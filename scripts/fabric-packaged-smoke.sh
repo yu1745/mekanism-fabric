@@ -143,6 +143,23 @@ required = {
 }
 with zipfile.ZipFile(sys.argv[1]) as artifact:
     entries = artifact.namelist()
+expected_tile_interfaces = {
+    "mekanism/common/tile/interfaces/IHasDumpButton.class",
+    "mekanism/common/tile/interfaces/IHasGasMode.class",
+    "mekanism/common/tile/interfaces/IHasMode.class",
+    "mekanism/common/tile/interfaces/IHasVisualization.class",
+    "mekanism/common/tile/interfaces/ITileActive.class",
+    "mekanism/common/tile/interfaces/IComparatorSupport.class",
+}
+actual_tile_interfaces = {
+    entry for entry in entries
+    if entry.startswith("mekanism/common/tile/interfaces/")
+    and "/" not in entry[len("mekanism/common/tile/interfaces/"):]
+    and entry.endswith(".class")
+}
+if (actual_tile_interfaces != expected_tile_interfaces
+        or any(entries.count(entry) != 1 for entry in expected_tile_interfaces)):
+    raise SystemExit(f"unexpected direct tile-interface class family: {sorted(actual_tile_interfaces)!r}")
 expected_tiers = {
     "mekanism/common/tier/BinTier.class",
     "mekanism/common/tier/EnergyCubeTier.class",
@@ -455,7 +472,7 @@ if unexpected_energy_api:
     )
 PYEOF
 then
-  echo "fabric-packaged-smoke: tier/resource/codec/collection/distribution/ChunkUtils/RegistryUtils/LambdaMetaFactoryUtil/long-transfer/dynamic-strict-energy/proxy/config-listener/common-lib-root production/test packaging contract failed" >&2
+  echo "fabric-packaged-smoke: tile-interface/tier/resource/codec/collection/distribution/ChunkUtils/RegistryUtils/LambdaMetaFactoryUtil/long-transfer/dynamic-strict-energy/proxy/config-listener/common-lib-root production/test packaging contract failed" >&2
   exit 1
 fi
 for required_entry in \

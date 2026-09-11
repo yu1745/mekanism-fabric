@@ -62,6 +62,12 @@ mekanism/common/util/StatUtils.java
 mekanism/common/resource/IResource.java
 mekanism/common/resource/MiscResource.java
 mekanism/common/resource/BlockResourceInfo.java
+mekanism/common/tile/interfaces/IHasDumpButton.java
+mekanism/common/tile/interfaces/IHasGasMode.java
+mekanism/common/tile/interfaces/IHasMode.java
+mekanism/common/tile/interfaces/IHasVisualization.java
+mekanism/common/tile/interfaces/ITileActive.java
+mekanism/common/tile/interfaces/IComparatorSupport.java
 mekanism/common/tier/BinTier.java
 mekanism/common/tier/EnergyCubeTier.java
 mekanism/common/tier/FactoryTier.java

@@ -13,7 +13,7 @@ The first storage milestone admits the official Mekanism energy-container contra
 - `mekanism.common.capabilities.DynamicHandler`
 - `mekanism.common.capabilities.energy.DynamicStrictEnergyHandler`
 
-The slice count is API 42 / common 70 / platform 10. The common count includes the seven byte-identical `4646f509` color/effect/spatial foundations documented in `FABRIC_PORT.md`; their exact JAR families and bounded tests do not admit any energy caller, owner, external API, lifecycle, networking, persistence, registry, or thread-safety guarantee. It also admits official
+The current global slice count is API 42 / common 80 / platform 10. The common count includes the seven byte-identical `4646f509` color/effect/spatial foundations documented in `FABRIC_PORT.md`; their exact JAR families and bounded tests do not admit any energy caller, owner, external API, lifecycle, networking, persistence, registry, or thread-safety guarantee. It also admits official
 `mekanism.common.lib.LastEnergyTracker` byte-identically to `4646f509` as a
 platform-neutral per-game-time accounting closure. Same-time calls accumulate a current
 bucket while the visible last bucket remains unchanged; every different timestamp—including
@@ -65,7 +65,7 @@ The three dynamic handler sources are byte-identical to `4646f509`. Insert and e
 
 ## Sequential transfer utilities
 
-The unchanged official long-valued transfer closure is admitted as part of the current API/common/platform slice count 42 / 74 / 10:
+The unchanged official long-valued transfer closure is admitted as part of the current API/common/platform slice count 42 / 80 / 10:
 
 - `mekanism.api.math.LongTransferUtils`
 - `mekanism.api.container.InContainerGetterLong`
