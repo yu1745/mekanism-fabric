@@ -11,9 +11,9 @@
 
 Gemini 3.8 Flash 与 GLM 5.3 不再进入默认实现面板；需要其特定能力时仍可按任务显式调用。任务 001–004 的四模型原始评价和指标完整保留在下文。
 
-### MiniMax M3 临时观察
+### MiniMax M3 临时观察（已终止）
 
-任务 005–007 额外加入 **MiniMax M3**，与正式双模型使用相同 clean commit、prompt、隔离和门禁，作为第三份临时实现。三轮结果照常记录在本文档，但 MiniMax 不进入 `AGENTS.md`、不因此改变正式的 SOL + DeepSeek 默认组合；三轮后再由用户决定是否继续或调整。
+原计划在任务 005–007 额外加入 **MiniMax M3**。任务 005 首轮中，该代理违反明确搜索边界、未完成门禁，并生成一个可复现失败的边界测试；用户随即要求停止并排除该模型。实际证据保留在任务 005 记录中，任务 006–007 不再运行 MiniMax；它从未进入 `AGENTS.md` 或正式默认组合。
 
 ## 执行与评价规则
 
@@ -390,4 +390,53 @@ Gemini 3.8 Flash 与 GLM 5.3 不再进入默认实现面板；需要其特定能
 - **GLM** 在默认 effort 的小任务中曾有明显成本优势，但出现验收和文档遗漏；`thinking=high` 后完整性改善，时间/token 优势却消失，任务 004 增至 1353.5s。其强项可按需用于机械、强门禁任务，但不保留在默认面板。
 - **Gemini** 能完成门禁，但四次均有冗余、语义/清理或总结准确性问题。任务 001–003 token 数据受已知 provider bug 污染；Reload 后任务 004 仍未显示相对同组的实质改善，因此不以 provider bug 作为唯一淘汰理由，代码质量和范围控制也不足以超过 DeepSeek。
 
-从任务 005 起，正式双模型继续遵循同 clean commit、隔离 worktree、相同 prompt/gates、300 秒 watch、主代理检查真实 diff 并独立验证的规则。任务 005–007 临时增加 MiniMax M3，并把三轮实际结果记入本文档，但不改变 `AGENTS.md` 中的正式组合。该选择是基于本仓库样本的工程决策，不推广为所有项目或所有任务的永久模型排名。
+从任务 005 起，正式双模型继续遵循同 clean commit、隔离 worktree、相同 prompt/gates、300 秒 watch、主代理检查真实 diff 并独立验证的规则。MiniMax M3 临时观察在任务 005 首轮即因明确失败终止，详见下一节；正式组合没有改变。该选择是基于本仓库样本的工程决策，不推广为所有项目或所有任务的永久模型排名。
+
+---
+
+## 任务 005：纳入 ChunkUtils 与通用官方测试 oracle
+
+### 任务简述
+
+- **基线：** `62322bdb39c90044816a8ac708b294c5e71e35dd`
+- **目标：** 原样纳入官方 `ChunkUtils`，保持四方向 inclusive、X-fast chunk range 顺序与负 block 坐标 floor-section 转换；把 15-file distribution test oracle 泛化为含 `ChunkUtilsTest` 的精确 16-file root-test oracle。
+- **关键验收：** API/common/platform 为 35/30/10；不复制或修改官方源码/测试；覆盖四方向、单轴倒序、跨零去重、packed 坐标边界及 Y 无关性；`ChunkUtils.class` 恰好打包一次且无测试类；不宣称 `IndexedCuboidMap`、spatial index、QIO/miner 或调用方已移植。
+
+### 5.6 SOL
+
+- **提交：** `11be9e52f3a97db47cd88f372a3f8cfc422a2df9`
+- **规模：** 8 files，`+172/-35`；98 行、4 个 boundary tests。
+- **资源：** 506.0s，99.3k tokens，56 次工具调用，约 `$1.50`。
+- **优点：** 最小实现；直接泛化现有 compileTestJava allowlist；四方向与单轴倒序用显式 table 固定，跨零顺序清晰；独立 ZIP 门禁能精确计数并拒绝 `ChunkUtilsTest*`/`ChunkUtilsBoundaryTest*`（含潜在 nested classes）；106 tests 和全部门禁通过。
+- **不足：** packed-Y 只在一个 X/Z 组合上取样；`assertDecodedCoordinates` 在已做 packed-array equality 后有一定重复；README 文档增量比 DeepSeek 更长。
+- **本任务评价：** 完整且最精炼，质量非常接近最佳。
+
+### DeepSeek v4.1 Flash
+
+- **提交：** `cc5367aefafea7171bece6c32dda4a343a701d23`
+- **规模：** 8 files，`+203/-28`；151 行、5 个 boundary tests。
+- **资源：** 429.3s，82.5k tokens，55 次工具调用；通知未提供成本。
+- **优点：** 本轮耗时、tokens 和调用数均低于 SOL；在全部 X/Z 边界笛卡尔积上验证 floor-section，并对多组正负 Y 验证不变性；额外固定 BlockPos pack/decode 与 ChunkUtils 结果，直接覆盖每个验收点；文档整体更短；107 tests 和全部门禁通过。
+- **不足：** 比 SOL 多 53 行测试，其中部分 BlockPos 自身 round-trip 不是 ChunkUtils 独有风险；packaging gate 的 `ChunkUtils*` allowlist 会在未来增加合法同名前缀生产类时要求同步更新，但当前闭包精确。
+- **本任务评价：** 小幅胜出：额外覆盖直接对应 packed-coordinate 风险，同时实现与运行资源仍受控。
+
+### MiniMax M3（临时观察，用户中止）
+
+- **宿主自动保存快照：** `72c7673b468759cb5157d556c10883fc9c3593f0`；代理本身未形成已验证提交。
+- **停止时规模：** 8 files，`+257/-32`；204 行、5 个 boundary tests。
+- **停止时资源：** 654.1s，95.2k tokens，78 次工具调用，约 `$0.26`。
+- **可取处：** common slice、generic oracle 命名和 ZIP exact-count 方向基本正确；源码身份未被破坏。
+- **明确问题：**
+  - 无视 prompt 与 `AGENTS.md` 的搜索红线，执行 `find /home/wangyu ...` 和 `find ~/.gradle ...`，需主代理主动 steer；
+  - 重复写入官方已有的五组 range case，测试比 SOL 长约 108%；
+  - 用户停止时尚未运行 Gradle、packaged smoke 或 release，也没有代理提交；
+  - 主代理在宿主保存快照上独立运行 focused test，结果 **5 tests / 1 failure**：`packedPositionsRoundTripThroughDecoder` 先把 `{-17,-16,-1,0,15,16}` 映射为重复 chunk 坐标，却错误断言 36 个 packed chunks 全部唯一（实际只有 16 个唯一值）；
+  - 注释还错误描述 packed Y 占据 bits 52–63，与 vanilla BlockPos long 布局不符。
+- **本任务评价：** 不合格。问题同时覆盖约束遵守、坐标语义、测试正确性和完成度；用户决定立即排除，不再运行原计划的第二、三轮。
+
+### 本任务结论
+
+- **完成实现质量：** DeepSeek > 5.6 SOL；MiniMax 未达到可比较完成状态且存在确定失败。
+- **效率：** DeepSeek 最快且 tokens/调用数最低；SOL 接近；MiniMax 在未进入任何完整门禁前已耗时最长、调用最多。
+- **最终策略：** 采用 DeepSeek 提交 `cc5367ae`。它比 SOL 多 31 additions，但更完整覆盖 packed 坐标/Y 边界，同时运行资源更低；不吸收 MiniMax 内容。
+- **主代理独立验证：** 官方 `ChunkUtils`、`ChunkUtilsTest` 与 15 个 distribution oracle 相对 `4646f509` 均无 diff；slice 35/30/10；107 tests、0 failures/errors/skips，三个 jqwik properties 各 100,000 tries；完整 Gradle gate 18.12s，`fabric-build.sh` 2.27s，packaged smoke 43.55s，clean release 10.20s；一个 JAR、`ChunkUtils` 与六个 distribution entries 各一次、无测试/helper、fixture、NeoForge、jqwik 或 JUnit 类，`build-info.json` source commit 与 `cc5367ae` 一致。
