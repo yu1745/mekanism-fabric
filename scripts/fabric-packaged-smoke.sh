@@ -199,13 +199,33 @@ if unexpected_lambda_meta_factory:
     raise SystemExit(
         "unexpected packaged LambdaMetaFactoryUtil class: " + ", ".join(unexpected_lambda_meta_factory)
     )
+expected_long_transfer = {
+    "mekanism/api/container/InContainerGetterLong.class",
+    "mekanism/api/container/LongToLongContainerInteraction.class",
+    "mekanism/api/math/LongTransferUtils.class",
+}
+for entry in expected_long_transfer:
+    if entries.count(entry) != 1:
+        raise SystemExit(f"long-transfer production class must be packaged exactly once: {entry}")
+unexpected_long_transfer = sorted(
+    entry for entry in entries
+    if entry.startswith("mekanism/api/math/LongTransferUtils")
+    and entry.endswith(".class") and entry not in expected_long_transfer
+)
+if unexpected_long_transfer:
+    raise SystemExit(
+        "packaged LongTransferUtils test/helper classes are forbidden: " + ", ".join(unexpected_long_transfer)
+    )
 PYEOF
 then
-  echo "fabric-packaged-smoke: distribution/ChunkUtils/RegistryUtils/LambdaMetaFactoryUtil production/test packaging contract failed" >&2
+  echo "fabric-packaged-smoke: distribution/ChunkUtils/RegistryUtils/LambdaMetaFactoryUtil/long-transfer production/test packaging contract failed" >&2
   exit 1
 fi
 for required_entry in \
     mekanism/api/RelativeSide.class \
+    mekanism/api/container/InContainerGetterLong.class \
+    mekanism/api/container/LongToLongContainerInteraction.class \
+    mekanism/api/math/LongTransferUtils.class \
     mekanism/api/energy/IEnergyContainer.class \
     mekanism/api/heat/HeatAPI.class \
     mekanism/api/heat/IHeatCapacitor.class \

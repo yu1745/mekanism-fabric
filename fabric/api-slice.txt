@@ -12,6 +12,8 @@ mekanism/api/SupportsColorMap.java
 mekanism/api/annotations/FieldsAreNotNullByDefault.java
 mekanism/api/annotations/NothingNullByDefault.java
 mekanism/api/annotations/ParametersAreNotNullByDefault.java
+mekanism/api/container/InContainerGetterLong.java
+mekanism/api/container/LongToLongContainerInteraction.java
 mekanism/api/energy/IEnergyContainer.java
 mekanism/api/functions/ByteSupplier.java
 mekanism/api/functions/CharPredicate.java
@@ -28,6 +30,7 @@ mekanism/api/heat/IMekanismHeatHandler.java
 mekanism/api/heat/ISidedHeatHandler.java
 mekanism/api/lasers/ILaserDissipation.java
 mekanism/api/lasers/ILaserReceptor.java
+mekanism/api/math/LongTransferUtils.java
 mekanism/api/math/MathUtils.java
 mekanism/api/text/IHasTranslationKey.java
 mekanism/api/tier/AlloyTier.java

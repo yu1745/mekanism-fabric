@@ -10,7 +10,7 @@ excluded. It uses Minecraft 1.21.1, Java 21, and Mojang official mappings.
 `api-slice.txt` is the auditable allowlist of API source paths, relative to
 `src/api/java`. The Fabric source set reads that file directly, so the listed
 sources retain their original `mekanism.api.*` names without being copied or
-modified. The allowlist contains **35 current source files**: **34 unchanged official
+modified. The allowlist contains **38 current source files**: **37 unchanged official
 baseline files** plus the project-owned registry-aware `INBTSerializable` NBT
 contract. Intentional API adaptations remain limited to that contract and
 `Action`'s removal of two NeoForge `FluidAction` conversion methods; see
@@ -19,7 +19,7 @@ and are not bundled in the mod.
 
 `common-slice.txt` contains **32 official source files**, and
 `platform-slice.txt` contains **10 project-owned Fabric sources**. Together with
-the **35-file API slice**, they form bounded registry/GameEvent, TOML
+the **38-file API slice**, they form bounded registry/GameEvent, TOML
 startup-config, configuration-handshake, internal energy storage/holder, internal
 heat storage/holder, wildcard-matching, fair-distribution, chunk-coordinate,
 lambda-metafactory, and vanilla-registry utility closures. The unchanged
@@ -58,6 +58,32 @@ Packaging checks only prove the exact outer/nested production class family is
 present once and tests are absent; behavior is proved by Java 21 tests, not a
 startup marker. `SyncMapper`, annotations, tracked data, containers, networking,
 reflection scanning, and all callers remain deferred.
+
+The unchanged official long-transfer utility closure (`LongTransferUtils` with the
+`InContainerGetterLong` and `LongToLongContainerInteraction` callback interfaces) is
+admitted as three byte-identical baseline sources in the API slice. It restores
+Mekanism's sequential generic/energy-container insert/extract helpers; it is not the
+fair-distribution layer, a Fabric transaction, or an external energy API adapter.
+Insertion visits containers that already hold energy first and only then the deferred
+empty containers (each phase in source order), forwards the current remainder to each
+next container, and returns as soon as a remainder is `<= 0`. Extraction walks source
+order, ignores non-positive drains, forwards the shrinking request, accumulates valid
+drains, and breaks exactly when the request is satisfied. `Action` and
+`AutomationType` are forwarded verbatim, and true `long` amounts above
+`Integer.MAX_VALUE` stay lossless. Callers must provide nonnegative offers, an
+explicit-overload `containerCount` that matches a fresh, consistent list, handlers
+whose insert remainder stays in `[0, offer]` and extract result in `[0, request]`, and
+a lookup that tolerates the nullable side. The official source defends against
+neither mismatched counts nor invalid handler returns, and this slice adds no policy.
+In particular, the energy-supplier extract overload short-circuits exactly `0` before
+the supplier lookup, while a negative amount still reaches the supplier and is then
+rejected by the explicit overload. Fabric-local Java 21 tests prove all six public
+overload families through observable event/order/value assertions, and the packaged
+smoke proves the three production classes occur exactly once with no
+`LongTransferUtils*` test/helper leakage and no startup marker. `IStrictEnergyHandler`,
+`EnergyHandler`, configurable holders/helpers, machines, network owners, the Team
+Reborn Energy API, Joule/FE conversion, Fabric lookup/transaction code, and all
+callers (`ComponentBackedEnergyHandler`, `EnergyRecipeData`) remain deferred.
 
 `RegistryUtils` has only the two minimal vanilla equivalents documented in
 `../docs/API_DELTAS.md`. Its holder-key helper uses `unwrapKey()` and preserves
