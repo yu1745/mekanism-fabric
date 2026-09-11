@@ -136,3 +136,110 @@
 - Gemini 在高消耗下仍遗漏了当前门禁未覆盖的既有语义。
 
 后续需要继续用 API 闭包、领域逻辑、平台 adapter、并发/事务语义等不同类型任务验证这些信号，不能据此形成永久结论。
+
+---
+
+## 任务 002：纳入动态热系数电容器
+
+### 任务简述
+
+- **基线：** `e89b69d64268eb1e4a4163846d036ffde059ef4d`
+- **目标：** 将官方原样的 `VariableHeatCapacitor` 纳入 Fabric common allowlist，验证动态传导/绝缘系数 supplier 语义，并补齐打包证明和状态文档。
+- **关键验收：**
+  - 官方源码与 `4646f509` 完全一致，不做平台适配，只增加一个 common slice 路径；
+  - simple factory 默认系数及继承的 ambient/listener/storage 行为不变；
+  - 两个 supplier 构造时各采样一次，getter 后续实时重采样；
+  - 传导系数严格保持 `Math.max(1, supplied)` 的 sub-one、NaN、正负无穷行为，绝缘系数原样返回；
+  - 保留 variable factory 绕过 `BasicHeatCapacitor.create` 验证的官方行为，null coefficient supplier 必须失败；
+  - remapped JAR 必须包含该类且不泄漏 fixture/NeoForge 类；
+  - 修复 `fabric/README.md` 的旧 slice 数量并准确记录边界；运行单测、slice/isolation、Fabric build、packaged smoke 和 clean release 门禁。
+
+### 5.6 SOL
+
+- **提交：** `24ca02bffc8c21ac0e9533557ef43d47081115a6`
+- **规模：** 8 files，`+131/-24`；新测试 104 行、5 个 test。
+- **资源：** 377.7s，61.9k tokens，38 次工具调用，约 `$0.78`。
+- **验证：** 代理报告全部门禁通过。
+- **优点：**
+  - 以最短测试完整覆盖两个 supplier 的构造采样、实时重采样、默认/自定义 ambient、listener、sub-one 和全部非有限值；
+  - 明确保留默认模式、factory 验证绕过和 null supplier 行为，没有重复测试已有 `BasicHeatCapacitor` 的整个 NBT 契约；
+  - `FABRIC_HEAT.md` 正确把打包验证的 heat 类数量从 8 更新为 9；
+  - `fabric/README.md` 是四者中最简洁且边界最明确的版本，准确写明 API 35、common 23、platform 10，以及未声明外部 API/transaction/config holder/network/machine owner 集成。
+- **不足：**
+  - 没有像 DeepSeek 那样额外统计 ambient supplier 的惰性读取次数，也没有在本测试中重复对照 `BasicHeatCapacitor.create` 的异常；这些语义已由现有 Basic 测试覆盖，不构成本任务缺口。
+- **本任务评价：** 正确性、覆盖度和简洁度最平衡，单体实现最佳。
+
+### Gemini 3.8 Flash
+
+- **提交：** `4e5b8c83f31fe17f18a3b70f625317475ccd84f5`
+- **规模：** 8 files，`+220/-23`；新测试 187 行、5 个 test。
+- **资源：** 485.6s，397.4k tokens，69 次工具调用，约 `$0.48`。
+- **验证：** 代理报告全部门禁通过。
+- **优点：**
+  - 所有显式验收语义均有覆盖，包括两个 supplier 的采样次数、继承存储/NBT、完整非有限值和 nullability；
+  - heat 类数量、slice 数量和延后边界总体正确；
+  - 相比任务 001，未引入生产语义回退。
+- **不足：**
+  - 测试比 5.6 SOL 长约 80%，重复了已有 Basic NBT 测试，并留下未使用的 `assertNull` import；
+  - `Math.max` 测试中保留了“先声称 NaN 返回 1、再自问并纠正为 NaN”的多行思考过程，不应进入正式源码；
+  - README 逐项枚举大量已纳入类型，信息密度低于 5.6 SOL 的闭包级描述；
+  - token 消耗约为 5.6 SOL 的 6.4 倍，四者最高。
+- **本任务评价：** 功能正确且验收完整，但缺乏最终代码清理，冗余明显。
+
+### DeepSeek v4.1 Flash
+
+- **提交：** `281beba9385ce4144ac086e8eea24609384177ed`
+- **规模：** 8 files，`+173/-13`；新测试 144 行、5 个 test。
+- **资源：** 435.7s，68.5k tokens，60 次工具调用；通知未提供成本。
+- **验证：** 代理报告全部门禁通过。
+- **优点：**
+  - 四者中测试语义证明最细：额外验证 ambient 惰性读取次数、Basic/Variable factory 的直接对照，以及 non-finite factory 输入；
+  - 两个 coefficient supplier 的构造/重采样计数完整，测试只依赖可观察行为；
+  - 文档中的 heat 类数量和延后边界正确，README 也明确不声明外部 API、capability、transaction 或 machine integration；
+  - 第一次测试发现自身断言顺序错误后能定位并修复。
+- **不足：**
+  - 对这个 40 行无平台适配类而言，144 行测试和较长文档略显过量；
+  - 工具调用约为 5.6 SOL 的 1.6 倍；
+  - packaged smoke 曾留下一个临时 orphan server process，虽然代理随后手动终止且没有仓库/运行时影响，但说明长门禁清理过程不够平滑。
+- **本任务评价：** 语义验证最强，整体质量第二；适合作为补充审查来源，但没有必要整体替换更精炼的 5.6 SOL 版本。
+
+### GLM 5.3
+
+- **提交：** `c818ea0c0166aa4cbabce1c249291675abcc857d`
+- **规模：** 实际为 8 files，`+135/-19`；新测试 106 行、5 个 test。代理报告误写成 7 files、`+29/-19`，遗漏了新测试文件的 106 行。
+- **资源：** 349.4s，24.3k tokens，31 次工具调用，约 `$0.25`。
+- **验证：** 代理报告全部门禁通过。本任务运行时尚未启用用户后来指定的 `thinking=high`。
+- **优点：**
+  - 再次获得最低耗时、token、调用数和成本；
+  - 测试对默认行为、动态系数、非有限值、验证绕过和 null supplier 均有实质覆盖；
+  - 未扩大生产 slice，构建和打包结果正确。
+- **不足：**
+  - 只统计 conduction supplier 的构造/后续读取次数，没有证明验收明确要求的 insulation supplier 也在构造时采样一次并由 getter 重采样；
+  - `FABRIC_HEAT.md` 仍声称 packaged smoke 验证 8 个 heat 类，加入 Variable 后应为 9；同一文档也没有登记新增测试；
+  - README 比 5.6 SOL 版本更长，且最终报告的 diff 规模不准确。
+- **本任务评价：** 执行效率最佳，但存在一个测试证据缺口和一个文档事实错误，因此本任务的单体质量排在第四。下一项任务将按用户要求使用 `thinking=high`，观察这些问题是否改善。
+
+### 本任务结论
+
+- **单体代码质量：** 5.6 SOL > DeepSeek > Gemini > GLM 5.3。
+- **执行效率：** GLM 5.3 > 5.6 SOL > DeepSeek > Gemini。
+- **最终策略：** 直接采用 5.6 SOL 实现；其他版本没有必须合入的代码。DeepSeek 的额外断言作为评审证据使用，但现有 Basic 测试已覆盖其主要增量。
+- **整合提交：** `c7b3aa0f68ad0d28bfd61ccc96462fb343795daa`
+- **主代理独立验证：**
+  - 官方 `VariableHeatCapacitor.java` 相对 `4646f509` diff 为空；
+  - slice 数量 API 35 / common 23 / platform 10，且无重复；
+  - 68 个 JUnit tests，0 failures / 0 errors；三个 source slice gate 和 fixture isolation 通过，14.44s；
+  - `fabric-build.sh` 通过，1.92s；
+  - packaged dedicated-server smoke 通过，39.87s；
+  - clean release contract 通过，7.25s；恰好一个 JAR，包含 `VariableHeatCapacitor.class`、无 fixture/NeoForge 类，`build-info.json` source commit 与 `c7b3aa0f` 一致。
+
+### 两项任务后的暂时纵向信号
+
+样本仍然只有两个，而且都偏向 Java fixture/domain 单元测试、Bash/Gradle 门禁和文档，不能代表大型平台 adapter 或并发事务实现：
+
+- **5.6 SOL：** 两项任务都给出最佳单体实现，优势是首次方案的一致性、精确命名和适度测试；
+- **DeepSeek：** 两项任务均为质量第二，稳定优势是证据组织、脚本重构和更细的边界测试，代价是更多调用与实现体积；
+- **GLM 5.3：** 两项任务都为效率第一，但分别出现边界表达/超时余量问题和验收/文档遗漏；下一项启用 `thinking=high` 后再观察；
+- **Gemini：** 两项任务均明显消耗更多 tokens；任务 001 有未被门禁触发的语义回退，任务 002 功能正确但未清理冗余与思考痕迹。
+
+继续累计不同类型任务；不把当前顺序视为永久模型排名。
