@@ -101,7 +101,7 @@ scripts/scan-platform-deps.py
 
 官方 `IEnergyContainer`、`BasicEnergyContainer` 及 `IStrictEnergyHandler` / `ISidedStrictEnergyHandler` / `IMekanismStrictEnergyHandler` 已作为内部 `long` storage/handler 窄切片纳入。前两份 handler 接口仅删除 NeoForge fluid import，并将 Javadoc-only `fill` 链接改为保留 accepted amount 与 unaccepted remainder 差异的平台中立文字；后者与 baseline 字节一致。测试证明 indexed 非空优先 insertion、源序 extraction、unsided→指定 side 桥接、nullable side 与 `Action` 原样传递、null/internal 和 non-null/external automation、invalid-index defaults、negative-set clamp，以及 aggregate 每次只查一次 side-specific list；`canHandleEnergy=false` 时返回 empty list 仍是实现者契约。
 
-`RelativeSide` 与非配置 `EnergyContainerHolder` 也已保留全方向映射、动态 facing 和 internal/external visibility。发布物门禁只证明三接口恰好存在一次且同名前缀 test/helper 不泄漏，不增加 startup marker；行为由 Fabric-local Java 21 测试证明。该切片不宣称 Fabric energy interoperability：concrete `EnergyHandler`、config holder、external Energy API、Joule/FE/Energy conversion、lookup/transaction、owners、machines、network 与 callers 均仍属 P1 后续边界，详见 `FABRIC_ENERGY.md`、`FABRIC_HOLDERS.md`。
+`RelativeSide` 与非配置 `EnergyContainerHolder` 也已保留全方向映射、动态 facing 和 internal/external visibility。发布物门禁只证明三接口与既有 `IEnergyContainer` 恰好存在一次，并拒绝当前闭包之外的其它 energy API class；不增加 startup marker，行为由 Fabric-local Java 21 测试证明。该切片不宣称 Fabric energy interoperability：concrete `EnergyHandler`、config holder、external Energy API、Joule/FE/Energy conversion、lookup/transaction、owners、machines、network 与 callers 均仍属 P1 后续边界，详见 `FABRIC_ENERGY.md`、`FABRIC_HOLDERS.md`。
 
 ### 当前 heat storage 落点
 

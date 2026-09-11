@@ -88,8 +88,8 @@ tests prove non-empty-first/source-order aggregation, exact side and `Action`
 propagation, invalid-index/no-op defaults, negative-set clamping, null/internal
 versus non-null/external automation, one list lookup per aggregate, and
 `SIMULATE`/`EXECUTE` behavior with a true-`long` amount. Packaging requires all
-three interfaces exactly once, rejects same-prefix nested/test/helper classes,
-and adds no startup marker. Concrete `EnergyHandler`, configurable
+three interfaces and the existing `IEnergyContainer` exactly once, rejects every
+other energy API class outside the current closure, and adds no startup marker. Concrete `EnergyHandler`, configurable
 holders/helpers, external Energy API and conversion, Fabric lookup/transaction,
 machines, network/persistence owners, and all callers
 (`ComponentBackedEnergyHandler`, `EnergyRecipeData`) remain deferred.

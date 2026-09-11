@@ -1,6 +1,7 @@
 package mekanism.api.energy;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
@@ -14,7 +15,7 @@ class ISidedStrictEnergyHandlerTest {
 
     @Test
     void everyUnsidedBridgeUsesTheConfiguredNonNullSide() {
-        TrackingSided handler = new TrackingSided(Direction.NORTH, 100, 100);
+        TrackingSided handler = new FixedSideTrackingSided(Direction.NORTH, 100, 100);
         handler.energy[0] = 20;
         handler.energy[1] = 40;
 
@@ -50,7 +51,7 @@ class ISidedStrictEnergyHandlerTest {
 
     @Test
     void sidedAggregatesPropagateExactNullableSideAndAction() {
-        TrackingSided handler = new TrackingSided(Direction.NORTH, 40, 100);
+        TrackingSided handler = new FixedSideTrackingSided(Direction.NORTH, 40, 100);
         handler.energy[1] = 70;
 
         assertEquals(0, handler.insertEnergy(50, null, Action.SIMULATE));
@@ -67,17 +68,25 @@ class ISidedStrictEnergyHandlerTest {
         assertEquals(List.of(0L, 0L), handler.energy());
     }
 
+    @Test
+    void defaultEnergySideIsNullAndUnsidedAggregateForwardsIt() {
+        TrackingSided handler = new TrackingSided(100);
+
+        assertNull(handler.getEnergySideFor());
+        assertEquals(0, handler.insertEnergy(5, Action.SIMULATE));
+        assertEquals(List.of("count", "insert"), handler.operations());
+        assertTrue(handler.calls.stream().allMatch(call -> call.side() == null));
+    }
+
     private record Call(String operation, int container, long amount, @Nullable Direction side, @Nullable Action action) {
     }
 
-    private static final class TrackingSided implements ISidedStrictEnergyHandler {
-        private final Direction defaultSide;
+    private static class TrackingSided implements ISidedStrictEnergyHandler {
         private final long[] max;
         private final long[] energy;
         private final List<Call> calls = new ArrayList<>();
 
-        private TrackingSided(Direction defaultSide, long... max) {
-            this.defaultSide = defaultSide;
+        private TrackingSided(long... max) {
             this.max = max;
             energy = new long[max.length];
         }
@@ -92,11 +101,6 @@ class ISidedStrictEnergyHandlerTest {
                 values.add(stored);
             }
             return values;
-        }
-
-        @Override
-        public Direction getEnergySideFor() {
-            return defaultSide;
         }
 
         @Override
@@ -147,6 +151,20 @@ class ISidedStrictEnergyHandlerTest {
                 energy[container] -= extracted;
             }
             return extracted;
+        }
+    }
+
+    private static final class FixedSideTrackingSided extends TrackingSided {
+        private final Direction side;
+
+        private FixedSideTrackingSided(Direction side, long... max) {
+            super(max);
+            this.side = side;
+        }
+
+        @Override
+        public Direction getEnergySideFor() {
+            return side;
         }
     }
 }

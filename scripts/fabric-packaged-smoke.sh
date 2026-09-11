@@ -224,14 +224,15 @@ expected_energy_handlers = {
 for entry in expected_energy_handlers:
     if entries.count(entry) != 1:
         raise SystemExit(f"strict energy-handler interface must be packaged exactly once: {entry}")
-unexpected_energy_handlers = sorted(
+expected_energy_api = expected_energy_handlers | {"mekanism/api/energy/IEnergyContainer.class"}
+unexpected_energy_api = sorted(
     entry for entry in entries
-    if any(entry.startswith(expected.removesuffix(".class")) for expected in expected_energy_handlers)
-    and entry.endswith(".class") and entry not in expected_energy_handlers
+    if entry.startswith("mekanism/api/energy/") and entry.endswith(".class")
+    and entry not in expected_energy_api
 )
-if unexpected_energy_handlers:
+if unexpected_energy_api:
     raise SystemExit(
-        "unexpected packaged strict energy-handler nested/test/helper class: " + ", ".join(unexpected_energy_handlers)
+        "unexpected packaged energy API class: " + ", ".join(unexpected_energy_api)
     )
 PYEOF
 then

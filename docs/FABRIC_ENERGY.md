@@ -114,7 +114,7 @@ Required gates:
 scripts/fabric-packaged-smoke.sh
 ```
 
-The packaged smoke verifies the storage classes and all three strict handler interfaces are present exactly once, rejects same-prefix handler nested/test/helper classes, and still requires exactly one occurrence of each long-transfer production class while rejecting any other `LongTransferUtils*.class`. Handler and energy behavior is exercised by JUnit rather than by constructing test state during production bootstrap; there is no handler startup marker.
+The packaged smoke verifies the storage classes and all three strict handler interfaces are present exactly once, rejects every other energy API class outside the current closure, and still requires exactly one occurrence of each long-transfer production class while rejecting any other `LongTransferUtils*.class`. Handler and energy behavior is exercised by JUnit rather than by constructing test state during production bootstrap; there is no handler startup marker.
 
 `fabric/src/test/java/mekanism/api/math/LongTransferUtilsTest.java` covers the sequential closure with observable event/order/value assertions:
 
