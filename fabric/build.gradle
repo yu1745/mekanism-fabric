@@ -54,6 +54,7 @@ loom {
             name = 'Mekanism mismatched handshake fixture client'
             source sourceSets.handshakeMismatchFixture
             runDir = System.getProperty('mekanism.handshake.mismatchClientDir', 'run/handshake-mismatch-client')
+            property 'mekanism.handshake.fixtureMode', System.getProperty('mekanism.handshake.fixtureMode', 'version_mismatch')
             programArgs '--quickPlayMultiplayer', System.getProperty('mekanism.handshake.address', '127.0.0.1:25567'),
                   '--username', System.getProperty('mekanism.handshake.username', 'MekanismMismatch')
         }
