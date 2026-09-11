@@ -18,7 +18,7 @@ fluid-import/link cleanup; `IMekanismStrictEnergyHandler` remains byte-identical
 See `../docs/API_DELTAS.md`. JetBrains annotations and JSR-305 remain `compileOnly`
 and are not bundled in the mod.
 
-`common-slice.txt` contains **52 official source files**, and
+`common-slice.txt` contains **60 official source files**, and
 `platform-slice.txt` contains **10 project-owned Fabric sources**. Seven spatial/color/effect foundations (`Color`, `CustomEffect`, `Pos3D`, `Quaternion`, `Range3D`, `MultipartUtils`, and `StatUtils`) remain byte-identical to `4646f509`. Twelve Java 21 tests bound channel/HSV/compositing/statistics, effect state, vector/range/rotation/quaternion state, and direct multipart ray selection. Packaging permits exactly four direct common-lib classes, one effect class, three math classes, the three `MultipartUtils` classes, and one `StatUtils` class. This admits no caller or owner: renderers/particles/GUI/recipe viewers/client lifecycle, transmitters/multipart blocks/gear, machines/block types/entities, packet tracking/network ranges, SPS/multiblock, additions/generators, external energy, world/chunk lifecycle, registries/config/persistence all remain deferred; there is no rendering integration, entity/player lifecycle, block registration, networking, thread-safety, or collision-owner guarantee. Together with
 the **42-file API slice**, they form bounded registry/GameEvent, TOML
 startup-config, configuration-handshake, internal energy storage/holder, internal
@@ -41,6 +41,8 @@ Callers must provide nonnegative offers, a fresh/non-reused `Target`, and handle
 whose simulation/acceptance and `SplitInfo.send` accounting obey the documented
 contract; the official implementation intentionally adds no defensive behavior
 for contract violations.
+
+Eight state/permission wrapper sources (`ProxiedHolder`, the three proxy classes, and the four generic/primitive cached suppliers) remain byte-identical to `4646f509`. Eight Fabric-local tests bind null-side intrinsic read-only behavior with exact read forwarding, non-null exact-side and independent insert/extract permission forwarding, plus lazy resolution/reuse, dependency-listener registration, real `clearCache` eager refresh, generic null-sentinel retries, negative-zero float bits, and a large long. Exact JAR family gates reject unexpected same-package classes and test/helper/fixture leakage. Owners/callers, capability registration/lookup/exposure, external energy/transactions/conversion, side configuration/ejection, machines/transmitters/networks, real config load/reload/file I/O/lifecycle/threading, persistence/network serialization, and broader Fabric integration remain deferred.
 
 The official `DependentMapCodec`, `SequencedCollectionCodec`, and `DroppingUnboundedMapCodec` are admitted byte-identically as a platform-neutral codec closure. A five-method, table-driven Java 21 oracle covers dependency-first codec selection and field errors, sequenced min/max/order/immutable/partial-remainder semantics, and first-wins map collisions including malformed and deliberately ignored duplicate partial values. Packaging allows exactly the one API and three common codec class entries (including `SequencedCollectionCodec$DecoderState`) and uses no startup marker. This proves only those codec behaviors: `ModuleContainer`, `AttachedSideConfig`, recipes, data components, config/network owners, and every caller remain deferred; no persistence, registry, packet, lifecycle-owner, or backward-compatible serialized-format claim is made.
 

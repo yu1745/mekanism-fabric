@@ -317,6 +317,42 @@ actual_dynamic_handlers = {
 }
 if actual_dynamic_handlers != expected_dynamic_handlers or any(entries.count(entry) != 1 for entry in expected_dynamic_handlers):
     raise SystemExit(f"unexpected root dynamic-handler class family: {sorted(actual_dynamic_handlers)!r}")
+expected_proxy_handlers = {
+    "mekanism/common/capabilities/proxy/ProxyHandler.class",
+    "mekanism/common/capabilities/proxy/ProxyHeatHandler.class",
+    "mekanism/common/capabilities/proxy/ProxyStrictEnergyHandler.class",
+}
+actual_proxy_handlers = {
+    entry for entry in entries
+    if entry.startswith("mekanism/common/capabilities/proxy/") and entry.endswith(".class")
+}
+if actual_proxy_handlers != expected_proxy_handlers or any(entries.count(entry) != 1 for entry in expected_proxy_handlers):
+    raise SystemExit(f"unexpected proxy-handler class family: {sorted(actual_proxy_handlers)!r}")
+expected_direct_holders = {
+    "mekanism/common/capabilities/holder/BasicHolder.class",
+    "mekanism/common/capabilities/holder/IHolder.class",
+    "mekanism/common/capabilities/holder/ProxiedHolder.class",
+}
+actual_direct_holders = {
+    entry for entry in entries
+    if entry.startswith("mekanism/common/capabilities/holder/")
+    and "/" not in entry[len("mekanism/common/capabilities/holder/"):]
+    and entry.endswith(".class")
+}
+if actual_direct_holders != expected_direct_holders or any(entries.count(entry) != 1 for entry in expected_direct_holders):
+    raise SystemExit(f"unexpected direct holder class family: {sorted(actual_direct_holders)!r}")
+expected_cached_suppliers = {
+    "mekanism/common/config/listener/ConfigBasedCachedSupplier.class",
+    "mekanism/common/config/listener/ConfigBasedCachedFloatSupplier.class",
+    "mekanism/common/config/listener/ConfigBasedCachedIntSupplier.class",
+    "mekanism/common/config/listener/ConfigBasedCachedLongSupplier.class",
+}
+actual_cached_suppliers = {
+    entry for entry in entries
+    if entry.startswith("mekanism/common/config/listener/") and entry.endswith(".class")
+}
+if actual_cached_suppliers != expected_cached_suppliers or any(entries.count(entry) != 1 for entry in expected_cached_suppliers):
+    raise SystemExit(f"unexpected cached-supplier class family: {sorted(actual_cached_suppliers)!r}")
 expected_common_energy = {
     "mekanism/common/capabilities/energy/BasicEnergyContainer.class",
     "mekanism/common/capabilities/energy/DynamicStrictEnergyHandler.class",
@@ -372,6 +408,14 @@ for required_entry in \
     mekanism/common/capabilities/heat/VariableHeatCapacitor.class \
     mekanism/common/capabilities/holder/BasicHolder.class \
     mekanism/common/capabilities/holder/IHolder.class \
+    mekanism/common/capabilities/holder/ProxiedHolder.class \
+    mekanism/common/capabilities/proxy/ProxyHandler.class \
+    mekanism/common/capabilities/proxy/ProxyHeatHandler.class \
+    mekanism/common/capabilities/proxy/ProxyStrictEnergyHandler.class \
+    mekanism/common/config/listener/ConfigBasedCachedSupplier.class \
+    mekanism/common/config/listener/ConfigBasedCachedFloatSupplier.class \
+    mekanism/common/config/listener/ConfigBasedCachedIntSupplier.class \
+    mekanism/common/config/listener/ConfigBasedCachedLongSupplier.class \
     mekanism/common/capabilities/holder/energy/EnergyContainerHolder.class \
     mekanism/common/capabilities/holder/energy/IEnergyContainerHolder.class \
     mekanism/common/capabilities/holder/heat/HeatCapacitorHolder.class \

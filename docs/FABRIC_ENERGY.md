@@ -13,7 +13,7 @@ The first storage milestone admits the official Mekanism energy-container contra
 - `mekanism.common.capabilities.DynamicHandler`
 - `mekanism.common.capabilities.energy.DynamicStrictEnergyHandler`
 
-The slice count is API 42 / common 52 / platform 10. The common count includes the seven byte-identical `4646f509` color/effect/spatial foundations documented in `FABRIC_PORT.md`; their exact JAR families and bounded tests do not admit any energy caller, owner, external API, lifecycle, networking, persistence, registry, or thread-safety guarantee. It also admits official
+The slice count is API 42 / common 60 / platform 10. The common count includes the seven byte-identical `4646f509` color/effect/spatial foundations documented in `FABRIC_PORT.md`; their exact JAR families and bounded tests do not admit any energy caller, owner, external API, lifecycle, networking, persistence, registry, or thread-safety guarantee. It also admits official
 `mekanism.common.lib.LastEnergyTracker` byte-identically to `4646f509` as a
 platform-neutral per-game-time accounting closure. Same-time calls accumulate a current
 bucket while the visible last bucket remains unchanged; every different timestamp—including
@@ -58,6 +58,10 @@ The three-layer handler closure connects the admitted sequential utility to Meka
 `IMekanismStrictEnergyHandler` defaults expose the side-specific list supplied by the implementer. Valid indexes delegate to their `IEnergyContainer`; invalid indexes return zero/null/remainder defaults or perform no mutation; direct setting clamps negative values to zero. A null side maps to `AutomationType.INTERNAL`, and a non-null side maps to `EXTERNAL`. Aggregate insert/extract obtains the side-specific list once per operation, then applies the unchanged sequential semantics under both `SIMULATE` and `EXECUTE`, including true-`long` values. `canHandleEnergy()` defaults to true; an implementation returning false remains responsible for returning an empty list from `getEnergyContainers`, exactly as the official contract states.
 
 The three dynamic handler sources are byte-identical to `4646f509`. Insert and extract predicates are independent and receive the exact nullable side. Denial returns the original insertion amount or zero extraction without consulting the supplier; allowance delegates through the defaults with exact index, side, amount, and `Action`, and the supplier receives that side. Direct container lookup forwards null/non-null unchanged, while `onContentsChanged` forwards once to a present listener and is harmless when absent.
+
+## Permission proxy closure
+
+`ProxiedHolder`, `ProxyHandler`, `ProxyStrictEnergyHandler`, and `ProxyHeatHandler` are admitted byte-identically to `4646f509`. A null side is intrinsically read-only: strict-energy direct set and indexed/aggregate insert/extract, plus indexed/aggregate heat mutation, are suppressed while all getters still receive exact null. For a non-null side, holder insert and extract predicates gate their operation families independently; denial returns the exact offered insertion amount or zero extraction, while allowance forwards exact side, container, amount, `Action`, and handler result. Heat reads and indexed/aggregate `handleHeat` likewise forward exactly. This is only a permission/forwarding wrapper: all owners/callers, capability registration/lookup/exposure, external Energy API/transactions/conversion, side configuration/ejection, machines/transmitters/networks, config lifecycle, persistence/network serialization, and broader Fabric integration remain deferred.
 
 ## Sequential transfer utilities
 
