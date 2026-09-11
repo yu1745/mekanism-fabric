@@ -1,6 +1,7 @@
 package mekanism.common.capabilities.holder.energy;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -108,8 +109,8 @@ class EnergyContainerHolderTest {
               });
 
         assertTrue(holder.canInsert(null));
-        assertTrue(!holder.canExtract(null));
-        assertTrue(!holder.canInsert(Direction.EAST));
+        assertFalse(holder.canExtract(null));
+        assertFalse(holder.canInsert(Direction.EAST));
         assertTrue(holder.canExtract(Direction.EAST));
         assertEquals(java.util.Arrays.asList(null, Direction.EAST), insertSides);
         assertEquals(java.util.Arrays.asList(null, Direction.EAST), extractSides);
