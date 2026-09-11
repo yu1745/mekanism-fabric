@@ -64,6 +64,13 @@ scripts/fabric-configuration-rejection-smoke.sh # 错版/同版本显式拒绝/�
 - 精确输出已经蕴含的长度、唯一性、范围等派生断言不重复添加；不为 Mekanism 测试 vanilla/JDK 自身行为。
 - platform adapter、transaction/simulation、序列化兼容、registry freeze、config 原子发布、network handshake/rejection、true-long/overflow、patched-Minecraft 语义替换与打包隔离可按独立风险突破默认目标，但仍须保持最小并记录理由。
 
+## 任务批次与候选门禁
+
+- 默认按同一 dependency/ownership boundary 组成约 **4–12 个紧密相关 production files** 的批次；可以包含 2–4 个相关子闭包。除非单文件本身跨平台、注册、事务、序列化或 patched-Minecraft 高风险边界，不再为简单 byte-identical 单类重复完整开发周期。
+- 不为凑数量混合无关代码。遇到 NeoForge/Fabric 语义分歧、registry lifecycle、transaction/rollback、线程或 owner 生命周期边界时，应立即缩小或拆分任务，并为每个分歧单独建立可执行验收。
+- 候选实现默认验证 source identity/delta、slice/fixture isolation、focused 与 full local unit tests、Fabric build 及静态 JAR class/leakage contract；不再由每个候选重复启动真实 dedicated server 或执行 clean release contract。
+- 主代理在审查并选定/综合真实 diff 后，独立重跑完整测试，再对最终实现各执行一次 `scripts/fabric-packaged-smoke.sh` 和 `./build.sh --clean`，核对最终 commit、JAR 数量与 sha256。高风险网络/注册/启动任务可在任务验收中显式恢复候选级真实运行门禁。
+
 ## 双模型并行实现评估
 
 四模型阶段已在任务 001–004 后结束；结论与原始指标见 `docs/MODEL_IMPLEMENTATION_COMPARISONS.md`。后续有明确边界和可执行验收门禁的开发任务，默认让 **5.6 SOL** 与 **DeepSeek v4.1 Flash** 从同一 clean commit 在隔离 worktree 中并行实现，并为两个顶层代理默认开启 300 秒 supervision watch。主代理必须检查真实 diff、综合取舍并独立验证，不能只采信代理总结；watch 只用于发现方向、范围或验收漂移，不干预可自行修复的普通构建/测试错误。每次任务的简述、两份评价、指标和最终选择持续追加到 `docs/MODEL_IMPLEMENTATION_COMPARISONS.md`。一次结果只评价该任务，不直接形成跨项目的永久模型排名。
