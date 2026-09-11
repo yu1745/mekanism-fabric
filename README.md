@@ -2,6 +2,11 @@
 
 # Mekanism for Minecraft 1.21 #
 
+> **Fabric port branch:** this branch starts from the exact upstream
+> `v1.21.1-10.7.19.85` Java source and is being converted from NeoForge to Fabric.
+> It is not yet a Fabric-runnable build. See [`docs/FABRIC_PORT.md`](docs/FABRIC_PORT.md)
+> for the baseline, archived Kotlin prototype, migration rules, and acceptance gates.
+
 Mekanism is an independent Minecraft add-on featuring high-tech machinery that can be used to create powerful tools, 
 armor, and weapons. You can find more detail on the features on the [**Official Wiki**](https://wiki.aidancbrady.com/wiki/Mekanism).
 With features ranging from jetpacks and balloons to factories and energy cubes, the mod does not have a single unifying goal.
