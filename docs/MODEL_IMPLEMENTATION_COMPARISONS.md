@@ -512,3 +512,39 @@ Gemini 3.8 Flash 与 GLM 5.3 不再进入默认实现面板；需要其特定能
 - **最终策略：** 在用户要求的 patched-source 登记提交 `1994bba9` 之后，以 SOL 候选 cherry-pick `c7fa833a` 为基底；主代理依据 DeepSeek 发现增加只针对 vanilla `Holder.Reference` 的 nullable-key helper：key-only standalone 仍返回 key，value-only intrusive 在 key 未绑定时恢复 NeoForge null；同时采用窄 registry helper。`5498f98a` 增加一个不注册、不变更 registry 的 focused test，固定 standalone/intrusive 两种 unbound 状态及三个公开入口，不采用 DeepSeek 的其余冗余断言。
 - **综合规模：** Task007 slice 本身 9 files，`+185/-12`，最终测试 120 行、7 tests；另有用户单独要求的 `AGENTS.md` patched-source 登记 `+11/-7`。
 - **主代理独立验证：** source diff 仅含两个 NeoForge-extension 边界的 vanilla helper；16 个 official root oracle 和 `fabric/build.gradle` 均未改变；slice 35/32/10；122 tests、0 failures/errors/skips，三个 jqwik properties 各 100,000 tries/checks；完整 Gradle gate 9.66s，`fabric-build.sh` 2.35s，packaged smoke 46.96s 并到达 `Done`；`RegistryUtils.class` 精确一次，无同名前缀测试/helper；最终 clean release contract 10.32s，恰好一个 JAR，无 fixture/NeoForge/JUnit/jqwik 泄漏，`build-info.json` source commit 与最终 HEAD 一致。
+
+---
+
+## 任务 008：纳入顺序 long transfer API 闭包
+
+### 任务简述
+
+- **基线：** `89d7654867834f8809d4929d90d0054508fb4480`
+- **目标：** 原样纳入 `InContainerGetterLong`、`LongToLongContainerInteraction` 与 `LongTransferUtils`，恢复 generic callback 与 energy-container 的六个顺序 insert/extract overload family。
+- **关键验收：** API/common/platform 为 38/32/10；non-positive/zero-container short circuit、single context forwarding、non-empty-first stable insertion、source-order shrinking extraction、非正 callback 结果、supplier extract 的 zero/negative lookup 差异、SIMULATE/EXECUTE、真实 `BasicEnergyContainer` 与大于 `Integer.MAX_VALUE` 的 long；三个 production class 精确各一次；不引入 fair-distribution、外部 Energy API、Fabric transaction 或调用方，不为 handler/count 违约增加策略。
+
+### 5.6 SOL
+
+- **提交：** `90d4e99cc2bd68b62f489575e3c0b16bc5e2ad11`
+- **规模：** 8 files，`+489/-25`；419 行、8 个 tests。
+- **资源：** 684.4s，130.5k tokens，61 次工具调用，约 `$2.23`。
+- **优点：** 八个聚合测试覆盖全部六类 overload；callback insert 以 negative remainder、energy-list insert 以 zero remainder 分别固定 `<= 0` stop，extract 同时固定负值忽略与满足即停；自定义 probe 对 amount/Action/Automation identity 和 caller range 作强断言；真实 Basic 容器用一个用例完成双向 SIMULATE/EXECUTE 与 true-long；文档总体更短。
+- **不足：** 自定义 probe 为实现 `IEnergyContainer` 带入无关 NBT 空实现；多个断言使用 `assertSame(null, side)`；packaged gate 把 transfer entries 混入 distribution required set 后再做集合减法，结构不如独立 contract 清楚；没有像 DeepSeek 那样固定 listener notification，单个聚合测试失败时定位粒度较粗。
+- **本任务评价：** 语义完整且较克制，但测试仍达 419 行；整体质量略逊于覆盖更清晰、运行更快的 DeepSeek 版本。
+
+### DeepSeek v4.1 Flash
+
+- **提交：** `2f430878f83a7dfb07fee197e3e528391ed16c04`
+- **规模：** 8 files，`+587/-11`；478 行、13 个 tests。
+- **资源：** 517.1s，111.6k tokens，83 次工具调用；通知未提供成本。
+- **优点：** 十三个按语义分组的测试完整覆盖显式验收；tracking subclass 直接复用真实 `BasicEnergyContainer`，同时证明调用顺序、current remainder/request、mutation 和 listener notification；zero/negative remainder、非正 drain、两种 side、四种 overload context 及 true-long insert/extract 证据清晰；package contract 独立于 distribution 集合；本轮墙钟快 167.3s、tokens 少 18.9k。
+- **不足：** 比 SOL 多 59 行测试和 98 行总 diff；最后一组 caller-range 循环与前面真实容器测试有部分重复，文档也更详细；留下一个未使用的 `assertFalse` import，以及一个从未传入 transfer 调用的 `unused` container/空事件断言，主代理清理了这五行。
+- **本任务评价：** 单体质量最佳；增量覆盖直接对应 mutation/notification 与诊断粒度，额外体积尚可接受，且运行资源更低。
+
+### 本任务结论
+
+- **单体代码质量：** DeepSeek > 5.6 SOL。
+- **执行效率：** DeepSeek 墙钟和 tokens 更低，SOL 工具调用更少且有成本数据。
+- **最终策略：** 采用 DeepSeek 提交并在主线上 cherry-pick 为 `096a8b7d`；`274445b6` 只删除未使用 import 和不参与 transfer 的 tautological fixture，不改变覆盖或行为。未吸收 SOL 的自定义 `IEnergyContainer` probe 和混合 package-set 结构。
+- **综合规模：** 8 files，`+582/-11`；最终测试 473 行、13 tests。
+- **主代理独立验证：** 三个 production source 与 `4646f509` byte-identical；16 个 root oracle、`fabric/build.gradle`、common/platform slices 和 `docs/API_DELTAS.md` 不变；slice 38/32/10；135 tests、0 failures/errors/skips，三个 jqwik properties 各 100,000 tries/checks；完整 Gradle gate 10.08s，`fabric-build.sh` 2.35s，packaged smoke 49.34s 并到达 `Done`；三个 transfer classes 精确各一次且无 `LongTransferUtils*` test/helper；最终 clean release contract 10.94s，恰好一个 JAR，无 test/fixture/NeoForge/JUnit/jqwik 泄漏，`build-info.json` source commit 与最终 HEAD 一致。
