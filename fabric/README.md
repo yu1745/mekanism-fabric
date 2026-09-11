@@ -1,12 +1,11 @@
 # Fabric bootstrap build
 
 This is an independent Gradle/Loom build for the first Java Fabric migration
-stage. It compiles `fabric/src/main` plus an explicit, reviewed slice of the
-official API sources under `../src/api/java`; all other upstream Java sources
-remain excluded. It uses Minecraft 1.21.1, Java 21, and Mojang official
-mappings.
+stage. It compiles explicit, reviewed allowlists from `fabric/src/main`,
+`../src/api/java`, and `../src/main/java`; all other upstream Java sources remain
+excluded. It uses Minecraft 1.21.1, Java 21, and Mojang official mappings.
 
-## Official API slice
+## Audited source slices
 
 `api-slice.txt` is the auditable allowlist of API source paths, relative to
 `src/api/java`. The Fabric source set reads that file directly, so the listed
@@ -23,6 +22,13 @@ adaptations. These sources use only JDK, Minecraft, the existing annotation
 slice, and one another. JetBrains annotations and JSR-305 remain `compileOnly`
 dependencies and are not bundled in the mod.
 
+`common-slice.txt` currently admits the five-file official GameEvent registration
+closure plus nine startup-config/cache sources. `platform-slice.txt` admits only
+the Fabric bootstrap and the registry/config adapters. The registry slice is
+described in `../docs/FABRIC_REGISTRY.md`; the TOML-backed startup slice is
+described in `../docs/FABRIC_CONFIG.md`. Night Config core/toml 3.8.3 are nested
+inside the remapped mod JAR for config persistence.
+
 The next nearby API candidates are blocked by deliberately excluded boundaries:
 incremental-enum helpers close over `ConstantPredicates` (which imports
 NeoForge fluid/tri-predicate and chemical types), and the text/provider enums
@@ -33,7 +39,7 @@ To repeat the portability audit and fail on a missing source, duplicate path,
 or any `net.neoforged` reference, run from the repository root:
 
 ```bash
-./gradlew -p fabric verifyApiSliceNoNeoForge
+./gradlew -p fabric verifyApiSliceNoNeoForge verifyCommonSliceNoNeoForge verifyPlatformSliceNoNeoForge
 ```
 
 The check is also a dependency of Java compilation. Blank lines and lines

@@ -1,0 +1,7 @@
+Night Config core and toml 3.8.3
+Copyright TheElectronWill and contributors
+https://github.com/TheElectronWill/night-config
+
+Distributed as separate nested JARs under the GNU Lesser General Public License v3.0.
+The corresponding source is available from the project URL and Maven Central under
+com.electronwill.night-config:core:3.8.3 and :toml:3.8.3.

@@ -1,4 +1,13 @@
 # Paths are relative to ../src/main/java. Keep one auditable common source per line.
+mekanism/common/config/BaseMekanismConfig.java
+mekanism/common/config/IConfigTranslation.java
+mekanism/common/config/IMekanismConfig.java
+mekanism/common/config/MekanismConfigType.java
+mekanism/common/config/MekanismStartupConfig.java
+mekanism/common/config/StartupConfigTranslations.java
+mekanism/common/config/value/CachedFloatValue.java
+mekanism/common/config/value/CachedIntValue.java
+mekanism/common/config/value/CachedValue.java
 mekanism/common/registration/INamedEntry.java
 mekanism/common/registration/MekanismDeferredHolder.java
 mekanism/common/registration/MekanismDeferredRegister.java

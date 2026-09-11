@@ -73,6 +73,11 @@ dependencies {
     modImplementation "net.fabricmc:fabric-loader:${loader_version}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
 
+    implementation "com.electronwill.night-config:core:${night_config_version}"
+    implementation "com.electronwill.night-config:toml:${night_config_version}"
+    include "com.electronwill.night-config:core:${night_config_version}"
+    include "com.electronwill.night-config:toml:${night_config_version}"
+
     // Annotation types referenced by the official API slice; neither is bundled.
     compileOnly 'org.jetbrains:annotations:24.1.0'
     compileOnly 'com.google.code.findbugs:jsr305:3.0.2'

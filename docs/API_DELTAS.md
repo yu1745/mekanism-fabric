@@ -68,6 +68,21 @@ vanilla `Registry<T>` 提交批次的入口。`MekanismDeferredHolder<R, T>` 不
 `fabric/src/test/java/mekanism/common/registration/MekanismDeferredRegisterTest.java` 以及 packaged
 server smoke。Kilt/Connector 仅用于核对生命周期、冻结和 canonical holder 行为；实现未复制。
 
+## Config contract
+
+状态：基础 spec/manager、primitive cached value 与官方 startup config 已移植。
+
+`IMekanismConfig` 的 `ModConfigSpec` / `ModConfig.Type` 签名分别替换为
+`MekanismConfigSpec` / `MekanismConfigType`；`IConfigTranslation.applyToBuilder` 改接
+Mekanism-owned builder，并直接声明原有 `getTranslationKey()`，不再通过尚含 NeoForge
+`TranslatableEnum` 的 `IHasTranslationKey` 继承。`MekanismStartupConfig` 构造器改为 public，供
+Fabric bootstrap 在完整 `MekanismConfig` 纳入前构造唯一 startup 实例。Cached int/float 的公开
+读写方法与 listener 语义不变，内部 backing value 类型改为 `MekanismConfigSpec.ConfigValue`。
+
+兼容影响：直接依赖 NeoForge config spec/type 或 `IConfigTranslation` 到
+`IHasTranslationKey` 赋值关系的 addon 必须改用 Fabric 侧契约。TOML 文件名、12 个 startup
+路径、默认值、范围、restart 元数据与缓存行为保持。细节和验证见 `docs/FABRIC_CONFIG.md`。
+
 ## Registry-aware NBT contract
 
 状态：基础契约与 `DataHandlerUtils` 已移植；容器接口将在各自依赖闭包可编译时逐项切换。

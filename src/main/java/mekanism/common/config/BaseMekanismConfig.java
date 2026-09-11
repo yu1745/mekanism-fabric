@@ -4,13 +4,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import mekanism.common.Mekanism;
 import mekanism.common.config.value.CachedValue;
-import net.neoforged.neoforge.common.ModConfigSpec;
+import mekanism.fabric.config.MekanismConfigSpec;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public abstract class BaseMekanismConfig implements IMekanismConfig {
-
-    private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor();
+    private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism/Config");
+    private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor(task -> {
+        Thread thread = new Thread(task, "Mekanism Config Saver");
+        thread.setDaemon(true);
+        return thread;
+    });
 
     private final List<CachedValue<?>> cachedConfigValues = new ArrayList<>();
 
@@ -32,11 +37,10 @@ public abstract class BaseMekanismConfig implements IMekanismConfig {
     }
 
     private static class ConfigSaver implements Runnable {
+        private final MekanismConfigSpec configSpec;
+        private int retries;
 
-        private final ModConfigSpec configSpec;
-        private int retries = 0;
-
-        private ConfigSaver(ModConfigSpec configSpec) {
+        private ConfigSaver(MekanismConfigSpec configSpec) {
             this.configSpec = configSpec;
         }
 
@@ -45,11 +49,11 @@ public abstract class BaseMekanismConfig implements IMekanismConfig {
             try {
                 configSpec.save();
             } catch (Exception e) {
-                Mekanism.logger.error("Failed to save config", e);
+                LOGGER.error("Failed to save config", e);
                 if (retries++ < 3) {
                     EXECUTOR.submit(this);
                 } else {
-                    Mekanism.logger.error("Giving up");
+                    LOGGER.error("Giving up");
                 }
             }
         }

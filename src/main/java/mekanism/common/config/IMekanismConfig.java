@@ -1,8 +1,7 @@
 package mekanism.common.config;
 
 import mekanism.common.config.value.CachedValue;
-import net.neoforged.fml.config.ModConfig;
-import net.neoforged.neoforge.common.ModConfigSpec;
+import mekanism.fabric.config.MekanismConfigSpec;
 
 public interface IMekanismConfig {
 
@@ -10,13 +9,13 @@ public interface IMekanismConfig {
 
     String getTranslation();
 
-    ModConfigSpec getConfigSpec();
+    MekanismConfigSpec getConfigSpec();
 
     default boolean isLoaded() {
         return getConfigSpec().isLoaded();
     }
 
-    ModConfig.Type getConfigType();
+    MekanismConfigType getConfigType();
 
     void save();
 

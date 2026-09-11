@@ -4,11 +4,13 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.function.BiPredicate;
-import mekanism.common.Mekanism;
 import mekanism.common.config.IMekanismConfig;
-import net.neoforged.neoforge.common.ModConfigSpec.ConfigValue;
+import mekanism.fabric.config.MekanismConfigSpec.ConfigValue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public abstract class CachedValue<T> {
+    private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism/Config");
 
     private final IMekanismConfig config;
     protected final ConfigValue<T> internal;
@@ -29,15 +31,15 @@ public abstract class CachedValue<T> {
             invalidationListeners = new HashSet<>();
         }
         if (!invalidationListeners.add(listener)) {
-            Mekanism.logger.warn("Duplicate invalidation listener added");
+            LOGGER.warn("Duplicate invalidation listener added");
         }
     }
 
     public void removeInvalidationListener(IConfigValueInvalidationListener listener) {
         if (invalidationListeners == null) {
-            Mekanism.logger.warn("Unable to remove specified invalidation listener, no invalidation listeners have been added.");
+            LOGGER.warn("Unable to remove specified invalidation listener, no invalidation listeners have been added.");
         } else if (!invalidationListeners.remove(listener)) {
-            Mekanism.logger.warn("Unable to remove specified invalidation listener.");
+            LOGGER.warn("Unable to remove specified invalidation listener.");
         }
     }
 

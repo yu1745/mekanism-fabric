@@ -1,5 +1,7 @@
 # Paths are relative to src/main/java. Keep one auditable Fabric source per line.
 mekanism/fabric/MekanismFabricBootstrap.java
+mekanism/fabric/config/FabricMekanismConfigManager.java
+mekanism/fabric/config/MekanismConfigSpec.java
 mekanism/fabric/registry/FabricDeferredHolder.java
 mekanism/fabric/registry/FabricDeferredRegister.java
 mekanism/fabric/registry/FabricRegistryLifecycle.java
