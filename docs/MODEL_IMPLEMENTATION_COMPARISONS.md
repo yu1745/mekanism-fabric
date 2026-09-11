@@ -654,3 +654,38 @@ Gemini 3.8 Flash 与 GLM 5.3 不再进入默认实现面板；需要其特定能
 - **最终策略：** 以 SOL candidate cherry-pick 为主线提交 `9e1a4527`；综合提交 `5ff829a5` 在原 sequenced test 中把 minimum 改成精确 `List is too short: 2` 断言，并固定 maximum 的 failed-input remainder 为 `["bad"]`，不新增 test method，也不引入 DeepSeek 的额外 fixture、第二测试文件或冗长文档。
 - **综合规模：** 8 files，`+153/-11`；local suite 114 行、5 tests，满足未来测试增长政策。
 - **主代理独立验证：** 三个 production source 与 `4646f509` 字节一致，`fabric/build.gradle`、18 个 oracle files/paths 和全部既有测试不变；slice 42/37/10 且无重复；32 suites、174 tests、0 failures/errors/skips，三个 jqwik properties 各 100,000 tries/checks；完整 Gradle gate 10.18s，`fabric-build.sh` 4.06s，packaged smoke 52.67s 并到达 `Done`；clean release 10.98s，恰好一个 JAR，两个 codec package 精确四类，无 test/fixture/NeoForge/JUnit/jqwik 泄漏，`build-info.json` source commit 与实现 HEAD `5ff829a5` 一致，JAR sha256 为 `c7e1a9211e26c4747270ad2c1073a9ece6ae2309a78d08c91878b757373eb278`。
+
+---
+
+## 任务 012：纳入 dynamic strict-energy policy 闭包
+
+### 任务简述
+
+- **固定比较基线：** `326cdec11399524ed80abd4d6dcc2465835ddb4c`；两个候选启动后，主线另以独立 docs-only 提交 `b369ca79` 删除测试源码行数限制，该政策变更不参与候选比较。
+- **目标：** 原样纳入 `SimpleDynamicHandler`、`DynamicHandler` 与 `DynamicStrictEnergyHandler`，把已验证的 strict handler defaults 连接到 nullable-side predicate、container supplier 与可选 listener policy。
+- **关键验收：** 三份 production source 与 `4646f509` 字节一致；slice 42/40/10，18-file official root oracle 与 `fabric/build.gradle` 不变；覆盖四种 denied operation、supplier short-circuit、indexed 与 aggregate insert/extract、side/Action/Automation forwarding、predicate independence、nullable direct lookup 和 listener；root capability 与 common energy 包精确限制；修正不存在的 `EnergyHandler` 旧措辞；不引入 helper/config holder、side configuration/ejector、Universal Cable、external API/conversion/lookup/transaction、owner、persistence 或 caller。
+
+### 5.6 SOL
+
+- **提交：** `c22d9449ad9f0ca4bfbd3adad3b61264550a2b7a`
+- **规模：** 8 files，`+187/-18`；local suite 123 行、4 tests。
+- **资源：** 416.5s，91.9k tokens，48 次工具调用，约 `$1.48`。
+- **优点：** 四种 indexed/aggregate insert/extract denied 路径都同时证明 predicate result、原样 remainder/zero 和 supplier 零调用；allowed 路径同时覆盖 indexed 与 aggregate 两个方向及两种 Action，直接记录 `AutomationType.EXTERNAL`；nullable direct supplier identity 与可选 listener 独立清楚；文档比 DeepSeek 明显简洁；候选的 178 tests、package gate、packaged smoke 与 release 均通过。
+- **不足：** allowed indexed 路径只有单容器并固定 index 0；即使实现错误地忽略 index，也会通过，未独立证明 index forwarding。predicate independence 由双向 allowed/denied 组合间接证明，不如 DeepSeek 用单 handler 对照直接。
+- **本任务评价：** 行为方向覆盖、文档克制和 package contract 最平衡，是更合适的整合基底；唯一实质缺口可用极小 fixture 调整补齐。
+
+### DeepSeek v4.1 Flash
+
+- **提交：** `2b9a6af0287d16dacd7d9441df077c92ae9f8c73`
+- **规模：** 8 files，`+240/-19`；local suite 131 行、4 tests。
+- **资源：** 390.4s，98.1k tokens，77 次工具调用；通知未提供成本。
+- **优点：** indexed insertion 明确选择 index 1，并证明第一个 container 完全未调用；同一 handler 的 insert allowed/extract denied 直接固定两个 predicate 相互独立；四种 denied path、supplier short-circuit、nullable lookup/list identity 和 listener 均清楚；比 SOL 快 26.1s，全部门禁通过。
+- **不足：** allowed 路径只证明 insertion：extraction 只出现在 denied 路径，没有把 allowed extract 的 amount/Action/Automation bridge 送入真实 container；aggregate 也只有 insertion。`FABRIC_ENERGY.md` 与 `fabric/README.md` 分别比 SOL 多约 31/20 行，较多重复逐项说明；总 diff 多 53 行、工具调用多 29 次。
+- **本任务评价：** exact-index 与 predicate-independence 证据最佳，但 allowed direction coverage 和文档信息密度逊于 SOL；适合作为针对性补充来源。
+
+### 本任务结论
+
+- **单体代码质量：** 5.6 SOL > DeepSeek；**执行效率：** DeepSeek 墙钟略快，SOL 少 6.2k tokens、29 次工具调用且有成本数据。
+- **最终策略：** 将 SOL candidate 在包含最新测试政策的主线上 cherry-pick 为 `4d804f64`；综合提交 `b6ee11db` 把其 indexed fixture 改为 `[untouched, target]` 并调用 index 1，立即断言第一个 container 无事件，随后用独立 aggregate handler 保留 SOL 原有双向 aggregate 证据。没有吸收 DeepSeek 的 insertion-only allowed 结构或冗长文档。
+- **综合规模：** Task012 本身相对固定基线（排除独立 `AGENTS.md` 政策提交）8 files，`+200/-18`；local suite 136 行、4 tests。
+- **主代理独立验证：** 三个 production source 与 `4646f509` 字节一致，18 个 official root oracle、`fabric/build.gradle` 和既有测试均未改变；slice 42/40/10 且无重复；33 suites、178 tests、0 failures/errors/skips，三个 jqwik properties 各 100,000 tries/checks；完整 clean Gradle gate 20.23s，`fabric-build.sh` 2.79s，packaged smoke 51.87s 并到达 `Done`；root capability 与 common energy 包精确匹配预期四个 production class，无 test/fixture/NeoForge/JUnit/jqwik 泄漏；implementation clean release 11.05s，恰好一个 JAR，`build-info.json` source commit 与 `b6ee11db` 一致，JAR sha256 为 `2b0a9f18f9e316ac51831403e3618d3d7216e807036df2d381108334a6bf60e1`。
