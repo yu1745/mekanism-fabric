@@ -19,6 +19,26 @@ repositories {
 def apiSlice = file('api-slice.txt').readLines()
       .collect { it.trim() }
       .findAll { it && !it.startsWith('#') }
+if (apiSlice.size() != apiSlice.toSet().size()) {
+    throw new GradleException('fabric/api-slice.txt contains duplicate source paths')
+}
+def apiSliceFiles = apiSlice.collect { file("../src/api/java/${it}") }
+
+tasks.register('verifyApiSliceNoNeoForge') {
+    group = 'verification'
+    description = 'Checks that every allowlisted official API source exists and has no NeoForge reference.'
+    inputs.files(apiSliceFiles)
+    doLast {
+        def missing = apiSliceFiles.findAll { !it.isFile() }
+        if (!missing.isEmpty()) {
+            throw new GradleException("Missing API slice sources: ${missing.join(', ')}")
+        }
+        def violations = apiSliceFiles.findAll { it.text.contains('net.neoforged.') }
+        if (!violations.isEmpty()) {
+            throw new GradleException("NeoForge references entered the Fabric API slice: ${violations.join(', ')}")
+        }
+    }
+}
 
 sourceSets {
     main {
@@ -50,6 +70,7 @@ processResources {
 }
 
 tasks.withType(JavaCompile).configureEach {
+    dependsOn tasks.named('verifyApiSliceNoNeoForge')
     options.release = 21
     options.encoding = 'UTF-8'
 }

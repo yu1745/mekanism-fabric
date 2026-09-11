@@ -16,15 +16,15 @@ summary said 18, but its itemized list contains 17); their dependency closure
 requires no additional Mekanism source. JetBrains annotations and JSR-305 are
 available as `compileOnly` dependencies and are not bundled in the mod.
 
-To repeat the portability audit and fail if any allowlisted source imports
-NeoForge, run from the repository root:
+To repeat the portability audit and fail on a missing source, duplicate path,
+or any `net.neoforged` reference, run from the repository root:
 
 ```bash
-! rg -v '^(#|$)' fabric/api-slice.txt | xargs -I{} rg -n '^import net\.neoforged\.' src/api/java/{}
+./gradlew -p fabric verifyApiSliceNoNeoForge
 ```
 
-Blank lines and lines beginning with `#` are ignored by Gradle; keep actual
-source entries one per line so the command above remains directly repeatable.
+The check is also a dependency of Java compilation. Blank lines and lines
+beginning with `#` are ignored; keep actual source entries one per line.
 
 Build from the repository root:
 
