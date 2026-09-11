@@ -87,6 +87,38 @@ class EnergyContainerHolderTest {
     }
 
     @Test
+    void proxiedCreatePreservesIndependentPredicatesAndExactContainerLookup() {
+        List<IEnergyContainer> nullContainers = List.of(BasicEnergyContainer.create(10, null));
+        List<IEnergyContainer> eastContainers = List.of(BasicEnergyContainer.create(20, null));
+        List<Direction> insertSides = new java.util.ArrayList<>();
+        List<Direction> extractSides = new java.util.ArrayList<>();
+        List<Direction> lookupSides = new java.util.ArrayList<>();
+        ProxiedEnergyContainerHolder holder = ProxiedEnergyContainerHolder.create(
+              side -> {
+                  insertSides.add(side);
+                  return side == null;
+              },
+              side -> {
+                  extractSides.add(side);
+                  return side == Direction.EAST;
+              },
+              side -> {
+                  lookupSides.add(side);
+                  return side == null ? nullContainers : eastContainers;
+              });
+
+        assertTrue(holder.canInsert(null));
+        assertTrue(!holder.canExtract(null));
+        assertTrue(!holder.canInsert(Direction.EAST));
+        assertTrue(holder.canExtract(Direction.EAST));
+        assertEquals(java.util.Arrays.asList(null, Direction.EAST), insertSides);
+        assertEquals(java.util.Arrays.asList(null, Direction.EAST), extractSides);
+        assertSame(nullContainers, holder.getEnergyContainers(null));
+        assertSame(eastContainers, holder.getEnergyContainers(Direction.EAST));
+        assertEquals(java.util.Arrays.asList(null, Direction.EAST), lookupSides);
+    }
+
+    @Test
     void duplicateMappingsAndLiveListsPreserveOfficialHolderBehavior() {
         EnergyContainerHolder holder = new EnergyContainerHolder(() -> Direction.NORTH);
         IEnergyContainer repeated = BasicEnergyContainer.create(100, null);

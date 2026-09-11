@@ -13,7 +13,7 @@ The first storage milestone admits the official Mekanism energy-container contra
 - `mekanism.common.capabilities.DynamicHandler`
 - `mekanism.common.capabilities.energy.DynamicStrictEnergyHandler`
 
-The slice count is API 42 / common 60 / platform 10. The common count includes the seven byte-identical `4646f509` color/effect/spatial foundations documented in `FABRIC_PORT.md`; their exact JAR families and bounded tests do not admit any energy caller, owner, external API, lifecycle, networking, persistence, registry, or thread-safety guarantee. It also admits official
+The slice count is API 42 / common 70 / platform 10. The common count includes the seven byte-identical `4646f509` color/effect/spatial foundations documented in `FABRIC_PORT.md`; their exact JAR families and bounded tests do not admit any energy caller, owner, external API, lifecycle, networking, persistence, registry, or thread-safety guarantee. It also admits official
 `mekanism.common.lib.LastEnergyTracker` byte-identically to `4646f509` as a
 platform-neutral per-game-time accounting closure. Same-time calls accumulate a current
 bucket while the visible last bucket remains unchanged; every different timestamp—including
@@ -65,7 +65,7 @@ The three dynamic handler sources are byte-identical to `4646f509`. Insert and e
 
 ## Sequential transfer utilities
 
-The unchanged official long-valued transfer closure is admitted as part of the current API/common/platform slice count 42 / 66 / 10:
+The unchanged official long-valued transfer closure is admitted as part of the current API/common/platform slice count 42 / 70 / 10:
 
 - `mekanism.api.math.LongTransferUtils`
 - `mekanism.api.container.InContainerGetterLong`
@@ -97,6 +97,12 @@ The official source adds no policy, and this slice adds none. Callers must provi
 - `InContainerGetterLong`/`LongToLongContainerInteraction` results that do not require overflow defense.
 
 Invalid handler returns, mismatched `containerCount`/list size, and overflow remain undefined for callers rather than defended here.
+
+## Internal energy support subclosures
+
+`ProxiedEnergyContainerHolder`, `EnergyAcceptorTarget`, `EnergySaveTarget`, and `LaserDissipationHandler` are admitted unchanged and remain byte-identical to official baseline `4646f509`. Six Fabric-local tests bind three narrow contracts: the proxied holder keeps independent insert/extract predicates and forwards exact nullable sides while returning the function's list identity; the acceptor bridge uses `EmitUtils`, forwards exact `SIMULATE`/`EXECUTE`, preserves true-`long` order/results, computes acceptance as offer minus remainder, and accounts execution shortfall from the actual remainder; save handlers simulate remaining capacity, accept fairly, defer publication until `save()`, publish saturated/zero values repeatedly, clamp aggregate stored totals, and have delegates snapshot max capacity, call `setEnergy`, and read current storage. The immutable laser handler retains 0, 1, ordinary values, validates each percentage independently (including infinities), and intentionally preserves raw-comparison NaN acceptance.
+
+These classes add no wire protocol or adapter. All owners/callers, transmitter/dynamic-network lifecycle, actual emission ticks, capability registration/lookup/exposure, Fabric Energy API/conversion/transactions/rollback, side configuration/ejection, machine/tile/item integration, laser armor/item attachment registration, damage handling, networking/serialization/persistence/threading remain deferred.
 
 ## Deliberately deferred
 

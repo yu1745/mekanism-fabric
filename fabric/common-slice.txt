@@ -8,10 +8,12 @@ mekanism/common/capabilities/holder/IHolder.java
 mekanism/common/capabilities/holder/ProxiedHolder.java
 mekanism/common/capabilities/holder/energy/EnergyContainerHolder.java
 mekanism/common/capabilities/holder/energy/IEnergyContainerHolder.java
+mekanism/common/capabilities/holder/energy/ProxiedEnergyContainerHolder.java
 mekanism/common/capabilities/holder/heat/HeatCapacitorHolder.java
 mekanism/common/capabilities/holder/heat/IHeatCapacitorHolder.java
 mekanism/common/capabilities/heat/BasicHeatCapacitor.java
 mekanism/common/capabilities/heat/VariableHeatCapacitor.java
+mekanism/common/capabilities/laser/item/LaserDissipationHandler.java
 mekanism/common/capabilities/proxy/ProxyHandler.java
 mekanism/common/capabilities/proxy/ProxyHeatHandler.java
 mekanism/common/capabilities/proxy/ProxyStrictEnergyHandler.java
@@ -28,6 +30,8 @@ mekanism/common/config/listener/ConfigBasedCachedSupplier.java
 mekanism/common/config/value/CachedFloatValue.java
 mekanism/common/config/value/CachedIntValue.java
 mekanism/common/config/value/CachedValue.java
+mekanism/common/content/network/distribution/EnergyAcceptorTarget.java
+mekanism/common/content/network/distribution/EnergySaveTarget.java
 mekanism/common/lib/Color.java
 mekanism/common/lib/LastEnergyTracker.java
 mekanism/common/lib/WildcardMatcher.java

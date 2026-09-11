@@ -363,6 +363,37 @@ actual_direct_holders = {
 }
 if actual_direct_holders != expected_direct_holders or any(entries.count(entry) != 1 for entry in expected_direct_holders):
     raise SystemExit(f"unexpected direct holder class family: {sorted(actual_direct_holders)!r}")
+expected_energy_holders = {
+    "mekanism/common/capabilities/holder/energy/EnergyContainerHolder.class",
+    "mekanism/common/capabilities/holder/energy/IEnergyContainerHolder.class",
+    "mekanism/common/capabilities/holder/energy/ProxiedEnergyContainerHolder.class",
+}
+actual_energy_holders = {
+    entry for entry in entries
+    if entry.startswith("mekanism/common/capabilities/holder/energy/") and entry.endswith(".class")
+}
+if actual_energy_holders != expected_energy_holders or any(entries.count(entry) != 1 for entry in expected_energy_holders):
+    raise SystemExit(f"unexpected energy-holder class family: {sorted(actual_energy_holders)!r}")
+expected_energy_distribution = {
+    "mekanism/common/content/network/distribution/EnergyAcceptorTarget.class",
+    "mekanism/common/content/network/distribution/EnergySaveTarget.class",
+    "mekanism/common/content/network/distribution/EnergySaveTarget$SaveHandler.class",
+    "mekanism/common/content/network/distribution/EnergySaveTarget$DelegateSaveHandler.class",
+}
+actual_energy_distribution = {
+    entry for entry in entries
+    if entry.startswith("mekanism/common/content/network/distribution/") and entry.endswith(".class")
+}
+if (actual_energy_distribution != expected_energy_distribution
+        or any(entries.count(entry) != 1 for entry in expected_energy_distribution)):
+    raise SystemExit(f"unexpected energy-distribution class family: {sorted(actual_energy_distribution)!r}")
+expected_laser_item = {"mekanism/common/capabilities/laser/item/LaserDissipationHandler.class"}
+actual_laser_item = {
+    entry for entry in entries
+    if entry.startswith("mekanism/common/capabilities/laser/item/") and entry.endswith(".class")
+}
+if actual_laser_item != expected_laser_item or entries.count(next(iter(expected_laser_item))) != 1:
+    raise SystemExit(f"unexpected laser-item class family: {sorted(actual_laser_item)!r}")
 expected_cached_suppliers = {
     "mekanism/common/config/listener/ConfigBasedCachedSupplier.class",
     "mekanism/common/config/listener/ConfigBasedCachedFloatSupplier.class",

@@ -18,7 +18,7 @@ fluid-import/link cleanup; `IMekanismStrictEnergyHandler` remains byte-identical
 See `../docs/API_DELTAS.md`. JetBrains annotations and JSR-305 remain `compileOnly`
 and are not bundled in the mod.
 
-`common-slice.txt` contains **66 official source files**, and
+`common-slice.txt` contains **70 official source files**, and
 `platform-slice.txt` contains **10 project-owned Fabric sources**. Seven spatial/color/effect foundations (`Color`, `CustomEffect`, `Pos3D`, `Quaternion`, `Range3D`, `MultipartUtils`, and `StatUtils`) remain byte-identical to `4646f509`. Twelve Java 21 tests bound channel/HSV/compositing/statistics, effect state, vector/range/rotation/quaternion state, and direct multipart ray selection. Packaging permits exactly four direct common-lib classes, one effect class, three math classes, the three `MultipartUtils` classes, and one `StatUtils` class. This admits no caller or owner: renderers/particles/GUI/recipe viewers/client lifecycle, transmitters/multipart blocks/gear, machines/block types/entities, packet tracking/network ranges, SPS/multiblock, additions/generators, external energy, world/chunk lifecycle, registries/config/persistence all remain deferred; there is no rendering integration, entity/player lifecycle, block registration, networking, thread-safety, or collision-owner guarantee. Together with
 the **42-file API slice**, they form bounded registry/GameEvent, TOML
 startup-config, configuration-handshake, internal energy storage/holder, internal
@@ -168,6 +168,8 @@ The repository-level `./build.sh [--clean] [--out <dir>]` contract invokes this
 Fabric build and collects only its remapped release JAR. The exact buildable
 NeoForge oracle remains available at baseline commit `4646f509`; current ported
 sources are not expected to compile with the root NeoForge Gradle build.
+
+Task 018 adds four byte-identical `4646f509` internal support sources: the proxied energy holder, acceptor/save distribution bridges, and immutable laser dissipation handler. Six local tests bind exact nullable predicate/list identity, action/true-`long` remainder/order and execution shortfall, fair delayed/repeated saturated/zero saves with clamped/delegate storage, and independent laser bounds/infinity plus raw-comparison NaN behavior. Exact JAR gates reject same-package leakage. This adds no wire protocol or adapter; all owners/callers, transmitter/dynamic-network lifecycle, emission ticks, capability registration/lookup/exposure, Fabric Energy conversion/transactions/rollback, side config/ejection, machine/tile/item integration, laser attachment/damage, networking/serialization/persistence/threading remain deferred.
 
 Dependency versions were checked against Fabric's official Maven metadata:
 
