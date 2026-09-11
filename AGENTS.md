@@ -50,8 +50,8 @@ scripts/fabric-paired-network-smoke.sh  # 隔离 Loom server + 两个顺序新 c
 scripts/fabric-configuration-rejection-smoke.sh # 错版/同版本显式拒绝/缺失协议 receiver 客户端的拒绝门禁（同上环境要求）
 ```
 
-## 四模型并行实现评估
+## 双模型并行实现评估
 
-后续有明确边界和可执行验收门禁的开发任务，默认让 5.6 SOL、Gemini 3.8 Flash、DeepSeek v4.1 Flash 与 GLM 5.3（固定 `thinking=high`）从同一 clean commit 在隔离 worktree 中并行实现，并为四个顶层代理默认开启 300 秒 supervision watch。主代理必须检查真实 diff、综合取舍并独立验证，不能只采信代理总结；watch 只用于发现方向、范围或验收漂移，不干预可自行修复的普通构建/测试错误。每次任务的简述、四份评价、指标和最终选择持续追加到 `docs/MODEL_IMPLEMENTATION_COMPARISONS.md`。一次结果只评价该任务，不直接形成永久模型排名。
+四模型阶段已在任务 001–004 后结束；结论与原始指标见 `docs/MODEL_IMPLEMENTATION_COMPARISONS.md`。后续有明确边界和可执行验收门禁的开发任务，默认让 **5.6 SOL** 与 **DeepSeek v4.1 Flash** 从同一 clean commit 在隔离 worktree 中并行实现，并为两个顶层代理默认开启 300 秒 supervision watch。主代理必须检查真实 diff、综合取舍并独立验证，不能只采信代理总结；watch 只用于发现方向、范围或验收漂移，不干预可自行修复的普通构建/测试错误。每次任务的简述、两份评价、指标和最终选择持续追加到 `docs/MODEL_IMPLEMENTATION_COMPARISONS.md`。一次结果只评价该任务，不直接形成跨项目的永久模型排名。
 
 Fabric 主线使用 Mojang official mappings。官方 API、common 与 Fabric adapter 源码分别通过 `fabric/api-slice.txt`、`fabric/common-slice.txt`、`fabric/platform-slice.txt` 逐项纳入；不得复制源码、改包名、加入 Kotlin，或为消除编译错误而无审计地扩大清单。

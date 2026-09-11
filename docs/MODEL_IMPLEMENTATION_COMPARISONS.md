@@ -1,20 +1,20 @@
-# 四模型并行实现评估记录
+# 并行实现评估记录
 
-本文档长期记录同一开发任务由四个模型独立实现后的实际表现。它不是一次实验后的永久排行榜；只有积累多种任务类型后，才据此判断各模型的稳定优势、弱点和适用范围。
+本文档长期记录同一开发任务由多个模型独立实现后的实际表现。任务 001–004 是四模型选拔阶段；用户指定任务 004 为最后一次四模型比较，之后缩减为两个模型。结论只服务于本 Mekanism Fabric 项目的默认开发流程，不视为跨项目永久排行榜。
 
-## 固定参评模型
+## 当前固定参评模型
 
-除非用户以后调整，后续适合并行比较的开发任务默认同时使用：
+从任务 005 起，后续适合并行比较的开发任务默认同时使用：
 
 1. **5.6 SOL**（继承/default 模型）；
-2. **Gemini 3.8 Flash**（`antigravity/gemini-3.8-flash`）；
-3. **DeepSeek v4.1 Flash**（`commandcode/deepseek-v4.1-flash`）；
-4. **GLM 5.3**（`zai-coding-cn/glm-5.3`，从下一项任务起固定使用 `thinking=high`）。
+2. **DeepSeek v4.1 Flash**（`commandcode/deepseek-v4.1-flash`）。
+
+Gemini 3.8 Flash 与 GLM 5.3 不再进入默认实现面板；需要其特定能力时仍可按任务显式调用。任务 001–004 的四模型原始评价和指标完整保留在下文。
 
 ## 执行与评价规则
 
-- 四个代理必须从同一 clean commit 开始，使用独立 Git worktree，并收到相同的目标、范围、约束和验收门禁。
-- 四个顶层代理启动后默认各开启 300 秒 supervision watch；只在方向、范围、验收漂移、反复无新证据失败、明确求助或高风险越界时干预，普通构建/测试错误留给代理自行修复。
+- 两个代理必须从同一 clean commit 开始，使用独立 Git worktree，并收到相同的目标、范围、约束和验收门禁。
+- 两个顶层代理启动后默认各开启 300 秒 supervision watch；只在方向、范围、验收漂移、反复无新证据失败、明确求助或高风险越界时干预，普通构建/测试错误留给代理自行修复。
 - 每个代理都必须实际开发、验证并提交；禁止读取、复制或 cherry-pick 其他参评代理的实现。
 - 比较以真实 commit/diff 和测试证据为准，不以代理总结为准。
 - 评价至少覆盖：
@@ -313,3 +313,77 @@
 - Gemini 三项 Reload 前 token 数据统一标记为 provider 缓存 bug 污染；修复效果必须从 Reload 后任务 004 开始衡量。
 
 三个样本仍不足以形成永久排名，且尚未覆盖大型 adapter、并发和事务语义。
+
+---
+
+## 任务 004：纳入官方公平分配算法
+
+### 任务简述
+
+- **基线：** `4e8327c7c0216a03287104c035981411f37f695a`
+- **目标：** 原样纳入 `EmitUtils`、`SplitInfo`、`IntegerSplitInfo`、`LongSplitInfo` 与 `Target`，保持 int/long 均分、重平衡、余量顺序、lying-handler fallback 与 handler 契约语义。
+- **关键验收：** common slice 从 24 增至 29；15 个官方测试/辅助源码原样接入（14 个 JUnit examples + 3 个各 100,000 tries 的 jqwik properties）；本地边界测试覆盖 null/empty/zero、插入顺序、`Integer.MAX_VALUE` 和不经 int clamp 的 true-long/`Long.MAX_VALUE`；最终 JAR 六个生产 class entries 恰好各一份且无测试/helper；不宣称 transport caller 或 Fabric transaction 已移植。
+
+### 5.6 SOL
+
+- **提交：** `970bda120e050bc40ac89567ef0e6bd39e5fc0bb`
+- **规模：** 8 files，`+286/-16`；166 行、5 个 boundary tests；不复制官方测试。
+- **资源：** 649.8s，114.7k tokens，65 次工具调用，约 `$2.00`。
+- **优点：** 直接把精确 15-file oracle 集合追加到 `compileTestJava`，结构最少；边界测试以 5 个聚合用例完整满足验收；packaged smoke 使用 ZIP allowlist 同时证明六类各一次并拒绝任何额外 distribution class；四份文档最克制。生产和 oracle 源均保持 byte-identical，97 个测试节点及全部门禁通过。
+- **不足：** oracle 路径硬编码在 `build.gradle`，没有像 GLM 那样对 root oracle 目录未来新增文件自动报错；边界用例聚合后单个失败的定位粒度不如其他实现。
+- **本任务评价：** 正确性、门禁强度、体积和可维护性平衡最佳，直接作为主线实现。
+
+### Gemini 3.8 Flash（Reload 后首个样本）
+
+- **提交：** `9a88c34cdaa2dd3f09100575602485d76bf1ce57`
+- **规模：** 24 files，`+1221/-15`；复制 15 个 oracle 文件并加 byte-fidelity gate；591 行、19 个 boundary tests。
+- **资源：** 847.3s，787.1k tokens，134 次工具调用，约 `$1.63`。
+- **优点：** 自动逐字节比较复制 oracle 与 root；边界测试覆盖很广，111 个测试节点全部通过；JUnit BOM 与 jqwik wiring 清楚。
+- **不足：** 相比 SOL 增加约 4.3 倍代码，复制 15 个本可原地编译的测试文件，19 个本地测试大量重复官方 rebalancing/fallback 和相邻数值案例；packaged smoke 只验证类至少存在一次，而最终总结错误声称脚本已证明“恰好一次”。
+- **Reload 后计量：** provider 修复后的本轮仍为 787.1k tokens，是 SOL 的 6.9 倍、三位其他模型中位数的约 6 倍；相对任务 002–003 的同组倍率没有实质下降。单个不同复杂度任务不能证明 provider 内部细节，但至少没有观察到可用于本项目决策的 token 正常化。
+- **本任务评价：** 功能正确但明显过度实现，并存在总结与真实门禁不一致；质量第四。
+
+### DeepSeek v4.1 Flash
+
+- **提交：** `62525ae75ddda145a4e378e08989d922ef9dfeae`
+- **规模：** 10 files，`+424/-10`；292 行、7 个 boundary tests；不复制官方测试。
+- **资源：** 558.7s，132.1k tokens，92 次工具调用；通知未提供成本。
+- **优点：** 本轮墙钟最快；以独立 `test-oracle-slice.txt` 和 source set 原地编译官方测试，和生产 allowlist 风格一致；true-long 测试详细；packaged smoke 同 SOL 一样精确计数六类；99 个测试节点及全部门禁通过。
+- **不足：** 为一个测试族新增 ignored-text 例外和 source set，边界测试比 SOL 长约 76%，README 说明也偏重；oracle verifier 固定数量但不自动核对 root 目录未来新增文件。
+- **本任务评价：** 质量第二；证据充分且速度好，但没有足够收益抵消额外结构和代码量。
+
+### GLM 5.3（`thinking=high`）
+
+- **提交：** `75c92c3d`
+- **规模：** 9 files，`+412/-10`；272 行、7 个 boundary tests；不复制官方测试。
+- **资源：** 1353.5s，156.1k tokens，96 次工具调用，约 `$2.02`。
+- **优点：** 独立 oracle source set 设计清楚；四者中唯一主动让 verifier 在 root oracle 目录未来增删文件时都失败；边界与文档完整，99 个测试节点及最终门禁通过。
+- **不足：** Gradle wiring 最复杂；packaged smoke 只查存在而未在脚本内精确计数；中途经历 source-set 编译配置失败和 stale-test 诊断，最终墙钟为四者最慢、约 SOL 2.1 倍，`thinking=high` 未形成稳定收益。
+- **本任务评价：** 质量第三；有一个值得参考的完整性门禁，但成本和复杂度不适合作为整合基底。
+
+### 本任务结论
+
+- **单体代码质量：** 5.6 SOL > DeepSeek > GLM 5.3 high > Gemini。
+- **执行效率：** DeepSeek 与 SOL 领先；GLM high 最慢；Gemini token 使用仍远高于同组。
+- **最终策略：** 直接采用 SOL 提交 `970bda12`，不加入其余实现的额外结构；当前精确 allowlist 已防止无关 root tests 被编译，未来官方 baseline 固定，因此 GLM 的目录新增检测不足以抵消复杂度。
+- **主代理独立验证：** 五个生产文件与 15 个 root oracle 相对 `4646f509` diff 为空；slice 为 35 / 29 / 10；97 tests、0 failures/errors/skips，三个 property 各 100,000 tries；完整 Gradle gate 18.67s，`fabric-build.sh` 2.47s，packaged smoke 47.83s，clean release 10.44s；一个 JAR、六类各一次、无 distribution test/helper、fixture、NeoForge、jqwik 或 JUnit 类，`build-info.json` source commit 与 `970bda12` 一致。
+
+## 四模型阶段最终结论与双模型选择
+
+四项任务在本项目上的单体质量顺序如下：
+
+| 任务 | 质量顺序 |
+|---|---|
+| 001 configuration rejection | SOL > DeepSeek > GLM > Gemini |
+| 002 variable heat capacitor | SOL > DeepSeek > Gemini > GLM |
+| 003 wildcard matcher | SOL > DeepSeek > GLM > Gemini |
+| 004 fair distribution | SOL > DeepSeek > GLM > Gemini |
+
+最终默认保留 **5.6 SOL + DeepSeek v4.1 Flash**：
+
+- **5.6 SOL** 四次均提供最适合作为整合基底的实现，稳定优势是语义完整、范围克制、测试够强且代码量最低或接近最低。
+- **DeepSeek** 四次均为质量第二，持续提供可吸收的边界测试、shell/Gradle 结构或诊断证据；速度与 tokens 大多接近 SOL，本轮还是墙钟最快。它是最稳定且互补的第二实现来源。
+- **GLM** 在默认 effort 的小任务中曾有明显成本优势，但出现验收和文档遗漏；`thinking=high` 后完整性改善，时间/token 优势却消失，任务 004 增至 1353.5s。其强项可按需用于机械、强门禁任务，但不保留在默认面板。
+- **Gemini** 能完成门禁，但四次均有冗余、语义/清理或总结准确性问题。任务 001–003 token 数据受已知 provider bug 污染；Reload 后任务 004 仍未显示相对同组的实质改善，因此不以 provider bug 作为唯一淘汰理由，代码质量和范围控制也不足以超过 DeepSeek。
+
+从任务 005 起，两个代理继续遵循同 clean commit、隔离 worktree、相同 prompt/gates、300 秒 watch、主代理检查真实 diff 并独立验证的规则。该选择是基于本仓库四个样本的工程决策，不推广为所有项目或所有任务的永久模型排名。
