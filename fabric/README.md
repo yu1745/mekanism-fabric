@@ -60,16 +60,17 @@ startup marker. `SyncMapper`, annotations, tracked data, containers, networking,
 reflection scanning, and all callers remain deferred.
 
 `RegistryUtils` has only the two minimal vanilla equivalents documented in
-`../docs/API_DELTAS.md`: `unwrapKey().orElse(null)` preserves nullable NeoForge
-holder-key behavior, while `getResourceKey(...).map(ResourceKey::location)`
-preserves null for unknown values even when scanning a defaulted registry.
-Fabric-local tests prove canonical built-in block-entity/block holders, all NBT ID
-rejection paths, block paths, keyed/direct holder naming, registered/unknown raw
+`../docs/API_DELTAS.md`. Its holder-key helper uses `unwrapKey()` and preserves
+NeoForge's nullable result for a value-only intrusive reference whose key is not
+yet bound; registry scans use `getResourceKey(...).map(ResourceKey::location)`
+so an unknown value in a defaulted registry remains null. Fabric-local tests
+cover canonical built-in holders, all NBT ID rejection paths, block paths,
+keyed/direct and key-only/value-only holder states, registered/unknown raw
 objects, and the direct-holder short circuit. The null fallback in `getBEHolder`
 is not forced because normal vanilla built-ins make it unreachable and tests do
 not mutate registries. Packaging proves only that `RegistryUtils.class` occurs
-once and no same-prefix test/helper leaks; behavior is not a startup marker.
-No caller, registry lifecycle/mutation, or custom registry is admitted.
+once and no same-prefix test/helper leaks; behavior is not a startup marker. No
+caller, registry lifecycle/mutation, or custom registry is admitted.
 
 Heat includes the unchanged dynamic `VariableHeatCapacitor`; neither energy nor
 heat claims external API, transaction, configurable-holder, network, or

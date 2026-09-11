@@ -1,6 +1,7 @@
 package mekanism.common.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -8,8 +9,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import mekanism.api.SerializationConstants;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.Holder;
+import net.minecraft.core.HolderOwner;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.Bootstrap;
 import net.minecraft.world.level.block.Block;
@@ -73,6 +76,25 @@ class RegistryUtilsTest {
         Holder.Reference<Block> reference = BuiltInRegistries.BLOCK.getHolder(STONE_ID).orElseThrow();
         assertEquals(STONE_ID, RegistryUtils.getName(reference));
         assertNull(RegistryUtils.getName(Holder.direct(Blocks.STONE)));
+    }
+
+    @Test
+    @SuppressWarnings("deprecation")
+    void unboundReferencesPreserveNullableNeoForgeKeySemantics() {
+        HolderOwner<Block> owner = new HolderOwner<>() {
+        };
+        ResourceKey<Block> stoneKey = ResourceKey.create(BuiltInRegistries.BLOCK.key(), STONE_ID);
+        Holder.Reference<Block> standalone = Holder.Reference.createStandAlone(owner, stoneKey);
+        Holder.Reference<Block> intrusive = Holder.Reference.createIntrusive(owner, Blocks.STONE);
+        assertFalse(standalone.isBound());
+        assertFalse(intrusive.isBound());
+
+        // A standalone holder has a key before its value is bound; an intrusive holder is the inverse.
+        assertEquals(STONE_ID, RegistryUtils.getName(standalone));
+        assertEquals(STONE_ID, RegistryUtils.getNameGeneric(standalone));
+        assertNull(RegistryUtils.getName(intrusive));
+        assertNull(RegistryUtils.getNameGeneric(intrusive));
+        assertEquals(STONE_ID, RegistryUtils.getName(intrusive, BuiltInRegistries.BLOCK));
     }
 
     @Test

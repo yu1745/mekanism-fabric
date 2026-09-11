@@ -43,7 +43,7 @@ public class RegistryUtils {
     }
 
     public static <TYPE> ResourceLocation getName(Holder<TYPE> element, DefaultedRegistry<TYPE> registry) {
-        ResourceKey<?> key = element.unwrapKey().orElse(null);
+        ResourceKey<?> key = getHolderKey(element);
         if (key == null) {
             return registry.getKey(element.value());
         }
@@ -52,12 +52,11 @@ public class RegistryUtils {
 
     @Nullable
     public static ResourceLocation getName(Holder<?> element) {
-        ResourceKey<?> key = element.unwrapKey().orElse(null);
+        ResourceKey<?> key = getHolderKey(element);
         return key == null ? null : key.location();
     }
 
     @Nullable
-    @SuppressWarnings({"unchecked", "rawtypes"})
     public static ResourceLocation getNameGeneric(Object element) {
         if (element instanceof Holder<?> holder) {
             //If we have a holder, just redirect to trying to look up the name with it
@@ -65,11 +64,30 @@ public class RegistryUtils {
             return getName(holder);
         }
         for (Registry<?> registry : BuiltInRegistries.REGISTRY) {
-            ResourceLocation name = ((Registry<Object>) registry).getResourceKey(element).map(ResourceKey::location).orElse(null);
+            ResourceLocation name = getRegistryKey(registry, element);
             if (name != null) {
                 return name;
             }
         }
         return null;
+    }
+
+    @Nullable
+    private static <TYPE> ResourceKey<TYPE> getHolderKey(Holder<TYPE> holder) {
+        if (holder instanceof Holder.Reference<?>) {
+            try {
+                return holder.unwrapKey().orElse(null);
+            } catch (IllegalStateException ignored) {
+                //NeoForge's Reference#getKey returns null before an intrusive holder's key is bound.
+                return null;
+            }
+        }
+        return holder.unwrapKey().orElse(null);
+    }
+
+    @Nullable
+    @SuppressWarnings("unchecked")
+    private static <TYPE> ResourceLocation getRegistryKey(Registry<TYPE> registry, Object element) {
+        return registry.getResourceKey((TYPE) element).map(ResourceKey::location).orElse(null);
     }
 }
