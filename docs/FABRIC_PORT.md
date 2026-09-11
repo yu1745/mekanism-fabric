@@ -47,7 +47,7 @@
 - [x] 独立 Fabric Loom 构建：MC 1.21.1、Java 21、Mojang official mappings；
 - [x] 最终 remapped JAR 的干净 Fabric 服务端冒烟门禁；
 - [x] NeoForge 平台依赖矩阵与可重复扫描脚本；
-- [~] 官方 API allowlist：已编译 25/265 个文件，其中 `Action` 是首个登记的平台适配；
+- [~] 官方 API allowlist：已编译 27/265 个文件；`Action` 与 registry-aware NBT 是首批登记的平台适配；
 - [ ] lifecycle、registry、config、network adapter；
 - [ ] holder/storage、CachedRecipe、机器基类与 Crusher。
 
