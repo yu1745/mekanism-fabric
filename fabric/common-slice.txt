@@ -1,4 +1,5 @@
 # Paths are relative to ../src/main/java. Keep one auditable common source per line.
+mekanism/common/capabilities/energy/BasicEnergyContainer.java
 mekanism/common/config/BaseMekanismConfig.java
 mekanism/common/config/IConfigTranslation.java
 mekanism/common/config/IMekanismConfig.java

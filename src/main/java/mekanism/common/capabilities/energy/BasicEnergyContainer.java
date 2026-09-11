@@ -1,6 +1,5 @@
 package mekanism.common.capabilities.energy;
 
-import com.google.common.base.Preconditions;
 import java.util.Objects;
 import java.util.function.Predicate;
 import mekanism.api.Action;
@@ -9,10 +8,9 @@ import mekanism.api.IContentsListener;
 import mekanism.api.SerializationConstants;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.energy.IEnergyContainer;
-import mekanism.api.functions.ConstantPredicates;
-import mekanism.common.util.NBTUtils;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Range;
@@ -20,20 +18,21 @@ import org.jetbrains.annotations.Range;
 @NothingNullByDefault
 public class BasicEnergyContainer implements IEnergyContainer {
 
+    private static final Predicate<@NotNull AutomationType> ALWAYS_TRUE = automationType -> true;
     public static final Predicate<@NotNull AutomationType> internalOnly = automationType -> automationType == AutomationType.INTERNAL;
     public static final Predicate<@NotNull AutomationType> manualOnly = automationType -> automationType == AutomationType.MANUAL;
     public static final Predicate<@NotNull AutomationType> notExternal = automationType -> automationType != AutomationType.EXTERNAL;
 
     public static BasicEnergyContainer create(long maxEnergy, @Nullable IContentsListener listener) {
-        return new BasicEnergyContainer(maxEnergy, ConstantPredicates.alwaysTrue(), ConstantPredicates.alwaysTrue(), listener);
+        return new BasicEnergyContainer(maxEnergy, ALWAYS_TRUE, ALWAYS_TRUE, listener);
     }
 
     public static BasicEnergyContainer input(long maxEnergy, @Nullable IContentsListener listener) {
-        return new BasicEnergyContainer(maxEnergy, notExternal, ConstantPredicates.alwaysTrue(), listener);
+        return new BasicEnergyContainer(maxEnergy, notExternal, ALWAYS_TRUE, listener);
     }
 
     public static BasicEnergyContainer output(long maxEnergy, @Nullable IContentsListener listener) {
-        return new BasicEnergyContainer(maxEnergy, ConstantPredicates.alwaysTrue(), internalOnly, listener);
+        return new BasicEnergyContainer(maxEnergy, ALWAYS_TRUE, internalOnly, listener);
     }
 
     public static BasicEnergyContainer create(long maxEnergy, Predicate<@NotNull AutomationType> canExtract, Predicate<@NotNull AutomationType> canInsert,
@@ -76,7 +75,9 @@ public class BasicEnergyContainer implements IEnergyContainer {
 
     @Override
     public void setEnergy(long energy) {
-        Preconditions.checkArgument(energy >= 0, "Energy cannot be negative");
+        if (energy < 0) {
+            throw new IllegalArgumentException("Energy cannot be negative");
+        }
         energy = clampEnergy(energy);
         if (stored != energy) {
             stored = energy;
@@ -175,6 +176,18 @@ public class BasicEnergyContainer implements IEnergyContainer {
 
     @Override
     public void deserializeNBT(HolderLookup.Provider provider, CompoundTag nbt) {
-        NBTUtils.setLegacyEnergyIfPresent(nbt, SerializationConstants.STORED, this::setEnergy);
+        if (nbt.contains(SerializationConstants.STORED, Tag.TAG_LONG)) {
+            setEnergy(nbt.getLong(SerializationConstants.STORED));
+        } else if (nbt.contains(SerializationConstants.STORED, Tag.TAG_STRING)) {
+            try {
+                String string = nbt.getString(SerializationConstants.STORED);
+                int decimalIndex = string.indexOf('.');
+                long value = Long.parseUnsignedLong(decimalIndex == -1 ? string : string.substring(0, decimalIndex));
+                // Values in the unsigned half of the legacy range overflow signed long and clamp to the supported maximum.
+                setEnergy(value < 0 ? Long.MAX_VALUE : value);
+            } catch (NumberFormatException e) {
+                setEnergy(0);
+            }
+        }
     }
 }

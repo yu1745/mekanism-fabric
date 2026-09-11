@@ -85,7 +85,7 @@ Fabric bootstrap 在完整 `MekanismConfig` 纳入前构造唯一 startup 实例
 
 ## Registry-aware NBT contract
 
-状态：基础契约与 `DataHandlerUtils` 已移植；容器接口将在各自依赖闭包可编译时逐项切换。
+状态：基础契约、`DataHandlerUtils` 与首个 `IEnergyContainer`/`BasicEnergyContainer` 闭包已移植；其余容器接口将在各自依赖闭包可编译时逐项切换。
 
 新增 Mekanism-owned 公共契约：
 
@@ -100,7 +100,7 @@ T serializeNBT(HolderLookup.Provider provider)
 void deserializeNBT(HolderLookup.Provider provider, T tag)
 ```
 
-`DataHandlerUtils` 仅把泛型约束从 NeoForge 接口切换为上述 Mekanism 接口；列表顺序、byte 索引、空标签跳过和 NBT 键格式保持官方行为。后续 `IChemicalTank`、`IEnergyContainer`、`IExtendedFluidTank`、`IHeatCapacitor`、`IInventorySlot` 的父接口变化必须随各自完整依赖闭包迁移，不能为了扩大 allowlist 添加 stub。
+`DataHandlerUtils` 仅把泛型约束从 NeoForge 接口切换为上述 Mekanism 接口；列表顺序、byte 索引、空标签跳过和 NBT 键格式保持官方行为。`IEnergyContainer` 已随首个 energy storage 闭包切换；后续 `IChemicalTank`、`IExtendedFluidTank`、`IHeatCapacitor`、`IInventorySlot` 的父接口变化必须随各自完整依赖闭包迁移，不能为了扩大 allowlist 添加 stub。
 
 兼容影响：实现容器接口的 Fabric addon 将实现 `mekanism.api.INBTSerializable`，而不是 NeoForge 父接口；序列化方法本身保持同名同参。Attachment、Data Component、Codec 和 Fabric 生命周期不进入这个值级契约，持久化 owner 负责传入 `HolderLookup.Provider`。
 
@@ -118,3 +118,11 @@ void deserializeNBT(HolderLookup.Provider provider, T tag)
 - `./gradlew -p fabric verifyApiSliceNoNeoForge`
 - `./fabric-build.sh`
 - `scripts/fabric-packaged-smoke.sh`
+
+## Energy container contract
+
+状态：内部 energy storage 首个垂直切片已移植，外部 Fabric energy lookup/transaction adapter 尚未实现。
+
+`IEnergyContainer` 的 NeoForge `INBTSerializable<CompoundTag>` 父接口替换为上文的 Mekanism-owned registry-aware 契约；energy getter/setter、execute/simulate、automation、listener、capacity 和 NBT 方法签名保持。仅删除了指向 NeoForge fluid handler 的 Javadoc 类型链接，改用平台中立文字描述同一返回值差异。
+
+`BasicEnergyContainer` 保留官方 public factory/predicate 表面与行为。为避免引入 chemical/fluid 和 broad NBT helper 闭包，`ConstantPredicates.alwaysTrue()` 改为类内缓存 predicate，`NBTUtils.setLegacyEnergyIfPresent` 的 `stored` long/legacy string 读取语义窄化到类内；Guava 参数检查改为同类型的显式 `IllegalArgumentException`。兼容细节、暂缓边界和验证见 `docs/FABRIC_ENERGY.md` 与 `fabric/src/test/java/mekanism/common/capabilities/energy/BasicEnergyContainerTest.java`。

@@ -3,13 +3,11 @@ package mekanism.api.energy;
 import mekanism.api.Action;
 import mekanism.api.AutomationType;
 import mekanism.api.IContentsListener;
+import mekanism.api.INBTSerializable;
 import mekanism.api.SerializationConstants;
 import mekanism.api.annotations.NothingNullByDefault;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
-import net.neoforged.neoforge.common.util.INBTSerializable;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import org.jetbrains.annotations.Range;
 
 @NothingNullByDefault
@@ -37,7 +35,7 @@ public interface IEnergyContainer extends INBTSerializable<CompoundTag>, IConten
      * <p>
      * Inserts energy into this {@link IEnergyContainer} and return the remainder.
      * </p>
-     * Note: This behaviour is subtly different from {@link IFluidHandler#fill(FluidStack, IFluidHandler.FluidAction)}
+     * Note: unlike fluid fill handlers that return the accepted amount, this method returns the unaccepted remainder.
      *
      * @param amount         Energy to insert. Must be positive.
      * @param action         The action to perform, either {@link Action#EXECUTE} or {@link Action#SIMULATE}

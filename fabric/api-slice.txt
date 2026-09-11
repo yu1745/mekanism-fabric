@@ -11,6 +11,7 @@ mekanism/api/SupportsColorMap.java
 mekanism/api/annotations/FieldsAreNotNullByDefault.java
 mekanism/api/annotations/NothingNullByDefault.java
 mekanism/api/annotations/ParametersAreNotNullByDefault.java
+mekanism/api/energy/IEnergyContainer.java
 mekanism/api/functions/ByteSupplier.java
 mekanism/api/functions/CharPredicate.java
 mekanism/api/functions/CharUnaryOperator.java

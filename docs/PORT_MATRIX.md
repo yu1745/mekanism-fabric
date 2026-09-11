@@ -81,6 +81,10 @@ scripts/scan-platform-deps.py
 
 首个窄切片已实现 configuration phase 的双向 payload、强制 `10.7.19` 精确协商和服务端 `ConfigurationTask` gate；common/client 注册类严格分离，dedicated packaged smoke 验证不会加载 client adapter。它只建立协议与阶段边界，不提前引入官方 packet catalog 或通用 context facade。配对 Loader 客户端的 matching/mismatch/reconnect/thread 门禁以及 gameplay dispatcher 仍是 P0 未完成项，详见 `FABRIC_NETWORK.md`。
 
+### 当前 energy storage 落点
+
+官方 `IEnergyContainer` 与 `BasicEnergyContainer` 已作为内部 `long` storage 窄切片纳入，保留 capacity、execute/simulate、automation policy、listener 和 legacy NBT 语义。该切片不宣称 Fabric energy interoperability：sided holder、Team Reborn Energy API、transaction rollback 和单位换算均仍属 P1 后续边界，详见 `FABRIC_ENERGY.md`。
+
 ## `other` 桶的处理
 
 213 个 import 尚落在通用桶，主要包括 `common.Tags`、conditions/crafting、`INBTSerializable`、`Lazy`/函数式 helper、permissions、world/biome modifiers 和测试辅助。处理顺序不是批量建 shim：
