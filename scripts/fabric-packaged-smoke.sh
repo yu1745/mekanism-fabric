@@ -141,6 +141,7 @@ for required_entry in \
     'mekanism/api/text/IHasTranslationKey$IHasEnumNameTranslationKey.class' \
     mekanism/common/capabilities/energy/BasicEnergyContainer.class \
     mekanism/common/capabilities/heat/BasicHeatCapacitor.class \
+    mekanism/common/capabilities/heat/VariableHeatCapacitor.class \
     mekanism/common/capabilities/holder/BasicHolder.class \
     mekanism/common/capabilities/holder/IHolder.class \
     mekanism/common/capabilities/holder/energy/EnergyContainerHolder.class \

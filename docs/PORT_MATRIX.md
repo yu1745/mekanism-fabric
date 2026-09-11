@@ -87,7 +87,7 @@ scripts/scan-platform-deps.py
 
 ### 当前 heat storage 落点
 
-官方 `HeatAPI`、`IHeatCapacitor`、`BasicHeatCapacitor`、三层 handler interface 与非配置 `HeatCapacitorHolder` 已作为内部 `double` storage/routing 窄切片纳入，保留 ambient initialization、batched update、epsilon、listener、capacity-weighted aggregation/distribution、relative-side routing 与 strict-double NBT 语义。Fabric access widener 精确承接官方 access transformer 对位置修正 biome temperature 的访问，不以 base temperature 降级。Config holder/helper、network、machine owner 与 persistence lifecycle 仍属后续 P1 闭包，详见 `FABRIC_HEAT.md`、`FABRIC_HOLDERS.md`。
+官方 `HeatAPI`、`IHeatCapacitor`、`BasicHeatCapacitor`、`VariableHeatCapacitor`、三层 handler interface 与非配置 `HeatCapacitorHolder` 已作为内部 `double` storage/routing 窄切片纳入，保留 ambient initialization、batched update、epsilon、listener、动态系数 supplier、capacity-weighted aggregation/distribution、relative-side routing 与 strict-double NBT 语义。Fabric access widener 精确承接官方 access transformer 对位置修正 biome temperature 的访问，不以 base temperature 降级。Config holder/helper、外部 heat API、transaction、network、machine owner 与 persistence lifecycle 仍属后续 P1 闭包，详见 `FABRIC_HEAT.md`、`FABRIC_HOLDERS.md`。
 
 ## `other` 桶的处理
 

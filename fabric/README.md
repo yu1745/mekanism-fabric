@@ -10,24 +10,23 @@ excluded. It uses Minecraft 1.21.1, Java 21, and Mojang official mappings.
 `api-slice.txt` is the auditable allowlist of API source paths, relative to
 `src/api/java`. The Fabric source set reads that file directly, so the listed
 sources retain their original `mekanism.api.*` names without being copied or
-modified. The allowlist now contains **27 source files**. The portable second
-slice added the vanilla-only `AutomationType` and `Chunk3D` value types,
-`SupportsColorMap`, and the complete four-file alloy/base tier closure
-(`ITier`, `IAlloyTier`, `BaseTier`, and `AlloyTier`). The first intentional
-platform adaptation adds `Action` while removing only its two NeoForge
-`FluidAction` conversion methods. The first NBT slice adds the Mekanism-owned
-registry-aware `INBTSerializable` contract and ports `DataHandlerUtils` without
-changing its NBT layout or index behavior. See `../docs/API_DELTAS.md` for both
-adaptations. These sources use only JDK, Minecraft, the existing annotation
-slice, and one another. JetBrains annotations and JSR-305 remain `compileOnly`
-dependencies and are not bundled in the mod.
+modified. The allowlist contains **35 current source files**: **34 unchanged official
+baseline files** plus the project-owned registry-aware `INBTSerializable` NBT
+contract. Intentional API adaptations remain limited to that contract and
+`Action`'s removal of two NeoForge `FluidAction` conversion methods; see
+`../docs/API_DELTAS.md`. JetBrains annotations and JSR-305 remain `compileOnly`
+and are not bundled in the mod.
 
-`common-slice.txt` currently admits the five-file official GameEvent registration
-closure plus nine startup-config/cache sources. `platform-slice.txt` admits only
-the Fabric bootstrap and the registry/config adapters. The registry slice is
-described in `../docs/FABRIC_REGISTRY.md`; the TOML-backed startup slice is
-described in `../docs/FABRIC_CONFIG.md`. Night Config core/toml 3.8.3 are nested
-inside the remapped mod JAR for config persistence.
+`common-slice.txt` contains **23 official source files**, and
+`platform-slice.txt` contains **10 project-owned Fabric sources**. Together they
+form bounded registry/GameEvent, TOML startup-config, configuration-handshake,
+internal energy storage/holder, and internal heat storage/holder closures. Heat
+includes the unchanged dynamic `VariableHeatCapacitor`; neither energy nor heat
+claims external API, transaction, configurable-holder, network, or machine-owner
+integration. See `../docs/FABRIC_REGISTRY.md`, `../docs/FABRIC_CONFIG.md`,
+`../docs/FABRIC_NETWORK.md`, `../docs/FABRIC_ENERGY.md`, and
+`../docs/FABRIC_HEAT.md`. Night Config core/toml 3.8.3 are nested in the remapped
+mod JAR.
 
 The next nearby API candidates are blocked by deliberately excluded boundaries:
 incremental-enum helpers close over `ConstantPredicates` (which imports
