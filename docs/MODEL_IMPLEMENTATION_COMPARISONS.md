@@ -781,3 +781,47 @@ GLM 在任务 013、014 完成两轮临时复测；任务 015 以受支持的 hi
 - **综合规模：** 8 files，`+215/-16`；local suite 185 行、8 tests。
 - **主代理独立验证：** 四份 production source 与 `4646f509` 字节一致；protected surfaces 和既有测试不变；slice 42/45/10 且无重复；35 suites、190 tests、0 failures/errors/skips，三个 jqwik properties 各 100,000 tries/checks；完整 Gradle gate 9.88s，`fabric-build.sh` 2.41s，packaged smoke 38.67s 并到达 `Done`；collection package 精确十二类且无 test/fixture/NeoForge/JUnit/jqwik 泄漏；implementation clean release 11.26s，恰好一个 JAR，`build-info.json` source commit 与 `99ff667e` 一致，JAR sha256 为 `507b231f0c935f466af92148ddef4dcacd444b2a31d30ef9f1731633f4442470`。
 - **后续效率调整：** 用户指出单类任务固定成本过高。从 Task015 起按同一 dependency/ownership boundary 批量纳入约 4–12 个紧密相关 production files；候选代理只跑 source/slice、编译、单测和静态 JAR package contract，真实 dedicated-server packaged smoke 与 clean release 由主代理在选定/综合版本上各跑一次。遇到平台 API、registry lifecycle、transaction 或 patched-Minecraft 语义分歧时仍立即拆分，不能为追求数量混合不相关边界。
+
+---
+
+## 任务 015：批量纳入 spatial/color/effect foundations（最后一次常规多实现）
+
+### 任务简述
+
+- **固定候选基线：** `6392702c`；候选启动后，主线另以 `dc714c21`/`20b91cbe` 切换为单 SOL 实现且默认不 watch，该政策不参与候选代码比较。
+- **目标：** 一批纳入七个 byte-identical foundation sources：`Color`、`CustomEffect`、`Pos3D`、`Quaternion`、`Range3D`、`MultipartUtils`、`StatUtils`，验证更大批次是否能提高每次固定门禁的有效进度。
+- **关键验收：** slice 42/52/10，七份源码与 `4646f509` 字节一致；12 个本地 tests 分别对应 channel/pack、blend/composite、HSV、ColorFunction、deterministic statistics、effect state、dimension/range、immutable vector ops、degree/order rotation、quaternion state、closest ray selection、miss/result identity 十二个独立 mutation family，因此四个超出默认八个的 tests 均有不可由其它输出替代的失效面；精确限制 direct common-lib/effect/math/MultipartUtils/StatUtils class families；不纳入任何 renderer、entity/player、transmitter、packet、machine、multiblock、registry/config/persistence caller。
+- **效率门禁试行：** 候选只运行 source/slice、完整本地测试、Fabric build 和静态 JAR 检查；真实 dedicated-server smoke 与 clean release 仅由主代理在综合版本执行。
+
+### 5.6 SOL
+
+- **提交：** `0d2c77dca5cea667d8c9cd1f2decdf5d723a93e0`
+- **规模：** 10 files，`+353/-16`；三份 local suites 共 293 行、12 tests。
+- **资源：** 445.9s，105.0k tokens，60 次工具调用，约 `$1.83`。
+- **优点：** 用 DeepSeek 不到一半的测试行数完成全部十二个 mutation family；Color pack/raw-unclamped、负 hue、HEAT 三段，StatUtils 的 negative-zero wrap，Pos3D matrix 与 quaternion handedness 差异，非零世界坐标 ray hit、null-slot subHit 和 strict-less tie 都是高信息密度断言；三套 suite 按 color/effect、spatial math、multipart 分层恰当；文档和 package gate 最短，完整本地门禁与静态 JAR 检查通过。
+- **不足：** `randVec` 直接断言长度为一，没有容忍 vanilla `Vec3.normalize()` 对极小向量返回零的约 `4e-12` 体积概率，理论上存在极低概率 flaky；遗漏 `Pos3D.create(GlobalPos)` 与 `getPerpendicular()` 的 `z == 0` 分支；quaternion 乘法只断言不相等，没有固定两个顺序的精确分量；`FABRIC_ENERGY.md` 仍留一处历史 42/45/10 count。
+- **本任务评价：** 明显最佳实现基底；所有缺口均可在现有方法内用少量断言修复，不需要采用更重测试结构。
+
+### DeepSeek v4.1 Flash
+
+- **提交：** `6ccf73e0952aeef00034ddfff4bc2c33a11fc456`
+- **规模：** 13 files，`+735/-14`；六份 local suites 共 615 行、12 tests。
+- **资源：** 561.5s，130.9k tokens，105 次工具调用；通知未提供成本。
+- **优点：** 六个 suite 的文件级诊断最细；独有地覆盖 `GlobalPos` factory、perpendicular 的两个分支、quaternion 两种乘法顺序精确分量，以及 `randVec` unit-or-zero fallback；全部 count 更新正确；完整本地门禁与静态 JAR 检查通过，且严格遵守不跑 server smoke/release 的新策略。
+- **不足：** 比 SOL 多 322 行测试、382 行总 diff、45 次工具调用、25.9k tokens 和 115.6s；大量 DisplayName、assert message、所有 hue/包装/equals 派生组合及 32 次随机循环重复同一 production mutation；首次误把 Gradle console 参数传给 wrapper，随后自行修复。额外体积没有形成足以整体取代 SOL 的独有边界。
+- **本任务评价：** 审计补充价值高但实现信息密度明显偏低；四个独有边界应吸收，整体代码不采用。
+
+### GLM 5.3（用户取消，非候选）
+
+- **状态：** high effort 运行中由用户明确叫停；无模型提交。host 仅保存未完成 worktree snapshot `2e185027`，禁止整合。
+- **取消时资源：** 838.3s，161.6k tokens，54 次工具调用，约 `$1.16`。
+- **partial 状态：** 已验证七份 source identity、更新 slice 并写出六份/12-test 草稿；第一次完整测试有五个候选自身预期错误（subHit pre-increment、HSV 480、alpha 40/255、stored reference identity、fresh helper identity），仅部分修正；Multipart 仍失败，文档、build、静态 JAR 检查和 commit 均未完成。
+- **评价边界：** 取消源于用户决定终止多实现架构，而不是给模型的失败判决；partial 不进入质量排名，也不用于 GLM/DeepSeek 替换结论。它只说明本轮在被叫停前已成为整体完成路径的延迟项。
+
+### 本任务结论与架构决策
+
+- **已完成候选质量与效率：** 5.6 SOL > DeepSeek；GLM partial 不排名。
+- **最终策略：** 将 SOL candidate cherry-pick 为 `bba5824b`。综合提交 `dd170288` 吸收 DeepSeek 的 `GlobalPos` factory、`z == 0` perpendicular、quaternion 精确乘法分量，并把随机向量断言改成 unit-or-vanilla-zero fallback；`39a9cf36` 修正 SOL 遗漏的旧 slice count。保留 SOL 的三套短测试和精炼文档。
+- **综合规模：** 排除独立代理架构政策文档，10 files，`+360/-17`；三份 local suites 共 299 行、12 tests。
+- **主代理独立验证：** 七份 production source 与 `4646f509` 字节一致；protected surfaces/既有测试不变；slice 42/52/10 且无重复；38 suites、202 tests、0 failures/errors/skips，三个 jqwik properties 各 100,000 tries/checks；完整 Gradle gate 10.12s，`fabric-build.sh` 4.05s；最终版本才运行的 packaged smoke 38.22s 并到达 `Done`，证明候选阶段省去了两次约 38 秒 server startup；clean release 11.40s，恰好一个 JAR，所有五组 task class family 精确且无 test/fixture/NeoForge/JUnit/jqwik 泄漏，`build-info.json` source commit 与 `39a9cf36` 一致，JAR sha256 为 `d1e42185e6bdebcd32e98694a64920adb64f7995e528ab3e49530e0191c83f68`。
+- **最终默认架构：** 用户认可停止常规多实现，并在 Task015 运行中立即取消 GLM。任务 016 起只由 SOL 在隔离 worktree 实现，默认不 watch；主代理审查/综合并运行最终门禁。DeepSeek、GLM 或其它模型只在已识别的高风险平台、patched、registry、transaction、network、serialization、thread/owner 边界中按需做只读 adversarial review。此架构选择使“GLM 替换 DeepSeek”的问题失去必要性，二者都不再是常驻实现代理。
