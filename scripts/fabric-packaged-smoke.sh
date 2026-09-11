@@ -176,11 +176,17 @@ if actual_common_codec != expected_common_codec or any(entries.count(entry) != 1
     raise SystemExit(f"unexpected common codec class family: {sorted(actual_common_codec)!r}")
 expected_collection = {
     "mekanism/common/lib/collection/BiLongMultimap.class",
+    "mekanism/common/lib/collection/BiMultimap.class",
+    "mekanism/common/lib/collection/EmptySequencedMap.class",
     "mekanism/common/lib/collection/FilterTransformIterator.class",
+    "mekanism/common/lib/collection/HashList.class",
     "mekanism/common/lib/collection/IndexedCuboidMap.class",
     "mekanism/common/lib/collection/IndexedCuboidMap$1.class",
     "mekanism/common/lib/collection/IndexedCuboidMap$2.class",
     "mekanism/common/lib/collection/IndexedCuboidMap$CenteredBoundingBox.class",
+    "mekanism/common/lib/collection/LRU.class",
+    "mekanism/common/lib/collection/LRU$LRUEntry.class",
+    "mekanism/common/lib/collection/LRU$LRUIterator.class",
 }
 actual_collection = [
     entry for entry in entries

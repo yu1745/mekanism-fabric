@@ -13,7 +13,7 @@ The first storage milestone admits the official Mekanism energy-container contra
 - `mekanism.common.capabilities.DynamicHandler`
 - `mekanism.common.capabilities.energy.DynamicStrictEnergyHandler`
 
-The slice count is API 42 / common 41 / platform 10. It also admits official
+The slice count is API 42 / common 45 / platform 10. It also admits official
 `mekanism.common.lib.LastEnergyTracker` byte-identically to `4646f509` as a
 platform-neutral per-game-time accounting closure. Same-time calls accumulate a current
 bucket while the visible last bucket remains unchanged; every different timestamp—including
@@ -63,7 +63,7 @@ The three dynamic handler sources are byte-identical to `4646f509`. Insert and e
 
 ## Sequential transfer utilities
 
-The unchanged official long-valued transfer closure is admitted as part of the current API/common/platform slice count 42 / 41 / 10:
+The unchanged official long-valued transfer closure is admitted as part of the current API/common/platform slice count 42 / 45 / 10:
 
 - `mekanism.api.math.LongTransferUtils`
 - `mekanism.api.container.InContainerGetterLong`

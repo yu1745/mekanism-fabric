@@ -18,7 +18,7 @@ fluid-import/link cleanup; `IMekanismStrictEnergyHandler` remains byte-identical
 See `../docs/API_DELTAS.md`. JetBrains annotations and JSR-305 remain `compileOnly`
 and are not bundled in the mod.
 
-`common-slice.txt` contains **41 official source files**, and
+`common-slice.txt` contains **45 official source files**, and
 `platform-slice.txt` contains **10 project-owned Fabric sources**. Together with
 the **42-file API slice**, they form bounded registry/GameEvent, TOML
 startup-config, configuration-handshake, internal energy storage/holder, internal
@@ -51,13 +51,14 @@ packed `long` behavior, and `packedBlockToChunk`'s `>> 4` floor-section semantic
 for negative coordinates. `rangeClosed` returns a `long[]` sized from the
 inclusive dimensions, so the caller owns the precondition that the requested
 rectangle is representable and small enough to allocate; no new validation or API
-guarantee is added. The unchanged `BiLongMultimap`, `FilterTransformIterator`, and
-`IndexedCuboidMap` now provide the bounded in-memory indexed lookup closure; official
-and Fabric-local Java 21 tests cover bidirectional mutation, filtering/exhaustion,
-negative chunk and inclusive-box edges, replacement, and index cleanup. Packaging
-requires exactly the six expected collection outer/anonymous/record classes and
-rejects the rest of that package. Miner/QIO/spatial callers, world/chunk
-lifecycle/loading, persistence, concurrency, and multi-thread mutation are not ported or claimed.
+guarantee is added. The unchanged collection utilities now also admit byte-identical `BiMultimap`,
+`EmptySequencedMap`, `HashList`, and `LRU`. Focused Java 21 tests bound bidirectional
+index symmetry/live reads, ordered unique replace/swap/clone transitions, unique non-null
+LRU ordering, and immutable empty sequenced-map behavior. Packaging requires exactly 12
+collection class entries and rejects every other class in that exact package. All security,
+frequency, filter, sync, QIO, `ModuleContainer`, gear, data-component, codec, GUI, recipe-viewer,
+client-lifecycle, networking, persistence, registry, miner, and spatial callers/owners remain
+deferred; no thread-safety, concurrent-mutation, or general mutable-view guarantee is made.
 
 The unchanged Java 21 `LambdaMetaFactoryUtil` preserves its two distinct access
 modes: an empty method name binds the caller-prepared `Field` with an unreflected

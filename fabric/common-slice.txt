@@ -25,8 +25,12 @@ mekanism/common/lib/WildcardMatcher.java
 mekanism/common/lib/codec/DroppingUnboundedMapCodec.java
 mekanism/common/lib/codec/SequencedCollectionCodec.java
 mekanism/common/lib/collection/BiLongMultimap.java
+mekanism/common/lib/collection/BiMultimap.java
+mekanism/common/lib/collection/EmptySequencedMap.java
 mekanism/common/lib/collection/FilterTransformIterator.java
+mekanism/common/lib/collection/HashList.java
 mekanism/common/lib/collection/IndexedCuboidMap.java
+mekanism/common/lib/collection/LRU.java
 mekanism/common/lib/distribution/IntegerSplitInfo.java
 mekanism/common/lib/distribution/LongSplitInfo.java
 mekanism/common/lib/distribution/SplitInfo.java
