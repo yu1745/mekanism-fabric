@@ -71,8 +71,10 @@ scripts/fabric-configuration-rejection-smoke.sh # 错版/同版本显式拒绝/�
 - 候选实现默认验证 source identity/delta、slice/fixture isolation、focused 与 full local unit tests、Fabric build 及静态 JAR class/leakage contract；不再由每个候选重复启动真实 dedicated server 或执行 clean release contract。
 - 主代理在审查并选定/综合真实 diff 后，独立重跑完整测试，再对最终实现各执行一次 `scripts/fabric-packaged-smoke.sh` 和 `./build.sh --clean`，核对最终 commit、JAR 数量与 sha256。高风险网络/注册/启动任务可在任务验收中显式恢复候选级真实运行门禁。
 
-## 双模型并行实现评估
+## 默认单实现代理与风险审查
 
-四模型阶段已在任务 001–004 后结束；结论与原始指标见 `docs/MODEL_IMPLEMENTATION_COMPARISONS.md`。后续有明确边界和可执行验收门禁的开发任务，默认让 **5.6 SOL** 与 **DeepSeek v4.1 Flash** 从同一 clean commit 在隔离 worktree 中并行实现，并为两个顶层代理默认开启 300 秒 supervision watch。主代理必须检查真实 diff、综合取舍并独立验证，不能只采信代理总结；watch 只用于发现方向、范围或验收漂移，不干预可自行修复的普通构建/测试错误。每次任务的简述、两份评价、指标和最终选择持续追加到 `docs/MODEL_IMPLEMENTATION_COMPARISONS.md`。一次结果只评价该任务，不直接形成跨项目的永久模型排名。
+任务 001–015 的多模型实现比较已结束；原始评价和指标完整保留在 `docs/MODEL_IMPLEMENTATION_COMPARISONS.md`。后续有明确边界和可执行验收门禁的开发任务，默认只让 **5.6 SOL** 从 clean commit 在隔离 worktree 中实现，并为该顶层代理开启 300 秒 supervision watch。主代理必须检查真实 diff、补足遗漏并独立运行最终门禁，不能只采信代理总结；watch 只用于发现方向、范围或验收漂移，不干预可自行修复的普通构建/测试错误。
+
+不再为常规任务复制完整实现。只有涉及 NeoForge/Fabric 语义替换、patched Minecraft、registry lifecycle、transaction/rollback、networking、序列化兼容、线程/owner 生命周期等高风险边界时，主代理才按风险临时调用一个独立模型做**只读 adversarial review**；审查者默认不改代码、不重复完整文档与发布门禁。DeepSeek、GLM 或其他模型均可按任务临时选择，但不作为常驻实现代理。单代理常规任务不再追加模型比较记录；只有真实发生额外模型比较或独立审查时才在比较文档中记录相应证据。
 
 Fabric 主线使用 Mojang official mappings。官方 API、common 与 Fabric adapter 源码分别通过 `fabric/api-slice.txt`、`fabric/common-slice.txt`、`fabric/platform-slice.txt` 逐项纳入；不得复制源码、改包名、加入 Kotlin，或为消除编译错误而无审计地扩大清单。
