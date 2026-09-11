@@ -153,16 +153,46 @@ class MekanismConfigSpecTest {
         assertTrue(exactDefaults.contains("minimum = -9223372036854775808"));
         assertTrue(exactDefaults.contains("maximum = 9223372036854775807"));
 
-        Files.writeString(file, "above53 = 9007199254740995\nnegativeAbove53 = -9007199254740995\nminimum = -9223372036854775808\nmaximum = 9223372036854775807\n");
+        String harmlessHugeText = "above53 = 9007199254740995\n"
+              + "negativeAbove53 = -9007199254740995\n"
+              + "minimum = -9223372036854775808\n"
+              + "maximum = 9223372036854775807\n"
+              + "18446744073709551616.key = \"9223372036854775808\"\n"
+              + "quoted = '18446744073709551616'\n"
+              + "multiline = \"\"\"\n-9223372036854775809\n\"\"\"\n"
+              + "# 0x8000000000000000\n";
+        Files.writeString(file, harmlessHugeText);
         MekanismConfigSpec.LoadResult loaded = spec.load(file);
+        assertFalse(loaded.malformed());
         assertEquals(0, loaded.correctedValues());
         assertEquals(9_007_199_254_740_995L, above53.get());
         assertEquals(-9_007_199_254_740_995L, negativeAbove53.get());
         spec.save();
         String exactSaved = Files.readString(file);
-        assertEquals(Set.of("above53 = 9007199254740995", "negativeAbove53 = -9007199254740995",
-                    "minimum = -9223372036854775808", "maximum = 9223372036854775807"),
-              Set.of(exactSaved.strip().split("\\R")));
+        assertTrue(exactSaved.contains("above53 = 9007199254740995"));
+        assertTrue(exactSaved.contains("negativeAbove53 = -9007199254740995"));
+        assertTrue(exactSaved.contains("minimum = -9223372036854775808"));
+        assertTrue(exactSaved.contains("maximum = 9223372036854775807"));
+
+        for (String overflow : new String[]{"9223372036854775808", "-9223372036854775809",
+              "18446744073709551616", "0x8000_0000_0000_0000"}) {
+            String invalid = "above53 = " + overflow + "\n"
+                  + "negativeAbove53 = -9007199254740995\nminimum = -9223372036854775808\nmaximum = 9223372036854775807\n"
+                  + "safe = \"18446744073709551616\" # 9223372036854775808\n";
+            Files.writeString(file, invalid);
+            MekanismConfigSpec.LoadResult rejected = spec.load(file);
+            assertTrue(rejected.malformed(), () -> "expected malformed overflow: " + overflow);
+            assertEquals(invalid, Files.readString(temporaryDirectory.resolve("longs.toml.invalid")));
+            assertEquals(4, rejected.correctedValues());
+            assertEquals(9_007_199_254_740_993L, above53.get());
+            assertEquals(-9_007_199_254_740_993L, negativeAbove53.get());
+            assertEquals(Long.MIN_VALUE, minimum.get());
+            assertEquals(Long.MAX_VALUE, maximum.get());
+            String defaults = Files.readString(file);
+            assertTrue(defaults.contains("above53 = 9007199254740993"));
+            assertTrue(defaults.contains("minimum = -9223372036854775808"));
+            assertTrue(defaults.contains("maximum = 9223372036854775807"));
+        }
     }
 
     @Test
@@ -175,22 +205,38 @@ class MekanismConfigSpecTest {
               () -> new MekanismConfigSpec.Builder().defineInRange("defaultHigh", 2L, -1L, 1L));
 
         MekanismConfigSpec.Builder builder = new MekanismConfigSpec.Builder();
-        builder.defineInRange("bounded", 0L, -10L, 10L);
+        MekanismConfigSpec.ConfigValue<Long> bounded = builder.defineInRange("bounded", 0L, -10L, 10L);
         builder.defineInRange("full", 0L, Long.MIN_VALUE, Long.MAX_VALUE);
+        builder.defineInRange("floatExact", 999_999_984_306_749_440L,
+              999_999_984_306_749_440L, 999_999_984_306_749_440L);
+        builder.defineInRange("doubleExact", 9_223_372_036_854_774_784L,
+              9_223_372_036_854_774_784L, 9_223_372_036_854_774_784L);
         MekanismConfigSpec spec = builder.build();
         for (Object accepted : new Object[]{(byte) 1, (short) -2, 3, 4L, BigInteger.TEN,
               new BigDecimal("-10.000"), 5.0F, -6.0D}) {
             assertTrue(spec.isValidValue("bounded", accepted), () -> "expected accepted: " + accepted);
         }
         for (Object rejected : new Object[]{null, "1", 1.5F, -2.25D, Float.NaN, Float.POSITIVE_INFINITY,
-              Double.NaN, Double.NEGATIVE_INFINITY, 11L, -11, BigInteger.valueOf(Long.MAX_VALUE).add(BigInteger.ONE),
-              BigInteger.valueOf(Long.MIN_VALUE).subtract(BigInteger.ONE), new BigDecimal("9223372036854775808"),
-              new BigDecimal("-9223372036854775809"), new BigDecimal("1.0001"), Math.scalb(1.0, 63)}) {
+              Double.NaN, Double.NEGATIVE_INFINITY, 11L, -11}) {
             assertFalse(spec.isValidValue("bounded", rejected), () -> "expected rejected: " + rejected);
         }
         assertTrue(spec.isValidValue("full", BigInteger.valueOf(Long.MAX_VALUE)));
         assertTrue(spec.isValidValue("full", new BigDecimal(Long.MIN_VALUE)));
-        assertFalse(spec.isValidValue("full", Math.scalb(1.0, 63)));
+        for (Object rejected : new Object[]{BigInteger.valueOf(Long.MAX_VALUE).add(BigInteger.ONE),
+              BigInteger.valueOf(Long.MIN_VALUE).subtract(BigInteger.ONE), new BigDecimal("9.223372036854775808E18"),
+              new BigDecimal("-9.223372036854775809E18"), new BigDecimal("1.0001"),
+              Math.scalb(1.0F, 63), (float) Long.MAX_VALUE, Math.scalb(1.0, 63), (double) Long.MAX_VALUE}) {
+            assertFalse(spec.isValidValue("full", rejected), () -> "expected full-range rejection: " + rejected);
+        }
+        float exactFloatInteger = 1.0E18F;
+        assertTrue(spec.isValidValue("full", exactFloatInteger));
+        assertTrue(spec.isValidValue("floatExact", exactFloatInteger));
+        assertFalse(spec.isValidValue("floatExact", 1_000_000_000_000_000_000L));
+        double nearMaximum = Math.nextDown(Math.scalb(1.0, 63));
+        assertTrue(spec.isValidValue("full", nearMaximum));
+        assertTrue(spec.isValidValue("doubleExact", nearMaximum));
+        bounded.set(10L);
+        assertEquals(10L, bounded.get());
     }
 
     @Test

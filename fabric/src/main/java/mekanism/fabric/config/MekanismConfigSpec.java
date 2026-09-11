@@ -104,8 +104,12 @@ public final class MekanismConfigSpec {
         if (created) {
             candidate = newDocument();
         } else {
-            try (BufferedReader reader = Files.newBufferedReader(normalizedTarget, StandardCharsets.UTF_8)) {
-                candidate = new TomlParser().parse(reader);
+            try {
+                String source = Files.readString(normalizedTarget, StandardCharsets.UTF_8);
+                validateTomlIntegerRange(source);
+                try (BufferedReader reader = new BufferedReader(new java.io.StringReader(source))) {
+                    candidate = new TomlParser().parse(reader);
+                }
             } catch (IOException | RuntimeException parseFailure) {
                 malformed = true;
                 LOGGER.error("Failed to parse config {}; replacing it with validated defaults", normalizedTarget, parseFailure);
@@ -225,6 +229,108 @@ public final class MekanismConfigSpec {
 
     private static CommentedConfig newDocument() {
         return TomlFormat.newConfig(LinkedHashMap::new);
+    }
+
+    /** Rejects valid-looking TOML integer value tokens that Night Config would wrap before schema validation. */
+    private static void validateTomlIntegerRange(String source) {
+        char previous = '\0';
+        boolean lineStart = true;
+        boolean tableHeader = false;
+        for (int index = 0; index < source.length();) {
+            char current = source.charAt(index);
+            if (Character.isWhitespace(current)) {
+                if (current == '\n' || current == '\r') {
+                    lineStart = true;
+                    tableHeader = false;
+                }
+                index++;
+                continue;
+            }
+            if (current == '#') {
+                index = skipToLineEnd(source, index + 1);
+                continue;
+            }
+            if (current == '"' || current == '\'') {
+                index = skipTomlString(source, index, current);
+                previous = 'v';
+                lineStart = false;
+                continue;
+            }
+            if ("=[]{},".indexOf(current) >= 0) {
+                if (current == '[' && lineStart) {
+                    tableHeader = true;
+                }
+                previous = current;
+                lineStart = false;
+                index++;
+                continue;
+            }
+            int start = index;
+            lineStart = false;
+            while (index < source.length()) {
+                char character = source.charAt(index);
+                if (Character.isWhitespace(character) || character == '#' || "=[]{},\"'".indexOf(character) >= 0) {
+                    break;
+                }
+                index++;
+            }
+            String token = source.substring(start, index);
+            int next = index;
+            while (next < source.length() && Character.isWhitespace(source.charAt(next))) {
+                next++;
+            }
+            boolean keyToken = next < source.length() && source.charAt(next) == '=';
+            if (!tableHeader && !keyToken && (previous == '=' || previous == '[' || previous == ',') && isTomlInteger(token)) {
+                BigInteger value = parseTomlInteger(token);
+                if (value.compareTo(BigInteger.valueOf(Long.MIN_VALUE)) < 0
+                      || value.compareTo(BigInteger.valueOf(Long.MAX_VALUE)) > 0) {
+                    throw new IllegalArgumentException("TOML integer outside signed 64-bit range: " + token);
+                }
+            }
+            previous = 'v';
+        }
+    }
+
+    private static int skipToLineEnd(String source, int index) {
+        while (index < source.length() && source.charAt(index) != '\n') {
+            index++;
+        }
+        return index;
+    }
+
+    private static int skipTomlString(String source, int start, char quote) {
+        boolean multiline = start + 2 < source.length() && source.charAt(start + 1) == quote && source.charAt(start + 2) == quote;
+        int index = start + (multiline ? 3 : 1);
+        while (index < source.length()) {
+            if (multiline && index + 2 < source.length() && source.charAt(index) == quote
+                  && source.charAt(index + 1) == quote && source.charAt(index + 2) == quote) {
+                return index + 3;
+            }
+            char current = source.charAt(index++);
+            if (!multiline && current == quote) {
+                return index;
+            }
+            if (quote == '"' && current == '\\' && index < source.length()) {
+                index++;
+            }
+        }
+        return index;
+    }
+
+    private static boolean isTomlInteger(String token) {
+        return token.matches("[+-]?(?:0|[1-9](?:_?[0-9])*)")
+              || token.matches("0x[0-9A-Fa-f](?:_?[0-9A-Fa-f])*")
+              || token.matches("0o[0-7](?:_?[0-7])*")
+              || token.matches("0b[01](?:_?[01])*");
+    }
+
+    private static BigInteger parseTomlInteger(String token) {
+        String compact = token.replace("_", "");
+        if (compact.startsWith("0x") || compact.startsWith("0o") || compact.startsWith("0b")) {
+            int radix = compact.charAt(1) == 'x' ? 16 : compact.charAt(1) == 'o' ? 8 : 2;
+            return new BigInteger(compact.substring(2), radix);
+        }
+        return new BigInteger(compact);
     }
 
     private static void preserveInvalidFile(Path source) {
@@ -485,12 +591,12 @@ public final class MekanismConfigSpec {
                     if (!Float.isFinite(floating)) {
                         return Optional.empty();
                     }
-                    value = new BigDecimal(Float.toString(floating)).longValueExact();
+                    value = new BigDecimal((double) floating).longValueExact();
                 } else if (raw instanceof Double floating) {
                     if (!Double.isFinite(floating)) {
                         return Optional.empty();
                     }
-                    value = BigDecimal.valueOf(floating).longValueExact();
+                    value = new BigDecimal(floating).longValueExact();
                 } else {
                     return Optional.empty();
                 }

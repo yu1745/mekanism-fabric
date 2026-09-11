@@ -115,7 +115,7 @@ scripts/scan-platform-deps.py
 
 ### 当前 signed-long config/tier metadata 落点
 
-allowlist 当前为 API **42** / common **74** / platform **10**。三个 energy/induction tier 源与 `4646f509` byte-identical；`CachedLongValue` 仅替换 NeoForge `Builder` 与 `ConfigValue` 两个 import。Fabric long schema 对 TOML integer 保持 `>2^53` 和完整 signed-long 精度，只规范化指定 primitive wrapper、精确 integral/representable 的 `BigInteger`/`BigDecimal` 与 finite floating values；fraction、NaN/infinity、overflow、range miss 和 rounded-double `2^63` 均拒绝，绝不 rounding/truncation/saturation 或 lossy `double == long`。
+allowlist 当前为 API **42** / common **74** / platform **10**。三个 energy/induction tier 源与 `4646f509` byte-identical；`CachedLongValue` 仅替换 NeoForge `Builder` 与 `ConfigValue` 两个 import。Fabric long schema 对合法 signed-long TOML integer literal 保持 `>2^53` 和端点精度，并在 Night Config 前以 decimal/hex/octal/binary lexical preflight 拒绝 modulo-wrap overflow；只规范化指定 primitive wrapper、精确 integral/representable 的 `BigInteger`/`BigDecimal` 与按 exact runtime IEEE 值检查的 finite Float/Double。fraction、NaN/infinity、overflow、range miss 和 `2^63` 均拒绝，绝不 rounding/truncation/saturation 或 lossy `double == long`。
 
 边界仅是 schema/value support 与 tier metadata，不激活 `tiers.toml`。`TierConfig`、`MekanismConfig`/其他 real config files、其他 cached value kinds/tier families、config sync/UI/watchers/world restart、owners/callers、machines/blocks/items、capability registration、external energy/transactions、networking/serialization/persistence/lifecycle/threading 均延期。
 

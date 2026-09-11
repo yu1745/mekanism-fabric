@@ -109,6 +109,6 @@
 
 ### Task 019 signed-long config/tier metadata 落点
 
-当前 slice 为 API/common/platform **42/74/10**。`EnergyCubeTier`、`InductionCellTier`、`InductionProviderTier` 与 `4646f509` byte-identical；`CachedLongValue` 唯一源码差异是 NeoForge `Builder`/`ConfigValue` 两个 import 替换为 Fabric spec 类型。`MekanismConfigSpec` 的 long schema 无损接受完整 signed-long TOML integer（含 `>2^53` 与两端点），只接受精确 integral 且 representable/range-valid 的指定 number 类型，拒绝 fraction、非有限值、overflow 与 double `2^63` trap，不作 rounding/truncation/saturation/lossy comparison。
+当前 slice 为 API/common/platform **42/74/10**。`EnergyCubeTier`、`InductionCellTier`、`InductionProviderTier` 与 `4646f509` byte-identical；`CachedLongValue` 唯一源码差异是 NeoForge `Builder`/`ConfigValue` 两个 import 替换为 Fabric spec 类型。`MekanismConfigSpec` 的 long schema 无损接受完整 signed-long TOML integer literal（含 `>2^53` 与两端点），并在 Night Config 前以 decimal/hex/octal/binary lexical preflight 拒绝会被 modulo wrap 的 overflow；程序化 Float/Double 按 exact runtime IEEE 值检查，只接受精确 integral 且 representable/range-valid 的指定 number 类型，拒绝 fraction、非有限值、overflow 与 `2^63` trap，不作 rounding/truncation/saturation/lossy comparison。
 
 这只是 schema/value support 与 tier metadata，不激活 `tiers.toml`。`TierConfig`、`MekanismConfig`/其他 real config files、其余 cached value kinds 和 tier families、config sync/UI/watchers/world restart、owners/callers、machines/blocks/items、capability registration、external energy/transactions、networking/serialization/persistence/lifecycle/threading 全部延期。

@@ -37,9 +37,9 @@ JAR 保持独立，LGPL-3.0 文本与 attribution 位于 `META-INF/licenses/`。
 ## 加载与保存语义
 
 - 整份 TOML 先解析、逐项规范化和范围验证，再一次性发布给 config values；
-- long 仅接受范围内的 `Byte`/`Short`/`Integer`/`Long`，以及恰为整数、可无损表示为 signed long 且范围内的 `BigInteger`/`BigDecimal`/finite `Float`/`Double`；null、非 number、fraction、NaN/infinity、signed-long overflow、配置越界及 rounded-double `2^63` 全部拒绝，不舍入、截断、饱和，也不以有损 `double == long` 比较；
-- Night Config TOML integer 在 load/correction/save 中保持 `2^53` 以上及 `Long.MIN_VALUE`/`Long.MAX_VALUE` 的精确 round trip；
-- 缺失、类型错误、非有限或越界数值恢复官方默认，并记录完整 dotted path；
+- long 仅接受范围内的 `Byte`/`Short`/`Integer`/`Long`，以及恰为整数、可无损表示为 signed long 且范围内的 `BigInteger`/`BigDecimal`/finite `Float`/`Double`；Float/Double 按运行时 IEEE 值的精确十进制展开验证，null、非 number、fraction、NaN/infinity、signed-long overflow、配置越界及 rounded `2^63` 全部拒绝，不舍入、截断、饱和，也不以有损 `double == long` 比较；
+- TOML integer literal 在 Night Config 解析前由窄 lexical preflight 对 decimal/hex/octal/binary 作 signed-long 无损范围检查，避免其 parser 的 modulo wrap；合法范围内 integer literal 在 load/correction/save 中保持 `2^53` 以上及 `Long.MIN_VALUE`/`Long.MAX_VALUE` 的精确 round trip（该保证只针对 TOML integer literal）；
+- 缺失、类型错误、非有限或 schema 越界数值恢复官方默认；lexical signed-long overflow 走 malformed-file 保留/默认替换路径，并记录完整 dotted path；
 - malformed 文件先复制为同目录 `*.toml.invalid`，再用完整默认文档替换；
 - 新建/修正文档及显式 save 使用同目录临时文件和 atomic move（文件系统不支持时降级为 replace）；
 - cache 的首次解析、`getOrDefault`、set 与 listener invalidation 行为仍由官方 cached value 类保留；
