@@ -17,13 +17,15 @@ contract. Intentional API adaptations remain limited to that contract and
 `../docs/API_DELTAS.md`. JetBrains annotations and JSR-305 remain `compileOnly`
 and are not bundled in the mod.
 
-`common-slice.txt` contains **23 official source files**, and
+`common-slice.txt` contains **24 official source files**, and
 `platform-slice.txt` contains **10 project-owned Fabric sources**. Together they
 form bounded registry/GameEvent, TOML startup-config, configuration-handshake,
-internal energy storage/holder, and internal heat storage/holder closures. Heat
-includes the unchanged dynamic `VariableHeatCapacitor`; neither energy nor heat
-claims external API, transaction, configurable-holder, network, or machine-owner
-integration. See `../docs/FABRIC_REGISTRY.md`, `../docs/FABRIC_CONFIG.md`,
+internal energy storage/holder, internal heat storage/holder, and wildcard-matching
+utility closures. The unchanged `WildcardMatcher` retains official recursive,
+UTF-16 `char` matching semantics; QIO, miner, Finder, and other consumers remain
+future work. Heat includes the unchanged dynamic `VariableHeatCapacitor`; neither
+energy nor heat claims external API, transaction, configurable-holder, network,
+or machine-owner integration. See `../docs/FABRIC_REGISTRY.md`, `../docs/FABRIC_CONFIG.md`,
 `../docs/FABRIC_NETWORK.md`, `../docs/FABRIC_ENERGY.md`, and
 `../docs/FABRIC_HEAT.md`. Night Config core/toml 3.8.3 are nested in the remapped
 mod JAR.

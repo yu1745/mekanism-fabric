@@ -52,6 +52,7 @@
 - [~] config：Mekanism-owned TOML spec/manager 与官方 12 项 startup 配置已通过缓存、校验、原子保存和 packaged server 门禁；其余八份 Core config 暂未纳入；
 - [~] network adapter：configuration `FriendlyByteBuf` 双向 codec、强制 `10.7.19` 协议协商、服务端 task gate、独立 client entrypoint、dedicated-server 打包门禁、两个独立客户端 JVM 的顺序 join，以及错版/同版本显式拒绝/缺失协议客户端的 configuration-phase 拒绝门禁已完成；同进程 reconnect、超时策略与 gameplay dispatcher 尚未完成（见 `FABRIC_NETWORK.md`）；
 - [~] holder/storage：官方 energy container、basic/variable heat capacitor、handler aggregation、`RelativeSide` 与两种非配置 holder 已通过 storage、动态热系数、weighted transfer 和全方向 side-routing 测试；config holder、外部 energy/heat API、transaction adapter、network/machine owners 及其余存储族尚未完成（见 `FABRIC_ENERGY.md`、`FABRIC_HEAT.md`、`FABRIC_HOLDERS.md`）；
+- [x] bounded common utility：官方 `WildcardMatcher` 原样纳入 24-file common slice（API 35、platform 10），并覆盖官方行为、`Locale.ROOT`、`TagKey` 与 BMP digit 边界及最终 JAR 类存在性；QIO、miner、Finder 等调用方尚未移植；
 - [ ] CachedRecipe、机器基类与 Crusher。
 
 ## 阶段顺序

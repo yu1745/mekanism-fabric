@@ -17,6 +17,7 @@ mekanism/common/config/StartupConfigTranslations.java
 mekanism/common/config/value/CachedFloatValue.java
 mekanism/common/config/value/CachedIntValue.java
 mekanism/common/config/value/CachedValue.java
+mekanism/common/lib/WildcardMatcher.java
 mekanism/common/registration/INamedEntry.java
 mekanism/common/registration/MekanismDeferredHolder.java
 mekanism/common/registration/MekanismDeferredRegister.java

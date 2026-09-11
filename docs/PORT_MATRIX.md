@@ -81,6 +81,10 @@ scripts/scan-platform-deps.py
 
 首个窄切片已实现 configuration phase 的双向 payload、强制 `10.7.19` 精确协商和服务端 `ConfigurationTask` gate；common/client 注册类严格分离，dedicated packaged smoke 验证不会加载 client adapter。隔离 Loom server + 两个顺序启动的独立 Xvfb client JVM 已验证 matching round-trip、Netty callback 与每连接重新协商；另一个隔离门禁已验证错版、同版本显式 `accepted=false` 与缺失 payload receiver 的客户端在进入 play 前被拒绝且服务端继续运行。它只建立协议与阶段边界，不提前引入官方 packet catalog 或通用 context facade；同一 client 进程 reconnect、withheld-response timeout 策略以及 gameplay dispatcher 仍是 P0 未完成项，详见 `FABRIC_NETWORK.md`。
 
+### 当前 platform-neutral utility 落点
+
+官方 `WildcardMatcher` 已原样纳入 bounded common slice，保持递归/回溯、`Locale.ROOT` 大小写折叠、`TagKey.location()` 和 UTF-16 `char`/`Character.isDigit(char)` 语义。Fabric 测试与 packaged JAR 门禁覆盖该边界；这不表示 QIO、miner、Finder 或其他未来调用方已经移植。
+
 ### 当前 energy storage 落点
 
 官方 `IEnergyContainer` 与 `BasicEnergyContainer` 已作为内部 `long` storage 窄切片纳入，保留 capacity、execute/simulate、automation policy、listener 和 legacy NBT 语义。`RelativeSide` 与非配置 `EnergyContainerHolder` 也已保留全方向映射、动态 facing 和 internal/external visibility。该切片不宣称 Fabric energy interoperability：config holder、Team Reborn Energy API、transaction rollback 和单位换算均仍属 P1 后续边界，详见 `FABRIC_ENERGY.md`、`FABRIC_HOLDERS.md`。

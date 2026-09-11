@@ -148,6 +148,7 @@ for required_entry in \
     mekanism/common/capabilities/holder/energy/IEnergyContainerHolder.class \
     mekanism/common/capabilities/holder/heat/HeatCapacitorHolder.class \
     mekanism/common/capabilities/holder/heat/IHeatCapacitorHolder.class \
+    mekanism/common/lib/WildcardMatcher.class \
     mekanism/fabric/MekanismFabricBootstrap.class \
     mekanism/fabric/MekanismFabricClientBootstrap.class \
     mekanism/fabric/network/FabricMekanismNetworking.class \
