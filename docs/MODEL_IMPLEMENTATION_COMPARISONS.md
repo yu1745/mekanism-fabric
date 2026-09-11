@@ -9,7 +9,7 @@
 1. **5.6 SOL**（继承/default 模型）；
 2. **Gemini 3.8 Flash**（`antigravity/gemini-3.8-flash`）；
 3. **DeepSeek v4.1 Flash**（`commandcode/deepseek-v4.1-flash`）；
-4. **GLM 5.3**（`zai-coding-cn/glm-5.3`）。
+4. **GLM 5.3**（`zai-coding-cn/glm-5.3`，从下一项任务起固定使用 `thinking=high`）。
 
 ## 执行与评价规则
 
