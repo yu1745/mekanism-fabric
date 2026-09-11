@@ -144,6 +144,8 @@ required = {
 with zipfile.ZipFile(sys.argv[1]) as artifact:
     entries = artifact.namelist()
 expected_direct_common_lib = {
+    "mekanism/common/lib/Color.class",
+    "mekanism/common/lib/Color$ColorFunction.class",
     "mekanism/common/lib/LastEnergyTracker.class",
     "mekanism/common/lib/WildcardMatcher.class",
 }
@@ -156,6 +158,42 @@ actual_direct_common_lib = {
 if (actual_direct_common_lib != expected_direct_common_lib
         or any(entries.count(entry) != 1 for entry in expected_direct_common_lib)):
     raise SystemExit(f"unexpected direct common lib class family: {sorted(actual_direct_common_lib)!r}")
+expected_effect = {"mekanism/common/lib/effect/CustomEffect.class"}
+actual_effect = {
+    entry for entry in entries
+    if entry.startswith("mekanism/common/lib/effect/") and entry.endswith(".class")
+}
+if actual_effect != expected_effect or any(entries.count(entry) != 1 for entry in expected_effect):
+    raise SystemExit(f"unexpected effect class family: {sorted(actual_effect)!r}")
+expected_math = {
+    "mekanism/common/lib/math/Pos3D.class",
+    "mekanism/common/lib/math/Quaternion.class",
+    "mekanism/common/lib/math/Range3D.class",
+}
+actual_math = {
+    entry for entry in entries
+    if entry.startswith("mekanism/common/lib/math/") and entry.endswith(".class")
+}
+if actual_math != expected_math or any(entries.count(entry) != 1 for entry in expected_math):
+    raise SystemExit(f"unexpected math class family: {sorted(actual_math)!r}")
+expected_multipart = {
+    "mekanism/common/util/MultipartUtils.class",
+    "mekanism/common/util/MultipartUtils$RayTraceVectors.class",
+    "mekanism/common/util/MultipartUtils$AdvancedRayTraceResult.class",
+}
+actual_multipart = {
+    entry for entry in entries
+    if entry.startswith("mekanism/common/util/MultipartUtils") and entry.endswith(".class")
+}
+if actual_multipart != expected_multipart or any(entries.count(entry) != 1 for entry in expected_multipart):
+    raise SystemExit(f"unexpected MultipartUtils class family: {sorted(actual_multipart)!r}")
+expected_stat = {"mekanism/common/util/StatUtils.class"}
+actual_stat = {
+    entry for entry in entries
+    if entry.startswith("mekanism/common/util/StatUtils") and entry.endswith(".class")
+}
+if actual_stat != expected_stat or entries.count("mekanism/common/util/StatUtils.class") != 1:
+    raise SystemExit(f"unexpected StatUtils class family: {sorted(actual_stat)!r}")
 expected_api_codec = {"mekanism/api/codec/DependentMapCodec.class"}
 actual_api_codec = {
     entry for entry in entries

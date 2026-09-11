@@ -20,6 +20,7 @@ mekanism/common/config/StartupConfigTranslations.java
 mekanism/common/config/value/CachedFloatValue.java
 mekanism/common/config/value/CachedIntValue.java
 mekanism/common/config/value/CachedValue.java
+mekanism/common/lib/Color.java
 mekanism/common/lib/LastEnergyTracker.java
 mekanism/common/lib/WildcardMatcher.java
 mekanism/common/lib/codec/DroppingUnboundedMapCodec.java
@@ -35,10 +36,16 @@ mekanism/common/lib/distribution/IntegerSplitInfo.java
 mekanism/common/lib/distribution/LongSplitInfo.java
 mekanism/common/lib/distribution/SplitInfo.java
 mekanism/common/lib/distribution/Target.java
+mekanism/common/lib/effect/CustomEffect.java
+mekanism/common/lib/math/Pos3D.java
+mekanism/common/lib/math/Quaternion.java
+mekanism/common/lib/math/Range3D.java
 mekanism/common/util/ChunkUtils.java
 mekanism/common/util/EmitUtils.java
 mekanism/common/util/LambdaMetaFactoryUtil.java
+mekanism/common/util/MultipartUtils.java
 mekanism/common/util/RegistryUtils.java
+mekanism/common/util/StatUtils.java
 mekanism/common/registration/INamedEntry.java
 mekanism/common/registration/MekanismDeferredHolder.java
 mekanism/common/registration/MekanismDeferredRegister.java

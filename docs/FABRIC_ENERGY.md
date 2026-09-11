@@ -13,16 +13,14 @@ The first storage milestone admits the official Mekanism energy-container contra
 - `mekanism.common.capabilities.DynamicHandler`
 - `mekanism.common.capabilities.energy.DynamicStrictEnergyHandler`
 
-The slice count is API 42 / common 45 / platform 10. It also admits official
+The slice count is API 42 / common 52 / platform 10. The common count includes the seven byte-identical `4646f509` color/effect/spatial foundations documented in `FABRIC_PORT.md`; their exact JAR families and bounded tests do not admit any energy caller, owner, external API, lifecycle, networking, persistence, registry, or thread-safety guarantee. It also admits official
 `mekanism.common.lib.LastEnergyTracker` byte-identically to `4646f509` as a
 platform-neutral per-game-time accounting closure. Same-time calls accumulate a current
 bucket while the visible last bucket remains unchanged; every different timestamp—including
 skipped or decreasing values—publishes that current bucket and starts another. Tick zero is
 the initial current bucket, amounts use raw `long` arithmetic without validation/clamping,
 and `setLastEnergyReceived` changes only the visible client-sync value until the next
-timestamp transition publishes the accumulated bucket. The packaged direct
-`mekanism/common/lib` classes are exactly `WildcardMatcher` and `LastEnergyTracker`, once
-each, with no startup marker. Its sole production caller, `TileEntityMekanism`, plus world
+timestamp transition publishes the accumulated bucket. The packaged direct `mekanism/common/lib` family now contains exactly `Color`, `Color$ColorFunction`, `WildcardMatcher`, and `LastEnergyTracker`, once each, with no startup marker. Its sole production caller, `TileEntityMekanism`, plus world
 tick/client synchronization, network ownership and persistence, machines/networks, external
 energy APIs, conversion/lookup, and Fabric transaction integration remain explicitly deferred.
 
