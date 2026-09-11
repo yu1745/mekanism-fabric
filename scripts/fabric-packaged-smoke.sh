@@ -160,6 +160,18 @@ actual_tile_interfaces = {
 if (actual_tile_interfaces != expected_tile_interfaces
         or any(entries.count(entry) != 1 for entry in expected_tile_interfaces)):
     raise SystemExit(f"unexpected direct tile-interface class family: {sorted(actual_tile_interfaces)!r}")
+expected_slot_info = {
+    "mekanism/common/tile/component/config/slot/ISlotInfo.class",
+    "mekanism/common/tile/component/config/slot/BaseSlotInfo.class",
+    "mekanism/common/tile/component/config/slot/EnergySlotInfo.class",
+    "mekanism/common/tile/component/config/slot/HeatSlotInfo.class",
+}
+actual_slot_info = {
+    entry for entry in entries
+    if entry.startswith("mekanism/common/tile/component/config/slot/") and entry.endswith(".class")
+}
+if actual_slot_info != expected_slot_info or any(entries.count(entry) != 1 for entry in expected_slot_info):
+    raise SystemExit(f"unexpected slot-info class family: {sorted(actual_slot_info)!r}")
 expected_tiers = {
     "mekanism/common/tier/BinTier.class",
     "mekanism/common/tier/EnergyCubeTier.class",
@@ -472,7 +484,7 @@ if unexpected_energy_api:
     )
 PYEOF
 then
-  echo "fabric-packaged-smoke: tile-interface/tier/resource/codec/collection/distribution/ChunkUtils/RegistryUtils/LambdaMetaFactoryUtil/long-transfer/dynamic-strict-energy/proxy/config-listener/common-lib-root production/test packaging contract failed" >&2
+  echo "fabric-packaged-smoke: tile-interface/slot-info/tier/resource/codec/collection/distribution/ChunkUtils/RegistryUtils/LambdaMetaFactoryUtil/long-transfer/dynamic-strict-energy/proxy/config-listener/common-lib-root production/test packaging contract failed" >&2
   exit 1
 fi
 for required_entry in \

@@ -13,7 +13,7 @@ The first storage milestone admits the official Mekanism energy-container contra
 - `mekanism.common.capabilities.DynamicHandler`
 - `mekanism.common.capabilities.energy.DynamicStrictEnergyHandler`
 
-The current global slice count is API 42 / common 80 / platform 10. The common count includes the seven byte-identical `4646f509` color/effect/spatial foundations documented in `FABRIC_PORT.md`; their exact JAR families and bounded tests do not admit any energy caller, owner, external API, lifecycle, networking, persistence, registry, or thread-safety guarantee. It also admits official
+The current global slice count is API 42 / common 84 / platform 10. The common count includes the seven byte-identical `4646f509` color/effect/spatial foundations documented in `FABRIC_PORT.md`; their exact JAR families and bounded tests do not admit any energy caller, owner, external API, lifecycle, networking, persistence, registry, or thread-safety guarantee. It also admits official
 `mekanism.common.lib.LastEnergyTracker` byte-identically to `4646f509` as a
 platform-neutral per-game-time accounting closure. Same-time calls accumulate a current
 bucket while the visible last bucket remains unchanged; every different timestamp—including
@@ -65,7 +65,7 @@ The three dynamic handler sources are byte-identical to `4646f509`. Insert and e
 
 ## Sequential transfer utilities
 
-The unchanged official long-valued transfer closure is admitted as part of the current API/common/platform slice count 42 / 80 / 10:
+The unchanged official long-valued transfer closure was admitted when the API/common/platform slice count was 42 / 70 / 10:
 
 - `mekanism.api.math.LongTransferUtils`
 - `mekanism.api.container.InContainerGetterLong`
@@ -104,6 +104,12 @@ Invalid handler returns, mismatched `containerCount`/list size, and overflow rem
 
 These classes add no wire protocol or adapter. All owners/callers, transmitter/dynamic-network lifecycle, actual emission ticks, capability registration/lookup/exposure, Fabric Energy API/conversion/transactions/rollback, side configuration/ejection, machine/tile/item integration, laser armor/item attachment registration, damage handling, networking/serialization/persistence/threading remain deferred.
 
+## Energy/heat slot descriptor closure
+
+`ISlotInfo`, `BaseSlotInfo`, `EnergySlotInfo`, and `HeatSlotInfo` are admitted byte-identically to official baseline `4646f509`. The energy descriptor preserves exact varargs order or list identity, observes later list membership and contained-state changes, scans emptiness in source order, and stops exactly at the first non-empty container. Shared base policy preserves both flags and defines enabled as their exact OR. The heat descriptor preserves flags/list identity but always returns false from `isEmpty()` without consulting capacitor state. Five focused tests bind those contracts; static packaging restricts the slot package to exactly the four corresponding production classes, once each, with no startup marker or helper leakage.
+
+This is descriptor metadata only. `ConfigInfo`, `DataType`, `TileComponentConfig`, `TileComponentEjector`, configurable holders/helpers, chemical/fluid/inventory/proxy slot descriptors, every tile/machine/block caller, capability exposure, side-configuration execution, ejection, persistence, networking/wire serialization, config/registry lifecycle, transactions, and thread ownership remain deferred; no broader integration is claimed.
+
 ## Long-valued tier metadata closure
 
 `EnergyCubeTier`, `InductionCellTier`, and `InductionProviderTier` are admitted byte-identically to `4646f509`; `CachedLongValue` differs only in replacing the two NeoForge builder/value imports with `MekanismConfigSpec` types. The Fabric spec now preserves exact in-range signed-long TOML integer literals through load/correction/save, including values above `2^53`, `Long.MIN_VALUE`, and `Long.MAX_VALUE`, while a decimal/hex/octal/binary lexical preflight rejects overflow before Night Config can wrap it. Its explicit normalizer checks Float/Double against the exact runtime IEEE value and rejects fractions, non-finite values, overflow (including floating `2^63`), and configured range misses without rounding, truncation, saturation, or lossy comparisons.
@@ -133,6 +139,8 @@ The non-config relative-side holder layer is now available and documented in `FA
 
 `fabric/src/test/java/mekanism/common/capabilities/energy/DynamicStrictEnergyHandlerTest.java` compactly covers denied policy short-circuiting, independent predicates, exact default-method/supplier side and action bridging, direct nullable lookup, and optional listener forwarding without repeating transfer matrices.
 
+`fabric/src/test/java/mekanism/common/tile/component/config/slot/SlotInfoTest.java` has exactly five methods covering all flag combinations/OR enablement, energy varargs order and zero/all-empty behavior, source-order first-non-empty short-circuit, live list identity/membership/state, and heat's unconditional non-empty result without reading capacitor state.
+
 `fabric/src/test/java/mekanism/common/capabilities/energy/BasicEnergyContainerTest.java` covers:
 
 - execute/simulate insertion and extraction, capacity remainder, and listener counts;
@@ -151,7 +159,7 @@ Required gates:
 scripts/fabric-packaged-smoke.sh
 ```
 
-The packaged smoke verifies the root capability package is exactly `SimpleDynamicHandler.class` and `DynamicHandler.class`, and the exact energy implementation package is `BasicEnergyContainer.class` plus `DynamicStrictEnergyHandler.class`, each once. It retains the exact energy API and long-transfer contracts. Handler behavior is exercised by JUnit rather than production bootstrap; there is no dynamic-handler startup marker.
+The packaged smoke verifies the root capability package is exactly `SimpleDynamicHandler.class` and `DynamicHandler.class`, the exact energy implementation package is `BasicEnergyContainer.class` plus `DynamicStrictEnergyHandler.class`, and the exact slot descriptor package is `ISlotInfo.class`, `BaseSlotInfo.class`, `EnergySlotInfo.class`, and `HeatSlotInfo.class`, each once. It retains the exact energy API and long-transfer contracts. Handler and descriptor behavior is exercised by JUnit rather than production bootstrap; there is no dynamic-handler or slot-descriptor startup marker.
 
 `fabric/src/test/java/mekanism/api/math/LongTransferUtilsTest.java` covers the sequential closure with observable event/order/value assertions:
 

@@ -13,7 +13,7 @@ This milestone adds the platform-neutral side-routing layer used by Mekanism's i
 - `mekanism.common.capabilities.holder.heat.IHeatCapacitorHolder`
 - `mekanism.common.capabilities.holder.heat.HeatCapacitorHolder`
 
-It builds on the internal energy and heat containers but does not expose either storage family through a Fabric block/item lookup.
+It builds on the internal energy and heat containers but does not expose either storage family through a Fabric block/item lookup. The current audited source counts are API **42** / common **84** / platform **10**.
 
 ## Relative-side contract
 
@@ -45,16 +45,20 @@ The enum no longer pulls `APILang`, `ILangEntry`, `TextComponentUtil`, or `Mekan
 
 `IHolder`/`IEnergyContainerHolder` retain unrestricted default `canInsert` and `canExtract` behavior. `HeatCapacitorHolder` applies the same official routing model without adding energy-style permission methods. Configurable holders and helpers remain separate.
 
+## Slot descriptor closure
+
+The adjacent platform-neutral descriptors `ISlotInfo`, `BaseSlotInfo`, `EnergySlotInfo`, and `HeatSlotInfo` are admitted byte-identically to `4646f509`. They preserve constructor flags and exact list references; enablement is exactly input OR output. Energy emptiness scans in source order and stops at the first non-empty container, while later list membership and contained state remain live. Heat descriptors always report non-empty and do not inspect capacitor heat state. Five focused JUnit methods bind those contracts, and the remapped JAR package is exactly the four corresponding classes, once each, without nested/synthetic/test/helper/fixture leakage or a startup marker.
+
 ## Deliberately deferred
 
 This slice excludes:
 
-- `EnergyContainerHelper` and `HeatCapacitorHelper`;
+- `EnergyContainerHelper`, `HeatCapacitorHelper`, and all other configurable holder/helper paths;
 - `ConfigHolder`, `ConfigEnergyContainerHolder`, and `ConfigHeatCapacitorHolder`;
-- `ISideConfiguration` and machine component configuration;
-- capability/lookup registration and proxies;
-- Team Reborn Energy API and Fabric transactions;
-- quantum-entangloporter and other specialized holders.
+- `ConfigInfo`, `DataType`, `TileComponentConfig`, `TileComponentEjector`, and side-configuration execution/ejection;
+- chemical, fluid, inventory, and proxy slot descriptors;
+- capability exposure/lookup registration, every tile/machine/block caller, and specialized holders;
+- Team Reborn Energy API, transactions, persistence, networking/wire serialization, config/registry lifecycle, and thread ownership.
 
 The energy and heat helpers currently couple their non-config and configurable factories. They must be split or admitted with their real side-configuration closure rather than stubbed.
 
@@ -74,6 +78,8 @@ The energy and heat helpers currently couple their non-config and configurable f
 - `fabric/src/test/java/mekanism/common/capabilities/holder/heat/HeatCapacitorHolderTest.java`
   - exercises representative horizontal and vertical routing for the official heat-holder specialization;
   - verifies internal/all-side identity, filtering, live facing, order, duplicates, and list mutability.
+- `fabric/src/test/java/mekanism/common/tile/component/config/slot/SlotInfoTest.java`
+  - five methods cover all four flag combinations/OR enablement, energy varargs order and zero/all-empty behavior, exact source-order short-circuit, live list identity/membership/state, and heat's unconditional non-empty result without capacitor reads.
 
 Required gates:
 
@@ -84,4 +90,4 @@ Required gates:
 scripts/fabric-packaged-smoke.sh
 ```
 
-The packaged smoke verifies the relative-side translation interface plus energy- and heat-holder classes are present in the remapped JAR. Directional behavior is exercised in JUnit and does not create synthetic holder state during normal mod bootstrap.
+The packaged smoke verifies the relative-side translation interface plus energy- and heat-holder classes are present in the remapped JAR, and statically restricts the slot descriptor family to exactly `ISlotInfo.class`, `BaseSlotInfo.class`, `EnergySlotInfo.class`, and `HeatSlotInfo.class`, once each. Directional and descriptor behavior is exercised in JUnit and does not create synthetic holder state or a descriptor startup marker during normal mod bootstrap.

@@ -62,6 +62,10 @@ mekanism/common/util/StatUtils.java
 mekanism/common/resource/IResource.java
 mekanism/common/resource/MiscResource.java
 mekanism/common/resource/BlockResourceInfo.java
+mekanism/common/tile/component/config/slot/ISlotInfo.java
+mekanism/common/tile/component/config/slot/BaseSlotInfo.java
+mekanism/common/tile/component/config/slot/EnergySlotInfo.java
+mekanism/common/tile/component/config/slot/HeatSlotInfo.java
 mekanism/common/tile/interfaces/IHasDumpButton.java
 mekanism/common/tile/interfaces/IHasGasMode.java
 mekanism/common/tile/interfaces/IHasMode.java
