@@ -5,6 +5,7 @@ output
 *.ipr
 *.iws
 out
+__pycache__/
 
 Mekanism*.jar
 MDK.zip
