@@ -619,3 +619,38 @@ Gemini 3.8 Flash 与 GLM 5.3 不再进入默认实现面板；需要其特定能
 - **最终策略：** 在用户测试政策提交 `917a122a` 后，以 SOL candidate cherry-pick 为主线提交 `398160f0`；综合提交 `1e17e80b` 只吸收 repeated `hasNext`、同 chunk/Y 超界和第二次 `removeAt=false` 三条独有断言，保留 SOL 实际执行 removeIf 的 mixed-removal fixture，不引入 DeepSeek 的空/尾 iterator 重复、独立文档或冗长说明。
 - **综合规模：** Task010 本身相对基线 9 files，`+149/-16`；local suite 109 行、3 tests，低于后续长期目标。
 - **主代理独立验证：** 三个 production 和两份新 official tests 与 `4646f509` 字节一致，先前 16 个 oracle 文件无修改，oracle 精确 18 个 existing unique paths；slice 41/35/10 且无重复；31 suites、169 tests、0 failures/errors/skips，三个 jqwik properties 各 100,000 tries/checks；完整 Gradle gate 9.37s，`fabric-build.sh` 2.81s，packaged smoke 56.22s 并到达 `Done`；clean release 10.55s，恰好一个 JAR，collection package 精确六类，无 test/fixture/NeoForge/JUnit/jqwik 泄漏，`build-info.json` source commit 与实现 HEAD `1e17e80b` 一致，JAR sha256 为 `e889fd46b206468e07c096f258c0378ebb59e22575a14a5812149bb69194ca37`。
+
+---
+
+## 任务 011：纳入 platform-neutral codec 闭包
+
+### 任务简述
+
+- **基线：** `e8a6eca2e93b943d464d39fd0f6445d302079762`
+- **目标：** 原样纳入 API `DependentMapCodec` 与 common `SequencedCollectionCodec`、`DroppingUnboundedMapCodec`，不增加依赖或 adapter。
+- **关键验收：** slice 42/37/10，18-file root oracle 与 `fabric/build.gradle` 不变；覆盖 dependency-selected codec/error、sequenced encode/decode bounds/order/immutable/partial remainder、dropping-map first-wins/malformed partial/duplicate partial-error early return；两个 codec package 精确四类；不宣称 `ModuleContainer`、`AttachedSideConfig`、recipes、data components、config/network owner、persistence/registry/packet lifecycle 或 caller 已移植。遵守新增测试目标不超过 200 行、3–6 tests。
+
+### 5.6 SOL
+
+- **提交：** `11bb591e751bbe1d8c3be8d99d656823660c195b`
+- **规模：** 8 files，`+149/-9`；单一 local suite 112 行、5 tests。
+- **资源：** 469.2s，90.5k tokens，54 次工具调用，约 `$1.64`。
+- **优点：** 一个短测试类完成三个 codec 的全部主要边界；Dependent fixture 用事件序列直接证明 dependency decode 发生在 selector 之前，并让 int/text 两类 round-trip 产生可观察不同形状；dropping-map 仅用标准 codec combinator 构造 partial-value error，first-wins、malformed partial 与 round-trip 都很紧凑；文档和 exact package gate 明显更短，全部门禁通过。
+- **不足：** sequenced minimum 用例最初只断言 error present；元素自身 decode error 即使错误地按 total count 判断 minimum 也可能让该断言通过。maximum 用例虽断言 `too long: 3` 和 retained elements，却没有同时固定 failed-input remainder。
+- **本任务评价：** 单体实现最佳，测试预算与有效覆盖比例优秀；两个断言缺口可在不新增 test method 的情况下补齐。
+
+### DeepSeek v4.1 Flash
+
+- **提交：** `eeddb0526ca37150cfdd449dcc91f9faaa3d1ab6`
+- **规模：** 9 files，`+262/-10`；两份 local suites 共 199 行、6 tests。
+- **资源：** 695.1s，130.5k tokens，108 次工具调用；通知未提供成本。
+- **优点：** sequenced minimum 精确断言 `too short: 1`，maximum 同时固定 retained elements 与 `[4]` remainder；Dependent 的 missing element message、missing/invalid dependency 无 partial result 更具体；自定义 partial codec 清楚地区分 malformed-without-partial 与 duplicate-with-partial early return。全部门禁通过并恰好守住 200 行/6-test 目标。
+- **不足：** 相比 SOL 多 87 行测试、113 行总 diff、54 次工具调用与 225.9s；Dependent 用 `AtomicReference` 只观察 selector 最终参数，没有像 SOL 的 event list 那样直接固定 dependency/selector 顺序；custom partial codec 本身 20 多行且返回非标准 decode remainder，但生产测试只消费 first value；README/PORT_MATRIX 重复了较长的逐行为说明。
+- **本任务评价：** 边界诊断更细且提供两个必须吸收的断言，单体质量第二；额外体积没有形成足够独有 mutation coverage 来取代 SOL 基底。
+
+### 本任务结论
+
+- **单体代码质量与执行效率：** 5.6 SOL > DeepSeek。
+- **最终策略：** 以 SOL candidate cherry-pick 为主线提交 `9e1a4527`；综合提交 `5ff829a5` 在原 sequenced test 中把 minimum 改成精确 `List is too short: 2` 断言，并固定 maximum 的 failed-input remainder 为 `["bad"]`，不新增 test method，也不引入 DeepSeek 的额外 fixture、第二测试文件或冗长文档。
+- **综合规模：** 8 files，`+153/-11`；local suite 114 行、5 tests，满足未来测试增长政策。
+- **主代理独立验证：** 三个 production source 与 `4646f509` 字节一致，`fabric/build.gradle`、18 个 oracle files/paths 和全部既有测试不变；slice 42/37/10 且无重复；32 suites、174 tests、0 failures/errors/skips，三个 jqwik properties 各 100,000 tries/checks；完整 Gradle gate 10.18s，`fabric-build.sh` 4.06s，packaged smoke 52.67s 并到达 `Done`；clean release 10.98s，恰好一个 JAR，两个 codec package 精确四类，无 test/fixture/NeoForge/JUnit/jqwik 泄漏，`build-info.json` source commit 与实现 HEAD `5ff829a5` 一致，JAR sha256 为 `c7e1a9211e26c4747270ad2c1073a9ece6ae2309a78d08c91878b757373eb278`。
