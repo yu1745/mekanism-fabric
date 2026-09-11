@@ -26,6 +26,7 @@ property() {
 MINECRAFT_VERSION=$(property minecraft_version)
 LOADER_VERSION=$(property loader_version)
 FABRIC_API_VERSION=$(property fabric_api_version)
+INSTALLER_VERSION=${FABRIC_INSTALLER_VERSION:-$(property fabric_installer_version)}
 
 mkdir -p "$CACHE_DIR" "$LOG_ROOT"
 RUN_ID=$(date -u +%Y%m%dT%H%M%SZ)-$$
@@ -98,25 +99,6 @@ if ! unzip -p "${MOD_JARS[0]}" fabric.mod.json | grep -Eq '"id"[[:space:]]*:[[:s
   echo "fabric-packaged-smoke: artifact does not contain mekanism fabric.mod.json" >&2
   exit 1
 fi
-
-INSTALLER_JSON="$CACHE_DIR/installer-versions.json"
-if ! curl --fail --location --retry 3 --retry-all-errors --connect-timeout 15 --max-time 60 \
-    --output "$INSTALLER_JSON.part" https://meta.fabricmc.net/v2/versions/installer; then
-  rm -f "$INSTALLER_JSON.part"
-  [[ -s "$INSTALLER_JSON" ]] || { echo 'fabric-packaged-smoke: cannot obtain Fabric installer metadata' >&2; exit 1; }
-  echo 'fabric-packaged-smoke: using cached Fabric installer metadata' >&2
-else
-  mv "$INSTALLER_JSON.part" "$INSTALLER_JSON"
-fi
-INSTALLER_VERSION=${FABRIC_INSTALLER_VERSION:-$(python3 - "$INSTALLER_JSON" <<'PY'
-import json, sys
-versions = json.load(open(sys.argv[1]))
-stable = [v["version"] for v in versions if v.get("stable")]
-if not stable:
-    raise SystemExit("no stable Fabric installer version")
-print(stable[0])
-PY
-)}
 
 LAUNCHER="$CACHE_DIR/fabric-server-${MINECRAFT_VERSION}-${LOADER_VERSION}-${INSTALLER_VERSION}.jar"
 API_JAR="$CACHE_DIR/fabric-api-${FABRIC_API_VERSION}.jar"
