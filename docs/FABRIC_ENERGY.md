@@ -9,6 +9,9 @@ The first storage milestone admits the official Mekanism energy-container contra
 - `mekanism.api.energy.ISidedStrictEnergyHandler`
 - `mekanism.api.energy.IMekanismStrictEnergyHandler`
 - `mekanism.common.capabilities.energy.BasicEnergyContainer`
+- `mekanism.common.capabilities.SimpleDynamicHandler`
+- `mekanism.common.capabilities.DynamicHandler`
+- `mekanism.common.capabilities.energy.DynamicStrictEnergyHandler`
 
 The domain remains measured in Mekanism's `long` energy units. `insert` returns the unaccepted remainder; `extract` returns the extracted amount. `Action.SIMULATE` performs the same capacity/rate/policy calculation as execution without mutating storage or notifying listeners.
 
@@ -43,9 +46,11 @@ The three-layer handler closure connects the admitted sequential utility to Meka
 
 `IMekanismStrictEnergyHandler` defaults expose the side-specific list supplied by the implementer. Valid indexes delegate to their `IEnergyContainer`; invalid indexes return zero/null/remainder defaults or perform no mutation; direct setting clamps negative values to zero. A null side maps to `AutomationType.INTERNAL`, and a non-null side maps to `EXTERNAL`. Aggregate insert/extract obtains the side-specific list once per operation, then applies the unchanged sequential semantics under both `SIMULATE` and `EXECUTE`, including true-`long` values. `canHandleEnergy()` defaults to true; an implementation returning false remains responsible for returning an empty list from `getEnergyContainers`, exactly as the official contract states.
 
+The three dynamic handler sources are byte-identical to `4646f509`. Insert and extract predicates are independent and receive the exact nullable side. Denial returns the original insertion amount or zero extraction without consulting the supplier; allowance delegates through the defaults with exact index, side, amount, and `Action`, and the supplier receives that side. Direct container lookup forwards null/non-null unchanged, while `onContentsChanged` forwards once to a present listener and is harmless when absent.
+
 ## Sequential transfer utilities
 
-The unchanged official long-valued transfer closure is admitted as part of the API slice count 41 / common 35 / platform 10:
+The unchanged official long-valued transfer closure is admitted as part of the current API/common/platform slice count 42 / 40 / 10:
 
 - `mekanism.api.math.LongTransferUtils`
 - `mekanism.api.container.InContainerGetterLong`
@@ -88,13 +93,18 @@ This is an internal storage slice, not external Fabric energy interoperability. 
 - Fabric transaction rollback;
 - Joule/FE/Energy conversion policy;
 - machines, menus, sync packets, or persistence owners;
-- concrete `EnergyHandler`, configurable holders/helpers, and every caller of the sequential closure (`ComponentBackedEnergyHandler`, `EnergyRecipeData`).
+- `EnergyContainerHelper` and its static dependency `ConfigEnergyContainerHolder`;
+- side configuration/ejector, Universal Cable, machines, network/persistence owners, and all callers (including `ComponentBackedEnergyHandler` and `EnergyRecipeData`).
+
+There is no official `mekanism.common.capabilities.energy.EnergyHandler` source in baseline `4646f509`; older generic/concrete `EnergyHandler` deferral wording was stale naming. The helper remains unsplit because its official class statically reaches the config holder and broad tile side-config/ejector/chemical/fluid/inventory owner closure.
 
 The non-config relative-side holder layer is now available and documented in `FABRIC_HOLDERS.md`. External energy boundaries must still wait for explicit conversion configuration and configurable exposure policy. Fabric API itself does not define a standard energy API.
 
 ## Verification
 
 `fabric/src/test/java/mekanism/api/energy/{IStrictEnergyHandlerTest,ISidedStrictEnergyHandlerTest,IMekanismStrictEnergyHandlerTest}.java` covers indexed delegation/order, every unsided-to-sided bridge, exact nullable side/`Action`, invalid indexes, negative-set clamping, null/internal versus non-null/external automation, one-list-lookup aggregates, simulation/execution, and a value above `Integer.MAX_VALUE`. The tracking fixtures are limited to delegation identity/order; real `BasicEnergyContainer` provides storage and mutation behavior.
+
+`fabric/src/test/java/mekanism/common/capabilities/energy/DynamicStrictEnergyHandlerTest.java` compactly covers denied policy short-circuiting, independent predicates, exact default-method/supplier side and action bridging, direct nullable lookup, and optional listener forwarding without repeating transfer matrices.
 
 `fabric/src/test/java/mekanism/common/capabilities/energy/BasicEnergyContainerTest.java` covers:
 
@@ -114,7 +124,7 @@ Required gates:
 scripts/fabric-packaged-smoke.sh
 ```
 
-The packaged smoke verifies the storage classes and all three strict handler interfaces are present exactly once, rejects every other energy API class outside the current closure, and still requires exactly one occurrence of each long-transfer production class while rejecting any other `LongTransferUtils*.class`. Handler and energy behavior is exercised by JUnit rather than by constructing test state during production bootstrap; there is no handler startup marker.
+The packaged smoke verifies the root capability package is exactly `SimpleDynamicHandler.class` and `DynamicHandler.class`, and the exact energy implementation package is `BasicEnergyContainer.class` plus `DynamicStrictEnergyHandler.class`, each once. It retains the exact energy API and long-transfer contracts. Handler behavior is exercised by JUnit rather than production bootstrap; there is no dynamic-handler startup marker.
 
 `fabric/src/test/java/mekanism/api/math/LongTransferUtilsTest.java` covers the sequential closure with observable event/order/value assertions:
 

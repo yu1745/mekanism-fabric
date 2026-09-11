@@ -248,6 +248,30 @@ if unexpected_long_transfer:
     raise SystemExit(
         "packaged LongTransferUtils test/helper classes are forbidden: " + ", ".join(unexpected_long_transfer)
     )
+expected_dynamic_handlers = {
+    "mekanism/common/capabilities/SimpleDynamicHandler.class",
+    "mekanism/common/capabilities/DynamicHandler.class",
+}
+actual_dynamic_handlers = {
+    entry for entry in entries
+    if entry.startswith("mekanism/common/capabilities/")
+    and "/" not in entry[len("mekanism/common/capabilities/"):]
+    and entry.endswith(".class")
+}
+if actual_dynamic_handlers != expected_dynamic_handlers or any(entries.count(entry) != 1 for entry in expected_dynamic_handlers):
+    raise SystemExit(f"unexpected root dynamic-handler class family: {sorted(actual_dynamic_handlers)!r}")
+expected_common_energy = {
+    "mekanism/common/capabilities/energy/BasicEnergyContainer.class",
+    "mekanism/common/capabilities/energy/DynamicStrictEnergyHandler.class",
+}
+actual_common_energy = {
+    entry for entry in entries
+    if entry.startswith("mekanism/common/capabilities/energy/")
+    and "/" not in entry[len("mekanism/common/capabilities/energy/"):]
+    and entry.endswith(".class")
+}
+if actual_common_energy != expected_common_energy or any(entries.count(entry) != 1 for entry in expected_common_energy):
+    raise SystemExit(f"unexpected common energy class family: {sorted(actual_common_energy)!r}")
 expected_energy_handlers = {
     "mekanism/api/energy/IStrictEnergyHandler.class",
     "mekanism/api/energy/ISidedStrictEnergyHandler.class",
@@ -268,7 +292,7 @@ if unexpected_energy_api:
     )
 PYEOF
 then
-  echo "fabric-packaged-smoke: codec/collection/distribution/ChunkUtils/RegistryUtils/LambdaMetaFactoryUtil/long-transfer/strict-energy-handler production/test packaging contract failed" >&2
+  echo "fabric-packaged-smoke: codec/collection/distribution/ChunkUtils/RegistryUtils/LambdaMetaFactoryUtil/long-transfer/dynamic-strict-energy production/test packaging contract failed" >&2
   exit 1
 fi
 for required_entry in \
@@ -283,7 +307,10 @@ for required_entry in \
     mekanism/api/heat/IMekanismHeatHandler.class \
     mekanism/api/heat/ISidedHeatHandler.class \
     'mekanism/api/text/IHasTranslationKey$IHasEnumNameTranslationKey.class' \
+    mekanism/common/capabilities/SimpleDynamicHandler.class \
+    mekanism/common/capabilities/DynamicHandler.class \
     mekanism/common/capabilities/energy/BasicEnergyContainer.class \
+    mekanism/common/capabilities/energy/DynamicStrictEnergyHandler.class \
     mekanism/common/capabilities/heat/BasicHeatCapacitor.class \
     mekanism/common/capabilities/heat/VariableHeatCapacitor.class \
     mekanism/common/capabilities/holder/BasicHolder.class \

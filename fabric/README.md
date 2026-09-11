@@ -18,7 +18,7 @@ fluid-import/link cleanup; `IMekanismStrictEnergyHandler` remains byte-identical
 See `../docs/API_DELTAS.md`. JetBrains annotations and JSR-305 remain `compileOnly`
 and are not bundled in the mod.
 
-`common-slice.txt` contains **37 official source files**, and
+`common-slice.txt` contains **40 official source files**, and
 `platform-slice.txt` contains **10 project-owned Fabric sources**. Together with
 the **42-file API slice**, they form bounded registry/GameEvent, TOML
 startup-config, configuration-handshake, internal energy storage/holder, internal
@@ -96,10 +96,16 @@ propagation, invalid-index/no-op defaults, negative-set clamping, null/internal
 versus non-null/external automation, one list lookup per aggregate, and
 `SIMULATE`/`EXECUTE` behavior with a true-`long` amount. Packaging requires all
 three interfaces and the existing `IEnergyContainer` exactly once, rejects every
-other energy API class outside the current closure, and adds no startup marker. Concrete `EnergyHandler`, configurable
-holders/helpers, external Energy API and conversion, Fabric lookup/transaction,
-machines, network/persistence owners, and all callers
-(`ComponentBackedEnergyHandler`, `EnergyRecipeData`) remain deferred.
+other energy API class outside the current closure, and adds no startup marker. The
+byte-identical `SimpleDynamicHandler`, `DynamicHandler`, and
+`DynamicStrictEnergyHandler` closure adds exact nullable-side predicate and supplier
+forwarding plus optional listener forwarding; denied operations never consult the
+supplier. The two root capability classes and the energy package's
+`BasicEnergyContainer`/`DynamicStrictEnergyHandler` are exact package families.
+There is no official `EnergyHandler` class in this baseline. `EnergyContainerHelper`,
+`ConfigEnergyContainerHolder`, side configuration/ejector, Universal Cable and other
+machine/network/persistence owners, external Energy API conversion/lookup/transaction,
+and all callers (`ComponentBackedEnergyHandler`, `EnergyRecipeData`) remain deferred.
 
 `RegistryUtils` has only the two minimal vanilla equivalents documented in
 `../docs/API_DELTAS.md`. Its holder-key helper uses `unwrapKey()` and preserves
