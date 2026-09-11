@@ -10,7 +10,7 @@ excluded. It uses Minecraft 1.21.1, Java 21, and Mojang official mappings.
 `api-slice.txt` is the auditable allowlist of API source paths, relative to
 `src/api/java`. The Fabric source set reads that file directly, so the listed
 sources retain their original `mekanism.api.*` names without being copied or
-modified. The allowlist contains **41 current source files**: **40 official baseline
+modified. The allowlist contains **42 current source files**: **41 official baseline
 sources** plus the project-owned registry-aware `INBTSerializable` NBT contract.
 Intentional API adaptations include that contract, `Action`'s removal of two
 NeoForge `FluidAction` conversion methods, and the Javadoc-only strict-handler
@@ -18,9 +18,9 @@ fluid-import/link cleanup; `IMekanismStrictEnergyHandler` remains byte-identical
 See `../docs/API_DELTAS.md`. JetBrains annotations and JSR-305 remain `compileOnly`
 and are not bundled in the mod.
 
-`common-slice.txt` contains **35 official source files**, and
+`common-slice.txt` contains **37 official source files**, and
 `platform-slice.txt` contains **10 project-owned Fabric sources**. Together with
-the **41-file API slice**, they form bounded registry/GameEvent, TOML
+the **42-file API slice**, they form bounded registry/GameEvent, TOML
 startup-config, configuration-handshake, internal energy storage/holder, internal
 heat storage/holder, wildcard-matching, fair-distribution, chunk-coordinate,
 lambda-metafactory, and vanilla-registry utility closures. The unchanged
@@ -35,6 +35,8 @@ Callers must provide nonnegative offers, a fresh/non-reused `Target`, and handle
 whose simulation/acceptance and `SplitInfo.send` accounting obey the documented
 contract; the official implementation intentionally adds no defensive behavior
 for contract violations.
+
+The official `DependentMapCodec`, `SequencedCollectionCodec`, and `DroppingUnboundedMapCodec` are admitted byte-identically as a platform-neutral codec closure. A five-method, table-driven Java 21 oracle covers dependency-first codec selection and field errors, sequenced min/max/order/immutable/partial-remainder semantics, and first-wins map collisions including malformed and deliberately ignored duplicate partial values. Packaging allows exactly the one API and three common codec class entries (including `SequencedCollectionCodec$DecoderState`) and uses no startup marker. This proves only those codec behaviors: `ModuleContainer`, `AttachedSideConfig`, recipes, data components, config/network owners, and every caller remain deferred; no persistence, registry, packet, lifecycle-owner, or backward-compatible serialized-format claim is made.
 
 The unchanged `ChunkUtils` keeps `rangeClosed`'s inclusive, row-major ordering
 (X changes fastest, then Z) for all four traversal directions together with its

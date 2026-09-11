@@ -143,6 +143,24 @@ required = {
 }
 with zipfile.ZipFile(sys.argv[1]) as artifact:
     entries = artifact.namelist()
+expected_api_codec = {"mekanism/api/codec/DependentMapCodec.class"}
+actual_api_codec = {
+    entry for entry in entries
+    if entry.startswith("mekanism/api/codec/") and entry.endswith(".class")
+}
+if actual_api_codec != expected_api_codec or any(entries.count(entry) != 1 for entry in expected_api_codec):
+    raise SystemExit(f"unexpected API codec class family: {sorted(actual_api_codec)!r}")
+expected_common_codec = {
+    "mekanism/common/lib/codec/DroppingUnboundedMapCodec.class",
+    "mekanism/common/lib/codec/SequencedCollectionCodec.class",
+    "mekanism/common/lib/codec/SequencedCollectionCodec$DecoderState.class",
+}
+actual_common_codec = {
+    entry for entry in entries
+    if entry.startswith("mekanism/common/lib/codec/") and entry.endswith(".class")
+}
+if actual_common_codec != expected_common_codec or any(entries.count(entry) != 1 for entry in expected_common_codec):
+    raise SystemExit(f"unexpected common codec class family: {sorted(actual_common_codec)!r}")
 expected_collection = {
     "mekanism/common/lib/collection/BiLongMultimap.class",
     "mekanism/common/lib/collection/FilterTransformIterator.class",
@@ -250,7 +268,7 @@ if unexpected_energy_api:
     )
 PYEOF
 then
-  echo "fabric-packaged-smoke: collection/distribution/ChunkUtils/RegistryUtils/LambdaMetaFactoryUtil/long-transfer/strict-energy-handler production/test packaging contract failed" >&2
+  echo "fabric-packaged-smoke: codec/collection/distribution/ChunkUtils/RegistryUtils/LambdaMetaFactoryUtil/long-transfer/strict-energy-handler production/test packaging contract failed" >&2
   exit 1
 fi
 for required_entry in \
