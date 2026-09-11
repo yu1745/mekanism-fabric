@@ -67,7 +67,10 @@ public final class FabricMekanismNetworking {
 
     private static void beginHandshake(ServerConfigurationPacketListenerImpl handler, MinecraftServer server) {
         if (!ServerConfigurationNetworking.canSend(handler, REQUEST_TYPE)) {
-            handler.disconnect(Component.literal("This server requires Mekanism protocol " + MekanismNetworkProtocol.CURRENT));
+            String reason = "This server requires Mekanism protocol " + MekanismNetworkProtocol.CURRENT;
+            LOGGER.info("MEKANISM_FABRIC_NETWORK_HANDSHAKE_REJECT kind=missing_receiver player={} protocol={} reason={}",
+                  handler.getOwner().getName(), MekanismNetworkProtocol.CURRENT, reason);
+            handler.disconnect(Component.literal(reason));
             return;
         }
         ((FabricServerConfigurationNetworkHandler) handler).addTask(
@@ -85,6 +88,11 @@ public final class FabricMekanismNetworking {
         }
         MekanismNetworkProtocol.Compatibility compatibility = result.orElseThrow();
         if (!compatibility.compatible()) {
+            String rejectionKind = MekanismNetworkProtocol.CURRENT.equals(response.protocolVersion()) ? "client_rejected" : "version_mismatch";
+            LOGGER.info("MEKANISM_FABRIC_NETWORK_HANDSHAKE_REJECT kind={} player={} session={} local={} remote={} reason={}",
+                  rejectionKind, handler.getOwner().getName(), sessionId, MekanismNetworkProtocol.CURRENT,
+                  MekanismNetworkProtocol.sanitizeForLog(response.protocolVersion()),
+                  MekanismNetworkProtocol.sanitizeForLog(compatibility.disconnectReason()));
             handler.disconnect(Component.literal(compatibility.disconnectReason()));
             return;
         }

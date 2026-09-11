@@ -1,3 +1,5 @@
+import groovy.json.JsonSlurper
+
 plugins {
     id 'fabric-loom' version "${loom_version}"
     id 'maven-publish'
@@ -10,21 +12,58 @@ base {
     archivesName = project.archives_base_name
 }
 
+sourceSets {
+    handshakeMismatchFixture
+    handshakeMissingReceiverFixture
+}
+
 loom {
     accessWidenerPath = file('src/main/resources/mekanism.accesswidener')
+    createRemapConfigurations(sourceSets.handshakeMismatchFixture)
+    createRemapConfigurations(sourceSets.handshakeMissingReceiverFixture)
+
+    mods {
+        mekanism {
+            sourceSet sourceSets.main
+        }
+        handshakeMismatchFixture {
+            sourceSet sourceSets.handshakeMismatchFixture
+        }
+        handshakeMissingReceiverFixture {
+            sourceSet sourceSets.handshakeMissingReceiverFixture
+        }
+    }
 
     runs {
         handshakeServer {
             server()
             name = 'Mekanism handshake server'
+            source sourceSets.main
             runDir = System.getProperty('mekanism.handshake.serverDir', 'run/handshake-server')
         }
         handshakeClient {
             client()
             name = 'Mekanism handshake client'
+            source sourceSets.main
             runDir = System.getProperty('mekanism.handshake.clientDir', 'run/handshake-client')
             programArgs '--quickPlayMultiplayer', System.getProperty('mekanism.handshake.address', '127.0.0.1:25567'),
                   '--username', System.getProperty('mekanism.handshake.username', 'MekanismSmoke')
+        }
+        handshakeMismatchClient {
+            client()
+            name = 'Mekanism mismatched handshake fixture client'
+            source sourceSets.handshakeMismatchFixture
+            runDir = System.getProperty('mekanism.handshake.mismatchClientDir', 'run/handshake-mismatch-client')
+            programArgs '--quickPlayMultiplayer', System.getProperty('mekanism.handshake.address', '127.0.0.1:25567'),
+                  '--username', System.getProperty('mekanism.handshake.username', 'MekanismMismatch')
+        }
+        handshakeMissingReceiverClient {
+            client()
+            name = 'Mekanism missing-protocol-receiver handshake fixture client'
+            source sourceSets.handshakeMissingReceiverFixture
+            runDir = System.getProperty('mekanism.handshake.missingReceiverClientDir', 'run/handshake-missing-receiver-client')
+            programArgs '--quickPlayMultiplayer', System.getProperty('mekanism.handshake.address', '127.0.0.1:25567'),
+                  '--username', System.getProperty('mekanism.handshake.username', 'MekanismMissing')
         }
     }
 }
@@ -76,6 +115,16 @@ registerPortableSliceCheck('verifyPlatformSliceNoNeoForge',
       'Checks that every allowlisted Fabric platform source exists and has no NeoForge reference.', platformSliceFiles)
 
 sourceSets {
+    handshakeMismatchFixture {
+        // Reuse only main's external Minecraft/Fabric compile dependencies; never main output.
+        compileClasspath += sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.runtimeClasspath - sourceSets.main.output
+    }
+    handshakeMissingReceiverFixture {
+        // Reuse external dependencies but never main or mismatch-fixture output.
+        compileClasspath += sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.runtimeClasspath - sourceSets.main.output
+    }
     main {
         java {
             srcDirs = ['src/main/java', '../src/api/java', '../src/main/java']
@@ -86,11 +135,80 @@ sourceSets {
     }
 }
 
+def mainOutputFiles = files(sourceSets.main.output)
+def mismatchOutputFiles = files(sourceSets.handshakeMismatchFixture.output)
+def mismatchRuntimeFiles = files(sourceSets.handshakeMismatchFixture.runtimeClasspath)
+def missingReceiverRuntimeFiles = files(sourceSets.handshakeMissingReceiverFixture.runtimeClasspath)
+def mismatchSourceFiles = files(sourceSets.handshakeMismatchFixture.allJava)
+def missingReceiverSourceFiles = files(sourceSets.handshakeMissingReceiverFixture.allJava)
+def mismatchMetadataFile = layout.projectDirectory.file('src/handshakeMismatchFixture/resources/fabric.mod.json')
+def missingReceiverMetadataFile = layout.projectDirectory.file('src/handshakeMissingReceiverFixture/resources/fabric.mod.json')
+def verifyHandshakeFixtureIsolation = tasks.register('verifyHandshakeFixtureIsolation') {
+    group = 'verification'
+    description = 'Checks that rejection-smoke clients cannot load Mekanism production classes.'
+    inputs.files(mismatchSourceFiles, missingReceiverSourceFiles, mismatchMetadataFile, missingReceiverMetadataFile)
+    doLast {
+        def canonical = { File file -> file.canonicalFile }
+        def mainOutput = mainOutputFiles.files.collect(canonical).toSet()
+        def mismatchOutput = mismatchOutputFiles.files.collect(canonical).toSet()
+        def mismatchClasspath = mismatchRuntimeFiles.files.collect(canonical).toSet()
+        def missingClasspath = missingReceiverRuntimeFiles.files.collect(canonical).toSet()
+        if (!mainOutput.intersect(mismatchClasspath).isEmpty() || !mainOutput.intersect(missingClasspath).isEmpty()) {
+            throw new GradleException('Handshake fixture runtime classpaths must not contain the main source-set output')
+        }
+        if (!mismatchOutput.intersect(missingClasspath).isEmpty()) {
+            throw new GradleException('Missing-protocol-receiver fixture runtime classpath must not contain mismatch-fixture output')
+        }
+        def validateMetadata = { metadataFile, expectedId ->
+            def metadata = new JsonSlurper().parse(metadataFile.asFile)
+            if (metadata.id != expectedId || metadata.environment != 'client' ||
+                  metadata.entrypoints?.keySet() != ['client'] as Set || metadata.depends?.containsKey('mekanism')) {
+                throw new GradleException("$expectedId metadata must be a distinct client-only mod with no Mekanism dependency")
+            }
+        }
+        validateMetadata(mismatchMetadataFile, 'mekanism_handshake_mismatch_fixture')
+        validateMetadata(missingReceiverMetadataFile, 'mekanism_handshake_missing_receiver_fixture')
+        def leakedImports = (mismatchSourceFiles.files + missingReceiverSourceFiles.files).findAll {
+            it.text.contains('mekanism.fabric.network') || it.text.contains('net.neoforged.')
+        }
+        if (!leakedImports.isEmpty()) {
+            throw new GradleException("Handshake fixture imports production or NeoForge code: ${leakedImports.join(', ')}")
+        }
+        def missingPayloadDeclarations = missingReceiverSourceFiles.files.findAll {
+            it.text.contains('PayloadTypeRegistry') || it.text.contains('ClientConfigurationNetworking') ||
+                  it.text.contains('CustomPacketPayload')
+        }
+        if (!missingPayloadDeclarations.isEmpty()) {
+            throw new GradleException("Missing-protocol-receiver fixture declares a network payload: ${missingPayloadDeclarations.join(', ')}")
+        }
+    }
+}
+
+tasks.named('compileHandshakeMismatchFixtureJava') {
+    dependsOn verifyHandshakeFixtureIsolation
+}
+tasks.named('compileHandshakeMissingReceiverFixtureJava') {
+    dependsOn verifyHandshakeFixtureIsolation
+}
+tasks.named('runHandshakeMismatchClient') {
+    dependsOn verifyHandshakeFixtureIsolation
+}
+tasks.named('runHandshakeMissingReceiverClient') {
+    dependsOn verifyHandshakeFixtureIsolation
+}
+tasks.named('check') {
+    dependsOn verifyHandshakeFixtureIsolation
+}
+
 dependencies {
     minecraft "com.mojang:minecraft:${minecraft_version}"
     mappings loom.officialMojangMappings()
     modImplementation "net.fabricmc:fabric-loader:${loader_version}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
+    modHandshakeMismatchFixtureImplementation "net.fabricmc:fabric-loader:${loader_version}"
+    modHandshakeMismatchFixtureImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
+    modHandshakeMissingReceiverFixtureImplementation "net.fabricmc:fabric-loader:${loader_version}"
+    modHandshakeMissingReceiverFixtureImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
 
     implementation "com.electronwill.night-config:core:${night_config_version}"
     implementation "com.electronwill.night-config:toml:${night_config_version}"

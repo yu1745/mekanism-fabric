@@ -126,6 +126,10 @@ if jar tf "${MOD_JARS[0]}" | grep -Eq '^net/neoforged/'; then
   echo "fabric-packaged-smoke: artifact unexpectedly contains NeoForge classes" >&2
   exit 1
 fi
+if jar tf "${MOD_JARS[0]}" | grep -Eq '^mekanism/fixture/'; then
+  echo "fabric-packaged-smoke: artifact unexpectedly contains handshake fixture classes" >&2
+  exit 1
+fi
 for required_entry in \
     mekanism/api/RelativeSide.class \
     mekanism/api/energy/IEnergyContainer.class \

@@ -30,6 +30,15 @@ class MekanismNetworkProtocolTest {
     }
 
     @Test
+    void peerControlledProtocolIsSanitizedForSingleLineLogging() {
+        assertEquals("safe-10.7.19", MekanismNetworkProtocol.sanitizeForLog("safe-10.7.19"));
+        assertEquals("bad??tab?null?line?paragraph?", MekanismNetworkProtocol.sanitizeForLog(
+              "bad\r\ntab\tnull\0line\u2028paragraph\u2029"));
+        assertEquals("emoji-\uD83D\uDE80", MekanismNetworkProtocol.sanitizeForLog("emoji-\uD83D\uDE80"));
+        assertThrows(NullPointerException.class, () -> MekanismNetworkProtocol.sanitizeForLog(null));
+    }
+
+    @Test
     void handshakeCanResolveOnlyOnce() {
         MekanismNetworkProtocol.Handshake handshake = new MekanismNetworkProtocol.Handshake();
         assertFalse(handshake.isResolved());

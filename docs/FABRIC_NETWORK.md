@@ -35,7 +35,7 @@ MekanismFabricClientBootstrap
   -> FabricMekanismClientNetworking       (client API only)
 ```
 
-The common bootstrap has no static reference to the client bootstrap or client networking adapter. The packaged dedicated-server smoke checks both classes are present in the final JAR while proving that the client entrypoint is not loaded on a dedicated server.
+The common bootstrap has no static reference to the client bootstrap or client networking adapter. The packaged dedicated-server smoke checks both classes are present in the final JAR while proving that the client entrypoint is not loaded on a dedicated server. Both rejection fixtures live in isolated custom source sets; `remapJar` excludes them, and packaged smoke rejects any `mekanism/fixture/` class leakage.
 
 ## Verification
 
@@ -57,10 +57,20 @@ The common bootstrap has no static reference to the client bootstrap or client n
   - requires the first disconnect to be observed before launching the second client;
   - pairs structured session IDs and requires every server start/complete marker to report a Netty event-loop thread;
   - removes disposable run directories and retains diagnostic logs.
+- `./gradlew -p fabric verifyHandshakeFixtureIsolation`
+  - proves both rejection-fixture runtime classpaths exclude the production source-set output and each other where required;
+  - validates distinct client-only metadata and forbids production-network imports;
+  - proves the registry-only missing-receiver fixture declares no payload API; mirroring the four synchronized GameEvent IDs is the prerequisite that lets it reach capability negotiation.
+- `scripts/fabric-configuration-rejection-smoke.sh`
+  - starts one production server, then fresh incompatible-version and missing-protocol-receiver client JVMs;
+  - requires exact structured server rejection and per-username disconnect reasons, meaningful within-process marker order, no completed task, no play join, and a still-live server;
+  - uses a wire-compatible independent codec for the mismatch and a registry-only fixture with no Mekanism payload declaration for the missing-receiver case.
 
-The paired gate is Linux-oriented and requires `flock`, Java, Python 3, a systemd user manager, `systemd-run`/`systemctl`, `xvfb-run`, and Xvfb. It serializes access to shared Loom outputs, runs each Gradle/game tree in a transient user scope for reliable cleanup, retries loopback-port bind races, and applies `FABRIC_PAIRED_SMOKE_TIMEOUT` as one overall deadline.
+Both process gates are Linux-oriented and require `flock`, Java, Python 3, a systemd user manager, `systemd-run`/`systemctl`, `xvfb-run`, and Xvfb. They serialize access to shared Loom outputs, run each Gradle/game tree in a transient user scope for reliable cleanup, retry loopback-port bind races, and apply one overall deadline (`FABRIC_PAIRED_SMOKE_TIMEOUT` or `FABRIC_REJECTION_SMOKE_TIMEOUT`).
 
-The paired gate now executes the matching-response task enqueue/start/complete path and proves fresh server-side negotiation for two independent connections. It does not exercise same-client-process reconnect or its static client registration state. It also does not yet execute the missing receiver, mismatched/rejected response, pending-task disconnect cleanup, or withheld-response timeout branches; those need a dedicated fixture client. The current task has no Mekanism-specific timeout, so a peer that advertises the channel and then withholds its response remains subject to the base connection lifecycle until that fixture gate defines and verifies an explicit policy.
+The rejection clients are distinct fixture mods and never import or load Mekanism production classes. They independently register the four synchronized GameEvent IDs solely as a registry-only prerequisite: without those IDs, Fabric registry synchronization rejects the client before configuration payload capability can be observed. The mismatch fixture then registers wire-compatible payload IDs/codecs and answers `fixture-mismatch-0`; the missing-receiver fixture declares zero payloads. This isolates receiver-capability behavior without claiming that `canSend=false` proves manifest/mod absence.
+
+The paired gate proves matching negotiation for two independent connections. The rejection gate proves incompatible-version and missing-receiver paths, including that neither task completes before disconnect. Remaining boundaries are same-client-process reconnect/static registration, a same-version client-declared `accepted=false` fixture, and withheld-response timeout policy. The current task has no Mekanism-specific timeout, so a peer that advertises the channel and then withholds its response remains subject to the base connection lifecycle until a fixture gate defines and verifies an explicit policy.
 
 ## Semantic references
 

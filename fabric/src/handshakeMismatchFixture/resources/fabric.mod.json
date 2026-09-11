@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "mekanism_handshake_mismatch_fixture",
+  "version": "1.0.0",
+  "name": "Mekanism Handshake Mismatch Fixture",
+  "description": "Client-only integration fixture for rejecting an incompatible Mekanism protocol.",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "mekanism.fixture.MismatchedHandshakeClient"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "minecraft": "~1.21.1",
+    "java": ">=21",
+    "fabric-api": ">=0.116.17"
+  }
+}

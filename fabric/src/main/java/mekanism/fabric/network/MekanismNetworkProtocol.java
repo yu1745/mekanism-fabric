@@ -14,6 +14,20 @@ public final class MekanismNetworkProtocol {
     private MekanismNetworkProtocol() {
     }
 
+    static String sanitizeForLog(String value) {
+        Objects.requireNonNull(value, "value");
+        StringBuilder sanitized = new StringBuilder(value.length());
+        value.codePoints().forEach(codePoint -> {
+            int type = Character.getType(codePoint);
+            if (Character.isISOControl(codePoint) || type == Character.LINE_SEPARATOR || type == Character.PARAGRAPH_SEPARATOR) {
+                sanitized.append('?');
+            } else {
+                sanitized.appendCodePoint(codePoint);
+            }
+        });
+        return sanitized.toString();
+    }
+
     public static Compatibility checkRemote(String remoteVersion) {
         Objects.requireNonNull(remoteVersion, "remoteVersion");
         if (CURRENT.equals(remoteVersion)) {

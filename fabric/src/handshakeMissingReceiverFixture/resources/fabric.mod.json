@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "mekanism_handshake_missing_receiver_fixture",
+  "version": "1.0.0",
+  "name": "Mekanism Missing-Protocol-Receiver Fixture",
+  "description": "Client-only integration fixture with compatible registry IDs and no Mekanism payload channel.",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "mekanism.fixture.MissingProtocolReceiverClient"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "minecraft": "~1.21.1",
+    "java": ">=21"
+  }
+}
