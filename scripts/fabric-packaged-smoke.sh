@@ -96,8 +96,19 @@ if [[ ${#MOD_JARS[@]} -ne 1 ]]; then
   printf '  %s\n' "${MOD_JARS[@]:-<none>}" >&2
   exit 1
 fi
-if ! unzip -p "${MOD_JARS[0]}" fabric.mod.json | grep -Eq '"id"[[:space:]]*:[[:space:]]*"mekanism"'; then
-  echo "fabric-packaged-smoke: artifact does not contain mekanism fabric.mod.json" >&2
+if ! python3 - "${MOD_JARS[0]}" <<'PYEOF'
+import json, sys, zipfile
+with zipfile.ZipFile(sys.argv[1]) as artifact:
+    metadata = json.loads(artifact.read("fabric.mod.json"))
+expected = {
+    "main": ["mekanism.fabric.MekanismFabricBootstrap"],
+    "client": ["mekanism.fabric.MekanismFabricClientBootstrap"],
+}
+if metadata.get("id") != "mekanism" or metadata.get("entrypoints") != expected:
+    raise SystemExit(f"unexpected Fabric metadata: id={metadata.get('id')!r} entrypoints={metadata.get('entrypoints')!r}")
+PYEOF
+then
+  echo "fabric-packaged-smoke: artifact does not contain the expected Mekanism entrypoints" >&2
   exit 1
 fi
 if jar tf "${MOD_JARS[0]}" | grep -Eq '^net/neoforged/'; then
@@ -105,6 +116,10 @@ if jar tf "${MOD_JARS[0]}" | grep -Eq '^net/neoforged/'; then
   exit 1
 fi
 for required_entry in \
+    mekanism/fabric/MekanismFabricBootstrap.class \
+    mekanism/fabric/MekanismFabricClientBootstrap.class \
+    mekanism/fabric/network/FabricMekanismNetworking.class \
+    mekanism/fabric/network/FabricMekanismClientNetworking.class \
     "META-INF/jars/core-${NIGHT_CONFIG_VERSION}.jar" \
     "META-INF/jars/toml-${NIGHT_CONFIG_VERSION}.jar" \
     META-INF/licenses/night-config-LGPL-3.0.txt \
@@ -141,12 +156,18 @@ SERVER_PID=$!
 deadline=$((SECONDS + TIMEOUT))
 mod_loaded=0
 config_proof=0
+network_proof=0
 registry_proof=0
 done_loaded=0
-crash_pattern='(Exception in thread|A mod crashed on startup|Could not execute entrypoint|Failed to start the minecraft server|---- Minecraft Crash Report ----|[[:space:]]ERROR[[:space:]])'
+crash_pattern='(Exception in thread|A mod crashed on startup|Could not execute entrypoint|Failed to start the minecraft server|---- Minecraft Crash Report ----|NoClassDefFoundError|ClassNotFoundException|[[:space:]]ERROR[[:space:]])'
 while (( SECONDS < deadline )); do
   if grep -Eq '(^|[[:space:]])- mekanism([[:space:]]|$)' "$LOG_FILE"; then mod_loaded=1; fi
   if grep -Fq 'MEKANISM_FABRIC_CONFIG_PROOF file=startup.toml values=12 loaded=true created=true corrected=12' "$LOG_FILE"; then config_proof=1; fi
+  if grep -Fq 'MEKANISM_FABRIC_NETWORK_PROOF protocol=10.7.19 phase=configuration codecs=2 server_receiver=true client_required=true' "$LOG_FILE"; then network_proof=1; fi
+  if grep -Fq 'MEKANISM_FABRIC_NETWORK_CLIENT_PROOF' "$LOG_FILE"; then
+    echo 'fabric-packaged-smoke: client networking entrypoint loaded on a dedicated server' >&2
+    exit 1
+  fi
   if grep -Fq 'MEKANISM_FABRIC_REGISTRY_PROOF key=mekanism:seismic_vibration canonical_identity=true entries=4' "$LOG_FILE"; then registry_proof=1; fi
   if grep -Eq 'Done \(' "$LOG_FILE"; then done_loaded=1; fi
   if grep -Eiq "$crash_pattern" "$LOG_FILE"; then
@@ -154,7 +175,7 @@ while (( SECONDS < deadline )); do
     grep -Ei "$crash_pattern" "$LOG_FILE" | tail -n 10 >&2 || true
     exit 1
   fi
-  if (( mod_loaded && config_proof && registry_proof && done_loaded )); then
+  if (( mod_loaded && config_proof && network_proof && registry_proof && done_loaded )); then
     STARTUP_CONFIG="$SERVER_DIR/config/Mekanism/startup.toml"
     if [[ ! -s "$STARTUP_CONFIG" ]]; then
       echo 'fabric-packaged-smoke: startup config proof logged but startup.toml is missing or empty' >&2
@@ -182,8 +203,8 @@ PYEOF
       exit 1
     fi
     RESULT=0
-    printf 'fabric-packaged-smoke: PASS (mekanism loaded, config/registry proofs passed, and server reached Done)\n'
-    grep -E '(^|[[:space:]])- mekanism([[:space:]]|$)|MEKANISM_FABRIC_(CONFIG|REGISTRY)_PROOF|Done \(' "$LOG_FILE" | tail -n 10
+    printf 'fabric-packaged-smoke: PASS (mekanism loaded, config/network/registry proofs passed, and server reached Done)\n'
+    grep -E '(^|[[:space:]])- mekanism([[:space:]]|$)|MEKANISM_FABRIC_(CONFIG|NETWORK|REGISTRY)_PROOF|Done \(' "$LOG_FILE" | tail -n 10
     exit 0
   fi
   if ! kill -0 "$SERVER_PID" 2>/dev/null; then
@@ -196,6 +217,6 @@ PYEOF
   sleep 1
 done
 
-echo "fabric-packaged-smoke: timed out after ${TIMEOUT}s (mod_loaded=$mod_loaded config_proof=$config_proof registry_proof=$registry_proof done=$done_loaded)" >&2
+echo "fabric-packaged-smoke: timed out after ${TIMEOUT}s (mod_loaded=$mod_loaded config_proof=$config_proof network_proof=$network_proof registry_proof=$registry_proof done=$done_loaded)" >&2
 tail -n 80 "$LOG_FILE" >&2
 exit 1

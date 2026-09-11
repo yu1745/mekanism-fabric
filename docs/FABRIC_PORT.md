@@ -50,7 +50,7 @@
 - [~] 官方 API allowlist：已编译 27/265 个文件；`Action` 与 registry-aware NBT 是首批登记的平台适配；
 - [~] lifecycle/registry：官方 deferred wrapper 已组合 Fabric adapter，四个官方 GameEvent 已验证同步注册、canonical holder 和冻结前时序；
 - [~] config：Mekanism-owned TOML spec/manager 与官方 12 项 startup 配置已通过缓存、校验、原子保存和 packaged server 门禁；其余八份 Core config 暂未纳入；
-- [ ] network adapter；
+- [~] network adapter：configuration `FriendlyByteBuf` 双向 codec、强制 `10.7.19` 协议协商、服务端 task gate、独立 client entrypoint 与 dedicated-server 打包门禁已完成；配对客户端往返/错版/重连门禁和 gameplay dispatcher 尚未完成（见 `FABRIC_NETWORK.md`）；
 - [ ] holder/storage、CachedRecipe、机器基类与 Crusher。
 
 ## 阶段顺序

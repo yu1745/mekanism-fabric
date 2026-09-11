@@ -77,6 +77,10 @@ scripts/scan-platform-deps.py
 | datagen | `GatherDataEvent`、`ExistingFileHelper`、NeoForge providers/model generators/data maps | 使用 Fabric datagen entrypoint/providers；抽取“存在性检查”接口；能改为 vanilla provider/codec 的先改，NeoForge model builder 由窄生成 adapter 或资源预生成承接 | P2 | 中高：运行时不阻塞首个 server slice，但生成结果必须 byte/semantic diff，不能静默漏资源 |
 | integration | `ModList`、InterModComms、optional mod API/test framework、CraftTweaker/JEI/EMI 等入口 | Loader mod presence + 每集成独立入口/adapter；用反射或独立 source set 保持 optional linkage；优先 EMI/Fabric 生态，NeoForge-only 集成明确禁用而非 stub | P3 | 中高：可选类验证、版本矩阵及服务端误加载 client 类；测试框架也需另建 Fabric 测试入口 |
 
+### 当前 P0 network 落点
+
+首个窄切片已实现 configuration phase 的双向 payload、强制 `10.7.19` 精确协商和服务端 `ConfigurationTask` gate；common/client 注册类严格分离，dedicated packaged smoke 验证不会加载 client adapter。它只建立协议与阶段边界，不提前引入官方 packet catalog 或通用 context facade。配对 Loader 客户端的 matching/mismatch/reconnect/thread 门禁以及 gameplay dispatcher 仍是 P0 未完成项，详见 `FABRIC_NETWORK.md`。
+
 ## `other` 桶的处理
 
 213 个 import 尚落在通用桶，主要包括 `common.Tags`、conditions/crafting、`INBTSerializable`、`Lazy`/函数式 helper、permissions、world/biome modifiers 和测试辅助。处理顺序不是批量建 shim：

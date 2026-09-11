@@ -17,6 +17,9 @@
   "entrypoints": {
     "main": [
       "mekanism.fabric.MekanismFabricBootstrap"
+    ],
+    "client": [
+      "mekanism.fabric.MekanismFabricClientBootstrap"
     ]
   },
   "depends": {

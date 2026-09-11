@@ -4,6 +4,7 @@ import mekanism.common.config.MekanismStartupConfig;
 import mekanism.common.registration.MekanismDeferredHolder;
 import mekanism.common.registries.MekanismGameEvents;
 import mekanism.fabric.config.FabricMekanismConfigManager;
+import mekanism.fabric.network.FabricMekanismNetworking;
 import net.fabricmc.api.ModInitializer;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -22,6 +23,9 @@ public final class MekanismFabricBootstrap implements ModInitializer {
     public void onInitialize() {
         FabricMekanismConfigManager.Registration startup = CONFIG_MANAGER.registerAndLoad(STARTUP_CONFIG);
         verifyStartupConfig(startup);
+        FabricMekanismNetworking.Registration networking = FabricMekanismNetworking.initialize();
+        LOGGER.info("MEKANISM_FABRIC_NETWORK_PROOF protocol={} phase=configuration codecs={} server_receiver={} client_required={}",
+              networking.protocolVersion(), networking.codecs(), networking.serverReceiver(), networking.clientRequired());
         MekanismGameEvents.GAME_EVENTS.registerAll(BuiltInRegistries.GAME_EVENT);
 
         verifyGameEvent(MekanismGameEvents.SEISMIC_VIBRATION, "seismic_vibration", 64);
