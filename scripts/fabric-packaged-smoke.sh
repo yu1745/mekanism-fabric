@@ -99,6 +99,10 @@ if ! unzip -p "${MOD_JARS[0]}" fabric.mod.json | grep -Eq '"id"[[:space:]]*:[[:s
   echo "fabric-packaged-smoke: artifact does not contain mekanism fabric.mod.json" >&2
   exit 1
 fi
+if jar tf "${MOD_JARS[0]}" | grep -Eq '^net/neoforged/'; then
+  echo "fabric-packaged-smoke: artifact unexpectedly contains NeoForge classes" >&2
+  exit 1
+fi
 
 LAUNCHER="$CACHE_DIR/fabric-server-${MINECRAFT_VERSION}-${LOADER_VERSION}-${INSTALLER_VERSION}.jar"
 API_JAR="$CACHE_DIR/fabric-api-${FABRIC_API_VERSION}.jar"
@@ -125,20 +129,22 @@ SERVER_PID=$!
 
 deadline=$((SECONDS + TIMEOUT))
 mod_loaded=0
+registry_proof=0
 done_loaded=0
 crash_pattern='(Exception in thread|A mod crashed on startup|Could not execute entrypoint|Failed to start the minecraft server|---- Minecraft Crash Report ----|[[:space:]]ERROR[[:space:]])'
 while (( SECONDS < deadline )); do
   if grep -Eq '(^|[[:space:]])- mekanism([[:space:]]|$)' "$LOG_FILE"; then mod_loaded=1; fi
+  if grep -Fq 'MEKANISM_FABRIC_REGISTRY_PROOF key=mekanism:seismic_vibration canonical_identity=true' "$LOG_FILE"; then registry_proof=1; fi
   if grep -Eq 'Done \(' "$LOG_FILE"; then done_loaded=1; fi
   if grep -Eiq "$crash_pattern" "$LOG_FILE"; then
     echo 'fabric-packaged-smoke: crash signature detected' >&2
     grep -Ei "$crash_pattern" "$LOG_FILE" | tail -n 10 >&2 || true
     exit 1
   fi
-  if (( mod_loaded && done_loaded )); then
+  if (( mod_loaded && registry_proof && done_loaded )); then
     RESULT=0
-    printf 'fabric-packaged-smoke: PASS (mekanism loaded and server reached Done)\n'
-    grep -E '(^|[[:space:]])- mekanism([[:space:]]|$)|Done \(' "$LOG_FILE" | tail -n 10
+    printf 'fabric-packaged-smoke: PASS (mekanism loaded, registry proof passed, and server reached Done)\n'
+    grep -E '(^|[[:space:]])- mekanism([[:space:]]|$)|MEKANISM_FABRIC_REGISTRY_PROOF|Done \(' "$LOG_FILE" | tail -n 10
     exit 0
   fi
   if ! kill -0 "$SERVER_PID" 2>/dev/null; then
@@ -151,6 +157,6 @@ while (( SECONDS < deadline )); do
   sleep 1
 done
 
-echo "fabric-packaged-smoke: timed out after ${TIMEOUT}s (mod_loaded=$mod_loaded done=$done_loaded)" >&2
+echo "fabric-packaged-smoke: timed out after ${TIMEOUT}s (mod_loaded=$mod_loaded registry_proof=$registry_proof done=$done_loaded)" >&2
 tail -n 80 "$LOG_FILE" >&2
 exit 1
