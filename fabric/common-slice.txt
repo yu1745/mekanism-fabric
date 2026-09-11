@@ -21,6 +21,7 @@ mekanism/common/config/value/CachedFloatValue.java
 mekanism/common/config/value/CachedIntValue.java
 mekanism/common/config/value/CachedValue.java
 mekanism/common/lib/WildcardMatcher.java
+mekanism/common/lib/LastEnergyTracker.java
 mekanism/common/lib/codec/DroppingUnboundedMapCodec.java
 mekanism/common/lib/codec/SequencedCollectionCodec.java
 mekanism/common/lib/collection/BiLongMultimap.java

@@ -18,14 +18,21 @@ fluid-import/link cleanup; `IMekanismStrictEnergyHandler` remains byte-identical
 See `../docs/API_DELTAS.md`. JetBrains annotations and JSR-305 remain `compileOnly`
 and are not bundled in the mod.
 
-`common-slice.txt` contains **40 official source files**, and
+`common-slice.txt` contains **41 official source files**, and
 `platform-slice.txt` contains **10 project-owned Fabric sources**. Together with
 the **42-file API slice**, they form bounded registry/GameEvent, TOML
 startup-config, configuration-handshake, internal energy storage/holder, internal
 heat storage/holder, wildcard-matching, fair-distribution, chunk-coordinate,
 lambda-metafactory, and vanilla-registry utility closures. The unchanged
 `WildcardMatcher` retains official recursive, UTF-16 `char` matching semantics;
-QIO, miner, Finder, and other consumers remain future work. The unchanged
+QIO, miner, Finder, and other consumers remain future work. The byte-identical
+`LastEnergyTracker` is a platform-neutral game-time bucket: same-time receives accumulate
+without changing the published last bucket, every differing (including skipped or decreasing)
+timestamp publishes the current bucket, and its setter changes only the visible client-sync
+value until the next transition. The direct common-lib JAR package is exactly it plus
+`WildcardMatcher`, once each, with no startup marker. `TileEntityMekanism`, world-tick/client
+synchronization and network/persistence owners, machines/networks, external energy APIs and
+Fabric conversion/lookup/transaction integration remain deferred. The unchanged
 distribution closure preserves the separate `int`/`long` split arithmetic,
 rebalancing, remainder order, lying-handler fallback, collection order, and
 `Target` handler contract. The exact 18-file official root-test oracle is

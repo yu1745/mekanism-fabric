@@ -13,6 +13,19 @@ The first storage milestone admits the official Mekanism energy-container contra
 - `mekanism.common.capabilities.DynamicHandler`
 - `mekanism.common.capabilities.energy.DynamicStrictEnergyHandler`
 
+The slice count is API 42 / common 41 / platform 10. It also admits official
+`mekanism.common.lib.LastEnergyTracker` byte-identically to `4646f509` as a
+platform-neutral per-game-time accounting closure. Same-time calls accumulate a current
+bucket while the visible last bucket remains unchanged; every different timestamp—including
+skipped or decreasing values—publishes that current bucket and starts another. Tick zero is
+the initial current bucket, amounts use raw `long` arithmetic without validation/clamping,
+and `setLastEnergyReceived` changes only the visible client-sync value until the next
+timestamp transition publishes the accumulated bucket. The packaged direct
+`mekanism/common/lib` classes are exactly `WildcardMatcher` and `LastEnergyTracker`, once
+each, with no startup marker. Its sole production caller, `TileEntityMekanism`, plus world
+tick/client synchronization, network ownership and persistence, machines/networks, external
+energy APIs, conversion/lookup, and Fabric transaction integration remain explicitly deferred.
+
 The domain remains measured in Mekanism's `long` energy units. `insert` returns the unaccepted remainder; `extract` returns the extracted amount. `Action.SIMULATE` performs the same capacity/rate/policy calculation as execution without mutating storage or notifying listeners.
 
 ## Platform adaptations
@@ -50,7 +63,7 @@ The three dynamic handler sources are byte-identical to `4646f509`. Insert and e
 
 ## Sequential transfer utilities
 
-The unchanged official long-valued transfer closure is admitted as part of the current API/common/platform slice count 42 / 40 / 10:
+The unchanged official long-valued transfer closure is admitted as part of the current API/common/platform slice count 42 / 41 / 10:
 
 - `mekanism.api.math.LongTransferUtils`
 - `mekanism.api.container.InContainerGetterLong`

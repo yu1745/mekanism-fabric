@@ -143,6 +143,19 @@ required = {
 }
 with zipfile.ZipFile(sys.argv[1]) as artifact:
     entries = artifact.namelist()
+expected_direct_common_lib = {
+    "mekanism/common/lib/WildcardMatcher.class",
+    "mekanism/common/lib/LastEnergyTracker.class",
+}
+actual_direct_common_lib = {
+    entry for entry in entries
+    if entry.startswith("mekanism/common/lib/")
+    and "/" not in entry[len("mekanism/common/lib/"):]
+    and entry.endswith(".class")
+}
+if (actual_direct_common_lib != expected_direct_common_lib
+        or any(entries.count(entry) != 1 for entry in expected_direct_common_lib)):
+    raise SystemExit(f"unexpected direct common lib class family: {sorted(actual_direct_common_lib)!r}")
 expected_api_codec = {"mekanism/api/codec/DependentMapCodec.class"}
 actual_api_codec = {
     entry for entry in entries
@@ -320,6 +333,7 @@ for required_entry in \
     mekanism/common/capabilities/holder/heat/HeatCapacitorHolder.class \
     mekanism/common/capabilities/holder/heat/IHeatCapacitorHolder.class \
     mekanism/common/lib/WildcardMatcher.class \
+    mekanism/common/lib/LastEnergyTracker.class \
     mekanism/common/util/ChunkUtils.class \
     mekanism/common/util/EmitUtils.class \
     mekanism/common/lib/distribution/SplitInfo.class \
