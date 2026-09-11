@@ -47,4 +47,4 @@ scripts/scan-platform-deps.py
 scripts/fabric-packaged-smoke.sh        # 最终 remapped JAR 的干净服务端门禁
 ```
 
-Fabric 主线使用 Mojang official mappings。官方 API 源码通过 `fabric/api-slice.txt` 逐项纳入；不得复制源码、改包名、加入 Kotlin，或为消除编译错误而无审计地扩大清单。
+Fabric 主线使用 Mojang official mappings。官方 API、common 与 Fabric adapter 源码分别通过 `fabric/api-slice.txt`、`fabric/common-slice.txt`、`fabric/platform-slice.txt` 逐项纳入；不得复制源码、改包名、加入 Kotlin，或为消除编译错误而无审计地扩大清单。

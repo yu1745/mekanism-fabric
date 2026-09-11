@@ -16,36 +16,53 @@ repositories {
     mavenCentral()
 }
 
-def apiSlice = file('api-slice.txt').readLines()
-      .collect { it.trim() }
-      .findAll { it && !it.startsWith('#') }
-if (apiSlice.size() != apiSlice.toSet().size()) {
-    throw new GradleException('fabric/api-slice.txt contains duplicate source paths')
+def loadSlice = { String listName ->
+    def entries = file(listName).readLines()
+          .collect { it.trim() }
+          .findAll { it && !it.startsWith('#') }
+    if (entries.size() != entries.toSet().size()) {
+        throw new GradleException("fabric/${listName} contains duplicate source paths")
+    }
+    entries
 }
+def apiSlice = loadSlice('api-slice.txt')
+def commonSlice = loadSlice('common-slice.txt')
+def platformSlice = loadSlice('platform-slice.txt')
 def apiSliceFiles = apiSlice.collect { file("../src/api/java/${it}") }
+def commonSliceFiles = commonSlice.collect { file("../src/main/java/${it}") }
+def platformSliceFiles = platformSlice.collect { file("src/main/java/${it}") }
 
-tasks.register('verifyApiSliceNoNeoForge') {
-    group = 'verification'
-    description = 'Checks that every allowlisted official API source exists and has no NeoForge reference.'
-    inputs.files(apiSliceFiles)
-    doLast {
-        def missing = apiSliceFiles.findAll { !it.isFile() }
-        if (!missing.isEmpty()) {
-            throw new GradleException("Missing API slice sources: ${missing.join(', ')}")
-        }
-        def violations = apiSliceFiles.findAll { it.text.contains('net.neoforged.') }
-        if (!violations.isEmpty()) {
-            throw new GradleException("NeoForge references entered the Fabric API slice: ${violations.join(', ')}")
+def registerPortableSliceCheck = { String taskName, String descriptionText, List<File> sources ->
+    tasks.register(taskName) {
+        group = 'verification'
+        description = descriptionText
+        inputs.files(sources)
+        doLast {
+            def missing = sources.findAll { !it.isFile() }
+            if (!missing.isEmpty()) {
+                throw new GradleException("Missing portable slice sources: ${missing.join(', ')}")
+            }
+            def violations = sources.findAll { it.text.contains('net.neoforged.') }
+            if (!violations.isEmpty()) {
+                throw new GradleException("NeoForge references entered a Fabric source slice: ${violations.join(', ')}")
+            }
         }
     }
 }
+registerPortableSliceCheck('verifyApiSliceNoNeoForge',
+      'Checks that every allowlisted official API source exists and has no NeoForge reference.', apiSliceFiles)
+registerPortableSliceCheck('verifyCommonSliceNoNeoForge',
+      'Checks that every allowlisted official common source exists and has no NeoForge reference.', commonSliceFiles)
+registerPortableSliceCheck('verifyPlatformSliceNoNeoForge',
+      'Checks that every allowlisted Fabric platform source exists and has no NeoForge reference.', platformSliceFiles)
 
 sourceSets {
     main {
         java {
-            srcDirs = ['src/main/java', '../src/api/java']
-            include 'mekanism/fabric/**/*.java'
+            srcDirs = ['src/main/java', '../src/api/java', '../src/main/java']
             apiSlice.each { include it }
+            commonSlice.each { include it }
+            platformSlice.each { include it }
         }
     }
 }
@@ -73,13 +90,18 @@ processResources {
 }
 
 tasks.withType(JavaCompile).configureEach {
-    dependsOn tasks.named('verifyApiSliceNoNeoForge')
+    dependsOn tasks.named('verifyApiSliceNoNeoForge'), tasks.named('verifyCommonSliceNoNeoForge'), tasks.named('verifyPlatformSliceNoNeoForge')
     options.release = 21
     options.encoding = 'UTF-8'
 }
 
+def testWorkingDirectory = layout.buildDirectory.dir('test-working')
 tasks.withType(Test).configureEach {
     useJUnitPlatform()
+    workingDir testWorkingDirectory
+    doFirst {
+        testWorkingDirectory.get().asFile.mkdirs()
+    }
 }
 
 java {

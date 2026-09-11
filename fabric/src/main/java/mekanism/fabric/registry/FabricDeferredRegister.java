@@ -3,7 +3,9 @@ package mekanism.fabric.registry;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.function.Supplier;
+import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
@@ -42,6 +44,19 @@ public final class FabricDeferredRegister<T> {
     }
 
     public synchronized void registerAll(Registrar<T> registrar) {
+        registerAll(registrar, null);
+    }
+
+    /** Registers through a vanilla registry and retains its canonical holder reference. */
+    public synchronized void registerAll(Registry<T> registry) {
+        Objects.requireNonNull(registry);
+        if (!registryKey.equals(registry.key())) {
+            throw new IllegalArgumentException("Expected registry " + registryKey.location() + " but got " + registry.key().location());
+        }
+        registerAll((ignoredRegistryKey, key, value) -> Registry.register(registry, key, value), registry::getHolderOrThrow);
+    }
+
+    private void registerAll(Registrar<T> registrar, Function<ResourceKey<T>, Holder<T>> holderLookup) {
         requireLifecycle(FabricRegistryLifecycle.COLLECTING, "register entries");
         Objects.requireNonNull(registrar);
         lifecycle = FabricRegistryLifecycle.REGISTERING;
@@ -50,7 +65,11 @@ public final class FabricDeferredRegister<T> {
                 T created = Objects.requireNonNull(pending.getValue().factory().get(),
                       "factory returned null for " + pending.getKey().location());
                 T canonical = registrar.register(registryKey, pending.getKey(), created);
-                pending.getValue().holder().bind(canonical);
+                if (holderLookup != null) {
+                    pending.getValue().holder().bind(canonical, holderLookup.apply(pending.getKey()));
+                } else {
+                    pending.getValue().holder().bind(canonical);
+                }
             }
             lifecycle = FabricRegistryLifecycle.REGISTERED;
         } catch (RuntimeException | Error failure) {

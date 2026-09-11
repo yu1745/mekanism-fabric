@@ -2,16 +2,25 @@
 
 当前 P0 切片在 `mekanism.fabric.registry` 提供 Mekanism 专用的同步适配器。它只收集
 `ResourceKey` 与 `Supplier`，在 Fabric `onInitialize` 中调用 vanilla
-`Registry.register`，并将其返回的 canonical 实例绑定到 holder。holder 在绑定前访问会失败；
-批次拒绝重复键、重复提交，以及 supplier 注册期间递归读取 holder。这里不实例化官方
-`Mekanism.java`，不模拟 EventBus/NeoForge lifecycle，也不提供通用转换层。
+`Registry.register`，并将其返回的 canonical 实例及 `Holder.Reference` 绑定到 holder。holder
+在绑定前读取值会失败，但 key/id 可用；批次拒绝重复键、重复提交，以及 supplier 注册期间
+递归读取 holder。这里不实例化官方 `Mekanism.java`，不模拟 EventBus/NeoForge lifecycle，
+也不提供通用转换层。
 
-唯一证明声明是 `mekanism:seismic_vibration -> new GameEvent(64)`。它没有加入官方
-`MekanismGameEvents`，以免未来启用官方批量声明时重复注册。启动后 entrypoint 会从 vanilla
-`GAME_EVENT` registry 回查 key 与对象身份，并输出 `MEKANISM_FABRIC_REGISTRY_PROOF` 日志。
+官方 `MekanismDeferredRegister` 与 `MekanismDeferredHolder` 已改为组合该 adapter，
+`GameEventDeferredRegister` 和 `MekanismGameEvents` 通过 `fabric/common-slice.txt` 审计后直接参与
+Fabric 构建；本地 adapter/entrypoint 同样由 `fabric/platform-slice.txt` 精确列举。临时
+`MekanismFabricGameEvents` 已删除。当前会同步注册并验证四个官方声明：
 
-后续接入官方 registry 源码时，将 `MekanismDeferredRegister` / holder 改为**组合**此 adapter，
-而不是复制或继承一个 NeoForge 兼容层；届时删除临时的 `MekanismFabricGameEvents` 声明。
+- `mekanism:seismic_vibration`（radius 64）；
+- `mekanism:jetpack_burn`（radius 16）；
+- `mekanism:gravity_modulate`（radius 16）；
+- `mekanism:gravity_modulate_boosted`（radius 32）。
+
+启动后 entrypoint 会从 vanilla `GAME_EVENT` registry 回查每个 key、半径、canonical 对象与 holder
+身份，并输出含 `entries=4` 的 `MEKANISM_FABRIC_REGISTRY_PROOF` 日志。为避免把尚未移植的完整
+`Mekanism.java` 拉入这个最小闭包，`MekanismGameEvents` 暂时直接使用稳定 namespace
+`"mekanism"`；完整 bootstrap 迁入后恢复对统一 MODID 常量的引用。
 
 ## 对照资料
 

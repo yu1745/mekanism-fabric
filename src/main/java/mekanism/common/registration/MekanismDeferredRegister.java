@@ -1,17 +1,27 @@
 package mekanism.common.registration;
 
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import mekanism.api.annotations.NothingNullByDefault;
+import mekanism.fabric.registry.FabricDeferredHolder;
+import mekanism.fabric.registry.FabricDeferredRegister;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
-import net.neoforged.neoforge.registries.DeferredRegister;
 
 @NothingNullByDefault
-public class MekanismDeferredRegister<T> extends DeferredRegister<T> {
+public class MekanismDeferredRegister<T> {
 
+    @FunctionalInterface
+    interface Registrar<T> {
+        T register(ResourceKey<? extends Registry<T>> registryKey, ResourceKey<T> key, T value);
+    }
+
+    private final ResourceKey<? extends Registry<T>> registryKey;
+    private final String namespace;
     private final Function<ResourceKey<T>, ? extends MekanismDeferredHolder<T, ?>> holderCreator;
+    private final FabricDeferredRegister<T> delegate;
 
     public MekanismDeferredRegister(ResourceKey<? extends Registry<T>> registryKey, String namespace) {
         this(registryKey, namespace, MekanismDeferredHolder::new);
@@ -19,25 +29,39 @@ public class MekanismDeferredRegister<T> extends DeferredRegister<T> {
 
     public MekanismDeferredRegister(ResourceKey<? extends Registry<T>> registryKey, String namespace,
           Function<ResourceKey<T>, ? extends MekanismDeferredHolder<T, ? extends T>> holderCreator) {
-        super(registryKey, namespace);
-        this.holderCreator = holderCreator;
+        this.registryKey = Objects.requireNonNull(registryKey);
+        this.namespace = Objects.requireNonNull(namespace);
+        this.holderCreator = Objects.requireNonNull(holderCreator);
+        delegate = new FabricDeferredRegister<>(registryKey, namespace);
     }
 
-    @Override
-    @SuppressWarnings("unchecked")
-    public <I extends T> MekanismDeferredHolder<T, I> register(String name, Function<ResourceLocation, ? extends I> func) {
-        return (MekanismDeferredHolder<T, I>) super.register(name, func);
+    public <I extends T> MekanismDeferredHolder<T, I> register(String name, Function<ResourceLocation, ? extends I> factory) {
+        Objects.requireNonNull(factory);
+        ResourceLocation id = ResourceLocation.fromNamespaceAndPath(namespace, name);
+        return register(name, () -> factory.apply(id));
     }
 
-    @Override
     @SuppressWarnings("unchecked")
-    public <I extends T> MekanismDeferredHolder<T, I> register(String name, Supplier<? extends I> sup) {
-        return (MekanismDeferredHolder<T, I>) super.register(name, sup);
+    public <I extends T> MekanismDeferredHolder<T, I> register(String name, Supplier<? extends I> supplier) {
+        Objects.requireNonNull(supplier);
+        ResourceKey<T> key = ResourceKey.create(registryKey, ResourceLocation.fromNamespaceAndPath(namespace, name));
+        MekanismDeferredHolder<T, I> holder = (MekanismDeferredHolder<T, I>) holderCreator.apply(key);
+        if (!key.equals(holder.getKey())) {
+            throw new IllegalArgumentException("Holder creator returned the wrong key for " + key.location());
+        }
+        FabricDeferredHolder<T> fabricHolder = delegate.register(name, supplier);
+        holder.attach(fabricHolder);
+        return holder;
     }
 
-    @Override
-    @SuppressWarnings("unchecked")
-    protected <I extends T> MekanismDeferredHolder<T, I> createHolder(ResourceKey<? extends Registry<T>> registryKey, ResourceLocation key) {
-        return (MekanismDeferredHolder<T, I>) holderCreator.apply(ResourceKey.create(registryKey, key));
+    /** Commits this batch through the normal vanilla registry lifecycle. */
+    public void registerAll(Registry<T> registry) {
+        delegate.registerAll(registry);
+    }
+
+    /** Package-private test seam for canonical binding semantics without mutating a global registry. */
+    void registerAll(Registrar<T> registrar) {
+        Objects.requireNonNull(registrar);
+        delegate.registerAll(registrar::register);
     }
 }

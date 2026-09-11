@@ -48,6 +48,26 @@ Kilt 的转换表明 execute/simulate 应在 transfer 边界映射为 transactio
 - `./fabric-build.sh`
 - `scripts/fabric-packaged-smoke.sh`
 
+## Deferred registry wrapper surface
+
+状态：首个 common source slice 已移植，用于官方 GameEvent 声明。
+
+`MekanismDeferredRegister<T>` 不再继承 NeoForge `DeferredRegister<T>`，而是组合
+`FabricDeferredRegister<T>`；保留 Mekanism 自身使用的两个 typed `register` 重载，并新增通过
+vanilla `Registry<T>` 提交批次的入口。`MekanismDeferredHolder<R, T>` 不再继承 NeoForge
+`DeferredHolder<R, T>`，而是组合 Fabric holder，同时直接实现 vanilla `Holder<R>` 与
+`Supplier<T>`。`get/getKey/key/getId/getName/is/keyMatches`、绑定前 key 可用性、绑定后 canonical
+对象身份均保留；绑定前读取值继续明确失败。
+
+兼容影响：依赖 NeoForge `DeferredRegister`/`DeferredHolder` 继承关系或其额外方法的 addon
+需要迁移到 Fabric/vanilla 注册 API。Mekanism 自身面向 holder/value/key 的公共用法保持源码级
+表面。当前只承诺 `fabric/common-slice.txt` 已纳入的闭包；后续每引入一种 registry wrapper，
+都必须补足实际调用到的 holder 语义，而不是伪造整个 NeoForge registry API。
+
+语义依据与验证见 `docs/FABRIC_REGISTRY.md`、
+`fabric/src/test/java/mekanism/common/registration/MekanismDeferredRegisterTest.java` 以及 packaged
+server smoke。Kilt/Connector 仅用于核对生命周期、冻结和 canonical holder 行为；实现未复制。
+
 ## Registry-aware NBT contract
 
 状态：基础契约与 `DataHandlerUtils` 已移植；容器接口将在各自依赖闭包可编译时逐项切换。

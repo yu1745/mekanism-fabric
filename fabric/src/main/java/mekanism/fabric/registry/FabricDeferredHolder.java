@@ -1,12 +1,22 @@
 package mekanism.fabric.registry;
 
+import com.mojang.datafixers.util.Either;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderOwner;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.TagKey;
 
-/** A holder which is unavailable until its deferred registration has completed. */
-public final class FabricDeferredHolder<T> {
+/** A stable keyed holder which is unavailable until its deferred registration has completed. */
+public final class FabricDeferredHolder<T> implements Holder<T>, Supplier<T> {
     private final ResourceKey<T> key;
     private volatile T value;
+    private volatile Holder<T> canonicalHolder;
 
     FabricDeferredHolder(ResourceKey<T> key) {
         this.key = Objects.requireNonNull(key);
@@ -16,7 +26,13 @@ public final class FabricDeferredHolder<T> {
         return key;
     }
 
+    @Override
     public T get() {
+        return value();
+    }
+
+    @Override
+    public T value() {
         T bound = value;
         if (bound == null) {
             throw new IllegalStateException("Registry value " + key.location() + " is not bound");
@@ -24,10 +40,79 @@ public final class FabricDeferredHolder<T> {
         return bound;
     }
 
+    @Override
+    public boolean isBound() {
+        return value != null;
+    }
+
+    @Override
+    public boolean is(ResourceLocation id) {
+        return key.location().equals(id);
+    }
+
+    @Override
+    public boolean is(ResourceKey<T> otherKey) {
+        return key.equals(otherKey);
+    }
+
+    @Override
+    public boolean is(Predicate<ResourceKey<T>> predicate) {
+        return predicate.test(key);
+    }
+
+    @Override
+    public boolean is(TagKey<T> tag) {
+        Holder<T> holder = canonicalHolder;
+        return holder != null && holder.is(tag);
+    }
+
+    @Override
+    @Deprecated
+    public boolean is(Holder<T> holder) {
+        Holder<T> canonical = canonicalHolder;
+        return canonical != null && canonical.is(holder);
+    }
+
+    @Override
+    public Stream<TagKey<T>> tags() {
+        Holder<T> holder = canonicalHolder;
+        return holder == null ? Stream.empty() : holder.tags();
+    }
+
+    @Override
+    public Either<ResourceKey<T>, T> unwrap() {
+        return Either.left(key);
+    }
+
+    @Override
+    public Optional<ResourceKey<T>> unwrapKey() {
+        return Optional.of(key);
+    }
+
+    @Override
+    public Kind kind() {
+        return Kind.REFERENCE;
+    }
+
+    @Override
+    public boolean canSerializeIn(HolderOwner<T> owner) {
+        Holder<T> holder = canonicalHolder;
+        return holder != null && holder.canSerializeIn(owner);
+    }
+
     void bind(T canonicalValue) {
+        bind(canonicalValue, null);
+    }
+
+    void bind(T canonicalValue, Holder<T> registryHolder) {
         if (value != null) {
             throw new IllegalStateException("Registry value " + key.location() + " is already bound");
         }
-        value = Objects.requireNonNull(canonicalValue, "registrar returned null for " + key.location());
+        T nonNullValue = Objects.requireNonNull(canonicalValue, "registrar returned null for " + key.location());
+        if (registryHolder != null && (!registryHolder.is(key) || registryHolder.value() != nonNullValue)) {
+            throw new IllegalArgumentException("Registry holder does not match canonical value " + key.location());
+        }
+        canonicalHolder = registryHolder;
+        value = nonNullValue;
     }
 }

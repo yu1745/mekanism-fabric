@@ -16,6 +16,9 @@ MDK.zip
 .settings
 /eclipse
 *.txt
+!/fabric/api-slice.txt
+!/fabric/common-slice.txt
+!/fabric/platform-slice.txt
 *.launch
 
 *.blend1
