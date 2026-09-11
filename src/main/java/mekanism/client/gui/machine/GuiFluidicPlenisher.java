@@ -20,13 +20,14 @@ import mekanism.common.util.text.TextUtils;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraftforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.FluidStack;
 import org.jetbrains.annotations.NotNull;
 
 public class GuiFluidicPlenisher extends GuiMekanismTile<TileEntityFluidicPlenisher, MekanismTileContainer<TileEntityFluidicPlenisher>> {
 
     public GuiFluidicPlenisher(MekanismTileContainer<TileEntityFluidicPlenisher> container, Inventory inv, Component title) {
         super(container, inv, title);
+        titleLabelY = 5;
         inventoryLabelY += 2;
         dynamicSlots = true;
     }
@@ -34,7 +35,7 @@ public class GuiFluidicPlenisher extends GuiMekanismTile<TileEntityFluidicPlenis
     @Override
     protected void addGuiElements() {
         super.addGuiElements();
-        addRenderableWidget(new GuiInnerScreen(this, 54, 23, 80, 41, () -> {
+        addRenderableWidget(new GuiInnerScreen(this, 54, 23, 80, 42, () -> {
             List<Component> list = new ArrayList<>();
             list.add(EnergyDisplay.of(tile.getEnergyContainer()).getTextComponent());
             list.add(MekanismLang.FINISHED.translate(YesNo.of(tile.finishedCalc)));
@@ -50,7 +51,7 @@ public class GuiFluidicPlenisher extends GuiMekanismTile<TileEntityFluidicPlenis
         addRenderableWidget(new GuiVerticalPowerBar(this, tile.getEnergyContainer(), 164, 15))
               .warning(WarningType.NOT_ENOUGH_ENERGY, () -> {
                   MachineEnergyContainer<TileEntityFluidicPlenisher> energyContainer = tile.getEnergyContainer();
-                  return energyContainer.getEnergyPerTick().greaterThan(energyContainer.getEnergy());
+                  return energyContainer.getEnergyPerTick() > energyContainer.getEnergy();
               });
         addRenderableWidget(new GuiFluidGauge(() -> tile.fluidTank, () -> tile.getFluidTanks(null), GaugeType.STANDARD, this, 6, 13));
         addRenderableWidget(new GuiEnergyTab(this, tile.getEnergyContainer(), tile::usedEnergy));
@@ -59,7 +60,7 @@ public class GuiFluidicPlenisher extends GuiMekanismTile<TileEntityFluidicPlenis
     @Override
     protected void drawForegroundText(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY) {
         renderTitleText(guiGraphics);
-        drawString(guiGraphics, playerInventoryTitle, inventoryLabelX, inventoryLabelY, titleTextColor());
+        renderInventoryText(guiGraphics);
         super.drawForegroundText(guiGraphics, mouseX, mouseY);
     }
 }

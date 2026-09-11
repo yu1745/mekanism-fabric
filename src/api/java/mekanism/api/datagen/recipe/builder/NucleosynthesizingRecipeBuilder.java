@@ -1,78 +1,61 @@
 package mekanism.api.datagen.recipe.builder;
 
-import com.google.gson.JsonObject;
-import java.util.function.Consumer;
-import mekanism.api.JsonConstants;
-import mekanism.api.SerializerHelper;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.datagen.recipe.MekanismRecipeBuilder;
-import mekanism.api.recipes.ingredients.ChemicalStackIngredient.GasStackIngredient;
+import mekanism.api.recipes.NucleosynthesizingRecipe;
+import mekanism.api.recipes.basic.BasicNucleosynthesizingRecipe;
+import mekanism.api.recipes.ingredients.ChemicalStackIngredient;
 import mekanism.api.recipes.ingredients.ItemStackIngredient;
-import net.minecraft.data.recipes.FinishedRecipe;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.data.recipes.RecipeOutput;
 import net.minecraft.world.item.ItemStack;
-import org.jetbrains.annotations.NotNull;
 
 @NothingNullByDefault
 public class NucleosynthesizingRecipeBuilder extends MekanismRecipeBuilder<NucleosynthesizingRecipeBuilder> {
 
     private final ItemStackIngredient itemInput;
-    private final GasStackIngredient gasInput;
+    private final ChemicalStackIngredient chemicalInput;
     private final ItemStack output;
     private final int duration;
+    private final boolean perTickUsage;
 
-    protected NucleosynthesizingRecipeBuilder(ItemStackIngredient itemInput, GasStackIngredient gasInput, ItemStack output, int duration) {
-        super(mekSerializer("nucleosynthesizing"));
+    protected NucleosynthesizingRecipeBuilder(ItemStackIngredient itemInput, ChemicalStackIngredient chemicalInput, ItemStack output, int duration, boolean perTickUsage) {
         this.itemInput = itemInput;
-        this.gasInput = gasInput;
+        this.chemicalInput = chemicalInput;
         this.output = output;
         this.duration = duration;
+        this.perTickUsage = perTickUsage;
     }
 
     /**
      * Creates a Nucleosynthesizing recipe builder.
      *
-     * @param itemInput Item Input.
-     * @param gasInput  Gas Input.
-     * @param output    Output.
-     * @param duration  Duration in ticks that it takes the recipe to complete. Must be greater than zero.
+     * @param itemInput     Item Input.
+     * @param chemicalInput Chemical Input.
+     * @param output        Output.
+     * @param duration      Duration in ticks that it takes the recipe to complete. Must be greater than zero.
+     * @param perTickUsage  Should the recipe consume the chemical input each tick it is processing.
      */
-    public static NucleosynthesizingRecipeBuilder nucleosynthesizing(ItemStackIngredient itemInput, GasStackIngredient gasInput, ItemStack output, int duration) {
+    public static NucleosynthesizingRecipeBuilder nucleosynthesizing(ItemStackIngredient itemInput, ChemicalStackIngredient chemicalInput, ItemStack output, int duration,
+          boolean perTickUsage) {
         if (output.isEmpty()) {
             throw new IllegalArgumentException("This nucleosynthesizing recipe requires a non empty item output.");
-        }
-        if (duration <= 0) {
+        } else if (duration <= 0) {
             throw new IllegalArgumentException("This nucleosynthesizing recipe must have a positive duration.");
         }
-        return new NucleosynthesizingRecipeBuilder(itemInput, gasInput, output, duration);
+        return new NucleosynthesizingRecipeBuilder(itemInput, chemicalInput, output, duration, perTickUsage);
     }
 
     @Override
-    protected NucleosynthesizingRecipeResult getResult(ResourceLocation id) {
-        return new NucleosynthesizingRecipeResult(id);
+    protected NucleosynthesizingRecipe asRecipe() {
+        return new BasicNucleosynthesizingRecipe(itemInput, chemicalInput, output, duration, perTickUsage);
     }
 
     /**
      * Builds this recipe using the output item's name as the recipe name.
      *
-     * @param consumer Finished Recipe Consumer.
+     * @param recipeOutput Finished Recipe Consumer.
      */
-    public void build(Consumer<FinishedRecipe> consumer) {
-        build(consumer, output.getItem());
-    }
-
-    public class NucleosynthesizingRecipeResult extends RecipeResult {
-
-        protected NucleosynthesizingRecipeResult(ResourceLocation id) {
-            super(id);
-        }
-
-        @Override
-        public void serializeRecipeData(@NotNull JsonObject json) {
-            json.add(JsonConstants.ITEM_INPUT, itemInput.serialize());
-            json.add(JsonConstants.GAS_INPUT, gasInput.serialize());
-            json.add(JsonConstants.OUTPUT, SerializerHelper.serializeItemStack(output));
-            json.addProperty(JsonConstants.DURATION, duration);
-        }
+    public void build(RecipeOutput recipeOutput) {
+        build(recipeOutput, output.getItemHolder());
     }
 }

@@ -4,9 +4,11 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import java.util.EnumMap;
 import java.util.Map;
-import java.util.function.ObjIntConsumer;
+import java.util.Map.Entry;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import mekanism.api.gear.IModule;
+import mekanism.api.gear.config.ModuleConfig;
 import mekanism.client.gui.element.GuiElementHolder;
 import mekanism.client.gui.element.button.TranslationButton;
 import mekanism.client.gui.element.custom.module.GuiModuleScreen;
@@ -14,12 +16,11 @@ import mekanism.client.gui.element.scroll.GuiModuleScrollList;
 import mekanism.client.gui.element.slot.GuiSlot;
 import mekanism.client.gui.element.slot.SlotType;
 import mekanism.client.gui.element.window.GuiMekaSuitHelmetOptions;
-import mekanism.common.Mekanism;
 import mekanism.common.MekanismLang;
 import mekanism.common.content.gear.Module;
-import mekanism.common.content.gear.ModuleConfigItem;
 import mekanism.common.inventory.container.ModuleTweakerContainer;
 import mekanism.common.inventory.container.slot.SlotOverlay;
+import mekanism.common.network.PacketUtils;
 import mekanism.common.network.to_server.PacketUpdateModuleSettings;
 import mekanism.common.registries.MekanismItems;
 import mekanism.common.registries.MekanismSounds;
@@ -41,7 +42,7 @@ import org.lwjgl.glfw.GLFW;
 public class GuiModuleTweaker extends GuiMekanism<ModuleTweakerContainer> {
 
     private final ArmorPreview armorPreview = new ArmorPreview();
-    private final ObjIntConsumer<ModuleConfigItem<?>> saveCallback;
+    private final Consumer<ModuleConfig<?>> saveCallback;
 
     private GuiModuleScrollList scrollList;
     private GuiModuleScreen moduleScreen;
@@ -51,26 +52,30 @@ public class GuiModuleTweaker extends GuiMekanism<ModuleTweakerContainer> {
 
     public GuiModuleTweaker(ModuleTweakerContainer container, Inventory inv, Component title) {
         super(container, inv, title);
-        saveCallback = (configItem, dataIndex) -> {
+        saveCallback = configItem -> {
             if (moduleScreen != null) {
                 IModule<?> module = moduleScreen.getCurrentModule();
                 if (module != null && selected != -1) {//Shouldn't be null but validate just in case
                     int slotIndex = menu.slots.get(selected).getSlotIndex();
-                    Mekanism.packetHandler().sendToServer(PacketUpdateModuleSettings.create(slotIndex, module.getData(), dataIndex, configItem.getData()));
+                    PacketUtils.sendToServer(PacketUpdateModuleSettings.create(slotIndex, module.getDataHolder(), module.getInstalledCount(), configItem));
                 }
             }
         };
-        imageWidth = 248;
+        imageWidth = 266;
         imageHeight += 20;
     }
 
     @Override
     protected void addGuiElements() {
         super.addGuiElements();
-        moduleScreen = addRenderableWidget(new GuiModuleScreen(this, 138, 20, saveCallback, armorPreview));
-        scrollList = addRenderableWidget(new GuiModuleScrollList(this, 30, 20, 108, 116, () -> getStack(selected), this::onModuleSelected));
-        addRenderableWidget(new GuiElementHolder(this, 30, 136, 108, 18));
-        optionsButton = addRenderableWidget(new TranslationButton(this, 31, 137, 106, 16, MekanismLang.BUTTON_OPTIONS, this::openOptions));
+        Supplier<ItemStack> itemSupplier = () -> getStack(selected);
+        addRenderableWidget(new GuiElementHolder(this, 30, 136, 120, 18));
+        moduleScreen = addRenderableWidget(new GuiModuleScreen(this, 150, 20, itemSupplier, saveCallback, armorPreview));
+        scrollList = addRenderableWidget(new GuiModuleScrollList(this, 30, 20, 116, itemSupplier, this::onModuleSelected));
+        optionsButton = addRenderableWidget(new TranslationButton(this, 31, 137, 118, 16, MekanismLang.BUTTON_OPTIONS, (element, mouseX, mouseY) -> {
+            ((GuiModuleTweaker) element.gui()).openOptions();
+            return true;
+        }));
         optionsButton.active = false;
         int size = menu.slots.size();
         for (int i = 0; i < size; i++) {
@@ -81,7 +86,7 @@ public class GuiModuleTweaker extends GuiMekanism<ModuleTweakerContainer> {
                 select(index);
             }
             addRenderableWidget(new GuiSlot(SlotType.NORMAL, this, slot.x - 1, slot.y - 1)
-                  .click((e, x, y) -> select(index), MekanismSounds.BEEP)
+                  .click((e, x, y) -> select(index), 1.0F, MekanismSounds.BEEP_ON)
                   .overlayColor(isValidItem(index) ? null : () -> 0xCC333333)
                   .with(() -> index == selected ? SlotOverlay.SELECT : null));
         }
@@ -92,7 +97,7 @@ public class GuiModuleTweaker extends GuiMekanism<ModuleTweakerContainer> {
     }
 
     private void openOptions() {
-        addWindow(new GuiMekaSuitHelmetOptions(this, getWidth() / 2 - 140 / 2, getHeight() / 2 - 90 / 2));
+        addWindow(new GuiMekaSuitHelmetOptions(this, (imageWidth - 140) / 2, (imageHeight - 140) / 2));
     }
 
     @Override
@@ -140,7 +145,7 @@ public class GuiModuleTweaker extends GuiMekanism<ModuleTweakerContainer> {
 
     @Override
     protected void drawForegroundText(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        renderTitleText(guiGraphics);
+        renderTitleTextWithOffset(guiGraphics, 24);
         super.drawForegroundText(guiGraphics, mouseX, mouseY);
     }
 
@@ -151,7 +156,7 @@ public class GuiModuleTweaker extends GuiMekanism<ModuleTweakerContainer> {
             armorPreview.tryUpdateFull(stack);
             scrollList.updateItemAndList(stack);
             scrollList.clearSelection();
-            optionsButton.active = stack.getItem() == MekanismItems.MEKASUIT_HELMET.get();
+            optionsButton.active = stack.is(MekanismItems.MEKASUIT_HELMET);
             return true;
         }
         return false;
@@ -185,7 +190,7 @@ public class GuiModuleTweaker extends GuiMekanism<ModuleTweakerContainer> {
                             case CHEST -> MekanismItems.MEKASUIT_BODYARMOR;
                             case HEAD -> MekanismItems.MEKASUIT_HELMET;
                             default -> throw new IllegalStateException("Unknown armor slot: " + armorSlot.getName());
-                        }).getItemStack();
+                        }).asStack();
                     }
                     return stack;
                 });
@@ -220,7 +225,9 @@ public class GuiModuleTweaker extends GuiMekanism<ModuleTweakerContainer> {
                 preview = new ArmorStand(EntityType.ARMOR_STAND, Minecraft.getInstance().level);
                 preview.setNoBasePlate(true);
                 //Copy the player's current armor when we first initialize this
-                lazyItems.forEach((slot, item) -> preview.setItemSlot(slot, item.get()));
+                for (Entry<EquipmentSlot, Supplier<ItemStack>> entry : lazyItems.entrySet()) {
+                    preview.setItemSlot(entry.getKey(), entry.getValue().get());
+                }
             }
             return preview;
         }

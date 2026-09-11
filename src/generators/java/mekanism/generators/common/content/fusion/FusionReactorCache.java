@@ -1,7 +1,8 @@
 package mekanism.generators.common.content.fusion;
 
-import mekanism.api.NBTConstants;
+import mekanism.api.SerializationConstants;
 import mekanism.common.lib.multiblock.MultiblockCache;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 
 public class FusionReactorCache extends MultiblockCache<FusionReactorMultiblockData> {
@@ -28,8 +29,8 @@ public class FusionReactorCache extends MultiblockCache<FusionReactorMultiblockD
     }
 
     @Override
-    public void apply(FusionReactorMultiblockData data) {
-        super.apply(data);
+    public void apply(HolderLookup.Provider provider, FusionReactorMultiblockData data) {
+        super.apply(provider, data);
         if (plasmaTemperature >= 0) {
             data.plasmaTemperature = plasmaTemperature;
         }
@@ -47,18 +48,18 @@ public class FusionReactorCache extends MultiblockCache<FusionReactorMultiblockD
     }
 
     @Override
-    public void load(CompoundTag nbtTags) {
-        super.load(nbtTags);
-        plasmaTemperature = nbtTags.getDouble(NBTConstants.PLASMA_TEMP);
-        injectionRate = nbtTags.getInt(NBTConstants.INJECTION_RATE);
-        burning = nbtTags.getBoolean(NBTConstants.BURNING);
+    public void load(HolderLookup.Provider provider, CompoundTag nbtTags) {
+        super.load(provider, nbtTags);
+        plasmaTemperature = nbtTags.getDouble(SerializationConstants.PLASMA_TEMP);
+        injectionRate = nbtTags.getInt(SerializationConstants.INJECTION_RATE);
+        burning = nbtTags.getBoolean(SerializationConstants.BURNING);
     }
 
     @Override
-    public void save(CompoundTag nbtTags) {
-        super.save(nbtTags);
-        nbtTags.putDouble(NBTConstants.PLASMA_TEMP, plasmaTemperature);
-        nbtTags.putInt(NBTConstants.INJECTION_RATE, getInjectionRate());
-        nbtTags.putBoolean(NBTConstants.BURNING, burning);
+    public void save(HolderLookup.Provider provider, CompoundTag nbtTags) {
+        super.save(provider, nbtTags);
+        nbtTags.putDouble(SerializationConstants.PLASMA_TEMP, plasmaTemperature);
+        nbtTags.putInt(SerializationConstants.INJECTION_RATE, getInjectionRate());
+        nbtTags.putBoolean(SerializationConstants.BURNING, burning);
     }
 }

@@ -1,24 +1,11 @@
 package mekanism.api;
 
-import com.mojang.serialization.Codec;
-import java.util.ServiceLoader;
-import mekanism.api.chemical.gas.Gas;
-import mekanism.api.chemical.gas.GasStack;
-import mekanism.api.chemical.infuse.InfuseType;
-import mekanism.api.chemical.infuse.InfusionStack;
-import mekanism.api.chemical.pigment.Pigment;
-import mekanism.api.chemical.pigment.PigmentStack;
-import mekanism.api.chemical.slurry.Slurry;
-import mekanism.api.chemical.slurry.SlurryStack;
+import mekanism.api.integration.emi.IMekanismEmiHelper;
 import mekanism.api.integration.jei.IMekanismJEIHelper;
-import mekanism.api.recipes.ingredients.ChemicalStackIngredient.GasStackIngredient;
-import mekanism.api.recipes.ingredients.ChemicalStackIngredient.InfusionStackIngredient;
-import mekanism.api.recipes.ingredients.ChemicalStackIngredient.PigmentStackIngredient;
-import mekanism.api.recipes.ingredients.ChemicalStackIngredient.SlurryStackIngredient;
+import mekanism.api.recipes.ingredients.creator.IChemicalIngredientCreator;
 import mekanism.api.recipes.ingredients.creator.IChemicalStackIngredientCreator;
 import mekanism.api.recipes.ingredients.creator.IFluidStackIngredientCreator;
 import mekanism.api.recipes.ingredients.creator.IItemStackIngredientCreator;
-import mekanism.api.robit.RobitSkin;
 
 /**
  * Provides access to a variety of different helpers that are exposed to the API.
@@ -30,7 +17,7 @@ public interface IMekanismAccess {
     /**
      * Provides access to Mekanism's internals.
      */
-    IMekanismAccess INSTANCE = ServiceLoader.load(IMekanismAccess.class).findFirst().orElseThrow(() -> new IllegalStateException("No valid ServiceImpl for IMekanismAccess found"));
+    IMekanismAccess INSTANCE = MekanismAPI.getService(IMekanismAccess.class);
 
     /**
      * Gets a helper to interact with some of Mekanism's JEI integration internals. This should only be called if JEI is loaded.
@@ -40,11 +27,12 @@ public interface IMekanismAccess {
     IMekanismJEIHelper jeiHelper();
 
     /**
-     * Codec for (de)serializing robit skins inline.
+     * Gets a helper to interact with some of Mekanism's EMI integration internals. This should only be called if EMI is loaded.
      *
-     * @apiNote Use {@link mekanism.api.robit.RobitSkinSerializationHelper#DIRECT_CODEC} instead.
+     * @throws IllegalStateException if EMI is not loaded.
+     * @since 10.5.10
      */
-    Codec<RobitSkin> robitSkinCodec();
+    IMekanismEmiHelper emiHelper();
 
     /**
      * Gets the item stack ingredient creator.
@@ -61,30 +49,18 @@ public interface IMekanismAccess {
     IFluidStackIngredientCreator fluidStackIngredientCreator();
 
     /**
-     * Gets the gas stack ingredient creator.
+     * Gets the chemical stack ingredient creator.
      *
-     * @apiNote Use {@link mekanism.api.recipes.ingredients.creator.IngredientCreatorAccess#gas()} instead.
+     * @apiNote Use {@link mekanism.api.recipes.ingredients.creator.IngredientCreatorAccess#chemicalStack()} instead.
+     * @since 10.7.0
      */
-    IChemicalStackIngredientCreator<Gas, GasStack, GasStackIngredient> gasStackIngredientCreator();
+    IChemicalStackIngredientCreator chemicalStackIngredientCreator();
 
     /**
-     * Gets the infusion stack ingredient creator.
+     * Gets the chemical ingredient creator.
      *
-     * @apiNote Use {@link mekanism.api.recipes.ingredients.creator.IngredientCreatorAccess#infusion()} instead.
+     * @apiNote Use {@link mekanism.api.recipes.ingredients.creator.IngredientCreatorAccess#chemical()} instead.
+     * @since 10.7.0
      */
-    IChemicalStackIngredientCreator<InfuseType, InfusionStack, InfusionStackIngredient> infusionStackIngredientCreator();
-
-    /**
-     * Gets the pigment stack ingredient creator.
-     *
-     * @apiNote Use {@link mekanism.api.recipes.ingredients.creator.IngredientCreatorAccess#pigment()} instead.
-     */
-    IChemicalStackIngredientCreator<Pigment, PigmentStack, PigmentStackIngredient> pigmentStackIngredientCreator();
-
-    /**
-     * Gets the slurry stack ingredient creator.
-     *
-     * @apiNote Use {@link mekanism.api.recipes.ingredients.creator.IngredientCreatorAccess#slurry()} instead.
-     */
-    IChemicalStackIngredientCreator<Slurry, SlurryStack, SlurryStackIngredient> slurryStackIngredientCreator();
+    IChemicalIngredientCreator chemicalIngredientCreator();
 }

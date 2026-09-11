@@ -1,19 +1,25 @@
 package mekanism.common.tile.base;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import mekanism.api.Chunk3D;
-import mekanism.api.Coord4D;
 import mekanism.common.Mekanism;
+import mekanism.common.network.PacketUtils;
 import mekanism.common.network.to_client.PacketUpdateTile;
 import mekanism.common.registration.impl.TileEntityTypeRegistryObject;
 import mekanism.common.tile.interfaces.ITileWrapper;
 import mekanism.common.util.WorldUtils;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.GlobalPos;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.SectionPos;
+import net.minecraft.core.component.DataComponentType;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtOps;
 import net.minecraft.network.Connection;
-import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -27,16 +33,31 @@ import org.jetbrains.annotations.Nullable;
 public abstract class TileEntityUpdateable extends BlockEntity implements ITileWrapper {
 
     @Nullable
-    private Coord4D cachedCoord;
+    private GlobalPos cachedCoord;
     private boolean cacheCoord;
     private long lastSave;
+    private final long worldPositionLong;
 
     public TileEntityUpdateable(TileEntityTypeRegistryObject<?> type, BlockPos pos, BlockState state) {
         super(type.get(), pos, state);
+        this.worldPositionLong = pos.asLong();
     }
 
     /**
-     * Call this for tiles that we may call {@link #getTileCoord()} a fair amount on to cache the coord when position/world information changes.
+     * Collects all data component types that should be persisted to the dropped item. Override this for any conditionally applied component types.
+     */
+    public List<DataComponentType<?>> getRemapEntries() {
+        return new ArrayList<>(collectComponents().keySet());
+    }
+
+    /**
+     * Called when block is placed in world
+     */
+    public void onAdded() {
+    }
+
+    /**
+     * Call this for tiles that we may call {@link #getTileGlobalPos()} a fair amount on to cache the coord when position/world information changes.
      */
     protected void cacheCoord() {
         //Mark that we want to cache the coord and then update the coord if needed
@@ -106,40 +127,38 @@ public abstract class TileEntityUpdateable extends BlockEntity implements ITileW
     }
 
     @Override
-    public void handleUpdateTag(@NotNull CompoundTag tag) {
-        //We don't want to do a full read from NBT so simply call the super's read method to let Forge do whatever
+    public void handleUpdateTag(@NotNull CompoundTag tag, @NotNull HolderLookup.Provider provider) {
+        //We don't want to do a full read from NBT so simply call the super's read method to let Neo do whatever
         // it wants, but don't treat this as if it was the full saved NBT data as not everything has to be synced to the client
-        super.load(tag);
+        super.loadAdditional(tag, provider);
+        //Copy of logic from BlockEntity#loadWithComponents which we can't just call directly as we don't want to call sub-implementations of loadAdditional
+        BlockEntity.ComponentHelper.COMPONENTS_CODEC.parse(provider.createSerializationContext(NbtOps.INSTANCE), tag)
+              .resultOrPartial(p_337987_ -> Mekanism.logger.warn("Failed to load components: {}", p_337987_))
+              .ifPresent(this::setComponents);
     }
 
     @NotNull
     @Override
-    public CompoundTag getUpdateTag() {
-        return getReducedUpdateTag();
+    public CompoundTag getUpdateTag(@NotNull HolderLookup.Provider provider) {
+        return getReducedUpdateTag(provider);
     }
 
     /**
-     * Similar to {@link #getUpdateTag()} but with reduced information for when we are doing our own syncing.
+     * Similar to {@link #getUpdateTag(HolderLookup.Provider)} but with reduced information for when we are doing our own syncing.
      */
     @NotNull
-    public CompoundTag getReducedUpdateTag() {
+    public CompoundTag getReducedUpdateTag(@NotNull HolderLookup.Provider provider) {
         //Add the base update tag information
-        return super.getUpdateTag();
+        return super.getUpdateTag(provider);
     }
 
     @Override
-    public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket pkt) {
-        if (isRemote() && net.getDirection() == PacketFlow.CLIENTBOUND) {
-            //Handle the update tag when we are on the client
-            CompoundTag tag = pkt.getTag();
-            if (tag != null) {
-                handleUpdatePacket(tag);
-            }
+    public void onDataPacket(@NotNull Connection net, @NotNull ClientboundBlockEntityDataPacket pkt, @NotNull HolderLookup.Provider provider) {
+        //Handle the update tag when we are on the client
+        CompoundTag tag = pkt.getTag();
+        if (!tag.isEmpty()) {
+            handleUpdateTag(tag, provider);
         }
-    }
-
-    public void handleUpdatePacket(@NotNull CompoundTag tag) {
-        handleUpdateTag(tag);
     }
 
     public void sendUpdatePacket() {
@@ -151,11 +170,11 @@ public abstract class TileEntityUpdateable extends BlockEntity implements ITileW
             Mekanism.logger.warn("Update packet call requested from client side", new IllegalStateException());
         } else if (isRemoved()) {
             Mekanism.logger.warn("Update packet call requested for removed tile", new IllegalStateException());
-        } else {
+        } else if (PacketUtils.hasPlayersTracking((ServerLevel) tracking.getLevel(), tracking.getBlockPos())) {
             //Note: We use our own update packet/channel to avoid chunk trashing and minecraft attempting to rerender
             // the entire chunk when most often we are just updating a TileEntityRenderer, so the chunk itself
             // does not need to and should not be redrawn
-            Mekanism.packetHandler().sendToAllTracking(new PacketUpdateTile(this), tracking);
+            PacketUtils.sendToAllTracking(new PacketUpdateTile(this), tracking);
         }
     }
 
@@ -165,18 +184,8 @@ public abstract class TileEntityUpdateable extends BlockEntity implements ITileW
     }
 
     @Override
-    public Level getTileWorld() {
-        return level;
-    }
-
-    @Override
-    public BlockPos getTilePos() {
-        return worldPosition;
-    }
-
-    @Override
-    public void load(@NotNull CompoundTag nbt) {
-        super.load(nbt);
+    public void loadAdditional(@NotNull CompoundTag nbt, @NotNull HolderLookup.Provider provider) {
+        super.loadAdditional(nbt, provider);
         updateCoord();
     }
 
@@ -184,17 +193,24 @@ public abstract class TileEntityUpdateable extends BlockEntity implements ITileW
     public void setLevel(@NotNull Level world) {
         super.setLevel(world);
         updateCoord();
+        //TODO: Do we need to clear the BlockCapabilityCaches we are storing if the level changes?
+        // The level changing is not really an expected thing to have happen, but might be worth
+        // considering if we run into mods that the caches are causing problems for
     }
 
     private void updateCoord() {
         if (cacheCoord && level != null) {
-            cachedCoord = new Coord4D(worldPosition, level);
+            cachedCoord = GlobalPos.of(level.dimension(), worldPosition);
         }
     }
 
     @Override
-    public Coord4D getTileCoord() {
-        return cacheCoord && cachedCoord != null ? cachedCoord : ITileWrapper.super.getTileCoord();
+    public GlobalPos getTileGlobalPos() {
+        return cacheCoord && cachedCoord != null ? cachedCoord : ITileWrapper.super.getTileGlobalPos();
+    }
+
+    public long getWorldPositionLong() {
+        return worldPositionLong;
     }
 
     @Override
@@ -202,7 +218,7 @@ public abstract class TileEntityUpdateable extends BlockEntity implements ITileW
         if (cacheCoord && cachedCoord != null) {
             return new Chunk3D(cachedCoord);
         }
-        BlockPos pos = getTilePos();
-        return new Chunk3D(getTileWorld().dimension(), SectionPos.blockToSectionCoord(pos.getX()), SectionPos.blockToSectionCoord(pos.getZ()));
+        BlockPos pos = this.getBlockPos();
+        return new Chunk3D(this.getLevel().dimension(), SectionPos.blockToSectionCoord(pos.getX()), SectionPos.blockToSectionCoord(pos.getZ()));
     }
 }

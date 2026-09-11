@@ -2,7 +2,7 @@ package mekanism.common.config.value;
 
 import mekanism.api.functions.FloatSupplier;
 import mekanism.common.config.IMekanismConfig;
-import net.minecraftforge.common.ForgeConfigSpec.ConfigValue;
+import net.neoforged.neoforge.common.ModConfigSpec.ConfigValue;
 
 //TODO: Once https://github.com/MinecraftForge/MinecraftForge/pull/6464 is merged make this extend CachedPrimitiveValue<Float>
 // and make it so that our get is cleaner
@@ -59,6 +59,11 @@ public class CachedFloatValue extends CachedValue<Double> implements FloatSuppli
         cachedValue = value;
     }
 
+    public void set(double value) {
+        internal.set(value);
+        cachedValue = (float) value;
+    }
+
     @Override
     protected boolean clearCachedValue(boolean checkChanged) {
         if (!resolved) {
@@ -67,7 +72,7 @@ public class CachedFloatValue extends CachedValue<Double> implements FloatSuppli
         }
         float oldCachedValue = cachedValue;
         resolved = false;
-        //Return if we are meant to check the changed ones, and it is different than it used to be
+        //Return if we are meant to check the changed ones, and it is different then it used to be
         return checkChanged && oldCachedValue != get();
     }
 }

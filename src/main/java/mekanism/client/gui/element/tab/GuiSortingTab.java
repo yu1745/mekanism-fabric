@@ -4,8 +4,8 @@ import mekanism.client.SpecialColors;
 import mekanism.client.gui.IGuiWrapper;
 import mekanism.client.gui.element.GuiInsetElement;
 import mekanism.client.render.MekanismRenderer;
-import mekanism.common.Mekanism;
 import mekanism.common.MekanismLang;
+import mekanism.common.network.PacketUtils;
 import mekanism.common.network.to_server.PacketGuiInteract;
 import mekanism.common.network.to_server.PacketGuiInteract.GuiInteraction;
 import mekanism.common.tile.factory.TileEntityFactory;
@@ -19,18 +19,13 @@ public class GuiSortingTab extends GuiInsetElement<TileEntityFactory<?>> {
 
     public GuiSortingTab(IGuiWrapper gui, TileEntityFactory<?> tile) {
         super(MekanismUtils.getResource(ResourceType.GUI, "sorting.png"), gui, tile, -26, 62, 35, 18, true);
+        setTooltip(MekanismLang.AUTO_SORT);
     }
 
     @Override
     public void drawBackground(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
         super.drawBackground(guiGraphics, mouseX, mouseY, partialTicks);
-        drawTextScaledBound(guiGraphics, OnOff.of(dataSource.isSorting()).getTextComponent(), relativeX + 3, relativeY + 24, titleTextColor(), 21);
-    }
-
-    @Override
-    public void renderToolTip(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        super.renderToolTip(guiGraphics, mouseX, mouseY);
-        displayTooltips(guiGraphics, mouseX, mouseY, MekanismLang.AUTO_SORT.translate());
+        drawScrollingString(guiGraphics, OnOff.of(dataSource.isSorting()).getTextComponent(), 0, 24, TextAlignment.CENTER, titleTextColor(), 3, false);
     }
 
     @Override
@@ -40,6 +35,6 @@ public class GuiSortingTab extends GuiInsetElement<TileEntityFactory<?>> {
 
     @Override
     public void onClick(double mouseX, double mouseY, int button) {
-        Mekanism.packetHandler().sendToServer(new PacketGuiInteract(GuiInteraction.AUTO_SORT_BUTTON, dataSource));
+        PacketUtils.sendToServer(new PacketGuiInteract(GuiInteraction.AUTO_SORT_BUTTON, dataSource));
     }
 }

@@ -2,29 +2,28 @@ package mekanism.common.tile.transmitter;
 
 import java.util.Collections;
 import java.util.List;
-import mekanism.api.NBTConstants;
+import mekanism.api.SerializationConstants;
 import mekanism.api.fluid.IExtendedFluidTank;
-import mekanism.api.providers.IBlockProvider;
 import mekanism.api.tier.BaseTier;
 import mekanism.common.block.states.BlockStateHelper;
 import mekanism.common.block.states.TransmitterType;
+import mekanism.common.capabilities.Capabilities;
 import mekanism.common.capabilities.fluid.DynamicFluidHandler;
 import mekanism.common.capabilities.resolver.manager.FluidHandlerManager;
 import mekanism.common.content.network.FluidNetwork;
 import mekanism.common.content.network.transmitter.MechanicalPipe;
-import mekanism.common.integration.computer.ComputerCapabilityHelper;
 import mekanism.common.integration.computer.IComputerTile;
 import mekanism.common.integration.computer.annotation.ComputerMethod;
 import mekanism.common.lib.transmitter.ConnectionType;
 import mekanism.common.registries.MekanismBlocks;
-import mekanism.common.util.EnumUtils;
-import mekanism.common.util.WorldUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.FluidStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -32,7 +31,7 @@ public class TileEntityMechanicalPipe extends TileEntityTransmitter implements I
 
     private final FluidHandlerManager fluidHandlerManager;
 
-    public TileEntityMechanicalPipe(IBlockProvider blockProvider, BlockPos pos, BlockState state) {
+    public TileEntityMechanicalPipe(Holder<Block> blockProvider, BlockPos pos, BlockState state) {
         super(blockProvider, pos, state);
         addCapabilityResolver(fluidHandlerManager = new FluidHandlerManager(direction -> {
             MechanicalPipe pipe = getTransmitter();
@@ -43,11 +42,10 @@ public class TileEntityMechanicalPipe extends TileEntityTransmitter implements I
             }
             return pipe.getFluidTanks(direction);
         }, new DynamicFluidHandler(this::getFluidTanks, getExtractPredicate(), getInsertPredicate(), null)));
-        ComputerCapabilityHelper.addComputerCapabilities(this, this::addCapabilityResolver);
     }
 
     @Override
-    protected MechanicalPipe createTransmitter(IBlockProvider blockProvider) {
+    protected MechanicalPipe createTransmitter(Holder<Block> blockProvider) {
         return new MechanicalPipe(blockProvider, this);
     }
 
@@ -81,13 +79,13 @@ public class TileEntityMechanicalPipe extends TileEntityTransmitter implements I
 
     @NotNull
     @Override
-    public CompoundTag getUpdateTag() {
+    public CompoundTag getUpdateTag(@NotNull HolderLookup.Provider provider) {
         //Note: We add the stored information to the initial update tag and not to the one we sync on side changes which uses getReducedUpdateTag
-        CompoundTag updateTag = super.getUpdateTag();
+        CompoundTag updateTag = super.getUpdateTag(provider);
         if (getTransmitter().hasTransmitterNetwork()) {
             FluidNetwork network = getTransmitter().getTransmitterNetwork();
-            updateTag.put(NBTConstants.FLUID_STORED, network.lastFluid.writeToNBT(new CompoundTag()));
-            updateTag.putFloat(NBTConstants.SCALE, network.currentScale);
+            updateTag.put(SerializationConstants.FLUID, network.lastFluid.saveOptional(provider));
+            updateTag.putFloat(SerializationConstants.SCALE, network.currentScale);
         }
         return updateTag;
     }
@@ -100,12 +98,12 @@ public class TileEntityMechanicalPipe extends TileEntityTransmitter implements I
     public void sideChanged(@NotNull Direction side, @NotNull ConnectionType old, @NotNull ConnectionType type) {
         super.sideChanged(side, old, type);
         if (type == ConnectionType.NONE) {
-            invalidateCapability(ForgeCapabilities.FLUID_HANDLER, side);
-            //Notify the neighbor on that side our state changed and we no longer have a capability
-            WorldUtils.notifyNeighborOfChange(level, side, worldPosition);
+            //We no longer have a capability, invalidate it, which will also notify the level
+            invalidateCapability(Capabilities.FLUID.block(), side);
         } else if (old == ConnectionType.NONE) {
-            //Notify the neighbor on that side our state changed, and we now do have a capability
-            WorldUtils.notifyNeighborOfChange(level, side, worldPosition);
+            //Notify any listeners to our position that we now do have a capability
+            //Note: We don't invalidate our impls because we know they are already invalid, so we can short circuit setting them to null from null
+            invalidateCapabilities();
         }
     }
 
@@ -116,9 +114,12 @@ public class TileEntityMechanicalPipe extends TileEntityTransmitter implements I
             //The transmitter now is powered by redstone and previously was not
             //Note: While at first glance the below invalidation may seem over aggressive, it is not actually that aggressive as
             // if a cap has not been initialized yet on a side then invalidating it will just NO-OP
-            invalidateCapability(ForgeCapabilities.FLUID_HANDLER, EnumUtils.DIRECTIONS);
+            invalidateCapabilityAll(Capabilities.FLUID.block());
+        } else {
+            //Notify any listeners to our position that we now do have a capability
+            //Note: We don't invalidate our impls because we know they are already invalid, so we can short circuit setting them to null from null
+            invalidateCapabilities();
         }
-        //Note: We do not have to invalidate any caps if we are going from powered to unpowered as all the caps would already be "empty"
     }
 
     //Methods relating to IComputerTile

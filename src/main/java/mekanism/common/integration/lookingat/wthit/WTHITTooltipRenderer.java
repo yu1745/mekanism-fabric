@@ -1,6 +1,5 @@
 package mekanism.common.integration.lookingat.wthit;
 
-import com.mojang.blaze3d.vertex.PoseStack;
 import mcp.mobius.waila.api.IBlockAccessor;
 import mcp.mobius.waila.api.IBlockComponentProvider;
 import mcp.mobius.waila.api.IDataReader;
@@ -9,15 +8,13 @@ import mcp.mobius.waila.api.IEntityComponentProvider;
 import mcp.mobius.waila.api.IPluginConfig;
 import mcp.mobius.waila.api.ITooltip;
 import mcp.mobius.waila.api.ITooltipComponent;
-import mekanism.common.integration.lookingat.ChemicalElement;
-import mekanism.common.integration.lookingat.EnergyElement;
-import mekanism.common.integration.lookingat.FluidElement;
+import mekanism.client.render.IFancyFontRenderer.TextAlignment;
+import mekanism.common.integration.lookingat.ILookingAtElement;
 import mekanism.common.integration.lookingat.LookingAtElement;
-import mekanism.common.integration.lookingat.LookingAtUtils;
-import net.minecraft.client.Minecraft;
+import mekanism.common.integration.lookingat.TextElement;
+import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
 public class WTHITTooltipRenderer implements IBlockComponentProvider, IEntityComponentProvider {
@@ -35,36 +32,22 @@ public class WTHITTooltipRenderer implements IBlockComponentProvider, IEntityCom
     }
 
     private void append(ITooltip tooltip, IDataReader dataReader, IPluginConfig config) {
-        WTHITLookingAtHelper helper = dataReader.get(WTHITLookingAtHelper.class);
+        WTHITLookingAtHelper helper = dataReader.get(WTHITLookingAtHelper.TYPE);
         if (helper != null) {
             //We have mek data, add an empty line for it so that we know to skip rendering the builtin types
             tooltip.setLine(MekanismWTHITPlugin.MEK_DATA);
             Component lastText = null;
             //Copy the data we need and have from the server and pass it on to the tooltip rendering
-            for (Object element : helper.elements) {
-                ResourceLocation name;
-                if (element instanceof Component component) {
+            for (ILookingAtElement element : helper.elements) {
+                if (element instanceof TextElement(Component text)) {
                     if (lastText != null) {
                         //Fallback to printing the last text
                         tooltip.addLine(lastText);
                     }
-                    lastText = component;
-                    continue;
-                } else if (element instanceof EnergyElement) {
-                    name = LookingAtUtils.ENERGY;
-                } else if (element instanceof FluidElement) {
-                    name = LookingAtUtils.FLUID;
-                } else if (element instanceof ChemicalElement chemicalElement) {
-                    name = switch (chemicalElement.getChemicalType()) {
-                        case GAS -> LookingAtUtils.GAS;
-                        case INFUSION -> LookingAtUtils.INFUSE_TYPE;
-                        case PIGMENT -> LookingAtUtils.PIGMENT;
-                        case SLURRY -> LookingAtUtils.SLURRY;
-                    };
-                } else {
+                    lastText = text;
                     continue;
                 }
-                if (config.getBoolean(name)) {
+                if (config.getBoolean(element.getID())) {
                     tooltip.addLine(new MekElement(lastText, (LookingAtElement) element));
                 }
                 lastText = null;
@@ -94,16 +77,12 @@ public class WTHITTooltipRenderer implements IBlockComponentProvider, IEntityCom
         }
 
         @Override
-        public void render(GuiGraphics guiGraphics, int x, int y, float delta) {
+        public void render(GuiGraphics guiGraphics, int x, int y, DeltaTracker delta) {
             if (text != null) {
-                LookingAtElement.renderScaledText(Minecraft.getInstance(), guiGraphics, x + 4, y + 3, 0xFFFFFF, 92, text);
+                element.drawScrollingString(guiGraphics, text, x, y + 3, TextAlignment.LEFT, 0xFFFFFF, 4, false);
                 y += 13;
             }
-            PoseStack pose = guiGraphics.pose();
-            pose.pushPose();
-            pose.translate(x, y, 0);
-            element.render(guiGraphics, 0, 1);
-            pose.popPose();
+            element.render(guiGraphics, x, y + 1);
         }
     }
 }

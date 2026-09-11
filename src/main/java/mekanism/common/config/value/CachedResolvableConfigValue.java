@@ -2,7 +2,7 @@ package mekanism.common.config.value;
 
 import java.util.function.Supplier;
 import mekanism.common.config.IMekanismConfig;
-import net.minecraftforge.common.ForgeConfigSpec.ConfigValue;
+import net.neoforged.neoforge.common.ModConfigSpec.ConfigValue;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -54,7 +54,7 @@ public abstract class CachedResolvableConfigValue<TYPE, REAL> extends CachedValu
         }
         TYPE oldCachedValue = cachedValue;
         cachedValue = null;
-        //Return if we are meant to check the changed ones, and it is different than it used to be
+        //Return if we are meant to check the changed ones, and it is different then it used to be
         return checkChanged && !oldCachedValue.equals(get());
     }
 }

@@ -1,17 +1,14 @@
 package mekanism.common.content.qio;
 
-import com.blamejared.recipestages.RecipeStagesUtil;
-import com.blamejared.recipestages.recipes.IStagedRecipe;
 import it.unimi.dsi.fastutil.ints.Int2IntArrayMap;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.IntFunction;
-import java.util.function.UnaryOperator;
 import mekanism.api.Action;
 import mekanism.api.AutomationType;
 import mekanism.api.IContentsListener;
@@ -23,7 +20,6 @@ import mekanism.common.inventory.container.SelectedWindowData.WindowType;
 import mekanism.common.inventory.container.slot.HotBarSlot;
 import mekanism.common.inventory.container.slot.IInsertableSlot;
 import mekanism.common.inventory.container.slot.MainInventorySlot;
-import mekanism.common.inventory.slot.BasicInventorySlot;
 import mekanism.common.inventory.slot.CraftingWindowInventorySlot;
 import mekanism.common.inventory.slot.CraftingWindowOutputInventorySlot;
 import mekanism.common.lib.inventory.HashedItem;
@@ -35,20 +31,19 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.stats.Stat;
 import net.minecraft.stats.Stats;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.player.StackedContents;
-import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.item.crafting.ShapedRecipe;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.common.ForgeHooks;
-import net.minecraftforge.common.crafting.IShapedRecipe;
-import net.minecraftforge.common.util.RecipeMatcher;
-import net.minecraftforge.items.ItemHandlerHelper;
+import net.neoforged.neoforge.common.CommonHooks;
+import net.neoforged.neoforge.common.util.RecipeMatcher;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -63,16 +58,15 @@ public class QIOCraftingWindow implements IContentsListener {
         }
     }
 
-    private final CraftingWindowInventorySlot[] inputSlots = new CraftingWindowInventorySlot[9];
+    private final IInventorySlot[] inputSlots = new CraftingWindowInventorySlot[9];
     private final ReplacementHelper replacementHelper = new ReplacementHelper();
     private final RemainderHelper remainderHelper = new RemainderHelper();
-    private final CraftingWindowOutputInventorySlot outputSlot;
-    private final QIOCraftingInventory craftingInventory;
+    private final IInventorySlot outputSlot;
     private final IQIOCraftingWindowHolder holder;
     private final SelectedWindowData windowData;
     private final byte windowIndex;
     @Nullable
-    private CraftingRecipe lastRecipe;
+    private RecipeHolder<CraftingRecipe> lastRecipe;
     private boolean isCrafting;
     private boolean changedWhileCrafting;
 
@@ -84,7 +78,16 @@ public class QIOCraftingWindow implements IContentsListener {
             inputSlots[slotIndex] = CraftingWindowInventorySlot.input(this, this.holder);
         }
         outputSlot = CraftingWindowOutputInventorySlot.create(this);
-        craftingInventory = new QIOCraftingInventory();
+    }
+
+    public QIOCraftingWindow(IQIOCraftingWindowHolder holder, byte windowIndex, IntFunction<IContentsListener> inputSaveListener) {
+        this.windowIndex = windowIndex;
+        this.holder = holder;
+        this.windowData = WINDOWS[windowIndex];
+        for (int slotIndex = 0; slotIndex < 9; slotIndex++) {
+            inputSlots[slotIndex] = CraftingWindowInventorySlot.input(this, inputSaveListener.apply(slotIndex));
+        }
+        outputSlot = CraftingWindowOutputInventorySlot.create(this);
     }
 
     public SelectedWindowData getWindowData() {
@@ -95,14 +98,14 @@ public class QIOCraftingWindow implements IContentsListener {
         return windowIndex;
     }
 
-    public CraftingWindowInventorySlot getInputSlot(int slot) {
+    public IInventorySlot getInputSlot(int slot) {
         if (slot < 0 || slot >= 9) {
             throw new IllegalArgumentException("Input slot out of range");
         }
         return inputSlots[slot];
     }
 
-    public CraftingWindowOutputInventorySlot getOutputSlot() {
+    public IInventorySlot getOutputSlot() {
         return outputSlot;
     }
 
@@ -110,7 +113,7 @@ public class QIOCraftingWindow implements IContentsListener {
      * Checks if the stack is equivalent to the current output.
      */
     public boolean isOutput(@NotNull ItemStack stack) {
-        return ItemHandlerHelper.canItemStacksStack(outputSlot.getStack(), stack);
+        return ItemStack.isSameItemSameComponents(outputSlot.getStack(), stack);
     }
 
     @Override
@@ -121,7 +124,7 @@ public class QIOCraftingWindow implements IContentsListener {
             changedWhileCrafting = true;
         } else {
             //If we are not currently crafting, recalculate the contents for the output slot
-            Level world = holder.getHolderWorld();
+            Level world = holder.getLevel();
             if (world != null && !world.isClientSide) {
                 updateOutputSlot(world);
             }
@@ -134,7 +137,7 @@ public class QIOCraftingWindow implements IContentsListener {
         if (!outputSlot.isEmpty()) {
             outputSlot.setEmpty();
         }
-        Level world = holder.getHolderWorld();
+        Level world = holder.getLevel();
         if (world != null && !world.isClientSide) {
             //And recheck the recipe
             updateOutputSlot(world);
@@ -146,23 +149,24 @@ public class QIOCraftingWindow implements IContentsListener {
      */
     private void updateOutputSlot(@NotNull Level world) {
         if (world.getServer() != null) {
-            if (craftingInventory.isEmpty()) {
+            CraftingInput craftingInput = asCraftingInput().input();
+            if (craftingInput.isEmpty()) {
                 //If there is no input, then set the output to empty as there can't be a matching recipe
                 if (!outputSlot.isEmpty()) {
                     outputSlot.setEmpty();
                 }
-            } else if (lastRecipe != null && lastRecipe.matches(craftingInventory, world)) {
+            } else if (lastRecipe != null && lastRecipe.value().matches(craftingInput, world)) {
                 //If the recipe matches make sure we update the output anyway, as the output may have changed based on NBT
                 // If the output slot was empty, then setting the slot to the recipe result fixes it not properly updating
                 // when we remove a single item recipe such as for buttons, and put it back in;
                 // and otherwise we update so that cases like bin upgrade recipes that the inputs match the recipe but the
                 // output is dependent on the specific inputs gets updated properly
                 //Note: We make sure to only call updateOutputSlot if we believe our inputs have changed type
-                outputSlot.setStack(assembleRecipe(lastRecipe, world.registryAccess()));
+                outputSlot.setStack(assembleRecipe(craftingInput, lastRecipe.value(), world.registryAccess()));
             } else {
                 //If we don't have a cached recipe, or our cached recipe doesn't match our inventory contents, lookup the recipe
-                CraftingRecipe recipe = MekanismRecipeType.getRecipeFor(RecipeType.CRAFTING, craftingInventory, world).orElse(null);
-                if (recipe != lastRecipe) {
+                RecipeHolder<CraftingRecipe> recipe = MekanismRecipeType.getRecipeFor(RecipeType.CRAFTING, craftingInput, world).orElse(null);
+                if (!Objects.equals(recipe, lastRecipe)) {
                     if (recipe == null) {
                         //If there is no found recipe, clear the output, but don't update our last recipe
                         // as we can start by checking if they are doing the same recipe as we last found
@@ -172,21 +176,22 @@ public class QIOCraftingWindow implements IContentsListener {
                     } else {
                         //If the recipe is different, update the output
                         lastRecipe = recipe;
-                        outputSlot.setStack(assembleRecipe(lastRecipe, world.registryAccess()));
+                        outputSlot.setStack(assembleRecipe(craftingInput, lastRecipe.value(), world.registryAccess()));
                     }
                 }
             }
         }
     }
 
-    private ItemStack assembleRecipe(CraftingRecipe recipe, RegistryAccess registryAccess) {
-        if (Mekanism.hooks.RecipeStagesLoaded) {
+    private ItemStack assembleRecipe(CraftingInput craftingInput, CraftingRecipe recipe, RegistryAccess registryAccess) {
+        //TODO - RecipeStages: Reinstate this when RecipeStages updates
+        /*if (Mekanism.hooks.recipeStages.isLoaded()) {
             if (recipe instanceof IStagedRecipe stagedRecipe) {
                 //Force assemble it as we handle validating if specific players can see/grab the output ourselves
-                return stagedRecipe.forceAssemble(craftingInventory, registryAccess);
+                return stagedRecipe.forceAssemble(craftingInput, registryAccess);
             }
-        }
-        return recipe.assemble(craftingInventory, registryAccess);
+        }*/
+        return recipe.assemble(craftingInput, registryAccess);
     }
 
     public boolean canViewRecipe(@NotNull ServerPlayer player) {
@@ -196,43 +201,47 @@ public class QIOCraftingWindow implements IContentsListener {
             // be anything in our output slot, so it doesn't matter
             return false;
         }
-        if (Mekanism.hooks.RecipeStagesLoaded) {
+        //TODO - RecipeStages: Reinstate this when RecipeStages updates
+        /*if (Mekanism.hooks.recipeStages.isLoaded()) {
             //If recipe stages is loaded check if the player has access to the recipe
-            if (!RecipeStagesUtil.hasStageForRecipe(lastRecipe, player)) {
+            if (!RecipeStagesUtil.hasStageForRecipe(lastRecipe.value(), player)) {
                 return false;
             }
-        }
+        }*/
         //If the recipe is dynamic, doLimitedCrafting is disabled, or the recipe is unlocked
         // allow viewing the recipe
-        return lastRecipe.isSpecial() || !player.level().getGameRules().getBoolean(GameRules.RULE_LIMITED_CRAFTING) || player.getRecipeBook().contains(lastRecipe);
+        return lastRecipe.value().isSpecial() || !player.level().getGameRules().getBoolean(GameRules.RULE_LIMITED_CRAFTING) || player.getRecipeBook().contains(lastRecipe);
     }
 
-    @Contract("null, _ -> false")
-    private boolean validateAndUnlockRecipe(@Nullable Level world, @NotNull Player player) {
-        if (world == null || lastRecipe == null || !lastRecipe.matches(craftingInventory, world)) {
+    @Contract("null, _, _ -> false")
+    private boolean validateAndUnlockRecipe(@Nullable Level world, @NotNull Player player, CraftingInput craftingInput) {
+        if (world == null || lastRecipe == null || !lastRecipe.value().matches(craftingInput, world)) {
             //If the recipe isn't valid for the inputs, fail
             //Note: lastRecipe shouldn't be null here, but we validate it just in case
             return false;
         }
-        if (lastRecipe != null && !lastRecipe.isSpecial()) {
-            if (player instanceof ServerPlayer serverPlayer && world.getGameRules().getBoolean(GameRules.RULE_LIMITED_CRAFTING) &&
-                !serverPlayer.getRecipeBook().contains(lastRecipe)) {
-                //If the player cannot use the recipe, don't allow crafting
-                return false;
+        if (lastRecipe != null) {
+            player.triggerRecipeCrafted(lastRecipe, craftingInput.items());
+            if (!lastRecipe.value().isSpecial()) {
+                if (player instanceof ServerPlayer serverPlayer && world.getGameRules().getBoolean(GameRules.RULE_LIMITED_CRAFTING) &&
+                    !serverPlayer.getRecipeBook().contains(lastRecipe)) {
+                    //If the player cannot use the recipe, don't allow crafting
+                    return false;
+                }
+                //Unlock the recipe for the player
+                player.awardRecipes(Collections.singleton(lastRecipe));
             }
-            //Unlock the recipe for the player
-            player.awardRecipes(Collections.singleton(lastRecipe));
         }
         return true;
     }
 
     private void craftingStarted(@NotNull Player player) {
         isCrafting = true;
-        ForgeHooks.setCraftingPlayer(player);
+        CommonHooks.setCraftingPlayer(player);
     }
 
     private void craftingFinished(@NotNull Level world) {
-        ForgeHooks.setCraftingPlayer(null);
+        CommonHooks.setCraftingPlayer(null);
         isCrafting = false;
         if (changedWhileCrafting) {
             //If our inputs changed while crafting then update the output slot
@@ -246,8 +255,9 @@ public class QIOCraftingWindow implements IContentsListener {
      */
     private int calculateMaxCraftAmount(@NotNull ItemStack stack, @Nullable QIOFrequency frequency) {
         int outputSize = stack.getCount();
-        int inputSize = 64;
-        for (CraftingWindowInventorySlot inputSlot : inputSlots) {
+        //Note: We start at the absolute max stack size, rather than at integer max value just to be a little more accurate
+        int inputSize = Item.ABSOLUTE_MAX_STACK_SIZE;
+        for (IInventorySlot inputSlot : inputSlots) {
             int count = inputSlot.getCount();
             if (count > 0 && count < inputSize) {
                 inputSize = count;
@@ -287,31 +297,30 @@ public class QIOCraftingWindow implements IContentsListener {
      */
     public void emptyTo(boolean toPlayerInv, List<HotBarSlot> hotBarSlots, List<MainInventorySlot> mainInventorySlots) {
         if (toPlayerInv) {
-            emptyTo(toTransfer -> {
-                ItemStack remainder = MekanismContainer.insertItem(hotBarSlots, toTransfer, true, windowData);
-                remainder = MekanismContainer.insertItem(mainInventorySlots, remainder, true, windowData);
-                remainder = MekanismContainer.insertItem(hotBarSlots, remainder, false, windowData);
-                return MekanismContainer.insertItem(mainInventorySlots, remainder, false, windowData);
-            });
+            for (IInventorySlot inputSlot : inputSlots) {
+                if (!inputSlot.isEmpty()) {
+                    ItemStack toTransfer = inputSlot.extractItem(inputSlot.getCount(), Action.SIMULATE, AutomationType.INTERNAL);
+                    if (!toTransfer.isEmpty()) {
+                        ItemStack remainder = MekanismContainer.insertItem(hotBarSlots, toTransfer, true, windowData);
+                        remainder = MekanismContainer.insertItem(mainInventorySlots, remainder, true, windowData);
+                        remainder = MekanismContainer.insertItem(hotBarSlots, remainder, false, windowData);
+                        remainder = MekanismContainer.insertItem(mainInventorySlots, remainder, false, windowData);
+                        inputSlot.extractItem(toTransfer.getCount() - remainder.getCount(), Action.EXECUTE, AutomationType.INTERNAL);
+                    }
+                }
+            }
         } else {
             QIOFrequency frequency = holder.getFrequency();
             //NO-OP if the frequency is null and that is the target
             if (frequency != null) {
-                emptyTo(frequency::addItem);
-            }
-        }
-    }
-
-    /**
-     * @param inserter Unary operator that takes the stack to transfer and returns remainder
-     */
-    private void emptyTo(UnaryOperator<ItemStack> inserter) {
-        for (CraftingWindowInventorySlot inputSlot : inputSlots) {
-            if (!inputSlot.isEmpty()) {
-                ItemStack toTransfer = inputSlot.extractItem(inputSlot.getCount(), Action.SIMULATE, AutomationType.INTERNAL);
-                if (!toTransfer.isEmpty()) {
-                    ItemStack remainder = inserter.apply(toTransfer);
-                    inputSlot.extractItem(toTransfer.getCount() - remainder.getCount(), Action.EXECUTE, AutomationType.INTERNAL);
+                for (IInventorySlot inputSlot : inputSlots) {
+                    if (!inputSlot.isEmpty()) {
+                        ItemStack toTransfer = inputSlot.extractItem(inputSlot.getCount(), Action.SIMULATE, AutomationType.INTERNAL);
+                        if (!toTransfer.isEmpty()) {
+                            ItemStack remainder = frequency.addItem(toTransfer);
+                            inputSlot.extractItem(toTransfer.getCount() - remainder.getCount(), Action.EXECUTE, AutomationType.INTERNAL);
+                        }
+                    }
                 }
             }
         }
@@ -326,8 +335,9 @@ public class QIOCraftingWindow implements IContentsListener {
             // Note: lastRecipe will always null on the client, so we can assume we are server side below
             return;
         }
-        Level world = holder.getHolderWorld();
-        if (!validateAndUnlockRecipe(world, player)) {
+        Level world = holder.getLevel();
+        CraftingInput.Positioned craftingInput = asCraftingInput();
+        if (!validateAndUnlockRecipe(world, player, craftingInput.input())) {
             //If the recipe isn't valid, fail
             return;
         }
@@ -347,7 +357,7 @@ public class QIOCraftingWindow implements IContentsListener {
         replacementHelper.reset();
         boolean recheckOutput = false;
         LastInsertTarget lastInsertTarget = new LastInsertTarget();
-        NonNullList<ItemStack> remaining = lastRecipe.getRemainingItems(craftingInventory);
+        NonNullList<ItemStack> remaining = lastRecipe.value().getRemainingItems(craftingInput.input());
         for (; crafted < maxToCraft; crafted += amountPerCraft) {
             if (recheckOutput && changedWhileCrafting) {
                 //If our inputs changed while crafting, and we are supposed to recheck the output,
@@ -355,9 +365,9 @@ public class QIOCraftingWindow implements IContentsListener {
                 // if there is an NBT sensitive recipe, the output may have changed
                 recheckOutput = false;
                 changedWhileCrafting = false;
-                CraftingRecipe oldRecipe = lastRecipe;
+                RecipeHolder<CraftingRecipe> oldRecipe = lastRecipe;
                 updateOutputSlot(world);
-                if (oldRecipe != lastRecipe) {
+                if (!Objects.equals(oldRecipe, lastRecipe)) {
                     //If the recipe changed, exit regardless of if the new recipe will produce the same output as the old one
                     // as there is a good chance something odd is going on or potentially even the doLimitedCrafting GameRule
                     // is enabled, and they only have access to one of the crafting recipes
@@ -382,7 +392,8 @@ public class QIOCraftingWindow implements IContentsListener {
                 //We also need to make sure to update the remaining items as even though the recipe still outputs the same result
                 // the remaining items may have changed such as durability of a container item, and we want to make sure to use
                 // the proper remaining stacks
-                remaining = lastRecipe.getRemainingItems(craftingInventory);
+                craftingInput = asCraftingInput();
+                remaining = lastRecipe.value().getRemainingItems(craftingInput.input());
             }
             //Simulate insertion into hotbar and then main inventory, allowing for inserting into empty slots,
             // as we just want to do a quick general check to see if there is room for the result, we will do
@@ -408,9 +419,10 @@ public class QIOCraftingWindow implements IContentsListener {
             }
             boolean stopCrafting = false;
             //Update slots with remaining contents
-            for (int index = 0; index < remaining.size(); index++) {
-                ItemStack remainder = remaining.get(index);
-                CraftingWindowInventorySlot inputSlot = inputSlots[index];
+            for (int subIndex = 0, size = remaining.size(); subIndex < size; subIndex++) {
+                ItemStack remainder = remaining.get(subIndex);
+                int index = getIndexFromRemaining(craftingInput, subIndex);
+                IInventorySlot inputSlot = inputSlots[index];
                 if (inputSlot.getCount() > 1) {
                     //If the input slot contains an item that is stacked, reduce the size of it by one
                     //Note: We "ignore" the fact that the container item may still be valid for the recipe, if the input is stacked
@@ -467,6 +479,14 @@ public class QIOCraftingWindow implements IContentsListener {
         craftingFinished(world);
     }
 
+    private static int getIndexFromRemaining(CraftingInput.Positioned craftingInput, int subIndex) {
+        int width = craftingInput.input().width();
+        int height = craftingInput.input().height();
+        int row = craftingInput.top() + (subIndex / width) % height;
+        int column = craftingInput.left() + subIndex % width;
+        return 3 * row + column;
+    }
+
     @NotNull
     public ItemStack performCraft(@NotNull Player player, @NotNull ItemStack result, int amountCrafted) {
         //TODO - 1.18: Given we don't fire a crafting event and even if we did things would likely not work properly,
@@ -478,28 +498,30 @@ public class QIOCraftingWindow implements IContentsListener {
             // Note: lastRecipe will always null on the client, so we can assume we are server side below
             return ItemStack.EMPTY;
         }
-        Level world = holder.getHolderWorld();
-        if (!validateAndUnlockRecipe(world, player)) {
+        Level world = holder.getLevel();
+        CraftingInput.Positioned craftingInput = asCraftingInput();
+        if (!validateAndUnlockRecipe(world, player, craftingInput.input())) {
             //If the recipe isn't valid, fail
             return ItemStack.EMPTY;
         }
         QIOFrequency frequency = holder.getFrequency();
         //Mark that we are crafting so changes to the slots below don't force a bunch of recalculations to take place
         craftingStarted(player);
-        //Craft the result
+        //Craft the result, note the result stack should always be a new instance by the time this method is called
         result.onCraftedBy(world, player, amountCrafted);
         //Note: We don't fire a crafting event as we don't want to allow for people to modify the output
         // stack or more importantly the input inventory during crafting
         //TODO: If this ends up causing major issues with some weird way another mod ends up doing crafting
         // we can evaluate how we want to handle it then/try to integrate support for firing it.
         //BasicEventHooks.firePlayerCraftingEvent(player, result, craftingInventory);
-        NonNullList<ItemStack> remaining = lastRecipe.getRemainingItems(craftingInventory);
+        NonNullList<ItemStack> remaining = lastRecipe.value().getRemainingItems(craftingInput.input());
         remainderHelper.reset();
         replacementHelper.reset();
         //Update slots with remaining contents
-        for (int index = 0; index < remaining.size(); index++) {
-            ItemStack remainder = remaining.get(index);
-            CraftingWindowInventorySlot inputSlot = inputSlots[index];
+        for (int subIndex = 0, size = remaining.size(); subIndex < size; subIndex++) {
+            ItemStack remainder = remaining.get(subIndex);
+            int index = getIndexFromRemaining(craftingInput, subIndex);
+            IInventorySlot inputSlot = inputSlots[index];
             if (inputSlot.getCount() > 1) {
                 //If the input slot contains an item that is stacked, reduce the size of it by one
                 //Note: We "ignore" the fact that the container item may still be valid for the recipe, if the input is stacked
@@ -628,117 +650,20 @@ public class QIOCraftingWindow implements IContentsListener {
         }
     }
 
-    private class QIOCraftingInventory implements CraftingContainer {
-
-        @Override
-        public int getContainerSize() {
-            return inputSlots.length;
+    private CraftingInput.Positioned asCraftingInput() {
+        List<ItemStack> items = new ArrayList<>(9);
+        for (IInventorySlot inputSlot : inputSlots) {
+            //Note: We copy this as we don't want to allow someone trying to interact with the stack directly
+            // to change the size of it. We also add it regardless of it is empty as that is what the method expects
+            // We also copy it to a count of one, to validate that no mods are trying to do stupid stacked recipe input based hacks
+            items.add(inputSlot.getStack().copyWithCount(1));
         }
-
-        @Override
-        public boolean isEmpty() {
-            return Arrays.stream(inputSlots).allMatch(BasicInventorySlot::isEmpty);
-        }
-
-        @NotNull
-        @Override
-        public ItemStack getItem(int index) {
-            if (index >= 0 && index < getContainerSize()) {
-                IInventorySlot inputSlot = getInputSlot(index);
-                if (!inputSlot.isEmpty()) {
-                    //Note: We copy this as we don't want to allow someone trying to interact with the stack directly
-                    // to change the size of it
-                    return inputSlot.getStack().copy();
-                }
-            }
-            return ItemStack.EMPTY;
-        }
-
-        @NotNull
-        @Override
-        public List<ItemStack> getItems() {
-            List<ItemStack> items = new ArrayList<>(getWidth() * getHeight());
-            for (CraftingWindowInventorySlot inputSlot : inputSlots) {
-                //Note: We copy this as we don't want to allow someone trying to interact with the stack directly
-                // to change the size of it. We also add it regardless of it is empty as that is what the method expects
-                items.add(inputSlot.getStack().copy());
-            }
-            return List.copyOf(items);
-        }
-
-        @NotNull
-        @Override
-        public ItemStack removeItemNoUpdate(int index) {
-            if (index >= 0 && index < getContainerSize()) {
-                IInventorySlot inputSlot = getInputSlot(index);
-                ItemStack stored = inputSlot.getStack();
-                inputSlot.setEmpty();
-                //Note: We don't bother copying the stack as we are setting it to empty, so
-                // it doesn't really matter if we modify the previously internal stack or not
-                return stored;
-            }
-            return ItemStack.EMPTY;
-        }
-
-        @NotNull
-        @Override
-        public ItemStack removeItem(int index, int count) {
-            if (index >= 0 && index < getContainerSize()) {
-                return getInputSlot(index).extractItem(count, Action.EXECUTE, AutomationType.INTERNAL);
-            }
-            return ItemStack.EMPTY;
-        }
-
-        @Override
-        public void setItem(int index, @NotNull ItemStack stack) {
-            if (index >= 0 && index < getContainerSize()) {
-                getInputSlot(index).setStack(stack);
-            }
-        }
-
-        @Override
-        public void setChanged() {
-            //Don't do anything, this mimics vanilla's behavior in TransientCraftingContainer
-        }
-
-        @Override
-        public boolean stillValid(@NotNull Player player) {
-            //Always return true similar to vanilla's implementation in TransientCraftingContainer
-            return true;
-        }
-
-        @Override
-        public void clearContent() {
-            for (CraftingWindowInventorySlot inputSlot : inputSlots) {
-                inputSlot.setEmpty();
-            }
-        }
-
-        @Override
-        public int getHeight() {
-            return 3;
-        }
-
-        @Override
-        public int getWidth() {
-            return 3;
-        }
-
-        @Override
-        public void fillStackedContents(@NotNull StackedContents helper) {
-            //Note: We don't copy it as it seems to be read only
-            // Don't trust custom implementations though to be read only
-            boolean copyNeeded = helper.getClass() != StackedContents.class;
-            for (CraftingWindowInventorySlot inputSlot : inputSlots) {
-                ItemStack stack = inputSlot.getStack();
-                helper.accountSimpleStack(copyNeeded ? stack.copy() : stack);
-            }
-        }
+        return CraftingInput.ofPositioned(3, 3, items);
     }
 
     private class RemainderHelper {
 
-        private final CraftingContainer dummy = MekanismUtils.getDummyCraftingInv();
+        private final NonNullList<ItemStack> dummy = NonNullList.withSize(9, ItemStack.EMPTY);
 
         private boolean updated;
 
@@ -746,7 +671,7 @@ public class QIOCraftingWindow implements IContentsListener {
             if (updated) {
                 updated = false;
                 //Only clear the contents if we need to
-                dummy.clearContent();
+                dummy.clear();
             }
         }
 
@@ -756,7 +681,7 @@ public class QIOCraftingWindow implements IContentsListener {
             if (!updated && !remainder.isEmpty()) {
                 //Update inputs and mark that we have updated them
                 for (int index = 0; index < inputSlots.length; index++) {
-                    dummy.setItem(index, inputSlots[index].getStack().copyWithCount(1));
+                    dummy.set(index, inputSlots[index].getStack().copyWithCount(1));
                 }
                 updated = true;
             }
@@ -770,7 +695,7 @@ public class QIOCraftingWindow implements IContentsListener {
                     //If our index matches the one we are replacing the value of instead of getting from the slot
                     // use the stack we are replacing it with instead
                     ItemStack stack = i == index ? old : inputSlots[i].getStack();
-                    dummy.setItem(i, stack.copyWithCount(1));
+                    dummy.set(i, stack.copyWithCount(1));
                 }
                 updated = true;
             }
@@ -778,16 +703,16 @@ public class QIOCraftingWindow implements IContentsListener {
 
         public boolean isStackStillValid(Level world, ItemStack stack, int index) {
             updateInputs(stack);
-            ItemStack old = dummy.getItem(index);
-            dummy.setItem(index, stack.copyWithCount(1));
-            if (lastRecipe != null && lastRecipe.matches(dummy, world)) {
+            ItemStack old = dummy.get(index);
+            dummy.set(index, stack.copyWithCount(1));
+            if (lastRecipe != null && lastRecipe.value().matches(CraftingInput.of(3, 3, dummy), world)) {
                 //If the remaining item is still valid in the recipe in that position return that it is still valid.
                 // Note: The recipe should never actually be null here
                 return true;
             }
             //Otherwise, revert the contents of the slot to what used to be in that slot
             // and return that the remaining item is not still valid in the slot
-            dummy.setItem(index, old);
+            dummy.set(index, old);
             return false;
         }
     }
@@ -807,7 +732,7 @@ public class QIOCraftingWindow implements IContentsListener {
             }
         }
 
-        public void findEquivalentItem(Level world, @NotNull QIOFrequency frequency, CraftingWindowInventorySlot slot, int index, ItemStack used) {
+        public void findEquivalentItem(Level world, @NotNull QIOFrequency frequency, IInventorySlot slot, int index, ItemStack used) {
             mapRecipe(index, used);
             if (invalid) {
                 //If something about mapping the recipe went wrong, we can't find any equivalents
@@ -822,9 +747,9 @@ public class QIOCraftingWindow implements IContentsListener {
                         //If for some reason the ingredient returns empty stacks, just skip those
                         continue;
                     }
-                    //If the ingredient is not vanilla, we start by checking against the exact stack it has stored as an item
+                    //Start by checking against the exact stack it has stored as an item
                     // Note: We can use a raw hashed item here as we don't store it anywhere, and just use it as a lookup
-                    if (!usedIngredient.isVanilla() && testEquivalentItem(world, frequency, slot, index, usedIngredient, HashedItem.raw(item))) {
+                    if (testEquivalentItem(world, frequency, slot, index, usedIngredient, HashedItem.raw(item))) {
                         //Match found, we can exit
                         return;
                     }
@@ -844,7 +769,7 @@ public class QIOCraftingWindow implements IContentsListener {
             }
         }
 
-        private boolean testEquivalentItem(Level world, @NotNull QIOFrequency frequency, CraftingWindowInventorySlot slot, int index, Ingredient usedIngredient,
+        private boolean testEquivalentItem(Level world, @NotNull QIOFrequency frequency, IInventorySlot slot, int index, Ingredient usedIngredient,
               HashedItem replacementType) {
             if (!frequency.isStoring(replacementType) || !usedIngredient.test(replacementType.getInternalStack())) {
                 //Our frequency doesn't actually have the item stored we are trying to use or the type we are trying
@@ -856,7 +781,7 @@ public class QIOCraftingWindow implements IContentsListener {
             // the base items in the recipe are filled in properly for it, we also make sure to properly initialize
             // the remainder helper's "inventory" while mapping the recipe if it hasn't already been initialized so
             // that we are able to just grab the "old" stack from the inventory like this
-            ItemStack old = remainderHelper.dummy.getItem(index);
+            ItemStack old = remainderHelper.dummy.get(index);
             if (remainderHelper.isStackStillValid(world, replacement, index)) {
                 // Then we test if our replacement will work properly in our recipe, and if it does, and we are able to
                 // insert it into the slot (which we should be able to), then we try removing the found item from the
@@ -867,8 +792,8 @@ public class QIOCraftingWindow implements IContentsListener {
                         ItemStack stack = slot.insertItem(removed, Action.EXECUTE, AutomationType.INTERNAL);
                         if (!stack.isEmpty()) {
                             //Note: This should never happen as we pre-validate attempting to insert, but in case it does, log it
-                            Mekanism.logger.error("Failed to insert item ({} with NBT: {}) into crafting window: {}.", removed.getItem(), removed.getTag(),
-                                  windowIndex);
+                            Mekanism.logger.error("Failed to insert item ({} with components: {}) into crafting window: {}.", removed.getItem(),
+                                  removed.getComponentsPatch(), windowIndex);
                         }
                         //TODO - 1.18: Debate potentially briefly highlighting the slot to make it more evident to the player
                         // that something about the slot changed.
@@ -877,7 +802,7 @@ public class QIOCraftingWindow implements IContentsListener {
                 }
                 //If we couldn't insert it into the slot for some reason, or we somehow failed to remove it from the frequency
                 // then we need to revert the stack from the remainder helper
-                remainderHelper.dummy.setItem(index, old);
+                remainderHelper.dummy.set(index, old);
             }
             return false;
         }
@@ -887,14 +812,14 @@ public class QIOCraftingWindow implements IContentsListener {
             //If the remainder is empty we don't actually need to update what our inputs are
             if (!mapped) {
                 mapped = true;
-                if (lastRecipe == null || lastRecipe.isSpecial()) {
+                if (lastRecipe == null || lastRecipe.value().isSpecial()) {
                     //The recipe should never be null, but we check it anyway. We also check if the recipe is
                     // special, because if it is then there are no "known" ingredients that we can use to try
                     // and figure out replacements
                     invalid = true;
                     return;
                 }
-                NonNullList<Ingredient> ingredients = lastRecipe.getIngredients();
+                NonNullList<Ingredient> ingredients = lastRecipe.value().getIngredients();
                 if (ingredients.isEmpty()) {
                     //Something went wrong
                     invalid = true;
@@ -902,26 +827,27 @@ public class QIOCraftingWindow implements IContentsListener {
                 }
                 //Ensure our remainder helper has been initialized as we will make use of it in validation
                 remainderHelper.updateInputsWithReplacement(index, used);
-                IntFunction<ItemStack> itemGetter = i -> {
-                    if (i == index) {
-                        return used;
-                    } else if (i >= 0 && i < inputSlots.length) {
-                        return inputSlots[i].getStack();
-                    }
-                    return ItemStack.EMPTY;
-                };
-                if (lastRecipe instanceof IShapedRecipe<?> shapedRecipe) {
+                if (lastRecipe.value() instanceof ShapedRecipe shapedRecipe) {
                     //It is a shaped recipe, make use of this information to attempt to find the proper match
-                    mapShapedRecipe(shapedRecipe, ingredients, itemGetter);
+                    mapShapedRecipe(shapedRecipe, ingredients, index, used);
                 } else {
-                    mapShapelessRecipe(ingredients, itemGetter);
+                    mapShapelessRecipe(ingredients, index, used);
                 }
             }
         }
 
-        private void mapShapedRecipe(IShapedRecipe<?> shapedRecipe, NonNullList<Ingredient> ingredients, IntFunction<ItemStack> itemGetter) {
-            int recipeWidth = shapedRecipe.getRecipeWidth();
-            int recipeHeight = shapedRecipe.getRecipeHeight();
+        private ItemStack getItem(int i, int index, ItemStack used) {
+            if (i == index) {
+                return used;
+            } else if (i >= 0 && i < inputSlots.length) {
+                return inputSlots[i].getStack();
+            }
+            return ItemStack.EMPTY;
+        }
+
+        private void mapShapedRecipe(ShapedRecipe shapedRecipe, NonNullList<Ingredient> ingredients, int index, ItemStack used) {
+            int recipeWidth = shapedRecipe.getWidth();
+            int recipeHeight = shapedRecipe.getHeight();
             for (int columnStart = 0; columnStart <= 3 - recipeWidth; columnStart++) {
                 for (int rowStart = 0; rowStart <= 3 - recipeHeight; rowStart++) {
                     //Note: Even though some shaped recipe implementations might not support a mirrored recipe as a match
@@ -930,8 +856,8 @@ public class QIOCraftingWindow implements IContentsListener {
                     // be so that it matches when mirrored, and if it does, the ingredients still should be close enough
                     // for the various spots given this is more of a heuristic than actually having to match no matter what,
                     // because we will end up testing the recipe with the item we try to use anyway at the end before moving it.
-                    if (mapShapedRecipe(ingredients, columnStart, rowStart, recipeWidth, recipeHeight, true, itemGetter) ||
-                        mapShapedRecipe(ingredients, columnStart, rowStart, recipeWidth, recipeHeight, false, itemGetter)) {
+                    if (mapShapedRecipe(ingredients, columnStart, rowStart, recipeWidth, recipeHeight, true, index, used) ||
+                        mapShapedRecipe(ingredients, columnStart, rowStart, recipeWidth, recipeHeight, false, index, used)) {
                         return;
                     }
                 }
@@ -941,7 +867,7 @@ public class QIOCraftingWindow implements IContentsListener {
         }
 
         private boolean mapShapedRecipe(NonNullList<Ingredient> ingredients, int columnStart, int rowStart, int recipeWidth, int recipeHeight, boolean mirrored,
-              IntFunction<ItemStack> itemGetter) {
+              int index, ItemStack used) {
             for (int actualColumn = 0; actualColumn < 3; actualColumn++) {
                 for (int actualRow = 0; actualRow < 3; actualRow++) {
                     int column = actualColumn - columnStart;
@@ -954,10 +880,10 @@ public class QIOCraftingWindow implements IContentsListener {
                             ingredient = ingredients.get(column + row * recipeWidth);
                         }
                     }
-                    int index = actualColumn + actualRow * 3;
-                    if (ingredient.test(itemGetter.apply(index))) {
+                    int i = actualColumn + actualRow * 3;
+                    if (ingredient.test(getItem(i, index, used))) {
                         //If the ingredient matches, add it to our map
-                        slotIngredients.put(index, ingredient);
+                        slotIngredients.put(i, ingredient);
                     } else {
                         //Otherwise, if the ingredient doesn't match, clear our stored ingredients
                         // as they were empty to start and return there is no match
@@ -969,17 +895,17 @@ public class QIOCraftingWindow implements IContentsListener {
             return true;
         }
 
-        private void mapShapelessRecipe(NonNullList<Ingredient> ingredients, IntFunction<ItemStack> itemGetter) {
+        private void mapShapelessRecipe(NonNullList<Ingredient> ingredients, int index, ItemStack used) {
             //Note: We don't make use of the "simple" way of looking the ingredients up that Vanilla's Shapeless recipe uses,
             // when all the ingredients are simple, as we care about which slot the various things happens in, which is much
             // easier to grab from forge's RecipeMatcher which works for simple ingredients as well, and is just not used
             // normally as it has slightly more overhead
             Int2IntMap actualLookup = new Int2IntArrayMap(inputSlots.length);
             List<ItemStack> inputs = new ArrayList<>(inputSlots.length);
-            for (int index = 0; index < inputSlots.length; index++) {
-                ItemStack stack = itemGetter.apply(index);
+            for (int i = 0; i < inputSlots.length; i++) {
+                ItemStack stack = getItem(i, index, used);
                 if (!stack.isEmpty()) {
-                    actualLookup.put(inputs.size(), index);
+                    actualLookup.put(inputs.size(), i);
                     inputs.add(stack);
                 }
             }

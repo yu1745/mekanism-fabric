@@ -3,46 +3,81 @@ package mekanism.client.lang;
 import com.google.common.collect.Table.Cell;
 import java.util.Map;
 import mekanism.api.MekanismAPI;
-import mekanism.api.chemical.pigment.Pigment;
-import mekanism.api.chemical.slurry.Slurry;
-import mekanism.api.providers.IItemProvider;
+import mekanism.api.MekanismAPITags;
+import mekanism.api.chemical.Chemical;
+import mekanism.api.gear.config.ModuleConfig;
 import mekanism.api.robit.RobitSkin;
 import mekanism.api.text.APILang;
 import mekanism.api.text.EnumColor;
+import mekanism.api.text.IHasTranslationKey;
+import mekanism.client.recipe_viewer.alias.MekanismAliases;
 import mekanism.common.Mekanism;
 import mekanism.common.MekanismLang;
 import mekanism.common.advancements.MekanismAdvancements;
+import mekanism.common.config.MekanismConfig;
+import mekanism.common.config.MekanismConfigTranslations;
+import mekanism.common.config.MekanismConfigTranslations.OreConfigTranslations;
+import mekanism.common.config.MekanismConfigTranslations.OreVeinConfigTranslations;
+import mekanism.common.config.MekanismConfigTranslations.TierTranslations;
 import mekanism.common.content.blocktype.FactoryType;
+import mekanism.common.content.gear.mekasuit.ModuleChargeDistributionUnit;
+import mekanism.common.content.gear.mekasuit.ModuleElectrolyticBreathingUnit;
+import mekanism.common.content.gear.mekasuit.ModuleGravitationalModulatingUnit;
+import mekanism.common.content.gear.mekasuit.ModuleHydraulicPropulsionUnit;
+import mekanism.common.content.gear.mekasuit.ModuleHydrostaticRepulsorUnit;
+import mekanism.common.content.gear.mekasuit.ModuleInhalationPurificationUnit;
+import mekanism.common.content.gear.mekasuit.ModuleJetpackUnit;
+import mekanism.common.content.gear.mekasuit.ModuleLocomotiveBoostingUnit;
+import mekanism.common.content.gear.mekasuit.ModuleMagneticAttractionUnit;
+import mekanism.common.content.gear.mekatool.ModuleAttackAmplificationUnit;
+import mekanism.common.content.gear.mekatool.ModuleBlastingUnit;
+import mekanism.common.content.gear.mekatool.ModuleFarmingUnit;
+import mekanism.common.content.gear.mekatool.ModuleTeleportationUnit;
+import mekanism.common.content.gear.mekatool.ModuleVeinMiningUnit;
+import mekanism.common.content.gear.shared.ModuleColorModulationUnit;
 import mekanism.common.entity.RobitPrideSkinData;
 import mekanism.common.integration.lookingat.LookingAtUtils;
 import mekanism.common.integration.lookingat.jade.JadeConstants;
+import mekanism.common.inventory.container.SelectedWindowData.WindowType;
+import mekanism.common.inventory.container.SelectedWindowData.WindowType.ConfigSaveData;
 import mekanism.common.registration.impl.BlockRegistryObject;
+import mekanism.common.registration.impl.DeferredChemical;
 import mekanism.common.registration.impl.ItemRegistryObject;
-import mekanism.common.registration.impl.PigmentRegistryObject;
 import mekanism.common.registration.impl.SlurryRegistryObject;
 import mekanism.common.registries.MekanismBlocks;
+import mekanism.common.registries.MekanismChemicals;
 import mekanism.common.registries.MekanismDamageTypes;
-import mekanism.common.registries.MekanismDamageTypes.MekanismDamageType;
 import mekanism.common.registries.MekanismEntityTypes;
 import mekanism.common.registries.MekanismFluids;
-import mekanism.common.registries.MekanismGases;
-import mekanism.common.registries.MekanismInfuseTypes;
 import mekanism.common.registries.MekanismItems;
 import mekanism.common.registries.MekanismModules;
-import mekanism.common.registries.MekanismPigments;
 import mekanism.common.registries.MekanismRobitSkins;
-import mekanism.common.registries.MekanismSlurries;
 import mekanism.common.registries.MekanismSounds;
 import mekanism.common.resource.IResource;
 import mekanism.common.resource.PrimaryResource;
 import mekanism.common.resource.ResourceType;
+import mekanism.common.resource.ore.BaseOreConfig;
 import mekanism.common.resource.ore.OreBlockType;
 import mekanism.common.resource.ore.OreType;
+import mekanism.common.tags.MekanismTags;
+import mekanism.common.tier.BinTier;
+import mekanism.common.tier.CableTier;
+import mekanism.common.tier.ChemicalTankTier;
+import mekanism.common.tier.ConductorTier;
+import mekanism.common.tier.EnergyCubeTier;
 import mekanism.common.tier.FactoryTier;
+import mekanism.common.tier.FluidTankTier;
+import mekanism.common.tier.InductionCellTier;
+import mekanism.common.tier.InductionProviderTier;
+import mekanism.common.tier.PipeTier;
+import mekanism.common.tier.TransporterTier;
+import mekanism.common.tier.TubeTier;
 import mekanism.common.util.EnumUtils;
+import mekanism.common.util.text.TextUtils;
 import net.minecraft.data.PackOutput;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 
 public class MekanismLangProvider extends BaseLanguageProvider {
@@ -53,6 +88,8 @@ public class MekanismLangProvider extends BaseLanguageProvider {
 
     @Override
     protected void addTranslations() {
+        addConfigs();
+        addTags();
         addItems();
         addBlocks();
         addFluids();
@@ -66,6 +103,194 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         addSubtitles();
         addMisc();
         addAdvancements();
+        addAliases();
+    }
+
+    private void addConfigs() {
+        addConfigs(MekanismConfig.getConfigs());
+        addConfigs(MekanismConfigTranslations.values());
+        for (WindowType windowType : WindowType.values()) {
+            for (ConfigSaveData saveData : windowType.getSavePaths()) {
+                addConfigs(saveData);
+            }
+        }
+        //Tier Configs
+        for (EnergyCubeTier tier : EnumUtils.ENERGY_CUBE_TIERS) {
+            addConfigs(TierTranslations.create(tier).toArray());
+        }
+        for (FluidTankTier tier : EnumUtils.FLUID_TANK_TIERS) {
+            addConfigs(TierTranslations.create(tier).toArray());
+        }
+        for (ChemicalTankTier tier : EnumUtils.CHEMICAL_TANK_TIERS) {
+            addConfigs(TierTranslations.create(tier).toArray());
+        }
+        for (BinTier tier : EnumUtils.BIN_TIERS) {
+            addConfigs(TierTranslations.create(tier).toArray());
+        }
+        for (InductionCellTier tier : EnumUtils.INDUCTION_CELL_TIERS) {
+            addConfigs(TierTranslations.create(tier).toArray());
+        }
+        for (InductionProviderTier tier : EnumUtils.INDUCTION_PROVIDER_TIERS) {
+            addConfigs(TierTranslations.create(tier).toArray());
+        }
+        for (CableTier tier : EnumUtils.CABLE_TIERS) {
+            addConfigs(TierTranslations.create(tier).toArray());
+        }
+        for (PipeTier tier : EnumUtils.PIPE_TIERS) {
+            addConfigs(TierTranslations.create(tier).toArray());
+        }
+        for (TubeTier tier : EnumUtils.TUBE_TIERS) {
+            addConfigs(TierTranslations.create(tier).toArray());
+        }
+        for (TransporterTier tier : EnumUtils.TRANSPORTER_TIERS) {
+            addConfigs(TierTranslations.create(tier).toArray());
+        }
+        for (ConductorTier tier : EnumUtils.CONDUCTOR_TIERS) {
+            addConfigs(TierTranslations.create(tier).toArray());
+        }
+        //World Gen configs
+        for (OreType oreType : EnumUtils.ORE_TYPES) {
+            String ore = oreType.getResource().getRegistrySuffix();
+            addConfigs(OreConfigTranslations.create(ore).toArray());
+            for (BaseOreConfig baseConfig : oreType.getBaseConfigs()) {
+                addConfigs(OreVeinConfigTranslations.create(ore, baseConfig.name()).toArray());
+            }
+        }
+    }
+
+    private void addTags() {
+        add(MekanismAPITags.Items.MEKA_UNITS, "Meka Units");
+        add(MekanismTags.Items.CONFIGURATORS, "Configurators");
+        add(MekanismTags.Items.PERSONAL_STORAGE, "Personal Storage");
+
+        add(MekanismTags.Items.RODS_PLASTIC, "Plastic Rods");
+
+        add(MekanismTags.Items.FUELS, "Fuels");
+        add(MekanismTags.Items.FUELS_BIO, "Bio Fuels");
+        add(MekanismTags.Items.FUELS_BLOCK_BIO, "Bio Storage Block Fuels");
+
+        add(MekanismTags.Items.PELLETS_ANTIMATTER, "Antimatter Pellets");
+        add(MekanismTags.Items.PELLETS_PLUTONIUM, "Plutonium Pellets");
+        add(MekanismTags.Items.PELLETS_POLONIUM, "Polonium Pellets");
+
+        add(MekanismTags.Items.DUSTS_BRONZE, "Bronze Dusts");
+        add(MekanismTags.Items.DUSTS_CHARCOAL, "Charcoal Dusts");
+        add(MekanismTags.Items.DUSTS_COAL, "Coal Dusts");
+        add(MekanismTags.Items.DUSTS_DIAMOND, "Diamond Dusts");
+        add(MekanismTags.Items.DUSTS_EMERALD, "Emerald Dusts");
+        add(MekanismTags.Items.DUSTS_NETHERITE, "Netherite Dusts");
+        add(MekanismTags.Items.DUSTS_LAPIS, "Lapis Dusts");
+        add(MekanismTags.Items.DUSTS_LITHIUM, "Lithium Dusts");
+        add(MekanismTags.Items.DUSTS_OBSIDIAN, "Obsidian Dusts");
+        add(MekanismTags.Items.DUSTS_QUARTZ, "Quartz Dusts");
+        add(MekanismTags.Items.DUSTS_REFINED_OBSIDIAN, "Refined Obsidian Dusts");
+        add(MekanismTags.Items.DUSTS_SALT, "Salts");
+        add(MekanismTags.Items.DUSTS_STEEL, "Steel Dusts");
+        add(MekanismTags.Items.DUSTS_SULFUR, "Sulfur Dusts");
+        add(MekanismTags.Items.DUSTS_WOOD, "Sawdusts");
+        add(MekanismTags.Items.DUSTS_FLUORITE, "Fluorite Dusts");
+
+        add(MekanismTags.Items.NUGGETS_BRONZE, "Bronze Nuggets");
+        add(MekanismTags.Items.NUGGETS_REFINED_GLOWSTONE, "Refined Glowstone Nuggets");
+        add(MekanismTags.Items.NUGGETS_REFINED_OBSIDIAN, "Refined Obsidian Nuggets");
+        add(MekanismTags.Items.NUGGETS_STEEL, "Steel Nuggets");
+
+        add(MekanismTags.Items.INGOTS_BRONZE, "Bronze Ingots");
+        add(MekanismTags.Items.INGOTS_REFINED_GLOWSTONE, "Refined Glowstone Ingots");
+        add(MekanismTags.Items.INGOTS_REFINED_OBSIDIAN, "Refined Obsidian Ingots");
+        add(MekanismTags.Items.INGOTS_STEEL, "Steel Ingots");
+
+        add(MekanismTags.Items.STORAGE_BLOCKS_BRONZE, "Bronze Storage Blocks");
+        add(MekanismTags.Items.STORAGE_BLOCKS_CHARCOAL, "Charcoal Storage Blocks");
+        add(MekanismTags.Items.STORAGE_BLOCKS_REFINED_GLOWSTONE, "Refined Glowstone Storage Blocks");
+        add(MekanismTags.Items.STORAGE_BLOCKS_REFINED_OBSIDIAN, "Refined Obsidian Storage Blocks");
+        add(MekanismTags.Items.STORAGE_BLOCKS_STEEL, "Steel Storage Blocks");
+        add(MekanismTags.Items.STORAGE_BLOCKS_FLUORITE, "Fluorite Storage Blocks");
+
+        add(MekanismTags.Items.CIRCUITS, "Circuits");
+        add(MekanismTags.Items.CIRCUITS_BASIC, "Basic Circuits");
+        add(MekanismTags.Items.CIRCUITS_ADVANCED, "Advanced Circuits");
+        add(MekanismTags.Items.CIRCUITS_ELITE, "Elite Circuits");
+        add(MekanismTags.Items.CIRCUITS_ULTIMATE, "Ultimate Circuits");
+
+        add(MekanismTags.Items.ALLOYS, "Alloys");
+        add(MekanismTags.Items.ALLOYS_BASIC, "Basic Alloys");
+        add(MekanismTags.Items.ALLOYS_INFUSED, "Infused Alloys");
+        add(MekanismTags.Items.ALLOYS_REINFORCED, "Reinforced Alloys");
+        add(MekanismTags.Items.ALLOYS_ATOMIC, "Atomic Alloys");
+
+        add(MekanismTags.Items.COMMON_ALLOYS, "Alloys");
+        add(MekanismTags.Items.ALLOYS_ADVANCED, "Advanced Alloys");
+        add(MekanismTags.Items.ALLOYS_ELITE, "Elite Alloys");
+        add(MekanismTags.Items.ALLOYS_ULTIMATE, "Ultimate Alloys");
+
+        add(MekanismTags.Items.ENRICHED, "Enriched");
+        add(MekanismTags.Items.ENRICHED_CARBON, "Enriched Carbon");
+        add(MekanismTags.Items.ENRICHED_DIAMOND, "Enriched Diamond");
+        add(MekanismTags.Items.ENRICHED_OBSIDIAN, "Enriched Obsidian");
+        add(MekanismTags.Items.ENRICHED_REDSTONE, "Enriched Redstone");
+        add(MekanismTags.Items.ENRICHED_GOLD, "Enriched Gold");
+        add(MekanismTags.Items.ENRICHED_TIN, "Enriched Tin");
+
+        add(MekanismTags.Items.DIRTY_DUSTS, "Dirty Dusts");
+        add(MekanismTags.Items.CLUMPS, "Clumps");
+        add(MekanismTags.Items.SHARDS, "Shards");
+        add(MekanismTags.Items.CRYSTALS, "Crystals");
+
+        add(MekanismTags.Items.GEMS_FLUORITE, "Fluorite");
+
+        add(MekanismTags.Items.MEKASUIT_HUD_RENDERER, "Renders MekaSuit HUD");
+        add(MekanismTags.Items.STONE_CRAFTING_MATERIALS, "Stone Crafting Materials");
+        add(MekanismTags.Items.MUFFLING_CENTER, "Muffling Upgrade Usable Ingots");
+
+        add(MekanismTags.Items.COLORABLE_WOOL, "Colorable Wool");
+        add(MekanismTags.Items.COLORABLE_CARPETS, "Colorable Carpets");
+        add(MekanismTags.Items.COLORABLE_BEDS, "Colorable Beds");
+        add(MekanismTags.Items.COLORABLE_GLASS, "Colorable Glass");
+        add(MekanismTags.Items.COLORABLE_GLASS_PANES, "Colorable Glass Panes");
+        add(MekanismTags.Items.COLORABLE_TERRACOTTA, "Colorable Terracotta");
+        add(MekanismTags.Items.COLORABLE_CANDLE, "Colorable Candles");
+        add(MekanismTags.Items.COLORABLE_CONCRETE, "Colorable Concrete");
+        add(MekanismTags.Items.COLORABLE_CONCRETE_POWDER, "Colorable Concrete Powders");
+        add(MekanismTags.Items.COLORABLE_BANNERS, "Colorable Banners");
+
+        add(MekanismTags.Fluids.BRINE, "Brine");
+        add(MekanismTags.Fluids.CHLORINE, "Chlorine");
+        add(MekanismTags.Fluids.ETHENE, "Ethene");
+        add(MekanismTags.Fluids.HEAVY_WATER, "Heavy Water");
+        add(MekanismTags.Fluids.HYDROGEN, "Hydrogen");
+        add(MekanismTags.Fluids.HYDROGEN_CHLORIDE, "Hydrogen Chloride");
+        add(MekanismTags.Fluids.URANIUM_OXIDE, "Uranium Oxide");
+        add(MekanismTags.Fluids.URANIUM_HEXAFLUORIDE, "Uranium Hexafluoride");
+        add(MekanismTags.Fluids.LITHIUM, "Lithium");
+        add(MekanismTags.Fluids.OXYGEN, "Oxygen");
+        add(MekanismTags.Fluids.SODIUM, "Sodium");
+        add(MekanismTags.Fluids.SUPERHEATED_SODIUM, "Superheated Sodium");
+        add(MekanismTags.Fluids.STEAM, "Steam");
+        add(MekanismTags.Fluids.SULFUR_DIOXIDE, "Sulfur Dioxide");
+        add(MekanismTags.Fluids.SULFUR_TRIOXIDE, "Sulfur Trioxide");
+        add(MekanismTags.Fluids.SULFURIC_ACID, "Sulfuric Acid");
+        add(MekanismTags.Fluids.HYDROFLUORIC_ACID, "Hydrofluoric Acid");
+        add(MekanismTags.Fluids.NUTRITIONAL_PASTE, "Nutritional Paste");
+
+        add(MekanismTags.Chemicals.WATER_VAPOR, "Water Vapor");
+        add(MekanismAPITags.Chemicals.WASTE_BARREL_DECAY_BLACKLIST, "Waste Barrel Does Not Decay");
+
+        add(MekanismAPITags.Chemicals.GASEOUS, "Gaseous");
+
+        add(MekanismAPITags.Chemicals.CARBON, "Carbon");
+        add(MekanismAPITags.Chemicals.REDSTONE, "Redstone");
+        add(MekanismAPITags.Chemicals.DIAMOND, "Diamond");
+        add(MekanismAPITags.Chemicals.REFINED_OBSIDIAN, "Refined Obsidian");
+        add(MekanismAPITags.Chemicals.BIO, "Bio");
+        add(MekanismAPITags.Chemicals.FUNGI, "Fungi");
+        add(MekanismAPITags.Chemicals.GOLD, "Gold");
+        add(MekanismAPITags.Chemicals.TIN, "Tin");
+
+        add(MekanismAPITags.Chemicals.DIRTY, "Dirty Slurry");
+        add(MekanismAPITags.Chemicals.CLEAN, "Clean Slurry");
+
+        add(MekanismAPITags.Chemicals.FRAMEDBLOCKS_BLACKLISTED, "FramedBlocks Blacklisted");
     }
 
     private void addItems() {
@@ -140,7 +365,7 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         add(MekanismItems.ENERGY_UPGRADE, "Energy Upgrade");
         add(MekanismItems.FILTER_UPGRADE, "Filter Upgrade");
         add(MekanismItems.MUFFLING_UPGRADE, "Muffling Upgrade");
-        add(MekanismItems.GAS_UPGRADE, "Gas Upgrade");
+        add(MekanismItems.CHEMICAL_UPGRADE, "Chemical Upgrade");
         add(MekanismItems.ANCHOR_UPGRADE, "Anchor Upgrade");
         add(MekanismItems.STONE_GENERATOR_UPGRADE, "Stone Generator Upgrade");
         //Alloys
@@ -179,34 +404,44 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         addTiered(MekanismItems.BASIC_TIER_INSTALLER, MekanismItems.ADVANCED_TIER_INSTALLER, MekanismItems.ELITE_TIER_INSTALLER, MekanismItems.ULTIMATE_TIER_INSTALLER, "Tier Installer");
 
         for (Cell<ResourceType, PrimaryResource, ItemRegistryObject<Item>> item : MekanismItems.PROCESSED_RESOURCES.cellSet()) {
-            String resourceName = formatAndCapitalize(item.getColumnKey().getRegistrySuffix());
-            add(item.getValue(), switch (item.getRowKey()) {
-                case SHARD -> resourceName + " Shard";
-                case CRYSTAL -> resourceName + " Crystal";
-                case DUST -> resourceName + " Dust";
-                case DIRTY_DUST -> "Dirty " + resourceName + " Dust";
-                case CLUMP -> resourceName + " Clump";
-                case INGOT -> resourceName + " Ingot";
-                case RAW -> "Raw " + resourceName;
-                case NUGGET -> resourceName + " Nugget";
+            String resourceName = TextUtils.formatAndCapitalize(item.getColumnKey().getRegistrySuffix());
+            TagKey<Item> tag = MekanismTags.Items.PROCESSED_RESOURCES.get(item.getRowKey(), item.getColumnKey());
+            switch (item.getRowKey()) {
+                case SHARD -> {
+                    add(item.getValue(), resourceName + " Shard");
+                    add(tag, resourceName + " Shards");
+                }
+                case CRYSTAL -> {
+                    add(item.getValue(), resourceName + " Crystal");
+                    add(tag, resourceName + " Crystals");
+                }
+                case DUST -> {
+                    add(item.getValue(), resourceName + " Dust");
+                    add(tag, resourceName + " Dusts");
+                }
+                case DIRTY_DUST -> {
+                    add(item.getValue(), "Dirty " + resourceName + " Dust");
+                    add(tag, "Dirty " + resourceName + " Dusts");
+                }
+                case CLUMP -> {
+                    add(item.getValue(), resourceName + " Clump");
+                    add(tag, resourceName + " Clumps");
+                }
+                case INGOT -> {
+                    add(item.getValue(), resourceName + " Ingot");
+                    add(tag, resourceName + " Ingots");
+                }
+                case RAW -> {
+                    add(item.getValue(), "Raw " + resourceName);
+                    add(tag, "Raw " + resourceName);
+                }
+                case NUGGET -> {
+                    add(item.getValue(), resourceName + " Nugget");
+                    add(tag, resourceName + " Nuggets");
+                }
                 default -> throw new IllegalStateException("Unexpected resource type for primary resource.");
-            });
-        }
-    }
-
-    private static String formatAndCapitalize(String s) {
-        boolean isFirst = true;
-        StringBuilder ret = new StringBuilder();
-        for (char c : s.toCharArray()) {
-            if (c == '_') {
-                isFirst = true;
-                ret.append(' ');
-            } else {
-                ret.append(isFirst ? Character.toUpperCase(c) : c);
-                isFirst = false;
             }
         }
-        return ret.toString();
     }
 
     private void addBlocks() {
@@ -257,6 +492,7 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         add(MekanismBlocks.NUTRITIONAL_LIQUIFIER, "Nutritional Liquifier");
         add(MekanismBlocks.ROTARY_CONDENSENTRATOR, "Rotary Condensentrator");
         add(MekanismBlocks.SALT_BLOCK, "Salt Block");
+        add(MekanismBlocks.BIO_FUEL_BLOCK, "Block of Bio Fuel");
         add(MekanismBlocks.SECURITY_DESK, "Security Desk");
         add(MekanismBlocks.SEISMIC_VIBRATOR, "Seismic Vibrator");
         add(MekanismBlocks.SOLAR_NEUTRON_ACTIVATOR, "Solar Neutron Activator");
@@ -289,15 +525,19 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         addOre(OreType.URANIUM, "A common, heavy metal, which can yield massive amounts of energy when properly processed. In its naturally-occurring form, it is not radioactive enough to cause harm.");
         addOre(OreType.LEAD, "A somewhat rare metal that is excellent at resisting radioactive particles.");
         //Storage blocks
-        add(MekanismBlocks.BRONZE_BLOCK, "Bronze Block");
+        add(MekanismBlocks.BRONZE_BLOCK, "Block of Bronze");
+        add(MekanismBlocks.CHARCOAL_BLOCK, "Block of Charcoal");
+        add(MekanismBlocks.STEEL_BLOCK, "Block of Steel");
+        add(MekanismBlocks.FLUORITE_BLOCK, "Block of Fluorite");
         add(MekanismBlocks.REFINED_OBSIDIAN_BLOCK, "Refined Obsidian");
-        add(MekanismBlocks.CHARCOAL_BLOCK, "Charcoal Block");
         add(MekanismBlocks.REFINED_GLOWSTONE_BLOCK, "Refined Glowstone");
-        add(MekanismBlocks.STEEL_BLOCK, "Steel Block");
-        add(MekanismBlocks.FLUORITE_BLOCK, "Fluorite Block");
         //Dynamic storage blocks
         for (Map.Entry<IResource, BlockRegistryObject<?, ?>> entry : MekanismBlocks.PROCESSED_RESOURCE_BLOCKS.entrySet()) {
-            add(entry.getValue(), formatAndCapitalize(entry.getKey().getRegistrySuffix()) + " Block");
+            IResource key = entry.getKey();
+            String name = TextUtils.formatAndCapitalize(key.getRegistrySuffix());
+            add(entry.getValue(), "Block of " + name);
+            addAlias(key.getRegistrySuffix(), name + " Block");
+            add(MekanismTags.Items.PROCESSED_RESOURCE_BLOCKS.get(key), name + " Storage Blocks");
         }
 
         //Tiered things
@@ -334,7 +574,7 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         addFluid(MekanismFluids.HYDROFLUORIC_ACID, "Liquid Hydrofluoric Acid");
         addFluid(MekanismFluids.URANIUM_OXIDE, "Liquid Uranium Oxide");
         addFluid(MekanismFluids.URANIUM_HEXAFLUORIDE, "Liquid Uranium Hexafluoride");
-        addFluid(MekanismFluids.ETHENE, "Liquid Ethylene");
+        addFluid(MekanismFluids.ETHENE, "Liquid Ethene");
         addFluid(MekanismFluids.SODIUM, "Liquid Sodium");
         addFluid(MekanismFluids.SUPERHEATED_SODIUM, "Liquid Superheated Sodium");
         addFluid(MekanismFluids.BRINE, "Brine");
@@ -345,77 +585,72 @@ public class MekanismLangProvider extends BaseLanguageProvider {
     }
 
     private void addEntities() {
-        add(MekanismEntityTypes.FLAME, "Flamethrower Flame");
-        add(MekanismEntityTypes.ROBIT, "Robit");
+        addEntity(MekanismEntityTypes.FLAME, "Flamethrower Flame");
+        addEntity(MekanismEntityTypes.ROBIT, "Robit");
     }
 
     private void addGases() {
-        add(MekanismAPI.EMPTY_GAS, "Empty");
-        add(MekanismGases.HYDROGEN, "Hydrogen");
-        add(MekanismGases.OXYGEN, "Oxygen");
-        add(MekanismGases.STEAM, "Steam");
-        add(MekanismGases.WATER_VAPOR, "Water Vapor");
-        add(MekanismGases.CHLORINE, "Chlorine");
-        add(MekanismGases.SULFUR_DIOXIDE, "Sulfur Dioxide");
-        add(MekanismGases.SULFUR_TRIOXIDE, "Sulfur Trioxide");
-        add(MekanismGases.SULFURIC_ACID, "Sulfuric Acid");
-        add(MekanismGases.HYDROGEN_CHLORIDE, "Hydrogen Chloride");
-        add(MekanismGases.HYDROFLUORIC_ACID, "Hydrofluoric Acid");
-        add(MekanismGases.URANIUM_OXIDE, "Uranium Oxide");
-        add(MekanismGases.URANIUM_HEXAFLUORIDE, "Uranium Hexafluoride");
-        add(MekanismGases.ETHENE, "Ethylene");
-        add(MekanismGases.SODIUM, "Sodium");
-        add(MekanismGases.SUPERHEATED_SODIUM, "Superheated Sodium");
-        add(MekanismGases.BRINE, "Gaseous Brine");
-        add(MekanismGases.LITHIUM, "Lithium");
-        add(MekanismGases.OSMIUM, "Osmium");
-        add(MekanismGases.FISSILE_FUEL, "Fissile Fuel");
-        add(MekanismGases.NUCLEAR_WASTE, "Nuclear Waste");
-        add(MekanismGases.SPENT_NUCLEAR_WASTE, "Spent Nuclear Waste");
-        add(MekanismGases.ANTIMATTER, "Antimatter");
-        add(MekanismGases.PLUTONIUM, "Plutonium");
-        add(MekanismGases.POLONIUM, "Polonium");
+        addHolder(MekanismAPI.EMPTY_CHEMICAL_HOLDER, "Empty");
+        add(MekanismChemicals.HYDROGEN, "Hydrogen");
+        add(MekanismChemicals.OXYGEN, "Oxygen");
+        add(MekanismChemicals.STEAM, "Steam");
+        add(MekanismChemicals.WATER_VAPOR, "Water Vapor");
+        add(MekanismChemicals.CHLORINE, "Chlorine");
+        add(MekanismChemicals.SULFUR_DIOXIDE, "Sulfur Dioxide");
+        add(MekanismChemicals.SULFUR_TRIOXIDE, "Sulfur Trioxide");
+        add(MekanismChemicals.SULFURIC_ACID, "Sulfuric Acid");
+        add(MekanismChemicals.HYDROGEN_CHLORIDE, "Hydrogen Chloride");
+        add(MekanismChemicals.HYDROFLUORIC_ACID, "Hydrofluoric Acid");
+        add(MekanismChemicals.URANIUM_OXIDE, "Uranium Oxide");
+        add(MekanismChemicals.URANIUM_HEXAFLUORIDE, "Uranium Hexafluoride");
+        add(MekanismChemicals.ETHENE, "Ethene");
+        add(MekanismChemicals.SODIUM, "Sodium");
+        add(MekanismChemicals.SUPERHEATED_SODIUM, "Superheated Sodium");
+        add(MekanismChemicals.BRINE, "Gaseous Brine");
+        add(MekanismChemicals.LITHIUM, "Lithium");
+        add(MekanismChemicals.OSMIUM, "Osmium");
+        add(MekanismChemicals.FISSILE_FUEL, "Fissile Fuel");
+        add(MekanismChemicals.NUCLEAR_WASTE, "Nuclear Waste");
+        add(MekanismChemicals.SPENT_NUCLEAR_WASTE, "Spent Nuclear Waste");
+        add(MekanismChemicals.ANTIMATTER, "Antimatter");
+        add(MekanismChemicals.PLUTONIUM, "Plutonium");
+        add(MekanismChemicals.POLONIUM, "Polonium");
     }
 
     private void addInfusionTypes() {
-        add(MekanismAPI.EMPTY_INFUSE_TYPE, "Empty");
-        add(MekanismInfuseTypes.CARBON, "Carbon");
-        add(MekanismInfuseTypes.REDSTONE, "Redstone");
-        add(MekanismInfuseTypes.DIAMOND, "Diamond");
-        add(MekanismInfuseTypes.REFINED_OBSIDIAN, "Refined Obsidian");
-        add(MekanismInfuseTypes.GOLD, "Gold");
-        add(MekanismInfuseTypes.TIN, "Tin");
-        add(MekanismInfuseTypes.FUNGI, "Fungi");
-        add(MekanismInfuseTypes.BIO, "Biomass");
+        add(MekanismChemicals.CARBON, "Carbon");
+        add(MekanismChemicals.REDSTONE, "Redstone");
+        add(MekanismChemicals.DIAMOND, "Diamond");
+        add(MekanismChemicals.REFINED_OBSIDIAN, "Refined Obsidian");
+        add(MekanismChemicals.GOLD, "Gold");
+        add(MekanismChemicals.TIN, "Tin");
+        add(MekanismChemicals.FUNGI, "Fungi");
+        add(MekanismChemicals.BIO, "Biomass");
     }
 
     private void addPigments() {
-        add(MekanismAPI.EMPTY_PIGMENT, "Empty");
-        for (Map.Entry<EnumColor, PigmentRegistryObject<Pigment>> entry : MekanismPigments.PIGMENT_COLOR_LOOKUP.entrySet()) {
+        for (Map.Entry<EnumColor, DeferredChemical<Chemical>> entry : MekanismChemicals.PIGMENT_COLOR_LOOKUP.entrySet()) {
             add(entry.getValue(), entry.getKey().getEnglishName() + " Pigment");
         }
     }
 
     private void addSlurries() {
-        add(MekanismAPI.EMPTY_SLURRY, "Empty");
-        for (Map.Entry<PrimaryResource, SlurryRegistryObject<Slurry, Slurry>> entry : MekanismSlurries.PROCESSED_RESOURCES.entrySet()) {
-            addSlurry(entry.getValue(), formatAndCapitalize(entry.getKey().getRegistrySuffix()));
+        for (Map.Entry<PrimaryResource, SlurryRegistryObject<Chemical, Chemical>> entry : MekanismChemicals.PROCESSED_RESOURCES.entrySet()) {
+            addSlurry(entry.getValue(), TextUtils.formatAndCapitalize(entry.getKey().getRegistrySuffix()));
         }
     }
 
-    private void addSlurry(SlurryRegistryObject<Slurry, Slurry> slurryRO, String name) {
-        add(slurryRO.getDirtySlurry(), "Dirty " + name + " Slurry");
-        add(slurryRO.getCleanSlurry(), "Clean " + name + " Slurry");
+    private void addSlurry(SlurryRegistryObject<Chemical, Chemical> slurryRO, String name) {
+        addHolder(slurryRO, "Dirty " + name + " Slurry");
+        addHolder(slurryRO.getCleanSlurry(), "Clean " + name + " Slurry");
     }
 
     private void addDamageSources() {
+        add(MekanismDamageTypes.FLAMETHROWER, "%1$s was incinerated.", "%1$s was ruthlessly incinerated by %2$s.");
         add(MekanismDamageTypes.LASER, "%1$s was incinerated.", "%1$s was incinerated whilst trying to escape %2$s.");
         add(MekanismDamageTypes.RADIATION, "%1$s was killed by radiation poisoning.", "%1$s was killed by radiation poisoning whilst trying to escape %2$s.");
-    }
-
-    private void add(MekanismDamageType damageType, String value, String valueEscaping) {
-        add(damageType, value);
-        add(damageType.getTranslationKey() + ".player", valueEscaping);
+        add(MekanismDamageTypes.SPS, "%1$s was supercritically phase shifted into the next life.",
+              "%1$s was supercritically phase shifted into the next life whilst trying to escape %2$s. Guess they succeeded in escaping.");
     }
 
     private void addRobitSkins() {
@@ -423,7 +658,7 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         addRobitSkin(MekanismRobitSkins.ALLAY, "Allay Costume");
         for (Map.Entry<RobitPrideSkinData, ResourceKey<RobitSkin>> entry : MekanismRobitSkins.PRIDE_SKINS.entrySet()) {
             ResourceKey<RobitSkin> prideSkin = entry.getValue();
-            String name = formatAndCapitalize(prideSkin.location().getPath());
+            String name = TextUtils.formatAndCapitalize(prideSkin.location().getPath());
             if (entry.getKey() != RobitPrideSkinData.PRIDE) {
                 name += " Pride";
             }
@@ -490,7 +725,7 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         add(MekanismAdvancements.STEEL_INGOT, "Industrial Revolution", "Infuse Iron with Carbon and repeat");
         add(MekanismAdvancements.STEEL_CASING, "The Perfect Foundation", "Used in even the most advanced machines");
 
-        add(MekanismAdvancements.INFUSED_ALLOY, "The Alloy That Started it All", "Infuse Iron with Redstone");
+        add(MekanismAdvancements.INFUSED_ALLOY, "The Alloy That Started it All", "Infuse Copper with Redstone");
         add(MekanismAdvancements.REINFORCED_ALLOY, "Make it Stronger", "Diamonds make everything better!");
         add(MekanismAdvancements.ATOMIC_ALLOY, "Top Tier Alloy", "Create one of the strongest alloys in existence");
 
@@ -507,7 +742,7 @@ public class MekanismLangProvider extends BaseLanguageProvider {
 
         add(MekanismAdvancements.ALARM, "Woop Woop Woop!", "Alarms are loud, especially the industrial kind");
         add(MekanismAdvancements.INSTALLER, "Your Distinctiveness Will Be Added to Our Own", "Craft any tier of Installer to upgrade your factories in place");
-        add(MekanismAdvancements.FACTORY, "The Factory Must Grow!", "Craft any kind of factory");
+        add(MekanismAdvancements.FACTORY, "The Factory Must Grow!", "Craft any kind of factory or use a Tier Installer");
         add(MekanismAdvancements.CONFIGURATION_COPYING, "Ctrl+C, Ctrl+V", "Use a configuration card to copy the configuration of one machine to another");
         add(MekanismAdvancements.RUNNING_FREE, "Yeah I'm Freeeeee Fallin'", "Protect yourself from falling with a pair of Free Runners");
         add(MekanismAdvancements.PLAYING_WITH_FIRE, "Playing With Fire", "Be responsible and don't burn down any forests; or do, we're not your manager");
@@ -537,6 +772,11 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         add(MekanismAdvancements.SPS, "Supercritical Phase Shifting?", "This thing doesn't seem safe");
         add(MekanismAdvancements.ANTIMATTER, "Impossible Material", "Create matter that shouldn't be able to exist here");
         add(MekanismAdvancements.NUCLEOSYNTHESIZER, "Alchemy, But Make It Sciencey", "Craft an Antiprotonic Nucleosynthesizer and don't worry if you can't pronounce the name");
+
+        add(MekanismAdvancements.SPS_EXPERIMENT_CREEPER, "Experimenting on Creepers", "Phase shift a creeper to make it supercritically charged");
+        add(MekanismAdvancements.SPS_EXPERIMENT_MOOSHROOM, "Mooshroom Recoloring", "Shift a Mooshroom's color gene to a different state");
+        add(MekanismAdvancements.SPS_EXPERIMENT_PIG, "Attempt at Pig Intelligence", "Try (and fail) to make a pig more intelligent");
+        add(MekanismAdvancements.SPS_EXPERIMENT_VILLAGER, "Villager Electroshock Therapy?", "Be the origin story for a villager's villain arc");
 
         add(MekanismAdvancements.POLONIUM, "Polonium, Not Plutonium", "Refine your Nuclear Waste into Polonium");
 
@@ -600,6 +840,13 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         add(MekanismAdvancements.FULL_CANTEEN, "Tasty Paste", "Completely fill a Canteen with Nutritional Paste");
     }
 
+    private void addAliases() {
+        addAliases(MekanismAliases.values());
+        for (FactoryType type : EnumUtils.FACTORY_TYPES) {
+            addAlias(type.getRegistryNameComponent(), type.getRegistryNameComponentCapitalized());
+        }
+    }
+
     private void addJade() {
         addJadeConfigTooltip(JadeConstants.REMOVE_BUILTIN, "Remove overwritten builtin renderings");
         addJadeConfigTooltip(JadeConstants.ENTITY_DATA, "Jade entity data provider");
@@ -607,18 +854,23 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         addJadeConfigTooltip(JadeConstants.TOOLTIP_RENDERER, "Jade tooltip renderer");
         addJadeConfigTooltip(LookingAtUtils.ENERGY, "Energy");
         addJadeConfigTooltip(LookingAtUtils.FLUID, "Fluid");
-        addJadeConfigTooltip(LookingAtUtils.GAS, "Gas");
-        addJadeConfigTooltip(LookingAtUtils.INFUSE_TYPE, "Infuse Type");
-        addJadeConfigTooltip(LookingAtUtils.PIGMENT, "Pigment");
-        addJadeConfigTooltip(LookingAtUtils.SLURRY, "Slurry");
+        addJadeConfigTooltip(LookingAtUtils.CHEMICAL, "Chemical");
     }
 
     private void addJadeConfigTooltip(ResourceLocation location, String value) {
-        add("config.jade.plugin_" + location.getNamespace() + "." + location.getPath(), value);
+        add("config.jade.plugin_" + location.toLanguageKey(), value);
     }
 
     private void addMisc() {
+        add("_mekanism_force_utf8", "\ufeff");
         addJade();
+        //Anchor Type
+        add(MekanismLang.ANCHOR_TYPE_ABSOLUTE, "Absolute (y = value)");
+        add(MekanismLang.ANCHOR_TYPE_ABOVE_BOTTOM, "Above Bottom (y = minY + value)");
+        add(MekanismLang.ANCHOR_TYPE_BELOW_TOP, "Below Top (y = depth - 1 + minY - value)");
+        //Height Shape
+        add(MekanismLang.HEIGHT_SHAPE_TRAPEZOID, "Trapezoid");
+        add(MekanismLang.HEIGHT_SHAPE_UNIFORM, "Uniform");
         //Upgrades
         add(APILang.UPGRADE_SPEED, "Speed");
         add(APILang.UPGRADE_SPEED_DESCRIPTION, "Increases speed of machinery.");
@@ -626,8 +878,8 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         add(APILang.UPGRADE_ENERGY_DESCRIPTION, "Increases energy efficiency and capacity of machinery.");
         add(APILang.UPGRADE_FILTER, "Filter");
         add(APILang.UPGRADE_FILTER_DESCRIPTION, "A filter that separates heavy water from regular water.");
-        add(APILang.UPGRADE_GAS, "Gas");
-        add(APILang.UPGRADE_GAS_DESCRIPTION, "Increases the efficiency of gas-using machinery.");
+        add(APILang.UPGRADE_CHEMICAL, "Chemical");
+        add(APILang.UPGRADE_CHEMICAL_DESCRIPTION, "Increases the efficiency of chemical-using machinery.");
         add(APILang.UPGRADE_MUFFLING, "Muffling");
         add(APILang.UPGRADE_MUFFLING_DESCRIPTION, "Reduces noise generated by machinery.");
         add(APILang.UPGRADE_ANCHOR, "Anchor");
@@ -636,30 +888,29 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         add(APILang.UPGRADE_STONE_GENERATOR_DESCRIPTION, "Generates stone or cobblestone as needed.");
         add(APILang.UPGRADE_MAX_INSTALLED, "Maximum Installed: %1$s");
         //Transmission types
+        add(MekanismLang.TRANSMISSION_TYPE_CHEMICALS, "Chemicals");
         add(MekanismLang.TRANSMISSION_TYPE_ENERGY, "Energy");
         add(MekanismLang.TRANSMISSION_TYPE_FLUID, "Fluids");
-        add(MekanismLang.TRANSMISSION_TYPE_GAS, "Gases");
-        add(MekanismLang.TRANSMISSION_TYPE_INFUSION, "Infuse Types");
-        add(MekanismLang.TRANSMISSION_TYPE_PIGMENT, "Pigments");
-        add(MekanismLang.TRANSMISSION_TYPE_SLURRY, "Slurries");
         add(MekanismLang.TRANSMISSION_TYPE_ITEM, "Items");
         add(MekanismLang.TRANSMISSION_TYPE_HEAT, "Heat");
         //Chemical Attributes
         add(APILang.CHEMICAL_ATTRIBUTE_RADIATION, " - Radioactivity: %1$s");
         add(APILang.CHEMICAL_ATTRIBUTE_COOLANT_EFFICIENCY, " - Coolant Efficiency: %1$s");
         add(APILang.CHEMICAL_ATTRIBUTE_COOLANT_ENTHALPY, " - Thermal Enthalpy: %1$s");
+        add(APILang.CHEMICAL_ATTRIBUTE_COOLANT_TEMPERATURE, " - Temperature: %1$s");
         add(APILang.CHEMICAL_ATTRIBUTE_FUEL_BURN_TICKS, " - Burn Time: %1$s t");
         add(APILang.CHEMICAL_ATTRIBUTE_FUEL_ENERGY_DENSITY, " - Energy Density: %1$s");
         //Colors
         for (EnumColor color : EnumUtils.COLORS) {
             add(color.getLangEntry(), color.getEnglishName());
         }
+        addModInfo(modName + " is a Minecraft add-on featuring high-tech machinery that can be used to create powerful tools, armor, and weapons.");
         addPackData(MekanismLang.MEKANISM, MekanismLang.PACK_DESCRIPTION);
         add(MekanismLang.DEBUG_TITLE, modName + " Debug");
         add(MekanismLang.LOG_FORMAT, "[%1$s] %2$s");
-        add(MekanismLang.FORGE, "MinecraftForge");
-        add(MekanismLang.IC2, "IndustrialCraft");
+        add(MekanismLang.FORGE, "NeoForge");
         add(MekanismLang.ERROR, "Error");
+        add(MekanismLang.INVALID_PACKET, "Invalid packet data received: %1$s");
         add(MekanismLang.ALPHA_WARNING, "Warning: " + modName + " is currently in alpha, and is not recommended for widespread use in modpacks. There are likely to be game breaking bugs, and various other issues that you can read more about %1$s.");
         add(MekanismLang.ALPHA_WARNING_HERE, "here");
         add(MekanismLang.RECIPE_WARNING, "Broken tags in Mekanism recipes detected, please check server logs for details. You will be missing some recipes and machines may not accept expected inputs.");
@@ -672,7 +923,7 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         add(MekanismLang.OFFHAND, "Hand 2");
         //Multiblock
         add(MekanismLang.MULTIBLOCK_INVALID_FRAME, "Couldn't create frame, invalid block at %1$s.");
-        add(MekanismLang.MULTIBLOCK_INVALID_INNER, "Couldn't validate center, found invalid block at %1$s.");
+        add(MekanismLang.MULTIBLOCK_INVALID_INNER, "Inner structure contains an illegal block (%2$s) located at %1$s.");
         add(MekanismLang.MULTIBLOCK_INVALID_CONTROLLER_CONFLICT, "Controller conflict: found extra controller at %1$s.");
         add(MekanismLang.MULTIBLOCK_INVALID_NO_CONTROLLER, "Couldn't form, no controller found.");
         //SPS
@@ -688,8 +939,7 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         add(MekanismLang.BOILER_INVALID_SUPERHEATING, "Couldn't form, invalid Superheating Element arrangement.");
         //Conversion
         add(MekanismLang.CONVERSION_ENERGY, "Item to Energy");
-        add(MekanismLang.CONVERSION_GAS, "Item to Gas");
-        add(MekanismLang.CONVERSION_INFUSION, "Item to Infuse Type");
+        add(MekanismLang.CONVERSION_CHEMICAL, "Item to Chemical");
         //QIO stuff
         add(MekanismLang.SET_FREQUENCY, "Set Frequency");
         add(MekanismLang.QIO_FREQUENCY_SELECT, "QIO Frequency Select");
@@ -697,27 +947,43 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         add(MekanismLang.QIO_TYPES_DETAIL, "Types: %1$s / %2$s");
         add(MekanismLang.QIO_ITEMS, "Items");
         add(MekanismLang.QIO_TYPES, "Types");
-        add(MekanismLang.QIO_TRIGGER_COUNT, "Trigger count: %1$s");
+        add(MekanismLang.QIO_TRIGGER_COUNT, "Trigger count:");
         add(MekanismLang.QIO_STORED_COUNT, "Stored count: %1$s");
         add(MekanismLang.QIO_FUZZY_MODE, "Ignoring NBT: %1$s");
         add(MekanismLang.QIO_ITEM_TYPE_UNDEFINED, "Item type undefined");
         add(MekanismLang.QIO_IMPORT_WITHOUT_FILTER, "Import Without Filter:");
         add(MekanismLang.QIO_EXPORT_WITHOUT_FILTER, "Export Without Filter:");
         add(MekanismLang.QIO_COMPENSATE_TOOLTIP, "What are you trying to compensate for?");
+        add(MekanismLang.QIO_TRANSFER_TO_FREQUENCY, "Prioritize moving items to the frequency when holding shift");
+        add(MekanismLang.QIO_TRANSFER_TO_WINDOW, "Prioritize moving items to the crafting window when holding shift");
+        add(MekanismLang.QIO_REJECTS_TO_FREQUENCY, "Prioritize moving items left in the crafting grid to the frequency when overriding with a recipe viewer");
+        add(MekanismLang.QIO_REJECTS_TO_INVENTORY, "Prioritize moving items left in the crafting grid to the player's inventory when overriding with a recipe viewer");
+        add(MekanismLang.QIO_SEARCH_AUTO_FOCUS, "Auto focus the QIO search bar when opening a dashboard.");
+        add(MekanismLang.QIO_SEARCH_MANUAL_FOCUS, "Don't automatically focus the QIO search bar when opening a dashboard.");
+        add(MekanismLang.QIO_EXPORTER_ROUND_ROBIN, "Round robin:");
+        add(MekanismLang.QIO_EXPORTER_ROUND_ROBIN_DESCRIPTION, "When connected to a transporter, cycles between all connected inventories when sending items.");
         add(MekanismLang.LIST_SORT_COUNT, "Count");
         add(MekanismLang.LIST_SORT_NAME, "Name");
         add(MekanismLang.LIST_SORT_MOD, "Mod");
+        add(MekanismLang.LIST_SORT_REGISTRY_NAME, "Item ID");
         add(MekanismLang.LIST_SORT_NAME_DESC, "Sort items by name.");
         add(MekanismLang.LIST_SORT_COUNT_DESC, "Sort items by count.");
         add(MekanismLang.LIST_SORT_MOD_DESC, "Sort items by mod.");
+        add(MekanismLang.LIST_SORT_REGISTRY_NAME_DESC, "Sort items by registry name.");
+        add(MekanismLang.LIST_SORT_ASCENDING, "Ascending");
         add(MekanismLang.LIST_SORT_ASCENDING_DESC, "Sort items in ascending order.");
+        add(MekanismLang.LIST_SORT_DESCENDING, "Descending");
         add(MekanismLang.LIST_SORT_DESCENDING_DESC, "Sort items in descending order.");
         add(MekanismLang.LIST_SEARCH, "Search:");
         add(MekanismLang.LIST_SORT, "Sort:");
+        //QIO Redstone Adapter
+        add(MekanismLang.REDSTONE_ADAPTER_TOGGLE_SIGNAL, "Toggle output signal inversion");
+        //Recipe Viewer
+        add(MekanismLang.RECIPE_VIEWER_INVENTORY_FULL, "Not enough room in inventory.");
         //JEI
         add(MekanismLang.JEI_AMOUNT_WITH_CAPACITY, "%1$s / %2$s mB");
-        add(MekanismLang.JEI_INFO_HEAVY_WATER, "%1$s mB of Heavy Water can be extracted from a water source block via an electric pump with a filter upgrade installed.");
-        add(MekanismLang.JEI_INFO_MODULE_INSTALLATION, "Using a Modification Station, modules can be installed on the various MekaSuit pieces and on the Meka-Tool.");
+        add(MekanismLang.RECIPE_VIEWER_INFO_HEAVY_WATER, "%1$s mB of Heavy Water can be extracted from a water source block via an electric pump with a filter upgrade installed.");
+        add(MekanismLang.RECIPE_VIEWER_INFO_MODULE_INSTALLATION, "Using a Modification Station, modules can be installed on the various MekaSuit pieces and on the Meka-Tool.");
         //Key
         add(MekanismLang.KEY_HAND_MODE, "Item Mode Switch");
         add(MekanismLang.KEY_HEAD_MODE, "Head Mode Switch");
@@ -731,7 +997,7 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         add(MekanismLang.KEY_HUD, "Show HUD");
         //Holiday
         add(MekanismLang.HOLIDAY_BORDER, "%1$s%2$s%1$s");
-        add(MekanismLang.HOLIDAY_SIGNATURE, "-aidancbrady");
+        add(MekanismLang.HOLIDAY_SIGNATURE, " - The Mekanism Team");
         add(MekanismLang.CHRISTMAS_LINE_ONE, "Merry Christmas, %1$s!");
         add(MekanismLang.CHRISTMAS_LINE_TWO, "May you have plenty of Christmas cheer");
         add(MekanismLang.CHRISTMAS_LINE_THREE, "and have a relaxing holiday with your");
@@ -740,6 +1006,9 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         add(MekanismLang.NEW_YEAR_LINE_TWO, "Best wishes to you as we enter this");
         add(MekanismLang.NEW_YEAR_LINE_THREE, "new and exciting year of %1$s! :)");
         add(MekanismLang.MAY_4_LINE_ONE, "May the 4th be with you, %1$s!");
+        add(MekanismLang.PRIDE_LINE_ONE, "Happy Pride Month, %1$s!");
+        add(MekanismLang.PRIDE_LINE_TWO, "Regardless of what anyone tells you,");
+        add(MekanismLang.PRIDE_LINE_THREE, "you are important!");
         //Generic
         //Note: How translation text component is implemented requires a double percent sign to make it show up as a single percent sign
         add(MekanismLang.GENERIC_PERCENT, "%1$s%%");
@@ -761,6 +1030,10 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         add(MekanismLang.GENERIC_LIST, "- %1$s");
         add(MekanismLang.GENERIC_MINUTES, "%1$sm");
         add(MekanismLang.GENERIC_HOURS_MINUTES, "%1$sh %2$sm");
+        add(MekanismLang.GENERIC_GREATER_THAN, "%1$s > %2$s");
+        add(MekanismLang.GENERIC_GREATER_EQUAL, "%1$s ≥ %2$s");
+        add(MekanismLang.GENERIC_LESS_THAN, "%1$s < %2$s");
+        add(MekanismLang.GENERIC_LESS_THAN_EQUAL, "%1$s ≤ %2$s");
         //Directions
         add(APILang.DOWN, "Down");
         add(APILang.UP, "Up");
@@ -785,12 +1058,19 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         add(MekanismLang.HOLD_FOR_MODULES, "Hold %1$s for installed modules.");
         add(MekanismLang.HOLD_FOR_SUPPORTED_ITEMS, "Hold %1$s for supporting items and conflicting modules.");
         //Commands
+        add(MekanismLang.COMMAND_ERROR_NOT_WATCHED, "Chunk (%1$s) is not being watched.");
         add(MekanismLang.COMMAND_CHUNK_WATCH, "Chunk (%1$s) added to watch list.");
+        add(MekanismLang.COMMAND_CHUNK_WATCH_NAMED, "Chunk %1$s (%2$s) added to watch list.");
         add(MekanismLang.COMMAND_CHUNK_UNWATCH, "Chunk (%1$s) removed from watch list.");
+        add(MekanismLang.COMMAND_CHUNK_UNWATCH_NAMED, "Chunk %1$s (%2$s) removed from watch list.");
         add(MekanismLang.COMMAND_CHUNK_CLEAR, "%1$s chunks removed from watch list.");
         add(MekanismLang.COMMAND_CHUNK_FLUSH, "%1$s chunks unloaded.");
         add(MekanismLang.COMMAND_CHUNK_LOADED, "Loaded chunk (%1$s).");
+        add(MekanismLang.COMMAND_CHUNK_LOADED_NAMED, "Loaded chunk %1$s (%2$s).");
         add(MekanismLang.COMMAND_CHUNK_UNLOADED, "Unloaded chunk (%1$s).");
+        add(MekanismLang.COMMAND_CHUNK_UNLOADED_NAMED, "Unloaded chunk %1$s (%2$s).");
+        add(MekanismLang.COMMAND_CHUNK_TICKET_LEVEL_CHANGED, "Chunk (%1$s) ticket level changed from: %2$s to: %3$s.");
+        add(MekanismLang.COMMAND_CHUNK_TICKET_LEVEL_CHANGED_NAMED, "Chunk %1$s (%2$s) ticket level changed from: %3$s to: %4$s.");
         add(MekanismLang.COMMAND_DEBUG, "Toggled debug mode: %1$s.");
         add(MekanismLang.COMMAND_TEST_RULES, "Enabled keepInventory, and disabled doMobSpawning, doDaylightCycle, doWeatherCycle and mobGriefing!");
         add(MekanismLang.COMMAND_TP, "Teleported to (%1$s) - saved last position on stack.");
@@ -813,6 +1093,7 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         add(MekanismLang.COMMAND_ERROR_RETROGEN_DISABLED, "Retrogen is disabled, please enable it in the config.");
         add(MekanismLang.COMMAND_ERROR_RETROGEN_FAILURE, "Failed to queue any chunks for retrogen.");
         //Tooltip stuff
+        add(MekanismLang.UNKNOWN, "Unknown");
         add(MekanismLang.MODE, "Mode: %1$s");
         add(MekanismLang.FIRE_MODE, "Fire Mode: %1$s");
         add(MekanismLang.BUCKET_MODE, "Bucket Mode: %1$s");
@@ -824,19 +1105,19 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         add(MekanismLang.FLOWING, "Flowing: %1$s");
         add(MekanismLang.INVALID, "(Invalid)");
         add(MekanismLang.HAS_INVENTORY, "Inventory: %1$s");
-        add(MekanismLang.NO_GAS, "No gas stored.");
+        add(MekanismLang.NO_CHEMICAL, "No chemicals stored.");
         add(MekanismLang.NO_FLUID_TOOLTIP, "No fluid stored.");
         add(MekanismLang.FREE_RUNNERS_MODE, "Runners Mode: %1$s");
         add(MekanismLang.JETPACK_MODE, "Jetpack Mode: %1$s");
         add(MekanismLang.SCUBA_TANK_MODE, "Scuba Tank: %1$s");
         add(MekanismLang.FREE_RUNNERS_STORED, "Runners Energy: %1$s");
         add(MekanismLang.FLAMETHROWER_STORED, "Flamethrower: %1$s");
-        add(MekanismLang.JETPACK_STORED, "Jetpack Fuel: %1$s");
+        add(MekanismLang.JETPACK_STORED, "Jetpack Fuel: %1$s (%2$s%%)");
         add(MekanismLang.PROGRESS, "Progress: %1$s");
         add(MekanismLang.PROCESS_RATE, "Process Rate: %1$s");
         add(MekanismLang.PROCESS_RATE_MB, "Process Rate: %1$s mB/t");
         add(MekanismLang.TICKS_REQUIRED, "Ticks Required: %1$s");
-        add(MekanismLang.DECAY_IMMUNE, "Will not decay inside a Radioactive Waste Barrel");
+        add(APILang.DECAY_IMMUNE, "Will not decay inside a Radioactive Waste Barrel");
         //Gui stuff
         add(MekanismLang.WIDTH, "Width");
         add(MekanismLang.HEIGHT, "Height");
@@ -845,7 +1126,9 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         add(MekanismLang.CRAFTING_WINDOW, "Crafting Window %1$s");
         add(MekanismLang.CRAFTING_WINDOW_CLEAR, "Empty Crafting Window contents into storage, hold shift to empty into player inventory instead.");
         add(MekanismLang.MIN, "Min: %1$s");
+        add(MekanismLang.MIN_DIGITAL_MINER, "Min Y level: %1$s");
         add(MekanismLang.MAX, "Max: %1$s");
+        add(MekanismLang.MAX_DIGITAL_MINER, "Max Y level: %1$s");
         add(MekanismLang.INFINITE, "Infinite");
         add(MekanismLang.NONE, "None");
         add(MekanismLang.EMPTY, "Empty");
@@ -857,10 +1140,6 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         add(MekanismLang.VOLUME, "Volume: %1$s");
         add(MekanismLang.NO_FLUID, "No fluid");
         add(MekanismLang.CHEMICAL, "Chemical: %1$s");
-        add(MekanismLang.GAS, "Gas: %1$s");
-        add(MekanismLang.INFUSE_TYPE, "Infuse Type: %1$s");
-        add(MekanismLang.PIGMENT, "Pigment: %1$s");
-        add(MekanismLang.SLURRY, "Slurry: %1$s");
         add(MekanismLang.LIQUID, "Liquid: %1$s");
         add(MekanismLang.UNIT, "Unit: %1$s");
         add(MekanismLang.USING, "Using: %1$s/t");
@@ -884,6 +1163,8 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         add(APILang.TRUE_LOWER, "true");
         add(APILang.FALSE_LOWER, "false");
         add(MekanismLang.CLOSE, "Close");
+        add(MekanismLang.PIN, "Pin this window so that it automatically opens with the GUI");
+        add(MekanismLang.UNPIN, "Unpin this window");
         add(MekanismLang.RADIATION_DOSE, "Radiation Dose: %1$s");
         add(MekanismLang.RADIATION_EXPOSURE, "Radiation Exposure: %1$s");
         add(MekanismLang.RADIATION_EXPOSURE_ENTITY, "Entity Radiation Exposure: %1$s");
@@ -893,7 +1174,8 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         add(MekanismLang.COLOR_PICKER, "Color Picker");
         add(MekanismLang.HELMET_OPTIONS, "Helmet Options");
         add(MekanismLang.HUD_OVERLAY, "HUD Overlay:");
-        add(MekanismLang.OPACITY, "Opacity");
+        add(MekanismLang.OPACITY, "Opacity: %1$s%%");
+        add(MekanismLang.JITTER, "Jitter: %1$s%%");
         add(MekanismLang.DEFAULT, "Default");
         add(MekanismLang.WARNING, "Warning");
         add(MekanismLang.DANGER, "Danger");
@@ -901,6 +1183,7 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         add(MekanismLang.RADIAL_SCREEN, "Radial Selector Screen");
         add(MekanismLang.VISUALS, "Visuals: %1$s");
         add(MekanismLang.VISUALS_TOO_BIG, "Area too large to display visuals.");
+        add(MekanismLang.NO_COLOR, "No color");
         //GUI Issues
         add(MekanismLang.ISSUES, "Issues:");
         add(MekanismLang.ISSUE_NOT_ENOUGH_ENERGY, " - Not enough energy to operate");
@@ -911,6 +1194,10 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         add(MekanismLang.ISSUE_INPUT_DOESNT_PRODUCE_OUTPUT, " - Input does not produce output");
         add(MekanismLang.ISSUE_INVALID_OREDICTIONIFICATOR_FILTER, " - Filter is no longer valid or supported");
         add(MekanismLang.ISSUE_FILTER_HAS_BLACKLISTED_ELEMENT, " - Filter contains at least one element that is blacklisted");
+        //Redstone Activation
+        add(MekanismLang.ISSUE_REDSTONE_SIGNAL_ABSENT, " - Redstone signal absent, provide one to activate.");
+        add(MekanismLang.ISSUE_REDSTONE_SIGNAL_PRESENT, " - Redstone signal present, remove it to activate.");
+        add(MekanismLang.ISSUE_REDSTONE_PULSE_REQUIRED, " - Redstone pulse required to activate.");
         //Laser Amplifier
         add(MekanismLang.ENTITY_DETECTION, "Entity Detection");
         add(MekanismLang.ENERGY_CONTENTS, "Energy Contents");
@@ -933,6 +1220,8 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         add(MekanismLang.TRANSPORTER_CONFIG, "Transporter Config");
         add(MekanismLang.SIDE_CONFIG, "Side Config");
         add(MekanismLang.SIDE_CONFIG_CLEAR, "Clear Side Config (sets all sides to none)");
+        add(MekanismLang.SIDE_CONFIG_CLEAR_ALL, "Hold Shift to clear sides of all substance types at once");
+        add(MekanismLang.SIDE_CONFIG_INCREMENT, "Increment Side Config (changes all sides to the next, or previous, configuration type)");
         add(MekanismLang.STRICT_INPUT, "Strict Input");
         add(MekanismLang.STRICT_INPUT_ENABLED, "Strict Input (%1$s)");
         add(MekanismLang.CONFIG_TYPE, "%1$s Config");
@@ -943,7 +1232,7 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         add(MekanismLang.AUTO_PULL, "Auto-pull");
         add(MekanismLang.AUTO_EJECT, "Auto-eject");
         add(MekanismLang.AUTO_SORT, "Auto-sort");
-        //Gas mode
+        //Chemical mode
         add(MekanismLang.IDLE, "Idle");
         add(MekanismLang.DUMPING_EXCESS, "Dumping Excess");
         add(MekanismLang.DUMPING, "Dumping");
@@ -971,16 +1260,10 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         add(MekanismLang.DICTIONARY_MOB_EFFECT_DESC, "Display Mob Effect Tags");
         add(MekanismLang.DICTIONARY_ENCHANTMENT, "Enchantment");
         add(MekanismLang.DICTIONARY_ENCHANTMENT_DESC, "Display Enchantment Tags");
-        add(MekanismLang.DICTIONARY_BLOCK_ENTITY_TYPE, "Block Entity Type");
+        add(MekanismLang.DICTIONARY_BLOCK_ENTITY_TYPE, "BE Type");
         add(MekanismLang.DICTIONARY_BLOCK_ENTITY_TYPE_DESC, "Display Block Entity Type Tags");
-        add(MekanismLang.DICTIONARY_GAS, "Gas");
-        add(MekanismLang.DICTIONARY_GAS_DESC, "Display Gas Tags");
-        add(MekanismLang.DICTIONARY_INFUSE_TYPE, "Infuse Type");
-        add(MekanismLang.DICTIONARY_INFUSE_TYPE_DESC, "Display Infuse Type Tags");
-        add(MekanismLang.DICTIONARY_PIGMENT, "Pigment");
-        add(MekanismLang.DICTIONARY_PIGMENT_DESC, "Display Pigment Tags");
-        add(MekanismLang.DICTIONARY_SLURRY, "Slurry");
-        add(MekanismLang.DICTIONARY_SLURRY_DESC, "Display Slurry Tags");
+        add(MekanismLang.DICTIONARY_CHEMICAL, "Chemical");
+        add(MekanismLang.DICTIONARY_CHEMICAL_DESC, "Display Chemical Tags");
         //Oredictionificator
         add(MekanismLang.LAST_ITEM, "Last Item");
         add(MekanismLang.NEXT_ITEM, "Next Item");
@@ -1017,6 +1300,8 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         add(MekanismLang.BLOCK_DATA, "Block data: %1$s");
         add(MekanismLang.BLOCK, "Block: %1$s");
         add(MekanismLang.BLOCK_ENTITY, "Block Entity: %1$s");
+        add(MekanismLang.BLOCK_ENTITY_SPAWN_TYPE, "Spawns: %1$s");
+        add(MekanismLang.BLOCK_ENTITY_DECORATION, "Decoration:");
         //Crafting Formula
         add(MekanismLang.INGREDIENTS, "Ingredients:");
         add(MekanismLang.ENCODED, "(Encoded)");
@@ -1030,10 +1315,7 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         add(MekanismLang.ITEMS, "- Items (%1$s)");
         add(MekanismLang.BLOCKS, "- Blocks (%1$s)");
         add(MekanismLang.FLUIDS, "- Fluids (%1$s)");
-        add(MekanismLang.GASES, "- Gases (%1$s)");
-        add(MekanismLang.INFUSE_TYPES, "- Infuse Types (%1$s)");
-        add(MekanismLang.PIGMENTS, "- Pigments (%1$s)");
-        add(MekanismLang.SLURRIES, "- Slurries (%1$s)");
+        add(MekanismLang.CHEMICALS, "- Chemicals (%1$s)");
         add(MekanismLang.HEAT, "- Heat (%1$s)");
         add(MekanismLang.CONDUCTION, "Conduction: %1$s");
         add(MekanismLang.INSULATION, "Insulation: %1$s");
@@ -1064,7 +1346,7 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         //Filter
         add(MekanismLang.CREATE_FILTER_TITLE, "Create New Filter");
         add(MekanismLang.FILTERS, "Filters:");
-        add(MekanismLang.FILTER_COUNT, "T: %1$s");
+        add(MekanismLang.FILTER_COUNT, "Filters: %1$s");
         add(MekanismLang.FILTER_ALLOW_DEFAULT, "Allow Default");
         add(MekanismLang.FILTER, "Filter");
         add(MekanismLang.FILTER_NEW, "New: %1$s");
@@ -1086,7 +1368,7 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         add(MekanismLang.ITEM_FILTER_NO_ITEM, "No item");
         add(MekanismLang.SORTER_FILTER_SIZE_MODE, "%1$s!");
         add(MekanismLang.SORTER_FILTER_MAX_LESS_THAN_MIN, "Max < min");
-        add(MekanismLang.SORTER_FILTER_OVER_SIZED, "Max > 64");
+        add(MekanismLang.SORTER_FILTER_OVER_SIZED, "Max > %1$s");
         add(MekanismLang.SORTER_FILTER_SIZE_MISSING, "Max/min");
         add(MekanismLang.OREDICTIONIFICATOR_FILTER, "Oredictionificator Filter");
         add(MekanismLang.OREDICTIONIFICATOR_FILTER_INVALID_NAMESPACE, "Invalid tag namespace");
@@ -1175,6 +1457,7 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         add(MekanismLang.CONFIG_CARD_SET, "Injected configuration data of type %1$s");
         add(MekanismLang.CONFIG_CARD_UNEQUAL, "Unequal configuration data formats.");
         add(MekanismLang.CONFIG_CARD_HAS_DATA, "Data: %1$s");
+        add(MekanismLang.CONFIG_CARD_CLEARED, "Cleared Configuration Card");
         //Connection Type
         add(MekanismLang.CONNECTION_NORMAL, "Normal");
         add(MekanismLang.CONNECTION_PUSH, "Push");
@@ -1183,7 +1466,7 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         //Teleporter
         add(MekanismLang.TELEPORTER_READY, "Ready");
         add(MekanismLang.TELEPORTER_NO_FRAME, "No frame");
-        add(MekanismLang.TELEPORTER_NO_LINK, "No link");
+        add(MekanismLang.TELEPORTER_NO_DESTINATION, "No destination");
         add(MekanismLang.TELEPORTER_NEEDS_ENERGY, "Needs energy");
         //Matrix
         add(MekanismLang.MATRIX, "Induction Matrix");
@@ -1217,7 +1500,7 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         add(MekanismLang.MINER_INVERSE, "Inverse mode");
         add(MekanismLang.MINER_REQUIRE_REPLACE, "Require replace: %1$s");
         add(MekanismLang.MINER_REQUIRE_REPLACE_INVERSE, "Inverse mode requires replacement: %1$s");
-        add(MekanismLang.MINER_RADIUS, "Radi: %1$s");
+        add(MekanismLang.MINER_RADIUS, "Block radius: %1$s");
         add(MekanismLang.MINER_IDLE, "Not ready");
         add(MekanismLang.MINER_SEARCHING, "Searching");
         add(MekanismLang.MINER_PAUSED, "Paused");
@@ -1259,9 +1542,6 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         add(MekanismLang.ENERGY_JOULES_SHORT, "J");
         add(MekanismLang.ENERGY_FORGE, "Forge Energy");
         add(MekanismLang.ENERGY_FORGE_SHORT, "FE");
-        add(MekanismLang.ENERGY_EU, "Electrical Unit");
-        add(MekanismLang.ENERGY_EU_PLURAL, "Electrical Units");
-        add(MekanismLang.ENERGY_EU_SHORT, "EU");
         //Network Reader
         add(MekanismLang.NETWORK_READER_BORDER, "%1$s %2$s %1$s");
         add(MekanismLang.NETWORK_READER_TEMPERATURE, " *Temperature: %1$s");
@@ -1273,10 +1553,10 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         add(MekanismLang.NETWORK_READER_CAPACITY, " *Capacity: %1$s");
         add(MekanismLang.NETWORK_READER_CONNECTED_SIDES, " *Connected sides: %1$s");
         //Sorter
-        add(MekanismLang.SORTER_DEFAULT, "Default:");
-        add(MekanismLang.SORTER_SINGLE_ITEM, "Single:");
-        add(MekanismLang.SORTER_ROUND_ROBIN, "RR:");
-        add(MekanismLang.SORTER_AUTO_EJECT, "Auto:");
+        add(MekanismLang.SORTER_DEFAULT, "Default color:");
+        add(MekanismLang.SORTER_SINGLE_ITEM, "Force single item:");
+        add(MekanismLang.SORTER_ROUND_ROBIN, "Round robin:");
+        add(MekanismLang.SORTER_AUTO_EJECT, "Eject unfiltered:");
         add(MekanismLang.SORTER_SINGLE_ITEM_DESCRIPTION, "Sends a single item instead of a whole stack each time (overrides min and max set in ItemStack filters).");
         add(MekanismLang.SORTER_ROUND_ROBIN_DESCRIPTION, "Cycles between all connected inventories when sending items.");
         add(MekanismLang.SORTER_AUTO_EJECT_DESCRIPTION, "Ejects unfiltered items automatically to connected inventories, using the default configuration.");
@@ -1300,6 +1580,7 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         add(MekanismLang.JETPACK_MODE_CHANGE, "Jetpack mode changed to: %1$s");
         add(MekanismLang.JETPACK_NORMAL, "Regular");
         add(MekanismLang.JETPACK_HOVER, "Hover");
+        add(MekanismLang.JETPACK_VECTOR, "Vector");
         add(MekanismLang.JETPACK_DISABLED, "Disabled");
         //Disassembler Mode
         add(MekanismLang.DISASSEMBLER_MODE_CHANGE, "Mode toggled to: %1$s (%2$s)");
@@ -1382,17 +1663,17 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         add(MekanismLang.DESCRIPTION_PERSONAL_CHEST, "A 54-slot chest that can be opened from your own inventory.");
         add(MekanismLang.DESCRIPTION_CHARGEPAD, "A universal chargepad that can charge any energized item from any mod.");
         add(MekanismLang.DESCRIPTION_LOGISTICAL_SORTER, "A filter-based, advanced sorting machine that can auto-eject specified items out of and into adjacent inventories and Logistical Transporters.");
-        add(MekanismLang.DESCRIPTION_ROTARY_CONDENSENTRATOR, "A machine capable of converting gases into their fluid form and vice versa.");
+        add(MekanismLang.DESCRIPTION_ROTARY_CONDENSENTRATOR, "A machine capable of converting chemicals into their fluid form and vice versa.");
         add(MekanismLang.DESCRIPTION_CHEMICAL_INJECTION_CHAMBER, "An elite machine capable of processing ores into four shards, serving as the initial stage of 400% ore processing.");
-        add(MekanismLang.DESCRIPTION_ELECTROLYTIC_SEPARATOR, "A machine that uses the process of electrolysis to split apart a certain gas into two different gases.");
+        add(MekanismLang.DESCRIPTION_ELECTROLYTIC_SEPARATOR, "A machine that uses the process of electrolysis to split apart a certain fluid into two different chemicals.");
         add(MekanismLang.DESCRIPTION_PRECISION_SAWMILL, "A machine used to process logs and other wood-based items more efficiently, as well as to obtain sawdust.");
         add(MekanismLang.DESCRIPTION_CHEMICAL_DISSOLUTION_CHAMBER, "An ultimate machine used to chemically dissolve all impurities of an ore, leaving an unprocessed slurry behind.");
         add(MekanismLang.DESCRIPTION_CHEMICAL_WASHER, "An ultimate machine that cleans unprocessed slurry and prepares it for crystallization.");
         add(MekanismLang.DESCRIPTION_CHEMICAL_CRYSTALLIZER, "An ultimate machine used to crystallize purified ore slurry into ore crystals.");
         add(MekanismLang.DESCRIPTION_CHEMICAL_OXIDIZER, "A machine capable of oxidizing solid materials into gas phase.");
-        add(MekanismLang.DESCRIPTION_CHEMICAL_INFUSER, "A machine that produces a new gas by infusing two others.");
+        add(MekanismLang.DESCRIPTION_CHEMICAL_INFUSER, "A machine that produces a new chemicals by infusing two others.");
         add(MekanismLang.DESCRIPTION_SEISMIC_VIBRATOR, "A machine that uses seismic vibrations to provide information on differing layers of the world.");
-        add(MekanismLang.DESCRIPTION_PRESSURIZED_REACTION_CHAMBER, "An advanced machine that processes a solid, liquid and gaseous mixture and creates both a gaseous and solid product.");
+        add(MekanismLang.DESCRIPTION_PRESSURIZED_REACTION_CHAMBER, "An advanced machine that processes a solid, liquid and chemical mixture and creates both a chemical and solid product.");
         add(MekanismLang.DESCRIPTION_FLUID_TANK, "A handy, sturdy, portable tank that lets you carry multiple buckets of fluid wherever you please. Also doubles as a bucket!");
         add(MekanismLang.DESCRIPTION_FLUIDIC_PLENISHER, "A machine that is capable of creating entire lakes by filling ravines with fluids.");
         add(MekanismLang.DESCRIPTION_LASER, "An advanced form of linear energy transfer that utilizes an extremely collimated beam of light.");
@@ -1416,6 +1697,11 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         add(MekanismLang.DESCRIPTION_INDUSTRIAL_ALARM, "Not just your everyday alarm... this is an 'industrial' alarm!");
         add(MekanismLang.DESCRIPTION_ENERGY_CUBE, "An advanced device for storing and distributing energy.");
         add(MekanismLang.DESCRIPTION_CHEMICAL_TANK, "A portable tank that lets you carry chemicals wherever you please.");
+        add(MekanismLang.DESCRIPTION_CABLE, "A simple way of distributing energy throughout a transmitter network.");
+        add(MekanismLang.DESCRIPTION_PIPE, "A simple way of distributing fluids throughout a transmitter network.");
+        add(MekanismLang.DESCRIPTION_TUBE, "A simple way of distributing chemicals throughout a transmitter network.");
+        add(MekanismLang.DESCRIPTION_TRANSPORTER, "A simple way of transporting items along the transmitter network.");
+        add(MekanismLang.DESCRIPTION_CONDUCTOR, "A simple way of transferring heat from one location to another.");
         add(MekanismLang.DESCRIPTION_DIVERSION, "- Controllable by redstone");
         add(MekanismLang.DESCRIPTION_RESTRICTIVE, "- Only used if no other paths available");
         add(MekanismLang.DESCRIPTION_SPS_CASING, "Reinforced casing capable of resisting intense chemical and thermal effects from phase-shifting reactions.");
@@ -1442,6 +1728,7 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         add(MekanismLang.RADIAL_BLASTING_POWER_HIGH, "High");
         add(MekanismLang.RADIAL_BLASTING_POWER_EXTREME, "Extreme");
         // Modules
+        add(MekanismLang.REMOVE_ALL_MODULES_TOOLTIP, "Removes a single module, hold shift to remove all.");
         add(MekanismLang.MODULE_ENABLED, "Enabled");
         add(MekanismLang.MODULE_ENABLED_LOWER, "enabled");
         add(MekanismLang.MODULE_DISABLED_LOWER, "disabled");
@@ -1452,37 +1739,39 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         add(MekanismLang.MODULE_CONFLICTING, "Conflicts with:");
         add(MekanismLang.MODULE_STACKABLE, "Stackable: %1$s");
         add(MekanismLang.MODULE_EXCLUSIVE, "(Exclusive Module)");
-        add(MekanismLang.MODULE_HANDLE_MODE_CHANGE, "Handle Mode Key");
-        add(MekanismLang.MODULE_RENDER_HUD, "Show in HUD");
+        addModuleConfig(ModuleConfig.HANDLES_MODE_CHANGE_KEY, "Handle Mode Key");
+        addModuleConfig(ModuleConfig.RENDER_HUD_KEY, "Show in HUD");
         add(MekanismLang.MODULE_MODE, "Mode");
-        add(MekanismLang.MODULE_COLOR, "ARGB Color");
-        add(MekanismLang.MODULE_BONUS_ATTACK_DAMAGE, "Bonus Attack Damage");
-        add(MekanismLang.MODULE_FARMING_RADIUS, "Farming Radius");
-        add(MekanismLang.MODULE_JUMP_BOOST, "Jump Boost");
-        add(MekanismLang.MODULE_STEP_ASSIST, "Step Assist");
-        add(MekanismLang.MODULE_RANGE, "Range");
-        add(MekanismLang.MODULE_SPRINT_BOOST, "Sprint Boost");
-        add(MekanismLang.MODULE_SWIM_BOOST, "Swim Boost");
+        addModuleConfig(ModuleColorModulationUnit.COLOR, "ARGB Color");
+        addModuleConfig(ModuleAttackAmplificationUnit.ATTACK_DAMAGE, "Bonus Attack Damage");
+        addModuleConfig(ModuleFarmingUnit.FARMING_RADIUS, "Farming Radius");
+        addModuleConfig(ModuleHydraulicPropulsionUnit.JUMP_BOOST, "Jump Boost");
+        addModuleConfig(ModuleHydraulicPropulsionUnit.STEP_ASSIST, "Step Assist");
+        addModuleConfig(ModuleMagneticAttractionUnit.RANGE, "Range");
+        addModuleConfig(ModuleLocomotiveBoostingUnit.SPRINT_BOOST, "Sprint Boost");
+        addModuleConfig(ModuleHydrostaticRepulsorUnit.SWIM_BOOST, "Swim Boost");
         add(MekanismLang.MODULE_EXTENDED_MODE, "Extended Mode");
         add(MekanismLang.MODULE_EXTENDED_ENABLED, "Extended Vein Mining: %1$s");
-        add(MekanismLang.MODULE_EXCAVATION_RANGE, "Excavation Range");
-        add(MekanismLang.MODULE_BLAST_RADIUS, "Blast Radius");
+        addModuleConfig(ModuleVeinMiningUnit.EXCAVATION_RANGE, "Excavation Range");
+        addModuleConfig(ModuleBlastingUnit.BLAST_RADIUS, "Blast Radius");
         add(MekanismLang.MODULE_BLASTING_ENABLED, "Blast Radius: %1$s");
         add(MekanismLang.MODULE_BLAST_AREA, "%1$sx%1$s");
         add(MekanismLang.MODULE_EFFICIENCY, "Efficiency");
         add(MekanismLang.MODULE_MODE_CHANGE, "%1$s bumped to: %2$s");
         add(MekanismLang.MODULE_JETPACK_MODE, "Jetpack Mode");
+        addModuleConfig(ModuleJetpackUnit.JETPACK_MULT, "Thrust Multiplier");
+        addModuleConfig(ModuleJetpackUnit.JETPACK_HOVER_MULT, "Hover Thrust Multiplier");
         add(MekanismLang.MODULE_GRAVITATIONAL_MODULATION, "Gravitational Modulation");
         add(MekanismLang.MODULE_MAGNETIC_ATTRACTION, "Magnetic Attraction");
-        add(MekanismLang.MODULE_CHARGE_SUIT, "Charge Suit");
-        add(MekanismLang.MODULE_CHARGE_INVENTORY, "Charge Inventory");
-        add(MekanismLang.MODULE_SPEED_BOOST, "Speed Boost");
+        addModuleConfig(ModuleChargeDistributionUnit.CHARGE_SUIT, "Charge Suit");
+        addModuleConfig(ModuleChargeDistributionUnit.CHARGE_INVENTORY, "Charge Inventory");
+        addModuleConfig(ModuleGravitationalModulatingUnit.SPEED_BOOST, "Speed Boost");
         add(MekanismLang.MODULE_VISION_ENHANCEMENT, "Vision Enhancement");
-        add(MekanismLang.MODULE_BREATHING_HELD, "Fill Held");
-        add(MekanismLang.MODULE_PURIFICATION_BENEFICIAL, "Remove Beneficial");
-        add(MekanismLang.MODULE_PURIFICATION_NEUTRAL, "Remove Neutral");
-        add(MekanismLang.MODULE_PURIFICATION_HARMFUL, "Remove Harmful");
-        add(MekanismLang.MODULE_TELEPORT_REQUIRES_BLOCK, "Requires Block Target");
+        addModuleConfig(ModuleElectrolyticBreathingUnit.FILL_HELD, "Fill Held");
+        addModuleConfig(ModuleInhalationPurificationUnit.BENEFICIAL_EFFECTS, "Remove Beneficial");
+        addModuleConfig(ModuleInhalationPurificationUnit.NEUTRAL_EFFECTS, "Remove Neutral");
+        addModuleConfig(ModuleInhalationPurificationUnit.HARMFUL_EFFECTS, "Remove Harmful");
+        addModuleConfig(ModuleTeleportationUnit.REQUIRE_TARGET, "Requires Block Target");
 
         add(MekanismModules.ENERGY_UNIT, "Energy Unit", "Increases maximum energy capacity.");
         add(MekanismModules.COLOR_MODULATION_UNIT, "Color Modulation Unit", "Uses advanced holographic projectors to modulate the perceived color of the MekaSuit.");
@@ -1516,24 +1805,28 @@ public class MekanismLangProvider extends BaseLanguageProvider {
         add(MekanismModules.HYDRAULIC_PROPULSION_UNIT, "Hydraulic Propulsion Unit", "Allows the user to both step and jump higher.");
         add(MekanismModules.MAGNETIC_ATTRACTION_UNIT, "Magnetic Attraction Unit", "Uses powerful magnets to draw distant items towards the player. Install multiple for a greater range.");
         add(MekanismModules.FROST_WALKER_UNIT, "Frost Walker Unit", "Uses liquid hydrogen to freeze any water the player walks on. Install multiple for a greater range.");
+        add(MekanismModules.SOUL_SURFER_UNIT, "Soul Surfer Unit", "Allows the user to surf effortlessly across the top of souls. Install multiple for a greater speed.");
+        // FramedBlocks integration
+        add(MekanismLang.FRAMEDBLOCKS_CAMO_HAS_SPECIAL_HANDLING, "Chemicals which require special handling cannot be inserted into framed blocks!");
     }
 
     private void addOre(OreType type, String description) {
-        String name = formatAndCapitalize(type.getResource().getRegistrySuffix());
+        String name = TextUtils.formatAndCapitalize(type.getResource().getRegistrySuffix());
         OreBlockType oreBlockType = MekanismBlocks.ORES.get(type);
         add(oreBlockType.stone(), name + " Ore");
-        add(oreBlockType.stoneBlock().getDescriptionTranslationKey(), description);
+        add(oreBlockType.stone().value().getDescriptionTranslationKey(), description);
         add(oreBlockType.deepslate(), "Deepslate " + name + " Ore");
+        add(MekanismTags.Items.ORES.get(type), name + " Ores");
     }
 
-    private void addTiered(IItemProvider basic, IItemProvider advanced, IItemProvider elite, IItemProvider ultimate, String name) {
+    private void addTiered(IHasTranslationKey basic, IHasTranslationKey advanced, IHasTranslationKey elite, IHasTranslationKey ultimate, String name) {
         add(basic, "Basic " + name);
         add(advanced, "Advanced " + name);
         add(elite, "Elite " + name);
         add(ultimate, "Ultimate " + name);
     }
 
-    private void addTiered(IItemProvider basic, IItemProvider advanced, IItemProvider elite, IItemProvider ultimate, IItemProvider creative, String name) {
+    private void addTiered(IHasTranslationKey basic, IHasTranslationKey advanced, IHasTranslationKey elite, IHasTranslationKey ultimate, IHasTranslationKey creative, String name) {
         addTiered(basic, advanced, elite, ultimate, name);
         add(creative, "Creative " + name);
     }

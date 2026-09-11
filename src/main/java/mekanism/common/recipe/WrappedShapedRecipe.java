@@ -1,24 +1,23 @@
 package mekanism.common.recipe;
 
 import mekanism.api.annotations.NothingNullByDefault;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
-import net.minecraft.core.RegistryAccess;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.CraftingBookCategory;
-import net.minecraft.world.item.crafting.CraftingRecipe;
+import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.ShapedRecipe;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.common.crafting.IShapedRecipe;
 
 @NothingNullByDefault
-public abstract class WrappedShapedRecipe implements CraftingRecipe, IShapedRecipe<CraftingContainer> {
+public abstract class WrappedShapedRecipe extends ShapedRecipe {
 
     private final ShapedRecipe internal;
 
     protected WrappedShapedRecipe(ShapedRecipe internal) {
+        //Note: We override all uses and calls to pattern and result, so we can just pass null and empty to them
+        // Because pattern is AT'd to public however, we make use of it to pass it to super, in case another mod is querying the value
+        super(internal.getGroup(), internal.category(), internal.pattern, ItemStack.EMPTY, internal.showNotification());
         this.internal = internal;
     }
 
@@ -27,18 +26,13 @@ public abstract class WrappedShapedRecipe implements CraftingRecipe, IShapedReci
     }
 
     @Override
-    public CraftingBookCategory category() {
-        return internal.category();
-    }
+    public abstract ItemStack assemble(CraftingInput input, HolderLookup.Provider provider);
 
     @Override
-    public abstract ItemStack assemble(CraftingContainer inv, RegistryAccess registryAccess);
-
-    @Override
-    public boolean matches(CraftingContainer inv, Level world) {
+    public boolean matches(CraftingInput input, Level world) {
         //Note: We do not override the matches method if it matches ignoring NBT,
         // to ensure that we return the proper value for if there is a match that gives a proper output
-        return internal.matches(inv, world) && !assemble(inv, world.registryAccess()).isEmpty();
+        return internal.matches(input, world) && !assemble(input, world.registryAccess()).isEmpty();
     }
 
     @Override
@@ -47,13 +41,13 @@ public abstract class WrappedShapedRecipe implements CraftingRecipe, IShapedReci
     }
 
     @Override
-    public ItemStack getResultItem(RegistryAccess registryAccess) {
-        return internal.getResultItem(registryAccess);
+    public ItemStack getResultItem(HolderLookup.Provider provider) {
+        return internal.getResultItem(provider);
     }
 
     @Override
-    public NonNullList<ItemStack> getRemainingItems(CraftingContainer inv) {
-        return internal.getRemainingItems(inv);
+    public NonNullList<ItemStack> getRemainingItems(CraftingInput input) {
+        return internal.getRemainingItems(input);
     }
 
     @Override
@@ -67,28 +61,18 @@ public abstract class WrappedShapedRecipe implements CraftingRecipe, IShapedReci
     }
 
     @Override
-    public String getGroup() {
-        return internal.getGroup();
-    }
-
-    @Override
     public ItemStack getToastSymbol() {
         return internal.getToastSymbol();
     }
 
     @Override
-    public ResourceLocation getId() {
-        return internal.getId();
+    public int getWidth() {
+        return internal.getWidth();
     }
 
     @Override
-    public int getRecipeWidth() {
-        return internal.getRecipeWidth();
-    }
-
-    @Override
-    public int getRecipeHeight() {
-        return internal.getRecipeHeight();
+    public int getHeight() {
+        return internal.getHeight();
     }
 
     @Override

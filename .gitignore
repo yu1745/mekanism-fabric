@@ -8,9 +8,7 @@ out
 
 Mekanism*.jar
 MDK.zip
-/run
 /runs
-/runGameTests
 /.gradle
 *.classpath
 *.project

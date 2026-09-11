@@ -1,90 +1,76 @@
 package mekanism.additions.common.entity.baby;
 
+import mekanism.additions.common.config.MekanismAdditionsConfig;
+import mekanism.additions.common.registries.AdditionsEntityTypes;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.protocol.Packet;
-import net.minecraft.network.protocol.game.ClientGamePacketListener;
-import net.minecraft.network.syncher.EntityDataAccessor;
-import net.minecraft.network.syncher.EntityDataSerializers;
-import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.monster.Stray;
+import net.minecraft.world.entity.projectile.AbstractArrow;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-public class EntityBabyStray extends Stray implements IBabyEntity {
-
-    private static final EntityDataAccessor<Boolean> IS_CHILD = SynchedEntityData.defineId(EntityBabyStray.class, EntityDataSerializers.BOOLEAN);
+public class EntityBabyStray extends Stray {
 
     //Copy of stray spawn restrictions
     public static boolean spawnRestrictions(EntityType<EntityBabyStray> type, ServerLevelAccessor world, MobSpawnType reason, BlockPos pos, RandomSource random) {
-        BlockPos blockpos = pos;
+        BlockPos.MutableBlockPos mutable = new BlockPos.MutableBlockPos(pos.getX(), pos.getY(), pos.getZ());
         do {
-            blockpos = blockpos.above();
-        } while (world.getBlockState(blockpos).is(Blocks.POWDER_SNOW));
-        return checkMonsterSpawnRules(type, world, reason, pos, random) && (reason == MobSpawnType.SPAWNER || world.canSeeSky(blockpos.below()));
+            mutable.move(Direction.UP);
+        } while (world.getBlockState(mutable).is(Blocks.POWDER_SNOW));
+        if (checkMonsterSpawnRules(type, world, reason, pos, random)) {
+            if (reason == MobSpawnType.SPAWNER) {
+                return true;
+            }
+            mutable.move(Direction.DOWN);
+            return world.canSeeSky(mutable);
+        }
+        return false;
     }
 
     public EntityBabyStray(EntityType<EntityBabyStray> type, Level world) {
         super(type, world);
-        setBaby(true);
-    }
-
-    @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        getEntityData().define(IS_CHILD, false);
+        this.xpReward = (int) (this.xpReward * 2.5);
+        AdditionsEntityTypes.setupBabyModifiers(this);
     }
 
     @Override
     public boolean isBaby() {
-        return getEntityData().get(IS_CHILD);
-    }
-
-    @Override
-    public void setBaby(boolean child) {
-        setChild(IS_CHILD, child);
-    }
-
-    @Override
-    public void onSyncedDataUpdated(@NotNull EntityDataAccessor<?> key) {
-        if (IS_CHILD.equals(key)) {
-            refreshDimensions();
-        }
-        super.onSyncedDataUpdated(key);
-    }
-
-    @Override
-    public int getExperienceReward() {
-        if (isBaby()) {
-            int oldXp = xpReward;
-            xpReward = (int) (xpReward * 2.5F);
-            int reward = super.getExperienceReward();
-            xpReward = oldXp;
-            return reward;
-        }
-        return super.getExperienceReward();
-    }
-
-    @Override
-    public double getMyRidingOffset() {
-        return isBaby() ? 0 : super.getMyRidingOffset();
-    }
-
-    @Override
-    protected float getStandingEyeHeight(@NotNull Pose pose, @NotNull EntityDimensions size) {
-        return this.isBaby() ? 0.93F : super.getStandingEyeHeight(pose, size);
+        return true;
     }
 
     @NotNull
     @Override
-    public Packet<ClientGamePacketListener> getAddEntityPacket() {
-        return NetworkHooks.getEntitySpawningPacket(this);
+    public EntityDimensions getDefaultDimensions(@NotNull Pose pose) {
+        //Note: We already have the age scale factored into the dimensions
+        return getType().getDimensions();
+    }
+
+    @NotNull
+    @Override
+    protected AbstractArrow getArrow(@NotNull ItemStack arrow, float velocity, @Nullable ItemStack weapon) {
+        AbstractArrow projectile = super.getArrow(arrow, velocity, weapon);
+        projectile.setBaseDamage(projectile.getBaseDamage() * MekanismAdditionsConfig.additions.babyArrowDamageMultiplier.get());
+        return projectile;
+    }
+
+    @Override
+    protected void populateDefaultEquipmentSlots(@NotNull RandomSource random, @NotNull DifficultyInstance difficulty) {
+        super.populateDefaultEquipmentSlots(random, difficulty);
+        for (EquipmentSlot slot : EquipmentSlot.values()) {
+            if (slot.getType() == EquipmentSlot.Type.HUMANOID_ARMOR) {
+                this.setItemSlot(slot, ItemStack.EMPTY);
+            }
+        }
     }
 }

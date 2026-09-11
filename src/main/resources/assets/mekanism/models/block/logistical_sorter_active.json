@@ -207,7 +207,7 @@
 			"faces": {
 				"north": {"uv": [0, 0, 5, 5], "texture": "#4", "cullface": "north"}
 			},
-			"forge_data": {
+			"neoforge_data": {
 				"block_light": 15,
 				"sky_light": 15
 			}
@@ -247,8 +247,8 @@
 		},
 		{
 			"name": "panel1",
-			"from": [11.005, 6.5, 4],
-			"to": [12.005, 9.5, 11],
+			"from": [11.008, 6.5, 4],
+			"to": [12.008, 9.5, 11],
 			"faces": {
 				"east": {"uv": [0, 6.5, 3.5, 8], "texture": "#all"},
 				"west": {"uv": [0, 5.5, 3.5, 7], "texture": "#all"},
@@ -258,8 +258,8 @@
 		},
 		{
 			"name": "panel2",
-			"from": [3.995, 6.5, 4],
-			"to": [4.995, 9.5, 11],
+			"from": [3.992, 6.5, 4],
+			"to": [4.992, 9.5, 11],
 			"faces": {
 				"east": {"uv": [0, 5.5, 3.5, 7], "texture": "#all"},
 				"west": {"uv": [0, 6.5, 3.5, 8], "texture": "#all"},
@@ -291,7 +291,7 @@
 				"up": {"uv": [0, 0, 1, 1], "texture": "#leds"},
 				"down": {"uv": [0, 0, 1, 1], "texture": "#leds"}
 			},
-			"forge_data": {
+			"neoforge_data": {
 				"block_light": 15,
 				"sky_light": 15
 			}
@@ -308,7 +308,7 @@
 				"up": {"uv": [0, 0, 1, 1], "texture": "#leds"},
 				"down": {"uv": [0, 0, 1, 1], "texture": "#leds"}
 			},
-			"forge_data": {
+			"neoforge_data": {
 				"block_light": 15,
 				"sky_light": 15
 			}
@@ -325,7 +325,7 @@
 				"up": {"uv": [0, 0, 1, 1], "texture": "#leds"},
 				"down": {"uv": [0, 0, 1, 1], "texture": "#leds"}
 			},
-			"forge_data": {
+			"neoforge_data": {
 				"block_light": 15,
 				"sky_light": 15
 			}
@@ -342,7 +342,7 @@
 				"up": {"uv": [0, 0, 1, 1], "texture": "#leds"},
 				"down": {"uv": [0, 0, 1, 1], "texture": "#leds"}
 			},
-			"forge_data": {
+			"neoforge_data": {
 				"block_light": 15,
 				"sky_light": 15
 			}

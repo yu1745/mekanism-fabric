@@ -3,22 +3,21 @@ package mekanism.common.tile.component;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import mekanism.api.NBTConstants;
+import mekanism.api.SerializationConstants;
 import mekanism.api.RelativeSide;
-import mekanism.api.chemical.gas.IGasTank;
-import mekanism.api.chemical.infuse.IInfusionTank;
-import mekanism.api.chemical.pigment.IPigmentTank;
-import mekanism.api.chemical.slurry.ISlurryTank;
+import mekanism.api.chemical.IChemicalTank;
 import mekanism.api.energy.IEnergyContainer;
 import mekanism.api.fluid.IExtendedFluidTank;
 import mekanism.api.heat.IHeatCapacitor;
 import mekanism.api.inventory.IInventorySlot;
+import mekanism.common.attachments.component.AttachedSideConfig;
+import mekanism.common.attachments.component.AttachedSideConfig.LightConfigInfo;
 import mekanism.common.capabilities.Capabilities;
 import mekanism.common.integration.computer.ComputerException;
 import mekanism.common.integration.computer.annotation.ComputerMethod;
@@ -27,14 +26,13 @@ import mekanism.common.inventory.container.MekanismContainer.ISpecificContainerT
 import mekanism.common.inventory.container.sync.ISyncableData;
 import mekanism.common.inventory.container.sync.SyncableBoolean;
 import mekanism.common.lib.transmitter.TransmissionType;
+import mekanism.common.registries.MekanismDataComponents;
 import mekanism.common.tile.base.TileEntityMekanism;
 import mekanism.common.tile.component.config.ConfigInfo;
 import mekanism.common.tile.component.config.DataType;
+import mekanism.common.tile.component.config.IPersistentConfigInfo;
 import mekanism.common.tile.component.config.slot.BaseSlotInfo;
-import mekanism.common.tile.component.config.slot.ChemicalSlotInfo.GasSlotInfo;
-import mekanism.common.tile.component.config.slot.ChemicalSlotInfo.InfusionSlotInfo;
-import mekanism.common.tile.component.config.slot.ChemicalSlotInfo.PigmentSlotInfo;
-import mekanism.common.tile.component.config.slot.ChemicalSlotInfo.SlurrySlotInfo;
+import mekanism.common.tile.component.config.slot.ChemicalSlotInfo;
 import mekanism.common.tile.component.config.slot.EnergySlotInfo;
 import mekanism.common.tile.component.config.slot.FluidSlotInfo;
 import mekanism.common.tile.component.config.slot.HeatSlotInfo;
@@ -42,26 +40,31 @@ import mekanism.common.tile.component.config.slot.ISlotInfo;
 import mekanism.common.tile.component.config.slot.InventorySlotInfo;
 import mekanism.common.util.EnumUtils;
 import mekanism.common.util.NBTUtils;
-import mekanism.common.util.WorldUtils;
 import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
+import net.minecraft.nbt.Tag;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.neoforged.neoforge.capabilities.BlockCapability;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class TileComponentConfig implements ITileComponent, ISpecificContainerTracker {
 
+    public static final String LEGACY_ITEM_EJECT_KEY = SerializationConstants.EJECT + TransmissionType.ITEM.getLegacyOrdinal();
+    public static final String LEGACY_ITEM_CONFIG_KEY = SerializationConstants.CONFIG + TransmissionType.ITEM.getLegacyOrdinal();
     public final TileEntityMekanism tile;
     private final Map<TransmissionType, ConfigInfo> configInfo = new EnumMap<>(TransmissionType.class);
     private final Map<TransmissionType, List<Consumer<Direction>>> configChangeListeners = new EnumMap<>(TransmissionType.class);
     //TODO: See if we can come up with a way of not needing this. The issue is we want this to be sorted, but getting the keySet of configInfo doesn't work for us
     private final List<TransmissionType> transmissionTypes = new ArrayList<>();
 
-    public TileComponentConfig(TileEntityMekanism tile, TransmissionType... types) {
+    public TileComponentConfig(TileEntityMekanism tile, Set<TransmissionType> types) {
         this.tile = tile;
         for (TransmissionType type : types) {
-            addSupported(type);
+            configInfo.put(type, new ConfigInfo());
+            transmissionTypes.add(type);
         }
         tile.addComponent(this);
     }
@@ -77,20 +80,15 @@ public class TileComponentConfig implements ITileComponent, ISpecificContainerTr
         Direction direction = side.getDirection(tile.getDirection());
         sideChangedBasic(transmissionType, direction);
         tile.sendUpdatePacket();
-        //Notify the neighbor on that side our state changed
-        WorldUtils.notifyNeighborOfChange(tile.getLevel(), direction, tile.getBlockPos());
     }
 
     private void sideChangedBasic(TransmissionType transmissionType, Direction direction) {
         switch (transmissionType) {
-            case ENERGY -> tile.invalidateCapabilities(EnergyCompatUtils.getEnabledEnergyCapabilities(), direction);
-            case FLUID -> tile.invalidateCapability(ForgeCapabilities.FLUID_HANDLER, direction);
-            case GAS -> tile.invalidateCapability(Capabilities.GAS_HANDLER, direction);
-            case INFUSION -> tile.invalidateCapability(Capabilities.INFUSION_HANDLER, direction);
-            case PIGMENT -> tile.invalidateCapability(Capabilities.PIGMENT_HANDLER, direction);
-            case SLURRY -> tile.invalidateCapability(Capabilities.SLURRY_HANDLER, direction);
-            case ITEM -> tile.invalidateCapability(ForgeCapabilities.ITEM_HANDLER, direction);
-            case HEAT -> tile.invalidateCapability(Capabilities.HEAT_HANDLER, direction);
+            case ENERGY -> tile.invalidateCapabilities(EnergyCompatUtils.getLoadedEnergyCapabilities(), direction);
+            case FLUID -> tile.invalidateCapability(Capabilities.FLUID.block(), direction);
+            case CHEMICAL -> tile.invalidateCapability(Capabilities.CHEMICAL.block(), direction);
+            case ITEM -> tile.invalidateCapability(Capabilities.ITEM.block(), direction);
+            case HEAT -> tile.invalidateCapability(Capabilities.HEAT, direction);
         }
         tile.markForSave();
         //And invalidate any "listeners" we may have that the side changed for a specific transmission type
@@ -108,28 +106,15 @@ public class TileComponentConfig implements ITileComponent, ISpecificContainerTr
         return transmissionTypes;
     }
 
-    public void addSupported(TransmissionType type) {
-        if (!configInfo.containsKey(type)) {
-            configInfo.put(type, new ConfigInfo(tile::getDirection));
-            transmissionTypes.add(type);
-        }
-    }
-
-    public boolean isCapabilityDisabled(@NotNull Capability<?> capability, Direction side) {
+    public boolean isCapabilityDisabled(@NotNull BlockCapability<?, @Nullable Direction> capability, @Nullable Direction side) {
         TransmissionType type = null;
-        if (capability == ForgeCapabilities.ITEM_HANDLER) {
+        if (Capabilities.ITEM.is(capability)) {
             type = TransmissionType.ITEM;
-        } else if (capability == Capabilities.GAS_HANDLER) {
-            type = TransmissionType.GAS;
-        } else if (capability == Capabilities.INFUSION_HANDLER) {
-            type = TransmissionType.INFUSION;
-        } else if (capability == Capabilities.PIGMENT_HANDLER) {
-            type = TransmissionType.PIGMENT;
-        } else if (capability == Capabilities.SLURRY_HANDLER) {
-            type = TransmissionType.SLURRY;
-        } else if (capability == Capabilities.HEAT_HANDLER) {
+        } else if (Capabilities.CHEMICAL.is(capability)) {
+            type = TransmissionType.CHEMICAL;
+        } else if (capability == Capabilities.HEAT) {
             type = TransmissionType.HEAT;
-        } else if (capability == ForgeCapabilities.FLUID_HANDLER) {
+        } else if (Capabilities.FLUID.is(capability)) {
             type = TransmissionType.FLUID;
         } else if (EnergyCompatUtils.isEnergyCapability(capability)) {
             type = TransmissionType.ENERGY;
@@ -163,7 +148,6 @@ public class TileComponentConfig implements ITileComponent, ISpecificContainerTr
         ConfigInfo config = getConfig(type);
         if (config != null) {
             config.addSlotInfo(DataType.INPUT, createInfo(type, true, false, container));
-            config.fill(DataType.INPUT);
             config.setCanEject(false);
         }
         return config;
@@ -173,8 +157,6 @@ public class TileComponentConfig implements ITileComponent, ISpecificContainerTr
         ConfigInfo config = getConfig(type);
         if (config != null) {
             config.addSlotInfo(DataType.OUTPUT, createInfo(type, false, true, container));
-            config.setDataType(DataType.OUTPUT, sides);
-            config.setEjecting(true);
         }
         return config;
     }
@@ -194,8 +176,6 @@ public class TileComponentConfig implements ITileComponent, ISpecificContainerTr
             config.addSlotInfo(DataType.INPUT, createInfo(type, true, alwaysAllowOutput, inputContainer));
             config.addSlotInfo(DataType.OUTPUT, createInfo(type, alwaysAllowInput, true, outputContainer));
             config.addSlotInfo(DataType.INPUT_OUTPUT, createInfo(type, true, true, List.of(inputContainer, outputContainer)));
-            config.fill(DataType.INPUT);
-            config.setDataType(DataType.OUTPUT, outputSide);
         }
         return config;
     }
@@ -210,8 +190,6 @@ public class TileComponentConfig implements ITileComponent, ISpecificContainerTr
             config.addSlotInfo(DataType.INPUT, createInfo(type, true, alwaysAllow, info));
             config.addSlotInfo(DataType.OUTPUT, createInfo(type, alwaysAllow, true, info));
             config.addSlotInfo(DataType.INPUT_OUTPUT, createInfo(type, true, true, info));
-            config.fill(DataType.INPUT);
-            config.setDataType(DataType.OUTPUT, outputSide);
         }
         return config;
     }
@@ -229,8 +207,6 @@ public class TileComponentConfig implements ITileComponent, ISpecificContainerTr
             ioSlots.addAll(outputSlots);
             itemConfig.addSlotInfo(DataType.INPUT_OUTPUT, new InventorySlotInfo(true, true, ioSlots));
             itemConfig.addSlotInfo(DataType.ENERGY, new InventorySlotInfo(true, true, energySlot));
-            //Set default config directions
-            itemConfig.setDefaults();
         }
         return itemConfig;
     }
@@ -243,8 +219,6 @@ public class TileComponentConfig implements ITileComponent, ISpecificContainerTr
             itemConfig.addSlotInfo(DataType.INPUT_OUTPUT, new InventorySlotInfo(true, true, inputSlot, outputSlot));
             itemConfig.addSlotInfo(DataType.EXTRA, new InventorySlotInfo(true, true, extraSlot));
             itemConfig.addSlotInfo(DataType.ENERGY, new InventorySlotInfo(true, true, energySlot));
-            //Set default config directions
-            itemConfig.setDefaults();
         }
         return itemConfig;
     }
@@ -276,80 +250,125 @@ public class TileComponentConfig implements ITileComponent, ISpecificContainerTr
     }
 
     @Override
-    public void read(CompoundTag nbtTags) {
-        NBTUtils.setCompoundIfPresent(nbtTags, NBTConstants.COMPONENT_CONFIG, configNBT -> {
-            Set<Direction> directionsToUpdate = EnumSet.noneOf(Direction.class);
-            configInfo.forEach((type, info) -> {
-                NBTUtils.setBooleanIfPresent(configNBT, NBTConstants.EJECT + type.ordinal(), info::setEjecting);
-                NBTUtils.setCompoundIfPresent(configNBT, NBTConstants.CONFIG + type.ordinal(), sideConfig -> {
-                    for (RelativeSide side : EnumUtils.SIDES) {
-                        NBTUtils.setEnumIfPresent(sideConfig, NBTConstants.SIDE + side.ordinal(), DataType::byIndexStatic, dataType -> {
-                            if (info.getDataType(side) != dataType) {
-                                info.setDataType(dataType, side);
-                                if (tile.hasLevel()) {//If we aren't already loaded yet don't do any updates
-                                    Direction direction = side.getDirection(tile.getDirection());
-                                    sideChangedBasic(type, direction);
-                                    directionsToUpdate.add(direction);
-                                }
-                            }
-                        });
-                    }
-                });
-            });
-            WorldUtils.notifyNeighborsOfChange(tile.getLevel(), tile.getBlockPos(), directionsToUpdate);
-        });
+    public String getComponentKey() {
+        return SerializationConstants.COMPONENT_CONFIG;
     }
 
     @Override
-    public void write(CompoundTag nbtTags) {
-        CompoundTag configNBT = new CompoundTag();
+    public void applyImplicitComponents(@NotNull BlockEntity.DataComponentInput input) {
+        AttachedSideConfig sideConfig = input.get(MekanismDataComponents.SIDE_CONFIG);
+        if (sideConfig != null) {
+            for (Entry<TransmissionType, LightConfigInfo> entry : sideConfig.configInfo().entrySet()) {
+                TransmissionType type = entry.getKey();
+                ConfigInfo info = configInfo.get(type);
+                if (info != null) {
+                    LightConfigInfo lightInfo = entry.getValue();
+                    info.setEjecting(lightInfo.isEjecting());
+                    for (Map.Entry<RelativeSide, DataType> sideEntry : lightInfo.sideConfig().entrySet()) {
+                        RelativeSide side = sideEntry.getKey();
+                        if (info.setDataType(sideEntry.getValue(), side)) {
+                            if (tile.hasLevel()) {//If we aren't already loaded yet don't do any updates
+                                Direction direction = side.getDirection(tile.getDirection());
+                                sideChangedBasic(type, direction);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Override
+    public void collectImplicitComponents(DataComponentMap.Builder builder) {
+        builder.set(MekanismDataComponents.SIDE_CONFIG, AttachedSideConfig.create(configInfo));
+    }
+
+    @Override
+    public void deserialize(CompoundTag configNBT, HolderLookup.Provider provider) {
+        read(configNBT, configInfo, (type, side) -> {
+            if (tile.hasLevel()) {//If we aren't already loaded yet don't do any updates
+                Direction direction = side.getDirection(tile.getDirection());
+                sideChangedBasic(type, direction);
+            }
+        });
+    }
+
+    public static void read(CompoundTag configNBT, Map<TransmissionType, ConfigInfo> configInfo) {
+        read(configNBT, configInfo, (type, side) -> {
+        });
+    }
+
+    public static void read(CompoundTag configNBT, Map<TransmissionType, ConfigInfo> configInfo, BiConsumer<TransmissionType, RelativeSide> onChange) {
+        //TODO -  1.22 remove backcompat - check for old ITEM ordinal, switch to legacy ordinals if found
+        boolean isLegacyData = configNBT.contains(LEGACY_ITEM_CONFIG_KEY) || configNBT.contains(LEGACY_ITEM_EJECT_KEY);
         for (Entry<TransmissionType, ConfigInfo> entry : configInfo.entrySet()) {
             TransmissionType type = entry.getKey();
             ConfigInfo info = entry.getValue();
-            configNBT.putBoolean(NBTConstants.EJECT + type.ordinal(), info.isEjecting());
-            CompoundTag sideConfig = new CompoundTag();
-            for (RelativeSide side : EnumUtils.SIDES) {
-                NBTUtils.writeEnum(sideConfig, NBTConstants.SIDE + side.ordinal(), info.getDataType(side));
+            int ordinalToUse = isLegacyData ? type.getLegacyOrdinal() : type.ordinal();
+            NBTUtils.setBooleanIfPresent(configNBT, SerializationConstants.EJECT + ordinalToUse, info::setEjecting);
+            String configKey = SerializationConstants.CONFIG + ordinalToUse;
+            if (configNBT.contains(configKey, Tag.TAG_INT_ARRAY)) {
+                readConfigSides(configNBT, onChange, configKey, info, type);
+            } else if (isLegacyData && type == TransmissionType.CHEMICAL) {
+                //fallback to try load other types in case a machine didn't have GAS
+                for (int legacyOrdinal = TransmissionType.CHEMICAL.getLegacyOrdinal() + 1; legacyOrdinal < TransmissionType.ITEM.getLegacyOrdinal(); legacyOrdinal++) {
+                    configKey = SerializationConstants.CONFIG + legacyOrdinal;
+                    if (configNBT.contains(configKey, Tag.TAG_INT_ARRAY)) {
+                        readConfigSides(configNBT, onChange, configKey, info, type);
+                        break;
+                    }
+                }
             }
-            configNBT.put(NBTConstants.CONFIG + type.ordinal(), sideConfig);
         }
-        nbtTags.put(NBTConstants.COMPONENT_CONFIG, configNBT);
+    }
+
+    private static void readConfigSides(CompoundTag configNBT, BiConsumer<TransmissionType, RelativeSide> onChange, String configKey, ConfigInfo info, TransmissionType type) {
+        int[] sideData = configNBT.getIntArray(configKey);
+        for (int i = 0; i < sideData.length && i < EnumUtils.SIDES.length; i++) {
+            RelativeSide side = EnumUtils.SIDES[i];
+            if (info.setDataType(DataType.BY_ID.apply(sideData[i]), side)) {
+                onChange.accept(type, side);
+            }
+        }
+    }
+
+    @Override
+    public CompoundTag serialize(HolderLookup.Provider provider) {
+        return write(configInfo, true);
+    }
+
+    public static CompoundTag write(Map<TransmissionType, ? extends IPersistentConfigInfo> configInfo, boolean full) {
+        CompoundTag configNBT = new CompoundTag();
+        for (Entry<TransmissionType, ? extends IPersistentConfigInfo> entry : configInfo.entrySet()) {
+            TransmissionType type = entry.getKey();
+            IPersistentConfigInfo info = entry.getValue();
+            if (full) {
+                configNBT.putBoolean(SerializationConstants.EJECT + type.ordinal(), info.isEjecting());
+            }
+            int[] sideData = new int[EnumUtils.SIDES.length];
+            for (int i = 0; i < EnumUtils.SIDES.length; i++) {
+                sideData[i] = info.getDataType(EnumUtils.SIDES[i]).ordinal();
+            }
+            configNBT.putIntArray(SerializationConstants.CONFIG + type.ordinal(), sideData);
+        }
+        return configNBT;
     }
 
     /**
-     * {@inheritDoc}
-     *
      * @implNote This is slightly different from read and write as we don't bother syncing the ejecting status. We can skip syncing the ejecting status as the client only
      * needs that information when in the gui see {@link #getSpecificSyncableData()} for where we sync ejecting status while in GUIs.
      */
     @Override
     public void addToUpdateTag(CompoundTag updateTag) {
-        CompoundTag configNBT = new CompoundTag();
-        for (Entry<TransmissionType, ConfigInfo> entry : configInfo.entrySet()) {
-            TransmissionType type = entry.getKey();
-            ConfigInfo info = entry.getValue();
-            CompoundTag sideConfig = new CompoundTag();
-            for (RelativeSide side : EnumUtils.SIDES) {
-                NBTUtils.writeEnum(sideConfig, NBTConstants.SIDE + side.ordinal(), info.getDataType(side));
-            }
-            configNBT.put(NBTConstants.CONFIG + type.ordinal(), sideConfig);
+        CompoundTag configNBT = write(configInfo, false);
+        if (!configNBT.isEmpty()) {
+            updateTag.put(getComponentKey(), configNBT);
         }
-        updateTag.put(NBTConstants.COMPONENT_CONFIG, configNBT);
     }
 
     @Override
     public void readFromUpdateTag(CompoundTag updateTag) {
-        NBTUtils.setCompoundIfPresent(updateTag, NBTConstants.COMPONENT_CONFIG, configNBT -> {
-            for (Entry<TransmissionType, ConfigInfo> entry : configInfo.entrySet()) {
-                TransmissionType type = entry.getKey();
-                ConfigInfo info = entry.getValue();
-                NBTUtils.setCompoundIfPresent(configNBT, NBTConstants.CONFIG + type.ordinal(), sideConfig -> {
-                    for (RelativeSide side : EnumUtils.SIDES) {
-                        NBTUtils.setEnumIfPresent(sideConfig, NBTConstants.SIDE + side.ordinal(), DataType::byIndexStatic, dataType -> info.setDataType(dataType, side));
-                    }
-                });
-            }
-        });
+        NBTUtils.setCompoundIfPresent(updateTag, getComponentKey(), configNBT -> read(configNBT, configInfo));
     }
 
     @Override
@@ -371,10 +390,7 @@ public class TileComponentConfig implements ITileComponent, ISpecificContainerTr
         return switch (type) {
             case ITEM -> new InventorySlotInfo(input, output, (List<IInventorySlot>) containers);
             case FLUID -> new FluidSlotInfo(input, output, (List<IExtendedFluidTank>) containers);
-            case GAS -> new GasSlotInfo(input, output, (List<IGasTank>) containers);
-            case INFUSION -> new InfusionSlotInfo(input, output, (List<IInfusionTank>) containers);
-            case PIGMENT -> new PigmentSlotInfo(input, output, (List<IPigmentTank>) containers);
-            case SLURRY -> new SlurrySlotInfo(input, output, (List<ISlurryTank>) containers);
+            case CHEMICAL -> new ChemicalSlotInfo(input, output, (List<IChemicalTank>) containers);
             case ENERGY -> new EnergySlotInfo(input, output, (List<IEnergyContainer>) containers);
             case HEAT -> new HeatSlotInfo(input, output, (List<IHeatCapacitor>) containers);
         };
@@ -430,7 +446,7 @@ public class TileComponentConfig implements ITileComponent, ISpecificContainerTr
         tile.validateSecurityIsPublic();
         validateSupportedTransmissionType(type);
         ConfigInfo config = configInfo.get(type);
-        if (!config.getSupportedDataTypes().contains(mode)) {
+        if (!config.supports(mode)) {
             throw new ComputerException("This machine does not support mode '%s' for transmission type '%s'.", mode, type);
         }
         DataType currentMode = config.getDataType(side);

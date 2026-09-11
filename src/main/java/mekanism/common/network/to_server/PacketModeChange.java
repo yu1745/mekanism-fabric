@@ -1,19 +1,29 @@
 package mekanism.common.network.to_server;
 
+import io.netty.buffer.ByteBuf;
+import mekanism.common.Mekanism;
 import mekanism.common.item.interfaces.IModeItem;
 import mekanism.common.item.interfaces.IModeItem.DisplayChange;
 import mekanism.common.network.IMekanismPacket;
-import net.minecraft.network.FriendlyByteBuf;
+import mekanism.common.network.PacketUtils;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import org.jetbrains.annotations.NotNull;
 
-public class PacketModeChange implements IMekanismPacket {
+public record PacketModeChange(EquipmentSlot slot, int shift, boolean displayChangeMessage) implements IMekanismPacket {
 
-    private final boolean displayChangeMessage;
-    private final EquipmentSlot slot;
-    private final int shift;
+    public static final CustomPacketPayload.Type<PacketModeChange> TYPE = new CustomPacketPayload.Type<>(Mekanism.rl("mode"));
+    public static final StreamCodec<ByteBuf, PacketModeChange> STREAM_CODEC = StreamCodec.composite(
+          PacketUtils.EQUIPMENT_SLOT_STREAM_CODEC, PacketModeChange::slot,
+          ByteBufCodecs.VAR_INT, PacketModeChange::shift,
+          ByteBufCodecs.BOOL, PacketModeChange::displayChangeMessage,
+          PacketModeChange::new
+    );
 
     public PacketModeChange(EquipmentSlot slot, boolean holdingShift) {
         this(slot, holdingShift ? -1 : 1, true);
@@ -23,37 +33,24 @@ public class PacketModeChange implements IMekanismPacket {
         this(slot, shift, false);
     }
 
-    private PacketModeChange(EquipmentSlot slot, int shift, boolean displayChangeMessage) {
-        this.slot = slot;
-        this.shift = shift;
-        this.displayChangeMessage = displayChangeMessage;
+    @NotNull
+    @Override
+    public CustomPacketPayload.Type<PacketModeChange> type() {
+        return TYPE;
     }
 
     @Override
-    public void handle(NetworkEvent.Context context) {
-        Player player = context.getSender();
-        if (player != null) {
-            ItemStack stack = player.getItemBySlot(slot);
-            if (!stack.isEmpty() && stack.getItem() instanceof IModeItem modeItem) {
-                DisplayChange displayChange;
-                if (displayChangeMessage) {
-                    displayChange = slot == EquipmentSlot.MAINHAND ? DisplayChange.MAIN_HAND : DisplayChange.OTHER;
-                } else {
-                    displayChange = DisplayChange.NONE;
-                }
-                modeItem.changeMode(player, stack, shift, displayChange);
+    public void handle(IPayloadContext context) {
+        Player player = context.player();
+        ItemStack stack = player.getItemBySlot(slot);
+        if (!stack.isEmpty() && stack.getItem() instanceof IModeItem modeItem) {
+            DisplayChange displayChange;
+            if (displayChangeMessage) {
+                displayChange = slot == EquipmentSlot.MAINHAND ? DisplayChange.MAIN_HAND : DisplayChange.OTHER;
+            } else {
+                displayChange = DisplayChange.NONE;
             }
+            modeItem.changeMode(player, stack, shift, displayChange);
         }
-    }
-
-    @Override
-    public void encode(FriendlyByteBuf buffer) {
-        buffer.writeEnum(slot);
-        buffer.writeVarInt(shift);
-        buffer.writeBoolean(displayChangeMessage);
-    }
-
-    public static PacketModeChange decode(FriendlyByteBuf buffer) {
-        return new PacketModeChange(buffer.readEnum(EquipmentSlot.class), buffer.readVarInt(), buffer.readBoolean());
     }
 }

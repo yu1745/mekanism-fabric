@@ -1,144 +1,133 @@
 package mekanism.api.datagen.recipe.builder;
 
-import com.google.gson.JsonObject;
-import java.util.function.Consumer;
-import mekanism.api.JsonConstants;
-import mekanism.api.SerializerHelper;
 import mekanism.api.annotations.NothingNullByDefault;
-import mekanism.api.chemical.Chemical;
-import mekanism.api.chemical.ChemicalStack;
-import mekanism.api.chemical.gas.Gas;
-import mekanism.api.chemical.gas.GasStack;
-import mekanism.api.chemical.infuse.InfuseType;
-import mekanism.api.chemical.infuse.InfusionStack;
-import mekanism.api.chemical.pigment.Pigment;
-import mekanism.api.chemical.pigment.PigmentStack;
 import mekanism.api.datagen.recipe.MekanismRecipeBuilder;
+import mekanism.api.recipes.ItemStackChemicalToItemStackRecipe;
+import mekanism.api.recipes.basic.BasicCompressingRecipe;
+import mekanism.api.recipes.basic.BasicInjectingRecipe;
+import mekanism.api.recipes.basic.BasicMetallurgicInfuserRecipe;
+import mekanism.api.recipes.basic.BasicPaintingRecipe;
+import mekanism.api.recipes.basic.BasicPurifyingRecipe;
 import mekanism.api.recipes.ingredients.ChemicalStackIngredient;
-import mekanism.api.recipes.ingredients.ChemicalStackIngredient.GasStackIngredient;
-import mekanism.api.recipes.ingredients.ChemicalStackIngredient.InfusionStackIngredient;
-import mekanism.api.recipes.ingredients.ChemicalStackIngredient.PigmentStackIngredient;
 import mekanism.api.recipes.ingredients.ItemStackIngredient;
-import net.minecraft.data.recipes.FinishedRecipe;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.data.recipes.RecipeOutput;
 import net.minecraft.world.item.ItemStack;
-import org.jetbrains.annotations.NotNull;
 
 @NothingNullByDefault
-public class ItemStackChemicalToItemStackRecipeBuilder<CHEMICAL extends Chemical<CHEMICAL>, STACK extends ChemicalStack<CHEMICAL>,
-      INGREDIENT extends ChemicalStackIngredient<CHEMICAL, STACK>> extends MekanismRecipeBuilder<ItemStackChemicalToItemStackRecipeBuilder<CHEMICAL, STACK, INGREDIENT>> {
+public class ItemStackChemicalToItemStackRecipeBuilder extends MekanismRecipeBuilder<ItemStackChemicalToItemStackRecipeBuilder> {
 
+    private final ItemStackChemicalToItemStackRecipeBuilder.Factory factory;
     private final ItemStackIngredient itemInput;
-    private final INGREDIENT chemicalInput;
+    private final ChemicalStackIngredient chemicalInput;
     private final ItemStack output;
+    private final boolean perTickUsage;
 
-    protected ItemStackChemicalToItemStackRecipeBuilder(ResourceLocation serializerName, ItemStackIngredient itemInput, INGREDIENT chemicalInput, ItemStack output) {
-        super(serializerName);
+    protected ItemStackChemicalToItemStackRecipeBuilder(ItemStackIngredient itemInput, ChemicalStackIngredient chemicalInput, ItemStack output, boolean perTickUsage,
+          ItemStackChemicalToItemStackRecipeBuilder.Factory factory) {
         this.itemInput = itemInput;
         this.chemicalInput = chemicalInput;
         this.output = output;
+        this.perTickUsage = perTickUsage;
+        this.factory = factory;
     }
 
     /**
      * Creates a Compressing recipe builder.
      *
-     * @param itemInput Item Input.
-     * @param gasInput  Gas Input, used at a constant rate over the duration of the recipe.
-     * @param output    Output.
+     * @param itemInput     Item Input.
+     * @param chemicalInput Chemical Input, used at a constant rate over the duration of the recipe.
+     * @param output        Output.
+     * @param perTickUsage  Should the recipe consume the chemical input each tick it is processing.
      */
-    public static ItemStackChemicalToItemStackRecipeBuilder<Gas, GasStack, GasStackIngredient> compressing(ItemStackIngredient itemInput, GasStackIngredient gasInput,
-          ItemStack output) {
+    public static ItemStackChemicalToItemStackRecipeBuilder compressing(ItemStackIngredient itemInput, ChemicalStackIngredient chemicalInput, ItemStack output,
+          boolean perTickUsage) {
         if (output.isEmpty()) {
             throw new IllegalArgumentException("This compressing recipe requires a non empty item output.");
         }
-        return new ItemStackChemicalToItemStackRecipeBuilder<>(mekSerializer("compressing"), itemInput, gasInput, output);
+        return new ItemStackChemicalToItemStackRecipeBuilder(itemInput, chemicalInput, output, perTickUsage, BasicCompressingRecipe::new);
     }
 
     /**
      * Creates a Purifying recipe builder.
      *
-     * @param itemInput Item Input.
-     * @param gasInput  Gas Input, used at a near constant rate over the duration of the recipe.
-     * @param output    Output.
+     * @param itemInput     Item Input.
+     * @param chemicalInput Chemical Input, used at a near constant rate over the duration of the recipe.
+     * @param output        Output.
+     * @param perTickUsage  Should the recipe consume the chemical input each tick it is processing.
      */
-    public static ItemStackChemicalToItemStackRecipeBuilder<Gas, GasStack, GasStackIngredient> purifying(ItemStackIngredient itemInput, GasStackIngredient gasInput,
-          ItemStack output) {
+    public static ItemStackChemicalToItemStackRecipeBuilder purifying(ItemStackIngredient itemInput, ChemicalStackIngredient chemicalInput, ItemStack output,
+          boolean perTickUsage) {
         if (output.isEmpty()) {
             throw new IllegalArgumentException("This purifying recipe requires a non empty item output.");
         }
-        return new ItemStackChemicalToItemStackRecipeBuilder<>(mekSerializer("purifying"), itemInput, gasInput, output);
+        return new ItemStackChemicalToItemStackRecipeBuilder(itemInput, chemicalInput, output, perTickUsage, BasicPurifyingRecipe::new);
     }
 
     /**
      * Creates an Injecting recipe builder.
      *
-     * @param itemInput Item Input.
-     * @param gasInput  Gas Input, used at a near constant rate over the duration of the recipe.
-     * @param output    Output.
+     * @param itemInput     Item Input.
+     * @param chemicalInput Chemical Input, used at a near constant rate over the duration of the recipe.
+     * @param output        Output.
+     * @param perTickUsage  Should the recipe consume the chemical input each tick it is processing.
      */
-    public static ItemStackChemicalToItemStackRecipeBuilder<Gas, GasStack, GasStackIngredient> injecting(ItemStackIngredient itemInput, GasStackIngredient gasInput,
-          ItemStack output) {
+    public static ItemStackChemicalToItemStackRecipeBuilder injecting(ItemStackIngredient itemInput, ChemicalStackIngredient chemicalInput, ItemStack output,
+          boolean perTickUsage) {
         if (output.isEmpty()) {
             throw new IllegalArgumentException("This injecting recipe requires a non empty item output.");
         }
-        return new ItemStackChemicalToItemStackRecipeBuilder<>(mekSerializer("injecting"), itemInput, gasInput, output);
+        return new ItemStackChemicalToItemStackRecipeBuilder(itemInput, chemicalInput, output, perTickUsage, BasicInjectingRecipe::new);
     }
 
     /**
      * Creates a Metallurgic Infusing recipe builder.
      *
      * @param itemInput     Item Input.
-     * @param infusionInput Infusion Input.
+     * @param chemicalInput Infusion Input.
      * @param output        Output.
+     * @param perTickUsage  Should the recipe consume the chemical input each tick it is processing.
      */
-    public static ItemStackChemicalToItemStackRecipeBuilder<InfuseType, InfusionStack, InfusionStackIngredient> metallurgicInfusing(ItemStackIngredient itemInput,
-          InfusionStackIngredient infusionInput, ItemStack output) {
+    public static ItemStackChemicalToItemStackRecipeBuilder metallurgicInfusing(ItemStackIngredient itemInput, ChemicalStackIngredient chemicalInput, ItemStack output,
+          boolean perTickUsage) {
         if (output.isEmpty()) {
             throw new IllegalArgumentException("This metallurgic infusing recipe requires a non empty output.");
         }
-        return new ItemStackChemicalToItemStackRecipeBuilder<>(mekSerializer("metallurgic_infusing"), itemInput, infusionInput, output);
+        return new ItemStackChemicalToItemStackRecipeBuilder(itemInput, chemicalInput, output, perTickUsage, BasicMetallurgicInfuserRecipe::new);
     }
 
     /**
      * Creates a Painting recipe builder.
      *
-     * @param itemInput    Item Input.
-     * @param pigmentInput Pigment Input.
-     * @param output       Output.
+     * @param itemInput     Item Input.
+     * @param chemicalInput Chemical Input.
+     * @param output        Output.
+     * @param perTickUsage  Should the recipe consume the chemical input each tick it is processing.
      */
-    public static ItemStackChemicalToItemStackRecipeBuilder<Pigment, PigmentStack, PigmentStackIngredient> painting(ItemStackIngredient itemInput,
-          PigmentStackIngredient pigmentInput, ItemStack output) {
+    public static ItemStackChemicalToItemStackRecipeBuilder painting(ItemStackIngredient itemInput, ChemicalStackIngredient chemicalInput, ItemStack output,
+          boolean perTickUsage) {
         if (output.isEmpty()) {
             throw new IllegalArgumentException("This painting recipe requires a non empty item output.");
         }
-        return new ItemStackChemicalToItemStackRecipeBuilder<>(mekSerializer("painting"), itemInput, pigmentInput, output);
+        return new ItemStackChemicalToItemStackRecipeBuilder(itemInput, chemicalInput, output, perTickUsage, BasicPaintingRecipe::new);
     }
 
     @Override
-    protected ItemStackChemicalToItemStackRecipeResult getResult(ResourceLocation id) {
-        return new ItemStackChemicalToItemStackRecipeResult(id);
+    protected ItemStackChemicalToItemStackRecipe asRecipe() {
+        return factory.create(itemInput, chemicalInput, output, perTickUsage);
     }
 
     /**
      * Builds this recipe using the output item's name as the recipe name.
      *
-     * @param consumer Finished Recipe Consumer.
+     * @param recipeOutput Finished Recipe Consumer.
      */
-    public void build(Consumer<FinishedRecipe> consumer) {
-        build(consumer, output.getItem());
+    public void build(RecipeOutput recipeOutput) {
+        build(recipeOutput, output.getItemHolder());
     }
 
-    public class ItemStackChemicalToItemStackRecipeResult extends RecipeResult {
+    @FunctionalInterface
+    public interface Factory {
 
-        protected ItemStackChemicalToItemStackRecipeResult(ResourceLocation id) {
-            super(id);
-        }
-
-        @Override
-        public void serializeRecipeData(@NotNull JsonObject json) {
-            json.add(JsonConstants.ITEM_INPUT, itemInput.serialize());
-            json.add(JsonConstants.CHEMICAL_INPUT, chemicalInput.serialize());
-            json.add(JsonConstants.OUTPUT, SerializerHelper.serializeItemStack(output));
-        }
+        ItemStackChemicalToItemStackRecipe create(ItemStackIngredient itemInput, ChemicalStackIngredient chemicalInput, ItemStack output, boolean perTickUsage);
     }
 }

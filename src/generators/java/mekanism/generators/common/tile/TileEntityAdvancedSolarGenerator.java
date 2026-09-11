@@ -2,12 +2,12 @@ package mekanism.generators.common.tile;
 
 import mekanism.api.IEvaporationSolar;
 import mekanism.api.RelativeSide;
-import mekanism.api.math.FloatingLong;
-import mekanism.common.capabilities.Capabilities;
-import mekanism.common.capabilities.resolver.BasicCapabilityResolver;
+import mekanism.api.math.MathUtils;
 import mekanism.common.tile.interfaces.IBoundingBlock;
+import mekanism.common.util.MekanismUtils;
 import mekanism.generators.common.config.MekanismGeneratorsConfig;
 import mekanism.generators.common.registries.GeneratorsBlocks;
+import net.minecraft.SharedConstants;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
@@ -15,20 +15,20 @@ import net.minecraft.world.level.block.state.BlockState;
 
 public class TileEntityAdvancedSolarGenerator extends TileEntitySolarGenerator implements IBoundingBlock, IEvaporationSolar {
 
+    private static final RelativeSide[] ENERGY_SIDES = {RelativeSide.FRONT, RelativeSide.BOTTOM};
     private final SolarCheck[] solarChecks = new SolarCheck[8];
 
     public TileEntityAdvancedSolarGenerator(BlockPos pos, BlockState state) {
         super(GeneratorsBlocks.ADVANCED_SOLAR_GENERATOR, pos, state, MekanismGeneratorsConfig.generators.advancedSolarGeneration);
-        addCapabilityResolver(BasicCapabilityResolver.constant(Capabilities.EVAPORATION_SOLAR, this));
     }
 
     @Override
     protected RelativeSide[] getEnergySides() {
-        return new RelativeSide[]{RelativeSide.FRONT, RelativeSide.BOTTOM};
+        return ENERGY_SIDES;
     }
 
     @Override
-    protected FloatingLong getConfiguredMax() {
+    protected long getConfiguredMax() {
         return MekanismGeneratorsConfig.generators.advancedSolarGeneration.get();
     }
 
@@ -52,7 +52,7 @@ public class TileEntityAdvancedSolarGenerator extends TileEntitySolarGenerator i
             }
             totalPeak += solarChecks[i].getPeakMultiplier();
         }
-        updateMaxOutputRaw(getConfiguredMax().multiply(totalPeak / 9));
+        updateMaxOutputRaw(MathUtils.clampToLong(getConfiguredMax() * (totalPeak / 9)));
     }
 
     @Override
@@ -77,11 +77,11 @@ public class TileEntityAdvancedSolarGenerator extends TileEntitySolarGenerator i
     }
 
     @Override
-    public FloatingLong getProduction() {
+    public long getProduction() {
         if (level == null || solarCheck == null) {
             //Note: We assume if solarCheck is null then solarChecks will be filled with null, and if it isn't
             // then it won't be as they get initialized at the same time
-            return FloatingLong.ZERO;
+            return 0;
         }
         float brightness = getBrightnessMultiplier(level);
         //Calculate the generation multiplier of all the solar panels together
@@ -93,7 +93,7 @@ public class TileEntityAdvancedSolarGenerator extends TileEntitySolarGenerator i
         }
         generationMultiplier /= solarChecks.length + 1;
         //Production is a function of the peak possible output in this biome and sun's current brightness
-        return getConfiguredMax().multiply(brightness * generationMultiplier);
+        return MathUtils.clampToLong(getConfiguredMax() * (brightness * generationMultiplier));
     }
 
     private static class AdvancedSolarCheck extends SolarCheck {
@@ -104,7 +104,7 @@ public class TileEntityAdvancedSolarGenerator extends TileEntitySolarGenerator i
         public AdvancedSolarCheck(Level world, BlockPos pos) {
             super(world, pos);
             //Recheck between every 10-30 ticks, to not end up checking each position each tick
-            recheckFrequency = Mth.nextInt(world.random, 10, 30);
+            recheckFrequency = Mth.nextInt(world.random, MekanismUtils.TICKS_PER_HALF_SECOND, MekanismUtils.TICKS_PER_HALF_SECOND + SharedConstants.TICKS_PER_SECOND);
         }
 
         @Override

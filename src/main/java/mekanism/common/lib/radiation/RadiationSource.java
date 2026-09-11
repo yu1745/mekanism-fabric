@@ -1,28 +1,40 @@
 package mekanism.common.lib.radiation;
 
-import java.util.Objects;
-import mekanism.api.Coord4D;
-import mekanism.api.NBTConstants;
+import java.util.Optional;
+import mekanism.api.SerializationConstants;
+import mekanism.api.annotations.NothingNullByDefault;
+import mekanism.api.radiation.IRadiationManager;
 import mekanism.api.radiation.IRadiationSource;
 import mekanism.common.config.MekanismConfig;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtUtils;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
+@NothingNullByDefault
 public class RadiationSource implements IRadiationSource {
 
-    private final Coord4D pos;
+    private final BlockPos pos;
     /** In Sv/h */
     private double magnitude;
 
-    public RadiationSource(Coord4D pos, double magnitude) {
+    public RadiationSource(BlockPos pos, double magnitude) {
         this.pos = pos;
         this.magnitude = magnitude;
     }
 
     @NotNull
     @Override
-    public Coord4D getPos() {
+    public BlockPos getPosition() {
         return pos;
+    }
+
+    @SuppressWarnings("removal")//backcompat
+    @Override
+    public GlobalPos getPos() {
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -38,16 +50,7 @@ public class RadiationSource implements IRadiationSource {
     @Override
     public boolean decay() {
         magnitude *= MekanismConfig.general.radiationSourceDecayRate.get();
-        return magnitude < RadiationManager.MIN_MAGNITUDE;
-    }
-
-    public static RadiationSource load(CompoundTag tag) {
-        return new RadiationSource(Coord4D.read(tag), tag.getDouble(NBTConstants.RADIATION));
-    }
-
-    public void write(CompoundTag tag) {
-        pos.write(tag);
-        tag.putDouble(NBTConstants.RADIATION, magnitude);
+        return magnitude < IRadiationManager.INSTANCE.minRadiationMagnitude();
     }
 
     @Override
@@ -63,6 +66,24 @@ public class RadiationSource implements IRadiationSource {
 
     @Override
     public int hashCode() {
-        return Objects.hash(pos, magnitude);
+        int result = pos.hashCode();
+        result = 31 * result + Double.hashCode(magnitude);
+        return result;
+    }
+
+    public CompoundTag serializeNBT() {
+        CompoundTag tag = new CompoundTag();
+        tag.put(SerializationConstants.POS, NbtUtils.writeBlockPos(pos));
+        tag.putDouble(SerializationConstants.RADIATION, magnitude);
+        return tag;
+    }
+
+    @Nullable
+    public static RadiationSource deserializeNBT(CompoundTag nbt) {
+        Optional<BlockPos> blockPos = NbtUtils.readBlockPos(nbt, SerializationConstants.POS);
+        if (blockPos.isEmpty()) {
+            return null;
+        }
+        return new RadiationSource(blockPos.get(), nbt.getDouble(SerializationConstants.RADIATION));
     }
 }

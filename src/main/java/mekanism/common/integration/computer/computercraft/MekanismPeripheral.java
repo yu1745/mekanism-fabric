@@ -14,6 +14,7 @@ import org.jetbrains.annotations.Nullable;
 import java.lang.ref.WeakReference;
 
 public class MekanismPeripheral<TILE extends BlockEntity & IComputerTile> extends CCMethodCaller implements IDynamicPeripheral {
+
     /**
      * Only call this if the given tile actually has computer support as it won't be double-checked.
      */
@@ -64,7 +65,7 @@ public class MekanismPeripheral<TILE extends BlockEntity & IComputerTile> extend
     public int hashCode() {
         int result = name.hashCode();
         TILE tileRef = tile.get();
-        result = 31 * result + (tileRef != null ? tileRef.hashCode() : 0);
+        result = 31 * result + (tileRef == null ? 0 : tileRef.hashCode());
         result = 31 & result + methods.hashCode();
         return result;
     }

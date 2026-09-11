@@ -4,12 +4,10 @@ import java.util.List;
 import mekanism.api.IContentsListener;
 import mekanism.api.RelativeSide;
 import mekanism.api.Upgrade;
-import mekanism.api.chemical.ChemicalTankBuilder;
-import mekanism.api.chemical.pigment.IPigmentTank;
-import mekanism.api.chemical.pigment.Pigment;
-import mekanism.api.chemical.pigment.PigmentStack;
-import mekanism.api.math.FloatingLong;
-import mekanism.api.recipes.PigmentMixingRecipe;
+import mekanism.api.chemical.BasicChemicalTank;
+import mekanism.api.chemical.ChemicalStack;
+import mekanism.api.chemical.IChemicalTank;
+import mekanism.api.recipes.ChemicalChemicalToChemicalRecipe;
 import mekanism.api.recipes.cache.CachedRecipe;
 import mekanism.api.recipes.cache.CachedRecipe.OperationTracker.RecipeError;
 import mekanism.api.recipes.cache.ChemicalChemicalToChemicalCachedRecipe;
@@ -17,6 +15,9 @@ import mekanism.api.recipes.inputs.IInputHandler;
 import mekanism.api.recipes.inputs.InputHelper;
 import mekanism.api.recipes.outputs.IOutputHandler;
 import mekanism.api.recipes.outputs.OutputHelper;
+import mekanism.api.recipes.vanilla_input.BiChemicalRecipeInput;
+import mekanism.client.recipe_viewer.type.IRecipeViewerRecipeType;
+import mekanism.client.recipe_viewer.type.RecipeViewerRecipeType;
 import mekanism.common.capabilities.energy.MachineEnergyContainer;
 import mekanism.common.capabilities.holder.chemical.ChemicalTankHelper;
 import mekanism.common.capabilities.holder.chemical.IChemicalTankHolder;
@@ -32,32 +33,30 @@ import mekanism.common.integration.computer.computercraft.ComputerConstants;
 import mekanism.common.inventory.container.MekanismContainer;
 import mekanism.common.inventory.container.slot.ContainerSlotType;
 import mekanism.common.inventory.container.slot.SlotOverlay;
-import mekanism.common.inventory.container.sync.SyncableFloatingLong;
+import mekanism.common.inventory.container.sync.SyncableLong;
 import mekanism.common.inventory.slot.EnergyInventorySlot;
-import mekanism.common.inventory.slot.chemical.PigmentInventorySlot;
+import mekanism.common.inventory.slot.chemical.ChemicalInventorySlot;
 import mekanism.common.lib.transmitter.TransmissionType;
 import mekanism.common.recipe.IMekanismRecipeTypeProvider;
 import mekanism.common.recipe.MekanismRecipeType;
 import mekanism.common.recipe.lookup.IEitherSideRecipeLookupHandler.EitherSideChemicalRecipeLookupHandler;
 import mekanism.common.recipe.lookup.cache.InputRecipeCache.EitherSideChemical;
 import mekanism.common.registries.MekanismBlocks;
-import mekanism.common.tile.component.TileComponentConfig;
 import mekanism.common.tile.component.TileComponentEjector;
 import mekanism.common.tile.component.config.ConfigInfo;
 import mekanism.common.tile.component.config.DataType;
-import mekanism.common.tile.component.config.slot.ChemicalSlotInfo.PigmentSlotInfo;
+import mekanism.common.tile.component.config.slot.ChemicalSlotInfo;
 import mekanism.common.tile.component.config.slot.InventorySlotInfo;
 import mekanism.common.tile.interfaces.IBoundingBlock;
 import mekanism.common.tile.prefab.TileEntityRecipeMachine;
-import mekanism.common.util.MekanismUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.AABB;
+import net.neoforged.neoforge.fluids.FluidType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class TileEntityPigmentMixer extends TileEntityRecipeMachine<PigmentMixingRecipe> implements IBoundingBlock,
-      EitherSideChemicalRecipeLookupHandler<Pigment, PigmentStack, PigmentMixingRecipe> {
+public class TileEntityPigmentMixer extends TileEntityRecipeMachine<ChemicalChemicalToChemicalRecipe> implements IBoundingBlock,
+      EitherSideChemicalRecipeLookupHandler<ChemicalChemicalToChemicalRecipe> {
 
     private static final List<RecipeError> TRACKED_ERROR_TYPES = List.of(
           RecipeError.NOT_ENOUGH_ENERGY,
@@ -68,35 +67,38 @@ public class TileEntityPigmentMixer extends TileEntityRecipeMachine<PigmentMixin
           RecipeError.INPUT_DOESNT_PRODUCE_OUTPUT
     );
 
+    public static final long MAX_INPUT_PIGMENT = FluidType.BUCKET_VOLUME;
+    public static final long MAX_OUTPUT_PIGMENT = 2 * MAX_INPUT_PIGMENT;
+
     @WrappingComputerMethod(wrapper = ComputerChemicalTankWrapper.class, methodNames = {"getLeftInput", "getLeftInputCapacity", "getLeftInputNeeded",
                                                                                         "getLeftInputFilledPercentage"}, docPlaceholder = "left pigment tank")
-    public IPigmentTank leftInputTank;
+    public IChemicalTank leftInputTank;
     @WrappingComputerMethod(wrapper = ComputerChemicalTankWrapper.class, methodNames = {"getRightInput", "getRightInputCapacity", "getRightInputNeeded",
                                                                                         "getRightInputFilledPercentage"}, docPlaceholder = "right pigment tank")
-    public IPigmentTank rightInputTank;
-    @WrappingComputerMethod(wrapper = ComputerChemicalTankWrapper.class, methodNames = {"getOutput", "getOutputCapacity", "getOutputNeeded", "getOutputFilledPercentage"}, docPlaceholder = "output pigment tank")
-    public IPigmentTank outputTank;
+    public IChemicalTank rightInputTank;
+    @WrappingComputerMethod(wrapper = ComputerChemicalTankWrapper.class, methodNames = {"getOutput", "getOutputCapacity", "getOutputNeeded",
+                                                                                        "getOutputFilledPercentage"}, docPlaceholder = "output pigment tank")
+    public IChemicalTank outputTank;
 
-    private FloatingLong clientEnergyUsed = FloatingLong.ZERO;
+    private long clientEnergyUsed = 0;
     private int baselineMaxOperations = 1;
 
-    private final IOutputHandler<@NotNull PigmentStack> outputHandler;
-    private final IInputHandler<@NotNull PigmentStack> leftInputHandler;
-    private final IInputHandler<@NotNull PigmentStack> rightInputHandler;
+    private final IOutputHandler<@NotNull ChemicalStack> outputHandler;
+    private final IInputHandler<@NotNull ChemicalStack> leftInputHandler;
+    private final IInputHandler<@NotNull ChemicalStack> rightInputHandler;
 
     private MachineEnergyContainer<TileEntityPigmentMixer> energyContainer;
     @WrappingComputerMethod(wrapper = ComputerIInventorySlotWrapper.class, methodNames = "getLeftInputItem", docPlaceholder = "left input slot")
-    PigmentInventorySlot leftInputSlot;
+    ChemicalInventorySlot leftInputSlot;
     @WrappingComputerMethod(wrapper = ComputerIInventorySlotWrapper.class, methodNames = "getOutputItem", docPlaceholder = "output slot")
-    PigmentInventorySlot outputSlot;
+    ChemicalInventorySlot outputSlot;
     @WrappingComputerMethod(wrapper = ComputerIInventorySlotWrapper.class, methodNames = "getRightInputItem", docPlaceholder = "right input slot")
-    PigmentInventorySlot rightInputSlot;
+    ChemicalInventorySlot rightInputSlot;
     @WrappingComputerMethod(wrapper = ComputerIInventorySlotWrapper.class, methodNames = "getEnergyItem", docPlaceholder = "energy slot")
     EnergyInventorySlot energySlot;
 
     public TileEntityPigmentMixer(BlockPos pos, BlockState state) {
         super(MekanismBlocks.PIGMENT_MIXER, pos, state, TRACKED_ERROR_TYPES);
-        configComponent = new TileComponentConfig(this, TransmissionType.ITEM, TransmissionType.PIGMENT, TransmissionType.ENERGY);
 
         ConfigInfo itemConfig = configComponent.getConfig(TransmissionType.ITEM);
         if (itemConfig != null) {
@@ -105,29 +107,21 @@ public class TileEntityPigmentMixer extends TileEntityRecipeMachine<PigmentMixin
             itemConfig.addSlotInfo(DataType.OUTPUT, new InventorySlotInfo(true, true, outputSlot));
             itemConfig.addSlotInfo(DataType.INPUT_OUTPUT, new InventorySlotInfo(true, true, leftInputSlot, rightInputSlot, outputSlot));
             itemConfig.addSlotInfo(DataType.ENERGY, new InventorySlotInfo(true, true, energySlot));
-            //Set default config directions
-            itemConfig.setDataType(DataType.INPUT_1, RelativeSide.LEFT);
-            itemConfig.setDataType(DataType.INPUT_2, RelativeSide.RIGHT);
-            itemConfig.setDataType(DataType.OUTPUT, RelativeSide.FRONT);
-            itemConfig.setDataType(DataType.ENERGY, RelativeSide.BACK);
         }
 
-        ConfigInfo pigmentConfig = configComponent.getConfig(TransmissionType.PIGMENT);
+        ConfigInfo pigmentConfig = configComponent.getConfig(TransmissionType.CHEMICAL);
         if (pigmentConfig != null) {
-            pigmentConfig.addSlotInfo(DataType.INPUT_1, new PigmentSlotInfo(true, false, leftInputTank));
-            pigmentConfig.addSlotInfo(DataType.INPUT_2, new PigmentSlotInfo(true, false, rightInputTank));
-            pigmentConfig.addSlotInfo(DataType.OUTPUT, new PigmentSlotInfo(false, true, outputTank));
-            pigmentConfig.addSlotInfo(DataType.INPUT_OUTPUT, new PigmentSlotInfo(true, true, leftInputTank, rightInputTank, outputTank));
-            pigmentConfig.setDataType(DataType.INPUT_1, RelativeSide.LEFT);
-            pigmentConfig.setDataType(DataType.INPUT_2, RelativeSide.RIGHT);
-            pigmentConfig.setDataType(DataType.OUTPUT, RelativeSide.FRONT);
-            pigmentConfig.setEjecting(true);
+            pigmentConfig.addSlotInfo(DataType.INPUT_1, new ChemicalSlotInfo(true, false, leftInputTank));
+            pigmentConfig.addSlotInfo(DataType.INPUT_2, new ChemicalSlotInfo(true, false, rightInputTank));
+            pigmentConfig.addSlotInfo(DataType.OUTPUT, new ChemicalSlotInfo(false, true, outputTank));
+            pigmentConfig.addSlotInfo(DataType.INPUT_OUTPUT, new ChemicalSlotInfo(true, true, leftInputTank, rightInputTank, outputTank));
         }
 
         configComponent.setupInputConfig(TransmissionType.ENERGY, energyContainer);
+        configComponent.addDisabledSides(RelativeSide.TOP);
 
         ejectorComponent = new TileComponentEjector(this);
-        ejectorComponent.setOutputData(configComponent, TransmissionType.ITEM, TransmissionType.PIGMENT)
+        ejectorComponent.setOutputData(configComponent, TransmissionType.ITEM, TransmissionType.CHEMICAL)
               .setCanTankEject(tank -> tank == outputTank);
 
         leftInputHandler = InputHelper.getInputHandler(leftInputTank, RecipeError.NOT_ENOUGH_LEFT_INPUT);
@@ -137,31 +131,31 @@ public class TileEntityPigmentMixer extends TileEntityRecipeMachine<PigmentMixin
 
     @NotNull
     @Override
-    public IChemicalTankHolder<Pigment, PigmentStack, IPigmentTank> getInitialPigmentTanks(IContentsListener listener, IContentsListener recipeCacheListener) {
-        ChemicalTankHelper<Pigment, PigmentStack, IPigmentTank> builder = ChemicalTankHelper.forSidePigmentWithConfig(this::getDirection, this::getConfig);
-        builder.addTank(leftInputTank = ChemicalTankBuilder.PIGMENT.input(1_000, pigment -> containsRecipe(pigment, rightInputTank.getStack()),
+    public IChemicalTankHolder getInitialChemicalTanks(IContentsListener listener, IContentsListener recipeCacheListener, IContentsListener recipeCacheUnpauseListener) {
+        ChemicalTankHelper builder = ChemicalTankHelper.forSideWithConfig(this);
+        builder.addTank(leftInputTank = BasicChemicalTank.inputModern(MAX_INPUT_PIGMENT, pigment -> containsRecipe(pigment, rightInputTank.getStack()),
               this::containsRecipe, recipeCacheListener));
-        builder.addTank(rightInputTank = ChemicalTankBuilder.PIGMENT.input(1_000, pigment -> containsRecipe(pigment, leftInputTank.getStack()),
+        builder.addTank(rightInputTank = BasicChemicalTank.inputModern(MAX_INPUT_PIGMENT, pigment -> containsRecipe(pigment, leftInputTank.getStack()),
               this::containsRecipe, recipeCacheListener));
-        builder.addTank(outputTank = ChemicalTankBuilder.PIGMENT.output(2_000, listener));
+        builder.addTank(outputTank = BasicChemicalTank.output(MAX_OUTPUT_PIGMENT, recipeCacheUnpauseListener));
         return builder.build();
     }
 
     @NotNull
     @Override
-    protected IEnergyContainerHolder getInitialEnergyContainers(IContentsListener listener, IContentsListener recipeCacheListener) {
-        EnergyContainerHelper builder = EnergyContainerHelper.forSideWithConfig(this::getDirection, this::getConfig);
-        builder.addContainer(energyContainer = MachineEnergyContainer.input(this, listener));
+    protected IEnergyContainerHolder getInitialEnergyContainers(IContentsListener listener, IContentsListener recipeCacheListener, IContentsListener recipeCacheUnpauseListener) {
+        EnergyContainerHelper builder = EnergyContainerHelper.forSideWithConfig(this);
+        builder.addContainer(energyContainer = MachineEnergyContainer.input(this, recipeCacheUnpauseListener));
         return builder.build();
     }
 
     @NotNull
     @Override
-    protected IInventorySlotHolder getInitialInventory(IContentsListener listener, IContentsListener recipeCacheListener) {
-        InventorySlotHelper builder = InventorySlotHelper.forSideWithConfig(this::getDirection, this::getConfig);
-        builder.addSlot(leftInputSlot = PigmentInventorySlot.fill(leftInputTank, listener, 6, 56));
-        builder.addSlot(rightInputSlot = PigmentInventorySlot.fill(rightInputTank, listener, 154, 56));
-        builder.addSlot(outputSlot = PigmentInventorySlot.drain(outputTank, listener, 80, 65));
+    protected IInventorySlotHolder getInitialInventory(IContentsListener listener, IContentsListener recipeCacheListener, IContentsListener recipeCacheUnpauseListener) {
+        InventorySlotHelper builder = InventorySlotHelper.forSideWithConfig(this);
+        builder.addSlot(leftInputSlot = ChemicalInventorySlot.fill(leftInputTank, listener, 6, 56));
+        builder.addSlot(rightInputSlot = ChemicalInventorySlot.fill(rightInputTank, listener, 154, 56));
+        builder.addSlot(outputSlot = ChemicalInventorySlot.drain(outputTank, listener, 80, 65));
         builder.addSlot(energySlot = EnergyInventorySlot.fillOrConvert(energyContainer, this::getLevel, listener, 154, 14));
         leftInputSlot.setSlotType(ContainerSlotType.INPUT);
         leftInputSlot.setSlotOverlay(SlotOverlay.MINUS);
@@ -173,39 +167,44 @@ public class TileEntityPigmentMixer extends TileEntityRecipeMachine<PigmentMixin
     }
 
     @Override
-    protected void onUpdateServer() {
-        super.onUpdateServer();
+    protected boolean onUpdateServer() {
+        boolean sendUpdatePacket = super.onUpdateServer();
         energySlot.fillContainerOrConvert();
         leftInputSlot.fillTank();
         rightInputSlot.fillTank();
         outputSlot.drainTank();
         clientEnergyUsed = recipeCacheLookupMonitor.updateAndProcess(energyContainer);
+        return sendUpdatePacket;
     }
 
-    @NotNull
     @ComputerMethod(nameOverride = "getEnergyUsage", methodDescription = ComputerConstants.DESCRIPTION_GET_ENERGY_USAGE)
-    public FloatingLong getEnergyUsed() {
+    public long getEnergyUsed() {
         return clientEnergyUsed;
     }
 
     @NotNull
     @Override
-    public IMekanismRecipeTypeProvider<PigmentMixingRecipe, EitherSideChemical<Pigment, PigmentStack, PigmentMixingRecipe>> getRecipeType() {
+    public IMekanismRecipeTypeProvider<BiChemicalRecipeInput, ChemicalChemicalToChemicalRecipe, EitherSideChemical<ChemicalChemicalToChemicalRecipe>> getRecipeType() {
         return MekanismRecipeType.PIGMENT_MIXING;
+    }
+
+    @Override
+    public IRecipeViewerRecipeType<ChemicalChemicalToChemicalRecipe> recipeViewerType() {
+        return RecipeViewerRecipeType.PIGMENT_MIXING;
     }
 
     @Nullable
     @Override
-    public PigmentMixingRecipe getRecipe(int cacheIndex) {
+    public ChemicalChemicalToChemicalRecipe getRecipe(int cacheIndex) {
         return findFirstRecipe(leftInputHandler, rightInputHandler);
     }
 
     @NotNull
     @Override
-    public CachedRecipe<PigmentMixingRecipe> createNewCachedRecipe(@NotNull PigmentMixingRecipe recipe, int cacheIndex) {
+    public CachedRecipe<ChemicalChemicalToChemicalRecipe> createNewCachedRecipe(@NotNull ChemicalChemicalToChemicalRecipe recipe, int cacheIndex) {
         return new ChemicalChemicalToChemicalCachedRecipe<>(recipe, recheckAllRecipeErrors, leftInputHandler, rightInputHandler, outputHandler)
               .setErrorsChanged(this::onErrorsChanged)
-              .setCanHolderFunction(() -> MekanismUtils.canFunction(this))
+              .setCanHolderFunction(this::canFunction)
               .setActive(this::setActive)
               .setEnergyRequirements(energyContainer::getEnergyPerTick, energyContainer)
               .setBaselineMaxOperations(() -> baselineMaxOperations)
@@ -220,13 +219,6 @@ public class TileEntityPigmentMixer extends TileEntityRecipeMachine<PigmentMixin
         }
     }
 
-    @NotNull
-    @Override
-    public AABB getRenderBoundingBox() {
-        //We only care about the position that is above because we only use the BER to render the shaft which is in the upper block
-        return new AABB(worldPosition.above(), worldPosition.offset(1, 2, 1));
-    }
-
     public MachineEnergyContainer<TileEntityPigmentMixer> getEnergyContainer() {
         return energyContainer;
     }
@@ -234,6 +226,6 @@ public class TileEntityPigmentMixer extends TileEntityRecipeMachine<PigmentMixin
     @Override
     public void addContainerTrackers(MekanismContainer container) {
         super.addContainerTrackers(container);
-        container.track(SyncableFloatingLong.create(this::getEnergyUsed, value -> clientEnergyUsed = value));
+        container.track(SyncableLong.create(this::getEnergyUsed, value -> clientEnergyUsed = value));
     }
 }

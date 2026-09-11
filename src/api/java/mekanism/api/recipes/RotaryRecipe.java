@@ -1,281 +1,164 @@
 package mekanism.api.recipes;
 
-import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
+import mekanism.api.MekanismAPI;
 import mekanism.api.annotations.NothingNullByDefault;
-import mekanism.api.chemical.gas.GasStack;
-import mekanism.api.recipes.ingredients.ChemicalStackIngredient.GasStackIngredient;
+import mekanism.api.chemical.ChemicalStack;
+import mekanism.api.recipes.ingredients.ChemicalStackIngredient;
 import mekanism.api.recipes.ingredients.FluidStackIngredient;
-import net.minecraft.network.FriendlyByteBuf;
+import mekanism.api.recipes.vanilla_input.RotaryRecipeInput;
+import net.minecraft.core.Holder;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.fluids.FluidStack;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.level.Level;
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.registries.DeferredHolder;
 import org.jetbrains.annotations.Contract;
 
 /**
  * Input: FluidStack
  * <br>
- * Output: GasStack
+ * Output: ChemicalStack
  * <br><br>
- * Input: GasStack
+ * Input: ChemicalStack
  * <br>
  * Output: FluidStack
  *
- * @apiNote Rotary Condensentrators can process this recipe type. Converting from fluid to gas when set to Decondensentrating and converting from gas to fluid when set to
- * Condensentrating.
+ * @apiNote Rotary Condensentrators can process this recipe type. Converting from fluid to chemical when set to Decondensentrating and converting from chemical to fluid
+ * when set to Condensentrating.
  */
 @NothingNullByDefault
-public abstract class RotaryRecipe extends MekanismRecipe {
+public abstract class RotaryRecipe extends MekanismRecipe<RotaryRecipeInput> {
 
-    private final GasStackIngredient gasInput;
-    private final FluidStackIngredient fluidInput;
-    private final FluidStack fluidOutput;
-    private final GasStack gasOutput;
-    private final boolean hasGasToFluid;
-    private final boolean hasFluidToGas;
+    private static final Holder<Item> ROTARY_CONDENSENTRATOR = DeferredHolder.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, "rotary_condensentrator"));
 
     /**
-     * Rotary recipe that converts a fluid into a gas.
-     *
-     * @param id         Recipe name.
-     * @param fluidInput Fluid input.
-     * @param gasOutput  Gas output.
-     *
-     * @apiNote It is recommended to use {@link #RotaryRecipe(ResourceLocation, FluidStackIngredient, GasStackIngredient, GasStack, FluidStack)} over this constructor in
-     * combination with {@link #RotaryRecipe(ResourceLocation, GasStackIngredient, FluidStack)} and making two separate recipes if the conversion will be possible in both
-     * directions.
+     * @return {@code true} if this recipe knows how to convert a chemical to a fluid.
      */
-    public RotaryRecipe(ResourceLocation id, FluidStackIngredient fluidInput, GasStack gasOutput) {
-        super(id);
-        this.fluidInput = Objects.requireNonNull(fluidInput, "Fluid input cannot be null.");
-        Objects.requireNonNull(gasOutput, "Gas output cannot be null.");
-        if (gasOutput.isEmpty()) {
-            throw new IllegalArgumentException("Gas output cannot be empty.");
-        }
-        this.gasOutput = gasOutput.copy();
-        //noinspection ConstantConditions we safety check it being null behind require hasGasToFluid
-        this.gasInput = null;
-        this.fluidOutput = FluidStack.EMPTY;
-        this.hasGasToFluid = false;
-        this.hasFluidToGas = true;
-    }
+    public abstract boolean hasChemicalToFluid();
 
     /**
-     * Rotary recipe that converts a gas into a fluid.
-     *
-     * @param id          Recipe name.
-     * @param gasInput    Gas input.
-     * @param fluidOutput Fluid output.
-     *
-     * @apiNote It is recommended to use {@link #RotaryRecipe(ResourceLocation, FluidStackIngredient, GasStackIngredient, GasStack, FluidStack)} over this constructor in
-     * combination with {@link #RotaryRecipe(ResourceLocation, FluidStackIngredient, GasStack)} and making two separate recipes if the conversion will be possible in both
-     * directions.
+     * @return {@code true} if this recipe knows how to convert a fluid to a chemical.
      */
-    public RotaryRecipe(ResourceLocation id, GasStackIngredient gasInput, FluidStack fluidOutput) {
-        super(id);
-        this.gasInput = Objects.requireNonNull(gasInput, "Gas input cannot be null.");
-        Objects.requireNonNull(fluidOutput, "Fluid output cannot be null.");
-        if (fluidOutput.isEmpty()) {
-            throw new IllegalArgumentException("Fluid output cannot be empty.");
-        }
-        this.fluidOutput = fluidOutput.copy();
-        //noinspection ConstantConditions we safety check it being null behind require hasFluidToGas
-        this.fluidInput = null;
-        this.gasOutput = GasStack.EMPTY;
-        this.hasGasToFluid = true;
-        this.hasFluidToGas = false;
-    }
+    public abstract boolean hasFluidToChemical();
 
     /**
-     * Rotary recipe that is capable of converting a fluid into a gas and a gas into a fluid.
-     *
-     * @param id          Recipe name.
-     * @param fluidInput  Fluid input.
-     * @param gasInput    Gas input.
-     * @param gasOutput   Gas output.
-     * @param fluidOutput Fluid output.
-     *
-     * @apiNote It is recommended to use this constructor over using {@link #RotaryRecipe(ResourceLocation, FluidStackIngredient, GasStack)} and
-     * {@link #RotaryRecipe(ResourceLocation, GasStackIngredient, FluidStack)} in combination and creating two recipes if the conversion will be possible in both
-     * directions.
-     */
-    public RotaryRecipe(ResourceLocation id, FluidStackIngredient fluidInput, GasStackIngredient gasInput, GasStack gasOutput, FluidStack fluidOutput) {
-        super(id);
-        this.gasInput = Objects.requireNonNull(gasInput, "Gas input cannot be null.");
-        this.fluidInput = Objects.requireNonNull(fluidInput, "Fluid input cannot be null.");
-        Objects.requireNonNull(gasOutput, "Gas output cannot be null.");
-        Objects.requireNonNull(fluidOutput, "Fluid output cannot be null.");
-        if (gasOutput.isEmpty()) {
-            throw new IllegalArgumentException("Gas output cannot be empty.");
-        } else if (fluidOutput.isEmpty()) {
-            throw new IllegalArgumentException("Fluid output cannot be empty.");
-        }
-        this.gasOutput = gasOutput.copy();
-        this.fluidOutput = fluidOutput.copy();
-        this.hasGasToFluid = true;
-        this.hasFluidToGas = true;
-    }
-
-    /**
-     * @return {@code true} if this recipe knows how to convert a gas to a fluid.
-     */
-    public boolean hasGasToFluid() {
-        return hasGasToFluid;
-    }
-
-    /**
-     * @return {@code true} if this recipe knows how to convert a fluid to a gas.
-     */
-    public boolean hasFluidToGas() {
-        return hasFluidToGas;
-    }
-
-    /**
-     * @throws IllegalStateException if {@link #hasGasToFluid()} is {@code false}.
-     */
-    protected void assertHasGasToFluid() {
-        if (!hasGasToFluid()) {
-            throw new IllegalStateException("This recipe has no gas to fluid conversion.");
-        }
-    }
-
-    /**
-     * @throws IllegalStateException if {@link #hasFluidToGas()} is {@code false}.
-     */
-    protected void assertHasFluidToGas() {
-        if (!hasFluidToGas()) {
-            throw new IllegalStateException("This recipe has no fluid to gas conversion.");
-        }
-    }
-
-    /**
-     * Checks if this recipe can convert fluids to gases, and evaluates this recipe on the given input.
+     * Checks if this recipe can convert fluids to chemicals, and evaluates this recipe on the given input.
      *
      * @param fluidStack Fluid input.
      *
      * @return {@code true} if the input is valid for this recipe.
      */
-    public boolean test(FluidStack fluidStack) {
-        return hasFluidToGas() && fluidInput.test(fluidStack);
-    }
+    public abstract boolean test(FluidStack fluidStack);
 
     /**
-     * Checks if this recipe can convert gases to fluids, and evaluates this recipe on the given input.
+     * Checks if this recipe can convert chemicals to fluids, and evaluates this recipe on the given input.
      *
-     * @param gasStack Gas input.
+     * @param chemicalStack Chemical input.
      *
      * @return {@code true} if the input is valid for this recipe.
      */
-    public boolean test(GasStack gasStack) {
-        return hasGasToFluid() && gasInput.test(gasStack);
+    public abstract boolean test(ChemicalStack chemicalStack);
+
+    @Override
+    public boolean matches(RotaryRecipeInput input, Level level) {
+        //Don't match incomplete recipes or ones that don't match
+        return !isIncomplete() && input.input().map(this::test, this::test);
     }
 
     /**
      * Gets the fluid input ingredient.
      *
-     * @throws IllegalStateException if {@link #hasFluidToGas()} is {@code false}.
+     * @throws IllegalStateException if {@link #hasFluidToChemical()} is {@code false}.
      */
-    public FluidStackIngredient getFluidInput() {
-        assertHasFluidToGas();
-        return fluidInput;
-    }
+    public abstract FluidStackIngredient getFluidInput();
 
     /**
-     * Gets the gas input ingredient.
+     * Gets the chemical input ingredient.
      *
-     * @throws IllegalStateException if {@link #hasGasToFluid()} is {@code false}.
+     * @throws IllegalStateException if {@link #hasChemicalToFluid()} is {@code false}.
      */
-    public GasStackIngredient getGasInput() {
-        assertHasGasToFluid();
-        return gasInput;
-    }
+    public abstract ChemicalStackIngredient getChemicalInput();
 
     /**
-     * For JEI, gets the gas output representations to display.
+     * For JEI, gets the chemical output representations to display.
      *
-     * @return Representation of the gas output, <strong>MUST NOT</strong> be modified.
+     * @return Representation of the chemical output, <strong>MUST NOT</strong> be modified.
      *
-     * @throws IllegalStateException if {@link #hasFluidToGas()} is {@code false}.
+     * @throws IllegalStateException if {@link #hasFluidToChemical()} is {@code false}.
      */
-    public List<GasStack> getGasOutputDefinition() {
-        assertHasFluidToGas();
-        return Collections.singletonList(gasOutput);
-    }
+    public abstract List<ChemicalStack> getChemicalOutputDefinition();
 
     /**
      * For JEI, gets the fluid output representations to display.
      *
      * @return Representation of the output, <strong>MUST NOT</strong> be modified.
      *
-     * @throws IllegalStateException if {@link #hasGasToFluid()} is {@code false}.
+     * @throws IllegalStateException if {@link #hasChemicalToFluid()} is {@code false}.
      */
-    public List<FluidStack> getFluidOutputDefinition() {
-        assertHasGasToFluid();
-        return Collections.singletonList(fluidOutput);
-    }
+    public abstract List<FluidStack> getFluidOutputDefinition();
 
     /**
-     * Gets a new gas output based on the given input.
+     * Gets a new chemical output based on the given input.
      *
      * @param input Specific fluid input.
      *
-     * @return New gas output.
+     * @return New chemical output.
      *
-     * @throws IllegalStateException if {@link #hasFluidToGas()} is {@code false}.
+     * @throws IllegalStateException if {@link #hasFluidToChemical()} is {@code false}.
      * @apiNote While Mekanism does not currently make use of the input, it is important to support it and pass the proper value in case any addons define input based
      * outputs where things like NBT may be different.
      * @implNote The passed in input should <strong>NOT</strong> be modified.
      */
     @Contract(value = "_ -> new", pure = true)
-    public GasStack getGasOutput(FluidStack input) {
-        assertHasFluidToGas();
-        return gasOutput.copy();
-    }
+    public abstract ChemicalStack getChemicalOutput(FluidStack input);
 
     /**
      * Gets a new fluid output based on the given input.
      *
-     * @param input Specific gas input.
+     * @param input Specific chemical input.
      *
      * @return New fluid output.
      *
-     * @throws IllegalStateException if {@link #hasGasToFluid()} is {@code false}.
+     * @throws IllegalStateException if {@link #hasChemicalToFluid()} is {@code false}.
      * @apiNote While Mekanism does not currently make use of the input, it is important to support it and pass the proper value in case any addons define input based
      * outputs where things like NBT may be different.
      * @implNote The passed in input should <strong>NOT</strong> be modified.
      */
     @Contract(value = "_ -> new", pure = true)
-    public FluidStack getFluidOutput(GasStack input) {
-        assertHasGasToFluid();
-        return fluidOutput.copy();
-    }
+    public abstract FluidStack getFluidOutput(ChemicalStack input);
 
     @Override
     public boolean isIncomplete() {
-        return (hasFluidToGas && fluidInput.hasNoMatchingInstances()) || (hasGasToFluid && gasInput.hasNoMatchingInstances());
+        return (hasFluidToChemical() && getFluidInput().hasNoMatchingInstances()) || (hasChemicalToFluid() && getChemicalInput().hasNoMatchingInstances());
     }
 
     @Override
     public void logMissingTags() {
-        if (hasFluidToGas) {
-            fluidInput.logMissingTags();
+        if (hasFluidToChemical()) {
+            getFluidInput().logMissingTags();
         }
-        if (hasGasToFluid) {
-            gasInput.logMissingTags();
+        if (hasChemicalToFluid()) {
+            getChemicalInput().logMissingTags();
         }
     }
 
     @Override
-    public void write(FriendlyByteBuf buffer) {
-        buffer.writeBoolean(hasFluidToGas);
-        if (hasFluidToGas) {
-            fluidInput.write(buffer);
-            gasOutput.writeToPacket(buffer);
-        }
-        buffer.writeBoolean(hasGasToFluid);
-        if (hasGasToFluid) {
-            gasInput.write(buffer);
-            fluidOutput.writeToPacket(buffer);
-        }
+    public final RecipeType<RotaryRecipe> getType() {
+        return MekanismRecipeTypes.TYPE_ROTARY.value();
     }
+
+    @Override
+    public String getGroup() {
+        return "rotary_condensentrator";
+    }
+
+    @Override
+    public ItemStack getToastSymbol() {
+        return new ItemStack(ROTARY_CONDENSENTRATOR);
+    }
+
 }

@@ -1,111 +1,99 @@
 package mekanism.tools.common.material;
 
-import mekanism.tools.common.MekanismTools;
+import java.util.List;
+import mekanism.tools.common.ToolsTags;
 import net.minecraft.MethodsReturnNonnullByDefault;
+import net.minecraft.core.Holder;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.tags.TagKey;
-import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.ArmorItem;
+import net.minecraft.world.item.Tier;
+import net.minecraft.world.item.component.Tool;
 import net.minecraft.world.level.block.Block;
-import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.NotNull;
 
 @MethodsReturnNonnullByDefault
-public abstract class BaseMekanismMaterial extends IItemTierHelper implements IArmorMaterialHelper, IPaxelMaterial {
+public interface BaseMekanismMaterial extends Tier, IPaxelMaterial {
 
-    @Nullable
-    @Override
-    public abstract TagKey<Block> getTag();//Force this to be implemented
+    int getShieldDurability();
 
-    public abstract int getShieldDurability();
-
-    public float getSwordDamage() {
+    default float getSwordDamage() {
         return 3;
     }
 
-    public float getSwordAtkSpeed() {
+    default float getSwordAtkSpeed() {
         return -2.4F;
     }
 
-    public float getShovelDamage() {
+    default float getShovelDamage() {
         return 1.5F;
     }
 
-    public float getShovelAtkSpeed() {
+    default float getShovelAtkSpeed() {
         return -3.0F;
     }
 
-    public abstract float getAxeDamage();
+    float getAxeDamage();
 
-    public abstract float getAxeAtkSpeed();
+    float getAxeAtkSpeed();
 
-    public float getPickaxeDamage() {
+    default float getPickaxeDamage() {
         return 1;
     }
 
-    public float getPickaxeAtkSpeed() {
+    default float getPickaxeAtkSpeed() {
         return -2.8F;
     }
 
-    public float getHoeDamage() {
+    default float getHoeDamage() {
         //Default to match the vanilla hoe's implementation of being negative the attack damage of the material
         return -getAttackDamageBonus();
     }
 
-    public float getHoeAtkSpeed() {
+    default float getHoeAtkSpeed() {
         return getAttackDamageBonus() - 3.0F;
     }
 
     @Override
-    public float getPaxelDamage() {
+    default float getPaxelDamage() {
         return getAxeDamage() + 1;
     }
 
     @Override
-    public int getPaxelMaxUses() {
+    default int getPaxelDurability() {
         return 2 * getUses();
     }
 
     @Override
-    public float getPaxelEfficiency() {
+    default float getPaxelEfficiency() {
         return getSpeed();
     }
 
     @Override
-    public int getPaxelEnchantability() {
-        return getCommonEnchantability();
+    default int getPaxelEnchantability() {
+        return getEnchantmentValue();
     }
 
-    public abstract String getRegistryPrefix();
+    String getRegistryPrefix();
 
-    //Recombine the methods that are split in such a way as to make it so the compiler can reobfuscate them properly
-    public abstract int getCommonEnchantability();
-
-    public boolean burnsInFire() {
+    default boolean burnsInFire() {
         return true;
     }
 
-    @Override
-    public int getItemEnchantability() {
-        return getCommonEnchantability();
-    }
+    //Armor material related helpers
+    float toughness();
+
+    float knockbackResistance();
+
+    Holder<SoundEvent> equipSound();
+
+    int getDefense(ArmorItem.Type type);
+
+    int getDurabilityForType(ArmorItem.Type type);
 
     @Override
-    public int getArmorEnchantability() {
-        return getCommonEnchantability();
-    }
-
-    public abstract Ingredient getCommonRepairMaterial();
-
-    @Override
-    public Ingredient getItemRepairMaterial() {
-        return getCommonRepairMaterial();
-    }
-
-    @Override
-    public Ingredient getArmorRepairMaterial() {
-        return getCommonRepairMaterial();
-    }
-
-    @Override
-    public String getName() {
-        return MekanismTools.MODID + ":" + getRegistryPrefix();
+    default Tool createToolProperties(@NotNull TagKey<Block> block) {
+        float speed = block == ToolsTags.Blocks.MINEABLE_WITH_PAXEL ? getPaxelEfficiency() : getSpeed();
+        return new Tool(List.of(Tool.Rule.deniesDrops(this.getIncorrectBlocksForDrops()), Tool.Rule.minesAndDrops(block, speed)), 1.0F, 1);
     }
 }

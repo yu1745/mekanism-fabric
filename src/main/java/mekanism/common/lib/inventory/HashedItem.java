@@ -1,15 +1,17 @@
 package mekanism.common.lib.inventory;
 
-import java.util.Objects;
+import com.mojang.serialization.Codec;
 import java.util.UUID;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.inventory.IHashedItem;
 import mekanism.common.util.StackUtils;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.UUIDUtil;
+import net.minecraft.nbt.Tag;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.items.ItemHandlerHelper;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * A wrapper of an ItemStack which tests equality and hashes based on item type and NBT data, ignoring stack size.
@@ -18,6 +20,15 @@ import org.jetbrains.annotations.Nullable;
  */
 @NothingNullByDefault
 public class HashedItem implements IHashedItem {
+
+    /**
+     * @implNote This codec does not copy any uuid information if the hashed item is a {@link UUIDAwareHashedItem}
+     */
+    public static final Codec<HashedItem> CODEC = ItemStack.SINGLE_ITEM_CODEC.xmap(HashedItem::raw, HashedItem::getInternalStack);
+    /**
+     * @implNote This codec does not copy any uuid information if the hashed item is a {@link UUIDAwareHashedItem}
+     */
+    public static final StreamCodec<RegistryFriendlyByteBuf, HashedItem> STREAM_CODEC = ItemStack.STREAM_CODEC.map(HashedItem::raw, HashedItem::getInternalStack);
 
     public static HashedItem create(ItemStack stack) {
         return new HashedItem(stack.copyWithCount(1));
@@ -38,7 +49,7 @@ public class HashedItem implements IHashedItem {
 
     protected HashedItem(ItemStack stack) {
         this.itemStack = stack;
-        this.hashCode = initHashCode();
+        this.hashCode = ItemStack.hashItemAndComponents(itemStack);
     }
 
     protected HashedItem(HashedItem other) {
@@ -48,12 +59,6 @@ public class HashedItem implements IHashedItem {
     protected HashedItem(ItemStack stack, int hashCode) {
         this.itemStack = stack;
         this.hashCode = hashCode;
-    }
-
-    //TODO: Deprecate in favor of getInternalStack?
-    @Deprecated(forRemoval = true, since = "10.3.6")
-    public ItemStack getStack() {
-        return itemStack;
     }
 
     @Override
@@ -78,8 +83,12 @@ public class HashedItem implements IHashedItem {
      * Helper to serialize the internal stack to nbt.
      */
     @NotNull
-    public CompoundTag internalToNBT() {
-        return itemStack.serializeNBT();
+    public Tag internalToNBT(HolderLookup.Provider provider) {
+        return itemStack.save(provider);
+    }
+
+    public boolean isSameItemSameComponents(ItemStack other) {
+        return ItemStack.isSameItemSameComponents(itemStack, other);
     }
 
     @Override
@@ -87,7 +96,7 @@ public class HashedItem implements IHashedItem {
         if (obj == this) {
             return true;
         }
-        return obj instanceof IHashedItem other && ItemHandlerHelper.canItemStacksStack(itemStack, other.getInternalStack());
+        return obj instanceof IHashedItem other && isSameItemSameComponents(other.getInternalStack());
     }
 
     @Override
@@ -95,63 +104,49 @@ public class HashedItem implements IHashedItem {
         return hashCode;
     }
 
-    private int initHashCode() {
-        int code = itemStack.getItem().hashCode();
-        if (itemStack.hasTag()) {
-            code = 31 * code + itemStack.getTag().hashCode();
-        }
-        //TODO: Eventually it may be worth also hashing the capability NBT, but as there is no way to access it
-        // without reflection we don't do that for now as odds are grabbing it would have more of a performance
-        // impact than comparing the cap nbt in equals for the few items from mods that do make use of it
-        return code;
+    @Override
+    public String toString() {
+        return itemStack.getItem() + " with components: " + itemStack.getComponentsPatch();
     }
 
+    //TODO: Eventually see if we can make it so instead of having this overarching HashedItem extension, make it just a record that is a pair?
     public static class UUIDAwareHashedItem extends HashedItem {
 
-        @Nullable
+        //TODO: Eventually we might want to make it so that we only need to sync the hashed item for types we haven't sent a given client yet so that then
+        // we can also send a smaller packet to each client until they disconnect and then we clear what packets they know
+        public static final StreamCodec<RegistryFriendlyByteBuf, UUIDAwareHashedItem> STREAM_CODEC = StreamCodec.composite(
+              ItemStack.STREAM_CODEC, HashedItem::getInternalStack,
+              UUIDUtil.STREAM_CODEC, UUIDAwareHashedItem::getUUID,
+              UUIDAwareHashedItem::new
+        );
+
+        @NotNull
         private final UUID uuid;
         private final int uuidBasedHash;
-        private final boolean overrideHash;
 
         /**
-         * @param uuid Should not be null unless something went wrong reading the packet.
-         *
          * @apiNote For use on the client side, hash is taken into account for equals and hashCode
          */
-        public UUIDAwareHashedItem(ItemStack stack, @Nullable UUID uuid) {
+        public UUIDAwareHashedItem(ItemStack stack, @NotNull UUID uuid) {
             super(stack.copyWithCount(1));
             this.uuid = uuid;
-            if (this.uuid == null) {
-                this.overrideHash = false;
-                this.uuidBasedHash = super.hashCode();
-            } else {
-                this.overrideHash = true;
-                this.uuidBasedHash = Objects.hash(super.hashCode(), this.uuid);
-            }
+            this.uuidBasedHash = 31 * super.hashCode() + this.uuid.hashCode();
         }
 
         public UUIDAwareHashedItem(HashedItem other, @NotNull UUID uuid) {
             super(other);
             this.uuid = uuid;
-            this.uuidBasedHash = super.hashCode();
-            this.overrideHash = false;
+            this.uuidBasedHash = 31 * super.hashCode() + this.uuid.hashCode();
         }
 
-        @Nullable
+        @NotNull
         public UUID getUUID() {
             return uuid;
         }
 
         @Override
         public boolean equals(Object obj) {
-            if (obj == this) {
-                return true;
-            } else if (overrideHash) {
-                //Note: UUID cannot be null if overrideHash is true
-                //noinspection DataFlowIssue
-                return obj instanceof UUIDAwareHashedItem uuidAware && uuid.equals(uuidAware.uuid) && super.equals(obj);
-            }
-            return super.equals(obj);
+            return obj == this || obj instanceof UUIDAwareHashedItem uuidAware && uuid.equals(uuidAware.uuid) && super.equals(obj);
         }
 
         @Override

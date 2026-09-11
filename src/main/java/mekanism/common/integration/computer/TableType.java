@@ -2,9 +2,11 @@ package mekanism.common.integration.computer;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import mekanism.api.SerializationConstants;
 import mekanism.common.util.MekCodecs;
 
 /**
@@ -14,10 +16,10 @@ public record TableType(String description, String humanName, Map<String, FieldT
 
     public static Codec<TableType> CODEC = RecordCodecBuilder.create(instance ->
           instance.group(
-                Codec.STRING.fieldOf("description").forGetter(TableType::description),
-                Codec.STRING.fieldOf("humanName").forGetter(TableType::humanName),
-                Codec.unboundedMap(Codec.STRING, FieldType.CODEC).optionalFieldOf("fields", Collections.emptyMap()).forGetter(TableType::fields),
-                MekCodecs.CLASS_TO_STRING_CODEC.optionalFieldOf("extends", null).forGetter(TableType::extendedFrom)
+                Codec.STRING.fieldOf(SerializationConstants.DESCRIPTION).forGetter(TableType::description),
+                Codec.STRING.fieldOf(SerializationConstants.HUMAN_NAME).forGetter(TableType::humanName),
+                Codec.unboundedMap(Codec.STRING, FieldType.CODEC).optionalFieldOf(SerializationConstants.FIELDS, Collections.emptyMap()).forGetter(TableType::fields),
+                MekCodecs.CLASS_TO_STRING_CODEC.optionalFieldOf(SerializationConstants.EXTENDS, null).forGetter(TableType::extendedFrom)
           ).apply(instance, TableType::new)
     );
     public static Codec<Map<Class<?>, TableType>> TABLE_MAP_CODEC = Codec.unboundedMap(MekCodecs.CLASS_TO_STRING_CODEC, CODEC);
@@ -26,15 +28,36 @@ public record TableType(String description, String humanName, Map<String, FieldT
         return new Builder(clazz, description);
     }
 
-    public record FieldType(String description, Class<?> javaType, String type, Class<?>[] javaExtra){
+    public record FieldType(String description, Class<?> javaType, String type, Class<?>[] javaExtra) {
+
         public static final Codec<FieldType> CODEC = RecordCodecBuilder.create(instance ->
               instance.group(
-                    Codec.STRING.fieldOf("description").forGetter(FieldType::description),
-                    MekCodecs.CLASS_TO_STRING_CODEC.fieldOf("javaType").forGetter(FieldType::javaType),
-                    Codec.STRING.fieldOf("type").forGetter(FieldType::type),
+                    Codec.STRING.fieldOf(SerializationConstants.DESCRIPTION).forGetter(FieldType::description),
+                    MekCodecs.CLASS_TO_STRING_CODEC.fieldOf(SerializationConstants.JAVA_TYPE).forGetter(FieldType::javaType),
+                    Codec.STRING.fieldOf(SerializationConstants.TYPE).forGetter(FieldType::type),
                     MekCodecs.optionalClassArrayCodec("javaExtra").forGetter(FieldType::javaExtra)
               ).apply(instance, FieldType::new)
         );
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            } else if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            FieldType other = (FieldType) o;
+            return javaType == other.javaType && type.equals(other.type) && description.equals(other.description) && Arrays.equals(javaExtra, other.javaExtra);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = description.hashCode();
+            result = 31 * result + javaType.hashCode();
+            result = 31 * result + type.hashCode();
+            result = 31 * result + Arrays.hashCode(javaExtra);
+            return result;
+        }
     }
 
     public static class Builder {

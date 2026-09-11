@@ -2,22 +2,22 @@ package mekanism.common.recipe.lookup.monitor;
 
 import mekanism.api.IContentsListener;
 import mekanism.api.energy.IEnergyContainer;
-import mekanism.api.math.FloatingLong;
 import mekanism.api.recipes.MekanismRecipe;
 import mekanism.api.recipes.cache.CachedRecipe;
 import mekanism.api.recipes.cache.ICachedRecipeHolder;
-import mekanism.api.recipes.cache.ItemStackConstantChemicalToItemStackCachedRecipe;
+import mekanism.api.recipes.cache.ItemStackConstantChemicalToObjectCachedRecipe;
 import mekanism.common.CommonWorldTickHandler;
 import mekanism.common.recipe.lookup.IRecipeLookupHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class RecipeCacheLookupMonitor<RECIPE extends MekanismRecipe> implements ICachedRecipeHolder<RECIPE>, IContentsListener {
+public class RecipeCacheLookupMonitor<RECIPE extends MekanismRecipe<?>> implements ICachedRecipeHolder<RECIPE>, IContentsListener {
 
     private final IRecipeLookupHandler<RECIPE> handler;
     protected final int cacheIndex;
     protected CachedRecipe<RECIPE> cachedRecipe;
     protected boolean hasNoRecipe;
+    protected boolean shouldUnpause;
 
     public RecipeCacheLookupMonitor(IRecipeLookupHandler<RECIPE> handler) {
         this(handler, 0);
@@ -41,21 +41,26 @@ public class RecipeCacheLookupMonitor<RECIPE extends MekanismRecipe> implements 
     public void onChange() {
         //Mark that we may have a recipe again
         hasNoRecipe = false;
+        unpause();
+    }
+
+    public void unpause() {
+        shouldUnpause = true;
     }
 
     /**
      * Helper that wraps {@link #updateAndProcess()} inside of a brief check to calculate how much energy actually got used.
      */
-    public FloatingLong updateAndProcess(IEnergyContainer energyContainer) {
+    public long updateAndProcess(IEnergyContainer energyContainer) {
         //Copy this so that if it changes we still have the original amount. Don't bother making it a constant though as this way
         // we can then use minusEqual instead of subtract to remove an extra copy call
-        FloatingLong prev = energyContainer.getEnergy().copy();
+        long prev = energyContainer.getEnergy();
         if (updateAndProcess()) {
             //Update amount of energy that actually got used, as if we are "near" full we may not have performed our max number of operations
-            return prev.minusEqual(energyContainer.getEnergy());
+            return Math.max(0, prev - energyContainer.getEnergy());
         }
         //If we don't have a cached recipe so didn't process anything at all just return zero
-        return FloatingLong.ZERO;
+        return 0L;
     }
 
     public boolean updateAndProcess() {
@@ -65,6 +70,10 @@ public class RecipeCacheLookupMonitor<RECIPE extends MekanismRecipe> implements 
             handler.onCachedRecipeChanged(cachedRecipe, cacheIndex);
         }
         if (cachedRecipe != null) {
+            if (shouldUnpause) {
+                shouldUnpause = false;
+                cachedRecipe.unpauseErrors();
+            }
             cachedRecipe.process();
             return true;
         }
@@ -75,9 +84,9 @@ public class RecipeCacheLookupMonitor<RECIPE extends MekanismRecipe> implements 
     public void loadSavedData(@NotNull CachedRecipe<RECIPE> cached, int cacheIndex) {
         if (cachedIndexMatches(cacheIndex)) {
             ICachedRecipeHolder.super.loadSavedData(cached, cacheIndex);
-            if (cached instanceof ItemStackConstantChemicalToItemStackCachedRecipe<?, ?, ?, ?> c &&
-                handler instanceof IRecipeLookupHandler.ConstantUsageRecipeLookupHandler handler) {
-                c.loadSavedUsageSoFar(handler.getSavedUsedSoFar(cacheIndex));
+            if (cached instanceof ItemStackConstantChemicalToObjectCachedRecipe<?, ?> c &&
+                handler instanceof IRecipeLookupHandler.ConstantUsageRecipeLookupHandler lookupHandler) {
+                c.loadSavedUsageSoFar(lookupHandler.getSavedUsedSoFar(cacheIndex));
             }
         }
     }

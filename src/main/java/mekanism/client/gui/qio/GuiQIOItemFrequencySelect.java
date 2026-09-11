@@ -5,13 +5,13 @@ import mekanism.client.gui.element.button.MekanismImageButton;
 import mekanism.client.gui.element.custom.GuiFrequencySelector;
 import mekanism.client.gui.element.custom.GuiFrequencySelector.IGuiColorFrequencySelector;
 import mekanism.client.gui.element.custom.GuiFrequencySelector.IItemGuiFrequencySelector;
-import mekanism.common.Mekanism;
-import mekanism.common.MekanismLang;
+import mekanism.client.gui.tooltip.TooltipUtils;
 import mekanism.common.content.qio.QIOFrequency;
 import mekanism.common.inventory.container.item.QIOFrequencySelectItemContainer;
 import mekanism.common.lib.frequency.FrequencyType;
-import mekanism.common.network.to_server.PacketGuiButtonPress;
-import mekanism.common.network.to_server.PacketGuiButtonPress.ClickedItemButton;
+import mekanism.common.network.PacketUtils;
+import mekanism.common.network.to_server.button.PacketItemButtonPress;
+import mekanism.common.network.to_server.button.PacketItemButtonPress.ClickedItemButton;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -31,12 +31,13 @@ public class GuiQIOItemFrequencySelect extends GuiMekanism<QIOFrequencySelectIte
         super.addGuiElements();
         addRenderableWidget(new GuiFrequencySelector<>(this, 17));
         addRenderableWidget(new MekanismImageButton(this, 6, 6, 14, getButtonLocation("back"),
-              () -> Mekanism.packetHandler().sendToServer(new PacketGuiButtonPress(ClickedItemButton.BACK_BUTTON, menu.getHand())), getOnHover(MekanismLang.BACK)));
+              (element, mouseX, mouseY) -> PacketUtils.sendToServer(new PacketItemButtonPress(ClickedItemButton.BACK_BUTTON, ((GuiQIOItemFrequencySelect) element.gui()).menu.getHand()))))
+              .setTooltip(TooltipUtils.BACK);
     }
 
     @Override
     protected void drawForegroundText(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        renderTitleText(guiGraphics);
+        renderTitleTextWithOffset(guiGraphics, 17);//Adjust spacing for back button
         super.drawForegroundText(guiGraphics, mouseX, mouseY);
     }
 
@@ -48,16 +49,5 @@ public class GuiQIOItemFrequencySelect extends GuiMekanism<QIOFrequencySelectIte
     @Override
     public QIOFrequencySelectItemContainer getFrequencyContainer() {
         return menu;
-    }
-
-    @Override
-    public void drawTitleText(GuiGraphics guiGraphics, Component text, float y) {
-        //Adjust spacing for back button
-        int leftShift = 15;
-        int xSize = getXSize() - leftShift;
-        int maxLength = xSize - 12;
-        float textWidth = getStringWidth(text);
-        float scale = Math.min(1, maxLength / textWidth);
-        drawScaledCenteredText(guiGraphics, text, leftShift + xSize / 2F, y, titleTextColor(), scale);
     }
 }

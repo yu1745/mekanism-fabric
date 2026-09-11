@@ -1,20 +1,24 @@
 package mekanism.client.gui.element.tab;
 
+import java.util.EnumMap;
+import java.util.Map;
 import mekanism.api.text.TextComponentUtil;
 import mekanism.client.SpecialColors;
 import mekanism.client.gui.IGuiWrapper;
 import mekanism.client.gui.element.GuiInsetElement;
 import mekanism.client.gui.element.window.GuiSideConfiguration;
+import mekanism.client.gui.tooltip.TooltipUtils;
 import mekanism.client.render.MekanismRenderer;
 import mekanism.common.lib.transmitter.TransmissionType;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.MekanismUtils.ResourceType;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.resources.ResourceLocation;
-import org.jetbrains.annotations.NotNull;
 
 public class GuiConfigTypeTab extends GuiInsetElement<Void> {
 
+    private final Map<TransmissionType, Tooltip> typeTooltips = new EnumMap<>(TransmissionType.class);
     private final TransmissionType transmission;
     private final GuiSideConfiguration<?> config;
 
@@ -37,19 +41,15 @@ public class GuiConfigTypeTab extends GuiInsetElement<Void> {
         MekanismRenderer.color(guiGraphics, switch (transmission) {
             case ENERGY -> SpecialColors.TAB_ENERGY_CONFIG;
             case FLUID -> SpecialColors.TAB_FLUID_CONFIG;
-            case GAS -> SpecialColors.TAB_GAS_CONFIG;
-            case INFUSION -> SpecialColors.TAB_INFUSION_CONFIG;
-            case PIGMENT -> SpecialColors.TAB_PIGMENT_CONFIG;
-            case SLURRY -> SpecialColors.TAB_SLURRY_CONFIG;
+            case CHEMICAL -> SpecialColors.TAB_CHEMICAL_CONFIG;
             case ITEM -> SpecialColors.TAB_ITEM_CONFIG;
             case HEAT -> SpecialColors.TAB_HEAT_CONFIG;
         });
     }
 
     @Override
-    public void renderToolTip(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        super.renderToolTip(guiGraphics, mouseX, mouseY);
-        displayTooltips(guiGraphics, mouseX, mouseY, TextComponentUtil.build(transmission));
+    public void updateTooltip(int mouseX, int mouseY) {
+        setTooltip(typeTooltips.computeIfAbsent(transmission, trans -> TooltipUtils.create(TextComponentUtil.build(trans))));
     }
 
     @Override

@@ -4,20 +4,20 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import mekanism.api.recipes.MekanismRecipe;
 import mekanism.api.recipes.ingredients.InputIngredient;
 import mekanism.common.recipe.MekanismRecipeType;
 import mekanism.common.recipe.lookup.cache.type.IInputCache;
+import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.common.util.TriPredicate;
+import net.neoforged.neoforge.common.util.TriPredicate;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Basic implementation for {@link IInputRecipeCache} for handling recipes with three inputs.
  */
 public abstract class TripleInputRecipeCache<INPUT_A, INGREDIENT_A extends InputIngredient<INPUT_A>, INPUT_B, INGREDIENT_B extends InputIngredient<INPUT_B>,
-      INPUT_C, INGREDIENT_C extends InputIngredient<INPUT_C>, RECIPE extends MekanismRecipe & TriPredicate<INPUT_A, INPUT_B, INPUT_C>,
+      INPUT_C, INGREDIENT_C extends InputIngredient<INPUT_C>, RECIPE extends MekanismRecipe<?> & TriPredicate<INPUT_A, INPUT_B, INPUT_C>,
       CACHE_A extends IInputCache<INPUT_A, INGREDIENT_A, RECIPE>, CACHE_B extends IInputCache<INPUT_B, INGREDIENT_B, RECIPE>,
       CACHE_C extends IInputCache<INPUT_C, INGREDIENT_C, RECIPE>> extends AbstractInputRecipeCache<RECIPE> {
 
@@ -32,7 +32,7 @@ public abstract class TripleInputRecipeCache<INPUT_A, INGREDIENT_A extends Input
     private final CACHE_B cacheB;
     private final CACHE_C cacheC;
 
-    protected TripleInputRecipeCache(MekanismRecipeType<RECIPE, ?> recipeType, Function<RECIPE, INGREDIENT_A> inputAExtractor, CACHE_A cacheA,
+    protected TripleInputRecipeCache(MekanismRecipeType<?, RECIPE, ?> recipeType, Function<RECIPE, INGREDIENT_A> inputAExtractor, CACHE_A cacheA,
           Function<RECIPE, INGREDIENT_B> inputBExtractor, CACHE_B cacheB, Function<RECIPE, INGREDIENT_C> inputCExtractor, CACHE_C cacheC) {
         super(recipeType);
         this.inputAExtractor = inputAExtractor;
@@ -185,13 +185,20 @@ public abstract class TripleInputRecipeCache<INPUT_A, INGREDIENT_A extends Input
         }
         initCacheIfNeeded(world);
         //Note: If cache 1 contains input 1 then we only need to test the type of input 2 and 3 as we already know input 1 matches
-        if (cache1.contains(input1, recipe -> input2Extractor.apply(recipe).testType(input2) && input3Extractor.apply(recipe).testType(input3))) {
-            return true;
+        for (RECIPE recipe : cache1.getRecipes(input1)) {
+            if (input2Extractor.apply(recipe).testType(input2) && input3Extractor.apply(recipe).testType(input3)) {
+                return true;
+            }
         }
         //Our quick lookup 1 cache does not contain it, check any recipes where the 1 ingredient was complex
-        return complexIngredients1.stream().anyMatch(recipe -> input1Extractor.apply(recipe).testType(input1) &&
-                                                               input2Extractor.apply(recipe).testType(input2) &&
-                                                               input3Extractor.apply(recipe).testType(input3));
+        for (RECIPE recipe : complexIngredients1) {
+            if (input1Extractor.apply(recipe).testType(input1) &&
+                input2Extractor.apply(recipe).testType(input2) &&
+                input3Extractor.apply(recipe).testType(input3)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -213,16 +220,26 @@ public abstract class TripleInputRecipeCache<INPUT_A, INGREDIENT_A extends Input
             return null;
         }
         initCacheIfNeeded(world);
-        Predicate<RECIPE> matchPredicate = r -> r.test(inputA, inputB, inputC);
         //Lookup a recipe from the A input map (the fact that it is A is arbitrary, it just as well could be B or C)
-        RECIPE recipe = cacheA.findFirstRecipe(inputA, matchPredicate);
+        RECIPE recipe = findFirstRecipe(inputA, inputB, inputC, cacheA.getRecipes(inputA));
         // if there is no recipe, then check if any of our complex recipes (either a, b, or c being complex) match
-        return recipe == null ? findFirstRecipe(complexRecipes, matchPredicate) : recipe;
+        return recipe == null ? findFirstRecipe(inputA, inputB, inputC, complexRecipes) : recipe;
+    }
+
+    @Nullable
+    private RECIPE findFirstRecipe(INPUT_A inputA, INPUT_B inputB, INPUT_C inputC, Iterable<RECIPE> recipes) {
+        for (RECIPE recipe : recipes) {
+            if (recipe.test(inputA, inputB, inputC)) {
+                return recipe;
+            }
+        }
+        return null;
     }
 
     @Override
-    protected void initCache(List<RECIPE> recipes) {
-        for (RECIPE recipe : recipes) {
+    protected void initCache(List<RecipeHolder<RECIPE>> recipes) {
+        for (RecipeHolder<RECIPE> recipeHolder : recipes) {
+            RECIPE recipe = recipeHolder.value();
             boolean complexA = cacheA.mapInputs(recipe, inputAExtractor.apply(recipe));
             boolean complexB = cacheB.mapInputs(recipe, inputBExtractor.apply(recipe));
             boolean complexC = cacheC.mapInputs(recipe, inputCExtractor.apply(recipe));

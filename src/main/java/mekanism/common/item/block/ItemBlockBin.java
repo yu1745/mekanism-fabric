@@ -3,24 +3,25 @@ package mekanism.common.item.block;
 import java.util.List;
 import mekanism.api.text.EnumColor;
 import mekanism.common.MekanismLang;
+import mekanism.common.attachments.LockData;
+import mekanism.common.attachments.containers.item.ComponentBackedBinInventorySlot;
 import mekanism.common.block.attribute.Attribute;
 import mekanism.common.block.basic.BlockBin;
-import mekanism.common.inventory.BinMekanismInventory;
 import mekanism.common.inventory.slot.BinInventorySlot;
-import mekanism.common.item.interfaces.IItemSustainedInventory;
+import mekanism.common.item.interfaces.IDroppableContents.IDroppableAttachmentContents;
+import mekanism.common.registries.MekanismDataComponents;
 import mekanism.common.tier.BinTier;
 import mekanism.common.util.text.TextUtils;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
 
-public class ItemBlockBin extends ItemBlockTooltip<BlockBin> implements IItemSustainedInventory {
+public class ItemBlockBin extends ItemBlockTooltip<BlockBin> implements IDroppableAttachmentContents {
 
-    public ItemBlockBin(BlockBin block) {
-        super(block, new Item.Properties().stacksTo(1));
+    public ItemBlockBin(BlockBin block, Item.Properties properties) {
+        super(block, properties.component(MekanismDataComponents.LOCK, LockData.EMPTY));
     }
 
     @Override
@@ -29,11 +30,10 @@ public class ItemBlockBin extends ItemBlockTooltip<BlockBin> implements IItemSus
     }
 
     @Override
-    protected void addStats(@NotNull ItemStack stack, Level world, @NotNull List<Component> tooltip, @NotNull TooltipFlag flag) {
-        BinMekanismInventory inventory = BinMekanismInventory.create(stack);
+    protected void addStats(@NotNull ItemStack stack, @NotNull Item.TooltipContext context, @NotNull List<Component> tooltip, @NotNull TooltipFlag flag) {
+        ComponentBackedBinInventorySlot slot = BinInventorySlot.getForStack(stack);
         BinTier tier = getTier();
-        if (inventory != null && tier != null) {
-            BinInventorySlot slot = inventory.getBinSlot();
+        if (slot != null && tier != null) {
             if (slot.isEmpty()) {
                 tooltip.add(MekanismLang.EMPTY.translateColored(EnumColor.DARK_RED));
             } else {
@@ -44,8 +44,9 @@ public class ItemBlockBin extends ItemBlockTooltip<BlockBin> implements IItemSus
                     tooltip.add(MekanismLang.ITEM_AMOUNT.translateColored(EnumColor.PURPLE, EnumColor.GRAY, TextUtils.format(slot.getCount())));
                 }
             }
-            if (slot.isLocked()) {
-                tooltip.add(MekanismLang.LOCKED.translateColored(EnumColor.AQUA, EnumColor.GRAY, slot.getLockStack()));
+            ItemStack lockStack = slot.getLockStack();
+            if (!lockStack.isEmpty()) {
+                tooltip.add(MekanismLang.LOCKED.translateColored(EnumColor.AQUA, EnumColor.GRAY, lockStack));
             }
             if (tier == BinTier.CREATIVE) {
                 tooltip.add(MekanismLang.CAPACITY.translateColored(EnumColor.INDIGO, EnumColor.GRAY, MekanismLang.INFINITE));

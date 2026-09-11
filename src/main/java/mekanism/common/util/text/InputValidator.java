@@ -2,7 +2,6 @@ package mekanism.common.util.text;
 
 import it.unimi.dsi.fastutil.chars.CharOpenHashSet;
 import it.unimi.dsi.fastutil.chars.CharSet;
-import java.util.Arrays;
 import mekanism.api.functions.CharPredicate;
 import net.minecraft.resources.ResourceLocation;
 
@@ -16,7 +15,8 @@ public class InputValidator {
     public static final CharPredicate DIGIT_OR_NEGATIVE = DIGIT.or(c -> c == '-');
     public static final CharPredicate LETTER = c -> (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
     public static final CharPredicate LETTER_OR_DIGIT = LETTER.or(DIGIT);
-    public static final CharPredicate USERNAME = InputValidator.LETTER_OR_DIGIT.or(c -> c == '_');
+    //Note: This is stricter than StringUtil#isValidPlayerName, but follows what is valid based on mojang's support site
+    public static final CharPredicate USERNAME = LETTER_OR_DIGIT.or(c -> c == '_');
     public static final CharPredicate RL_NAMESPACE = ResourceLocation::validNamespaceChar;
     public static final CharPredicate RL_PATH = ResourceLocation::validPathChar;
     public static final CharPredicate RESOURCE_LOCATION = ResourceLocation::isAllowedInResourceLocation;
@@ -35,7 +35,17 @@ public class InputValidator {
     }
 
     public static CharPredicate or(CharPredicate... validators) {
-        return c -> Arrays.stream(validators).anyMatch(v -> v.test(c));
+        if (validators.length == 1) {
+            return validators[0];
+        }
+        return c -> {
+            for (CharPredicate v : validators) {
+                if (v.test(c)) {
+                    return true;
+                }
+            }
+            return false;
+        };
     }
 
     public static boolean test(String s, CharPredicate predicate) {

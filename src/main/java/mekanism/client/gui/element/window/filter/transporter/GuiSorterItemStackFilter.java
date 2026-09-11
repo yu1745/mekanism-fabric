@@ -14,18 +14,18 @@ import org.jetbrains.annotations.Nullable;
 public class GuiSorterItemStackFilter extends GuiItemStackFilter<SorterItemStackFilter, TileEntityLogisticalSorter> implements GuiSorterFilterHelper {
 
     public static GuiSorterItemStackFilter create(IGuiWrapper gui, TileEntityLogisticalSorter tile) {
-        return new GuiSorterItemStackFilter(gui, (gui.getWidth() - 195) / 2, 30, tile, null);
+        return new GuiSorterItemStackFilter(gui, (gui.getXSize() - SORTER_FILTER_WIDTH) / 2, 30, tile, null);
     }
 
     public static GuiSorterItemStackFilter edit(IGuiWrapper gui, TileEntityLogisticalSorter tile, SorterItemStackFilter filter) {
-        return new GuiSorterItemStackFilter(gui, (gui.getWidth() - 195) / 2, 30, tile, filter);
+        return new GuiSorterItemStackFilter(gui, (gui.getXSize() - SORTER_FILTER_WIDTH) / 2, 30, tile, filter);
     }
 
     private GuiTextField minField;
     private GuiTextField maxField;
 
     private GuiSorterItemStackFilter(IGuiWrapper gui, int x, int y, TileEntityLogisticalSorter tile, @Nullable SorterItemStackFilter origFilter) {
-        super(gui, x, y, 195, 90, tile, origFilter);
+        super(gui, x, y, SORTER_FILTER_WIDTH, 90, tile, origFilter);
     }
 
     @Override
@@ -36,12 +36,14 @@ public class GuiSorterItemStackFilter extends GuiItemStackFilter<SorterItemStack
     @Override
     protected void init() {
         super.init();
-        addSorterDefaults(gui(), filter, getSlotOffset(), this::addChild, tile::getSingleItem, (min, max) -> {
+        addSorterDefaults(gui(), getSlotOffset(), this::addChild, (min, max) -> {
             minField = min;
             maxField = max;
         });
-        addChild(new MekanismImageButton(gui(), relativeX + 148, relativeY + 68, 11, 14, getButtonLocation("fuzzy"),
-              () -> filter.fuzzyMode = !filter.fuzzyMode, getOnHover(MekanismLang.FUZZY_MODE)));
+        addChild(new MekanismImageButton(gui(), relativeX + 148, relativeY + 68, 11, 14, getButtonLocation("fuzzy"), (element, mouseX, mouseY) -> {
+            filter.fuzzyMode = !filter.fuzzyMode;
+            return true;
+        })).setTooltip(MekanismLang.FUZZY_MODE);
     }
 
     @Override
@@ -57,7 +59,12 @@ public class GuiSorterItemStackFilter extends GuiItemStackFilter<SorterItemStack
     @Override
     public void renderForeground(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         super.renderForeground(guiGraphics, mouseX, mouseY);
-        renderSorterForeground(guiGraphics, filter, tile.getSingleItem());
-        drawString(guiGraphics, OnOff.of(filter.fuzzyMode).getTextComponent(), relativeX + 161, relativeY + 71, titleTextColor());
+        renderSorterForeground(guiGraphics);
+        drawScrollingString(guiGraphics, OnOff.of(filter.fuzzyMode).getTextComponent(), 159, 71, TextAlignment.LEFT, titleTextColor(), width - 159, 2, false);
+    }
+
+    @Override
+    public boolean isSingleItem() {
+        return tile.getSingleItem();
     }
 }

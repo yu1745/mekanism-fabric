@@ -1,23 +1,23 @@
 package mekanism.common.integration.crafttweaker.recipe.manager;
 
 import com.blamejared.crafttweaker.api.annotation.ZenRegister;
+import com.blamejared.crafttweaker.api.fluid.CTFluidIngredient;
 import com.blamejared.crafttweaker.api.fluid.IFluidStack;
 import mekanism.api.recipes.FluidToFluidRecipe;
-import mekanism.api.recipes.ingredients.FluidStackIngredient;
+import mekanism.api.recipes.basic.BasicFluidToFluidRecipe;
+import mekanism.api.recipes.vanilla_input.SingleFluidRecipeInput;
 import mekanism.common.integration.crafttweaker.CrTConstants;
 import mekanism.common.integration.crafttweaker.CrTUtils;
 import mekanism.common.recipe.IMekanismRecipeTypeProvider;
 import mekanism.common.recipe.MekanismRecipeType;
-import mekanism.common.recipe.impl.FluidToFluidIRecipe;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.FluidStack;
 import org.openzen.zencode.java.ZenCodeType;
 
 @ZenRegister
 @ZenCodeType.Name(CrTConstants.CLASS_RECIPE_MANAGER_FLUID_TO_FLUID)
-public abstract class FluidToFluidRecipeManager extends MekanismRecipeManager<FluidToFluidRecipe> {
+public abstract class FluidToFluidRecipeManager extends MekanismRecipeManager<SingleFluidRecipeInput, FluidToFluidRecipe> {
 
-    protected FluidToFluidRecipeManager(IMekanismRecipeTypeProvider<FluidToFluidRecipe, ?> recipeType) {
+    protected FluidToFluidRecipeManager(IMekanismRecipeTypeProvider<SingleFluidRecipeInput, FluidToFluidRecipe, ?> recipeType) {
         super(recipeType);
     }
 
@@ -27,26 +27,25 @@ public abstract class FluidToFluidRecipeManager extends MekanismRecipeManager<Fl
      * If this is called from the evaporating recipe manager, this will be an evaporating recipe and able to be processed in a thermal evaporation plant.
      *
      * @param name   Name of the new recipe.
-     * @param input  {@link FluidStackIngredient} representing the input of the recipe.
+     * @param input  {@link CTFluidIngredient} representing the input of the recipe.
      * @param output {@link IFluidStack} representing the output of the recipe.
      */
     @ZenCodeType.Method
-    public void addRecipe(String name, FluidStackIngredient input, IFluidStack output) {
-        addRecipe(makeRecipe(getAndValidateName(name), input, output));
+    public void addRecipe(String name, CTFluidIngredient input, IFluidStack output) {
+        addRecipe(name, makeRecipe(input, output));
     }
 
     /**
      * Creates a recipe that converts a fluid into another fluid.
      *
-     * @param id     Name of the new recipe.
-     * @param input  {@link FluidStackIngredient} representing the input of the recipe.
+     * @param input  {@link CTFluidIngredient} representing the input of the recipe.
      * @param output {@link IFluidStack} representing the output of the recipe. Will be validated as not empty.
      */
-    public final FluidToFluidIRecipe makeRecipe(ResourceLocation id, FluidStackIngredient input, IFluidStack output) {
-        return makeRecipe(id, input, getAndValidateNotEmpty(output));
+    public final BasicFluidToFluidRecipe makeRecipe(CTFluidIngredient input, IFluidStack output) {
+        return makeRecipe(input, getAndValidateNotEmpty(output));
     }
 
-    protected abstract FluidToFluidIRecipe makeRecipe(ResourceLocation id, FluidStackIngredient input, FluidStack output);
+    protected abstract BasicFluidToFluidRecipe makeRecipe(CTFluidIngredient input, FluidStack output);
 
     @Override
     protected String describeOutputs(FluidToFluidRecipe recipe) {
@@ -64,8 +63,8 @@ public abstract class FluidToFluidRecipeManager extends MekanismRecipeManager<Fl
         }
 
         @Override
-        protected FluidToFluidIRecipe makeRecipe(ResourceLocation id, FluidStackIngredient input, FluidStack output) {
-            return new FluidToFluidIRecipe(id, input, output);
+        protected BasicFluidToFluidRecipe makeRecipe(CTFluidIngredient input, FluidStack output) {
+            return new BasicFluidToFluidRecipe(CrTUtils.fromCrT(input), output);
         }
     }
 }

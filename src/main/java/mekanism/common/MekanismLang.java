@@ -16,8 +16,8 @@ public enum MekanismLang implements ILangEntry {
     LOG_FORMAT("constants", "log_format"),
     PACK_DESCRIPTION("constants", "pack_description"),
     FORGE("constants", "forge"),
-    IC2("constants", "ic2"),
     ERROR("constants", "error"),
+    INVALID_PACKET("constants", "error.packet.invalid"),
     ALPHA_WARNING("constants", "alpha_warning"),
     ALPHA_WARNING_HERE("constants", "alpha_warning.here"),
     RECIPE_WARNING("constants", "recipe_warning"),
@@ -51,8 +51,14 @@ public enum MekanismLang implements ILangEntry {
     BOILER_INVALID_SUPERHEATING("boiler", "invalid_superheating"),
     //Conversion
     CONVERSION_ENERGY("conversion", "energy"),
-    CONVERSION_GAS("conversion", "gas"),
-    CONVERSION_INFUSION("conversion", "infusion"),
+    CONVERSION_CHEMICAL("conversion", "chemical"),
+    //Anchor Type
+    ANCHOR_TYPE_ABSOLUTE("anchor_type", "absolute"),
+    ANCHOR_TYPE_ABOVE_BOTTOM("anchor_type", "above_bottom"),
+    ANCHOR_TYPE_BELOW_TOP("anchor_type", "below_top"),
+    //Height Shape
+    HEIGHT_SHAPE_TRAPEZOID("height_shape", "trapezoid"),
+    HEIGHT_SHAPE_UNIFORM("height_shape", "above_bottom"),
     //QIO stuff
     SET_FREQUENCY("qio", "set_frequency"),
     QIO_FREQUENCY_SELECT("qio", "qio_frequency_select"),
@@ -67,20 +73,36 @@ public enum MekanismLang implements ILangEntry {
     QIO_IMPORT_WITHOUT_FILTER("qio", "import_without_filter"),
     QIO_EXPORT_WITHOUT_FILTER("qio", "export_without_filter"),
     QIO_COMPENSATE_TOOLTIP("qio", "compensate_tooltip"),
+    QIO_TRANSFER_TO_FREQUENCY("qio", "transfer.to_frequency"),
+    QIO_TRANSFER_TO_WINDOW("qio", "transfer.to_window"),
+    QIO_REJECTS_TO_FREQUENCY("qio", "recipe_viewer.to_frequency"),
+    QIO_REJECTS_TO_INVENTORY("qio", "recipe_viewer.to_inventory"),
+    QIO_SEARCH_AUTO_FOCUS("qio", "search.focus.auto"),
+    QIO_SEARCH_MANUAL_FOCUS("qio", "search.focus.manual"),
+    QIO_EXPORTER_ROUND_ROBIN("qio", "exporter.round_robin"),
+    QIO_EXPORTER_ROUND_ROBIN_DESCRIPTION("qio", "exporter.round_robin.description"),
     LIST_SORT_COUNT("qio", "sort_count"),
     LIST_SORT_NAME("qio", "sort_name"),
     LIST_SORT_MOD("qio", "sort_mod"),
+    LIST_SORT_REGISTRY_NAME("qio", "sort_registry_name"),
     LIST_SORT_NAME_DESC("qio", "sort_name_desc"),
     LIST_SORT_COUNT_DESC("qio", "sort_count_desc"),
     LIST_SORT_MOD_DESC("qio", "sort_mod_desc"),
+    LIST_SORT_REGISTRY_NAME_DESC("qio", "sort_registry_name.desc"),
+    LIST_SORT_ASCENDING("qio", "sort_ascending"),
     LIST_SORT_ASCENDING_DESC("qio", "sort_ascending_desc"),
+    LIST_SORT_DESCENDING("qio", "sort_descending"),
     LIST_SORT_DESCENDING_DESC("qio", "sort_descending_desc"),
     LIST_SEARCH("qio", "list_search"),
     LIST_SORT("qio", "list_sort"),
+    //Adapter
+    REDSTONE_ADAPTER_TOGGLE_SIGNAL("redstone_adapter", "toggle_signal"),
+    //Recipe viewer
+    RECIPE_VIEWER_INVENTORY_FULL("tooltip", "recipe_viewer.inventory_full"),
     //JEI
     JEI_AMOUNT_WITH_CAPACITY("tooltip", "jei.amount.with.capacity"),
-    JEI_INFO_HEAVY_WATER("info", "jei.heavy_water"),
-    JEI_INFO_MODULE_INSTALLATION("info", "jei.module_installation"),
+    RECIPE_VIEWER_INFO_HEAVY_WATER("info", "jei.heavy_water"),
+    RECIPE_VIEWER_INFO_MODULE_INSTALLATION("info", "jei.module_installation"),
     //Built into JEI
     JEI_MISSING_ITEMS("jei.tooltip.error.recipe.transfer.missing"),
     JEI_INVENTORY_FULL("jei.tooltip.error.recipe.transfer.inventory.full"),
@@ -107,6 +129,9 @@ public enum MekanismLang implements ILangEntry {
     NEW_YEAR_LINE_TWO("holiday", "new_year.2"),
     NEW_YEAR_LINE_THREE("holiday", "new_year.3"),
     MAY_4_LINE_ONE("holiday", "may_4.1"),
+    PRIDE_LINE_ONE("holiday", "pride.1"),
+    PRIDE_LINE_TWO("holiday", "pride.2"),
+    PRIDE_LINE_THREE("holiday", "pride.3"),
     //Generic
     GENERIC_PERCENT("generic", "percent"),
     GENERIC_WITH_COMMA("generic", "with_comma"),
@@ -127,18 +152,29 @@ public enum MekanismLang implements ILangEntry {
     GENERIC_LIST("generic", "list"),
     GENERIC_MINUTES("generic", "minutes"),
     GENERIC_HOURS_MINUTES("generic", "hours_minutes"),
+    GENERIC_GREATER_THAN("generic", "greater_than"),
+    GENERIC_GREATER_EQUAL("generic", "greater_equal"),
+    GENERIC_LESS_THAN("generic", "less_than"),
+    GENERIC_LESS_THAN_EQUAL("generic", "less_than_equal"),
     //Hold for
     HOLD_FOR_DETAILS("tooltip", "hold_for_details"),
     HOLD_FOR_DESCRIPTION("tooltip", "hold_for_description"),
     HOLD_FOR_MODULES("tooltip", "hold_for_modules"),
     HOLD_FOR_SUPPORTED_ITEMS("tooltip", "hold_for_supported_items"),
     //Commands
+    COMMAND_ERROR_NOT_WATCHED("command", "error.watch.not_watched"),
     COMMAND_CHUNK_WATCH("command", "chunk.watch"),
+    COMMAND_CHUNK_WATCH_NAMED("command", "chunk.watch.named"),
     COMMAND_CHUNK_UNWATCH("command", "chunk.unwatch"),
+    COMMAND_CHUNK_UNWATCH_NAMED("command", "chunk.unwatch.named"),
     COMMAND_CHUNK_CLEAR("command", "chunk.clear"),
     COMMAND_CHUNK_FLUSH("command", "chunk.flush"),
     COMMAND_CHUNK_LOADED("command", "chunk.loaded"),
+    COMMAND_CHUNK_LOADED_NAMED("command", "chunk.loaded.named"),
     COMMAND_CHUNK_UNLOADED("command", "chunk.unloaded"),
+    COMMAND_CHUNK_UNLOADED_NAMED("command", "chunk.unloaded.named"),
+    COMMAND_CHUNK_TICKET_LEVEL_CHANGED("command", "chunk.ticket_level_changed"),
+    COMMAND_CHUNK_TICKET_LEVEL_CHANGED_NAMED("command", "chunk.ticket_level_changed.named"),
     COMMAND_DEBUG("command", "debug"),
     COMMAND_TEST_RULES("command", "testrules"),
     COMMAND_TP("command", "tp"),
@@ -163,13 +199,11 @@ public enum MekanismLang implements ILangEntry {
     //Transmission types
     TRANSMISSION_TYPE_ENERGY("transmission", "energy"),
     TRANSMISSION_TYPE_FLUID("transmission", "fluids"),
-    TRANSMISSION_TYPE_GAS("transmission", "gases"),
-    TRANSMISSION_TYPE_INFUSION("transmission", "infuse_types"),
-    TRANSMISSION_TYPE_PIGMENT("transmission", "pigments"),
-    TRANSMISSION_TYPE_SLURRY("transmission", "slurries"),
+    TRANSMISSION_TYPE_CHEMICALS("transmission", "chemicals"),
     TRANSMISSION_TYPE_ITEM("transmission", "items"),
     TRANSMISSION_TYPE_HEAT("transmission", "heat"),
     //Tooltip stuff
+    UNKNOWN("tooltip", "unknown"),
     MODE("tooltip", "mode"),
     FIRE_MODE("tooltip", "fire_mode"),
     BUCKET_MODE("tooltip", "bucket_mode"),
@@ -181,7 +215,7 @@ public enum MekanismLang implements ILangEntry {
     FLOWING("tooltip", "flowing"),
     INVALID("tooltip", "invalid"),
     HAS_INVENTORY("tooltip", "inventory"),
-    NO_GAS("tooltip", "no_gas"),
+    NO_CHEMICAL("tooltip", "no_chemical"),
     NO_FLUID_TOOLTIP("tooltip", "no_fluid"),
     FREE_RUNNERS_MODE("tooltip", "mode.free_runners"),
     JETPACK_MODE("tooltip", "mode.jetpack"),
@@ -189,7 +223,6 @@ public enum MekanismLang implements ILangEntry {
     FREE_RUNNERS_STORED("tooltip", "stored.free_runners"),
     FLAMETHROWER_STORED("tooltip", "stored.flamethrower"),
     JETPACK_STORED("tooltip", "stored.jetpack"),
-    DECAY_IMMUNE("tooltip", "decay_immune"),
     //Gui stuff
     HEIGHT("gui", "height"),
     WIDTH("gui", "width"),
@@ -202,7 +235,9 @@ public enum MekanismLang implements ILangEntry {
     PROCESS_RATE_MB("gui", "process_rate_mb"),
     TICKS_REQUIRED("gui", "ticks_required"),
     MIN("gui", "min"),
+    MIN_DIGITAL_MINER("gui", "digital_miner.min"),
     MAX("gui", "max"),
+    MAX_DIGITAL_MINER("gui", "digital_miner.max"),
     INFINITE("gui", "infinite"),
     NONE("gui", "none"),
     EMPTY("gui", "empty"),
@@ -214,10 +249,6 @@ public enum MekanismLang implements ILangEntry {
     VOLUME("gui", "volume"),
     NO_FLUID("gui", "no_fluid"),
     CHEMICAL("gui", "chemical"),
-    GAS("gui", "gas"),
-    INFUSE_TYPE("gui", "infuse_type"),
-    PIGMENT("gui", "pigment"),
-    SLURRY("gui", "slurry"),
     LIQUID("gui", "liquid"),
     UNIT("gui", "unit"),
     USING("gui", "using"),
@@ -239,6 +270,8 @@ public enum MekanismLang implements ILangEntry {
     TRUE("gui", "true"),
     FALSE("gui", "false"),
     CLOSE("gui", "close"),
+    PIN("gui", "pin"),
+    UNPIN("gui", "unpin"),
     RADIATION_DOSE("gui", "radiation_dose"),
     RADIATION_EXPOSURE("gui", "radiation_exposure"),
     RADIATION_EXPOSURE_ENTITY("gui", "radiation_exposure.entity"),
@@ -249,6 +282,7 @@ public enum MekanismLang implements ILangEntry {
     HELMET_OPTIONS("gui", "helmet_options"),
     HUD_OVERLAY("gui", "hud_overlay"),
     OPACITY("gui", "opacity"),
+    JITTER("gui", "jitter"),
     DEFAULT("gui", "default"),
     WARNING("gui", "warning"),
     DANGER("gui", "danger"),
@@ -256,6 +290,7 @@ public enum MekanismLang implements ILangEntry {
     RADIAL_SCREEN("gui", "radial_screen"),
     VISUALS("gui", "visuals"),
     VISUALS_TOO_BIG("gui", "visuals.too_big"),
+    NO_COLOR("gui", "no_color"),
     //GUI Issues
     ISSUES("gui", "issues"),
     ISSUE_NOT_ENOUGH_ENERGY("gui", "issues.no_energy"),
@@ -266,6 +301,10 @@ public enum MekanismLang implements ILangEntry {
     ISSUE_INPUT_DOESNT_PRODUCE_OUTPUT("gui", "issues.input_doesnt_produce_output"),
     ISSUE_INVALID_OREDICTIONIFICATOR_FILTER("gui", "issues.invalid_oredictionificator_filter"),
     ISSUE_FILTER_HAS_BLACKLISTED_ELEMENT("gui", "issues.filter_has_blacklisted_element"),
+    //Redstone Activation
+    ISSUE_REDSTONE_SIGNAL_ABSENT("gui", "issues.redstone_signal_absent"),
+    ISSUE_REDSTONE_SIGNAL_PRESENT("gui", "issues.redstone_signal_present"),
+    ISSUE_REDSTONE_PULSE_REQUIRED("gui", "issues.redstone_pulse_required"),
     //Laser Amplifier
     ENTITY_DETECTION("laser_amplifier", "entity_detection"),
     ENERGY_CONTENTS("laser_amplifier", "energy_contents"),
@@ -288,6 +327,8 @@ public enum MekanismLang implements ILangEntry {
     TRANSPORTER_CONFIG("configuration", "transporter"),
     SIDE_CONFIG("configuration", "side"),
     SIDE_CONFIG_CLEAR("configuration", "side.clear"),
+    SIDE_CONFIG_CLEAR_ALL("configuration", "side.clear.all"),
+    SIDE_CONFIG_INCREMENT("configuration", "side.increment"),
     STRICT_INPUT("configuration", "strict_input"),
     STRICT_INPUT_ENABLED("configuration", "strict_input.enabled"),
     CONFIG_TYPE("configuration", "config_type"),
@@ -298,10 +339,10 @@ public enum MekanismLang implements ILangEntry {
     AUTO_PULL("auto", "pull"),
     AUTO_EJECT("auto", "eject"),
     AUTO_SORT("auto", "sort"),
-    //Gas mode
-    IDLE("gas_mode", "idle"),
-    DUMPING_EXCESS("gas_mode", "dumping_excess"),
-    DUMPING("gas_mode", "dumping"),
+    //Chemical mode
+    IDLE("chemical_mode", "idle"),
+    DUMPING_EXCESS("chemical_mode", "dumping_excess"),
+    DUMPING("chemical_mode", "dumping"),
     //Dictionary
     DICTIONARY_KEY("dictionary", "key"),
     DICTIONARY_NO_KEY("dictionary", "no_key"),
@@ -328,14 +369,8 @@ public enum MekanismLang implements ILangEntry {
     DICTIONARY_ENCHANTMENT_DESC("dictionary", "enchantment.desc"),
     DICTIONARY_BLOCK_ENTITY_TYPE("dictionary", "block_entity_type"),
     DICTIONARY_BLOCK_ENTITY_TYPE_DESC("dictionary", "block_entity_type.desc"),
-    DICTIONARY_GAS("dictionary", "gas"),
-    DICTIONARY_GAS_DESC("dictionary", "gas.desc"),
-    DICTIONARY_INFUSE_TYPE("dictionary", "infuse_type"),
-    DICTIONARY_INFUSE_TYPE_DESC("dictionary", "infuse_type.desc"),
-    DICTIONARY_PIGMENT("dictionary", "pigment"),
-    DICTIONARY_PIGMENT_DESC("dictionary", "pigment.desc"),
-    DICTIONARY_SLURRY("dictionary", "slurry"),
-    DICTIONARY_SLURRY_DESC("dictionary", "slurry.desc"),
+    DICTIONARY_CHEMICAL("dictionary", "chemical"),
+    DICTIONARY_CHEMICAL_DESC("dictionary", "chemical.desc"),
     //Oredictionificator
     LAST_ITEM("oredictionificator", "last_item"),
     NEXT_ITEM("oredictionificator", "next_item"),
@@ -372,6 +407,8 @@ public enum MekanismLang implements ILangEntry {
     BLOCK_DATA("cardboard_box", "block_data"),
     BLOCK("cardboard_box", "block"),
     BLOCK_ENTITY("cardboard_box", "block_entity"),
+    BLOCK_ENTITY_SPAWN_TYPE("cardboard_box", "block_entity.spawn_type"),
+    BLOCK_ENTITY_DECORATION("cardboard_box", "block_entity.decoration"),
     //Crafting Formula
     INGREDIENTS("crafting_formula", "ingredients"),
     ENCODED("crafting_formula", "encoded"),
@@ -385,10 +422,7 @@ public enum MekanismLang implements ILangEntry {
     ITEMS("transmitter", "items"),
     BLOCKS("transmitter", "blocks"),
     FLUIDS("transmitter", "fluids"),
-    GASES("transmitter", "gases"),
-    INFUSE_TYPES("transmitter", "infuse_types"),
-    PIGMENTS("transmitter", "pigments"),
-    SLURRIES("transmitter", "slurries"),
+    CHEMICALS("transmitter", "chemicals"),
     HEAT("transmitter", "heat"),
     CONDUCTION("transmitter", "conduction"),
     INSULATION("transmitter", "insulation"),
@@ -518,6 +552,7 @@ public enum MekanismLang implements ILangEntry {
     CONFIG_CARD_SET("configuration_card", "set"),
     CONFIG_CARD_UNEQUAL("configuration_card", "unequal"),
     CONFIG_CARD_HAS_DATA("configuration_card", "has_data"),
+    CONFIG_CARD_CLEARED("configuration_card", "cleared"),
     //Connection Type
     CONNECTION_NORMAL("connection", "normal"),
     CONNECTION_PUSH("connection", "push"),
@@ -526,7 +561,7 @@ public enum MekanismLang implements ILangEntry {
     //Teleporter
     TELEPORTER_READY("teleporter", "ready"),
     TELEPORTER_NO_FRAME("teleporter", "no_frame"),
-    TELEPORTER_NO_LINK("teleporter", "no_link"),
+    TELEPORTER_NO_DESTINATION("teleporter", "no_destination"),
     TELEPORTER_NEEDS_ENERGY("teleporter", "needs_energy"),
     //Matrix
     MATRIX("matrix", "induction_matrix"),
@@ -603,9 +638,6 @@ public enum MekanismLang implements ILangEntry {
     ENERGY_JOULES_SHORT("energy", "joules.short"),
     ENERGY_FORGE("energy", "forge"),
     ENERGY_FORGE_SHORT("energy", "forge.short"),
-    ENERGY_EU("energy", "eu"),
-    ENERGY_EU_PLURAL("energy", "eu.plural"),
-    ENERGY_EU_SHORT("energy", "eu.short"),
     //Network Reader
     NETWORK_READER_BORDER("network_reader", "border"),
     NETWORK_READER_TEMPERATURE("network_reader", "temperature"),
@@ -644,6 +676,7 @@ public enum MekanismLang implements ILangEntry {
     JETPACK_MODE_CHANGE("jetpack", "mode_change"),
     JETPACK_NORMAL("jetpack", "normal"),
     JETPACK_HOVER("jetpack", "hover"),
+    JETPACK_VECTOR("jetpack", "vector"),
     JETPACK_DISABLED("jetpack", "disabled"),
     //Disassembler Mode
     DISASSEMBLER_MODE_CHANGE("disassembler", "mode_change"),
@@ -760,6 +793,11 @@ public enum MekanismLang implements ILangEntry {
     DESCRIPTION_INDUSTRIAL_ALARM("description", "industrial_alarm"),
     DESCRIPTION_ENERGY_CUBE("description", "energy_cube"),
     DESCRIPTION_CHEMICAL_TANK("description", "chemical_tank"),
+    DESCRIPTION_CABLE("description", "cable"),
+    DESCRIPTION_PIPE("description", "pipe"),
+    DESCRIPTION_TUBE("description", "tube"),
+    DESCRIPTION_TRANSPORTER("description", "transporter"),
+    DESCRIPTION_CONDUCTOR("description", "conductor"),
     DESCRIPTION_DIVERSION("description", "diversion"),
     DESCRIPTION_RESTRICTIVE("description", "restrictive"),
     DESCRIPTION_SPS_CASING("description", "sps_casing"),
@@ -796,6 +834,7 @@ public enum MekanismLang implements ILangEntry {
     RADIAL_BLASTING_POWER_EXTREME("radial", "blasting_power.extreme"),
 
     //Modules
+    REMOVE_ALL_MODULES_TOOLTIP("gui", "modification.remove.tooltip"),
     MODULE_ENABLED("module", "enabled"),
     MODULE_ENABLED_LOWER("module", "enabled_lower"),
     MODULE_DISABLED_LOWER("module", "disabled_lower"),
@@ -806,37 +845,20 @@ public enum MekanismLang implements ILangEntry {
     MODULE_CONFLICTING("module", "conflicting"),
     MODULE_STACKABLE("module", "stackable"),
     MODULE_EXCLUSIVE("module", "exclusive"),
-    MODULE_HANDLE_MODE_CHANGE("module", "handle_mode_change"),
-    MODULE_RENDER_HUD("module", "render_hud"),
     MODULE_MODE("module", "mode"),
-    MODULE_COLOR("module", "color"),
-    MODULE_BONUS_ATTACK_DAMAGE("module", "bonus_attack_damage"),
-    MODULE_FARMING_RADIUS("module", "farming_radius"),
-    MODULE_JUMP_BOOST("module", "jump_boost"),
-    MODULE_STEP_ASSIST("module", "step_assist"),
-    MODULE_RANGE("module", "range"),
     MODULE_SPRINT_BOOST("module", "sprint_boost"),
-    MODULE_SWIM_BOOST("module", "swim_boost"),
     MODULE_EXTENDED_MODE("module", "extended_mode"),
     MODULE_EXTENDED_ENABLED("module", "extended_enabled"),
-    MODULE_EXCAVATION_RANGE("module", "mining_range"),
-    MODULE_BLAST_RADIUS("module", "blast_radius"),
     MODULE_BLASTING_ENABLED("module", "blasting_enabled"),
     MODULE_BLAST_AREA("module", "blast_area"),
     MODULE_EFFICIENCY("module", "efficiency"),
-    MODULE_BREATHING_HELD("module", "breathing.held"),
     MODULE_JETPACK_MODE("module", "jetpack_mode"),
     MODULE_GRAVITATIONAL_MODULATION("module", "gravitational_modulation"),
     MODULE_MAGNETIC_ATTRACTION("module", "magnetic_attraction"),
     MODULE_MODE_CHANGE("module", "mode_change"),
-    MODULE_CHARGE_SUIT("module", "charge_suit"),
-    MODULE_CHARGE_INVENTORY("module", "charge_inventory"),
-    MODULE_SPEED_BOOST("module", "speed_boost"),
     MODULE_VISION_ENHANCEMENT("module", "vision_enhancement"),
-    MODULE_PURIFICATION_BENEFICIAL("module", "purification.beneficial"),
-    MODULE_PURIFICATION_NEUTRAL("module", "purification.neutral"),
-    MODULE_PURIFICATION_HARMFUL("module", "purification.harmful"),
-    MODULE_TELEPORT_REQUIRES_BLOCK("module", "teleportation_requires_block"),
+    //FramedBlocks integration
+    FRAMEDBLOCKS_CAMO_HAS_SPECIAL_HANDLING("msg", "compat.framedblocks.camo.has_special_handling")
     ;
 
     private final String key;
@@ -854,10 +876,10 @@ public enum MekanismLang implements ILangEntry {
         return key;
     }
 
-    public static MekanismLang get(EquipmentSlot type) {
+    public static ILangEntry get(EquipmentSlot type) {
         return switch (type) {
             case HEAD -> HEAD;
-            case CHEST -> BODY;
+            case CHEST, BODY -> BODY;
             case LEGS -> LEGS;
             case FEET -> FEET;
             case MAINHAND -> MAINHAND;

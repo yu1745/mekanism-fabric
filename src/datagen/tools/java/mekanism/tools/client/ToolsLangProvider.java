@@ -1,12 +1,21 @@
 package mekanism.tools.client;
 
-import mekanism.api.providers.IItemProvider;
 import mekanism.api.text.EnumColor;
+import mekanism.api.text.IHasTranslationKey;
 import mekanism.client.lang.BaseLanguageProvider;
 import mekanism.common.util.EnumUtils;
+import mekanism.tools.client.recipe_viewer.aliases.ToolsAliases;
 import mekanism.tools.common.MekanismTools;
 import mekanism.tools.common.ToolsLang;
+import mekanism.tools.common.ToolsTags;
 import mekanism.tools.common.advancements.ToolsAdvancements;
+import mekanism.tools.common.config.MekanismToolsConfig;
+import mekanism.tools.common.config.ToolsConfigTranslations;
+import mekanism.tools.common.config.ToolsConfigTranslations.ArmorSpawnChanceTranslations;
+import mekanism.tools.common.config.ToolsConfigTranslations.MaterialTranslations;
+import mekanism.tools.common.config.ToolsConfigTranslations.VanillaPaxelMaterialTranslations;
+import mekanism.tools.common.material.MaterialCreator;
+import mekanism.tools.common.material.VanillaPaxelMaterialCreator;
 import mekanism.tools.common.registries.ToolsItems;
 import net.minecraft.data.PackOutput;
 
@@ -18,9 +27,44 @@ public class ToolsLangProvider extends BaseLanguageProvider {
 
     @Override
     protected void addTranslations() {
+        addConfigs();
+        addTags();
         addItems();
         addAdvancements();
         addMisc();
+        addAliases(ToolsAliases.values());
+    }
+
+    private void addConfigs() {
+        addConfigs(MekanismToolsConfig.getConfigs());
+        addConfigs(ToolsConfigTranslations.values());
+        //Vanilla paxels
+        addConfigs(MekanismToolsConfig.materials.wood);
+        addConfigs(MekanismToolsConfig.materials.stone);
+        addConfigs(MekanismToolsConfig.materials.iron);
+        addConfigs(MekanismToolsConfig.materials.diamond);
+        addConfigs(MekanismToolsConfig.materials.gold);
+        addConfigs(MekanismToolsConfig.materials.netherite);
+        //Mekanism materials
+        addConfigs(MekanismToolsConfig.materials.bronze);
+        addConfigs(MekanismToolsConfig.materials.lapisLazuli);
+        addConfigs(MekanismToolsConfig.materials.osmium);
+        addConfigs(MekanismToolsConfig.materials.refinedGlowstone);
+        addConfigs(MekanismToolsConfig.materials.refinedObsidian);
+        addConfigs(MekanismToolsConfig.materials.steel);
+    }
+
+    private void addConfigs(VanillaPaxelMaterialCreator config) {
+        addConfigs(VanillaPaxelMaterialTranslations.create(config.getRegistryPrefix()).toArray());
+    }
+
+    private void addConfigs(MaterialCreator config) {
+        addConfigs(MaterialTranslations.create(config.getRegistryPrefix()).toArray());
+        addConfigs(ArmorSpawnChanceTranslations.create(config.getRegistryPrefix()).toArray());
+    }
+
+    private void addTags() {
+        add(ToolsTags.Items.TOOLS_PAXEL, "Paxels");
     }
 
     private void addItems() {
@@ -59,12 +103,14 @@ public class ToolsLangProvider extends BaseLanguageProvider {
     }
 
     private void addMisc() {
+        addModInfo("Tools module for Mekanism");
         addPackData(ToolsLang.MEKANISM_TOOLS, ToolsLang.PACK_DESCRIPTION);
         add(ToolsLang.HP, "HP: %1$s");
     }
 
-    private void addSet(String type, IItemProvider helmet, IItemProvider chestplate, IItemProvider leggings, IItemProvider boots, IItemProvider sword,
-          IItemProvider pickaxe, IItemProvider axe, IItemProvider shovel, IItemProvider hoe, IItemProvider paxel, IItemProvider shield) {
+    private void addSet(String type, IHasTranslationKey helmet, IHasTranslationKey chestplate, IHasTranslationKey leggings, IHasTranslationKey boots,
+          IHasTranslationKey sword, IHasTranslationKey pickaxe, IHasTranslationKey axe, IHasTranslationKey shovel, IHasTranslationKey hoe, IHasTranslationKey paxel,
+          IHasTranslationKey shield) {
         add(helmet, type + " Helmet");
         add(chestplate, type + " Chestplate");
         add(leggings, type + " Leggings");
@@ -78,7 +124,7 @@ public class ToolsLangProvider extends BaseLanguageProvider {
         addShield(shield, type + " Shield");
     }
 
-    private void addShield(IItemProvider shield, String name) {
+    private void addShield(IHasTranslationKey shield, String name) {
         add(shield, name);
         //Add names for all the bannered overlay types
         for (EnumColor color : EnumUtils.COLORS) {

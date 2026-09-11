@@ -1,25 +1,29 @@
 package mekanism.builder;
 
-import com.squareup.javapoet.AnnotationSpec;
-import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.CodeBlock;
-import com.squareup.javapoet.FieldSpec;
-import com.squareup.javapoet.JavaFile;
-import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.ParameterSpec;
-import com.squareup.javapoet.ParameterizedTypeName;
-import com.squareup.javapoet.TypeName;
-import com.squareup.javapoet.TypeSpec;
+import com.palantir.javapoet.AnnotationSpec;
+import com.palantir.javapoet.ClassName;
+import com.palantir.javapoet.CodeBlock;
+import com.palantir.javapoet.FieldSpec;
+import com.palantir.javapoet.JavaFile;
+import com.palantir.javapoet.MethodSpec;
+import com.palantir.javapoet.ParameterSpec;
+import com.palantir.javapoet.ParameterizedTypeName;
+import com.palantir.javapoet.TypeName;
+import com.palantir.javapoet.TypeSpec;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.WrongMethodTypeException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.Consumer;
-import java.util.function.Function;
+import java.util.stream.Collectors;
+import javax.annotation.processing.Messager;
+import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
@@ -27,21 +31,16 @@ import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
-import javax.tools.Diagnostic.Kind;
-import mekanism.MekAnnotationProcessors;
-import mekanism.util.FakeParameter;
-import mekanism.visitors.AnnotationHelper;
-import mekanism.visitors.ParamToHelperMapper;
-import javax.annotation.processing.Messager;
-import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.WrongMethodTypeException;
-import java.util.stream.Collectors;
+import javax.tools.Diagnostic.Kind;
+import mekanism.MekAnnotationProcessors;
+import mekanism.util.FakeParameter;
+import mekanism.visitors.AnnotationHelper;
+import mekanism.visitors.ParamToHelperMapper;
 
 /**
  * Heavy lifting class to generate a Factory for a single target class
@@ -77,7 +76,7 @@ public class ComputerHandlerBuilder {
         collectionType = Objects.requireNonNull(elementUtils.getTypeElement("java.util.Collection")).asType();
         mapType = Objects.requireNonNull(elementUtils.getTypeElement("java.util.Map")).asType();
         eitherType = Objects.requireNonNull(elementUtils.getTypeElement("com.mojang.datafixers.util.Either")).asType();
-        convertableType = Objects.requireNonNull(elementUtils.getTypeElement(MekAnnotationProcessors.COMPUTER_INTEGRATION_PACKAGE+".Convertable")).asType();
+        convertableType = Objects.requireNonNull(elementUtils.getTypeElement(MekAnnotationProcessors.COMPUTER_INTEGRATION_PACKAGE + ".Convertable")).asType();
         TypeMirror filterInterface = typeUtils.erasure(elementUtils.getTypeElement("mekanism.common.content.filter.IFilter").asType());
         paramToHelperMapper = new ParamToHelperMapper(helperParam, filterInterface, typeUtils);
     }
@@ -145,14 +144,14 @@ public class ComputerHandlerBuilder {
                     if (annotatedElement instanceof ExecutableElement executableElement) {
                         handleAtComputerMethod(annotatedName, isPrivate, isStatic, annotationValues, executableElement);
                     } else {
-                        messager.printMessage(Kind.ERROR, "Unable to handle, expected ExecutableElement but found "+annotatedElement.getClass().getSimpleName());
+                        messager.printMessage(Kind.ERROR, "Unable to handle, expected ExecutableElement but found " + annotatedElement.getClass().getSimpleName());
                     }
                 } else if (typeUtils.isSameType(annotationMirror.getAnnotationType(), syntheticComputerMethodAnnotationType)) {
                     handlerTypeSpec.addOriginatingElement(annotatedElement);
                     if (annotatedElement instanceof VariableElement fieldElement) {
                         handleAtSyntheticMethod(annotatedName, isPrivate, isStatic, annotationValues, fieldElement);
                     } else {
-                        messager.printMessage(Kind.ERROR, "Unable to handle, expected VariableElement but found "+annotatedElement.getClass().getSimpleName());
+                        messager.printMessage(Kind.ERROR, "Unable to handle, expected VariableElement but found " + annotatedElement.getClass().getSimpleName());
                     }
                 } else if (typeUtils.isSameType(annotationMirror.getAnnotationType(), wrappingComputerMethodAnnotationType)) {
                     handlerTypeSpec.addOriginatingElement(annotatedElement);
@@ -172,11 +171,11 @@ public class ComputerHandlerBuilder {
     /**
      * Build method for a @WrappingComputerMethod
      *
-     * @param annotatedElement     the field or method annotated
-     * @param annotatedName        the field or method simple name
-     * @param isPrivate modifiers checked previously
-     * @param isStatic             modifier checked previously
-     * @param annotationValues     an annotation helper for this annotation's values
+     * @param annotatedElement the field or method annotated
+     * @param annotatedName    the field or method simple name
+     * @param isPrivate        modifiers checked previously
+     * @param isStatic         modifier checked previously
+     * @param annotationValues an annotation helper for this annotation's values
      */
     private void handleAtWrappingComputerMethod(Element annotatedElement, String annotatedName, boolean isPrivate, boolean isStatic, AnnotationHelper annotationValues) {
         //get the wrapper type and find its static methods
@@ -239,7 +238,7 @@ public class ComputerHandlerBuilder {
             //generate the doc string, if we have all the data
             String methodDescription = null;
             if (docPlaceholder != null) {
-                methodDescription = wrapperMethod.getAnnotationMirrors()
+                String unformattedDescription = wrapperMethod.getAnnotationMirrors()
                       .stream()
                       //find the doc annotation on the target method
                       .filter(it -> typeUtils.isSameType(it.getAnnotationType(), wrappingComputerMethodDocAnnotationType))
@@ -254,10 +253,12 @@ public class ComputerHandlerBuilder {
                       )
                       //get the value as a string
                       .map(v -> (String) v.getValue())
-                      //format it
-                      .map(template -> String.format(template, docPlaceholder))
                       //something in the chain failed, default to null
                       .orElse(null);
+                if (unformattedDescription != null) {
+                    //format it
+                    methodDescription = String.format(Locale.ROOT, unformattedDescription, docPlaceholder);
+                }
             }
 
             //add a call to register() in the handler class's constructor
@@ -290,11 +291,11 @@ public class ComputerHandlerBuilder {
     /**
      * Generate a getter and/or setter for a field. Private fields do not support setter (currently unused anyway)
      *
-     * @param annotatedName        the field or method simple name
-     * @param isPrivate modifiers checked previously
-     * @param isStatic             modifier checked previously
-     * @param annotationValues     an annotation helper for this annotation's values
-     * @param fieldElement         the field annotated
+     * @param annotatedName    the field or method simple name
+     * @param isPrivate        modifiers checked previously
+     * @param isStatic         modifier checked previously
+     * @param annotationValues an annotation helper for this annotation's values
+     * @param fieldElement     the field annotated
      */
     private void handleAtSyntheticMethod(String annotatedName, boolean isPrivate, boolean isStatic, AnnotationHelper annotationValues, VariableElement fieldElement) {
         //get a code reference to the field, or a call of the generated getter
@@ -313,7 +314,7 @@ public class ComputerHandlerBuilder {
             handlerTypeSpec.addMethod(handlerMethod);
 
             //ensure the getter is registered
-            CodeBlock getterRegistration = buildRegisterMethodCall(annotationValues, Collections.emptyList(), fieldType, handlerMethod, getterName, annotationValues.getBooleanValue("threadSafeGetter", false), annotationValues.getStringValue("getterDescription",null));
+            CodeBlock getterRegistration = buildRegisterMethodCall(annotationValues, Collections.emptyList(), fieldType, handlerMethod, getterName, annotationValues.getBooleanValue("threadSafeGetter", false), annotationValues.getStringValue("getterDescription", null));
             constructorBuilder.addStatement(getterRegistration);
         }
 
@@ -334,7 +335,7 @@ public class ComputerHandlerBuilder {
             handlerTypeSpec.addMethod(handlerMethod);
 
             //register the setter
-            CodeBlock setterRegistration = buildRegisterMethodCall(annotationValues, Collections.singletonList(new FakeParameter(fieldType, "value")), typeUtils.getNoType(TypeKind.VOID), handlerMethod, setterName, annotationValues.getBooleanValue("threadSafeSetter", false), annotationValues.getStringValue("setterDescription",null));
+            CodeBlock setterRegistration = buildRegisterMethodCall(annotationValues, Collections.singletonList(new FakeParameter(fieldType, "value")), typeUtils.getNoType(TypeKind.VOID), handlerMethod, setterName, annotationValues.getBooleanValue("threadSafeSetter", false), annotationValues.getStringValue("setterDescription", null));
             constructorBuilder.addStatement(setterRegistration);
         }
 
@@ -346,11 +347,11 @@ public class ComputerHandlerBuilder {
     /**
      * Handle an @ComputerMethod annotated method
      *
-     * @param annotatedName        the field or method simple name
-     * @param isPrivate modifiers checked previously
-     * @param isStatic             modifier checked previously
-     * @param annotationValues     an annotation helper for this annotation's values
-     * @param executableElement    the method with the annotation
+     * @param annotatedName     the field or method simple name
+     * @param isPrivate         modifiers checked previously
+     * @param isStatic          modifier checked previously
+     * @param annotationValues  an annotation helper for this annotation's values
+     * @param executableElement the method with the annotation
      */
     private void handleAtComputerMethod(String annotatedName, boolean isPrivate, boolean isStatic, AnnotationHelper annotationValues, ExecutableElement executableElement) {
         //bail if method isn't directly accessible for performance reasons
@@ -376,17 +377,17 @@ public class ComputerHandlerBuilder {
         handlerTypeSpec.addMethod(handlerMethod);
 
         //add a call to register() in the handler class's constructor
-        CodeBlock registerMethodBuilder = buildRegisterMethodCall(annotationValues, parameters, returnType, handlerMethod, nameOverride, annotationValues.getBooleanValue("threadSafe", false), annotationValues.getStringValue("methodDescription",null));
+        CodeBlock registerMethodBuilder = buildRegisterMethodCall(annotationValues, parameters, returnType, handlerMethod, nameOverride, annotationValues.getBooleanValue("threadSafe", false), annotationValues.getStringValue("methodDescription", null));
         constructorBuilder.addStatement(registerMethodBuilder);
     }
 
     /**
      * Generate a CodeBlock which grabs the value of the field.
      *
-     * @param annotatedName        the simple name of the field to get
-     * @param isPrivate if we need to use a proxy getter / method handle
-     * @param isStatic             is it a static method
-     * @param fieldElement         the element we're getting
+     * @param annotatedName the simple name of the field to get
+     * @param isPrivate     if we need to use a proxy getter / method handle
+     * @param isStatic      is it a static method
+     * @param fieldElement  the element we're getting
      *
      * @return CodeBlock which references the field
      */
@@ -450,7 +451,7 @@ public class ComputerHandlerBuilder {
               .returns(returnType)
               .beginControlFlow("try")
               //invoke the method handle
-              .addStatement("return ($T)$N.invokeExact($L)", returnType, methodHandleField, proxyParams.stream().map(param -> param.name).collect(Collectors.joining(", ")))
+              .addStatement("return ($T)$N.invokeExact($L)", returnType, methodHandleField, proxyParams.stream().map(ParameterSpec::name).collect(Collectors.joining(", ")))
               //catch a failing method handle (throw as RuntimeException)
               .nextControlFlow("catch ($T wmte)", WrongMethodTypeException.class)
               .addStatement("throw new $T($S, wmte)", RuntimeException.class, "Method not bound correctly")
@@ -601,7 +602,6 @@ public class ComputerHandlerBuilder {
      * @param computerExposedName either a name override or the annotated name, exposed to a computer
      * @param threadSafeLiteral   the value of the threadsafe annotation member (name varies in the case of synthetics)
      *
-     * @param methodDescription
      * @return a CodeBlock to be added to the constructor
      */
     private CodeBlock buildRegisterMethodCall(AnnotationHelper annotationValues, List<VariableElement> parameters, TypeMirror returnType, MethodSpec handlerMethod, String computerExposedName, boolean threadSafeLiteral, String methodDescription) {
@@ -645,15 +645,15 @@ public class ComputerHandlerBuilder {
             registerMethodBuilder.add(".methodDescription($S)", methodDescription);
         }
         //requires public security
-        if (annotationValues.getBooleanValue("requiresPublicSecurity",false)) {
+        if (annotationValues.getBooleanValue("requiresPublicSecurity", false)) {
             registerMethodBuilder.add(".requiresPublicSecurity()");
         }
         //param names
         if (!parameters.isEmpty()) {
             List<String> paramNames = parameters.stream().map(variableElement -> variableElement.getSimpleName().toString()).toList();
             FieldSpec paramNameField = this.paramNameConstants.computeIfAbsent(paramNames, params ->
-                  FieldSpec.builder(String[].class, "NAMES_"+String.join("_", params), Modifier.PRIVATE, Modifier.FINAL)
-                        .initializer("new String[]{$L}", params.stream().map(p->CodeBlock.of("$S",p)).collect(CodeBlock.joining(",")))
+                  FieldSpec.builder(String[].class, "NAMES_" + String.join("_", params), Modifier.PRIVATE, Modifier.FINAL)
+                        .initializer("new String[]{$L}", params.stream().map(p -> CodeBlock.of("$S", p)).collect(CodeBlock.joining(",")))
                         .build()
             );
             List<String> paramTypes = parameters.stream().map(param -> typeUtils.erasure(param.asType()).toString()).toList();

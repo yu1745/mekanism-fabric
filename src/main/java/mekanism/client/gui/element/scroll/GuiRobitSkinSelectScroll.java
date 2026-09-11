@@ -14,15 +14,17 @@ import mekanism.client.gui.IGuiWrapper;
 import mekanism.client.gui.element.GuiElement;
 import mekanism.client.gui.element.GuiElementHolder;
 import mekanism.client.gui.element.GuiInnerScreen;
+import mekanism.client.gui.tooltip.TooltipUtils;
 import mekanism.client.model.MekanismModelCache;
-import mekanism.client.render.lib.QuadTransformation;
-import mekanism.client.render.lib.QuadUtils;
 import mekanism.common.Mekanism;
 import mekanism.common.MekanismLang;
 import mekanism.common.entity.EntityRobit;
 import mekanism.common.registries.MekanismRobitSkins;
 import mekanism.common.registries.MekanismRobitSkins.SkinLookup;
+import mekanism.common.util.MekanismUtils;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -32,8 +34,10 @@ import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
-import net.minecraftforge.client.model.data.ModelData;
+import net.neoforged.neoforge.client.model.data.ModelData;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.joml.Quaternionf;
 
 public class GuiRobitSkinSelectScroll extends GuiElement {
 
@@ -48,6 +52,12 @@ public class GuiRobitSkinSelectScroll extends GuiElement {
     private ResourceKey<RobitSkin> selectedSkin;
     private float rotation;
     private int ticks;
+    @Nullable
+    private ResourceKey<RobitSkin> lastSkin;
+    @Nullable
+    private Tooltip lastTooltip;
+    @Nullable
+    private ScreenRectangle cachedTooltipRect;
 
     public GuiRobitSkinSelectScroll(IGuiWrapper gui, int x, int y, EntityRobit robit, Supplier<List<ResourceKey<RobitSkin>>> unlockedSkins) {
         super(gui, x, y, INNER_DIMENSIONS + 12, INNER_DIMENSIONS);
@@ -55,7 +65,7 @@ public class GuiRobitSkinSelectScroll extends GuiElement {
         this.selectedSkin = this.robit.getSkin();
         this.unlockedSkins = unlockedSkins;
         scrollBar = addChild(new GuiScrollBar(gui, relativeX + INNER_DIMENSIONS, relativeY, INNER_DIMENSIONS,
-              () -> getUnlockedSkins() == null ? 0 : (int) Math.ceil((double) getUnlockedSkins().size() / SLOT_COUNT), () -> SLOT_COUNT));
+              () -> getUnlockedSkins() == null ? 0 : Mth.ceil((double) getUnlockedSkins().size() / SLOT_COUNT), () -> SLOT_COUNT));
     }
 
     private List<ResourceKey<RobitSkin>> getUnlockedSkins() {
@@ -73,11 +83,11 @@ public class GuiRobitSkinSelectScroll extends GuiElement {
         if (skins != null) {
             Lighting.setupForFlatItems();
             //Every ten ticks consider the skin to change
-            int index = ticks / 10;
+            int index = ticks / MekanismUtils.TICKS_PER_HALF_SECOND;
             float oldRot = rotation;
             rotation = Mth.wrapDegrees(rotation - 0.5F);
             float rot = Mth.rotLerp(partialTicks, oldRot, rotation);
-            QuadTransformation rotation = QuadTransformation.rotateY(rot);
+            Quaternionf rotation = Axis.YP.rotationDegrees(rot);
             int slotStart = scrollBar.getCurrentSelection() * SLOT_COUNT, max = SLOT_COUNT * SLOT_COUNT;
             for (int i = 0; i < max; i++) {
                 int slotX = relativeX + (i % SLOT_COUNT) * SLOT_DIMENSIONS, slotY = relativeY + (i / SLOT_COUNT) * SLOT_DIMENSIONS;
@@ -129,44 +139,59 @@ public class GuiRobitSkinSelectScroll extends GuiElement {
         ticks++;
     }
 
+    @NotNull
     @Override
-    public void renderToolTip(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        super.renderToolTip(guiGraphics, mouseX, mouseY);
-        ResourceKey<RobitSkin> skin = getSkin(mouseX, mouseY);
-        if (skin != null) {
-            displayTooltips(guiGraphics, mouseX, mouseY, MekanismLang.ROBIT_SKIN.translate(RobitSkin.getTranslatedName(skin)));
-        }
+    protected ScreenRectangle getTooltipRectangle(int mouseX, int mouseY) {
+        return cachedTooltipRect == null ? super.getTooltipRectangle(mouseX, mouseY) : cachedTooltipRect;
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
-        return scrollBar.adjustScroll(delta) || super.mouseScrolled(mouseX, mouseY, delta);
+    public void updateTooltip(int mouseX, int mouseY) {
+        ResourceKey<RobitSkin> skin = getSkin(mouseX, mouseY, true);
+        if (skin == null) {
+            lastTooltip = null;
+        } else if (lastSkin != skin) {
+            lastTooltip = TooltipUtils.create(MekanismLang.ROBIT_SKIN.translate(RobitSkin.getTranslatedName(skin)));
+        }
+        lastSkin = skin;
+        setTooltip(lastTooltip);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double xDelta, double yDelta) {
+        return scrollBar.adjustScroll(yDelta) || super.mouseScrolled(mouseX, mouseY, xDelta, yDelta);
     }
 
     @Override
     public void onClick(double mouseX, double mouseY, int button) {
         super.onClick(mouseX, mouseY, button);
-        ResourceKey<RobitSkin> skin = getSkin(mouseX, mouseY);
+        ResourceKey<RobitSkin> skin = getSkin(mouseX, mouseY, false);
         if (skin != null) {
             selectedSkin = skin;
         }
     }
 
-    private ResourceKey<RobitSkin> getSkin(double mouseX, double mouseY) {
+    private ResourceKey<RobitSkin> getSkin(double mouseX, double mouseY, boolean updateTooltipRect) {
         List<ResourceKey<RobitSkin>> skins = getUnlockedSkins();
         if (skins != null) {
             int slotX = (int) ((mouseX - getX()) / SLOT_DIMENSIONS), slotY = (int) ((mouseY - getY()) / SLOT_DIMENSIONS);
             if (slotX >= 0 && slotY >= 0 && slotX < SLOT_COUNT && slotY < SLOT_COUNT) {
                 int slot = (slotY + scrollBar.getCurrentSelection()) * SLOT_COUNT + slotX;
                 if (slot < skins.size()) {
+                    if (updateTooltipRect) {
+                        cachedTooltipRect = new ScreenRectangle(getX() + slotX * SLOT_DIMENSIONS, getY() + slotY * SLOT_DIMENSIONS, SLOT_DIMENSIONS, SLOT_DIMENSIONS);
+                    }
                     return skins.get(slot);
                 }
             }
         }
+        if (updateTooltipRect) {
+            cachedTooltipRect = null;
+        }
         return null;
     }
 
-    private void renderRobit(GuiGraphics guiGraphics, ResourceKey<RobitSkin> skinKey, int x, int y, QuadTransformation rotation, int index) {
+    private void renderRobit(GuiGraphics guiGraphics, ResourceKey<RobitSkin> skinKey, int x, int y, Quaternionf rotation, int index) {
         SkinLookup skinLookup = MekanismRobitSkins.lookup(robit.level().registryAccess(), skinKey);
         List<ResourceLocation> textures = skinLookup.skin().textures();
         if (textures.isEmpty()) {
@@ -186,14 +211,11 @@ public class GuiRobitSkinSelectScroll extends GuiElement {
         pose.translate(x + SLOT_DIMENSIONS, y + (int) (0.8 * SLOT_DIMENSIONS), 0);
         pose.scale(SLOT_DIMENSIONS, SLOT_DIMENSIONS, SLOT_DIMENSIONS);
         pose.mulPose(Axis.ZP.rotationDegrees(180));
+        pose.rotateAround(rotation,  0.5F, 0.0F, 0.5F);
         PoseStack.Pose matrixEntry = pose.last();
-        ModelData modelData = ModelData.builder().with(EntityRobit.SKIN_TEXTURE_PROPERTY, MathUtils.getByIndexMod(textures, index)).build();
-        List<BakedQuad> quads = model.getQuads(null, null, robit.level().random, modelData, null);
-        //TODO: Ideally at some point we will want to be able to have the rotations happen via the matrix stack
-        // so that we aren't having to transform the quads directly
-        quads = QuadUtils.transformBakedQuads(quads, rotation);
-        for (BakedQuad quad : quads) {
-            builder.putBulkData(matrixEntry, quad, 1, 1, 1, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
+        ModelData modelData = ModelData.of(EntityRobit.SKIN_TEXTURE_PROPERTY, MathUtils.getByIndexMod(textures, index));
+        for (BakedQuad quad : model.getQuads(null, null, robit.level().random, modelData, null)) {
+            builder.putBulkData(matrixEntry, quad, 1, 1, 1, 1, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
         }
         buffer.endBatch(RobitSpriteUploader.RENDER_TYPE);
 

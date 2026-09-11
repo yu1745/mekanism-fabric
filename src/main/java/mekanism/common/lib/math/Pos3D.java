@@ -1,11 +1,10 @@
 package mekanism.common.lib.math;
 
-import mekanism.api.Coord4D;
-import mekanism.api.NBTConstants;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Direction.Axis;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.core.Vec3i;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
@@ -32,10 +31,6 @@ public class Pos3D extends Vec3 {
         super(vec.x, vec.y, vec.z);
     }
 
-    public Pos3D(Coord4D coord) {
-        super(coord.getX(), coord.getY(), coord.getZ());
-    }
-
     public Pos3D(double x, double y, double z) {
         super(x, y, z);
     }
@@ -53,19 +48,12 @@ public class Pos3D extends Vec3 {
         return create(tile.getBlockPos());
     }
 
-    public static Pos3D create(Vec3i vec) {
-        return new Pos3D(Vec3.atLowerCornerOf(vec));
+    public static Pos3D create(GlobalPos pos) {
+        return create(pos.pos());
     }
 
-    /**
-     * Returns a new Pos3D from a tag compound.
-     *
-     * @param tag - tag compound to read from
-     *
-     * @return the Pos3D from the tag compound
-     */
-    public static Pos3D read(CompoundTag tag) {
-        return new Pos3D(tag.getDouble(NBTConstants.X), tag.getDouble(NBTConstants.Y), tag.getDouble(NBTConstants.Z));
+    public static Pos3D create(Vec3i vec) {
+        return new Pos3D(atLowerCornerOf(vec));
     }
 
     public static Pos3D translateMatrix(double[] matrix, Pos3D translation) {
@@ -88,20 +76,6 @@ public class Pos3D extends Vec3 {
     }
 
     /**
-     * Writes this Pos3D's data to an CompoundNBT.
-     *
-     * @param nbtTags - tag compound to write to
-     *
-     * @return the tag compound with this Pos3D's data
-     */
-    public CompoundTag write(CompoundTag nbtTags) {
-        nbtTags.putDouble(NBTConstants.X, x);
-        nbtTags.putDouble(NBTConstants.Y, y);
-        nbtTags.putDouble(NBTConstants.Z, z);
-        return nbtTags;
-    }
-
-    /**
      * Creates and returns a Pos3D with values representing the difference between this and the Pos3D in the parameters.
      *
      * @param vec - Vec3 to subtract
@@ -113,14 +87,14 @@ public class Pos3D extends Vec3 {
     }
 
     /**
-     * Creates a new Coord4D representing this Pos3D in the provided dimension.
+     * Creates a new GlobalPos representing this Pos3D in the provided dimension.
      *
      * @param dimension - the dimension this Pos3D is in
      *
-     * @return Coord4D representing this Pos3D
+     * @return GlobalPos representing this Pos3D
      */
-    public Coord4D getCoord(ResourceKey<Level> dimension) {
-        return new Coord4D((int) x, (int) y, (int) z, dimension);
+    public GlobalPos getGlobalPos(ResourceKey<Level> dimension) {
+        return GlobalPos.of(dimension, BlockPos.containing(x, y, z));
     }
 
     /**

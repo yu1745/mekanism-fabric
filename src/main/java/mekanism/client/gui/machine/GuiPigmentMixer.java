@@ -1,13 +1,14 @@
 package mekanism.client.gui.machine;
 
 import java.lang.ref.WeakReference;
-import mekanism.api.chemical.pigment.PigmentStack;
-import mekanism.api.recipes.PigmentMixingRecipe;
+import mekanism.api.chemical.ChemicalStack;
+import mekanism.api.recipes.ChemicalChemicalToChemicalRecipe;
 import mekanism.api.recipes.cache.CachedRecipe.OperationTracker.RecipeError;
 import mekanism.client.gui.GuiConfigurableTile;
 import mekanism.client.gui.element.bar.GuiHorizontalPowerBar;
 import mekanism.client.gui.element.gauge.GaugeType;
-import mekanism.client.gui.element.gauge.GuiPigmentGauge;
+import mekanism.client.gui.element.gauge.GuiChemicalGauge;
+import mekanism.client.gui.element.gauge.GuiGauge;
 import mekanism.client.gui.element.progress.GuiProgress;
 import mekanism.client.gui.element.progress.GuiProgress.ColorDetails;
 import mekanism.client.gui.element.progress.ProgressType;
@@ -22,10 +23,11 @@ import org.jetbrains.annotations.NotNull;
 
 public class GuiPigmentMixer extends GuiConfigurableTile<TileEntityPigmentMixer, MekanismTileContainer<TileEntityPigmentMixer>> {
 
+    private GuiGauge<?> centerGauge;
+
     public GuiPigmentMixer(MekanismTileContainer<TileEntityPigmentMixer> container, Inventory inv, Component title) {
         super(container, inv, title);
         inventoryLabelY += 2;
-        titleLabelX = 5;
         titleLabelY = 5;
         dynamicSlots = true;
     }
@@ -37,22 +39,22 @@ public class GuiPigmentMixer extends GuiConfigurableTile<TileEntityPigmentMixer,
               .warning(WarningType.NOT_ENOUGH_ENERGY, tile.getWarningCheck(RecipeError.NOT_ENOUGH_ENERGY))
               .warning(WarningType.NOT_ENOUGH_ENERGY_REDUCED_RATE, tile.getWarningCheck(RecipeError.NOT_ENOUGH_ENERGY_REDUCED_RATE));
         addRenderableWidget(new GuiEnergyTab(this, tile.getEnergyContainer(), tile::getEnergyUsed));
-        addRenderableWidget(new GuiPigmentGauge(() -> tile.leftInputTank, () -> tile.getPigmentTanks(null), GaugeType.STANDARD, this, 25, 13))
+        addRenderableWidget(new GuiChemicalGauge(() -> tile.leftInputTank, () -> tile.getChemicalTanks(null), GaugeType.STANDARD, this, 25, 13))
               .warning(WarningType.NO_MATCHING_RECIPE, tile.getWarningCheck(RecipeError.NOT_ENOUGH_LEFT_INPUT));
-        addRenderableWidget(new GuiPigmentGauge(() -> tile.outputTank, () -> tile.getPigmentTanks(null), GaugeType.STANDARD, this, 79, 4))
+        centerGauge = addRenderableWidget(new GuiChemicalGauge(() -> tile.outputTank, () -> tile.getChemicalTanks(null), GaugeType.STANDARD, this, 79, 4))
               .warning(WarningType.NO_SPACE_IN_OUTPUT, tile.getWarningCheck(RecipeError.NOT_ENOUGH_OUTPUT_SPACE));
-        addRenderableWidget(new GuiPigmentGauge(() -> tile.rightInputTank, () -> tile.getPigmentTanks(null), GaugeType.STANDARD, this, 133, 13))
+        addRenderableWidget(new GuiChemicalGauge(() -> tile.rightInputTank, () -> tile.getChemicalTanks(null), GaugeType.STANDARD, this, 133, 13))
               .warning(WarningType.NO_MATCHING_RECIPE, tile.getWarningCheck(RecipeError.NOT_ENOUGH_RIGHT_INPUT));
-        addRenderableWidget(new GuiProgress(tile::getActive, ProgressType.SMALL_RIGHT, this, 47, 39).jeiCategory(tile).colored(new LeftColorDetails()))
+        addRenderableWidget(new GuiProgress(tile::getActive, ProgressType.SMALL_RIGHT, this, 47, 39).recipeViewerCategory(tile).colored(new LeftColorDetails()))
               .warning(WarningType.INPUT_DOESNT_PRODUCE_OUTPUT, tile.getWarningCheck(RecipeError.INPUT_DOESNT_PRODUCE_OUTPUT));
-        addRenderableWidget(new GuiProgress(tile::getActive, ProgressType.SMALL_LEFT, this, 101, 39).jeiCategory(tile).colored(new RightColorDetails()))
+        addRenderableWidget(new GuiProgress(tile::getActive, ProgressType.SMALL_LEFT, this, 101, 39).recipeViewerCategory(tile).colored(new RightColorDetails()))
               .warning(WarningType.INPUT_DOESNT_PRODUCE_OUTPUT, tile.getWarningCheck(RecipeError.INPUT_DOESNT_PRODUCE_OUTPUT));
     }
 
     @Override
     protected void drawForegroundText(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        drawString(guiGraphics, title, titleLabelX, titleLabelY, titleTextColor());
-        drawString(guiGraphics, playerInventoryTitle, inventoryLabelX, inventoryLabelY, titleTextColor());
+        renderTitleTextWithOffset(guiGraphics, 1, centerGauge.getRelativeX(), 4, TextAlignment.LEFT);
+        renderInventoryText(guiGraphics, centerGauge.getRelativeX());
         super.drawForegroundText(guiGraphics, mouseX, mouseY);
     }
 
@@ -60,7 +62,7 @@ public class GuiPigmentMixer extends GuiConfigurableTile<TileEntityPigmentMixer,
 
         @Override
         public int getColorFrom() {
-            return tile == null ? 0xFFFFFFFF : getColor(tile.leftInputTank.getType().getColorRepresentation());
+            return tile == null ? 0xFFFFFFFF : getColor(tile.leftInputTank.getStack().getChemicalColorRepresentation());
         }
     }
 
@@ -68,13 +70,13 @@ public class GuiPigmentMixer extends GuiConfigurableTile<TileEntityPigmentMixer,
 
         @Override
         public int getColorFrom() {
-            return tile == null ? 0xFFFFFFFF : getColor(tile.rightInputTank.getType().getColorRepresentation());
+            return tile == null ? 0xFFFFFFFF : getColor(tile.rightInputTank.getStack().getChemicalColorRepresentation());
         }
     }
 
     private abstract class PigmentColorDetails implements ColorDetails {
 
-        private WeakReference<PigmentMixingRecipe> cachedRecipe;
+        private WeakReference<ChemicalChemicalToChemicalRecipe> cachedRecipe;
 
         @Override
         public abstract int getColorFrom();
@@ -88,9 +90,9 @@ public class GuiPigmentMixer extends GuiConfigurableTile<TileEntityPigmentMixer,
             if (tile.outputTank.isEmpty()) {
                 //If the pigment tank is empty, try looking up the recipe and grabbing the color from it
                 if (!tile.leftInputTank.isEmpty() && !tile.rightInputTank.isEmpty()) {
-                    PigmentStack leftInput = tile.leftInputTank.getStack();
-                    PigmentStack rightInput = tile.rightInputTank.getStack();
-                    PigmentMixingRecipe recipe;
+                    ChemicalStack leftInput = tile.leftInputTank.getStack();
+                    ChemicalStack rightInput = tile.rightInputTank.getStack();
+                    ChemicalChemicalToChemicalRecipe recipe;
                     if (cachedRecipe == null) {
                         recipe = getRecipeAndCache();
                     } else {
@@ -105,11 +107,11 @@ public class GuiPigmentMixer extends GuiConfigurableTile<TileEntityPigmentMixer,
                 }
                 return 0xFFFFFFFF;
             }
-            return getColor(tile.outputTank.getType().getColorRepresentation());
+            return getColor(tile.outputTank.getStack().getChemicalColorRepresentation());
         }
 
-        private PigmentMixingRecipe getRecipeAndCache() {
-            PigmentMixingRecipe recipe = tile.getRecipe(0);
+        private ChemicalChemicalToChemicalRecipe getRecipeAndCache() {
+            ChemicalChemicalToChemicalRecipe recipe = tile.getRecipe(0);
             if (recipe == null) {
                 cachedRecipe = null;
             } else {
@@ -118,7 +120,7 @@ public class GuiPigmentMixer extends GuiConfigurableTile<TileEntityPigmentMixer,
             return recipe;
         }
 
-        private boolean isValid(PigmentMixingRecipe recipe, PigmentStack leftInput, PigmentStack rightInput) {
+        private boolean isValid(ChemicalChemicalToChemicalRecipe recipe, ChemicalStack leftInput, ChemicalStack rightInput) {
             return (recipe.getLeftInput().testType(leftInput) && recipe.getRightInput().testType(rightInput)) ||
                    (recipe.getLeftInput().testType(rightInput) && recipe.getRightInput().testType(leftInput));
         }

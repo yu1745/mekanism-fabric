@@ -15,13 +15,13 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.client.extensions.common.IClientItemExtensions;
+import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
 
 @ParametersAreNotNullByDefault
 public class MekanismArmorLayer<T extends LivingEntity, M extends HumanoidModel<T>, A extends HumanoidModel<T>> extends HumanoidArmorLayer<T, M, A> {
 
-    public MekanismArmorLayer(RenderLayerParent<T, M> entityRenderer, A modelLeggings, A modelArmor, ModelManager manager) {
-        super(entityRenderer, modelLeggings, modelArmor, manager);
+    public MekanismArmorLayer(RenderLayerParent<T, M> entityRenderer, HumanoidArmorLayer<T, M, A> vanillaLayer, ModelManager manager) {
+        super(entityRenderer, vanillaLayer.innerModel, vanillaLayer.outerModel, manager);
     }
 
     @Override
@@ -37,7 +37,7 @@ public class MekanismArmorLayer<T extends LivingEntity, M extends HumanoidModel<
         ItemStack stack = entity.getItemBySlot(slot);
         Item item = stack.getItem();
         if (item instanceof ArmorItem armorItem && armorItem.getEquipmentSlot() == slot && IClientItemExtensions.of(item) instanceof ISpecialGear specialGear) {
-            ICustomArmor model = specialGear.getGearModel(armorItem.getType());
+            ICustomArmor model = specialGear.gearModel();
             A coreModel = slot == EquipmentSlot.LEGS ? innerModel : outerModel;
             getParentModel().copyPropertiesTo(coreModel);
             setPartVisibility(coreModel, slot);

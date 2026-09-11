@@ -1,20 +1,46 @@
 package mekanism.common.content.miner;
 
-import java.util.Objects;
-import mekanism.api.NBTConstants;
+import com.mojang.datafixers.Products.P3;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
+import com.mojang.serialization.codecs.RecordCodecBuilder.Mu;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import mekanism.api.SerializationConstants;
 import mekanism.common.content.filter.BaseFilter;
 import mekanism.common.integration.computer.annotation.ComputerMethod;
 import mekanism.common.integration.computer.annotation.SyntheticComputerMethod;
-import mekanism.common.util.NBTUtils;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 
 public abstract class MinerFilter<FILTER extends MinerFilter<FILTER>> extends BaseFilter<FILTER> {
+
+    protected static <FILTER extends MinerFilter<FILTER>> P3<Mu<FILTER>, Boolean, Item, Boolean> baseMinerCodec(Instance<FILTER> instance) {
+        return baseCodec(instance)
+              .and(BuiltInRegistries.ITEM.byNameCodec().optionalFieldOf(SerializationConstants.REPLACE_TARGET, Items.AIR).forGetter(filter -> filter.replaceTarget))
+              .and(Codec.BOOL.optionalFieldOf(SerializationConstants.REQUIRES_REPLACEMENT, false).forGetter(filter -> filter.requiresReplacement))
+              ;
+    }
+
+    protected static <FILTER extends MinerFilter<FILTER>> StreamCodec<RegistryFriendlyByteBuf, FILTER> baseMinerStreamCodec(Supplier<FILTER> constructor) {
+        return StreamCodec.composite(
+              baseStreamCodec(constructor), Function.identity(),
+              ByteBufCodecs.registry(Registries.ITEM), filter -> filter.replaceTarget,
+              ByteBufCodecs.BOOL, filter -> filter.requiresReplacement,
+              (filter, replaceTarget, requiresReplacement) -> {
+                  filter.replaceTarget = replaceTarget;
+                  filter.requiresReplacement = requiresReplacement;
+                  return filter;
+              }
+        );
+    }
 
     @SyntheticComputerMethod(getter = "getReplaceTarget", setter = "setReplaceTarget", threadSafeGetter = true, threadSafeSetter = true)
     public Item replaceTarget = Items.AIR;
@@ -24,7 +50,14 @@ public abstract class MinerFilter<FILTER extends MinerFilter<FILTER>> extends Ba
     protected MinerFilter() {
     }
 
+    protected MinerFilter(boolean enabled, Item replaceTarget, boolean requiresReplacement) {
+        super(enabled);
+        this.replaceTarget = replaceTarget;
+        this.requiresReplacement = requiresReplacement;
+    }
+
     protected MinerFilter(FILTER filter) {
+        super(filter);
         replaceTarget = filter.replaceTarget;
         requiresReplacement = filter.requiresReplacement;
     }
@@ -39,39 +72,11 @@ public abstract class MinerFilter<FILTER extends MinerFilter<FILTER>> extends Ba
     public abstract boolean hasBlacklistedElement();
 
     @Override
-    public CompoundTag write(CompoundTag nbtTags) {
-        super.write(nbtTags);
-        nbtTags.putBoolean(NBTConstants.REQUIRE_STACK, requiresReplacement);
-        if (replaceTarget != Items.AIR) {
-            NBTUtils.writeRegistryEntry(nbtTags, NBTConstants.REPLACE_STACK, ForgeRegistries.ITEMS, replaceTarget);
-        }
-        return nbtTags;
-    }
-
-    @Override
-    public void read(CompoundTag nbtTags) {
-        super.read(nbtTags);
-        requiresReplacement = nbtTags.getBoolean(NBTConstants.REQUIRE_STACK);
-        replaceTarget = NBTUtils.readRegistryEntry(nbtTags, NBTConstants.REPLACE_STACK, ForgeRegistries.ITEMS, Items.AIR);
-    }
-
-    @Override
-    public void write(FriendlyByteBuf buffer) {
-        super.write(buffer);
-        buffer.writeBoolean(requiresReplacement);
-        buffer.writeRegistryId(ForgeRegistries.ITEMS, replaceTarget);
-    }
-
-    @Override
-    public void read(FriendlyByteBuf dataStream) {
-        super.read(dataStream);
-        requiresReplacement = dataStream.readBoolean();
-        replaceTarget = dataStream.readRegistryIdSafe(Item.class);
-    }
-
-    @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), replaceTarget, requiresReplacement);
+        int result = super.hashCode();
+        result = 31 * result + replaceTarget.hashCode();
+        result = 31 * result + Boolean.hashCode(requiresReplacement);
+        return result;
     }
 
     @Override

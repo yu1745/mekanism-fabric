@@ -1,9 +1,10 @@
 package mekanism.common.world.height;
 
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
+import mekanism.api.SerializationConstants;
 import mekanism.common.Mekanism;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.config.WorldConfig.OreVeinConfig;
@@ -18,8 +19,8 @@ import org.jetbrains.annotations.NotNull;
 
 public class ConfigurableHeightProvider extends HeightProvider {
 
-    public static final Codec<ConfigurableHeightProvider> CODEC = RecordCodecBuilder.create(builder -> builder.group(
-          OreVeinType.CODEC.fieldOf("oreVeinType").forGetter(config -> config.oreVeinType)
+    public static final MapCodec<ConfigurableHeightProvider> CODEC = RecordCodecBuilder.mapCodec(builder -> builder.group(
+          OreVeinType.CODEC.fieldOf(SerializationConstants.ORE_TYPE).forGetter(config -> config.oreVeinType)
     ).apply(builder, type -> new ConfigurableHeightProvider(type, MekanismConfig.world.getVeinConfig(type))));
 
     private final OreVeinType oreVeinType;
@@ -43,7 +44,7 @@ public class ConfigurableHeightProvider extends HeightProvider {
             if (warnedFor == null) {
                 warnedFor = new LongOpenHashSet();
             }
-            if (warnedFor.add((long) min << 32 | (long) max)) {
+            if (warnedFor.add((long) min << 32 | max)) {
                 Mekanism.logger.warn("Empty height range: {}", this);
             }
             return min;

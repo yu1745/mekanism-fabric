@@ -22,7 +22,7 @@ import mekanism.common.util.text.TextUtils;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraftforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.FluidStack;
 import org.jetbrains.annotations.NotNull;
 
 public class GuiDynamicTank extends GuiMekanismTile<TileEntityDynamicTank, MekanismTileContainer<TileEntityDynamicTank>> {
@@ -51,21 +51,18 @@ public class GuiDynamicTank extends GuiMekanismTile<TileEntityDynamicTank, Mekan
                     addStored(ret, multiblock.getFluidTank().getFluid(), FluidStack::getAmount);
                     capacity = multiblock.getTankCapacity();
                 }
-                case GAS -> addStored(ret, multiblock.getGasTank());
-                case INFUSION -> addStored(ret, multiblock.getInfusionTank());
-                case PIGMENT -> addStored(ret, multiblock.getPigmentTank());
-                case SLURRY -> addStored(ret, multiblock.getSlurryTank());
+                case CHEMICAL -> addStored(ret, multiblock.getChemicalTank());
             }
             ret.add(MekanismLang.CAPACITY.translate(""));
             ret.add(MekanismLang.GENERIC_MB.translate(TextUtils.format(capacity)));
             return ret;
-        }).spacing(2));
+        }).spacing(1));
         addRenderableWidget(new GuiDownArrow(this, 150, 39));
         addRenderableWidget(new GuiContainerEditModeTab<>(this, tile));
         addRenderableWidget(new GuiMergedTankGauge<>(() -> tile.getMultiblock().mergedTank, tile::getMultiblock, GaugeType.MEDIUM, this, 7, 16, 34, 56));
     }
 
-    private void addStored(List<Component> ret, IChemicalTank<?, ?> tank) {
+    private void addStored(List<Component> ret, IChemicalTank tank) {
         addStored(ret, tank.getStack(), ChemicalStack::getAmount);
     }
 
@@ -77,7 +74,7 @@ public class GuiDynamicTank extends GuiMekanismTile<TileEntityDynamicTank, Mekan
     @Override
     protected void drawForegroundText(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY) {
         renderTitleText(guiGraphics);
-        drawString(guiGraphics, playerInventoryTitle, inventoryLabelX, inventoryLabelY, titleTextColor());
+        renderInventoryText(guiGraphics);
         super.drawForegroundText(guiGraphics, mouseX, mouseY);
     }
 }

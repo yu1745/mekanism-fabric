@@ -1,16 +1,20 @@
 package mekanism.generators.common.block.attribute;
 
+import io.netty.buffer.ByteBuf;
 import java.util.List;
+import java.util.function.IntFunction;
 import mekanism.api.IIncrementalEnum;
 import mekanism.api.annotations.NothingNullByDefault;
-import mekanism.api.math.MathUtils;
 import mekanism.api.text.EnumColor;
-import mekanism.api.text.IHasTextComponent;
+import mekanism.api.text.IHasTextComponent.IHasEnumNameTextComponent;
 import mekanism.api.text.ILangEntry;
 import mekanism.common.block.attribute.Attribute;
 import mekanism.common.block.attribute.AttributeState;
 import mekanism.generators.common.GeneratorsLang;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.util.ByIdMap;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
@@ -41,12 +45,13 @@ public class AttributeStateFissionPortMode implements AttributeState {
     }
 
     @NothingNullByDefault
-    public enum FissionPortMode implements StringRepresentable, IHasTextComponent, IIncrementalEnum<FissionPortMode> {
+    public enum FissionPortMode implements StringRepresentable, IHasEnumNameTextComponent, IIncrementalEnum<FissionPortMode> {
         INPUT("input", GeneratorsLang.FISSION_PORT_MODE_INPUT, EnumColor.BRIGHT_GREEN),
         OUTPUT_WASTE("output_waste", GeneratorsLang.FISSION_PORT_MODE_OUTPUT_WASTE, EnumColor.BROWN),
         OUTPUT_COOLANT("output_coolant", GeneratorsLang.FISSION_PORT_MODE_OUTPUT_COOLANT, EnumColor.DARK_AQUA);
 
-        private static final FissionPortMode[] MODES = values();
+        public static final IntFunction<FissionPortMode> BY_ID = ByIdMap.continuous(FissionPortMode::ordinal, values(), ByIdMap.OutOfBoundsStrategy.WRAP);
+        public static final StreamCodec<ByteBuf, FissionPortMode> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, FissionPortMode::ordinal);
 
         private final String name;
         private final ILangEntry langEntry;
@@ -68,13 +73,9 @@ public class AttributeStateFissionPortMode implements AttributeState {
             return langEntry.translateColored(color);
         }
 
-        public static FissionPortMode byIndexStatic(int index) {
-            return MathUtils.getByIndexMod(MODES, index);
-        }
-
         @Override
         public FissionPortMode byIndex(int index) {
-            return byIndexStatic(index);
+            return BY_ID.apply(index);
         }
     }
 }

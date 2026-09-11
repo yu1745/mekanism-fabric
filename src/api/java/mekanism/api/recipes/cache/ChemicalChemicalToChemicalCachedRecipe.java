@@ -1,37 +1,42 @@
 package mekanism.api.recipes.cache;
 
 import java.util.Objects;
+import java.util.function.BiConsumer;
+import java.util.function.BinaryOperator;
 import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import mekanism.api.annotations.NothingNullByDefault;
-import mekanism.api.chemical.Chemical;
 import mekanism.api.chemical.ChemicalStack;
-import mekanism.api.recipes.chemical.ChemicalChemicalToChemicalRecipe;
+import mekanism.api.functions.ConstantPredicates;
+import mekanism.api.recipes.ChemicalChemicalToChemicalRecipe;
 import mekanism.api.recipes.ingredients.ChemicalStackIngredient;
 import mekanism.api.recipes.inputs.IInputHandler;
 import mekanism.api.recipes.outputs.IOutputHandler;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Base class to help implement handling of chemical chemical to chemical recipes.
  */
 @NothingNullByDefault
-public class ChemicalChemicalToChemicalCachedRecipe<CHEMICAL extends Chemical<CHEMICAL>, STACK extends ChemicalStack<CHEMICAL>,
-      INGREDIENT extends ChemicalStackIngredient<CHEMICAL, STACK>, RECIPE extends ChemicalChemicalToChemicalRecipe<CHEMICAL, STACK, INGREDIENT>>
-      extends CachedRecipe<RECIPE> {
+public class ChemicalChemicalToChemicalCachedRecipe<RECIPE extends ChemicalChemicalToChemicalRecipe> extends CachedRecipe<RECIPE> {
 
-    private final IOutputHandler<@NotNull STACK> outputHandler;
-    private final IInputHandler<@NotNull STACK> leftInputHandler;
-    private final IInputHandler<@NotNull STACK> rightInputHandler;
+    private final IOutputHandler<ChemicalStack> outputHandler;
+    private final IInputHandler<ChemicalStack> leftInputHandler;
+    private final IInputHandler<ChemicalStack> rightInputHandler;
+    private final BiConsumer<ChemicalStack, ChemicalStack> inputsSetter;
+    private final Consumer<ChemicalStack> outputSetter;
+    private final Supplier<ChemicalStackIngredient> leftInput;
+    private final Supplier<ChemicalStackIngredient> rightInput;
+    private final BinaryOperator<ChemicalStack> outputGetter;
 
     //Note: These shouldn't be null in places they are actually used, but we mark them as nullable, so we don't have to initialize them
     @Nullable
-    private STACK leftRecipeInput;
+    private ChemicalStack leftRecipeInput;
     @Nullable
-    private STACK rightRecipeInput;
+    private ChemicalStack rightRecipeInput;
     @Nullable
-    private STACK output;
+    private ChemicalStack output;
 
     /**
      * @param recipe            Recipe.
@@ -41,46 +46,50 @@ public class ChemicalChemicalToChemicalCachedRecipe<CHEMICAL extends Chemical<CH
      * @param rightInputHandler Right input handler.
      * @param outputHandler     Output handler.
      */
-    public ChemicalChemicalToChemicalCachedRecipe(RECIPE recipe, BooleanSupplier recheckAllErrors, IInputHandler<@NotNull STACK> leftInputHandler,
-          IInputHandler<@NotNull STACK> rightInputHandler, IOutputHandler<@NotNull STACK> outputHandler) {
+    public ChemicalChemicalToChemicalCachedRecipe(RECIPE recipe, BooleanSupplier recheckAllErrors, IInputHandler<ChemicalStack> leftInputHandler,
+          IInputHandler<ChemicalStack> rightInputHandler, IOutputHandler<ChemicalStack> outputHandler) {
         super(recipe, recheckAllErrors);
         this.leftInputHandler = Objects.requireNonNull(leftInputHandler, "Left input handler cannot be null.");
         this.rightInputHandler = Objects.requireNonNull(rightInputHandler, "Right input handler cannot be null.");
         this.outputHandler = Objects.requireNonNull(outputHandler, "Output handler cannot be null.");
+        this.leftInput = this.recipe::getLeftInput;
+        this.rightInput = this.recipe::getRightInput;
+        this.inputsSetter = (left, right) -> {
+            leftRecipeInput = left;
+            rightRecipeInput = right;
+        };
+        this.outputSetter = output -> this.output = output;
+        this.outputGetter = this.recipe::getOutput;
     }
 
     @Override
     protected void calculateOperationsThisTick(OperationTracker tracker) {
         super.calculateOperationsThisTick(tracker);
         if (tracker.shouldContinueChecking()) {
-            STACK leftInputChemical = leftInputHandler.getInput();
+            ChemicalStack leftInputChemical = leftInputHandler.getInput();
             if (leftInputChemical.isEmpty()) {
                 //No input, we don't know if the recipe matches or not so treat it as not matching
                 tracker.mismatchedRecipe();
             } else {
-                STACK rightInputChemical = rightInputHandler.getInput();
+                ChemicalStack rightInputChemical = rightInputHandler.getInput();
                 if (rightInputChemical.isEmpty()) {
                     //No input, we don't know if the recipe matches or not so treat it as not matching
                     tracker.mismatchedRecipe();
                 } else {
-                    Supplier<INGREDIENT> leftIngredient;
-                    Supplier<INGREDIENT> rightIngredient;
-                    INGREDIENT leftInput = recipe.getLeftInput();
-                    INGREDIENT rightInput = recipe.getRightInput();
-                    if (!leftInput.test(leftInputChemical) || !rightInput.test(rightInputChemical)) {
+                    Supplier<ChemicalStackIngredient> leftIngredient;
+                    Supplier<ChemicalStackIngredient> rightIngredient;
+                    if (!recipe.getLeftInput().test(leftInputChemical) || !recipe.getRightInput().test(rightInputChemical)) {
                         //If one of our inputs is invalid for the side it is on, switch them so that we can check
                         // if they are just reversed which side they are on and there is a valid recipe for them
                         // if they are on the other side
-                        leftIngredient = () -> rightInput;
-                        rightIngredient = () -> leftInput;
+                        leftIngredient = rightInput;
+                        rightIngredient = leftInput;
                     } else {
-                        leftIngredient = () -> leftInput;
-                        rightIngredient = () -> rightInput;
+                        leftIngredient = leftInput;
+                        rightIngredient = rightInput;
                     }
-                    CachedRecipeHelper.twoInputCalculateOperationsThisTick(tracker, leftInputHandler, leftIngredient, rightInputHandler, rightIngredient, (left, right) -> {
-                        leftRecipeInput = left;
-                        rightRecipeInput = right;
-                    }, outputHandler, recipe::getOutput, output -> this.output = output, ChemicalStack::isEmpty, ChemicalStack::isEmpty);
+                    CachedRecipeHelper.twoInputCalculateOperationsThisTick(tracker, leftInputHandler, leftIngredient, rightInputHandler, rightIngredient, inputsSetter,
+                          outputHandler, outputGetter, outputSetter, ConstantPredicates.CHEMICAL_EMPTY, ConstantPredicates.CHEMICAL_EMPTY);
                 }
             }
         }
@@ -88,11 +97,11 @@ public class ChemicalChemicalToChemicalCachedRecipe<CHEMICAL extends Chemical<CH
 
     @Override
     public boolean isInputValid() {
-        STACK leftInput = leftInputHandler.getInput();
+        ChemicalStack leftInput = leftInputHandler.getInput();
         if (leftInput.isEmpty()) {
             return false;
         }
-        STACK rightInput = rightInputHandler.getInput();
+        ChemicalStack rightInput = rightInputHandler.getInput();
         return !rightInput.isEmpty() && recipe.test(leftInput, rightInput);
     }
 

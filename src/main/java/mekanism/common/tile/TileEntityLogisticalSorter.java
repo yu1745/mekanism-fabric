@@ -1,20 +1,19 @@
 package mekanism.common.tile;
 
-import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import mekanism.api.IContentsListener;
-import mekanism.api.NBTConstants;
 import mekanism.api.RelativeSide;
+import mekanism.api.SerializationConstants;
 import mekanism.api.text.EnumColor;
 import mekanism.client.sound.SoundHandler;
+import mekanism.common.attachments.containers.ContainerType;
 import mekanism.common.capabilities.Capabilities;
 import mekanism.common.capabilities.holder.slot.IInventorySlotHolder;
 import mekanism.common.capabilities.holder.slot.InventorySlotHelper;
-import mekanism.common.capabilities.resolver.BasicCapabilityResolver;
+import mekanism.common.capabilities.item.CursedTransporterItemHandler;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.content.filter.SortableFilterManager;
-import mekanism.common.content.network.transmitter.LogisticalTransporterBase;
 import mekanism.common.content.transporter.SorterFilter;
 import mekanism.common.integration.computer.ComputerException;
 import mekanism.common.integration.computer.annotation.ComputerMethod;
@@ -25,34 +24,56 @@ import mekanism.common.inventory.container.sync.SyncableInt;
 import mekanism.common.inventory.slot.InternalInventorySlot;
 import mekanism.common.lib.SidedBlockPos;
 import mekanism.common.lib.inventory.Finder;
+import mekanism.common.lib.inventory.IAdvancedTransportEjector;
 import mekanism.common.lib.inventory.TransitRequest;
 import mekanism.common.lib.inventory.TransitRequest.TransitResponse;
 import mekanism.common.registries.MekanismBlocks;
-import mekanism.common.tile.base.SubstanceType;
+import mekanism.common.registries.MekanismDataComponents;
 import mekanism.common.tile.base.TileEntityMekanism;
-import mekanism.common.tile.interfaces.ISustainedData;
+import mekanism.common.tile.base.WrenchResult;
 import mekanism.common.tile.interfaces.ITileFilterHolder;
-import mekanism.common.tile.transmitter.TileEntityLogisticalTransporterBase;
+import mekanism.common.util.EnumUtils;
 import mekanism.common.util.InventoryUtils;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.NBTUtils;
 import mekanism.common.util.TransporterUtils;
-import mekanism.common.util.WorldUtils;
+import net.minecraft.SharedConstants;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.component.DataComponentMap;
+import net.minecraft.core.component.DataComponentType;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.redstone.Redstone;
+import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
+import net.neoforged.neoforge.items.IItemHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class TileEntityLogisticalSorter extends TileEntityMekanism implements ISustainedData, ITileFilterHolder<SorterFilter<?>> {
+public class TileEntityLogisticalSorter extends TileEntityMekanism implements ITileFilterHolder<SorterFilter<?>>, IAdvancedTransportEjector {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     private final SortableFilterManager<SorterFilter<?>> filterManager = new SortableFilterManager<SorterFilter<?>>((Class) SorterFilter.class, this::markForSave);
-    private final Finder strictFinder = stack -> filterManager.getEnabledFilters().stream().noneMatch(filter -> !filter.allowDefault && filter.getFinder().modifies(stack));
+    private final Finder strictFinder = stack -> {
+        for (SorterFilter<?> filter : filterManager.getEnabledFilters()) {
+            if (!filter.allowDefault && filter.getFinder().test(stack)) {
+                return false;
+            }
+        }
+        return true;
+    };
+
+    @Nullable
+    private BlockCapabilityCache<IItemHandler, @Nullable Direction> homeInventory;
+    @Nullable
+    private BlockCapabilityCache<IItemHandler, @Nullable Direction> targetInventory;
 
     @SyntheticComputerMethod(getter = "getDefaultColor")
     public EnumColor color;
@@ -60,94 +81,111 @@ public class TileEntityLogisticalSorter extends TileEntityMekanism implements IS
     private boolean roundRobin;
     private boolean singleItem;
     @Nullable
-    public SidedBlockPos rrTarget;
+    private SidedBlockPos rrTarget;
     private int delayTicks;
     private long nextSound = 0;
 
     public TileEntityLogisticalSorter(BlockPos pos, BlockState state) {
         super(MekanismBlocks.LOGISTICAL_SORTER, pos, state);
         delaySupplier = () -> 3;
-        addCapabilityResolver(BasicCapabilityResolver.constant(Capabilities.CONFIG_CARD, this));
     }
 
     @NotNull
     @Override
     protected IInventorySlotHolder getInitialInventory(IContentsListener listener) {
-        InventorySlotHelper builder = InventorySlotHelper.forSide(this::getDirection);
+        InventorySlotHelper builder = InventorySlotHelper.forSide(facingSupplier);
+        //TODO - 1.20.4: Re-evaluate the internal inventory slot and why do we even have a slot on the sorter
         builder.addSlot(InternalInventorySlot.create(listener), RelativeSide.FRONT);
         return builder.build();
     }
 
     @Override
-    protected void onUpdateServer() {
-        super.onUpdateServer();
+    public boolean persists(ContainerType<?, ?, ?> type) {
+        //Note: We don't persist items because the slot we have is only actually for the transporters to connect visually
+        return type != ContainerType.ITEM && super.persists(type);
+    }
+
+    @Override
+    protected boolean onUpdateServer() {
+        boolean sendUpdatePacket = super.onUpdateServer();
         delayTicks = Math.max(0, delayTicks - 1);
         if (delayTicks == 6) {
             setActive(false);
         }
 
-        if (MekanismUtils.canFunction(this) && delayTicks == 0) {
-            Direction direction = getDirection();
-            BlockEntity back = WorldUtils.getTileEntity(getLevel(), worldPosition.relative(direction.getOpposite()));
-            BlockEntity front = WorldUtils.getTileEntity(getLevel(), worldPosition.relative(direction));
+        if (canFunction() && delayTicks == 0) {
+            IItemHandler back = getHomeInventory();
             //If there is no tile to pull from or the push to, skip doing any checks
-            if (InventoryUtils.isItemHandler(back, direction) && front != null) {
-                boolean sentItems = false;
-                for (SorterFilter<?> filter : filterManager.getEnabledFilters()) {
-                    TransitRequest request = filter.mapInventory(back, direction, singleItem);
-                    if (request.isEmpty()) {
-                        continue;
-                    }
-                    int min = singleItem ? 1 : filter.sizeMode ? filter.min : 0;
-                    TransitResponse response = emitItemToTransporter(front, request, filter.color, min);
-                    if (!response.isEmpty()) {
-                        response.useAll();
-                        WorldUtils.saveChunk(back);
-                        setActive(true);
-                        sentItems = true;
-                        break;
-                    }
+            if (back != null) {
+                Direction direction = getDirection();
+                if (targetInventory == null) {
+                    targetInventory = Capabilities.ITEM.createCache((ServerLevel) level, worldPosition.relative(direction), direction.getOpposite());
                 }
+                IItemHandler frontCap = targetInventory.getCapability();
+                if (frontCap != null) {
+                    boolean sentItems = false;
+                    for (SorterFilter<?> filter : filterManager.getEnabledFilters()) {
+                        TransitRequest request = filter.mapInventory(back, singleItem);
+                        if (request.isEmpty()) {
+                            continue;
+                        }
+                        int min = singleItem ? 1 : filter.sizeMode ? filter.min : 0;
+                        TransitResponse response = emitItemToTransporter(frontCap, request, filter.color, min);
+                        if (!response.isEmpty()) {
+                            response.useAll();
+                            setActive(true);
+                            sentItems = true;
+                            break;
+                        }
+                    }
 
-                if (!sentItems && autoEject) {
-                    TransitRequest request = TransitRequest.definedItem(back, direction, singleItem ? 1 : 64, strictFinder);
-                    TransitResponse response = emitItemToTransporter(front, request, color, 0);
-                    if (!response.isEmpty()) {
-                        response.useAll();
-                        WorldUtils.saveChunk(back);
-                        setActive(true);
+                    if (!sentItems && autoEject) {
+                        //TODO - 1.21: Evaluate if this (and SorterFilter#mapInventory) should use a stack's max stack size or the absolute stack size
+                        TransitRequest request = TransitRequest.definedItem(back, singleItem ? 1 : Item.ABSOLUTE_MAX_STACK_SIZE, strictFinder);
+                        TransitResponse response = emitItemToTransporter(frontCap, request, color, 0);
+                        if (!response.isEmpty()) {
+                            response.useAll();
+                            setActive(true);
+                        }
                     }
                 }
             }
-            delayTicks = 10;
+            delayTicks = MekanismUtils.TICKS_PER_HALF_SECOND;
         }
+        return sendUpdatePacket;
     }
 
-    private TransitResponse emitItemToTransporter(BlockEntity front, TransitRequest request, EnumColor filterColor, int min) {
-        if (front instanceof TileEntityLogisticalTransporterBase transporterBase) {
-            LogisticalTransporterBase transporter = transporterBase.getTransmitter();
-            if (roundRobin) {
-                return transporter.insertRR(this, request, filterColor, true, min);
-            }
-            return transporter.insert(this, request, filterColor, true, min);
+    private TransitResponse emitItemToTransporter(IItemHandler target, TransitRequest request, EnumColor filterColor, int min) {
+        if (request.isEmpty()) {
+            return request.getEmptyResponse();
+        } else if (target instanceof CursedTransporterItemHandler cursed) {
+            return cursed.getTransporter().insertMaybeRR(this, getBlockPos(), request, filterColor, true, min);
         }
-        return request.addToInventory(front, getDirection(), min, false);
+        return request.addToInventoryUnchecked(target, min);
     }
 
     @Override
-    public void saveAdditional(@NotNull CompoundTag nbtTags) {
-        super.saveAdditional(nbtTags);
+    public void saveAdditional(@NotNull CompoundTag nbtTags, @NotNull HolderLookup.Provider provider) {
+        super.saveAdditional(nbtTags, provider);
+        SidedBlockPos rrTarget = getRoundRobinTarget();
         if (rrTarget != null) {
-            nbtTags.put(NBTConstants.ROUND_ROBIN_TARGET, rrTarget.serialize());
+            nbtTags.put(SerializationConstants.ROUND_ROBIN_TARGET, rrTarget.serialize());
         }
     }
 
     @Override
-    public void load(@NotNull CompoundTag nbt) {
-        super.load(nbt);
-        if (nbt.contains(NBTConstants.ROUND_ROBIN_TARGET, Tag.TAG_COMPOUND)) {
-            rrTarget = SidedBlockPos.deserialize(nbt.getCompound(NBTConstants.ROUND_ROBIN_TARGET));
+    public void loadAdditional(@NotNull CompoundTag nbt, @NotNull HolderLookup.Provider provider) {
+        super.loadAdditional(nbt, provider);
+        if (nbt.contains(SerializationConstants.ROUND_ROBIN_TARGET, Tag.TAG_COMPOUND)) {
+            setRoundRobinTarget(SidedBlockPos.deserialize(nbt.getCompound(SerializationConstants.ROUND_ROBIN_TARGET)));
         }
+    }
+
+    @Override
+    @Deprecated
+    public void removeComponentsFromTag(@NotNull CompoundTag tag) {
+        super.removeComponentsFromTag(tag);
+        tag.remove(SerializationConstants.ROUND_ROBIN_TARGET);
     }
 
     @Override
@@ -158,11 +196,11 @@ public class TileEntityLogisticalSorter extends TileEntityMekanism implements IS
     @Override
     protected void onUpdateClient() {
         super.onUpdateClient();
-        if (MekanismConfig.client.enableMachineSounds.get() && getActive() && level.getGameTime() >= nextSound) {
+        if (MekanismConfig.client.enableMachineSounds.get() && getActive() && soundEvent != null && level.getGameTime() >= nextSound) {
             if (!isFullyMuffled()) {
-                SoundHandler.startTileSound(soundEvent, getSoundCategory(), getInitialVolume(), level.getRandom(), getSoundPos(), false);
+                SoundHandler.startTileSound(soundEvent.get(), getSoundCategory(), getInitialVolume(), level.getRandom(), getSoundPos(), false);
             }
-            nextSound = level.getGameTime() + 20L * (level.random.nextInt(5,15));
+            nextSound = level.getGameTime() + (long) SharedConstants.TICKS_PER_SECOND * level.random.nextInt(5, 15);
         }
     }
 
@@ -171,6 +209,7 @@ public class TileEntityLogisticalSorter extends TileEntityMekanism implements IS
         return autoEject;
     }
 
+    @Override
     @ComputerMethod(nameOverride = "isRoundRobin")
     public boolean getRoundRobin() {
         return roundRobin;
@@ -186,12 +225,6 @@ public class TileEntityLogisticalSorter extends TileEntityMekanism implements IS
         markForSave();
     }
 
-    public void toggleRoundRobin() {
-        roundRobin = !roundRobin;
-        rrTarget = null;
-        markForSave();
-    }
-
     public void toggleSingleItem() {
         singleItem = !singleItem;
         markForSave();
@@ -204,66 +237,140 @@ public class TileEntityLogisticalSorter extends TileEntityMekanism implements IS
         }
     }
 
-    public boolean canSendHome(ItemStack stack) {
-        Direction oppositeDirection = getOppositeDirection();
-        BlockEntity back = WorldUtils.getTileEntity(getLevel(), worldPosition.relative(oppositeDirection));
-        return TransporterUtils.canInsert(back, null, stack, oppositeDirection, true);
-    }
-
     public boolean hasConnectedInventory() {
         Direction oppositeDirection = getOppositeDirection();
-        BlockEntity tile = WorldUtils.getTileEntity(getLevel(), worldPosition.relative(oppositeDirection));
-        return TransporterUtils.isValidAcceptorOnSide(tile, oppositeDirection);
+        return TransporterUtils.isValidAcceptorOnSide(getLevel(), worldPosition.relative(oppositeDirection), oppositeDirection);
     }
 
-    @NotNull
-    public TransitResponse sendHome(TransitRequest request) {
-        Direction oppositeDirection = getOppositeDirection();
-        BlockEntity back = WorldUtils.getTileEntity(getLevel(), worldPosition.relative(oppositeDirection));
-        return request.addToInventory(back, oppositeDirection, 0, true);
+    @Nullable
+    private IItemHandler getHomeInventory() {
+        if (homeInventory == null) {
+            Direction direction = getDirection();
+            BlockPos pos = worldPosition.relative(direction.getOpposite());
+            homeInventory = Capabilities.ITEM.createCache((ServerLevel) level, pos, direction);
+        }
+        return homeInventory.getCapability();
     }
 
     @Override
-    public boolean canPulse() {
+    protected void invalidateDirectionCaches(Direction newDirection) {
+        super.invalidateDirectionCaches(newDirection);
+        homeInventory = null;
+        targetInventory = null;
+    }
+
+    @Override
+    public void toggleRoundRobin() {
+        roundRobin = !roundRobin;
+        setRoundRobinTarget((SidedBlockPos) null);
+        markForSave();
+    }
+
+    @Nullable
+    @Override
+    public SidedBlockPos getRoundRobinTarget() {
+        return rrTarget;
+    }
+
+    @Override
+    public void setRoundRobinTarget(@Nullable SidedBlockPos target) {
+        rrTarget = target;
+    }
+
+    @Override
+    public boolean canSendHome(@NotNull ItemStack stack) {
+        Direction oppositeDirection = getOppositeDirection();
+        return TransporterUtils.canInsert(level, worldPosition.relative(oppositeDirection), null, stack, oppositeDirection, true);
+    }
+
+    @NotNull
+    @Override
+    public TransitResponse sendHome(@NotNull TransitRequest request) {
+        Direction direction = getDirection();
+        BlockPos pos = worldPosition.relative(direction.getOpposite());
+        //Note: We pass false as we have no reason to allow daisy-chaining sorters given a sorter can't send from a sorter to another
+        // and the only case would be if an inventory was replaced with another sorter connected to an inventory to proxy it back an extra spot
+        return request.addToInventory(getLevel(), pos, getHomeInventory(), 0, false);
+    }
+
+    @Override
+    public boolean supportsMode(RedstoneControl mode) {
         return true;
     }
 
     @Override
-    public void writeSustainedData(CompoundTag dataMap) {
-        dataMap.putInt(NBTConstants.COLOR, TransporterUtils.getColorIndex(color));
-        dataMap.putBoolean(NBTConstants.EJECT, autoEject);
-        dataMap.putBoolean(NBTConstants.ROUND_ROBIN, roundRobin);
-        dataMap.putBoolean(NBTConstants.SINGLE_ITEM, singleItem);
-        filterManager.writeToNBT(dataMap);
+    protected WrenchResult tryWrenchRotate(BlockState state, Player player, ItemStack stack) {
+        Direction change = MekanismUtils.rotate(getDirection(), true);
+        if (!hasConnectedInventory()) {
+            for (Direction dir : EnumUtils.DIRECTIONS) {
+                Direction opposite = dir.getOpposite();
+                if (InventoryUtils.isItemHandler(level, worldPosition.relative(dir), opposite)) {
+                    change = opposite;
+                    break;
+                }
+            }
+        }
+        setFacing(change);
+        level.updateNeighborsAt(worldPosition, state.getBlock());
+        return WrenchResult.SUCCESS;
     }
 
     @Override
-    public void readSustainedData(CompoundTag dataMap) {
-        NBTUtils.setEnumIfPresent(dataMap, NBTConstants.COLOR, TransporterUtils::readColor, color -> this.color = color);
-        autoEject = dataMap.getBoolean(NBTConstants.EJECT);
-        roundRobin = dataMap.getBoolean(NBTConstants.ROUND_ROBIN);
-        singleItem = dataMap.getBoolean(NBTConstants.SINGLE_ITEM);
-        filterManager.readFromNBT(dataMap);
+    public void writeSustainedData(HolderLookup.Provider provider, CompoundTag dataMap) {
+        super.writeSustainedData(provider, dataMap);
+        if (color != null) {
+            NBTUtils.writeEnum(dataMap, SerializationConstants.COLOR, color);
+        }
+        dataMap.putBoolean(SerializationConstants.EJECT, autoEject);
+        dataMap.putBoolean(SerializationConstants.ROUND_ROBIN, roundRobin);
+        dataMap.putBoolean(SerializationConstants.SINGLE_ITEM, singleItem);
+        filterManager.writeToNBT(provider, dataMap);
     }
 
     @Override
-    public Map<String, String> getTileDataRemap() {
-        Map<String, String> remap = new Object2ObjectOpenHashMap<>();
-        remap.put(NBTConstants.COLOR, NBTConstants.COLOR);
-        remap.put(NBTConstants.EJECT, NBTConstants.EJECT);
-        remap.put(NBTConstants.ROUND_ROBIN, NBTConstants.ROUND_ROBIN);
-        remap.put(NBTConstants.SINGLE_ITEM, NBTConstants.SINGLE_ITEM);
-        remap.put(NBTConstants.FILTERS, NBTConstants.FILTERS);
-        return remap;
+    public void readSustainedData(HolderLookup.Provider provider, CompoundTag dataMap) {
+        super.readSustainedData(provider, dataMap);
+        this.color = NBTUtils.getEnum(dataMap, SerializationConstants.COLOR, EnumColor.BY_ID);
+        autoEject = dataMap.getBoolean(SerializationConstants.EJECT);
+        roundRobin = dataMap.getBoolean(SerializationConstants.ROUND_ROBIN);
+        singleItem = dataMap.getBoolean(SerializationConstants.SINGLE_ITEM);
+        filterManager.readFromNBT(provider, dataMap);
+    }
+
+    @Override
+    public List<DataComponentType<?>> getRemapEntries() {
+        List<DataComponentType<?>> remapEntries = super.getRemapEntries();
+        remapEntries.add(MekanismDataComponents.COLOR.get());
+        return remapEntries;
+    }
+
+    @Override
+    protected void collectImplicitComponents(@NotNull DataComponentMap.Builder builder) {
+        super.collectImplicitComponents(builder);
+        if (color != null) {
+            builder.set(MekanismDataComponents.COLOR, color);
+        }
+        builder.set(MekanismDataComponents.EJECT, autoEject);
+        builder.set(MekanismDataComponents.ROUND_ROBIN, roundRobin);
+        builder.set(MekanismDataComponents.SINGLE_ITEM, singleItem);
+    }
+
+    @Override
+    protected void applyImplicitComponents(@NotNull BlockEntity.DataComponentInput input) {
+        super.applyImplicitComponents(input);
+        color = input.get(MekanismDataComponents.COLOR);
+        autoEject = input.getOrDefault(MekanismDataComponents.EJECT, autoEject);
+        roundRobin = input.getOrDefault(MekanismDataComponents.ROUND_ROBIN, roundRobin);
+        singleItem = input.getOrDefault(MekanismDataComponents.SINGLE_ITEM, singleItem);
     }
 
     @Override
     public int getRedstoneLevel() {
-        return getActive() ? 15 : 0;
+        return getActive() ? Redstone.SIGNAL_MAX : Redstone.SIGNAL_NONE;
     }
 
     @Override
-    protected boolean makesComparatorDirty(@Nullable SubstanceType type) {
+    protected boolean makesComparatorDirty(ContainerType<?, ?, ?> type) {
         return false;
     }
 
@@ -336,14 +443,11 @@ public class TileEntityLogisticalSorter extends TileEntityMekanism implements IS
     @ComputerMethod(requiresPublicSecurity = true)
     void setDefaultColor(EnumColor color) throws ComputerException {
         validateSecurityIsPublic();
-        if (!TransporterUtils.colors.contains(color)) {
-            throw new ComputerException("Color '%s' is not a supported transporter color.", color);
-        }
         changeColor(color);
     }
 
     @ComputerMethod
-    List<SorterFilter<?>> getFilters() {
+    Collection<SorterFilter<?>> getFilters() {
         return filterManager.getFilters();
     }
 

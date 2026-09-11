@@ -1,5 +1,6 @@
 package mekanism.client.key;
 
+import java.util.Optional;
 import mekanism.client.ClientRegistrationUtil;
 import mekanism.client.MekanismClient;
 import mekanism.client.sound.SoundHandler;
@@ -9,8 +10,9 @@ import mekanism.common.base.KeySync;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.integration.curios.CuriosIntegration;
 import mekanism.common.inventory.container.ModuleTweakerContainer;
-import mekanism.common.item.interfaces.IGasItem;
+import mekanism.common.item.interfaces.IChemicalItem;
 import mekanism.common.item.interfaces.IModeItem;
+import mekanism.common.network.PacketUtils;
 import mekanism.common.network.to_server.PacketModeChange;
 import mekanism.common.network.to_server.PacketModeChangeCurios;
 import mekanism.common.network.to_server.PacketOpenGui;
@@ -20,10 +22,11 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
-import net.minecraftforge.client.settings.KeyModifier;
+import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
+import net.neoforged.neoforge.client.settings.KeyModifier;
 import org.lwjgl.glfw.GLFW;
 import top.theillusivec4.curios.api.SlotContext;
+import top.theillusivec4.curios.api.SlotResult;
 
 public class MekanismKeyHandler {
 
@@ -32,10 +35,10 @@ public class MekanismKeyHandler {
               Player player = Minecraft.getInstance().player;
               if (player != null) {
                   if (IModeItem.isModeItem(player, EquipmentSlot.MAINHAND, false)) {
-                      Mekanism.packetHandler().sendToServer(new PacketModeChange(EquipmentSlot.MAINHAND, player.isShiftKeyDown()));
+                      PacketUtils.sendToServer(new PacketModeChange(EquipmentSlot.MAINHAND, player.isShiftKeyDown()));
                   } else if (!IModeItem.isModeItem(player, EquipmentSlot.MAINHAND) && IModeItem.isModeItem(player, EquipmentSlot.OFFHAND, false)) {
                       //Otherwise, try their offhand
-                      Mekanism.packetHandler().sendToServer(new PacketModeChange(EquipmentSlot.OFFHAND, player.isShiftKeyDown()));
+                      PacketUtils.sendToServer(new PacketModeChange(EquipmentSlot.OFFHAND, player.isShiftKeyDown()));
                   }
               }
           }).build();
@@ -54,7 +57,7 @@ public class MekanismKeyHandler {
           .onKeyDown((kb, isRepeat) -> {
               Player player = Minecraft.getInstance().player;
               if (player != null && ModuleTweakerContainer.hasTweakableItem(player)) {
-                  Mekanism.packetHandler().sendToServer(new PacketOpenGui(GuiType.MODULE_TWEAKER));
+                  PacketUtils.sendToServer(new PacketOpenGui(GuiType.MODULE_TWEAKER));
               }
           }).build();
     public static final KeyMapping boostKey = new MekKeyBindingBuilder().description(MekanismLang.KEY_BOOST).conflictInGame().keyCode(GLFW.GLFW_KEY_LEFT_CONTROL)
@@ -75,19 +78,20 @@ public class MekanismKeyHandler {
         Player player = Minecraft.getInstance().player;
         if (player != null) {
             if (IModeItem.isModeItem(player, slot)) {
-                Mekanism.packetHandler().sendToServer(new PacketModeChange(slot, player.isShiftKeyDown()));
+                PacketUtils.sendToServer(new PacketModeChange(slot, player.isShiftKeyDown()));
                 SoundHandler.playSound(MekanismSounds.HYDRAULIC);
-            } else if (Mekanism.hooks.CuriosLoaded) {
-                CuriosIntegration.findFirstCurioAsResult(player, stack -> {
+            } else if (Mekanism.hooks.curios.isLoaded()) {
+                Optional<SlotResult> curiosResult = CuriosIntegration.findFirstCurioAsResult(player, stack -> {
                     if (stack.canEquip(slot, player) && IModeItem.isModeItem(stack, slot)) {
-                        return !(stack.getItem() instanceof IGasItem item) || item.hasGas(stack);
+                        return !(stack.getItem() instanceof IChemicalItem item) || item.hasChemical(stack);
                     }
                     return false;
-                }).ifPresent(result -> {
-                    SlotContext slotContext = result.slotContext();
-                    Mekanism.packetHandler().sendToServer(new PacketModeChangeCurios(slotContext.identifier(), slotContext.index(), player.isShiftKeyDown()));
-                    SoundHandler.playSound(MekanismSounds.HYDRAULIC);
                 });
+                if (curiosResult.isPresent()) {
+                    SlotContext slotContext = curiosResult.get().slotContext();
+                    PacketUtils.sendToServer(new PacketModeChangeCurios(slotContext.identifier(), slotContext.index(), player.isShiftKeyDown()));
+                    SoundHandler.playSound(MekanismSounds.HYDRAULIC);
+                }
             }
         }
     }

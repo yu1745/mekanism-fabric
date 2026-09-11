@@ -9,6 +9,7 @@ import mekanism.common.block.states.BlockStateHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.sounds.SoundEvent;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
@@ -48,13 +49,12 @@ public class BlockPlasticSlab extends SlabBlock implements IColoredBlock, IState
 
     @Override
     public BlockState getStateForPlacement(@NotNull BlockPlaceContext context) {
-        return BlockStateHelper.getStateForPlacement(this, super.getStateForPlacement(context), context);
+        return BlockStateHelper.getStateForPlacement(super.getStateForPlacement(context), context);
     }
 
     @NotNull
     @Override
-    @Deprecated
-    public FluidState getFluidState(@NotNull BlockState state) {
+    protected FluidState getFluidState(@NotNull BlockState state) {
         return getFluid(state);
     }
 
@@ -64,14 +64,13 @@ public class BlockPlasticSlab extends SlabBlock implements IColoredBlock, IState
     }
 
     @Override
-    public boolean canPlaceLiquid(@NotNull BlockGetter world, @NotNull BlockPos pos, @NotNull BlockState state, @NotNull Fluid fluid) {
-        return state.getValue(TYPE) != SlabType.DOUBLE && IStateExtendedFluidLoggable.super.canPlaceLiquid(world, pos, state, fluid);
+    public boolean canPlaceLiquid(Player player, @NotNull BlockGetter world, @NotNull BlockPos pos, @NotNull BlockState state, @NotNull Fluid fluid) {
+        return state.getValue(TYPE) != SlabType.DOUBLE && IStateExtendedFluidLoggable.super.canPlaceLiquid(player, world, pos, state, fluid);
     }
 
     @NotNull
     @Override
-    @Deprecated
-    public BlockState updateShape(@NotNull BlockState state, @NotNull Direction facing, @NotNull BlockState facingState, @NotNull LevelAccessor world,
+    protected BlockState updateShape(@NotNull BlockState state, @NotNull Direction facing, @NotNull BlockState facingState, @NotNull LevelAccessor world,
           @NotNull BlockPos currentPos, @NotNull BlockPos facingPos) {
         updateFluids(state, world, currentPos);
         return super.updateShape(state, facing, facingState, world, currentPos, facingPos);
@@ -79,9 +78,9 @@ public class BlockPlasticSlab extends SlabBlock implements IColoredBlock, IState
 
     @NotNull
     @Override
-    public ItemStack pickupBlock(@NotNull LevelAccessor world, @NotNull BlockPos pos, @NotNull BlockState state) {
+    public ItemStack pickupBlock(Player player, @NotNull LevelAccessor world, @NotNull BlockPos pos, @NotNull BlockState state) {
         //Manually declare which pickupBlock we want to be using
-        return IStateExtendedFluidLoggable.super.pickupBlock(world, pos, state);
+        return IStateExtendedFluidLoggable.super.pickupBlock(player, world, pos, state);
     }
 
     @NotNull
@@ -93,7 +92,7 @@ public class BlockPlasticSlab extends SlabBlock implements IColoredBlock, IState
 
     @NotNull
     @Override
-    public Optional<SoundEvent> getPickupSound(BlockState state) {
+    public Optional<SoundEvent> getPickupSound(@NotNull BlockState state) {
         //Manually declare which getPickupSound we want to be using
         return IStateExtendedFluidLoggable.super.getPickupSound(state);
     }

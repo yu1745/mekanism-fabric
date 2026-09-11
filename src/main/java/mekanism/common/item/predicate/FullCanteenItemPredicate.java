@@ -1,33 +1,29 @@
 package mekanism.common.item.predicate;
 
-import mekanism.common.Mekanism;
-import mekanism.common.config.MekanismConfig;
+import com.mojang.serialization.Codec;
+import java.util.List;
+import mekanism.api.fluid.IExtendedFluidTank;
+import mekanism.common.attachments.containers.ContainerType;
 import mekanism.common.item.gear.ItemCanteen;
 import mekanism.common.registries.MekanismFluids;
-import mekanism.common.util.StorageUtils;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.advancements.critereon.ItemSubPredicate;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.fluids.FluidStack;
 import org.jetbrains.annotations.NotNull;
 
-public class FullCanteenItemPredicate extends CustomItemPredicate {
+public class FullCanteenItemPredicate implements ItemSubPredicate {
 
-    public static final ResourceLocation ID = Mekanism.rl("full_canteen");
     public static final FullCanteenItemPredicate INSTANCE = new FullCanteenItemPredicate();
+    public static final Codec<FullCanteenItemPredicate> CODEC = Codec.unit(INSTANCE);
+    public static final ItemSubPredicate.Type<FullCanteenItemPredicate> TYPE = new ItemSubPredicate.Type<>(CODEC);
 
     private FullCanteenItemPredicate() {
     }
 
     @Override
-    protected ResourceLocation getID() {
-        return ID;
-    }
-
-    @Override
     public boolean matches(@NotNull ItemStack stack) {
         if (stack.getItem() instanceof ItemCanteen) {
-            FluidStack fluidStack = StorageUtils.getStoredFluidFromNBT(stack);
-            return fluidStack.isFluidStackIdentical(MekanismFluids.NUTRITIONAL_PASTE.getFluidStack(MekanismConfig.gear.canteenMaxStorage.get()));
+            List<IExtendedFluidTank> tanks = ContainerType.FLUID.getAttachmentContainersIfPresent(stack);
+            return !tanks.isEmpty() && tanks.stream().allMatch(tank -> tank.getNeeded() == 0 && tank.getFluid().is(MekanismFluids.NUTRITIONAL_PASTE));
         }
         return false;
     }

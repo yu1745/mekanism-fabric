@@ -7,11 +7,11 @@ import mekanism.common.block.BlockPersonalStorage;
 import mekanism.common.inventory.container.item.PersonalStorageItemContainer;
 import mekanism.common.item.interfaces.IDroppableContents;
 import mekanism.common.item.interfaces.IGuiItem;
-import mekanism.common.lib.inventory.personalstorage.PersonalStorageItemInventory;
+import mekanism.common.lib.inventory.personalstorage.AbstractPersonalStorageItemInventory;
 import mekanism.common.lib.inventory.personalstorage.PersonalStorageManager;
+import mekanism.common.lib.security.ItemSecurityUtils;
 import mekanism.common.registration.impl.ContainerTypeRegistryObject;
 import mekanism.common.registries.MekanismContainerTypes;
-import mekanism.common.util.SecurityUtils;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.stats.Stats;
 import net.minecraft.world.InteractionHand;
@@ -20,27 +20,27 @@ import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.common.util.FakePlayer;
 import org.jetbrains.annotations.NotNull;
 
 public class ItemBlockPersonalStorage<BLOCK extends BlockPersonalStorage<?, ?>> extends ItemBlockTooltip<BLOCK> implements IDroppableContents, IGuiItem {
 
     private final ResourceLocation openStat;
 
-    public ItemBlockPersonalStorage(BLOCK block, ResourceLocation openStat) {
-        super(block);
+    public ItemBlockPersonalStorage(BLOCK block, Item.Properties properties, ResourceLocation openStat) {
+        super(block, true, properties);
         this.openStat = openStat;
     }
 
     @NotNull
     @Override
     public InteractionResultHolder<ItemStack> use(@NotNull Level world, @NotNull Player player, @NotNull InteractionHand hand) {
-        return SecurityUtils.get().claimOrOpenGui(world, player, hand, (p, h, s) -> {
+        return ItemSecurityUtils.get().claimOrOpenGui(world, player, hand, (p, h, s) -> {
             if (!world.isClientSide) {
                 PersonalStorageManager.getInventoryFor(s);
             }
@@ -64,7 +64,7 @@ public class ItemBlockPersonalStorage<BLOCK extends BlockPersonalStorage<?, ?>> 
     protected boolean canPlace(@NotNull BlockPlaceContext context, @NotNull BlockState state) {
         Player player = context.getPlayer();
         //Only allow placing if there is no player, it is a fake player, or the player is sneaking
-        return (player == null || player instanceof FakePlayer || player.isShiftKeyDown()) && super.canPlace(context, state);
+        return (player == null || player.isFakePlayer() || player.isShiftKeyDown()) && super.canPlace(context, state);
     }
 
     @Override
@@ -77,13 +77,12 @@ public class ItemBlockPersonalStorage<BLOCK extends BlockPersonalStorage<?, ?>> 
         super.onDestroyed(item, damageSource);
         if (!item.level().isClientSide) {
             ItemStack stack = item.getItem();
-            PersonalStorageManager.getInventoryIfPresent(stack).ifPresent(inventory -> {
-                if (inventory.isInventoryEmpty()) {
-                    //If the inventory was actually empty we can prune the data from the storage manager
-                    // (if it isn't empty we want to persist it so that server admins can recover their items)
-                    PersonalStorageManager.deleteInventory(stack);
-                }
-            });
+            AbstractPersonalStorageItemInventory inventory = PersonalStorageManager.getInventoryIfPresent(stack).orElse(null);
+            if (inventory != null && inventory.isInventoryEmpty()) {
+                //If the inventory was actually empty we can prune the data from the storage manager
+                // (if it isn't empty we want to persist it so that server admins can recover their items)
+                PersonalStorageManager.deleteInventory(stack);
+            }
         }
     }
 
@@ -92,5 +91,12 @@ public class ItemBlockPersonalStorage<BLOCK extends BlockPersonalStorage<?, ?>> 
         return PersonalStorageManager.getInventoryIfPresent(stack)
               .map(inventory -> inventory.getInventorySlots(null))
               .orElse(Collections.emptyList());
+    }
+
+    @Override
+    public int getScalar(ItemStack stack) {
+        //If for some reason a personal storage block is destroyed that has an inventory and is stacked
+        // we only want to drop one of the backing item
+        return 1;
     }
 }

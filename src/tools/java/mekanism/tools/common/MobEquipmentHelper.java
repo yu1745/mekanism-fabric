@@ -1,12 +1,13 @@
 package mekanism.tools.common;
 
-import mekanism.api.providers.IItemProvider;
 import mekanism.common.config.value.CachedFloatValue;
 import mekanism.tools.common.config.MekanismToolsConfig;
 import mekanism.tools.common.config.ToolsConfig.ArmorSpawnChanceConfig;
 import mekanism.tools.common.registries.ToolsItems;
+import net.minecraft.core.Holder;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.Difficulty;
+import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.monster.Drowned;
@@ -15,9 +16,11 @@ import net.minecraft.world.entity.monster.Stray;
 import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.entity.monster.ZombifiedPiglin;
 import net.minecraft.world.entity.monster.piglin.Piglin;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
-import net.minecraftforge.event.entity.living.MobSpawnEvent;
+import net.minecraft.world.item.enchantment.providers.VanillaEnchantmentProviders;
+import net.neoforged.neoforge.event.entity.living.FinalizeSpawnEvent;
 
 public class MobEquipmentHelper {
 
@@ -40,19 +43,20 @@ public class MobEquipmentHelper {
         return entity instanceof Zombie && !(entity instanceof Drowned) && !(entity instanceof ZombifiedPiglin);
     }
 
-    public static void onLivingSpecialSpawn(MobSpawnEvent.FinalizeSpawn event) {
+    public static void onLivingSpecialSpawn(FinalizeSpawnEvent event) {
         LivingEntity entity = event.getEntity();
         boolean isZombie = isZombie(entity);
         if (isZombie || entity instanceof Skeleton || entity instanceof Stray || entity instanceof Piglin) {
             //Don't bother calculating random numbers unless the instanceof checks pass
             RandomSource random = event.getLevel().getRandom();
-            boolean isHard = event.getDifficulty().getDifficulty() == Difficulty.HARD;
-            float difficultyMultiplier = event.getDifficulty().getSpecialMultiplier();
+            DifficultyInstance difficulty = event.getDifficulty();
+            boolean isHard = difficulty.getDifficulty() == Difficulty.HARD;
+            float difficultyMultiplier = difficulty.getSpecialMultiplier();
             GearType gearType = null;
             if (random.nextFloat() < MekanismToolsConfig.tools.armorSpawnChance.get() * difficultyMultiplier) {
                 //We can only spawn refined glowstone armor on piglins
                 gearType = getGearType(entity instanceof Piglin ? 0 : random.nextInt(6));
-                setEntityArmorWithChance(random, entity, isHard, difficultyMultiplier, gearType);
+                setEntityArmorWithChance(random, entity, isHard, difficulty, gearType);
             }
             if (isZombie) {
                 CachedFloatValue spawnChance = isHard ? MekanismToolsConfig.tools.weaponSpawnChanceHard : MekanismToolsConfig.tools.weaponSpawnChance;
@@ -61,8 +65,8 @@ public class MobEquipmentHelper {
                         gearType = getGearType(random.nextInt(6));
                     }
                     if (gearType.spawnChance.canSpawnWeapon.get()) {
-                        IItemProvider weapon = random.nextFloat() < gearType.spawnChance.swordWeight.get() ? gearType.sword : gearType.shovel;
-                        setStackIfEmpty(entity, random, gearType.spawnChance.weaponEnchantmentChance.get(), difficultyMultiplier, EquipmentSlot.MAINHAND, weapon);
+                        Holder<Item> weapon = random.nextFloat() < gearType.spawnChance.swordWeight.get() ? gearType.sword : gearType.shovel;
+                        setStackIfEmpty(entity, random, gearType.spawnChance.weaponEnchantmentChance.get(), difficulty, EquipmentSlot.MAINHAND, weapon);
                     }
                 }
             }
@@ -71,53 +75,53 @@ public class MobEquipmentHelper {
 
     private static GearType getGearType(int type) {
         return switch (type) {
-            default -> REFINED_GLOWSTONE;
             case 1 -> LAPIS_LAZULI;
             case 2 -> REFINED_OBSIDIAN;
             case 3 -> STEEL;
             case 4 -> BRONZE;
             case 5 -> OSMIUM;
+            default -> REFINED_GLOWSTONE;
         };
     }
 
-    private static void setEntityArmorWithChance(RandomSource random, LivingEntity entity, boolean isHard, float difficultyMultiplier, GearType gearType) {
+    private static void setEntityArmorWithChance(RandomSource random, LivingEntity entity, boolean isHard, DifficultyInstance difficulty, GearType gearType) {
         ArmorSpawnChanceConfig chanceConfig = gearType.spawnChance();
         float stopChance = isHard ? chanceConfig.multiplePieceChanceHard.get() : chanceConfig.multiplePieceChance.get();
         if (random.nextFloat() < chanceConfig.bootsChance.get()) {
-            setStackIfEmpty(entity, random, chanceConfig.armorEnchantmentChance.get(), difficultyMultiplier, EquipmentSlot.FEET, gearType.boots);
+            setStackIfEmpty(entity, random, chanceConfig.armorEnchantmentChance.get(), difficulty, EquipmentSlot.FEET, gearType.boots);
             if (random.nextFloat() < stopChance) {
                 return;
             }
         }
         if (random.nextFloat() < chanceConfig.leggingsChance.get()) {
-            setStackIfEmpty(entity, random, chanceConfig.armorEnchantmentChance.get(), difficultyMultiplier, EquipmentSlot.LEGS, gearType.leggings);
+            setStackIfEmpty(entity, random, chanceConfig.armorEnchantmentChance.get(), difficulty, EquipmentSlot.LEGS, gearType.leggings);
             if (random.nextFloat() < stopChance) {
                 return;
             }
         }
         if (random.nextFloat() < chanceConfig.chestplateChance.get()) {
-            setStackIfEmpty(entity, random, chanceConfig.armorEnchantmentChance.get(), difficultyMultiplier, EquipmentSlot.CHEST, gearType.chestplate);
+            setStackIfEmpty(entity, random, chanceConfig.armorEnchantmentChance.get(), difficulty, EquipmentSlot.CHEST, gearType.chestplate);
             if (random.nextFloat() < stopChance) {
                 return;
             }
         }
         if (random.nextFloat() < chanceConfig.helmetChance.get()) {
-            setStackIfEmpty(entity, random, chanceConfig.armorEnchantmentChance.get(), difficultyMultiplier, EquipmentSlot.HEAD, gearType.helmet);
+            setStackIfEmpty(entity, random, chanceConfig.armorEnchantmentChance.get(), difficulty, EquipmentSlot.HEAD, gearType.helmet);
         }
     }
 
-    private static void setStackIfEmpty(LivingEntity entity, RandomSource random, float baseChance, float difficultyMultiplier, EquipmentSlot slot, IItemProvider item) {
+    private static void setStackIfEmpty(LivingEntity entity, RandomSource random, float baseChance, DifficultyInstance difficulty, EquipmentSlot slot, Holder<Item> item) {
         if (entity.getItemBySlot(slot).isEmpty()) {
-            ItemStack stack = item.getItemStack();
-            if (random.nextFloat() < baseChance * difficultyMultiplier) {
+            ItemStack stack = new ItemStack(item);
+            if (random.nextFloat() < baseChance * difficulty.getSpecialMultiplier()) {
                 //Copy of vanilla's enchant item level logic
-                stack = EnchantmentHelper.enchantItem(random, stack, (int) (5 + difficultyMultiplier * random.nextInt(18)), false);
+                EnchantmentHelper.enchantItemFromProvider(stack, entity.level().registryAccess(), VanillaEnchantmentProviders.MOB_SPAWN_EQUIPMENT, difficulty, random);
             }
             entity.setItemSlot(slot, stack);
         }
     }
 
-    private record GearType(IItemProvider sword, IItemProvider shovel, IItemProvider helmet, IItemProvider chestplate, IItemProvider leggings, IItemProvider boots,
+    private record GearType(Holder<Item> sword, Holder<Item> shovel, Holder<Item> helmet, Holder<Item> chestplate, Holder<Item> leggings, Holder<Item> boots,
                             ArmorSpawnChanceConfig spawnChance) {
     }
 }

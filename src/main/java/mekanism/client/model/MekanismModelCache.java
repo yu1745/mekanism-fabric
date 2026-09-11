@@ -11,10 +11,11 @@ import mekanism.client.render.transmitter.RenderTransmitterBase;
 import mekanism.common.Mekanism;
 import mekanism.common.registries.MekanismRobitSkins.SkinLookup;
 import mekanism.common.tile.qio.TileEntityQIODriveArray.DriveStatus;
+import mekanism.common.util.EnumUtils;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.client.resources.model.ModelResourceLocation;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.client.event.ModelEvent.BakingCompleted;
+import net.neoforged.neoforge.client.event.ModelEvent.BakingCompleted;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -38,14 +39,14 @@ public class MekanismModelCache extends BaseModelCache {
     public final JSONModelData LIQUIFIER_BLADE = registerJSON("block/liquifier_blade");
     public final JSONModelData VIBRATOR_SHAFT = registerJSON("block/vibrator_shaft");
     public final JSONModelData PIGMENT_MIXER_SHAFT = registerJSON("block/pigment_mixer_shaft");
-    public final JSONModelData[] QIO_DRIVES = new JSONModelData[DriveStatus.STATUSES.length];
+    public final JSONModelData[] QIO_DRIVES = new JSONModelData[EnumUtils.DRIVE_STATUSES.length];
     private final Map<ResourceLocation, JSONModelData> CUSTOM_ROBIT_MODELS = new HashMap<>();
     private final Map<ResourceLocation, JSONModelData> ROBIT_SKINS = new HashMap<>();
     private BakedModel BASE_ROBIT;
 
     private MekanismModelCache() {
         super(Mekanism.MODID);
-        for (DriveStatus status : DriveStatus.STATUSES) {
+        for (DriveStatus status : EnumUtils.DRIVE_STATUSES) {
             if (status != DriveStatus.NONE) {
                 QIO_DRIVES[status.ordinal()] = registerJSON(status.getModel());
             }
@@ -56,7 +57,7 @@ public class MekanismModelCache extends BaseModelCache {
     public void onBake(BakingCompleted evt) {
         super.onBake(evt);
         callbacks.forEach(Runnable::run);
-        BASE_ROBIT = getBakedModel(evt, new ModelResourceLocation(Mekanism.rl("robit"), "inventory"));
+        BASE_ROBIT = getBakedModel(evt, ModelResourceLocation.inventory(Mekanism.rl("robit")));
         //Clear old robit skin caches
         //Note: We don't clear the cached models as the old JSONModelDatas should be able to properly handle reloading,
         // and we only clear the skin cache in case the skin no longer has a custom model (even though this is highly unlikely)
@@ -69,14 +70,20 @@ public class MekanismModelCache extends BaseModelCache {
 
     @Nullable
     public BakedModel getRobitSkin(@NotNull SkinLookup skinLookup) {
-        JSONModelData data = ROBIT_SKINS.computeIfAbsent(skinLookup.location(), skinName -> {
+        ResourceLocation skinName = skinLookup.location();
+        JSONModelData data;
+        if (ROBIT_SKINS.containsKey(skinName)) {
+            data = ROBIT_SKINS.get(skinName);
+        } else {
             ResourceLocation customModel = skinLookup.skin().customModel();
             if (customModel != null) {
                 //If multiple skins make use of the same custom model, have them all point at the same model data object
-                return CUSTOM_ROBIT_MODELS.computeIfAbsent(customModel, this::registerJSONAndBake);
+                data = CUSTOM_ROBIT_MODELS.computeIfAbsent(customModel, this::registerJSONAndBake);
+            } else {
+                data = null;
             }
-            return null;
-        });
+            ROBIT_SKINS.put(skinName, data);
+        }
         return data == null ? BASE_ROBIT : data.getBakedModel();
     }
 

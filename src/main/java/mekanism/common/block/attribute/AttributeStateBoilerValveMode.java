@@ -1,14 +1,18 @@
 package mekanism.common.block.attribute;
 
+import io.netty.buffer.ByteBuf;
 import java.util.List;
+import java.util.function.IntFunction;
 import mekanism.api.IIncrementalEnum;
 import mekanism.api.annotations.NothingNullByDefault;
-import mekanism.api.math.MathUtils;
 import mekanism.api.text.EnumColor;
-import mekanism.api.text.IHasTextComponent;
+import mekanism.api.text.IHasTextComponent.IHasEnumNameTextComponent;
 import mekanism.api.text.ILangEntry;
 import mekanism.common.MekanismLang;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.util.ByIdMap;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
@@ -39,12 +43,13 @@ public class AttributeStateBoilerValveMode implements AttributeState {
     }
 
     @NothingNullByDefault
-    public enum BoilerValveMode implements StringRepresentable, IHasTextComponent, IIncrementalEnum<BoilerValveMode> {
+    public enum BoilerValveMode implements StringRepresentable, IHasEnumNameTextComponent, IIncrementalEnum<BoilerValveMode> {
         INPUT("input", MekanismLang.BOILER_VALVE_MODE_INPUT, EnumColor.BRIGHT_GREEN),
-        OUTPUT_STEAM("output_steam", MekanismLang.BOILER_VALVE_MODE_OUTPUT_STEAM, EnumColor.GRAY),
+        OUTPUT_STEAM("output_steam", MekanismLang.BOILER_VALVE_MODE_OUTPUT_STEAM, EnumColor.RED),
         OUTPUT_COOLANT("output_coolant", MekanismLang.BOILER_VALVE_MODE_OUTPUT_COOLANT, EnumColor.DARK_AQUA);
 
-        private static final BoilerValveMode[] MODES = values();
+        public static final IntFunction<BoilerValveMode> BY_ID = ByIdMap.continuous(BoilerValveMode::ordinal, values(), ByIdMap.OutOfBoundsStrategy.WRAP);
+        public static final StreamCodec<ByteBuf, BoilerValveMode> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, BoilerValveMode::ordinal);
 
         private final String name;
         private final ILangEntry langEntry;
@@ -66,13 +71,9 @@ public class AttributeStateBoilerValveMode implements AttributeState {
             return langEntry.translateColored(color);
         }
 
-        public static BoilerValveMode byIndexStatic(int index) {
-            return MathUtils.getByIndexMod(MODES, index);
-        }
-
         @Override
         public BoilerValveMode byIndex(int index) {
-            return byIndexStatic(index);
+            return BY_ID.apply(index);
         }
     }
 }

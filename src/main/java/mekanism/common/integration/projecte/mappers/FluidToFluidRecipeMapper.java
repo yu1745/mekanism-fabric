@@ -1,53 +1,29 @@
 package mekanism.common.integration.projecte.mappers;
 
 import mekanism.api.recipes.FluidToFluidRecipe;
-import mekanism.common.integration.projecte.IngredientHelper;
+import mekanism.api.recipes.basic.BasicFluidToFluidRecipe;
+import mekanism.common.config.MekanismConfigTranslations;
 import mekanism.common.recipe.MekanismRecipeType;
 import moze_intel.projecte.api.mapper.collector.IMappingCollector;
-import moze_intel.projecte.api.mapper.recipe.INSSFakeGroupManager;
-import moze_intel.projecte.api.mapper.recipe.IRecipeTypeMapper;
 import moze_intel.projecte.api.mapper.recipe.RecipeTypeMapper;
 import moze_intel.projecte.api.nss.NormalizedSimpleStack;
-import net.minecraft.core.RegistryAccess;
-import net.minecraft.world.item.crafting.Recipe;
-import net.minecraft.world.item.crafting.RecipeType;
-import net.minecraftforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.FluidStackLinkedSet;
 
 @RecipeTypeMapper
-public class FluidToFluidRecipeMapper implements IRecipeTypeMapper {
+public class FluidToFluidRecipeMapper extends TypedMekanismRecipeMapper<FluidToFluidRecipe> {
 
-    @Override
-    public String getName() {
-        return "MekFluidToFluid";
+    public FluidToFluidRecipeMapper() {
+        super(MekanismConfigTranslations.PE_MAPPER_EVAPORATING, FluidToFluidRecipe.class, MekanismRecipeType.EVAPORATING);
     }
 
     @Override
-    public String getDescription() {
-        return "Maps Mekanism evaporating recipes.";
-    }
-
-    @Override
-    public boolean canHandle(RecipeType<?> recipeType) {
-        return recipeType == MekanismRecipeType.EVAPORATING.get();
-    }
-
-    @Override
-    public boolean handleRecipe(IMappingCollector<NormalizedSimpleStack, Long> mapper, Recipe<?> iRecipe, RegistryAccess registryAccess, INSSFakeGroupManager groupManager) {
-        if (!(iRecipe instanceof FluidToFluidRecipe recipe)) {
-            //Double check that we have a type of recipe we know how to handle
-            return false;
+    protected boolean handleRecipe(IMappingCollector<NormalizedSimpleStack, Long> mapper, FluidToFluidRecipe recipe, MekFakeGroupHelper fakeGroupHelper) {
+        if (OPTIMIZE_BASIC && recipe instanceof BasicFluidToFluidRecipe basicRecipe) {
+            //This will be the case for the majority of our recipes
+            return addConversion(mapper, basicRecipe.getOutputRaw(), fakeGroupHelper.forIngredient(recipe.getInput()));
         }
-        boolean handled = false;
-        for (FluidStack representation : recipe.getInput().getRepresentations()) {
-            FluidStack output = recipe.getOutput(representation);
-            if (!output.isEmpty()) {
-                IngredientHelper ingredientHelper = new IngredientHelper(mapper);
-                ingredientHelper.put(representation);
-                if (ingredientHelper.addAsConversion(output)) {
-                    handled = true;
-                }
-            }
-        }
-        return handled;
+        return addConversions(mapper, recipe.getInput(), recipe::getOutput, FluidStack::isEmpty, fakeGroupHelper::forFluids, FluidStackLinkedSet.TYPE_AND_COMPONENTS,
+              TypedMekanismRecipeMapper::addConversion);
     }
 }

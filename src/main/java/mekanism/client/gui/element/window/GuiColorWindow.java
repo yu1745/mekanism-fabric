@@ -13,6 +13,7 @@ import mekanism.client.gui.element.button.TranslationButton;
 import mekanism.client.gui.element.custom.GuiEntityPreview;
 import mekanism.client.gui.element.text.BackgroundType;
 import mekanism.client.gui.element.text.GuiTextField;
+import mekanism.client.gui.tooltip.TooltipUtils;
 import mekanism.common.MekanismLang;
 import mekanism.common.inventory.container.SelectedWindowData.WindowType;
 import mekanism.common.lib.Color;
@@ -21,6 +22,7 @@ import mekanism.common.util.MekanismUtils.ResourceType;
 import mekanism.common.util.text.InputValidator;
 import mekanism.common.util.text.TextUtils;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
@@ -49,11 +51,11 @@ public class GuiColorWindow extends GuiWindow {
     private float value = 0.5F;
     private float alpha = 1;
 
-    public GuiColorWindow(IGuiWrapper gui, int x, int y, boolean handlesAlpha, Consumer<Color> callback) {
-        this(gui, x, y, handlesAlpha, callback, null, null, null);
+    public GuiColorWindow(IGuiWrapper gui, int x, int y, boolean handlesAlpha, Color initialColor, Consumer<Color> callback) {
+        this(gui, x, y, handlesAlpha, initialColor, callback, null, null, null);
     }
 
-    public GuiColorWindow(IGuiWrapper gui, int x, int y, boolean handlesAlpha, Consumer<Color> callback, @Nullable Supplier<LivingEntity> armorPreview,
+    public GuiColorWindow(IGuiWrapper gui, int x, int y, boolean handlesAlpha, Color initialColor, Consumer<Color> callback, @Nullable Supplier<LivingEntity> armorPreview,
           @Nullable Consumer<Color> updatePreviewColor, @Nullable Runnable previewReset) {
         super(gui, x, y, (handlesAlpha ? 184 : 158) + (armorPreview == null ? 0 : 83), handlesAlpha ? 152 : 140, WindowType.COLOR);
         interactionStrategy = InteractionStrategy.NONE;
@@ -78,22 +80,22 @@ public class GuiColorWindow extends GuiWindow {
         }
 
         int textOffset = this.handlesAlpha ? 6 : 0;
-        textField = addChild(new GuiTextField(gui, relativeX + 30 + textOffset, relativeY + height - 20, 63 + extraWidth - textOffset, 12));
+        textField = addChild(new GuiTextField(gui, this, relativeX + 30 + textOffset, relativeY + height - 20, 63 + extraWidth - textOffset, 12));
         textField.setInputValidator(InputValidator.DIGIT.or(c -> c == ','))
               //Transform paste to remove any spaces to allow pasting from sources that have a space after the comma
               .setPasteTransformer(text -> text.replace(" ", ""))
               .setBackground(BackgroundType.ELEMENT_HOLDER)
               .setMaxLength(this.handlesAlpha ? 15 : 11);
-        addChild(new TranslationButton(gui, relativeX + 98 + extraWidth, relativeY + height - 21, 54, 14, MekanismLang.BUTTON_CONFIRM, () -> {
+        addChild(new TranslationButton(gui, relativeX + 98 + extraWidth, relativeY + height - 21, 54, 14, MekanismLang.BUTTON_CONFIRM, (element, mouseX, mouseY) -> {
             callback.accept(getColor());
-            close();
+            return close(element, mouseX, mouseY);
         }));
 
         if (armorPreview != null) {
-            addChild(new GuiEntityPreview(gui, relativeX + 155 + extraWidth, relativeY + 17, 80, height - 24, 5, armorPreview));
+            addChild(new GuiEntityPreview(gui, relativeX + 155 + extraWidth, relativeY + 17, 80, height - 24, armorPreview));
         }
 
-        setColor(Color.rgbi(128, 70, 70));
+        setColor(initialColor);
     }
 
     @Override
@@ -122,8 +124,7 @@ public class GuiColorWindow extends GuiWindow {
         super.renderForeground(guiGraphics, mouseX, mouseY);
         drawTitleText(guiGraphics, MekanismLang.COLOR_PICKER.translate(), 6);
         ILangEntry entry = handlesAlpha ? MekanismLang.RGBA : MekanismLang.RGB;
-        int textOffset = handlesAlpha ? 6 : 0;
-        drawTextScaledBound(guiGraphics, entry.translate(), relativeX + 7, relativeY + height - 18F, titleTextColor(), 20 + textOffset);
+        drawScrollingString(guiGraphics, entry.translate(), 2, height - 18, TextAlignment.RIGHT, titleTextColor(), textField.getRelativeX() - relativeX - 2, 2, false);
     }
 
     private void drawTiledGradient(GuiGraphics guiGraphics, int x, int y, int width, int height) {
@@ -143,10 +144,14 @@ public class GuiColorWindow extends GuiWindow {
     private void drawGradient(GuiGraphics guiGraphics, int x, int y, int width, int height, Color tl, Color tr, Color bl, Color br) {
         VertexConsumer buffer = guiGraphics.bufferSource().getBuffer(RenderType.gui());
         Matrix4f matrix4f = guiGraphics.pose().last().pose();
-        buffer.vertex(matrix4f, x, y + height, 0).color(bl.r(), bl.g(), bl.b(), bl.a()).endVertex();
-        buffer.vertex(matrix4f, x + width, y + height, 0).color(br.r(), br.g(), br.b(), br.a()).endVertex();
-        buffer.vertex(matrix4f, x + width, y, 0).color(tr.r(), tr.g(), tr.b(), tr.a()).endVertex();
-        buffer.vertex(matrix4f, x, y, 0).color(tl.r(), tl.g(), tl.b(), tl.a()).endVertex();
+        buffer.addVertex(matrix4f, x, y + height, 0)
+              .setColor(bl.r(), bl.g(), bl.b(), bl.a());
+        buffer.addVertex(matrix4f, x + width, y + height, 0)
+              .setColor(br.r(), br.g(), br.b(), br.a());
+        buffer.addVertex(matrix4f, x + width, y, 0)
+              .setColor(tr.r(), tr.g(), tr.b(), tr.a());
+        buffer.addVertex(matrix4f, x, y, 0)
+              .setColor(tl.r(), tl.g(), tl.b(), tl.a());
         //Note: This technically should probably be flushIfUnmanaged, but I believe we are always unmanaged here, so it is not worth ATing the method to call it
         guiGraphics.flush();
     }
@@ -241,20 +246,29 @@ public class GuiColorWindow extends GuiWindow {
 
     public class GuiColorView extends GuiElement {
 
+        @Nullable
+        private Tooltip lastTooltip = null;
+        @Nullable
+        private Color lastColor = null;
+
         public GuiColorView(IGuiWrapper gui, int x, int y, int width, int height) {
             super(gui, x, y, width, height);
         }
 
         @Override
-        public void renderToolTip(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY) {
-            super.renderToolTip(guiGraphics, mouseX, mouseY);
-            String hex;
-            if (GuiColorWindow.this.handlesAlpha) {
-                hex = TextUtils.hex(false, 4, getColor().argb());
-            } else {
-                hex = TextUtils.hex(false, 3, getColor().rgb());
+        public void updateTooltip(int mouseX, int mouseY) {
+            Color color = getColor();
+            if (!color.equals(lastColor)) {
+                lastColor = color;
+                String hex;
+                if (GuiColorWindow.this.handlesAlpha) {
+                    hex = TextUtils.hex(false, 4, color.argb());
+                } else {
+                    hex = TextUtils.hex(false, 3, color.rgb());
+                }
+                lastTooltip = TooltipUtils.create(MekanismLang.GENERIC_HEX.translateColored(EnumColor.GRAY, hex));
             }
-            displayTooltips(guiGraphics, mouseX, mouseY, MekanismLang.GENERIC_HEX.translateColored(EnumColor.GRAY, hex));
+            setTooltip(lastTooltip);
         }
 
         @Override
@@ -268,8 +282,6 @@ public class GuiColorWindow extends GuiWindow {
 
     private abstract static class GuiPicker extends GuiElement {
 
-        private boolean isDragging;
-
         public GuiPicker(IGuiWrapper gui, int x, int y, int width, int height) {
             super(gui, x, y, width, height);
         }
@@ -278,22 +290,17 @@ public class GuiColorWindow extends GuiWindow {
 
         @Override
         public void onClick(double mouseX, double mouseY, int button) {
+            super.onClick(mouseX, mouseY, button);
             set(mouseX, mouseY);
-            isDragging = true;
+            setDragging(true);
         }
 
         @Override
         public void onDrag(double mouseX, double mouseY, double deltaX, double deltaY) {
             super.onDrag(mouseX, mouseY, deltaX, deltaY);
-            if (isDragging) {
+            if (isDragging()) {
                 set(mouseX, mouseY);
             }
-        }
-
-        @Override
-        public void onRelease(double mouseX, double mouseY) {
-            super.onRelease(mouseX, mouseY);
-            isDragging = false;
         }
     }
 

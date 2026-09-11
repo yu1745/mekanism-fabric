@@ -10,12 +10,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import mekanism.additions.common.MekanismAdditions;
-import mekanism.additions.common.item.ItemWalkieTalkie;
+import mekanism.additions.common.item.ItemWalkieTalkie.WalkieData;
+import mekanism.additions.common.registries.AdditionsDataComponents;
 import mekanism.common.Mekanism;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.server.ServerLifecycleHooks;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 public class VoiceConnection extends Thread {
 
@@ -26,8 +27,10 @@ public class VoiceConnection extends Thread {
     private final Socket socket;
     private UUID uuid;
 
-    public VoiceConnection(Socket s) {
+    VoiceConnection(Socket s) {
+        super("VoiceServer Connection Thread");
         socket = s;
+        //Note: This is set as a Daemon thread because the parent thread is a daemon thread
     }
 
     @Override
@@ -53,7 +56,7 @@ public class VoiceConnection extends Thread {
                                 }
                             }
                             retryCount++;
-                            Thread.sleep(50);
+                            sleep(50);
                         } catch (Exception ignored) {
                         }
                     }
@@ -72,15 +75,15 @@ public class VoiceConnection extends Thread {
             open = false;
         }
 
-        // Main client listen thread
+        // Main client listen thread (set to daemon because the voice connection is a daemon)
         new Thread(() -> {
             while (open) {
                 try {
-                    short byteCount = VoiceConnection.this.input.readShort();
+                    short byteCount = this.input.readShort();
                     byte[] audioData = new byte[byteCount];
-                    VoiceConnection.this.input.readFully(audioData);
+                    this.input.readFully(audioData);
                     if (byteCount > 0) {
-                        MekanismAdditions.voiceManager.sendToPlayers(byteCount, audioData, VoiceConnection.this);
+                        MekanismAdditions.voiceManager.sendToPlayers(byteCount, audioData, this);
                     }
                 } catch (Exception e) {
                     open = false;
@@ -123,22 +126,31 @@ public class VoiceConnection extends Thread {
 
     public boolean canListen(int channel) {
         ServerPlayer player = getPlayer();
-        return player.getInventory().items.stream().anyMatch(itemStack -> canListen(channel, itemStack)) || canListen(channel, player.getOffhandItem());
+        for (ItemStack itemStack : player.getInventory().items) {
+            if (canListen(channel, itemStack)) {
+                return true;
+            }
+        }
+        return canListen(channel, player.getOffhandItem());
     }
 
-    private boolean canListen(int channel, ItemStack itemStack) {
-        if (!itemStack.isEmpty() && itemStack.getItem() instanceof ItemWalkieTalkie walkieTalkie) {
-            return walkieTalkie.getOn(itemStack) && walkieTalkie.getChannel(itemStack) == channel;
-        }
-        return false;
+    private boolean canListen(int channel, ItemStack stack) {
+        WalkieData data = stack.getOrDefault(AdditionsDataComponents.WALKIE_DATA, WalkieData.DEFAULT);
+        return data.running() && data.channel() == channel;
     }
 
     public int getCurrentChannel() {
-        ItemStack itemStack = getPlayer().getInventory().getSelected();
-        if (!itemStack.isEmpty() && itemStack.getItem() instanceof ItemWalkieTalkie walkieTalkie && walkieTalkie.getOn(itemStack)) {
-            return walkieTalkie.getChannel(itemStack);
+        ServerPlayer player = getPlayer();
+        int channel = getCurrentChannel(player.getMainHandItem());
+        if (channel == 0) {
+            channel = getCurrentChannel(player.getOffhandItem());
         }
-        return 0;
+        return channel;
+    }
+
+    private int getCurrentChannel(ItemStack stack) {
+        WalkieData data = stack.getOrDefault(AdditionsDataComponents.WALKIE_DATA, WalkieData.DEFAULT);
+        return data.running() ? data.channel() : 0;
     }
 
     public ServerPlayer getPlayer() {

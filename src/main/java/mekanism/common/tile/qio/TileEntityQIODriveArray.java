@@ -1,12 +1,12 @@
 package mekanism.common.tile.qio;
 
+import io.netty.buffer.ByteBuf;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.IntFunction;
 import mekanism.api.IContentsListener;
-import mekanism.api.NBTConstants;
-import mekanism.api.inventory.IInventorySlot;
-import mekanism.api.math.MathUtils;
+import mekanism.api.SerializationConstants;
 import mekanism.common.Mekanism;
 import mekanism.common.capabilities.holder.slot.IInventorySlotHolder;
 import mekanism.common.capabilities.holder.slot.InventorySlotHelper;
@@ -17,21 +17,27 @@ import mekanism.common.integration.computer.ComputerException;
 import mekanism.common.integration.computer.annotation.ComputerMethod;
 import mekanism.common.inventory.slot.QIODriveSlot;
 import mekanism.common.registries.MekanismBlocks;
+import mekanism.common.util.MekanismUtils;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.ByIdMap;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.client.model.data.ModelData;
-import net.minecraftforge.client.model.data.ModelProperty;
+import net.neoforged.neoforge.client.model.data.ModelData;
+import net.neoforged.neoforge.client.model.data.ModelProperty;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class TileEntityQIODriveArray extends TileEntityQIOComponent implements IQIODriveHolder {
 
     public static final ModelProperty<byte[]> DRIVE_STATUS_PROPERTY = new ModelProperty<>();
     public static final int DRIVE_SLOTS = 12;
 
-    private List<IInventorySlot> driveSlots;
+    private List<QIODriveSlot> driveSlots;
     private byte[] driveStatus = new byte[DRIVE_SLOTS];
     private int prevDriveHash = -1;
 
@@ -42,12 +48,12 @@ public class TileEntityQIODriveArray extends TileEntityQIOComponent implements I
     @NotNull
     @Override
     protected IInventorySlotHolder getInitialInventory(IContentsListener listener) {
-        InventorySlotHelper builder = InventorySlotHelper.forSide(this::getDirection);
+        InventorySlotHelper builder = InventorySlotHelper.forSide(facingSupplier);
         final int xSize = 176;
         driveSlots = new ArrayList<>();
         for (int y = 0; y < 2; y++) {
             for (int x = 0; x < 6; x++) {
-                QIODriveSlot slot = new QIODriveSlot(this, y * 6 + x, listener, xSize / 2 - (6 * 18 / 2) + x * 18, 70 + y * 18);
+                QIODriveSlot slot = new QIODriveSlot(this, y * 6 + x, this::getLevel, listener, xSize / 2 - (6 * 18 / 2) + x * 18, 70 + y * 18);
                 driveSlots.add(slot);
                 builder.addSlot(slot);
             }
@@ -56,12 +62,11 @@ public class TileEntityQIODriveArray extends TileEntityQIOComponent implements I
     }
 
     @Override
-    protected void onUpdateServer() {
-        super.onUpdateServer();
-        if (level.getGameTime() % 10 == 0) {
-            QIOFrequency frequency = getQIOFrequency();
+    protected boolean onUpdateServer(@Nullable QIOFrequency frequency) {
+        boolean needsUpdate = super.onUpdateServer(frequency);
+        if (level.getGameTime() % MekanismUtils.TICKS_PER_HALF_SECOND == 0) {
             for (int i = 0; i < DRIVE_SLOTS; i++) {
-                QIODriveSlot slot = (QIODriveSlot) driveSlots.get(i);
+                QIODriveSlot slot = driveSlots.get(i);
                 QIODriveData data = frequency == null ? null : frequency.getDriveData(slot.getKey());
                 if (frequency == null || data == null) {
                     setDriveStatus(i, slot.isEmpty() ? DriveStatus.NONE : DriveStatus.OFFLINE);
@@ -81,10 +86,11 @@ public class TileEntityQIODriveArray extends TileEntityQIOComponent implements I
 
             int newHash = Arrays.hashCode(driveStatus);
             if (newHash != prevDriveHash) {
-                sendUpdatePacket();
+                needsUpdate = true;
                 prevDriveHash = newHash;
             }
         }
+        return needsUpdate;
     }
 
     private void setDriveStatus(int slot, DriveStatus status) {
@@ -92,33 +98,33 @@ public class TileEntityQIODriveArray extends TileEntityQIOComponent implements I
     }
 
     @Override
-    public void saveAdditional(@NotNull CompoundTag nbtTags) {
+    public void saveAdditional(@NotNull CompoundTag nbtTags, @NotNull HolderLookup.Provider provider) {
         QIOFrequency freq = getQIOFrequency();
         if (freq != null) {
             // save all item data before we save
             freq.saveAll();
         }
-        super.saveAdditional(nbtTags);
+        super.saveAdditional(nbtTags, provider);
     }
 
     @NotNull
     @Override
     public ModelData getModelData() {
-        return ModelData.builder().with(DRIVE_STATUS_PROPERTY, driveStatus).build();
+        return ModelData.of(DRIVE_STATUS_PROPERTY, driveStatus);
     }
 
     @NotNull
     @Override
-    public CompoundTag getReducedUpdateTag() {
-        CompoundTag updateTag = super.getReducedUpdateTag();
-        updateTag.putByteArray(NBTConstants.DRIVES, driveStatus);
+    public CompoundTag getReducedUpdateTag(@NotNull HolderLookup.Provider provider) {
+        CompoundTag updateTag = super.getReducedUpdateTag(provider);
+        updateTag.putByteArray(SerializationConstants.DRIVES, Arrays.copyOf(driveStatus, driveStatus.length));
         return updateTag;
     }
 
     @Override
-    public void handleUpdateTag(@NotNull CompoundTag tag) {
-        super.handleUpdateTag(tag);
-        byte[] status = tag.getByteArray(NBTConstants.DRIVES);
+    public void handleUpdateTag(@NotNull CompoundTag tag, @NotNull HolderLookup.Provider provider) {
+        super.handleUpdateTag(tag, provider);
+        byte[] status = tag.getByteArray(SerializationConstants.DRIVES);
         if (!Arrays.equals(status, driveStatus)) {
             driveStatus = status;
             updateModelData();
@@ -131,7 +137,7 @@ public class TileEntityQIODriveArray extends TileEntityQIOComponent implements I
     }
 
     @Override
-    public List<IInventorySlot> getDriveSlots() {
+    public List<QIODriveSlot> getDriveSlots() {
         return driveSlots;
     }
 
@@ -157,7 +163,7 @@ public class TileEntityQIODriveArray extends TileEntityQIOComponent implements I
     @ComputerMethod
     DriveStatus getDriveStatus(int slot) throws ComputerException {
         validateSlot(slot);
-        return DriveStatus.byIndexStatic(driveStatus[slot]);
+        return DriveStatus.BY_ID.apply(driveStatus[slot]);
     }
 
     @ComputerMethod(methodDescription = "Requires a frequency to be selected")
@@ -200,13 +206,14 @@ public class TileEntityQIODriveArray extends TileEntityQIOComponent implements I
         NEAR_FULL(Mekanism.rl("block/qio_drive/qio_drive_partial")),
         FULL(Mekanism.rl("block/qio_drive/qio_drive_full"));
 
+        public static final IntFunction<DriveStatus> BY_ID = ByIdMap.continuous(DriveStatus::ordinal, values(), ByIdMap.OutOfBoundsStrategy.WRAP);
+        public static final StreamCodec<ByteBuf, DriveStatus> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, DriveStatus::ordinal);
+
         private final ResourceLocation model;
 
         DriveStatus(ResourceLocation model) {
             this.model = model;
         }
-
-        public static final DriveStatus[] STATUSES = values();
 
         public int ledIndex() {
             return ordinal() - READY.ordinal();
@@ -218,10 +225,6 @@ public class TileEntityQIODriveArray extends TileEntityQIOComponent implements I
 
         public byte status() {
             return (byte) ordinal();
-        }
-
-        public static DriveStatus byIndexStatic(int index) {
-            return MathUtils.getByIndexMod(STATUSES, index);
         }
     }
 }

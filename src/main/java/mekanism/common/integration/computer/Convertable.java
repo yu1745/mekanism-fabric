@@ -1,15 +1,15 @@
 package mekanism.common.integration.computer;
 
 import mekanism.api.chemical.ChemicalStack;
-import net.minecraftforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.FluidStack;
 
 import java.util.function.BiFunction;
 
 /**
- * Wrapper type for a method which may return a different static type at runtime.
- * Ensures that the result can still be converted.
+ * Wrapper type for a method which may return a different static type at runtime. Ensures that the result can still be converted.
  */
 public final class Convertable<RAW> {
+
     private final RAW value;
     private final BiFunction<BaseComputerHelper, RAW, Object> converter;
 
@@ -30,7 +30,7 @@ public final class Convertable<RAW> {
         return of(value, BaseComputerHelper::convert);
     }
 
-    public static Convertable<ChemicalStack<?>> of(ChemicalStack<?> value) {
+    public static Convertable<ChemicalStack> of(ChemicalStack value) {
         return of(value, BaseComputerHelper::convert);
     }
 }

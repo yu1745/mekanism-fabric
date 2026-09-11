@@ -5,16 +5,16 @@ import mekanism.additions.common.entity.EntityBalloon;
 import mekanism.api.text.EnumColor;
 import mekanism.api.text.TextComponentUtil;
 import mekanism.common.lib.math.Pos3D;
+import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.WorldUtils;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.BlockSource;
 import net.minecraft.core.Direction;
+import net.minecraft.core.dispenser.BlockSource;
 import net.minecraft.core.dispenser.DefaultDispenseItemBehavior;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionResultHolder;
-import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -23,6 +23,7 @@ import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.DispenserBlock;
+import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
@@ -46,13 +47,14 @@ public class ItemBalloon extends Item {
     public InteractionResultHolder<ItemStack> use(Level world, @NotNull Player player, @NotNull InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
         if (!world.isClientSide) {
-            boolean rightHand = (player.getMainArm() == HumanoidArm.RIGHT) == (hand == InteractionHand.MAIN_HAND);
+            boolean rightHand = MekanismUtils.isRightArm(player, hand);
             Vec3 pos = new Pos3D(rightHand ? -0.4 : 0.4, 0, 0.3).yRot(player.yBodyRot).translate(new Pos3D(player));
             EntityBalloon balloon = EntityBalloon.create(world, pos.x - 0.5, pos.y - 1.25, pos.z - 0.5, color);
             if (balloon == null) {
                 return InteractionResultHolder.fail(stack);
             }
             world.addFreshEntity(balloon);
+            world.gameEvent(player, GameEvent.ENTITY_PLACE, pos);
         }
         if (!player.isCreative()) {
             stack.shrink(1);
@@ -80,19 +82,19 @@ public class ItemBalloon extends Item {
         ItemStack stack = context.getItemInHand();
         if (player.isShiftKeyDown()) {
             BlockPos pos = context.getClickedPos();
-            AABB bound = new AABB(pos, pos.offset(1, 3, 1));
+            AABB bound = AABB.encapsulatingFullBlocks(pos, pos.above(2));
             List<EntityBalloon> balloonsNear = player.level().getEntitiesOfClass(EntityBalloon.class, bound);
             if (!balloonsNear.isEmpty()) {
                 return InteractionResult.FAIL;
             }
             Level world = context.getLevel();
-            if (WorldUtils.isValidReplaceableBlock(world, pos)) {
+            if (WorldUtils.isValidReplaceableBlock(world, null, pos)) {
                 pos = pos.below();
             }
             if (!Block.canSupportCenter(world, pos, Direction.UP)) {
                 return InteractionResult.FAIL;
             }
-            if (WorldUtils.isValidReplaceableBlock(world, pos.above()) && WorldUtils.isValidReplaceableBlock(world, pos.above(2))) {
+            if (WorldUtils.isValidReplaceableBlock(world, null, pos.above()) && WorldUtils.isValidReplaceableBlock(world, null, pos.above(2))) {
                 world.removeBlock(pos.above(), false);
                 world.removeBlock(pos.above(2), false);
                 if (!world.isClientSide) {
@@ -102,6 +104,7 @@ public class ItemBalloon extends Item {
                     }
                     world.addFreshEntity(balloon);
                     stack.shrink(1);
+                    world.gameEvent(player, GameEvent.ENTITY_PLACE, pos);
                 }
                 return InteractionResult.SUCCESS;
             }
@@ -114,10 +117,11 @@ public class ItemBalloon extends Item {
     @Override
     public InteractionResult interactLivingEntity(@NotNull ItemStack stack, Player player, @NotNull LivingEntity entity, @NotNull InteractionHand hand) {
         if (player.isShiftKeyDown()) {
-            if (!player.level().isClientSide) {
+            Level level = player.level();
+            if (!level.isClientSide) {
                 AABB bound = new AABB(entity.getX() - 0.2, entity.getY() - 0.5, entity.getZ() - 0.2,
-                      entity.getX() + 0.2, entity.getY() + entity.getDimensions(entity.getPose()).height + 4, entity.getZ() + 0.2);
-                List<EntityBalloon> balloonsNear = player.level().getEntitiesOfClass(EntityBalloon.class, bound);
+                      entity.getX() + 0.2, entity.getY() + entity.getBbHeight() + 4, entity.getZ() + 0.2);
+                List<EntityBalloon> balloonsNear = level.getEntitiesOfClass(EntityBalloon.class, bound);
                 for (EntityBalloon balloon : balloonsNear) {
                     if (balloon.latchedEntity == entity) {
                         return InteractionResult.SUCCESS;
@@ -127,8 +131,9 @@ public class ItemBalloon extends Item {
                 if (balloon == null) {
                     return InteractionResult.FAIL;
                 }
-                player.level().addFreshEntity(balloon);
+                level.addFreshEntity(balloon);
                 stack.shrink(1);
+                level.gameEvent(player, GameEvent.ENTITY_PLACE, balloon.position());
             }
             return InteractionResult.SUCCESS;
         }
@@ -146,16 +151,16 @@ public class ItemBalloon extends Item {
         @NotNull
         @Override
         public ItemStack execute(BlockSource source, @NotNull ItemStack stack) {
-            Direction side = source.getBlockState().getValue(DispenserBlock.FACING);
-            BlockPos sourcePos = source.getPos();
+            Direction side = source.state().getValue(DispenserBlock.FACING);
+            BlockPos sourcePos = source.pos();
             BlockPos offsetPos = sourcePos.relative(side);
-            List<LivingEntity> entities = source.getLevel().getEntitiesOfClass(LivingEntity.class, new AABB(offsetPos, offsetPos.offset(1, 1, 1)));
+            List<LivingEntity> entities = source.level().getEntitiesOfClass(LivingEntity.class, new AABB(offsetPos));
             boolean latched = false;
 
             for (LivingEntity entity : entities) {
                 AABB bound = new AABB(entity.getX() - 0.2, entity.getY() - 0.5, entity.getZ() - 0.2,
-                      entity.getX() + 0.2, entity.getY() + entity.getDimensions(entity.getPose()).height + 4, entity.getZ() + 0.2);
-                List<EntityBalloon> balloonsNear = source.getLevel().getEntitiesOfClass(EntityBalloon.class, bound);
+                      entity.getX() + 0.2, entity.getY() + entity.getBbHeight() + 4, entity.getZ() + 0.2);
+                List<EntityBalloon> balloonsNear = source.level().getEntitiesOfClass(EntityBalloon.class, bound);
                 boolean hasBalloon = false;
                 for (EntityBalloon balloon : balloonsNear) {
                     if (balloon.latchedEntity == entity) {
@@ -166,7 +171,7 @@ public class ItemBalloon extends Item {
                 if (!hasBalloon) {
                     EntityBalloon balloon = EntityBalloon.create(entity, color);
                     if (balloon != null) {
-                        source.getLevel().addFreshEntity(balloon);
+                        source.level().addFreshEntity(balloon);
                     }
                     latched = true;
                 }
@@ -180,10 +185,10 @@ public class ItemBalloon extends Item {
                     case WEST -> pos = pos.add(-0.5, -1, 0);
                     case EAST -> pos = pos.add(0.5, -1, 0);
                 }
-                if (!source.getLevel().isClientSide) {
-                    EntityBalloon balloon = EntityBalloon.create(source.getLevel(), pos.x, pos.y, pos.z, color);
+                if (!source.level().isClientSide) {
+                    EntityBalloon balloon = EntityBalloon.create(source.level(), pos.x, pos.y, pos.z, color);
                     if (balloon != null) {
-                        source.getLevel().addFreshEntity(balloon);
+                        source.level().addFreshEntity(balloon);
                     }
                 }
             }

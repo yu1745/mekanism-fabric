@@ -1,21 +1,22 @@
 package mekanism.generators.common.tile;
 
+import java.util.function.Predicate;
 import mekanism.api.Action;
 import mekanism.api.AutomationType;
 import mekanism.api.IContentsListener;
 import mekanism.api.RelativeSide;
-import mekanism.api.chemical.ChemicalTankBuilder;
-import mekanism.api.chemical.gas.Gas;
-import mekanism.api.chemical.gas.GasStack;
-import mekanism.api.chemical.gas.IGasTank;
-import mekanism.api.chemical.gas.attribute.GasAttributes.Fuel;
-import mekanism.api.math.FloatingLong;
-import mekanism.common.capabilities.chemical.variable.VariableCapacityChemicalTankBuilder.VariableCapacityGasTank;
+import mekanism.api.chemical.ChemicalStack;
+import mekanism.api.chemical.attribute.ChemicalAttributes;
+import mekanism.api.datamaps.IMekanismDataMapTypes;
+import mekanism.api.datamaps.chemical.attribute.ChemicalFuel;
+import mekanism.api.functions.ConstantPredicates;
+import mekanism.api.math.MathUtils;
+import mekanism.common.attachments.containers.ContainerType;
+import mekanism.common.capabilities.chemical.VariableCapacityChemicalTank;
 import mekanism.common.capabilities.holder.chemical.ChemicalTankHelper;
 import mekanism.common.capabilities.holder.chemical.IChemicalTankHolder;
 import mekanism.common.capabilities.holder.slot.IInventorySlotHolder;
 import mekanism.common.capabilities.holder.slot.InventorySlotHelper;
-import mekanism.common.config.MekanismConfig;
 import mekanism.common.integration.computer.SpecialComputerMethodWrapper.ComputerChemicalTankWrapper;
 import mekanism.common.integration.computer.SpecialComputerMethodWrapper.ComputerIInventorySlotWrapper;
 import mekanism.common.integration.computer.annotation.ComputerMethod;
@@ -23,11 +24,11 @@ import mekanism.common.integration.computer.annotation.WrappingComputerMethod;
 import mekanism.common.inventory.container.MekanismContainer;
 import mekanism.common.inventory.container.slot.SlotOverlay;
 import mekanism.common.inventory.container.sync.SyncableDouble;
-import mekanism.common.inventory.container.sync.SyncableFloatingLong;
 import mekanism.common.inventory.container.sync.SyncableInt;
+import mekanism.common.inventory.container.sync.SyncableLong;
 import mekanism.common.inventory.slot.EnergyInventorySlot;
-import mekanism.common.inventory.slot.chemical.GasInventorySlot;
-import mekanism.common.tile.base.SubstanceType;
+import mekanism.common.inventory.slot.chemical.ChemicalInventorySlot;
+import mekanism.common.util.ChemicalUtil;
 import mekanism.common.util.MekanismUtils;
 import mekanism.generators.common.config.MekanismGeneratorsConfig;
 import mekanism.generators.common.registries.GeneratorsBlocks;
@@ -38,29 +39,34 @@ import org.jetbrains.annotations.Nullable;
 
 public class TileEntityGasGenerator extends TileEntityGenerator {
 
+    @SuppressWarnings("removal")
+    public static final Predicate<ChemicalStack> HAS_FUEL = chemical -> chemical.getData(IMekanismDataMapTypes.INSTANCE.chemicalFuel()) != null
+                                                                           || chemical.hasLegacy(ChemicalAttributes.Fuel.class);//TODO - 1.22 Remove this legacy check
+
     /**
      * The tank this block is storing fuel in.
      */
-    @WrappingComputerMethod(wrapper = ComputerChemicalTankWrapper.class, methodNames = {"getFuel", "getFuelCapacity", "getFuelNeeded", "getFuelFilledPercentage"}, docPlaceholder = "fuel tank")
+    @WrappingComputerMethod(wrapper = ComputerChemicalTankWrapper.class, methodNames = {"getFuel", "getFuelCapacity", "getFuelNeeded",
+                                                                                        "getFuelFilledPercentage"}, docPlaceholder = "fuel tank")
     public FuelTank fuelTank;
     private long burnTicks;
     private int maxBurnTicks;
-    private FloatingLong generationRate = FloatingLong.ZERO;
+    private long generationRate = 0;
     private double gasUsedLastTick;
 
     @WrappingComputerMethod(wrapper = ComputerIInventorySlotWrapper.class, methodNames = "getFuelItem", docPlaceholder = "fuel item slot")
-    GasInventorySlot fuelSlot;
+    ChemicalInventorySlot fuelSlot;
     @WrappingComputerMethod(wrapper = ComputerIInventorySlotWrapper.class, methodNames = "getEnergyItem", docPlaceholder = "energy item slot")
     EnergyInventorySlot energySlot;
 
     public TileEntityGasGenerator(BlockPos pos, BlockState state) {
-        super(GeneratorsBlocks.GAS_BURNING_GENERATOR, pos, state, MekanismConfig.general.FROM_H2);
+        super(GeneratorsBlocks.GAS_BURNING_GENERATOR, pos, state, ChemicalUtil::hydrogenEnergyPerTick);
     }
 
     @NotNull
     @Override
-    public IChemicalTankHolder<Gas, GasStack, IGasTank> getInitialGasTanks(IContentsListener listener) {
-        ChemicalTankHelper<Gas, GasStack, IGasTank> builder = ChemicalTankHelper.forSide(this::getDirection);
+    public IChemicalTankHolder getInitialChemicalTanks(IContentsListener listener) {
+        ChemicalTankHelper builder = ChemicalTankHelper.forSide(facingSupplier);
         builder.addTank(fuelTank = new FuelTank(listener), RelativeSide.LEFT, RelativeSide.RIGHT, RelativeSide.BACK, RelativeSide.TOP, RelativeSide.BOTTOM);
         return builder.build();
     }
@@ -68,8 +74,8 @@ public class TileEntityGasGenerator extends TileEntityGenerator {
     @NotNull
     @Override
     protected IInventorySlotHolder getInitialInventory(IContentsListener listener) {
-        InventorySlotHelper builder = InventorySlotHelper.forSide(this::getDirection);
-        builder.addSlot(fuelSlot = GasInventorySlot.fill(fuelTank, listener, 17, 35), RelativeSide.FRONT, RelativeSide.LEFT, RelativeSide.BACK, RelativeSide.TOP,
+        InventorySlotHelper builder = InventorySlotHelper.forSide(facingSupplier);
+        builder.addSlot(fuelSlot = ChemicalInventorySlot.fill(fuelTank, listener, 17, 35), RelativeSide.FRONT, RelativeSide.LEFT, RelativeSide.BACK, RelativeSide.TOP,
               RelativeSide.BOTTOM);
         builder.addSlot(energySlot = EnergyInventorySlot.drain(getEnergyContainer(), listener, 143, 35), RelativeSide.RIGHT);
         fuelSlot.setSlotOverlay(SlotOverlay.MINUS);
@@ -77,31 +83,32 @@ public class TileEntityGasGenerator extends TileEntityGenerator {
     }
 
     @Override
-    protected void onUpdateServer() {
-        super.onUpdateServer();
+    protected boolean onUpdateServer() {
+        boolean sendUpdatePacket = super.onUpdateServer();
         energySlot.drainContainer();
         fuelSlot.fillTank();
 
-        if (!fuelTank.isEmpty() && MekanismUtils.canFunction(this) && getEnergyContainer().insert(generationRate, Action.SIMULATE, AutomationType.INTERNAL).isZero()) {
+        if (!fuelTank.isEmpty() && canFunction() && getEnergyContainer().insert(generationRate, Action.SIMULATE, AutomationType.INTERNAL) == 0L) {
             setActive(true);
             if (!fuelTank.isEmpty()) {
-                fuelTank.getType().ifAttributePresent(Fuel.class, fuel -> {
+                ChemicalFuel fuel = fuelTank.getFuel();
+                if (fuel != null) {
                     //Ensure valid data
-                    maxBurnTicks = Math.max(1, fuel.getBurnTicks());
-                    generationRate = fuel.getEnergyPerTick();
-                });
+                    maxBurnTicks = Math.max(1, fuel.burnTicks());
+                    generationRate = fuel.energyPerTick();
+                }
             }
 
             long toUse = getToUse();
-            FloatingLong toUseGeneration = generationRate.multiply(toUse);
-            updateMaxOutputRaw(MekanismConfig.general.FROM_H2.get().max(toUseGeneration));
+            long toUseGeneration = MathUtils.multiplyClamped(generationRate, toUse);
+            updateMaxOutputRaw(Math.max(ChemicalUtil.hydrogenEnergyPerTick(), toUseGeneration));
 
             long total = burnTicks + fuelTank.getStored() * maxBurnTicks;
             total -= toUse;
             getEnergyContainer().insert(toUseGeneration, Action.EXECUTE, AutomationType.INTERNAL);
             if (!fuelTank.isEmpty()) {
                 //TODO: Improve this as it is sort of hacky
-                fuelTank.setStack(new GasStack(fuelTank.getStack(), total / maxBurnTicks));
+                fuelTank.setStack(fuelTank.getStack().copyWithAmount(total / maxBurnTicks));
             }
             burnTicks = total % maxBurnTicks;
             gasUsedLastTick = toUse / (double) maxBurnTicks;
@@ -112,26 +119,27 @@ public class TileEntityGasGenerator extends TileEntityGenerator {
             gasUsedLastTick = 0;
             setActive(false);
         }
+        return sendUpdatePacket;
     }
 
     private void reset() {
         burnTicks = 0;
         maxBurnTicks = 0;
-        generationRate = FloatingLong.ZERO;
-        updateMaxOutputRaw(MekanismConfig.general.FROM_H2.get());
+        generationRate = 0L;
+        updateMaxOutputRaw(ChemicalUtil.hydrogenEnergyPerTick());
     }
 
     private long getToUse() {
-        if (generationRate.isZero() || fuelTank.isEmpty()) {
+        if (generationRate == 0L || fuelTank.isEmpty()) {
             return 0;
         }
         long max = (long) Math.ceil(256 * (fuelTank.getStored() / (double) fuelTank.getCapacity()));
         max = Math.min(maxBurnTicks * fuelTank.getStored() + burnTicks, max);
-        max = Math.min(getEnergyContainer().getNeeded().divide(generationRate).intValue(), max);
+        max = Math.min(MathUtils.clampToLong(getEnergyContainer().getNeeded() / (double) generationRate), max);
         return max;
     }
 
-    public FloatingLong getGenerationRate() {
+    public long getGenerationRate() {
         return generationRate;
     }
 
@@ -150,14 +158,14 @@ public class TileEntityGasGenerator extends TileEntityGenerator {
     }
 
     @Override
-    protected boolean makesComparatorDirty(@Nullable SubstanceType type) {
-        return type == SubstanceType.GAS;
+    protected boolean makesComparatorDirty(ContainerType<?, ?, ?> type) {
+        return type == ContainerType.CHEMICAL;
     }
 
     @Override
     public void addContainerTrackers(MekanismContainer container) {
         super.addContainerTrackers(container);
-        container.track(SyncableFloatingLong.create(this::getGenerationRate, value -> generationRate = value));
+        container.track(SyncableLong.create(this::getGenerationRate, value -> generationRate = value));
         container.track(syncableMaxOutput());
         container.track(SyncableDouble.create(this::getUsed, value -> gasUsedLastTick = value));
         container.track(SyncableInt.create(this::getMaxBurnTicks, value -> maxBurnTicks = value));
@@ -165,37 +173,58 @@ public class TileEntityGasGenerator extends TileEntityGenerator {
 
     //Methods relating to IComputerTile
     @Override
-    FloatingLong getProductionRate() {
-        return getGenerationRate().multiply(getUsed()).multiply(getMaxBurnTicks());
+    long getProductionRate() {
+        return MathUtils.clampToLong(getGenerationRate() * getUsed() * getMaxBurnTicks());
     }
     //End methods IComputerTile
 
     //Implementation of gas tank that on no longer being empty updates the output rate of this generator
-    private class FuelTank extends VariableCapacityGasTank {
+    public class FuelTank extends VariableCapacityChemicalTank {
 
         protected FuelTank(@Nullable IContentsListener listener) {
-            super(MekanismGeneratorsConfig.generators.gbgTankCapacity, ChemicalTankBuilder.GAS.notExternal, ChemicalTankBuilder.GAS.alwaysTrueBi,
-                  gas -> gas.has(Fuel.class), null, listener);
+            super(MekanismGeneratorsConfig.generators.gbgTankCapacity, ConstantPredicates.notExternal(), ConstantPredicates.alwaysTrueBi(), HAS_FUEL, null, listener);
         }
 
         @Override
-        public void setStack(@NotNull GasStack stack) {
+        public void setStack(@NotNull ChemicalStack stack) {
             boolean wasEmpty = isEmpty();
             super.setStack(stack);
             recheckOutput(stack, wasEmpty);
         }
 
         @Override
-        public void setStackUnchecked(@NotNull GasStack stack) {
+        public void setStackUnchecked(@NotNull ChemicalStack stack) {
             boolean wasEmpty = isEmpty();
             super.setStackUnchecked(stack);
             recheckOutput(stack, wasEmpty);
         }
 
-        private void recheckOutput(@NotNull GasStack stack, boolean wasEmpty) {
+        private void recheckOutput(@NotNull ChemicalStack stack, boolean wasEmpty) {
             if (wasEmpty && !stack.isEmpty()) {
-                getType().ifAttributePresent(Fuel.class, fuel -> updateMaxOutputRaw(fuel.getEnergyPerTick()));
+                ChemicalFuel fuel = getFuel();
+                if (fuel != null) {
+                    updateMaxOutputRaw(fuel.energyPerTick());
+                }
             }
+        }
+
+        @Nullable
+        @SuppressWarnings("removal")
+        public ChemicalFuel getFuel() {
+            if (isEmpty()) {
+                return null;
+            }
+            ChemicalStack stack = getStack();
+            ChemicalFuel fuel = stack.getData(IMekanismDataMapTypes.INSTANCE.chemicalFuel());
+            if (fuel == null) {//TODO - 1.22: Remove this handling of legacy data
+                //If there is no fuel in the data map, see if one was set manually on the stack
+                ChemicalAttributes.Fuel legacyFuel = stack.getLegacy(ChemicalAttributes.Fuel.class);
+                if (legacyFuel != null) {
+                    //If it was, convert it to the non legacy type
+                    return legacyFuel.asModern();
+                }
+            }
+            return fuel;
         }
     }
 }

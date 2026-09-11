@@ -1,15 +1,18 @@
 package mekanism.client.gui.element.custom.module;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.ObjIntConsumer;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 import mekanism.api.gear.IModule;
+import mekanism.api.gear.ModuleData;
 import mekanism.api.gear.ModuleData.ExclusiveFlag;
-import mekanism.api.gear.config.ModuleBooleanData;
-import mekanism.api.gear.config.ModuleColorData;
-import mekanism.api.gear.config.ModuleEnumData;
-import mekanism.api.text.IHasTextComponent;
+import mekanism.api.gear.config.ModuleBooleanConfig;
+import mekanism.api.gear.config.ModuleColorConfig;
+import mekanism.api.gear.config.ModuleConfig;
+import mekanism.api.gear.config.ModuleEnumConfig;
+import mekanism.api.text.TextComponentUtil;
 import mekanism.client.gui.GuiModuleTweaker.ArmorPreview;
 import mekanism.client.gui.IGuiWrapper;
 import mekanism.client.gui.element.GuiElement;
@@ -18,63 +21,69 @@ import mekanism.client.gui.element.scroll.GuiScrollList;
 import mekanism.client.gui.element.scroll.GuiScrollableElement;
 import mekanism.common.MekanismLang;
 import mekanism.common.content.gear.Module;
-import mekanism.common.content.gear.ModuleConfigItem;
-import mekanism.common.content.gear.ModuleConfigItem.DisableableModuleConfigItem;
+import net.minecraft.Util;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+//TODO: Eventually try to add support for defining ways to render custom config types
 public class GuiModuleScreen extends GuiScrollableElement {
 
     private static final int ELEMENT_SPACER = 4;
 
-    final ObjIntConsumer<ModuleConfigItem<?>> saveCallback;
+    final Consumer<ModuleConfig<?>> saveCallback;
+    private final Supplier<ItemStack> itemSupplier;
     private final ArmorPreview armorPreview;
 
     @Nullable
     private Module<?> currentModule;
-    private List<MiniElement> miniElements = new ArrayList<>();
+    private Map<ResourceLocation, MiniElement<?>> miniElements = new LinkedHashMap<>();
     private int maxElements;
 
-    public GuiModuleScreen(IGuiWrapper gui, int x, int y, ObjIntConsumer<ModuleConfigItem<?>> saveCallback, ArmorPreview armorPreview) {
-        this(gui, x, y, 102, 134, saveCallback, armorPreview);
+    public GuiModuleScreen(IGuiWrapper gui, int x, int y, Supplier<ItemStack> itemSupplier, Consumer<ModuleConfig<?>> saveCallback, ArmorPreview armorPreview) {
+        this(gui, x, y, 108, 134, itemSupplier, saveCallback, armorPreview);
     }
 
-    private GuiModuleScreen(IGuiWrapper gui, int x, int y, int width, int height, ObjIntConsumer<ModuleConfigItem<?>> saveCallback, ArmorPreview armorPreview) {
+    private GuiModuleScreen(IGuiWrapper gui, int x, int y, int width, int height, Supplier<ItemStack> itemSupplier, Consumer<ModuleConfig<?>> saveCallback, ArmorPreview armorPreview) {
         super(GuiScrollList.SCROLL_LIST, gui, x, y, width, height, width - 6, 2, 4, 4, height - 4);
+        this.itemSupplier = itemSupplier;
         this.saveCallback = saveCallback;
         this.armorPreview = armorPreview;
     }
 
-    @SuppressWarnings("unchecked")
     public void setModule(@Nullable Module<?> module) {
-        List<MiniElement> newElements = new ArrayList<>();
+        Map<ResourceLocation, MiniElement<?>> newElements = new LinkedHashMap<>();
 
         if (module != null) {
-            int startY = getStartY(module);
-            List<ModuleConfigItem<?>> configItems = module.getConfigItems();
-            for (int i = 0, configItemsCount = configItems.size(); i < configItemsCount; i++) {
-                ModuleConfigItem<?> configItem = configItems.get(i);
-                MiniElement element = null;
-                // Don't show the enabled option if this is enabled by default
-                if (configItem.getData() instanceof ModuleBooleanData && (!configItem.getName().equals(Module.ENABLED_KEY) || !module.getData().isNoDisable())) {
-                    if (configItem instanceof DisableableModuleConfigItem item && !item.isConfigEnabled()) {
-                        //Skip options that are force disabled by the config
-                        continue;
-                    }
-                    element = new BooleanToggle(this, (ModuleConfigItem<Boolean>) configItem, 2, startY, i);
-                } else if (configItem.getData() instanceof ModuleEnumData) {
-                    EnumToggle<?> toggle = createEnumToggle(configItem, 2, startY, i);
-                    element = toggle;
-                    // allow the dragger to continue sliding, even when we reset the config element
-                    if (currentModule != null && currentModule.getData() == module.getData() && i < miniElements.size() && miniElements.get(i) instanceof EnumToggle<?> enumToggle) {
-                        toggle.dragging = enumToggle.dragging;
-                    }
-                } else if (configItem.getData() instanceof ModuleColorData data) {
-                    element = new ColorSelection(this, (ModuleConfigItem<Integer>) configItem, 2, startY, i, data.handlesAlpha(), armorPreview);
+            ModuleData<?> untypedData = module.getUntypedData();
+            int startY = getStartY(untypedData);
+            for (ModuleConfig<?> configItem : module.getConfigs()) {
+                if (configItem.isConfigDisabled()) {
+                    //Skip options that are force disabled by the config
+                    continue;
                 }
+                Component description = TextComponentUtil.translate(Util.makeDescriptionId("module", configItem.name()));
+                ResourceLocation name = configItem.name();
+                MiniElement<?> element = switch (configItem) {
+                    // Don't show the enabled option if this is enabled by default
+                    case ModuleBooleanConfig config when !name.equals(ModuleConfig.ENABLED_KEY) || !untypedData.isNoDisable() ->
+                          new BooleanToggle(this, config, description, 2, startY);
+                    case ModuleEnumConfig<?> config -> {
+                        EnumToggle<?> toggle = new EnumToggle<>(this, config, description, 2, startY);
+                        // allow the dragger to continue sliding, even when we reset the config element
+                        if (currentModule != null && currentModule.getUntypedData() == untypedData && miniElements.get(name) instanceof EnumToggle<?> enumToggle) {
+                            toggle.dragging = enumToggle.dragging;
+                        }
+                        yield toggle;
+                    }
+                    case ModuleColorConfig config -> new ColorSelection(this, config, description, 2, startY, armorPreview);
+                    default -> null;
+                };
                 if (element != null) {
-                    newElements.add(element);
+                    newElements.put(name, element);
                     startY += element.getNeededHeight() + ELEMENT_SPACER;
                 }
             }
@@ -87,20 +96,20 @@ public class GuiModuleScreen extends GuiScrollableElement {
         miniElements = newElements;
     }
 
-    @SuppressWarnings("unchecked")
-    private <TYPE extends Enum<TYPE> & IHasTextComponent> EnumToggle<TYPE> createEnumToggle(ModuleConfigItem<?> data, int xPos, int yPos, int dataIndex) {
-        return new EnumToggle<>(this, (ModuleConfigItem<TYPE>) data, xPos, yPos, dataIndex);
+    private static int getStartY(@Nullable IModule<?> module) {
+        if (module == null) {
+            return ELEMENT_SPACER + 1;
+        }
+        return getStartY(module.getUntypedData());
     }
 
-    private static int getStartY(@Nullable IModule<?> module) {
-        int startY = 5;
-        if (module != null) {
-            if (module.getData().isExclusive(ExclusiveFlag.ANY)) {
-                startY += 13;
-            }
-            if (module.getData().getMaxStackSize() > 1) {
-                startY += 13;
-            }
+    private static int getStartY(ModuleData<?> untypedData) {
+        int startY = ELEMENT_SPACER + 1;
+        if (untypedData.isExclusive(ExclusiveFlag.ANY)) {
+            startY += 13;
+        }
+        if (untypedData.getMaxStackSize() > 1) {
+            startY += 13;
         }
         return startY;
     }
@@ -130,6 +139,10 @@ public class GuiModuleScreen extends GuiScrollableElement {
         return currentModule;
     }
 
+    public ItemStack getContainerStack() {
+        return itemSupplier.get();
+    }
+
     @Override
     public void syncFrom(GuiElement element) {
         GuiModuleScreen old = (GuiModuleScreen) element;
@@ -138,8 +151,8 @@ public class GuiModuleScreen extends GuiScrollableElement {
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
-        return isMouseOver(mouseX, mouseY) && adjustScroll(delta) || super.mouseScrolled(mouseX, mouseY, delta);
+    public boolean mouseScrolled(double mouseX, double mouseY, double xDelta, double yDelta) {
+        return isMouseOver(mouseX, mouseY) && adjustScroll(yDelta) || super.mouseScrolled(mouseX, mouseY, xDelta, yDelta);
     }
 
     @Override
@@ -147,7 +160,7 @@ public class GuiModuleScreen extends GuiScrollableElement {
         super.onClick(mouseX, mouseY, button);
         //Shift the mouse y by the proper amount so that we click the correct spots
         mouseY += getCurrentSelection();
-        for (MiniElement element : miniElements) {
+        for (MiniElement<?> element : miniElements.values()) {
             element.click(mouseX, mouseY);
         }
     }
@@ -157,7 +170,7 @@ public class GuiModuleScreen extends GuiScrollableElement {
         super.onRelease(mouseX, mouseY);
         //Shift the mouse y by the proper amount so that we click the correct spots
         mouseY += getCurrentSelection();
-        for (MiniElement element : miniElements) {
+        for (MiniElement<?> element : miniElements.values()) {
             element.release(mouseX, mouseY);
         }
     }
@@ -167,7 +180,7 @@ public class GuiModuleScreen extends GuiScrollableElement {
         super.onDrag(mouseX, mouseY, deltaX, deltaY);
         //Shift the mouse y by the proper amount so that we click the correct spots
         mouseY += getCurrentSelection();
-        for (MiniElement element : miniElements) {
+        for (MiniElement<?> element : miniElements.values()) {
             element.onDrag(mouseX, mouseY, deltaX, deltaY);
         }
     }
@@ -185,18 +198,19 @@ public class GuiModuleScreen extends GuiScrollableElement {
     public void renderForeground(GuiGraphics guiGraphics, int mx, int my) {
         super.renderForeground(guiGraphics, mx, my);
         scissorScreen(guiGraphics, mx, my, (g, mouseX, mouseY, module, shift) -> {
-            int startY = 5;
+            int startY = ELEMENT_SPACER + 1;
             if (module != null) {
-                if (module.getData().isExclusive(ExclusiveFlag.ANY)) {
+                if (module.getUntypedData().isExclusive(ExclusiveFlag.ANY)) {
                     if (startY + 13 > shift) {
-                        drawTextWithScale(g, MekanismLang.MODULE_EXCLUSIVE.translate(), relativeX + 5, relativeY + startY, 0x635BD4, 0.8F);
+                        drawScaledScrollingString(g, MekanismLang.MODULE_EXCLUSIVE.translate(), 2, startY, TextAlignment.LEFT, 0x635BD4,
+                              getScreenWidth() - GuiScrollList.TEXTURE_WIDTH, 2, false, 0.8F);
                     }
                     startY += 13;
                 }
-                if (module.getData().getMaxStackSize() > 1) {
+                if (module.getUntypedData().getMaxStackSize() > 1) {
                     if (startY + 13 > shift) {
-                        drawTextWithScale(g, MekanismLang.MODULE_INSTALLED.translate(module.getInstalledCount()), relativeX + 5, relativeY + startY,
-                              screenTextColor(), 0.8F);
+                        drawScaledScrollingString(g, MekanismLang.MODULE_INSTALLED.translate(module.getInstalledCount()), 2, startY, TextAlignment.LEFT, screenTextColor(),
+                              getScreenWidth() - GuiScrollList.TEXTURE_WIDTH, 2, false, 0.8F);
                     }
                     startY += 13;
                 }
@@ -207,7 +221,7 @@ public class GuiModuleScreen extends GuiScrollableElement {
 
     private void scissorScreen(GuiGraphics guiGraphics, int mouseX, int mouseY, ScissorRender renderer, ScissorMiniElementRender miniElementRender) {
         //Note: Scissor width at edge of monitor to make it, so we effectively only are scissoring height
-        guiGraphics.enableScissor(0, getY() + 1, guiGraphics.guiWidth(), getY() + this.height - 1);
+        guiGraphics.enableScissor(0, getY() + 1, guiGraphics.guiWidth(), getBottom() - 1);
         PoseStack pose = guiGraphics.pose();
         pose.pushPose();
         int shift = getCurrentSelection();
@@ -218,7 +232,7 @@ public class GuiModuleScreen extends GuiScrollableElement {
         //Draw any needed text and calculate where our elements will start rendering
         int startY = renderer.render(guiGraphics, mouseX, mouseY, currentModule, shift);
         //Draw elements
-        for (MiniElement element : miniElements) {
+        for (MiniElement<?> element : miniElements.values()) {
             if (startY >= shift + height) {
                 //If we are past the max draw spot, stop attempting to draw
                 break;
@@ -242,6 +256,6 @@ public class GuiModuleScreen extends GuiScrollableElement {
     @FunctionalInterface
     private interface ScissorMiniElementRender {
 
-        void render(MiniElement element, GuiGraphics guiGraphics, int mouseX, int mouseY);
+        void render(MiniElement<?> element, GuiGraphics guiGraphics, int mouseX, int mouseY);
     }
 }

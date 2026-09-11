@@ -5,10 +5,8 @@ import com.google.common.collect.Table;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
-import mekanism.api.chemical.ChemicalTags;
-import mekanism.api.chemical.gas.Gas;
-import mekanism.api.chemical.infuse.InfuseType;
-import mekanism.api.chemical.slurry.Slurry;
+import mekanism.api.MekanismAPI;
+import mekanism.api.chemical.Chemical;
 import mekanism.common.Mekanism;
 import mekanism.common.resource.BlockResourceInfo;
 import mekanism.common.resource.IResource;
@@ -16,46 +14,25 @@ import mekanism.common.resource.PrimaryResource;
 import mekanism.common.resource.ResourceType;
 import mekanism.common.resource.ore.OreType;
 import mekanism.common.util.EnumUtils;
+import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.tags.TagKey;
-import net.minecraft.world.damagesource.DamageType;
-import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.material.Fluid;
-import net.minecraftforge.registries.ForgeRegistries;
 
 public class MekanismTags {
-
-    /**
-     * Call to force make sure this is all initialized
-     */
-    public static void init() {
-        Items.init();
-        Blocks.init();
-        Biomes.init();
-        DamageTypes.init();
-        Fluids.init();
-        Gases.init();
-        InfuseTypes.init();
-        MobEffects.init();
-        Slurries.init();
-        TileEntityTypes.init();
-    }
 
     private MekanismTags() {
     }
 
     public static class Items {
-
-        private static void init() {
-        }
 
         private Items() {
         }
@@ -69,84 +46,77 @@ public class MekanismTags {
                 for (ResourceType type : EnumUtils.RESOURCE_TYPES) {
                     if (type.usedByPrimary(resource)) {
                         if (type.isVanilla() || type == ResourceType.DUST) {
-                            PROCESSED_RESOURCES.put(type, resource, forgeTag(type.getBaseTagPath() + "/" + resource.getRegistrySuffix()));
+                            PROCESSED_RESOURCES.put(type, resource, commonTag(type.getBaseTagPath() + "/" + resource.getRegistrySuffix()));
                         } else {
-                            PROCESSED_RESOURCES.put(type, resource, tag(type.getBaseTagPath() + "/" + resource.getRegistrySuffix()));
+                            PROCESSED_RESOURCES.put(type, resource, commonTag(type.getBaseTagPath() + "/" + resource.getRegistrySuffix()));
                         }
                     }
                 }
                 if (!resource.isVanilla()) {
-                    PROCESSED_RESOURCE_BLOCKS.put(resource, forgeTag("storage_blocks/" + resource.getRegistrySuffix()));
+                    PROCESSED_RESOURCE_BLOCKS.put(resource, commonTag("storage_blocks/" + resource.getRegistrySuffix()));
                     BlockResourceInfo rawResource = resource.getRawResourceBlockInfo();
                     if (rawResource != null) {
-                        PROCESSED_RESOURCE_BLOCKS.put(rawResource, forgeTag("storage_blocks/" + rawResource.getRegistrySuffix()));
+                        PROCESSED_RESOURCE_BLOCKS.put(rawResource, commonTag("storage_blocks/" + rawResource.getRegistrySuffix()));
                     }
                 }
             }
             for (OreType ore : EnumUtils.ORE_TYPES) {
-                ORES.put(ore, forgeTag("ores/" + ore.getResource().getRegistrySuffix()));
+                ORES.put(ore, commonTag("ores/" + ore.getResource().getRegistrySuffix()));
             }
         }
 
         public static final TagKey<Item> CONFIGURATORS = tag("configurators");
-        public static final TagKey<Item> WRENCHES = forgeTag("wrenches");
-        public static final TagKey<Item> TOOLS_WRENCH = forgeTag("tools/wrench");
         public static final TagKey<Item> PERSONAL_STORAGE = tag("personal_storage");
 
-        public static final TagKey<Item> BATTERIES = forgeTag("batteries");
+        public static final TagKey<Item> RODS_PLASTIC = commonTag("rods/plastic");
 
-        public static final TagKey<Item> RODS_PLASTIC = forgeTag("rods/plastic");
+        public static final TagKey<Item> FUELS = commonTag("fuels");
+        public static final TagKey<Item> FUELS_BIO = commonTag("fuels/bio");
+        public static final TagKey<Item> FUELS_BLOCK_BIO = commonTag("fuels/block/bio");
 
-        public static final TagKey<Item> FUELS = forgeTag("fuels");
-        public static final TagKey<Item> FUELS_BIO = forgeTag("fuels/bio");
+        public static final TagKey<Item> PELLETS_ANTIMATTER = commonTag("pellets/antimatter");
+        public static final TagKey<Item> PELLETS_PLUTONIUM = commonTag("pellets/plutonium");
+        public static final TagKey<Item> PELLETS_POLONIUM = commonTag("pellets/polonium");
 
-        public static final TagKey<Item> SALT = forgeTag("salt");
-        public static final TagKey<Item> SAWDUST = forgeTag("sawdust");
-        public static final TagKey<Item> YELLOW_CAKE_URANIUM = forgeTag("yellow_cake_uranium");
+        public static final TagKey<Item> DUSTS_BRONZE = commonTag("dusts/bronze");
+        public static final TagKey<Item> DUSTS_CHARCOAL = commonTag("dusts/charcoal");
+        public static final TagKey<Item> DUSTS_COAL = commonTag("dusts/coal");
+        public static final TagKey<Item> DUSTS_DIAMOND = commonTag("dusts/diamond");
+        public static final TagKey<Item> DUSTS_EMERALD = commonTag("dusts/emerald");
+        public static final TagKey<Item> DUSTS_NETHERITE = commonTag("dusts/netherite");
+        public static final TagKey<Item> DUSTS_LAPIS = commonTag("dusts/lapis");
+        public static final TagKey<Item> DUSTS_LITHIUM = commonTag("dusts/lithium");
+        public static final TagKey<Item> DUSTS_OBSIDIAN = commonTag("dusts/obsidian");
+        public static final TagKey<Item> DUSTS_QUARTZ = commonTag("dusts/quartz");
+        public static final TagKey<Item> DUSTS_REFINED_OBSIDIAN = commonTag("dusts/refined_obsidian");
+        public static final TagKey<Item> DUSTS_SALT = commonTag("dusts/salt");
+        public static final TagKey<Item> DUSTS_STEEL = commonTag("dusts/steel");
+        public static final TagKey<Item> DUSTS_SULFUR = commonTag("dusts/sulfur");
+        public static final TagKey<Item> DUSTS_WOOD = commonTag("dusts/wood");
+        public static final TagKey<Item> DUSTS_FLUORITE = commonTag("dusts/fluorite");
 
-        public static final TagKey<Item> PELLETS_ANTIMATTER = forgeTag("pellets/antimatter");
-        public static final TagKey<Item> PELLETS_PLUTONIUM = forgeTag("pellets/plutonium");
-        public static final TagKey<Item> PELLETS_POLONIUM = forgeTag("pellets/polonium");
+        public static final TagKey<Item> NUGGETS_BRONZE = commonTag("nuggets/bronze");
+        public static final TagKey<Item> NUGGETS_REFINED_GLOWSTONE = commonTag("nuggets/refined_glowstone");
+        public static final TagKey<Item> NUGGETS_REFINED_OBSIDIAN = commonTag("nuggets/refined_obsidian");
+        public static final TagKey<Item> NUGGETS_STEEL = commonTag("nuggets/steel");
 
-        public static final TagKey<Item> DUSTS_BRONZE = forgeTag("dusts/bronze");
-        public static final TagKey<Item> DUSTS_CHARCOAL = forgeTag("dusts/charcoal");
-        public static final TagKey<Item> DUSTS_COAL = forgeTag("dusts/coal");
-        public static final TagKey<Item> DUSTS_DIAMOND = forgeTag("dusts/diamond");
-        public static final TagKey<Item> DUSTS_EMERALD = forgeTag("dusts/emerald");
-        public static final TagKey<Item> DUSTS_NETHERITE = forgeTag("dusts/netherite");
-        public static final TagKey<Item> DUSTS_LAPIS = forgeTag("dusts/lapis");
-        public static final TagKey<Item> DUSTS_LITHIUM = forgeTag("dusts/lithium");
-        public static final TagKey<Item> DUSTS_OBSIDIAN = forgeTag("dusts/obsidian");
-        public static final TagKey<Item> DUSTS_QUARTZ = forgeTag("dusts/quartz");
-        public static final TagKey<Item> DUSTS_REFINED_OBSIDIAN = forgeTag("dusts/refined_obsidian");
-        public static final TagKey<Item> DUSTS_SALT = forgeTag("dusts/salt");
-        public static final TagKey<Item> DUSTS_STEEL = forgeTag("dusts/steel");
-        public static final TagKey<Item> DUSTS_SULFUR = forgeTag("dusts/sulfur");
-        public static final TagKey<Item> DUSTS_WOOD = forgeTag("dusts/wood");
-        public static final TagKey<Item> DUSTS_FLUORITE = forgeTag("dusts/fluorite");
+        public static final TagKey<Item> INGOTS_BRONZE = commonTag("ingots/bronze");
+        public static final TagKey<Item> INGOTS_REFINED_GLOWSTONE = commonTag("ingots/refined_glowstone");
+        public static final TagKey<Item> INGOTS_REFINED_OBSIDIAN = commonTag("ingots/refined_obsidian");
+        public static final TagKey<Item> INGOTS_STEEL = commonTag("ingots/steel");
 
-        public static final TagKey<Item> NUGGETS_BRONZE = forgeTag("nuggets/bronze");
-        public static final TagKey<Item> NUGGETS_REFINED_GLOWSTONE = forgeTag("nuggets/refined_glowstone");
-        public static final TagKey<Item> NUGGETS_REFINED_OBSIDIAN = forgeTag("nuggets/refined_obsidian");
-        public static final TagKey<Item> NUGGETS_STEEL = forgeTag("nuggets/steel");
+        public static final TagKey<Item> STORAGE_BLOCKS_BRONZE = commonTag("storage_blocks/bronze");
+        public static final TagKey<Item> STORAGE_BLOCKS_CHARCOAL = commonTag("storage_blocks/charcoal");
+        public static final TagKey<Item> STORAGE_BLOCKS_REFINED_GLOWSTONE = commonTag("storage_blocks/refined_glowstone");
+        public static final TagKey<Item> STORAGE_BLOCKS_REFINED_OBSIDIAN = commonTag("storage_blocks/refined_obsidian");
+        public static final TagKey<Item> STORAGE_BLOCKS_STEEL = commonTag("storage_blocks/steel");
+        public static final TagKey<Item> STORAGE_BLOCKS_FLUORITE = commonTag("storage_blocks/fluorite");
 
-        public static final TagKey<Item> INGOTS_BRONZE = forgeTag("ingots/bronze");
-        public static final TagKey<Item> INGOTS_REFINED_GLOWSTONE = forgeTag("ingots/refined_glowstone");
-        public static final TagKey<Item> INGOTS_REFINED_OBSIDIAN = forgeTag("ingots/refined_obsidian");
-        public static final TagKey<Item> INGOTS_STEEL = forgeTag("ingots/steel");
-
-        public static final TagKey<Item> STORAGE_BLOCKS_BRONZE = forgeTag("storage_blocks/bronze");
-        public static final TagKey<Item> STORAGE_BLOCKS_CHARCOAL = forgeTag("storage_blocks/charcoal");
-        public static final TagKey<Item> STORAGE_BLOCKS_REFINED_GLOWSTONE = forgeTag("storage_blocks/refined_glowstone");
-        public static final TagKey<Item> STORAGE_BLOCKS_REFINED_OBSIDIAN = forgeTag("storage_blocks/refined_obsidian");
-        public static final TagKey<Item> STORAGE_BLOCKS_STEEL = forgeTag("storage_blocks/steel");
-        public static final TagKey<Item> STORAGE_BLOCKS_FLUORITE = forgeTag("storage_blocks/fluorite");
-
-        public static final TagKey<Item> CIRCUITS = forgeTag("circuits");
-        public static final TagKey<Item> CIRCUITS_BASIC = forgeTag("circuits/basic");
-        public static final TagKey<Item> CIRCUITS_ADVANCED = forgeTag("circuits/advanced");
-        public static final TagKey<Item> CIRCUITS_ELITE = forgeTag("circuits/elite");
-        public static final TagKey<Item> CIRCUITS_ULTIMATE = forgeTag("circuits/ultimate");
+        public static final TagKey<Item> CIRCUITS = commonTag("circuits");
+        public static final TagKey<Item> CIRCUITS_BASIC = commonTag("circuits/basic");
+        public static final TagKey<Item> CIRCUITS_ADVANCED = commonTag("circuits/advanced");
+        public static final TagKey<Item> CIRCUITS_ELITE = commonTag("circuits/elite");
+        public static final TagKey<Item> CIRCUITS_ULTIMATE = commonTag("circuits/ultimate");
 
         public static final TagKey<Item> ALLOYS = tag("alloys");
         public static final TagKey<Item> ALLOYS_BASIC = tag("alloys/basic");
@@ -154,10 +124,10 @@ public class MekanismTags {
         public static final TagKey<Item> ALLOYS_REINFORCED = tag("alloys/reinforced");
         public static final TagKey<Item> ALLOYS_ATOMIC = tag("alloys/atomic");
         //Forge alloy tags
-        public static final TagKey<Item> FORGE_ALLOYS = forgeTag("alloys");
-        public static final TagKey<Item> ALLOYS_ADVANCED = forgeTag("alloys/advanced");
-        public static final TagKey<Item> ALLOYS_ELITE = forgeTag("alloys/elite");
-        public static final TagKey<Item> ALLOYS_ULTIMATE = forgeTag("alloys/ultimate");
+        public static final TagKey<Item> COMMON_ALLOYS = commonTag("alloys");
+        public static final TagKey<Item> ALLOYS_ADVANCED = commonTag("alloys/advanced");
+        public static final TagKey<Item> ALLOYS_ELITE = commonTag("alloys/elite");
+        public static final TagKey<Item> ALLOYS_ULTIMATE = commonTag("alloys/ultimate");
 
         public static final TagKey<Item> ENRICHED = tag("enriched");
         public static final TagKey<Item> ENRICHED_CARBON = tag("enriched/carbon");
@@ -172,8 +142,11 @@ public class MekanismTags {
         public static final TagKey<Item> SHARDS = tag("shards");
         public static final TagKey<Item> CRYSTALS = tag("crystals");
 
-        public static final TagKey<Item> GEMS_FLUORITE = forgeTag("gems/fluorite");
+        public static final TagKey<Item> GEMS_FLUORITE = commonTag("gems/fluorite");
+
         public static final TagKey<Item> MEKASUIT_HUD_RENDERER = tag("mekasuit_hud_renderer");
+        public static final TagKey<Item> STONE_CRAFTING_MATERIALS = tag("stone_crafting_materials");
+        public static final TagKey<Item> MUFFLING_CENTER = tag("muffling_center");
 
         public static final TagKey<Item> COLORABLE_WOOL = tag("colorable/wool");
         public static final TagKey<Item> COLORABLE_CARPETS = tag("colorable/carpets");
@@ -186,13 +159,8 @@ public class MekanismTags {
         public static final TagKey<Item> COLORABLE_CONCRETE_POWDER = tag("colorable/concrete_powder");
         public static final TagKey<Item> COLORABLE_BANNERS = tag("colorable/banners");
 
-        public static final TagKey<Item> ARMORS_HELMETS_HAZMAT = forgeTag("armors/hazmat");
-        public static final TagKey<Item> ARMORS_CHESTPLATES_HAZMAT = forgeTag("armors/chestplates/hazmat");
-        public static final TagKey<Item> ARMORS_LEGGINGS_HAZMAT = forgeTag("armors/leggings/hazmat");
-        public static final TagKey<Item> ARMORS_BOOTS_HAZMAT = forgeTag("armors/boots/hazmat");
-
-        private static TagKey<Item> forgeTag(String name) {
-            return ItemTags.create(new ResourceLocation("forge", name));
+        private static TagKey<Item> commonTag(String name) {
+            return ItemTags.create(ResourceLocation.fromNamespaceAndPath("c", name));
         }
 
         private static TagKey<Item> tag(String name) {
@@ -201,9 +169,6 @@ public class MekanismTags {
     }
 
     public static class Blocks {
-
-        private static void init() {
-        }
 
         private Blocks() {
         }
@@ -214,42 +179,42 @@ public class MekanismTags {
         static {
             for (PrimaryResource resource : EnumUtils.PRIMARY_RESOURCES) {
                 if (!resource.isVanilla()) {
-                    RESOURCE_STORAGE_BLOCKS.put(resource, forgeTag("storage_blocks/" + resource.getRegistrySuffix()));
+                    RESOURCE_STORAGE_BLOCKS.put(resource, commonTag("storage_blocks/" + resource.getRegistrySuffix()));
                     BlockResourceInfo rawResource = resource.getRawResourceBlockInfo();
                     if (rawResource != null) {
-                        RESOURCE_STORAGE_BLOCKS.put(rawResource, forgeTag("storage_blocks/" + rawResource.getRegistrySuffix()));
+                        RESOURCE_STORAGE_BLOCKS.put(rawResource, commonTag("storage_blocks/" + rawResource.getRegistrySuffix()));
                     }
                 }
             }
             for (OreType ore : EnumUtils.ORE_TYPES) {
-                ORES.put(ore, forgeTag("ores/" + ore.getResource().getRegistrySuffix()));
+                ORES.put(ore, commonTag("ores/" + ore.getResource().getRegistrySuffix()));
             }
         }
 
-        public static final TagKey<Block> RELOCATION_NOT_SUPPORTED = forgeTag("relocation_not_supported");
         public static final TagKey<Block> CARDBOARD_BLACKLIST = tag("cardboard_blacklist");
         public static final TagKey<Block> MINER_BLACKLIST = tag("miner_blacklist");
-        public static final LazyTagLookup<Block> MINER_BLACKLIST_LOOKUP = LazyTagLookup.create(ForgeRegistries.BLOCKS, MINER_BLACKLIST);
         public static final TagKey<Block> ATOMIC_DISASSEMBLER_ORE = tag("atomic_disassembler_ore");
+        public static final TagKey<Block> INCORRECT_FOR_DISASSEMBLER = tag("incorrect_for_disassembler");
+        public static final TagKey<Block> INCORRECT_FOR_MEKA_TOOL = tag("incorrect_for_meka_tool");
         /**
          * For use in the farming module to target blocks that should be effectively ignored when checking if the block below should be targeted.
          */
         public static final TagKey<Block> FARMING_OVERRIDE = tag("farming_override");
 
-        public static final TagKey<Block> CHESTS_ELECTRIC = forgeTag("chests/electric");
-        public static final TagKey<Block> CHESTS_PERSONAL = forgeTag("chests/personal");
-        public static final TagKey<Block> BARRELS_PERSONAL = forgeTag("barrels/personal");
+        public static final TagKey<Block> CHESTS_ELECTRIC = commonTag("chests/electric");
+        public static final TagKey<Block> CHESTS_PERSONAL = commonTag("chests/personal");
+        public static final TagKey<Block> BARRELS_PERSONAL = commonTag("barrels/personal");
         public static final TagKey<Block> PERSONAL_STORAGE = tag("personal_storage");
 
-        public static final TagKey<Block> STORAGE_BLOCKS_BRONZE = forgeTag("storage_blocks/bronze");
-        public static final TagKey<Block> STORAGE_BLOCKS_CHARCOAL = forgeTag("storage_blocks/charcoal");
-        public static final TagKey<Block> STORAGE_BLOCKS_REFINED_GLOWSTONE = forgeTag("storage_blocks/refined_glowstone");
-        public static final TagKey<Block> STORAGE_BLOCKS_REFINED_OBSIDIAN = forgeTag("storage_blocks/refined_obsidian");
-        public static final TagKey<Block> STORAGE_BLOCKS_STEEL = forgeTag("storage_blocks/steel");
-        public static final TagKey<Block> STORAGE_BLOCKS_FLUORITE = forgeTag("storage_blocks/fluorite");
+        public static final TagKey<Block> STORAGE_BLOCKS_BRONZE = commonTag("storage_blocks/bronze");
+        public static final TagKey<Block> STORAGE_BLOCKS_CHARCOAL = commonTag("storage_blocks/charcoal");
+        public static final TagKey<Block> STORAGE_BLOCKS_REFINED_GLOWSTONE = commonTag("storage_blocks/refined_glowstone");
+        public static final TagKey<Block> STORAGE_BLOCKS_REFINED_OBSIDIAN = commonTag("storage_blocks/refined_obsidian");
+        public static final TagKey<Block> STORAGE_BLOCKS_STEEL = commonTag("storage_blocks/steel");
+        public static final TagKey<Block> STORAGE_BLOCKS_FLUORITE = commonTag("storage_blocks/fluorite");
 
-        private static TagKey<Block> forgeTag(String name) {
-            return BlockTags.create(new ResourceLocation("forge", name));
+        private static TagKey<Block> commonTag(String name) {
+            return BlockTags.create(ResourceLocation.fromNamespaceAndPath("c", name));
         }
 
         private static TagKey<Block> tag(String name) {
@@ -259,160 +224,87 @@ public class MekanismTags {
 
     public static class Biomes {
 
-        private static void init() {
-        }
-
         private Biomes() {
         }
 
         public static final TagKey<Biome> SPAWN_ORES = tag("spawn_ores");
 
         private static TagKey<Biome> tag(String name) {
-            return TagUtils.createKey(Registries.BIOME, Mekanism.rl(name));
+            return TagKey.create(Registries.BIOME, Mekanism.rl(name));
         }
     }
 
-    public static class DamageTypes {
+    public static class Entities {
 
-        private static void init() {
+        private Entities() {
         }
 
-        private DamageTypes() {
+        public static final TagKey<EntityType<?>> CREEPERS = commonTag("creepers");
+        public static final TagKey<EntityType<?>> VALID_SPS_EXPERIMENT = tag("valid_sps_experiment");
+
+        private static TagKey<EntityType<?>> commonTag(String name) {
+            return tag(ResourceLocation.fromNamespaceAndPath("c", name));
         }
 
-        public static final TagKey<DamageType> MEKASUIT_ALWAYS_SUPPORTED = tag("mekasuit_always_supported");
-        public static final TagKey<DamageType> IS_PREVENTABLE_MAGIC = tag("is_preventable_magic");
+        private static TagKey<EntityType<?>> tag(String name) {
+            return tag(Mekanism.rl(name));
+        }
 
-        private static TagKey<DamageType> tag(String name) {
-            return TagUtils.createKey(Registries.DAMAGE_TYPE, Mekanism.rl(name));
+        private static TagKey<EntityType<?>> tag(ResourceLocation tag) {
+            return TagKey.create(Registries.ENTITY_TYPE, tag);
         }
     }
 
     public static class Fluids {
 
-        private static void init() {
-        }
-
         private Fluids() {
         }
 
-        public static final TagKey<Fluid> BRINE = forgeTag("brine");
-        public static final TagKey<Fluid> CHLORINE = forgeTag("chlorine");
-        public static final TagKey<Fluid> ETHENE = forgeTag("ethene");
-        public static final TagKey<Fluid> HEAVY_WATER = forgeTag("heavy_water");
-        public static final TagKey<Fluid> HYDROGEN = forgeTag("hydrogen");
-        public static final TagKey<Fluid> HYDROGEN_CHLORIDE = forgeTag("hydrogen_chloride");
-        public static final TagKey<Fluid> URANIUM_OXIDE = forgeTag("uranium_oxide");
-        public static final TagKey<Fluid> URANIUM_HEXAFLUORIDE = forgeTag("uranium_hexafluoride");
-        public static final TagKey<Fluid> LITHIUM = forgeTag("lithium");
-        public static final TagKey<Fluid> OXYGEN = forgeTag("oxygen");
-        public static final TagKey<Fluid> SODIUM = forgeTag("sodium");
-        public static final TagKey<Fluid> SUPERHEATED_SODIUM = forgeTag("superheated_sodium");
-        public static final TagKey<Fluid> STEAM = forgeTag("steam");
-        public static final TagKey<Fluid> SULFUR_DIOXIDE = forgeTag("sulfur_dioxide");
-        public static final TagKey<Fluid> SULFUR_TRIOXIDE = forgeTag("sulfur_trioxide");
-        public static final TagKey<Fluid> SULFURIC_ACID = forgeTag("sulfuric_acid");
-        public static final TagKey<Fluid> HYDROFLUORIC_ACID = forgeTag("hydrofluoric_acid");
+        public static final TagKey<Fluid> BRINE = commonTag("brine");
+        public static final TagKey<Fluid> CHLORINE = commonTag("chlorine");
+        public static final TagKey<Fluid> ETHENE = commonTag("ethene");
+        public static final TagKey<Fluid> HEAVY_WATER = commonTag("heavy_water");
+        public static final TagKey<Fluid> HYDROGEN = commonTag("hydrogen");
+        public static final TagKey<Fluid> HYDROGEN_CHLORIDE = commonTag("hydrogen_chloride");
+        public static final TagKey<Fluid> URANIUM_OXIDE = commonTag("uranium_oxide");
+        public static final TagKey<Fluid> URANIUM_HEXAFLUORIDE = commonTag("uranium_hexafluoride");
+        public static final TagKey<Fluid> LITHIUM = commonTag("lithium");
+        public static final TagKey<Fluid> OXYGEN = commonTag("oxygen");
+        public static final TagKey<Fluid> SODIUM = commonTag("sodium");
+        public static final TagKey<Fluid> SUPERHEATED_SODIUM = commonTag("superheated_sodium");
+        public static final TagKey<Fluid> STEAM = commonTag("steam");
+        public static final TagKey<Fluid> SULFUR_DIOXIDE = commonTag("sulfur_dioxide");
+        public static final TagKey<Fluid> SULFUR_TRIOXIDE = commonTag("sulfur_trioxide");
+        public static final TagKey<Fluid> SULFURIC_ACID = commonTag("sulfuric_acid");
+        public static final TagKey<Fluid> HYDROFLUORIC_ACID = commonTag("hydrofluoric_acid");
+        public static final TagKey<Fluid> NUTRITIONAL_PASTE = commonTag("nutritional_paste");
 
-        public static final LazyTagLookup<Fluid> WATER_LOOKUP = LazyTagLookup.create(ForgeRegistries.FLUIDS, FluidTags.WATER);
-        public static final LazyTagLookup<Fluid> LAVA_LOOKUP = LazyTagLookup.create(ForgeRegistries.FLUIDS, FluidTags.LAVA);
-
-        private static TagKey<Fluid> forgeTag(String name) {
-            return FluidTags.create(new ResourceLocation("forge", name));
+        private static TagKey<Fluid> commonTag(String name) {
+            return FluidTags.create(ResourceLocation.fromNamespaceAndPath("c", name));
         }
     }
 
-    public static class Gases {
+    public static class Chemicals {
 
-        private static void init() {
+        private Chemicals() {
         }
 
-        private Gases() {
-        }
+        public static final TagKey<Chemical> WATER_VAPOR = tag("water_vapor");
 
-        public static final TagKey<Gas> WATER_VAPOR = tag("water_vapor");
-        public static final TagKey<Gas> WASTE_BARREL_DECAY_BLACKLIST = tag("waste_barrel_decay_blacklist");
-        public static final LazyTagLookup<Gas> WASTE_BARREL_DECAY_LOOKUP = LazyTagLookup.create(ChemicalTags.GAS, WASTE_BARREL_DECAY_BLACKLIST);
-
-        private static TagKey<Gas> tag(String name) {
-            return ChemicalTags.GAS.tag(Mekanism.rl(name));
+        private static TagKey<Chemical> tag(String name) {
+            return TagKey.create(MekanismAPI.CHEMICAL_REGISTRY_NAME, Mekanism.rl(name));
         }
     }
 
-    public static class InfuseTypes {
+    public static class DataComponents {
 
-        private static void init() {
+        private DataComponents() {
         }
 
-        private InfuseTypes() {
-        }
+        public static final TagKey<DataComponentType<?>> CLEARABLE_CONFIG = tag("config/clearable");
 
-        public static final TagKey<InfuseType> CARBON = tag("carbon");
-        public static final TagKey<InfuseType> REDSTONE = tag("redstone");
-        public static final TagKey<InfuseType> DIAMOND = tag("diamond");
-        public static final TagKey<InfuseType> REFINED_OBSIDIAN = tag("refined_obsidian");
-        public static final TagKey<InfuseType> BIO = tag("bio");
-        public static final TagKey<InfuseType> FUNGI = tag("fungi");
-        public static final TagKey<InfuseType> GOLD = tag("gold");
-        public static final TagKey<InfuseType> TIN = tag("tin");
-
-        private static TagKey<InfuseType> tag(String name) {
-            return ChemicalTags.INFUSE_TYPE.tag(Mekanism.rl(name));
-        }
-    }
-
-    public static class Slurries {
-
-        private static void init() {
-        }
-
-        private Slurries() {
-        }
-
-        public static final TagKey<Slurry> DIRTY = tag("dirty");
-        public static final LazyTagLookup<Slurry> DIRTY_LOOKUP = LazyTagLookup.create(ChemicalTags.SLURRY, DIRTY);
-        public static final TagKey<Slurry> CLEAN = tag("clean");
-
-        private static TagKey<Slurry> tag(String name) {
-            return ChemicalTags.SLURRY.tag(Mekanism.rl(name));
-        }
-    }
-
-    public static class MobEffects {
-
-        private static void init() {
-        }
-
-        private MobEffects() {
-        }
-
-        public static final TagKey<MobEffect> SPEED_UP_BLACKLIST = tag("speed_up_blacklist");
-        public static final LazyTagLookup<MobEffect> SPEED_UP_BLACKLIST_LOOKUP = LazyTagLookup.create(ForgeRegistries.MOB_EFFECTS, SPEED_UP_BLACKLIST);
-
-        private static TagKey<MobEffect> tag(String name) {
-            return TagUtils.createKey(ForgeRegistries.MOB_EFFECTS, Mekanism.rl(name));
-        }
-    }
-
-    public static class TileEntityTypes {
-
-        private static void init() {
-        }
-
-        private TileEntityTypes() {
-        }
-
-        public static final TagKey<BlockEntityType<?>> CARDBOARD_BLACKLIST = tag("cardboard_blacklist");
-        public static final LazyTagLookup<BlockEntityType<?>> CARDBOARD_BLACKLIST_LOOKUP = LazyTagLookup.create(ForgeRegistries.BLOCK_ENTITY_TYPES, CARDBOARD_BLACKLIST);
-        public static final TagKey<BlockEntityType<?>> RELOCATION_NOT_SUPPORTED = forgeTag("relocation_not_supported");
-        public static final TagKey<BlockEntityType<?>> IMMOVABLE = forgeTag("immovable");
-
-        private static TagKey<BlockEntityType<?>> tag(String name) {
-            return TagUtils.createKey(ForgeRegistries.BLOCK_ENTITY_TYPES, Mekanism.rl(name));
-        }
-
-        private static TagKey<BlockEntityType<?>> forgeTag(String name) {
-            return TagUtils.createKey(ForgeRegistries.BLOCK_ENTITY_TYPES, new ResourceLocation("forge", name));
+        private static TagKey<DataComponentType<?>> tag(String name) {
+            return TagKey.create(Registries.DATA_COMPONENT_TYPE, Mekanism.rl(name));
         }
     }
 }

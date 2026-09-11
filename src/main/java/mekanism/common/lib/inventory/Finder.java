@@ -1,18 +1,23 @@
 package mekanism.common.lib.inventory;
 
+import java.util.function.Predicate;
 import mekanism.common.lib.WildcardMatcher;
 import mekanism.common.util.MekanismUtils;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraftforge.items.ItemHandlerHelper;
 
-public interface Finder {
+@FunctionalInterface
+public interface Finder extends Predicate<ItemStack> {
 
     Finder ANY = stack -> true;
+    Finder NONE = stack -> false;
 
     static Finder item(Item itemType) {
-        return stack -> itemType != Items.AIR && itemType == stack.getItem();
+        if (itemType == Items.AIR) {
+            return NONE;
+        }
+        return stack -> stack.is(itemType);
     }
 
     static Finder item(ItemStack itemType) {
@@ -20,7 +25,7 @@ public interface Finder {
     }
 
     static Finder strict(ItemStack itemType) {
-        return stack -> ItemHandlerHelper.canItemStacksStack(itemType, stack);
+        return stack -> ItemStack.isSameItemSameComponents(itemType, stack);
     }
 
     static Finder tag(String tagName) {
@@ -30,6 +35,4 @@ public interface Finder {
     static Finder modID(String modID) {
         return stack -> !stack.isEmpty() && WildcardMatcher.matches(modID, MekanismUtils.getModId(stack));
     }
-
-    boolean modifies(ItemStack stack);
 }

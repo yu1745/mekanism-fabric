@@ -1,19 +1,21 @@
 package mekanism.api.recipes;
 
-import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.function.Predicate;
+import mekanism.api.MekanismAPI;
 import mekanism.api.annotations.NothingNullByDefault;
-import mekanism.api.chemical.Chemical;
 import mekanism.api.chemical.ChemicalStack;
-import mekanism.api.chemical.ChemicalType;
-import mekanism.api.chemical.merged.BoxedChemicalStack;
 import mekanism.api.recipes.ingredients.ChemicalStackIngredient;
-import net.minecraft.core.RegistryAccess;
-import net.minecraft.network.FriendlyByteBuf;
+import mekanism.api.recipes.vanilla_input.SingleChemicalRecipeInput;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.level.Level;
+import net.neoforged.neoforge.registries.DeferredHolder;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
@@ -25,27 +27,9 @@ import org.jetbrains.annotations.NotNull;
  * @apiNote Chemical Crystallizers can process this recipe type.
  */
 @NothingNullByDefault
-public abstract class ChemicalCrystallizerRecipe extends MekanismRecipe implements Predicate<@NotNull BoxedChemicalStack> {
+public abstract class ChemicalCrystallizerRecipe extends MekanismRecipe<SingleChemicalRecipeInput> implements Predicate<@NotNull ChemicalStack> {
 
-    private final ChemicalType chemicalType;
-    private final ChemicalStackIngredient<?, ?> input;
-    private final ItemStack output;
-
-    /**
-     * @param id     Recipe name.
-     * @param input  Input.
-     * @param output Output.
-     */
-    public ChemicalCrystallizerRecipe(ResourceLocation id, ChemicalStackIngredient<?, ?> input, ItemStack output) {
-        super(id);
-        this.input = Objects.requireNonNull(input, "Input cannot be null.");
-        this.chemicalType = ChemicalType.getTypeFor(input);
-        Objects.requireNonNull(output, "Output cannot be null.");
-        if (output.isEmpty()) {
-            throw new IllegalArgumentException("Output cannot be empty.");
-        }
-        this.output = output.copy();
-    }
+    private static final Holder<Item> CHEMICAL_CRYSTALLIZER = DeferredHolder.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, "chemical_crystallizer"));
 
     /**
      * Gets the output based on the given input.
@@ -59,28 +43,28 @@ public abstract class ChemicalCrystallizerRecipe extends MekanismRecipe implemen
      * @implNote The passed in input should <strong>NOT</strong> be modified.
      */
     @Contract(value = "_ -> new", pure = true)
-    public ItemStack getOutput(BoxedChemicalStack input) {
-        return output.copy();
-    }
-
-    @NotNull
-    @Override
-    public ItemStack getResultItem(@NotNull RegistryAccess registryAccess) {
-        return output.copy();
-    }
+    public abstract ItemStack getOutput(ChemicalStack input);
 
     /**
      * For JEI, gets the output representations to display.
      *
      * @return Representation of the output, <strong>MUST NOT</strong> be modified.
      */
-    public List<ItemStack> getOutputDefinition() {
-        return Collections.singletonList(output);
+    public abstract List<ItemStack> getOutputDefinition();
+
+    @NotNull
+    @Override
+    public ItemStack assemble(SingleChemicalRecipeInput input, HolderLookup.Provider provider) {
+        if (!isIncomplete() && test(input.chemical())) {
+            return getOutput(input.chemical());
+        }
+        return ItemStack.EMPTY;
     }
 
     @Override
-    public boolean test(BoxedChemicalStack chemicalStack) {
-        return chemicalType == chemicalStack.getChemicalType() && testInternal(chemicalStack.getChemicalStack());
+    public boolean matches(SingleChemicalRecipeInput input, Level level) {
+        //Don't match incomplete recipes or ones that don't match
+        return !isIncomplete() && test(input.chemical());
     }
 
     /**
@@ -89,12 +73,9 @@ public abstract class ChemicalCrystallizerRecipe extends MekanismRecipe implemen
      * @param stack Input stack.
      *
      * @return {@code true} if the stack matches the input.
-     *
-     * @apiNote See {@link #test(BoxedChemicalStack)}.
      */
-    public boolean test(ChemicalStack<?> stack) {
-        return chemicalType == ChemicalType.getTypeFor(stack) && testInternal(stack);
-    }
+    @Override
+    public abstract boolean test(ChemicalStack stack);
 
     /**
      * Helper to test this recipe against a chemical stack's type without having to first box it up.
@@ -103,54 +84,36 @@ public abstract class ChemicalCrystallizerRecipe extends MekanismRecipe implemen
      *
      * @return {@code true} if the stack's type matches the input.
      *
-     * @apiNote See {@link #testType(BoxedChemicalStack)}.
      */
-    public boolean testType(ChemicalStack<?> stack) {
-        return chemicalType == ChemicalType.getTypeFor(stack) && testTypeInternal(stack);
-    }
-
-    /**
-     * Helper to test this recipe against a chemical stack's type without having to first box it up.
-     *
-     * @param stack Input stack.
-     *
-     * @return {@code true} if the stack's type matches the input.
-     */
-    public boolean testType(BoxedChemicalStack stack) {
-        return chemicalType == stack.getChemicalType() && testTypeInternal(stack.getChemicalStack());
-    }
-
-    @SuppressWarnings("unchecked")
-    private <CHEMICAL extends Chemical<CHEMICAL>, STACK extends ChemicalStack<CHEMICAL>> boolean testInternal(STACK stack) {
-        return ((ChemicalStackIngredient<CHEMICAL, STACK>) input).test(stack);
-    }
-
-    @SuppressWarnings("unchecked")
-    private <CHEMICAL extends Chemical<CHEMICAL>, STACK extends ChemicalStack<CHEMICAL>> boolean testTypeInternal(STACK stack) {
-        return ((ChemicalStackIngredient<CHEMICAL, STACK>) input).testType(stack);
-    }
+    public abstract boolean testType(ChemicalStack stack);
 
     /**
      * Gets the input ingredient.
      */
-    public ChemicalStackIngredient<?, ?> getInput() {
-        return input;
-    }
+    public abstract ChemicalStackIngredient getInput();
 
     @Override
     public boolean isIncomplete() {
-        return input.hasNoMatchingInstances();
+        return getInput().hasNoMatchingInstances();
     }
 
     @Override
     public void logMissingTags() {
-        input.logMissingTags();
+        getInput().logMissingTags();
     }
 
     @Override
-    public void write(FriendlyByteBuf buffer) {
-        buffer.writeEnum(chemicalType);
-        input.write(buffer);
-        buffer.writeItem(output);
+    public final RecipeType<ChemicalCrystallizerRecipe> getType() {
+        return MekanismRecipeTypes.TYPE_CRYSTALLIZING.value();
+    }
+
+    @Override
+    public String getGroup() {
+        return "chemical_crystallizer";
+    }
+
+    @Override
+    public ItemStack getToastSymbol() {
+        return new ItemStack(CHEMICAL_CRYSTALLIZER);
     }
 }

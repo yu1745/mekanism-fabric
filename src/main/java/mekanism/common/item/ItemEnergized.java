@@ -1,48 +1,27 @@
 package mekanism.common.item;
 
 import java.util.List;
-import java.util.function.Predicate;
-import mekanism.api.AutomationType;
-import mekanism.api.math.FloatingLong;
-import mekanism.api.math.FloatingLongSupplier;
-import mekanism.common.capabilities.ItemCapabilityWrapper.ItemCapability;
-import mekanism.common.capabilities.energy.BasicEnergyContainer;
-import mekanism.common.capabilities.energy.item.RateLimitEnergyHandler;
+import java.util.function.Consumer;
 import mekanism.common.config.MekanismConfig;
-import mekanism.common.config.value.CachedFloatingLongValue;
 import mekanism.common.registration.impl.CreativeTabDeferredRegister.ICustomCreativeTabContents;
 import mekanism.common.util.StorageUtils;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
 
-public class ItemEnergized extends CapabilityItem implements ICustomCreativeTabContents {
+public class ItemEnergized extends Item implements ICustomCreativeTabContents {
 
-    private final FloatingLongSupplier chargeRateSupplier;
-    private final FloatingLongSupplier maxEnergySupplier;
-    private final Predicate<@NotNull AutomationType> canExtract;
-    private final Predicate<@NotNull AutomationType> canInsert;
-
-    public ItemEnergized(FloatingLongSupplier chargeRateSupplier, FloatingLongSupplier maxEnergySupplier, Properties properties) {
-        this(chargeRateSupplier, maxEnergySupplier, BasicEnergyContainer.manualOnly, BasicEnergyContainer.alwaysTrue, properties);
-    }
-
-    public ItemEnergized(FloatingLongSupplier chargeRateSupplier, FloatingLongSupplier maxEnergySupplier, Predicate<@NotNull AutomationType> canExtract,
-          Predicate<@NotNull AutomationType> canInsert, Properties properties) {
-        super(properties.stacksTo(1));
-        this.chargeRateSupplier = chargeRateSupplier;
-        this.maxEnergySupplier = maxEnergySupplier;
-        this.canExtract = canExtract;
-        this.canInsert = canInsert;
+    public ItemEnergized(Properties properties) {
+        super(properties);
     }
 
     @Override
     public boolean isBarVisible(@NotNull ItemStack stack) {
-        return true;
+        //If we are currently stacked, don't display the bar as it will overlap the stack count
+        return stack.getCount() == 1;
     }
 
     @Override
@@ -56,38 +35,13 @@ public class ItemEnergized extends CapabilityItem implements ICustomCreativeTabC
     }
 
     @Override
-    public void appendHoverText(@NotNull ItemStack stack, Level world, @NotNull List<Component> tooltip, @NotNull TooltipFlag flag) {
+    public void appendHoverText(@NotNull ItemStack stack, @NotNull Item.TooltipContext context, @NotNull List<Component> tooltip, @NotNull TooltipFlag flag) {
         StorageUtils.addStoredEnergy(stack, tooltip, true);
     }
 
     @Override
-    public void addItems(CreativeModeTab.Output tabOutput) {
-        if (maxEnergySupplier instanceof CachedFloatingLongValue configValue) {
-            tabOutput.accept(StorageUtils.getFilledEnergyVariant(new ItemStack(this), configValue));
-        } else {
-            tabOutput.accept(StorageUtils.getFilledEnergyVariant(new ItemStack(this), maxEnergySupplier.get()));
-        }
-    }
-
-    protected FloatingLong getMaxEnergy(ItemStack stack) {
-        return maxEnergySupplier.get();
-    }
-
-    protected FloatingLong getChargeRate(ItemStack stack) {
-        return chargeRateSupplier.get();
-    }
-
-    @Override
-    protected boolean areCapabilityConfigsLoaded() {
-        return super.areCapabilityConfigsLoaded() && MekanismConfig.gear.isLoaded();
-    }
-
-    @Override
-    protected void gatherCapabilities(List<ItemCapability> capabilities, ItemStack stack, CompoundTag nbt) {
-        super.gatherCapabilities(capabilities, stack, nbt);
-        //Note: We interact with this capability using "manual" as the automation type, to ensure we can properly bypass the energy limit for extracting
-        // Internal is used by the "null" side, which is what will get used for most items
-        capabilities.add(RateLimitEnergyHandler.create(() -> getChargeRate(stack), () -> getMaxEnergy(stack), canExtract, canInsert));
+    public void addItems(Holder<Item> item, Consumer<ItemStack> tabOutput) {
+        tabOutput.accept(StorageUtils.getFilledEnergyVariant(item));
     }
 
     @Override

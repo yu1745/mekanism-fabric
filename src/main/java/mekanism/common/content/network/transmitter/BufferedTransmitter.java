@@ -6,7 +6,9 @@ import mekanism.common.lib.transmitter.TransmissionType;
 import mekanism.common.tile.transmitter.TileEntityTransmitter;
 import mekanism.common.util.EnumUtils;
 import mekanism.common.util.WorldUtils;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import org.jetbrains.annotations.NotNull;
 
@@ -78,9 +80,12 @@ public abstract class BufferedTransmitter<ACCEPTOR, NETWORK extends DynamicBuffe
                 byte changedTransmitters = (byte) (allPossibleConnections ^ allCurrentConnections);
                 //Inform the neighboring tiles that they should refresh their connection on the side we changed
                 // This happens because we are no longer an orphan and want to tell the neighboring tiles about it
+                BlockPos.MutableBlockPos mutable = new BlockPos.MutableBlockPos();
+                BlockPos pos = getBlockPos();
                 for (Direction side : EnumUtils.DIRECTIONS) {
                     if (connectionMapContainsSide(changedTransmitters, side)) {
-                        TileEntityTransmitter tile = WorldUtils.getTileEntity(TileEntityTransmitter.class, getTileWorld(), getTilePos().relative(side));
+                        mutable.setWithOffset(pos, side);
+                        TileEntityTransmitter tile = WorldUtils.getTileEntity(TileEntityTransmitter.class, getLevel(), mutable);
                         if (tile != null) {
                             tile.getTransmitter().refreshConnections(side.getOpposite());
                         }
@@ -118,7 +123,7 @@ public abstract class BufferedTransmitter<ACCEPTOR, NETWORK extends DynamicBuffe
     }
 
     private void recheckConnectionPrechecked(Direction side) {
-        TileEntityTransmitter otherTile = WorldUtils.getTileEntity(TileEntityTransmitter.class, getTileWorld(), getTilePos().relative(side));
+        TileEntityTransmitter otherTile = WorldUtils.getTileEntity(TileEntityTransmitter.class, getLevel(), getBlockPos().relative(side));
         if (otherTile != null) {
             NETWORK network = getTransmitterNetwork();
             //The other one should always have the same incompatible networks state as us
@@ -170,7 +175,8 @@ public abstract class BufferedTransmitter<ACCEPTOR, NETWORK extends DynamicBuffe
     }
 
     @Override
-    protected void handleContentsUpdateTag(@NotNull NETWORK network, @NotNull CompoundTag tag) {
+    protected void handleContentsUpdateTag(@NotNull NETWORK network, @NotNull CompoundTag tag, @NotNull HolderLookup.Provider provider) {
+        super.handleContentsUpdateTag(network, tag, provider);
         network.updateCapacity();
     }
 

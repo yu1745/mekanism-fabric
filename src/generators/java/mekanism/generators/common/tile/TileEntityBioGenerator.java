@@ -3,9 +3,9 @@ package mekanism.generators.common.tile;
 import mekanism.api.Action;
 import mekanism.api.AutomationType;
 import mekanism.api.IContentsListener;
-import mekanism.api.NBTConstants;
 import mekanism.api.RelativeSide;
-import mekanism.api.math.FloatingLong;
+import mekanism.api.SerializationConstants;
+import mekanism.common.attachments.containers.ContainerType;
 import mekanism.common.capabilities.fluid.BasicFluidTank;
 import mekanism.common.capabilities.fluid.VariableCapacityFluidTank;
 import mekanism.common.capabilities.holder.fluid.FluidTankHelper;
@@ -14,11 +14,9 @@ import mekanism.common.capabilities.holder.slot.IInventorySlotHolder;
 import mekanism.common.capabilities.holder.slot.InventorySlotHelper;
 import mekanism.common.integration.computer.SpecialComputerMethodWrapper.ComputerFluidTankWrapper;
 import mekanism.common.integration.computer.SpecialComputerMethodWrapper.ComputerIInventorySlotWrapper;
-import mekanism.common.integration.computer.annotation.ComputerMethod;
 import mekanism.common.integration.computer.annotation.WrappingComputerMethod;
 import mekanism.common.inventory.slot.EnergyInventorySlot;
 import mekanism.common.tags.MekanismTags;
-import mekanism.common.tile.base.SubstanceType;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.NBTUtils;
 import mekanism.generators.common.GeneratorTags;
@@ -27,10 +25,10 @@ import mekanism.generators.common.registries.GeneratorsBlocks;
 import mekanism.generators.common.registries.GeneratorsFluids;
 import mekanism.generators.common.slot.FluidFuelInventorySlot;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 public class TileEntityBioGenerator extends TileEntityGenerator {
 
@@ -50,9 +48,9 @@ public class TileEntityBioGenerator extends TileEntityGenerator {
     @NotNull
     @Override
     protected IFluidTankHolder getInitialFluidTanks(IContentsListener listener) {
-        FluidTankHelper builder = FluidTankHelper.forSide(this::getDirection);
+        FluidTankHelper builder = FluidTankHelper.forSide(facingSupplier);
         builder.addTank(bioFuelTank = VariableCapacityFluidTank.input(MekanismGeneratorsConfig.generators.bioTankCapacity,
-                    fluidStack -> GeneratorTags.Fluids.BIOETHANOL_LOOKUP.contains(fluidStack.getFluid()), listener), RelativeSide.LEFT, RelativeSide.RIGHT,
+                    fluidStack -> fluidStack.is(GeneratorTags.Fluids.BIOETHANOL), listener), RelativeSide.LEFT, RelativeSide.RIGHT,
               RelativeSide.BACK, RelativeSide.TOP, RelativeSide.BOTTOM);
         return builder.build();
     }
@@ -60,46 +58,47 @@ public class TileEntityBioGenerator extends TileEntityGenerator {
     @NotNull
     @Override
     protected IInventorySlotHolder getInitialInventory(IContentsListener listener) {
-        InventorySlotHelper builder = InventorySlotHelper.forSide(this::getDirection);
-        builder.addSlot(fuelSlot = FluidFuelInventorySlot.forFuel(bioFuelTank, stack -> stack.is(MekanismTags.Items.FUELS_BIO) ? 200 : 0,
-                    GeneratorsFluids.BIOETHANOL::getFluidStack, listener, 17, 35), RelativeSide.FRONT, RelativeSide.LEFT, RelativeSide.BACK, RelativeSide.TOP,
+        InventorySlotHelper builder = InventorySlotHelper.forSide(facingSupplier);
+        builder.addSlot(fuelSlot = FluidFuelInventorySlot.forFuel(bioFuelTank, stack -> stack.is(MekanismTags.Items.FUELS_BIO) ? 200 : stack.is(MekanismTags.Items.FUELS_BLOCK_BIO) ? 200 * 9 : 0,
+                    GeneratorsFluids.BIOETHANOL::asStack, listener, 17, 35), RelativeSide.FRONT, RelativeSide.LEFT, RelativeSide.BACK, RelativeSide.TOP,
               RelativeSide.BOTTOM);
         builder.addSlot(energySlot = EnergyInventorySlot.drain(getEnergyContainer(), listener, 143, 35), RelativeSide.RIGHT);
         return builder.build();
     }
 
     @Override
-    protected void onUpdateServer() {
-        super.onUpdateServer();
+    protected boolean onUpdateServer() {
+        boolean sendUpdatePacket = super.onUpdateServer();
         energySlot.drainContainer();
         fuelSlot.fillOrBurn();
-        if (MekanismUtils.canFunction(this) && !bioFuelTank.isEmpty() &&
-            getEnergyContainer().insert(MekanismGeneratorsConfig.generators.bioGeneration.get(), Action.SIMULATE, AutomationType.INTERNAL).isZero()) {
+        if (canFunction() && !bioFuelTank.isEmpty() &&
+            getEnergyContainer().insert(MekanismGeneratorsConfig.generators.bioGeneration.get(), Action.SIMULATE, AutomationType.INTERNAL) == 0L) {
             setActive(true);
             MekanismUtils.logMismatchedStackSize(bioFuelTank.shrinkStack(1, Action.EXECUTE), 1);
             getEnergyContainer().insert(MekanismGeneratorsConfig.generators.bioGeneration.get(), Action.EXECUTE, AutomationType.INTERNAL);
             float fluidScale = MekanismUtils.getScale(lastFluidScale, bioFuelTank);
-            if (fluidScale != lastFluidScale) {
+            if (MekanismUtils.scaleChanged(fluidScale, lastFluidScale)) {
                 lastFluidScale = fluidScale;
-                sendUpdatePacket();
+                sendUpdatePacket = true;
             }
         } else {
             setActive(false);
         }
+        return sendUpdatePacket;
     }
 
     @NotNull
     @Override
-    public CompoundTag getReducedUpdateTag() {
-        CompoundTag updateTag = super.getReducedUpdateTag();
-        updateTag.put(NBTConstants.FLUID_STORED, bioFuelTank.serializeNBT());
+    public CompoundTag getReducedUpdateTag(@NotNull HolderLookup.Provider provider) {
+        CompoundTag updateTag = super.getReducedUpdateTag(provider);
+        updateTag.put(SerializationConstants.FLUID, bioFuelTank.serializeNBT(provider));
         return updateTag;
     }
 
     @Override
-    public void handleUpdateTag(@NotNull CompoundTag tag) {
-        super.handleUpdateTag(tag);
-        NBTUtils.setCompoundIfPresent(tag, NBTConstants.FLUID_STORED, nbt -> bioFuelTank.deserializeNBT(nbt));
+    public void handleUpdateTag(@NotNull CompoundTag tag, @NotNull HolderLookup.Provider provider) {
+        super.handleUpdateTag(tag, provider);
+        NBTUtils.setCompoundIfPresent(tag, SerializationConstants.FLUID, nbt -> bioFuelTank.deserializeNBT(provider, nbt));
     }
 
     @Override
@@ -108,14 +107,14 @@ public class TileEntityBioGenerator extends TileEntityGenerator {
     }
 
     @Override
-    protected boolean makesComparatorDirty(@Nullable SubstanceType type) {
-        return type == SubstanceType.FLUID;
+    protected boolean makesComparatorDirty(ContainerType<?, ?, ?> type) {
+        return type == ContainerType.FLUID;
     }
 
     //Methods relating to IComputerTile
     @Override
-    FloatingLong getProductionRate() {
-        return getActive() ? MekanismGeneratorsConfig.generators.bioGeneration.get() : FloatingLong.ZERO;
+    long getProductionRate() {
+        return getActive() ? MekanismGeneratorsConfig.generators.bioGeneration.get() : 0L;
     }
     //End methods IComputerTile
 }

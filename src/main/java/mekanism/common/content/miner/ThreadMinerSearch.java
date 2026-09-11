@@ -1,13 +1,14 @@
 package mekanism.common.content.miner;
 
+import io.netty.buffer.ByteBuf;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Reference2BooleanMap;
 import it.unimi.dsi.fastutil.objects.Reference2BooleanOpenHashMap;
 import java.util.BitSet;
+import java.util.function.IntFunction;
 import mekanism.api.annotations.NothingNullByDefault;
-import mekanism.api.math.MathUtils;
-import mekanism.api.text.IHasTextComponent;
+import mekanism.api.text.IHasTextComponent.IHasEnumNameTextComponent;
 import mekanism.api.text.ILangEntry;
 import mekanism.common.MekanismLang;
 import mekanism.common.tags.MekanismTags;
@@ -17,8 +18,10 @@ import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.WorldUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.util.ByIdMap;
 import net.minecraft.world.level.ChunkPos;
-import net.minecraft.world.level.PathNavigationRegion;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.DoorBlock;
@@ -32,15 +35,17 @@ public class ThreadMinerSearch extends Thread {
 
     private final TileEntityDigitalMiner tile;
     private final Long2ObjectMap<BitSet> oresToMine = new Long2ObjectOpenHashMap<>();
-    private PathNavigationRegion chunkCache;
+    private MinerRegionCache chunkCache;
     public State state = State.IDLE;
     public int found = 0;
 
     public ThreadMinerSearch(TileEntityDigitalMiner tile) {
+        super("Digital Miner Search thread " + tile.getBlockPos());
         this.tile = tile;
+        setDaemon(true);
     }
 
-    public void setChunkCache(PathNavigationRegion cache) {
+    public void setChunkCache(MinerRegionCache cache) {
         this.chunkCache = cache;
     }
 
@@ -58,7 +63,7 @@ public class ThreadMinerSearch extends Thread {
         Block info;
         BlockPos minerPos = tile.getBlockPos();
         for (int i = 0; i < size; i++) {
-            if (tile.isRemoved()) {
+            if (tile.isRemoved() || isInterrupted()) {
                 //Make sure the miner is still valid and something hasn't gone wrong
                 return;
             }
@@ -76,14 +81,19 @@ public class ThreadMinerSearch extends Thread {
             if (MekanismUtils.isLiquidBlock(info)) {//Skip liquids
                 continue;
             }
-            boolean accepted = acceptedItems.computeIfAbsent(info, (Block block) -> {
-                if (tile.isReplaceTarget(block.asItem())) {
+            boolean accepted;
+            if (acceptedItems.containsKey(info)) {
+                accepted = acceptedItems.getBoolean(info);
+            } else {
+                if (tile.isReplaceTarget(info.asItem())) {
                     //If it is a replace target just mark it as never being accepted
-                    return false;
+                    accepted = false;
+                } else {
+                    //Ensure that the inverse mode is the opposite of the filter match
+                    accepted = tile.getInverse() != tile.getFilterManager().anyEnabledMatch(state, MinerFilter::canFilter);
                 }
-                //Ensure that the inverse mode is the opposite of the filter match
-                return tile.getInverse() != tile.getFilterManager().anyEnabledMatch(filter -> filter.canFilter(state));
-            });
+                acceptedItems.put(info, accepted);
+            }
             if (accepted) {
                 long chunk = ChunkPos.asLong(testPos);
                 oresToMine.computeIfAbsent(chunk, k -> new BitSet()).set(i);
@@ -93,6 +103,9 @@ public class ThreadMinerSearch extends Thread {
 
         state = State.FINISHED;
         chunkCache = null;
+        if (interrupted()) {
+            return;//no point checking as we got cancelled
+        }
         if (tile.searcher == this) {
             //Only update search if we are still valid and didn't get replaced due to a reset call
             tile.updateFromSearch(oresToMine, found);
@@ -114,13 +127,14 @@ public class ThreadMinerSearch extends Thread {
     }
 
     @NothingNullByDefault
-    public enum State implements IHasTextComponent {
+    public enum State implements IHasEnumNameTextComponent {
         IDLE(MekanismLang.MINER_IDLE),
         SEARCHING(MekanismLang.MINER_SEARCHING),
         PAUSED(MekanismLang.MINER_PAUSED),
         FINISHED(MekanismLang.MINER_READY);
 
-        private static final State[] MODES = values();
+        public static final IntFunction<State> BY_ID = ByIdMap.continuous(State::ordinal, values(), ByIdMap.OutOfBoundsStrategy.WRAP);
+        public static final StreamCodec<ByteBuf, State> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, State::ordinal);
 
         private final ILangEntry langEntry;
 
@@ -131,10 +145,6 @@ public class ThreadMinerSearch extends Thread {
         @Override
         public Component getTextComponent() {
             return langEntry.translate();
-        }
-
-        public static State byIndexStatic(int index) {
-            return MathUtils.getByIndexMod(MODES, index);
         }
     }
 }

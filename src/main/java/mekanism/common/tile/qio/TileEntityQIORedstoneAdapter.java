@@ -1,7 +1,8 @@
 package mekanism.common.tile.qio;
 
-import java.util.Map;
-import mekanism.api.NBTConstants;
+import java.util.Optional;
+import mekanism.api.SerializationConstants;
+import mekanism.client.model.data.DataBasedModelLoader;
 import mekanism.common.content.qio.QIOFrequency;
 import mekanism.common.integration.computer.ComputerException;
 import mekanism.common.integration.computer.annotation.ComputerMethod;
@@ -11,16 +12,22 @@ import mekanism.common.inventory.container.sync.SyncableItemStack;
 import mekanism.common.inventory.container.sync.SyncableLong;
 import mekanism.common.lib.inventory.HashedItem;
 import mekanism.common.registries.MekanismBlocks;
+import mekanism.common.registries.MekanismDataComponents;
 import mekanism.common.util.NBTUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.component.DataComponentMap;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.neoforged.neoforge.client.model.data.ModelData;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class TileEntityQIORedstoneAdapter extends TileEntityQIOComponent {
@@ -28,26 +35,30 @@ public class TileEntityQIORedstoneAdapter extends TileEntityQIOComponent {
     @Nullable
     private HashedItem itemType = null;
     private boolean fuzzy;
+    private boolean inverted;
     private long count = 0;
     private long clientStoredCount = 0;
+    private boolean isEmitting;
 
     public TileEntityQIORedstoneAdapter(BlockPos pos, BlockState state) {
         super(MekanismBlocks.QIO_REDSTONE_ADAPTER, pos, state);
-        delaySupplier = NO_DELAY;
     }
 
     public int getRedstoneLevel(Direction side) {
-        return side != getOppositeDirection() && getActive() ? 15 : 0;
+        return side != getOppositeDirection() && getActive() && isEmitting ? 15 : 0;
     }
 
     private long getFreqStored() {
-        QIOFrequency freq = getQIOFrequency();
+        return getStored(getQIOFrequency());
+    }
+
+    private long getStored(@Nullable QIOFrequency freq) {
         if (freq == null || itemType == null) {
             return 0;
         } else if (fuzzy) {
-            return freq.getTypesForItem(itemType.getItem()).stream().mapToLong(freq::getStored).sum();
+            return freq.getTypesForItem(itemType.getItem()).stream().mapToLong(freq::getStoredByHash).sum();
         }
-        return freq.getStored(itemType);
+        return freq.getStoredByHash(itemType);
     }
 
     public void handleStackChange(ItemStack stack) {
@@ -73,38 +84,95 @@ public class TileEntityQIORedstoneAdapter extends TileEntityQIOComponent {
         }
     }
 
-    @Override
-    protected void onUpdateServer() {
-        super.onUpdateServer();
-        long stored = getFreqStored();
-        setActive(stored > 0 && stored >= count);
+    public void invertSignal() {
+        setSignalInverted(!inverted);
     }
 
-    @Override
-    public void writeSustainedData(CompoundTag dataMap) {
-        super.writeSustainedData(dataMap);
-        if (itemType != null) {
-            dataMap.put(NBTConstants.SINGLE_ITEM, itemType.internalToNBT());
+    private void setSignalInverted(boolean inverted) {
+        if (this.inverted != inverted) {
+            this.inverted = inverted;
+            markForSave();
         }
-        dataMap.putLong(NBTConstants.AMOUNT, count);
-        dataMap.putBoolean(NBTConstants.FUZZY_MODE, fuzzy);
     }
 
     @Override
-    public void readSustainedData(CompoundTag dataMap) {
-        super.readSustainedData(dataMap);
-        NBTUtils.setItemStackIfPresent(dataMap, NBTConstants.SINGLE_ITEM, item -> itemType = HashedItem.create(item));
-        NBTUtils.setLongIfPresent(dataMap, NBTConstants.AMOUNT, value -> count = value);
-        NBTUtils.setBooleanIfPresent(dataMap, NBTConstants.FUZZY_MODE, value -> fuzzy = value);
+    protected boolean onUpdateServer(@Nullable QIOFrequency frequency) {
+        boolean needsUpdate = super.onUpdateServer(frequency);
+        long stored = getStored(frequency);
+        boolean hasStored = stored > 0 && stored >= count;
+        boolean shouldEmit = hasStored != inverted;
+        if (isEmitting != shouldEmit) {
+            isEmitting = shouldEmit;
+            needsUpdate = true;
+            //Update redstone on sides except the back
+            level.updateNeighborsAtExceptFromFacing(getBlockPos(), getBlockState().getBlock(), getOppositeDirection());
+        }
+        return needsUpdate;
     }
 
     @Override
-    public Map<String, String> getTileDataRemap() {
-        Map<String, String> remap = super.getTileDataRemap();
-        remap.put(NBTConstants.SINGLE_ITEM, NBTConstants.SINGLE_ITEM);
-        remap.put(NBTConstants.AMOUNT, NBTConstants.AMOUNT);
-        remap.put(NBTConstants.FUZZY_MODE, NBTConstants.FUZZY_MODE);
-        return remap;
+    public void writeSustainedData(HolderLookup.Provider provider, CompoundTag dataMap) {
+        super.writeSustainedData(provider, dataMap);
+        if (itemType != null) {
+            dataMap.put(SerializationConstants.SINGLE_ITEM, itemType.internalToNBT(provider));
+        }
+        dataMap.putLong(SerializationConstants.AMOUNT, count);
+        dataMap.putBoolean(SerializationConstants.FUZZY, fuzzy);
+        dataMap.putBoolean(SerializationConstants.INVERSE, inverted);
+    }
+
+    @Override
+    public void readSustainedData(HolderLookup.Provider provider, @NotNull CompoundTag dataMap) {
+        super.readSustainedData(provider, dataMap);
+        NBTUtils.setItemStackIfPresent(provider, dataMap, SerializationConstants.SINGLE_ITEM, item -> itemType = HashedItem.create(item));
+        NBTUtils.setLongIfPresent(dataMap, SerializationConstants.AMOUNT, value -> count = value);
+        NBTUtils.setBooleanIfPresent(dataMap, SerializationConstants.FUZZY, value -> fuzzy = value);
+        NBTUtils.setBooleanIfPresent(dataMap, SerializationConstants.INVERSE, value -> inverted = value);
+    }
+
+    @NotNull
+    @Override
+    public ModelData getModelData() {
+        if (isEmitting) {
+            return ModelData.of(DataBasedModelLoader.EMITTING, null);
+        }
+        return super.getModelData();
+    }
+
+    @NotNull
+    @Override
+    public CompoundTag getReducedUpdateTag(@NotNull HolderLookup.Provider provider) {
+        CompoundTag updateTag = super.getReducedUpdateTag(provider);
+        updateTag.putBoolean(SerializationConstants.EMITTING, isEmitting);
+        return updateTag;
+    }
+
+    @Override
+    public void handleUpdateTag(@NotNull CompoundTag tag, @NotNull HolderLookup.Provider provider) {
+        super.handleUpdateTag(tag, provider);
+        boolean emitting = tag.getBoolean(SerializationConstants.EMITTING);
+        if (isEmitting != emitting) {
+            isEmitting = emitting;
+            updateModelData();
+        }
+    }
+
+    @Override
+    protected void collectImplicitComponents(@NotNull DataComponentMap.Builder builder) {
+        super.collectImplicitComponents(builder);
+        builder.set(MekanismDataComponents.ITEM_TARGET, Optional.ofNullable(itemType));
+        builder.set(MekanismDataComponents.LONG_AMOUNT, count);
+        builder.set(MekanismDataComponents.FUZZY, fuzzy);
+        builder.set(MekanismDataComponents.INVERSE, inverted);
+    }
+
+    @Override
+    protected void applyImplicitComponents(@NotNull BlockEntity.DataComponentInput input) {
+        super.applyImplicitComponents(input);
+        itemType = input.getOrDefault(MekanismDataComponents.ITEM_TARGET, Optional.empty()).orElse(null);
+        count = input.getOrDefault(MekanismDataComponents.LONG_AMOUNT, count);
+        fuzzy = input.getOrDefault(MekanismDataComponents.FUZZY, fuzzy);
+        inverted = input.getOrDefault(MekanismDataComponents.INVERSE, inverted);
     }
 
     @ComputerMethod(nameOverride = "getTargetItem")
@@ -120,6 +188,11 @@ public class TileEntityQIORedstoneAdapter extends TileEntityQIOComponent {
     @ComputerMethod
     public boolean getFuzzyMode() {
         return fuzzy;
+    }
+
+    @ComputerMethod
+    public boolean isInverted() {
+        return inverted;
     }
 
     public long getStoredCount() {
@@ -138,6 +211,7 @@ public class TileEntityQIORedstoneAdapter extends TileEntityQIOComponent {
         }));
         container.track(SyncableLong.create(this::getCount, value -> count = value));
         container.track(SyncableBoolean.create(this::getFuzzyMode, value -> fuzzy = value));
+        container.track(SyncableBoolean.create(this::isInverted, value -> inverted = value));
         container.track(SyncableLong.create(this::getFreqStored, value -> clientStoredCount = value));
     }
 
@@ -151,8 +225,8 @@ public class TileEntityQIORedstoneAdapter extends TileEntityQIOComponent {
     @ComputerMethod(requiresPublicSecurity = true)
     void setTargetItem(ResourceLocation itemName) throws ComputerException {
         validateSecurityIsPublic();
-        Item item = ForgeRegistries.ITEMS.getValue(itemName);
-        if (item == null || item == Items.AIR) {
+        Item item = BuiltInRegistries.ITEM.get(itemName);
+        if (item == Items.AIR) {
             throw new ComputerException("Target item '%s' could not be found. If you are trying to clear it consider using clearTargetItem instead.", itemName);
         }
         handleStackChange(new ItemStack(item));
@@ -177,6 +251,18 @@ public class TileEntityQIORedstoneAdapter extends TileEntityQIOComponent {
     void computerSetFuzzyMode(boolean fuzzy) throws ComputerException {
         validateSecurityIsPublic();
         setFuzzyMode(fuzzy);
+    }
+
+    @ComputerMethod(nameOverride = "invertSignal", requiresPublicSecurity = true)
+    void computerInvertSignal() throws ComputerException {
+        validateSecurityIsPublic();
+        invertSignal();
+    }
+
+    @ComputerMethod(nameOverride = "setSignalInverted", requiresPublicSecurity = true)
+    void computerSetSignalInverted(boolean inverted) throws ComputerException {
+        validateSecurityIsPublic();
+        setSignalInverted(inverted);
     }
     //End methods IComputerTile
 }

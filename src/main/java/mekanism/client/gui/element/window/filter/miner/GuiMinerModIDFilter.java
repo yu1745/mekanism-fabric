@@ -14,21 +14,21 @@ import org.jetbrains.annotations.Nullable;
 public class GuiMinerModIDFilter extends GuiModIDFilter<MinerModIDFilter, TileEntityDigitalMiner> implements GuiMinerFilterHelper {
 
     public static GuiMinerModIDFilter create(IGuiWrapper gui, TileEntityDigitalMiner tile) {
-        return new GuiMinerModIDFilter(gui, (gui.getWidth() - 173) / 2, 30, tile, null);
+        return new GuiMinerModIDFilter(gui, (gui.getXSize() - MINER_FILTER_WIDTH) / 2, 30, tile, null);
     }
 
     public static GuiMinerModIDFilter edit(IGuiWrapper gui, TileEntityDigitalMiner tile, MinerModIDFilter filter) {
-        return new GuiMinerModIDFilter(gui, (gui.getWidth() - 173) / 2, 30, tile, filter);
+        return new GuiMinerModIDFilter(gui, (gui.getXSize() - MINER_FILTER_WIDTH) / 2, 30, tile, filter);
     }
 
     private GuiMinerModIDFilter(IGuiWrapper gui, int x, int y, TileEntityDigitalMiner tile, @Nullable MinerModIDFilter origFilter) {
-        super(gui, x, y, 173, 90, tile, origFilter);
+        super(gui, x, y, MINER_FILTER_WIDTH, 90, tile, origFilter);
     }
 
     @Override
     protected void init() {
         super.init();
-        addMinerDefaults(gui(), filter, getSlotOffset(), this::addChild);
+        addMinerDefaults(gui(), getSlotOffset(), this::addChild);
     }
 
     @Override

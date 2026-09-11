@@ -11,18 +11,18 @@ import org.jetbrains.annotations.Nullable;
 public class GuiSorterTagFilter extends GuiTagFilter<SorterTagFilter, TileEntityLogisticalSorter> implements GuiSorterFilterHelper {
 
     public static GuiSorterTagFilter create(IGuiWrapper gui, TileEntityLogisticalSorter tile) {
-        return new GuiSorterTagFilter(gui, (gui.getWidth() - 182) / 2, 30, tile, null);
+        return new GuiSorterTagFilter(gui, (gui.getXSize() - SORTER_FILTER_WIDTH) / 2, 30, tile, null);
     }
 
     public static GuiSorterTagFilter edit(IGuiWrapper gui, TileEntityLogisticalSorter tile, SorterTagFilter filter) {
-        return new GuiSorterTagFilter(gui, (gui.getWidth() - 182) / 2, 30, tile, filter);
+        return new GuiSorterTagFilter(gui, (gui.getXSize() - SORTER_FILTER_WIDTH) / 2, 30, tile, filter);
     }
 
     private GuiTextField minField;
     private GuiTextField maxField;
 
     private GuiSorterTagFilter(IGuiWrapper gui, int x, int y, TileEntityLogisticalSorter tile, @Nullable SorterTagFilter origFilter) {
-        super(gui, x, y, 195, 90, tile, origFilter);
+        super(gui, x, y, SORTER_FILTER_WIDTH, 90, tile, origFilter);
     }
 
     @Override
@@ -33,7 +33,7 @@ public class GuiSorterTagFilter extends GuiTagFilter<SorterTagFilter, TileEntity
     @Override
     protected void init() {
         super.init();
-        addSorterDefaults(gui(), filter, getSlotOffset(), this::addChild, tile::getSingleItem, (min, max) -> {
+        addSorterDefaults(gui(), getSlotOffset(), this::addChild, (min, max) -> {
             minField = min;
             maxField = max;
         });
@@ -54,6 +54,11 @@ public class GuiSorterTagFilter extends GuiTagFilter<SorterTagFilter, TileEntity
     @Override
     public void renderForeground(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         super.renderForeground(guiGraphics, mouseX, mouseY);
-        renderSorterForeground(guiGraphics, filter, tile.getSingleItem());
+        renderSorterForeground(guiGraphics);
+    }
+
+    @Override
+    public boolean isSingleItem() {
+        return tile.getSingleItem();
     }
 }

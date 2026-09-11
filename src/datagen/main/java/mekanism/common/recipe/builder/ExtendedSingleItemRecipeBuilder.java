@@ -1,54 +1,39 @@
 package mekanism.common.recipe.builder;
 
-import com.google.gson.JsonObject;
-import mekanism.api.JsonConstants;
+import java.util.Objects;
 import mekanism.api.annotations.NothingNullByDefault;
-import mekanism.common.DataGenJsonConstants;
-import mekanism.common.util.RegistryUtils;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.core.Holder;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.item.crafting.RecipeSerializer;
-import net.minecraft.world.level.ItemLike;
+import net.minecraft.world.item.crafting.SingleItemRecipe;
+import net.minecraft.world.item.crafting.StonecutterRecipe;
 
 @NothingNullByDefault
 public class ExtendedSingleItemRecipeBuilder extends BaseRecipeBuilder<ExtendedSingleItemRecipeBuilder> {
 
+    private final SingleItemRecipe.Factory<?> factory;
     private final Ingredient ingredient;
 
-    public ExtendedSingleItemRecipeBuilder(RecipeSerializer<?> serializer, Ingredient ingredient, ItemLike result, int count) {
-        super(serializer, result, count);
+    public ExtendedSingleItemRecipeBuilder(Ingredient ingredient, Holder<Item> result, int count, SingleItemRecipe.Factory<?> factory) {
+        super(result, count);
         this.ingredient = ingredient;
+        this.factory = factory;
     }
 
-    public static ExtendedSingleItemRecipeBuilder stonecutting(Ingredient ingredient, ItemLike result) {
+    public static ExtendedSingleItemRecipeBuilder stonecutting(Ingredient ingredient, Holder<Item> result) {
         return stonecutting(ingredient, result, 1);
     }
 
-    public static ExtendedSingleItemRecipeBuilder stonecutting(Ingredient ingredient, ItemLike result, int count) {
-        return new ExtendedSingleItemRecipeBuilder(RecipeSerializer.STONECUTTER, ingredient, result, count);
+    public static ExtendedSingleItemRecipeBuilder stonecutting(Ingredient ingredient, Holder<Item> result, int count) {
+        return new ExtendedSingleItemRecipeBuilder(ingredient, result, count, StonecutterRecipe::new);
     }
 
     @Override
-    protected RecipeResult getResult(ResourceLocation id) {
-        return new Result(id);
-    }
-
-    public class Result extends BaseRecipeResult {
-
-        public Result(ResourceLocation id) {
-            super(id);
-        }
-
-        @Override
-        public void serializeRecipeData(JsonObject json) {
-            super.serializeRecipeData(json);
-            json.add(JsonConstants.INGREDIENT, ingredient.toJson());
-        }
-
-        @Override
-        protected void serializeResult(JsonObject json) {
-            json.addProperty(DataGenJsonConstants.RESULT, RegistryUtils.getName(result).toString());
-            json.addProperty(JsonConstants.COUNT, count);
-        }
+    protected SingleItemRecipe asRecipe() {
+        return this.factory.create(
+              Objects.requireNonNullElse(this.group, ""),
+              this.ingredient,
+              resultStack()
+        );
     }
 }

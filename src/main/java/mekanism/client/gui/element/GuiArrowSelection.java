@@ -1,7 +1,6 @@
 package mekanism.client.gui.element;
 
 import java.util.function.Supplier;
-import mekanism.client.gui.GuiUtils;
 import mekanism.client.gui.IGuiWrapper;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.MekanismUtils.ResourceType;
@@ -14,28 +13,25 @@ public class GuiArrowSelection extends GuiTexturedElement {
 
     private static final ResourceLocation ARROW = MekanismUtils.getResource(ResourceType.GUI, "arrow_selection.png");
 
-    private final Supplier<Component> textComponentSupplier;
+    private final Supplier<Component> targetText;
 
-    public GuiArrowSelection(IGuiWrapper gui, int x, int y, Supplier<Component> textComponentSupplier) {
+    public GuiArrowSelection(IGuiWrapper gui, int x, int y, Supplier<Component> targetText) {
         super(ARROW, gui, x, y, 33, 19);
-        this.textComponentSupplier = textComponentSupplier;
+        this.targetText = targetText;
     }
 
     @Override
     public boolean isMouseOver(double xAxis, double yAxis) {
         //TODO: override isHovered
-        return this.active && this.visible && xAxis >= getX() + 16 && xAxis < getX() + width - 1 && yAxis >= getY() + 1 && yAxis < getY() + height - 1;
+        return this.active && this.visible && xAxis >= getX() + 16 && xAxis < getRight() - 1 && yAxis >= getY() + 1 && yAxis < getBottom() - 1;
     }
 
     @Override
-    public void renderToolTip(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        super.renderToolTip(guiGraphics, mouseX, mouseY);
-        Component component = textComponentSupplier.get();
+    public void renderForeground(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        super.renderForeground(guiGraphics, mouseX, mouseY);
+        Component component = targetText.get();
         if (component != null) {
-            int tooltipX = mouseX + 5;
-            int tooltipY = mouseY - 5;
-            GuiUtils.renderBackgroundTexture(guiGraphics, GuiInnerScreen.SCREEN, GuiInnerScreen.SCREEN_SIZE, GuiInnerScreen.SCREEN_SIZE, tooltipX - 3, tooltipY - 4, getStringWidth(component) + 6, 16, 256, 256);
-            drawString(guiGraphics, component, tooltipX, tooltipY, screenTextColor());
+            drawScrollingString(guiGraphics, component, getWidth(), 6, TextAlignment.LEFT, screenTextColor(), 15, 1, false);
         }
     }
 

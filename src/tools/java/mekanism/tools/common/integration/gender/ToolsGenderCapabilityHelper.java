@@ -1,34 +1,25 @@
 package mekanism.tools.common.integration.gender;
 
 import mekanism.common.Mekanism;
-import mekanism.common.capabilities.ItemCapabilityWrapper;
 import mekanism.common.integration.gender.MekanismGenderArmor;
-import mekanism.tools.common.item.ItemMekanismArmor;
+import mekanism.tools.common.MekanismTools;
 import mekanism.tools.common.registries.ToolsItems;
-import net.minecraft.world.item.ArmorItem;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 
+@EventBusSubscriber(modid = MekanismTools.MODID)
 public class ToolsGenderCapabilityHelper {
 
-    public static void addGenderCapability(ItemMekanismArmor item, ItemCapabilityWrapper wrapper) {
-        //Validate the mod is loaded and that this is for the correct slot
-        if (Mekanism.hooks.WildfireGenderModLoaded && item.getType() == ArmorItem.Type.CHESTPLATE) {
-            MekanismGenderArmor genderArmor = null;
-            if (item == ToolsItems.BRONZE_CHESTPLATE.asItem()) {
-                genderArmor = ArmorSettings.BRONZE;
-            } else if (item == ToolsItems.LAPIS_LAZULI_CHESTPLATE.asItem()) {
-                genderArmor = ArmorSettings.LAPIS_LAZULI;
-            } else if (item == ToolsItems.OSMIUM_CHESTPLATE.asItem()) {
-                genderArmor = ArmorSettings.OSMIUM;
-            } else if (item == ToolsItems.REFINED_GLOWSTONE_CHESTPLATE.asItem()) {
-                genderArmor = ArmorSettings.REFINED_GLOWSTONE;
-            } else if (item == ToolsItems.REFINED_OBSIDIAN_CHESTPLATE.asItem()) {
-                genderArmor = ArmorSettings.REFINED_OBSIDIAN;
-            } else if (item == ToolsItems.STEEL_CHESTPLATE.asItem()) {
-                genderArmor = ArmorSettings.STEEL;
-            }
-            if (genderArmor != null) {
-                wrapper.add(genderArmor);
-            }
+    @SubscribeEvent
+    public static void addGenderCapability(RegisterCapabilitiesEvent event) {
+        if (Mekanism.hooks.genderMod.isLoaded()) {
+            ArmorSettings.BRONZE.register(event, ToolsItems.BRONZE_CHESTPLATE);
+            ArmorSettings.LAPIS_LAZULI.register(event, ToolsItems.LAPIS_LAZULI_CHESTPLATE);
+            ArmorSettings.OSMIUM.register(event, ToolsItems.OSMIUM_CHESTPLATE);
+            ArmorSettings.REFINED_GLOWSTONE.register(event, ToolsItems.REFINED_GLOWSTONE_CHESTPLATE);
+            ArmorSettings.REFINED_OBSIDIAN.register(event, ToolsItems.REFINED_OBSIDIAN_CHESTPLATE);
+            ArmorSettings.STEEL.register(event, ToolsItems.STEEL_CHESTPLATE);
         }
     }
 

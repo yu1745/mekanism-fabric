@@ -1,22 +1,18 @@
 package mekanism.api.datagen.recipe.builder;
 
-import com.google.gson.JsonObject;
-import mekanism.api.JsonConstants;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.datagen.recipe.MekanismRecipeBuilder;
-import mekanism.api.math.FloatingLong;
+import mekanism.api.recipes.ItemStackToEnergyRecipe;
+import mekanism.api.recipes.basic.BasicItemStackToEnergyRecipe;
 import mekanism.api.recipes.ingredients.ItemStackIngredient;
-import net.minecraft.resources.ResourceLocation;
-import org.jetbrains.annotations.NotNull;
 
 @NothingNullByDefault
 public class ItemStackToEnergyRecipeBuilder extends MekanismRecipeBuilder<ItemStackToEnergyRecipeBuilder> {
 
     private final ItemStackIngredient input;
-    private final FloatingLong output;
+    private final long output;
 
-    protected ItemStackToEnergyRecipeBuilder(ItemStackIngredient input, FloatingLong output, ResourceLocation serializerName) {
-        super(serializerName);
+    protected ItemStackToEnergyRecipeBuilder(ItemStackIngredient input, long output) {
         this.input = input;
         this.output = output;
     }
@@ -27,28 +23,15 @@ public class ItemStackToEnergyRecipeBuilder extends MekanismRecipeBuilder<ItemSt
      * @param input  Input.
      * @param output Output.
      */
-    public static ItemStackToEnergyRecipeBuilder energyConversion(ItemStackIngredient input, FloatingLong output) {
-        if (output.isZero()) {
+    public static ItemStackToEnergyRecipeBuilder energyConversion(ItemStackIngredient input, long output) {
+        if (output <= 0L) {
             throw new IllegalArgumentException("This energy conversion recipe requires an energy output greater than zero");
         }
-        return new ItemStackToEnergyRecipeBuilder(input, output, mekSerializer("energy_conversion"));
+        return new ItemStackToEnergyRecipeBuilder(input, output);
     }
 
     @Override
-    protected ItemStackToEnergyRecipeResult getResult(ResourceLocation id) {
-        return new ItemStackToEnergyRecipeResult(id);
-    }
-
-    public class ItemStackToEnergyRecipeResult extends RecipeResult {
-
-        protected ItemStackToEnergyRecipeResult(ResourceLocation id) {
-            super(id);
-        }
-
-        @Override
-        public void serializeRecipeData(@NotNull JsonObject json) {
-            json.add(JsonConstants.INPUT, input.serialize());
-            json.addProperty(JsonConstants.OUTPUT, output);
-        }
+    protected ItemStackToEnergyRecipe asRecipe() {
+        return new BasicItemStackToEnergyRecipe(input, output);
     }
 }

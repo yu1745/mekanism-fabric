@@ -6,7 +6,7 @@ import mekanism.api.AutomationType;
 import mekanism.api.IContentsListener;
 import mekanism.api.Upgrade;
 import mekanism.api.annotations.NothingNullByDefault;
-import mekanism.api.math.FloatingLong;
+import mekanism.api.functions.ConstantPredicates;
 import mekanism.common.block.attribute.Attribute;
 import mekanism.common.block.attribute.AttributeEnergy;
 import mekanism.common.tile.base.TileEntityMekanism;
@@ -20,7 +20,7 @@ public class MachineEnergyContainer<TILE extends TileEntityMekanism> extends Bas
 
     public static <TILE extends TileEntityMekanism> MachineEnergyContainer<TILE> input(TILE tile, @Nullable IContentsListener listener) {
         AttributeEnergy electricBlock = validateBlock(tile);
-        return new MachineEnergyContainer<>(electricBlock.getStorage(), electricBlock.getUsage(), notExternal, alwaysTrue, tile, listener);
+        return new MachineEnergyContainer<>(electricBlock.getStorage(), electricBlock.getUsage(), notExternal, ConstantPredicates.alwaysTrue(), tile, listener);
     }
 
     public static <TILE extends TileEntityMekanism> MachineEnergyContainer<TILE> internal(TILE tile, @Nullable IContentsListener listener) {
@@ -30,7 +30,7 @@ public class MachineEnergyContainer<TILE extends TileEntityMekanism> extends Bas
 
     public static AttributeEnergy validateBlock(TileEntityMekanism tile) {
         Objects.requireNonNull(tile, "Tile cannot be null");
-        AttributeEnergy attributeEnergy = Attribute.get(tile.getBlockType(), AttributeEnergy.class);
+        AttributeEnergy attributeEnergy = Attribute.get(tile.getBlockHolder(), AttributeEnergy.class);
         if (attributeEnergy == null) {
             throw new IllegalArgumentException("Block provider must be an electric block");
         }
@@ -38,14 +38,14 @@ public class MachineEnergyContainer<TILE extends TileEntityMekanism> extends Bas
     }
 
     protected final TILE tile;
-    private final FloatingLong baseEnergyPerTick;
-    private FloatingLong currentMaxEnergy;
-    protected FloatingLong currentEnergyPerTick;
+    private final long baseEnergyPerTick;
+    private long currentMaxEnergy;
+    protected long currentEnergyPerTick;
 
-    protected MachineEnergyContainer(FloatingLong maxEnergy, FloatingLong energyPerTick, Predicate<@NotNull AutomationType> canExtract,
+    protected MachineEnergyContainer(long maxEnergy, long energyPerTick, Predicate<@NotNull AutomationType> canExtract,
           Predicate<@NotNull AutomationType> canInsert, TILE tile, @Nullable IContentsListener listener) {
         super(maxEnergy, canExtract, canInsert, listener);
-        this.baseEnergyPerTick = energyPerTick.copyAsConst();
+        this.baseEnergyPerTick = energyPerTick;
         this.tile = tile;
         currentMaxEnergy = getBaseMaxEnergy();
         currentEnergyPerTick = baseEnergyPerTick;
@@ -56,32 +56,29 @@ public class MachineEnergyContainer<TILE extends TileEntityMekanism> extends Bas
     }
 
     @Override
-    public FloatingLong getMaxEnergy() {
+    public long getMaxEnergy() {
         return currentMaxEnergy;
     }
 
-    public FloatingLong getBaseMaxEnergy() {
+    public long getBaseMaxEnergy() {
         return super.getMaxEnergy();
     }
 
-    public void setMaxEnergy(FloatingLong maxEnergy) {
-        Objects.requireNonNull(maxEnergy, "Max energy cannot be null");
+    public void setMaxEnergy(long maxEnergy) {
         this.currentMaxEnergy = maxEnergy;
-        if (getEnergy().greaterThan(getMaxEnergy())) {
-            setEnergy(getMaxEnergy());
-        }
+        //Clamp the energy
+        setEnergy(getEnergy());
     }
 
-    public FloatingLong getEnergyPerTick() {
+    public long getEnergyPerTick() {
         return currentEnergyPerTick;
     }
 
-    public FloatingLong getBaseEnergyPerTick() {
+    public long getBaseEnergyPerTick() {
         return baseEnergyPerTick;
     }
 
-    public void setEnergyPerTick(FloatingLong energyPerTick) {
-        Objects.requireNonNull(energyPerTick, "Energy per tick cannot be null");
+    public void setEnergyPerTick(long energyPerTick) {
         this.currentEnergyPerTick = energyPerTick;
     }
 

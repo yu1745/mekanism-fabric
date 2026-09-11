@@ -1,40 +1,45 @@
 package mekanism.common.content.transporter;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import mekanism.api.Coord4D;
-import mekanism.common.content.transporter.TransporterStack.Path;
 import mekanism.common.lib.inventory.TransitRequest;
 import mekanism.common.lib.inventory.TransitRequest.ItemData;
 import mekanism.common.lib.inventory.TransitRequest.TransitResponse;
 import mekanism.common.util.InventoryUtils;
 import mekanism.common.util.StackUtils;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.items.IItemHandler;
+import net.neoforged.neoforge.items.IItemHandler;
 
 public class TransporterManager {
 
     private TransporterManager() {
     }
 
-    private static final Map<Coord4D, Set<TransporterStack>> flowingStacks = new Object2ObjectOpenHashMap<>();
+    //todo determine if a custom pos record is better storing the long
+    private static final Map<GlobalPos, Set<TransporterStack>> flowingStacks = new Object2ObjectOpenHashMap<>();
 
     public static void reset() {
         flowingStacks.clear();
     }
 
     public static void add(Level world, TransporterStack stack) {
-        flowingStacks.computeIfAbsent(new Coord4D(stack.getDest(), world), k -> new ObjectOpenHashSet<>()).add(stack);
+        flowingStacks.computeIfAbsent(GlobalPos.of(world.dimension(), BlockPos.of(stack.getDest())), k -> new HashSet<>()).add(stack);
     }
 
     public static void remove(Level world, TransporterStack stack) {
-        if (stack.hasPath() && stack.getPathType() != Path.NONE) {
-            flowingStacks.get(new Coord4D(stack.getDest(), world)).remove(stack);
+        if (stack.hasPath() && stack.getPathType().hasTarget()) {
+            GlobalPos pos = GlobalPos.of(world.dimension(), BlockPos.of(stack.getDest()));
+            Set<TransporterStack> transporterStacks = flowingStacks.get(pos);
+            if (transporterStacks != null && transporterStacks.remove(stack) && transporterStacks.isEmpty()) {
+                flowingStacks.remove(pos);
+            }
         }
     }
 
@@ -183,8 +188,8 @@ public class TransporterManager {
      *
      * @return {@link TransitResponse} of expected items to use
      */
-    public static TransitResponse getPredictedInsert(Coord4D position, Direction side, IItemHandler handler, TransitRequest request,
-          Map<Coord4D, Set<TransporterStack>> additionalFlowingStacks) {
+    public static TransitResponse getPredictedInsert(GlobalPos position, Direction side, IItemHandler handler, TransitRequest request,
+          Map<GlobalPos, Set<TransporterStack>> additionalFlowingStacks) {
         InventoryInfo inventoryInfo = new InventoryInfo(handler);
         //Before we see if this item can fit in the destination, we must first check the stacks that are
         // en-route. Note that we also have to simulate the current inventory after each stack; we'll keep
@@ -200,12 +205,12 @@ public class TransporterManager {
         return getPredictedInsert(inventoryInfo, handler, request);
     }
 
-    private static boolean predictFlowing(Coord4D position, Direction side, IItemHandler handler, InventoryInfo inventoryInfo,
-          Map<Coord4D, Set<TransporterStack>> flowingStacks) {
+    private static boolean predictFlowing(GlobalPos position, Direction side, IItemHandler handler, InventoryInfo inventoryInfo,
+          Map<GlobalPos, Set<TransporterStack>> flowingStacks) {
         Set<TransporterStack> transporterStacks = flowingStacks.get(position);
         if (transporterStacks != null) {
             for (TransporterStack stack : transporterStacks) {
-                if (stack != null && stack.getPathType() != Path.NONE) {
+                if (stack != null && stack.getPathType().hasTarget()) {
                     //We start by simulating inserting the stack into the handler, regardless of if we
                     // are interacting with the same side of the target as the stack's path is taking.
                     // This is so that in cases where the item handler is shared (chests) or some of
@@ -246,7 +251,7 @@ public class TransporterManager {
     private static TransitResponse getPredictedInsert(InventoryInfo inventoryInfo, IItemHandler handler, TransitRequest request) {
         //For each of the items in the request, simulate the insert. We try each stack in the
         // request; it might be possible to not send the first item, but the second could work, etc.
-        for (ItemData data : request.getItemData()) {
+        for (ItemData data : request) {
             //Create a sending ItemStack with the hashed item type and total item count within the request
             ItemStack stack = data.getStack();
             int numToSend = data.getTotalCount();

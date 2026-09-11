@@ -5,17 +5,23 @@ import it.unimi.dsi.fastutil.chars.Char2ObjectMap;
 import it.unimi.dsi.fastutil.chars.CharSet;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedHashMap;
+import java.util.EnumMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.BiPredicate;
 import mekanism.common.base.TagCache;
 import mekanism.common.util.MekanismUtils;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.TooltipFlag.Default;
+import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.VisibleForTesting;
 
 /**
  * Advanced pattern searching, in use by QIO Item Viewers. Only use on client-side.
@@ -24,11 +30,27 @@ import org.jetbrains.annotations.Nullable;
  */
 public class SearchQueryParser {
 
-    private static final ISearchQuery INVALID = stack -> false;
     private static final Set<Character> TERMINATORS = Set.of('|', '(', '\"', '\'');
 
+    /**
+     * @param query Expected to be lower case
+     */
     public static ISearchQuery parse(String query) {
-        List<SearchQuery> ret = new ArrayList<>();
+        if (query == null || query.isEmpty()) {
+            return ISearchQuery.INVALID;
+        }
+        return parse(query, new HashSet<>());
+    }
+
+    @VisibleForTesting
+    public static ISearchQuery parseOrdered(String query) {
+        if (query == null || query.isEmpty()) {
+            return ISearchQuery.INVALID;
+        }
+        return parse(query.trim().toLowerCase(Locale.ROOT), new LinkedHashSet<>());
+    }
+
+    private static ISearchQuery parse(String query, Set<SearchQuery> ret) {
         SearchQuery curQuery = new SearchQuery();
 
         for (int i = 0; i < query.length(); i++) {
@@ -55,14 +77,19 @@ public class SearchQueryParser {
             // read the key string(s) of the given query type
             KeyListResult keyListResult = readKeyList(query, i, type, curQuery);
             if (!keyListResult.hasResult()) {
-                return INVALID;
+                return ISearchQuery.INVALID;
             }
             i = keyListResult.index();
         }
         if (!curQuery.isEmpty()) {
+            if (ret.isEmpty()) {
+                return curQuery;
+            }
             ret.add(curQuery);
+        } else if (ret.size() == 1) {
+            return ret.iterator().next();
         }
-        return new SearchQueryList(ret);
+        return ret.isEmpty() ? ISearchQuery.INVALID : new SearchQuerySet(ret);
     }
 
     private static KeyListResult readKeyList(String query, int start, QueryType type, SearchQuery curQuery) {
@@ -179,11 +206,41 @@ public class SearchQueryParser {
 
     public enum QueryType {
         // ~ is a dummy char, not actually used by parser
-        NAME('~', (key, stack) -> stack.getHoverName().getString().toLowerCase(Locale.ROOT).contains(key.toLowerCase(Locale.ROOT))),
-        MOD_ID('@', (key, stack) -> MekanismUtils.getModId(stack).toLowerCase(Locale.ROOT).contains(key.toLowerCase(Locale.ROOT))),
-        TOOLTIP('$', (key, stack) -> stack.getTooltipLines(null, TooltipFlag.Default.NORMAL).stream().map(t -> t.getString().toLowerCase(Locale.ROOT))
-              .anyMatch(tooltip -> tooltip.contains(key.toLowerCase(Locale.ROOT)))),
-        TAG('#', (key, stack) -> TagCache.getItemTags(stack).stream().anyMatch(itemTag -> itemTag.toLowerCase(Locale.ROOT).contains(key.toLowerCase(Locale.ROOT))));
+        NAME('~') {
+            @Override
+            public boolean matches(@Nullable Level level, @Nullable Player player, String key, ItemStack stack) {
+                return stack.getHoverName().getString().toLowerCase(Locale.ROOT).contains(key);
+            }
+        },
+        MOD_ID('@') {
+            @Override
+            public boolean matches(@Nullable Level level, @Nullable Player player, String key, ItemStack stack) {
+                return MekanismUtils.getModId(stack).toLowerCase(Locale.ROOT).contains(key);
+            }
+        },
+        TOOLTIP('$') {
+            @Override
+            public boolean matches(@Nullable Level level, @Nullable Player player, String key, ItemStack stack) {
+                for (Component tooltipLine : stack.getTooltipLines(Item.TooltipContext.of(level), player, Default.NORMAL)) {
+                    String tooltip = tooltipLine.getString().toLowerCase(Locale.ROOT);
+                    if (tooltip.contains(key)) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        },
+        TAG('#') {
+            @Override
+            public boolean matches(@Nullable Level level, @Nullable Player player, String key, ItemStack stack) {
+                for (String tag : TagCache.getItemTags(stack)) {
+                    if (tag.toLowerCase(Locale.ROOT).contains(key)) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        };
 
         private static final Char2ObjectMap<QueryType> charLookupMap;
 
@@ -204,25 +261,34 @@ public class SearchQueryParser {
         }
 
         private final char prefix;
-        private final BiPredicate<String, ItemStack> checker;
 
-        QueryType(char prefix, BiPredicate<String, ItemStack> checker) {
+        QueryType(char prefix) {
             this.prefix = prefix;
-            this.checker = checker;
         }
 
-        public boolean matches(String key, ItemStack stack) {
-            return checker.test(key, stack);
-        }
+        public abstract boolean matches(@Nullable Level level, @Nullable Player player, String key, ItemStack stack);
     }
 
     public static class SearchQuery implements ISearchQuery {
 
-        private final Map<QueryType, List<String>> queryStrings = new LinkedHashMap<>();
+        //TODO: Do we want to allow adding to query strings of a query type after the fact and instead force using an query set if you don't want to use parenthesis
+        private final Map<QueryType, List<String>> queryStrings = new EnumMap<>(QueryType.class);
 
         @Override
-        public boolean matches(ItemStack stack) {
-            return queryStrings.entrySet().stream().allMatch(entry -> entry.getValue().stream().anyMatch(key -> entry.getKey().matches(key, stack)));
+        public boolean test(@Nullable Level level, @Nullable Player player, ItemStack stack) {
+            for (Map.Entry<QueryType, List<String>> entry : queryStrings.entrySet()) {
+                boolean hasNoMatch = true;
+                for (String key : entry.getValue()) {
+                    if (entry.getKey().matches(level, player, key, stack)) {
+                        hasNoMatch = false;
+                        break;
+                    }
+                }
+                if (hasNoMatch) {
+                    return false;
+                }
+            }
+            return true;
         }
 
         private boolean isEmpty() {
@@ -237,20 +303,43 @@ public class SearchQueryParser {
         public String toString() {
             return queryStrings.toString();
         }
+
+        @Override
+        public boolean equals(Object o) {
+            if (o == this) {
+                return true;
+            } else if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            return queryStrings.equals(((SearchQuery) o).queryStrings);
+        }
+
+        @Override
+        public int hashCode() {
+            return queryStrings.hashCode();
+        }
     }
 
-    public static class SearchQueryList implements ISearchQuery {
+    public static class SearchQuerySet implements ISearchQuery {
 
-        private final List<SearchQuery> queries;
+        private final Set<SearchQuery> queries;
 
-        private SearchQueryList(List<SearchQuery> queries) {
+        private SearchQuerySet(Set<SearchQuery> queries) {
             this.queries = queries;
         }
 
         @Override
-        public boolean matches(ItemStack stack) {
+        public boolean test(@Nullable Level level, @Nullable Player player, ItemStack stack) {
             // allow empty query lists to match all stacks
-            return queries.isEmpty() || queries.stream().anyMatch(query -> query.matches(stack));
+            if (queries.isEmpty()) {
+                return true;
+            }
+            for (SearchQuery query : queries) {
+                if (query.test(level, player, stack)) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         @Override
@@ -258,14 +347,32 @@ public class SearchQueryParser {
             return queries.toString();
         }
 
-        protected List<SearchQuery> getQueries() {
+        protected Set<SearchQuery> getQueries() {
             return queries;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (o == this) {
+                return true;
+            } else if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            return queries.equals(((SearchQuerySet) o).queries);
+        }
+
+        @Override
+        public int hashCode() {
+            return queries.hashCode();
         }
     }
 
+    @FunctionalInterface
     public interface ISearchQuery {
 
-        boolean matches(ItemStack stack);
+        ISearchQuery INVALID = (level, player, stack) -> false;
+
+        boolean test(@Nullable Level level, @Nullable Player player, ItemStack stack);
 
         default boolean isInvalid() {
             return this == INVALID;

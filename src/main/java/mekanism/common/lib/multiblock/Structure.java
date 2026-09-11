@@ -1,15 +1,17 @@
 package mekanism.common.lib.multiblock;
 
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
+import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectSortedMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.NavigableMap;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.function.ToIntFunction;
 import mekanism.common.lib.math.voxel.BlockPosBuilder;
 import mekanism.common.lib.math.voxel.VoxelPlane;
@@ -28,8 +30,8 @@ public class Structure {
 
     private final Map<BlockPos, IMultiblockBase> nodes = new Object2ObjectOpenHashMap<>();
 
-    private final Map<Axis, NavigableMap<Integer, VoxelPlane>> minorPlaneMap = new EnumMap<>(Axis.class);
-    private final Map<Axis, NavigableMap<Integer, VoxelPlane>> planeMap = new EnumMap<>(Axis.class);
+    private final Map<Axis, Int2ObjectSortedMap<VoxelPlane>> minorPlaneMap = new EnumMap<>(Axis.class);
+    private final Map<Axis, Int2ObjectSortedMap<VoxelPlane>> planeMap = new EnumMap<>(Axis.class);
 
     private boolean valid;
 
@@ -48,7 +50,7 @@ public class Structure {
     }
 
     private void init(IMultiblockBase node) {
-        BlockPos pos = node.getTilePos();
+        BlockPos pos = node.getBlockPos();
         nodes.put(pos, node);
         for (Axis axis : Axis.AXES) {
             getMinorAxisMap(axis).put(axis.getCoord(pos), new VoxelPlane(axis, pos, node instanceof IMultiblock));
@@ -85,12 +87,12 @@ public class Structure {
         return nodes.get(pos);
     }
 
-    public NavigableMap<Integer, VoxelPlane> getMinorAxisMap(Axis axis) {
-        return minorPlaneMap.computeIfAbsent(axis, k -> new TreeMap<>(Integer::compare));
+    public Int2ObjectSortedMap<VoxelPlane> getMinorAxisMap(Axis axis) {
+        return minorPlaneMap.computeIfAbsent(axis, k -> new Int2ObjectRBTreeMap<>());
     }
 
-    public NavigableMap<Integer, VoxelPlane> getMajorAxisMap(Axis axis) {
-        return planeMap.computeIfAbsent(axis, k -> new TreeMap<>(Integer::compare));
+    public Int2ObjectSortedMap<VoxelPlane> getMajorAxisMap(Axis axis) {
+        return planeMap.computeIfAbsent(axis, k -> new Int2ObjectRBTreeMap<>());
     }
 
     public void markForUpdate(Level world, boolean invalidate) {
@@ -138,22 +140,26 @@ public class Structure {
             }
             //Merge nodes, and update their structure to point to our structure
             MultiblockManager<?> manager = getManager();
-            s.nodes.forEach((key, value) -> {
-                nodes.put(key, value);
-                value.setStructure(manager, this);
-            });
+            for (Map.Entry<BlockPos, IMultiblockBase> e : s.nodes.entrySet()) {
+                IMultiblockBase v = e.getValue();
+                nodes.put(e.getKey(), v);
+                v.setStructure(manager, this);
+            }
             //Iterate through the over the other structure's minor plane map and merge
             // the minor planes into our structure.
-            for (Entry<Axis, NavigableMap<Integer, VoxelPlane>> entry : s.minorPlaneMap.entrySet()) {
+            for (Map.Entry<Axis, Int2ObjectSortedMap<VoxelPlane>> entry : s.minorPlaneMap.entrySet()) {
                 Axis axis = entry.getKey();
-                Map<Integer, VoxelPlane> minorMap = getMinorAxisMap(axis);
-                Map<Integer, VoxelPlane> majorMap = getMajorAxisMap(axis);
-                entry.getValue().forEach((key, value) -> {
+                Int2ObjectSortedMap<VoxelPlane> minorMap = getMinorAxisMap(axis);
+                Int2ObjectSortedMap<VoxelPlane> majorMap = getMajorAxisMap(axis);
+                for (ObjectIterator<Int2ObjectMap.Entry<VoxelPlane>> iterator = Int2ObjectMaps.fastIterator(entry.getValue()); iterator.hasNext(); ) {
+                    Int2ObjectMap.Entry<VoxelPlane> e = iterator.next();
+                    int key = e.getIntKey();
+                    VoxelPlane value = e.getValue();
                     VoxelPlane majorPlane = majorMap.get(key);
                     if (majorPlane != null) {
                         //If the major map already has an entry for the position, merge them
                         majorPlane.merge(value);
-                        return;
+                        continue;
                     }
                     VoxelPlane minorPlane = minorMap.get(key);
                     if (minorPlane == null) {
@@ -170,15 +176,18 @@ public class Structure {
                             minorMap.remove(key);
                         }
                     }
-                });
+                }
             }
             //Iterate through the over the other structure's major plane map and merge
             // the major planes into our structure.
-            for (Entry<Axis, NavigableMap<Integer, VoxelPlane>> entry : s.planeMap.entrySet()) {
+            for (Map.Entry<Axis, Int2ObjectSortedMap<VoxelPlane>> entry : s.planeMap.entrySet()) {
                 Axis axis = entry.getKey();
-                Map<Integer, VoxelPlane> minorMap = getMinorAxisMap(axis);
-                Map<Integer, VoxelPlane> majorMap = getMajorAxisMap(axis);
-                entry.getValue().forEach((key, value) -> {
+                Int2ObjectSortedMap<VoxelPlane> minorMap = getMinorAxisMap(axis);
+                Int2ObjectSortedMap<VoxelPlane> majorMap = getMajorAxisMap(axis);
+                for (ObjectIterator<Int2ObjectMap.Entry<VoxelPlane>> iterator = Int2ObjectMaps.fastIterator(entry.getValue()); iterator.hasNext(); ) {
+                    Int2ObjectMap.Entry<VoxelPlane> e = iterator.next();
+                    int key = e.getIntKey();
+                    VoxelPlane value = e.getValue();
                     VoxelPlane majorPlane = majorMap.get(key);
                     if (majorPlane == null) {
                         //If the major map doesn't have an entry, copy it
@@ -194,7 +203,7 @@ public class Structure {
                         //If the major map does have an entry, merge them
                         majorPlane.merge(value);
                     }
-                });
+                }
             }
         }
     }
@@ -210,7 +219,7 @@ public class Structure {
 
     public void removeMultiblock(Level world) {
         if (multiblockData != null) {
-            multiblockData.remove(world);
+            multiblockData.remove(world, this);
             multiblockData = null;
         }
     }
@@ -233,41 +242,31 @@ public class Structure {
         } else if (node instanceof IStructuralMultiblock) {
             node.resetStructure(null);
         }
-        FormationProtocol.explore(node.getTilePos(), pos -> {
-            if (pos.equals(node.getTilePos())) {
+        FormationProtocol.explore(node.getLevel(), chunkMap, node.getBlockPos(), node, (level, chunks, start, n, pos) -> {
+            if (pos.equals(start)) {
                 return true;
             }
-            BlockEntity tile = WorldUtils.getTileEntity(node.getTileWorld(), chunkMap, pos);
-            if (tile instanceof IMultiblockBase adj && isCompatible(node, adj)) {
+            BlockEntity tile = WorldUtils.getTileEntity(level, chunks, pos);
+            if (tile instanceof IMultiblockBase adj && isCompatible(n, adj)) {
                 boolean didMerge = false;
-                if (node instanceof IStructuralMultiblock && adj instanceof IStructuralMultiblock) {
-                    Set<MultiblockManager<?>> managers = new HashSet<>();
-                    managers.addAll(((IStructuralMultiblock) node).getStructureMap().keySet());
-                    managers.addAll(((IStructuralMultiblock) adj).getStructureMap().keySet());
-                    // if both are structural, they should merge all manager structures
-                    //TODO - 1.18: Figure out what this should be as having it just be equals seems incorrect.
-                    // My guess is it should be the commented code down below but maybe it should be |= instead
+                if (n instanceof IStructuralMultiblock structuralN && adj instanceof IStructuralMultiblock structuralAdj) {
+                    Set<MultiblockManager<?>> managers = new HashSet<>(structuralN.getStructureMap().keySet());
+                    managers.addAll(structuralAdj.getStructureMap().keySet());
+                    // if both are structural, they try to merge all manager structures
                     for (MultiblockManager<?> manager : managers) {
-                        didMerge = mergeIfNecessary(node, adj, manager);
+                        didMerge |= mergeIfNecessary(n, adj, manager, true);
                     }
-                        /*if (!managers.isEmpty()) {
-                            boolean merged = true;
-                            for (MultiblockManager<?> manager : managers) {
-                                merged &= mergeIfNecessary(node, adj, manager);
-                            }
-                            didMerge = merged;
-                        }*/
-                } else if (node instanceof IStructuralMultiblock) {
+                } else if (n instanceof IStructuralMultiblock) {
                     // validate from the perspective of the IMultiblock
-                    if (!hasStructure(node, (IMultiblock<?>) adj)) {
-                        validate(adj, chunkMap);
+                    if (!hasStructure(n, (IMultiblock<?>) adj)) {
+                        validate(adj, chunks);
                     }
                     return false;
                 } else if (adj instanceof IStructuralMultiblock) {
-                    didMerge = mergeIfNecessary(node, adj, getManager(node));
+                    didMerge = mergeIfNecessary(n, adj, getManager(n), false);
                 } else { // both are regular IMultiblocks
                     // we know the structures are compatible so managers must be the same for both
-                    didMerge = mergeIfNecessary(node, adj, getManager(node));
+                    didMerge = mergeIfNecessary(n, adj, getManager(n), false);
                 }
                 return didMerge;
             }
@@ -279,7 +278,7 @@ public class Structure {
         return structural.getStructure(multiblock.getManager()) == multiblock.getStructure();
     }
 
-    private static boolean mergeIfNecessary(IMultiblockBase node, IMultiblockBase adj, MultiblockManager<?> manager) {
+    private static boolean mergeIfNecessary(IMultiblockBase node, IMultiblockBase adj, MultiblockManager<?> manager, boolean bothStructural) {
         // reset the structures if they're invalid
         Structure nodeStructure = node.getStructure(manager);
         if (!nodeStructure.isValid()) {
@@ -291,6 +290,14 @@ public class Structure {
         }
         // only merge if the structures are different
         if (!node.hasStructure(adjStructure)) {
+            if (bothStructural) {
+                //If at least one is formed, but they aren't both formed then don't merge them
+                // as it means we are placing a structural multiblock against another structural one that is already formed,
+                // so it has to be outside the bounds
+                if ((nodeStructure.getMultiblockData() == null) == (adjStructure.getMultiblockData() != null)) {
+                    return false;
+                }
+            }
             Structure changed;
             // merge into the bigger structure for efficiency
             if (nodeStructure.size() >= adjStructure.size() || (nodeStructure.getManager() != null && adjStructure.getManager() == null)) {
@@ -306,7 +313,7 @@ public class Structure {
                 changed.add(nodeStructure);
             }
             // update the changed structure
-            changed.markForUpdate(node.getTileWorld(), false);
+            changed.markForUpdate(node.getLevel(), false);
             return true;
         }
         return false;

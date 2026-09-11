@@ -1,37 +1,34 @@
 package mekanism.generators.common.config;
 
-import mekanism.api.math.FloatingLong;
 import mekanism.common.config.BaseMekanismConfig;
-import mekanism.common.config.value.CachedFloatingLongValue;
-import net.minecraftforge.common.ForgeConfigSpec;
-import net.minecraftforge.fml.config.ModConfig.Type;
+import mekanism.common.config.value.CachedLongValue;
+import net.neoforged.fml.config.ModConfig.Type;
+import net.neoforged.neoforge.common.ModConfigSpec;
 
 public class GeneratorsStorageConfig extends BaseMekanismConfig {
 
-    private final ForgeConfigSpec configSpec;
+    private final ModConfigSpec configSpec;
 
-    public final CachedFloatingLongValue heatGenerator;
-    public final CachedFloatingLongValue bioGenerator;
-    public final CachedFloatingLongValue solarGenerator;
-    public final CachedFloatingLongValue advancedSolarGenerator;
-    public final CachedFloatingLongValue windGenerator;
+    public final CachedLongValue heatGenerator;
+    public final CachedLongValue bioGenerator;
+    public final CachedLongValue solarGenerator;
+    public final CachedLongValue advancedSolarGenerator;
+    public final CachedLongValue windGenerator;
 
     GeneratorsStorageConfig() {
-        ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
-        builder.comment("Generator Energy Storage Config. This config is synced from server to client.").push("storage");
+        ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
 
-        heatGenerator = CachedFloatingLongValue.define(this, builder, "Base energy storage (Joules).", "heatGenerator",
-              FloatingLong.createConst(160_000));
-        bioGenerator = CachedFloatingLongValue.define(this, builder, "Base energy storage (Joules).", "bioGenerator",
-              FloatingLong.createConst(160_000));
-        solarGenerator = CachedFloatingLongValue.define(this, builder, "Base energy storage (Joules).", "solarGenerator",
-              FloatingLong.createConst(96_000));
-        advancedSolarGenerator = CachedFloatingLongValue.define(this, builder, "Base energy storage (Joules).", "advancedSolarGenerator",
-              FloatingLong.createConst(200_000));
-        windGenerator = CachedFloatingLongValue.define(this, builder, "Base energy storage (Joules).", "windGenerator",
-              FloatingLong.createConst(200_000));
+        heatGenerator = CachedLongValue.definedMin(this, builder, GeneratorsConfigTranslations.ENERGY_STORAGE_GENERATOR_HEAT, "heatGenerator",
+              160_000L, 1);
+        bioGenerator = CachedLongValue.definedMin(this, builder, GeneratorsConfigTranslations.ENERGY_STORAGE_GENERATOR_BIO, "bioGenerator",
+              160_000L, 1);
+        solarGenerator = CachedLongValue.definedMin(this, builder, GeneratorsConfigTranslations.ENERGY_STORAGE_GENERATOR_SOLAR, "solarGenerator",
+              96_000L, 1);
+        advancedSolarGenerator = CachedLongValue.definedMin(this, builder, GeneratorsConfigTranslations.ENERGY_STORAGE_GENERATOR_SOLAR_ADVANCED, "advancedSolarGenerator",
+              200_000L, 1);
+        windGenerator = CachedLongValue.definedMin(this, builder, GeneratorsConfigTranslations.ENERGY_STORAGE_GENERATOR_WIND, "windGenerator",
+              200_000L, 1);
 
-        builder.pop();
         configSpec = builder.build();
     }
 
@@ -41,17 +38,17 @@ public class GeneratorsStorageConfig extends BaseMekanismConfig {
     }
 
     @Override
-    public ForgeConfigSpec getConfigSpec() {
+    public String getTranslation() {
+        return "Storage Config";
+    }
+
+    @Override
+    public ModConfigSpec getConfigSpec() {
         return configSpec;
     }
 
     @Override
     public Type getConfigType() {
         return Type.SERVER;
-    }
-
-    @Override
-    public boolean addToContainer() {
-        return false;
     }
 }

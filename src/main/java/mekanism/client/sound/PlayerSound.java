@@ -3,8 +3,10 @@ package mekanism.client.sound;
 import java.lang.ref.WeakReference;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.registration.impl.SoundEventRegistryObject;
+import net.minecraft.SharedConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.AbstractTickableSoundInstance;
+import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.client.sounds.SoundEventListener;
 import net.minecraft.client.sounds.SoundManager;
 import net.minecraft.client.sounds.WeighedSoundEvents;
@@ -28,7 +30,7 @@ public abstract class PlayerSound extends AbstractTickableSoundInstance {
     private int consecutiveTicks;
 
     public PlayerSound(@NotNull Player player, @NotNull SoundEventRegistryObject<?> sound) {
-        this(player, sound.get(), 60);
+        this(player, sound.get(), 3 * SharedConstants.TICKS_PER_SECOND);
         //Set it to repeat the subtitle every 3 seconds the sound is constantly playing
     }
 
@@ -97,17 +99,21 @@ public abstract class PlayerSound extends AbstractTickableSoundInstance {
             return;
         }
 
-        if (shouldPlaySound(player)) {
+        if (shouldPlaySound(player) && player.level().tickRateManager().runsNormally()) {
             if (volume < 1.0F) {
                 // If we weren't max volume, start fading up
                 volume = Math.min(1.0F, volume + fadeUpStep);
             }
             if (consecutiveTicks % subtitleFrequency == 0) {
                 SoundManager soundHandler = Minecraft.getInstance().getSoundManager();
-                for (SoundEventListener soundEventListener : soundHandler.soundEngine.listeners) {
-                    WeighedSoundEvents soundEventAccessor = resolve(soundHandler);
-                    if (soundEventAccessor != null) {
-                        soundEventListener.onPlaySound(this, soundEventAccessor);
+                if (!soundHandler.soundEngine.listeners.isEmpty()) {
+                    float scaledVolume = Math.max(volume, 1.0F) * sound.getAttenuationDistance();
+                    float range = !relative && attenuation != SoundInstance.Attenuation.NONE ? scaledVolume : Float.POSITIVE_INFINITY;
+                    for (SoundEventListener soundEventListener : soundHandler.soundEngine.listeners) {
+                        WeighedSoundEvents soundEventAccessor = resolve(soundHandler);
+                        if (soundEventAccessor != null) {
+                            soundEventListener.onPlaySound(this, soundEventAccessor, range);
+                        }
                     }
                 }
                 consecutiveTicks = 1;
@@ -143,7 +149,6 @@ public abstract class PlayerSound extends AbstractTickableSoundInstance {
     }
 
     public enum SoundType {
-        FLAMETHROWER,
         JETPACK,
         SCUBA_MASK,
         GRAVITATIONAL_MODULATOR

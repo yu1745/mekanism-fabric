@@ -1,58 +1,37 @@
 package mekanism.common.content.network.distribution;
 
 import java.util.Collection;
-import mekanism.api.math.FloatingLong;
+import mekanism.api.annotations.NothingNullByDefault;
+import mekanism.common.content.network.distribution.EnergyTransmitterSaveTarget.CableSaveHandler;
 import mekanism.common.content.network.transmitter.UniversalCable;
-import mekanism.common.lib.distribution.SplitInfo;
-import mekanism.common.lib.distribution.Target;
 
-public class EnergyTransmitterSaveTarget extends Target<EnergyTransmitterSaveTarget.SaveHandler, FloatingLong, FloatingLong> {
+public class EnergyTransmitterSaveTarget extends EnergySaveTarget<CableSaveHandler> {
 
     public EnergyTransmitterSaveTarget(Collection<UniversalCable> transmitters) {
-        super(transmitters.size());
-        transmitters.forEach(transmitter -> addHandler(new SaveHandler(transmitter)));
+        super(transmitters.stream().map(CableSaveHandler::new).toList());
     }
 
-    @Override
-    protected void acceptAmount(EnergyTransmitterSaveTarget.SaveHandler transmitter, SplitInfo<FloatingLong> splitInfo, FloatingLong amount) {
-        transmitter.acceptAmount(splitInfo, amount);
-    }
+    @NothingNullByDefault
+    public static class CableSaveHandler extends EnergySaveTarget.SaveHandler {
 
-    @Override
-    protected FloatingLong simulate(EnergyTransmitterSaveTarget.SaveHandler transmitter, FloatingLong energyToSend) {
-        return transmitter.simulate(energyToSend);
-    }
-
-    public void saveShare() {
-        for (EnergyTransmitterSaveTarget.SaveHandler cable : handlers) {
-            cable.saveShare();
-        }
-    }
-
-    public static class SaveHandler {
-
-        private FloatingLong currentStored = FloatingLong.ZERO;
         private final UniversalCable transmitter;
 
-        public SaveHandler(UniversalCable transmitter) {
+        public CableSaveHandler(UniversalCable transmitter) {
+            super(transmitter.getCapacity());
             this.transmitter = transmitter;
         }
 
-        protected void acceptAmount(SplitInfo<FloatingLong> splitInfo, FloatingLong amount) {
-            amount = amount.min(transmitter.getCapacityAsFloatingLong().subtract(currentStored));
-            currentStored = currentStored.plusEqual(amount);
-            splitInfo.send(amount);
-        }
-
-        protected FloatingLong simulate(FloatingLong energyToSend) {
-            return energyToSend.copy().min(transmitter.getCapacityAsFloatingLong().subtract(currentStored));
-        }
-
-        protected void saveShare() {
-            if (!currentStored.isZero() || !transmitter.lastWrite.isZero()) {
+        @Override
+        protected void save(long currentStored) {
+            if (currentStored != 0L || transmitter.lastWrite != 0L) {
                 transmitter.lastWrite = currentStored;
                 transmitter.getTransmitterTile().markForSave();
             }
+        }
+
+        @Override
+        protected long getStored() {
+            return transmitter.getShare();
         }
     }
 }

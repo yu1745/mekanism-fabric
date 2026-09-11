@@ -1,42 +1,41 @@
 package mekanism.client.gui.element.custom.module;
 
-import java.util.Optional;
 import java.util.function.Consumer;
 import mekanism.api.gear.IModule;
-import mekanism.api.gear.config.ModuleColorData;
+import mekanism.api.gear.IModuleContainer;
+import mekanism.api.gear.IModuleHelper;
+import mekanism.api.gear.config.ModuleColorConfig;
 import mekanism.client.gui.GuiModuleTweaker;
 import mekanism.client.gui.GuiUtils;
 import mekanism.client.gui.element.text.GuiTextField;
 import mekanism.client.gui.element.window.GuiColorWindow;
+import mekanism.client.render.IFancyFontRenderer.TextAlignment;
 import mekanism.common.MekanismLang;
-import mekanism.common.content.gear.Module;
-import mekanism.common.content.gear.ModuleConfigItem;
-import mekanism.common.content.gear.ModuleHelper;
 import mekanism.common.content.gear.shared.ModuleColorModulationUnit;
 import mekanism.common.lib.Color;
 import mekanism.common.registries.MekanismModules;
 import mekanism.common.util.text.TextUtils;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
-class ColorSelection extends MiniElement {
+class ColorSelection extends MiniElement<Integer> {
 
     private static final int OFFSET_Y = 1;
     private final int OFFSET_X;
+    private final boolean supportsAlpha;
 
-    private final ModuleConfigItem<Integer> data;
     @Nullable
     private final GuiModuleTweaker.ArmorPreview armorPreview;
-    private final boolean handlesAlpha;
 
-    ColorSelection(GuiModuleScreen parent, ModuleConfigItem<Integer> data, int xPos, int yPos, int dataIndex, boolean handlesAlpha, @Nullable GuiModuleTweaker.ArmorPreview armorPreview) {
-        super(parent, xPos, yPos, dataIndex);
-        this.data = data;
-        this.handlesAlpha = handlesAlpha;
+    ColorSelection(GuiModuleScreen parent, ModuleColorConfig data, Component description, int xPos, int yPos, @Nullable GuiModuleTweaker.ArmorPreview armorPreview) {
+        super(parent, data, description, xPos, yPos);
         this.armorPreview = armorPreview;
+        this.supportsAlpha = data.supportsAlpha();
         OFFSET_X = this.parent.getScreenWidth() - 26;
     }
 
@@ -64,14 +63,15 @@ class ColorSelection extends MiniElement {
     @Override
     protected void renderForeground(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         int textColor = parent.screenTextColor();
-        parent.drawTextWithScale(guiGraphics, data.getDescription(), getRelativeX() + 3, getRelativeY(), textColor, 0.8F);
+        parent.drawScaledScrollingString(guiGraphics, description, xPos, yPos, TextAlignment.LEFT, textColor, OFFSET_X, 3, false, 0.8F);
         String hex;
-        if (handlesAlpha) {
+        if (supportsAlpha) {
             hex = TextUtils.hex(false, 4, data.get());
         } else {
             hex = TextUtils.hex(false, 3, getColor().rgb());
         }
-        parent.drawTextExact(guiGraphics, MekanismLang.GENERIC_HEX.translate(hex), getRelativeX() + 3, getRelativeY() + 11, textColor);
+        //TODO: Do we want to draw the hex in the RGB color it is set to (intentionally ignore alpha)
+        parent.drawScrollingString(guiGraphics, MekanismLang.GENERIC_HEX.translate(hex), xPos, yPos + 11, TextAlignment.LEFT, textColor, OFFSET_X, 3, false);
     }
 
     @Override
@@ -80,31 +80,27 @@ class ColorSelection extends MiniElement {
             Consumer<Color> updatePreviewColor = null;
             Runnable previewReset = null;
             IModule<?> currentModule = parent.getCurrentModule();
-            if (armorPreview != null && data.matches(MekanismModules.COLOR_MODULATION_UNIT, ModuleColorModulationUnit.COLOR_CONFIG_KEY) && currentModule != null) {
-                ItemStack stack = currentModule.getContainer().copy();
+            if (armorPreview != null && data.name().equals(ModuleColorModulationUnit.COLOR) && currentModule != null) {
+                ItemStack stack = parent.getContainerStack().copy();
                 if (stack.getItem() instanceof ArmorItem armorItem) {
-                    Module<ModuleColorModulationUnit> colorModulation = ModuleHelper.get().load(stack, MekanismModules.COLOR_MODULATION_UNIT);
-                    if (colorModulation != null) {
-                        Optional<ModuleConfigItem<Integer>> matchedData = colorModulation.getConfigItems().stream()
-                              .filter(e -> e.getName().equals(ModuleColorModulationUnit.COLOR_CONFIG_KEY) && e.getData() instanceof ModuleColorData)
-                              .map(e -> (ModuleConfigItem<Integer>) e)
-                              .findFirst();
-                        if (matchedData.isPresent()) {
-                            //Ensure the preview has been initialized
-                            armorPreview.get();
-                            EquipmentSlot slot = armorItem.getEquipmentSlot();
-                            //Replace the current preview with our copy
-                            armorPreview.updatePreview(slot, stack);
-                            updatePreviewColor = c -> matchedData.get().set(c.argb());
-                            previewReset = () -> armorPreview.resetToDefault(slot);
+                    //Ensure the preview has been initialized
+                    armorPreview.get();
+                    EquipmentSlot slot = armorItem.getEquipmentSlot();
+                    //Replace the current preview with our copy
+                    armorPreview.updatePreview(slot, stack);
+                    updatePreviewColor = c -> {
+                        IModuleContainer moduleContainer = IModuleHelper.INSTANCE.getModuleContainer(stack);
+                        if (moduleContainer != null) {//Note: Should always be present
+                            //Note: We can use the source data to ensure we have the correct config option, as with does not mutate it
+                            moduleContainer.replaceModuleConfig(Minecraft.getInstance().level.registryAccess(), stack, MekanismModules.COLOR_MODULATION_UNIT,
+                                  data.with(c.argb()));
                         }
-                    }
+                    };
+                    previewReset = () -> armorPreview.resetToDefault(slot);
                 }
             }
-            GuiColorWindow window = new GuiColorWindow(parent.gui(), parent.getGuiWidth() / 2 - 160 / 2, parent.getGuiHeight() / 2 - 120 / 2, handlesAlpha,
-                  color -> setData(data, color.argb()), armorPreview, updatePreviewColor, previewReset);
-            window.setColor(getColor());
-            parent.gui().addWindow(window);
+            parent.gui().addWindow(new GuiColorWindow(parent.gui(), (parent.getGuiWidth() - 160) / 2, (parent.getGuiHeight() - 120) / 2, supportsAlpha,
+                              getColor(), color -> setData(color.argb()), armorPreview, updatePreviewColor, previewReset));
         }
     }
 }

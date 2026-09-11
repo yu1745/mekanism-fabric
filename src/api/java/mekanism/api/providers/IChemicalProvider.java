@@ -1,29 +1,34 @@
 package mekanism.api.providers;
 
+import mekanism.api.MekanismAPI;
 import mekanism.api.chemical.Chemical;
 import mekanism.api.chemical.ChemicalStack;
 import net.minecraft.MethodsReturnNonnullByDefault;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
+@SuppressWarnings("removal")
 @MethodsReturnNonnullByDefault
-public interface IChemicalProvider<CHEMICAL extends Chemical<CHEMICAL>> extends IBaseProvider {
+@Deprecated(forRemoval = true, since = "10.7.11")
+public interface IChemicalProvider extends IBaseProvider {
 
     /**
      * Gets the chemical this provider represents.
      */
-    CHEMICAL getChemical();
+    Chemical getChemical();
 
     /**
      * Creates a chemical stack of the given size using the chemical this provider represents.
      *
      * @param size Size of the stack.
      */
-    ChemicalStack<CHEMICAL> getStack(long size);
+    default ChemicalStack getStack(long size) {
+        return new ChemicalStack(getChemical(), size);
+    }
 
     @Override
     default ResourceLocation getRegistryName() {
-        return getChemical().getRegistryName();
+        return MekanismAPI.CHEMICAL_REGISTRY.getKey(getChemical());
     }
 
     @Override

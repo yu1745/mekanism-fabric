@@ -6,6 +6,7 @@ import mekanism.client.gui.element.GuiDigitalSwitch;
 import mekanism.client.gui.element.GuiDigitalSwitch.SwitchType;
 import mekanism.client.gui.element.button.FilterButton;
 import mekanism.client.gui.element.button.MekanismImageButton;
+import mekanism.client.gui.element.button.TooltipToggleButton;
 import mekanism.client.gui.element.button.TranslationButton;
 import mekanism.client.gui.element.slot.GuiSlot;
 import mekanism.client.gui.element.slot.SlotType;
@@ -14,8 +15,8 @@ import mekanism.client.gui.element.window.filter.miner.GuiMinerFilerSelect;
 import mekanism.client.gui.element.window.filter.miner.GuiMinerItemStackFilter;
 import mekanism.client.gui.element.window.filter.miner.GuiMinerModIDFilter;
 import mekanism.client.gui.element.window.filter.miner.GuiMinerTagFilter;
-import mekanism.client.jei.interfaces.IJEIGhostTarget.IGhostBlockItemConsumer;
-import mekanism.common.Mekanism;
+import mekanism.client.gui.tooltip.TooltipUtils;
+import mekanism.client.recipe_viewer.interfaces.IRecipeViewerGhostTarget.IGhostBlockItemConsumer;
 import mekanism.common.MekanismLang;
 import mekanism.common.base.TagCache;
 import mekanism.common.config.MekanismConfig;
@@ -29,11 +30,12 @@ import mekanism.common.content.miner.MinerModIDFilter;
 import mekanism.common.content.miner.MinerTagFilter;
 import mekanism.common.inventory.container.tile.MekanismTileContainer;
 import mekanism.common.inventory.warning.WarningTracker.WarningType;
-import mekanism.common.network.to_server.PacketGuiButtonPress;
-import mekanism.common.network.to_server.PacketGuiButtonPress.ClickedTileButton;
+import mekanism.common.network.PacketUtils;
 import mekanism.common.network.to_server.PacketGuiInteract;
 import mekanism.common.network.to_server.PacketGuiInteract.GuiInteraction;
 import mekanism.common.network.to_server.PacketGuiInteract.GuiInteractionItem;
+import mekanism.common.network.to_server.button.PacketTileButtonPress;
+import mekanism.common.network.to_server.button.PacketTileButtonPress.ClickedTileButton;
 import mekanism.common.tile.machine.TileEntityDigitalMiner;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.MekanismUtils.ResourceType;
@@ -69,21 +71,27 @@ public class GuiDigitalMinerConfig extends GuiFilterHolder<MinerFilter<?>, TileE
     @Override
     protected void addGuiElements() {
         super.addGuiElements();
-        addRenderableWidget(new TranslationButton(this, 56, 136, 96, 20, MekanismLang.BUTTON_NEW_FILTER,
-              () -> addWindow(new GuiMinerFilerSelect(this, tile))));
+        addRenderableWidget(new TranslationButton(this, 96, 136, 156, 20, MekanismLang.BUTTON_NEW_FILTER, (element, mouseX, mouseY) -> {
+            GuiDigitalMinerConfig gui = (GuiDigitalMinerConfig) element.gui();
+            gui.addWindow(new GuiMinerFilerSelect(gui, gui.tile));
+            return true;
+        }));
         addRenderableWidget(new MekanismImageButton(this, 5, 5, 11, 14, getButtonLocation("back"),
-              () -> Mekanism.packetHandler().sendToServer(new PacketGuiButtonPress(ClickedTileButton.BACK_BUTTON, tile)), getOnHover(MekanismLang.BACK)));
-        addRenderableWidget(new GuiDigitalSwitch(this, 10, 115, INVERSE, tile::getInverse, MekanismLang.MINER_INVERSE.translate(),
-              () -> Mekanism.packetHandler().sendToServer(new PacketGuiInteract(GuiInteraction.INVERSE_BUTTON, tile)), SwitchType.LEFT_ICON));
+              (element, mouseX, mouseY) -> PacketUtils.sendToServer(new PacketTileButtonPress(ClickedTileButton.BACK_BUTTON, ((GuiDigitalMinerConfig) element.gui()).tile))))
+              .setTooltip(TooltipUtils.BACK);
+        addRenderableWidget(new GuiDigitalSwitch(this, 10, 115, INVERSE, tile::getInverse, (element, mouseX, mouseY) ->
+              PacketUtils.sendToServer(new PacketGuiInteract(GuiInteraction.INVERSE_BUTTON, ((GuiDigitalMinerConfig) element.gui()).tile)), SwitchType.LEFT_ICON))
+              .setTooltip(MekanismLang.MINER_INVERSE);
         addRenderableWidget(new GuiSlot(SlotType.NORMAL, this, 13, 135)).setRenderAboveSlots().setRenderHover(true)
               .stored(() -> new ItemStack(tile.getInverseReplaceTarget())).click((element, mouseX, mouseY) -> {
-                  if (Screen.hasShiftDown()) {
-                      updateInverseReplaceTarget(Items.AIR);
+                  GuiDigitalMinerConfig gui = (GuiDigitalMinerConfig) element.gui();
+                  if (hasShiftDown()) {
+                      gui.updateInverseReplaceTarget(Items.AIR);
                       return true;
                   } else {
-                      ItemStack stack = getCarriedItem();
+                      ItemStack stack = gui.getCarriedItem();
                       if (!stack.isEmpty() && stack.getItem() instanceof BlockItem) {
-                          updateInverseReplaceTarget(stack.getItem());
+                          gui.updateInverseReplaceTarget(stack.getItem());
                           return true;
                       }
                   }
@@ -92,18 +100,18 @@ public class GuiDigitalMinerConfig extends GuiFilterHolder<MinerFilter<?>, TileE
                   updateInverseReplaceTarget(((ItemStack) ingredient).getItem());
                   minecraft.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
               });
-        addRenderableWidget(new MekanismImageButton(this, 35, 137, 14, 16, getButtonLocation("exclamation"),
-              () -> Mekanism.packetHandler().sendToServer(new PacketGuiInteract(GuiInteraction.INVERSE_REQUIRES_REPLACEMENT_BUTTON, tile)),
-              getOnHover(() -> MekanismLang.MINER_REQUIRE_REPLACE_INVERSE.translate(YesNo.of(tile.getInverseRequiresReplacement())))));
-        radiusField = addRenderableWidget(new GuiTextField(this, 13, 49, 38, 11));
+        addRenderableWidget(new TooltipToggleButton(this, 35, 137, 14, 16, getButtonLocation("exclamation"), tile::getInverseRequiresReplacement,
+              (element, mouseX, mouseY) -> PacketUtils.sendToServer(new PacketGuiInteract(GuiInteraction.INVERSE_REQUIRES_REPLACEMENT_BUTTON, ((GuiDigitalMinerConfig) element.gui()).tile)),
+              MekanismLang.MINER_REQUIRE_REPLACE_INVERSE.translate(YesNo.YES), MekanismLang.MINER_REQUIRE_REPLACE_INVERSE.translate(YesNo.NO)));
+        radiusField = addRenderableWidget(new GuiTextField(this, 13, 45, 38, 11));
         radiusField.setMaxLength(Integer.toString(MekanismConfig.general.minerMaxRadius.get()).length());
         radiusField.setInputValidator(InputValidator.DIGIT);
         radiusField.configureDigitalBorderInput(() -> setText(radiusField, GuiInteraction.SET_RADIUS));
-        minField = addRenderableWidget(new GuiTextField(this, 13, 74, 38, 11));
+        minField = addRenderableWidget(new GuiTextField(this, 13, 71, 38, 11));
         minField.setMaxLength(maxHeightLength);
         minField.setInputValidator(InputValidator.DIGIT_OR_NEGATIVE);
         minField.configureDigitalBorderInput(() -> setText(minField, GuiInteraction.SET_MIN_Y));
-        maxField = addRenderableWidget(new GuiTextField(this, 13, 99, 38, 11));
+        maxField = addRenderableWidget(new GuiTextField(this, 13, 98, 38, 11));
         maxField.setMaxLength(maxHeightLength);
         maxField.setInputValidator(InputValidator.DIGIT_OR_NEGATIVE);
         maxField.configureDigitalBorderInput(() -> setText(maxField, GuiInteraction.SET_MAX_Y));
@@ -114,7 +122,7 @@ public class GuiDigitalMinerConfig extends GuiFilterHolder<MinerFilter<?>, TileE
     }
 
     private void updateInverseReplaceTarget(Item target) {
-        Mekanism.packetHandler().sendToServer(new PacketGuiInteract(GuiInteractionItem.DIGITAL_MINER_INVERSE_REPLACE_ITEM, tile, new ItemStack(target)));
+        PacketUtils.sendToServer(new PacketGuiInteract(GuiInteractionItem.DIGITAL_MINER_INVERSE_REPLACE_ITEM, tile, new ItemStack(target)));
     }
 
     @Override
@@ -125,23 +133,11 @@ public class GuiDigitalMinerConfig extends GuiFilterHolder<MinerFilter<?>, TileE
     @Override
     protected void drawForegroundText(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY) {
         super.drawForegroundText(guiGraphics, mouseX, mouseY);
-        renderTitleText(guiGraphics);
-        drawScaledTextScaledBound(guiGraphics, MekanismLang.FILTERS.translate(), 14, 22, screenTextColor(), 36, 0.8F);
-        drawScaledTextScaledBound(guiGraphics, MekanismLang.FILTER_COUNT.translate(getFilterManager().count()), 14, 31, screenTextColor(), 36, 0.8F);
-        drawScaledTextScaledBound(guiGraphics, MekanismLang.MINER_RADIUS.translate(tile.getRadius()), 14, 40, screenTextColor(), 36, 0.8F);
-        drawScaledTextScaledBound(guiGraphics, MekanismLang.MIN.translate(tile.getMinY()), 14, 65, screenTextColor(), 36, 0.8F);
-        drawScaledTextScaledBound(guiGraphics, MekanismLang.MAX.translate(tile.getMaxY()), 14, 90, screenTextColor(), 36, 0.8F);
-    }
-
-    @Override
-    public void drawTitleText(GuiGraphics guiGraphics, Component text, float y) {
-        //Adjust spacing for back button
-        int leftShift = 11;
-        int xSize = getXSize() - leftShift;
-        int maxLength = xSize - 12;
-        float textWidth = getStringWidth(text);
-        float scale = Math.min(1, maxLength / textWidth);
-        drawScaledCenteredText(guiGraphics, text, leftShift + xSize / 2F, y, titleTextColor(), scale);
+        renderTitleTextWithOffset(guiGraphics, 14);//Adjust spacing for back button
+        drawScreenText(guiGraphics, MekanismLang.FILTER_COUNT.translate(getFilterManager().count()), 5);
+        drawScreenText(guiGraphics, MekanismLang.MINER_RADIUS.translate(tile.getRadius()), 18);
+        drawScreenText(guiGraphics, MekanismLang.MIN_DIGITAL_MINER.translate(tile.getMinY()), 44);
+        drawScreenText(guiGraphics, MekanismLang.MAX_DIGITAL_MINER.translate(tile.getMaxY()), 71);
     }
 
     @Override
@@ -164,7 +160,7 @@ public class GuiDigitalMinerConfig extends GuiFilterHolder<MinerFilter<?>, TileE
     private void setText(GuiTextField field, GuiInteraction interaction) {
         if (!field.getText().isEmpty()) {
             try {
-                Mekanism.packetHandler().sendToServer(new PacketGuiInteract(interaction, tile, Integer.parseInt(field.getText())));
+                PacketUtils.sendToServer(new PacketGuiInteract(interaction, tile, Integer.parseInt(field.getText())));
             } catch (NumberFormatException ignored) {//Might not be valid if multiple negative signs
             }
             field.setText("");

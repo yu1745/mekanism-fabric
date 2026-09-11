@@ -1,27 +1,37 @@
 package mekanism.client.texture;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import mekanism.api.MekanismAPI;
 import mekanism.api.chemical.Chemical;
 import mekanism.common.registration.impl.FluidDeferredRegister;
 import mekanism.common.registration.impl.FluidDeferredRegister.MekanismFluidType;
-import mekanism.common.registration.impl.FluidRegistryObject;
 import net.minecraft.client.renderer.texture.atlas.sources.DirectoryLister;
 import net.minecraft.client.renderer.texture.atlas.sources.SingleFile;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.data.PackOutput;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.common.data.ExistingFileHelper;
-import net.minecraftforge.common.data.SpriteSourceProvider;
-import net.minecraftforge.registries.IForgeRegistry;
+import net.neoforged.neoforge.common.data.ExistingFileHelper;
+import net.neoforged.neoforge.common.data.SpriteSourceProvider;
+import net.neoforged.neoforge.fluids.FluidType;
 
 public abstract class BaseSpriteSourceProvider extends SpriteSourceProvider {
 
     private final Set<ResourceLocation> trackedSingles = new HashSet<>();
 
-    protected BaseSpriteSourceProvider(PackOutput output, String modid, ExistingFileHelper fileHelper) {
-        super(output, fileHelper, modid);
+    protected BaseSpriteSourceProvider(PackOutput output, String modid, ExistingFileHelper fileHelper, CompletableFuture<Provider> lookupProvider) {
+        super(output, lookupProvider, modid, fileHelper);
+    }
+
+    protected void addFiles(SourceList atlas, List<ResourceLocation> resourceLocations) {
+        addFiles(atlas, resourceLocations.stream().sorted(ResourceLocation::compareNamespaced).toArray(ResourceLocation[]::new));
     }
 
     protected void addFiles(SourceList atlas, ResourceLocation... resourceLocations) {
@@ -35,26 +45,26 @@ public abstract class BaseSpriteSourceProvider extends SpriteSourceProvider {
 
     //TODO - 1.20: Re-evaluate doing this
     protected void addChemicalSprites(SourceList atlas) {
-        addChemicalSprites(atlas, MekanismAPI.gasRegistry());
-        addChemicalSprites(atlas, MekanismAPI.infuseTypeRegistry());
-        addChemicalSprites(atlas, MekanismAPI.pigmentRegistry());
-        addChemicalSprites(atlas, MekanismAPI.slurryRegistry());
-    }
-
-    private <CHEMICAL extends Chemical<CHEMICAL>> void addChemicalSprites(SourceList atlas, IForgeRegistry<CHEMICAL> chemicalRegistry) {
-        for (Chemical<?> chemical : chemicalRegistry.getValues()) {
-            //TODO - 1.20: Evaluate this
-            if (chemical.getRegistryName().getNamespace().equals(modid)) {
-                addFiles(atlas, chemical.getIcon());
+        List<ResourceLocation> icons = new ArrayList<>();
+        for (Map.Entry<ResourceKey<Chemical>, Chemical> entry : MekanismAPI.CHEMICAL_REGISTRY.entrySet()) {
+            if (entry.getKey().location().getNamespace().equals(modid)) {
+                icons.add(entry.getValue().getIcon());
             }
         }
+        addFiles(atlas, icons);
     }
 
     protected void addFluids(SourceList atlas, FluidDeferredRegister register) {
-        for (FluidRegistryObject<? extends MekanismFluidType, ?, ?, ?, ?> fluidRO : register.getAllFluids()) {
-            MekanismFluidType fluidType = fluidRO.getFluidType();
-            addFiles(atlas, fluidType.stillTexture, fluidType.flowingTexture, fluidType.overlayTexture);
+        List<ResourceLocation> icons = new ArrayList<>();
+        for (Holder<FluidType> holder : register.getFluidTypeEntries()) {
+            //Note: This should always be the case
+            if (holder.value() instanceof MekanismFluidType fluidType) {
+                icons.add(fluidType.stillTexture);
+                icons.add(fluidType.flowingTexture);
+                icons.add(fluidType.overlayTexture);
+            }
         }
+        addFiles(atlas, icons);
     }
 
     protected void addDirectory(SourceList atlas, String directory, String spritePrefix) {

@@ -1,12 +1,18 @@
 package mekanism.api.tier;
 
+import io.netty.buffer.ByteBuf;
 import java.util.Locale;
+import java.util.function.IntFunction;
 import mekanism.api.SupportsColorMap;
-import mekanism.api.math.MathUtils;
 import net.minecraft.network.chat.TextColor;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.util.ByIdMap;
+import net.minecraft.util.FastColor;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.level.material.MapColor;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * The default tiers used in Mekanism.
@@ -20,12 +26,24 @@ public enum BaseTier implements StringRepresentable, SupportsColorMap {
     ULTIMATE("Ultimate", new int[]{247, 135, 255}, MapColor.COLOR_MAGENTA),
     CREATIVE("Creative", new int[]{88, 88, 88}, MapColor.TERRACOTTA_CYAN);
 
-    private static final BaseTier[] TIERS = values();
+    /**
+     * Gets a tier by index, wrapping for out of bounds indices.
+     *
+     * @since 10.6.0
+     */
+    public static final IntFunction<BaseTier> BY_ID = ByIdMap.continuous(BaseTier::ordinal, values(), ByIdMap.OutOfBoundsStrategy.WRAP);
+    /**
+     * Stream codec for syncing tiers by index.
+     *
+     * @since 10.6.0
+     */
+    public static final StreamCodec<ByteBuf, BaseTier> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, BaseTier::ordinal);
 
     private final String name;
     private final MapColor mapColor;
     private TextColor textColor;
     private int[] rgbCode;
+    private int argb;
 
     BaseTier(String name, int[] rgbCode, MapColor mapColor) {
         this.name = name;
@@ -56,9 +74,12 @@ public enum BaseTier implements StringRepresentable, SupportsColorMap {
         return mapColor;
     }
 
+    @Override
+    public int getPackedColor() {
+        return argb;
+    }
+
     /**
-     * {@inheritDoc}
-     *
      * @apiNote Modifying the returned array will result in this color object changing the color it represents, and should not be done.
      */
     @Override
@@ -67,16 +88,14 @@ public enum BaseTier implements StringRepresentable, SupportsColorMap {
     }
 
     /**
-     * {@inheritDoc}
-     *
      * @apiNote This method is mostly for <strong>INTERNAL</strong> usage.
-     *
      * @since 10.4.0
      */
     @Override
     public void setColorFromAtlas(int[] color) {
         this.rgbCode = color;
-        this.textColor = TextColor.fromRgb(rgbCode[0] << 16 | rgbCode[1] << 8 | rgbCode[2]);
+        this.argb = FastColor.ARGB32.color(rgbCode[0], rgbCode[1], rgbCode[2]);
+        this.textColor = TextColor.fromRgb(argb);
     }
 
     /**
@@ -95,11 +114,23 @@ public enum BaseTier implements StringRepresentable, SupportsColorMap {
     }
 
     /**
-     * Gets a tier by index.
+     * Helper to lookup what base tier corresponds to the given integer value.
      *
-     * @param index Index of the tier.
+     * @param tier Ordinal of the tier level to get.
+     *
+     * @return the corresponding Base Tier.
+     *
+     * @since 10.7.11
      */
-    public static BaseTier byIndexStatic(int index) {
-        return MathUtils.getByIndexMod(TIERS, index);
+    @Nullable
+    public static BaseTier getTier(int tier) {
+        return switch (tier) {
+            case 0 -> BASIC;
+            case 1 -> ADVANCED;
+            case 2 -> ELITE;
+            case 3 -> ULTIMATE;
+            case 4 -> CREATIVE;
+            default -> null;
+        };
     }
 }

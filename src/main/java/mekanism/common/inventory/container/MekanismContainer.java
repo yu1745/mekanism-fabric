@@ -11,11 +11,6 @@ import java.util.Objects;
 import java.util.UUID;
 import mekanism.api.Action;
 import mekanism.api.chemical.ChemicalStack;
-import mekanism.api.chemical.gas.GasStack;
-import mekanism.api.chemical.infuse.InfusionStack;
-import mekanism.api.chemical.pigment.PigmentStack;
-import mekanism.api.chemical.slurry.SlurryStack;
-import mekanism.api.math.FloatingLong;
 import mekanism.common.Mekanism;
 import mekanism.common.inventory.container.slot.ArmorSlot;
 import mekanism.common.inventory.container.slot.HotBarSlot;
@@ -29,10 +24,10 @@ import mekanism.common.inventory.container.sync.ISyncableData.DirtyType;
 import mekanism.common.inventory.container.sync.SyncableBlockPos;
 import mekanism.common.inventory.container.sync.SyncableBoolean;
 import mekanism.common.inventory.container.sync.SyncableByte;
+import mekanism.common.inventory.container.sync.SyncableByteArray;
 import mekanism.common.inventory.container.sync.SyncableDouble;
 import mekanism.common.inventory.container.sync.SyncableEnum;
 import mekanism.common.inventory.container.sync.SyncableFloat;
-import mekanism.common.inventory.container.sync.SyncableFloatingLong;
 import mekanism.common.inventory.container.sync.SyncableFluidStack;
 import mekanism.common.inventory.container.sync.SyncableFrequency;
 import mekanism.common.inventory.container.sync.SyncableInt;
@@ -41,19 +36,18 @@ import mekanism.common.inventory.container.sync.SyncableLong;
 import mekanism.common.inventory.container.sync.SyncableRegistryEntry;
 import mekanism.common.inventory.container.sync.SyncableShort;
 import mekanism.common.inventory.container.sync.chemical.SyncableChemicalStack;
-import mekanism.common.inventory.container.sync.chemical.SyncableGasStack;
-import mekanism.common.inventory.container.sync.chemical.SyncableInfusionStack;
-import mekanism.common.inventory.container.sync.chemical.SyncablePigmentStack;
-import mekanism.common.inventory.container.sync.chemical.SyncableSlurryStack;
+import mekanism.common.inventory.container.sync.list.SyncableCollection;
 import mekanism.common.inventory.container.sync.list.SyncableList;
-import mekanism.common.lib.frequency.Frequency;
+import mekanism.common.network.PacketUtils;
 import mekanism.common.network.to_client.container.PacketUpdateContainer;
 import mekanism.common.network.to_client.container.property.PropertyData;
 import mekanism.common.network.to_server.PacketWindowSelect;
 import mekanism.common.registration.impl.ContainerTypeRegistryObject;
 import mekanism.common.util.EnumUtils;
-import mekanism.common.util.RegistryUtils;
+import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Inventory;
@@ -62,7 +56,9 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.fluids.FluidStack;
+import net.minecraft.world.level.Level;
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -98,18 +94,18 @@ public abstract class MekanismContainer extends AbstractContainerMenu implements
     protected MekanismContainer(ContainerTypeRegistryObject<?> type, int id, Inventory inv) {
         super(type.get(), id);
         this.inv = inv;
-        if (!isRemote()) {
+        if (!getLevel().isClientSide()) {
             //Only keep track of uuid based selected grids on the server (we use a size of one as for the most part containers are actually 1:1)
             selectedWindows = new HashMap<>(1);
         }
     }
 
-    public boolean isRemote() {
-        return inv.player.level().isClientSide;
-    }
-
     public UUID getPlayerUUID() {
         return inv.player.getUUID();
+    }
+
+    public Level getLevel() {
+        return inv.player.level();
     }
 
     @NotNull
@@ -172,7 +168,7 @@ public abstract class MekanismContainer extends AbstractContainerMenu implements
             if (!insertableSlot.canMergeWith(stack)) {
                 return false;
             }
-            SelectedWindowData selectedWindow = isRemote() ? getSelectedWindow() : getSelectedWindow(getPlayerUUID());
+            SelectedWindowData selectedWindow = getLevel().isClientSide() ? getSelectedWindow() : getSelectedWindow(getPlayerUUID());
             return insertableSlot.exists(selectedWindow) && super.canTakeItemForPickAll(stack, slot);
         }
         return super.canTakeItemForPickAll(stack, slot);
@@ -226,7 +222,7 @@ public abstract class MekanismContainer extends AbstractContainerMenu implements
             y += 18;
         }
         if (offhandOffset != -1) {
-            addSlot(new OffhandSlot(inv, 40, x, y + offhandOffset));
+            addSlot(new OffhandSlot(inv, 40, x, y + offhandOffset, inv.player));
         }
     }
 
@@ -250,8 +246,6 @@ public abstract class MekanismContainer extends AbstractContainerMenu implements
     }
 
     /**
-     * {@inheritDoc}
-     *
      * @return The contents in this slot AFTER transferring items away.
      */
     @NotNull
@@ -442,7 +436,7 @@ public abstract class MekanismContainer extends AbstractContainerMenu implements
     public void setSelectedWindow(@Nullable SelectedWindowData selectedWindow) {
         if (!Objects.equals(this.selectedWindow, selectedWindow)) {
             this.selectedWindow = selectedWindow;
-            Mekanism.packetHandler().sendToServer(new PacketWindowSelect(this.selectedWindow));
+            PacketUtils.sendToServer(new PacketWindowSelect(this.selectedWindow));
         }
     }
 
@@ -535,7 +529,7 @@ public abstract class MekanismContainer extends AbstractContainerMenu implements
             return trackedData.get(property);
         }
         Mekanism.logger.warn("Received out of bounds window property {} for container {}. There are currently {} tracked properties.", property,
-              RegistryUtils.getName(getType()), trackedData.size());
+              Util.getRegisteredName(BuiltInRegistries.MENU, getType()), trackedData.size());
         return null;
     }
 
@@ -557,8 +551,6 @@ public abstract class MekanismContainer extends AbstractContainerMenu implements
         ISyncableData data = getTrackedData(property);
         if (data instanceof SyncableShort syncable) {
             syncable.set(value);
-        } else if (data instanceof SyncableFloatingLong syncable) {
-            syncable.setDecimal(value);
         }
     }
 
@@ -572,6 +564,8 @@ public abstract class MekanismContainer extends AbstractContainerMenu implements
             syncable.set(value);
         } else if (data instanceof SyncableItemStack syncable) {
             syncable.set(value);
+        } else if (data instanceof SyncableRegistryEntry<?> syncable) {
+            syncable.setFromId(value);
         }
     }
 
@@ -579,7 +573,7 @@ public abstract class MekanismContainer extends AbstractContainerMenu implements
         ISyncableData data = getTrackedData(property);
         if (data instanceof SyncableLong syncable) {
             syncable.set(value);
-        } else if (data instanceof SyncableChemicalStack<?, ?> syncable) {
+        } else if (data instanceof SyncableChemicalStack syncable) {
             syncable.set(value);
         }
     }
@@ -619,44 +613,21 @@ public abstract class MekanismContainer extends AbstractContainerMenu implements
         }
     }
 
-    public <V> void handleWindowProperty(short property, @NotNull V value) {
+    public void handleWindowProperty(short property, @NotNull ChemicalStack value) {
         ISyncableData data = getTrackedData(property);
-        if (data instanceof SyncableRegistryEntry) {
-            ((SyncableRegistryEntry<V>) data).set(value);
-        }
-    }
-
-    public <STACK extends ChemicalStack<?>> void handleWindowProperty(short property, @NotNull STACK value) {
-        ISyncableData data = getTrackedData(property);
-        if (data instanceof SyncableGasStack syncable && value instanceof GasStack stack) {
-            syncable.set(stack);
-        } else if (data instanceof SyncableInfusionStack syncable && value instanceof InfusionStack stack) {
-            syncable.set(stack);
-        } else if (data instanceof SyncablePigmentStack syncable && value instanceof PigmentStack stack) {
-            syncable.set(stack);
-        } else if (data instanceof SyncableSlurryStack syncable && value instanceof SlurryStack stack) {
-            syncable.set(stack);
-        }
-    }
-
-    public <FREQUENCY extends Frequency> void handleWindowProperty(short property, @Nullable FREQUENCY value) {
-        ISyncableData data = getTrackedData(property);
-        if (data instanceof SyncableFrequency) {
-            ((SyncableFrequency<FREQUENCY>) data).set(value);
-        }
-    }
-
-    public void handleWindowProperty(short property, @NotNull FloatingLong value) {
-        ISyncableData data = getTrackedData(property);
-        if (data instanceof SyncableFloatingLong syncable) {
+        if (data instanceof SyncableChemicalStack syncable) {
             syncable.set(value);
         }
     }
 
-    public <TYPE> void handleWindowProperty(short property, @NotNull List<TYPE> value) {
+    public void handleWindowProperty(short property, byte[] value) {
         ISyncableData data = getTrackedData(property);
-        if (data instanceof SyncableList) {
-            ((SyncableList<TYPE>) data).set(value);
+        switch (data) {
+            case SyncableByteArray syncable -> syncable.set(value);
+            case SyncableFrequency<?> syncable -> syncable.set(getLevel().registryAccess(), value);
+            case SyncableList<?> syncable -> syncable.set(getLevel().registryAccess(), value);
+            case SyncableCollection<?, ?> syncable -> syncable.set(getLevel().registryAccess(), value);
+            case null, default -> Mekanism.logger.error("Unknown byte value type: {}, please report", data == null ? null : data.getClass().getName());
         }
     }
 
@@ -669,15 +640,16 @@ public abstract class MekanismContainer extends AbstractContainerMenu implements
         if (inv.player instanceof ServerPlayer player) {
             //Only check tracked data for changes if we actually have any listeners
             List<PropertyData> dirtyData = new ArrayList<>();
+            RegistryAccess registryAccess = player.registryAccess();
             for (short i = 0; i < trackedData.size(); i++) {
                 ISyncableData data = trackedData.get(i);
                 DirtyType dirtyType = data.isDirty();
                 if (dirtyType != DirtyType.CLEAN) {
-                    dirtyData.add(data.getPropertyData(i, dirtyType));
+                    dirtyData.add(data.getPropertyData(registryAccess, i, dirtyType));
                 }
             }
             if (!dirtyData.isEmpty()) {
-                Mekanism.packetHandler().sendTo(new PacketUpdateContainer((short) containerId, dirtyData), player);
+                PacketDistributor.sendToPlayer(player, new PacketUpdateContainer((short) containerId, dirtyData));
             }
         }
     }
@@ -692,16 +664,17 @@ public abstract class MekanismContainer extends AbstractContainerMenu implements
         if (inv.player instanceof ServerPlayer player) {
             //Send all contents to the listener when it first gets added
             List<PropertyData> dirtyData = new ArrayList<>();
+            RegistryAccess registryAccess = player.registryAccess();
             for (short i = 0; i < syncableData.size(); i++) {
                 ISyncableData data = syncableData.get(i);
                 //Query if the data is dirty or not so that we update our last known value to the initial values
                 data.isDirty();
                 //And then add the property data as if it was dirty regardless of if it was in case the value is the same as the default
                 // as the client may not actually know about it
-                dirtyData.add(data.getPropertyData(propertyIndex.apply(i), DirtyType.DIRTY));
+                dirtyData.add(data.getPropertyData(registryAccess, propertyIndex.apply(i), DirtyType.DIRTY));
             }
             if (!dirtyData.isEmpty()) {
-                Mekanism.packetHandler().sendTo(new PacketUpdateContainer((short) containerId, dirtyData), player);
+                PacketDistributor.sendToPlayer(player, new PacketUpdateContainer((short) containerId, dirtyData));
             }
         }
     }

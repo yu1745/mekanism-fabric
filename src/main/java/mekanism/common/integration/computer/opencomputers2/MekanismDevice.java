@@ -1,11 +1,11 @@
 package mekanism.common.integration.computer.opencomputers2;
 
+import java.lang.ref.WeakReference;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import li.cil.oc2.api.bus.device.rpc.RPCDevice;
 import li.cil.oc2.api.bus.device.rpc.RPCInvocation;
 import li.cil.oc2.api.bus.device.rpc.RPCMethod;
 import li.cil.oc2.api.bus.device.rpc.RPCMethodGroup;
@@ -18,13 +18,13 @@ import mekanism.common.integration.computer.FactoryRegistry;
 import mekanism.common.integration.computer.IComputerTile;
 import net.minecraft.MethodsReturnNonnullByDefault;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.common.util.Lazy;
+import net.neoforged.neoforge.common.util.Lazy;
 import org.jetbrains.annotations.Nullable;
-import java.lang.ref.WeakReference;
 
 @MethodsReturnNonnullByDefault
-@ParametersAreNotNullByDefault
-public class MekanismDevice<TILE extends BlockEntity & IComputerTile> extends BoundMethodHolder implements RPCDevice {
+@ParametersAreNotNullByDefault//TODO: reimplement RPCDevice if OC updates to NF
+public class MekanismDevice<TILE extends BlockEntity & IComputerTile> extends BoundMethodHolder /*implements RPCDevice*/ {
+
     public static <TILE extends BlockEntity & IComputerTile> MekanismDevice<TILE> create(TILE tile) {
         MekanismDevice<TILE> device = new MekanismDevice<>(tile);
         //add helper apis first
@@ -44,12 +44,12 @@ public class MekanismDevice<TILE extends BlockEntity & IComputerTile> extends Bo
         this.attachedTile = new WeakReference<>(tile);
     }
 
-    @Override
+    //@Override
     public List<String> getTypeNames() {
         return name;
     }
 
-    @Override
+    //@Override
     public List<RPCMethodGroup> getMethodGroups() {
         return methodGroups.get();
     }
@@ -67,18 +67,18 @@ public class MekanismDevice<TILE extends BlockEntity & IComputerTile> extends Bo
         int result = methodGroups.hashCode();
         result = 31 * result + name.hashCode();
         TILE tile = attachedTile.get();
-        result = 31 * result + (tile != null ? tile.hashCode() : 0);
+        result = 31 * result + (tile == null ? 0 : tile.hashCode());
         result = 31 & result + methods.hashCode();
         return result;
     }
 
     private List<RPCMethodGroup> buildMethodGroups() {
-        return this.methods.keySet().stream().map(key->{
+        return this.methods.keySet().stream().map(key -> {
             List<BoundMethodData<?>> overloads = this.methods.get(key);
             if (overloads.size() == 1) {
-                return new Method(key, overloads.get(0));
+                return new Method(key, overloads.getFirst());
             }
-            Set<RPCMethod> set = new HashSet<>();
+            Set<RPCMethod> set = new HashSet<>(overloads.size());
             for (BoundMethodData<?> md : overloads) {
                 set.add(new Method(key, md));
             }
@@ -86,32 +86,25 @@ public class MekanismDevice<TILE extends BlockEntity & IComputerTile> extends Bo
         }).toList();
     }
 
-    private static class MethodGroup implements RPCMethodGroup {
-        private final String name;
-        private final Set<RPCMethod> children;
-
-        private MethodGroup(String name, Set<RPCMethod> children) {
-            this.name = name;
-            this.children = children;
-        }
-
-        @Override
-        public String getName() {
-            return name;
-        }
-
-        @Override
-        public Set<RPCMethod> getOverloads() {
-            return children;
-        }
+    private record MethodGroup(String getName, Set<RPCMethod> getOverloads) implements RPCMethodGroup {
 
         @Override
         public Optional<RPCMethod> findOverload(RPCInvocation invocation) {
-            return this.children.stream().filter(m->m.getParameters().length == invocation.getParameters().size()).findFirst();
+            Set<RPCMethod> children = getOverloads();
+            if (!children.isEmpty()) {
+                int parameters = invocation.getParameters().size();
+                for (RPCMethod m : children) {
+                    if (m.getParameters().length == parameters) {
+                        return Optional.of(m);
+                    }
+                }
+            }
+            return Optional.empty();
         }
     }
 
     private static class Method implements RPCMethod {
+
         private final String name;
         private final BoundMethodData<?> methodData;
         private final Class<?> returnType;
@@ -169,6 +162,7 @@ public class MekanismDevice<TILE extends BlockEntity & IComputerTile> extends Bo
     }
 
     private static class Param implements RPCParameter {
+
         @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
         private final Optional<String> name;
         private final Class<?> returnType;

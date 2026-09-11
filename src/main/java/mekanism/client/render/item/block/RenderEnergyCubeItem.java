@@ -2,30 +2,28 @@ package mekanism.client.render.item.block;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
-import mekanism.api.NBTConstants;
 import mekanism.api.RelativeSide;
 import mekanism.client.model.ModelEnergyCore;
 import mekanism.client.render.MekanismRenderer;
 import mekanism.client.render.item.MekanismISTER;
 import mekanism.client.render.tileentity.RenderEnergyCube;
+import mekanism.common.attachments.component.AttachedSideConfig;
 import mekanism.common.item.block.ItemBlockEnergyCube;
 import mekanism.common.lib.transmitter.TransmissionType;
 import mekanism.common.tier.EnergyCubeTier;
 import mekanism.common.tile.TileEntityEnergyCube;
 import mekanism.common.tile.TileEntityEnergyCube.CubeSideState;
 import mekanism.common.tile.component.config.DataType;
+import mekanism.common.tile.component.config.IPersistentConfigInfo;
 import mekanism.common.util.EnumUtils;
-import mekanism.common.util.ItemDataUtils;
 import mekanism.common.util.StorageUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.client.model.data.ModelData;
+import net.neoforged.neoforge.client.model.data.ModelData;
 import org.jetbrains.annotations.NotNull;
 
 public class RenderEnergyCubeItem extends MekanismISTER {
@@ -42,30 +40,22 @@ public class RenderEnergyCubeItem extends MekanismISTER {
     public void renderByItem(@NotNull ItemStack stack, @NotNull ItemDisplayContext displayContext, @NotNull PoseStack matrix, @NotNull MultiBufferSource renderer,
           int light, int overlayLight) {
         EnergyCubeTier tier = ((ItemBlockEnergyCube) stack.getItem()).getTier();
-
         CubeSideState[] sideStates = new CubeSideState[EnumUtils.SIDES.length];
-        CompoundTag configData = ItemDataUtils.getDataMapIfPresent(stack);
-        if (configData != null && configData.contains(NBTConstants.COMPONENT_CONFIG, Tag.TAG_COMPOUND)) {
-            CompoundTag sideConfig = configData.getCompound(NBTConstants.COMPONENT_CONFIG).getCompound(NBTConstants.CONFIG + TransmissionType.ENERGY.ordinal());
-            //TODO: Maybe improve on this, but for now this is a decent way of making it not have disabled sides show
-            for (RelativeSide side : EnumUtils.SIDES) {
-                DataType dataType = DataType.byIndexStatic(sideConfig.getInt(NBTConstants.SIDE + side.ordinal()));
-                CubeSideState state = CubeSideState.INACTIVE;
-                if (dataType != DataType.NONE) {
-                    state = dataType.canOutput() ? CubeSideState.ACTIVE_LIT : CubeSideState.ACTIVE_UNLIT;
-                }
-                sideStates[side.ordinal()] = state;
+        AttachedSideConfig fallback = tier == EnergyCubeTier.CREATIVE ? ItemBlockEnergyCube.ALL_OUTPUT : ItemBlockEnergyCube.SIDE_CONFIG;
+        IPersistentConfigInfo sideConfig = AttachedSideConfig.getStoredConfigInfo(stack, fallback, TransmissionType.ENERGY);
+        for (RelativeSide side : EnumUtils.SIDES) {
+            DataType dataType = sideConfig.getDataType(side);
+            CubeSideState state = CubeSideState.INACTIVE;
+            if (dataType != DataType.NONE) {
+                state = dataType.canOutput() ? CubeSideState.ACTIVE_LIT : CubeSideState.ACTIVE_UNLIT;
             }
-        } else {
-            for (RelativeSide side : EnumUtils.SIDES) {
-                sideStates[side.ordinal()] = tier == EnergyCubeTier.CREATIVE || side == RelativeSide.FRONT ? CubeSideState.ACTIVE_LIT : CubeSideState.ACTIVE_UNLIT;
-            }
+            sideStates[side.ordinal()] = state;
         }
-        ModelData modelData = ModelData.builder().with(TileEntityEnergyCube.SIDE_STATE_PROPERTY, sideStates).build();
+        ModelData modelData = ModelData.of(TileEntityEnergyCube.SIDE_STATE_PROPERTY, sideStates);
         renderBlockItem(stack, displayContext, matrix, renderer, light, overlayLight, modelData);
-        double energyPercentage = StorageUtils.getStoredEnergyFromNBT(stack).divideToLevel(tier.getMaxEnergy());
+        double energyPercentage = StorageUtils.getEnergyRatio(stack);
         if (energyPercentage > 0) {
-            float ticks = Minecraft.getInstance().levelRenderer.ticks + MekanismRenderer.getPartialTick();
+            float ticks = Minecraft.getInstance().levelRenderer.getTicks() + MekanismRenderer.getPartialTick();
             float scaledTicks = 4 * ticks;
             matrix.pushPose();
             matrix.translate(0.5, 0.5, 0.5);

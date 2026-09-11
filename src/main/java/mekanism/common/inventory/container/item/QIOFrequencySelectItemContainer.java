@@ -15,7 +15,7 @@ public class QIOFrequencySelectItemContainer extends FrequencyItemContainer<QIOF
     }
 
     @Override
-    public FrequencyType<QIOFrequency> getFrequencyType() {
+    protected FrequencyType<QIOFrequency> getFrequencyType() {
         return FrequencyType.QIO;
     }
 }

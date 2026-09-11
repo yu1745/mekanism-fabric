@@ -1,56 +1,47 @@
 package mekanism.common.network.to_client;
 
+import io.netty.buffer.ByteBuf;
 import java.util.function.BooleanSupplier;
+import java.util.function.IntFunction;
 import mekanism.client.render.RenderTickHandler;
+import mekanism.common.Mekanism;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.lib.effect.BoltEffect;
 import mekanism.common.lib.effect.BoltEffect.BoltRenderInfo;
 import mekanism.common.lib.effect.BoltEffect.SpawnFunction;
-import mekanism.common.network.BasePacketHandler;
 import mekanism.common.network.IMekanismPacket;
-import net.minecraft.network.FriendlyByteBuf;
+import mekanism.common.network.PacketUtils;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.util.ByIdMap;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import org.jetbrains.annotations.NotNull;
 
-public class PacketLightningRender implements IMekanismPacket {
+public record PacketLightningRender(LightningPreset preset, int renderer, Vec3 start, Vec3 end, int segments) implements IMekanismPacket {
 
-    private final LightningPreset preset;
-    private final Vec3 start;
-    private final Vec3 end;
-    private final int renderer;
-    private final int segments;
+    public static final CustomPacketPayload.Type<PacketLightningRender> TYPE = new CustomPacketPayload.Type<>(Mekanism.rl("render_bolt"));
+    public static final StreamCodec<ByteBuf, PacketLightningRender> STREAM_CODEC = StreamCodec.composite(
+          LightningPreset.STREAM_CODEC, PacketLightningRender::preset,
+          ByteBufCodecs.VAR_INT, PacketLightningRender::renderer,
+          PacketUtils.VEC3_STREAM_CODEC, PacketLightningRender::start,
+          PacketUtils.VEC3_STREAM_CODEC, PacketLightningRender::end,
+          ByteBufCodecs.VAR_INT, PacketLightningRender::segments,
+          PacketLightningRender::new
+    );
 
-    public PacketLightningRender(LightningPreset preset, int renderer, Vec3 start, Vec3 end, int segments) {
-        this.preset = preset;
-        this.renderer = renderer;
-        this.start = start;
-        this.end = end;
-        this.segments = segments;
+    @NotNull
+    @Override
+    public CustomPacketPayload.Type<PacketLightningRender> type() {
+        return TYPE;
     }
 
     @Override
-    public void handle(NetworkEvent.Context context) {
+    public void handle(IPayloadContext context) {
         if (preset.shouldAdd.getAsBoolean()) {
             RenderTickHandler.renderBolt(renderer, preset.boltCreator.create(start, end, segments));
         }
-    }
-
-    @Override
-    public void encode(FriendlyByteBuf buffer) {
-        buffer.writeEnum(preset);
-        buffer.writeVarInt(renderer);
-        BasePacketHandler.writeVector3d(buffer, start);
-        BasePacketHandler.writeVector3d(buffer, end);
-        buffer.writeVarInt(segments);
-    }
-
-    public static PacketLightningRender decode(FriendlyByteBuf buffer) {
-        LightningPreset preset = buffer.readEnum(LightningPreset.class);
-        int renderer = buffer.readVarInt();
-        Vec3 start = BasePacketHandler.readVector3d(buffer);
-        Vec3 end = BasePacketHandler.readVector3d(buffer);
-        int segments = buffer.readVarInt();
-        return new PacketLightningRender(preset, renderer, start, end, segments);
     }
 
     @FunctionalInterface
@@ -64,6 +55,9 @@ public class PacketLightningRender implements IMekanismPacket {
               new BoltEffect(BoltRenderInfo.ELECTRICITY, start, end, segments).size(0.04F).lifespan(8).spawn(SpawnFunction.noise(8, 4))),
         TOOL_AOE(MekanismConfig.client.renderToolAOEParticles, (start, end, segments) ->
               new BoltEffect(BoltRenderInfo.ELECTRICITY, start, end, segments).size(0.015F).lifespan(12).spawn(SpawnFunction.NO_DELAY));
+
+        public static final IntFunction<LightningPreset> BY_ID = ByIdMap.continuous(LightningPreset::ordinal, values(), ByIdMap.OutOfBoundsStrategy.WRAP);
+        public static final StreamCodec<ByteBuf, LightningPreset> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, LightningPreset::ordinal);
 
         private final BooleanSupplier shouldAdd;
         private final BoltCreator boltCreator;

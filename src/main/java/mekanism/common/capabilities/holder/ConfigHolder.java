@@ -7,17 +7,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 import mekanism.api.RelativeSide;
 import mekanism.common.lib.transmitter.TransmissionType;
 import mekanism.common.tile.component.TileComponentConfig;
 import mekanism.common.tile.component.config.ConfigInfo;
 import mekanism.common.tile.component.config.slot.ISlotInfo;
+import mekanism.common.tile.interfaces.ISideConfiguration;
 import net.minecraft.core.Direction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class ConfigHolder<TYPE> implements IHolder {
+
+    private static final Predicate<ISlotInfo> CAN_INPUT = ISlotInfo::canInput;
+    private static final Predicate<ISlotInfo> CAN_OUTPUT = ISlotInfo::canOutput;
 
     /**
      * Dummy ISlotInfo used for representing we have no config
@@ -34,13 +37,8 @@ public abstract class ConfigHolder<TYPE> implements IHolder {
         }
 
         @Override
-        public int hashCode() {
-            return 0;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            return obj == this;
+        public boolean isEmpty() {
+            return false;
         }
 
         @Override
@@ -50,28 +48,29 @@ public abstract class ConfigHolder<TYPE> implements IHolder {
     };
 
     private final Map<Direction, ISlotInfo> cachedSlotInfo = new EnumMap<>(Direction.class);
-    private final Supplier<TileComponentConfig> configSupplier;
-    private final Supplier<Direction> facingSupplier;
+    private final ISideConfiguration sideConfiguration;
     protected final List<TYPE> slots = new ArrayList<>();
     @Nullable
     private Direction lastDirection;
-    private boolean listenerAdded;
 
-    protected ConfigHolder(Supplier<Direction> facingSupplier, Supplier<TileComponentConfig> configSupplier) {
-        this.facingSupplier = facingSupplier;
-        this.configSupplier = configSupplier;
+    @Nullable
+    private ConfigInfo lazyConfig;
+    private boolean retrievedConfig;
+
+    protected ConfigHolder(ISideConfiguration sideConfiguration) {
+        this.sideConfiguration = sideConfiguration;
     }
 
     protected abstract TransmissionType getTransmissionType();
 
     @Override
     public boolean canInsert(@Nullable Direction side) {
-        return canInteract(side, ISlotInfo::canInput);
+        return canInteract(side, CAN_INPUT);
     }
 
     @Override
     public boolean canExtract(@Nullable Direction side) {
-        return canInteract(side, ISlotInfo::canOutput);
+        return canInteract(side, CAN_OUTPUT);
     }
 
     private boolean canInteract(@Nullable Direction side, @NotNull Predicate<ISlotInfo> interactPredicate) {
@@ -104,34 +103,36 @@ public abstract class ConfigHolder<TYPE> implements IHolder {
 
     @Nullable
     private ISlotInfo getSlotInfo(Direction side) {
-        Direction direction = facingSupplier.get();
+        Direction direction = sideConfiguration.getDirection();
         if (direction != lastDirection) {
             //Invalid entire cache and update what direction we had as last if our last direction doesn't match the one we currently are facing
             cachedSlotInfo.clear();
             lastDirection = direction;
         } else if (cachedSlotInfo.containsKey(side)) {
+            //If the direction changed, we know it isn't cached so can skip checking
             return cachedSlotInfo.get(side);
         }
-        ISlotInfo slotInfo;
-        TileComponentConfig config = configSupplier.get();
-        if (config == null) {
-            slotInfo = NO_CONFIG;
-        } else {
-            TransmissionType transmissionType = getTransmissionType();
-            ConfigInfo configInfo = config.getConfig(transmissionType);
-            if (configInfo == null) {
-                slotInfo = NO_CONFIG;
-            } else {
-                if (!listenerAdded) {
+        if (!retrievedConfig) {
+            retrievedConfig = true;
+            TileComponentConfig config = sideConfiguration.getConfig();
+            if (config != null) {
+                TransmissionType transmissionType = getTransmissionType();
+                lazyConfig = config.getConfig(transmissionType);
+                if (lazyConfig != null) {
                     //If we haven't added a listener to our config yet add one to remove the cached info we have for that side
-                    listenerAdded = true;
+                    //Note: We know we haven't done this if we haven't retrieved the config yet, as we only retrieve the config a single time
                     config.addConfigChangeListener(transmissionType, cachedSlotInfo::remove);
                 }
-                slotInfo = configInfo.getSlotInfo(RelativeSide.fromDirections(direction, side));
-                if (slotInfo != null && !slotInfo.isEnabled()) {
-                    //If we have a slot info, but it is not actually enabled, just store it as null to avoid having to recheck if it is enabled later
-                    slotInfo = null;
-                }
+            }
+        }
+        ISlotInfo slotInfo;
+        if (lazyConfig == null) {
+            slotInfo = NO_CONFIG;
+        } else {
+            slotInfo = lazyConfig.getSlotInfo(RelativeSide.fromDirections(direction, side));
+            if (slotInfo != null && !slotInfo.isEnabled()) {
+                //If we have a slot info, but it is not actually enabled, just store it as null to avoid having to recheck if it is enabled later
+                slotInfo = null;
             }
         }
         cachedSlotInfo.put(side, slotInfo);

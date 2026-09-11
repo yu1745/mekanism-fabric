@@ -3,6 +3,7 @@ package mekanism.tools.common.material.impl;
 import mekanism.common.tags.MekanismTags;
 import mekanism.tools.common.ToolsTags;
 import mekanism.tools.common.material.BaseMekanismMaterial;
+import net.minecraft.core.Holder;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.TagKey;
@@ -10,9 +11,8 @@ import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
-public class RefinedObsidianMaterialDefaults extends BaseMekanismMaterial {
+public class RefinedObsidianMaterialDefaults implements BaseMekanismMaterial {
 
     @Override
     public int getShieldDurability() {
@@ -45,12 +45,7 @@ public class RefinedObsidianMaterialDefaults extends BaseMekanismMaterial {
     }
 
     @Override
-    public int getLevel() {
-        return 4;
-    }
-
-    @Override
-    public int getCommonEnchantability() {
+    public int getEnchantmentValue() {
         return 18;
     }
 
@@ -60,7 +55,7 @@ public class RefinedObsidianMaterialDefaults extends BaseMekanismMaterial {
     }
 
     @Override
-    public float getToughness() {
+    public float toughness() {
         return 5;
     }
 
@@ -69,25 +64,20 @@ public class RefinedObsidianMaterialDefaults extends BaseMekanismMaterial {
         return switch (armorType) {
             case BOOTS -> 975;
             case LEGGINGS -> 1_125;
-            case CHESTPLATE -> 1_200;
+            case CHESTPLATE, BODY -> 1_200;
             case HELMET -> 825;
         };
     }
 
     @Override
-    public int getDefenseForType(@NotNull ArmorItem.Type armorType) {
+    public int getDefense(@NotNull ArmorItem.Type armorType) {
         return switch (armorType) {
             case BOOTS -> 5;
             case LEGGINGS -> 8;
             case CHESTPLATE -> 12;
             case HELMET -> 6;
+            default -> 0;
         };
-    }
-
-    @NotNull
-    @Override
-    public String getConfigCommentName() {
-        return "Refined Obsidian";
     }
 
     @NotNull
@@ -96,26 +86,26 @@ public class RefinedObsidianMaterialDefaults extends BaseMekanismMaterial {
         return "refined_obsidian";
     }
 
-    @Nullable
+    @NotNull
     @Override
-    public TagKey<Block> getTag() {
-        return ToolsTags.Blocks.NEEDS_REFINED_OBSIDIAN_TOOL;
+    public TagKey<Block> getIncorrectBlocksForDrops() {
+        return ToolsTags.Blocks.INCORRECT_FOR_REFINED_OBSIDIAN_TOOL;
     }
 
     @NotNull
     @Override
-    public SoundEvent getEquipSound() {
+    public Holder<SoundEvent> equipSound() {
         return SoundEvents.ARMOR_EQUIP_IRON;
     }
 
     @NotNull
     @Override
-    public Ingredient getCommonRepairMaterial() {
+    public Ingredient getRepairIngredient() {
         return Ingredient.of(MekanismTags.Items.INGOTS_REFINED_OBSIDIAN);
     }
 
     @Override
-    public float getKnockbackResistance() {
+    public float knockbackResistance() {
         return 0.2F;
     }
 }

@@ -13,6 +13,7 @@
   "advancements.mekanismtools.paxel.title": "Herramienta múltiple",
   "constants.mekanismtools.mod_name": "Mekanism: Herramientas",
   "constants.mekanismtools.pack_description": "Recursos usados por Mekanism: Herramientas",
+  "fml.menu.mods.info.description.mekanismtools": "Modulo de herramientas para el Mekanismo",
   "item.mekanismtools.bronze_axe": "Hacha de Bronce",
   "item.mekanismtools.bronze_boots": "Botas de bronce",
   "item.mekanismtools.bronze_chestplate": "Pechera de bronce",
@@ -181,5 +182,6 @@
   "item.mekanismtools.steel_sword": "Espada de acero",
   "item.mekanismtools.stone_paxel": "Picapalacha de piedra",
   "item.mekanismtools.wood_paxel": "Picapalacha de madera",
+  "tag.item.c.tools.paxel": "Paxels",
   "tooltip.mekanismtools.hp": "HP: %1$s"
 }

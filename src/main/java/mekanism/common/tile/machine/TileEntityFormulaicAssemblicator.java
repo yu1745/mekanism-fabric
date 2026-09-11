@@ -1,24 +1,26 @@
 package mekanism.common.tile.machine;
 
 import it.unimi.dsi.fastutil.ints.IntArraySet;
-import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.objects.Object2IntLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
-import it.unimi.dsi.fastutil.objects.Object2IntMap.Entry;
+import it.unimi.dsi.fastutil.objects.Object2IntMaps;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Predicate;
 import mekanism.api.Action;
 import mekanism.api.AutomationType;
 import mekanism.api.IContentsListener;
-import mekanism.api.NBTConstants;
+import mekanism.api.SerializationConstants;
 import mekanism.api.Upgrade;
+import mekanism.api.functions.ConstantPredicates;
 import mekanism.api.inventory.IInventorySlot;
-import mekanism.api.math.FloatingLong;
 import mekanism.common.CommonWorldTickHandler;
 import mekanism.common.Mekanism;
+import mekanism.common.attachments.FormulaAttachment;
 import mekanism.common.capabilities.energy.MachineEnergyContainer;
 import mekanism.common.capabilities.holder.energy.EnergyContainerHelper;
 import mekanism.common.capabilities.holder.energy.IEnergyContainerHolder;
@@ -45,7 +47,7 @@ import mekanism.common.lib.inventory.HashedItem;
 import mekanism.common.lib.transmitter.TransmissionType;
 import mekanism.common.recipe.MekanismRecipeType;
 import mekanism.common.registries.MekanismBlocks;
-import mekanism.common.tile.component.TileComponentConfig;
+import mekanism.common.registries.MekanismDataComponents;
 import mekanism.common.tile.component.TileComponentEjector;
 import mekanism.common.tile.component.config.ConfigInfo;
 import mekanism.common.tile.component.config.DataType;
@@ -55,27 +57,27 @@ import mekanism.common.tile.prefab.TileEntityConfigurableMachine;
 import mekanism.common.util.InventoryUtils;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.UpgradeUtils;
+import net.minecraft.SharedConstants;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.CraftingRecipe;
+import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.items.ItemHandlerHelper;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class TileEntityFormulaicAssemblicator extends TileEntityConfigurableMachine implements IHasMode {
 
+    public static final Predicate<@NotNull ItemStack> FORMULA_SLOT_VALIDATOR = stack -> stack.getItem() instanceof ItemCraftingFormula;
     private static final NonNullList<ItemStack> EMPTY_LIST = NonNullList.create();
-    private static final Predicate<@NotNull ItemStack> formulaSlotValidator = stack -> stack.getItem() instanceof ItemCraftingFormula;
 
-    private static final int BASE_TICKS_REQUIRED = 40;
-
-    private final CraftingContainer dummyInv = MekanismUtils.getDummyCraftingInv();
+    private static final int BASE_TICKS_REQUIRED = 2 * SharedConstants.TICKS_PER_SECOND;
 
     private int ticksRequired = BASE_TICKS_REQUIRED;
     private int operatingTicks;
@@ -84,13 +86,15 @@ public class TileEntityFormulaicAssemblicator extends TileEntityConfigurableMach
     private boolean isRecipe = false;
     private boolean stockControl = false;
     private boolean needsOrganize = true; //organize on load
+    private boolean canTryToMove = true; //allow trying to move on load
     private final HashedItem[] stockControlMap = new HashedItem[18];
 
     private int pulseOperations;
 
-    public RecipeFormula formula;
+    @NotNull
+    public RecipeFormula formula = RecipeFormula.EMPTY;
     @Nullable
-    private CraftingRecipe cachedRecipe = null;
+    private RecipeHolder<CraftingRecipe> cachedRecipe = null;
     @SyntheticComputerMethod(getter = "getExcessRemainingItems")
     NonNullList<ItemStack> lastRemainingItems = EMPTY_LIST;
 
@@ -108,13 +112,11 @@ public class TileEntityFormulaicAssemblicator extends TileEntityConfigurableMach
 
     public TileEntityFormulaicAssemblicator(BlockPos pos, BlockState state) {
         super(MekanismBlocks.FORMULAIC_ASSEMBLICATOR, pos, state);
-        configComponent = new TileComponentConfig(this, TransmissionType.ITEM, TransmissionType.ENERGY);
         configComponent.setupItemIOConfig(inputSlots, outputSlots, energySlot, false);
         ConfigInfo itemConfig = configComponent.getConfig(TransmissionType.ITEM);
         if (itemConfig != null) {
             //Expose formula slot via extra
             itemConfig.addSlotInfo(DataType.EXTRA, new InventorySlotInfo(true, true, formulaSlot));
-            itemConfig.setDefaults();
         }
         configComponent.setupInputConfig(TransmissionType.ENERGY, energyContainer);
         ejectorComponent = new TileComponentEjector(this);
@@ -124,7 +126,7 @@ public class TileEntityFormulaicAssemblicator extends TileEntityConfigurableMach
     @NotNull
     @Override
     protected IEnergyContainerHolder getInitialEnergyContainers(IContentsListener listener) {
-        EnergyContainerHelper builder = EnergyContainerHelper.forSideWithConfig(this::getDirection, this::getConfig);
+        EnergyContainerHelper builder = EnergyContainerHelper.forSideWithConfig(this);
         builder.addContainer(energyContainer = MachineEnergyContainer.input(this, listener));
         return builder.build();
     }
@@ -135,43 +137,53 @@ public class TileEntityFormulaicAssemblicator extends TileEntityConfigurableMach
         craftingGridSlots = new ArrayList<>();
         inputSlots = new ArrayList<>();
         outputSlots = new ArrayList<>();
-        InventorySlotHelper builder = InventorySlotHelper.forSideWithConfig(this::getDirection, this::getConfig);
-        builder.addSlot(formulaSlot = BasicInventorySlot.at(formulaSlotValidator, listener, 6, 26))
+        IContentsListener inputSlotChanged = () -> {
+            listener.onContentsChanged();
+            //If an input slot changes allow trying to move items to the crafting grid again as potentially we have something that can be moved
+            // and if we have stock control enabled, allow attempting to re-organize the inventory
+            needsOrganize = stockControl;
+            canTryToMove = true;
+        };
+        IContentsListener listenAndRecheckRecipe = () -> {
+            listener.onContentsChanged();
+            recalculateRecipe();
+        };
+
+        InventorySlotHelper builder = InventorySlotHelper.forSideWithConfig(this);
+        //If the formula slot changes we want to make sure to recheck the recipe
+        builder.addSlot(formulaSlot = BasicInventorySlot.at(FORMULA_SLOT_VALIDATOR, listenAndRecheckRecipe, 6, 26, 1))
               .setSlotOverlay(SlotOverlay.FORMULA);
         for (int slotY = 0; slotY < 2; slotY++) {
             for (int slotX = 0; slotX < 9; slotX++) {
                 int index = slotY * 9 + slotX;
                 InputInventorySlot inputSlot = InputInventorySlot.at(stack -> {
                     //Is item valid
-                    if (formula == null) {
+                    if (formula.isEmpty()) {
                         return true;
-                    }
-                    IntList indices = formula.getIngredientIndices(level, stack);
-                    if (!indices.isEmpty()) {
-                        if (stockControl) {
-                            HashedItem stockItem = stockControlMap[index];
-                            return stockItem == null || ItemHandlerHelper.canItemStacksStack(stockItem.getInternalStack(), stack);
+                    } else if (!formula.valid()) {
+                        return false;
+                    } else if (stockControl) {
+                        HashedItem stockItem = stockControlMap[index];
+                        if (stockItem != null) {
+                            return stockItem.isSameItemSameComponents(stack);
                         }
-                        return true;
                     }
-                    return false;
-                }, BasicInventorySlot.alwaysTrue, listener, 8 + slotX * 18, 98 + slotY * 18);
-                builder.addSlot(inputSlot);
-                inputSlots.add(inputSlot);
+                    return formula.isValidIngredient(level, stack);
+                }, ConstantPredicates.alwaysTrue(), inputSlotChanged, 8 + slotX * 18, 98 + slotY * 18);
+                inputSlots.add(builder.addSlot(inputSlot));
             }
         }
         for (int slotY = 0; slotY < 3; slotY++) {
             for (int slotX = 0; slotX < 3; slotX++) {
-                IInventorySlot craftingSlot = FormulaicCraftingSlot.at(this::getAutoMode, listener, 26 + slotX * 18, 17 + slotY * 18);
-                builder.addSlot(craftingSlot);
-                craftingGridSlots.add(craftingSlot);
+                //If a crafting slot changes then we want to make sure that we recheck the recipe
+                IInventorySlot craftingSlot = FormulaicCraftingSlot.at(this::getAutoMode, listenAndRecheckRecipe, 26 + slotX * 18, 17 + slotY * 18);
+                craftingGridSlots.add(builder.addSlot(craftingSlot));
             }
         }
         for (int slotY = 0; slotY < 3; slotY++) {
             for (int slotX = 0; slotX < 2; slotX++) {
                 OutputInventorySlot outputSlot = OutputInventorySlot.at(listener, 116 + slotX * 18, 17 + slotY * 18);
-                builder.addSlot(outputSlot);
-                outputSlots.add(outputSlot);
+                outputSlots.add(builder.addSlot(outputSlot));
             }
         }
         //Add the energy slot after adding the other slots so that it has the lowest priority in shift clicking
@@ -189,7 +201,7 @@ public class TileEntityFormulaicAssemblicator extends TileEntityConfigurableMach
         if (!isRemote()) {
             checkFormula();
             recalculateRecipe();
-            if (formula != null && stockControl) {
+            if (!formula.isEmpty() && stockControl) {
                 //Ensure stock control is loaded before our first tick in case something inserting ticks before our first tick
                 // and inserts into the wrong slots
                 buildStockControlMap();
@@ -198,14 +210,14 @@ public class TileEntityFormulaicAssemblicator extends TileEntityConfigurableMach
     }
 
     @Override
-    protected void onUpdateServer() {
-        super.onUpdateServer();
+    protected boolean onUpdateServer() {
+        boolean sendUpdatePacket = super.onUpdateServer();
         if (CommonWorldTickHandler.flushTagAndRecipeCaches) {
             //Invalidate the cached recipe and recalculate
             cachedRecipe = null;
             recalculateRecipe();
         }
-        if (formula != null && stockControl && needsOrganize) {
+        if (!formula.isEmpty() && stockControl && needsOrganize) {
             buildStockControlMap();
             organizeStock();
             //Mark as no longer needing to organize after organizing it so that it rearranging things doesn't cause it to organize again
@@ -214,16 +226,16 @@ public class TileEntityFormulaicAssemblicator extends TileEntityConfigurableMach
         energySlot.fillContainerOrConvert();
         if (getControlType() != RedstoneControl.PULSE) {
             pulseOperations = 0;
-        } else if (MekanismUtils.canFunction(this)) {
+        } else if (canFunction()) {
             pulseOperations++;
         }
         checkFormula();
-        if (autoMode && formula == null) {
+        if (autoMode && formula.isEmpty()) {
             nextMode();
         }
 
-        FloatingLong clientEnergyUsed = FloatingLong.ZERO;
-        if (autoMode && formula != null && ((getControlType() == RedstoneControl.PULSE && pulseOperations > 0) || MekanismUtils.canFunction(this))) {
+        long clientEnergyUsed = 0L;
+        if (autoMode && !formula.isEmpty() && ((getControlType() == RedstoneControl.PULSE && pulseOperations > 0) || canFunction())) {
             boolean canOperate = true;
             if (!isRecipe) {
                 canOperate = moveItemsToGrid();
@@ -238,8 +250,8 @@ public class TileEntityFormulaicAssemblicator extends TileEntityConfigurableMach
                         }
                     }
                 } else {
-                    FloatingLong energyPerTick = energyContainer.getEnergyPerTick();
-                    if (energyContainer.extract(energyPerTick, Action.SIMULATE, AutomationType.INTERNAL).equals(energyPerTick)) {
+                    long energyPerTick = energyContainer.getEnergyPerTick();
+                    if (energyContainer.extract(energyPerTick, Action.SIMULATE, AutomationType.INTERNAL) == energyPerTick) {
                         clientEnergyUsed = energyContainer.extract(energyPerTick, Action.EXECUTE, AutomationType.INTERNAL);
                         operatingTicks++;
                     }
@@ -250,93 +262,116 @@ public class TileEntityFormulaicAssemblicator extends TileEntityConfigurableMach
         } else {
             operatingTicks = 0;
         }
-        usedEnergy = !clientEnergyUsed.isZero();
+        usedEnergy = clientEnergyUsed > 0L;
+        return sendUpdatePacket;
     }
 
     private void checkFormula() {
         ItemStack formulaStack = formulaSlot.getStack();
-        if (!formulaStack.isEmpty() && formulaStack.getItem() instanceof ItemCraftingFormula) {
-            if (formula == null || lastFormulaStack != formulaStack) {
-                loadFormula();
+        FormulaAttachment attachment = formulaStack.getOrDefault(MekanismDataComponents.FORMULA_HOLDER, FormulaAttachment.EMPTY);
+        if (!attachment.isEmpty() && !attachment.invalid()) {
+            if (formula.isEmpty() || lastFormulaStack != formulaStack) {
+                formula = loadFormula(formulaStack, attachment);
             }
         } else {
-            formula = null;
+            formula = RecipeFormula.EMPTY;
         }
-        lastFormulaStack = formulaStack;
+        //Note: Because loading ends up overriding the set stack, we can't just use our stored variable
+        // and have to look it back up instead
+        lastFormulaStack = formulaSlot.getStack();
     }
 
-    private void loadFormula() {
-        ItemStack formulaStack = formulaSlot.getStack();
-        ItemCraftingFormula formulaItem = (ItemCraftingFormula) formulaStack.getItem();
-        if (formulaItem.isInvalid(formulaStack)) {
-            formula = null;
-            return;
-        }
-        NonNullList<ItemStack> formulaInventory = formulaItem.getInventory(formulaStack);
-        if (formulaInventory == null) {
-            formula = null;
-        } else {
-            RecipeFormula recipe = new RecipeFormula(level, formulaInventory);
-            if (recipe.isValidFormula()) {
-                if (formula == null) {
-                    formula = recipe;
-                } else if (!formula.isFormulaEqual(recipe)) {
-                    formula = recipe;
-                    operatingTicks = 0;
-                }
-            } else {
-                formula = null;
-                formulaItem.setInvalid(formulaStack, true);
+    //Note: Assumes attachment is not invalid
+    private RecipeFormula loadFormula(ItemStack formulaStack, FormulaAttachment attachment) {
+        RecipeFormula recipe = RecipeFormula.create(level, attachment);
+        if (recipe.valid()) {
+            if (!formula.isEmpty() && !formula.equals(recipe)) {
+                //If we are going from one formula to a different one, reset the operating ticks
+                // Note: We don't reset the ticks if we are going from none to having one, as we
+                // want to persist how many ticks we had when we load from save
+                operatingTicks = 0;
             }
+            return recipe;
         }
-    }
-
-    @Override
-    protected void setChanged(boolean updateComparator) {
-        super.setChanged(updateComparator);
-        //TODO: Should this be changed to being in onContentsChanged instead of setChanged?
-        recalculateRecipe();
+        formulaStack = formulaStack.copy();
+        formulaStack.set(MekanismDataComponents.FORMULA_HOLDER, attachment.asInvalid());
+        formulaSlot.setStack(formulaStack);
+        return RecipeFormula.EMPTY;
     }
 
     private void recalculateRecipe() {
         if (level != null && !isRemote()) {
-            if (formula == null || !formula.isValidFormula()) {
-                //Should always be 9 for the size
-                for (int i = 0; i < craftingGridSlots.size(); i++) {
-                    dummyInv.setItem(i, craftingGridSlots.get(i).getStack().copyWithCount(1));
+            boolean wasRecipe = isRecipe;
+            ItemStack previousOutput = lastOutputStack;
+            NonNullList<ItemStack> previousRemaining = lastRemainingItems;
+            if (hasValidFormula()) {
+                RecipeHolder<CraftingRecipe> recipe = formula.recipe();
+                if (recipe == null) {
+                    isRecipe = false;
+                    lastOutputStack = ItemStack.EMPTY;
+                } else {
+                    //Should always be a 3x3 grid for the size
+                    CraftingInput input = MekanismUtils.getCraftingInputSlots(3, 3, craftingGridSlots, true).input();
+                    isRecipe = recipe.value().matches(input, level);
+                    if (isRecipe) {
+                        lastOutputStack = recipe.value().assemble(input, level.registryAccess());
+                        lastRemainingItems = recipe.value().getRemainingItems(input);
+                    } else {
+                        //TODO: Do we need to clear the last remaining items?
+                        lastOutputStack = ItemStack.EMPTY;
+                    }
                 }
+            } else {
+                //Should always be 9 for the size
+                CraftingInput craftingInput = MekanismUtils.getCraftingInputSlots(3, 3, craftingGridSlots, true).input();
                 lastRemainingItems = EMPTY_LIST;
-                if (cachedRecipe == null || !cachedRecipe.matches(dummyInv, level)) {
-                    cachedRecipe = MekanismRecipeType.getRecipeFor(RecipeType.CRAFTING, dummyInv, level).orElse(null);
+                if (cachedRecipe == null || !cachedRecipe.value().matches(craftingInput, level)) {
+                    cachedRecipe = MekanismRecipeType.getRecipeFor(RecipeType.CRAFTING, craftingInput, level).orElse(null);
                 }
                 if (cachedRecipe == null) {
                     lastOutputStack = ItemStack.EMPTY;
                 } else {
-                    lastOutputStack = cachedRecipe.assemble(dummyInv, level.registryAccess());
-                    lastRemainingItems = cachedRecipe.getRemainingItems(dummyInv);
+                    lastOutputStack = cachedRecipe.value().assemble(craftingInput, level.registryAccess());
+                    //Note: Because we don't currently do any replacement of remaining items, we don't need to keep track of where the recipe
+                    // was positioned for purposes of replacing things with the remaining items
+                    lastRemainingItems = cachedRecipe.value().getRemainingItems(craftingInput);
                 }
                 isRecipe = !lastOutputStack.isEmpty();
+            }
+            boolean recipeChanged = false;
+            if (isRecipe != wasRecipe || !ItemStack.matches(lastOutputStack, previousOutput) || lastRemainingItems.size() != previousRemaining.size()) {
+                recipeChanged = true;
             } else {
-                isRecipe = formula.matches(level, craftingGridSlots);
-                if (isRecipe) {
-                    lastOutputStack = formula.assemble(level.registryAccess());
-                    lastRemainingItems = formula.getRemainingItems();
-                } else {
-                    lastOutputStack = ItemStack.EMPTY;
+                for (int i = 0; i < lastRemainingItems.size(); i++) {
+                    if (!ItemStack.matches(lastRemainingItems.get(i), previousRemaining.get(i))) {
+                        recipeChanged = true;
+                        break;
+                    }
                 }
             }
-            needsOrganize = true;
+            if (recipeChanged) {
+                needsOrganize = true;
+                canTryToMove = true;
+            }
         }
     }
 
+    private boolean canMoveLastRemaining() {
+        for (ItemStack it : lastRemainingItems) {
+            if (!it.isEmpty() && !tryMoveToOutput(it, Action.SIMULATE)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     private boolean doSingleCraft() {
-        recalculateRecipe();
         ItemStack output = lastOutputStack;
-        if (!output.isEmpty() && tryMoveToOutput(output, Action.SIMULATE) &&
-            (lastRemainingItems.isEmpty() || lastRemainingItems.stream().allMatch(it -> it.isEmpty() || tryMoveToOutput(it, Action.SIMULATE)))) {
+        if (!output.isEmpty() && tryMoveToOutput(output, Action.SIMULATE) && canMoveLastRemaining()) {
             tryMoveToOutput(output, Action.EXECUTE);
             //TODO: Fix this as I believe if things overlap there is a chance it won't work properly.
-            // For example if there are multiple stacks of dirt in remaining and we have room for one stack, but given we only check one stack at a time...)
+            // For example if there are multiple stacks of dirt, or even just different item types, in remaining and we have room for one stack,
+            // but given we only check one stack at a time...)
             // Basically simulating fitting the last remaining items doesn't do enough validation about intermediary state
             for (ItemStack remainingItem : lastRemainingItems) {
                 if (!remainingItem.isEmpty()) {
@@ -352,30 +387,26 @@ public class TileEntityFormulaicAssemblicator extends TileEntityConfigurableMach
                     MekanismUtils.logMismatchedStackSize(craftingSlot.shrinkStack(1, Action.EXECUTE), 1);
                 }
             }
-            if (formula != null) {
+            if (!formula.isEmpty()) {
                 moveItemsToGrid();
             }
-            markForSave();
             return true;
         }
         return false;
     }
 
     public boolean craftSingle() {
-        if (formula == null) {
-            return doSingleCraft();
-        }
         boolean canOperate = true;
-        if (!formula.matches(getLevel(), craftingGridSlots)) {
+        if (!formula.isEmpty() && !formula.matches(getLevel(), craftingGridSlots)) {
             canOperate = moveItemsToGrid();
         }
-        if (canOperate) {
-            return doSingleCraft();
-        }
-        return false;
+        return canOperate && doSingleCraft();
     }
 
     private boolean moveItemsToGrid() {
+        if (!canTryToMove) {
+            return false;
+        }
         boolean ret = true;
         for (int i = 0; i < craftingGridSlots.size(); i++) {
             IInventorySlot recipeSlot = craftingGridSlots.get(i);
@@ -384,49 +415,63 @@ public class TileEntityFormulaicAssemblicator extends TileEntityConfigurableMach
                 continue;
             }
             if (recipeStack.isEmpty()) {
-                boolean found = false;
+                Set<HashedItem> checkedTypes = null;
                 for (int j = inputSlots.size() - 1; j >= 0; j--) {
                     //The stack stored in the stock inventory
                     IInventorySlot stockSlot = inputSlots.get(j);
                     if (!stockSlot.isEmpty()) {
                         ItemStack stockStack = stockSlot.getStack();
-                        if (formula.isIngredientInPos(level, stockStack, i)) {
-                            recipeSlot.setStack(stockStack.copyWithCount(1));
-                            MekanismUtils.logMismatchedStackSize(stockSlot.shrinkStack(1, Action.EXECUTE), 1);
-                            markForSave();
-                            found = true;
-                            break;
+                        //Note: As we don't mutate it (except potentially when we found it as a match, at which point we don't need it anymore),
+                        // we can just use a raw view rather than having to copy the stack
+                        HashedItem stockStackType = HashedItem.raw(stockStack);
+                        //If we already checked this stack type for being valid in the recipe for this position, we can skip checking it again
+                        if (checkedTypes == null || checkedTypes.add(stockStackType)) {
+                            if (formula.isIngredientInPos(level, stockStack, i)) {
+                                recipeSlot.setStack(stockStack.copyWithCount(1));
+                                MekanismUtils.logMismatchedStackSize(stockSlot.shrinkStack(1, Action.EXECUTE), 1);
+                                break;
+                            } else if (checkedTypes == null) {
+                                checkedTypes = new HashSet<>();
+                                //Note: If the types set was not null, then we will have added it above when checking if we already checked the type
+                                checkedTypes.add(stockStackType);
+                            }
                         }
                     }
                 }
-                if (!found) {
+                if (recipeSlot.isEmpty()) {
+                    //We didn't find a stack to replace it with, that means we won't be able to operate on our recipe
                     ret = false;
                 }
             } else {
                 //Update recipeStack as well, so we can check if it is empty without having to get it again
                 recipeSlot.setStack(recipeStack = tryMoveToInput(recipeStack));
-                markForSave();
                 if (!recipeStack.isEmpty()) {
                     ret = false;
                 }
             }
         }
+        if (!ret) {
+            //If we failed to move items, then we know none of the currently stored items are valid for the recipe,
+            // so we can skip trying to move them until something changes
+            canTryToMove = false;
+        }
         return ret;
     }
 
     public void craftAll() {
+        //TODO: Can we somehow optimize this, maybe by moving multiple items at once
         while (craftSingle()) {
         }
     }
 
     public void fillGrid() {
-        if (formula != null) {
+        if (!formula.isEmpty()) {
             moveItemsToGrid();
         }
     }
 
     public void emptyGrid() {
-        if (formula == null) {
+        if (formula.isEmpty()) {
             moveItemsToInput(true);
         }
     }
@@ -435,11 +480,10 @@ public class TileEntityFormulaicAssemblicator extends TileEntityConfigurableMach
         for (int i = 0; i < craftingGridSlots.size(); i++) {
             IInventorySlot recipeSlot = craftingGridSlots.get(i);
             ItemStack recipeStack = recipeSlot.getStack();
-            if (!recipeStack.isEmpty() && (forcePush || (formula != null && !formula.isIngredientInPos(getLevel(), recipeStack, i)))) {
+            if (!recipeStack.isEmpty() && (forcePush || (!formula.isEmpty() && !formula.isIngredientInPos(getLevel(), recipeStack, i)))) {
                 recipeSlot.setStack(tryMoveToInput(recipeStack));
             }
         }
-        markForSave();
     }
 
     @Override
@@ -448,7 +492,7 @@ public class TileEntityFormulaicAssemblicator extends TileEntityConfigurableMach
             operatingTicks = 0;
             autoMode = false;
             markForSave();
-        } else if (formula != null) {
+        } else if (!formula.isEmpty()) {
             moveItemsToInput(false);
             autoMode = true;
             markForSave();
@@ -485,18 +529,19 @@ public class TileEntityFormulaicAssemblicator extends TileEntityConfigurableMach
     }
 
     public void toggleStockControl() {
-        if (!isRemote() && formula != null) {
+        if (!isRemote() && !formula.isEmpty()) {
             stockControl = !stockControl;
             if (stockControl) {
                 organizeStock();
-                //Just organized mark as not actually needing organize in case things changed
-                needsOrganize = false;
             }
+            //We either just organized, so can mark it as not actually needing organize in case things changed,
+            // or we don't want to organize so if we had a queued organization we can just remove it
+            needsOrganize = false;
         }
     }
 
     private void organizeStock() {
-        if (formula == null) {
+        if (formula.isEmpty()) {
             return;
         }
         // build map of what items we have to organize
@@ -572,7 +617,7 @@ public class TileEntityFormulaicAssemblicator extends TileEntityConfigurableMach
 
     private boolean setSlotIfChanged(Object2IntMap<HashedItem> storedMap, IInventorySlot inputSlot) {
         boolean empty = false;
-        ObjectIterator<Entry<HashedItem>> iterator = storedMap.object2IntEntrySet().iterator();
+        ObjectIterator<Object2IntMap.Entry<HashedItem>> iterator = Object2IntMaps.fastIterator(storedMap);
         Object2IntMap.Entry<HashedItem> next = iterator.next();
         HashedItem item = next.getKey();
         int stored = next.getIntValue();
@@ -595,7 +640,7 @@ public class TileEntityFormulaicAssemblicator extends TileEntityConfigurableMach
     }
 
     private void buildStockControlMap() {
-        if (formula == null) {
+        if (formula.isEmpty()) {
             return;
         }
         for (int i = 0; i < 9; i++) {
@@ -626,38 +671,40 @@ public class TileEntityFormulaicAssemblicator extends TileEntityConfigurableMach
     }
 
     public void encodeFormula() {
-        if (!formulaSlot.isEmpty()) {
-            ItemStack formulaStack = formulaSlot.getStack();
-            if (formulaStack.getItem() instanceof ItemCraftingFormula item && !item.hasInventory(formulaStack)) {
-                RecipeFormula formula = new RecipeFormula(level, craftingGridSlots);
-                if (formula.isValidFormula()) {
-                    item.setInventory(formulaStack, formula.input);
-                    markForSave();
-                }
+        if (formulaSlot.isEmpty()) {
+            return;
+        }
+        FormulaAttachment formulaAttachment = formulaSlot.getStack().getOrDefault(MekanismDataComponents.FORMULA_HOLDER, FormulaAttachment.EMPTY);
+        if (formulaAttachment.isEmpty()) {
+            RecipeFormula formula = RecipeFormula.create(level, craftingGridSlots);
+            if (formula.valid()) {
+                ItemStack stack = formulaSlot.getStack().copy();
+                stack.set(MekanismDataComponents.FORMULA_HOLDER, FormulaAttachment.create(formula));
+                formulaSlot.setStack(stack);
             }
         }
     }
 
     @Override
-    public void load(@NotNull CompoundTag nbt) {
-        super.load(nbt);
-        autoMode = nbt.getBoolean(NBTConstants.AUTO);
-        operatingTicks = nbt.getInt(NBTConstants.PROGRESS);
-        pulseOperations = nbt.getInt(NBTConstants.PULSE);
-        stockControl = nbt.getBoolean(NBTConstants.STOCK_CONTROL);
+    public void loadAdditional(@NotNull CompoundTag nbt, @NotNull HolderLookup.Provider provider) {
+        super.loadAdditional(nbt, provider);
+        autoMode = nbt.getBoolean(SerializationConstants.AUTO);
+        operatingTicks = nbt.getInt(SerializationConstants.PROGRESS);
+        pulseOperations = nbt.getInt(SerializationConstants.PULSE);
+        stockControl = nbt.getBoolean(SerializationConstants.STOCK_CONTROL);
     }
 
     @Override
-    public void saveAdditional(@NotNull CompoundTag nbtTags) {
-        super.saveAdditional(nbtTags);
-        nbtTags.putBoolean(NBTConstants.AUTO, autoMode);
-        nbtTags.putInt(NBTConstants.PROGRESS, operatingTicks);
-        nbtTags.putInt(NBTConstants.PULSE, pulseOperations);
-        nbtTags.putBoolean(NBTConstants.STOCK_CONTROL, stockControl);
+    public void saveAdditional(@NotNull CompoundTag nbtTags, @NotNull HolderLookup.Provider provider) {
+        super.saveAdditional(nbtTags, provider);
+        nbtTags.putBoolean(SerializationConstants.AUTO, autoMode);
+        nbtTags.putInt(SerializationConstants.PROGRESS, operatingTicks);
+        nbtTags.putInt(SerializationConstants.PULSE, pulseOperations);
+        nbtTags.putBoolean(SerializationConstants.STOCK_CONTROL, stockControl);
     }
 
     @Override
-    public boolean canPulse() {
+    public boolean supportsMode(RedstoneControl mode) {
         return true;
     }
 
@@ -692,30 +739,15 @@ public class TileEntityFormulaicAssemblicator extends TileEntityConfigurableMach
         container.track(SyncableBoolean.create(this::hasRecipe, value -> isRecipe = value));
         container.track(SyncableBoolean.create(this::getStockControl, value -> stockControl = value));
         container.track(SyncableBoolean.create(this::usedEnergy, value -> usedEnergy = value));
-        container.track(SyncableBoolean.create(() -> formula != null, hasFormula -> {
-            if (hasFormula) {
-                if (formula == null && isRemote()) {
-                    //If we are on the client (which we should be when setting anyway) and we don't have a formula yet
-                    // but should, then create an empty formula
-                    formula = new RecipeFormula(getLevel(), NonNullList.withSize(9, ItemStack.EMPTY));
-                }
-            } else {
-                formula = null;
-            }
-        }));
         for (int i = 0; i < 9; i++) {
             int index = i;
-            container.track(SyncableItemStack.create(() -> formula == null ? ItemStack.EMPTY : formula.input.get(index), stack -> {
-                if (!stack.isEmpty() && formula == null && isRemote()) {
-                    //If we are on the client (which we should be when setting anyway) and we don't have a formula yet
-                    // but should, then create an empty formula. Also make sure it isn't just us trying to clear the formula slot
-                    formula = new RecipeFormula(getLevel(), NonNullList.withSize(9, ItemStack.EMPTY));
-                }
-                if (formula != null) {
-                    formula.setStack(getLevel(), index, stack);
-                }
-            }));
+            container.track(SyncableItemStack.create(() -> formula.getInputStack(index), stack -> formula = formula.withStack(getLevel(), index, stack)));
         }
+    }
+
+    @ComputerMethod
+    public boolean hasValidFormula() {
+        return !formula.isEmpty() && formula.valid();
     }
 
     //Methods relating to IComputerTile
@@ -741,11 +773,6 @@ public class TileEntityFormulaicAssemblicator extends TileEntityConfigurableMach
         return outputSlots.get(slot).getStack();
     }
 
-    @ComputerMethod
-    boolean hasValidFormula() {
-        return formula != null && formula.isValidFormula();
-    }
-
     @ComputerMethod(nameOverride = "getSlots")
     int computerGetSlots() {
         return inputSlots.size();
@@ -763,10 +790,10 @@ public class TileEntityFormulaicAssemblicator extends TileEntityConfigurableMach
     @ComputerMethod(nameOverride = "encodeFormula", requiresPublicSecurity = true, methodDescription = "Requires an unencoded formula in the formula slot and a valid recipe")
     void computerEncodeFormula() throws ComputerException {
         validateSecurityIsPublic();
-        ItemStack formulaStack = formulaSlot.getStack();
-        if (formulaStack.isEmpty() || !(formulaStack.getItem() instanceof ItemCraftingFormula craftingFormula)) {
+        FormulaAttachment formulaAttachment = formulaSlot.getStack().getOrDefault(MekanismDataComponents.FORMULA_HOLDER, FormulaAttachment.EMPTY);
+        if (formulaAttachment.isEmpty()) {
             throw new ComputerException("No formula found.");
-        } else if (formula != null && formula.isValidFormula() || craftingFormula.hasInventory(formulaStack)) {
+        } else if (hasValidFormula() || formulaAttachment.hasItems()) {
             throw new ComputerException("Formula has already been encoded.");
         } else if (!hasRecipe()) {
             throw new ComputerException("Encoding formulas require that there is a valid recipe to actually encode.");

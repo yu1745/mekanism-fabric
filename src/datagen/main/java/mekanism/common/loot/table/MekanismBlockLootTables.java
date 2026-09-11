@@ -5,10 +5,15 @@ import mekanism.common.registries.MekanismItems;
 import mekanism.common.resource.PrimaryResource;
 import mekanism.common.resource.ResourceType;
 import mekanism.common.resource.ore.OreType;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.world.level.storage.loot.providers.number.ConstantValue;
 import net.minecraft.world.level.storage.loot.providers.number.UniformGenerator;
 
 public class MekanismBlockLootTables extends BaseBlockLootTables {
+
+    public MekanismBlockLootTables(HolderLookup.Provider provider) {
+        super(provider);
+    }
 
     @Override
     protected void generate() {
@@ -20,6 +25,6 @@ public class MekanismBlockLootTables extends BaseBlockLootTables {
         add(block -> createOreDrop(block, MekanismItems.PROCESSED_RESOURCES.get(ResourceType.RAW, PrimaryResource.LEAD)), MekanismBlocks.ORES.get(OreType.LEAD));
         add(block -> createOreDrop(block, MekanismItems.PROCESSED_RESOURCES.get(ResourceType.RAW, PrimaryResource.URANIUM)), MekanismBlocks.ORES.get(OreType.URANIUM));
         //Register the remaining blocks as dropping themselves with any contents they may have stored
-        dropSelfWithContents(MekanismBlocks.BLOCKS.getAllBlocks());
+        dropSelfWithContents(MekanismBlocks.BLOCKS.getPrimaryEntries());
     }
 }

@@ -2,7 +2,7 @@ package mekanism.client.render.lib;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Function;
+import mekanism.api.functions.ToFloatFunction;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 
@@ -62,11 +62,11 @@ public class QuadUtils {
         TextureAtlasSprite texture = quad.getTexture();
         float uMin = texture.getU0(), uMax = texture.getU1();
         float vMin = texture.getV0(), vMax = texture.getV1();
-        quad.vertexTransform(v -> {
-            float newU = (v.getTexU() - uMin) * 16F / (uMax - uMin);
-            float newV = (v.getTexV() - vMin) * 16F / (vMax - vMin);
+        for (Vertex v : quad.getVertices()) {
+            float newU = (v.getTexU() - uMin) / (uMax - uMin);
+            float newV = (v.getTexV() - vMin) / (vMax - vMin);
             v.texRaw(newTexture.getU(newU), newTexture.getV(newV));
-        });
+        }
     }
 
     // this is an adaptation of fry's original UV contractor (pulled from BakedQuadBuilder).
@@ -83,15 +83,15 @@ public class QuadUtils {
         }
     }
 
-    private static float[] contract(Quad quad, Function<Vertex, Float> uvf, float ep) {
+    private static float[] contract(Quad quad, ToFloatFunction<Vertex> uvf, float ep) {
         float center = 0;
         float[] ret = new float[4];
         for (int v = 0; v < 4; v++) {
-            center += uvf.apply(quad.getVertices()[v]);
+            center += uvf.applyAsFloat(quad.getVertices()[v]);
         }
         center /= 4;
         for (int v = 0; v < 4; v++) {
-            float orig = uvf.apply(quad.getVertices()[v]);
+            float orig = uvf.applyAsFloat(quad.getVertices()[v]);
             float shifted = orig * (1 - eps) + center * eps;
             float delta = orig - shifted;
             if (Math.abs(delta) < ep) { // not moving a fraction of a pixel

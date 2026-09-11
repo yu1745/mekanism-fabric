@@ -2,12 +2,14 @@ package mekanism.common.capabilities.heat;
 
 import java.util.function.DoubleSupplier;
 import mekanism.api.IContentsListener;
-import mekanism.api.NBTConstants;
+import mekanism.api.SerializationConstants;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.heat.HeatAPI;
 import mekanism.api.heat.IHeatCapacitor;
 import mekanism.common.util.NBTUtils;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.util.Mth;
 import org.jetbrains.annotations.Nullable;
 
 @NothingNullByDefault
@@ -94,6 +96,11 @@ public class BasicHeatCapacitor implements IHeatCapacitor {
         heatToHandle += transfer;
     }
 
+    @Override
+    public boolean isAmbientTemperature() {
+        return Mth.equal(getTemperature(), getAmbientTemperature());
+    }
+
     public void update() {
         if (heatToHandle != 0 && Math.abs(heatToHandle) > HeatAPI.EPSILON) {
             initStoredHeat();
@@ -106,16 +113,15 @@ public class BasicHeatCapacitor implements IHeatCapacitor {
     }
 
     @Override
-    public void deserializeNBT(CompoundTag nbt) {
-        NBTUtils.setDoubleIfPresent(nbt, NBTConstants.STORED, heat -> storedHeat = heat);
-        NBTUtils.setDoubleIfPresent(nbt, NBTConstants.HEAT_CAPACITY, capacity -> setHeatCapacity(capacity, false));
+    public void deserializeNBT(HolderLookup.Provider provider, CompoundTag nbt) {
+        NBTUtils.setDoubleIfPresent(nbt, SerializationConstants.STORED, heat -> storedHeat = heat);
+        NBTUtils.setDoubleIfPresent(nbt, SerializationConstants.HEAT_CAPACITY, capacity -> setHeatCapacity(capacity, false));
     }
 
     @Override
-    public CompoundTag serializeNBT() {
-        CompoundTag nbt = new CompoundTag();
-        nbt.putDouble(NBTConstants.STORED, getHeat());
-        nbt.putDouble(NBTConstants.HEAT_CAPACITY, getHeatCapacity());
+    public CompoundTag serializeNBT(HolderLookup.Provider provider) {
+        CompoundTag nbt = IHeatCapacitor.super.serializeNBT(provider);
+        nbt.putDouble(SerializationConstants.HEAT_CAPACITY, getHeatCapacity());
         return nbt;
     }
 

@@ -21,43 +21,44 @@ import org.jetbrains.annotations.Nullable;
 
 public class GuiOredictionificatorFilter extends GuiTextFilter<OredictionificatorItemFilter, TileEntityOredictionificator> {
 
+    private static final int WIDTH = 162;
+
     public static GuiOredictionificatorFilter create(IGuiWrapper gui, TileEntityOredictionificator tile) {
-        return new GuiOredictionificatorFilter(gui, (gui.getWidth() - 152) / 2, 15, tile, null);
+        return new GuiOredictionificatorFilter(gui, (gui.getXSize() - WIDTH) / 2, 15, tile, null);
     }
 
     public static GuiOredictionificatorFilter edit(IGuiWrapper gui, TileEntityOredictionificator tile, OredictionificatorItemFilter filter) {
-        return new GuiOredictionificatorFilter(gui, (gui.getWidth() - 152) / 2, 15, tile, filter);
+        return new GuiOredictionificatorFilter(gui, (gui.getXSize() - WIDTH) / 2, 15, tile, filter);
     }
 
     private GuiOredictionificatorFilter(IGuiWrapper gui, int x, int y, TileEntityOredictionificator tile, @Nullable OredictionificatorItemFilter origFilter) {
-        super(gui, x, y, 152, 100, MekanismLang.OREDICTIONIFICATOR_FILTER.translate(), tile, origFilter);
+        super(gui, x, y, WIDTH, 100, MekanismLang.OREDICTIONIFICATOR_FILTER.translate(), tile, origFilter);
     }
 
     @Override
     protected int getScreenHeight() {
-        return 53;
-    }
-
-    @Override
-    protected int getSlotOffset() {
-        return 32;
+        return 52;
     }
 
     @Override
     protected void init() {
         super.init();
-        addChild(new MekanismImageButton(gui(), relativeX + 10, relativeY + 18, 12, getButtonLocation("left"), () -> {
+        addChild(new MekanismImageButton(gui(), relativeX + 3, relativeY + 38, 12, getButtonLocation("left"), (element, mouseX, mouseY) -> {
             if (filter.hasFilter()) {
                 filter.previous();
                 slotDisplay.updateStackList();
+                return true;
             }
-        }, getOnHover(MekanismLang.LAST_ITEM)));
-        addChild(new MekanismImageButton(gui(), relativeX + 10, relativeY + 52, 12, getButtonLocation("right"), () -> {
+            return false;
+        })).setTooltip(MekanismLang.LAST_ITEM);
+        addChild(new MekanismImageButton(gui(), relativeX + 16, relativeY + 38, 12, getButtonLocation("right"), (element, mouseX, mouseY) -> {
             if (filter.hasFilter()) {
                 filter.next();
                 slotDisplay.updateStackList();
+                return true;
             }
-        }, getOnHover(MekanismLang.NEXT_ITEM)));
+            return false;
+        })).setTooltip(MekanismLang.NEXT_ITEM);
     }
 
     @Override
@@ -77,7 +78,7 @@ public class GuiOredictionificatorFilter extends GuiTextFilter<Oredictionificato
             filterSaveFailed(getNoFilterSaveError());
             return false;
         }
-        String modid = "forge";
+        String modid = "c";
         String newFilter = name.toLowerCase(Locale.ROOT);
         if (newFilter.contains(":")) {
             String[] split = newFilter.split(":");
@@ -92,7 +93,7 @@ public class GuiOredictionificatorFilter extends GuiTextFilter<Oredictionificato
             filterSaveFailed(MekanismLang.OREDICTIONIFICATOR_FILTER_INVALID_PATH);
             return false;
         }
-        ResourceLocation filterLocation = new ResourceLocation(modid, newFilter);
+        ResourceLocation filterLocation = ResourceLocation.fromNamespaceAndPath(modid, newFilter);
         if (filter.hasFilter() && filter.filterMatches(filterLocation)) {
             filterSaveFailed(MekanismLang.TAG_FILTER_SAME_TAG);
         } else if (TileEntityOredictionificator.isValidTarget(filterLocation)) {

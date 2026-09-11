@@ -1,10 +1,12 @@
 package mekanism.api.heat;
 
 import mekanism.api.IContentsListener;
-import mekanism.api.NBTConstants;
+import mekanism.api.SerializationConstants;
 import mekanism.api.annotations.NothingNullByDefault;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraftforge.common.util.INBTSerializable;
+import net.minecraft.util.Mth;
+import net.neoforged.neoforge.common.util.INBTSerializable;
 
 @NothingNullByDefault
 public interface IHeatCapacitor extends INBTSerializable<CompoundTag>, IContentsListener {
@@ -68,10 +70,22 @@ public interface IHeatCapacitor extends INBTSerializable<CompoundTag>, IContents
      */
     void handleHeat(double transfer);
 
+    /**
+     * Checks if this heat capacitor is currently at the ambient temperature of its surroundings.
+     *
+     * @return {@code true} if this capacitor is currently at the ambient temperature of the environment it is in.
+     *
+     * @implNote This method should be overridden to take into account any variable ambient temperature data such as biomes.
+     * @since 10.7.15
+     */
+    default boolean isAmbientTemperature() {
+        return Mth.equal(getTemperature(), HeatAPI.AMBIENT_TEMP);
+    }
+
     @Override
-    default CompoundTag serializeNBT() {
+    default CompoundTag serializeNBT(HolderLookup.Provider provider) {
         CompoundTag nbt = new CompoundTag();
-        nbt.putDouble(NBTConstants.STORED, getHeat());
+        nbt.putDouble(SerializationConstants.STORED, getHeat());
         return nbt;
     }
 }

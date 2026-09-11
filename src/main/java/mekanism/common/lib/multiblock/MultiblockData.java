@@ -2,26 +2,22 @@ package mekanism.common.lib.multiblock;
 
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.EnumMap;
-import java.util.EnumSet;
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.BiPredicate;
 import java.util.function.BooleanSupplier;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import mekanism.api.Action;
 import mekanism.api.AutomationType;
 import mekanism.api.IContentsListener;
-import mekanism.api.NBTConstants;
-import mekanism.api.chemical.gas.IGasTank;
-import mekanism.api.chemical.infuse.IInfusionTank;
-import mekanism.api.chemical.pigment.IPigmentTank;
-import mekanism.api.chemical.slurry.ISlurryTank;
+import mekanism.api.SerializationConstants;
+import mekanism.api.chemical.IChemicalTank;
+import mekanism.api.chemical.IMekanismChemicalHandler;
 import mekanism.api.energy.IEnergyContainer;
 import mekanism.api.energy.IMekanismStrictEnergyHandler;
 import mekanism.api.fluid.IExtendedFluidTank;
@@ -30,12 +26,9 @@ import mekanism.api.heat.HeatAPI;
 import mekanism.api.heat.IHeatCapacitor;
 import mekanism.api.inventory.IInventorySlot;
 import mekanism.api.inventory.IMekanismInventory;
-import mekanism.common.capabilities.chemical.dynamic.IGasTracker;
-import mekanism.common.capabilities.chemical.dynamic.IInfusionTracker;
-import mekanism.common.capabilities.chemical.dynamic.IPigmentTracker;
-import mekanism.common.capabilities.chemical.dynamic.ISlurryTracker;
 import mekanism.common.capabilities.heat.ITileHeatHandler;
 import mekanism.common.integration.computer.annotation.ComputerMethod;
+import mekanism.common.integration.energy.BlockEnergyCapabilityCache;
 import mekanism.common.inventory.container.sync.dynamic.ContainerSync;
 import mekanism.common.lib.math.voxel.IShape;
 import mekanism.common.lib.math.voxel.VoxelCuboid;
@@ -44,22 +37,24 @@ import mekanism.common.lib.multiblock.FormationProtocol.StructureRequirement;
 import mekanism.common.lib.multiblock.IValveHandler.ValveData;
 import mekanism.common.lib.multiblock.MultiblockCache.CacheSubstance;
 import mekanism.common.tile.prefab.TileEntityMultiblock;
+import mekanism.common.tile.prefab.TileEntityStructuralMultiblock;
 import mekanism.common.util.EnumUtils;
 import mekanism.common.util.NBTUtils;
 import mekanism.common.util.WorldUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.redstone.Redstone;
+import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class MultiblockData implements IMekanismInventory, IMekanismFluidHandler, IMekanismStrictEnergyHandler, ITileHeatHandler, IGasTracker, IInfusionTracker,
-      IPigmentTracker, ISlurryTracker {
+public class MultiblockData implements IMekanismInventory, IMekanismFluidHandler, IMekanismStrictEnergyHandler, ITileHeatHandler, IMekanismChemicalHandler {
 
-    protected static final Map<Direction, Set<Direction>> SIDE_REFERENCES = new EnumMap<>(Direction.class);
     public Set<BlockPos> locations = new ObjectOpenHashSet<>();
     /**
      * @apiNote This set is only used for purposes of caching all known valid inner blocks of a multiblock structure, for use in checking if we need to revalidate the
@@ -88,17 +83,14 @@ public class MultiblockData implements IMekanismInventory, IMekanismFluidHandler
     private boolean formed;
     public boolean recheckStructure;
 
-    private int currentRedstoneLevel;
+    private int currentRedstoneLevel = Redstone.SIGNAL_NONE;
 
     private final BooleanSupplier remoteSupplier;
     private final Supplier<Level> worldSupplier;
 
     protected final List<IInventorySlot> inventorySlots = new ArrayList<>();
     protected final List<IExtendedFluidTank> fluidTanks = new ArrayList<>();
-    protected final List<IGasTank> gasTanks = new ArrayList<>();
-    protected final List<IInfusionTank> infusionTanks = new ArrayList<>();
-    protected final List<IPigmentTank> pigmentTanks = new ArrayList<>();
-    protected final List<ISlurryTank> slurryTanks = new ArrayList<>();
+    protected final List<IChemicalTank> chemicalTanks = new ArrayList<>();
     protected final List<IEnergyContainer> energyContainers = new ArrayList<>();
     protected final List<IHeatCapacitor> heatCapacitors = new ArrayList<>();
 
@@ -130,7 +122,7 @@ public class MultiblockData implements IMekanismInventory, IMekanismFluidHandler
         return () -> {
             contentsListener.onContentsChanged();
             if (!isRemote()) {
-                markDirtyComparator(getWorld());
+                markDirtyComparator(getLevel());
             }
         };
     }
@@ -145,6 +137,14 @@ public class MultiblockData implements IMekanismInventory, IMekanismFluidHandler
 
     public void markDirty() {
         dirty = true;
+    }
+
+    /**
+     * Returns true if the multiblock's gui can be accessed via structural multiblocks, false otherwise. An example this may be false for would be on a thermal
+     * evaporation plant.
+     */
+    public boolean allowsStructuralGuiAccess(TileEntityStructuralMultiblock multiblock) {
+        return true;
     }
 
     /**
@@ -184,7 +184,11 @@ public class MultiblockData implements IMekanismInventory, IMekanismFluidHandler
         if (positions.length == 0) {
             throw new IllegalArgumentException("No positions given.");
         }
-        return Arrays.stream(positions).mapToDouble(pos -> world.getBiome(pos).value().getTemperature(pos)).sum() / positions.length;
+        double sum = 0;
+        for (BlockPos pos : positions) {
+            sum += world.getBiome(pos).value().getTemperature(pos);
+        }
+        return sum / positions.length;
     }
 
     public boolean setShape(IShape shape) {
@@ -204,35 +208,26 @@ public class MultiblockData implements IMekanismInventory, IMekanismFluidHandler
                 internalMultiblock.setMultiblock(this);
             }
         }
+        for (BlockPos pos : locations) {
+            BlockEntity tile = WorldUtils.getTileEntity(world, pos);
+            if (tile instanceof IStructuralMultiblock structuralMultiblock) {
+                structuralMultiblock.multiblockFormed(this);
+            }
+        }
 
         if (shouldCap(CacheSubstance.FLUID)) {
             for (IExtendedFluidTank tank : getFluidTanks(null)) {
                 tank.setStackSize(Math.min(tank.getFluidAmount(), tank.getCapacity()), Action.EXECUTE);
             }
         }
-        if (shouldCap(CacheSubstance.GAS)) {
-            for (IGasTank tank : getGasTanks(null)) {
-                tank.setStackSize(Math.min(tank.getStored(), tank.getCapacity()), Action.EXECUTE);
-            }
-        }
-        if (shouldCap(CacheSubstance.INFUSION)) {
-            for (IInfusionTank tank : getInfusionTanks(null)) {
-                tank.setStackSize(Math.min(tank.getStored(), tank.getCapacity()), Action.EXECUTE);
-            }
-        }
-        if (shouldCap(CacheSubstance.PIGMENT)) {
-            for (IPigmentTank tank : getPigmentTanks(null)) {
-                tank.setStackSize(Math.min(tank.getStored(), tank.getCapacity()), Action.EXECUTE);
-            }
-        }
-        if (shouldCap(CacheSubstance.SLURRY)) {
-            for (ISlurryTank tank : getSlurryTanks(null)) {
+        if (shouldCap(CacheSubstance.CHEMICAL)) {
+            for (IChemicalTank tank : getChemicalTanks(null)) {
                 tank.setStackSize(Math.min(tank.getStored(), tank.getCapacity()), Action.EXECUTE);
             }
         }
         if (shouldCap(CacheSubstance.ENERGY)) {
             for (IEnergyContainer container : getEnergyContainers(null)) {
-                container.setEnergy(container.getEnergy().min(container.getMaxEnergy()));
+                container.setEnergy(Math.min(container.getEnergy(), container.getMaxEnergy()));
             }
         }
         updateEjectors(world);
@@ -240,21 +235,13 @@ public class MultiblockData implements IMekanismInventory, IMekanismFluidHandler
     }
 
     protected void updateEjectors(Level world) {
-        for (ValveData valve : valves) {
-            BlockEntity tile = WorldUtils.getTileEntity(world, valve.location);
-            if (tile instanceof IMultiblockEjector ejector) {//Check if this valve is an ejector as not all of them are
-                //Ensure we don't use create a bunch of identical collections potentially using up a bunch of memory
-                Set<Direction> sides = SIDE_REFERENCES.computeIfAbsent(valve.side, Collections::singleton);
-                ejector.setEjectSides(sides);
-            }
-        }
     }
 
     protected boolean isRemote() {
         return remoteSupplier.getAsBoolean();
     }
 
-    protected Level getWorld() {
+    public Level getLevel() {
         return worldSupplier.get();
     }
 
@@ -262,11 +249,17 @@ public class MultiblockData implements IMekanismInventory, IMekanismFluidHandler
         return true;
     }
 
-    public void remove(Level world) {
+    public void remove(Level world, Structure oldStructure) {
         for (BlockPos pos : internalLocations) {
             BlockEntity tile = WorldUtils.getTileEntity(world, pos);
             if (tile instanceof IInternalMultiblock internalMultiblock) {
                 internalMultiblock.setMultiblock(null);
+            }
+        }
+        for (BlockPos pos : locations) {
+            BlockEntity tile = WorldUtils.getTileEntity(world, pos);
+            if (tile instanceof IStructuralMultiblock structuralMultiblock) {
+                structuralMultiblock.multiblockUnformed(oldStructure);
             }
         }
         inventoryID = null;
@@ -277,23 +270,26 @@ public class MultiblockData implements IMekanismInventory, IMekanismFluidHandler
     public void meltdownHappened(Level world) {
     }
 
-    public void readUpdateTag(CompoundTag tag) {
-        NBTUtils.setIntIfPresent(tag, NBTConstants.VOLUME, this::setVolume);
-        NBTUtils.setBlockPosIfPresent(tag, NBTConstants.RENDER_LOCATION, value -> renderLocation = value);
-        bounds = new VoxelCuboid(NbtUtils.readBlockPos(tag.getCompound(NBTConstants.MIN)),
-              NbtUtils.readBlockPos(tag.getCompound(NBTConstants.MAX)));
-        NBTUtils.setUUIDIfPresentElse(tag, NBTConstants.INVENTORY_ID, value -> inventoryID = value, () -> inventoryID = null);
+    public void readUpdateTag(CompoundTag tag, HolderLookup.Provider provider) {
+        NBTUtils.setIntIfPresent(tag, SerializationConstants.VOLUME, this::setVolume);
+        NBTUtils.setBlockPosIfPresent(tag, SerializationConstants.RENDER_LOCATION, value -> renderLocation = value);
+        Optional<BlockPos> minPos = NbtUtils.readBlockPos(tag, SerializationConstants.MIN);
+        Optional<BlockPos> maxPos = NbtUtils.readBlockPos(tag, SerializationConstants.MAX);
+        if (minPos.isPresent() && maxPos.isPresent()) {
+            bounds = new VoxelCuboid(minPos.get(), maxPos.get());
+        }
+        NBTUtils.setUUIDIfPresentElse(tag, SerializationConstants.INVENTORY_ID, value -> inventoryID = value, () -> inventoryID = null);
     }
 
-    public void writeUpdateTag(CompoundTag tag) {
-        tag.putInt(NBTConstants.VOLUME, getVolume());
+    public void writeUpdateTag(CompoundTag tag, HolderLookup.Provider provider) {
+        tag.putInt(SerializationConstants.VOLUME, getVolume());
         if (renderLocation != null) {//In theory this shouldn't be null here but check it anyway
-            tag.put(NBTConstants.RENDER_LOCATION, NbtUtils.writeBlockPos(renderLocation));
+            tag.put(SerializationConstants.RENDER_LOCATION, NbtUtils.writeBlockPos(renderLocation));
         }
-        tag.put(NBTConstants.MIN, NbtUtils.writeBlockPos(bounds.getMinPos()));
-        tag.put(NBTConstants.MAX, NbtUtils.writeBlockPos(bounds.getMaxPos()));
+        tag.put(SerializationConstants.MIN, NbtUtils.writeBlockPos(bounds.getMinPos()));
+        tag.put(SerializationConstants.MAX, NbtUtils.writeBlockPos(bounds.getMaxPos()));
         if (inventoryID != null) {
-            tag.putUUID(NBTConstants.INVENTORY_ID, inventoryID);
+            tag.putUUID(SerializationConstants.INVENTORY_ID, inventoryID);
         }
     }
 
@@ -340,7 +336,7 @@ public class MultiblockData implements IMekanismInventory, IMekanismFluidHandler
                 if (manager != null) {
                     IStructureValidator<T> validator = manager.createValidator();
                     if (validator instanceof CuboidStructureValidator<T> cuboidValidator) {
-                        validator.init(getWorld(), manager, structure);
+                        validator.init(getLevel(), manager, structure);
                         cuboidValidator.loadCuboid(getBounds());
                         return cuboidValidator.getStructureRequirement(pos) == StructureRequirement.INNER;
                     }
@@ -361,8 +357,10 @@ public class MultiblockData implements IMekanismInventory, IMekanismFluidHandler
     public Direction getOutsideSide(@NotNull BlockPos pos) {
         if (isFormed()) {
             VoxelCuboid bounds = getBounds();
+            BlockPos.MutableBlockPos mutable = new BlockPos.MutableBlockPos();
             for (Direction direction : EnumUtils.DIRECTIONS) {
-                if (bounds.getRelativeLocation(pos.relative(direction)) == CuboidRelative.OUTSIDE) {
+                mutable.setWithOffset(pos, direction);
+                if (bounds.getRelativeLocation(mutable) == CuboidRelative.OUTSIDE) {
                     return direction;
                 }
             }
@@ -373,63 +371,31 @@ public class MultiblockData implements IMekanismInventory, IMekanismFluidHandler
     @NotNull
     @Override
     public List<IInventorySlot> getInventorySlots(@Nullable Direction side) {
-        return isFormed() ? inventorySlots : Collections.emptyList();
+        return isFormed() || isRemote() ? inventorySlots : Collections.emptyList();
     }
 
     @NotNull
     @Override
     public List<IExtendedFluidTank> getFluidTanks(@Nullable Direction side) {
-        return isFormed() ? fluidTanks : Collections.emptyList();
+        return isFormed() || isRemote() ? fluidTanks : Collections.emptyList();
     }
 
     @NotNull
     @Override
-    public List<IGasTank> getGasTanks(@Nullable Direction side) {
-        return isFormed() ? gasTanks : Collections.emptyList();
-    }
-
-    @NotNull
-    @Override
-    public List<IInfusionTank> getInfusionTanks(@Nullable Direction side) {
-        return isFormed() ? infusionTanks : Collections.emptyList();
-    }
-
-    @NotNull
-    @Override
-    public List<IPigmentTank> getPigmentTanks(@Nullable Direction side) {
-        return isFormed() ? pigmentTanks : Collections.emptyList();
-    }
-
-    @NotNull
-    @Override
-    public List<ISlurryTank> getSlurryTanks(@Nullable Direction side) {
-        return isFormed() ? slurryTanks : Collections.emptyList();
+    public List<IChemicalTank> getChemicalTanks(@Nullable Direction side) {
+        return isFormed() || isRemote() ? chemicalTanks : Collections.emptyList();
     }
 
     @NotNull
     @Override
     public List<IEnergyContainer> getEnergyContainers(@Nullable Direction side) {
-        return isFormed() ? energyContainers : Collections.emptyList();
+        return isFormed() || isRemote() ? energyContainers : Collections.emptyList();
     }
 
     @NotNull
     @Override
     public List<IHeatCapacitor> getHeatCapacitors(Direction side) {
-        return isFormed() ? heatCapacitors : Collections.emptyList();
-    }
-
-    public Set<Direction> getDirectionsToEmit(BlockPos pos) {
-        Set<Direction> directionsToEmit = null;
-        for (Direction direction : EnumUtils.DIRECTIONS) {
-            BlockPos neighborPos = pos.relative(direction);
-            if (!isKnownLocation(neighborPos)) {
-                if (directionsToEmit == null) {
-                    directionsToEmit = EnumSet.noneOf(Direction.class);
-                }
-                directionsToEmit.add(direction);
-            }
-        }
-        return directionsToEmit == null ? Collections.emptySet() : directionsToEmit;
+        return isFormed() || isRemote() ? heatCapacitors : Collections.emptyList();
     }
 
     public boolean isKnownLocation(BlockPos pos) {
@@ -513,10 +479,56 @@ public class MultiblockData implements IMekanismInventory, IMekanismFluidHandler
     }
 
     protected int getMultiblockRedstoneLevel() {
-        return 0;
+        return Redstone.SIGNAL_NONE;
     }
 
     public int getCurrentRedstoneLevel() {
         return currentRedstoneLevel;
+    }
+
+    protected <CACHE> List<CACHE> getActiveOutputs(List<? extends OutputTarget<CACHE, Void>> outputs) {
+        return getActiveOutputs(outputs, null);
+    }
+
+    protected <CACHE, DATA> List<CACHE> getActiveOutputs(List<? extends OutputTarget<CACHE, DATA>> outputs, DATA data) {
+        //TODO: Try to somehow cache which ones can currently output?
+        List<CACHE> targets = new ArrayList<>(outputs.size());
+        for (OutputTarget<CACHE, DATA> target : outputs) {
+            if (target.canOutput(data)) {
+                targets.add(target.cache());
+            }
+        }
+        return targets;
+    }
+
+    public record EnergyOutputTarget(BlockEnergyCapabilityCache cache, BooleanSupplier isActive) implements OutputTarget<BlockEnergyCapabilityCache, Void> {
+
+        @Override
+        public boolean canOutput(Void unused) {
+            return isActive.getAsBoolean();
+        }
+    }
+
+    public record CapabilityOutputTarget<TYPE>(BlockCapabilityCache<TYPE, @Nullable Direction> cache, BooleanSupplier isActive) implements OutputTarget<BlockCapabilityCache<TYPE, @Nullable Direction>, Void> {
+
+        @Override
+        public boolean canOutput(Void unused) {
+            return isActive.getAsBoolean();
+        }
+    }
+
+    public record AdvancedCapabilityOutputTarget<TYPE, DATA>(BlockCapabilityCache<TYPE, @Nullable Direction> cache, Predicate<DATA> isActive) implements OutputTarget<BlockCapabilityCache<TYPE, @Nullable Direction>, DATA> {
+
+        @Override
+        public boolean canOutput(DATA data) {
+            return isActive.test(data);
+        }
+    }
+
+    protected interface OutputTarget<CACHE, DATA> {
+
+        CACHE cache();
+
+        boolean canOutput(DATA data);
     }
 }

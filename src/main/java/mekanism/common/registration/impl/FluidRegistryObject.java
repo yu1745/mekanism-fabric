@@ -1,70 +1,64 @@
 package mekanism.common.registration.impl;
 
-import java.util.Objects;
-import mekanism.api.annotations.ParametersAreNotNullByDefault;
-import mekanism.api.providers.IFluidProvider;
-import net.minecraft.MethodsReturnNonnullByDefault;
+import mekanism.api.annotations.NothingNullByDefault;
+import mekanism.api.text.IHasTextComponent;
+import mekanism.api.text.IHasTranslationKey;
+import mekanism.common.registration.MekanismDeferredHolder;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.BucketItem;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.material.Fluid;
-import net.minecraftforge.fluids.FluidType;
-import net.minecraftforge.registries.RegistryObject;
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.FluidType;
+import net.neoforged.neoforge.registries.DeferredHolder;
 
-@ParametersAreNotNullByDefault
-@MethodsReturnNonnullByDefault
+@NothingNullByDefault
 public class FluidRegistryObject<TYPE extends FluidType, STILL extends Fluid, FLOWING extends Fluid, BLOCK extends LiquidBlock, BUCKET extends BucketItem>
-      implements IFluidProvider {
+    extends MekanismDeferredHolder<Fluid, STILL> implements IHasTextComponent, IHasTranslationKey {
 
-    private RegistryObject<TYPE> fluidTypeRO;
-    private RegistryObject<STILL> stillRO;
-    private RegistryObject<FLOWING> flowingRO;
-    private RegistryObject<BLOCK> blockRO;
-    private RegistryObject<BUCKET> bucketRO;
+    private final DeferredHolder<FluidType, TYPE> fluidType;
+    private final DeferredHolder<Fluid, FLOWING> flowing;
+    private final ItemRegistryObject<BUCKET> bucket;
+    private final DeferredHolder<Block, BLOCK> block;
+
+    FluidRegistryObject(DeferredHolder<FluidType, TYPE> fluidType, DeferredHolder<Fluid, STILL> still, DeferredHolder<Fluid, FLOWING> flowing,
+          ItemRegistryObject<BUCKET> bucket, DeferredHolder<Block, BLOCK> block) {
+        //Default our fluid to being the still variant
+        super(still.getKey());
+        this.fluidType = fluidType;
+        this.flowing = flowing;
+        this.bucket = bucket;
+        this.block = block;
+    }
 
     public TYPE getFluidType() {
-        return fluidTypeRO.get();
+        return fluidType.get();
     }
 
-    public STILL getStillFluid() {
-        return stillRO.get();
-    }
-
-    public FLOWING getFlowingFluid() {
-        return flowingRO.get();
+    public DeferredHolder<Fluid, FLOWING> getFlowingFluid() {
+        return flowing;
     }
 
     public BLOCK getBlock() {
-        return blockRO.get();
+        return block.get();
     }
 
-    public BUCKET getBucket() {
-        return bucketRO.get();
+    public ItemRegistryObject<BUCKET> getBucket() {
+        return bucket;
     }
 
-    //Make sure these update methods are package local as only the FluidDeferredRegister should be messing with them
-    void updateFluidType(RegistryObject<TYPE> fluidTypeRO) {
-        this.fluidTypeRO = Objects.requireNonNull(fluidTypeRO);
-    }
-
-    void updateStill(RegistryObject<STILL> stillRO) {
-        this.stillRO = Objects.requireNonNull(stillRO);
-    }
-
-    void updateFlowing(RegistryObject<FLOWING> flowingRO) {
-        this.flowingRO = Objects.requireNonNull(flowingRO);
-    }
-
-    void updateBlock(RegistryObject<BLOCK> blockRO) {
-        this.blockRO = Objects.requireNonNull(blockRO);
-    }
-
-    void updateBucket(RegistryObject<BUCKET> bucketRO) {
-        this.bucketRO = Objects.requireNonNull(bucketRO);
+    public FluidStack asStack(int amount) {
+        return new FluidStack(get(), amount);
     }
 
     @Override
-    public STILL getFluid() {
-        //Default our fluid to being the still variant
-        return getStillFluid();
+    public Component getTextComponent() {
+        return getFluidType().getDescription(asStack(1));
+    }
+
+    @Override
+    public String getTranslationKey() {
+        return getFluidType().getDescriptionId();
     }
 }

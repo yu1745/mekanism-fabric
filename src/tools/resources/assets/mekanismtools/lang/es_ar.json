@@ -11,8 +11,9 @@
   "advancements.mekanismtools.not_enough_shielding.title": "No hay suficiente blindaje",
   "advancements.mekanismtools.paxel.description": "Fabrica algún Paxel (Pico, Hacha, Pala)",
   "advancements.mekanismtools.paxel.title": "Multi-Herramienta",
-  "constants.mekanismtools.mod_name": "Mekanism: Herramientas",
-  "constants.mekanismtools.pack_description": "Recursos usados por Mekanism: Herramientas",
+  "constants.mekanismtools.mod_name": "Mekanism: Tools",
+  "constants.mekanismtools.pack_description": "Recursos utilizados por Mekanism: Tools",
+  "fml.menu.mods.info.description.mekanismtools": "Modulo de herramientas para el Mekanismo",
   "item.mekanismtools.bronze_axe": "Hacha de bronce",
   "item.mekanismtools.bronze_boots": "Botas de bronce",
   "item.mekanismtools.bronze_chestplate": "Pechera de bronce",
@@ -181,5 +182,6 @@
   "item.mekanismtools.steel_sword": "Espada de acero",
   "item.mekanismtools.stone_paxel": "Paxel de piedra",
   "item.mekanismtools.wood_paxel": "Paxel de madera",
+  "tag.item.c.tools.paxel": "Paxels",
   "tooltip.mekanismtools.hp": "Vida: %1$s"
 }

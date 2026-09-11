@@ -1,12 +1,22 @@
 package mekanism.common.inventory.container;
 
+import io.netty.buffer.ByteBuf;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.IntFunction;
+import mekanism.common.Mekanism;
+import mekanism.common.config.IConfigTranslation;
 import mekanism.common.config.MekanismConfig;
+import mekanism.common.config.value.CachedBooleanValue;
 import mekanism.common.config.value.CachedIntValue;
 import mekanism.common.content.qio.IQIOCraftingWindowHolder;
+import mekanism.common.util.text.TextUtils;
+import net.minecraft.Util;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.util.ByIdMap;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -43,13 +53,13 @@ public class SelectedWindowData {
 
     @Override
     public int hashCode() {
-        return Objects.hash(type, extraData);
+        return 31 * type.hashCode() + extraData;
     }
 
     /**
      * @apiNote Only call this on the client.
      */
-    public void updateLastPosition(int x, int y) {
+    public void updateLastPosition(int x, int y, boolean pinned) {
         String saveName = type.getSaveName(extraData);
         if (saveName != null) {
             CachedWindowPosition cachedPosition = MekanismConfig.client.lastWindowPositions.get(saveName);
@@ -65,11 +75,20 @@ public class SelectedWindowData {
                     cachedY.set(y);
                     changed = true;
                 }
+                CachedBooleanValue cachedPinned = cachedPosition.pinned;
+                if (cachedPinned != null && cachedPinned.get() != pinned) {
+                    cachedPinned.set(pinned);
+                    changed = true;
+                }
                 if (changed) {
                     MekanismConfig.client.save();
                 }
             }
         }
+    }
+
+    public boolean wasPinned() {
+        return getLastPosition().pinned();
     }
 
     /**
@@ -80,44 +99,52 @@ public class SelectedWindowData {
         if (saveName != null) {
             CachedWindowPosition cachedPosition = MekanismConfig.client.lastWindowPositions.get(saveName);
             if (cachedPosition != null) {
-                return new WindowPosition(cachedPosition.x().get(), cachedPosition.y().get());
+                return new WindowPosition(cachedPosition.x().get(), cachedPosition.y().get(), cachedPosition.pinned() != null && cachedPosition.pinned().get());
             }
         }
-        return new WindowPosition(Integer.MAX_VALUE, Integer.MAX_VALUE);
+        return new WindowPosition(Integer.MAX_VALUE, Integer.MAX_VALUE, false);
     }
 
-    public record CachedWindowPosition(CachedIntValue x, CachedIntValue y) {
+    public record CachedWindowPosition(CachedIntValue x, CachedIntValue y, @Nullable CachedBooleanValue pinned) {
     }
 
-    public record WindowPosition(int x, int y) {
+    public record WindowPosition(int x, int y, boolean pinned) {
     }
 
     public enum WindowType {
-        COLOR("color"),
-        CONFIRMATION("confirmation"),
-        CRAFTING("crafting", IQIOCraftingWindowHolder.MAX_CRAFTING_WINDOWS),
-        MEKA_SUIT_HELMET("mekaSuitHelmet"),
-        RENAME("rename"),
-        SKIN_SELECT("skinSelect"),
-        SIDE_CONFIG("sideConfig"),
-        TRANSPORTER_CONFIG("transporterConfig"),
-        UPGRADE("upgrade"),
+        COLOR("color", false),
+        CONFIRMATION("confirmation", false),
+        CRAFTING("crafting", true, IQIOCraftingWindowHolder.MAX_CRAFTING_WINDOWS),
+        MEKA_SUIT_HELMET("mekasuit_helmet", false),
+        RENAME("rename", false),
+        SKIN_SELECT("skin_select", false),
+        SIDE_CONFIG("side_config", true),
+        TRANSPORTER_CONFIG("transporter_config", true),
+        UPGRADE("upgrade", true),
         /**
          * For use by windows that don't actually have any server side specific logic required, or don't persist their position.
          */
-        UNSPECIFIED(null);
+        UNSPECIFIED(null, false);
 
+        public static final IntFunction<WindowType> BY_ID = ByIdMap.continuous(WindowType::ordinal, values(), ByIdMap.OutOfBoundsStrategy.WRAP);
+        public static final StreamCodec<ByteBuf, WindowType> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, WindowType::ordinal);
+
+        /**
+         * @implNote This name needs to be lower case
+         */
         @Nullable
         private final String saveName;
+        private final boolean canPin;
         private final byte maxData;
 
-        WindowType(@Nullable String saveName) {
-            this(saveName, (byte) 1);
+        WindowType(@Nullable String saveName, boolean canPin) {
+            this(saveName, canPin, (byte) 1);
         }
 
-        WindowType(@Nullable String saveName, byte maxData) {
+        WindowType(@Nullable String saveName, boolean canPin, byte maxData) {
             this.saveName = saveName;
             this.maxData = maxData;
+            this.canPin = canPin;
         }
 
         @Nullable
@@ -125,21 +152,42 @@ public class SelectedWindowData {
             return maxData == 1 ? saveName : saveName + extraData;
         }
 
-        public List<String> getSavePaths() {
+        public List<ConfigSaveData> getSavePaths() {
             if (saveName == null) {
                 return Collections.emptyList();
-            } else if (maxData == 1) {
-                return Collections.singletonList(saveName);
             }
-            List<String> savePaths = new ArrayList<>();
+            List<ConfigSaveData> savePaths = new ArrayList<>(maxData);
             for (int i = 0; i < maxData; i++) {
-                savePaths.add(saveName + i);
+                savePaths.add(ConfigSaveData.create(saveName, i, maxData, canPin));
             }
             return savePaths;
         }
 
+        public boolean canPin() {
+            return canPin;
+        }
+
         public boolean isValid(byte extraData) {
             return extraData >= 0 && extraData < maxData;
+        }
+
+        public record ConfigSaveData(String savePath, String title, String tooltip, @Nullable String button, String getTranslationKey) implements IConfigTranslation {
+
+            private static ConfigSaveData create(String savePath, int index, int size, boolean canPin) {
+                String saveName = TextUtils.formatAndCapitalize(savePath);
+                String title = saveName + " Window Position";
+                String tooltip = "The last position the " + saveName + " window was in when it was closed";
+                if (size > 1) {
+                    savePath += index;
+                    title += " " + (index + 1);
+                }
+                if (canPin) {
+                    tooltip += ", and whether it was pinned";
+                }
+                return new ConfigSaveData(savePath, title, tooltip + ".", "Edit " + saveName + " Position",
+                      Util.makeDescriptionId("configuration", Mekanism.rl("client.last_window_positions." + savePath))
+                );
+            }
         }
     }
 }

@@ -12,6 +12,7 @@ import mekanism.client.render.lib.QuadTransformation.TextureFilteredTransformati
 import mekanism.client.render.lib.QuadUtils;
 import mekanism.common.entity.EntityRobit;
 import mekanism.common.item.ItemRobit;
+import mekanism.common.registries.MekanismDataComponents;
 import mekanism.common.registries.MekanismRobitSkins;
 import mekanism.common.registries.MekanismRobitSkins.SkinLookup;
 import net.minecraft.client.Minecraft;
@@ -24,7 +25,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.client.model.data.ModelData;
+import net.neoforged.neoforge.client.model.data.ModelData;
 import org.jetbrains.annotations.Nullable;
 
 @NothingNullByDefault
@@ -75,7 +76,7 @@ public class RobitBakedModel extends ExtensionOverrideBakedModel<ResourceLocatio
         @Nullable
         @Override
         public BakedModel resolve(BakedModel model, ItemStack stack, @Nullable ClientLevel world, @Nullable LivingEntity entity, int seed) {
-            if (!stack.isEmpty() && stack.getItem() instanceof ItemRobit robit) {
+            if (!stack.isEmpty() && stack.getItem() instanceof ItemRobit) {
                 RegistryAccess registryAccess;
                 if (world != null) {
                     registryAccess = world.registryAccess();
@@ -89,7 +90,7 @@ public class RobitBakedModel extends ExtensionOverrideBakedModel<ResourceLocatio
                     }
                     registryAccess = level.registryAccess();
                 }
-                ResourceKey<RobitSkin> skinKey = robit.getRobitSkin(stack);
+                ResourceKey<RobitSkin> skinKey = stack.getOrDefault(MekanismDataComponents.ROBIT_SKIN, MekanismRobitSkins.BASE);
                 SkinLookup skinLookup = MekanismRobitSkins.lookup(registryAccess, skinKey);
                 RobitSkin skin = skinLookup.skin();
                 if (skin.customModel() != null) {
@@ -103,7 +104,7 @@ public class RobitBakedModel extends ExtensionOverrideBakedModel<ResourceLocatio
                 List<ResourceLocation> textures = skin.textures();
                 if (!textures.isEmpty()) {
                     //Assuming the skin actually has textures (it should), grab the first texture as the model data
-                    ModelData modelData = ModelData.builder().with(EntityRobit.SKIN_TEXTURE_PROPERTY, textures.get(0)).build();
+                    ModelData modelData = ModelData.of(EntityRobit.SKIN_TEXTURE_PROPERTY, textures.getFirst());
                     return wrap(model, stack, world, entity, seed, modelData, RobitModelDataBakedModel::new);
                 }
             }

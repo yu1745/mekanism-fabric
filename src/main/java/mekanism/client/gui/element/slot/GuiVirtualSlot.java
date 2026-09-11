@@ -3,8 +3,7 @@ package mekanism.client.gui.element.slot;
 import java.util.Optional;
 import mekanism.client.gui.IGuiWrapper;
 import mekanism.client.gui.VirtualSlotContainerScreen;
-import mekanism.client.gui.element.GuiElement;
-import mekanism.client.jei.interfaces.IJEIIngredientHelper;
+import mekanism.client.recipe_viewer.interfaces.IRecipeViewerIngredientHelper;
 import mekanism.common.inventory.container.IGUIWindow;
 import mekanism.common.inventory.container.slot.IVirtualSlot;
 import mekanism.common.inventory.container.slot.SlotOverlay;
@@ -16,7 +15,7 @@ import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class GuiVirtualSlot extends GuiSlot implements IJEIIngredientHelper {
+public class GuiVirtualSlot extends GuiSlot implements IRecipeViewerIngredientHelper {
 
     private IVirtualSlot virtualSlot;
 
@@ -61,17 +60,16 @@ public class GuiVirtualSlot extends GuiSlot implements IJEIIngredientHelper {
         }
     }
 
-    @Nullable
     @Override
-    public GuiElement mouseClickedNested(double mouseX, double mouseY, int button) {
-        if (mouseX >= getX() && mouseY >= getY() && mouseX < getX() + width && mouseY < getY() + height) {
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (mouseX >= getX() && mouseY >= getY() && mouseX < getRight() && mouseY < getBottom()) {
             IGuiWrapper gui = gui();
             if (gui instanceof VirtualSlotContainerScreen<?> screen && virtualSlot != null) {
                 //Redirect to a copy of vanilla logic
-                return screen.slotClicked(virtualSlot.getSlot(), button) ? this : null;
+                return screen.slotClicked(virtualSlot.getSlot(), button);
             }
         }
-        return super.mouseClickedNested(mouseX, mouseY, button);
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override

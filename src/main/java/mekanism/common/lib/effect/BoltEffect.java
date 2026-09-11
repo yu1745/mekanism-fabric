@@ -5,14 +5,16 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
-import java.util.Random;
 import mekanism.common.lib.Color;
+import mekanism.common.util.MekanismUtils;
+import net.minecraft.SharedConstants;
 import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.Vec3;
 
 public class BoltEffect {
 
-    private final Random random = new Random();
+    private final RandomSource random = RandomSource.create();
 
     private final BoltRenderInfo renderInfo;
 
@@ -24,9 +26,9 @@ public class BoltEffect {
     private int count = 1;
     private float size = 0.1F;
 
-    private int lifespan = 30;
+    private int lifespan = SharedConstants.TICKS_PER_SECOND + MekanismUtils.TICKS_PER_HALF_SECOND;
 
-    private SpawnFunction spawnFunction = SpawnFunction.delay(60);
+    private SpawnFunction spawnFunction = SpawnFunction.delay(3 * SharedConstants.TICKS_PER_SECOND);
     private FadeFunction fadeFunction = FadeFunction.fade(0.5F);
 
     public BoltEffect(Vec3 start, Vec3 end) {
@@ -162,7 +164,7 @@ public class BoltEffect {
         return quads;
     }
 
-    private static Vec3 findRandomOrthogonalVector(Vec3 vec, Random rand) {
+    private static Vec3 findRandomOrthogonalVector(Vec3 vec, RandomSource rand) {
         Vec3 newVec = new Vec3(-0.5 + rand.nextDouble(), -0.5 + rand.nextDouble(), -0.5 + rand.nextDouble());
         return vec.cross(newVec).normalize();
     }
@@ -236,11 +238,11 @@ public class BoltEffect {
     public interface RandomFunction {
 
         /** Uniform probability distribution. */
-        RandomFunction UNIFORM = Random::nextFloat;
+        RandomFunction UNIFORM = RandomSource::nextFloat;
         /** Gaussian probability distribution. */
         RandomFunction GAUSSIAN = rand -> (float) rand.nextGaussian();
 
-        float getRandom(Random rand);
+        float getRandom(RandomSource rand);
     }
 
     /**
@@ -284,12 +286,14 @@ public class BoltEffect {
     public interface SpawnFunction {
 
         /** Allow for bolts to be spawned each update call without any delay. */
-        SpawnFunction NO_DELAY = rand -> new SpawnDelayBounds(0F, 0F);
+        SpawnFunction NO_DELAY = new SpawnDelayBounds(0F, 0F);
         /** Will re-spawn a bolt each time one expires. */
         SpawnFunction CONSECUTIVE = new SpawnFunction() {
+            private final SpawnDelayBounds BOUNDS = new SpawnDelayBounds(0F, 0F);
+
             @Override
-            public SpawnDelayBounds getSpawnDelayBounds(Random rand) {
-                return new SpawnDelayBounds(0F, 0F);
+            public SpawnDelayBounds getSpawnDelayBounds(RandomSource rand) {
+                return BOUNDS;
             }
 
             @Override
@@ -300,19 +304,19 @@ public class BoltEffect {
 
         /** Spawn bolts with a specified constant delay. */
         static SpawnFunction delay(float delay) {
-            return rand -> new SpawnDelayBounds(delay, delay);
+            return new SpawnDelayBounds(delay, delay);
         }
 
         /**
          * Spawns bolts with a specified delay and specified noise value, which will be randomly applied at either end of the delay bounds.
          */
         static SpawnFunction noise(float delay, float noise) {
-            return rand -> new SpawnDelayBounds(delay - noise, delay + noise);
+            return new SpawnDelayBounds(delay - noise, delay + noise);
         }
 
-        SpawnDelayBounds getSpawnDelayBounds(Random rand);
+        SpawnDelayBounds getSpawnDelayBounds(RandomSource rand);
 
-        default float getSpawnDelay(Random rand) {
+        default float getSpawnDelay(RandomSource rand) {
             SpawnDelayBounds bounds = getSpawnDelayBounds(rand);
             return Mth.lerp(rand.nextFloat(), bounds.start(), bounds.end());
         }
@@ -321,7 +325,12 @@ public class BoltEffect {
             return false;
         }
 
-        record SpawnDelayBounds(float start, float end) {
+        record SpawnDelayBounds(float start, float end) implements SpawnFunction {
+
+            @Override
+            public SpawnDelayBounds getSpawnDelayBounds(RandomSource rand) {
+                return this;
+            }
         }
     }
 

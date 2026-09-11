@@ -1,45 +1,25 @@
 package mekanism.common.advancements.triggers;
 
-import com.google.gson.JsonObject;
-import com.google.gson.JsonSyntaxException;
-import java.util.Arrays;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.Locale;
-import mekanism.api.JsonConstants;
+import java.util.Optional;
+import mekanism.api.SerializationConstants;
 import mekanism.common.advancements.MekanismCriteriaTriggers;
-import net.minecraft.advancements.critereon.AbstractCriterionTriggerInstance;
+import net.minecraft.advancements.Criterion;
 import net.minecraft.advancements.critereon.ContextAwarePredicate;
-import net.minecraft.advancements.critereon.DeserializationContext;
-import net.minecraft.advancements.critereon.SerializationContext;
+import net.minecraft.advancements.critereon.EntityPredicate;
 import net.minecraft.advancements.critereon.SimpleCriterionTrigger;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.util.GsonHelper;
 import net.minecraft.util.StringRepresentable;
 import org.jetbrains.annotations.NotNull;
 
 public class UseGaugeDropperTrigger extends SimpleCriterionTrigger<UseGaugeDropperTrigger.TriggerInstance> {
 
-    private final ResourceLocation id;
-
-    public UseGaugeDropperTrigger(ResourceLocation id) {
-        this.id = id;
-    }
-
     @NotNull
     @Override
-    public ResourceLocation getId() {
-        return id;
-    }
-
-    @NotNull
-    @Override
-    protected TriggerInstance createInstance(@NotNull JsonObject json, @NotNull ContextAwarePredicate playerPredicate, @NotNull DeserializationContext context) {
-        String actionName = GsonHelper.getAsString(json, JsonConstants.ACTION);
-        UseDropperAction action = Arrays.stream(UseDropperAction.ACTIONS)
-              .filter(a -> a.getSerializedName().equals(actionName))
-              .findFirst()
-              .orElseThrow(() -> new JsonSyntaxException("Unknown dropper use action: " + actionName));
-        return new TriggerInstance(playerPredicate, action);
+    public Codec<TriggerInstance> codec() {
+        return TriggerInstance.CODEC;
     }
 
     public void trigger(ServerPlayer player, UseDropperAction action) {
@@ -52,8 +32,7 @@ public class UseGaugeDropperTrigger extends SimpleCriterionTrigger<UseGaugeDropp
         DRAIN,
         DUMP;
 
-        //Do not modify
-        private static final UseDropperAction[] ACTIONS = values();
+        public static final Codec<UseDropperAction> CODEC = StringRepresentable.fromEnum(UseDropperAction::values);
 
         @NotNull
         @Override
@@ -62,25 +41,16 @@ public class UseGaugeDropperTrigger extends SimpleCriterionTrigger<UseGaugeDropp
         }
     }
 
-    public static class TriggerInstance extends AbstractCriterionTriggerInstance {
+    public record TriggerInstance(Optional<ContextAwarePredicate> player, UseDropperAction action) implements SimpleCriterionTrigger.SimpleInstance {
 
-        private final UseDropperAction action;
+        public static final Codec<TriggerInstance> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+                    EntityPredicate.ADVANCEMENT_CODEC.optionalFieldOf(SerializationConstants.PLAYER).forGetter(TriggerInstance::player),
+                    UseDropperAction.CODEC.fieldOf(SerializationConstants.ACTION).forGetter(TriggerInstance::action)
+              ).apply(instance, TriggerInstance::new)
+        );
 
-        public TriggerInstance(ContextAwarePredicate playerPredicate, UseDropperAction action) {
-            super(MekanismCriteriaTriggers.USE_GAUGE_DROPPER.getId(), playerPredicate);
-            this.action = action;
-        }
-
-        @NotNull
-        @Override
-        public JsonObject serializeToJson(@NotNull SerializationContext context) {
-            JsonObject json = super.serializeToJson(context);
-            json.addProperty(JsonConstants.ACTION, action.getSerializedName());
-            return json;
-        }
-
-        public static UseGaugeDropperTrigger.TriggerInstance any() {
-            return new UseGaugeDropperTrigger.TriggerInstance(ContextAwarePredicate.ANY, UseDropperAction.ANY);
+        public static Criterion<TriggerInstance> any() {
+            return MekanismCriteriaTriggers.USE_GAUGE_DROPPER.createCriterion(new TriggerInstance(Optional.empty(), UseDropperAction.ANY));
         }
     }
 }

@@ -1,16 +1,22 @@
 package mekanism.additions.client;
 
 import java.util.Map;
+import mekanism.additions.client.recipe_viewer.aliases.AdditionsAliases;
 import mekanism.additions.common.AdditionsLang;
+import mekanism.additions.common.AdditionsTags;
 import mekanism.additions.common.MekanismAdditions;
 import mekanism.additions.common.advancements.AdditionsAdvancements;
+import mekanism.additions.common.config.AdditionsConfigTranslations;
+import mekanism.additions.common.config.AdditionsConfigTranslations.BabySpawnTranslations;
+import mekanism.additions.common.config.MekanismAdditionsConfig;
+import mekanism.additions.common.entity.baby.BabyType;
 import mekanism.additions.common.item.ItemBalloon;
 import mekanism.additions.common.registries.AdditionsBlocks;
 import mekanism.additions.common.registries.AdditionsEntityTypes;
 import mekanism.additions.common.registries.AdditionsItems;
 import mekanism.additions.common.registries.AdditionsSounds;
-import mekanism.api.providers.IBlockProvider;
 import mekanism.api.text.EnumColor;
+import mekanism.api.text.IHasTranslationKey;
 import mekanism.client.lang.BaseLanguageProvider;
 import mekanism.common.registration.impl.ItemRegistryObject;
 import net.minecraft.data.PackOutput;
@@ -23,15 +29,63 @@ public class AdditionsLangProvider extends BaseLanguageProvider {
 
     @Override
     protected void addTranslations() {
+        addConfigs();
+        addTags();
         addItems();
         addBlocks();
         addEntities();
         addSubtitles();
         addAdvancements();
         addMisc();
+        addAliases(AdditionsAliases.values());
+    }
+
+    private void addConfigs() {
+        addConfigs(MekanismAdditionsConfig.getConfigs());
+        addConfigs(AdditionsConfigTranslations.values());
+        for (BabyType type : BabyType.values()) {
+            addConfigs(BabySpawnTranslations.create("baby_" + type.getSerializedName()).toArray());
+        }
+    }
+
+    private void addTags() {
+        add(AdditionsTags.Items.BALLOONS, "Balloons");
+
+        add(AdditionsTags.Items.FENCES_PLASTIC, "Plastic Fences");
+        add(AdditionsTags.Items.COMMON_FENCES_PLASTIC, "Plastic Fences");
+        add(AdditionsTags.Items.FENCES_PLASTIC_NORMAL, "Normal Plastic Fences");
+        add(AdditionsTags.Items.FENCE_GATES_PLASTIC, "Plastic Fence Gates");
+        add(AdditionsTags.Items.COMMON_FENCE_GATES_PLASTIC, "Plastic Fence Gates");
+        add(AdditionsTags.Items.FENCE_GATES_PLASTIC_NORMAL, "Normal Plastic Fence Gates");
+        add(AdditionsTags.Items.STAIRS_PLASTIC, "Plastic Stairs");
+        add(AdditionsTags.Items.COMMON_STAIRS_PLASTIC, "Plastic Stairs");
+        add(AdditionsTags.Items.STAIRS_PLASTIC_NORMAL, "Normal Plastic Stairs");
+        add(AdditionsTags.Items.SLABS_PLASTIC, "Plastic Slabs");
+        add(AdditionsTags.Items.COMMON_SLABS_PLASTIC, "Plastic Slabs");
+        add(AdditionsTags.Items.SLABS_PLASTIC_NORMAL, "Normal Plastic Slabs");
+        add(AdditionsTags.Items.STAIRS_PLASTIC_GLOW, "Glow Plastic Stairs");
+        add(AdditionsTags.Items.COMMON_STAIRS_PLASTIC_GLOW, "Glow Plastic Stairs");
+        add(AdditionsTags.Items.SLABS_PLASTIC_GLOW, "Glow Plastic Slabs");
+        add(AdditionsTags.Items.COMMON_SLABS_PLASTIC_GLOW, "Glow Plastic Slabs");
+        add(AdditionsTags.Items.STAIRS_PLASTIC_TRANSPARENT, "Transparent Plastic Stairs");
+        add(AdditionsTags.Items.COMMON_STAIRS_PLASTIC_TRANSPARENT, "Transparent Plastic Stairs");
+        add(AdditionsTags.Items.SLABS_PLASTIC_TRANSPARENT, "Transparent Plastic Slabs");
+        add(AdditionsTags.Items.COMMON_SLABS_PLASTIC_TRANSPARENT, "Transparent Plastic Slabs");
+
+        add(AdditionsTags.Items.GLOW_PANELS, "Glow Panels");
+
+        add(AdditionsTags.Items.PLASTIC_BLOCKS, "All Types of Plastic Blocks");
+        add(AdditionsTags.Items.PLASTIC_BLOCKS_GLOW, "Glow Plastic Blocks");
+        add(AdditionsTags.Items.PLASTIC_BLOCKS_PLASTIC, "Plastic Blocks");
+        add(AdditionsTags.Items.PLASTIC_BLOCKS_REINFORCED, "Reinforced Plastic Blocks");
+        add(AdditionsTags.Items.PLASTIC_BLOCKS_ROAD, "Plastic Roads");
+        add(AdditionsTags.Items.PLASTIC_BLOCKS_SLICK, "Slick Plastic Blocks");
+        add(AdditionsTags.Items.PLASTIC_BLOCKS_TRANSPARENT, "Transparent Plastic Blocks");
+
     }
 
     private void addItems() {
+        add(AdditionsItems.BABY_BOGGED_SPAWN_EGG, "Baby Bogged Spawn Egg");
         add(AdditionsItems.BABY_CREEPER_SPAWN_EGG, "Baby Creeper Spawn Egg");
         add(AdditionsItems.BABY_ENDERMAN_SPAWN_EGG, "Baby Enderman Spawn Egg");
         add(AdditionsItems.BABY_SKELETON_SPAWN_EGG, "Baby Skeleton Spawn Egg");
@@ -63,13 +117,14 @@ public class AdditionsLangProvider extends BaseLanguageProvider {
     }
 
     private void addEntities() {
-        add(AdditionsEntityTypes.BABY_CREEPER, "Baby Creeper");
-        add(AdditionsEntityTypes.BABY_ENDERMAN, "Baby Enderman");
-        add(AdditionsEntityTypes.BABY_SKELETON, "Baby Skeleton");
-        add(AdditionsEntityTypes.BABY_STRAY, "Baby Stray");
-        add(AdditionsEntityTypes.BABY_WITHER_SKELETON, "Baby Wither Skeleton");
-        add(AdditionsEntityTypes.BALLOON, "Balloon");
-        add(AdditionsEntityTypes.OBSIDIAN_TNT, "Obsidian TNT");
+        addEntity(AdditionsEntityTypes.BABY_BOGGED, "Baby Bogged");
+        addEntity(AdditionsEntityTypes.BABY_CREEPER, "Baby Creeper");
+        addEntity(AdditionsEntityTypes.BABY_ENDERMAN, "Baby Enderman");
+        addEntity(AdditionsEntityTypes.BABY_SKELETON, "Baby Skeleton");
+        addEntity(AdditionsEntityTypes.BABY_STRAY, "Baby Stray");
+        addEntity(AdditionsEntityTypes.BABY_WITHER_SKELETON, "Baby Wither Skeleton");
+        addEntity(AdditionsEntityTypes.BALLOON, "Balloon");
+        addEntity(AdditionsEntityTypes.OBSIDIAN_TNT, "Obsidian TNT");
     }
 
     private void addSubtitles() {
@@ -85,6 +140,7 @@ public class AdditionsLangProvider extends BaseLanguageProvider {
     }
 
     private void addMisc() {
+        addModInfo("Additions module for Mekanism, contains miscellaneous things that do not thematically fit in the other modules");
         addPackData(AdditionsLang.MEKANISM_ADDITIONS, AdditionsLang.PACK_DESCRIPTION);
         add(AdditionsLang.CHANNEL, "Channel: %1$s");
         add(AdditionsLang.CHANNEL_CHANGE, "Channel changed to: %1$s");
@@ -95,8 +151,8 @@ public class AdditionsLangProvider extends BaseLanguageProvider {
         add(AdditionsLang.DESCRIPTION_OBSIDIAN_TNT, "An extremely powerful, obsidian-infused block of TNT. Use at your own peril.");
     }
 
-    private void addColoredBlocks(Map<EnumColor, ? extends IBlockProvider> blocks, String suffix) {
-        for (Map.Entry<EnumColor, ? extends IBlockProvider> entry : blocks.entrySet()) {
+    private void addColoredBlocks(Map<EnumColor, ? extends IHasTranslationKey> blocks, String suffix) {
+        for (Map.Entry<EnumColor, ? extends IHasTranslationKey> entry : blocks.entrySet()) {
             add(entry.getValue(), entry.getKey().getEnglishName() + " " + suffix);
         }
     }

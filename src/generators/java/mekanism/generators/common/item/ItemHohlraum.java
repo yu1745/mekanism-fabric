@@ -1,58 +1,47 @@
 package mekanism.generators.common.item;
 
 import java.util.List;
-import java.util.Optional;
-import mekanism.api.chemical.ChemicalTankBuilder;
-import mekanism.api.chemical.gas.GasStack;
-import mekanism.api.chemical.gas.IGasHandler;
+import java.util.function.Consumer;
+import mekanism.api.chemical.ChemicalStack;
+import mekanism.api.chemical.IChemicalHandler;
 import mekanism.api.text.EnumColor;
 import mekanism.common.MekanismLang;
 import mekanism.common.capabilities.Capabilities;
-import mekanism.common.capabilities.ItemCapabilityWrapper.ItemCapability;
-import mekanism.common.capabilities.chemical.item.RateLimitGasHandler;
-import mekanism.common.item.CapabilityItem;
 import mekanism.common.registration.impl.CreativeTabDeferredRegister.ICustomCreativeTabContents;
 import mekanism.common.util.ChemicalUtil;
 import mekanism.common.util.StorageUtils;
-import mekanism.generators.common.GeneratorTags;
 import mekanism.generators.common.GeneratorsLang;
-import mekanism.generators.common.config.MekanismGeneratorsConfig;
-import mekanism.generators.common.registries.GeneratorsGases;
-import net.minecraft.nbt.CompoundTag;
+import mekanism.generators.common.registries.GeneratorsChemicals;
+import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
-public class ItemHohlraum extends CapabilityItem implements ICustomCreativeTabContents {
+public class ItemHohlraum extends Item implements ICustomCreativeTabContents {
 
     public ItemHohlraum(Properties properties) {
         super(properties.stacksTo(1));
     }
 
     @Override
-    public void appendHoverText(@NotNull ItemStack stack, @Nullable Level world, @NotNull List<Component> tooltip, @NotNull TooltipFlag flag) {
-        Optional<IGasHandler> capability = stack.getCapability(Capabilities.GAS_HANDLER).resolve();
-        if (capability.isPresent()) {
-            IGasHandler gasHandlerItem = capability.get();
-            if (gasHandlerItem.getTanks() > 0) {
-                //Validate something didn't go terribly wrong, and we actually do have the tank we expect to have
-                GasStack storedGas = gasHandlerItem.getChemicalInTank(0);
-                if (!storedGas.isEmpty()) {
-                    tooltip.add(MekanismLang.STORED.translate(storedGas, storedGas.getAmount()));
-                    if (storedGas.getAmount() == gasHandlerItem.getTankCapacity(0)) {
-                        tooltip.add(GeneratorsLang.READY_FOR_REACTION.translateColored(EnumColor.DARK_GREEN));
-                    } else {
-                        tooltip.add(GeneratorsLang.INSUFFICIENT_FUEL.translateColored(EnumColor.DARK_RED));
-                    }
-                    return;
+    public void appendHoverText(@NotNull ItemStack stack, @NotNull Item.TooltipContext context, @NotNull List<Component> tooltip, @NotNull TooltipFlag flag) {
+        IChemicalHandler gasHandlerItem = Capabilities.CHEMICAL.getCapability(stack);
+        if (gasHandlerItem != null && gasHandlerItem.getChemicalTanks() > 0) {
+            //Validate something didn't go terribly wrong, and we actually do have the tank we expect to have
+            ChemicalStack storedGas = gasHandlerItem.getChemicalInTank(0);
+            if (!storedGas.isEmpty()) {
+                tooltip.add(MekanismLang.STORED.translate(storedGas, storedGas.getAmount()));
+                if (storedGas.getAmount() == gasHandlerItem.getChemicalTankCapacity(0)) {
+                    tooltip.add(GeneratorsLang.READY_FOR_REACTION.translateColored(EnumColor.DARK_GREEN));
+                } else {
+                    tooltip.add(GeneratorsLang.INSUFFICIENT_FUEL.translateColored(EnumColor.DARK_RED));
                 }
+                return;
             }
         }
-        tooltip.add(MekanismLang.NO_GAS.translate());
+        tooltip.add(MekanismLang.NO_CHEMICAL.translate());
         tooltip.add(GeneratorsLang.INSUFFICIENT_FUEL.translateColored(EnumColor.DARK_RED));
     }
 
@@ -72,19 +61,7 @@ public class ItemHohlraum extends CapabilityItem implements ICustomCreativeTabCo
     }
 
     @Override
-    public void addItems(CreativeModeTab.Output tabOutput) {
-        tabOutput.accept(ChemicalUtil.getFilledVariant(new ItemStack(this), MekanismGeneratorsConfig.generators.hohlraumMaxGas, GeneratorsGases.FUSION_FUEL));
-    }
-
-    @Override
-    protected boolean areCapabilityConfigsLoaded() {
-        return super.areCapabilityConfigsLoaded() && MekanismGeneratorsConfig.generators.isLoaded();
-    }
-
-    @Override
-    protected void gatherCapabilities(List<ItemCapability> capabilities, ItemStack stack, CompoundTag nbt) {
-        super.gatherCapabilities(capabilities, stack, nbt);
-        capabilities.add(RateLimitGasHandler.create(MekanismGeneratorsConfig.generators.hohlraumFillRate, MekanismGeneratorsConfig.generators.hohlraumMaxGas,
-              ChemicalTankBuilder.GAS.notExternal, ChemicalTankBuilder.GAS.alwaysTrueBi, GeneratorTags.Gases.FUSION_FUEL_LOOKUP::contains));
+    public void addItems(Holder<Item> item, Consumer<ItemStack> tabOutput) {
+        tabOutput.accept(ChemicalUtil.getFilledVariant(item, GeneratorsChemicals.FUSION_FUEL));
     }
 }

@@ -1,17 +1,11 @@
 package mekanism.generators.common;
 
 import mekanism.api.MekanismIMC;
-import mekanism.api.chemical.gas.attribute.GasAttributes.Fuel;
-import mekanism.api.math.FloatingLong;
 import mekanism.common.Mekanism;
 import mekanism.common.base.IModModule;
 import mekanism.common.command.builders.BuildCommand;
-import mekanism.common.config.MekanismConfig;
-import mekanism.common.config.MekanismModConfig;
-import mekanism.common.config.listener.ConfigBasedCachedFLSupplier;
 import mekanism.common.lib.Version;
 import mekanism.common.lib.multiblock.MultiblockManager;
-import mekanism.common.registries.MekanismGases;
 import mekanism.generators.common.config.MekanismGeneratorsConfig;
 import mekanism.generators.common.content.fission.FissionReactorCache;
 import mekanism.generators.common.content.fission.FissionReactorMultiblockData;
@@ -27,33 +21,26 @@ import mekanism.generators.common.registries.GeneratorsBlocks;
 import mekanism.generators.common.registries.GeneratorsBuilders.FissionReactorBuilder;
 import mekanism.generators.common.registries.GeneratorsBuilders.FusionReactorBuilder;
 import mekanism.generators.common.registries.GeneratorsBuilders.TurbineBuilder;
+import mekanism.generators.common.registries.GeneratorsChemicals;
 import mekanism.generators.common.registries.GeneratorsContainerTypes;
 import mekanism.generators.common.registries.GeneratorsCreativeTabs;
+import mekanism.generators.common.registries.GeneratorsDataComponents;
 import mekanism.generators.common.registries.GeneratorsFluids;
-import mekanism.generators.common.registries.GeneratorsGases;
 import mekanism.generators.common.registries.GeneratorsItems;
 import mekanism.generators.common.registries.GeneratorsModules;
 import mekanism.generators.common.registries.GeneratorsSounds;
 import mekanism.generators.common.registries.GeneratorsTileEntityTypes;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.fml.ModLoadingContext;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.config.ModConfig;
-import net.minecraftforge.fml.event.config.ModConfigEvent;
-import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.minecraftforge.fml.event.lifecycle.InterModEnqueueEvent;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.neoforged.fml.event.lifecycle.InterModEnqueueEvent;
 
 @Mod(MekanismGenerators.MODID)
 public class MekanismGenerators implements IModModule {
 
     public static final String MODID = "mekanismgenerators";
-    private static final ConfigBasedCachedFLSupplier ETHENE_ENERGY_DENSITY = new ConfigBasedCachedFLSupplier(() -> {
-        FloatingLong energy = MekanismGeneratorsConfig.generators.bioGeneration.get().multiply(2)
-              .timesEqual(MekanismGeneratorsConfig.generators.ethyleneDensityMultiplier.get());
-        return energy.plusEqual(MekanismConfig.general.FROM_H2.get());
-    }, MekanismConfig.general.FROM_H2, MekanismGeneratorsConfig.generators.bioGeneration, MekanismGeneratorsConfig.generators.ethyleneDensityMultiplier);
 
     public static MekanismGenerators instance;
 
@@ -70,14 +57,16 @@ public class MekanismGenerators implements IModModule {
     public static final MultiblockManager<FissionReactorMultiblockData> fissionReactorManager = new MultiblockManager<>("fissionReactor", FissionReactorCache::new, FissionReactorValidator::new);
     public static final MultiblockManager<FusionReactorMultiblockData> fusionReactorManager = new MultiblockManager<>("fusionReactor", FusionReactorCache::new, FusionReactorValidator::new);
 
-    public MekanismGenerators() {
+    public MekanismGenerators(ModContainer modContainer, IEventBus modEventBus) {
         Mekanism.addModule(instance = this);
-        MekanismGeneratorsConfig.registerConfigs(ModLoadingContext.get());
-        IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
+        //Set our version number to match the neoforge.mods.toml file, which matches the one in our build.gradle
+        versionNumber = new Version(modContainer);
+        MekanismGeneratorsConfig.registerConfigs(modContainer);
         modEventBus.addListener(this::commonSetup);
-        modEventBus.addListener(this::onConfigLoad);
+        modEventBus.addListener(MekanismGeneratorsConfig::onConfigLoad);
         modEventBus.addListener(this::imcQueue);
 
+        GeneratorsDataComponents.DATA_COMPONENTS.register(modEventBus);
         GeneratorsItems.ITEMS.register(modEventBus);
         GeneratorsBlocks.BLOCKS.register(modEventBus);
         GeneratorsFluids.FLUIDS.register(modEventBus);
@@ -85,11 +74,9 @@ public class MekanismGenerators implements IModModule {
         GeneratorsSounds.SOUND_EVENTS.register(modEventBus);
         GeneratorsContainerTypes.CONTAINER_TYPES.register(modEventBus);
         GeneratorsTileEntityTypes.TILE_ENTITY_TYPES.register(modEventBus);
-        GeneratorsGases.GASES.register(modEventBus);
+        GeneratorsChemicals.CHEMICALS.register(modEventBus);
         GeneratorsModules.MODULES.register(modEventBus);
-        //Set our version number to match the mods.toml file, which matches the one in our build.gradle
-        versionNumber = new Version(ModLoadingContext.get().getActiveContainer());
-        packetHandler = new GeneratorsPacketHandler();
+        packetHandler = new GeneratorsPacketHandler(modEventBus, versionNumber);
     }
 
     public static GeneratorsPacketHandler packetHandler() {
@@ -97,15 +84,11 @@ public class MekanismGenerators implements IModModule {
     }
 
     public static ResourceLocation rl(String path) {
-        return new ResourceLocation(MekanismGenerators.MODID, path);
+        return ResourceLocation.fromNamespaceAndPath(MODID, path);
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
         event.enqueueWork(() -> {
-            //Ensure our tags are all initialized
-            GeneratorTags.init();
-            //Add fuel attribute to ethene
-            MekanismGases.ETHENE.get().addAttribute(new Fuel(MekanismGeneratorsConfig.generators.ethyleneBurnTicks, ETHENE_ENERGY_DENSITY));
             //Register dispenser behaviors
             GeneratorsFluids.FLUIDS.registerBucketDispenserBehavior();
             //Register extended build commands (in enqueue as it is not thread safe)
@@ -113,8 +96,6 @@ public class MekanismGenerators implements IModModule {
             BuildCommand.register("fission", GeneratorsLang.FISSION_REACTOR, new FissionReactorBuilder());
             BuildCommand.register("fusion", GeneratorsLang.FUSION_REACTOR, new FusionReactorBuilder());
         });
-
-        packetHandler.initialize();
 
         //Finalization
         Mekanism.logger.info("Loaded 'Mekanism: Generators' module.");
@@ -136,17 +117,7 @@ public class MekanismGenerators implements IModModule {
     }
 
     @Override
-    public void resetClient() {
+    public void resetClientDimensionChanged() {
         TurbineMultiblockData.clientRotationMap.clear();
-    }
-
-    private void onConfigLoad(ModConfigEvent configEvent) {
-        //Note: We listen to both the initial load and the reload, to make sure that we fix any accidentally
-        // cached values from calls before the initial loading
-        ModConfig config = configEvent.getConfig();
-        //Make sure it is for the same modid as us
-        if (config.getModId().equals(MODID) && config instanceof MekanismModConfig mekConfig) {
-            mekConfig.clearCache(configEvent);
-        }
     }
 }

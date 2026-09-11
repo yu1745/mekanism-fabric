@@ -1,15 +1,20 @@
 package mekanism.api.recipes;
 
-import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.function.BiPredicate;
+import mekanism.api.MekanismAPI;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.recipes.ingredients.ItemStackIngredient;
-import net.minecraft.core.RegistryAccess;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.RecipeInput;
+import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.level.Level;
+import net.neoforged.neoforge.registries.DeferredHolder;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
@@ -23,46 +28,45 @@ import org.jetbrains.annotations.NotNull;
  * @apiNote Combiners and Combining Factories can process this recipe type.
  */
 @NothingNullByDefault
-public abstract class CombinerRecipe extends MekanismRecipe implements BiPredicate<@NotNull ItemStack, @NotNull ItemStack> {
+public abstract class CombinerRecipe extends MekanismRecipe<RecipeInput> implements BiPredicate<@NotNull ItemStack, @NotNull ItemStack> {
 
-    private final ItemStackIngredient mainInput;
-    private final ItemStackIngredient extraInput;
-    private final ItemStack output;
-
-    /**
-     * @param id         Recipe name.
-     * @param mainInput  Main input.
-     * @param extraInput Secondary/extra input.
-     * @param output     Output.
-     */
-    public CombinerRecipe(ResourceLocation id, ItemStackIngredient mainInput, ItemStackIngredient extraInput, ItemStack output) {
-        super(id);
-        this.mainInput = Objects.requireNonNull(mainInput, "Main input cannot be null.");
-        this.extraInput = Objects.requireNonNull(extraInput, "Secondary/Extra input cannot be null.");
-        Objects.requireNonNull(output, "Output cannot be null.");
-        if (output.isEmpty()) {
-            throw new IllegalArgumentException("Output cannot be empty.");
-        }
-        this.output = output.copy();
-    }
+    private static final Holder<Item> COMBINER = DeferredHolder.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, "combiner"));
 
     @Override
-    public boolean test(ItemStack input, ItemStack extra) {
-        return mainInput.test(input) && extraInput.test(extra);
-    }
+    public abstract boolean test(ItemStack input, ItemStack extra);
 
     /**
      * Gets the main input ingredient.
      */
-    public ItemStackIngredient getMainInput() {
-        return mainInput;
-    }
+    public abstract ItemStackIngredient getMainInput();
 
     /**
      * Gets the secondary input ingredient.
      */
-    public ItemStackIngredient getExtraInput() {
-        return extraInput;
+    public abstract ItemStackIngredient getExtraInput();
+
+    @NotNull
+    @Override
+    public ItemStack assemble(RecipeInput input, HolderLookup.Provider provider) {
+        if (!isIncomplete() && input.size() == 2) {
+            ItemStack mainInput = input.getItem(0);
+            ItemStack extraInput = input.getItem(1);
+            if (test(mainInput, extraInput)) {
+                return getOutput(mainInput, extraInput);
+            }
+        }
+        return ItemStack.EMPTY;
+    }
+
+    @Override
+    public boolean matches(RecipeInput input, Level level) {
+        //Don't match incomplete recipes or ones that don't match
+        return !isIncomplete() && input.size() == 2 && test(input.getItem(0), input.getItem(1));
+    }
+
+    @Override
+    public boolean canCraftInDimensions(int width, int height) {
+        return width * height > 1;
     }
 
     /**
@@ -78,40 +82,42 @@ public abstract class CombinerRecipe extends MekanismRecipe implements BiPredica
      * @implNote The passed in inputs should <strong>NOT</strong> be modified.
      */
     @Contract(value = "_, _ -> new", pure = true)
-    public ItemStack getOutput(@NotNull ItemStack input, @NotNull ItemStack extra) {
-        return output.copy();
-    }
+    public abstract ItemStack getOutput(@NotNull ItemStack input, @NotNull ItemStack extra);
 
     @NotNull
     @Override
-    public ItemStack getResultItem(@NotNull RegistryAccess registryAccess) {
-        return output.copy();
-    }
+    public abstract ItemStack getResultItem(@NotNull HolderLookup.Provider provider);
 
     /**
      * For JEI, gets the output representations to display.
      *
      * @return Representation of the output, <strong>MUST NOT</strong> be modified.
      */
-    public List<ItemStack> getOutputDefinition() {
-        return Collections.singletonList(output);
-    }
+    public abstract List<ItemStack> getOutputDefinition();
 
     @Override
     public boolean isIncomplete() {
-        return mainInput.hasNoMatchingInstances() || extraInput.hasNoMatchingInstances();
+        return getMainInput().hasNoMatchingInstances() || getExtraInput().hasNoMatchingInstances();
     }
 
     @Override
     public void logMissingTags() {
-        mainInput.logMissingTags();
-        extraInput.logMissingTags();
+        getMainInput().logMissingTags();
+        getExtraInput().logMissingTags();
     }
 
     @Override
-    public void write(FriendlyByteBuf buffer) {
-        mainInput.write(buffer);
-        extraInput.write(buffer);
-        buffer.writeItem(output);
+    public final RecipeType<CombinerRecipe> getType() {
+        return MekanismRecipeTypes.TYPE_COMBINING.value();
+    }
+
+    @Override
+    public String getGroup() {
+        return "combiner";
+    }
+
+    @Override
+    public ItemStack getToastSymbol() {
+        return new ItemStack(COMBINER);
     }
 }

@@ -12,11 +12,13 @@ import mekanism.api.Upgrade;
 import mekanism.client.sound.PlayerSound.SoundType;
 import mekanism.common.Mekanism;
 import mekanism.common.config.MekanismConfig;
-import mekanism.common.lib.radiation.RadiationManager.RadiationScale;
+import mekanism.common.lib.radiation.RadiationScale;
 import mekanism.common.registration.impl.SoundEventRegistryObject;
 import mekanism.common.tile.interfaces.ITileSound;
 import mekanism.common.tile.interfaces.IUpgradeTile;
+import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.WorldUtils;
+import net.minecraft.SharedConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.AbstractTickableSoundInstance;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
@@ -29,14 +31,15 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.ForgeHooksClient;
-import net.minecraftforge.client.event.sound.PlaySoundEvent;
-import net.minecraftforge.client.event.sound.SoundEngineLoadEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.ClientHooks;
+import net.neoforged.neoforge.client.event.sound.PlaySoundEvent;
+import net.neoforged.neoforge.client.event.sound.SoundEngineLoadEvent;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -56,7 +59,7 @@ import org.jetbrains.annotations.NotNull;
  *
  * @apiNote Only used by client
  */
-@Mod.EventBusSubscriber(modid = Mekanism.MODID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
+@EventBusSubscriber(modid = Mekanism.MODID, value = Dist.CLIENT)
 public class SoundHandler {
 
     private SoundHandler() {
@@ -91,11 +94,14 @@ public class SoundHandler {
         switch (soundType) {
             case JETPACK -> startSound(world, uuid, jetpackSounds, JetpackSound::new);
             case SCUBA_MASK -> startSound(world, uuid, scubaMaskSounds, ScubaMaskSound::new);
-            //TODO: Evaluate at some point if there is a better way to do this
-            // Currently it requests both play, except only one can ever play at once due to the shouldPlaySound method
-            case FLAMETHROWER -> startSounds(world, uuid, flamethrowerSounds, FlamethrowerSound.Active::new, FlamethrowerSound.Idle::new);
             case GRAVITATIONAL_MODULATOR -> startSound(world, uuid, gravitationalModulationSounds, GravitationalModulationSound::new);
         }
+    }
+
+    public static void startFlamethrowerSound(@NotNull Player player) {
+        //TODO: Evaluate at some point if there is a better way to do this
+        // Currently it requests both play, except only one can ever play at once due to the shouldPlaySound method
+        startSounds(player, flamethrowerSounds, FlamethrowerSoundActive::new, FlamethrowerSoundIdle::new);
     }
 
     private static void startSound(LevelAccessor world, UUID uuid, Map<UUID, PlayerSound> knownSounds, Function<Player, PlayerSound> soundCreator) {
@@ -115,21 +121,19 @@ public class SoundHandler {
     }
 
     @SafeVarargs
-    private static void startSounds(LevelAccessor world, UUID uuid, Map<UUID, PlayerSound[]> knownSounds, Function<Player, PlayerSound>... soundCreators) {
+    private static void startSounds(Player player, Map<UUID, PlayerSound[]> knownSounds, Function<Player, PlayerSound>... soundCreators) {
+        UUID uuid = player.getUUID();
         if (knownSounds.containsKey(uuid)) {
             if (playerSoundsEnabled()) {
                 //Check if it needs to be restarted
                 restartSounds(knownSounds.get(uuid));
             }
         } else {
-            Player player = world.getPlayerByUUID(uuid);
-            if (player != null) {
-                PlayerSound[] sounds = new PlayerSound[soundCreators.length];
-                for (int i = 0; i < soundCreators.length; i++) {
-                    playSound(sounds[i] = soundCreators[i].apply(player));
-                }
-                knownSounds.put(uuid, sounds);
+            PlayerSound[] sounds = new PlayerSound[soundCreators.length];
+            for (int i = 0; i < soundCreators.length; i++) {
+                playSound(sounds[i] = soundCreators[i].apply(player));
             }
+            knownSounds.put(uuid, sounds);
         }
     }
 
@@ -289,10 +293,10 @@ public class SoundHandler {
 
         private final float originalVolume;
 
-        // Choose an interval between 60-80 ticks (3-4 seconds) to check for muffling changes. We do this
+        // Choose an interval between 20-40 ticks (1-2 seconds) to check for muffling changes. We do this
         // to ensure that not every tile sound tries to run on the same tick and thus create
         // uneven spikes of CPU usage
-        private final int checkInterval = 20 + ThreadLocalRandom.current().nextInt(20);
+        private final int checkInterval = SharedConstants.TICKS_PER_SECOND + ThreadLocalRandom.current().nextInt(SharedConstants.TICKS_PER_SECOND);
 
         TileTickableSound(SoundEvent soundEvent, SoundSource category, RandomSource random, BlockPos pos, float volume, boolean looping) {
             super(soundEvent, category, random);
@@ -308,10 +312,17 @@ public class SoundHandler {
         }
 
         @Override
-        @SuppressWarnings("UnstableApiUsage")
         public void tick() {
             // Every configured interval, see if we need to adjust muffling
-            if (Minecraft.getInstance().level.getGameTime() % checkInterval == 0) {
+            Level level = Minecraft.getInstance().level;
+            if (level == null) {
+                this.stop();
+                return;
+            }
+            if (!MekanismUtils.isTickingNormally(level)) {
+                //Mute it similar to how the minecart sound handling is
+                volume = 0;
+            } else if (level.getGameTime() % checkInterval == 0) {
                 if (!isClientPlayerInRange(this)) {
                     //If the player is not in range of hearing this sound anymore; go ahead and shutdown
                     stop();
@@ -324,7 +335,7 @@ public class SoundHandler {
                 //Make sure we set our volume back to what it actually would be for purposes of letting other mods know
                 // what volume to use
                 volume = originalVolume;
-                SoundInstance s = ForgeHooksClient.playSound(soundEngine, this);
+                SoundInstance s = ClientHooks.playSound(soundEngine, this);
                 IN_MUFFLED_CHECK = false;
 
                 if (s == this) {
@@ -347,7 +358,7 @@ public class SoundHandler {
             float retVolume = 1.0F;
 
             if (tile instanceof IUpgradeTile upgradeTile && upgradeTile.supportsUpgrade(Upgrade.MUFFLING)) {
-                int mufflerCount = upgradeTile.getComponent().getUpgrades(Upgrade.MUFFLING);
+                int mufflerCount = Math.min(upgradeTile.getComponent().getUpgrades(Upgrade.MUFFLING), Upgrade.MUFFLING.getMax());
                 retVolume = 1.0F - (mufflerCount / (float) Upgrade.MUFFLING.getMax());
             }
 

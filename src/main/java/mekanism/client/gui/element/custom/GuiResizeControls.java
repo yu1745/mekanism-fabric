@@ -1,37 +1,39 @@
 package mekanism.client.gui.element.custom;
 
-import java.util.function.Consumer;
 import mekanism.client.SpecialColors;
 import mekanism.client.gui.IGuiWrapper;
 import mekanism.client.gui.element.GuiSideHolder;
 import mekanism.client.gui.element.button.MekanismImageButton;
+import mekanism.client.gui.tooltip.TooltipUtils;
 import mekanism.client.render.MekanismRenderer;
 import mekanism.common.MekanismLang;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.inventory.container.QIOItemViewerContainer;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.MekanismUtils.ResourceType;
+import net.minecraft.SharedConstants;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.resources.ResourceLocation;
-import org.jetbrains.annotations.NotNull;
 
 public class GuiResizeControls extends GuiSideHolder {
 
+    private static final Tooltip COMPENSATE = TooltipUtils.create(MekanismLang.QIO_COMPENSATE_TOOLTIP);
+
     private final MekanismImageButton expandButton, shrinkButton;
-    private final Consumer<ResizeType> resizeHandler;
 
     private int tooltipTicks;
 
     private static final ResourceLocation MINUS = MekanismUtils.getResource(ResourceType.GUI_BUTTON, "minus.png");
     private static final ResourceLocation PLUS = MekanismUtils.getResource(ResourceType.GUI_BUTTON, "plus.png");
 
-    public GuiResizeControls(IGuiWrapper gui, int y, Consumer<ResizeType> resizeHandler) {
-        super(gui, -26, y, 39, true, false);
-        this.resizeHandler = resizeHandler;
+    public <GUI extends IGuiWrapper & ResizeController> GuiResizeControls(GUI gui, int y) {
+        super(gui, -26, y, 40, true, false);
         expandButton = addChild(new MekanismImageButton(gui, relativeX + 4, relativeY + 5, 19, 9, 19, 9, PLUS,
-              () -> handleResize(ResizeType.EXPAND_Y)));
-        shrinkButton = addChild(new MekanismImageButton(gui, relativeX + 4, relativeY + 25, 19, 9, 19, 9, MINUS,
-              () -> handleResize(ResizeType.SHRINK_Y)));
+              (element, mouseX, mouseY) -> handleResize(ResizeType.EXPAND_Y, Screen.hasShiftDown())));
+        shrinkButton = addChild(new MekanismImageButton(gui, relativeX + 4, relativeY + 26, 19, 9, 19, 9, MINUS,
+              (element, mouseX, mouseY) -> handleResize(ResizeType.SHRINK_Y, Screen.hasShiftDown())));
         updateButtonState();
         active = true;
     }
@@ -43,25 +45,25 @@ public class GuiResizeControls extends GuiSideHolder {
     }
 
     @Override
-    public void renderToolTip(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        super.renderToolTip(guiGraphics, mouseX, mouseY);
+    public void updateTooltip(int mouseX, int mouseY) {
         if (tooltipTicks > 0 && !expandButton.active) {
-            displayTooltips(guiGraphics, mouseX, mouseY, MekanismLang.QIO_COMPENSATE_TOOLTIP.translate());
+            setTooltip(COMPENSATE);
+        } else {
+            clearTooltip();
         }
     }
 
     @Override
     public void renderForeground(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         super.renderForeground(guiGraphics, mouseX, mouseY);
-        drawScaledCenteredTextScaledBound(guiGraphics, MekanismLang.HEIGHT.translate(), relativeX + 13.5F, relativeY + 15.5F, titleTextColor(), width - 4, 0.7F);
+        drawScaledScrollingString(guiGraphics, MekanismLang.HEIGHT.translate(), 0, 16, TextAlignment.CENTER, titleTextColor(), 4, false, 0.6F);
     }
 
     @Override
     public void onClick(double mouseX, double mouseY, int button) {
         super.onClick(mouseX, mouseY, button);
-        if (!expandButton.active && mouseX >= expandButton.getX() && mouseX < expandButton.getX() + expandButton.getWidth() &&
-            mouseY >= expandButton.getY() && mouseY < expandButton.getY() + expandButton.getHeight()) {
-            tooltipTicks = 100;
+        if (!expandButton.active && mouseX >= expandButton.getX() && mouseX < expandButton.getRight() && mouseY >= expandButton.getY() && mouseY < expandButton.getBottom()) {
+            tooltipTicks = 5 * SharedConstants.TICKS_PER_SECOND;
         }
     }
 
@@ -70,9 +72,14 @@ public class GuiResizeControls extends GuiSideHolder {
         MekanismRenderer.color(guiGraphics, SpecialColors.TAB_RESIZE_CONTROLS);
     }
 
-    private void handleResize(ResizeType type) {
-        resizeHandler.accept(type);
-        updateButtonState();
+    private boolean handleResize(ResizeType type, boolean adjustMax) {
+        //Validate something didn't change and it still is actually a controller
+        if (gui() instanceof ResizeController resizeHandler) {
+            resizeHandler.resize(type, adjustMax);
+            updateButtonState();
+            return true;
+        }
+        return false;
     }
 
     private void updateButtonState() {
@@ -90,5 +97,11 @@ public class GuiResizeControls extends GuiSideHolder {
         EXPAND_Y,
         SHRINK_X,
         SHRINK_Y;
+    }
+
+    @FunctionalInterface
+    public interface ResizeController {
+
+        void resize(ResizeType type, boolean adjustMax);
     }
 }

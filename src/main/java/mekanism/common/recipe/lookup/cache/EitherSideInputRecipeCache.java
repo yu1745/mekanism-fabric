@@ -5,18 +5,18 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import mekanism.api.recipes.MekanismRecipe;
 import mekanism.api.recipes.ingredients.InputIngredient;
 import mekanism.common.recipe.MekanismRecipeType;
 import mekanism.common.recipe.lookup.cache.type.IInputCache;
+import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Similar in concept to {@link DoubleInputRecipeCache} except that it requires both input types to be the same and also allows for them to be in any order.
  */
-public abstract class EitherSideInputRecipeCache<INPUT, INGREDIENT extends InputIngredient<INPUT>, RECIPE extends MekanismRecipe & BiPredicate<INPUT, INPUT>,
+public abstract class EitherSideInputRecipeCache<INPUT, INGREDIENT extends InputIngredient<INPUT>, RECIPE extends MekanismRecipe<?> & BiPredicate<INPUT, INPUT>,
       CACHE extends IInputCache<INPUT, INGREDIENT, RECIPE>> extends AbstractInputRecipeCache<RECIPE> {
 
     private final Set<RECIPE> complexRecipes = new HashSet<>();
@@ -24,7 +24,7 @@ public abstract class EitherSideInputRecipeCache<INPUT, INGREDIENT extends Input
     private final Function<RECIPE, INGREDIENT> inputBExtractor;
     private final CACHE cache;
 
-    protected EitherSideInputRecipeCache(MekanismRecipeType<RECIPE, ?> recipeType, Function<RECIPE, INGREDIENT> inputAExtractor,
+    protected EitherSideInputRecipeCache(MekanismRecipeType<?, RECIPE, ?> recipeType, Function<RECIPE, INGREDIENT> inputAExtractor,
           Function<RECIPE, INGREDIENT> inputBExtractor, CACHE cache) {
         super(recipeType);
         this.inputAExtractor = inputAExtractor;
@@ -53,8 +53,15 @@ public abstract class EitherSideInputRecipeCache<INPUT, INGREDIENT extends Input
             return false;
         }
         initCacheIfNeeded(world);
-        return cache.contains(input) || complexRecipes.stream().anyMatch(recipe -> inputAExtractor.apply(recipe).testType(input) ||
-                                                                                   inputBExtractor.apply(recipe).testType(input));
+        if (cache.contains(input)) {
+            return true;
+        }
+        for (RECIPE recipe : complexRecipes) {
+            if (inputAExtractor.apply(recipe).testType(input) || inputBExtractor.apply(recipe).testType(input)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -84,19 +91,22 @@ public abstract class EitherSideInputRecipeCache<INPUT, INGREDIENT extends Input
         // secondary validation we check inputB first as we know the recipe contains inputA as one of the
         // inputs, but we want to make sure that we only mark it as valid if the same input is on both sides
         // if the recipe combines two of the same type of ingredient
-        if (cache.contains(inputA, recipe -> {
-            INGREDIENT ingredientA = inputAExtractor.apply(recipe);
-            INGREDIENT ingredientB = inputBExtractor.apply(recipe);
-            return ingredientB.testType(inputB) && ingredientA.testType(inputA) || ingredientA.testType(inputB) && ingredientB.testType(inputA);
-        })) {
+        if (containsInput(inputA, inputB, cache.getRecipes(inputA))) {
             return true;
         }
         //Our quick lookup cache does not contain it, check any recipes where the ingredients are complex
-        return complexRecipes.stream().anyMatch(recipe -> {
+        return containsInput(inputA, inputB, complexRecipes);
+    }
+
+    private boolean containsInput(INPUT inputA, INPUT inputB, Iterable<RECIPE> recipes) {
+        for (RECIPE recipe : recipes) {
             INGREDIENT ingredientA = inputAExtractor.apply(recipe);
             INGREDIENT ingredientB = inputBExtractor.apply(recipe);
-            return ingredientA.testType(inputA) && ingredientB.testType(inputB) || ingredientB.testType(inputA) && ingredientA.testType(inputB);
-        });
+            if (ingredientB.testType(inputB) && ingredientA.testType(inputA) || ingredientA.testType(inputB) && ingredientB.testType(inputA)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -115,17 +125,27 @@ public abstract class EitherSideInputRecipeCache<INPUT, INGREDIENT extends Input
             return null;
         }
         initCacheIfNeeded(world);
-        //Note: The recipe's test method checks both directions
-        Predicate<RECIPE> matchPredicate = r -> r.test(inputA, inputB);
         //Lookup a recipe from the input map
-        RECIPE recipe = cache.findFirstRecipe(inputA, matchPredicate);
+        RECIPE recipe = findFirstRecipe(inputA, inputB, cache.getRecipes(inputA));
         // if there is no recipe, then check if any of our complex recipes match
-        return recipe == null ? findFirstRecipe(complexRecipes, matchPredicate) : recipe;
+        return recipe == null ? findFirstRecipe(inputA, inputB, complexRecipes) : recipe;
+    }
+
+    @Nullable
+    private RECIPE findFirstRecipe(INPUT inputA, INPUT inputB, Iterable<RECIPE> recipes) {
+        for (RECIPE recipe : recipes) {
+            //Note: The recipe's test method checks both directions
+            if (recipe.test(inputA, inputB)) {
+                return recipe;
+            }
+        }
+        return null;
     }
 
     @Override
-    protected void initCache(List<RECIPE> recipes) {
-        for (RECIPE recipe : recipes) {
+    protected void initCache(List<RecipeHolder<RECIPE>> recipes) {
+        for (RecipeHolder<RECIPE> recipeHolder : recipes) {
+            RECIPE recipe = recipeHolder.value();
             boolean complexA = cache.mapInputs(recipe, inputAExtractor.apply(recipe));
             boolean complexB = cache.mapInputs(recipe, inputBExtractor.apply(recipe));
             if (complexA || complexB) {

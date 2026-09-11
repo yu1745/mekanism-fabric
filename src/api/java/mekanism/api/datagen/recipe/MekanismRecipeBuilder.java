@@ -1,44 +1,37 @@
 package mekanism.api.datagen.recipe;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.function.Consumer;
-import mekanism.api.JsonConstants;
-import mekanism.api.MekanismAPI;
+import java.util.Map;
 import mekanism.api.annotations.NothingNullByDefault;
 import net.minecraft.advancements.Advancement;
+import net.minecraft.advancements.AdvancementHolder;
+import net.minecraft.advancements.AdvancementRequirements;
 import net.minecraft.advancements.AdvancementRewards;
-import net.minecraft.advancements.CriterionTriggerInstance;
-import net.minecraft.advancements.RequirementsStrategy;
+import net.minecraft.advancements.Criterion;
 import net.minecraft.advancements.critereon.RecipeUnlockedTrigger;
-import net.minecraft.data.recipes.FinishedRecipe;
+import net.minecraft.core.Holder;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.data.recipes.RecipeOutput;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.level.ItemLike;
-import net.minecraftforge.common.crafting.CraftingHelper;
-import net.minecraftforge.common.crafting.conditions.ICondition;
-import net.minecraftforge.registries.ForgeRegistries;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import net.neoforged.neoforge.common.conditions.ICondition;
 
 /**
  * Base recipe builder that declares various common methods between our different builders.
  */
 @NothingNullByDefault
+@SuppressWarnings("UnusedReturnValue")
 public abstract class MekanismRecipeBuilder<BUILDER extends MekanismRecipeBuilder<BUILDER>> {
 
-    protected static ResourceLocation mekSerializer(String name) {
-        return new ResourceLocation(MekanismAPI.MEKANISM_MODID, name);
-    }
-
     protected final List<ICondition> conditions = new ArrayList<>();
-    protected final Advancement.Builder advancementBuilder = Advancement.Builder.advancement();
-    protected final ResourceLocation serializerName;
+    protected final Map<String, Criterion<?>> criteria = new LinkedHashMap<>();
 
-    protected MekanismRecipeBuilder(ResourceLocation serializerName) {
-        this.serializerName = serializerName;
+    protected MekanismRecipeBuilder() {
         //TODO: We may also want to validate inputs, currently we are not validating our input ingredients as being valid, and are just validating the other parameters
     }
 
@@ -47,8 +40,8 @@ public abstract class MekanismRecipeBuilder<BUILDER extends MekanismRecipeBuilde
      *
      * @param criterion Criterion to add.
      */
-    public BUILDER addCriterion(RecipeCriterion criterion) {
-        return addCriterion(criterion.name(), criterion.criterion());
+    public BUILDER unlockedBy(RecipeCriterion criterion) {
+        return unlockedBy(criterion.name(), criterion.criterion());
     }
 
     /**
@@ -57,8 +50,9 @@ public abstract class MekanismRecipeBuilder<BUILDER extends MekanismRecipeBuilde
      * @param name      Name of the criterion.
      * @param criterion Criterion to add.
      */
-    public BUILDER addCriterion(String name, CriterionTriggerInstance criterion) {
-        advancementBuilder.addCriterion(name, criterion);
+    @SuppressWarnings("unchecked")
+    public BUILDER unlockedBy(String name, Criterion<?> criterion) {
+        criteria.put(name, criterion);
         return (BUILDER) this;
     }
 
@@ -67,26 +61,16 @@ public abstract class MekanismRecipeBuilder<BUILDER extends MekanismRecipeBuilde
      *
      * @param condition Condition to add.
      */
+    @SuppressWarnings("unchecked")
     public BUILDER addCondition(ICondition condition) {
         conditions.add(condition);
         return (BUILDER) this;
     }
 
     /**
-     * Checks if this recipe has any criteria.
-     *
-     * @return {@code true} if this recipe has any criteria.
-     */
-    protected boolean hasCriteria() {
-        return !advancementBuilder.getCriteria().isEmpty();
-    }
-
-    /**
      * Gets a recipe result object.
-     *
-     * @param id ID of the recipe being built.
      */
-    protected abstract RecipeResult getResult(ResourceLocation id);
+    protected abstract Recipe<?> asRecipe();
 
     /**
      * Performs any extra validation.
@@ -99,84 +83,52 @@ public abstract class MekanismRecipeBuilder<BUILDER extends MekanismRecipeBuilde
     /**
      * Builds this recipe.
      *
-     * @param consumer Finished Recipe Consumer.
-     * @param id       Name of the recipe being built.
+     * @param recipeOutput Finished Recipe Consumer.
+     * @param id           Name of the recipe being built.
      */
-    public void build(Consumer<FinishedRecipe> consumer, ResourceLocation id) {
+    public void build(RecipeOutput recipeOutput, ResourceLocation id) {
         validate(id);
-        if (hasCriteria()) {
+        AdvancementHolder advancementHolder = null;
+        if (!this.criteria.isEmpty()) {
+            Advancement.Builder advancementBuilder = recipeOutput.advancement()
+                  .addCriterion("has_the_recipe", RecipeUnlockedTrigger.unlocked(id))
+                  .rewards(AdvancementRewards.Builder.recipe(id))
+                  .requirements(AdvancementRequirements.Strategy.OR);
             //If there is a way to "unlock" this recipe then add an advancement with the criteria
-            advancementBuilder.parent(new ResourceLocation("recipes/root")).addCriterion("has_the_recipe", RecipeUnlockedTrigger.unlocked(id))
-                  .rewards(AdvancementRewards.Builder.recipe(id)).requirements(RequirementsStrategy.OR);
+            this.criteria.forEach(advancementBuilder::addCriterion);
+            advancementHolder = advancementBuilder.build(id.withPrefix("recipes/"));
         }
-        consumer.accept(getResult(id));
+        recipeOutput.accept(id, asRecipe(), advancementHolder, conditions.toArray(new ICondition[0]));
     }
 
     /**
      * Builds this recipe basing the name on the output item.
      *
-     * @param consumer Finished Recipe Consumer.
-     * @param output   Output to base the recipe name off of.
+     * @param recipeOutput Finished Recipe Consumer.
+     * @param output       Output to base the recipe name off of.
+     * @deprecated Use {@link #build(RecipeOutput, Holder)} instead
      */
-    protected void build(Consumer<FinishedRecipe> consumer, ItemLike output) {
-        ResourceLocation registryName = ForgeRegistries.ITEMS.getKey(output.asItem());
+    @Deprecated(forRemoval = true, since = "10.7.11")
+    protected void build(RecipeOutput recipeOutput, ItemLike output) {
+        ResourceLocation registryName = BuiltInRegistries.ITEM.getKeyOrNull(output.asItem());
         if (registryName == null) {
             throw new IllegalStateException("Could not retrieve registry name for output.");
         }
-        build(consumer, registryName);
+        build(recipeOutput, registryName);
     }
 
     /**
-     * Base recipe result.
+     * Builds this recipe basing the name on the output item.
+     *
+     * @param recipeOutput Finished Recipe Consumer.
+     * @param output       Output to base the recipe name off of.
+     * @since 10.7.11
      */
-    protected abstract class RecipeResult implements FinishedRecipe {
-
-        private final ResourceLocation id;
-
-        public RecipeResult(ResourceLocation id) {
-            this.id = id;
+    protected void build(RecipeOutput recipeOutput, Holder<Item> output) {
+        ResourceKey<Item> key = output.getKey();
+        if (key == null) {
+            throw new IllegalStateException("Could not retrieve registry name for output.");
         }
-
-        @Override
-        public JsonObject serializeRecipe() {
-            JsonObject jsonObject = new JsonObject();
-            jsonObject.addProperty(JsonConstants.TYPE, serializerName.toString());
-            if (!conditions.isEmpty()) {
-                JsonArray conditionsArray = new JsonArray();
-                for (ICondition condition : conditions) {
-                    conditionsArray.add(CraftingHelper.serialize(condition));
-                }
-                jsonObject.add(JsonConstants.CONDITIONS, conditionsArray);
-            }
-            this.serializeRecipeData(jsonObject);
-            return jsonObject;
-        }
-
-        @NotNull
-        @Override
-        public RecipeSerializer<?> getType() {
-            //Note: This may be null if something is screwed up but this method isn't actually used, so it shouldn't matter
-            // and in fact it will probably be null if only the API is included. But again, as we manually just use
-            // the serializer's name this should not affect us
-            return ForgeRegistries.RECIPE_SERIALIZERS.getValue(serializerName);
-        }
-
-        @NotNull
-        @Override
-        public ResourceLocation getId() {
-            return this.id;
-        }
-
-        @Nullable
-        @Override
-        public JsonObject serializeAdvancement() {
-            return hasCriteria() ? advancementBuilder.serializeToJson() : null;
-        }
-
-        @Nullable
-        @Override
-        public ResourceLocation getAdvancementId() {
-            return new ResourceLocation(id.getNamespace(), "recipes/" + id.getPath());
-        }
+        build(recipeOutput, key.location());
     }
 }

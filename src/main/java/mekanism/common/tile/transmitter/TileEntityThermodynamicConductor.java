@@ -4,7 +4,6 @@ import java.util.Collections;
 import java.util.List;
 import mekanism.api.heat.IHeatCapacitor;
 import mekanism.api.heat.IMekanismHeatHandler;
-import mekanism.api.providers.IBlockProvider;
 import mekanism.api.tier.BaseTier;
 import mekanism.common.block.states.BlockStateHelper;
 import mekanism.common.block.states.TransmitterType;
@@ -13,10 +12,10 @@ import mekanism.common.capabilities.resolver.manager.HeatHandlerManager;
 import mekanism.common.content.network.transmitter.ThermodynamicConductor;
 import mekanism.common.lib.transmitter.ConnectionType;
 import mekanism.common.registries.MekanismBlocks;
-import mekanism.common.util.EnumUtils;
-import mekanism.common.util.WorldUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Holder;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -25,7 +24,7 @@ public class TileEntityThermodynamicConductor extends TileEntityTransmitter {
 
     private final HeatHandlerManager heatHandlerManager;
 
-    public TileEntityThermodynamicConductor(IBlockProvider blockProvider, BlockPos pos, BlockState state) {
+    public TileEntityThermodynamicConductor(Holder<Block> blockProvider, BlockPos pos, BlockState state) {
         super(blockProvider, pos, state);
         addCapabilityResolver(heatHandlerManager = new HeatHandlerManager(direction -> {
             ThermodynamicConductor conductor = getTransmitter();
@@ -49,7 +48,7 @@ public class TileEntityThermodynamicConductor extends TileEntityTransmitter {
     }
 
     @Override
-    protected ThermodynamicConductor createTransmitter(IBlockProvider blockProvider) {
+    protected ThermodynamicConductor createTransmitter(Holder<Block> blockProvider) {
         return new ThermodynamicConductor(blockProvider, this);
     }
 
@@ -79,12 +78,12 @@ public class TileEntityThermodynamicConductor extends TileEntityTransmitter {
     public void sideChanged(@NotNull Direction side, @NotNull ConnectionType old, @NotNull ConnectionType type) {
         super.sideChanged(side, old, type);
         if (type == ConnectionType.NONE) {
-            invalidateCapability(Capabilities.HEAT_HANDLER, side);
-            //Notify the neighbor on that side our state changed and we no longer have a capability
-            WorldUtils.notifyNeighborOfChange(level, side, worldPosition);
+            //We no longer have a capability, invalidate it, which will also notify the level
+            invalidateCapability(Capabilities.HEAT, side);
         } else if (old == ConnectionType.NONE) {
-            //Notify the neighbor on that side our state changed, and we now do have a capability
-            WorldUtils.notifyNeighborOfChange(level, side, worldPosition);
+            //Notify any listeners to our position that we now do have a capability
+            //Note: We don't invalidate our impls because we know they are already invalid, so we can short circuit setting them to null from null
+            invalidateCapabilities();
         }
     }
 
@@ -95,8 +94,11 @@ public class TileEntityThermodynamicConductor extends TileEntityTransmitter {
             //The transmitter now is powered by redstone and previously was not
             //Note: While at first glance the below invalidation may seem over aggressive, it is not actually that aggressive as
             // if a cap has not been initialized yet on a side then invalidating it will just NO-OP
-            invalidateCapability(Capabilities.HEAT_HANDLER, EnumUtils.DIRECTIONS);
+            invalidateCapabilityAll(Capabilities.HEAT);
+        } else {
+            //Notify any listeners to our position that we now do have a capability
+            //Note: We don't invalidate our impls because we know they are already invalid, so we can short circuit setting them to null from null
+            invalidateCapabilities();
         }
-        //Note: We do not have to invalidate any caps if we are going from powered to unpowered as all the caps would already be "empty"
     }
 }

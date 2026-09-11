@@ -33,7 +33,7 @@ public class GuiSeismicVibrator extends GuiMekanismTile<TileEntitySeismicVibrato
         addRenderableWidget(new GuiVerticalPowerBar(this, tile.getEnergyContainer(), 164, 15))
               .warning(WarningType.NOT_ENOUGH_ENERGY, () -> {
                   MachineEnergyContainer<TileEntitySeismicVibrator> energyContainer = tile.getEnergyContainer();
-                  return energyContainer.getEnergyPerTick().greaterThan(energyContainer.getEnergy());
+                  return energyContainer.getEnergyPerTick() > energyContainer.getEnergy();
               });
         addRenderableWidget(new GuiEnergyTab(this, tile.getEnergyContainer(), tile::getActive));
     }
@@ -41,7 +41,7 @@ public class GuiSeismicVibrator extends GuiMekanismTile<TileEntitySeismicVibrato
     @Override
     protected void drawForegroundText(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY) {
         renderTitleText(guiGraphics);
-        drawString(guiGraphics, playerInventoryTitle, inventoryLabelX, inventoryLabelY, titleTextColor());
+        renderInventoryText(guiGraphics);
         super.drawForegroundText(guiGraphics, mouseX, mouseY);
     }
 }

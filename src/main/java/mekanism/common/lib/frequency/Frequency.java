@@ -1,50 +1,80 @@
 package mekanism.common.lib.frequency;
 
+import com.mojang.datafixers.Products.P3;
+import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
+import com.mojang.serialization.codecs.RecordCodecBuilder.Mu;
+import io.netty.buffer.ByteBuf;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import mekanism.api.IFrequency;
-import mekanism.api.NBTConstants;
+import mekanism.api.SerializationConstants;
 import mekanism.api.security.SecurityMode;
-import mekanism.common.network.BasePacketHandler;
+import mekanism.common.network.PacketUtils;
 import mekanism.common.util.MekanismUtils;
-import mekanism.common.util.NBTUtils;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.core.UUIDUtil;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.util.ExtraCodecs;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class Frequency implements IFrequency {
 
+    protected static <FREQ extends Frequency> P3<Mu<FREQ>, String, Optional<UUID>, SecurityMode> baseCodec(Instance<FREQ> instance) {
+        return instance.group(
+              ExtraCodecs.NON_EMPTY_STRING.fieldOf(SerializationConstants.NAME).forGetter(Frequency::getName),
+              UUIDUtil.CODEC.optionalFieldOf(SerializationConstants.OWNER_UUID).forGetter(freq -> Optional.ofNullable(freq.getOwner())),
+              SecurityMode.CODEC.fieldOf(SerializationConstants.SECURITY_MODE).forGetter(Frequency::getSecurity)
+        );
+    }
+
+    protected static <BUF extends ByteBuf, FREQ extends Frequency> StreamCodec<BUF, FREQ> baseStreamCodec(FrequencyConstructor<FREQ> constructor) {
+        return StreamCodec.composite(
+              ByteBufCodecs.STRING_UTF8, Frequency::getName,
+              ByteBufCodecs.optional(UUIDUtil.STREAM_CODEC), freq -> Optional.ofNullable(freq.getOwner()),
+              ByteBufCodecs.stringUtf8(PacketUtils.LAST_USERNAME_LENGTH), Frequency::getOwnerName,
+              SecurityMode.STREAM_CODEC, Frequency::getSecurity,
+              (name, owner, ownerName, security) -> constructor.create(name, owner.orElse(null), ownerName, security)
+        );
+    }
+
     protected boolean dirty;
     private boolean removed;
-    private String name;
+    private final String name;
 
     @Nullable
-    private UUID ownerUUID;
-    private String clientOwner;
+    private final UUID ownerUUID;
+    private final String ownerName;
 
     private boolean valid = true;
-    private boolean publicFreq;
+    private SecurityMode securityMode;
 
     private final FrequencyType<?> frequencyType;
 
     /**
-     * @param uuid Should only be null if we have incomplete data that we are loading
+     * Owner username is looked up so that we can sync it (and more importantly have it
+     * set in single player when network connections don't serialize and deserialize)
+     *
+     * @param owner Should only be null if we have incomplete data that we are loading.
      */
-    public Frequency(FrequencyType<?> frequencyType, String name, @Nullable UUID uuid) {
-        this(frequencyType);
-        this.name = name;
-        ownerUUID = uuid;
+    protected Frequency(FrequencyType<?> frequencyType, String name, @Nullable UUID owner, SecurityMode securityMode) {
+        this(frequencyType, name, owner, MekanismUtils.getLastKnownUsername(owner), securityMode);
     }
 
-    public Frequency(FrequencyType<?> frequencyType) {
+    protected Frequency(FrequencyType<?> frequencyType, String name, @Nullable UUID owner, String ownerName, SecurityMode securityMode) {
         this.frequencyType = frequencyType;
+        this.name = name;
+        this.ownerUUID = owner;
+        this.ownerName = ownerName;
+        this.securityMode = securityMode;
     }
 
     /**
      * @return {@code true} if persistent data was changed and the frequency needs to be saved.
      */
-    public boolean tick() {
+    public boolean tick(boolean tickingNormally) {
         return dirty;
     }
 
@@ -80,21 +110,14 @@ public abstract class Frequency implements IFrequency {
 
     @Override
     public final SecurityMode getSecurity() {
-        //TODO: Eventually we may want to allow for protected frequencies, at which point instead of
-        // storing a boolean publicFreq we would just store the security mode
-        return isPublic() ? SecurityMode.PUBLIC : SecurityMode.PRIVATE;
+        return securityMode;
     }
 
-    public boolean isPublic() {
-        return publicFreq;
-    }
-
-    public Frequency setPublic(boolean isPublic) {
-        if (publicFreq != isPublic) {
-            publicFreq = isPublic;
+    public void setSecurityMode(SecurityMode securityMode) {
+        if (this.securityMode != securityMode) {
+            this.securityMode = securityMode;
             dirty = true;
         }
-        return this;
     }
 
     @Override
@@ -121,41 +144,9 @@ public abstract class Frequency implements IFrequency {
         return Objects.equals(ownerUUID, toCheck);
     }
 
-    public String getClientOwner() {
-        return clientOwner;
-    }
-
-    public void writeComponentData(CompoundTag nbtTags) {
-        nbtTags.putString(NBTConstants.NAME, name);
-        if (ownerUUID != null) {
-            nbtTags.putUUID(NBTConstants.OWNER_UUID, ownerUUID);
-        }
-        nbtTags.putBoolean(NBTConstants.PUBLIC_FREQUENCY, publicFreq);
-    }
-
-    public void write(CompoundTag nbtTags) {
-        writeComponentData(nbtTags);
-    }
-
-    protected void read(CompoundTag nbtTags) {
-        name = nbtTags.getString(NBTConstants.NAME);
-        NBTUtils.setUUIDIfPresent(nbtTags, NBTConstants.OWNER_UUID, uuid -> ownerUUID = uuid);
-        publicFreq = nbtTags.getBoolean(NBTConstants.PUBLIC_FREQUENCY);
-    }
-
-    public void write(FriendlyByteBuf buffer) {
-        getType().write(buffer);
-        buffer.writeUtf(name);
-        BasePacketHandler.writeOptional(buffer, ownerUUID, FriendlyByteBuf::writeUUID);
-        buffer.writeUtf(MekanismUtils.getLastKnownUsername(ownerUUID));
-        buffer.writeBoolean(publicFreq);
-    }
-
-    protected void read(FriendlyByteBuf dataStream) {
-        name = BasePacketHandler.readString(dataStream);
-        ownerUUID = BasePacketHandler.readOptional(dataStream, FriendlyByteBuf::readUUID);
-        clientOwner = BasePacketHandler.readString(dataStream);
-        publicFreq = dataStream.readBoolean();
+    @NotNull
+    public String getOwnerName() {
+        return ownerName;
     }
 
     /**
@@ -173,47 +164,35 @@ public abstract class Frequency implements IFrequency {
         if (ownerUUID != null) {
             code = 31 * code + ownerUUID.hashCode();
         }
-        code = 31 * code + (publicFreq ? 1 : 0);
+        if (frequencyType != FrequencyType.SECURITY) {
+            code = 31 * code + (securityMode.ordinal());
+        }
         return code;
     }
 
     @Override
     public boolean equals(Object obj) {
-        return obj instanceof Frequency other && publicFreq == other.publicFreq && ownerUUID != null && name.equals(other.name) && ownerUUID.equals(other.ownerUUID);
+        if (this == obj) {
+            return true;
+        }
+        if (obj instanceof Frequency other) {
+            if (frequencyType == FrequencyType.SECURITY || securityMode == other.securityMode) {
+                return ownerUUID != null && name.equals(other.name) && ownerUUID.equals(other.ownerUUID);
+            }
+        }
+        return false;
     }
 
     public FrequencyIdentity getIdentity() {
-        return new FrequencyIdentity(getKey(), publicFreq);
+        return new FrequencyIdentity(getKey(), securityMode, ownerUUID);
     }
 
-    public boolean areIdentitiesEqual(Frequency other) {
-        //TODO: Decide if we want to "inline" this to not require creating new identity objects
-        return getIdentity().equals(other.getIdentity());
+    public record FrequencyIdentity(Object key, SecurityMode securityMode, @Nullable UUID ownerUUID) {
     }
 
-    public CompoundTag serializeIdentity() {
-        return frequencyType.getIdentitySerializer().serialize(getIdentity());
-    }
+    @FunctionalInterface
+    protected interface FrequencyConstructor<FREQ extends Frequency> {
 
-    /**
-     * Like {@link #serializeIdentity()} except ensures the owner information is added if need be.
-     */
-    public CompoundTag serializeIdentityWithOwner() {
-        CompoundTag serializedIdentity = serializeIdentity();
-        if (!serializedIdentity.hasUUID(NBTConstants.OWNER_UUID) && ownerUUID != null) {
-            serializedIdentity.putUUID(NBTConstants.OWNER_UUID, ownerUUID);
-        }
-        return serializedIdentity;
-    }
-
-    public static <FREQ extends Frequency> FREQ readFromPacket(FriendlyByteBuf dataStream) {
-        return FrequencyType.<FREQ>load(dataStream).create(dataStream);
-    }
-
-    public record FrequencyIdentity(Object key, boolean isPublic) {
-
-        public static FrequencyIdentity load(FrequencyType<?> type, CompoundTag tag) {
-            return type.getIdentitySerializer().load(tag);
-        }
+        FREQ create(String name, @Nullable UUID owner, String ownerName, SecurityMode securityMode);
     }
 }

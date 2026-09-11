@@ -1,23 +1,21 @@
 package mekanism.common.tile.machine;
 
-import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
-import java.util.function.BiFunction;
 import mekanism.api.Action;
 import mekanism.api.AutomationType;
 import mekanism.api.IContentsListener;
-import mekanism.api.NBTConstants;
 import mekanism.api.RelativeSide;
-import mekanism.api.math.FloatingLong;
-import mekanism.common.capabilities.Capabilities;
+import mekanism.api.SerializationConstants;
+import mekanism.api.functions.LongObjectToLongFunction;
+import mekanism.api.math.MathUtils;
+import mekanism.common.attachments.StabilizedChunks;
+import mekanism.common.attachments.containers.ContainerType;
 import mekanism.common.capabilities.energy.FixedUsageEnergyContainer;
 import mekanism.common.capabilities.holder.energy.EnergyContainerHelper;
 import mekanism.common.capabilities.holder.energy.IEnergyContainerHolder;
 import mekanism.common.capabilities.holder.slot.IInventorySlotHolder;
 import mekanism.common.capabilities.holder.slot.InventorySlotHelper;
-import mekanism.common.capabilities.resolver.BasicCapabilityResolver;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.integration.computer.ComputerException;
 import mekanism.common.integration.computer.SpecialComputerMethodWrapper.ComputerIInventorySlotWrapper;
@@ -28,28 +26,28 @@ import mekanism.common.inventory.container.MekanismContainer;
 import mekanism.common.inventory.slot.EnergyInventorySlot;
 import mekanism.common.lib.chunkloading.IChunkLoader;
 import mekanism.common.registries.MekanismBlocks;
-import mekanism.common.tile.base.SubstanceType;
+import mekanism.common.registries.MekanismDataComponents;
 import mekanism.common.tile.base.TileEntityMekanism;
 import mekanism.common.tile.component.TileComponentChunkLoader;
 import mekanism.common.tile.interfaces.IHasVisualization;
-import mekanism.common.tile.interfaces.ISustainedData;
-import mekanism.common.util.MekanismUtils;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.SectionPos;
+import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.AABB;
+import net.minecraft.world.level.redstone.Redstone;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
-public class TileEntityDimensionalStabilizer extends TileEntityMekanism implements IChunkLoader, ISustainedData, IHasVisualization {
+public class TileEntityDimensionalStabilizer extends TileEntityMekanism implements IChunkLoader, IHasVisualization {
 
     public static final int MAX_LOAD_RADIUS = 2;
     public static final int MAX_LOAD_DIAMETER = 2 * MAX_LOAD_RADIUS + 1;
-    private static final String COMPUTER_RANGE_STR = "Range: [-"+MAX_LOAD_RADIUS+", "+MAX_LOAD_RADIUS+"]";
-    private static final String COMPUTER_RANGE_RAD = "Range: [1, "+MAX_LOAD_RADIUS+"]";
-    private static final BiFunction<FloatingLong, TileEntityDimensionalStabilizer, FloatingLong> BASE_ENERGY_CALCULATOR = (base, tile) -> base.multiply(tile.chunksLoaded);
+    private static final String COMPUTER_RANGE_STR = "Range: [-" + MAX_LOAD_RADIUS + ", " + MAX_LOAD_RADIUS + "]";
+    private static final String COMPUTER_RANGE_RAD = "Range: [1, " + MAX_LOAD_RADIUS + "]";
+    private static final LongObjectToLongFunction<TileEntityDimensionalStabilizer> BASE_ENERGY_CALCULATOR = (base, tile) -> MathUtils.multiplyClamped(base, tile.chunksLoaded);
 
     private final ChunkLoader chunkLoaderComponent;
     private final boolean[][] loadingChunks;
@@ -63,7 +61,6 @@ public class TileEntityDimensionalStabilizer extends TileEntityMekanism implemen
 
     public TileEntityDimensionalStabilizer(BlockPos pos, BlockState state) {
         super(MekanismBlocks.DIMENSIONAL_STABILIZER, pos, state);
-        addCapabilityResolver(BasicCapabilityResolver.constant(Capabilities.CONFIG_CARD, this));
 
         chunkLoaderComponent = new ChunkLoader(this);
         loadingChunks = new boolean[MAX_LOAD_DIAMETER][MAX_LOAD_DIAMETER];
@@ -74,7 +71,7 @@ public class TileEntityDimensionalStabilizer extends TileEntityMekanism implemen
     @NotNull
     @Override
     protected IEnergyContainerHolder getInitialEnergyContainers(IContentsListener listener) {
-        EnergyContainerHelper builder = EnergyContainerHelper.forSide(this::getDirection);
+        EnergyContainerHelper builder = EnergyContainerHelper.forSide(facingSupplier);
         builder.addContainer(energyContainer = FixedUsageEnergyContainer.input(this, BASE_ENERGY_CALCULATOR, listener));
         return builder.build();
     }
@@ -82,19 +79,19 @@ public class TileEntityDimensionalStabilizer extends TileEntityMekanism implemen
     @NotNull
     @Override
     protected IInventorySlotHolder getInitialInventory(IContentsListener listener) {
-        InventorySlotHelper builder = InventorySlotHelper.forSide(this::getDirection);
+        InventorySlotHelper builder = InventorySlotHelper.forSide(facingSupplier);
         builder.addSlot(energySlot = EnergyInventorySlot.fillOrConvert(energyContainer, this::getLevel, listener, 143, 35), RelativeSide.BACK);
         return builder.build();
     }
 
     @Override
-    protected void onUpdateServer() {
-        super.onUpdateServer();
+    protected boolean onUpdateServer() {
+        boolean sendUpdatePacket = super.onUpdateServer();
         energySlot.fillContainerOrConvert();
         //Only attempt to use power if chunk loading isn't disabled in the config
-        if (MekanismConfig.general.allowChunkloading.get() && MekanismUtils.canFunction(this)) {
-            FloatingLong energyPerTick = energyContainer.getEnergyPerTick();
-            if (energyContainer.extract(energyPerTick, Action.SIMULATE, AutomationType.INTERNAL).equals(energyPerTick)) {
+        if (MekanismConfig.general.allowChunkloading.get() && canFunction()) {
+            long energyPerTick = energyContainer.getEnergyPerTick();
+            if (energyContainer.extract(energyPerTick, Action.SIMULATE, AutomationType.INTERNAL) == energyPerTick) {
                 energyContainer.extract(energyPerTick, Action.EXECUTE, AutomationType.INTERNAL);
                 setActive(true);
             } else {
@@ -103,6 +100,7 @@ public class TileEntityDimensionalStabilizer extends TileEntityMekanism implemen
         } else {
             setActive(false);
         }
+        return sendUpdatePacket;
     }
 
     public boolean isChunkLoadingAt(int x, int z) {
@@ -185,11 +183,11 @@ public class TileEntityDimensionalStabilizer extends TileEntityMekanism implemen
 
     @Override
     public int getRedstoneLevel() {
-        return getActive() ? 15 : 0;
+        return getActive() ? Redstone.SIGNAL_MAX : Redstone.SIGNAL_NONE;
     }
 
     @Override
-    protected boolean makesComparatorDirty(@Nullable SubstanceType type) {
+    protected boolean makesComparatorDirty(ContainerType<?, ?, ?> type) {
         return false;
     }
 
@@ -197,26 +195,6 @@ public class TileEntityDimensionalStabilizer extends TileEntityMekanism implemen
     public int getCurrentRedstoneLevel() {
         //We don't cache the redstone level for the dimensional stabilizer
         return getRedstoneLevel();
-    }
-
-    @NotNull
-    @Override
-    public AABB getRenderBoundingBox() {
-        if (isClientRendering() && canDisplayVisuals() && level != null) {
-            int chunkX = SectionPos.blockToSectionCoord(worldPosition.getX());
-            int chunkZ = SectionPos.blockToSectionCoord(worldPosition.getZ());
-            ChunkPos minChunk = new ChunkPos(chunkX - MAX_LOAD_RADIUS, chunkZ - MAX_LOAD_RADIUS);
-            ChunkPos maxChunk = new ChunkPos(chunkX + MAX_LOAD_RADIUS, chunkZ + MAX_LOAD_RADIUS);
-            return new AABB(
-                  minChunk.getMinBlockX(),
-                  level.getMinBuildHeight(),
-                  minChunk.getMinBlockZ(),
-                  maxChunk.getMaxBlockX() + 1,
-                  level.getMaxBuildHeight(),
-                  maxChunk.getMaxBlockZ() + 1
-            );
-        }
-        return super.getRenderBoundingBox();
     }
 
     @Override
@@ -236,21 +214,23 @@ public class TileEntityDimensionalStabilizer extends TileEntityMekanism implemen
     }
 
     @Override
-    public void writeSustainedData(CompoundTag dataMap) {
+    public void writeSustainedData(HolderLookup.Provider provider, CompoundTag dataMap) {
+        super.writeSustainedData(provider, dataMap);
         byte[] chunksToLoad = new byte[MAX_LOAD_DIAMETER * MAX_LOAD_DIAMETER];
         for (int x = 0; x < MAX_LOAD_DIAMETER; x++) {
             for (int z = 0; z < MAX_LOAD_DIAMETER; z++) {
                 chunksToLoad[x * MAX_LOAD_DIAMETER + z] = (byte) (isChunkLoadingAt(x, z) ? 1 : 0);
             }
         }
-        dataMap.putByteArray(NBTConstants.STABILIZER_CHUNKS_TO_LOAD, chunksToLoad);
+        dataMap.putByteArray(SerializationConstants.STABILIZER_CHUNKS_TO_LOAD, chunksToLoad);
     }
 
     @Override
-    public void readSustainedData(CompoundTag dataMap) {
+    public void readSustainedData(HolderLookup.Provider provider, @NotNull CompoundTag dataMap) {
+        super.readSustainedData(provider, dataMap);
         boolean changed = false;
         int lastChunksLoaded = chunksLoaded;
-        byte[] chunksToLoad = dataMap.getByteArray(NBTConstants.STABILIZER_CHUNKS_TO_LOAD);
+        byte[] chunksToLoad = dataMap.getByteArray(SerializationConstants.STABILIZER_CHUNKS_TO_LOAD);
         if (chunksToLoad.length != MAX_LOAD_DIAMETER * MAX_LOAD_DIAMETER) {
             //If it is the wrong size dummy it to all zeros so things get set to false as we don't know
             // where to position our values
@@ -274,10 +254,37 @@ public class TileEntityDimensionalStabilizer extends TileEntityMekanism implemen
     }
 
     @Override
-    public Map<String, String> getTileDataRemap() {
-        Map<String, String> remap = new Object2ObjectOpenHashMap<>();
-        remap.put(NBTConstants.STABILIZER_CHUNKS_TO_LOAD, NBTConstants.STABILIZER_CHUNKS_TO_LOAD);
-        return remap;
+    protected void applyImplicitComponents(@NotNull BlockEntity.DataComponentInput input) {
+        super.applyImplicitComponents(input);
+        //TODO - 1.20.4: Deduplicate this and the from nbt
+        boolean changed = false;
+        int lastChunksLoaded = chunksLoaded;
+        StabilizedChunks chunksToLoad = input.getOrDefault(MekanismDataComponents.STABILIZER_CHUNKS, StabilizedChunks.NONE);
+        if (chunksToLoad == StabilizedChunks.NONE) {
+            //Skip if we don't have any data
+            return;
+        }
+        for (int x = 0; x < MAX_LOAD_DIAMETER; x++) {
+            for (int z = 0; z < MAX_LOAD_DIAMETER; z++) {
+                changed |= setChunkLoadingAt(x, z, chunksToLoad.loaded(x * MAX_LOAD_DIAMETER + z));
+            }
+        }
+        if (changed) {
+            if (chunksLoaded != lastChunksLoaded) {
+                //If the number of chunks loaded is different we need to update our energy to use
+                energyContainer.updateEnergyPerTick();
+            }
+            if (hasLevel()) {
+                //Refresh the chunks that are loaded as it has changed
+                getChunkLoader().refreshChunkTickets();
+            }
+        }
+    }
+
+    @Override
+    protected void collectImplicitComponents(@NotNull DataComponentMap.Builder builder) {
+        super.collectImplicitComponents(builder);
+        builder.set(MekanismDataComponents.STABILIZER_CHUNKS, StabilizedChunks.create(this));
     }
 
     @Override
@@ -300,18 +307,18 @@ public class TileEntityDimensionalStabilizer extends TileEntityMekanism implemen
         return val + MAX_LOAD_RADIUS;
     }
 
-    @ComputerMethod(nameOverride = "isChunkLoadingAt", methodDescription = "Check if the Dimensional Stabilizer is configured to load a the specified relative chunk position at x,y (Stabilizer is at 0,0). "+COMPUTER_RANGE_STR)
+    @ComputerMethod(nameOverride = "isChunkLoadingAt", methodDescription = "Check if the Dimensional Stabilizer is configured to load a the specified relative chunk position at x,y (Stabilizer is at 0,0). " + COMPUTER_RANGE_STR)
     boolean computerIsChunkloadingAt(int x, int z) throws ComputerException {
         return isChunkLoadingAt(validateDimension(x, true), validateDimension(z, false));
     }
 
-    @ComputerMethod(nameOverride = "toggleChunkLoadingAt", requiresPublicSecurity = true, methodDescription = "Toggle loading the specified relative chunk at the relative x,y position (Stabilizer is at 0,0). Just like clicking the button in the GUI. "+COMPUTER_RANGE_STR)
+    @ComputerMethod(nameOverride = "toggleChunkLoadingAt", requiresPublicSecurity = true, methodDescription = "Toggle loading the specified relative chunk at the relative x,y position (Stabilizer is at 0,0). Just like clicking the button in the GUI. " + COMPUTER_RANGE_STR)
     void computerToggleChunkLoadingAt(int x, int z) throws ComputerException {
         validateSecurityIsPublic();
         toggleChunkLoadingAt(validateDimension(x, true), validateDimension(z, false));
     }
 
-    @ComputerMethod(nameOverride = "setChunkLoadingAt", requiresPublicSecurity = true, methodDescription = "Set if the Dimensional Stabilizer is configured to load a the specified relative position (Stabilizer is at 0,0). True = load the chunk, false = don't load the chunk. "+COMPUTER_RANGE_STR)
+    @ComputerMethod(nameOverride = "setChunkLoadingAt", requiresPublicSecurity = true, methodDescription = "Set if the Dimensional Stabilizer is configured to load a the specified relative position (Stabilizer is at 0,0). True = load the chunk, false = don't load the chunk. " + COMPUTER_RANGE_STR)
     void computerSetChunkLoadingAt(int x, int z, boolean load) throws ComputerException {
         validateSecurityIsPublic();
         if (setChunkLoadingAt(validateDimension(x, true), validateDimension(z, false), load)) {
@@ -329,14 +336,14 @@ public class TileEntityDimensionalStabilizer extends TileEntityMekanism implemen
         }
     }
 
-    @ComputerMethod(requiresPublicSecurity = true, methodDescription = "Sets the chunks in the specified radius to be loaded. The chunk the Stabilizer is in is always loaded. "+COMPUTER_RANGE_RAD)
+    @ComputerMethod(requiresPublicSecurity = true, methodDescription = "Sets the chunks in the specified radius to be loaded. The chunk the Stabilizer is in is always loaded. " + COMPUTER_RANGE_RAD)
     void enableChunkLoadingFor(int radius) throws ComputerException {
         validateSecurityIsPublic();
         validateRadius(radius);
         adjustChunkLoadingRadius(radius, true);
     }
 
-    @ComputerMethod(requiresPublicSecurity = true, methodDescription = "Sets the chunks in the specified radius to not be kept loaded. The chunk the Stabilizer is in is always loaded. "+COMPUTER_RANGE_RAD)
+    @ComputerMethod(requiresPublicSecurity = true, methodDescription = "Sets the chunks in the specified radius to not be kept loaded. The chunk the Stabilizer is in is always loaded. " + COMPUTER_RANGE_RAD)
     void disableChunkLoadingFor(int radius) throws ComputerException {
         validateSecurityIsPublic();
         validateRadius(radius);

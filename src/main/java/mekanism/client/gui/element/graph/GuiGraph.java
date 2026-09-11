@@ -8,13 +8,17 @@ import mekanism.client.gui.IGuiWrapper;
 import mekanism.client.gui.element.GuiInnerScreen;
 import mekanism.client.gui.element.GuiTexturedElement;
 import mekanism.client.gui.element.graph.GuiGraph.GraphDataHandler;
+import mekanism.client.gui.tooltip.TooltipUtils;
 import mekanism.client.render.MekanismRenderer;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.MekanismUtils.ResourceType;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public abstract class GuiGraph<COLLECTION extends Collection<?>, HANDLER extends GraphDataHandler> extends GuiTexturedElement {
 
@@ -23,6 +27,13 @@ public abstract class GuiGraph<COLLECTION extends Collection<?>, HANDLER extends
 
     protected final COLLECTION graphData;
     protected final HANDLER dataHandler;
+
+    @Nullable
+    private Component lastInfo = null;
+    @Nullable
+    private Tooltip lastTooltip;
+    @Nullable
+    private ScreenRectangle cachedTooltipRect;
 
     protected boolean fixedScale = false;
 
@@ -72,13 +83,28 @@ public abstract class GuiGraph<COLLECTION extends Collection<?>, HANDLER extends
 
     protected abstract Component getDataDisplay(int hoverIndex);
 
+    @NotNull
     @Override
-    public void renderToolTip(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        super.renderToolTip(guiGraphics, mouseX, mouseY);
+    protected ScreenRectangle getTooltipRectangle(int mouseX, int mouseY) {
+        return cachedTooltipRect == null ? super.getTooltipRectangle(mouseX, mouseY) : cachedTooltipRect;
+    }
+
+    @Override
+    public void updateTooltip(int mouseX, int mouseY) {
         int hoverIndex = mouseX - getX();
         if (hoverIndex >= 0 && hoverIndex < graphData.size()) {
-            displayTooltips(guiGraphics, mouseX, mouseY, getDataDisplay(hoverIndex));
+            Component info = getDataDisplay(hoverIndex);
+            if (!info.equals(lastInfo)) {
+                lastInfo = info;
+                lastTooltip = TooltipUtils.create(info);
+            }
+            cachedTooltipRect = new ScreenRectangle(getX(), getGuiTop() + getButtonY(), 1, getButtonHeight());
+        } else {
+            lastInfo = null;
+            lastTooltip = null;
+            cachedTooltipRect = null;
         }
+        setTooltip(lastTooltip);
     }
 
     public interface GraphDataHandler {

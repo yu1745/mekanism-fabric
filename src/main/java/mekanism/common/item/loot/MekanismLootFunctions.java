@@ -1,14 +1,17 @@
 package mekanism.common.item.loot;
 
+import java.util.Set;
 import mekanism.common.Mekanism;
-import mekanism.common.item.loot.PersonalStorageContentsLootFunction.PersonalStorageLootFunctionSerializer;
-import net.minecraft.core.registries.Registries;
+import mekanism.common.registration.MekanismDeferredHolder;
+import mekanism.common.registration.impl.LootFunctionDeferredRegister;
 import net.minecraft.world.level.storage.loot.functions.LootItemFunctionType;
-import net.minecraftforge.registries.DeferredRegister;
-import net.minecraftforge.registries.RegistryObject;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParam;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 
 public class MekanismLootFunctions {
-    public static final DeferredRegister<LootItemFunctionType> REGISTER = DeferredRegister.create(Registries.LOOT_FUNCTION_TYPE, Mekanism.MODID);
 
-    public static final RegistryObject<LootItemFunctionType> PERSONAL_STORAGE_LOOT_FUNC = REGISTER.register("personal_storage_contents", ()->new LootItemFunctionType(new PersonalStorageLootFunctionSerializer()));
+    public static final LootFunctionDeferredRegister REGISTER = new LootFunctionDeferredRegister(Mekanism.MODID);
+    public static final Set<LootContextParam<?>> BLOCK_ENTITY_LOOT_CONTEXT = Set.of(LootContextParams.BLOCK_ENTITY);
+
+    public static final MekanismDeferredHolder<LootItemFunctionType<?>, LootItemFunctionType<PersonalStorageContentsLootFunction>> PERSONAL_STORAGE = REGISTER.registerBasic("personal_storage_contents", () -> PersonalStorageContentsLootFunction.INSTANCE);
 }

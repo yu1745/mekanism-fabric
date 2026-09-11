@@ -6,10 +6,11 @@ import mekanism.api.Action;
 import mekanism.api.AutomationType;
 import mekanism.api.IContentsListener;
 import mekanism.api.annotations.NothingNullByDefault;
+import mekanism.api.functions.ConstantPredicates;
 import mekanism.common.tier.FluidTankTier;
 import mekanism.common.tile.TileEntityFluidTank;
 import mekanism.common.util.WorldUtils;
-import net.minecraftforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.FluidStack;
 import org.jetbrains.annotations.Nullable;
 
 @NothingNullByDefault
@@ -25,16 +26,22 @@ public class FluidTankFluidTank extends BasicFluidTank {
     private final IntSupplier rate;
 
     private FluidTankFluidTank(TileEntityFluidTank tile, @Nullable IContentsListener listener) {
-        super(tile.tier.getStorage(), alwaysTrueBi, alwaysTrueBi, alwaysTrue, listener);
+        super(tile.tier.getStorage(), ConstantPredicates.alwaysTrueBi(), ConstantPredicates.alwaysTrueBi(), ConstantPredicates.alwaysTrue(), listener);
         this.tile = tile;
         rate = tile.tier::getOutput;
         isCreative = tile.tier == FluidTankTier.CREATIVE;
     }
 
     @Override
-    protected int getRate(@Nullable AutomationType automationType) {
+    protected int getInsertRate(@Nullable AutomationType automationType) {
         //Only limit the internal rate to change the speed at which this can be filled from an item
-        return automationType == AutomationType.INTERNAL ? rate.getAsInt() : super.getRate(automationType);
+        return automationType == AutomationType.INTERNAL ? rate.getAsInt() : super.getInsertRate(automationType);
+    }
+
+    @Override
+    protected int getExtractRate(@Nullable AutomationType automationType) {
+        //Only limit the internal rate to change the speed at which this can be filled from an item
+        return automationType == AutomationType.INTERNAL ? rate.getAsInt() : super.getExtractRate(automationType);
     }
 
     @Override
@@ -46,12 +53,13 @@ public class FluidTankFluidTank extends BasicFluidTank {
             remainder = super.insert(stack, Action.SIMULATE, automationType);
             if (remainder.isEmpty()) {
                 //If we are able to insert it then set perform the action of setting it to full
-                setStackUnchecked(new FluidStack(stack, getCapacity()));
+                setStackUnchecked(stack.copyWithAmount(getCapacity()));
             }
         } else {
             remainder = super.insert(stack, action.combine(!isCreative), automationType);
         }
-        if (!remainder.isEmpty()) {
+        //Ensure we have the same type of fluid stored as we failed to insert, in which case we want to try to insert to the one above
+        if (!remainder.isEmpty() && FluidStack.isSameFluidSameComponents(stored, remainder)) {
             //If we have any leftover check if we can send it to the tank that is above
             TileEntityFluidTank tileAbove = WorldUtils.getTileEntity(TileEntityFluidTank.class, this.tile.getLevel(), this.tile.getBlockPos().above());
             if (tileAbove != null) {
@@ -73,7 +81,7 @@ public class FluidTankFluidTank extends BasicFluidTank {
                 if (tileAbove != null) {
                     int leftOverToInsert = amount - grownAmount;
                     //Note: We do external so that it is not limited by the internal rate limits
-                    FluidStack remainder = tileAbove.fluidTank.insert(new FluidStack(stored, leftOverToInsert), action, AutomationType.EXTERNAL);
+                    FluidStack remainder = tileAbove.fluidTank.insert(stored.copyWithAmount(leftOverToInsert), action, AutomationType.EXTERNAL);
                     grownAmount += leftOverToInsert - remainder.getAmount();
                 }
             }

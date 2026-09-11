@@ -3,13 +3,17 @@ package mekanism.api.inventory;
 import mekanism.api.Action;
 import mekanism.api.AutomationType;
 import mekanism.api.IContentsListener;
+import mekanism.api.SerializationConstants;
+import mekanism.api.SerializerHelper;
 import mekanism.api.annotations.NothingNullByDefault;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.common.util.INBTSerializable;
-import net.minecraftforge.items.IItemHandler;
-import net.minecraftforge.items.ItemHandlerHelper;
+import net.neoforged.neoforge.common.util.INBTSerializable;
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import net.neoforged.neoforge.items.IItemHandler;
 import org.jetbrains.annotations.Nullable;
 
 @NothingNullByDefault
@@ -50,9 +54,7 @@ public interface IInventorySlot extends INBTSerializable<CompoundTag>, IContents
      * <p>
      * Inserts an {@link ItemStack} into this {@link IInventorySlot} and return the remainder. The {@link ItemStack} <em>should not</em> be modified in this function!
      * </p>
-     * Note: This behaviour is subtly different from
-     * {@link net.minecraftforge.fluids.capability.IFluidHandler#fill(net.minecraftforge.fluids.FluidStack,
-     * net.minecraftforge.fluids.capability.IFluidHandler.FluidAction)}
+     * Note: This behaviour is subtly different from {@link IFluidHandler#fill(FluidStack, IFluidHandler.FluidAction)}
      *
      * @param stack          {@link ItemStack} to insert. This must not be modified by the slot.
      * @param action         The action to perform, either {@link Action#EXECUTE} or {@link Action#SIMULATE}
@@ -66,17 +68,18 @@ public interface IInventorySlot extends INBTSerializable<CompoundTag>, IContents
      * run
      */
     default ItemStack insertItem(ItemStack stack, Action action, AutomationType automationType) {
-        if (stack.isEmpty() || !isItemValid(stack)) {
-            //"Fail quick" if the given stack is empty, or we can never insert the item or currently are unable to insert it
-            return stack;
+        if (stack.isEmpty()) {
+            //"Fail quick" if the given stack is empty
+            return ItemStack.EMPTY;
         }
+        //Validate that we aren't at max stack size before we try to see if we can insert the item, as on average this will be a cheaper check
         int needed = getLimit(stack) - getCount();
-        if (needed <= 0) {
-            //Fail if we are a full slot
+        if (needed <= 0 || !isItemValid(stack)) {
+            //Fail if we are a full slot, or we can never insert the item or currently are unable to insert it
             return stack;
         }
         boolean sameType = false;
-        if (isEmpty() || (sameType = ItemHandlerHelper.canItemStacksStack(getStack(), stack))) {
+        if (isEmpty() || (sameType = ItemStack.isSameItemSameComponents(getStack(), stack))) {
             int toAdd = Math.min(stack.getCount(), needed);
             if (action.execute()) {
                 //If we want to actually insert the item, then update the current item
@@ -122,7 +125,7 @@ public interface IInventorySlot extends INBTSerializable<CompoundTag>, IContents
         ItemStack current = getStack();
         //Ensure that if this slot allows going past the max stack size of an item, that when extracting we don't act as if we have more than
         // the max stack size, as the JavaDoc for IItemHandler requires that the returned stack is not larger than its stack size
-        int currentAmount = Math.min(getCount(), current.getMaxStackSize());
+        int currentAmount = Math.min(current.getCount(), current.getMaxStackSize());
         if (currentAmount < amount) {
             //If we are trying to extract more than we have, just change it so that we are extracting it all
             amount = currentAmount;
@@ -176,7 +179,9 @@ public interface IInventorySlot extends INBTSerializable<CompoundTag>, IContents
      * @return A slot for use in a container that represents this {@link IInventorySlot}, or null if this slot should not be added.
      */
     @Nullable
-    Slot createContainerSlot();
+    default Slot createContainerSlot() {
+        return null;
+    }
 
     /**
      * Convenience method for modifying the size of the stored stack.
@@ -230,7 +235,10 @@ public interface IInventorySlot extends INBTSerializable<CompoundTag>, IContents
      */
     default int growStack(int amount, Action action) {
         int current = getCount();
-        if (amount > 0) {
+        if (current == 0) {
+            //"Fail quick" if our stack is empty, so we can't grow it
+            return 0;
+        } else if (amount > 0) {
             //Cap adding amount at how much we need, so that we don't risk integer overflow
             amount = Math.min(amount, getLimit(getStack()));
         }
@@ -283,5 +291,14 @@ public interface IInventorySlot extends INBTSerializable<CompoundTag>, IContents
      */
     default int getCount() {
         return getStack().getCount();
+    }
+
+    @Override
+    default CompoundTag serializeNBT(HolderLookup.Provider provider) {
+        CompoundTag nbt = new CompoundTag();
+        if (!isEmpty()) {
+            nbt.put(SerializationConstants.ITEM, SerializerHelper.saveOversized(provider, getStack()));
+        }
+        return nbt;
     }
 }

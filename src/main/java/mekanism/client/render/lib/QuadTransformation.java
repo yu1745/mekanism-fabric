@@ -11,6 +11,7 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
+import org.joml.Vector3f;
 
 public interface QuadTransformation {
 
@@ -43,11 +44,11 @@ public interface QuadTransformation {
         return new AmbientShadeTransformation(ambientOcclusion, shade);
     }
 
-    static QuadTransformation translate(double xTranslation, double yTranslation, double zTranslation) {
-        return translate(new Vec3(xTranslation, yTranslation, zTranslation));
+    static QuadTransformation translate(float xTranslation, float yTranslation, float zTranslation) {
+        return translate(new Vector3f(xTranslation, yTranslation, zTranslation));
     }
 
-    static QuadTransformation translate(Vec3 translation) {
+    static QuadTransformation translate(Vector3f translation) {
         return new TranslationTransformation(translation);
     }
 
@@ -151,7 +152,9 @@ public interface QuadTransformation {
 
         @Override
         public boolean transform(Quad quad) {
-            quad.vertexTransform(v -> v.color(color));
+            for (Vertex v : quad.getVertices()) {
+                v.color(color);
+            }
             return true;
         }
 
@@ -181,7 +184,9 @@ public interface QuadTransformation {
 
         @Override
         public boolean transform(Quad quad) {
-            quad.vertexTransform(v -> v.light(lightU, lightV));
+            for (Vertex v : quad.getVertices()) {
+                v.light(lightU, lightV);
+            }
             return true;
         }
 
@@ -195,7 +200,9 @@ public interface QuadTransformation {
 
         @Override
         public int hashCode() {
-            return Objects.hash(lightU, lightV);
+            int result = lightU;
+            result = 31 * result + lightV;
+            return result;
         }
     }
 
@@ -226,7 +233,7 @@ public interface QuadTransformation {
 
         @Override
         public int hashCode() {
-            return Objects.hash(ambientOcclusion, shade);
+            return 31 * Boolean.hashCode(ambientOcclusion) + Boolean.hashCode(shade);
         }
     }
 
@@ -243,10 +250,10 @@ public interface QuadTransformation {
 
         @Override
         public boolean transform(Quad quad) {
-            quad.vertexTransform(v -> {
-                v.pos(round(quaternion.rotate(v.getPos().subtract(0.5, 0.5, 0.5)).add(0.5, 0.5, 0.5)));
+            for (Vertex v : quad.getVertices()) {
+                v.pos(round(quaternion.rotate(v.getPosD().subtract(0.5, 0.5, 0.5)).add(0.5, 0.5, 0.5)));
                 v.normal(round(quaternion.rotate(v.getNormalD()).normalize()));
-            });
+            }
             return true;
         }
 
@@ -270,15 +277,17 @@ public interface QuadTransformation {
 
     class TranslationTransformation implements QuadTransformation {
 
-        private final Vec3 translation;
+        private final Vector3f translation;
 
-        protected TranslationTransformation(Vec3 translation) {
+        protected TranslationTransformation(Vector3f translation) {
             this.translation = translation;
         }
 
         @Override
         public boolean transform(Quad quad) {
-            quad.vertexTransform(v -> v.pos(v.getPos().add(translation)));
+            for (Vertex v : quad.getVertices()) {
+                v.getPos().add(translation);
+            }
             return true;
         }
 
@@ -313,9 +322,11 @@ public interface QuadTransformation {
             float uMin = texture.getU0(), uMax = texture.getU1();
             float vMin = texture.getV0(), vMax = texture.getV1();
             //Calculate how much of a shift it is based on the texture's scale
-            float uShift = this.uShift * (uMax - uMin) / 16F;
-            float vShift = this.vShift * (vMax - vMin) / 16F;
-            quad.vertexTransform(v -> v.texRaw(v.getTexU() + uShift, v.getTexV() + vShift));
+            float uShift = this.uShift * (uMax - uMin);
+            float vShift = this.vShift * (vMax - vMin);
+            for (Vertex v : quad.getVertices()) {
+                v.texRaw(v.getTexU() + uShift, v.getTexV() + vShift);
+            }
             return true;
         }
 
@@ -329,7 +340,9 @@ public interface QuadTransformation {
 
         @Override
         public int hashCode() {
-            return Objects.hash(uShift, vShift);
+            int result = Float.hashCode(uShift);
+            result = 31 * result + Float.hashCode(vShift);
+            return result;
         }
     }
 
@@ -394,7 +407,9 @@ public interface QuadTransformation {
 
         @Override
         public int hashCode() {
-            return Objects.hash(original, verifier);
+            int result = Objects.hashCode(original);
+            result = 31 * result + Objects.hashCode(verifier);
+            return result;
         }
     }
 

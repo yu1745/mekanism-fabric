@@ -3,16 +3,16 @@ package mekanism.common.content.network.distribution;
 import java.util.Collection;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.energy.IEnergyContainer;
-import mekanism.api.math.FloatingLong;
+import mekanism.api.math.MathUtils;
 import mekanism.common.lib.distribution.SplitInfo;
 import mekanism.common.lib.distribution.Target;
 
-public class EnergySaveTarget extends Target<EnergySaveTarget.SaveHandler, FloatingLong, FloatingLong> {
+public class EnergySaveTarget<HANDLER extends EnergySaveTarget.SaveHandler> extends Target<HANDLER, Void> {
 
     public EnergySaveTarget() {
     }
 
-    public EnergySaveTarget(Collection<EnergySaveTarget.SaveHandler> allHandlers) {
+    public EnergySaveTarget(Collection<HANDLER> allHandlers) {
         super(allHandlers);
     }
 
@@ -21,47 +21,84 @@ public class EnergySaveTarget extends Target<EnergySaveTarget.SaveHandler, Float
     }
 
     @Override
-    protected void acceptAmount(EnergySaveTarget.SaveHandler handler, SplitInfo<FloatingLong> splitInfo, FloatingLong amount) {
+    protected void acceptAmount(HANDLER handler, SplitInfo splitInfo, Void unused, long amount) {
         handler.acceptAmount(splitInfo, amount);
     }
 
     @Override
-    protected FloatingLong simulate(EnergySaveTarget.SaveHandler handler, FloatingLong energyToSend) {
-        return handler.simulate(energyToSend);
+    protected long simulate(HANDLER handler, Void unused, long amount) {
+        return handler.simulate(amount);
     }
 
     public void save() {
-        for (SaveHandler handler : handlers) {
+        for (HANDLER handler : handlers) {
             handler.save();
         }
     }
 
-    public void addDelegate(IEnergyContainer delegate) {
-        this.addHandler(new SaveHandler(delegate));
+    public long getStored() {
+        long total = 0;
+        for (HANDLER handler : handlers) {
+            total = MathUtils.addClamped(total, handler.getStored());
+        }
+        return total;
     }
 
     @NothingNullByDefault
-    public static class SaveHandler {
+    public abstract static class SaveHandler {
+
+        private final long maxEnergy;
+        private long neededEnergy;
+
+        protected SaveHandler(long maxEnergy) {
+            this.maxEnergy = maxEnergy;
+            this.neededEnergy = this.maxEnergy;
+        }
+
+        protected void acceptAmount(SplitInfo splitInfo, long amount) {
+            if (neededEnergy <= 0L) {
+                splitInfo.send(0L);
+            } else {
+                amount = Math.min(amount, neededEnergy);
+                neededEnergy -= amount;
+                splitInfo.send(amount);
+            }
+        }
+
+        protected long simulate(long energyToSend) {
+            if (neededEnergy <= 0L || energyToSend <= 0L) {
+                return 0L;
+            }
+            return Math.min(energyToSend, neededEnergy);
+        }
+
+        protected final void save() {
+            save(maxEnergy - neededEnergy);
+        }
+
+        protected abstract void save(long currentStored);
+
+        protected abstract long getStored();
+    }
+
+    @NothingNullByDefault
+    public static class DelegateSaveHandler extends SaveHandler {
 
         private final IEnergyContainer delegate;
-        private FloatingLong currentStored = FloatingLong.ZERO;
 
-        public SaveHandler(IEnergyContainer delegate) {
+        public DelegateSaveHandler(IEnergyContainer delegate) {
+            super(delegate.getMaxEnergy());
             this.delegate = delegate;
         }
 
-        protected void acceptAmount(SplitInfo<FloatingLong> splitInfo, FloatingLong amount) {
-            amount = amount.min(delegate.getMaxEnergy().subtract(currentStored));
-            currentStored = currentStored.plusEqual(amount);
-            splitInfo.send(amount);
-        }
-
-        protected FloatingLong simulate(FloatingLong energyToSend) {
-            return energyToSend.copy().min(delegate.getMaxEnergy().subtract(currentStored));
-        }
-
-        protected void save() {
+        @Override
+        protected void save(long currentStored) {
             delegate.setEnergy(currentStored);
+        }
+
+        @Override
+        protected long getStored() {
+            return delegate.getEnergy();
         }
     }
 }

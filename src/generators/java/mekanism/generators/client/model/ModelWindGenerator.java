@@ -15,6 +15,7 @@ import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 import org.jetbrains.annotations.NotNull;
 
 public class ModelWindGenerator extends MekanismJavaModel {
@@ -134,7 +135,7 @@ public class ModelWindGenerator extends MekanismJavaModel {
         bladeCenter = BLADE_CENTER.getFromRoot(root);
     }
 
-    public void render(@NotNull PoseStack matrix, @NotNull MultiBufferSource renderer, double angle, int light, int overlayLight, boolean hasEffect) {
+    public void render(@NotNull PoseStack matrix, @NotNull MultiBufferSource renderer, float angle, int light, int overlayLight, boolean hasEffect) {
         float baseRotation = getAbsoluteRotation(angle);
         setRotation(blade1a, 0F, 0F, baseRotation);
         setRotation(blade1b, 0F, 0F, 0.0349066F + baseRotation);
@@ -150,15 +151,15 @@ public class ModelWindGenerator extends MekanismJavaModel {
         setRotation(bladeCap, 0F, 0F, baseRotation);
         setRotation(bladeCenter, 0F, 0F, baseRotation);
 
-        renderToBuffer(matrix, getVertexConsumer(renderer, RENDER_TYPE, hasEffect), light, overlayLight, 1, 1, 1, 1);
+        renderToBuffer(matrix, getVertexConsumer(renderer, RENDER_TYPE, hasEffect), light, overlayLight, 0xFFFFFFFF);
     }
 
     @Override
-    public void renderToBuffer(@NotNull PoseStack poseStack, @NotNull VertexConsumer vertexConsumer, int light, int overlayLight, float red, float green, float blue, float alpha) {
-        renderPartsToBuffer(parts, poseStack, vertexConsumer, light, overlayLight, red, green, blue, alpha);
+    public void renderToBuffer(@NotNull PoseStack poseStack, @NotNull VertexConsumer vertexConsumer, int light, int overlayLight, int color) {
+        renderPartsToBuffer(parts, poseStack, vertexConsumer, light, overlayLight, color);
     }
 
-    public void renderWireFrame(PoseStack matrix, VertexConsumer vertexBuilder, double angle, int red, int green, int blue, int alpha) {
+    public void renderWireFrame(PoseStack matrix, VertexConsumer vertexBuilder, float angle) {
         float baseRotation = getAbsoluteRotation(angle);
         setRotation(blade1a, 0F, 0F, baseRotation);
         setRotation(blade1b, 0F, 0F, 0.0349066F + baseRotation);
@@ -173,10 +174,10 @@ public class ModelWindGenerator extends MekanismJavaModel {
 
         setRotation(bladeCap, 0F, 0F, baseRotation);
         setRotation(bladeCenter, 0F, 0F, baseRotation);
-        renderPartsAsWireFrame(parts, matrix, vertexBuilder, red, green, blue, alpha);
+        renderPartsAsWireFrame(parts, matrix, vertexBuilder);
     }
 
-    private float getAbsoluteRotation(double angle) {
-        return (float) Math.toRadians(angle % 360);
+    private float getAbsoluteRotation(float angle) {
+        return (angle % 360) * Mth.DEG_TO_RAD;
     }
 }

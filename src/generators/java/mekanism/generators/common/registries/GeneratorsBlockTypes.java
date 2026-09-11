@@ -1,17 +1,19 @@
 package mekanism.generators.common.registries;
 
-import java.util.EnumSet;
-import mekanism.api.Upgrade;
+import mekanism.api.math.MathUtils;
 import mekanism.common.block.attribute.AttributeCustomSelectionBox;
+import mekanism.common.block.attribute.AttributeHasBounding.HandleBoundingBlock;
+import mekanism.common.block.attribute.AttributeHasBounding.TriBooleanFunction;
 import mekanism.common.block.attribute.AttributeMultiblock;
 import mekanism.common.block.attribute.AttributeParticleFX;
+import mekanism.common.block.attribute.AttributeUpgradeSupport;
 import mekanism.common.block.attribute.Attributes;
 import mekanism.common.block.attribute.Attributes.AttributeMobSpawn;
 import mekanism.common.block.attribute.Attributes.AttributeRedstoneEmitter;
-import mekanism.common.config.MekanismConfig;
 import mekanism.common.content.blocktype.BlockTypeTile;
 import mekanism.common.content.blocktype.BlockTypeTile.BlockTileBuilder;
 import mekanism.common.lib.math.Pos3D;
+import mekanism.common.util.ChemicalUtil;
 import mekanism.generators.common.GeneratorsLang;
 import mekanism.generators.common.block.attribute.AttributeStateFissionPortMode;
 import mekanism.generators.common.config.MekanismGeneratorsConfig;
@@ -42,7 +44,10 @@ import mekanism.generators.common.tile.turbine.TileEntityTurbineCasing;
 import mekanism.generators.common.tile.turbine.TileEntityTurbineRotor;
 import mekanism.generators.common.tile.turbine.TileEntityTurbineValve;
 import mekanism.generators.common.tile.turbine.TileEntityTurbineVent;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 
 public class GeneratorsBlockTypes {
 
@@ -56,7 +61,7 @@ public class GeneratorsBlockTypes {
           .withEnergyConfig(MekanismGeneratorsConfig.storageConfig.heatGenerator)
           .withCustomShape(BlockShapes.HEAT_GENERATOR)
           .withSound(GeneratorsSounds.HEAT_GENERATOR)
-          .withSupportedUpgrades(EnumSet.of(Upgrade.MUFFLING))
+          .with(AttributeUpgradeSupport.MUFFLING_ONLY)
           .withComputerSupport("heatGenerator")
           .replace(Attributes.ACTIVE_MELT_LIGHT)
           .with(new AttributeParticleFX()
@@ -70,7 +75,7 @@ public class GeneratorsBlockTypes {
           .withEnergyConfig(MekanismGeneratorsConfig.storageConfig.bioGenerator)
           .withCustomShape(BlockShapes.BIO_GENERATOR)
           .withSound(GeneratorsSounds.BIO_GENERATOR)
-          .withSupportedUpgrades(EnumSet.of(Upgrade.MUFFLING))
+          .with(AttributeUpgradeSupport.MUFFLING_ONLY)
           .withComputerSupport("bioGenerator")
           .replace(Attributes.ACTIVE_MELT_LIGHT)
           .with(new AttributeParticleFX()
@@ -83,7 +88,7 @@ public class GeneratorsBlockTypes {
           .withEnergyConfig(MekanismGeneratorsConfig.storageConfig.solarGenerator)
           .withCustomShape(BlockShapes.SOLAR_GENERATOR)
           .withSound(GeneratorsSounds.SOLAR_GENERATOR)
-          .withSupportedUpgrades(EnumSet.of(Upgrade.MUFFLING))
+          .with(AttributeUpgradeSupport.MUFFLING_ONLY)
           .withComputerSupport("solarGenerator")
           .replace(Attributes.ACTIVE)
           .build();
@@ -95,10 +100,18 @@ public class GeneratorsBlockTypes {
           .withCustomShape(BlockShapes.WIND_GENERATOR)
           .with(AttributeCustomSelectionBox.JAVA)
           .withSound(GeneratorsSounds.WIND_GENERATOR)
-          .withSupportedUpgrades(EnumSet.of(Upgrade.MUFFLING))
-          .withBounding((pos, state, builder) -> {
-              for (int i = 0; i < 4; i++) {
-                  builder.add(pos.above(i + 1));
+          .with(AttributeUpgradeSupport.MUFFLING_ONLY)
+          .withBounding(new HandleBoundingBlock() {
+              @Override
+              public <DATA> boolean handle(Level level, BlockPos pos, BlockState state, DATA data, TriBooleanFunction<Level, BlockPos, DATA> consumer) {
+                  BlockPos.MutableBlockPos mutable = new BlockPos.MutableBlockPos();
+                  for (int i = 0; i < 4; i++) {
+                      mutable.setWithOffset(pos, 0, i + 1, 0);
+                      if (!consumer.accept(level, mutable, data)) {
+                          return false;
+                      }
+                  }
+                  return true;
               }
           })
           .withComputerSupport("windGenerator")
@@ -107,11 +120,11 @@ public class GeneratorsBlockTypes {
     public static final Generator<TileEntityGasGenerator> GAS_BURNING_GENERATOR = GeneratorBuilder
           .createGenerator(() -> GeneratorsTileEntityTypes.GAS_BURNING_GENERATOR, GeneratorsLang.DESCRIPTION_GAS_BURNING_GENERATOR)
           .withGui(() -> GeneratorsContainerTypes.GAS_BURNING_GENERATOR)
-          .withEnergyConfig(() -> MekanismConfig.general.FROM_H2.get().multiply(1_000))
+          .withEnergyConfig(() -> MathUtils.multiplyClamped(1_000, ChemicalUtil.hydrogenEnergyDensity()))
           .withCustomShape(BlockShapes.GAS_BURNING_GENERATOR)
           .with(AttributeCustomSelectionBox.JSON)
           .withSound(GeneratorsSounds.GAS_BURNING_GENERATOR)
-          .withSupportedUpgrades(EnumSet.of(Upgrade.MUFFLING))
+          .with(AttributeUpgradeSupport.MUFFLING_ONLY)
           .withComputerSupport("gasBurningGenerator")
           .replace(Attributes.ACTIVE_MELT_LIGHT)
           .build();
@@ -122,13 +135,23 @@ public class GeneratorsBlockTypes {
           .withEnergyConfig(MekanismGeneratorsConfig.storageConfig.advancedSolarGenerator)
           .withCustomShape(BlockShapes.ADVANCED_SOLAR_GENERATOR)
           .withSound(GeneratorsSounds.SOLAR_GENERATOR)
-          .withSupportedUpgrades(EnumSet.of(Upgrade.MUFFLING))
-          .withBounding((pos, state, builder) -> {
-              builder.add(pos.above());
-              for (int x = -1; x <= 1; x++) {
-                  for (int z = -1; z <= 1; z++) {
-                      builder.add(pos.offset(x, 2, z));
+          .with(AttributeUpgradeSupport.MUFFLING_ONLY)
+          .withBounding(new HandleBoundingBlock() {
+              @Override
+              public <DATA> boolean handle(Level level, BlockPos pos, BlockState state, DATA data, TriBooleanFunction<Level, BlockPos, DATA> consumer) {
+                  BlockPos.MutableBlockPos mutable = new BlockPos.MutableBlockPos(pos.getX(), pos.getY() + 1, pos.getZ());
+                  if (!consumer.accept(level, mutable, data)) {
+                      return false;
                   }
+                  for (int x = -1; x <= 1; x++) {
+                      for (int z = -1; z <= 1; z++) {
+                          mutable.setWithOffset(pos, x, 2, z);
+                          if (!consumer.accept(level, mutable, data)) {
+                              return false;
+                          }
+                      }
+                  }
+                  return true;
               }
           })
           .withComputerSupport("advancedSolarGenerator")

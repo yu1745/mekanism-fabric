@@ -7,7 +7,6 @@ import mekanism.common.registries.MekanismSounds;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.MekanismUtils.ResourceType;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
 
@@ -19,24 +18,16 @@ public class GuiDigitalSwitch extends GuiTexturedElement {
     private final SwitchType type;
     private final ResourceLocation icon;
     private final BooleanSupplier stateSupplier;
-    private final Component tooltip;
-    private final Runnable onToggle;
+    private final IClickable onToggle;
 
-    public GuiDigitalSwitch(IGuiWrapper gui, int x, int y, ResourceLocation icon, BooleanSupplier stateSupplier, Component tooltip,
-          Runnable onToggle, SwitchType type) {
+    public GuiDigitalSwitch(IGuiWrapper gui, int x, int y, ResourceLocation icon, BooleanSupplier stateSupplier, IClickable onToggle, SwitchType type) {
         super(SWITCH, gui, x, y, type.width, type.height);
         this.type = type;
         this.icon = icon;
         this.stateSupplier = stateSupplier;
-        this.tooltip = tooltip;
         this.onToggle = onToggle;
-        this.clickSound = MekanismSounds.BEEP;
-    }
-
-    @Override
-    public void renderToolTip(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        super.renderToolTip(guiGraphics, mouseX, mouseY);
-        displayTooltips(guiGraphics, mouseX, mouseY, tooltip);
+        this.clickSound = () -> this.stateSupplier.getAsBoolean() ? MekanismSounds.BEEP_OFF.get() : MekanismSounds.BEEP_ON.get();
+        this.clickVolume = 1.0F;
     }
 
     @Override
@@ -51,13 +42,13 @@ public class GuiDigitalSwitch extends GuiTexturedElement {
     @Override
     public void renderForeground(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         super.renderForeground(guiGraphics, mouseX, mouseY);
-        drawScaledCenteredText(guiGraphics, MekanismLang.ON.translate(), relativeX + type.switchX + 8, relativeY + type.switchY, 0x101010, 0.5F);
-        drawScaledCenteredText(guiGraphics, MekanismLang.OFF.translate(), relativeX + type.switchX + 8, relativeY + type.switchY + 9, 0x101010, 0.5F);
+        drawScaledScrollingString(guiGraphics, MekanismLang.ON.translate(), type.switchX, type.switchY, TextAlignment.CENTER, 0x101010, BUTTON_SIZE_X, 1, false, 0.5F);
+        drawScaledScrollingString(guiGraphics, MekanismLang.OFF.translate(), type.switchX, type.switchY + BUTTON_SIZE_Y + 1, TextAlignment.CENTER, 0x101010, BUTTON_SIZE_X, 1, false, 0.5F);
     }
 
     @Override
     public void onClick(double mouseX, double mouseY, int button) {
-        onToggle.run();
+        onToggle.onClick(this, mouseX, mouseY);
     }
 
     public enum SwitchType {

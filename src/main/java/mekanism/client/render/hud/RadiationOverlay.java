@@ -2,21 +2,23 @@ package mekanism.client.render.hud;
 
 import mekanism.api.radiation.IRadiationManager;
 import mekanism.client.render.MekanismRenderer;
-import mekanism.common.capabilities.Capabilities;
 import mekanism.common.lib.radiation.RadiationManager;
-import mekanism.common.lib.radiation.RadiationManager.RadiationScale;
+import mekanism.common.lib.radiation.RadiationScale;
+import mekanism.common.registries.MekanismAttachmentTypes;
 import mekanism.common.util.MekanismUtils;
+import net.minecraft.client.DeltaTracker;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.LayeredDraw;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.client.gui.overlay.ForgeGui;
-import net.minecraftforge.client.gui.overlay.IGuiOverlay;
+import org.jetbrains.annotations.NotNull;
 
-public class RadiationOverlay implements IGuiOverlay {
+public class RadiationOverlay implements LayeredDraw.Layer {
 
     public static final RadiationOverlay INSTANCE = new RadiationOverlay();
 
     private double prevRadiation = 0;
-    private long lastTick;
+    private int lastTick;
 
     private RadiationOverlay() {
     }
@@ -26,28 +28,27 @@ public class RadiationOverlay implements IGuiOverlay {
     }
 
     @Override
-    public void render(ForgeGui gui, GuiGraphics guiGraphics, float partialTicks, int screenWidth, int screenHeight) {
-        Player player = gui.getMinecraft().player;
-        if (player != null && IRadiationManager.INSTANCE.isRadiationEnabled() && MekanismUtils.isPlayingMode(player)) {
-            player.getCapability(Capabilities.RADIATION_ENTITY).ifPresent(c -> {
-                double radiation = c.getRadiation();
-                double severity = RadiationScale.getScaledDoseSeverity(radiation) * 0.8;
-                //Only update the previous radiation level at most once a tick
-                if (lastTick != player.level().getGameTime()) {
-                    lastTick = player.level().getGameTime();
-                    if (prevRadiation < severity) {
-                        prevRadiation = Math.min(severity, prevRadiation + 0.01);
-                    }
-                    if (prevRadiation > severity) {
-                        prevRadiation = Math.max(severity, prevRadiation - 0.01);
-                    }
+    public void render(@NotNull GuiGraphics graphics, @NotNull DeltaTracker delta) {
+        Minecraft minecraft = Minecraft.getInstance();
+        Player player = minecraft.player;
+        if (player != null && RadiationManager.isGlobalRadiationEnabled() && MekanismUtils.isPlayingMode(player)) {
+            double radiation = player.getData(MekanismAttachmentTypes.RADIATION);
+            double severity = RadiationScale.getScaledDoseSeverity(radiation) * 0.8;
+            //Only update the previous radiation level at most once a tick
+            if (lastTick != minecraft.gui.getGuiTicks()) {
+                lastTick = minecraft.gui.getGuiTicks();
+                if (prevRadiation < severity) {
+                    prevRadiation = Math.min(severity, prevRadiation + 0.01);
                 }
-                if (severity > RadiationManager.BASELINE) {
-                    int effect = (int) (prevRadiation * 255);
-                    int color = (0x701E1E << 8) + effect;
-                    MekanismRenderer.renderColorOverlay(guiGraphics, 0, 0, color);
+                if (prevRadiation > severity) {
+                    prevRadiation = Math.max(severity, prevRadiation - 0.01);
                 }
-            });
+            }
+            if (severity > IRadiationManager.INSTANCE.baselineRadiation()) {
+                int effect = (int) (prevRadiation * 255);
+                int color = (0x701E1E << 8) + effect;
+                MekanismRenderer.renderColorOverlay(graphics, 0, 0, color);
+            }
         }
     }
 }

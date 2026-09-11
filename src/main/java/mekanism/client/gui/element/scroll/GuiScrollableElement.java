@@ -1,6 +1,5 @@
 package mekanism.client.gui.element.scroll;
 
-import mekanism.api.math.MathUtils;
 import mekanism.client.gui.IGuiWrapper;
 import mekanism.client.gui.element.GuiElement;
 import mekanism.client.gui.element.GuiTexturedElement;
@@ -11,7 +10,6 @@ import net.minecraft.util.Mth;
 public abstract class GuiScrollableElement extends GuiTexturedElement {
 
     protected double scroll;
-    private boolean isDragging;
     private int dragOffset;
     protected final int maxBarHeight;
     protected final int barWidth;
@@ -55,7 +53,7 @@ public abstract class GuiScrollableElement extends GuiTexturedElement {
                 double yAxis = mouseY - getGuiTop();
                 dragOffset = (int) (yAxis - (scroll + barY));
                 //Mark that we are dragging so that we can continue to "drag" even if our mouse goes off of being over the element
-                isDragging = true;
+                setDragging(true);
             } else {
                 this.scroll = 0;
             }
@@ -65,7 +63,7 @@ public abstract class GuiScrollableElement extends GuiTexturedElement {
     @Override
     public void onDrag(double mouseX, double mouseY, double deltaX, double deltaY) {
         super.onDrag(mouseX, mouseY, deltaX, deltaY);
-        if (isDragging && needsScrollBars()) {
+        if (isDragging() && needsScrollBars()) {
             double yAxis = mouseY - getGuiTop();
             this.scroll = Mth.clamp((yAxis - barY - dragOffset) / getMax(), 0, 1);
         }
@@ -75,7 +73,6 @@ public abstract class GuiScrollableElement extends GuiTexturedElement {
     public void onRelease(double mouseX, double mouseY) {
         super.onRelease(mouseX, mouseY);
         dragOffset = 0;
-        isDragging = false;
     }
 
     protected boolean needsScrollBars() {
@@ -106,7 +103,7 @@ public abstract class GuiScrollableElement extends GuiTexturedElement {
 
     public boolean adjustScroll(double delta) {
         if (delta != 0 && needsScrollBars()) {
-            int elements = MathUtils.clampToInt(Math.ceil(getElements() / (double) getScrollElementScaler()));
+            int elements = Mth.ceil(getElements() / (double) getScrollElementScaler());
             if (elements > 0) {
                 //TODO - 1.19: Should this make use of ScrollIncrementer
                 if (delta > 0) {

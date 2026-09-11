@@ -1,22 +1,28 @@
 package mekanism.common.content.gear.mekatool;
 
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import io.netty.buffer.ByteBuf;
 import it.unimi.dsi.fastutil.objects.Object2IntLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Reference2BooleanMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.function.IntFunction;
+import mekanism.api.SerializationConstants;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.annotations.ParametersAreNotNullByDefault;
 import mekanism.api.gear.ICustomModule;
 import mekanism.api.gear.IModule;
-import mekanism.api.gear.config.IModuleConfigItem;
-import mekanism.api.gear.config.ModuleConfigItemCreator;
-import mekanism.api.gear.config.ModuleEnumData;
+import mekanism.api.gear.IModuleContainer;
+import mekanism.api.gear.config.ModuleBooleanConfig;
+import mekanism.api.gear.config.ModuleConfig;
 import mekanism.api.radial.IRadialDataHelper;
 import mekanism.api.radial.IRadialDataHelper.BooleanRadialModes;
 import mekanism.api.radial.RadialData;
@@ -28,26 +34,35 @@ import mekanism.api.text.IHasTextComponent;
 import mekanism.api.text.TextComponentUtil;
 import mekanism.common.Mekanism;
 import mekanism.common.MekanismLang;
-import mekanism.common.block.BlockBounding;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.item.gear.ItemAtomicDisassembler.DisassemblerMode;
+import mekanism.common.network.PacketUtils;
 import mekanism.common.network.to_client.PacketLightningRender;
 import mekanism.common.network.to_client.PacketLightningRender.LightningPreset;
+import mekanism.common.registries.MekanismBlocks;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.WorldUtils;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.ByIdMap;
+import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @ParametersAreNotNullByDefault
-public class ModuleVeinMiningUnit implements ICustomModule<ModuleVeinMiningUnit> {
+public record ModuleVeinMiningUnit(boolean extended, ExcavationRange excavationRange) implements ICustomModule<ModuleVeinMiningUnit> {
+
+    public static final ResourceLocation EXTENDED_MODE = Mekanism.rl("extended_mode");
+    public static final ResourceLocation EXCAVATION_RANGE = Mekanism.rl("mining_range");
 
     private static final BooleanRadialModes RADIAL_MODES = new BooleanRadialModes(
           new BasicRadialMode(MekanismLang.RADIAL_VEIN_NORMAL, DisassemblerMode.VEIN.icon(), EnumColor.AQUA),
@@ -56,14 +71,8 @@ public class ModuleVeinMiningUnit implements ICustomModule<ModuleVeinMiningUnit>
     private static final RadialData<IRadialMode> RADIAL_DATA = IRadialDataHelper.INSTANCE.booleanBasedData(Mekanism.rl("vein_mining_mode"), RADIAL_MODES);
     private static final NestedRadialMode NESTED_RADIAL_MODE = new NestedRadialMode(RADIAL_DATA, MekanismLang.RADIAL_VEIN, DisassemblerMode.VEIN.icon(), EnumColor.AQUA);
 
-    private IModuleConfigItem<Boolean> extendedMode;
-    private IModuleConfigItem<ExcavationRange> excavationRange;
-
-    @Override
-    public void init(IModule<ModuleVeinMiningUnit> module, ModuleConfigItemCreator configItemCreator) {
-        extendedMode = configItemCreator.createDisableableConfigItem("extended_mode", MekanismLang.MODULE_EXTENDED_MODE, false, MekanismConfig.gear.mekaToolExtendedMining);
-        excavationRange = configItemCreator.createConfigItem("excavation_range", MekanismLang.MODULE_EXCAVATION_RANGE,
-              new ModuleEnumData<>(ExcavationRange.LOW, module.getInstalledCount() + 1));
+    public ModuleVeinMiningUnit(IModule<ModuleVeinMiningUnit> module) {
+        this(module.getBooleanConfigOrFalse(EXTENDED_MODE), module.<ExcavationRange>getConfigOrThrow(EXCAVATION_RANGE).get());
     }
 
     @Override
@@ -77,54 +86,51 @@ public class ModuleVeinMiningUnit implements ICustomModule<ModuleVeinMiningUnit>
     @Override
     public <MODE extends IRadialMode> MODE getMode(IModule<ModuleVeinMiningUnit> module, ItemStack stack, RadialData<MODE> radialData) {
         if (radialData == RADIAL_DATA && MekanismConfig.gear.mekaToolExtendedMining.get()) {
-            return (MODE) RADIAL_MODES.get(isExtended());
+            return (MODE) RADIAL_MODES.get(extended);
         }
         return null;
     }
 
     @Override
-    public <MODE extends IRadialMode> boolean setMode(IModule<ModuleVeinMiningUnit> module, Player player, ItemStack stack, RadialData<MODE> radialData, MODE mode) {
+    public <MODE extends IRadialMode> boolean setMode(IModule<ModuleVeinMiningUnit> module, Player player, IModuleContainer moduleContainer, ItemStack stack, RadialData<MODE> radialData, MODE mode) {
         if (radialData == RADIAL_DATA && MekanismConfig.gear.mekaToolExtendedMining.get()) {
-            boolean extended = mode == RADIAL_MODES.trueMode();
-            if (isExtended() != extended) {
-                extendedMode.set(extended);
+            if (extended == (mode != RADIAL_MODES.trueMode())) {
+                toggleExtended(module, moduleContainer, stack, player.registryAccess());
             }
         }
         return false;
     }
 
-    @Nullable
+    private void toggleExtended(IModule<ModuleVeinMiningUnit> module, IModuleContainer moduleContainer, ItemStack stack, HolderLookup.Provider provider) {
+        moduleContainer.replaceModuleConfig(provider, stack, module.getDataHolder(), module.<Boolean>getConfigOrThrow(EXTENDED_MODE).with(!extended));
+    }
+
     @Override
     public Component getModeScrollComponent(IModule<ModuleVeinMiningUnit> module, ItemStack stack) {
-        if (isExtended()) {
+        if (extended()) {
             return MekanismLang.RADIAL_VEIN_EXTENDED.translateColored(EnumColor.PINK);
         }
         return MekanismLang.RADIAL_VEIN_NORMAL.translateColored(EnumColor.AQUA);
     }
 
     @Override
-    public void changeMode(IModule<ModuleVeinMiningUnit> module, Player player, ItemStack stack, int shift, boolean displayChangeMessage) {
+    public void changeMode(IModule<ModuleVeinMiningUnit> module, Player player, IModuleContainer moduleContainer, ItemStack stack, int shift, boolean displayChangeMessage) {
         if (Math.abs(shift) % 2 == 1) {
             //We are changing by an odd amount, so toggle the mode
-            boolean newState = !isExtended();
-            extendedMode.set(newState);
             if (displayChangeMessage) {
-                player.sendSystemMessage(MekanismUtils.logFormat(MekanismLang.MODULE_MODE_CHANGE.translate(MekanismLang.MODULE_EXTENDED_MODE, EnumColor.INDIGO, newState)));
+                player.sendSystemMessage(MekanismUtils.logFormat(MekanismLang.MODULE_MODE_CHANGE.translate(MekanismLang.MODULE_EXTENDED_MODE, EnumColor.INDIGO, !extended)));
             }
+            toggleExtended(module, moduleContainer, stack, player.registryAccess());
         }
     }
 
-    public boolean isExtended() {
-        return extendedMode.get();
-    }
-
     public int getExcavationRange() {
-        return excavationRange.get().getRange();
+        return excavationRange.getRange();
     }
 
     public static boolean canVeinBlock(BlockState state) {
         //Even though we now handle breaking bounding blocks properly, don't allow vein mining them
-        return !(state.getBlock() instanceof BlockBounding);
+        return !state.is(MekanismBlocks.BOUNDING_BLOCK);
     }
 
     public static Object2IntMap<BlockPos> findPositions(Level world, Map<BlockPos, BlockState> initial, int extendedRange, Reference2BooleanMap<Block> oreTracker) {
@@ -159,8 +165,8 @@ public class ModuleVeinMiningUnit implements ICustomModule<ModuleVeinMiningUnit>
                             frontier.put(nextPos.immutable(), nextState.get());
                             //Note: We do this for all blocks we find/attempt to mine, not just ones we do mine, as it is a bit simpler
                             // and also represents those blocks getting checked by the vein mining for potentially being able to be mined
-                            Mekanism.packetHandler().sendToAllTracking(new PacketLightningRender(LightningPreset.TOOL_AOE, Objects.hash(blockPos, nextPos),
-                                  Vec3.atCenterOf(blockPos), Vec3.atCenterOf(nextPos), 10), world, blockPos);
+                            PacketUtils.sendToAllTracking(new PacketLightningRender(LightningPreset.TOOL_AOE, 31 * blockPos.hashCode() + nextPos.hashCode(),
+                                  blockPos.getCenter(), nextPos.getCenter(), 10), world, blockPos);
                         }
                     }
                 }
@@ -171,27 +177,33 @@ public class ModuleVeinMiningUnit implements ICustomModule<ModuleVeinMiningUnit>
     }
 
     @Override
-    public void addHUDStrings(IModule<ModuleVeinMiningUnit> module, Player player, Consumer<Component> hudStringAdder) {
+    public void addHUDStrings(IModule<ModuleVeinMiningUnit> module, IModuleContainer moduleContainer, ItemStack stack, Player player, Consumer<Component> hudStringAdder) {
         //Only add hud string for extended vein mining if enabled in config
         if (module.isEnabled() && MekanismConfig.gear.mekaToolExtendedMining.get()) {
             hudStringAdder.accept(MekanismLang.MODULE_EXTENDED_ENABLED.translateColored(EnumColor.DARK_GRAY,
-                  isExtended() ? EnumColor.BRIGHT_GREEN : EnumColor.DARK_RED,
-                  isExtended() ? MekanismLang.MODULE_ENABLED_LOWER : MekanismLang.MODULE_DISABLED_LOWER));
+                  extended ? EnumColor.BRIGHT_GREEN : EnumColor.DARK_RED,
+                  extended ? MekanismLang.MODULE_ENABLED_LOWER : MekanismLang.MODULE_DISABLED_LOWER));
         }
     }
 
     @NothingNullByDefault
-    public enum ExcavationRange implements IHasTextComponent {
+    public enum ExcavationRange implements IHasTextComponent, StringRepresentable {
         OFF(0),
         LOW(2),
         MED(4),
         HIGH(6),
         EXTREME(8);
 
+        public static final Codec<ExcavationRange> CODEC = StringRepresentable.fromEnum(ExcavationRange::values);
+        public static final IntFunction<ExcavationRange> BY_ID = ByIdMap.continuous(ExcavationRange::ordinal, values(), ByIdMap.OutOfBoundsStrategy.WRAP);
+        public static final StreamCodec<ByteBuf, ExcavationRange> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, ExcavationRange::ordinal);
+
+        private final String serializedName;
         private final int range;
         private final Component label;
 
         ExcavationRange(int range) {
+            this.serializedName = name().toLowerCase(Locale.ROOT);
             this.range = range;
             this.label = TextComponentUtil.getString(Integer.toString(range));
         }
@@ -203,6 +215,11 @@ public class ModuleVeinMiningUnit implements ICustomModule<ModuleVeinMiningUnit>
 
         public int getRange() {
             return range;
+        }
+
+        @Override
+        public String getSerializedName() {
+            return serializedName;
         }
     }
 
@@ -228,6 +245,48 @@ public class ModuleVeinMiningUnit implements ICustomModule<ModuleVeinMiningUnit>
 
         public int getDistance() {
             return distance;
+        }
+    }
+
+    @NothingNullByDefault
+    public static class ModuleExtendedModeConfig extends ModuleBooleanConfig {
+
+        public static final Codec<ModuleExtendedModeConfig> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+              ResourceLocation.CODEC.fieldOf(SerializationConstants.NAME).forGetter(ModuleConfig::name),
+              Codec.BOOL.fieldOf(SerializationConstants.VALUE).forGetter(ModuleConfig::get)
+        ).apply(instance, ModuleExtendedModeConfig::new));
+        public static final StreamCodec<ByteBuf, ModuleExtendedModeConfig> STREAM_CODEC = StreamCodec.composite(
+              ResourceLocation.STREAM_CODEC, ModuleConfig::name,
+              ByteBufCodecs.BOOL, ModuleConfig::get,
+              ModuleExtendedModeConfig::new
+        );
+
+        public ModuleExtendedModeConfig(ResourceLocation name, boolean value) {
+            super(name, value);
+        }
+
+        @Override
+        public StreamCodec<ByteBuf, ModuleConfig<Boolean>> namedStreamCodec(ResourceLocation name) {
+            return ByteBufCodecs.BOOL.map(val -> new ModuleExtendedModeConfig(name, val), ModuleConfig::get);
+        }
+
+        @Override
+        public ModuleBooleanConfig with(Boolean value) {
+            Objects.requireNonNull(value, "Value cannot be null.");
+            if (get().equals(value)) {
+                return this;
+            }
+            return new ModuleExtendedModeConfig(name(), value);
+        }
+
+        @Override
+        public Boolean get() {
+            return super.get() && !isConfigDisabled();
+        }
+
+        @Override
+        public boolean isConfigDisabled() {
+            return !MekanismConfig.gear.mekaToolExtendedMining.get();
         }
     }
 }

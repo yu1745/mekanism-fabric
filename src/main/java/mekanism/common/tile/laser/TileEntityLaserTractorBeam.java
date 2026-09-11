@@ -1,6 +1,5 @@
 package mekanism.common.tile.laser;
 
-import java.util.ArrayList;
 import java.util.List;
 import mekanism.api.Action;
 import mekanism.api.AutomationType;
@@ -27,7 +26,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.common.util.Lazy;
 import org.jetbrains.annotations.NotNull;
 
 public class TileEntityLaserTractorBeam extends TileEntityLaserReceptor {
@@ -44,7 +42,7 @@ public class TileEntityLaserTractorBeam extends TileEntityLaserReceptor {
     @NotNull
     @Override
     protected IInventorySlotHolder getInitialInventory(IContentsListener listener) {
-        InventorySlotHelper builder = InventorySlotHelper.forSide(this::getDirection);
+        InventorySlotHelper builder = InventorySlotHelper.forSide(facingSupplier);
         for (int slotX = 0; slotX < 9; slotX++) {
             for (int slotY = 0; slotY < 3; slotY++) {
                 OutputInventorySlot slot = OutputInventorySlot.at(listener, 8 + slotX * 18, 16 + slotY * 18);
@@ -56,18 +54,17 @@ public class TileEntityLaserTractorBeam extends TileEntityLaserReceptor {
     }
 
     @Override
-    protected void handleBreakBlock(BlockState state, BlockPos hitPos, Player player, ItemStack tool) {
-        List<ItemStack> drops = new ArrayList<>(Block.getDrops(state, (ServerLevel) level, hitPos, WorldUtils.getTileEntity(level, hitPos), player, tool));
+    protected void handleBreakBlock(BlockState state, ServerLevel level, BlockPos hitPos, Player player, ItemStack tool) {
+        List<ItemStack> drops = WorldUtils.getDrops(state, level, hitPos, WorldUtils.getTileEntity(level, hitPos), player, tool);
         //Collect any extra drops that might have happened due to say breaking the top part of a door or flower and try to add them
         //Note: Technically we should just always return true rather than relying on the return result of the add method,
         // but as array lists always will return true as they are modified we don't have to worry about that
         CommonWorldTickHandler.fallbackItemCollector = drops::add;
-        breakBlock(state, hitPos);
+        breakBlock(state, level, hitPos, tool);
         CommonWorldTickHandler.fallbackItemCollector = null;
         if (!drops.isEmpty()) {
-            Lazy<Direction> direction = Lazy.of(this::getDirection);
-            Lazy<BlockPos> dropPos = Lazy.of(() -> worldPosition.relative(direction.get(), 2));
-            Lazy<Direction> opposite = Lazy.of(() -> direction.get().getOpposite());
+            BlockPos dropPos = null;
+            Direction opposite = null;
             List<IInventorySlot> inventorySlots = getInventorySlots(null);
             for (ItemStack drop : drops) {
                 //Try inserting it first where it can stack and then into empty slots
@@ -76,7 +73,12 @@ public class TileEntityLaserTractorBeam extends TileEntityLaserReceptor {
                     //If we have some drop left over that we couldn't fit, then spawn it into the world
                     // Note: We use an adjusted position and an opposite direction to provide the item with momentum towards the tractor beam
                     // so that even though we couldn't fit the items into our inventory we can still have them appear to be "pulled" to the tractor beam
-                    Block.popResourceFromFace(level, dropPos.get(), opposite.get(), drop);
+                    if (dropPos == null) {
+                        Direction direction = getDirection();
+                        dropPos = worldPosition.relative(direction, 2);
+                        opposite = direction.getOpposite();
+                    }
+                    Block.popResourceFromFace(level, dropPos, opposite, drop);
                 }
             }
         }

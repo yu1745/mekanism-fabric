@@ -13,6 +13,7 @@
   "advancements.mekanismtools.paxel.title": "Çoklu-Araç",
   "constants.mekanismtools.mod_name": "Mekanism: Aletler",
   "constants.mekanismtools.pack_description": "Mekanism: Aletler için kullanılan kaynaklar",
+  "fml.menu.mods.info.description.mekanismtools": "Mekanism için Aletler modülü",
   "item.mekanismtools.bronze_axe": "Bronz Balta",
   "item.mekanismtools.bronze_boots": "Bronz Bot",
   "item.mekanismtools.bronze_chestplate": "Bronz Göğüslük",
@@ -181,5 +182,6 @@
   "item.mekanismtools.steel_sword": "Çelik Kılıç",
   "item.mekanismtools.stone_paxel": "Taş Kaltek",
   "item.mekanismtools.wood_paxel": "Tahta Kaltek",
+  "tag.item.c.tools.paxel": "Kaltekler",
   "tooltip.mekanismtools.hp": "HP: %1$s"
 }

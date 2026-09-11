@@ -1,5 +1,6 @@
 package mekanism.common.command.builders;
 
+import com.mojang.brigadier.Command;
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -8,7 +9,6 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import java.util.ArrayDeque;
 import java.util.HashSet;
-import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
 import mekanism.api.text.EnumColor;
@@ -18,7 +18,6 @@ import mekanism.common.MekanismLang;
 import mekanism.common.base.MekanismPermissions;
 import mekanism.common.util.EnumUtils;
 import mekanism.common.util.MekanismUtils;
-import mekanism.common.util.RegistryUtils;
 import mekanism.common.util.WorldUtils;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -29,7 +28,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Clearable;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
-import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
@@ -52,7 +51,7 @@ public class BuildCommand {
                           CommandSourceStack source = ctx.getSource();
                           destroy(source.getLevel(), rayTracePos(source));
                           source.sendSuccess(() -> MekanismLang.COMMAND_BUILD_REMOVED.translateColored(EnumColor.GRAY), true);
-                          return 0;
+                          return Command.SINGLE_SUCCESS;
                       }));
 
     public static void register(String name, ILangEntry localizedName, StructureBuilder builder) {
@@ -89,7 +88,7 @@ public class BuildCommand {
             ILangEntry builtEntry = empty ? MekanismLang.COMMAND_BUILD_BUILT_EMPTY : MekanismLang.COMMAND_BUILD_BUILT;
             return builtEntry.translateColored(EnumColor.GRAY, EnumColor.INDIGO, localizedName);
         }, true);
-        return 0;
+        return Command.SINGLE_SUCCESS;
     }
 
     private static void destroy(Level world, BlockPos pos) throws CommandSyntaxException {
@@ -106,7 +105,7 @@ public class BuildCommand {
             BlockPos ptr = openSet.poll();
             if (isMekanismBlock(world, chunkMap, ptr)) {
                 Clearable.tryClear(WorldUtils.getTileEntity(world, chunkMap, ptr));
-                world.removeBlock(ptr, false);
+                world.setBlock(ptr, world.getFluidState(ptr).createLegacyBlock(), Block.UPDATE_ALL | Block.UPDATE_SUPPRESS_DROPS);
                 for (Direction side : EnumUtils.DIRECTIONS) {
                     BlockPos offset = ptr.relative(side);
                     if (traversed.add(offset)) {
@@ -118,7 +117,9 @@ public class BuildCommand {
     }
 
     private static boolean isMekanismBlock(@Nullable LevelAccessor world, @NotNull Long2ObjectMap<ChunkAccess> chunkMap, @NotNull BlockPos pos) {
-        Optional<BlockState> state = WorldUtils.getBlockState(world, chunkMap, pos);
-        return state.isPresent() && RegistryUtils.getNamespace(state.get().getBlock()).startsWith(Mekanism.MODID);
+        return WorldUtils.getBlockState(world, chunkMap, pos)
+              .map(state -> state.getBlockHolder().getKey())
+              .filter(key -> key.location().getNamespace().startsWith(Mekanism.MODID))
+              .isPresent();
     }
 }

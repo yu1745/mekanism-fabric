@@ -1,20 +1,17 @@
 package mekanism.common.util;
 
 import java.util.Optional;
+import mekanism.api.SerializationConstants;
+import net.minecraft.core.DefaultedRegistry;
+import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
-import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.inventory.MenuType;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.minecraft.world.level.material.Fluid;
-import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.IForgeRegistry;
 import org.jetbrains.annotations.Nullable;
 
 public class RegistryUtils {
@@ -22,62 +19,55 @@ public class RegistryUtils {
     private RegistryUtils() {
     }
 
-    public static ResourceLocation getName(MenuType<?> element) {
-        return getName(ForgeRegistries.MENU_TYPES, element);
+    public static Holder<BlockEntityType<?>> getBEHolder(BlockEntityType<?> type) {
+        Holder<BlockEntityType<?>> holder = type.builtInRegistryHolder();
+        //I don't believe this can ever be null as it is always instantiated, but just in case the nullability annotation is valid... handle it
+        if (holder == null) {
+            return BuiltInRegistries.BLOCK_ENTITY_TYPE.wrapAsHolder(type);
+        }
+        return holder;
     }
 
-    public static ResourceLocation getName(ParticleType<?> element) {
-        return getName(ForgeRegistries.PARTICLE_TYPES, element);
-    }
-
-    public static ResourceLocation getName(Item element) {
-        return getName(ForgeRegistries.ITEMS, element);
-    }
-
-    public static String getPath(Item element) {
-        return getName(element).getPath();
-    }
-
-    public static ResourceLocation getName(Block element) {
-        return getName(ForgeRegistries.BLOCKS, element);
-    }
-
-    public static String getNamespace(Block element) {
-        return getName(element).getNamespace();
+    public static <R> Optional<Holder.Reference<R>> getHolderById(CompoundTag nbt, Registry<R> registry) {
+        if (nbt != null && nbt.contains(SerializationConstants.ID, Tag.TAG_STRING)) {
+            ResourceLocation name = ResourceLocation.tryParse(nbt.getString(SerializationConstants.ID));
+            if (name != null) {
+                return registry.getHolder(name);
+            }
+        }
+        return Optional.empty();
     }
 
     public static String getPath(Block element) {
-        return getName(element).getPath();
+        return BuiltInRegistries.BLOCK.getKey(element).getPath();
     }
 
-    public static ResourceLocation getName(Fluid element) {
-        return getName(ForgeRegistries.FLUIDS, element);
+    public static <TYPE> ResourceLocation getName(Holder<TYPE> element, DefaultedRegistry<TYPE> registry) {
+        ResourceKey<?> key = element.getKey();
+        if (key == null) {
+            return registry.getKey(element.value());
+        }
+        return key.location();
     }
 
-    public static ResourceLocation getName(BlockEntityType<?> element) {
-        return getName(ForgeRegistries.BLOCK_ENTITY_TYPES, element);
-    }
-
-    public static ResourceLocation getName(EntityType<?> element) {
-        return getName(ForgeRegistries.ENTITY_TYPES, element);
-    }
-
-    public static ResourceLocation getName(RecipeSerializer<?> element) {
-        return getName(ForgeRegistries.RECIPE_SERIALIZERS, element);
-    }
-
-    private static <T> ResourceLocation getName(IForgeRegistry<T> registry, T element) {
-        return registry.getKey(element);
+    @Nullable
+    public static ResourceLocation getName(Holder<?> element) {
+        ResourceKey<?> key = element.getKey();
+        return key == null ? null : key.location();
     }
 
     @Nullable
     @SuppressWarnings({"unchecked", "rawtypes"})
     public static ResourceLocation getNameGeneric(Object element) {
+        if (element instanceof Holder<?> holder) {
+            //If we have a holder, just redirect to trying to look up the name with it
+            // As this method is mostly a fallback, we don't care if it fails to find a name if someone has a registry of holders for some reason
+            return getName(holder);
+        }
         for (Registry<?> registry : BuiltInRegistries.REGISTRY) {
-            //Note: We have to use getResourceKey as getKey for defaulted registries returns the default key
-            Optional<ResourceKey<?>> resourceKey = ((Registry) registry).getResourceKey(element);
-            if (resourceKey.isPresent()) {
-                return resourceKey.get().location();
+            ResourceLocation name = ((Registry) registry).getKeyOrNull(element);
+            if (name != null) {
+                return name;
             }
         }
         return null;

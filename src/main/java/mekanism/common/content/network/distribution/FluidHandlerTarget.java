@@ -1,36 +1,34 @@
 package mekanism.common.content.network.distribution;
 
 import java.util.Collection;
+import mekanism.api.math.MathUtils;
 import mekanism.common.lib.distribution.SplitInfo;
 import mekanism.common.lib.distribution.Target;
-import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.capability.IFluidHandler;
-import net.minecraftforge.fluids.capability.IFluidHandler.FluidAction;
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction;
 import org.jetbrains.annotations.NotNull;
 
-public class FluidHandlerTarget extends Target<IFluidHandler, Integer, @NotNull FluidStack> {
+public class FluidHandlerTarget extends Target<IFluidHandler, @NotNull FluidStack> {
 
-    public FluidHandlerTarget(@NotNull FluidStack type) {
-        this.extra = type;
+    public FluidHandlerTarget() {
     }
 
-    public FluidHandlerTarget(@NotNull FluidStack type, Collection<IFluidHandler> allHandlers) {
+    public FluidHandlerTarget(Collection<IFluidHandler> allHandlers) {
         super(allHandlers);
-        this.extra = type;
     }
 
-    public FluidHandlerTarget(@NotNull FluidStack type, int expectedSize) {
+    public FluidHandlerTarget(int expectedSize) {
         super(expectedSize);
-        this.extra = type;
     }
 
     @Override
-    protected void acceptAmount(IFluidHandler handler, SplitInfo<Integer> splitInfo, Integer amount) {
-        splitInfo.send(handler.fill(new FluidStack(extra, amount), FluidAction.EXECUTE));
+    protected void acceptAmount(IFluidHandler handler, SplitInfo splitInfo, @NotNull FluidStack resource, long amount) {
+        splitInfo.send(handler.fill(resource.copyWithAmount(MathUtils.clampToInt(amount)), FluidAction.EXECUTE));
     }
 
     @Override
-    protected Integer simulate(IFluidHandler handler, @NotNull FluidStack fluidStack) {
-        return handler.fill(fluidStack.copy(), FluidAction.SIMULATE);
+    protected long simulate(IFluidHandler handler, @NotNull FluidStack resource, long amount) {
+        return handler.fill(resource.copyWithAmount(MathUtils.clampToInt(amount)), FluidAction.SIMULATE);
     }
 }

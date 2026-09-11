@@ -8,10 +8,10 @@ import java.util.Map.Entry;
 import java.util.Set;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.common.recipe.WrappedShapedRecipe;
-import mekanism.common.registries.MekanismRecipeSerializers;
-import net.minecraft.core.RegistryAccess;
-import net.minecraft.world.inventory.CraftingContainer;
+import mekanism.common.registries.MekanismRecipeSerializersInternal;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.ShapedRecipe;
 
@@ -24,24 +24,24 @@ public class MekanismShapedRecipe extends WrappedShapedRecipe {
 
     @Override
     public RecipeSerializer<?> getSerializer() {
-        return MekanismRecipeSerializers.MEK_DATA.get();
+        return MekanismRecipeSerializersInternal.MEK_DATA.get();
     }
 
     @Override
-    public ItemStack assemble(CraftingContainer inv, RegistryAccess registryAccess) {
-        ItemStack resultItem = getResultItem(registryAccess);
+    public ItemStack assemble(CraftingInput inv, HolderLookup.Provider provider) {
+        ItemStack resultItem = getResultItem(provider);
         if (resultItem.isEmpty()) {
             return ItemStack.EMPTY;
         }
         ItemStack toReturn = resultItem.copy();
-        List<ItemStack> nbtInputs = new ArrayList<>();
-        for (int i = 0; i < inv.getContainerSize(); i++) {
+        List<ItemStack> componentInputs = new ArrayList<>();
+        for (int i = 0; i < inv.size(); i++) {
             ItemStack stack = inv.getItem(i);
-            if (!stack.isEmpty() && stack.hasTag()) {
-                nbtInputs.add(stack);
+            if (!stack.isEmpty() && !stack.isComponentsPatchEmpty()) {
+                componentInputs.add(stack);
             }
         }
-        if (nbtInputs.isEmpty()) {
+        if (componentInputs.isEmpty()) {
             //If none of our items have NBT we can skip checking what data can be transferred
             return toReturn;
         }
@@ -52,7 +52,7 @@ public class MekanismShapedRecipe extends WrappedShapedRecipe {
         }
         Map<RecipeUpgradeType, List<RecipeUpgradeData<?>>> upgradeInfo = new EnumMap<>(RecipeUpgradeType.class);
         //Only bother checking input items that have NBT as ones that do not, don't have any data they may need to transfer
-        for (ItemStack stack : nbtInputs) {
+        for (ItemStack stack : componentInputs) {
             Set<RecipeUpgradeType> stackSupportedTypes = RecipeUpgradeData.getSupportedTypes(stack);
             for (RecipeUpgradeType supportedType : stackSupportedTypes) {
                 if (supportedTypes.contains(supportedType)) {
@@ -69,7 +69,7 @@ public class MekanismShapedRecipe extends WrappedShapedRecipe {
             if (!upgradeData.isEmpty()) {
                 //Skip any empty data, even though we should never have any
                 RecipeUpgradeData<?> data = RecipeUpgradeData.mergeUpgradeData(upgradeData);
-                if (data == null || !data.applyToStack(toReturn)) {
+                if (data == null || !data.applyToStack(provider, toReturn)) {
                     //Fail, incompatible data
                     return ItemStack.EMPTY;
                 }

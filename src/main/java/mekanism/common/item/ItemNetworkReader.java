@@ -1,14 +1,12 @@
 package mekanism.common.item;
 
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
-import java.util.Optional;
 import java.util.Set;
 import mekanism.api.Action;
 import mekanism.api.AutomationType;
 import mekanism.api.MekanismAPI;
 import mekanism.api.energy.IEnergyContainer;
 import mekanism.api.heat.IHeatHandler;
-import mekanism.api.math.FloatingLong;
 import mekanism.api.text.EnumColor;
 import mekanism.api.text.ILangEntry;
 import mekanism.api.text.TextComponentUtil;
@@ -19,7 +17,6 @@ import mekanism.common.content.network.transmitter.Transmitter;
 import mekanism.common.lib.transmitter.DynamicNetwork;
 import mekanism.common.lib.transmitter.TransmitterNetworkRegistry;
 import mekanism.common.tile.transmitter.TileEntityTransmitter;
-import mekanism.common.util.CapabilityUtils;
 import mekanism.common.util.EnumUtils;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.StorageUtils;
@@ -39,7 +36,7 @@ import org.jetbrains.annotations.NotNull;
 public class ItemNetworkReader extends ItemEnergized {
 
     public ItemNetworkReader(Properties properties) {
-        super(MekanismConfig.gear.networkReaderChargeRate, MekanismConfig.gear.networkReaderMaxEnergy, properties.rarity(Rarity.UNCOMMON));
+        super(properties.rarity(Rarity.UNCOMMON).stacksTo(1));
     }
 
     private void displayBorder(Player player, Object toDisplay, boolean brackets) {
@@ -61,20 +58,19 @@ public class ItemNetworkReader extends ItemEnergized {
             BlockEntity tile = WorldUtils.getTileEntity(world, pos);
             if (tile != null) {
                 if (!player.isCreative()) {
-                    FloatingLong energyPerUse = MekanismConfig.gear.networkReaderEnergyUsage.get();
+                    long energyPerUse = MekanismConfig.gear.networkReaderEnergyUsage.get();
                     IEnergyContainer energyContainer = StorageUtils.getEnergyContainer(context.getItemInHand(), 0);
-                    if (energyContainer == null || energyContainer.extract(energyPerUse, Action.SIMULATE, AutomationType.MANUAL).smallerThan(energyPerUse)) {
+                    if (energyContainer == null || energyContainer.extract(energyPerUse, Action.SIMULATE, AutomationType.MANUAL) < energyPerUse) {
                         return InteractionResult.FAIL;
                     }
                     energyContainer.extract(energyPerUse, Action.EXECUTE, AutomationType.MANUAL);
                 }
                 Direction opposite = context.getClickedFace().getOpposite();
                 if (tile instanceof TileEntityTransmitter transmitterTile) {
-                    displayTransmitterInfo(player, transmitterTile.getTransmitter(), tile, opposite);
+                    displayTransmitterInfo(player, world, pos, transmitterTile, opposite);
                 } else {
-                    Optional<IHeatHandler> heatHandler = CapabilityUtils.getCapability(tile, Capabilities.HEAT_HANDLER, opposite).resolve();
-                    if (heatHandler.isPresent()) {
-                        IHeatHandler transfer = heatHandler.get();
+                    IHeatHandler transfer = WorldUtils.getCapability(world, Capabilities.HEAT, pos, null, tile, opposite);
+                    if (transfer != null) {
                         displayBorder(player, MekanismLang.MEKANISM, true);
                         sendTemperature(player, transfer);
                         displayEndBorder(player);
@@ -85,7 +81,7 @@ public class ItemNetworkReader extends ItemEnergized {
                 return InteractionResult.CONSUME;
             } else if (player.isShiftKeyDown() && MekanismAPI.debug) {
                 displayBorder(player, MekanismLang.DEBUG_TITLE, true);
-                for (Component component : TransmitterNetworkRegistry.getInstance().toComponents()) {
+                for (Component component : TransmitterNetworkRegistry.toComponents()) {
                     player.sendSystemMessage(TextComponentUtil.build(EnumColor.DARK_GRAY, component));
                 }
                 displayEndBorder(player);
@@ -94,8 +90,9 @@ public class ItemNetworkReader extends ItemEnergized {
         return InteractionResult.PASS;
     }
 
-    private void displayTransmitterInfo(Player player, Transmitter<?, ?, ?> transmitter, BlockEntity tile, Direction opposite) {
+    private void displayTransmitterInfo(Player player, Level level, BlockPos pos, TileEntityTransmitter tile, Direction opposite) {
         displayBorder(player, MekanismLang.MEKANISM, true);
+        Transmitter<?, ?, ?> transmitter = tile.getTransmitter();
         if (transmitter.hasTransmitterNetwork()) {
             DynamicNetwork<?, ?, ?> transmitterNetwork = transmitter.getTransmitterNetwork();
             player.sendSystemMessage(MekanismLang.NETWORK_READER_TRANSMITTERS.translateColored(EnumColor.GRAY, EnumColor.DARK_GRAY, transmitterNetwork.transmittersSize()));
@@ -104,7 +101,10 @@ public class ItemNetworkReader extends ItemEnergized {
             sendMessageIfNonNull(player, MekanismLang.NETWORK_READER_BUFFER, transmitterNetwork.getStoredInfo());
             sendMessageIfNonNull(player, MekanismLang.NETWORK_READER_THROUGHPUT, transmitterNetwork.getFlowInfo());
             sendMessageIfNonNull(player, MekanismLang.NETWORK_READER_CAPACITY, transmitterNetwork.getNetworkReaderCapacity());
-            CapabilityUtils.getCapability(tile, Capabilities.HEAT_HANDLER, opposite).ifPresent(heatHandler -> sendTemperature(player, heatHandler));
+            IHeatHandler heatHandler = WorldUtils.getCapability(level, Capabilities.HEAT, pos, null, tile, opposite);
+            if (heatHandler != null) {
+                sendTemperature(player, heatHandler);
+            }
         } else {
             player.sendSystemMessage(MekanismLang.NO_NETWORK.translate());
         }
@@ -113,15 +113,18 @@ public class ItemNetworkReader extends ItemEnergized {
 
     private void displayConnectedNetworks(Player player, Level world, BlockPos pos) {
         Set<DynamicNetwork<?, ?, ?>> iteratedNetworks = new ObjectOpenHashSet<>();
+        BlockPos.MutableBlockPos mutable = new BlockPos.MutableBlockPos();
+        long posAsLong = pos.asLong();
         for (Direction side : EnumUtils.DIRECTIONS) {
-            BlockEntity tile = WorldUtils.getTileEntity(world, pos.relative(side));
+            mutable.setWithOffset(pos, side);
+            BlockEntity tile = WorldUtils.getTileEntity(world, mutable);
             if (tile instanceof TileEntityTransmitter transmitterTile) {
                 Transmitter<?, ?, ?> transmitter = transmitterTile.getTransmitter();
                 DynamicNetwork<?, ?, ?> transmitterNetwork = transmitter.getTransmitterNetwork();
                 if (transmitterNetwork.hasAcceptor(pos) && !iteratedNetworks.contains(transmitterNetwork)) {
                     displayBorder(player, compileList(transmitter.getSupportedTransmissionTypes()), false);
                     player.sendSystemMessage(MekanismLang.NETWORK_READER_CONNECTED_SIDES.translateColored(EnumColor.GRAY, EnumColor.DARK_GRAY,
-                          compileList(transmitterNetwork.getAcceptorDirections(pos))));
+                          compileList(transmitterNetwork.getAcceptorDirections(posAsLong))));
                     displayEndBorder(player);
                     iteratedNetworks.add(transmitterNetwork);
                 }

@@ -1,5 +1,4 @@
 {
-  "block.mekanism.ethene": "Течен етилен",
   "block.mekanism.heavy_water": "Тежка вода",
   "block.mekanism.lead_ore": "Оловна руда",
   "block.mekanism.lithium": "Течен литий",
@@ -19,6 +18,5 @@
   "filter.mekanism.oredictionificator.unsupported_tag": "Неподдържан таг",
   "key.mekanism.description": "Show description",
   "key.mekanism.details": "Show details",
-  "tooltip.mekanism.no_fluid": "Няма течност.",
-  "tooltip.mekanism.no_gas": "Няма газ."
+  "tooltip.mekanism.no_fluid": "Няма течност."
 }

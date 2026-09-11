@@ -1,7 +1,5 @@
 package mekanism.common.block.states;
 
-import mekanism.api.math.MathUtils;
-
 public enum TransmitterType {
     UNIVERSAL_CABLE(Size.SMALL),
     MECHANICAL_PIPE(Size.LARGE),
@@ -11,8 +9,6 @@ public enum TransmitterType {
     DIVERSION_TRANSPORTER(Size.LARGE),
     THERMODYNAMIC_CONDUCTOR(Size.SMALL);
 
-    private static final TransmitterType[] TYPES = values();
-
     private final Size size;
 
     TransmitterType(Size size) {
@@ -21,10 +17,6 @@ public enum TransmitterType {
 
     public Size getSize() {
         return size;
-    }
-
-    public static TransmitterType byIndexStatic(int index) {
-        return MathUtils.getByIndexMod(TYPES, index);
     }
 
     public enum Size {

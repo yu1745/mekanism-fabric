@@ -1,5 +1,5 @@
 {
-	"loader": "forge:composite",
+	"loader": "neoforge:composite",
 	"gui_light": "side",
 	"textures": {
 		"particle": "mekanism:block/models/antiprotonic_nucleosynthesizer_front"
@@ -236,7 +236,7 @@
 						"south": {"uv": [0, 0, 2, 2], "texture": "#8"},
 						"west": {"uv": [0, 0, 2, 2], "texture": "#8"}
 					},
-					"forge_data": {
+					"neoforge_data": {
 						"block_light": 15,
 						"sky_light": 15
 					}
@@ -251,7 +251,7 @@
 						"south": {"uv": [0, 0, 2, 2], "texture": "#8"},
 						"west": {"uv": [0, 0, 2, 2], "texture": "#8"}
 					},
-					"forge_data": {
+					"neoforge_data": {
 						"block_light": 15,
 						"sky_light": 15
 					}
@@ -266,7 +266,7 @@
 						"south": {"uv": [0, 0, 2, 2], "texture": "#8"},
 						"west": {"uv": [0, 0, 2, 2], "texture": "#8"}
 					},
-					"forge_data": {
+					"neoforge_data": {
 						"block_light": 15,
 						"sky_light": 15
 					}
@@ -281,15 +281,15 @@
 						"south": {"uv": [0, 0, 2, 2], "texture": "#8"},
 						"west": {"uv": [0, 0, 2, 2], "texture": "#8"}
 					},
-					"forge_data": {
+					"neoforge_data": {
 						"block_light": 15,
 						"sky_light": 15
 					}
 				},
 				{
 					"name": "port",
-					"from": [4, 4, 15.005],
-					"to": [12, 12, 16.005],
+					"from": [4, 4, 15.008],
+					"to": [12, 12, 16.008],
 					"faces": {
 						"east": {"uv": [0, 0, 1, 8], "texture": "#5"},
 						"south": {"uv": [0, 0, 8, 8], "texture": "#5", "cullface": "south"},
@@ -300,12 +300,12 @@
 				},
 				{
 					"name": "port_led1",
-					"from": [4, 4, 16.005],
-					"to": [12, 12, 16.005],
+					"from": [4, 4, 16.008],
+					"to": [12, 12, 16.008],
 					"faces": {
 						"south": {"uv": [8, 8, 16, 16], "texture": "#6", "cullface": "south"}
 					},
-					"forge_data": {
+					"neoforge_data": {
 						"block_light": 15,
 						"sky_light": 15
 					}

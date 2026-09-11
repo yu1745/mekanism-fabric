@@ -1,8 +1,10 @@
 package mekanism.common.tile.machine;
 
-import mekanism.api.chemical.gas.Gas;
-import mekanism.api.chemical.gas.GasStack;
-import mekanism.api.recipes.ItemStackGasToItemStackRecipe;
+import mekanism.api.recipes.ItemStackChemicalToItemStackRecipe;
+import mekanism.api.recipes.vanilla_input.SingleItemChemicalRecipeInput;
+import mekanism.client.recipe_viewer.type.IRecipeViewerRecipeType;
+import mekanism.client.recipe_viewer.type.RecipeViewerRecipeType;
+import mekanism.common.config.MekanismConfig;
 import mekanism.common.recipe.IMekanismRecipeTypeProvider;
 import mekanism.common.recipe.MekanismRecipeType;
 import mekanism.common.recipe.lookup.cache.InputRecipeCache.ItemChemical;
@@ -20,12 +22,17 @@ public class TileEntityPurificationChamber extends TileEntityAdvancedElectricMac
 
     @NotNull
     @Override
-    public IMekanismRecipeTypeProvider<ItemStackGasToItemStackRecipe, ItemChemical<Gas, GasStack, ItemStackGasToItemStackRecipe>> getRecipeType() {
+    public IMekanismRecipeTypeProvider<SingleItemChemicalRecipeInput, ItemStackChemicalToItemStackRecipe, ItemChemical<ItemStackChemicalToItemStackRecipe>> getRecipeType() {
         return MekanismRecipeType.PURIFYING;
     }
 
     @Override
+    public IRecipeViewerRecipeType<ItemStackChemicalToItemStackRecipe> recipeViewerType() {
+        return RecipeViewerRecipeType.PURIFYING;
+    }
+
+    @Override
     protected boolean useStatisticalMechanics() {
-        return true;
+        return MekanismConfig.usage.randomizedConsumption.get();
     }
 }

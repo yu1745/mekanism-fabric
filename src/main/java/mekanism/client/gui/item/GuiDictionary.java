@@ -24,6 +24,7 @@ public class GuiDictionary extends GuiMekanism<DictionaryContainer> {
 
     private GuiTextScrollList scrollList;
     private GuiDictionaryTarget target;
+    private GuiDropdown<?> dropdown;
     private DictionaryTagType currentType = DictionaryTagType.ITEM;
 
     public GuiDictionary(DictionaryContainer container, Inventory inv, Component title) {
@@ -41,7 +42,7 @@ public class GuiDictionary extends GuiMekanism<DictionaryContainer> {
         scrollList = addRenderableWidget(new GuiTextScrollList(this, 7, 29, 162, 42));
         //TODO: Ideally we would eventually replace this with some sort of tab system as it would probably look better
         // and could then be limited to just the tags the target supports
-        addRenderableWidget(new GuiDropdown<>(this, 124, 73, 45, DictionaryTagType.class, () -> currentType, this::setCurrentType));
+        dropdown = addRenderableWidget(new GuiDropdown<>(this, 113, 73, 56, DictionaryTagType.class, () -> currentType, this::setCurrentType));
         target = addRenderableWidget(new GuiDictionaryTarget(this, 6, 6, this::updateScrollList));
     }
 
@@ -59,9 +60,8 @@ public class GuiDictionary extends GuiMekanism<DictionaryContainer> {
 
     @Override
     protected void drawForegroundText(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        renderTitleText(guiGraphics);
-        drawString(guiGraphics, playerInventoryTitle, inventoryLabelX, inventoryLabelY, titleTextColor());
-        drawTextScaledBound(guiGraphics, MekanismLang.DICTIONARY_TAG_TYPE.translate(), 77, inventoryLabelY, titleTextColor(), 45);
+        renderTitleTextWithOffset(guiGraphics, target.getRelativeRight());
+        renderInventoryTextAndOther(guiGraphics, MekanismLang.DICTIONARY_TAG_TYPE.translate(), imageWidth - dropdown.getRelativeX() - 5);
         super.drawForegroundText(guiGraphics, mouseX, mouseY);
     }
 
@@ -90,10 +90,8 @@ public class GuiDictionary extends GuiMekanism<DictionaryContainer> {
         POTION(MekanismLang.DICTIONARY_POTION, MekanismLang.DICTIONARY_POTION_DESC),
         MOB_EFFECT(MekanismLang.DICTIONARY_MOB_EFFECT, MekanismLang.DICTIONARY_MOB_EFFECT_DESC),
         ENCHANTMENT(MekanismLang.DICTIONARY_ENCHANTMENT, MekanismLang.DICTIONARY_ENCHANTMENT_DESC),
-        GAS(MekanismLang.DICTIONARY_GAS, MekanismLang.DICTIONARY_GAS_DESC),
-        INFUSE_TYPE(MekanismLang.DICTIONARY_INFUSE_TYPE, MekanismLang.DICTIONARY_INFUSE_TYPE_DESC),
-        PIGMENT(MekanismLang.DICTIONARY_PIGMENT, MekanismLang.DICTIONARY_PIGMENT_DESC),
-        SLURRY(MekanismLang.DICTIONARY_SLURRY, MekanismLang.DICTIONARY_SLURRY_DESC);
+        CHEMICAL(MekanismLang.DICTIONARY_CHEMICAL, MekanismLang.DICTIONARY_CHEMICAL_DESC),
+        ;
 
         private final ILangEntry name;
         private final ILangEntry tooltip;

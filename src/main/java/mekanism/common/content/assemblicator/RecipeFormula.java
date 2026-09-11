@@ -1,127 +1,145 @@
 package mekanism.common.content.assemblicator;
 
-import it.unimi.dsi.fastutil.ints.IntArrayList;
-import it.unimi.dsi.fastutil.ints.IntList;
 import java.util.List;
 import mekanism.api.inventory.IInventorySlot;
+import mekanism.common.attachments.FormulaAttachment;
 import mekanism.common.recipe.MekanismRecipeType;
 import mekanism.common.util.MekanismUtils;
 import net.minecraft.core.NonNullList;
-import net.minecraft.core.RegistryAccess;
-import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.CraftingRecipe;
+import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
-public class RecipeFormula {
+public record RecipeFormula(CraftingInput.Positioned craftingInput, @Nullable RecipeHolder<CraftingRecipe> recipe) {
 
-    public final NonNullList<ItemStack> input = NonNullList.withSize(9, ItemStack.EMPTY);
-    @Nullable
-    public CraftingRecipe recipe;
-    private final CraftingContainer dummy = MekanismUtils.getDummyCraftingInv();
+    public static final RecipeFormula EMPTY = new RecipeFormula(CraftingInput.Positioned.EMPTY, null);
 
-    public RecipeFormula(Level world, NonNullList<ItemStack> inv) {
-        for (int i = 0; i < 9; i++) {
-            input.set(i, inv.get(i).copyWithCount(1));
-        }
-        resetToRecipe();
-        recipe = getRecipeFromGrid(dummy, world);
+    public static RecipeFormula create(Level world, FormulaAttachment attachment) {
+        //Should always be a 3x3 grid for the size
+        return create(world, MekanismUtils.getCraftingInput(3, 3, attachment.inventory(), true));
     }
 
-    public RecipeFormula(Level world, List<IInventorySlot> craftingGridSlots) {
-        //Should always be 9 for the size
-        for (int i = 0; i < craftingGridSlots.size(); i++) {
-            IInventorySlot craftingSlot = craftingGridSlots.get(i);
-            if (!craftingSlot.isEmpty()) {
-                input.set(i, craftingSlot.getStack().copyWithCount(1));
-            }
+    public static RecipeFormula create(Level world, List<IInventorySlot> craftingGridSlots) {
+        //Should always be a 3x3 grid for the size
+        return create(world, MekanismUtils.getCraftingInputSlots(3, 3, craftingGridSlots, true));
+    }
+
+    public static RecipeFormula create(Level world, CraftingInput.Positioned craftingInput) {
+        if (craftingInput.input().isEmpty()) {
+            return EMPTY;
         }
-        resetToRecipe();
-        recipe = getRecipeFromGrid(dummy, world);
+        return new RecipeFormula(craftingInput, MekanismRecipeType.getRecipeFor(RecipeType.CRAFTING, craftingInput.input(), world).orElse(null));
+    }
+
+    public RecipeFormula withStack(Level world, int index, ItemStack stack) {
+        if (isEmpty() && stack.isEmpty()) {
+            return this;
+        }
+        List<ItemStack> copy = getCopy(false);
+        ItemStack old = copy.set(index, stack);
+        if (old != null && ItemStack.isSameItemSameComponents(old, stack)) {
+            //Nothing changed, don't bother creating new objects
+            //TODO: If there is a performance problem, try to optimize this to being above copying the list
+            return this;
+        }
+        return create(world, CraftingInput.ofPositioned(3, 3, copy));
     }
 
     public ItemStack getInputStack(int slot) {
-        return input.get(slot);
+        if (isEmpty()) {
+            return ItemStack.EMPTY;
+        }
+        int row = slot / 3;
+        int column = slot % 3;
+        CraftingInput input = craftingInput.input();
+        if (row < craftingInput.top() || row >= craftingInput.top() + input.height() ||
+            column < craftingInput.left() || column >= craftingInput.left() + input.width()) {
+            return ItemStack.EMPTY;
+        }
+        return input.getItem(column - craftingInput.left(), row - craftingInput.top());
     }
 
-    private void resetToRecipe() {
-        for (int i = 0; i < 9; i++) {
-            dummy.setItem(i, input.get(i));
-        }
+    public boolean isEmpty() {
+        return this == EMPTY;
+    }
+
+    public boolean valid() {
+        return recipe != null;
     }
 
     public boolean matches(Level world, List<IInventorySlot> craftingGridSlots) {
         if (recipe == null) {
             return false;
         }
-        //Should always be 9 for the size
-        for (int i = 0; i < craftingGridSlots.size(); i++) {
-            dummy.setItem(i, craftingGridSlots.get(i).getStack().copyWithCount(1));
-        }
-        return recipe.matches(dummy, world);
-    }
-
-    //Must have matches be called before this and be true as it assumes that the dummy inventory was set by it
-    public ItemStack assemble(RegistryAccess registryAccess) {
-        return recipe == null ? ItemStack.EMPTY : recipe.assemble(dummy, registryAccess);
-    }
-
-    //Must have matches be called before this and be true as it assumes that the dummy inventory was set by it
-    public NonNullList<ItemStack> getRemainingItems() {
-        //Should never be null given the assumption matches is called first
-        return recipe == null ? NonNullList.create() : recipe.getRemainingItems(dummy);
+        //Should always be a 3x3 grid for the size
+        return recipe.value().matches(MekanismUtils.getCraftingInputSlots(3, 3, craftingGridSlots, true).input(), world);
     }
 
     public boolean isIngredientInPos(Level world, ItemStack stack, int i) {
         if (recipe == null) {
             return false;
-        } else if (stack.isEmpty() && !input.get(i).isEmpty()) {
+        } else if (stack.isEmpty()) {
             //If the stack being checked is empty but the input isn't expected to be empty,
-            // mark it as not being correct for the position
-            return false;
+            // mark it as not being correct for the position, but if it is expected to be empty,
+            // mark it as being correct for the position
+            return getInputStack(i).isEmpty();
         }
-        resetToRecipe();
-        dummy.setItem(i, stack);
-        return recipe.matches(dummy, world);
+        ItemStack lastItem = getInputStack(i);
+        if (lastItem.isEmpty()) {
+            //We expect it to be empty, fail because it isn't
+            return false;
+        } else if (ItemStack.isSameItemSameComponents(stack, lastItem)) {
+            //We are the same as the last item and the one we expect for that slot of the recipe
+            return true;
+        }
+
+        List<ItemStack> dummy = getCopy(false);
+        dummy.set(i, stack);
+        return recipe.value().matches(CraftingInput.of(3, 3, dummy), world);
     }
 
-    public IntList getIngredientIndices(Level world, ItemStack stack) {
-        IntList ret = new IntArrayList();
+    public boolean isValidIngredient(Level world, ItemStack stack) {
         if (recipe != null) {
-            for (int i = 0; i < 9; i++) {
-                dummy.setItem(i, stack);
-                if (recipe.matches(dummy, world)) {
-                    ret.add(i);
+            for (ItemStack inputItem : craftingInput.input().items()) {
+                //Short circuit if it is one of the items we already know about
+                if (!inputItem.isEmpty() && ItemStack.isSameItemSameComponents(inputItem, stack)) {
+                    return true;
                 }
-                dummy.setItem(i, input.get(i));
+            }
+            List<ItemStack> dummy = getCopy(false);
+            for (int i = 0; i < 9; i++) {
+                ItemStack inputItem = dummy.get(i);
+                //Skip slots that aren't expected to be empty
+                if (!inputItem.isEmpty()) {
+                    dummy.set(i, stack);
+                    if (recipe.value().matches(CraftingInput.of(3, 3, dummy), world)) {
+                        return true;
+                    }
+                    dummy.set(i, inputItem);
+                }
             }
         }
-        return ret;
+        return false;
     }
 
-    public boolean isValidFormula() {
-        return getRecipe() != null;
-    }
-
-    @Nullable
-    public CraftingRecipe getRecipe() {
-        return recipe;
-    }
-
-    public boolean isFormulaEqual(RecipeFormula formula) {
-        return formula.getRecipe() == getRecipe();
-    }
-
-    public void setStack(Level world, int index, ItemStack stack) {
-        input.set(index, stack);
-        resetToRecipe();
-        recipe = getRecipeFromGrid(dummy, world);
-    }
-
-    @Nullable
-    private static CraftingRecipe getRecipeFromGrid(CraftingContainer inv, Level world) {
-        return MekanismRecipeType.getRecipeFor(RecipeType.CRAFTING, inv, world).orElse(null);
+    public List<ItemStack> getCopy(boolean copyStacks) {
+        List<ItemStack> stacks = NonNullList.withSize(9, ItemStack.EMPTY);
+        if (isEmpty()) {
+            return stacks;
+        }
+        CraftingInput input = craftingInput.input();
+        for (int row = 0; row < input.height(); row++) {
+            int shiftedRow = 3 * (craftingInput.top() + row);
+            for (int column = 0; column < input.width(); column++) {
+                int index = shiftedRow + craftingInput.left() + column;
+                ItemStack stack = input.getItem(column, row);
+                stacks.set(index, copyStacks ? stack.copy() : stack);
+            }
+        }
+        return stacks;
     }
 }

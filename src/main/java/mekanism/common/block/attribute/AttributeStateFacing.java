@@ -89,20 +89,20 @@ public class AttributeStateFacing implements AttributeState {
     public BlockState copyStateData(BlockState oldState, BlockState newState) {
         AttributeStateFacing newStateFacingAttribute = Attribute.get(newState, AttributeStateFacing.class);
         if (newStateFacingAttribute != null) {
-            DirectionProperty oldFacingProperty = Attribute.get(oldState, AttributeStateFacing.class).getFacingProperty();
+            DirectionProperty oldFacingProperty = Attribute.getOrThrow(oldState, AttributeStateFacing.class).getFacingProperty();
             newState = newState.setValue(newStateFacingAttribute.getFacingProperty(), oldState.getValue(oldFacingProperty));
         }
         return newState;
     }
 
     @Override
-    @Contract("_, null, _, _, _, _ -> null")
-    public BlockState getStateForPlacement(Block block, @Nullable BlockState state, @NotNull LevelAccessor world, @NotNull BlockPos pos, @Nullable Player player,
+    @Contract("null, _, _, _, _ -> null")
+    public BlockState getStateForPlacement(@Nullable BlockState state, @NotNull LevelAccessor world, @NotNull BlockPos pos, @Nullable Player player,
           @NotNull Direction face) {
         if (state == null) {
             return null;
         }
-        AttributeStateFacing blockFacing = Attribute.get(block, AttributeStateFacing.class);
+        AttributeStateFacing blockFacing = Attribute.get(state, AttributeStateFacing.class);
         Direction newDirection = Direction.SOUTH;
         if (blockFacing.getPlacementType() == FacePlacementType.PLAYER_LOCATION) {
             //TODO: Somehow weight this stuff towards context.getFace(), so that it has a higher likelihood of going with the face that was clicked on

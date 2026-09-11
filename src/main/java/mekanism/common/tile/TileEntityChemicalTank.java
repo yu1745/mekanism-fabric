@@ -1,33 +1,21 @@
 package mekanism.common.tile;
 
-import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
-import java.util.Map;
+import com.mojang.serialization.Codec;
+import io.netty.buffer.ByteBuf;
+import java.util.Locale;
+import java.util.function.IntFunction;
 import mekanism.api.Action;
 import mekanism.api.IContentsListener;
 import mekanism.api.IIncrementalEnum;
-import mekanism.api.NBTConstants;
 import mekanism.api.RelativeSide;
+import mekanism.api.SerializationConstants;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.chemical.IChemicalTank;
-import mekanism.api.chemical.gas.Gas;
-import mekanism.api.chemical.gas.GasStack;
-import mekanism.api.chemical.gas.IGasTank;
-import mekanism.api.chemical.infuse.IInfusionTank;
-import mekanism.api.chemical.infuse.InfuseType;
-import mekanism.api.chemical.infuse.InfusionStack;
-import mekanism.api.chemical.merged.MergedChemicalTank;
-import mekanism.api.chemical.merged.MergedChemicalTank.Current;
-import mekanism.api.chemical.pigment.IPigmentTank;
-import mekanism.api.chemical.pigment.Pigment;
-import mekanism.api.chemical.pigment.PigmentStack;
-import mekanism.api.chemical.slurry.ISlurryTank;
-import mekanism.api.chemical.slurry.Slurry;
-import mekanism.api.chemical.slurry.SlurryStack;
 import mekanism.api.math.MathUtils;
-import mekanism.api.providers.IBlockProvider;
-import mekanism.api.text.IHasTextComponent;
+import mekanism.api.text.IHasTextComponent.IHasEnumNameTextComponent;
 import mekanism.api.text.ILangEntry;
 import mekanism.common.MekanismLang;
+import mekanism.common.attachments.containers.ContainerType;
 import mekanism.common.block.attribute.Attribute;
 import mekanism.common.capabilities.chemical.ChemicalTankChemicalTank;
 import mekanism.common.capabilities.holder.chemical.ChemicalTankHelper;
@@ -45,99 +33,75 @@ import mekanism.common.inventory.container.MekanismContainer;
 import mekanism.common.inventory.container.slot.ContainerSlotType;
 import mekanism.common.inventory.container.slot.SlotOverlay;
 import mekanism.common.inventory.container.sync.SyncableEnum;
-import mekanism.common.inventory.slot.chemical.MergedChemicalInventorySlot;
+import mekanism.common.inventory.slot.chemical.ChemicalInventorySlot;
 import mekanism.common.lib.transmitter.TransmissionType;
+import mekanism.common.registries.MekanismDataComponents;
 import mekanism.common.tier.ChemicalTankTier;
-import mekanism.common.tile.base.SubstanceType;
 import mekanism.common.tile.component.ITileComponent;
-import mekanism.common.tile.component.TileComponentConfig;
 import mekanism.common.tile.component.TileComponentEjector;
 import mekanism.common.tile.interfaces.IHasGasMode;
-import mekanism.common.tile.interfaces.ISustainedData;
 import mekanism.common.tile.prefab.TileEntityConfigurableMachine;
 import mekanism.common.upgrade.ChemicalTankUpgradeData;
 import mekanism.common.upgrade.IUpgradeData;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.NBTUtils;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.util.ByIdMap;
+import net.minecraft.util.StringRepresentable;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class TileEntityChemicalTank extends TileEntityConfigurableMachine implements ISustainedData, IHasGasMode {
+public class TileEntityChemicalTank extends TileEntityConfigurableMachine implements IHasGasMode {
 
     @SyntheticComputerMethod(getter = "getDumpingMode", getterDescription = "Get the current Dumping configuration")
     public GasMode dumping = GasMode.IDLE;
 
-    private MergedChemicalTank chemicalTank;
+    private IChemicalTank chemicalTank;
     private ChemicalTankTier tier;
 
     @WrappingComputerMethod(wrapper = ComputerIInventorySlotWrapper.class, methodNames = "getDrainItem", docPlaceholder = "drain slot")
-    MergedChemicalInventorySlot<MergedChemicalTank> drainSlot;
+    ChemicalInventorySlot drainSlot;
     @WrappingComputerMethod(wrapper = ComputerIInventorySlotWrapper.class, methodNames = "getFillItem", docPlaceholder = "fill slot")
-    MergedChemicalInventorySlot<MergedChemicalTank> fillSlot;
+    ChemicalInventorySlot fillSlot;
 
-    public TileEntityChemicalTank(IBlockProvider blockProvider, BlockPos pos, BlockState state) {
+    public TileEntityChemicalTank(Holder<Block> blockProvider, BlockPos pos, BlockState state) {
         super(blockProvider, pos, state);
-        configComponent = new TileComponentConfig(this, TransmissionType.GAS, TransmissionType.INFUSION, TransmissionType.PIGMENT, TransmissionType.SLURRY,
-              TransmissionType.ITEM);
         configComponent.setupIOConfig(TransmissionType.ITEM, drainSlot, fillSlot, RelativeSide.FRONT, true).setCanEject(false);
-        configComponent.setupIOConfig(TransmissionType.GAS, getGasTank(), RelativeSide.FRONT).setEjecting(true);
-        configComponent.setupIOConfig(TransmissionType.INFUSION, getInfusionTank(), RelativeSide.FRONT).setEjecting(true);
-        configComponent.setupIOConfig(TransmissionType.PIGMENT, getPigmentTank(), RelativeSide.FRONT).setEjecting(true);
-        configComponent.setupIOConfig(TransmissionType.SLURRY, getSlurryTank(), RelativeSide.FRONT).setEjecting(true);
+        configComponent.setupIOConfig(TransmissionType.CHEMICAL, getChemicalTank(), RelativeSide.FRONT);
         ejectorComponent = new TileComponentEjector(this, () -> tier.getOutput());
-        ejectorComponent.setOutputData(configComponent, TransmissionType.GAS, TransmissionType.INFUSION, TransmissionType.PIGMENT, TransmissionType.SLURRY)
-              .setCanEject(type -> MekanismUtils.canFunction(this) && (tier == ChemicalTankTier.CREATIVE || dumping != GasMode.DUMPING));
+        ejectorComponent.setOutputData(configComponent, TransmissionType.CHEMICAL)
+              .setCanEject(type -> canFunction() && (tier == ChemicalTankTier.CREATIVE || dumping != GasMode.DUMPING));
     }
 
     @Override
     protected void presetVariables() {
         super.presetVariables();
-        tier = Attribute.getTier(getBlockType(), ChemicalTankTier.class);
-        chemicalTank = ChemicalTankChemicalTank.create(tier, this);
+        tier = Attribute.getTier(getBlockHolder(), ChemicalTankTier.class);
     }
 
-    @NotNull
     @Override
-    public IChemicalTankHolder<Gas, GasStack, IGasTank> getInitialGasTanks(IContentsListener listener) {
-        ChemicalTankHelper<Gas, GasStack, IGasTank> builder = ChemicalTankHelper.forSideGasWithConfig(this::getDirection, this::getConfig);
-        builder.addTank(getGasTank());
-        return builder.build();
-    }
-
-    @NotNull
-    @Override
-    public IChemicalTankHolder<InfuseType, InfusionStack, IInfusionTank> getInitialInfusionTanks(IContentsListener listener) {
-        ChemicalTankHelper<InfuseType, InfusionStack, IInfusionTank> builder = ChemicalTankHelper.forSideInfusionWithConfig(this::getDirection, this::getConfig);
-        builder.addTank(getInfusionTank());
-        return builder.build();
-    }
-
-    @NotNull
-    @Override
-    public IChemicalTankHolder<Pigment, PigmentStack, IPigmentTank> getInitialPigmentTanks(IContentsListener listener) {
-        ChemicalTankHelper<Pigment, PigmentStack, IPigmentTank> builder = ChemicalTankHelper.forSidePigmentWithConfig(this::getDirection, this::getConfig);
-        builder.addTank(getPigmentTank());
-        return builder.build();
-    }
-
-    @NotNull
-    @Override
-    public IChemicalTankHolder<Slurry, SlurryStack, ISlurryTank> getInitialSlurryTanks(IContentsListener listener) {
-        ChemicalTankHelper<Slurry, SlurryStack, ISlurryTank> builder = ChemicalTankHelper.forSideSlurryWithConfig(this::getDirection, this::getConfig);
-        builder.addTank(getSlurryTank());
+    public @Nullable IChemicalTankHolder getInitialChemicalTanks(IContentsListener listener) {
+        ChemicalTankHelper builder = ChemicalTankHelper.forSideWithConfig(this);
+        builder.addTank(chemicalTank = ChemicalTankChemicalTank.create(tier, listener));
         return builder.build();
     }
 
     @NotNull
     @Override
     protected IInventorySlotHolder getInitialInventory(IContentsListener listener) {
-        InventorySlotHelper builder = InventorySlotHelper.forSideWithConfig(this::getDirection, this::getConfig);
-        builder.addSlot(drainSlot = MergedChemicalInventorySlot.drain(chemicalTank, listener, 16, 16));
-        builder.addSlot(fillSlot = MergedChemicalInventorySlot.fill(chemicalTank, listener, 16, 48));
+        InventorySlotHelper builder = InventorySlotHelper.forSideWithConfig(this);
+        builder.addSlot(drainSlot = ChemicalInventorySlot.drain(chemicalTank, listener, 16, 16));
+        builder.addSlot(fillSlot = ChemicalInventorySlot.fill(chemicalTank, listener, 16, 48));
         drainSlot.setSlotType(ContainerSlotType.OUTPUT);
         drainSlot.setSlotOverlay(SlotOverlay.PLUS);
         fillSlot.setSlotType(ContainerSlotType.INPUT);
@@ -146,26 +110,23 @@ public class TileEntityChemicalTank extends TileEntityConfigurableMachine implem
     }
 
     @Override
-    protected void onUpdateServer() {
-        super.onUpdateServer();
-        drainSlot.drainChemicalTanks();
-        fillSlot.fillChemicalTanks();
+    protected boolean onUpdateServer() {
+        boolean sendUpdatePacket = super.onUpdateServer();
+        drainSlot.drainTank();
+        fillSlot.fillTank();
         if (dumping != GasMode.IDLE && tier != ChemicalTankTier.CREATIVE) {
-            Current current = chemicalTank.getCurrent();
-            if (current != Current.EMPTY) {
-                IChemicalTank<?, ?> currentTank = chemicalTank.getTankFromCurrent(current);
-                if (dumping == GasMode.DUMPING) {
-                    currentTank.shrinkStack(tier.getStorage() / 400, Action.EXECUTE);
-                } else {//dumping == GasMode.DUMPING_EXCESS
-                    long target = MathUtils.clampToLong(currentTank.getCapacity() * MekanismConfig.general.dumpExcessKeepRatio.get());
-                    long stored = currentTank.getStored();
-                    if (target < stored) {
-                        //Dump excess that we need to get to the target (capping at our eject rate for how much we can dump at once)
-                        currentTank.shrinkStack(Math.min(stored - target, tier.getOutput()), Action.EXECUTE);
-                    }
+            if (dumping == GasMode.DUMPING) {
+                chemicalTank.shrinkStack(tier.getStorage() / 400, Action.EXECUTE);
+            } else {//dumping == GasMode.DUMPING_EXCESS
+                long target = MathUtils.clampToLong(chemicalTank.getCapacity() * MekanismConfig.general.dumpExcessKeepRatio.get());
+                long stored = chemicalTank.getStored();
+                if (target < stored) {
+                    //Dump excess that we need to get to the target (capping at our eject rate for how much we can dump at once)
+                    chemicalTank.shrinkStack(Math.min(stored - target, tier.getOutput()), Action.EXECUTE);
                 }
             }
         }
+        return sendUpdatePacket;
     }
 
     @Override
@@ -183,93 +144,80 @@ public class TileEntityChemicalTank extends TileEntityConfigurableMachine implem
 
     @Override
     public int getRedstoneLevel() {
-        IChemicalTank<?, ?> currentTank = getCurrentTank();
+        IChemicalTank currentTank = getCurrentTank();
         return MekanismUtils.redstoneLevelFromContents(currentTank.getStored(), currentTank.getCapacity());
     }
 
     @Override
-    protected boolean makesComparatorDirty(@Nullable SubstanceType type) {
-        return type == SubstanceType.GAS || type == SubstanceType.INFUSION || type == SubstanceType.PIGMENT || type == SubstanceType.SLURRY;
+    protected boolean makesComparatorDirty(ContainerType<?, ?, ?> type) {
+        return type == ContainerType.CHEMICAL;
     }
 
-    @WrappingComputerMethod(wrapper = ComputerChemicalTankWrapper.class, methodNames = {"getStored", "getCapacity", "getNeeded", "getFilledPercentage"}, docPlaceholder = "tank")
-    IChemicalTank<?, ?> getCurrentTank() {
-        Current current = chemicalTank.getCurrent();
-        return chemicalTank.getTankFromCurrent(current == Current.EMPTY ? Current.GAS : current);
+    @WrappingComputerMethod(wrapper = ComputerChemicalTankWrapper.class, methodNames = {"getStored", "getCapacity", "getNeeded",
+                                                                                        "getFilledPercentage"}, docPlaceholder = "tank")
+    IChemicalTank getCurrentTank() {
+        return chemicalTank;
     }
 
     public ChemicalTankTier getTier() {
         return tier;
     }
 
-    public MergedChemicalTank getChemicalTank() {
+    public IChemicalTank getChemicalTank() {
         return chemicalTank;
     }
 
-    public IGasTank getGasTank() {
-        return chemicalTank.getGasTank();
-    }
-
-    public IInfusionTank getInfusionTank() {
-        return chemicalTank.getInfusionTank();
-    }
-
-    public IPigmentTank getPigmentTank() {
-        return chemicalTank.getPigmentTank();
-    }
-
-    public ISlurryTank getSlurryTank() {
-        return chemicalTank.getSlurryTank();
-    }
-
     @Override
-    public void parseUpgradeData(@NotNull IUpgradeData upgradeData) {
+    public void parseUpgradeData(HolderLookup.Provider provider, @NotNull IUpgradeData upgradeData) {
         if (upgradeData instanceof ChemicalTankUpgradeData data) {
             redstone = data.redstone;
             setControlType(data.controlType);
             drainSlot.setStack(data.drainSlot.getStack());
             fillSlot.setStack(data.fillSlot.getStack());
             dumping = data.dumping;
-            getGasTank().setStack(data.storedGas);
-            getInfusionTank().setStack(data.storedInfusion);
-            getPigmentTank().setStack(data.storedPigment);
-            getSlurryTank().setStack(data.storedSlurry);
+            getChemicalTank().setStack(data.storedChemical);
             for (ITileComponent component : getComponents()) {
-                component.read(data.components);
+                component.read(data.components, provider);
             }
         } else {
-            super.parseUpgradeData(upgradeData);
+            super.parseUpgradeData(provider, upgradeData);
         }
     }
 
     @NotNull
     @Override
-    public ChemicalTankUpgradeData getUpgradeData() {
-        return new ChemicalTankUpgradeData(redstone, getControlType(), drainSlot, fillSlot, dumping, getGasTank().getStack(), getInfusionTank().getStack(),
-              getPigmentTank().getStack(), getSlurryTank().getStack(), getComponents());
+    public ChemicalTankUpgradeData getUpgradeData(HolderLookup.Provider provider) {
+        return new ChemicalTankUpgradeData(provider, redstone, getControlType(), drainSlot, fillSlot, dumping, getChemicalTank().getStack(), getComponents());
     }
 
     @Override
-    public void writeSustainedData(CompoundTag dataMap) {
-        NBTUtils.writeEnum(dataMap, NBTConstants.DUMP_MODE, dumping);
+    public void writeSustainedData(HolderLookup.Provider provider, CompoundTag dataMap) {
+        super.writeSustainedData(provider, dataMap);
+        NBTUtils.writeEnum(dataMap, SerializationConstants.DUMP_MODE, dumping);
     }
 
     @Override
-    public void readSustainedData(CompoundTag dataMap) {
-        NBTUtils.setEnumIfPresent(dataMap, NBTConstants.DUMP_MODE, GasMode::byIndexStatic, mode -> dumping = mode);
+    public void readSustainedData(HolderLookup.Provider provider, @NotNull CompoundTag data) {
+        super.readSustainedData(provider, data);
+        NBTUtils.setEnumIfPresent(data, SerializationConstants.DUMP_MODE, GasMode.BY_ID, mode -> dumping = mode);
     }
 
     @Override
-    public Map<String, String> getTileDataRemap() {
-        Map<String, String> remap = new Object2ObjectOpenHashMap<>();
-        remap.put(NBTConstants.DUMP_MODE, NBTConstants.DUMP_MODE);
-        return remap;
+    protected void collectImplicitComponents(@NotNull DataComponentMap.Builder builder) {
+        super.collectImplicitComponents(builder);
+        builder.set(MekanismDataComponents.DUMP_MODE, dumping);
+    }
+
+    @Override
+    protected void applyImplicitComponents(@NotNull BlockEntity.DataComponentInput input) {
+        super.applyImplicitComponents(input);
+        dumping = input.getOrDefault(MekanismDataComponents.DUMP_MODE, dumping);
     }
 
     @Override
     public void addContainerTrackers(MekanismContainer container) {
         super.addContainerTrackers(container);
-        container.track(SyncableEnum.create(GasMode::byIndexStatic, GasMode.IDLE, () -> dumping, value -> dumping = value));
+        container.track(SyncableEnum.create(GasMode.BY_ID, GasMode.IDLE, () -> dumping, value -> dumping = value));
     }
 
     //Methods relating to IComputerTile
@@ -297,15 +245,20 @@ public class TileEntityChemicalTank extends TileEntityConfigurableMachine implem
     //End methods IComputerTile
 
     @NothingNullByDefault
-    public enum GasMode implements IIncrementalEnum<GasMode>, IHasTextComponent {
+    public enum GasMode implements IIncrementalEnum<GasMode>, IHasEnumNameTextComponent, StringRepresentable {
         IDLE(MekanismLang.IDLE),
         DUMPING_EXCESS(MekanismLang.DUMPING_EXCESS),
         DUMPING(MekanismLang.DUMPING);
 
-        private static final GasMode[] MODES = values();
+        public static final Codec<GasMode> CODEC = StringRepresentable.fromEnum(GasMode::values);
+        public static final IntFunction<GasMode> BY_ID = ByIdMap.continuous(GasMode::ordinal, values(), ByIdMap.OutOfBoundsStrategy.WRAP);
+        public static final StreamCodec<ByteBuf, GasMode> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, GasMode::ordinal);
+
+        private final String serializedName;
         private final ILangEntry langEntry;
 
         GasMode(ILangEntry langEntry) {
+            this.serializedName = name().toLowerCase(Locale.ROOT);
             this.langEntry = langEntry;
         }
 
@@ -316,11 +269,12 @@ public class TileEntityChemicalTank extends TileEntityConfigurableMachine implem
 
         @Override
         public GasMode byIndex(int index) {
-            return byIndexStatic(index);
+            return BY_ID.apply(index);
         }
 
-        public static GasMode byIndexStatic(int index) {
-            return MathUtils.getByIndexMod(MODES, index);
+        @Override
+        public String getSerializedName() {
+            return serializedName;
         }
     }
 }

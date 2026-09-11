@@ -18,9 +18,9 @@ public abstract class GuiFilterSelect<TILE extends TileEntityMekanism & ITileFil
     protected final TILE tile;
 
     protected GuiFilterSelect(IGuiWrapper gui, TILE tile, int filterCount) {
-        super(gui, (gui.getWidth() - 152) / 2, 20, 152, 30 + filterCount * FILTER_HEIGHT, SelectedWindowData.UNSPECIFIED);
+        super(gui, (gui.getXSize() - 152) / 2, 20, 152, 30 + filterCount * FILTER_HEIGHT, SelectedWindowData.UNSPECIFIED);
         this.tile = tile;
-        addChild(new GuiElementHolder(gui, 23, relativeY + 18, 130, 2 + filterCount * FILTER_HEIGHT));
+        addChild(new GuiElementHolder(gui, relativeX + 11, relativeY + 18, 130, 2 + filterCount * FILTER_HEIGHT));
         int buttonY = relativeY + 19;
         buttonY = addFilterButton(buttonY, MekanismLang.BUTTON_ITEMSTACK_FILTER, getItemStackFilterCreator());
         buttonY = addFilterButton(buttonY, MekanismLang.BUTTON_TAG_FILTER, getTagFilterCreator());
@@ -31,11 +31,12 @@ public abstract class GuiFilterSelect<TILE extends TileEntityMekanism & ITileFil
         if (filterSupplier == null) {
             return buttonY;
         }
-        addChild(new TranslationButton(gui(), 24, buttonY, 128, FILTER_HEIGHT, translationHelper, () -> {
+        addChild(new TranslationButton(gui(), relativeX + 12, buttonY, 128, FILTER_HEIGHT, translationHelper, (element, mouseX, mouseY) -> {
             //Add the window for the filter dialog to the parent gui
-            gui().addWindow(filterSupplier.create(gui(), tile));
+            IGuiWrapper gui = element.gui();
+            gui.addWindow(filterSupplier.create(gui, tile));
             //And close the filter select dialog
-            close();
+            return close(element, mouseX, mouseY);
         }));
         return buttonY + FILTER_HEIGHT;
     }

@@ -1,29 +1,23 @@
 package mekanism.client.gui;
 
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.BufferUploader;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.Tesselator;
-import com.mojang.blaze3d.vertex.VertexBuffer;
-import com.mojang.blaze3d.vertex.VertexBuffer.Usage;
 import com.mojang.blaze3d.vertex.VertexFormat.Mode;
 import com.mojang.math.Divisor;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
-import mekanism.client.gui.element.GuiElement;
 import mekanism.common.Mekanism;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.network.chat.Component;
@@ -79,7 +73,7 @@ public class GuiUtils {
     }
 
     public static void drawBackdrop(GuiGraphics guiGraphics, Minecraft minecraft, int x, int y, int width, int alpha) {
-        drawBackdrop(guiGraphics, minecraft, x, y, width, 9, alpha);
+        drawBackdrop(guiGraphics, minecraft, x, y, width, minecraft.font.lineHeight, alpha);
     }
 
     public static void drawBackdrop(GuiGraphics guiGraphics, Minecraft minecraft, int x, int y, int width, int height, int alpha) {
@@ -118,8 +112,7 @@ public class GuiUtils {
             RenderSystem.enableBlend();
         }
         //Note: We still use the tesselator as that is what GuiGraphics#innerBlit does
-        BufferBuilder vertexBuffer = Tesselator.getInstance().getBuilder();
-        vertexBuffer.begin(Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
+        BufferBuilder vertexBuffer = Tesselator.getInstance().begin(Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
         Matrix4f matrix4f = guiGraphics.pose().last().pose();
         for (int xTile = 0; xTile <= xTileCount; xTile++) {
             int width = (xTile == xTileCount) ? xRemainder : textureWidth;
@@ -158,31 +151,114 @@ public class GuiUtils {
                     vLocalMin = vMin + vLocalDif;
                     vLocalMax = vMax;
                 }
-                vertexBuffer.vertex(matrix4f, x, y + textureHeight, zLevel).uv(uLocalMin, vLocalMax).endVertex();
-                vertexBuffer.vertex(matrix4f, shiftedX, y + textureHeight, zLevel).uv(uLocalMax, vLocalMax).endVertex();
-                vertexBuffer.vertex(matrix4f, shiftedX, y + maskTop, zLevel).uv(uLocalMax, vLocalMin).endVertex();
-                vertexBuffer.vertex(matrix4f, x, y + maskTop, zLevel).uv(uLocalMin, vLocalMin).endVertex();
+                vertexBuffer.addVertex(matrix4f, x, y + textureHeight, zLevel)
+                      .setUv(uLocalMin, vLocalMax);
+                vertexBuffer.addVertex(matrix4f, shiftedX, y + textureHeight, zLevel)
+                      .setUv(uLocalMax, vLocalMax);
+                vertexBuffer.addVertex(matrix4f, shiftedX, y + maskTop, zLevel)
+                      .setUv(uLocalMax, vLocalMin);
+                vertexBuffer.addVertex(matrix4f, x, y + maskTop, zLevel)
+                      .setUv(uLocalMin, vLocalMin);
             }
         }
-        BufferUploader.drawWithShader(vertexBuffer.end());
+        BufferUploader.drawWithShader(vertexBuffer.buildOrThrow());
         if (blend) {
             RenderSystem.disableBlend();
         }
     }
 
     // reverse-order iteration over children w/ built-in GuiElement check, runs a basic anyMatch with checker
-    public static boolean checkChildren(List<? extends GuiEventListener> children, Predicate<GuiElement> checker) {
+    public static <CHILD extends GuiEventListener> boolean checkChildren(List<? extends CHILD> children, Predicate<CHILD> checker) {
+        return findChild(children, checker) != null;
+    }
+
+    // reverse-order iteration over children w/ built-in GuiElement check, runs a basic anyMatch with checker
+    @Nullable
+    public static <CHILD extends GuiEventListener> CHILD findChild(List<? extends CHILD> children, Predicate<CHILD> checker) {
         for (int i = children.size() - 1; i >= 0; i--) {
-            Object obj = children.get(i);
-            if (obj instanceof GuiElement element && checker.test(element)) {
+            CHILD child = children.get(i);
+            if (checker.test(child)) {
+                return child;
+            }
+        }
+        return null;
+    }
+
+    // reverse-order iteration over children w/ built-in GuiElement check, runs a basic anyMatch with checker
+    public static <CHILD extends GuiEventListener> boolean checkChildren(List<? extends CHILD> children, double mouseX, double mouseY, MouseOverPredicate<CHILD> checker) {
+        return findChild(children, mouseX, mouseY, checker) != null;
+    }
+
+    @Nullable
+    public static <CHILD extends GuiEventListener> CHILD findChild(List<? extends CHILD> children, double mouseX, double mouseY, MouseOverPredicate<CHILD> checker) {
+        for (int i = children.size() - 1; i >= 0; i--) {
+            CHILD child = children.get(i);
+            if (checker.test(child, mouseX, mouseY)) {
+                return child;
+            }
+        }
+        return null;
+    }
+
+    @Nullable
+    public static <CHILD extends GuiEventListener> CHILD findChild(List<? extends CHILD> children, double mouseX, double mouseY, int button, MouseClickedPredicate<CHILD> checker) {
+        for (int i = children.size() - 1; i >= 0; i--) {
+            CHILD child = children.get(i);
+            if (checker.test(child, mouseX, mouseY, button)) {
+                return child;
+            }
+        }
+        return null;
+    }
+
+    public static <CHILD extends GuiEventListener> boolean checkChildren(List<? extends CHILD> children, int keyCode, int scanCode, int modifiers, KeyPressedPredicate<CHILD> checker) {
+        for (int i = children.size() - 1; i >= 0; i--) {
+            CHILD child = children.get(i);
+            if (checker.test(child, keyCode, scanCode, modifiers)) {
                 return true;
             }
         }
         return false;
     }
 
-    public static int drawString(GuiGraphics guiGraphics, Font font, Component component, float x, float y, int color, boolean drawShadow) {
-        return guiGraphics.drawString(font, component.getVisualOrderText(), x, y, color, drawShadow);
+    public static <CHILD extends GuiEventListener> boolean checkChildrenChar(List<? extends CHILD> children, char c, int keyCode, CharTypedPredicate<CHILD> checker) {
+        for (int i = children.size() - 1; i >= 0; i--) {
+            CHILD child = children.get(i);
+            if (checker.test(child, c, keyCode)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public interface MouseOverPredicate<ELEMENT> {
+
+        boolean test(ELEMENT element, double mouseX, double mouseY);
+    }
+
+    public interface MouseClickedPredicate<ELEMENT> {
+
+        boolean test(ELEMENT element, double mouseX, double mouseY, int button);
+    }
+
+    public interface KeyPressedPredicate<ELEMENT> {
+
+        boolean test(ELEMENT element, int keyCode, int scanCode, int modifiers);
+    }
+
+    public interface CharTypedPredicate<ELEMENT> {
+
+        boolean test(ELEMENT element, char c, int keyCode);
+    }
+
+    public static int drawStringNoFlush(GuiGraphics graphics, Font font, Component component, float x, float y, int color, boolean drawShadow) {
+        return drawStringNoFlush(graphics, graphics.pose().last().pose(), font, component, x, y, color, drawShadow);
+    }
+
+    public static int drawStringNoFlush(GuiGraphics graphics, Matrix4f matrix, Font font, Component component, float x, float y, int color, boolean drawShadow) {
+        //Copy of GuiGraphics#drawString(Font, FormattedCharSequence, float, float, int, boolean) but without the flush at the end
+        return font.drawInBatch(component.getVisualOrderText(), x, y, color, drawShadow, matrix, graphics.bufferSource(),
+              Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
     }
 
     public static void renderItem(GuiGraphics guiGraphics, @NotNull ItemStack stack, int xAxis, int yAxis, float scale, Font font, @Nullable String text, boolean overlay) {
@@ -210,6 +286,13 @@ public class GuiUtils {
                 Mekanism.logger.error("Failed to render stack into gui: {}", stack, e);
             }
         }
+    }
+
+    public static void renderBorder(GuiGraphics guiGraphics, int x, int y, int boxWidth, int boxHeight, int color) {
+        guiGraphics.hLine(x, x + boxWidth, y, color);
+        guiGraphics.hLine(x, x + boxWidth, y + boxHeight, color);
+        guiGraphics.vLine(x, y, y + boxHeight, color);
+        guiGraphics.vLine(x + boxWidth, y, y + boxHeight, color);
     }
 
     /**
@@ -251,8 +334,7 @@ public class GuiUtils {
         Matrix4f matrix4f = guiGraphics.pose().last().pose();
         profiler.pop();
 
-        BufferBuilder bufferbuilder = Tesselator.getInstance().getBuilder();
-        bufferbuilder.begin(Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
+        BufferBuilder buffer = Tesselator.getInstance().begin(Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
 
         profiler.push("blitting");
 
@@ -265,31 +347,30 @@ public class GuiUtils {
         cornerHeight = Math.min(cornerHeight, height / 2);
         edgeHeight = Math.min(edgeHeight, height / 2);
         if (width == uWidth && height == vHeight) {
-            blit(bufferbuilder, matrix4f, x, y, uOffset, vOffset, width, height, textureWidth, textureHeight);
+            blit(buffer, matrix4f, x, y, uOffset, vOffset, width, height, textureWidth, textureHeight);
         } else if (height == vHeight) {
-            blit(bufferbuilder, matrix4f, x, y, uOffset, vOffset, cornerWidth, height, textureWidth, textureHeight);
-            blitRepeating(bufferbuilder, matrix4f, x + cornerWidth, y, width - edgeWidth - cornerWidth, height, uOffset + cornerWidth, vOffset, uWidth - edgeWidth - cornerWidth, vHeight, textureWidth, textureHeight);
-            blit(bufferbuilder, matrix4f, x + width - edgeWidth, y, uOffset + uWidth - edgeWidth, vOffset, edgeWidth, height, textureWidth, textureHeight);
+            blit(buffer, matrix4f, x, y, uOffset, vOffset, cornerWidth, height, textureWidth, textureHeight);
+            blitRepeating(buffer, matrix4f, x + cornerWidth, y, width - edgeWidth - cornerWidth, height, uOffset + cornerWidth, vOffset, uWidth - edgeWidth - cornerWidth, vHeight, textureWidth, textureHeight);
+            blit(buffer, matrix4f, x + width - edgeWidth, y, uOffset + uWidth - edgeWidth, vOffset, edgeWidth, height, textureWidth, textureHeight);
         } else if (width == uWidth) {
-            blit(bufferbuilder, matrix4f, x, y, uOffset, vOffset, width, cornerHeight, textureWidth, textureHeight);
-            blitRepeating(bufferbuilder, matrix4f, x, y + cornerHeight, width, height - edgeHeight - cornerHeight, uOffset, vOffset + cornerHeight, uWidth, vHeight - edgeHeight - cornerHeight, textureWidth, textureHeight);
-            blit(bufferbuilder, matrix4f, x, y + height - edgeHeight, uOffset, vOffset + vHeight - edgeHeight, width, edgeHeight, textureWidth, textureHeight);
+            blit(buffer, matrix4f, x, y, uOffset, vOffset, width, cornerHeight, textureWidth, textureHeight);
+            blitRepeating(buffer, matrix4f, x, y + cornerHeight, width, height - edgeHeight - cornerHeight, uOffset, vOffset + cornerHeight, uWidth, vHeight - edgeHeight - cornerHeight, textureWidth, textureHeight);
+            blit(buffer, matrix4f, x, y + height - edgeHeight, uOffset, vOffset + vHeight - edgeHeight, width, edgeHeight, textureWidth, textureHeight);
         } else {
-            blit(bufferbuilder, matrix4f, x, y, uOffset, vOffset, cornerWidth, cornerHeight, textureWidth, textureHeight);
-            blitRepeating(bufferbuilder, matrix4f, x + cornerWidth, y, width - edgeWidth - cornerWidth, cornerHeight, uOffset + cornerWidth, vOffset, uWidth - edgeWidth - cornerWidth, cornerHeight, textureWidth, textureHeight);
-            blit(bufferbuilder, matrix4f, x + width - edgeWidth, y, uOffset + uWidth - edgeWidth, vOffset, edgeWidth, cornerHeight, textureWidth, textureHeight);
-            blit(bufferbuilder, matrix4f, x, y + height - edgeHeight, uOffset, vOffset + vHeight - edgeHeight, cornerWidth, edgeHeight, textureWidth, textureHeight);
-            blitRepeating(bufferbuilder, matrix4f, x + cornerWidth, y + height - edgeHeight, width - edgeWidth - cornerWidth, edgeHeight, uOffset + cornerWidth, vOffset + vHeight - edgeHeight, uWidth - edgeWidth - cornerWidth, edgeHeight, textureWidth, textureHeight);
-            blit(bufferbuilder, matrix4f, x + width - edgeWidth, y + height - edgeHeight, uOffset + uWidth - edgeWidth, vOffset + vHeight - edgeHeight, edgeWidth, edgeHeight, textureWidth, textureHeight);
-            blitRepeating(bufferbuilder, matrix4f, x, y + cornerHeight, cornerWidth, height - edgeHeight - cornerHeight, uOffset, vOffset + cornerHeight, cornerWidth, vHeight - edgeHeight - cornerHeight, textureWidth, textureHeight);
-            blitRepeating(bufferbuilder, matrix4f, x + cornerWidth, y + cornerHeight, width - edgeWidth - cornerWidth, height - edgeHeight - cornerHeight, uOffset + cornerWidth, vOffset + cornerHeight, uWidth - edgeWidth - cornerWidth, vHeight - edgeHeight - cornerHeight, textureWidth, textureHeight);
-            blitRepeating(bufferbuilder, matrix4f, x + width - edgeWidth, y + cornerHeight, cornerWidth, height - edgeHeight - cornerHeight, uOffset + uWidth - edgeWidth, vOffset + cornerHeight, edgeWidth, vHeight - edgeHeight - cornerHeight, textureWidth, textureHeight);
+            blit(buffer, matrix4f, x, y, uOffset, vOffset, cornerWidth, cornerHeight, textureWidth, textureHeight);
+            blitRepeating(buffer, matrix4f, x + cornerWidth, y, width - edgeWidth - cornerWidth, cornerHeight, uOffset + cornerWidth, vOffset, uWidth - edgeWidth - cornerWidth, cornerHeight, textureWidth, textureHeight);
+            blit(buffer, matrix4f, x + width - edgeWidth, y, uOffset + uWidth - edgeWidth, vOffset, edgeWidth, cornerHeight, textureWidth, textureHeight);
+            blit(buffer, matrix4f, x, y + height - edgeHeight, uOffset, vOffset + vHeight - edgeHeight, cornerWidth, edgeHeight, textureWidth, textureHeight);
+            blitRepeating(buffer, matrix4f, x + cornerWidth, y + height - edgeHeight, width - edgeWidth - cornerWidth, edgeHeight, uOffset + cornerWidth, vOffset + vHeight - edgeHeight, uWidth - edgeWidth - cornerWidth, edgeHeight, textureWidth, textureHeight);
+            blit(buffer, matrix4f, x + width - edgeWidth, y + height - edgeHeight, uOffset + uWidth - edgeWidth, vOffset + vHeight - edgeHeight, edgeWidth, edgeHeight, textureWidth, textureHeight);
+            blitRepeating(buffer, matrix4f, x, y + cornerHeight, cornerWidth, height - edgeHeight - cornerHeight, uOffset, vOffset + cornerHeight, cornerWidth, vHeight - edgeHeight - cornerHeight, textureWidth, textureHeight);
+            blitRepeating(buffer, matrix4f, x + cornerWidth, y + cornerHeight, width - edgeWidth - cornerWidth, height - edgeHeight - cornerHeight, uOffset + cornerWidth, vOffset + cornerHeight, uWidth - edgeWidth - cornerWidth, vHeight - edgeHeight - cornerHeight, textureWidth, textureHeight);
+            blitRepeating(buffer, matrix4f, x + width - edgeWidth, y + cornerHeight, cornerWidth, height - edgeHeight - cornerHeight, uOffset + uWidth - edgeWidth, vOffset + cornerHeight, edgeWidth, vHeight - edgeHeight - cornerHeight, textureWidth, textureHeight);
         }
         profiler.pop();
 
         profiler.push("drawing");
-        //cachedBuffer.bind();
-        BufferUploader.drawWithShader(bufferbuilder.end());
+        BufferUploader.drawWithShader(buffer.buildOrThrow());
 
         profiler.pop();
     }
@@ -299,10 +380,14 @@ public class GuiUtils {
     }
 
     private static void blit(BufferBuilder bufferbuilder, Matrix4f matrix4f, int pX, int pY, float pUOffset, float pVOffset, int pWidth, int pHeight, int pTextureWidth, int pTextureHeight) {
-        bufferbuilder.vertex(matrix4f, (float) pX, (float) pY, (float) 0).uv((pUOffset + 0.0F) / (float) pTextureWidth, (pVOffset + 0.0F) / (float) pTextureHeight).endVertex();
-        bufferbuilder.vertex(matrix4f, (float) pX, (float) (pY + pHeight), (float) 0).uv((pUOffset + 0.0F) / (float) pTextureWidth, (pVOffset + (float) pHeight) / (float) pTextureHeight).endVertex();
-        bufferbuilder.vertex(matrix4f, (float) (pX + pWidth), (float) (pY + pHeight), (float) 0).uv((pUOffset + (float) pWidth) / (float) pTextureWidth, (pVOffset + (float) pHeight) / (float) pTextureHeight).endVertex();
-        bufferbuilder.vertex(matrix4f, (float) (pX + pWidth), (float) pY, (float) 0).uv((pUOffset + (float) pWidth) / (float) pTextureWidth, (pVOffset + 0.0F) / (float) pTextureHeight).endVertex();
+        bufferbuilder.addVertex(matrix4f, pX, pY, 0)
+              .setUv(pUOffset / pTextureWidth, pVOffset / pTextureHeight);
+        bufferbuilder.addVertex(matrix4f, pX, pY + pHeight, 0)
+              .setUv(pUOffset / pTextureWidth, (pVOffset + pHeight) / pTextureHeight);
+        bufferbuilder.addVertex(matrix4f, pX + pWidth, pY + pHeight, 0)
+              .setUv((pUOffset + pWidth) / pTextureWidth, (pVOffset + pHeight) / pTextureHeight);
+        bufferbuilder.addVertex(matrix4f, pX + pWidth, pY, 0)
+              .setUv((pUOffset + pWidth) / pTextureWidth, pVOffset / pTextureHeight);
     }
 
     private static void blitRepeating(BufferBuilder bufferbuilder, Matrix4f matrix4f, int pX, int pY, int pWidth, int pHeight, int pUOffset, int pVOffset, int pSourceWidth, int pSourceHeight, int textureWidth, int textureHeight) {
@@ -325,7 +410,6 @@ public class GuiUtils {
 
     /**
      * Returns an iterator for dividing a value into slices of a specified size.
-     * <p>
      *
      * @param pTarget the value to be divided.
      * @param pTotal  the size of each slice.

@@ -1,69 +1,55 @@
 package mekanism.common.item.gear;
 
-import mekanism.api.annotations.NothingNullByDefault;
-import mekanism.common.Mekanism;
-import mekanism.common.capabilities.ItemCapabilityWrapper;
+import mekanism.common.capabilities.Capabilities;
+import mekanism.common.capabilities.ICapabilityAware;
 import mekanism.common.capabilities.radiation.item.RadiationShieldingHandler;
-import mekanism.common.integration.gender.GenderCapabilityHelper;
-import net.minecraft.nbt.CompoundTag;
+import mekanism.common.registries.MekanismArmorMaterials;
+import net.minecraft.core.Holder;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.ItemStack.TooltipPart;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.enchantment.Enchantment;
-import net.minecraftforge.common.capabilities.ICapabilityProvider;
+import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import org.jetbrains.annotations.NotNull;
 
-public class ItemHazmatSuitArmor extends ArmorItem {
+public class ItemHazmatSuitArmor extends ArmorItem implements ICapabilityAware {
 
-    private static final HazmatMaterial HAZMAT_MATERIAL = new HazmatMaterial();
-
-    public ItemHazmatSuitArmor(ArmorItem.Type armorType, Properties properties) {
-        super(HAZMAT_MATERIAL, armorType, properties.rarity(Rarity.UNCOMMON));
+    public ItemHazmatSuitArmor(Type armorType, Properties properties) {
+        super(MekanismArmorMaterials.HAZMAT, armorType, properties.rarity(Rarity.UNCOMMON).stacksTo(1));
     }
 
-    public static double getShieldingByArmor(ArmorItem.Type type) {
+    public static double getShieldingByArmor(Type type) {
         return switch (type) {
             case HELMET -> 0.25;
             case CHESTPLATE -> 0.4;
             case LEGGINGS -> 0.2;
             case BOOTS -> 0.15;
+            case BODY -> 0.0;
         };
     }
 
     @Override
-    public int getDefaultTooltipHideFlags(@NotNull ItemStack stack) {
-        return super.getDefaultTooltipHideFlags(stack) | TooltipPart.MODIFIERS.getMask();
-    }
-
-    @Override
-    public ICapabilityProvider initCapabilities(ItemStack stack, CompoundTag nbt) {
-        ItemCapabilityWrapper wrapper = new ItemCapabilityWrapper(stack, RadiationShieldingHandler.create(item -> getShieldingByArmor(getType())));
-        GenderCapabilityHelper.addGenderCapability(this, wrapper::add);
-        return wrapper;
+    public void attachCapabilities(RegisterCapabilitiesEvent event) {
+        event.registerItem(Capabilities.RADIATION_SHIELDING, (stack, ctx) -> RadiationShieldingHandler.create(getShieldingByArmor(getType())), this);
     }
 
     @Override
     public boolean isEnchantable(@NotNull ItemStack stack) {
-        return material.getEnchantmentValue() > 0 && super.isEnchantable(stack);
+        return material.value().enchantmentValue() > 0 && stack.getMaxStackSize() == 1;
     }
 
     @Override
-    public boolean isBookEnchantable(ItemStack stack, ItemStack book) {
+    public boolean isBookEnchantable(@NotNull ItemStack stack, @NotNull ItemStack book) {
         return isEnchantable(stack) && super.isBookEnchantable(stack, book);
     }
 
     @Override
-    public boolean canApplyAtEnchantingTable(ItemStack stack, Enchantment enchantment) {
-        return isEnchantable(stack) && super.canApplyAtEnchantingTable(stack, enchantment);
+    public boolean isPrimaryItemFor(@NotNull ItemStack stack, @NotNull Holder<Enchantment> enchantment) {
+        return isEnchantable(stack) && super.isPrimaryItemFor(stack, enchantment);
     }
 
-    @NothingNullByDefault
-    protected static class HazmatMaterial extends BaseSpecialArmorMaterial {
-
-        @Override
-        public String getName() {
-            return Mekanism.MODID + ":hazmat";
-        }
+    @Override
+    public boolean supportsEnchantment(@NotNull ItemStack stack, @NotNull Holder<Enchantment> enchantment) {
+        return isEnchantable(stack) && super.supportsEnchantment(stack, enchantment);
     }
 }

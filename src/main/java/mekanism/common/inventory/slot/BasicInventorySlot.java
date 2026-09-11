@@ -7,7 +7,8 @@ import java.util.function.Predicate;
 import mekanism.api.Action;
 import mekanism.api.AutomationType;
 import mekanism.api.IContentsListener;
-import mekanism.api.NBTConstants;
+import mekanism.api.SerializationConstants;
+import mekanism.api.SerializerHelper;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.functions.ConstantPredicates;
 import mekanism.api.inventory.IInventorySlot;
@@ -15,47 +16,50 @@ import mekanism.common.inventory.container.slot.ContainerSlotType;
 import mekanism.common.inventory.container.slot.InventoryContainerSlot;
 import mekanism.common.inventory.container.slot.SlotOverlay;
 import mekanism.common.inventory.warning.ISupportsWarning;
-import mekanism.common.util.NBTUtils;
-import mekanism.common.util.RegistryUtils;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.items.ItemHandlerHelper;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+//TODO: Should we make some sort of "ITickableSlot" or something that lets us tick a bunch of slots at once instead of having to manually call the relevant methods
 @NothingNullByDefault
 public class BasicInventorySlot implements IInventorySlot {
 
-    //TODO: Should we make some sort of "ITickableSlot" or something that lets us tick a bunch of slots at once instead of having to manually call the relevant methods
-    public static final Predicate<@NotNull ItemStack> alwaysTrue = ConstantPredicates.alwaysTrue();
-    public static final Predicate<@NotNull ItemStack> alwaysFalse = ConstantPredicates.alwaysFalse();
-    public static final BiPredicate<@NotNull ItemStack, @NotNull AutomationType> alwaysTrueBi = ConstantPredicates.alwaysTrueBi();
-    public static final BiPredicate<@NotNull ItemStack, @NotNull AutomationType> manualOnly = (stack, automationType) -> automationType == AutomationType.MANUAL;
-    public static final BiPredicate<@NotNull ItemStack, @NotNull AutomationType> internalOnly = ConstantPredicates.internalOnly();
-    public static final BiPredicate<@NotNull ItemStack, @NotNull AutomationType> notExternal = ConstantPredicates.notExternal();
-    public static final int DEFAULT_LIMIT = 64;
-
     public static BasicInventorySlot at(@Nullable IContentsListener listener, int x, int y) {
-        return at(alwaysTrue, listener, x, y);
+        return at(ConstantPredicates.alwaysTrue(), listener, x, y);
     }
 
     public static BasicInventorySlot at(Predicate<@NotNull ItemStack> validator, @Nullable IContentsListener listener, int x, int y) {
+        return at(validator, listener, x, y, Item.ABSOLUTE_MAX_STACK_SIZE);
+    }
+
+    public static BasicInventorySlot at(Predicate<@NotNull ItemStack> validator, @Nullable IContentsListener listener, int x, int y, int limit) {
         Objects.requireNonNull(validator, "Item validity check cannot be null");
-        return new BasicInventorySlot(alwaysTrueBi, alwaysTrueBi, validator, listener, x, y);
+        if (limit < 1) {
+            throw new IllegalArgumentException("Slots with a custom limit must allow at least one item");
+        }
+        return new BasicInventorySlot(limit, ConstantPredicates.alwaysTrueBi(), ConstantPredicates.alwaysTrueBi(), validator, listener, x, y);
     }
 
     public static BasicInventorySlot at(Predicate<@NotNull ItemStack> canExtract, Predicate<@NotNull ItemStack> canInsert, @Nullable IContentsListener listener, int x, int y) {
         Objects.requireNonNull(canExtract, "Extraction validity check cannot be null");
         Objects.requireNonNull(canInsert, "Insertion validity check cannot be null");
-        return new BasicInventorySlot(canExtract, canInsert, alwaysTrue, listener, x, y);
+        return new BasicInventorySlot(canExtract, canInsert, ConstantPredicates.alwaysTrue(), listener, x, y);
     }
 
     public static BasicInventorySlot at(BiPredicate<@NotNull ItemStack, @NotNull AutomationType> canExtract,
           BiPredicate<@NotNull ItemStack, @NotNull AutomationType> canInsert, @Nullable IContentsListener listener, int x, int y) {
+        return at(canExtract, canInsert, ConstantPredicates.alwaysTrue(), listener, x, y);
+    }
+
+    public static BasicInventorySlot at(BiPredicate<@NotNull ItemStack, @NotNull AutomationType> canExtract,
+          BiPredicate<@NotNull ItemStack, @NotNull AutomationType> canInsert, Predicate<@NotNull ItemStack> validator, @Nullable IContentsListener listener, int x, int y) {
         Objects.requireNonNull(canExtract, "Extraction validity check cannot be null");
         Objects.requireNonNull(canInsert, "Insertion validity check cannot be null");
-        return new BasicInventorySlot(canExtract, canInsert, alwaysTrue, listener, x, y);
+        Objects.requireNonNull(validator, "Item validity check cannot be null");
+        return new BasicInventorySlot(canExtract, canInsert, validator, listener, x, y);
     }
 
     /**
@@ -86,7 +90,7 @@ public class BasicInventorySlot implements IInventorySlot {
 
     protected BasicInventorySlot(BiPredicate<@NotNull ItemStack, @NotNull AutomationType> canExtract, BiPredicate<@NotNull ItemStack, @NotNull AutomationType> canInsert,
           Predicate<@NotNull ItemStack> validator, @Nullable IContentsListener listener, int x, int y) {
-        this(DEFAULT_LIMIT, canExtract, canInsert, validator, listener, x, y);
+        this(Item.ABSOLUTE_MAX_STACK_SIZE, canExtract, canInsert, validator, listener, x, y);
     }
 
     protected BasicInventorySlot(int limit, BiPredicate<@NotNull ItemStack, @NotNull AutomationType> canExtract,
@@ -100,6 +104,10 @@ public class BasicInventorySlot implements IInventorySlot {
         this.y = y;
     }
 
+    public int getGuiX() {
+        return x;
+    }
+
     @Override
     public ItemStack getStack() {
         return current;
@@ -110,7 +118,7 @@ public class BasicInventorySlot implements IInventorySlot {
         setStack(stack, true);
     }
 
-    protected void setStackUnchecked(ItemStack stack) {
+    public void setStackUnchecked(ItemStack stack) {
         setStack(stack, false);
     }
 
@@ -126,24 +134,25 @@ public class BasicInventorySlot implements IInventorySlot {
         } else {
             //Throws a RuntimeException as IItemHandlerModifiable specifies is allowed when something unexpected happens
             // As setStack is more meant to be used as an internal method
-            throw new RuntimeException("Invalid stack for slot: " + RegistryUtils.getName(stack.getItem()) + " " + stack.getCount() + " " + stack.getTag());
+            throw new RuntimeException("Invalid stack for slot: " + stack + " " + stack.getComponentsPatch());
         }
         onContentsChanged();
     }
 
     @Override
     public ItemStack insertItem(ItemStack stack, Action action, AutomationType automationType) {
-        if (stack.isEmpty() || !isItemValid(stack) || !canInsert.test(stack, automationType)) {
-            //"Fail quick" if the given stack is empty, or we can never insert the item or currently are unable to insert it
-            return stack;
+        if (stack.isEmpty()) {
+            //"Fail quick" if the given stack is empty
+            return ItemStack.EMPTY;
         }
-        int needed = getLimit(stack) - getCount();
-        if (needed <= 0) {
-            //Fail if we are a full slot
+        //Validate that we aren't at max stack size before we try to see if we can insert the item, as on average this will be a cheaper check
+        int needed = getLimit(stack) - current.getCount();
+        if (needed <= 0 || !isItemValidForInsertion(stack, automationType)) {
+            //Fail if we are a full slot, or we can never insert the item or currently are unable to insert it
             return stack;
         }
         boolean sameType = false;
-        if (isEmpty() || (sameType = ItemHandlerHelper.canItemStacksStack(current, stack))) {
+        if (current.isEmpty() || (sameType = ItemStack.isSameItemSameComponents(current, stack))) {
             int toAdd = Math.min(stack.getCount(), needed);
             if (action.execute()) {
                 //If we want to actually insert the item, then update the current item
@@ -166,13 +175,13 @@ public class BasicInventorySlot implements IInventorySlot {
 
     @Override
     public ItemStack extractItem(int amount, Action action, AutomationType automationType) {
-        if (isEmpty() || amount < 1 || !canExtract.test(current, automationType)) {
+        if (current.isEmpty() || amount < 1 || !canExtract.test(current, automationType)) {
             //"Fail quick" if we don't can never extract from this slot, have an item stored, or the amount being requested is less than one
             return ItemStack.EMPTY;
         }
         //Ensure that if this slot allows going past the max stack size of an item, that when extracting we don't act as if we have more than
         // the max stack size, as the JavaDoc for IItemHandler requires that the returned stack is not larger than its stack size
-        int currentAmount = Math.min(getCount(), current.getMaxStackSize());
+        int currentAmount = Math.min(current.getCount(), current.getMaxStackSize());
         if (currentAmount < amount) {
             //If we are trying to extract more than we have, just change it so that we are extracting it all
             amount = currentAmount;
@@ -244,14 +253,12 @@ public class BasicInventorySlot implements IInventorySlot {
     }
 
     /**
-     * {@inheritDoc}
-     *
      * @implNote Overwritten so that if we decide to change to returning a cached/copy of our stack in {@link #getStack()}, we can optimize out the copying, and can also
      * directly modify our stack instead of having to make a copy.
      */
     @Override
     public int setStackSize(int amount, Action action) {
-        if (isEmpty()) {
+        if (current.isEmpty()) {
             return 0;
         } else if (amount <= 0) {
             if (action.execute()) {
@@ -263,7 +270,7 @@ public class BasicInventorySlot implements IInventorySlot {
         if (amount > maxStackSize) {
             amount = maxStackSize;
         }
-        if (getCount() == amount || action.simulate()) {
+        if (current.getCount() == amount || action.simulate()) {
             //If our size is not changing, or we are only simulating the change, don't do anything
             return amount;
         }
@@ -273,14 +280,15 @@ public class BasicInventorySlot implements IInventorySlot {
     }
 
     /**
-     * {@inheritDoc}
-     *
      * @implNote Overwritten so that if we decide to change to returning a cached/copy of our stack in {@link #getStack()}, we can optimize out the copying.
      */
     @Override
     public int growStack(int amount, Action action) {
-        int current = getCount();
-        if (amount > 0) {
+        int current = this.current.getCount();
+        if (current == 0) {
+            //"Fail quick" if our stack is empty, so we can't grow it
+            return 0;
+        } else if (amount > 0) {
             //Cap adding amount at how much we need, so that we don't risk integer overflow
             amount = Math.min(amount, getLimit(this.current));
         }
@@ -289,8 +297,6 @@ public class BasicInventorySlot implements IInventorySlot {
     }
 
     /**
-     * {@inheritDoc}
-     *
      * @implNote Overwritten so that if we decide to change to returning a cached/copy of our stack in {@link #getStack()}, we can optimize out the copying.
      */
     @Override
@@ -299,8 +305,6 @@ public class BasicInventorySlot implements IInventorySlot {
     }
 
     /**
-     * {@inheritDoc}
-     *
      * @implNote Overwritten so that if we decide to change to returning a cached/copy of our stack in {@link #getStack()}, we can optimize out the copying.
      */
     @Override
@@ -308,27 +312,22 @@ public class BasicInventorySlot implements IInventorySlot {
         return current.getCount();
     }
 
+    /**
+     * @implNote Overwritten so that if we decide to change to returning a cached/copy of our stack in {@link #getStack()}, we can optimize out the copying.
+     */
     @Override
-    public CompoundTag serializeNBT() {
+    public CompoundTag serializeNBT(HolderLookup.Provider provider) {
         CompoundTag nbt = new CompoundTag();
         if (!isEmpty()) {
-            nbt.put(NBTConstants.ITEM, current.serializeNBT());
-            if (getCount() > current.getMaxStackSize()) {
-                nbt.putInt(NBTConstants.SIZE_OVERRIDE, getCount());
-            }
+            nbt.put(SerializationConstants.ITEM, SerializerHelper.saveOversized(provider, current));
         }
         return nbt;
     }
 
     @Override
-    public void deserializeNBT(CompoundTag nbt) {
-        ItemStack stack = ItemStack.EMPTY;
-        if (nbt.contains(NBTConstants.ITEM, Tag.TAG_COMPOUND)) {
-            stack = ItemStack.of(nbt.getCompound(NBTConstants.ITEM));
-            NBTUtils.setIntIfPresent(nbt, NBTConstants.SIZE_OVERRIDE, stack::setCount);
-        }
+    public void deserializeNBT(HolderLookup.Provider provider, CompoundTag nbt) {
         //Set the stack in an unchecked way so that if it is no longer valid, we don't end up
         // crashing due to the stack not being valid
-        setStackUnchecked(stack);
+        setStackUnchecked(SerializerHelper.parseOversizedOptional(provider, nbt.getCompound(SerializationConstants.ITEM)));
     }
 }

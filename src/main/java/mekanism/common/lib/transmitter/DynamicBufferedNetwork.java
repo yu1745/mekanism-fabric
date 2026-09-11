@@ -1,17 +1,17 @@
 package mekanism.common.lib.transmitter;
 
+import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
-import java.util.function.LongConsumer;
 import mekanism.common.content.network.transmitter.BufferedTransmitter;
 import mekanism.common.lib.math.Range3D;
 import mekanism.common.util.WorldUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.ChunkPos;
-import net.minecraftforge.eventbus.api.Event;
+import net.neoforged.bus.api.Event;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -56,7 +56,7 @@ public abstract class DynamicBufferedNetwork<ACCEPTOR, NETWORK extends DynamicBu
     @Override
     protected void addTransmitterFromCommit(TRANSMITTER transmitter) {
         super.addTransmitterFromCommit(transmitter);
-        chunks.add(ChunkPos.asLong(transmitter.getTilePos()));
+        chunks.add(ChunkPos.asLong(transmitter.getBlockPos()));
         //Update the capacity here, to make sure that we can actually absorb the buffer properly
         updateCapacity(transmitter);
         absorbBuffer(transmitter);
@@ -128,7 +128,7 @@ public abstract class DynamicBufferedNetwork<ACCEPTOR, NETWORK extends DynamicBu
 
     public synchronized void updateCapacity() {
         long sum = 0;
-        for (TRANSMITTER transmitter : transmitters) {
+        for (TRANSMITTER transmitter : getTransmitters()) {
             long transmitterCapacity = transmitter.getCapacity();
             if (transmitterCapacity > Long.MAX_VALUE - capacity) {
                 //Ensure we don't overflow
@@ -159,7 +159,7 @@ public abstract class DynamicBufferedNetwork<ACCEPTOR, NETWORK extends DynamicBu
         if (world == null) {
             //If the world is null, try falling back to the trigger transmitter's world.
             // Note: This also in theory could be null, so we double-check it is not before grabbing the game time
-            world = triggerTransmitter.getTileWorld();
+            world = triggerTransmitter.getLevel();
         }
         if (world != null && world.getGameTime() != lastSaveShareWriteTime) {
             lastSaveShareWriteTime = world.getGameTime();
@@ -170,7 +170,10 @@ public abstract class DynamicBufferedNetwork<ACCEPTOR, NETWORK extends DynamicBu
     public void markDirty() {
         if (world != null && !world.isClientSide && world.getGameTime() != lastMarkDirtyTime) {
             lastMarkDirtyTime = world.getGameTime();
-            chunks.forEach((LongConsumer) chunk -> WorldUtils.markChunkDirty(world, WorldUtils.getBlockPosFromChunkPos(chunk)));
+            for (LongIterator iterator = chunks.iterator(); iterator.hasNext(); ) {
+                long chunk = iterator.nextLong();
+                WorldUtils.markChunkDirty(world, ChunkPos.getX(chunk), ChunkPos.getZ(chunk));
+            }
         }
     }
 
@@ -191,8 +194,8 @@ public abstract class DynamicBufferedNetwork<ACCEPTOR, NETWORK extends DynamicBu
         int minZ = 0;
         int maxX = 0;
         int maxZ = 0;
-        for (TRANSMITTER transmitter : transmitters) {
-            BlockPos pos = transmitter.getTilePos();
+        for (TRANSMITTER transmitter : getTransmitters()) {
+            BlockPos pos = transmitter.getBlockPos();
             if (initialized) {
                 if (pos.getX() < minX) {
                     minX = pos.getX();

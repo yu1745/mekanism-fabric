@@ -2,8 +2,7 @@ package mekanism.common.tile.multiblock;
 
 import java.util.LinkedList;
 import java.util.Queue;
-import mekanism.api.NBTConstants;
-import mekanism.api.providers.IBlockProvider;
+import mekanism.api.SerializationConstants;
 import mekanism.common.Mekanism;
 import mekanism.common.content.sps.SPSMultiblockData;
 import mekanism.common.lib.multiblock.MultiblockManager;
@@ -12,7 +11,10 @@ import mekanism.common.registries.MekanismBlocks;
 import mekanism.common.tile.prefab.TileEntityMultiblock;
 import mekanism.common.util.NBTUtils;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
 
@@ -27,7 +29,7 @@ public class TileEntitySPSCasing extends TileEntityMultiblock<SPSMultiblockData>
         this(MekanismBlocks.SPS_CASING, pos, state);
     }
 
-    public TileEntitySPSCasing(IBlockProvider provider, BlockPos pos, BlockState state) {
+    public TileEntitySPSCasing(Holder<Block> provider, BlockPos pos, BlockState state) {
         super(provider, pos, state);
     }
 
@@ -83,16 +85,16 @@ public class TileEntitySPSCasing extends TileEntityMultiblock<SPSMultiblockData>
 
     @NotNull
     @Override
-    public CompoundTag getReducedUpdateTag() {
-        CompoundTag updateTag = super.getReducedUpdateTag();
+    public CompoundTag getReducedUpdateTag(@NotNull HolderLookup.Provider provider) {
+        CompoundTag updateTag = super.getReducedUpdateTag(provider);
         SPSMultiblockData multiblock = getMultiblock();
-        updateTag.putBoolean(NBTConstants.HANDLE_SOUND, multiblock.isFormed() && multiblock.handlesSound(this) && multiblock.lastProcessed > 0);
+        updateTag.putBoolean(SerializationConstants.HANDLE_SOUND, multiblock.isFormed() && multiblock.handlesSound(this) && multiblock.lastProcessed > 0);
         return updateTag;
     }
 
     @Override
-    public void handleUpdateTag(@NotNull CompoundTag tag) {
-        super.handleUpdateTag(tag);
-        NBTUtils.setBooleanIfPresent(tag, NBTConstants.HANDLE_SOUND, value -> handleSound = value);
+    public void handleUpdateTag(@NotNull CompoundTag tag, @NotNull HolderLookup.Provider provider) {
+        super.handleUpdateTag(tag, provider);
+        NBTUtils.setBooleanIfPresent(tag, SerializationConstants.HANDLE_SOUND, value -> handleSound = value);
     }
 }

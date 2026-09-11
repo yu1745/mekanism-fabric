@@ -1,48 +1,17 @@
 package mekanism.api.recipes;
 
-import java.util.Objects;
-import mekanism.api.inventory.IgnoredIInventory;
-import net.minecraft.core.RegistryAccess;
-import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.resources.ResourceLocation;
+import mekanism.api.MekanismAPI;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Recipe;
-import net.minecraft.world.level.Level;
+import net.minecraft.world.item.crafting.RecipeInput;
 import org.jetbrains.annotations.NotNull;
 
 /**
  * Base class for helping wrap our recipes into IRecipes.
  */
-public abstract class MekanismRecipe implements Recipe<IgnoredIInventory> {//TODO: Should we make implementations override equals and hashcode?
-
-    private final ResourceLocation id;
-
-    /**
-     * @param id Recipe name.
-     */
-    protected MekanismRecipe(ResourceLocation id) {
-        this.id = Objects.requireNonNull(id, "Recipe name cannot be null.");
-    }
-
-    /**
-     * Writes this recipe to a PacketBuffer.
-     *
-     * @param buffer The buffer to write to.
-     */
-    public abstract void write(FriendlyByteBuf buffer);
-
-    @NotNull
-    @Override
-    public ResourceLocation getId() {
-        return id;
-    }
-
-    @Override
-    public boolean matches(@NotNull IgnoredIInventory inv, @NotNull Level world) {
-        //TODO: Decide if we ever want to make use of this method
-        //Default to not being able to match incomplete recipes though
-        return !isIncomplete();
-    }
+public abstract class MekanismRecipe<INPUT extends RecipeInput> implements Recipe<INPUT> {
+    //TODO: Should we make implementations override equals and hashcode?
 
     @Override
     public boolean isSpecial() {
@@ -55,11 +24,14 @@ public abstract class MekanismRecipe implements Recipe<IgnoredIInventory> {//TOD
     @Override
     public abstract boolean isIncomplete();
 
-    public void logMissingTags() {}
+    //todo 1.21.5 or 1.22: make this abstract
+    public void logMissingTags() {
+        MekanismAPI.logger.error("Please implement logMissingTags(): {}", this);
+    }
 
     @NotNull
     @Override
-    public ItemStack assemble(@NotNull IgnoredIInventory inv, @NotNull RegistryAccess registryAccess) {
+    public ItemStack assemble(@NotNull INPUT input, @NotNull HolderLookup.Provider provider) {
         return ItemStack.EMPTY;
     }
 
@@ -70,7 +42,7 @@ public abstract class MekanismRecipe implements Recipe<IgnoredIInventory> {//TOD
 
     @NotNull
     @Override
-    public ItemStack getResultItem(@NotNull RegistryAccess registryAccess) {
+    public ItemStack getResultItem(@NotNull HolderLookup.Provider provider) {
         return ItemStack.EMPTY;
     }
 }

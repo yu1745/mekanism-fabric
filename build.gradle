@@ -3,50 +3,54 @@ import com.modrinth.minotaur.dependencies.ModDependency
 import com.modrinth.minotaur.dependencies.VersionDependency
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
-import mekanism.MergeJars
+import mekanism.AllJar
+import mekanism.MergeModuleResources
+import mekanism.OptimizePng
+import mekanism.OutputChangelog
 import net.darkhax.curseforgegradle.TaskPublishCurseForge
 import net.darkhax.curseforgegradle.UploadArtifact
-import net.minecraftforge.gradle.common.util.RunConfig
-import net.minecraftforge.gradle.userdev.tasks.RenameJarInPlace
+import org.gradle.buildconfiguration.tasks.UpdateDaemonJvm
 
 import java.util.function.Consumer
 
 plugins {
-    id 'org.ajoberstar.grgit.service' version '5.2.0'
-    id 'net.darkhax.curseforgegradle' version '1.1.16'
-    id "com.modrinth.minotaur" version "2.+"
-    id 'java'
-    id 'eclipse'
-    id 'idea'
-    id 'maven-publish'
-    id 'net.neoforged.gradle' version '[6.0.18,6.2)'
-    id 'org.parchmentmc.librarian.forgegradle' version '1.+'
+    id('org.ajoberstar.grgit.service')//Version declared in buildSrc
+    id('net.darkhax.curseforgegradle').version('1.1.26')
+    id('com.modrinth.minotaur').version('2.8.8')
+    id('java')
+    id('eclipse')
+    id('idea')
+    id('maven-publish')
+    id('net.neoforged.moddev').version('2.0.107')//https://projects.neoforged.net/neoforged/moddevgradle
 }
 
-tasks.named('wrapper', Wrapper).configure {
+tasks.named('wrapper', Wrapper) {
     //Define wrapper values here so as to not have to always do so when updating gradlew.properties
-    gradleVersion = '8.4'
+    gradleVersion = '9.0.0'
     distributionType = Wrapper.DistributionType.ALL
 }
 
-defaultTasks 'build'
+tasks.named('updateDaemonJvm', UpdateDaemonJvm) {
+    languageVersion = JavaLanguageVersion.of("${java_version}")
+}
+
+defaultTasks('build')
 
 idea {
     module {
         //Exclude directories from being managed
-        for (String excludeDirName in ["run", "runGameTests", "out", "logs", "gradle"]) {
-            excludeDirs.add(new File(projectDir, excludeDirName))
+        for (String excludeDirName : ['runs', 'out', 'logs', 'gradle']) {
+            excludeDirs.add(file(excludeDirName))
         }
+        //Tell IDEA to always download sources/javadoc artifacts from maven.
+        downloadJavadoc = true
+        downloadSources = true
     }
 }
 
 ext {
-    versionProperties = ["version"       : mod_version, "mc_version": minecraft_version_range, "forge_version": forge_version_range,
-                         "loader_version": loader_version_range, "crafttweaker_version": crafttweaker_version_range, "curios_version": curios_version_range,
-                         "jei_version": jei_version_range, "json_things_version": json_things_version_range, "wthit_version": wthit_version_range]
-    jsonPatterns = ["**/*.json", "**/*.mcmeta"]
-    secondaryModules = ['additions', 'defense', 'generators', 'tools']
-    extraTypes = ['datagen', 'gameTest']
+    secondaryModules = ['additions', 'generators', 'tools']
+    extraTypes = ['datagen']
 }
 
 sourceSets {
@@ -56,41 +60,54 @@ sourceSets {
     }
     main {
         resources {
-            include '**/**'
+            include('**/**')
             // copy everything else, but blender and bbmodel files.
-            exclude '**/*.blend'
-            exclude '**/*.bbmodel'
+            // And also exclude the cache of the generated data from what gets built
+            exclude('**/*.blend', '**/*.bbmodel', '.cache')
             //Add the generated main module resources
             srcDirs += ['src/datagen/generated/mekanism']
-            //But exclude the cache of the generated data from what gets built
-            exclude '.cache'
         }
         compileClasspath += api.output
-        runtimeClasspath += api.output
     }
     test {
         //The test module has no resources
         resources.srcDirs = []
         //Add the api to the output, all other ones that need to will get added via setupExtraSourceSets
         compileClasspath += api.output
-        runtimeClasspath += api.output
+    }
+    gameTest {
+        compileClasspath += api.output
+        resources {
+            srcDirs += ['src/gameTest/generated']
+        }
+    }
+    // These source-sets only exist for the sake of assembling a dependency graph
+    // for IntelliJ. Each of these will become an IntelliJ module when the project is imported,
+    // and will be set as the "main module" for the IntelliJ runs. A compile dependency
+    // on the other source sets is enough, since runtime classpath is managed by MDG anyway.
+    runMain {
+        runtimeClasspath += main.runtimeClasspath + api.runtimeClasspath
+        compileClasspath += main.output + api.output
+    }
+    runData {
+        compileClasspath += runMain.compileClasspath
+        runtimeClasspath += runMain.runtimeClasspath
     }
 }
 
 configurations {
+    //Make sure all our sub source set stuff extends the proper base methods so that
+    // they can see all the dependencies we have in dependencies including neo
+    extendConfigurations(implementation, apiImplementation, testImplementation)
+    extendConfigurations(compileOnly, apiCompileOnly, testCompileOnly)
+    extendConfigurations(runtimeOnly, apiRuntimeOnly)
+    extendConfigurations(localRuntime, apiLocalRuntime)
     datagenNonMod
 }
 
 //Add all extra source sets that the main sourceSet should have
 setupExtraSourceSets(sourceSets.main)
-
-configurations {
-    //Make sure all our sub source set stuff extends the proper base methods so that
-    // they can see all the dependencies we have in dependencies including forge
-    extendConfigurations(implementation, apiImplementation, testImplementation)
-    extendConfigurations(compileOnly, apiCompileOnly, testCompileOnly)
-    extendConfigurations(runtimeOnly, apiRuntimeOnly)
-}
+setupExtraSourceSets(sourceSets.gameTest, false)
 
 //Create sourceSets and configurations for each of the additional modules in src/$name and adds a reference to
 // the corresponding data gen's resource directory excluding the cache. It also adds the api and main mekanism
@@ -102,7 +119,7 @@ for (String name : secondaryModules) {
         //Add the generated module resources
         srcDirs += ["src/datagen/generated/mekanism${name}"]
         //But exclude the cache of the generated data from what gets built
-        exclude '.cache'
+        exclude('.cache')
     }
     sourceSet.compileClasspath += sourceSets.api.output
     sourceSet.compileClasspath += sourceSets.main.output
@@ -110,52 +127,69 @@ for (String name : secondaryModules) {
     setupExtraSourceSets(sourceSet)
 }
 
-//Setup the UPDATE_SOURCESET property in case we are doing any remappings
-project.ext."UPDATE_SOURCESETS" = project.sourceSets.collect { it.name }.join(';')
-
-def setupExtraSourceSets(SourceSet base) {
+def setupExtraSourceSets(SourceSet base, boolean includeExtra = true) {
     //Expose the base module to junit
     project.sourceSets.test.compileClasspath += base.output
-    project.sourceSets.test.runtimeClasspath += base.output
+    if (base != project.sourceSets.gameTest) {
+        project.sourceSets.gameTest.compileClasspath += base.output
+    }
+    // Add the directory where Gradle would usually put the AP sources explicitly so IntelliJ picks it up
+    // If we don't do this, IJ seems to run a weird heuristic on where to put the AP sources and put them
+    // into the generated resource directory instead
+    base.java.srcDir project.file("build/generated/sources/annotationProcessor/java/${base.name}")
     //Setup and extend configurations for alternate modules. First by making the implementation, compileOnly, runtimeOnly equivalents
     // for those modules extend the main ones
-    def baseImplementation = project.configurations.maybeCreate(base.getTaskName(null, "implementation"))
-    def baseCompileOnly = project.configurations.maybeCreate(base.getTaskName(null, "compileOnly"))
-    def baseRuntimeOnly = project.configurations.maybeCreate(base.getTaskName(null, "runtimeOnly"))
+    def baseImplementation = project.configurations.maybeCreate(base.getTaskName(null, 'implementation'))
+    def baseCompileOnly = project.configurations.maybeCreate(base.getTaskName(null, 'compileOnly'))
+    def baseRuntimeOnly = project.configurations.maybeCreate(base.getTaskName(null, 'runtimeOnly'))
+    def baseLocalRuntime = project.configurations.maybeCreate(base.getTaskName(null, 'localRuntime'))
     if (base != project.sourceSets.main) {
         // If this is a secondary module then make the base tasks extend the builtin ones
-        baseImplementation.extendsFrom(project.configurations.getByName("implementation"))
-        baseCompileOnly.extendsFrom(project.configurations.getByName("compileOnly"))
-        baseRuntimeOnly.extendsFrom(project.configurations.getByName("runtimeOnly"))
+        baseImplementation.extendsFrom(project.configurations.named('implementation').get())
+        baseCompileOnly.extendsFrom(project.configurations.named('compileOnly').get())
+        baseRuntimeOnly.extendsFrom(project.configurations.named('runtimeOnly').get())
+        baseLocalRuntime.extendsFrom(project.configurations.named('localRuntime').get())
     }
-    //And then setup and have all the extra sourceSets have their configurations extend the ones for the base module so that they can
-    // properly access the dependency
-    for (String extraType : extraTypes) {
-        //Setup a source set in extraType/$name
-        def extraSourceSet = setupExtraSourceSet(base, extraType)
-        //And then setup the configurations for it
-        def implExtends = [baseImplementation]
-        if (extraType == 'datagen'){
-            implExtends.add(project.configurations.getByName("datagenNonMod"))
+    base.runtimeClasspath += baseLocalRuntime
+    if (includeExtra) {
+        //And then setup and have all the extra sourceSets have their configurations extend the ones for the base module so that they can
+        // properly access the dependency
+        for (String extraType : extraTypes) {
+            //Setup a source set in extraType/$name
+            def extraSourceSet = setupExtraSourceSet(base, extraType)
+            //And then setup the configurations for it
+            def implExtends = [baseImplementation]
+            if (extraType == 'datagen') {
+                implExtends.add(project.configurations.named('datagenNonMod').get())
+                sourceSets.runData.compileClasspath += extraSourceSet.output
+                sourceSets.runData.runtimeClasspath += extraSourceSet.runtimeClasspath
+            }
+            project.configurations.maybeCreate(extraSourceSet.getTaskName(null, 'implementation')).extendsFrom(*implExtends)
+            project.configurations.maybeCreate(extraSourceSet.getTaskName(null, 'compileOnly')).extendsFrom(baseCompileOnly)
+            project.configurations.maybeCreate(extraSourceSet.getTaskName(null, 'runtimeOnly')).extendsFrom(baseRuntimeOnly)
+            project.configurations.maybeCreate(extraSourceSet.getTaskName(null, 'localRuntime')).extendsFrom(baseLocalRuntime)
         }
-        project.configurations.maybeCreate(extraSourceSet.getTaskName(null, "implementation")).extendsFrom(*implExtends)
-        project.configurations.maybeCreate(extraSourceSet.getTaskName(null, "compileOnly")).extendsFrom(baseCompileOnly)
-        project.configurations.maybeCreate(extraSourceSet.getTaskName(null, "runtimeOnly")).extendsFrom(baseRuntimeOnly)
+    }
+    if (base != project.sourceSets.gameTest) {
+        sourceSets.runMain.compileClasspath += base.output
+        sourceSets.runMain.runtimeClasspath += base.runtimeClasspath
     }
 }
 
 SourceSet setupExtraSourceSet(SourceSet baseSourceSet, String extra) {
-    def name = baseSourceSet.getName()
+    def name = baseSourceSet.name
     def extraSourceSet = sourceSets.create(baseSourceSet.getTaskName(extra, null))
     extraSourceSet.java.srcDirs = ["src/${extra}/${name}/java"]
     //Resources folder for if we have anything get created by our annotation processors or in the case of game tests, for any nbt presets
     extraSourceSet.resources.srcDirs = ["src/${extra}/${name}/resources"]
     extraSourceSet.compileClasspath += project.sourceSets.api.output
     extraSourceSet.compileClasspath += project.sourceSets.main.output
+    extraSourceSet.runtimeClasspath += project.sourceSets.main.runtimeClasspath
     if (baseSourceSet != project.sourceSets.main) {
         //If the base sourceSet is main it already is the extra source set and has a reference to the base one from before this if statement
-        extraSourceSet.compileClasspath += getExtraSourceSet(project.sourceSets.main, extra).output
+        extraSourceSet.compileClasspath += getExtraSourceSet(project.sourceSets.main, extra).get().output
         extraSourceSet.compileClasspath += baseSourceSet.output
+        extraSourceSet.runtimeClasspath += baseSourceSet.runtimeClasspath
     }
     return extraSourceSet
 }
@@ -166,91 +200,59 @@ static void extendConfigurations(Configuration base, Configuration... configurat
     }
 }
 
-SourceSet getExtraSourceSet(String base, String name) {
-    return getExtraSourceSet(project.sourceSets.getByName(base), name)
-}
-
-SourceSet getExtraSourceSet(SourceSet base, String name) {
-    return project.sourceSets.getByName(base.getTaskName(name, null))
+Provider<SourceSet> getExtraSourceSet(SourceSet base, String name) {
+    return project.sourceSets.named(base.getTaskName(name, null))
 }
 
 setupTasks(sourceSets.main)
 for (String name : secondaryModules) {
-    setupTasks(sourceSets.getByName(name))
+    setupTasks(sourceSets.named(name).get())
 }
 
 def setupTasks(SourceSet sourceSet) {
-    def output = sourceSet.name
-    def compileTask = tasks.named(sourceSet.getCompileJavaTaskName(), JavaCompile)
-    def replaceResourceTask = tasks.register(sourceSet.getTaskName("replace", "resources"), Copy, {
-        setGroup("replace resources")
-        outputs.upToDateWhen { false }
-        def modsToml = copySpec {
-            from(sourceSet.resources) {
-                include "META-INF/mods.toml"
-                expand versionProperties
-            }
-        }
-        //Copy it into the build dir
-        with(modsToml)
-        into "$buildDir/resources/${output}/"
-        //If IntelliJ's output dir exists, copy it there as well
-        def intellijPath = sourceSet == project.sourceSets.main ? "production" : output
-        if (new File("$rootDir/out/${intellijPath}/resources/").exists()) {
-            copy {
-                with(modsToml)
-                into "$rootDir/out/${intellijPath}/resources/"
-            }
-        }
-        //If Eclipse's output dir exists, copy it there as well
-        if (new File("$rootDir/bin/${output}/").exists()) {
-            copy {
-                with(modsToml)
-                into "$rootDir/bin/${output}/"
-            }
-        }
-    })
-    //Set the various variables/settings for the different process resources tasks
-    tasks.named(sourceSet.getProcessResourcesTaskName(), ProcessResources).configure {
-        setGroup("process resources")
-        duplicatesStrategy(DuplicatesStrategy.FAIL)
-        exclude('META-INF/mods.toml')
-        from("${projectDir}") { include 'logo.png' }
-        //Depend on the compile task so that we can map the computer methods as needed
-        dependsOn(compileTask)
-        finalizedBy(replaceResourceTask)
-        doLast {
-            fileTree(dir: getOutputs().getFiles().getAsPath(), includes: jsonPatterns).each {
-                File file -> file.setText(JsonOutput.toJson(new JsonSlurper().parse(file)))
-            }
-        }
-    }
-    tasks.named(sourceSet.getCompileJavaTaskName(), JavaCompile).configure { setGroup("compile") }
-    for (String extraType : extraTypes) {
-        def extraSourceSet = getExtraSourceSet(sourceSet, extraType)
-        tasks.named(extraSourceSet.getProcessResourcesTaskName(), ProcessResources).configure {
-            setGroup("process resources")
-            dependsOn(compileTask)
-        }
-        tasks.named(extraSourceSet.getCompileJavaTaskName(), JavaCompile).configure { setGroup("compile") }
-    }
-    //Make the various classes tasks depend on the corresponding replaceResources tasks in addition to the default processResources tasks they depend on
-    tasks.named(sourceSet.getClassesTaskName()).configure { dependsOn(replaceResourceTask) }
-    //Configure specific compile tasks to have the proper annotation processor info
-    compileTask.configure {
-        setGroup("compile")
+    def compileTask = tasks.named(sourceSet.compileJavaTaskName, JavaCompile) {
+        //Configure specific compile tasks to have the proper annotation processor info
+        setGroup('compile')
         options.annotationProcessorPath = configurations.annotationProcessor
         options.compilerArgs.addAll([
-                "-AmekanismModule=mekanism${sourceSet == sourceSets.main ? "" : output}",//annotation processor param
-                "-parameters"
+                "-AmekanismModule=mekanism${sourceSet == sourceSets.main ? '' : sourceSet.name}",//annotation processor param
+                '-parameters'
         ])
+    }
+    //Set the various variables/settings for the different process resources tasks
+    tasks.named(sourceSet.processResourcesTaskName, ProcessResources) {
+        setGroup('process resources')
+        duplicatesStrategy = DuplicatesStrategy.FAIL
+        var versionProperties = ['file'       : ['jarVersion': mod_version], 'mc_version': minecraft_version_range, 'neo_version': neo_version_range,
+                                 'loader_version': loader_version_range, 'jei_version': jei_version_range]
+        //Mark the properties as inputs so that when they change things update
+        inputs.properties(versionProperties)
+        filesMatching('META-INF/neoforge.mods.toml') { expand(versionProperties) }
+        from("${projectDir}") { include('logo.png') }
+        //Depend on the compile task so that we can map the computer methods as needed
+        dependsOn(compileTask)
+        def files = fileTree(dir: outputs.files.asPath, includes: ['**/*.json', '**/*.mcmeta'])
+        doLast {
+            for (def file : files) {
+                file.text = JsonOutput.toJson(new JsonSlurper().parse(file))
+            }
+        }
+    }
+    tasks.named(sourceSet.compileJavaTaskName, JavaCompile) { setGroup('compile') }
+    for (String extraType : extraTypes) {
+        def extraSourceSet = getExtraSourceSet(sourceSet, extraType).get()
+        tasks.named(extraSourceSet.processResourcesTaskName, ProcessResources) {
+            setGroup('process resources')
+            dependsOn(compileTask)
+        }
+        tasks.named(extraSourceSet.compileJavaTaskName, JavaCompile) { setGroup('compile') }
     }
 }
 
-group = "mekanism"
-def basicVersion = "${mod_version}." + (System.env.BUILD_NUMBER ?: "homebaked")
+group = 'mekanism'
+def basicVersion = "${mod_version}." + (System.getenv('BUILD_NUMBER') ?: 'homebaked')
 version = "${minecraft_version}-${basicVersion}"
-archivesBaseName = "Mekanism"
+project.base.archivesName = 'Mekanism'
 java {
     toolchain {
         languageVersion.set(JavaLanguageVersion.of("${java_version}"))
@@ -259,113 +261,147 @@ java {
     withSourcesJar()
 }
 
-//nb this exists here so that IDEA can resolve `project`
-def datagenExtraClasspath = {
-    def paths = new HashSet<String>()
-    project.configurations.datagenNonMod.copyRecursive().resolve()
-            .collect { it.absolutePath.toString() }
-            .findAll { (!it.contains("datafixerupper")) }//avoid adding datafixerupper twice as modlauncher will die
-            .each { path -> paths.add(path) }
-    return paths.join(File.pathSeparator)
-}
+final runsFolder = layout.projectDirectory.dir('runs')
+final clientRunsFolder = runsFolder.dir('client')
 
-minecraft {
-    if (mappings_channel == "parchment_previous") {
-        mappings channel: 'parchment', version: "${previous_minecraft_version}-${mappings_version}"
-    } else {
-        mappings channel: "${mappings_channel}", version: "${mappings_version}"
+neoForge {
+    // This enables modding tasks and configurations
+    enable {
+        version = neo_version
+        enabledSourceSets = sourceSets // All source sets use Minecraft code
     }
 
-    accessTransformers.from(file('src/main/resources/META-INF/accesstransformer.cfg'),
-            file('src/additions/resources/META-INF/accesstransformer.cfg'))
-
-    runs {
-        client {
-            setupRunConfig(it, true)
-            //The below if statements are to add args to your gradle.properties file in user home
-            // (DO NOT add them directly to the gradle.properties file for this project)
-            // Setting the below properties allows use of your normal Minecraft account in the
-            // dev environment including having your skin load. Each property also has a comment
-            // explaining what information to set the value to/format it expects
-            // One thing to note is because of the caching that goes on, after changing these
-            // variables, you need to refresh the project and rerun genIntellijRuns/genEclipseRuns
-            if (project.hasProperty('mc_uuid')) {
-                //Your uuid without any dashes in the middle
-                args '--uuid', project.getProperty('mc_uuid')
-            }
-            if (project.hasProperty('mc_username')) {
-                //Your username/display name, this is the name that shows up in chat
-                // Note: This is not your email, even if you have a Mojang account
-                args '--username', project.getProperty('mc_username')
-            }
-            if (project.hasProperty('mc_accessToken')) {
-                //Your access token, you can find it in your '.minecraft/launcher_accounts.json' file
-                args '--accessToken', project.getProperty('mc_accessToken')
-            }
+    mods {
+        mekanism {
+            sourceSet((SourceSet) sourceSets.api)
+            sourceSet((SourceSet) sourceSets.main)
         }
-        server { setupRunConfig(it, true) }
-        gameTestServer { setupRunConfig(it, true, "runGameTests") }
-        data {
-            setupRunConfig(it, false)
-            environment 'target', 'fmluserdevdata'
-
-            args '--all', '--output', file('src/datagen/generated/'),
-                    '--mod', 'mekanism', '--existing', file('src/main/resources/')
-
-            mods.named("mekanism").configure { source((SourceSet) sourceSets.datagenMain) }
-            for (String name : secondaryModules) {
-                def modName = "mekanism${name}"
-                def extra = getExtraSourceSet(name, 'datagen')
-                mods.named(modName).configure { source(extra) }
-                args '--mod', modName, '--existing', file("src/${name}/resources/")
-            }
-
-            project.afterEvaluate {
-                //After the project has been evaluated so our dependencies has been populated,
-                // add all the extra non-mod files to runData's minecraft classpath so that they can be
-                // access from the game module layer at runtime
-                lazyToken("minecraft_classpath", datagenExtraClasspath)
-            }
+        // contains main mod + its datagen code
+        mekanismData {
+            modSourceSets = mods.mekanism.modSourceSets
+            sourceSet((SourceSet) sourceSets.datagenMain)
         }
-    }
-}
-
-def setupRunConfig(RunConfig runConfig, boolean supportsGameTests, String directory = "run") {
-    runConfig.workingDirectory(file(directory))
-    //This fixes Mixin application problems from other mods because their refMaps are SRG-based, but we're in a MCP env
-    runConfig.property 'mixin.env.remapRefMap', 'true'
-    runConfig.property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
-    if (supportsGameTests) {
-        //Specify all our mods as domains to look for game tests
-        runConfig.property 'forge.enabledGameTestNamespaces', 'mekanism,mekanismadditions,mekanismdefense,mekanismgenerators,mekanismtools'
-    }
-
-    if (project.hasProperty('forge_force_ansi')) {
-        //Force ansi if declared as a gradle variable, as the auto detection doesn't detect IntelliJ properly
-        // or eclipse's plugin that adds support for ansi escape in console
-        runConfig.jvmArg("-Dterminal.ansi=${project.getProperty('forge_force_ansi')}")
-    }
-
-    runConfig.mods.register("mekanism").configure {
-        sources((SourceSet[]) [sourceSets.main, sourceSets.api])
-        if (supportsGameTests) source((SourceSet) sourceSets.gameTestMain)
+        mekanismtests {
+            sourceSet((SourceSet) sourceSets.gameTest)
+        }
     }
     for (String name : secondaryModules) {
-        def base = sourceSets.getByName(name)
-        def extra = supportsGameTests ? getExtraSourceSet(base, 'gameTest') : null
-        runConfig.mods.register("mekanism${name}").configure {
-            source(base)
-            if (supportsGameTests) source(extra)
+        final sourceSet = sourceSets.named(name)
+        mods.maybeCreate(name).modSourceSets.add(sourceSet)
+        // Create a secondary mod group for the modules main code + its datagen code
+        final datagenMod = mods.maybeCreate(name + 'Data')
+        datagenMod.modSourceSets.add(sourceSet)
+        datagenMod.modSourceSets.add(sourceSet.flatMap(s -> getExtraSourceSet(s, 'datagen')))
+    }
+
+    accessTransformers = [
+            'src/main/resources/META-INF/accesstransformer.cfg',
+            'src/additions/resources/META-INF/accesstransformer.cfg',
+            //Dev time only ATs so the file name doesn't have to match accesstransformer.cfg
+            'src/datagen/main/resources/META-INF/datagen_ats.cfg',
+            'src/gameTest/resources/META-INF/gametest_ats.cfg',
+    ]
+
+    runs {
+        configureEach {
+            if (project.hasProperty('forge_force_ansi')) {
+                //Force ansi if declared as a gradle variable, as the auto detection doesn't detect IntelliJ properly
+                // or eclipse's plugin that adds support for ansi escape in console
+                systemProperties.put('terminal.ansi', (String) property('forge_force_ansi'))
+            }
+
+            loadedMods = [mods.mekanism]
+            for (String name : secondaryModules) {
+                loadedMods.add(mods.named(name))
+            }
+            //if the selected toolchain is a JBR, enable DCEVM
+            if (javaToolchains.launcherFor(java.toolchain).map { it.metadata.vendor }.getOrElse('').contains('JetBrains')) {
+                jvmArguments.addAll('-XX:+IgnoreUnrecognizedVMOptions', '-XX:+AllowEnhancedClassRedefinition')
+            }
+
+            // Uncomment this to get verbose debug logging
+            // logLevel = org.slf4j.event.Level.DEBUG
+
+            sourceSet = sourceSets.runMain
+        }
+        //Note: To enable logging into the client account, set the mc_devlogin property to true in your gradle user home
+        // You can also run gradlew runClient -Pmc_devlogin=true
+        client {
+            client()
+            gameDirectory.value(clientRunsFolder)
+            if (findProperty('mc_devlogin') ?: false) {
+                devLogin = true
+            }
+        }
+        clientAlt {
+            client()
+            gameDirectory.value(runsFolder.dir('clientAlt'))
+            // Force dev login to be disabled for this run to allow using a secondary username
+            devLogin = false
+            programArguments.addAll('--username', 'AltDev')
+        }
+        server {
+            server()
+            gameDirectory.value(runsFolder.dir('server'))
+        }
+        gameTestServer {
+            type = 'gameTestServer'
+            gameDirectory.value(runsFolder.dir('gameTestServer'))
+            sourceSet = sourceSets.gameTest
+            loadedMods.add(mods.mekanismtests)
+        }
+        gameTestClient {
+            client()
+            gameDirectory.value(clientRunsFolder)
+            if (findProperty('mc_devlogin') ?: false) {
+                devLogin = true
+            }
+            sourceSet = sourceSets.gameTest
+            loadedMods.add(mods.mekanismtests)
+            programArguments.addAll('--quickPlaySingleplayer', 'GameTestWorld')
+        }
+        dataGameTest {
+            data()
+            gameDirectory.value(runsFolder.dir('gameTestServer'))
+            programArguments.addAll('--all', '--output', file('src/gameTest/generated/').absolutePath,
+                    '--mod', 'mekanismtests', '--existing', file('src/gameTest/resources/').absolutePath,
+                    '--existing-mod', 'mekanism')
+            for (String name : secondaryModules) {
+                programArguments.addAll('--existing-mod', 'mekanism' + name)
+            }
+
+            sourceSet = sourceSets.gameTest
+            loadedMods.add(mods.mekanismtests)
+        }
+        data {
+            data()
+            gameDirectory.value(runsFolder.dir('data'))
+            programArguments.addAll('--all', '--output', file('src/datagen/generated/').absolutePath,
+                    '--mod', 'mekanism', '--existing', file('src/main/resources/').absolutePath)
+
+            sourceSet = sourceSets.runData
+            loadedMods = [mods.mekanismData]
+
+            for (String name : secondaryModules) {
+                //println("Adding $name")
+                loadedMods.add(mods.named(name + 'Data'))
+                programArguments.addAll('--mod', 'mekanism' + name, '--existing', file("src/${name}/resources/").absolutePath)
+            }
         }
     }
 
-    //if the selected toolchain is a JBR, enable DCEVM
-    if(project.javaToolchains.launcherFor(java.toolchain).map{it.metadata.vendor }.getOrElse("").contains("JetBrains")) {
-        runConfig.jvmArg("-XX:+AllowEnhancedClassRedefinition")
+    unitTest {
+        enable()
+        testedMod = mods.mekanism
+        loadedMods = runs.client.loadedMods
     }
 }
 
-void exclusiveRepo(RepositoryHandler handler, String url, String... groups) {
+// Ensure any jar without the necessary FML manifest attributes gets picked up via legacy classpath.
+// This configuration only exists after setting the neoForge version above.
+configurations.dataAdditionalRuntimeClasspath.extendsFrom configurations.datagenNonMod
+
+static void exclusiveRepo(RepositoryHandler handler, String url, String... groups) {
     exclusiveRepo(handler, url, filter -> {
         for (def group : groups) {
             filter.includeGroup(group)
@@ -373,193 +409,209 @@ void exclusiveRepo(RepositoryHandler handler, String url, String... groups) {
     })
 }
 
-//Note: This cannot be static so that fg.repository can be properly accessed
-@SuppressWarnings('GrMethodMayBeStatic')
-void exclusiveRepo(RepositoryHandler handler, String url, Consumer<InclusiveRepositoryContentDescriptor> filterSetup) {
+static void exclusiveRepo(RepositoryHandler handler, String url, Consumer<InclusiveRepositoryContentDescriptor> filterSetup) {
     handler.exclusiveContent {
         it.forRepositories(handler.maven {
             setUrl(url)
-        }, fg.repository)//Add FG's repo so we make sure we are able to then find the mapped deps
+        })
         it.filter { f -> filterSetup.accept(f) }
     }
 }
 
 repositories { RepositoryHandler handler ->
     exclusiveRepo(handler, 'https://maven.blamejared.com', filter -> {
-        filter.includeGroupByRegex 'com\\.blamejared.*'
-        filter.includeGroup 'mezz.jei'
-        filter.includeGroup 'org.openzen.zencode'
+        filter.includeGroupAndSubgroups('com.blamejared')
+        filter.includeGroup('mezz.jei')
+        filter.includeGroup('org.openzen.zencode')
     })
+    exclusiveRepo(handler, 'https://maven.terraformersmc.com/', 'dev.emi')
     exclusiveRepo(handler, 'https://maven.theillusivec4.top/', 'top.theillusivec4.curios')
-    exclusiveRepo(handler, 'https://maven.tterrag.com/', 'team.chisel.ctm')
+    //TODO: Switch back to grabbing CTM from here instead of the mirror on modmaven once tterrag fixes his maven issues
+    //exclusiveRepo(handler, 'https://maven.tterrag.com/', 'team.chisel.ctm')
     exclusiveRepo(handler, 'https://squiddev.cc/maven/', 'cc.tweaked', 'org.squiddev')
     exclusiveRepo(handler, 'https://dogforce-games.com/maven/', 'dev.gigaherz.jsonthings')
     exclusiveRepo(handler, 'https://maven2.bai.lol', 'lol.bai', 'mcp.mobius.waila')//WTHIT
     exclusiveRepo(handler, 'https://www.cursemaven.com', 'curse.maven')
-    exclusiveRepo(handler, 'https://modmaven.dev/', 'appeng', 'mcjty.theoneprobe')
-    exclusiveRepo(handler, 'https://maven.thiakil.com', 'com.thiakil')
+    exclusiveRepo(handler, 'https://modmaven.dev/', 'mcjty.theoneprobe', 'dev.technici4n', 'team.chisel.ctm')
+    exclusiveRepo(handler, 'https://maven.minecraftforge.net/releases/', 'com.github.glitchfiend')
+    exclusiveRepo(handler, 'https://maven.thiakil.com', 'com.thiakil', 'moze_intel.projecte')
     exclusiveRepo(handler, 'https://maven.parchmentmc.org/', 'org.parchmentmc.data')
+    handler.exclusiveContent {
+        it.forRepositories(handler.mavenCentral())
+        it.filter {
+            includeGroup('org.appliedenergistics')
+        }
+    }
 }
 
-test {
+tasks.named('test', Test) {
     useJUnitPlatform()
 }
 
 dependencies {
-    minecraft "net.neoforged:forge:${minecraft_version}-${forge_version}"
+    compileOnly(project(':annotation-processor'))
+    localRuntime(project(':annotation-processor'))
+    annotationProcessor(project(':annotation-processor'))
 
-    annotationProcessor project(":annotation-processor")
-
-    testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_version}"
-    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_version}"
-    //We use https://github.com/quicktheories/QuickTheories to allow for implementing property based testing
-    testImplementation "org.quicktheories:quicktheories:${quicktheories_version}"
-
-    compileOnly fg.deobf("mezz.jei:jei-${minecraft_version}-common-api:${jei_version}")
-    compileOnly fg.deobf("mezz.jei:jei-${minecraft_version}-forge-api:${jei_version}")
-    runtimeOnly fg.deobf("mezz.jei:jei-${minecraft_version}-forge:${jei_version}")
-
-    //TODO - 1.19: Re-enable once https://github.com/Chisel-Team/ConnectedTexturesMod/pull/204 is merged
-    //runtimeOnly fg.deobf("team.chisel.ctm:CTM:${minecraft_version}-${ctm_version}")
-
-    //TODO: Remove having to specify these as non transitive once https://github.com/McJtyMods/TheOneProbe/issues/548 is fixed
-    compileOnly fg.deobf("mcjty.theoneprobe:theoneprobe:${top_version}:api") {
+    def testFrameWork = "net.neoforged:testframework:${neo_version}"
+    gameTestImplementation(testFrameWork) {
         transitive = false
     }
-    runtimeOnly fg.deobf("mcjty.theoneprobe:theoneprobe:${top_version}") {
+    testImplementation(testFrameWork) {
         transitive = false
     }
-    compileOnly fg.deobf("curse.maven:jade-api-324717:${jade_api_id}")
-    runtimeOnly fg.deobf("curse.maven:jade-324717:${jade_id}")
-    compileOnly fg.deobf("mcp.mobius.waila:wthit-api:forge-${wthit_version}")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:${junit_version}")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:${junit_version}")
+    //We use https://github.com/jqwik-team/jqwik to allow for implementing property based testing
+    testImplementation("net.jqwik:jqwik:${jqwik_version}")
 
-    implementation fg.deobf("com.blamejared.crafttweaker:CraftTweaker-forge-${minecraft_version}:${crafttweaker_version}")
-    implementation fg.deobf("com.blamejared.jeitweaker:JeiTweaker-forge-${minecraft_version}:${jeitweaker_version}")
+    compileOnly("mezz.jei:jei-${minecraft_version}-neoforge-api:${jei_version}")
+    if (recipe_viewer == 'jei' || recipe_viewer == 'hybrid') {
+        localRuntime("mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}")
+    }
 
-    compileOnly fg.deobf("dev.gigaherz.jsonthings:JsonThings-${minecraft_version}:${json_things_version}")
+    compileOnly("dev.emi:emi-neoforge:${emi_version}+${minecraft_version}:api")
+    def emi = "dev.emi:emi-neoforge:${emi_version}+${minecraft_version}"
+    //TODO: Re-evaluate (https://github.com/emilyploszaj/emi/issues/537) might allow us to not have to do this
+    //Compile against full emi in datagen
+    datagenMainCompileOnly(emi)
+    if (recipe_viewer == 'emi' || recipe_viewer == 'hybrid') {
+        localRuntime(emi)
+    } else {
+        //We still need it to load in datagen regardless of if we are using emi or a different viewer so that we can access EMI related objects
+        datagenMainRuntimeOnly(emi)
+    }
+
+    localRuntime("team.chisel.ctm:CTM:${previous_minor_minecraft_version}-${ctm_version}")
+
+    compileOnly("mcjty.theoneprobe:theoneprobe:${top_version}:api")
+    localRuntime("mcjty.theoneprobe:theoneprobe:${top_version}")
+    compileOnly("curse.maven:jade-api-324717:${jade_api_id}")
+    localRuntime("curse.maven:jade-324717:${jade_id}")
+    compileOnly("mcp.mobius.waila:wthit-api:neo-${wthit_version}")
+    //localRuntime("mcp.mobius.waila:wthit:neo-${wthit_version}")
+    //localRuntime('lol.bai:badpackets:neo-0.8.1')
+
+    def crt = "com.blamejared.crafttweaker:CraftTweaker-neoforge-${minecraft_version}:${crafttweaker_version}"
+    compileOnly(crt)
+    localRuntime(crt)
+    def jeiTweaker = "com.blamejared.jeitweaker:JeiTweaker-forge-1.20.1:${jeitweaker_version}"
+    compileOnly(jeiTweaker)
+    //TODO: Re-enable when it updates
+    //localRuntime(jeiTweaker)
+
+    compileOnly("dev.gigaherz.jsonthings:JsonThings-${minecraft_version}:${json_things_version}")
 
     //Mods we have dependencies on but don't bother loading into the dev environment
-    compileOnly fg.deobf("curse.maven:projecte-api-226410:${projecte_api_id}")
-    compileOnly fg.deobf("curse.maven:flux-networks-248020:${flux_networks_id}")
-    compileOnly fg.deobf("top.theillusivec4.curios:curios-forge:${curios_version}:api")
-    compileOnly fg.deobf("com.blamejared.recipestages:RecipeStages:${recipe_stages_version}")
-    compileOnly fg.deobf("curse.maven:opencomputers2-437654:${oc2_id}")
-    compileOnly fg.deobf("cc.tweaked:cc-tweaked-${minecraft_version}-forge-api:${cc_tweaked_version}")
-    compileOnly fg.deobf("cc.tweaked:cc-tweaked-${minecraft_version}-core-api:${cc_tweaked_version}")
-    //runtimeOnly fg.deobf("cc.tweaked:cc-tweaked-${minecraft_version}-forge:${cc_tweaked_version}")
-    compileOnly fg.deobf("curse.maven:female-gender-forge-481655:${wildfire_gender_mod_id}")
+    compileOnly("curse.maven:projecte-api-226410:${projecte_api_id}")
+    compileOnly("curse.maven:flux-networks-248020:${flux_networks_id}")
+    compileOnly("dev.technici4n:GrandPower:${grand_power_version}")
+    compileOnly("top.theillusivec4.curios:curios-neoforge:${curios_version}:api")
+    compileOnly("com.blamejared.recipestages:RecipeStages:${recipe_stages_version}")
+    compileOnly("curse.maven:opencomputers2-437654:${oc2_id}")
+    compileOnly("cc.tweaked:cc-tweaked-${previous_minor_minecraft_version}-forge-api:${cc_tweaked_version}")
+    //localRuntime("cc.tweaked:cc-tweaked-${previous_minor_minecraft_version}-forge:${cc_tweaked_version}")
+    compileOnly("curse.maven:female-gender-forge-481655:${wildfire_gender_mod_id}")
+    compileOnly("curse.maven:framedblocks-441647:${framedblocks_mod_id}")
 
     //Dependencies for data generators for mod compat reference
-    datagenMainImplementation fg.deobf("appeng:appliedenergistics2-forge:${ae2_version}")
-    datagenMainCompileOnly fg.deobf("curse.maven:biomes-o-plenty-api-220318:${biomesoplenty_api_id}")
-    datagenMainRuntimeOnly fg.deobf("curse.maven:biomes-o-plenty-220318:${biomesoplenty_id}")
-    datagenMainRuntimeOnly fg.deobf("curse.maven:terrablender-563928:${terrablender_id}")
-    //TODO - 1.20: Switch back to datagenMainImplementation
-    datagenMainCompileOnly fg.deobf("curse.maven:biomes-youll-go-247560:${byg_id}")
-    datagenMainImplementation fg.deobf("curse.maven:farmers-delight-398521:${farmers_delight_id}")
-    datagenMainImplementation fg.deobf("curse.maven:i-like-wood-324164:${ilikewood_id}")
-    //TODO - 1.20: Switch back to datagenMainImplementation
-    datagenMainCompileOnly fg.deobf("curse.maven:i-like-wood-biomes-o-plenty-437203:${ilikewood_bop_id}")
-    //TODO - 1.20: Switch back to datagenMainImplementation
-    datagenMainCompileOnly fg.deobf("curse.maven:i-like-wood-oh-the-biomes-youll-go-475110:${ilikewood_byg_id}")
-    datagenMainRuntimeOnly fg.deobf("curse.maven:projecte-226410:${projecte_id}")
+    datagenMainImplementation("org.appliedenergistics:appliedenergistics2:${ae2_version}")
+    datagenMainRuntimeOnly("com.github.glitchfiend:GlitchCore-neoforge:${minecraft_version}-${glitchcore_version}")
+    datagenMainRuntimeOnly("com.github.glitchfiend:TerraBlender-neoforge:${minecraft_version}-${terrablender_version}")
+    datagenMainImplementation("com.github.glitchfiend:BiomesOPlenty-neoforge:${minecraft_version}-${biomesoplenty_version}")
+    datagenMainRuntimeOnly("curse.maven:corgilib-693313:${corgilib_id}")
+    datagenMainRuntimeOnly("curse.maven:geckolib-388172:${geckolib_id}")
+    datagenMainRuntimeOnly("curse.maven:oh-the-trees-youll-grow-962544:${ohthetreesyoullgrow_id}")
+    datagenMainImplementation("curse.maven:oh-the-biomes-weve-gone-1070751:${biomeswevegone_id}")
+    datagenMainImplementation("curse.maven:farmers-delight-398521:${farmers_delight_id}")
+    datagenMainRuntimeOnly("curse.maven:projecte-226410:${projecte_id}")
 
-    datagenNonMod "com.thiakil:yaml-ops:${yamlops_version}"
+    //Note: Even though yaml ops defines a FMLModType we have to pretend FML doesn't know how to handle it due to a lib yaml ops bundles not defining it
+    datagenNonMod("com.thiakil:yaml-ops:${yamlops_version}")
 }
 
 def getManifestAttributes(String title) {
     return [
-            "Specification-Title"     : title,
-            "Specification-Vendor"    : "Mekanism",
-            "Specification-Version"   : "${project.mod_version}",
-            "Implementation-Title"    : title,
-            "Implementation-Version"  : "${project.mod_version}",
-            "Implementation-Vendor"   : "Mekanism",
-            "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ"),
-            "Automatic-Module-Name"   : title.toLowerCase(Locale.ROOT)
+            'Specification-Title'     : title,
+            'Specification-Vendor'    : 'Mekanism',
+            'Specification-Version'   : "${project.mod_version}",
+            'Implementation-Title'    : title,
+            'Implementation-Version'  : "${project.mod_version}",
+            'Implementation-Vendor'   : 'Mekanism',
+            'Implementation-Timestamp': new Date().format('yyyy-MM-dd\'T\'HH:mm:ssZ'),
+            'Automatic-Module-Name'   : title.toLowerCase(Locale.ROOT)
     ]
 }
 
-tasks.named('jar', Jar).configure {
-    duplicatesStrategy(DuplicatesStrategy.FAIL)
+tasks.named('jar', Jar) {
+    duplicatesStrategy = DuplicatesStrategy.FAIL
     from([sourceSets.api.output, sourceSets.main.output])
     exclude('crafttweaker_parameter_names.json')
-    manifest.attributes(getManifestAttributes("Mekanism"))
+    manifest.attributes(getManifestAttributes('Mekanism'))
 }
 
-tasks.named('sourcesJar', Jar).configure {
-    dependsOn(classes, apiClasses, additionsClasses, defenseClasses, generatorsClasses, toolsClasses)
-    duplicatesStrategy(DuplicatesStrategy.FAIL)
+tasks.named('sourcesJar', Jar) {
+    dependsOn(classes, apiClasses, additionsClasses, generatorsClasses, toolsClasses)
+    duplicatesStrategy = DuplicatesStrategy.FAIL
     //Note: Already contains main source set's sources by default
-    from(sourceSets.api.allJava, sourceSets.additions.allJava, sourceSets.defense.allJava, sourceSets.generators.allJava, sourceSets.tools.allJava)
-    manifest.attributes(getManifestAttributes("Mekanism"))
+    from(sourceSets.api.allJava, sourceSets.additions.allJava, sourceSets.generators.allJava, sourceSets.tools.allJava)
+    manifest.attributes(getManifestAttributes('Mekanism'))
 }
 
 def secondaryJar(SourceSet sourceSet, String title) {
-    return tasks.register(sourceSet.getJarTaskName(), Jar, {
-        duplicatesStrategy(DuplicatesStrategy.FAIL)
+    return tasks.register(sourceSet.jarTaskName, Jar) {
+        duplicatesStrategy = DuplicatesStrategy.FAIL
         archiveClassifier.set(sourceSet.name)
-        from sourceSet.output
+        from(sourceSet.output)
         if (!title.isEmpty()) {
             archiveFileName.set("${title}-${project.version}.jar")
         }
-        manifest.attributes(getManifestAttributes(title.isEmpty() ? "Mekanism" : title))
-    })
+        manifest.attributes(getManifestAttributes(title.isEmpty() ? 'Mekanism' : title))
+    }
 }
 
 def apiJar = secondaryJar(sourceSets.api, '')
 def additionsJar = secondaryJar(sourceSets.additions, 'MekanismAdditions')
-def defenseJar = secondaryJar(sourceSets.defense, 'MekanismDefense')
 def generatorsJar = secondaryJar(sourceSets.generators, 'MekanismGenerators')
 def toolsJar = secondaryJar(sourceSets.tools, 'MekanismTools')
 
-def allJar = tasks.register('allJar', Jar, {
-    dependsOn(classes, apiClasses, additionsClasses, defenseClasses, generatorsClasses, toolsClasses)
-    mustRunAfter(clean)
-    duplicatesStrategy(DuplicatesStrategy.FAIL)
-    archiveClassifier.set("all")
-    manifest.attributes(getManifestAttributes("MekanismAll"))
-    def combineSets = [sourceSets.main, sourceSets.additions, sourceSets.defense, sourceSets.generators, sourceSets.tools]
-    doFirst {
-        //Start by generating the merged data
-        MergeJars.merge(project, combineSets)
-    }
-    //Then copy all the files except for ones we are going to include from the merged
-    from(sourceSets.api.output)
-    List<String> baseExcludeData = MergeJars.getGeneralPathsToExclude(project, combineSets)
-    Closure excludeFromMain = MergeJars.createExcludeClosure(baseExcludeData, 'crafttweaker_parameter_names.json')
-    from(sourceSets.main.output, excludeFromMain)
-    Closure excludeFromAll = MergeJars.createExcludeClosure(baseExcludeData, 'logo.png', 'pack.mcmeta')
+def mergeModuleResources = tasks.register('mergeModuleResources', MergeModuleResources) {
+    dependsOn('classes', 'apiClasses', 'additionsClasses', 'generatorsClasses', 'toolsClasses')
+    mustRunAfter('clean')
+    //Note: Get the resources from the output of process resources, so that any expands that need to happen we know have already happened
+    resources = tasks.named(sourceSets.main.processResourcesTaskName).get().outputs.files
+    //Note: We have to use classesDirs rather than generatedSourcesDirs to also include resources generated by the annotation process
+    // and not just the java source files. We filter further along to ensure we only take services into account
+    annotationGenerated = sourceSets.main.output.classesDirs
     for (String name : secondaryModules) {
-        from(sourceSets.getByName(name).output, excludeFromAll)
+        SourceSet secondarySourceSet = sourceSets.named(name).get()
+        resources += tasks.named(secondarySourceSet.processResourcesTaskName).get().outputs.files
+        annotationGenerated += secondarySourceSet.output.classesDirs
     }
-    //And finally copy over the generated files
-    MergeJars.getGeneratedClosures(versionProperties).each { closure -> from("$buildDir/generated", closure) }
-})
+    //Only look at generated service files as a restriction for our input
+    annotationGenerated = annotationGenerated.asFileTree.matching(serviceFilter)
+}
 
-clean {
-    //TODO: Try to come up with a slightly better solution to this that deletes more,
-    // for example make it calculate the current hash and only leave that or only do
-    // this if clean build is being ran. We also ideally would have it remove some of
-    // the data from our generated folder, but for now this will do given jenkins runs
-    // a clean build because we need to make sure it doesn't fail
-    def filteredDelete = new HashSet<>()
-    for (def toDelete : getDelete()) {
-        for (def f : file(toDelete).listFiles()) {
-            if (f.getName() != "fg_cache") {
-                filteredDelete.add(f)
-            }
-        }
+def allJar = tasks.register('allJar', AllJar) {
+    dependsOn(mergeModuleResources)
+    duplicatesStrategy = DuplicatesStrategy.FAIL
+    archiveClassifier.set('all')
+    manifest.attributes(getManifestAttributes('MekanismAll'))
+    pathsToExclude.set(mergeModuleResources.<RegularFile>flatMap(m -> m.pathsToExclude))
+    apiOutput = sourceSets.api.output
+    mainOutput = sourceSets.main.output
+    for (String name : secondaryModules) {
+        secondaryModuleOutputs += sourceSets.named(name).get().output
     }
-    setDelete(filteredDelete)
 }
 
 tasks.withType(JavaCompile).configureEach({
     options.encoding = 'UTF-8'
-    options.compilerArgs.addAll(["-Xmaxerrs", "100000"])
+    options.compilerArgs.addAll(['-Xmaxerrs', '100000'])
 })
 
 tasks.withType(Javadoc).configureEach({
+    options.encoding = 'UTF-8'
     options.tags = [
             'apiNote:a:<em>API Note:</em>',
             'implSpec:a:<em>Implementation Requirements:</em>',
@@ -572,84 +624,46 @@ artifacts {
     archives jar
     archives additionsJar
     archives generatorsJar
-    archives defenseJar
     archives toolsJar
     archives allJar
     archives sourcesJar
 }
 
-createReobf(sourceSets.api)
-for (String name : secondaryModules) {
-    createReobf(sourceSets.getByName(name))
-}
-def reobfAllJar = createReobf('allJar')
-
-def createReobf(SourceSet sourceSet) {
-    def reobfTask = createReobf(sourceSet.getJarTaskName())
-    reobfTask.configure { libraries.from(sourceSet.compileClasspath) }
-    tasks.named(sourceSet.getJarTaskName()).configure(task -> task.finalizedBy(reobfTask))
-    return reobfTask
-}
-
-def createReobf(String name) {
-    def reobfExtension = (NamedDomainObjectContainer<RenameJarInPlace>) extensions.getByName("reobf")
-    return reobfExtension.register(name)
-}
-
-allJar.configure { finalizedBy(reobfAllJar) }
-afterEvaluate {
-    tasks.named('jar', Jar).configure { finalizedBy(tasks.named('reobfJar', RenameJarInPlace)) }
-}
-
-//Minimize/optimize all png files, requires optipng on the PATH
-// Credits: BrainStone
-void minimizePNGFile(File file) {
-    long size = file.length()
-    exec {
-        executable "optipng"
-        args "-q", "-o7", "-zm1-9", "-strip", "all", file
-    }
-    long newSize = file.length()
-    if (newSize < size) {
-        System.out.format("Reduced File size of %s from %d bytes to %d bytes (reduced by %.2f%%)\n",
-                file, size, newSize, ((double) (size - newSize)) / ((double) size) * 100.0)
-    }
-}
-
-tasks.register('optimizePng').configure {
-    doLast {
-        def pngPatterns = ["**/*.png"]
-        //Ensure the logo is minimized (we add this file to each jar)
-        minimizePNGFile(file("${projectDir}/logo.png"))
-        //Minimize any PNGs in the source sets
-        def sourceSets = [sourceSets.main, sourceSets.additions, sourceSets.generators, sourceSets.defense, sourceSets.tools]
-        for (def sourceSet : sourceSets) {
-            for (dir in sourceSet.resources.srcDirs) {
-                fileTree(dir: dir, includes: pngPatterns).each { minimizePNGFile(it) }
-            }
+tasks.register('optimizePng', OptimizePng) {
+    def pngPatterns = ['**/*.png']
+    //Ensure the logo is minimized (we add this file to each jar)
+    inputFiles.from(file("${projectDir}/logo.png"))
+    //Minimize any PNGs in the source sets
+    def sourceSets = [sourceSets.main, sourceSets.additions, sourceSets.generators, sourceSets.tools]
+    for (def sourceSet : sourceSets) {
+        for (def dir : sourceSet.resources.srcDirs) {
+            inputFiles.from(fileTree(dir: dir, includes: pngPatterns))
         }
     }
-}
-
-tasks.withType(GenerateModuleMetadata).configureEach {
-    //Disable Gradle 7 module metadata generation as it does not play nicely with FG
-    enabled = false
+    //TODO: Make optimize png be fully compatible with the configuration cache?
+    notCompatibleWithConfigurationCache('Up to date check is not currently compatible with the configuration cache')
+    outputs.upToDateWhen {
+        //Validate that none of the files has changed size, as the odds that a file has the exact same size and has changed is very low for an image file
+        //Note: This is from Chat-GPT, I don't understand why the any check isn't just always true (and thus this being different from returning always false)
+        // but it seems to function properly(?), whereas just always returning false does not
+        !inputFiles.files.any { file -> file.length() != file.size() }
+    }
 }
 
 //properties to put in $HOME/.gradle/gradle.properties
 def MAVEN_PASSWORD_PROPERTY_NAME = 'mekanismMavenPassword'
-def MODMAVEN_PW = System.getenv('MEK_MAVEN_PW') ?: (String)project.findProperty(MAVEN_PASSWORD_PROPERTY_NAME)
+def MODMAVEN_PW = System.getenv('MEK_MAVEN_PW') ?: (String) project.findProperty(MAVEN_PASSWORD_PROPERTY_NAME)
 
 publishing {
     publications { PublicationContainer publicationContainer ->
-        publicationContainer.register("maven", MavenPublication) { MavenPublication publication ->
+        publicationContainer.register('maven', MavenPublication) { MavenPublication publication ->
             publication.from((SoftwareComponent) components.java)
             publication.groupId = project.group
             publication.version = project.version
-            publication.artifactId = System.getenv("MAVEN_ARTIFACT") ?: project.archivesBaseName
+            publication.artifactId = System.getenv('MAVEN_ARTIFACT') ?: project.base.archivesName.get()
             publication.artifacts = [apiJar, jar, generatorsJar, additionsJar, toolsJar, allJar, sourcesJar]
             publication.pom {
-                name.set("Mekanism")
+                name.set('Mekanism')
                 packaging = 'jar'
                 description.set('Mekanism is a Minecraft add-on featuring high-tech machinery that can be used to create powerful tools, armor, and weapons.')
                 url.set('https://aidancbrady.com/mekanism/')
@@ -666,27 +680,6 @@ publishing {
                         distribution.set('repo')
                     }
                 }
-                withXml {
-                    NodeList dependencies = asNode().dependencies
-                    NodeList allDeps = dependencies.'*'
-
-                    // Remove forge deps
-                    allDeps.<Node> findAll() { Node el ->
-                        el.artifactId.text() == 'forge' && el.groupId.text() == 'net.neoforged'
-                    }.forEach() { Node el ->
-                        el.parent().remove(el)
-                    }
-                    //remove NeoGradle's mapped suffix from versions & set as optional so anyone else doesn't inherit them
-                    allDeps.<Node> findAll() { Node el ->
-                        el.version.text().contains('_mapped_')
-                    }.each { Node el ->
-                        el.version.each { Node version ->
-                            def versionText = version.text()
-                            version.setValue(versionText.substring(0, versionText.indexOf('_mapped_')))
-                        }
-                        el.appendNode('optional', true)
-                    }
-                }
             }
         }
     }
@@ -695,7 +688,7 @@ publishing {
             url = 'https://modmaven.dev/artifactory/local-releases/'
             if (MODMAVEN_PW != null) {
                 credentials {
-                    username = "mekanism"
+                    username = 'mekanism'
                     password = MODMAVEN_PW
                 }
             }
@@ -703,82 +696,35 @@ publishing {
     }
 }
 
-def resolvedChangelog = null
-
-//closure to generate the changelog once, and only when needed by CurseGradle or Modrinth
-def changeLogResolver = { ->
-    if (resolvedChangelog != null) {
-        println "Using cached changelog"
-        return resolvedChangelog
-    }
-    def generatedChangelog = "Unable to generate changelog :("
-    def currentCommit = System.getenv("GIT_COMMIT")
-    def prevCommit = System.getenv("GIT_PREVIOUS_SUCCESSFUL_COMMIT") ?: System.getenv("GIT_PREVIOUS_COMMIT")
-
-    if (currentCommit != null && prevCommit != null) {
-        generatedChangelog = ""
-        //Use the service to avoid eagerly instantiating the grgit instance, and only do so when we actually need it
-        // for usage in generating the changelog for either CF or Modrinth
-        grgitService.service.get().grgit.log {
-            range(prevCommit, currentCommit)
-        }.reverse().each { commit ->
-            //Use full message rather than short message to get any new lines, and trim it so that any trailing new lines
-            // get removed so that we don't end up with extra spaces
-            String message = commit.fullMessage.trim()
-            if (!message.startsWith("Merge branch") && !message.startsWith("Merge pull request") && !message.contains("[no-changelog]")) {
-                //Ignore Merges and PR Merges
-                message = message.replaceAll("#(\\d+)", { match ->//turn issues/prs into links (github currently supports prs being linked as issues)
-                    return "<a href=\"https://github.com/mekanism/Mekanism/issues/${match[1]}\">${match[0]}</a>"
-                }).replaceAll("\\n", "<br>&emsp;")//convert new lines that are part of a commit message into actual new lines and a tab
-                if (generatedChangelog != "") {
-                    //If this isn't the first commit prepend an extra newline
-                    generatedChangelog += "<br>"
-                }
-                generatedChangelog += "<a href=\"https://github.com/mekanism/Mekanism/commit/${commit.id}\">${commit.getAbbreviatedId()}</a> - ${message}"
-            }
-        }
-        println "Changelog generated"
-    }
-
-    def releaseNotesFile = project.file("docs/release_${mod_version}.html")
-    if (releaseNotesFile.exists()) {
-        //Add any version specific changelog stuff
-        def releaseNotes = releaseNotesFile.getText()
-        generatedChangelog = "$releaseNotes<br> $generatedChangelog"
-    }
-
-    if (release_type == "alpha") {
-        //Add a warning at the top about what an alpha build means
-        generatedChangelog = "Warning: Mekanism is currently in alpha, and is not recommended for widespread use in modpacks. There are likely to be game breaking bugs, " +
-                "and updating from one alpha to the next may cause various mekanism blocks to disappear/void their contents. While we will try to not have this happen/keep " +
-                "it to a minimum make sure to make backups. You can read more about the alpha state of this project <a href=\"https://github.com/mekanism/Mekanism#alpha-status\">here</a>." +
-                "<br> $generatedChangelog"
-    }
-    resolvedChangelog = generatedChangelog
-    return generatedChangelog
+def outputChangelog = tasks.register('outputChangelog', OutputChangelog, grgitService.service)
+outputChangelog.configure { OutputChangelog out ->
+    out.releaseNotes.value(provider {
+        //If we have a file specified that exists for the mod version, then we want to use it
+        // otherwise we want to fall back to not having the value set
+        def file = layout.projectDirectory.file("docs/release_${mod_version}.md")
+        return file.asFile.exists() ? file : null
+    })
 }
+Provider<RegularFile> changelogFile = outputChangelog.<RegularFile>flatMap(c -> c.outputFile)
 
-tasks.register('outputChangelog') {
-    doLast {
-        project.file("build/changelog.html").text = changeLogResolver.call()
-    }
-}
+if (System.getenv('CURSEFORGE_KEY') != null || project.hasProperty('curseforgeKey')) {
+    logger.lifecycle('Enabling Curseforge config')
+    tasks.register('curseforge', TaskPublishCurseForge) { task ->
+        dependsOn(outputChangelog)
+        setGroup('publishing')
+        setDescription('Upload Mekanism to CurseForge')
 
-def mainCfUpload, additionsCfUpload, generatorsCfUpload, toolsCfUpload;
+        inputs.file(changelogFile)
+        inputs.property('release_type', release_type)
+        inputs.property('java_version', java_version)
+        inputs.property('minecraft_version', minecraft_version)
 
-if (System.getenv("CURSEFORGE_KEY") != null || project.hasProperty('curseforgeKey')) {
-    println "Enabling Curseforge config"
-    tasks.register("curseforge", TaskPublishCurseForge, { task ->
-        setGroup("publishing")
-        setDescription("Upload Mekanism to CurseForge")
-
-        apiToken = System.getenv("CURSEFORGE_KEY") ?: project.findProperty("curseforgeKey")
-
-        def changelog = changeLogResolver.call()
+        disableVersionDetection()
+        apiToken = System.getenv('CURSEFORGE_KEY') ?: project.findProperty('curseforgeKey')
 
         //Main Mekanism Project
-        mainCfUpload = task.upload(268560, jar) { main ->
-            setGenericCurseArtifactData(main, changelog)
+        def mainCfUpload = task.upload(268560, jar) { main ->
+            setGenericCurseArtifactData(main, changelogFile)
             //Include the API jar as a secondary file to the main file
             withAdditionalFile(apiJar)
             //Add optional deps
@@ -787,120 +733,124 @@ if (System.getenv("CURSEFORGE_KEY") != null || project.hasProperty('curseforgeKe
                     'cc-tweaked', 'oc2',
                     //Looking at mods
                     'jade', 'the-one-probe', 'wthit-forge',
+                    //Recipe viewers
+                    'emi', 'jei',
                     //Tweakers
                     'crafttweaker', 'jeitweaker',
                     //World gen
-                    'biomes-o-plenty', 'oh-the-biomes-youll-go',
-                    //Wood types
-                    'i-like-wood', 'i-like-wood-biomes-o-plenty-plugin', 'i-like-wood-oh-the-biomes-youll-go-plugin',
+                    'biomes-o-plenty', 'oh-the-biomes-weve-gone',
                     //Misc
-                    'applied-energistics-2', 'ctm', 'curios', 'dark-mode-everywhere', 'farmers-delight', 'female-gender-neoforge', 'flux-networks',
-                    'jei', 'json-things', 'perviaminvenire', 'projecte', 'recipe-stages'
+                    'applied-energistics-2', 'ctm', 'curios-continuation', 'dark-mode-everywhere', 'farmers-delight', 'female-gender-neoforge', 'flux-networks',
+                    'framedblocks', 'grandpower', 'json-things', 'perviaminvenire', 'projecte', 'recipe-stages'
             )
         }
 
         //Secondary modules/projects
-        additionsCfUpload = uploadSecondaryCurseProject(task, 345425, changelog, additionsJar)
-        //uploadSecondaryCurseProject(task, 376939, changelog, defenseJar)
-        generatorsCfUpload = uploadSecondaryCurseProject(task, 268566, changelog, generatorsJar)
-        toolsCfUpload = uploadSecondaryCurseProject(task, 268567, changelog, toolsJar)
+        def additionsCfUpload = uploadSecondaryCurseProject(task, 345425, changelogFile, additionsJar)
+        def generatorsCfUpload = uploadSecondaryCurseProject(task, 268566, changelogFile, generatorsJar)
+        def toolsCfUpload = uploadSecondaryCurseProject(task, 268567, changelogFile, toolsJar)
 
         doLast {
-            println("https://www.curseforge.com/minecraft/mc-mods/mekanism/files/${mainCfUpload.curseFileId}")
-            println("https://www.curseforge.com/minecraft/mc-mods/mekanism-additions/files/${additionsCfUpload.curseFileId}")
-            println("https://www.curseforge.com/minecraft/mc-mods/mekanism-generators/files/${generatorsCfUpload.curseFileId}")
-            println("https://www.curseforge.com/minecraft/mc-mods/mekanism-tools/files/${toolsCfUpload.curseFileId}")
+            //Note: Quiet is the level above warning but below error. We want these to show regardless of logging level
+            // see: https://docs.gradle.org/current/userguide/logging.html
+            //Note: We cast to object to be explicit, so that when we have CurseForgeGradle in debug mode and these are null
+            // then it can resolve which overload to use
+            logger.quiet('https://www.curseforge.com/minecraft/mc-mods/mekanism/files/{}', (Object) mainCfUpload.curseFileId)
+            logger.quiet('https://www.curseforge.com/minecraft/mc-mods/mekanism-additions/files/{}', (Object) additionsCfUpload.curseFileId)
+            logger.quiet('https://www.curseforge.com/minecraft/mc-mods/mekanism-generators/files/{}', (Object) generatorsCfUpload.curseFileId)
+            logger.quiet('https://www.curseforge.com/minecraft/mc-mods/mekanism-tools/files/{}', (Object) toolsCfUpload.curseFileId)
         }
-    })
+    }
 }
 
-void setGenericCurseArtifactData(UploadArtifact artifact, String changelog) {
+void setGenericCurseArtifactData(UploadArtifact artifact, Provider<RegularFile> changelog) {
     artifact.changelog = changelog
-    artifact.changelogType = 'html'
-    artifact.releaseType = "${release_type}"
-    //Add that we support forge for now as we currently support both Forge and NeoForge. NeoForge is detected automatically from the gradle plugin
-    artifact.addModLoader("Forge")
+    artifact.changelogType = 'markdown'
+    artifact.releaseType = release_type
+    artifact.addModLoader('NeoForge')
+    artifact.addJavaVersion("Java ${java_version}")
+    artifact.addGameVersion(minecraft_version)
 }
 
-UploadArtifact uploadSecondaryCurseProject(TaskPublishCurseForge task, long projectId, String changelog, TaskProvider<Jar> sourceSetJar) {
+UploadArtifact uploadSecondaryCurseProject(TaskPublishCurseForge task, long projectId, Provider<RegularFile> changelog, TaskProvider<Jar> sourceSetJar) {
     return task.upload(projectId, sourceSetJar) { artifact ->
         setGenericCurseArtifactData(artifact, changelog)
         addRequirement('mekanism')
     }
 }
 
-if (System.getenv("MODRINTH_TOKEN") != null || project.hasProperty('modrinthToken')) {
-    println "Enabling Modrinth config"
-    def additionsModrinth = createSecondaryModrinthUpload("additions", "a6F3uASn", additionsJar)
-    //def defenseModrinth = createSecondaryModrinthUpload("defense", "", defenseJar)
-    def generatorsModrinth = createSecondaryModrinthUpload("generators", "OFVYKsAk", generatorsJar)
-    def toolsModrinth = createSecondaryModrinthUpload("tools", "tqQpq1lt", toolsJar)
-    tasks.named('modrinth').configure {
-        dependsOn(jar, apiJar)
-        finalizedBy(additionsModrinth, /*defenseModrinth,*/ generatorsModrinth, toolsModrinth)
+if (System.getenv('MODRINTH_TOKEN') != null || project.hasProperty('modrinthToken')) {
+    logger.lifecycle('Enabling Modrinth config')
+    def additionsModrinth = createSecondaryModrinthUpload('additions', 'a6F3uASn', additionsJar)
+    def generatorsModrinth = createSecondaryModrinthUpload('generators', 'OFVYKsAk', generatorsJar)
+    def toolsModrinth = createSecondaryModrinthUpload('tools', 'tqQpq1lt', toolsJar)
+    tasks.named('modrinth') {
+        dependsOn(jar, apiJar, outputChangelog)
+        finalizedBy(additionsModrinth, generatorsModrinth, toolsModrinth)
+        notCompatibleWithConfigurationCache('Not yet compatible')//TODO: Remove when possible
     }
 
     modrinth {
-        if (System.getenv("MODRINTH_TOKEN") == null) {
+        if (System.getenv('MODRINTH_TOKEN') == null) {
             //Defaults to MODRINTH_TOKEN so we only have to check for a token via gradle properties if there isn't a system property
-            getToken().value((String) project.findProperty("modrinthToken"))
+            token.set((String) project.findProperty('modrinthToken'))
         } else {
-            token = System.getenv("MODRINTH_TOKEN")
+            token = System.getenv('MODRINTH_TOKEN')
         }
-        projectId = "Ce6I4WUE"
+        projectId = 'Ce6I4WUE'
         //Use the full "basic" version number rather than just mod version number so that if multiple releases end up happening due to bugs
         // then we don't run into conflicts in uploading
         //Note: The versionName is set to the versionNumber automatically
         versionNumber = "${basicVersion}"
         versionType = "${release_type}"
-        changelog = changeLogResolver.call()
+        gameVersions.add("${minecraft_version}")
+        failSilently = true
+        changelog.value(changelogFile.map(file -> file.asFile.text))
         uploadFile = jar
-        //Add that we support forge for now as we currently support both Forge and NeoForge
-        // Note: Once we no longer support forge we can just remove the line as NeoForge will be able to be detected automatically
-        // Currently we can't as Minotaur only detects loaders if none are set
-        loaders.addAll("forge", "neoforge")
 
-        getAdditionalFiles().value([apiJar.get()])
+        additionalFiles.value([apiJar.get()])
         //Note: Can't use nested dependency configuration as we have no way to clear it for the secondary uploads
-        getDependencies().value([
-                new ModDependency("XxWD5pD3", "optional"),//AE2
-                new ModDependency("gu7yAYhd", "optional"),//CC: Tweaked
-                new ModDependency("Xg35A4rS", "optional"),//CraftTweaker
-                new ModDependency("vvuO3ImH", "optional"),//Curios
-                new ModDependency("R2OftAxM", "optional"),//Farmer's Delight
-                new ModDependency("nvQzSEkH", "optional"),//Jade
-                new ModDependency("EiEOyeoL", "optional"),//JEI Tweaker
-                new ModDependency("uE1WpIAk", "optional"),//Oh the Biomes You'll Go
-                new ModDependency("qXkLFB0L", "optional"),//Recipe Stages
-                new ModDependency("Eyw0UxEx", "optional"),//The One Probe
-                new ModDependency("bcOsQHnC", "optional"),//Wildfire's Female Gender Mod
-                new ModDependency("6AQIaxuO", "optional"),//WTHIT
+        dependencies.value([
+                new ModDependency('XxWD5pD3', 'optional'),//AE2
+                new ModDependency('NTi7d3Xc', 'optional'),//Biomes We've Gone
+                new ModDependency('gu7yAYhd', 'optional'),//CC: Tweaked
+                new ModDependency('Xg35A4rS', 'optional'),//CraftTweaker
+                new ModDependency('fRiHVvU7', 'optional'),//EMI
+                new ModDependency('R2OftAxM', 'optional'),//Farmer's Delight
+                new ModDependency('nvQzSEkH', 'optional'),//Jade
+                new ModDependency('u6dRKJwZ', 'optional'),//JEI
+                new ModDependency('EiEOyeoL', 'optional'),//JEI Tweaker
+                new ModDependency('qXkLFB0L', 'optional'),//Recipe Stages
+                new ModDependency('Eyw0UxEx', 'optional'),//The One Probe
+                new ModDependency('bcOsQHnC', 'optional'),//Wildfire's Female Gender Mod
+                new ModDependency('6AQIaxuO', 'optional'),//WTHIT
         ])
     }
 
 }
 
 def createSecondaryModrinthUpload(String output, String targetProjectId, TaskProvider<Jar> sourceSetJar) {
-    return tasks.register("${output}Modrinth", TaskModrinthUpload, {
-        setGroup("publishing")
+    return tasks.register("${output}Modrinth", TaskModrinthUpload) {
+        setGroup('publishing')
         setDescription("Upload Mekanism ${output} to Modrinth")
-        dependsOn(tasks.named("modrinth"), sourceSetJar)
+        dependsOn(tasks.named('modrinth'), sourceSetJar)
+        notCompatibleWithConfigurationCache('Not yet compatible')//TODO: Remove when possible
         doFirst {
             //Run in do first to change the configured extension values before it starts applying
             modrinth {
                 projectId = targetProjectId
                 uploadFile = sourceSetJar.get()
                 //Clear additional upload files as this is a modification of what things are set to from before
-                getAdditionalFiles().empty()
+                additionalFiles.empty()
                 //Mark that the addon requires the build of Mekanism that we just uploaded (and override it to clear all optional dependencies)
                 if (tasks.modrinth.newVersion == null || tasks.modrinth.newVersion.getId() == null) {
                     //If we failed to find the upload version just set it to Mekanism in general
-                    getDependencies().value([new ModDependency("Ce6I4WUE", "required")])
+                    dependencies.value([new ModDependency('Ce6I4WUE', 'required')])
                 } else {
-                    getDependencies().value([new VersionDependency(tasks.modrinth.newVersion.getId(), "required")])
+                    dependencies.value([new VersionDependency((String) tasks.modrinth.newVersion.getId(), 'required')])
                 }
             }
-            println "Updated Modrinth extension"
+            logger.lifecycle('Updated Modrinth extension')
         }
-    })
+    }
 }

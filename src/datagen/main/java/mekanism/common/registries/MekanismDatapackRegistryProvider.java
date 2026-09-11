@@ -5,6 +5,7 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
 import mekanism.api.MekanismAPI;
 import mekanism.api.robit.AdvancementBasedRobitSkin;
 import mekanism.api.robit.BasicRobitSkin;
@@ -13,8 +14,7 @@ import mekanism.common.Mekanism;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.config.WorldConfig.OreVeinConfig;
 import mekanism.common.entity.RobitPrideSkinData;
-import mekanism.common.registration.impl.FeatureRegistryObject;
-import mekanism.common.registries.MekanismDamageTypes.MekanismDamageType;
+import mekanism.common.registration.impl.MekanismDamageType;
 import mekanism.common.resource.ore.OreBlockType;
 import mekanism.common.resource.ore.OreType;
 import mekanism.common.resource.ore.OreType.OreVeinType;
@@ -38,7 +38,6 @@ import net.minecraft.data.worldgen.placement.PlacementUtils;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.BlockTags;
-import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.GenerationStep;
@@ -56,8 +55,8 @@ import net.minecraft.world.level.levelgen.placement.PlacedFeature;
 import net.minecraft.world.level.levelgen.structure.templatesystem.RuleTest;
 import net.minecraft.world.level.levelgen.structure.templatesystem.TagMatchTest;
 import net.minecraft.world.level.material.Fluids;
-import net.minecraftforge.common.world.ForgeBiomeModifiers.AddFeaturesBiomeModifier;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.neoforged.neoforge.common.world.BiomeModifiers.AddFeaturesBiomeModifier;
+import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
 public class MekanismDatapackRegistryProvider extends BaseDatapackRegistryProvider {
 
@@ -70,13 +69,13 @@ public class MekanismDatapackRegistryProvider extends BaseDatapackRegistryProvid
     private static final RuleTest DEEPSLATE_ORE_REPLACEABLES = new TagMatchTest(BlockTags.DEEPSLATE_ORE_REPLACEABLES);
 
     private static ConfiguredFeature<ResizableOreFeatureConfig, ResizableOreFeature> configureOreFeature(OreVeinType oreVeinType,
-          FeatureRegistryObject<ResizableOreFeatureConfig, ? extends ResizableOreFeature> featureRO) {
+          Supplier<? extends ResizableOreFeature> featureRO) {
         OreVeinConfig oreVeinConfig = MekanismConfig.world.getVeinConfig(oreVeinType);
         List<TargetBlockState> targetStates = ORE_STONE_TARGETS.computeIfAbsent(oreVeinType.type(), oreType -> {
             OreBlockType oreBlockType = MekanismBlocks.ORES.get(oreType);
             return List.of(
-                  OreConfiguration.target(STONE_ORE_REPLACEABLES, oreBlockType.stoneBlock().defaultBlockState()),
-                  OreConfiguration.target(DEEPSLATE_ORE_REPLACEABLES, oreBlockType.deepslateBlock().defaultBlockState())
+                  OreConfiguration.target(STONE_ORE_REPLACEABLES, oreBlockType.stone().defaultState()),
+                  OreConfiguration.target(DEEPSLATE_ORE_REPLACEABLES, oreBlockType.deepslate().defaultState())
             );
         });
         return new ConfiguredFeature<>(featureRO.get(), new ResizableOreFeatureConfig(targetStates, oreVeinType, oreVeinConfig.maxVeinSize(),
@@ -95,7 +94,7 @@ public class MekanismDatapackRegistryProvider extends BaseDatapackRegistryProvid
                   }
               }
               context.register(configuredFeature(Mekanism.rl("salt")), new ConfiguredFeature<>(MekanismFeatures.DISK.get(), new ResizableDiskConfig(
-                    RuleBasedBlockStateProvider.simple(MekanismBlocks.SALT_BLOCK.getBlock()),
+                    RuleBasedBlockStateProvider.simple(MekanismBlocks.SALT_BLOCK.value()),
                     BlockPredicate.matchesBlocks(Blocks.DIRT, Blocks.CLAY),
                     ConfigurableUniformInt.SALT
               )));
@@ -125,7 +124,7 @@ public class MekanismDatapackRegistryProvider extends BaseDatapackRegistryProvid
                     BiomeFilter.biome()
               ));
           })
-          .add(ForgeRegistries.Keys.BIOME_MODIFIERS, context -> {
+          .add(NeoForgeRegistries.Keys.BIOME_MODIFIERS, context -> {
               HolderSet.Named<Biome> isOverworldTag = context.lookup(Registries.BIOME).getOrThrow(MekanismTags.Biomes.SPAWN_ORES);
               HolderGetter<PlacedFeature> placedFeatures = context.lookup(Registries.PLACED_FEATURE);
               for (OreType type : EnumUtils.ORE_TYPES) {
@@ -144,8 +143,8 @@ public class MekanismDatapackRegistryProvider extends BaseDatapackRegistryProvid
                     GenerationStep.Decoration.UNDERGROUND_ORES));
           })
           .add(Registries.DAMAGE_TYPE, context -> {
-              for (MekanismDamageType damageType : MekanismDamageTypes.DAMAGE_TYPES.values()) {
-                  context.register(damageType.key(), new DamageType(damageType.getMsgId(), damageType.exhaustion()));
+              for (MekanismDamageType damageType : MekanismDamageTypes.DAMAGE_TYPES.damageTypes()) {
+                  context.register(damageType.key(), damageType.toVanilla());
               }
           })
           .add(MekanismAPI.ROBIT_SKIN_REGISTRY_NAME, context -> {
@@ -156,7 +155,7 @@ public class MekanismDatapackRegistryProvider extends BaseDatapackRegistryProvid
                           Mekanism.rl("allay2")
                     ),
                     Mekanism.rl("item/robit_allay"),
-                    new ResourceLocation("husbandry/allay_deliver_item_to_player")
+                    ResourceLocation.withDefaultNamespace("husbandry/allay_deliver_item_to_player")
               ));
               for (Map.Entry<RobitPrideSkinData, ResourceKey<RobitSkin>> entry : MekanismRobitSkins.PRIDE_SKINS.entrySet()) {
                   ResourceKey<RobitSkin> key = entry.getValue();

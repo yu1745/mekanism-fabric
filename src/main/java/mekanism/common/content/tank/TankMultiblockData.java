@@ -4,17 +4,13 @@ import com.mojang.datafixers.util.Either;
 import java.util.ArrayList;
 import java.util.List;
 import mekanism.api.IContentsListener;
-import mekanism.api.NBTConstants;
+import mekanism.api.SerializationConstants;
 import mekanism.api.chemical.ChemicalStack;
-import mekanism.api.chemical.ChemicalTankBuilder;
-import mekanism.api.chemical.gas.IGasTank;
-import mekanism.api.chemical.infuse.IInfusionTank;
-import mekanism.api.chemical.pigment.IPigmentTank;
-import mekanism.api.chemical.slurry.ISlurryTank;
+import mekanism.api.chemical.IChemicalTank;
 import mekanism.api.fluid.IExtendedFluidTank;
+import mekanism.api.functions.ConstantPredicates;
 import mekanism.api.inventory.IInventorySlot;
-import mekanism.common.capabilities.chemical.multiblock.MultiblockChemicalTankBuilder;
-import mekanism.common.capabilities.fluid.BasicFluidTank;
+import mekanism.common.capabilities.chemical.VariableCapacityChemicalTank;
 import mekanism.common.capabilities.fluid.VariableCapacityFluidTank;
 import mekanism.common.capabilities.merged.MergedTank;
 import mekanism.common.capabilities.merged.MergedTank.CurrentType;
@@ -32,9 +28,10 @@ import mekanism.common.tile.interfaces.IFluidContainerManager.ContainerEditMode;
 import mekanism.common.tile.multiblock.TileEntityDynamicTank;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.NBTUtils;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.FluidStack;
 
 public class TankMultiblockData extends MultiblockData implements IValveHandler {
 
@@ -56,17 +53,11 @@ public class TankMultiblockData extends MultiblockData implements IValveHandler 
         super(tile);
         IContentsListener saveAndComparator = createSaveAndComparator();
         mergedTank = MergedTank.create(
-              VariableCapacityFluidTank.create(this, this::getTankCapacity, BasicFluidTank.alwaysTrue, saveAndComparator),
-              MultiblockChemicalTankBuilder.GAS.create(this, this::getChemicalTankCapacity, ChemicalTankBuilder.GAS.alwaysTrue, saveAndComparator),
-              MultiblockChemicalTankBuilder.INFUSION.create(this, this::getChemicalTankCapacity, ChemicalTankBuilder.INFUSION.alwaysTrue, saveAndComparator),
-              MultiblockChemicalTankBuilder.PIGMENT.create(this, this::getChemicalTankCapacity, ChemicalTankBuilder.PIGMENT.alwaysTrue, saveAndComparator),
-              MultiblockChemicalTankBuilder.SLURRY.create(this, this::getChemicalTankCapacity, ChemicalTankBuilder.SLURRY.alwaysTrue, saveAndComparator)
+              VariableCapacityFluidTank.create(this, this::getTankCapacity, ConstantPredicates.alwaysTrue(), saveAndComparator),
+              VariableCapacityChemicalTank.create(this, this::getChemicalTankCapacity, ConstantPredicates.alwaysTrue(), saveAndComparator)
         );
         fluidTanks.add(mergedTank.getFluidTank());
-        gasTanks.add(mergedTank.getGasTank());
-        infusionTanks.add(mergedTank.getInfusionTank());
-        pigmentTanks.add(mergedTank.getPigmentTank());
-        slurryTanks.add(mergedTank.getSlurryTank());
+        chemicalTanks.add(mergedTank.getChemicalTank());
         inventorySlots.addAll(createBaseInventorySlots());
     }
 
@@ -85,16 +76,16 @@ public class TankMultiblockData extends MultiblockData implements IValveHandler 
         CurrentType type = mergedTank.getCurrentType();
         if (type == CurrentType.EMPTY) {
             inputSlot.handleTank(outputSlot, editMode);
-            inputSlot.drainChemicalTanks();
-            outputSlot.fillChemicalTanks();
+            inputSlot.drainChemicalTank();//todo will this do anything if empty??
+            outputSlot.fillChemicalTank();
         } else if (type == CurrentType.FLUID) {
             inputSlot.handleTank(outputSlot, editMode);
         } else { //Chemicals
-            inputSlot.drainChemicalTank(type);
-            outputSlot.fillChemicalTank(type);
+            inputSlot.drainChemicalTank();
+            outputSlot.fillChemicalTank();
         }
         float scale = getScale();
-        if (scale != prevScale) {
+        if (MekanismUtils.scaleChanged(scale, prevScale)) {
             prevScale = scale;
             needsPacket = true;
         }
@@ -102,28 +93,26 @@ public class TankMultiblockData extends MultiblockData implements IValveHandler 
     }
 
     @Override
-    public void readUpdateTag(CompoundTag tag) {
-        super.readUpdateTag(tag);
-        NBTUtils.setFloatIfPresent(tag, NBTConstants.SCALE, scale -> prevScale = scale);
-        mergedTank.readFromUpdateTag(tag);
+    public void readUpdateTag(CompoundTag tag, HolderLookup.Provider provider) {
+        super.readUpdateTag(tag, provider);
+        NBTUtils.setFloatIfPresent(tag, SerializationConstants.SCALE, scale -> prevScale = scale);
+        mergedTank.readFromUpdateTag(provider, tag);
         readValves(tag);
     }
 
     @Override
-    public void writeUpdateTag(CompoundTag tag) {
-        super.writeUpdateTag(tag);
-        tag.putFloat(NBTConstants.SCALE, prevScale);
-        mergedTank.addToUpdateTag(tag);
+    public void writeUpdateTag(CompoundTag tag, HolderLookup.Provider provider) {
+        super.writeUpdateTag(tag, provider);
+        tag.putFloat(SerializationConstants.SCALE, prevScale);
+        mergedTank.addToUpdateTag(provider, tag);
         writeValves(tag);
     }
 
     private float getScale() {
         return switch (mergedTank.getCurrentType()) {
             case FLUID -> MekanismUtils.getScale(prevScale, getFluidTank());
-            case GAS -> MekanismUtils.getScale(prevScale, getGasTank());
-            case INFUSION -> MekanismUtils.getScale(prevScale, getInfusionTank());
-            case PIGMENT -> MekanismUtils.getScale(prevScale, getPigmentTank());
-            case SLURRY -> MekanismUtils.getScale(prevScale, getSlurryTank());
+            case CHEMICAL -> MekanismUtils.getScale(prevScale, getChemicalTank());
+            //todo shouldn't this use the lowest amount? - Thiakil
             default -> MekanismUtils.getScale(prevScale, 0, getChemicalTankCapacity(), true);
         };
     }
@@ -156,10 +145,7 @@ public class TankMultiblockData extends MultiblockData implements IValveHandler 
     private long getStoredAmount() {
         return switch (mergedTank.getCurrentType()) {
             case FLUID -> getFluidTank().getFluidAmount();
-            case GAS -> getGasTank().getStored();
-            case INFUSION -> getInfusionTank().getStored();
-            case PIGMENT -> getPigmentTank().getStored();
-            case SLURRY -> getSlurryTank().getStored();
+            case CHEMICAL -> getChemicalTank().getStored();
             default -> 0;
         };
     }
@@ -168,20 +154,8 @@ public class TankMultiblockData extends MultiblockData implements IValveHandler 
         return mergedTank.getFluidTank();
     }
 
-    public IGasTank getGasTank() {
-        return mergedTank.getGasTank();
-    }
-
-    public IInfusionTank getInfusionTank() {
-        return mergedTank.getInfusionTank();
-    }
-
-    public IPigmentTank getPigmentTank() {
-        return mergedTank.getPigmentTank();
-    }
-
-    public ISlurryTank getSlurryTank() {
-        return mergedTank.getSlurryTank();
+    public IChemicalTank getChemicalTank() {
+        return mergedTank.getChemicalTank();
     }
 
     public boolean isEmpty() {
@@ -208,13 +182,10 @@ public class TankMultiblockData extends MultiblockData implements IValveHandler 
     }
 
     @ComputerMethod
-    Either<ChemicalStack<?>, FluidStack> getStored() {
+    Either<ChemicalStack, FluidStack> getStored() {
         return switch (mergedTank.getCurrentType()) {
             case FLUID -> Either.right(getFluidTank().getFluid());
-            case GAS -> Either.left(getGasTank().getStack());
-            case INFUSION -> Either.left(getInfusionTank().getStack());
-            case PIGMENT -> Either.left(getPigmentTank().getStack());
-            case SLURRY -> Either.left(getSlurryTank().getStack());
+            case CHEMICAL -> Either.left(getChemicalTank().getStack());
             default -> Either.right(FluidStack.EMPTY);
         };
     }

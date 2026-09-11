@@ -9,7 +9,6 @@ import com.blamejared.crafttweaker.api.plugin.IScriptLoadSourceRegistrationHandl
 import com.blamejared.crafttweaker.api.plugin.IScriptRunModuleConfiguratorRegistrationHandler;
 import com.blamejared.crafttweaker.api.zencode.scriptrun.IScriptRunModuleConfigurator;
 import mekanism.common.Mekanism;
-import mekanism.common.integration.crafttweaker.CrTRecipeComponents.ChemicalRecipeComponent;
 
 @CraftTweakerPlugin(Mekanism.MODID + ":crt_plugin")
 public class MekCraftTweakerPlugin implements ICraftTweakerPlugin {
@@ -34,16 +33,11 @@ public class MekCraftTweakerPlugin implements ICraftTweakerPlugin {
     @Override
     public void registerRecipeComponents(IRecipeComponentRegistrationHandler handler) {
         //Input/Output
-        //Note: We only register the input for items as the output uses the one built into crafttweaker
-        handler.registerRecipeComponent(CrTRecipeComponents.ITEM.input());
-        handler.registerRecipeComponent(CrTRecipeComponents.FLUID.input());
-        handler.registerRecipeComponent(CrTRecipeComponents.FLUID.output());
-        for (ChemicalRecipeComponent<?, ?, ?, ?> chemicalComponent : CrTRecipeComponents.CHEMICAL_COMPONENTS) {
-            handler.registerRecipeComponent(chemicalComponent.input());
-            handler.registerRecipeComponent(chemicalComponent.output());
-        }
+        handler.registerRecipeComponent(CrTRecipeComponents.CHEMICAL.input());
+        handler.registerRecipeComponent(CrTRecipeComponents.CHEMICAL.output());
         //Misc
         handler.registerRecipeComponent(CrTRecipeComponents.CHANCE);
         handler.registerRecipeComponent(CrTRecipeComponents.ENERGY);
+        handler.registerRecipeComponent(CrTRecipeComponents.PER_TICK_USAGE);
     }
 }

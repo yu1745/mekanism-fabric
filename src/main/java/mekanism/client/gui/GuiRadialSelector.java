@@ -18,10 +18,10 @@ import mekanism.api.radial.mode.INestedRadialMode;
 import mekanism.api.radial.mode.IRadialMode;
 import mekanism.api.text.EnumColor;
 import mekanism.client.render.lib.ScrollIncrementer;
-import mekanism.common.Mekanism;
 import mekanism.common.MekanismLang;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.lib.radial.IGenericRadialModeItem;
+import mekanism.common.network.PacketUtils;
 import mekanism.common.network.to_server.PacketRadialModeChange;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.MekanismUtils.ResourceType;
@@ -176,18 +176,22 @@ public class GuiRadialSelector extends Screen {
             textToDraw.add(new PositionedText(x, y, mode.sliceName()));
         }
 
-        // Labels (has to be separate from icons or the icons occasionally will get extra artifacts for some reason)
-        boolean whiteRadialText = MekanismConfig.client.whiteRadialText.get();
-        for (PositionedText toDraw : textToDraw) {
-            pose.pushPose();
-            pose.translate(toDraw.x, toDraw.y, 0);
-            pose.scale(0.6F, 0.6F, 0.6F);
-            Component text = toDraw.text;
-            if (whiteRadialText) {
-                text = text.copy().withStyle(ChatFormatting.RESET);
+        if (!textToDraw.isEmpty()) {
+            // Labels (has to be separate from icons or the icons occasionally will get extra artifacts for some reason and also then we can't batch them)
+            boolean whiteRadialText = MekanismConfig.client.whiteRadialText.get();
+            for (PositionedText toDraw : textToDraw) {
+                pose.pushPose();
+                pose.translate(toDraw.x, toDraw.y, 0);
+                pose.scale(0.6F, 0.6F, 0.6F);
+                Component text = toDraw.text;
+                if (whiteRadialText) {
+                    text = text.copy().withStyle(ChatFormatting.RESET);
+                }
+                GuiUtils.drawStringNoFlush(guiGraphics, font, text, -font.width(text) / 2F, 8, 0xCCFFFFFF, true);
+                pose.popPose();
             }
-            GuiUtils.drawString(guiGraphics, font, text, -font.width(text) / 2F, 8, 0xCCFFFFFF, true);
-            pose.popPose();
+            //Flush and actually render out the labels
+            guiGraphics.flush();
         }
 
         pose.popPose();
@@ -208,8 +212,8 @@ public class GuiRadialSelector extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
-        return delta != 0 && mouseScrolled(radialData, scrollIncrementer.scroll(delta)) || super.mouseScrolled(mouseX, mouseY, delta);
+    public boolean mouseScrolled(double mouseX, double mouseY, double deltaX, double deltaY) {
+        return deltaY != 0 && mouseScrolled(radialData, scrollIncrementer.scroll(deltaY)) || super.mouseScrolled(mouseX, mouseY, deltaX, deltaY);
     }
 
     private <MODE extends IRadialMode> boolean mouseScrolled(RadialData<MODE> radialData, int shift) {
@@ -248,8 +252,7 @@ public class GuiRadialSelector extends Screen {
     private void drawTorus(GuiGraphics guiGraphics, float startAngle, float sizeAngle, float inner, float outer, float red, float green, float blue, float alpha) {
         RenderSystem.setShader(GameRenderer::getPositionColorShader);
         //Note: We still use the tesselator as that is what GuiGraphics#innerBlit does, and we also need to be able to use a custom vertex mode
-        BufferBuilder vertexBuffer = Tesselator.getInstance().getBuilder();
-        vertexBuffer.begin(Mode.TRIANGLE_STRIP, DefaultVertexFormat.POSITION_COLOR);
+        BufferBuilder vertexBuffer = Tesselator.getInstance().begin(Mode.TRIANGLE_STRIP, DefaultVertexFormat.POSITION_COLOR);
         Matrix4f matrix4f = guiGraphics.pose().last().pose();
         float draws = DRAWS * (sizeAngle / 360F);
         for (int i = 0; i <= draws; i++) {
@@ -257,10 +260,12 @@ public class GuiRadialSelector extends Screen {
             float angle = Mth.DEG_TO_RAD * degrees;
             float cos = Mth.cos(angle);
             float sin = Mth.sin(angle);
-            vertexBuffer.vertex(matrix4f, outer * cos, outer * sin, 0).color(red, green, blue, alpha).endVertex();
-            vertexBuffer.vertex(matrix4f, inner * cos, inner * sin, 0).color(red, green, blue, alpha).endVertex();
+            vertexBuffer.addVertex(matrix4f, outer * cos, outer * sin, 0)
+                  .setColor(red, green, blue, alpha);
+            vertexBuffer.addVertex(matrix4f, inner * cos, inner * sin, 0)
+                  .setColor(red, green, blue, alpha);
         }
-        BufferUploader.drawWithShader(vertexBuffer.end());
+        BufferUploader.drawWithShader(vertexBuffer.buildOrThrow());
     }
 
     @Nullable
@@ -301,7 +306,7 @@ public class GuiRadialSelector extends Screen {
                 if (networkRepresentation != -1) {
                     //TODO: If we ever add a radial type where the network representation may be negative,
                     // re-evaluate how we do this type validation
-                    Mekanism.packetHandler().sendToServer(new PacketRadialModeChange(slot, path, networkRepresentation));
+                    PacketUtils.sendToServer(new PacketRadialModeChange(slot, path, networkRepresentation));
                 }
             }
         } else if (overBackButton) {

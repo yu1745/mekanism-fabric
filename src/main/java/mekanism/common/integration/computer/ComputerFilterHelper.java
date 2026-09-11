@@ -15,6 +15,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 
 public class ComputerFilterHelper {
+
     @ComputerMethod(methodDescription = "Create a Logistical Sorter Item Filter structure from an Item name")
     public static SorterItemStackFilter createSorterItemFilter(Item item) {
         SorterItemStackFilter filter = new SorterItemStackFilter();
@@ -68,7 +69,7 @@ public class ComputerFilterHelper {
     public static OredictionificatorItemFilter createOredictionificatorItemFilter(ResourceLocation filterTag, Item selectedOutput) throws ComputerException {
         OredictionificatorItemFilter filter = new OredictionificatorItemFilter();
         filter.computerSetFilter(filterTag);
-        filter.setSelectedOutput(selectedOutput);
+        filter.setSelectedOutput(selectedOutput.builtInRegistryHolder());
         return filter;
     }
 

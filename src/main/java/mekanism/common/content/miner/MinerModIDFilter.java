@@ -1,26 +1,44 @@
 package mekanism.common.content.miner;
 
-import java.util.Objects;
-import mekanism.api.NBTConstants;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import java.util.function.Function;
+import mekanism.api.SerializationConstants;
 import mekanism.common.base.TagCache;
 import mekanism.common.content.filter.FilterType;
 import mekanism.common.content.filter.IModIDFilter;
 import mekanism.common.lib.WildcardMatcher;
-import mekanism.common.network.BasePacketHandler;
 import mekanism.common.util.RegistryUtils;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.state.BlockState;
 
 public class MinerModIDFilter extends MinerFilter<MinerModIDFilter> implements IModIDFilter<MinerModIDFilter> {
 
+    public static final MapCodec<MinerModIDFilter> CODEC = RecordCodecBuilder.mapCodec(instance -> baseMinerCodec(instance)
+          .and(Codec.STRING.fieldOf(SerializationConstants.MODID).forGetter(MinerModIDFilter::getModID))
+          .apply(instance, MinerModIDFilter::new));
+    public static final StreamCodec<RegistryFriendlyByteBuf, MinerModIDFilter> STREAM_CODEC = StreamCodec.composite(
+          baseMinerStreamCodec(MinerModIDFilter::new), Function.identity(),
+          ByteBufCodecs.STRING_UTF8, MinerModIDFilter::getModID,
+          (filter, modID) -> {
+              filter.modID = modID;
+              return filter;
+          }
+    );
+
     private String modID;
 
-    public MinerModIDFilter(String modID) {
-        this.modID = modID;
+    public MinerModIDFilter() {
     }
 
-    public MinerModIDFilter() {
+    protected MinerModIDFilter(boolean enabled, Item replaceTarget, boolean requiresReplacement, String modID) {
+        super(enabled, replaceTarget, requiresReplacement);
+        this.modID = modID;
     }
 
     public MinerModIDFilter(MinerModIDFilter filter) {
@@ -30,7 +48,8 @@ public class MinerModIDFilter extends MinerFilter<MinerModIDFilter> implements I
 
     @Override
     public boolean canFilter(BlockState state) {
-        return WildcardMatcher.matches(modID, RegistryUtils.getNamespace(state.getBlock()));
+        ResourceLocation name = RegistryUtils.getName(state.getBlockHolder());
+        return name != null && WildcardMatcher.matches(modID, name.getNamespace());
     }
 
     @Override
@@ -39,33 +58,8 @@ public class MinerModIDFilter extends MinerFilter<MinerModIDFilter> implements I
     }
 
     @Override
-    public CompoundTag write(CompoundTag nbtTags) {
-        super.write(nbtTags);
-        nbtTags.putString(NBTConstants.MODID, modID);
-        return nbtTags;
-    }
-
-    @Override
-    public void read(CompoundTag nbtTags) {
-        super.read(nbtTags);
-        modID = nbtTags.getString(NBTConstants.MODID);
-    }
-
-    @Override
-    public void write(FriendlyByteBuf buffer) {
-        super.write(buffer);
-        buffer.writeUtf(modID);
-    }
-
-    @Override
-    public void read(FriendlyByteBuf dataStream) {
-        super.read(dataStream);
-        modID = BasePacketHandler.readString(dataStream);
-    }
-
-    @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), modID);
+        return 31 * super.hashCode() + modID.hashCode();
     }
 
     @Override

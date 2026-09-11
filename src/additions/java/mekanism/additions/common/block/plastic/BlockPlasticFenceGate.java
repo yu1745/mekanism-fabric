@@ -36,20 +36,18 @@ public class BlockPlasticFenceGate extends FenceGateBlock implements IColoredBlo
 
     @Override
     public BlockState getStateForPlacement(@NotNull BlockPlaceContext context) {
-        return BlockStateHelper.getStateForPlacement(this, super.getStateForPlacement(context), context);
+        return BlockStateHelper.getStateForPlacement(super.getStateForPlacement(context), context);
     }
 
     @NotNull
     @Override
-    @Deprecated
-    public FluidState getFluidState(@NotNull BlockState state) {
+    protected FluidState getFluidState(@NotNull BlockState state) {
         return getFluid(state);
     }
 
     @NotNull
     @Override
-    @Deprecated
-    public BlockState updateShape(@NotNull BlockState state, @NotNull Direction facing, @NotNull BlockState facingState, @NotNull LevelAccessor world,
+    protected BlockState updateShape(@NotNull BlockState state, @NotNull Direction facing, @NotNull BlockState facingState, @NotNull LevelAccessor world,
           @NotNull BlockPos currentPos, @NotNull BlockPos facingPos) {
         updateFluids(state, world, currentPos);
         return super.updateShape(state, facing, facingState, world, currentPos, facingPos);

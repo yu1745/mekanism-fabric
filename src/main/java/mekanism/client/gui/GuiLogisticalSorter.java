@@ -10,7 +10,6 @@ import mekanism.client.gui.element.window.filter.transporter.GuiSorterFilerSelec
 import mekanism.client.gui.element.window.filter.transporter.GuiSorterItemStackFilter;
 import mekanism.client.gui.element.window.filter.transporter.GuiSorterModIDFilter;
 import mekanism.client.gui.element.window.filter.transporter.GuiSorterTagFilter;
-import mekanism.common.Mekanism;
 import mekanism.common.MekanismLang;
 import mekanism.common.base.TagCache;
 import mekanism.common.content.filter.IFilter;
@@ -22,6 +21,7 @@ import mekanism.common.content.transporter.SorterItemStackFilter;
 import mekanism.common.content.transporter.SorterModIDFilter;
 import mekanism.common.content.transporter.SorterTagFilter;
 import mekanism.common.inventory.container.tile.MekanismTileContainer;
+import mekanism.common.network.PacketUtils;
 import mekanism.common.network.to_server.PacketGuiInteract;
 import mekanism.common.network.to_server.PacketGuiInteract.GuiInteraction;
 import mekanism.common.tile.TileEntityLogisticalSorter;
@@ -43,22 +43,27 @@ public class GuiLogisticalSorter extends GuiFilterHolder<SorterFilter<?>, TileEn
     protected void addGuiElements() {
         super.addGuiElements();
         addRenderableWidget(new GuiSlot(SlotType.NORMAL, this, 12, 136).setRenderAboveSlots());
-        addRenderableWidget(new TranslationButton(this, 56, 136, 96, 20, MekanismLang.BUTTON_NEW_FILTER,
-              () -> addWindow(new GuiSorterFilerSelect(this, tile))));
-        addRenderableWidget(new MekanismImageButton(this, 12, 58, 14, getButtonLocation("single"),
-              () -> Mekanism.packetHandler().sendToServer(new PacketGuiInteract(GuiInteraction.SINGLE_ITEM_BUTTON, tile)),
-              getOnHover(MekanismLang.SORTER_SINGLE_ITEM_DESCRIPTION)));
-        addRenderableWidget(new MekanismImageButton(this, 12, 84, 14, getButtonLocation("round_robin"),
-              () -> Mekanism.packetHandler().sendToServer(new PacketGuiInteract(GuiInteraction.ROUND_ROBIN_BUTTON, tile)),
-              getOnHover(MekanismLang.SORTER_ROUND_ROBIN_DESCRIPTION)));
-        addRenderableWidget(new MekanismImageButton(this, 12, 110, 14, getButtonLocation("auto_eject"),
-              () -> Mekanism.packetHandler().sendToServer(new PacketGuiInteract(GuiInteraction.AUTO_EJECT_BUTTON, tile)),
-              getOnHover(MekanismLang.SORTER_AUTO_EJECT_DESCRIPTION)));
-        addRenderableWidget(new ColorButton(this, 13, 137, 16, 16, () -> tile.color,
-              () -> Mekanism.packetHandler().sendToServer(new PacketGuiInteract(GuiInteraction.CHANGE_COLOR, tile,
-                    hasShiftDown() ? -1 : TransporterUtils.getColorIndex(TransporterUtils.increment(tile.color)))),
-              () -> Mekanism.packetHandler().sendToServer(new PacketGuiInteract(GuiInteraction.CHANGE_COLOR, tile,
-                    TransporterUtils.getColorIndex(TransporterUtils.decrement(tile.color))))));
+        addRenderableWidget(new TranslationButton(this, 96, 136, 156, 20, MekanismLang.BUTTON_NEW_FILTER, (element, mouseX, mouseY) -> {
+            GuiLogisticalSorter gui = (GuiLogisticalSorter) element.gui();
+            gui.addWindow(new GuiSorterFilerSelect(gui, gui.tile));
+            return true;
+        }));
+        addRenderableWidget(new MekanismImageButton(this, 12, 46, 14, getButtonLocation("single"),
+              (element, mouseX, mouseY) -> PacketUtils.sendToServer(new PacketGuiInteract(GuiInteraction.SINGLE_ITEM_BUTTON, ((GuiLogisticalSorter) element.gui()).tile))))
+              .setTooltip(MekanismLang.SORTER_SINGLE_ITEM_DESCRIPTION);
+        addRenderableWidget(new MekanismImageButton(this, 12, 76, 14, getButtonLocation("round_robin"),
+              (element, mouseX, mouseY) -> PacketUtils.sendToServer(new PacketGuiInteract(GuiInteraction.ROUND_ROBIN_BUTTON, ((GuiLogisticalSorter) element.gui()).tile))))
+              .setTooltip(MekanismLang.SORTER_ROUND_ROBIN_DESCRIPTION);
+        addRenderableWidget(new MekanismImageButton(this, 12, 106, 14, getButtonLocation("auto_eject"),
+              (element, mouseX, mouseY) -> PacketUtils.sendToServer(new PacketGuiInteract(GuiInteraction.AUTO_EJECT_BUTTON, ((GuiLogisticalSorter) element.gui()).tile))))
+              .setTooltip(MekanismLang.SORTER_AUTO_EJECT_DESCRIPTION);
+        addRenderableWidget(new ColorButton(this, 13, 137, 16, 16, () -> tile.color, (element, mouseX, mouseY) -> {
+            TileEntityLogisticalSorter tile = ((GuiLogisticalSorter) element.gui()).tile;
+            return PacketUtils.sendToServer(new PacketGuiInteract(GuiInteraction.CHANGE_COLOR, tile, hasShiftDown() ? -1 : TransporterUtils.getColorIndex(TransporterUtils.increment(tile.color))));
+        }, (element, mouseX, mouseY) -> {
+            TileEntityLogisticalSorter tile = ((GuiLogisticalSorter) element.gui()).tile;
+            return PacketUtils.sendToServer(new PacketGuiInteract(GuiInteraction.CHANGE_COLOR, tile, TransporterUtils.getColorIndex(TransporterUtils.decrement(tile.color))));
+        }));
     }
 
     @Override
@@ -66,15 +71,14 @@ public class GuiLogisticalSorter extends GuiFilterHolder<SorterFilter<?>, TileEn
         super.drawForegroundText(guiGraphics, mouseX, mouseY);
         // Write to info display
         renderTitleText(guiGraphics);
-        drawTextWithScale(guiGraphics, MekanismLang.FILTERS.translate(), 14, 22, screenTextColor(), 0.8F);
-        drawTextWithScale(guiGraphics, MekanismLang.FILTER_COUNT.translate(getFilterManager().count()), 14, 31, screenTextColor(), 0.8F);
-        drawTextWithScale(guiGraphics, MekanismLang.SORTER_SINGLE_ITEM.translate(), 14, 48, screenTextColor(), 0.8F);
-        drawTextWithScale(guiGraphics, OnOff.of(tile.getSingleItem()).getTextComponent(), 27, 60, screenTextColor(), 0.8F);
-        drawTextWithScale(guiGraphics, MekanismLang.SORTER_ROUND_ROBIN.translate(), 14, 74, screenTextColor(), 0.8F);
-        drawTextWithScale(guiGraphics, OnOff.of(tile.getRoundRobin()).getTextComponent(), 27, 86, screenTextColor(), 0.8F);
-        drawTextWithScale(guiGraphics, MekanismLang.SORTER_AUTO_EJECT.translate(), 14, 100, screenTextColor(), 0.8F);
-        drawTextWithScale(guiGraphics, OnOff.of(tile.getAutoEject()).getTextComponent(), 27, 112, screenTextColor(), 0.8F);
-        drawTextWithScale(guiGraphics, MekanismLang.SORTER_DEFAULT.translate(), 14, 126, screenTextColor(), 0.8F);
+        drawScreenText(guiGraphics, MekanismLang.FILTER_COUNT.translate(getFilterManager().count()), 4);
+        drawScreenText(guiGraphics, MekanismLang.SORTER_SINGLE_ITEM.translate(), 19);
+        drawScreenText(guiGraphics, OnOff.of(tile.getSingleItem()).getTextComponent(), 14, 32);
+        drawScreenText(guiGraphics, MekanismLang.SORTER_ROUND_ROBIN.translate(), 49);
+        drawScreenText(guiGraphics, OnOff.of(tile.getRoundRobin()).getTextComponent(), 14, 62);
+        drawScreenText(guiGraphics, MekanismLang.SORTER_AUTO_EJECT.translate(), 79);
+        drawScreenText(guiGraphics, OnOff.of(tile.getAutoEject()).getTextComponent(), 14, 92);
+        drawScreenText(guiGraphics, MekanismLang.SORTER_DEFAULT.translate(), 109);
     }
 
     @Override

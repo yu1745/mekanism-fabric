@@ -3,21 +3,21 @@ package mekanism.common.content.blocktype;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Stream.Builder;
-import mekanism.api.functions.TriConsumer;
 import mekanism.api.text.ILangEntry;
 import mekanism.api.tier.ITier;
 import mekanism.common.block.attribute.Attribute;
 import mekanism.common.block.attribute.AttributeCustomShape;
 import mekanism.common.block.attribute.AttributeHasBounding;
+import mekanism.common.block.attribute.AttributeHasBounding.HandleBoundingBlock;
 import mekanism.common.block.attribute.AttributeMultiblock;
+import mekanism.common.block.attribute.AttributeSideConfig;
 import mekanism.common.block.attribute.Attributes.AttributeComputerIntegration;
+import mekanism.common.block.attribute.Attributes.AttributeCustomPathType;
 import mekanism.common.block.attribute.Attributes.AttributeLight;
 import mekanism.common.block.attribute.Attributes.AttributeMobSpawn;
 import mekanism.common.block.interfaces.ITypeBlock;
-import net.minecraft.core.BlockPos;
+import mekanism.common.lib.transmitter.TransmissionType;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -115,14 +115,18 @@ public class BlockType {
             return self();
         }
 
-        public final T withBounding(TriConsumer<BlockPos, BlockState, Builder<BlockPos>> boundingPositions) {
-            return with(new AttributeHasBounding(boundingPositions));
+        public final T withBounding(HandleBoundingBlock boundingPosHandlers) {
+            return with(new AttributeHasBounding(boundingPosHandlers));
         }
 
         @SafeVarargs
         public final T without(Class<? extends Attribute>... attrs) {
             holder.remove(attrs);
             return self();
+        }
+
+        public final T withSideConfig(TransmissionType... types) {
+            return with(AttributeSideConfig.create(types));
         }
 
         public T withCustomShape(VoxelShape[] shape) {
@@ -142,11 +146,11 @@ public class BlockType {
         }
 
         public final T externalMultiblock() {
-            return with(AttributeMultiblock.EXTERNAL, AttributeMobSpawn.WHEN_NOT_FORMED);
+            return with(AttributeMultiblock.EXTERNAL, AttributeMobSpawn.WHEN_NOT_FORMED, AttributeCustomPathType.WHEN_NOT_FORMED);
         }
 
         public final T internalMultiblock() {
-            return with(AttributeMultiblock.INTERNAL, AttributeMobSpawn.WHEN_NOT_FORMED);
+            return with(AttributeMultiblock.INTERNAL, AttributeMobSpawn.WHEN_NOT_FORMED, AttributeCustomPathType.WHEN_NOT_FORMED);
         }
 
         public BLOCK build() {

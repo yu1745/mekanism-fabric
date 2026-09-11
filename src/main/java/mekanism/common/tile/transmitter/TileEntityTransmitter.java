@@ -2,11 +2,12 @@ package mekanism.common.tile.transmitter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
 import mekanism.api.IAlloyInteraction;
-import mekanism.api.providers.IBlockProvider;
+import mekanism.api.IConfigurable;
 import mekanism.api.text.EnumColor;
-import mekanism.api.tier.AlloyTier;
 import mekanism.api.tier.BaseTier;
+import mekanism.api.tier.IAlloyTier;
 import mekanism.client.model.data.TransmitterModelData;
 import mekanism.common.Mekanism;
 import mekanism.common.MekanismLang;
@@ -17,10 +18,8 @@ import mekanism.common.block.states.TransmitterType.Size;
 import mekanism.common.block.transmitter.BlockLargeTransmitter;
 import mekanism.common.block.transmitter.BlockSmallTransmitter;
 import mekanism.common.capabilities.Capabilities;
-import mekanism.common.capabilities.DynamicHandler.InteractPredicate;
 import mekanism.common.capabilities.proxy.ProxyConfigurable;
 import mekanism.common.capabilities.proxy.ProxyConfigurable.ISidedConfigurable;
-import mekanism.common.capabilities.resolver.BasicCapabilityResolver;
 import mekanism.common.capabilities.resolver.BasicSidedCapabilityResolver;
 import mekanism.common.content.network.transmitter.BufferedTransmitter;
 import mekanism.common.content.network.transmitter.IUpgradeableTransmitter;
@@ -37,40 +36,54 @@ import mekanism.common.util.MultipartUtils.AdvancedRayTraceResult;
 import mekanism.common.util.WorldUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.minecraftforge.client.model.data.ModelData;
-import net.minecraftforge.client.model.data.ModelProperty;
+import net.neoforged.neoforge.capabilities.ICapabilityProvider;
+import net.neoforged.neoforge.client.model.data.ModelData;
+import net.neoforged.neoforge.client.model.data.ModelProperty;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class TileEntityTransmitter extends CapabilityTileEntity implements ISidedConfigurable, IAlloyInteraction {
+
+    public static final ICapabilityProvider<TileEntityTransmitter, @Nullable Direction, IConfigurable> CONFIGURABLE_PROVIDER =
+          capabilityProvider(Capabilities.CONFIGURABLE, (tile, cap) -> new BasicSidedCapabilityResolver<>(tile, cap, ProxyConfigurable::new));
 
     public static final ModelProperty<TransmitterModelData> TRANSMITTER_PROPERTY = new ModelProperty<>();
 
     private final Transmitter<?, ?, ?> transmitter;
     private boolean forceUpdate = true;
     private boolean loaded = false;
+    private boolean markJoined = false;
 
-    public TileEntityTransmitter(IBlockProvider blockProvider, BlockPos pos, BlockState state) {
-        super(((IHasTileEntity<? extends TileEntityTransmitter>) blockProvider.getBlock()).getTileType(), pos, state);
+    public TileEntityTransmitter(Holder<Block> blockProvider, BlockPos pos, BlockState state) {
+        super(((IHasTileEntity<? extends TileEntityTransmitter>) blockProvider.value()).getTileType(), pos, state);
         this.transmitter = createTransmitter(blockProvider);
         cacheCoord();
-        addCapabilityResolver(BasicCapabilityResolver.constant(Capabilities.ALLOY_INTERACTION, this));
-        addCapabilityResolver(new BasicSidedCapabilityResolver<>(this, Capabilities.CONFIGURABLE, ProxyConfigurable::new));
     }
 
-    protected abstract Transmitter<?, ?, ?> createTransmitter(IBlockProvider blockProvider);
+    protected abstract Transmitter<?, ?, ?> createTransmitter(Holder<Block> blockProvider);
 
     public Transmitter<?, ?, ?> getTransmitter() {
         return transmitter;
+    }
+
+    @Override
+    public void setLevel(@NotNull Level level) {
+        super.setLevel(level);
+        if (level instanceof ServerLevel serverLevel) {
+            getTransmitter().getAcceptorCache().initializeCache(serverLevel);
+        }
     }
 
     public void setForceUpdate() {
@@ -80,6 +93,10 @@ public abstract class TileEntityTransmitter extends CapabilityTileEntity impleme
     public abstract TransmitterType getTransmitterType();
 
     protected void onUpdateServer() {
+        if (markJoined) {
+            onWorldJoin(false);
+            markJoined = false;
+        }
         if (forceUpdate) {
             getTransmitter().refreshConnections();
             forceUpdate = false;
@@ -92,37 +109,29 @@ public abstract class TileEntityTransmitter extends CapabilityTileEntity impleme
 
     @NotNull
     @Override
-    public CompoundTag getReducedUpdateTag() {
-        return getTransmitter().getReducedUpdateTag(super.getReducedUpdateTag());
+    public CompoundTag getReducedUpdateTag(@NotNull HolderLookup.Provider provider) {
+        return getTransmitter().getReducedUpdateTag(provider, super.getReducedUpdateTag(provider));
     }
 
     @Override
-    public void handleUpdateTag(@NotNull CompoundTag tag) {
-        super.handleUpdateTag(tag);
-        getTransmitter().handleUpdateTag(tag);
+    public void handleUpdateTag(@NotNull CompoundTag tag, @NotNull HolderLookup.Provider provider) {
+        super.handleUpdateTag(tag, provider);
+        if (getTransmitter().handleUpdateTag(tag, provider)) {
+            //Only update the model data if something got updated that caused the model data to change
+            updateModelData();
+        }
     }
 
     @Override
-    public void handleUpdatePacket(@NotNull CompoundTag tag) {
-        super.handleUpdatePacket(tag);
-        //Delay requesting the model data update and actually updating the packet until we have finished parsing the update tag
-        updateModelData();
+    public void loadAdditional(@NotNull CompoundTag nbt, @NotNull HolderLookup.Provider provider) {
+        super.loadAdditional(nbt, provider);
+        getTransmitter().read(provider, nbt);
     }
 
     @Override
-    public void load(@NotNull CompoundTag nbt) {
-        super.load(nbt);
-        getTransmitter().read(nbt);
-    }
-
-    @Override
-    public void saveAdditional(@NotNull CompoundTag nbtTags) {
-        super.saveAdditional(nbtTags);
-        getTransmitter().write(nbtTags);
-    }
-
-    public void onNeighborTileChange(Direction side) {
-        getTransmitter().onNeighborTileChange(side);
+    public void saveAdditional(@NotNull CompoundTag nbtTags, @NotNull HolderLookup.Provider provider) {
+        super.saveAdditional(nbtTags, provider);
+        getTransmitter().write(provider, nbtTags);
     }
 
     public void onNeighborBlockChange(Direction side) {
@@ -132,14 +141,18 @@ public abstract class TileEntityTransmitter extends CapabilityTileEntity impleme
     @Override
     public void clearRemoved() {
         super.clearRemoved();
-        onWorldJoin(false);
+        if (isRemote()) {
+            onWorldJoin(false);
+        } else {
+            markJoined = true;
+        }
     }
 
     @Override
     public void onChunkUnloaded() {
         if (!isRemote()) {
             //Only take the transmitter's share if it was unloaded and not if we are being removed
-            getTransmitter().takeShare();
+            getTransmitter().validateAndTakeShare();
         }
         super.onChunkUnloaded();
     }
@@ -151,7 +164,9 @@ public abstract class TileEntityTransmitter extends CapabilityTileEntity impleme
         getTransmitter().remove();
     }
 
+    @Override
     public void onAdded() {
+        super.onAdded();
         onWorldJoin(false);
         getTransmitter().refreshConnections();
     }
@@ -184,6 +199,7 @@ public abstract class TileEntityTransmitter extends CapabilityTileEntity impleme
                 TransmitterNetworkRegistry.invalidateTransmitter(getTransmitter());
             }
         }
+        getTransmitter().onWorldSeparate(stillPresent);
     }
 
     public void chunkAccessibilityChange(boolean loaded) {
@@ -285,17 +301,10 @@ public abstract class TileEntityTransmitter extends CapabilityTileEntity impleme
 
     @NotNull
     @Override
-    public AABB getRenderBoundingBox() {
-        //If any of the block is in view, then allow rendering the contents
-        return new AABB(worldPosition, worldPosition.offset(1, 1, 1));
-    }
-
-    @NotNull
-    @Override
     public ModelData getModelData() {
         TransmitterModelData data = initModelData();
         updateModelData(data);
-        return ModelData.builder().with(TRANSMITTER_PROPERTY, data).build();
+        return ModelData.of(TRANSMITTER_PROPERTY, data);
     }
 
     protected void updateModelData(TransmitterModelData modelData) {
@@ -311,13 +320,13 @@ public abstract class TileEntityTransmitter extends CapabilityTileEntity impleme
     }
 
     @Override
-    public void onAlloyInteraction(Player player, ItemStack stack, @NotNull AlloyTier tier) {
+    public void onAlloyInteraction(Player player, ItemStack stack, @NotNull IAlloyTier tier) {
         if (getLevel() != null && getTransmitter().hasTransmitterNetwork()) {
             DynamicNetwork<?, ?, ?> transmitterNetwork = getTransmitter().getTransmitterNetwork();
             List<Transmitter<?, ?, ?>> list = new ArrayList<>(transmitterNetwork.getTransmitters());
             list.sort((o1, o2) -> {
                 if (o1 != null && o2 != null) {
-                    return Double.compare(o1.getTilePos().distSqr(worldPosition), o2.getTilePos().distSqr(worldPosition));
+                    return Double.compare(o1.getBlockPos().distSqr(worldPosition), o2.getBlockPos().distSqr(worldPosition));
                 }
                 return 0;
             });
@@ -327,7 +336,7 @@ public abstract class TileEntityTransmitter extends CapabilityTileEntity impleme
                 if (transmitter instanceof IUpgradeableTransmitter<?> upgradeableTransmitter && upgradeableTransmitter.canUpgrade(tier)) {
                     TileEntityTransmitter transmitterTile = transmitter.getTransmitterTile();
                     BlockState state = transmitterTile.getBlockState();
-                    BlockState upgradeState = transmitterTile.upgradeResult(state, tier.getBaseTier());
+                    BlockState upgradeState = transmitterTile.upgradeResult(state, tier.getBaseTierLevel());
                     if (state == upgradeState) {
                         //Skip if it would not actually upgrade anything
                         continue;
@@ -341,8 +350,8 @@ public abstract class TileEntityTransmitter extends CapabilityTileEntity impleme
                     }
                     transmitter.startUpgrading();
                     TransmitterUpgradeData upgradeData = upgradeableTransmitter.getUpgradeData();
-                    BlockPos transmitterPos = transmitter.getTilePos();
-                    Level transmitterWorld = transmitter.getTileWorld();
+                    BlockPos transmitterPos = transmitter.getBlockPos();
+                    Level transmitterWorld = transmitter.getLevel();
                     if (upgradeData == null) {
                         Mekanism.logger.warn("Got no upgrade data for transmitter at position: {} in {} but it said it would be able to provide some.",
                               transmitterPos, transmitterWorld);
@@ -373,7 +382,7 @@ public abstract class TileEntityTransmitter extends CapabilityTileEntity impleme
                     stack.shrink(1);
                 }
                 if (player instanceof ServerPlayer serverPlayer) {
-                    MekanismCriteriaTriggers.ALLOY_UPGRADE.trigger(serverPlayer);
+                    MekanismCriteriaTriggers.ALLOY_UPGRADE.value().trigger(serverPlayer);
                 }
             }
         }
@@ -385,6 +394,15 @@ public abstract class TileEntityTransmitter extends CapabilityTileEntity impleme
         } else {
             Mekanism.logger.warn("Unhandled upgrade data.", new IllegalStateException());
         }
+    }
+
+    @NotNull
+    protected BlockState upgradeResult(@NotNull BlockState current, int tierLevel) {
+        BaseTier tier = BaseTier.getTier(tierLevel);
+        if (tier == null) {
+            return current;
+        }
+        return upgradeResult(current, tier);
     }
 
     @NotNull
@@ -401,27 +419,25 @@ public abstract class TileEntityTransmitter extends CapabilityTileEntity impleme
     public void redstoneChanged(boolean powered) {
     }
 
-    protected InteractPredicate getExtractPredicate() {
-        return (tank, side) -> {
+    protected Predicate<@Nullable Direction> getExtractPredicate() {
+        return side -> {
             if (side == null) {
                 //Note: We return true here, but extraction isn't actually allowed and gets blocked by the read only handler
                 return true;
             }
             //If we have a side only allow extracting if our connection allows it
-            ConnectionType connectionType = getTransmitter().getConnectionType(side);
-            return connectionType == ConnectionType.NORMAL || connectionType == ConnectionType.PUSH;
+            return getTransmitter().getConnectionType(side).canSendTo();
         };
     }
 
-    protected InteractPredicate getInsertPredicate() {
-        return (tank, side) -> {
+    protected Predicate<@Nullable Direction> getInsertPredicate() {
+        return side -> {
             if (side == null) {
                 //Note: We return true here, but insertion isn't actually allowed and gets blocked by the read only handler
                 return true;
             }
             //If we have a side only allow inserting if our connection allows it
-            ConnectionType connectionType = getTransmitter().getConnectionType(side);
-            return connectionType == ConnectionType.NORMAL || connectionType == ConnectionType.PULL;
+            return getTransmitter().getConnectionType(side).canAccept();
         };
     }
 }

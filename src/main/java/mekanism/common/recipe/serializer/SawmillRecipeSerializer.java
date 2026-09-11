@@ -1,96 +1,62 @@
 package mekanism.common.recipe.serializer;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonSyntaxException;
-import mekanism.api.JsonConstants;
+import com.mojang.datafixers.util.Function4;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
+import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import java.util.Optional;
+import mekanism.api.SerializationConstants;
 import mekanism.api.SerializerHelper;
+import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.recipes.SawmillRecipe;
+import mekanism.api.recipes.basic.BasicSawmillRecipe;
 import mekanism.api.recipes.ingredients.ItemStackIngredient;
-import mekanism.api.recipes.ingredients.creator.IngredientCreatorAccess;
-import mekanism.common.Mekanism;
-import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.GsonHelper;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeSerializer;
-import org.jetbrains.annotations.NotNull;
 
-public class SawmillRecipeSerializer<RECIPE extends SawmillRecipe> implements RecipeSerializer<RECIPE> {
+@NothingNullByDefault
+public class SawmillRecipeSerializer implements RecipeSerializer<BasicSawmillRecipe> {
 
-    private final IFactory<RECIPE> factory;
+    private final StreamCodec<RegistryFriendlyByteBuf, BasicSawmillRecipe> streamCodec;
+    private final MapCodec<BasicSawmillRecipe> codec;
 
-    public SawmillRecipeSerializer(IFactory<RECIPE> factory) {
-        this.factory = factory;
-    }
+    public SawmillRecipeSerializer(Function4<ItemStackIngredient, ItemStack, ItemStack, Double, BasicSawmillRecipe> factory) {
+        Codec<Double> chanceCodec = Codec.DOUBLE.validate(d -> d > 0 && d <= 1 ? DataResult.success(d) : DataResult.error(() -> "Expected secondaryChance to be greater than zero, and less than or equal to one. Found " + d));
+        MapCodec<Optional<Double>> secondaryChanceFieldBase = chanceCodec.optionalFieldOf(SerializationConstants.SECONDARY_CHANCE);
+        MapCodec<Optional<ItemStack>> mainOutputFieldBase = ItemStack.CODEC.optionalFieldOf(SerializationConstants.MAIN_OUTPUT);
+        RecordCodecBuilder<BasicSawmillRecipe, Optional<ItemStack>> secondaryOutputField = ItemStack.CODEC.optionalFieldOf(SerializationConstants.SECONDARY_OUTPUT).forGetter(BasicSawmillRecipe::getSecondaryOutputRaw);
 
-    @NotNull
-    @Override
-    public RECIPE fromJson(@NotNull ResourceLocation recipeId, @NotNull JsonObject json) {
-        JsonElement input = GsonHelper.isArrayNode(json, JsonConstants.INPUT) ? GsonHelper.getAsJsonArray(json, JsonConstants.INPUT) :
-                            GsonHelper.getAsJsonObject(json, JsonConstants.INPUT);
-        ItemStackIngredient inputIngredient = IngredientCreatorAccess.item().deserialize(input);
-        ItemStack mainOutput = ItemStack.EMPTY;
-        ItemStack secondaryOutput = ItemStack.EMPTY;
-        double secondaryChance = 0;
-        if (json.has(JsonConstants.SECONDARY_OUTPUT) || json.has(JsonConstants.SECONDARY_CHANCE)) {
-            if (json.has(JsonConstants.MAIN_OUTPUT)) {
-                //Allow for the main output to be optional if we have a secondary output
-                mainOutput = SerializerHelper.getItemStack(json, JsonConstants.MAIN_OUTPUT);
-                if (mainOutput.isEmpty()) {
-                    throw new JsonSyntaxException("Sawmill main recipe output must not be empty, if it is defined.");
-                }
-            }
-            //If we have either json element for secondary information, assume we have both and fail if we can't get one of them
-            JsonElement chance = json.get(JsonConstants.SECONDARY_CHANCE);
-            if (!GsonHelper.isNumberValue(chance)) {
-                throw new JsonSyntaxException("Expected secondaryChance to be a number greater than zero.");
-            }
-            secondaryChance = chance.getAsJsonPrimitive().getAsDouble();
-            if (secondaryChance <= 0 || secondaryChance > 1) {
-                throw new JsonSyntaxException("Expected secondaryChance to be greater than zero, and less than or equal to one.");
-            }
-            secondaryOutput = SerializerHelper.getItemStack(json, JsonConstants.SECONDARY_OUTPUT);
-            if (secondaryOutput.isEmpty()) {
-                throw new JsonSyntaxException("Sawmill secondary recipe output must not be empty, if there is no main output.");
-            }
-        } else {
-            //If we don't have a secondary output require a main output
-            mainOutput = SerializerHelper.getItemStack(json, JsonConstants.MAIN_OUTPUT);
-            if (mainOutput.isEmpty()) {
-                throw new JsonSyntaxException("Sawmill main recipe output must not be empty, if there is no secondary output.");
-            }
-        }
-        return this.factory.create(recipeId, inputIngredient, mainOutput, secondaryOutput, secondaryChance);
+        this.codec = RecordCodecBuilder.mapCodec(instance -> instance.group(
+              ItemStackIngredient.CODEC.fieldOf(SerializationConstants.INPUT).forGetter(SawmillRecipe::getInput),
+              SerializerHelper.oneRequired(secondaryOutputField, mainOutputFieldBase, BasicSawmillRecipe::getMainOutputRaw),
+              secondaryOutputField,
+              SerializerHelper.dependentOptionality(secondaryOutputField, secondaryChanceFieldBase, sawmillRecipe -> {
+                  double secondaryChance = sawmillRecipe.getSecondaryChance();
+                  return secondaryChance == 0 ? Optional.empty() : Optional.of(secondaryChance);
+              })
+        ).apply(instance, (input, mainOutput, secondaryOutput, secondChance) ->
+              factory.apply(input, mainOutput.orElse(ItemStack.EMPTY), secondaryOutput.orElse(ItemStack.EMPTY), secondChance.orElse(0D))
+        ));
+        this.streamCodec = StreamCodec.composite(
+              ItemStackIngredient.STREAM_CODEC, SawmillRecipe::getInput,
+              ItemStack.OPTIONAL_STREAM_CODEC, (BasicSawmillRecipe recipe) -> recipe.getMainOutputRaw().orElse(ItemStack.EMPTY),
+              ItemStack.OPTIONAL_STREAM_CODEC, (BasicSawmillRecipe recipe) -> recipe.getSecondaryOutputRaw().orElse(ItemStack.EMPTY),
+              ByteBufCodecs.DOUBLE, SawmillRecipe::getSecondaryChance,
+              factory
+        );
     }
 
     @Override
-    public RECIPE fromNetwork(@NotNull ResourceLocation recipeId, @NotNull FriendlyByteBuf buffer) {
-        try {
-            ItemStackIngredient inputIngredient = IngredientCreatorAccess.item().read(buffer);
-            ItemStack mainOutput = buffer.readItem();
-            ItemStack secondaryOutput = buffer.readItem();
-            double secondaryChance = buffer.readDouble();
-            return this.factory.create(recipeId, inputIngredient, mainOutput, secondaryOutput, secondaryChance);
-        } catch (Exception e) {
-            Mekanism.logger.error("Error reading sawmill recipe from packet.", e);
-            throw e;
-        }
+    public MapCodec<BasicSawmillRecipe> codec() {
+        return codec;
     }
 
     @Override
-    public void toNetwork(@NotNull FriendlyByteBuf buffer, @NotNull RECIPE recipe) {
-        try {
-            recipe.write(buffer);
-        } catch (Exception e) {
-            Mekanism.logger.error("Error writing sawmill recipe to packet.", e);
-            throw e;
-        }
-    }
-
-    @FunctionalInterface
-    public interface IFactory<RECIPE extends SawmillRecipe> {
-
-        RECIPE create(ResourceLocation id, ItemStackIngredient input, ItemStack mainOutput, ItemStack secondaryOutput, double secondaryChance);
+    public StreamCodec<RegistryFriendlyByteBuf, BasicSawmillRecipe> streamCodec() {
+        return streamCodec;
     }
 }

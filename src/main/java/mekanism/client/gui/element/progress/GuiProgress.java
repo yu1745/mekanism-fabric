@@ -10,8 +10,8 @@ import java.util.function.BooleanSupplier;
 import mekanism.client.gui.IGuiWrapper;
 import mekanism.client.gui.element.GuiTexturedElement;
 import mekanism.client.gui.element.progress.IProgressInfoHandler.IBooleanProgressInfoHandler;
-import mekanism.client.jei.MekanismJEIRecipeType;
-import mekanism.client.jei.interfaces.IJEIRecipeArea;
+import mekanism.client.recipe_viewer.type.IRecipeViewerRecipeType;
+import mekanism.client.recipe_viewer.interfaces.IRecipeViewerRecipeArea;
 import mekanism.client.render.MekanismRenderer;
 import mekanism.common.inventory.warning.ISupportsWarning;
 import mekanism.common.inventory.warning.WarningTracker.WarningType;
@@ -22,11 +22,11 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 
-public class GuiProgress extends GuiTexturedElement implements IJEIRecipeArea<GuiProgress>, ISupportsWarning<GuiProgress> {
+public class GuiProgress extends GuiTexturedElement implements IRecipeViewerRecipeArea<GuiProgress>, ISupportsWarning<GuiProgress> {
 
     protected final IProgressInfoHandler handler;
     protected final ProgressType type;
-    private MekanismJEIRecipeType<?>[] recipeCategories;
+    private IRecipeViewerRecipeType<?>[] recipeCategories;
     @Nullable
     private ColorDetails colorDetails;
     @Nullable
@@ -95,20 +95,20 @@ public class GuiProgress extends GuiTexturedElement implements IJEIRecipeArea<Gu
     }
 
     @Override
-    public boolean isJEIAreaActive() {
+    public boolean isRecipeViewerAreaActive() {
         return handler.isActive();
     }
 
     @NotNull
     @Override
-    public GuiProgress jeiCategories(@NotNull MekanismJEIRecipeType<?>... recipeCategories) {
+    public GuiProgress recipeViewerCategories(@NotNull IRecipeViewerRecipeType<?>... recipeCategories) {
         this.recipeCategories = recipeCategories;
         return this;
     }
 
     @Nullable
     @Override
-    public MekanismJEIRecipeType<?>[] getRecipeCategories() {
+    public IRecipeViewerRecipeType<?>[] getRecipeCategories() {
         return recipeCategories;
     }
 
@@ -130,10 +130,10 @@ public class GuiProgress extends GuiTexturedElement implements IJEIRecipeArea<Gu
         int x2 = x + width;
         int y2 = y + height;
         Matrix4f matrix = guiGraphics.pose().last().pose();
-        float minU = uOffset / (float) textureWidth;
-        float maxU = (uOffset + width) / (float) textureWidth;
-        float minV = vOffset / (float) textureHeight;
-        float maxV = (vOffset + height) / (float) textureHeight;
+        float minU = uOffset / textureWidth;
+        float maxU = (uOffset + width) / textureWidth;
+        float minV = vOffset / textureHeight;
+        float maxV = (vOffset + height) / textureHeight;
 
         float alphaFrom = MekanismRenderer.getAlpha(colorFrom);
         float redFrom = MekanismRenderer.getRed(colorFrom);
@@ -171,25 +171,39 @@ public class GuiProgress extends GuiTexturedElement implements IJEIRecipeArea<Gu
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
         RenderSystem.setShaderTexture(0, resource);
-        RenderSystem.setShader(GameRenderer::getPositionColorTexShader);
+        RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
 
-        //Note: We still use the tesselator as that is what the position_color_tex GuiGraphics#innerBlit does
-        BufferBuilder builder = Tesselator.getInstance().getBuilder();
-        builder.begin(Mode.QUADS, DefaultVertexFormat.POSITION_COLOR_TEX);
+        BufferBuilder builder = Tesselator.getInstance().begin(Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
 
         if (type.isVertical()) {
-            builder.vertex(matrix, x, y2, 0).color(redTo, greenTo, blueTo, alphaTo).uv(minU, maxV).endVertex();
-            builder.vertex(matrix, x2, y2, 0).color(redTo, greenTo, blueTo, alphaTo).uv(maxU, maxV).endVertex();
-            builder.vertex(matrix, x2, y, 0).color(redFrom, greenFrom, blueFrom, alphaFrom).uv(maxU, minV).endVertex();
-            builder.vertex(matrix, x, y, 0).color(redFrom, greenFrom, blueFrom, alphaFrom).uv(minU, minV).endVertex();
+            builder.addVertex(matrix, x, y2, 0)
+                  .setUv(minU, maxV)
+                  .setColor(redTo, greenTo, blueTo, alphaTo);
+            builder.addVertex(matrix, x2, y2, 0)
+                  .setUv(maxU, maxV)
+                  .setColor(redTo, greenTo, blueTo, alphaTo);
+            builder.addVertex(matrix, x2, y, 0)
+                  .setUv(maxU, minV)
+                  .setColor(redFrom, greenFrom, blueFrom, alphaFrom);
+            builder.addVertex(matrix, x, y, 0)
+                  .setUv(minU, minV)
+                  .setColor(redFrom, greenFrom, blueFrom, alphaFrom);
         } else {
-            builder.vertex(matrix, x, y2, 0).color(redFrom, greenFrom, blueFrom, alphaFrom).uv(minU, maxV).endVertex();
-            builder.vertex(matrix, x2, y2, 0).color(redTo, greenTo, blueTo, alphaTo).uv(maxU, maxV).endVertex();
-            builder.vertex(matrix, x2, y, 0).color(redTo, greenTo, blueTo, alphaTo).uv(maxU, minV).endVertex();
-            builder.vertex(matrix, x, y, 0).color(redFrom, greenFrom, blueFrom, alphaFrom).uv(minU, minV).endVertex();
+            builder.addVertex(matrix, x, y2, 0)
+                  .setUv(minU, maxV)
+                  .setColor(redFrom, greenFrom, blueFrom, alphaFrom);
+            builder.addVertex(matrix, x2, y2, 0)
+                  .setUv(maxU, maxV)
+                  .setColor(redTo, greenTo, blueTo, alphaTo);
+            builder.addVertex(matrix, x2, y, 0)
+                  .setUv(maxU, minV)
+                  .setColor(redTo, greenTo, blueTo, alphaTo);
+            builder.addVertex(matrix, x, y, 0)
+                  .setUv(minU, minV)
+                  .setColor(redFrom, greenFrom, blueFrom, alphaFrom);
         }
 
-        BufferUploader.drawWithShader(builder.end());
+        BufferUploader.drawWithShader(builder.buildOrThrow());
         //Reset blit and fill gradient states
         RenderSystem.disableBlend();
     }

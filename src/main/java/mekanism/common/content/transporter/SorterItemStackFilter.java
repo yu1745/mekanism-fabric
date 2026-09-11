@@ -1,23 +1,49 @@
 package mekanism.common.content.transporter;
 
-import java.util.Objects;
-import mekanism.api.NBTConstants;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import java.util.Optional;
+import java.util.function.Function;
+import mekanism.api.SerializationConstants;
+import mekanism.api.text.EnumColor;
 import mekanism.common.content.filter.FilterType;
 import mekanism.common.content.filter.IItemStackFilter;
 import mekanism.common.lib.inventory.Finder;
-import mekanism.common.util.NBTUtils;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.items.ItemHandlerHelper;
 import org.jetbrains.annotations.NotNull;
 
 public class SorterItemStackFilter extends SorterFilter<SorterItemStackFilter> implements IItemStackFilter<SorterItemStackFilter> {
+
+    public static final MapCodec<SorterItemStackFilter> CODEC = RecordCodecBuilder.mapCodec(instance -> baseSorterCodec(instance)
+          .and(ItemStack.SINGLE_ITEM_CODEC.fieldOf(SerializationConstants.TARGET_STACK).forGetter(SorterItemStackFilter::getItemStack))
+          .and(Codec.BOOL.optionalFieldOf(SerializationConstants.FUZZY, false).forGetter(filter -> filter.fuzzyMode))
+          .apply(instance, SorterItemStackFilter::new));
+    public static final StreamCodec<RegistryFriendlyByteBuf, SorterItemStackFilter> STREAM_CODEC = StreamCodec.composite(
+          baseSorterStreamCodec(SorterItemStackFilter::new), Function.identity(),
+          ItemStack.OPTIONAL_STREAM_CODEC, SorterItemStackFilter::getItemStack,
+          ByteBufCodecs.BOOL, filter -> filter.fuzzyMode,
+          (filter, itemType, fuzzyMode) -> {
+              filter.itemType = itemType;
+              filter.fuzzyMode = fuzzyMode;
+              return filter;
+          }
+    );
 
     private ItemStack itemType = ItemStack.EMPTY;
     public boolean fuzzyMode;
 
     public SorterItemStackFilter() {
+    }
+
+    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
+    protected SorterItemStackFilter(boolean enabled, boolean allowDefault, boolean sizeMode, int min, int max, Optional<EnumColor> color, ItemStack itemType, boolean fuzzyMode) {
+        super(enabled, allowDefault, sizeMode, min, max, color.orElse(null));
+        this.itemType = itemType;
+        this.fuzzyMode = fuzzyMode;
     }
 
     public SorterItemStackFilter(SorterItemStackFilter filter) {
@@ -32,37 +58,11 @@ public class SorterItemStackFilter extends SorterFilter<SorterItemStackFilter> i
     }
 
     @Override
-    public CompoundTag write(CompoundTag nbtTags) {
-        super.write(nbtTags);
-        nbtTags.putBoolean(NBTConstants.FUZZY_MODE, fuzzyMode);
-        itemType.save(nbtTags);
-        return nbtTags;
-    }
-
-    @Override
-    public void read(CompoundTag nbtTags) {
-        super.read(nbtTags);
-        NBTUtils.setBooleanIfPresent(nbtTags, NBTConstants.FUZZY_MODE, fuzzy -> fuzzyMode = fuzzy);
-        itemType = ItemStack.of(nbtTags);
-    }
-
-    @Override
-    public void write(FriendlyByteBuf buffer) {
-        super.write(buffer);
-        buffer.writeBoolean(fuzzyMode);
-        buffer.writeItem(itemType);
-    }
-
-    @Override
-    public void read(FriendlyByteBuf dataStream) {
-        super.read(dataStream);
-        fuzzyMode = dataStream.readBoolean();
-        itemType = dataStream.readItem();
-    }
-
-    @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), itemType.getItem(), fuzzyMode);
+        int result = super.hashCode();
+        result = 31 * result + itemType.getItem().hashCode();
+        result = 31 * result + Boolean.hashCode(fuzzyMode);
+        return result;
     }
 
     @Override
@@ -75,9 +75,9 @@ public class SorterItemStackFilter extends SorterFilter<SorterItemStackFilter> i
         SorterItemStackFilter other = (SorterItemStackFilter) o;
         if (fuzzyMode == other.fuzzyMode) {
             if (fuzzyMode) {
-                return itemType.getItem() == other.itemType.getItem();
+                return itemType.is(other.itemType.getItemHolder());
             }
-            return ItemHandlerHelper.canItemStacksStack(itemType, other.itemType);
+            return ItemStack.isSameItemSameComponents(itemType, other.itemType);
         }
         return false;
     }

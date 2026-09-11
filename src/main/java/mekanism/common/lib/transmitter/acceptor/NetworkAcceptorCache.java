@@ -1,7 +1,12 @@
 package mekanism.common.lib.transmitter.acceptor;
 
+import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectMaps;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.Map;
@@ -9,34 +14,37 @@ import java.util.Map.Entry;
 import java.util.Set;
 import mekanism.common.content.network.transmitter.Transmitter;
 import mekanism.common.lib.transmitter.TransmitterNetworkRegistry;
+import mekanism.common.util.WorldUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraftforge.common.util.LazyOptional;
+import org.jetbrains.annotations.Nullable;
 
 public class NetworkAcceptorCache<ACCEPTOR> {
 
-    private final Map<BlockPos, Map<Direction, LazyOptional<ACCEPTOR>>> cachedAcceptors = new Object2ObjectOpenHashMap<>();
+    private final Long2ObjectMap<Map<Direction, ACCEPTOR>> cachedAcceptors = new Long2ObjectOpenHashMap<>();
     private final Map<Transmitter<ACCEPTOR, ?, ?>, Set<Direction>> changedAcceptors = new Object2ObjectOpenHashMap<>();
 
     public void updateTransmitterOnSide(Transmitter<ACCEPTOR, ?, ?> transmitter, Direction side) {
-        LazyOptional<ACCEPTOR> acceptor = transmitter.canConnectToAcceptor(side) ? transmitter.getAcceptor(side) : LazyOptional.empty();
-        BlockPos acceptorPos = transmitter.getTilePos().relative(side);
-        if (acceptor.isPresent()) {
-            cachedAcceptors.computeIfAbsent(acceptorPos, pos -> new EnumMap<>(Direction.class)).put(side.getOpposite(), acceptor);
-        } else if (cachedAcceptors.containsKey(acceptorPos)) {
-            Map<Direction, LazyOptional<ACCEPTOR>> cached = cachedAcceptors.get(acceptorPos);
-            cached.remove(side.getOpposite());
-            if (cached.isEmpty()) {
-                cachedAcceptors.remove(acceptorPos);
+        transmitter.refreshAcceptorConnections(side);
+        ACCEPTOR acceptor = transmitter.canConnectToAcceptor(side) ? transmitter.getAcceptor(side) : null;
+        long acceptorPos = WorldUtils.relativePos(transmitter.getWorldPositionLong(), side);
+        if (acceptor == null) {
+            Map<Direction, ACCEPTOR> cached = cachedAcceptors.get(acceptorPos);
+            if (cached != null) {
+                cached.remove(side.getOpposite());
+                if (cached.isEmpty()) {
+                    cachedAcceptors.remove(acceptorPos);
+                }
             }
         } else {
-            cachedAcceptors.remove(acceptorPos);
+            cachedAcceptors.computeIfAbsent(acceptorPos, pos -> new EnumMap<>(Direction.class)).put(side.getOpposite(), acceptor);
         }
     }
 
     public void adoptAcceptors(NetworkAcceptorCache<ACCEPTOR> other) {
-        for (Entry<BlockPos, Map<Direction, LazyOptional<ACCEPTOR>>> entry : other.cachedAcceptors.entrySet()) {
-            BlockPos pos = entry.getKey();
+        for (ObjectIterator<Long2ObjectMap.Entry<Map<Direction, ACCEPTOR>>> iterator = other.getAcceptorFastIterator(); iterator.hasNext(); ) {
+            Long2ObjectMap.Entry<Map<Direction, ACCEPTOR>> entry = iterator.next();
+            long pos = entry.getLongKey();
             if (cachedAcceptors.containsKey(pos)) {
                 cachedAcceptors.get(pos).putAll(entry.getValue());
             } else {
@@ -81,14 +89,14 @@ public class NetworkAcceptorCache<ACCEPTOR> {
     /**
      * @apiNote Listeners should not be added to these LazyOptionals here as they may not correspond to an actual handler and may not get invalidated.
      */
-    public Set<Map.Entry<BlockPos, Map<Direction, LazyOptional<ACCEPTOR>>>> getAcceptorEntrySet() {
-        return cachedAcceptors.entrySet();
+    public ObjectIterator<Long2ObjectMap.Entry<Map<Direction, ACCEPTOR>>> getAcceptorFastIterator() {
+        return Long2ObjectMaps.fastIterator(cachedAcceptors);
     }
 
     /**
      * @apiNote Listeners should not be added to these LazyOptionals here as they may not correspond to an actual handler and may not get invalidated.
      */
-    public Collection<Map<Direction, LazyOptional<ACCEPTOR>>> getAcceptorValues() {
+    public Collection<Map<Direction, ACCEPTOR>> getAcceptorValues() {
         return cachedAcceptors.values();
     }
 
@@ -98,10 +106,15 @@ public class NetworkAcceptorCache<ACCEPTOR> {
     }
 
     public boolean hasAcceptor(BlockPos acceptorPos) {
-        return cachedAcceptors.containsKey(acceptorPos);
+        return cachedAcceptors.containsKey(acceptorPos.asLong());
     }
 
-    public Set<Direction> getAcceptorDirections(BlockPos pos) {
+    @Nullable
+    public ACCEPTOR getCachedAcceptor(long acceptorPos, Direction side) {
+        return cachedAcceptors.getOrDefault(acceptorPos, Collections.emptyMap()).get(side);
+    }
+
+    public Set<Direction> getAcceptorDirections(long pos) {
         //TODO: Do this better?
         return cachedAcceptors.get(pos).keySet();
     }

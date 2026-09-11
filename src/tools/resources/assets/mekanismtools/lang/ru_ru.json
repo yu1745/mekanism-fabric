@@ -13,6 +13,7 @@
   "advancements.mekanismtools.paxel.title": "Многофункциональный инструмент",
   "constants.mekanismtools.mod_name": "Mekanism: Tools",
   "constants.mekanismtools.pack_description": "Ресурсы, используемые для Mekanism: Tools",
+  "fml.menu.mods.info.description.mekanismtools": "Модуль инструментов для Mekanism",
   "item.mekanismtools.bronze_axe": "Бронзовый топор",
   "item.mekanismtools.bronze_boots": "Бронзовые ботинки",
   "item.mekanismtools.bronze_chestplate": "Бронзовый нагрудник",
@@ -181,5 +182,6 @@
   "item.mekanismtools.steel_sword": "Стальной меч",
   "item.mekanismtools.stone_paxel": "Каменный мульти-инcтрумент",
   "item.mekanismtools.wood_paxel": "Деревянный мульти-инcтрумент",
+  "tag.item.c.tools.paxel": "Копорты",
   "tooltip.mekanismtools.hp": "HP: %1$s"
 }

@@ -3,7 +3,9 @@ package mekanism.common.content.gear;
 import mekanism.api.gear.ICustomModule;
 import mekanism.api.gear.ICustomModule.ModuleDispenseResult;
 import mekanism.api.gear.IModule;
-import net.minecraft.core.BlockSource;
+import mekanism.api.gear.IModuleContainer;
+import mekanism.api.gear.IModuleHelper;
+import net.minecraft.core.dispenser.BlockSource;
 import net.minecraft.core.dispenser.OptionalDispenseItemBehavior;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
@@ -21,13 +23,16 @@ public class ModuleDispenseBehavior extends OptionalDispenseItemBehavior {
             return stack;
         }
         boolean preventDrop = result == ModuleDispenseResult.FAIL_PREVENT_DROP;
-        for (Module<?> module : ModuleHelper.get().loadAll(stack)) {
-            if (module.isEnabled()) {
-                result = onModuleDispense(module, source);
-                if (result == ModuleDispenseResult.HANDLED) {
-                    return stack;
+        IModuleContainer moduleContainer = IModuleHelper.INSTANCE.getModuleContainer(stack);
+        if (moduleContainer != null) {
+            for (IModule<?> module : moduleContainer.modules()) {
+                if (module.isEnabled()) {
+                    result = onModuleDispense(module, source, moduleContainer, stack);
+                    if (result == ModuleDispenseResult.HANDLED) {
+                        return stack;
+                    }
+                    preventDrop |= result == ModuleDispenseResult.FAIL_PREVENT_DROP;
                 }
-                preventDrop |= result == ModuleDispenseResult.FAIL_PREVENT_DROP;
             }
         }
         if (preventDrop) {
@@ -38,8 +43,8 @@ public class ModuleDispenseBehavior extends OptionalDispenseItemBehavior {
         return super.execute(source, stack);
     }
 
-    private <MODULE extends ICustomModule<MODULE>> ModuleDispenseResult onModuleDispense(IModule<MODULE> module, @NotNull BlockSource source) {
-        return module.getCustomInstance().onDispense(module, source);
+    private <MODULE extends ICustomModule<MODULE>> ModuleDispenseResult onModuleDispense(IModule<MODULE> module, @NotNull BlockSource source, IModuleContainer moduleContainer, ItemStack stack) {
+        return module.getCustomInstance().onDispense(module, moduleContainer, stack, source);
     }
 
     protected ModuleDispenseResult performBuiltin(@NotNull BlockSource source, @NotNull ItemStack stack) {

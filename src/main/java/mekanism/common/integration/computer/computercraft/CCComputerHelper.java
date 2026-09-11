@@ -3,24 +3,16 @@ package mekanism.common.integration.computer.computercraft;
 import dan200.computercraft.api.lua.IArguments;
 import dan200.computercraft.api.lua.LuaException;
 import dan200.computercraft.api.lua.MethodResult;
-import mekanism.api.math.FloatingLong;
-import mekanism.common.content.filter.IFilter;
-import mekanism.common.content.miner.MinerFilter;
-import mekanism.common.content.oredictionificator.OredictionificatorFilter;
-import mekanism.common.content.qio.filter.QIOFilter;
-import mekanism.common.content.transporter.SorterFilter;
+import java.util.Map;
 import mekanism.common.integration.computer.BaseComputerHelper;
 import mekanism.common.integration.computer.ComputerException;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-
-import java.util.Map;
 
 public class CCComputerHelper extends BaseComputerHelper {
 
     private final IArguments arguments;
 
-    public CCComputerHelper(IArguments arguments){
+    public CCComputerHelper(IArguments arguments) {
         this.arguments = arguments;
     }
 
@@ -101,23 +93,6 @@ public class CCComputerHelper extends BaseComputerHelper {
     public double getDouble(int param) throws ComputerException {
         try {
             return arguments.getDouble(param);
-        } catch (LuaException e) {
-            throw new ComputerException(e);
-        }
-    }
-
-    @Override
-    public FloatingLong getFloatingLong(int param) throws ComputerException {
-        try {
-            Object opt = arguments.get(param);
-            if (opt instanceof String s) {
-                return FloatingLong.parseFloatingLong(s);
-            }
-            double finiteDouble = arguments.getFiniteDouble(param);
-            if (finiteDouble < 0) {
-                return FloatingLong.ZERO;
-            }
-            return FloatingLong.createConst(finiteDouble);
         } catch (LuaException e) {
             throw new ComputerException(e);
         }

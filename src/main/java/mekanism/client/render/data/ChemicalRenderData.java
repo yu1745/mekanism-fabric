@@ -1,31 +1,29 @@
 package mekanism.client.render.data;
 
-import java.util.Objects;
+import mekanism.api.MekanismAPITags;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.chemical.Chemical;
-import mekanism.api.chemical.gas.Gas;
-import mekanism.api.chemical.infuse.InfuseType;
-import mekanism.api.chemical.pigment.Pigment;
-import mekanism.api.chemical.slurry.Slurry;
 import mekanism.client.render.MekanismRenderer;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 //TODO - 1.18: Make it possible for chemicals to define a "glow/light" value and then use that here
 @NothingNullByDefault
-public abstract class ChemicalRenderData<CHEMICAL extends Chemical<CHEMICAL>> extends RenderData {
+public class ChemicalRenderData extends RenderData {
 
-    public final CHEMICAL chemical;
+    public final Holder<Chemical> chemical;
 
-    protected ChemicalRenderData(BlockPos renderLocation, int width, int height, int length, CHEMICAL chemical) {
+    public ChemicalRenderData(BlockPos renderLocation, int width, int height, int length, Holder<Chemical> chemical) {
         super(renderLocation, width, height, length);
         this.chemical = chemical;
     }
 
     @Override
     public int getColorARGB(float scale) {
-        return MekanismRenderer.getColorARGB(chemical, scale, isGaseous());
+        return MekanismRenderer.getColorARGB(chemical, scale);
     }
 
     @Override
@@ -34,55 +32,58 @@ public abstract class ChemicalRenderData<CHEMICAL extends Chemical<CHEMICAL>> ex
     }
 
     @Override
+    @SuppressWarnings("removal")
     public boolean isGaseous() {
-        return false;
+        //TODO - 1.22: Remove the legacy check
+        return chemical.is(MekanismAPITags.Chemicals.GASEOUS) || chemical.value().isGaseousLegacy();
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), chemical);
+        return 31 * super.hashCode() + chemical.hashCode();
     }
 
     @Override
     public boolean equals(@Nullable Object o) {
         if (o == this) {
             return true;
-        } else if (o == null || getClass() != o.getClass() || !super.equals(o)) {
+        } else if (o == null) {
             return false;
         }
-        return chemical == ((ChemicalRenderData<?>) o).chemical;
+        return o.getClass() == ChemicalRenderData.class && equalsCommonChemical(o);
     }
 
-    public static class GasRenderData extends ChemicalRenderData<Gas> {
+    protected boolean equalsCommonChemical(@NotNull Object o) {
+        return super.equals(o) && chemical.is(((ChemicalRenderData) o).chemical);
+    }
 
-        public GasRenderData(BlockPos renderLocation, int width, int height, int length, Gas gas) {
-            super(renderLocation, width, height, length, gas);
+    public static class Scaled extends ChemicalRenderData implements ScaledRenderData {
+
+        private final float scale;
+
+        public Scaled(BlockPos renderLocation, int width, int height, int length, Holder<Chemical> chemical, float scale) {
+            super(renderLocation, width, height, length, chemical);
+            this.scale = scale;
         }
 
         @Override
-        public boolean isGaseous() {
-            return true;
+        public float scale() {
+            return scale;
         }
-    }
 
-    public static class InfusionRenderData extends ChemicalRenderData<InfuseType> {
-
-        public InfusionRenderData(BlockPos renderLocation, int width, int height, int length, InfuseType infuseType) {
-            super(renderLocation, width, height, length, infuseType);
+        @Override
+        public boolean equals(@Nullable Object o) {
+            if (o == this) {
+                return true;
+            } else if (o == null) {
+                return false;
+            }
+            return o.getClass() == Scaled.class && equalsCommonChemical(o) && scale == ((Scaled) o).scale;
         }
-    }
 
-    public static class PigmentRenderData extends ChemicalRenderData<Pigment> {
-
-        public PigmentRenderData(BlockPos renderLocation, int width, int height, int length, Pigment pigment) {
-            super(renderLocation, width, height, length, pigment);
-        }
-    }
-
-    public static class SlurryRenderData extends ChemicalRenderData<Slurry> {
-
-        public SlurryRenderData(BlockPos renderLocation, int width, int height, int length, Slurry slurry) {
-            super(renderLocation, width, height, length, slurry);
+        @Override
+        public int hashCode() {
+            return 31 * super.hashCode() + Float.hashCode(scale);
         }
     }
 }

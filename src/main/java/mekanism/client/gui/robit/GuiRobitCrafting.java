@@ -18,13 +18,13 @@ public class GuiRobitCrafting extends GuiRobit<CraftingRobitContainer> {
     @Override
     protected void addGuiElements() {
         super.addGuiElements();
-        addRenderableWidget(new GuiRightArrow(this, 90, 35).jeiCrafting());
+        addRenderableWidget(new GuiRightArrow(this, 90, 35).recipeViewerCrafting());
     }
 
     @Override
     protected void drawForegroundText(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        drawString(guiGraphics, title, titleLabelX, titleLabelY, titleTextColor());
-        drawString(guiGraphics, playerInventoryTitle, inventoryLabelX, inventoryLabelY, titleTextColor());
+        renderTitleText(guiGraphics);
+        renderInventoryText(guiGraphics);
         super.drawForegroundText(guiGraphics, mouseX, mouseY);
     }
 

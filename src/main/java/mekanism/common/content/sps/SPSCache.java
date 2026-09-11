@@ -1,9 +1,10 @@
 package mekanism.common.content.sps;
 
-import mekanism.api.NBTConstants;
-import mekanism.api.math.FloatingLong;
+import mekanism.api.SerializationConstants;
+import mekanism.api.math.MathUtils;
 import mekanism.common.lib.multiblock.MultiblockCache;
 import mekanism.common.util.NBTUtils;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 
 public class SPSCache extends MultiblockCache<SPSMultiblockData> {
@@ -11,22 +12,23 @@ public class SPSCache extends MultiblockCache<SPSMultiblockData> {
     private double progress;
     private int inputProcessed;
     private boolean couldOperate;
-    private FloatingLong receivedEnergy = FloatingLong.ZERO;
+    private long receivedEnergy = 0;
     private double lastProcessed;
 
     @Override
     public void merge(MultiblockCache<SPSMultiblockData> mergeCache, RejectContents rejectContents) {
         super.merge(mergeCache, rejectContents);
-        progress += ((SPSCache) mergeCache).progress;
-        inputProcessed += ((SPSCache) mergeCache).inputProcessed;
-        couldOperate |= ((SPSCache) mergeCache).couldOperate;
-        receivedEnergy = receivedEnergy.add(((SPSCache) mergeCache).receivedEnergy);
-        lastProcessed = Math.max(lastProcessed, ((SPSCache) mergeCache).lastProcessed);
+        SPSCache spsMergeCache = (SPSCache) mergeCache;
+        progress += spsMergeCache.progress;
+        inputProcessed += spsMergeCache.inputProcessed;
+        couldOperate |= spsMergeCache.couldOperate;
+        receivedEnergy = MathUtils.addClamped(receivedEnergy, spsMergeCache.receivedEnergy);
+        lastProcessed = Math.max(lastProcessed, spsMergeCache.lastProcessed);
     }
 
     @Override
-    public void apply(SPSMultiblockData data) {
-        super.apply(data);
+    public void apply(HolderLookup.Provider provider, SPSMultiblockData data) {
+        super.apply(provider, data);
         data.progress = progress;
         data.inputProcessed = inputProcessed;
         data.couldOperate = couldOperate;
@@ -45,22 +47,22 @@ public class SPSCache extends MultiblockCache<SPSMultiblockData> {
     }
 
     @Override
-    public void load(CompoundTag nbtTags) {
-        super.load(nbtTags);
-        NBTUtils.setDoubleIfPresent(nbtTags, NBTConstants.PROGRESS, val -> progress = val);
-        NBTUtils.setIntIfPresent(nbtTags, NBTConstants.PROCESSED, val -> inputProcessed = val);
-        NBTUtils.setBooleanIfPresent(nbtTags, NBTConstants.COULD_OPERATE, val -> couldOperate = val);
-        NBTUtils.setFloatingLongIfPresent(nbtTags, NBTConstants.ENERGY_USAGE, val -> receivedEnergy = val);
-        NBTUtils.setDoubleIfPresent(nbtTags, NBTConstants.LAST_PROCESSED, val -> lastProcessed = val);
+    public void load(HolderLookup.Provider provider, CompoundTag nbtTags) {
+        super.load(provider, nbtTags);
+        NBTUtils.setDoubleIfPresent(nbtTags, SerializationConstants.PROGRESS, val -> progress = val);
+        NBTUtils.setIntIfPresent(nbtTags, SerializationConstants.PROCESSED, val -> inputProcessed = val);
+        NBTUtils.setBooleanIfPresent(nbtTags, SerializationConstants.COULD_OPERATE, val -> couldOperate = val);
+        NBTUtils.setLegacyEnergyIfPresent(nbtTags, SerializationConstants.ENERGY_USAGE, val -> receivedEnergy = val);
+        NBTUtils.setDoubleIfPresent(nbtTags, SerializationConstants.LAST_PROCESSED, val -> lastProcessed = val);
     }
 
     @Override
-    public void save(CompoundTag nbtTags) {
-        super.save(nbtTags);
-        nbtTags.putDouble(NBTConstants.PROGRESS, progress);
-        nbtTags.putInt(NBTConstants.PROCESSED, inputProcessed);
-        nbtTags.putBoolean(NBTConstants.COULD_OPERATE, couldOperate);
-        nbtTags.putString(NBTConstants.ENERGY_USAGE, receivedEnergy.toString());
-        nbtTags.putDouble(NBTConstants.LAST_PROCESSED, lastProcessed);
+    public void save(HolderLookup.Provider provider, CompoundTag nbtTags) {
+        super.save(provider, nbtTags);
+        nbtTags.putDouble(SerializationConstants.PROGRESS, progress);
+        nbtTags.putInt(SerializationConstants.PROCESSED, inputProcessed);
+        nbtTags.putBoolean(SerializationConstants.COULD_OPERATE, couldOperate);
+        nbtTags.putLong(SerializationConstants.ENERGY_USAGE, receivedEnergy);
+        nbtTags.putDouble(SerializationConstants.LAST_PROCESSED, lastProcessed);
     }
 }

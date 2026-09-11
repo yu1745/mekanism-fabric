@@ -1,15 +1,13 @@
 package mekanism.api.recipes;
 
-import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.function.Predicate;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.recipes.ingredients.ItemStackIngredient;
-import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.fluids.FluidStack;
+import net.minecraft.world.item.crafting.SingleRecipeInput;
+import net.minecraft.world.level.Level;
+import net.neoforged.neoforge.fluids.FluidStack;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
@@ -20,43 +18,24 @@ import org.jetbrains.annotations.NotNull;
  * <br>
  * Output: FluidStack
  *
- * @apiNote There is currently only one type of ItemStack to FluidStack recipe type:
- * <ul>
- *     <li>Nutritional Liquification: These cannot currently be created, but are processed in the Nutritional Liquifier.</li>
- * </ul>
+ * @apiNote There is currently no types of ItemStack to FluidStack recipe type
  */
 @NothingNullByDefault
-public abstract class ItemStackToFluidRecipe extends MekanismRecipe implements Predicate<@NotNull ItemStack> {
-
-    protected final ItemStackIngredient input;
-    protected final FluidStack output;
-
-    /**
-     * @param id     Recipe name.
-     * @param input  Input.
-     * @param output Output.
-     */
-    public ItemStackToFluidRecipe(ResourceLocation id, ItemStackIngredient input, FluidStack output) {
-        super(id);
-        this.input = Objects.requireNonNull(input, "Input cannot be null.");
-        Objects.requireNonNull(output, "Output cannot be null.");
-        if (output.isEmpty()) {
-            throw new IllegalArgumentException("Output cannot be empty.");
-        }
-        this.output = output.copy();
-    }
+public abstract class ItemStackToFluidRecipe extends MekanismRecipe<SingleRecipeInput> implements Predicate<@NotNull ItemStack> {
 
     @Override
-    public boolean test(ItemStack itemStack) {
-        return input.test(itemStack);
+    public abstract boolean test(ItemStack itemStack);
+
+    @Override
+    public boolean matches(SingleRecipeInput input, Level level) {
+        //Don't match incomplete recipes or ones that don't match
+        return !isIncomplete() && test(input.item());
     }
 
     /**
      * Gets the input ingredient.
      */
-    public ItemStackIngredient getInput() {
-        return input;
-    }
+    public abstract ItemStackIngredient getInput();
 
     /**
      * Gets a new output based on the given input.
@@ -70,32 +49,22 @@ public abstract class ItemStackToFluidRecipe extends MekanismRecipe implements P
      * @implNote The passed in input should <strong>NOT</strong> be modified.
      */
     @Contract(value = "_ -> new", pure = true)
-    public FluidStack getOutput(ItemStack input) {
-        return output.copy();
-    }
+    public abstract FluidStack getOutput(ItemStack input);
 
     /**
      * For JEI, gets the output representations to display.
      *
      * @return Representation of the output, <strong>MUST NOT</strong> be modified.
      */
-    public List<FluidStack> getOutputDefinition() {
-        return Collections.singletonList(output);
-    }
+    public abstract List<FluidStack> getOutputDefinition();
 
     @Override
     public boolean isIncomplete() {
-        return input.hasNoMatchingInstances();
+        return getInput().hasNoMatchingInstances();
     }
 
     @Override
     public void logMissingTags() {
-        input.logMissingTags();
-    }
-
-    @Override
-    public void write(FriendlyByteBuf buffer) {
-        input.write(buffer);
-        output.writeToPacket(buffer);
+        getInput().logMissingTags();
     }
 }

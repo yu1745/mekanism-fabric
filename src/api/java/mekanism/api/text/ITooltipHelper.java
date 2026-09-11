@@ -1,7 +1,6 @@
 package mekanism.api.text;
 
-import java.util.ServiceLoader;
-import mekanism.api.math.FloatingLong;
+import mekanism.api.MekanismAPI;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.ApiStatus.Internal;
 
@@ -12,11 +11,13 @@ import org.jetbrains.annotations.ApiStatus.Internal;
 @Internal
 public interface ITooltipHelper {
 
-    ITooltipHelper INSTANCE = ServiceLoader.load(ITooltipHelper.class).findFirst().orElseThrow(() -> new IllegalStateException("No valid ServiceImpl for ITooltipHelper found"));
+    ITooltipHelper INSTANCE = MekanismAPI.getService(ITooltipHelper.class);
 
-    Component getEnergyPerMBDisplayShort(FloatingLong energy);
+    Component getEnergyPerMBDisplayShort(long energy);
 
     Component getRadioactivityDisplayShort(double radioactivity);
+
+    Component getTemperatureDisplayShort(double temperature);
 
     String getFormattedNumber(long number);
 

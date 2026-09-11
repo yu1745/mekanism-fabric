@@ -18,7 +18,7 @@ public class CrTRobitSkin {
         ResourceLocation skinName = CraftTweakerAPI.getAccessibleElementsProvider()
               .registryAccess()
               .registryOrThrow(MekanismAPI.ROBIT_SKIN_REGISTRY_NAME)
-              .getKey(_this);
+              .getKeyOrNull(_this);
         if (skinName == null) {
             throw new IllegalArgumentException("Unregistered robit skin");
         }

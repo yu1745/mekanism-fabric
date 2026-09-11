@@ -1,8 +1,8 @@
 package mekanism.client.gui.element.gauge;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 import java.util.function.BooleanSupplier;
 import mekanism.api.text.EnumColor;
 import mekanism.client.gui.GuiMekanismTile;
@@ -10,6 +10,7 @@ import mekanism.client.gui.GuiUtils.TilingDirection;
 import mekanism.client.gui.IGuiWrapper;
 import mekanism.client.gui.element.GuiTexturedElement;
 import mekanism.client.gui.element.slot.GuiSlot;
+import mekanism.client.gui.tooltip.TooltipUtils;
 import mekanism.client.render.MekanismRenderer;
 import mekanism.common.MekanismLang;
 import mekanism.common.inventory.warning.ISupportsWarning;
@@ -20,6 +21,7 @@ import mekanism.common.tile.component.config.ConfigInfo;
 import mekanism.common.tile.component.config.DataType;
 import mekanism.common.tile.interfaces.ISideConfiguration;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
@@ -33,6 +35,10 @@ public abstract class GuiGauge<T> extends GuiTexturedElement implements ISupport
     protected T dummyType;
     @Nullable
     private BooleanSupplier warningSupplier;
+
+    private List<Component> lastInfo = Collections.emptyList();
+    @Nullable
+    private Tooltip lastTooltip;
 
     public GuiGauge(GaugeType gaugeType, IGuiWrapper gui, int x, int y) {
         this(gaugeType, gui, x, y, gaugeType.getGaugeOverlay().getWidth() + 2, gaugeType.getGaugeOverlay().getHeight() + 2);
@@ -84,7 +90,7 @@ public abstract class GuiGauge<T> extends GuiTexturedElement implements ISupport
         if (warning) {
             //Draw background (we do it regardless of if we are full or not as if the thing being drawn has transparency
             // we may as well show the background)
-            guiGraphics.blit(GuiSlot.WARNING_BACKGROUND_TEXTURE, relativeX + 1, relativeY + 1, 0, 0, width - 2, height - 2, 256, 256);
+            guiGraphics.blit(WARNING_BACKGROUND_TEXTURE, relativeX + 1, relativeY + 1, 0, 0, width - 2, height - 2, 256, 256);
         }
         int scale = getScaledLevel();
         TextureAtlasSprite icon = getIcon();
@@ -109,17 +115,19 @@ public abstract class GuiGauge<T> extends GuiTexturedElement implements ISupport
     }
 
     @Override
-    public void renderToolTip(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        super.renderToolTip(guiGraphics, mouseX, mouseY);
+    public void updateTooltip(int mouseX, int mouseY) {
+        if (dummy) {
+            return;
+        }
         ItemStack stack = gui().getCarriedItem();
         EnumColor color = getGaugeColor().getColor();
+        List<Component> list;
         if (!stack.isEmpty() && stack.getItem() instanceof ItemConfigurator && color != null) {
             if (gui() instanceof GuiMekanismTile<?, ?> gui && gui.getTileEntity() instanceof ISideConfiguration sideConfig && getTransmission() != null) {
                 DataType dataType = null;
                 ConfigInfo config = sideConfig.getConfig().getConfig(getTransmission());
                 if (config != null) {
-                    Set<DataType> supportedDataTypes = config.getSupportedDataTypes();
-                    for (DataType type : supportedDataTypes) {
+                    for (DataType type : config.getSupportedDataTypes()) {
                         if (type.getColor() == color) {
                             dataType = type;
                             break;
@@ -127,19 +135,24 @@ public abstract class GuiGauge<T> extends GuiTexturedElement implements ISupport
                     }
                 }
                 if (dataType == null) {
-                    displayTooltips(guiGraphics, mouseX, mouseY, MekanismLang.GENERIC_PARENTHESIS.translateColored(color, color.getName()));
+                    list = List.of(MekanismLang.GENERIC_PARENTHESIS.translateColored(color, color.getName()));
                 } else {
-                    displayTooltips(guiGraphics, mouseX, mouseY, MekanismLang.GENERIC_WITH_PARENTHESIS.translateColored(color, dataType, color.getName()));
+                    list = List.of(MekanismLang.GENERIC_WITH_PARENTHESIS.translateColored(color, dataType, color.getName()));
                 }
+            } else {
+                list = Collections.emptyList();
             }
         } else {
-            List<Component> list = new ArrayList<>();
+            list = new ArrayList<>(getTooltipText());
             if (getLabel() != null) {
-                list.add(getLabel());
+                list.addFirst(getLabel());
             }
-            list.addAll(getTooltipText());
-            displayTooltips(guiGraphics, mouseX, mouseY, list);
         }
+        if (!list.equals(lastInfo)) {
+            lastInfo = list;
+            lastTooltip = TooltipUtils.create(list);
+        }
+        setTooltip(lastTooltip);
     }
 
     @Nullable

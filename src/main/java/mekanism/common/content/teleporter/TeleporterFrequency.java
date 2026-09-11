@@ -1,38 +1,58 @@
 package mekanism.common.content.teleporter;
 
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import io.netty.buffer.ByteBuf;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import java.util.Set;
 import java.util.UUID;
-import mekanism.api.Coord4D;
-import mekanism.api.NBTConstants;
+import java.util.function.Function;
+import mekanism.api.SerializationConstants;
+import mekanism.api.security.SecurityMode;
 import mekanism.api.text.EnumColor;
 import mekanism.common.lib.frequency.Frequency;
 import mekanism.common.lib.frequency.FrequencyType;
 import mekanism.common.lib.frequency.IColorableFrequency;
 import mekanism.common.tile.interfaces.ITileWrapper;
-import mekanism.common.util.NBTUtils;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.core.GlobalPos;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import org.jetbrains.annotations.Nullable;
 
 public class TeleporterFrequency extends Frequency implements IColorableFrequency {
 
-    private final Set<Coord4D> activeCoords = new ObjectOpenHashSet<>();
+    public static final Codec<TeleporterFrequency> CODEC = RecordCodecBuilder.create(instance -> baseCodec(instance)
+          .and(EnumColor.CODEC.fieldOf(SerializationConstants.COLOR).forGetter(TeleporterFrequency::getColor))
+          .apply(instance, (name, owner, securityMode, color) -> {
+              TeleporterFrequency frequency = new TeleporterFrequency(name, owner.orElse(null), securityMode);
+              frequency.color = color;
+              return frequency;
+          }));
+    public static final StreamCodec<ByteBuf, TeleporterFrequency> STREAM_CODEC = StreamCodec.composite(
+          baseStreamCodec(TeleporterFrequency::new), Function.identity(),
+          EnumColor.STREAM_CODEC, TeleporterFrequency::getColor,
+          (frequency, color) -> {
+              frequency.color = color;
+              return frequency;
+          }
+    );
+
+
+    private final Set<GlobalPos> activeCoords = new ObjectOpenHashSet<>();
     private EnumColor color = EnumColor.PURPLE;
 
     /**
      * @param uuid Should only be null if we have incomplete data that we are loading
      */
-    public TeleporterFrequency(String n, @Nullable UUID uuid) {
-        super(FrequencyType.TELEPORTER, n, uuid);
+    public TeleporterFrequency(String n, @Nullable UUID uuid, SecurityMode securityMode) {
+        super(FrequencyType.TELEPORTER, n, uuid, securityMode);
     }
 
-    public TeleporterFrequency() {
-        super(FrequencyType.TELEPORTER);
+    private TeleporterFrequency(String name, @Nullable UUID owner, String ownerName, SecurityMode securityMode) {
+        super(FrequencyType.TELEPORTER, name, owner, ownerName, securityMode);
     }
 
-    public Set<Coord4D> getActiveCoords() {
+    public Set<GlobalPos> getActiveCoords() {
         return activeCoords;
     }
 
@@ -70,18 +90,18 @@ public class TeleporterFrequency extends Frequency implements IColorableFrequenc
         return changedData;
     }
 
-    private Coord4D getCoord(BlockEntity tile) {
+    private GlobalPos getCoord(BlockEntity tile) {
         if (tile instanceof ITileWrapper tileWrapper) {
             //Note: This should be the case the majority of the time, and allows us to use the cached coord4d object
-            return tileWrapper.getTileCoord();
+            return tileWrapper.getTileGlobalPos();
         }
-        return new Coord4D(tile);
+        return GlobalPos.of(tile.getLevel().dimension(), tile.getBlockPos());
     }
 
-    public Coord4D getClosestCoords(Coord4D coord) {
-        Coord4D closest = null;
-        for (Coord4D iterCoord : activeCoords) {
-            if (iterCoord.equals(coord)) {
+    public GlobalPos getClosestCoords(GlobalPos pos) {
+        GlobalPos closest = null;
+        for (GlobalPos iterCoord : activeCoords) {
+            if (iterCoord.equals(pos)) {
                 continue;
             }
             if (closest == null) {
@@ -89,38 +109,14 @@ public class TeleporterFrequency extends Frequency implements IColorableFrequenc
                 continue;
             }
 
-            if (coord.dimension != closest.dimension && coord.dimension == iterCoord.dimension) {
+            if (pos.dimension() != closest.dimension() && pos.dimension() == iterCoord.dimension()) {
                 closest = iterCoord;
-            } else if (coord.dimension != closest.dimension || coord.dimension == iterCoord.dimension) {
-                if (coord.distanceTo(closest) > coord.distanceTo(iterCoord)) {
+            } else if (pos.dimension() != closest.dimension() || pos.dimension() == iterCoord.dimension()) {
+                if (pos.pos().distSqr(closest.pos()) > pos.pos().distSqr(iterCoord.pos())) {
                     closest = iterCoord;
                 }
             }
         }
         return closest;
-    }
-
-    @Override
-    protected void read(CompoundTag nbtTags) {
-        super.read(nbtTags);
-        NBTUtils.setEnumIfPresent(nbtTags, NBTConstants.COLOR, EnumColor::byIndexStatic, color -> this.color = color);
-    }
-
-    @Override
-    protected void read(FriendlyByteBuf dataStream) {
-        super.read(dataStream);
-        this.color = dataStream.readEnum(EnumColor.class);
-    }
-
-    @Override
-    public void write(CompoundTag nbtTags) {
-        super.write(nbtTags);
-        NBTUtils.writeEnum(nbtTags, NBTConstants.COLOR, color);
-    }
-
-    @Override
-    public void write(FriendlyByteBuf buffer) {
-        super.write(buffer);
-        buffer.writeEnum(color);
     }
 }

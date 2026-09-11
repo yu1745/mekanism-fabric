@@ -1,25 +1,43 @@
 package mekanism.common.content.miner;
 
+import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.Objects;
+import java.util.function.Function;
+import mekanism.api.SerializationConstants;
 import mekanism.common.content.filter.FilterType;
 import mekanism.common.content.filter.IItemStackFilter;
 import mekanism.common.tags.MekanismTags;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
 
 public class MinerItemStackFilter extends MinerFilter<MinerItemStackFilter> implements IItemStackFilter<MinerItemStackFilter> {
 
+    public static final MapCodec<MinerItemStackFilter> CODEC = RecordCodecBuilder.mapCodec(instance -> baseMinerCodec(instance)
+          .and(ItemStack.SINGLE_ITEM_CODEC.fieldOf(SerializationConstants.TARGET_STACK).forGetter(MinerItemStackFilter::getItemStack))
+          .apply(instance, MinerItemStackFilter::new));
+    public static final StreamCodec<RegistryFriendlyByteBuf, MinerItemStackFilter> STREAM_CODEC = StreamCodec.composite(
+          baseMinerStreamCodec(MinerItemStackFilter::new), Function.identity(),
+          ItemStack.OPTIONAL_STREAM_CODEC, MinerItemStackFilter::getItemStack,
+          (filter, itemType) -> {
+              filter.itemType = itemType;
+              return filter;
+          }
+    );
+
     private ItemStack itemType = ItemStack.EMPTY;
 
-    public MinerItemStackFilter(ItemStack item) {
-        itemType = item;
+    public MinerItemStackFilter() {
     }
 
-    public MinerItemStackFilter() {
+    protected MinerItemStackFilter(boolean enabled, Item replaceTarget, boolean requiresReplacement, ItemStack itemType) {
+        super(enabled, replaceTarget, requiresReplacement);
+        this.itemType = itemType;
     }
 
     public MinerItemStackFilter(MinerItemStackFilter filter) {
@@ -33,42 +51,17 @@ public class MinerItemStackFilter extends MinerFilter<MinerItemStackFilter> impl
         if (itemStack.isEmpty()) {
             return false;
         }
-        return itemType.getItem() == itemStack.getItem();
+        return itemType.is(itemStack.getItemHolder());
     }
 
     @Override
     public boolean hasBlacklistedElement() {
-        return !itemType.isEmpty() && itemType.getItem() instanceof BlockItem blockItem && MekanismTags.Blocks.MINER_BLACKLIST_LOOKUP.contains(blockItem.getBlock());
-    }
-
-    @Override
-    public CompoundTag write(CompoundTag nbtTags) {
-        super.write(nbtTags);
-        itemType.save(nbtTags);
-        return nbtTags;
-    }
-
-    @Override
-    public void read(CompoundTag nbtTags) {
-        super.read(nbtTags);
-        itemType = ItemStack.of(nbtTags);
-    }
-
-    @Override
-    public void write(FriendlyByteBuf buffer) {
-        super.write(buffer);
-        buffer.writeItem(itemType);
-    }
-
-    @Override
-    public void read(FriendlyByteBuf dataStream) {
-        super.read(dataStream);
-        itemType = dataStream.readItem();
+        return !itemType.isEmpty() && itemType.getItem() instanceof BlockItem blockItem && blockItem.getBlock().builtInRegistryHolder().is(MekanismTags.Blocks.MINER_BLACKLIST);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), itemType.getItem());
+        return 31 * super.hashCode() + itemType.getItem().hashCode();
     }
 
     @Override

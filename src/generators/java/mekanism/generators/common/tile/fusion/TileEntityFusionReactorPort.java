@@ -1,43 +1,41 @@
 package mekanism.generators.common.tile.fusion;
 
-import java.util.Collections;
-import java.util.Set;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
 import mekanism.api.IContentsListener;
-import mekanism.api.chemical.gas.Gas;
-import mekanism.api.chemical.gas.GasStack;
-import mekanism.api.chemical.gas.IGasTank;
+import mekanism.api.chemical.IChemicalHandler;
 import mekanism.api.heat.IHeatHandler;
 import mekanism.api.text.EnumColor;
+import mekanism.common.attachments.containers.ContainerType;
 import mekanism.common.capabilities.Capabilities;
 import mekanism.common.capabilities.heat.CachedAmbientTemperature;
 import mekanism.common.capabilities.holder.chemical.IChemicalTankHolder;
 import mekanism.common.capabilities.holder.energy.IEnergyContainerHolder;
 import mekanism.common.capabilities.holder.fluid.IFluidTankHolder;
 import mekanism.common.capabilities.holder.heat.IHeatCapacitorHolder;
-import mekanism.common.capabilities.holder.slot.IInventorySlotHolder;
 import mekanism.common.integration.computer.annotation.ComputerMethod;
-import mekanism.common.lib.multiblock.IMultiblockEjector;
-import mekanism.common.tile.base.SubstanceType;
-import mekanism.common.util.CableUtils;
-import mekanism.common.util.CapabilityUtils;
-import mekanism.common.util.ChemicalUtil;
+import mekanism.common.integration.energy.BlockEnergyCapabilityCache;
+import mekanism.common.lib.multiblock.MultiblockData.CapabilityOutputTarget;
+import mekanism.common.lib.multiblock.MultiblockData.EnergyOutputTarget;
 import mekanism.common.util.WorldUtils;
 import mekanism.common.util.text.BooleanStateDisplay.InputOutput;
 import mekanism.generators.common.GeneratorsLang;
-import mekanism.generators.common.content.fusion.FusionReactorMultiblockData;
 import mekanism.generators.common.registries.GeneratorsBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class TileEntityFusionReactorPort extends TileEntityFusionReactorBlock implements IMultiblockEjector {
+public class TileEntityFusionReactorPort extends TileEntityFusionReactorBlock {
 
-    private Set<Direction> outputDirections = Collections.emptySet();
+    private final Map<Direction, BlockCapabilityCache<IChemicalHandler, @Nullable Direction>> chemicalCapabilityCaches = new EnumMap<>(Direction.class);
+    private final Map<Direction, BlockEnergyCapabilityCache> energyCapabilityCaches = new EnumMap<>(Direction.class);
 
     public TileEntityFusionReactorPort(BlockPos pos, BlockState state) {
         super(GeneratorsBlocks.FUSION_REACTOR_PORT, pos, state);
@@ -46,9 +44,9 @@ public class TileEntityFusionReactorPort extends TileEntityFusionReactorBlock im
 
     @NotNull
     @Override
-    public IChemicalTankHolder<Gas, GasStack, IGasTank> getInitialGasTanks(IContentsListener listener) {
+    public IChemicalTankHolder getInitialChemicalTanks(IContentsListener listener) {
         //Note: We can just use a proxied holder as the input/output restrictions are done in the tanks themselves
-        return side -> getMultiblock().getGasTanks(side);
+        return side -> getMultiblock().getChemicalTanks(side);
     }
 
     @NotNull
@@ -69,42 +67,40 @@ public class TileEntityFusionReactorPort extends TileEntityFusionReactorBlock im
         return side -> getMultiblock().getHeatCapacitors(side);
     }
 
-    @NotNull
     @Override
-    protected IInventorySlotHolder getInitialInventory(IContentsListener listener) {
-        return side -> getMultiblock().getInventorySlots(side);
-    }
-
-    @Override
-    public boolean persists(SubstanceType type) {
-        if (type == SubstanceType.GAS || type == SubstanceType.FLUID || type == SubstanceType.ENERGY || type == SubstanceType.HEAT) {
+    public boolean persists(ContainerType<?, ?, ?> type) {
+        if (type == ContainerType.CHEMICAL || type == ContainerType.FLUID || type == ContainerType.ENERGY || type == ContainerType.HEAT) {
             return false;
         }
         return super.persists(type);
     }
 
-    @Override
-    public void setEjectSides(Set<Direction> sides) {
-        outputDirections = sides;
+    public void addGasTargetCapability(List<CapabilityOutputTarget<IChemicalHandler>> outputTargets, Direction side) {
+        BlockCapabilityCache<IChemicalHandler, @Nullable Direction> cache = chemicalCapabilityCaches.get(side);
+        if (cache == null) {
+            cache = Capabilities.CHEMICAL.createCache((ServerLevel) level, worldPosition.relative(side), side.getOpposite());
+            chemicalCapabilityCaches.put(side, cache);
+        }
+        outputTargets.add(new CapabilityOutputTarget<>(cache, this::getActive));
     }
 
-    @Override
-    protected boolean onUpdateServer(FusionReactorMultiblockData multiblock) {
-        boolean needsPacket = super.onUpdateServer(multiblock);
-        if (getActive() && multiblock.isFormed()) {
-            ChemicalUtil.emit(outputDirections, multiblock.steamTank, this);
-            CableUtils.emit(outputDirections, multiblock.energyContainer, this);
+    public void addEnergyTargetCapability(List<EnergyOutputTarget> outputTargets, Direction side) {
+        BlockEnergyCapabilityCache cache = energyCapabilityCaches.get(side);
+        if (cache == null) {
+            cache = BlockEnergyCapabilityCache.create((ServerLevel) level, worldPosition.relative(side), side.getOpposite());
+            energyCapabilityCaches.put(side, cache);
         }
-        return needsPacket;
+        outputTargets.add(new EnergyOutputTarget(cache, this::getActive));
     }
 
     @Nullable
     @Override
     public IHeatHandler getAdjacent(@NotNull Direction side) {
         if (canHandleHeat() && getHeatCapacitorCount(side) > 0) {
-            BlockEntity adj = WorldUtils.getTileEntity(getLevel(), getBlockPos().relative(side));
-            if (!(adj instanceof TileEntityFusionReactorBlock)) {
-                return CapabilityUtils.getCapability(adj, Capabilities.HEAT_HANDLER, side.getOpposite()).resolve().orElse(null);
+            if (WorldUtils.getBlockState(level, getBlockPos().relative(side))
+                  .filter(state -> !state.is(GeneratorsBlocks.FUSION_REACTOR_PORT))
+                  .isPresent()) {
+                return getAdjacentUnchecked(side);
             }
         }
         return null;

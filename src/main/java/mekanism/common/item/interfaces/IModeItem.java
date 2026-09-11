@@ -1,11 +1,10 @@
 package mekanism.common.item.interfaces;
 
-import java.util.function.Supplier;
+import java.util.function.Function;
 import mekanism.client.render.hud.MekanismStatusOverlay;
 import mekanism.common.Mekanism;
 import mekanism.common.lib.radial.IGenericRadialModeItem;
-import mekanism.common.network.to_client.PacketShowModeChange;
-import mekanism.common.util.MekanismUtils;
+import net.minecraft.core.component.DataComponentType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -56,7 +55,7 @@ public interface IModeItem {
 
     static void displayModeChange(Player player) {
         if (player instanceof ServerPlayer serverPlayer) {
-            Mekanism.packetHandler().sendTo(PacketShowModeChange.INSTANCE, serverPlayer);
+            Mekanism.packetHandler().showModeChange(serverPlayer);
         } else {
             MekanismStatusOverlay.INSTANCE.setTimer();
         }
@@ -67,13 +66,28 @@ public interface IModeItem {
         MAIN_HAND,
         OTHER;
 
-        public void sendMessage(Player player, Supplier<Component> message) {
+        public <DATA> void sendMessage(Player player, DATA data, Function<DATA, Component> message) {
             if (this == MAIN_HAND) {
                 //TODO: Eventually decide if we want to make it so that it checks if IModeItem#getScrollTextComponent is null and otherwise just make it a system message
                 displayModeChange(player);
             } else if (this == OTHER) {
-                player.sendSystemMessage(MekanismUtils.logFormat(message.get()));
+                player.displayClientMessage(message.apply(data), true);
             }
+        }
+    }
+
+    interface IAttachmentBasedModeItem<MODE> extends IModeItem {
+
+        DataComponentType<MODE> getModeDataType();
+
+        MODE getDefaultMode();
+
+        default MODE getMode(ItemStack stack) {
+            return stack.getOrDefault(getModeDataType(), getDefaultMode());
+        }
+
+        default void setMode(ItemStack stack, Player player, MODE mode) {
+            stack.set(getModeDataType(), mode);
         }
     }
 }

@@ -1,62 +1,32 @@
 package mekanism.common.integration.projecte.mappers;
 
-import java.util.List;
 import mekanism.api.recipes.CombinerRecipe;
-import mekanism.common.integration.projecte.IngredientHelper;
+import mekanism.api.recipes.basic.BasicCombinerRecipe;
+import mekanism.common.config.MekanismConfigTranslations;
 import mekanism.common.recipe.MekanismRecipeType;
 import moze_intel.projecte.api.mapper.collector.IMappingCollector;
-import moze_intel.projecte.api.mapper.recipe.INSSFakeGroupManager;
-import moze_intel.projecte.api.mapper.recipe.IRecipeTypeMapper;
 import moze_intel.projecte.api.mapper.recipe.RecipeTypeMapper;
-import moze_intel.projecte.api.nss.NSSItem;
 import moze_intel.projecte.api.nss.NormalizedSimpleStack;
-import net.minecraft.core.RegistryAccess;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.Recipe;
-import net.minecraft.world.item.crafting.RecipeType;
-import org.jetbrains.annotations.NotNull;
+import net.minecraft.world.item.ItemStackLinkedSet;
 
 @RecipeTypeMapper
-public class CombinerRecipeMapper implements IRecipeTypeMapper {
+public class CombinerRecipeMapper extends TypedMekanismRecipeMapper<CombinerRecipe> {
 
-    @Override
-    public String getName() {
-        return "MekCombiner";
+    public CombinerRecipeMapper() {
+        super(MekanismConfigTranslations.PE_MAPPER_COMBINER, CombinerRecipe.class, MekanismRecipeType.COMBINING);
     }
 
     @Override
-    public String getDescription() {
-        return "Maps Mekanism combiner recipes.";
-    }
-
-    @Override
-    public boolean canHandle(RecipeType<?> recipeType) {
-        return recipeType == MekanismRecipeType.COMBINING.get();
-    }
-
-    @Override
-    public boolean handleRecipe(IMappingCollector<NormalizedSimpleStack, Long> mapper, Recipe<?> iRecipe, RegistryAccess registryAccess, INSSFakeGroupManager groupManager) {
-        if (!(iRecipe instanceof CombinerRecipe recipe)) {
-            //Double check that we have a type of recipe we know how to handle
-            return false;
+    protected boolean handleRecipe(IMappingCollector<NormalizedSimpleStack, Long> mapper, CombinerRecipe recipe, MekFakeGroupHelper fakeGroupHelper) {
+        if (OPTIMIZE_BASIC && recipe instanceof BasicCombinerRecipe basicRecipe) {
+            //This will be the case for the majority of our recipes
+            return addConversion(mapper, basicRecipe.getOutputRaw(), fakeGroupHelper.forIngredients(
+                  recipe.getMainInput(),
+                  recipe.getExtraInput()
+            ));
         }
-        boolean handled = false;
-        List<@NotNull ItemStack> mainRepresentations = recipe.getMainInput().getRepresentations();
-        List<@NotNull ItemStack> extraRepresentations = recipe.getExtraInput().getRepresentations();
-        for (ItemStack mainRepresentation : mainRepresentations) {
-            NormalizedSimpleStack nssMain = NSSItem.createItem(mainRepresentation);
-            for (ItemStack extraRepresentation : extraRepresentations) {
-                ItemStack output = recipe.getOutput(mainRepresentation, extraRepresentation);
-                if (!output.isEmpty()) {
-                    IngredientHelper ingredientHelper = new IngredientHelper(mapper);
-                    ingredientHelper.put(nssMain, mainRepresentation.getCount());
-                    ingredientHelper.put(extraRepresentation);
-                    if (ingredientHelper.addAsConversion(output)) {
-                        handled = true;
-                    }
-                }
-            }
-        }
-        return handled;
+        return addConversions(mapper, recipe.getMainInput(), recipe.getExtraInput(), recipe::getOutput, ItemStack::isEmpty,
+              fakeGroupHelper::forItems, fakeGroupHelper::forItems, ItemStackLinkedSet.TYPE_AND_TAG, TypedMekanismRecipeMapper::addConversion);
     }
 }

@@ -3,13 +3,16 @@ package mekanism.api.fluid;
 import mekanism.api.Action;
 import mekanism.api.AutomationType;
 import mekanism.api.IContentsListener;
-import mekanism.api.NBTConstants;
+import mekanism.api.SerializationConstants;
 import mekanism.api.annotations.NothingNullByDefault;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraftforge.common.util.INBTSerializable;
-import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.IFluidTank;
-import net.minecraftforge.fluids.capability.IFluidHandler.FluidAction;
+import net.minecraft.nbt.Tag;
+import net.neoforged.neoforge.common.util.INBTSerializable;
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.IFluidTank;
+import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction;
 
 @NothingNullByDefault
 public interface IExtendedFluidTank extends IFluidTank, INBTSerializable<CompoundTag>, IContentsListener {
@@ -41,7 +44,7 @@ public interface IExtendedFluidTank extends IFluidTank, INBTSerializable<Compoun
      * Inserts a {@link FluidStack} into this {@link IExtendedFluidTank} and return the remainder. The {@link FluidStack} <em>should not</em> be modified in this
      * function!
      * </p>
-     * Note: This behaviour is subtly <strong>different</strong> from {@link net.minecraftforge.fluids.capability.IFluidHandler#fill(FluidStack, FluidAction)}
+     * Note: This behaviour is subtly <strong>different</strong> from {@link IFluidHandler#fill(FluidStack, FluidAction)}
      *
      * @param stack          {@link FluidStack} to insert. This must not be modified by the tank.
      * @param action         The action to perform, either {@link Action#EXECUTE} or {@link Action#SIMULATE}
@@ -65,7 +68,7 @@ public interface IExtendedFluidTank extends IFluidTank, INBTSerializable<Compoun
             return stack;
         }
         boolean sameType = false;
-        if (isEmpty() || (sameType = stack.isFluidEqual(getFluid()))) {
+        if (isEmpty() || (sameType = FluidStack.isSameFluidSameComponents(stack, getFluid()))) {
             int toAdd = Math.min(stack.getAmount(), needed);
             if (action.execute()) {
                 //If we want to actually insert the fluid, then update the current fluid
@@ -76,10 +79,10 @@ public interface IExtendedFluidTank extends IFluidTank, INBTSerializable<Compoun
                 } else {
                     //If we are not the same type then we have to copy the stack and set it
                     // Note: this also will mark that the contents changed
-                    setStack(new FluidStack(stack, toAdd));
+                    setStack(stack.copyWithAmount(toAdd));
                 }
             }
-            return new FluidStack(stack, stack.getAmount() - toAdd);
+            return stack.copyWithAmount(stack.getAmount() - toAdd);
         }
         //If we didn't accept this fluid, then just return the given stack
         return stack;
@@ -106,7 +109,7 @@ public interface IExtendedFluidTank extends IFluidTank, INBTSerializable<Compoun
         if (isEmpty() || amount < 1) {
             return FluidStack.EMPTY;
         }
-        FluidStack ret = new FluidStack(getFluid(), Math.min(getFluidAmount(), amount));
+        FluidStack ret = getFluid().copyWithAmount(Math.min(getFluidAmount(), amount));
         if (!ret.isEmpty() && action.execute()) {
             // Note: this also will mark that the contents changed
             shrinkStack(ret.getAmount(), action);
@@ -145,7 +148,7 @@ public interface IExtendedFluidTank extends IFluidTank, INBTSerializable<Compoun
             //If our size is not changing, or we are only simulating the change, don't do anything
             return amount;
         }
-        setStack(new FluidStack(getFluid(), amount));
+        setStack(getFluid().copyWithAmount(amount));
         return amount;
     }
 
@@ -165,7 +168,10 @@ public interface IExtendedFluidTank extends IFluidTank, INBTSerializable<Compoun
      */
     default int growStack(int amount, Action action) {
         int current = getFluidAmount();
-        if (amount > 0) {
+        if (current == 0) {
+            //"Fail quick" if our stack is empty, so we can't grow it
+            return 0;
+        } else if (amount > 0) {
             //Cap adding amount at how much we need, so that we don't risk integer overflow
             amount = Math.min(amount, getNeeded());
         }
@@ -219,7 +225,7 @@ public interface IExtendedFluidTank extends IFluidTank, INBTSerializable<Compoun
      * @implNote If your implementation of {@link #getFluid()} returns a copy, this should be overridden to directly check against the internal stack.
      */
     default boolean isFluidEqual(FluidStack other) {
-        return getFluid().isFluidEqual(other);
+        return FluidStack.isSameFluidSameComponents(getFluid(), other);
     }
 
     /**
@@ -232,12 +238,24 @@ public interface IExtendedFluidTank extends IFluidTank, INBTSerializable<Compoun
     }
 
     @Override
-    default CompoundTag serializeNBT() {
+    default int getFluidAmount() {
+        return getFluid().getAmount();
+    }
+
+    @Override
+    default CompoundTag serializeNBT(HolderLookup.Provider provider) {
         CompoundTag nbt = new CompoundTag();
         if (!isEmpty()) {
-            nbt.put(NBTConstants.STORED, getFluid().writeToNBT(new CompoundTag()));
+            nbt.put(SerializationConstants.STORED, getFluid().save(provider));
         }
         return nbt;
+    }
+
+    @Override
+    default void deserializeNBT(HolderLookup.Provider provider, CompoundTag nbt) {
+        if (nbt.contains(SerializationConstants.STORED, Tag.TAG_COMPOUND)) {
+            setStackUnchecked(FluidStack.parseOptional(provider, nbt.getCompound(SerializationConstants.STORED)));
+        }
     }
 
     /**
@@ -259,7 +277,7 @@ public interface IExtendedFluidTank extends IFluidTank, INBTSerializable<Compoun
     @Override
     @Deprecated
     default FluidStack drain(FluidStack stack, FluidAction action) {
-        if (!isEmpty() && getFluid().isFluidEqual(stack)) {
+        if (!isEmpty() && isFluidEqual(stack)) {
             return extract(stack.getAmount(), Action.fromFluidAction(action), AutomationType.EXTERNAL);
         }
         return FluidStack.EMPTY;

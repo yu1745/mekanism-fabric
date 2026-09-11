@@ -4,15 +4,15 @@ import dan200.computercraft.api.lua.IArguments;
 import dan200.computercraft.api.lua.ILuaContext;
 import dan200.computercraft.api.lua.LuaException;
 import dan200.computercraft.api.lua.MethodResult;
+import java.util.Collection;
+import java.util.Locale;
+import java.util.stream.Collectors;
 import mekanism.common.integration.computer.BoundMethodHolder;
 import mekanism.common.integration.computer.ComputerException;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Collection;
-import java.util.Locale;
-import java.util.stream.Collectors;
-
 public class CCMethodCaller extends BoundMethodHolder {
+
     public String[] getMethodNames() {
         return methodNames.get();
     }
@@ -25,18 +25,23 @@ public class CCMethodCaller extends BoundMethodHolder {
         //validate arg counts match, types are checked at call time
         Collection<BoundMethodData<?>> methodDataCollection = this.methods.get(methodNames[methodIdx]);
         int argCount = arguments.count();
-        BoundMethodData<?> methodToCall = methodDataCollection.stream().filter(md -> md.argumentNames().length == argCount)
-                .findAny()
-                .orElseThrow(() -> new LuaException(String.format(Locale.ROOT,
-                        "Found %d arguments, expected %s",
-                        argCount,
-                        methodDataCollection.stream().map(it -> String.valueOf(it.argumentNames().length)).collect(Collectors.joining(" or "))
-                )));
+        BoundMethodData<?> methodToCall = getBoundMethodData(methodDataCollection, argCount);
         if (methodToCall.threadSafe()) {
             return callHandler(arguments, methodToCall);
         }
-        IArguments escaped = arguments.escapes();
-        return context.executeMainThreadTask(()->callHandler(escaped, methodToCall).getResult());
+        arguments.escapes();
+        return context.executeMainThreadTask(() -> callHandler(arguments, methodToCall).getResult());
+    }
+
+    private static BoundMethodData<?> getBoundMethodData(Collection<BoundMethodData<?>> methodDataCollection, int argCount) throws LuaException {
+        for (BoundMethodData<?> md : methodDataCollection) {
+            if (md.argumentNames().length == argCount) {
+                return md;
+            }
+        }
+        throw new LuaException(String.format(Locale.ROOT, "Found %d arguments, expected %s", argCount,
+              methodDataCollection.stream().map(it -> String.valueOf(it.argumentNames().length)).collect(Collectors.joining(" or "))
+        ));
     }
 
     @NotNull
@@ -48,7 +53,7 @@ public class CCMethodCaller extends BoundMethodHolder {
             if (ex.getCause() instanceof LuaException luaException) {
                 throw luaException;
             }
-            throw (LuaException)new LuaException(ex.getMessage()).initCause(ex);
+            throw (LuaException) new LuaException(ex.getMessage()).initCause(ex);
         }
         return result instanceof MethodResult mr ? mr : MethodResult.of(result);
     }

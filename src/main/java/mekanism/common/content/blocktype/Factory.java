@@ -1,11 +1,13 @@
 package mekanism.common.content.blocktype;
 
 import java.util.function.Supplier;
+import mekanism.api.math.MathUtils;
 import mekanism.common.MekanismLang;
 import mekanism.common.block.attribute.AttributeEnergy;
 import mekanism.common.block.attribute.AttributeFactoryType;
 import mekanism.common.block.attribute.AttributeGui;
 import mekanism.common.block.attribute.AttributeParticleFX;
+import mekanism.common.block.attribute.AttributeSideConfig;
 import mekanism.common.block.attribute.AttributeSound;
 import mekanism.common.block.attribute.AttributeTier;
 import mekanism.common.block.attribute.AttributeUpgradeSupport;
@@ -41,7 +43,7 @@ public class Factory<TILE extends TileEntityFactory<?>> extends FactoryMachine<T
     private void setMachineData(FactoryTier tier) {
         setFrom(origMachine, AttributeSound.class, AttributeFactoryType.class, AttributeUpgradeSupport.class);
         AttributeEnergy origEnergy = origMachine.get(AttributeEnergy.class);
-        add(new AttributeEnergy(origEnergy::getUsage, () -> origEnergy.getConfigStorage().multiply(0.5).max(origEnergy.getUsage()).multiply(tier.processes)));
+        add(new AttributeEnergy(origEnergy::getUsage, () -> MathUtils.clampToLong(Math.max(origEnergy.getConfigStorage() * 0.5, origEnergy.getUsage()) * tier.processes)));
     }
 
     public static class FactoryBuilder<FACTORY extends Factory<TILE>, TILE extends TileEntityFactory<?>, T extends MachineBuilder<FACTORY, TILE, T>>
@@ -61,6 +63,10 @@ public class Factory<TILE extends TileEntityFactory<?>> extends FactoryMachine<T
             // assign the value here, and then return the builder itself as it is the same object
             builder.withComputerSupport(tier, type.getRegistryNameComponentCapitalized() + "Factory");
             builder.withCustomShape(BlockShapes.getShape(tier, type));
+            builder.with(switch (type) {
+                case SMELTING, ENRICHING, CRUSHING, COMBINING, SAWING -> AttributeSideConfig.ELECTRIC_MACHINE;
+                case COMPRESSING, INJECTING, PURIFYING, INFUSING -> AttributeSideConfig.ADVANCED_ELECTRIC_MACHINE;
+            });
             builder.replace(new AttributeParticleFX().addDense(ParticleTypes.SMOKE, 5, rand -> new Pos3D(
                   rand.nextFloat() * 0.7F - 0.3F,
                   rand.nextFloat() * 0.1F + 0.7F,

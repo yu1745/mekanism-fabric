@@ -1,25 +1,27 @@
 package mekanism.client.state;
 
-import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import mekanism.api.providers.IBlockProvider;
 import mekanism.client.model.BaseBlockModelProvider;
-import mekanism.common.DataGenJsonConstants;
+import mekanism.common.DataGenSerializationConstants;
+import mekanism.common.registration.impl.FluidDeferredRegister;
 import mekanism.common.registration.impl.FluidDeferredRegister.MekanismFluidType;
-import mekanism.common.registration.impl.FluidRegistryObject;
 import mekanism.common.util.RegistryUtils;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Holder;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.data.PackOutput;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.Property;
-import net.minecraftforge.client.model.generators.BlockStateProvider;
-import net.minecraftforge.client.model.generators.ConfiguredModel;
-import net.minecraftforge.client.model.generators.ModelFile;
-import net.minecraftforge.client.model.generators.VariantBlockStateBuilder;
-import net.minecraftforge.common.data.ExistingFileHelper;
+import net.neoforged.neoforge.client.model.generators.BlockStateProvider;
+import net.neoforged.neoforge.client.model.generators.ConfiguredModel;
+import net.neoforged.neoforge.client.model.generators.ModelFile;
+import net.neoforged.neoforge.client.model.generators.VariantBlockStateBuilder;
+import net.neoforged.neoforge.common.data.ExistingFileHelper;
+import net.neoforged.neoforge.registries.DeferredHolder;
 import org.jetbrains.annotations.NotNull;
 
 public abstract class BaseBlockStateProvider<PROVIDER extends BaseBlockModelProvider> extends BlockStateProvider {
@@ -45,21 +47,35 @@ public abstract class BaseBlockStateProvider<PROVIDER extends BaseBlockModelProv
         return modelProvider;
     }
 
-    protected VariantBlockStateBuilder getVariantBuilder(IBlockProvider blockProvider) {
-        return getVariantBuilder(blockProvider.getBlock());
+    protected String getPath(Holder<Block> holder) {
+        return RegistryUtils.getName(holder, BuiltInRegistries.BLOCK).getPath();
     }
 
-    protected void registerFluidBlockStates(List<FluidRegistryObject<? extends MekanismFluidType, ?, ?, ?, ?>> fluidROs) {
-        for (FluidRegistryObject<? extends MekanismFluidType, ?, ?, ?, ?> fluidRO : fluidROs) {
-            simpleBlock(fluidRO.getBlock(), models().getBuilder(RegistryUtils.getPath(fluidRO.getBlock())).texture(DataGenJsonConstants.PARTICLE,
-                  fluidRO.getFluidType().stillTexture));
+    protected VariantBlockStateBuilder getVariantBuilder(Holder<Block> blockProvider) {
+        return getVariantBuilder(blockProvider.value());
+    }
+
+    public void simpleBlock(Holder<Block> block, ModelFile model) {
+        simpleBlock(block.value(), model);
+    }
+
+    public void directionalBlock(Holder<Block> block, Function<BlockState, ModelFile> modelFunc) {
+        directionalBlock(block.value(), modelFunc);
+    }
+
+    protected void registerFluidBlockStates(FluidDeferredRegister register) {
+        for (DeferredHolder<Block, ? extends Block> blockEntry : register.getBlockEntries()) {
+            //Note: We expect this to always be the case
+            if (blockEntry.value() instanceof LiquidBlock block && block.fluid.getFluidType() instanceof MekanismFluidType fluidType) {
+                simpleBlock(block, models().getBuilder(blockEntry.getId().getPath()).texture(DataGenSerializationConstants.PARTICLE, fluidType.stillTexture));
+            }
         }
     }
 
     /**
      * Like directionalBlock but allows us to skip specific properties
      */
-    protected void directionalBlock(Block block, Function<BlockState, ModelFile> modelFunc, int angleOffset, Property<?>... toSkip) {
+    protected void directionalBlock(Holder<Block> block, Function<BlockState, ModelFile> modelFunc, int angleOffset, Property<?>... toSkip) {
         getVariantBuilder(block).forAllStatesExcept(state -> {
             Direction dir = state.getValue(BlockStateProperties.FACING);
             return ConfiguredModel.builder()
@@ -70,7 +86,7 @@ public abstract class BaseBlockStateProvider<PROVIDER extends BaseBlockModelProv
         }, toSkip);
     }
 
-    protected void simpleBlockItem(IBlockProvider block, ModelFile model) {
-        super.simpleBlockItem(block.getBlock(), model);
+    protected void simpleBlockItem(Holder<Block> block, ModelFile model) {
+        super.simpleBlockItem(block.value(), model);
     }
 }

@@ -21,7 +21,7 @@ import mekanism.common.integration.crafttweaker.example.BaseCrTExampleProvider;
 import mekanism.common.integration.crafttweaker.example.CrTExampleBuilder;
 import mekanism.common.integration.crafttweaker.recipe.manager.MekanismRecipeManager;
 import mekanism.common.util.MekanismUtils;
-import net.minecraftforge.common.util.Lazy;
+import net.neoforged.neoforge.common.util.Lazy;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.openzen.zencode.java.ZenCodeType;
@@ -32,7 +32,7 @@ public class CrTExampleRecipeComponentBuilder<BUILDER_TYPE extends CrTExampleBui
     private final List<RecipeExample> examples = new ArrayList<>();
     private final BUILDER_TYPE parent;
 
-    public CrTExampleRecipeComponentBuilder(BUILDER_TYPE parent, MekanismRecipeManager<?> recipeManager, String... methodNames) {
+    public CrTExampleRecipeComponentBuilder(BUILDER_TYPE parent, MekanismRecipeManager<?, ?> recipeManager, String... methodNames) {
         super(recipeManager);
         this.parent = parent;
         if (methodNames == null || methodNames.length == 0) {
@@ -209,7 +209,7 @@ public class CrTExampleRecipeComponentBuilder<BUILDER_TYPE extends CrTExampleBui
             List<String> representations = parameterRepresentations[i];
             int representationCount = representations.size();
             if (representationCount == 1) {
-                appendToAll(combinedParameters, representations.get(0), addComma);
+                appendToAll(combinedParameters, representations.getFirst(), addComma);
             } else {
                 List<StringBuilder> currentCombinedParameters = copyCombined(combinedParameters);
                 for (int j = 0; j < representationCount; j++) {
@@ -228,7 +228,7 @@ public class CrTExampleRecipeComponentBuilder<BUILDER_TYPE extends CrTExampleBui
             }
         }
         appendRecipeMethodStart(stringBuilder, methodName);
-        stringBuilder.append(combinedParameters.get(0))
+        stringBuilder.append(combinedParameters.getFirst())
               .append(");\n");
         int possibilities = combinedParameters.size();
         if (possibilities > 1) {
@@ -273,7 +273,7 @@ public class CrTExampleRecipeComponentBuilder<BUILDER_TYPE extends CrTExampleBui
         for (RecipeMethod method : methods) {
             if (!method.hasExample) {
                 StringBuilder signature = new StringBuilder(method.methodName);
-                signature.append("(");
+                signature.append('(');
                 method.appendParameters(signature, (sb, name, type, generic) -> {
                     sb.append(type.getSimpleName())
                           .append(' ')
@@ -284,7 +284,7 @@ public class CrTExampleRecipeComponentBuilder<BUILDER_TYPE extends CrTExampleBui
                               .append('>');
                     }
                 });
-                signature.append(")");
+                signature.append(')');
                 throw new RuntimeException("Recipe method: '" + signature + "' has no example usage declared.");
             }
         }
@@ -408,9 +408,7 @@ public class CrTExampleRecipeComponentBuilder<BUILDER_TYPE extends CrTExampleBui
 
         @Override
         public int hashCode() {
-            int result = method.hashCode();
-            result = 31 * result + Arrays.hashCode(params);
-            return result;
+            return 31 * method.hashCode() + Arrays.deepHashCode(params);
         }
     }
 }

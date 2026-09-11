@@ -5,12 +5,12 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.function.Supplier;
 import mekanism.api.recipes.MekanismRecipe;
 import mekanism.api.recipes.ingredients.InputIngredient;
 import mekanism.common.recipe.MekanismRecipeType;
 import mekanism.common.recipe.lookup.cache.type.IInputCache;
+import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
@@ -18,7 +18,7 @@ import org.jetbrains.annotations.Nullable;
  * Basic implementation for {@link IInputRecipeCache} for handling recipes with two inputs.
  */
 public abstract class DoubleInputRecipeCache<INPUT_A, INGREDIENT_A extends InputIngredient<INPUT_A>, INPUT_B, INGREDIENT_B extends InputIngredient<INPUT_B>,
-      RECIPE extends MekanismRecipe & BiPredicate<INPUT_A, INPUT_B>, CACHE_A extends IInputCache<INPUT_A, INGREDIENT_A, RECIPE>,
+      RECIPE extends MekanismRecipe<?> & BiPredicate<INPUT_A, INPUT_B>, CACHE_A extends IInputCache<INPUT_A, INGREDIENT_A, RECIPE>,
       CACHE_B extends IInputCache<INPUT_B, INGREDIENT_B, RECIPE>> extends AbstractInputRecipeCache<RECIPE> {
 
     private final Set<RECIPE> complexIngredientA = new HashSet<>();
@@ -29,7 +29,7 @@ public abstract class DoubleInputRecipeCache<INPUT_A, INGREDIENT_A extends Input
     private final CACHE_A cacheA;
     private final CACHE_B cacheB;
 
-    protected DoubleInputRecipeCache(MekanismRecipeType<RECIPE, ?> recipeType, Function<RECIPE, INGREDIENT_A> inputAExtractor, CACHE_A cacheA,
+    protected DoubleInputRecipeCache(MekanismRecipeType<?, RECIPE, ?> recipeType, Function<RECIPE, INGREDIENT_A> inputAExtractor, CACHE_A cacheA,
           Function<RECIPE, INGREDIENT_B> inputBExtractor, CACHE_B cacheB) {
         super(recipeType);
         this.inputAExtractor = inputAExtractor;
@@ -143,16 +143,25 @@ public abstract class DoubleInputRecipeCache<INPUT_A, INGREDIENT_A extends Input
             return null;
         }
         initCacheIfNeeded(world);
-        Predicate<RECIPE> matchPredicate = r -> r.test(inputA, inputB);
         //Lookup a recipe from the specified input map
         RECIPE recipe;
         if (useCacheA) {
-            recipe = cacheA.findFirstRecipe(inputA, matchPredicate);
+            recipe = findFirstRecipe(inputA, inputB, cacheA.getRecipes(inputA));
         } else {
-            recipe = cacheB.findFirstRecipe(inputB, matchPredicate);
+            recipe = findFirstRecipe(inputA, inputB, cacheB.getRecipes(inputB));
         }
         // if there is no recipe, then check if any of our complex recipes (either a or b being complex) match
-        return recipe == null ? findFirstRecipe(complexRecipes, matchPredicate) : recipe;
+        return recipe == null ? findFirstRecipe(inputA, inputB, complexRecipes) : recipe;
+    }
+
+    @Nullable
+    private RECIPE findFirstRecipe(INPUT_A inputA, INPUT_B inputB, Iterable<RECIPE> recipes) {
+        for (RECIPE recipe : recipes) {
+            if (recipe.test(inputA, inputB)) {
+                return recipe;
+            }
+        }
+        return null;
     }
 
     /**
@@ -168,29 +177,45 @@ public abstract class DoubleInputRecipeCache<INPUT_A, INGREDIENT_A extends Input
      * @apiNote This is mainly meant as a helper for factories so makes the assumption that if inputB is empty it doesn't factor it into the check at all.
      */
     @Nullable
-    public RECIPE findTypeBasedRecipe(@Nullable Level world, INPUT_A inputA, INPUT_B inputB, Predicate<RECIPE> matchCriteria) {
+    public <DATA> RECIPE findTypeBasedRecipe(@Nullable Level world, INPUT_A inputA, INPUT_B inputB, DATA data, CheckRecipeType<INPUT_A, INPUT_B, RECIPE, DATA> matchCriteria) {
         if (cacheA.isEmpty(inputA)) {
             //Don't allow empty primary inputs
             return null;
         }
         initCacheIfNeeded(world);
-        Predicate<RECIPE> matchPredicate;
         if (cacheB.isEmpty(inputB)) {
             //If b is empty, lookup by A and our match criteria
-            matchPredicate = matchCriteria;
+            for (RECIPE recipe : cacheA.getRecipes(inputA)) {
+                if (matchCriteria.testType(recipe, inputA, inputB, data)) {
+                    return recipe;
+                }
+            }
+            for (RECIPE complexRecipe : complexRecipes) {
+                if (inputAExtractor.apply(complexRecipe).testType(inputA) && matchCriteria.testType(complexRecipe, inputA, inputB, data)) {
+                    return complexRecipe;
+                }
+            }
         } else {
-            matchPredicate = recipe -> inputBExtractor.apply(recipe).testType(inputB) && matchCriteria.test(recipe);
+            for (RECIPE recipe : cacheA.getRecipes(inputA)) {
+                if (inputBExtractor.apply(recipe).testType(inputB) && matchCriteria.testType(recipe, inputA, inputB, data)) {
+                    return recipe;
+                }
+            }
+            for (RECIPE complexRecipe : complexRecipes) {
+                if (inputAExtractor.apply(complexRecipe).testType(inputA)) {
+                    if (inputBExtractor.apply(complexRecipe).testType(inputB) && matchCriteria.testType(complexRecipe, inputA, inputB, data)) {
+                        return complexRecipe;
+                    }
+                }
+            }
         }
-        RECIPE recipe = cacheA.findFirstRecipe(inputA, matchPredicate);
-        if (recipe == null) {
-            return findFirstRecipe(complexRecipes, r -> inputAExtractor.apply(r).testType(inputA) && matchPredicate.test(r));
-        }
-        return recipe;
+        return null;
     }
 
     @Override
-    protected void initCache(List<RECIPE> recipes) {
-        for (RECIPE recipe : recipes) {
+    protected void initCache(List<RecipeHolder<RECIPE>> recipes) {
+        for (RecipeHolder<RECIPE> recipeHolder : recipes) {
+            RECIPE recipe = recipeHolder.value();
             boolean complexA = cacheA.mapInputs(recipe, inputAExtractor.apply(recipe));
             boolean complexB = cacheB.mapInputs(recipe, inputBExtractor.apply(recipe));
             if (complexA) {
@@ -208,12 +233,18 @@ public abstract class DoubleInputRecipeCache<INPUT_A, INGREDIENT_A extends Input
     /**
      * Helper expansion class for {@link DoubleInputRecipeCache} to simplify the generics when both inputs are of the same type.
      */
-    public abstract static class DoubleSameInputRecipeCache<INPUT, INGREDIENT extends InputIngredient<INPUT>, RECIPE extends MekanismRecipe & BiPredicate<INPUT, INPUT>,
+    public abstract static class DoubleSameInputRecipeCache<INPUT, INGREDIENT extends InputIngredient<INPUT>, RECIPE extends MekanismRecipe<?> & BiPredicate<INPUT, INPUT>,
           CACHE extends IInputCache<INPUT, INGREDIENT, RECIPE>> extends DoubleInputRecipeCache<INPUT, INGREDIENT, INPUT, INGREDIENT, RECIPE, CACHE, CACHE> {
 
-        protected DoubleSameInputRecipeCache(MekanismRecipeType<RECIPE, ?> recipeType, Function<RECIPE, INGREDIENT> inputAExtractor,
+        protected DoubleSameInputRecipeCache(MekanismRecipeType<?, RECIPE, ?> recipeType, Function<RECIPE, INGREDIENT> inputAExtractor,
               Function<RECIPE, INGREDIENT> inputBExtractor, Supplier<CACHE> cacheSupplier) {
             super(recipeType, inputAExtractor, cacheSupplier.get(), inputBExtractor, cacheSupplier.get());
         }
+    }
+
+    @FunctionalInterface
+    public interface CheckRecipeType<INPUT_A, INPUT_B, RECIPE extends MekanismRecipe<?> & BiPredicate<INPUT_A, INPUT_B>, DATA> {
+
+        boolean testType(RECIPE recipe, INPUT_A inputA, INPUT_B inputB, DATA data);
     }
 }

@@ -20,15 +20,15 @@ public final class MultipartUtils {
         float pitch = entity.getXRot();
         float yaw = entity.getYRot();
         Vec3 start = entity.getEyePosition();
-        float f1 = Mth.cos(-yaw * 0.017453292F - (float) Math.PI);
-        float f2 = Mth.sin(-yaw * 0.017453292F - (float) Math.PI);
+        float f1 = Mth.cos(-yaw * 0.017453292F - Mth.PI);
+        float f2 = Mth.sin(-yaw * 0.017453292F - Mth.PI);
         float f3 = -Mth.cos(-pitch * 0.017453292F);
         float lookY = Mth.sin(-pitch * 0.017453292F);
         float lookX = f2 * f3;
         float lookZ = f1 * f3;
         double reach = 5.0D;
         if (entity instanceof Player player) {
-            reach = player.getBlockReach();
+            reach = player.blockInteractionRange();
         }
         Vec3 end = start.add(lookX * reach, lookY * reach, lookZ * reach);
         return new RayTraceVectors(start, end);

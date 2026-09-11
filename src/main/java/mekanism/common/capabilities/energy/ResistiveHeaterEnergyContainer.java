@@ -3,12 +3,15 @@ package mekanism.common.capabilities.energy;
 import java.util.function.Predicate;
 import mekanism.api.AutomationType;
 import mekanism.api.IContentsListener;
-import mekanism.api.NBTConstants;
+import mekanism.api.SerializationConstants;
 import mekanism.api.annotations.NothingNullByDefault;
-import mekanism.api.math.FloatingLong;
+import mekanism.api.functions.ConstantPredicates;
+import mekanism.api.math.MathUtils;
 import mekanism.common.block.attribute.AttributeEnergy;
 import mekanism.common.tile.machine.TileEntityResistiveHeater;
 import mekanism.common.util.NBTUtils;
+import net.minecraft.SharedConstants;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -16,12 +19,14 @@ import org.jetbrains.annotations.Nullable;
 @NothingNullByDefault
 public class ResistiveHeaterEnergyContainer extends MachineEnergyContainer<TileEntityResistiveHeater> {
 
+    public static final long USAGE_MULTIPLIER = 20 * SharedConstants.TICKS_PER_SECOND;
+
     public static ResistiveHeaterEnergyContainer input(TileEntityResistiveHeater tile, @Nullable IContentsListener listener) {
         AttributeEnergy electricBlock = validateBlock(tile);
-        return new ResistiveHeaterEnergyContainer(electricBlock.getStorage(), electricBlock.getUsage(), notExternal, alwaysTrue, tile, listener);
+        return new ResistiveHeaterEnergyContainer(electricBlock.getStorage(), electricBlock.getUsage(), notExternal, ConstantPredicates.alwaysTrue(), tile, listener);
     }
 
-    private ResistiveHeaterEnergyContainer(FloatingLong maxEnergy, FloatingLong energyPerTick, Predicate<@NotNull AutomationType> canExtract,
+    private ResistiveHeaterEnergyContainer(long maxEnergy, long energyPerTick, Predicate<@NotNull AutomationType> canExtract,
           Predicate<@NotNull AutomationType> canInsert, TileEntityResistiveHeater tile, @Nullable IContentsListener listener) {
         super(maxEnergy, energyPerTick, canExtract, canInsert, tile, listener);
     }
@@ -31,21 +36,21 @@ public class ResistiveHeaterEnergyContainer extends MachineEnergyContainer<TileE
         return true;
     }
 
-    public void updateEnergyUsage(FloatingLong energyUsage) {
+    public void updateEnergyUsage(long energyUsage) {
         currentEnergyPerTick = energyUsage;
-        setMaxEnergy(energyUsage.multiply(400));
+        setMaxEnergy(MathUtils.multiplyClamped(energyUsage, USAGE_MULTIPLIER));
     }
 
     @Override
-    public CompoundTag serializeNBT() {
-        CompoundTag nbt = super.serializeNBT();
-        nbt.putString(NBTConstants.ENERGY_USAGE, getEnergyPerTick().toString());
+    public CompoundTag serializeNBT(HolderLookup.Provider provider) {
+        CompoundTag nbt = super.serializeNBT(provider);
+        nbt.putLong(SerializationConstants.ENERGY_USAGE, getEnergyPerTick());
         return nbt;
     }
 
     @Override
-    public void deserializeNBT(CompoundTag nbt) {
-        super.deserializeNBT(nbt);
-        NBTUtils.setFloatingLongIfPresent(nbt, NBTConstants.ENERGY_USAGE, this::updateEnergyUsage);
+    public void deserializeNBT(HolderLookup.Provider provider, CompoundTag nbt) {
+        NBTUtils.setLegacyEnergyIfPresent(nbt, SerializationConstants.ENERGY_USAGE, this::updateEnergyUsage);
+        super.deserializeNBT(provider, nbt);
     }
 }

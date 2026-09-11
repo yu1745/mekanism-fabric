@@ -1,88 +1,95 @@
 package mekanism.common.content.gear.mekasuit;
 
-import java.util.Optional;
 import mekanism.api.Action;
+import mekanism.api.AutomationType;
 import mekanism.api.annotations.ParametersAreNotNullByDefault;
 import mekanism.api.energy.IEnergyContainer;
 import mekanism.api.energy.IStrictEnergyHandler;
 import mekanism.api.gear.ICustomModule;
 import mekanism.api.gear.IModule;
-import mekanism.api.gear.config.IModuleConfigItem;
-import mekanism.api.gear.config.ModuleBooleanData;
-import mekanism.api.gear.config.ModuleConfigItemCreator;
-import mekanism.api.math.FloatingLong;
+import mekanism.api.gear.IModuleContainer;
 import mekanism.common.Mekanism;
-import mekanism.common.MekanismLang;
 import mekanism.common.config.MekanismConfig;
+import mekanism.common.content.network.EnergyNetwork;
 import mekanism.common.content.network.distribution.EnergySaveTarget;
+import mekanism.common.content.network.distribution.EnergySaveTarget.DelegateSaveHandler;
 import mekanism.common.integration.curios.CuriosIntegration;
 import mekanism.common.integration.energy.EnergyCompatUtils;
 import mekanism.common.util.EmitUtils;
 import mekanism.common.util.StorageUtils;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.items.IItemHandler;
+import net.neoforged.neoforge.items.IItemHandler;
 
 @ParametersAreNotNullByDefault
-public class ModuleChargeDistributionUnit implements ICustomModule<ModuleChargeDistributionUnit> {
+public record ModuleChargeDistributionUnit(boolean chargeSuit, boolean chargeInventory) implements ICustomModule<ModuleChargeDistributionUnit> {
 
-    private IModuleConfigItem<Boolean> chargeSuit;
-    private IModuleConfigItem<Boolean> chargeInventory;
+    public static final ResourceLocation CHARGE_SUIT = Mekanism.rl("charge_suit");
+    public static final ResourceLocation CHARGE_INVENTORY = Mekanism.rl("charge_inventory");
 
-    @Override
-    public void init(IModule<ModuleChargeDistributionUnit> module, ModuleConfigItemCreator configItemCreator) {
-        chargeSuit = configItemCreator.createConfigItem("charge_suit", MekanismLang.MODULE_CHARGE_SUIT, new ModuleBooleanData());
-        chargeInventory = configItemCreator.createConfigItem("charge_inventory", MekanismLang.MODULE_CHARGE_INVENTORY, new ModuleBooleanData(false));
+    public ModuleChargeDistributionUnit(IModule<ModuleChargeDistributionUnit> module) {
+        this(module.getBooleanConfigOrFalse(CHARGE_SUIT), module.getBooleanConfigOrFalse(CHARGE_INVENTORY));
     }
 
     @Override
-    public void tickServer(IModule<ModuleChargeDistributionUnit> module, Player player) {
+    public void tickServer(IModule<ModuleChargeDistributionUnit> module, IModuleContainer moduleContainer, ItemStack stack, Player player) {
         // charge inventory first
-        if (chargeInventory.get()) {
-            chargeInventory(module, player);
+        if (chargeInventory) {
+            IEnergyContainer energyContainer = module.getEnergyContainer(stack);
+            if (energyContainer != null) {
+                chargeInventory(energyContainer, player);
+            }
         }
-        // distribute suit charge next
-        if (chargeSuit.get()) {
+        // distribute suit charge next, so that if we used power from the suit to charge an item, then we can balance across the suit properly
+        if (chargeSuit) {
             chargeSuit(player);
         }
     }
 
     private void chargeSuit(Player player) {
-        FloatingLong total = FloatingLong.ZERO;
-        EnergySaveTarget saveTarget = new EnergySaveTarget(4);
+        EnergySaveTarget<DelegateSaveHandler> saveTarget = new EnergySaveTarget<>(4);
         for (ItemStack stack : player.getArmorSlots()) {
             IEnergyContainer energyContainer = StorageUtils.getEnergyContainer(stack, 0);
             if (energyContainer != null) {
-                saveTarget.addDelegate(energyContainer);
-                total = total.plusEqual(energyContainer.getEnergy());
+                saveTarget.addHandler(new DelegateSaveHandler(energyContainer));
             }
         }
-        EmitUtils.sendToAcceptors(saveTarget, total);
-        saveTarget.save();
+        if (saveTarget.getHandlerCount() > 1) {
+            //If we only have one handler we can skip charging as it will all just go back into the chest piece
+            long stored = saveTarget.getStored();
+            EmitUtils.sendToAcceptors(saveTarget, stored, EnergyNetwork.ENERGY);
+            saveTarget.save();
+        }
     }
 
-    private void chargeInventory(IModule<ModuleChargeDistributionUnit> module, Player player) {
-        FloatingLong toCharge = MekanismConfig.gear.mekaSuitInventoryChargeRate.get();
+    private void chargeInventory(IEnergyContainer energyContainer, Player player) {
+        //Only try to charge up to how much energy we actually have stored
+        long toCharge = Math.min(MekanismConfig.gear.mekaSuitInventoryChargeRate.get(), energyContainer.getEnergy());
+        if (toCharge == 0L) {
+            return;
+        }
         // first try to charge mainhand/offhand item
-        toCharge = charge(module, player, player.getMainHandItem(), toCharge);
-        toCharge = charge(module, player, player.getOffhandItem(), toCharge);
-        if (!toCharge.isZero()) {
+        ItemStack mainHand = player.getMainHandItem();
+        ItemStack offHand = player.getOffhandItem();
+        toCharge = charge(energyContainer, mainHand, toCharge);
+        toCharge = charge(energyContainer, offHand, toCharge);
+        if (toCharge > 0L) {
             for (ItemStack stack : player.getInventory().items) {
-                if (stack != player.getMainHandItem() && stack != player.getOffhandItem()) {
-                    toCharge = charge(module, player, stack, toCharge);
-                    if (toCharge.isZero()) {
-                        break;
+                if (stack != mainHand && stack != offHand) {
+                    toCharge = charge(energyContainer, stack, toCharge);
+                    if (toCharge == 0L) {
+                        return;
                     }
                 }
             }
-            if (!toCharge.isZero() && Mekanism.hooks.CuriosLoaded) {
-                Optional<? extends IItemHandler> curiosInventory = CuriosIntegration.getCuriosInventory(player);
-                if (curiosInventory.isPresent()) {
-                    IItemHandler handler = curiosInventory.get();
+            if (Mekanism.hooks.curios.isLoaded()) {
+                IItemHandler handler = CuriosIntegration.getCuriosInventory(player);
+                if (handler != null) {
                     for (int slot = 0, slots = handler.getSlots(); slot < slots; slot++) {
-                        toCharge = charge(module, player, handler.getStackInSlot(slot), toCharge);
-                        if (toCharge.isZero()) {
-                            break;
+                        toCharge = charge(energyContainer, handler.getStackInSlot(slot), toCharge);
+                        if (toCharge == 0L) {
+                            return;
                         }
                     }
                 }
@@ -91,14 +98,17 @@ public class ModuleChargeDistributionUnit implements ICustomModule<ModuleChargeD
     }
 
     /** return rejects */
-    private FloatingLong charge(IModule<ModuleChargeDistributionUnit> module, Player player, ItemStack stack, FloatingLong amount) {
-        if (!stack.isEmpty() && !amount.isZero()) {
+    private long charge(IEnergyContainer energyContainer, ItemStack stack, long amount) {
+        if (!stack.isEmpty() && amount > 0L) {
             IStrictEnergyHandler handler = EnergyCompatUtils.getStrictEnergyHandler(stack);
             if (handler != null) {
-                FloatingLong remaining = handler.insertEnergy(amount, Action.SIMULATE);
-                if (remaining.smallerThan(amount)) {
+                long remaining = handler.insertEnergy(amount, Action.SIMULATE);
+                if (remaining < amount) {
                     //If we can actually insert any energy into
-                    return handler.insertEnergy(module.useEnergy(player, amount.subtract(remaining), false), Action.EXECUTE).add(remaining);
+                    long toExtract = amount - remaining;
+                    long extracted = energyContainer.extract(toExtract, Action.EXECUTE, AutomationType.MANUAL);
+                    long inserted = handler.insertEnergy(extracted, Action.EXECUTE);
+                    return inserted + remaining;
                 }
             }
         }

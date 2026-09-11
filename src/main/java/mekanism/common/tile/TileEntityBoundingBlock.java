@@ -1,6 +1,6 @@
 package mekanism.common.tile;
 
-import mekanism.api.NBTConstants;
+import mekanism.api.SerializationConstants;
 import mekanism.api.Upgrade;
 import mekanism.common.Mekanism;
 import mekanism.common.registries.MekanismBlocks;
@@ -13,15 +13,18 @@ import mekanism.common.util.NBTUtils;
 import mekanism.common.util.WorldUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.Nameable;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.util.LazyOptional;
+import net.minecraft.world.level.redstone.Redstone;
+import net.neoforged.neoforge.capabilities.BlockCapability;
+import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -30,60 +33,49 @@ import org.jetbrains.annotations.Nullable;
  */
 public class TileEntityBoundingBlock extends TileEntityUpdateable implements IUpgradeTile, Nameable {
 
-    private BlockPos mainPos = BlockPos.ZERO;
-
-    private boolean receivedCoords;
+    @Nullable
+    private BlockPos mainPos;
     private int currentRedstoneLevel;
 
     public TileEntityBoundingBlock(BlockPos pos, BlockState state) {
         super(MekanismTileEntityTypes.BOUNDING_BLOCK, pos, state);
     }
 
-    public void setMainLocation(BlockPos pos) {
-        receivedCoords = pos != null;
-        if (!isRemote()) {
-            mainPos = pos;
+    public void setMainLocation(@Nullable BlockPos pos, boolean sync) {
+        mainPos = pos;
+        if (sync && !isRemote()) {
             sendUpdatePacket();
         }
     }
 
-    public boolean hasReceivedCoords() {
-        return receivedCoords;
+    public boolean canRedirectFrom(BlockPos boundingPos) {
+        return mainPos != null && !mainPos.equals(boundingPos);
     }
 
     public BlockPos getMainPos() {
         if (mainPos == null) {
-            mainPos = BlockPos.ZERO;
+            return worldPosition;
         }
         return mainPos;
     }
 
     @Nullable
-    public BlockEntity getMainTile() {
-        return receivedCoords ? WorldUtils.getTileEntity(level, getMainPos()) : null;
+    public BlockEntity getMainTile(BlockPos boundingPos) {
+        return canRedirectFrom(boundingPos) ? WorldUtils.getTileEntity(level, getMainPos()) : null;
     }
 
     @Nullable
     private IBoundingBlock getMain() {
         // Return the main tile; note that it's possible, esp. when chunks are
         // loading that the main tile has not yet loaded and thus is null.
-        BlockEntity tile = getMainTile();
+        BlockEntity tile = getMainTile(worldPosition);
         if (tile != null && !(tile instanceof IBoundingBlock)) {
             // On the off chance that another block got placed there (which seems only likely with corruption, go ahead and log what we found.)
-            Mekanism.logger.error("Found tile {} instead of an IBoundingBlock, at {}. Multiblock cannot function", tile, getMainPos());
+            Mekanism.logger.error("Found tile {} instead of an IBoundingBlock, at {} in {}. Multiblock cannot function", tile, getMainPos(),
+                  level == null ? "null" : level.dimension().location());
             return null;
         }
         return (IBoundingBlock) tile;
-    }
-
-    @NotNull
-    @Override
-    public <T> LazyOptional<T> getCapability(@NotNull Capability<T> capability, @Nullable Direction side) {
-        IBoundingBlock main = getMain();
-        if (main == null) {
-            return super.getCapability(capability, side);
-        }
-        return main.getOffsetCapability(capability, side, worldPosition.subtract(getMainPos()));
     }
 
     @Override
@@ -93,7 +85,7 @@ public class TileEntityBoundingBlock extends TileEntityUpdateable implements IUp
         return main != null && main.triggerBoundingEvent(worldPosition.subtract(getMainPos()), id, param) || handled;
     }
 
-    public void onNeighborChange(Block block, BlockPos neighborPos) {
+    public void onNeighborChange(Level level, Block block, BlockPos neighborPos) {
         if (!isRemote()) {
             int power = level.getBestNeighborSignal(getBlockPos());
             if (currentRedstoneLevel != power) {
@@ -111,7 +103,7 @@ public class TileEntityBoundingBlock extends TileEntityUpdateable implements IUp
         if (main != null && main.supportsComparator()) {
             return main.getBoundingComparatorSignal(worldPosition.subtract(getMainPos()));
         }
-        return 0;
+        return Redstone.SIGNAL_NONE;
     }
 
     @Override
@@ -138,65 +130,84 @@ public class TileEntityBoundingBlock extends TileEntityUpdateable implements IUp
     }
 
     @Override
-    public void load(@NotNull CompoundTag nbt) {
-        super.load(nbt);
-        NBTUtils.setBlockPosIfPresent(nbt, NBTConstants.MAIN, pos -> mainPos = pos);
-        currentRedstoneLevel = nbt.getInt(NBTConstants.REDSTONE);
-        receivedCoords = nbt.getBoolean(NBTConstants.RECEIVED_COORDS);
+    public void loadAdditional(@NotNull CompoundTag nbt, @NotNull HolderLookup.Provider provider) {
+        super.loadAdditional(nbt, provider);
+        NBTUtils.setBlockPosIfPresent(nbt, SerializationConstants.MAIN, pos -> mainPos = pos);
+        currentRedstoneLevel = nbt.getInt(SerializationConstants.REDSTONE);
     }
 
     @Override
-    public void saveAdditional(@NotNull CompoundTag nbtTags) {
-        super.saveAdditional(nbtTags);
-        if (receivedCoords) {
-            nbtTags.put(NBTConstants.MAIN, NbtUtils.writeBlockPos(getMainPos()));
+    public void saveAdditional(@NotNull CompoundTag nbtTags, @NotNull HolderLookup.Provider provider) {
+        super.saveAdditional(nbtTags, provider);
+        if (mainPos != null) {
+            nbtTags.put(SerializationConstants.MAIN, NbtUtils.writeBlockPos(mainPos));
         }
-        nbtTags.putInt(NBTConstants.REDSTONE, currentRedstoneLevel);
-        nbtTags.putBoolean(NBTConstants.RECEIVED_COORDS, receivedCoords);
+        nbtTags.putInt(SerializationConstants.REDSTONE, currentRedstoneLevel);
     }
 
     @NotNull
     @Override
-    public CompoundTag getReducedUpdateTag() {
-        CompoundTag updateTag = super.getReducedUpdateTag();
-        if (receivedCoords) {
-            updateTag.put(NBTConstants.MAIN, NbtUtils.writeBlockPos(getMainPos()));
+    public CompoundTag getReducedUpdateTag(@NotNull HolderLookup.Provider provider) {
+        CompoundTag updateTag = super.getReducedUpdateTag(provider);
+        if (mainPos != null) {
+            updateTag.put(SerializationConstants.MAIN, NbtUtils.writeBlockPos(mainPos));
         }
-        updateTag.putInt(NBTConstants.REDSTONE, currentRedstoneLevel);
-        updateTag.putBoolean(NBTConstants.RECEIVED_COORDS, receivedCoords);
+        updateTag.putInt(SerializationConstants.REDSTONE, currentRedstoneLevel);
         return updateTag;
     }
 
     @Override
-    public void handleUpdateTag(@NotNull CompoundTag tag) {
-        super.handleUpdateTag(tag);
-        NBTUtils.setBlockPosIfPresent(tag, NBTConstants.MAIN, pos -> mainPos = pos);
-        currentRedstoneLevel = tag.getInt(NBTConstants.REDSTONE);
-        receivedCoords = tag.getBoolean(NBTConstants.RECEIVED_COORDS);
+    public void handleUpdateTag(@NotNull CompoundTag tag, @NotNull HolderLookup.Provider provider) {
+        super.handleUpdateTag(tag, provider);
+        NBTUtils.setBlockPosIfPresent(tag, SerializationConstants.MAIN, pos -> mainPos = pos);
+        currentRedstoneLevel = tag.getInt(SerializationConstants.REDSTONE);
     }
 
     @Override
     public boolean hasCustomName() {
-        return getMainTile() instanceof Nameable mainTile && mainTile.hasCustomName();
+        return getMainTile(worldPosition) instanceof Nameable mainTile && mainTile.hasCustomName();
     }
 
     @NotNull
     @Override
     @SuppressWarnings("ConstantConditions")
     public Component getName() {
-        // Safe check for the custom name being null is done in {@link hasCustomName()} already
-        return hasCustomName() ? getCustomName() : MekanismBlocks.BOUNDING_BLOCK.getTextComponent();
+        if (getMainTile(worldPosition) instanceof Nameable mainTile && mainTile.hasCustomName()) {
+            return mainTile.getCustomName();
+        }
+        return MekanismBlocks.BOUNDING_BLOCK.getTextComponent();
     }
 
     @NotNull
     @Override
     public Component getDisplayName() {
-        return getMainTile() instanceof Nameable mainTile ? mainTile.getDisplayName() : MekanismBlocks.BOUNDING_BLOCK.getTextComponent();
+        return getMainTile(worldPosition) instanceof Nameable mainTile ? mainTile.getDisplayName() : MekanismBlocks.BOUNDING_BLOCK.getTextComponent();
     }
 
     @Nullable
     @Override
     public Component getCustomName() {
-        return getMainTile() instanceof Nameable mainTile ? mainTile.getCustomName() : null;
+        return getMainTile(worldPosition) instanceof Nameable mainTile ? mainTile.getCustomName() : null;
+    }
+
+    public static <CAP> void proxyCapability(RegisterCapabilitiesEvent event, BlockCapability<CAP, @Nullable Direction> capability) {
+        event.registerBlock(capability, (level, pos, state, blockEntity, context) -> {
+            if (blockEntity instanceof TileEntityBoundingBlock bounding) {
+                IBoundingBlock main = bounding.getMain();
+                if (main != null) {
+                    return main.getOffsetCapability(capability, context, pos.subtract(bounding.getMainPos()));
+                }
+            }
+            return null;
+        }, MekanismBlocks.BOUNDING_BLOCK.value());
+    }
+
+    public static <CAP, CONTEXT> void alwaysProxyCapability(RegisterCapabilitiesEvent event, BlockCapability<CAP, CONTEXT> capability) {
+        event.registerBlock(capability, (level, pos, state, boundingBlock, context) -> {
+            if (boundingBlock instanceof TileEntityBoundingBlock bounding && bounding.canRedirectFrom(pos)) {
+                return WorldUtils.getCapability(level, capability, bounding.getMainPos(), context);
+            }
+            return null;
+        }, MekanismBlocks.BOUNDING_BLOCK.value());
     }
 }

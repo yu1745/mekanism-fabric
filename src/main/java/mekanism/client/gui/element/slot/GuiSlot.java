@@ -1,27 +1,41 @@
 package mekanism.client.gui.element.slot;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.function.BooleanSupplier;
+import java.util.function.Function;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
+import mekanism.api.inventory.IInventorySlot;
 import mekanism.api.text.EnumColor;
+import mekanism.client.gui.GuiMekanismTile;
 import mekanism.client.gui.IGuiWrapper;
-import mekanism.client.gui.element.GuiElement;
 import mekanism.client.gui.element.GuiTexturedElement;
-import mekanism.client.jei.interfaces.IJEIGhostTarget;
+import mekanism.client.gui.tooltip.TooltipUtils;
+import mekanism.client.recipe_viewer.interfaces.IRecipeViewerGhostTarget;
 import mekanism.client.render.MekanismRenderer;
+import mekanism.common.MekanismLang;
+import mekanism.common.inventory.container.slot.InventoryContainerSlot;
 import mekanism.common.inventory.container.slot.SlotOverlay;
 import mekanism.common.inventory.warning.ISupportsWarning;
 import mekanism.common.inventory.warning.WarningTracker.WarningType;
+import mekanism.common.item.ItemConfigurator;
+import mekanism.common.lib.transmitter.TransmissionType;
+import mekanism.common.tile.component.config.ConfigInfo;
+import mekanism.common.tile.component.config.DataType;
+import mekanism.common.tile.component.config.slot.InventorySlotInfo;
+import mekanism.common.tile.interfaces.ISideConfiguration;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class GuiSlot extends GuiTexturedElement implements IJEIGhostTarget, ISupportsWarning<GuiSlot> {
+public class GuiSlot extends GuiTexturedElement implements IRecipeViewerGhostTarget, ISupportsWarning<GuiSlot> {
 
     private static final int INVALID_SLOT_COLOR = MekanismRenderer.getColorARGB(EnumColor.DARK_RED, 0.8F);
     public static final int DEFAULT_HOVER_COLOR = 0x80FFFFFF;
@@ -36,11 +50,15 @@ public class GuiSlot extends GuiTexturedElement implements IJEIGhostTarget, ISup
     @Nullable
     private SlotOverlay overlay;
     @Nullable
-    private IHoverable onHover;
+    private Function<GuiSlot, List<Component>> onHover;
     @Nullable
     private IClickable onClick;
     private boolean renderHover;
     private boolean renderAboveSlots;
+
+    private List<Component> lastInfo = Collections.emptyList();
+    @Nullable
+    private Tooltip lastTooltip;
 
     @Nullable
     private IGhostIngredientConsumer ghostHandler;
@@ -71,18 +89,19 @@ public class GuiSlot extends GuiTexturedElement implements IJEIGhostTarget, ISup
         return this;
     }
 
-    public GuiSlot hover(IHoverable onHover) {
+    public GuiSlot hover(Function<GuiSlot, List<Component>> onHover) {
         this.onHover = onHover;
         return this;
     }
 
     public GuiSlot click(IClickable onClick) {
-        //Use default click sound
-        return click(onClick, SoundEvents.UI_BUTTON_CLICK);
+        //Use default click sound and default volume from SimpleSoundInstance.forUI
+        return click(onClick, 0.25F, BUTTON_CLICK_SOUND);
     }
 
-    public GuiSlot click(IClickable onClick, @Nullable Supplier<SoundEvent> clickSound) {
+    public GuiSlot click(IClickable onClick, float clickVolume, @Nullable Supplier<SoundEvent> clickSound) {
         this.clickSound = clickSound;
+        this.clickVolume = clickVolume;
         this.onClick = onClick;
         return this;
     }
@@ -185,26 +204,45 @@ public class GuiSlot extends GuiTexturedElement implements IJEIGhostTarget, ISup
     }
 
     @Override
-    public void renderToolTip(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        super.renderToolTip(guiGraphics, mouseX, mouseY);
+    public void updateTooltip(int mouseX, int mouseY) {
+        ItemStack stack = gui().getCarriedItem();
+        List<Component> list = Collections.emptyList();
         if (onHover != null) {
-            onHover.onHover(this, guiGraphics, mouseX, mouseY);
+            list = onHover.apply(this);
         }
+        if (list.isEmpty() && !stack.isEmpty() && stack.getItem() instanceof ItemConfigurator && gui() instanceof GuiMekanismTile<?, ?> gui &&
+            gui.getTileEntity() instanceof ISideConfiguration config && gui.getSlotUnderMouse() instanceof InventoryContainerSlot slot) {
+            ConfigInfo info = config.getConfig().getConfig(TransmissionType.ITEM);
+            if (info != null) {
+                IInventorySlot inventorySlot = slot.getInventorySlot();
+                for (DataType type : info.getSupportedDataTypes()) {
+                    if (info.getSlotInfo(type) instanceof InventorySlotInfo slotInfo && slotInfo.hasSlot(inventorySlot)) {
+                        EnumColor color = type.getColor();
+                        list = List.of(MekanismLang.GENERIC_WITH_PARENTHESIS.translateColored(color, type, color.getName()));
+                        break;
+                    }
+                }
+            }
+        }
+        if (!list.equals(lastInfo)) {
+            lastInfo = list;
+            lastTooltip = TooltipUtils.create(list);
+        }
+        setTooltip(lastTooltip);
     }
 
-    @Nullable
     @Override
-    public GuiElement mouseClickedNested(double mouseX, double mouseY, int button) {
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (onClick != null && isValidClickButton(button)) {
-            if (mouseX >= getX() + borderSize() && mouseY >= getY() + borderSize() && mouseX < getX() + width - borderSize() && mouseY < getY() + height - borderSize()) {
-                if (onClick.onClick(this, (int) mouseX, (int) mouseY)) {
+            if (mouseX >= getX() + borderSize() && mouseY >= getY() + borderSize() && mouseX < getRight() - borderSize() && mouseY < getBottom() - borderSize()) {
+                if (onClick.onClick(this, mouseX, mouseY)) {
                     playDownSound(minecraft.getSoundManager());
-                    return this;
+                    return true;
                 }
                 //If clicking the slot fails check super as maybe it has children that can handle clicks
             }
         }
-        return super.mouseClickedNested(mouseX, mouseY, button);
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
     @Nullable

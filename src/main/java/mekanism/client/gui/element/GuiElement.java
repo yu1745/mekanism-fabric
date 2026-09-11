@@ -4,6 +4,8 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import mekanism.api.text.ILangEntry;
@@ -12,37 +14,50 @@ import mekanism.client.gui.GuiUtils;
 import mekanism.client.gui.GuiUtils.TilingDirection;
 import mekanism.client.gui.IGuiWrapper;
 import mekanism.client.gui.element.window.GuiWindow;
+import mekanism.client.gui.tooltip.TooltipUtils;
 import mekanism.client.render.IFancyFontRenderer;
 import mekanism.client.render.MekanismRenderer;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.MekanismUtils.ResourceType;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.ComponentPath;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.components.events.ContainerEventHandler;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.client.gui.navigation.FocusNavigationEvent;
+import net.minecraft.client.gui.navigation.FocusNavigationEvent.ArrowNavigation;
+import net.minecraft.client.gui.navigation.FocusNavigationEvent.InitialFocus;
+import net.minecraft.client.gui.navigation.FocusNavigationEvent.TabNavigation;
+import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.client.sounds.SoundManager;
+import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.lwjgl.glfw.GLFW;
 
-public abstract class GuiElement extends AbstractWidget implements IFancyFontRenderer {
+//Note: We don't just extend AbstractContainerWidget as we want to be able to reference default implementations of AbstractWidget
+public abstract class GuiElement extends AbstractWidget implements IFancyFontRenderer, ContainerEventHandler {
 
     private static final int BUTTON_TEX_X = 200, BUTTON_TEX_Y = 60, BUTTON_INDIVIDUAL_TEX_Y = BUTTON_TEX_Y / 3;
     public static final ResourceLocation WARNING_BACKGROUND_TEXTURE = MekanismUtils.getResource(ResourceType.GUI, "warning_background.png");
     public static final ResourceLocation WARNING_TEXTURE = MekanismUtils.getResource(ResourceType.GUI, "warning.png");
+    protected static Supplier<SoundEvent> BUTTON_CLICK_SOUND = SoundEvents.UI_BUTTON_CLICK::value;
 
     public static final Minecraft minecraft = Minecraft.getInstance();
 
     protected ButtonBackground buttonBackground = ButtonBackground.NONE;
 
-    protected final List<GuiElement> children = new ArrayList<>();
+    private final List<GuiElement> children = new ArrayList<>();
     /**
      * Children that don't get drawn or checked for beyond transferring data. This is mainly a helper to make it easier to update positioning information of background
      * helpers.
@@ -52,16 +67,22 @@ public abstract class GuiElement extends AbstractWidget implements IFancyFontRen
     private IGuiWrapper guiObj;
     @Nullable
     protected Supplier<SoundEvent> clickSound;
+    //Default to the value from SimpleSoundInstance.forUI
+    protected float clickVolume = 0.25F;
     protected int relativeX;
     protected int relativeY;
     public boolean isOverlay;
 
+    @Nullable
+    private GuiElement focused;
+    private boolean isDragging;
+
     public GuiElement(IGuiWrapper gui, int x, int y, int width, int height) {
-        this(gui, x, y, width, height, Component.empty());
+        this(gui, x, y, width, height, CommonComponents.EMPTY);
     }
 
     public GuiElement(IGuiWrapper gui, int x, int y, int width, int height, Component text) {
-        super(gui.getLeft() + x, gui.getTop() + y, width, height, text);
+        super(gui.getGuiLeft() + x, gui.getGuiTop() + y, width, height, text);
         this.relativeX = x;
         this.relativeY = y;
         this.guiObj = gui;
@@ -73,12 +94,29 @@ public abstract class GuiElement extends AbstractWidget implements IFancyFontRen
         // as some of our GuiElements have sub GuiElements and those are the ones we actually would want to narrate
     }
 
+    public GuiElement setTooltip(ILangEntry langEntry) {
+        setTooltip(TooltipUtils.create(langEntry));
+        return this;
+    }
+
+    protected void clearTooltip() {
+        setTooltip((Tooltip) null);
+    }
+
     public int getRelativeX() {
         return relativeX;
     }
 
     public int getRelativeY() {
         return relativeY;
+    }
+
+    public int getRelativeRight() {
+        return getRelativeX() + getWidth();
+    }
+
+    public int getRelativeBottom() {
+        return getRelativeY() + getHeight();
     }
 
     /**
@@ -95,9 +133,13 @@ public abstract class GuiElement extends AbstractWidget implements IFancyFontRen
 
     private void transferToNewGuiInternal(IGuiWrapper gui) {
         guiObj = gui;
-        children.forEach(child -> child.transferToNewGuiInternal(gui));
+        for (GuiElement guiElement : children) {
+            guiElement.transferToNewGuiInternal(gui);
+        }
         //Transfer position only children as well
-        positionOnlyChildren.forEach(child -> child.transferToNewGuiInternal(gui));
+        for (GuiElement child : positionOnlyChildren) {
+            child.transferToNewGuiInternal(gui);
+        }
     }
 
     protected <ELEMENT extends GuiElement> ELEMENT addChild(ELEMENT element) {
@@ -118,23 +160,42 @@ public abstract class GuiElement extends AbstractWidget implements IFancyFontRen
     }
 
     public final int getGuiLeft() {
-        return guiObj.getLeft();
+        return guiObj.getGuiLeft();
     }
 
     public final int getGuiTop() {
-        return guiObj.getTop();
+        return guiObj.getGuiTop();
     }
 
     public final int getGuiWidth() {
-        return guiObj.getWidth();
+        return guiObj.getXSize();
     }
 
     public final int getGuiHeight() {
-        return guiObj.getHeight();
+        return guiObj.getYSize();
     }
 
+    @NotNull
+    @Override
+    public ScreenRectangle getRectangle() {
+        return new ScreenRectangle(getGuiLeft() + getButtonX(), getGuiTop() + getButtonY(), getButtonWidth(), getButtonHeight());
+    }
+
+    @NotNull
+    protected ScreenRectangle getTooltipRectangle(int mouseX, int mouseY) {
+        return getRectangle();
+    }
+
+    @NotNull
+    @Override
     public List<GuiElement> children() {
         return children;
+    }
+
+    @Override
+    public void visitWidgets(@NotNull Consumer<AbstractWidget> consumer) {
+        super.visitWidgets(consumer);
+        children.forEach(consumer);
     }
 
     public void tick() {
@@ -145,14 +206,22 @@ public abstract class GuiElement extends AbstractWidget implements IFancyFontRen
      * @apiNote prevLeft and prevTop may be equal to left and top when things are being reinitialized such as when returning from viewing recipes in JEI.
      */
     public void resize(int prevLeft, int prevTop, int left, int top) {
-        setX(getX() - prevLeft + left);
-        setY(getY() - prevTop + top);
-        children.forEach(child -> child.resize(prevLeft, prevTop, left, top));
-        positionOnlyChildren.forEach(child -> child.resize(prevLeft, prevTop, left, top));
+        setPosition(getX() - prevLeft + left, getY() - prevTop + top);
+        for (GuiElement guiElement : children) {
+            guiElement.resize(prevLeft, prevTop, left, top);
+        }
+        for (GuiElement child : positionOnlyChildren) {
+            child.resize(prevLeft, prevTop, left, top);
+        }
     }
 
-    public boolean childrenContainsElement(Predicate<GuiElement> checker) {
-        return children.stream().anyMatch(e -> e.containsElement(checker));
+    public final boolean childrenContainsElement(Predicate<GuiElement> checker) {
+        for (GuiElement child : children) {
+            if (child.containsElement(checker)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public boolean containsElement(Predicate<GuiElement> checker) {
@@ -160,30 +229,25 @@ public abstract class GuiElement extends AbstractWidget implements IFancyFontRen
     }
 
     public void move(int changeX, int changeY) {
-        setX(getX() + changeX);
-        setY(getY() + changeY);
+        setPosition(getX() + changeX, getY() + changeY);
         //Note: When moving we need to adjust our relative position but when resizing, we don't as we are relative to the
         // positions changing when resizing, instead of moving where we are in relation to
         relativeX += changeX;
         relativeY += changeY;
-        children.forEach(child -> child.move(changeX, changeY));
-        positionOnlyChildren.forEach(child -> child.move(changeX, changeY));
+        for (GuiElement child : children) {
+            child.move(changeX, changeY);
+        }
+        for (GuiElement child : positionOnlyChildren) {
+            child.move(changeX, changeY);
+        }
     }
 
     public void onWindowClose() {
         children.forEach(GuiElement::onWindowClose);
     }
 
-    protected ResourceLocation getButtonLocation(String name) {
+    protected static ResourceLocation getButtonLocation(String name) {
         return MekanismUtils.getResource(ResourceType.GUI_BUTTON, name + ".png");
-    }
-
-    protected IHoverable getOnHover(ILangEntry translationHelper) {
-        return getOnHover((Supplier<Component>) translationHelper::translate);
-    }
-
-    protected IHoverable getOnHover(Supplier<Component> componentSupplier) {
-        return (onHover, guiGraphics, mouseX, mouseY) -> displayTooltips(guiGraphics, mouseX, mouseY, componentSupplier.get());
     }
 
     public boolean hasPersistentData() {
@@ -216,17 +280,20 @@ public abstract class GuiElement extends AbstractWidget implements IFancyFontRen
             // render background overlay and children above everything else
             renderBackgroundOverlay(guiGraphics, mouseX, mouseY);
             // render children just above background overlay
-            children.forEach(child -> child.renderShifted(guiGraphics, mouseX, mouseY, 0));
-            children.forEach(child -> child.onDrawBackground(guiGraphics, mouseX, mouseY, 0));
+            for (GuiElement guiElement : children) {
+                guiElement.renderShifted(guiGraphics, mouseX, mouseY, 0);
+            }
+            for (GuiElement guiElement : children) {
+                guiElement.onDrawBackground(guiGraphics, mouseX, mouseY, 0);
+            }
             renderForeground(guiGraphics, mouseX, mouseY);
             // translate forward to render child foreground
-            children.forEach(child -> {
-                //Only apply the z shift to each child instead of having future children be translated by more as well
+            for (GuiElement child : children) {//Only apply the z shift to each child instead of having future children be translated by more as well
                 // Note: Does not apply to compounding with grandchildren as we want those to compound
                 pose.pushPose();
                 child.onRenderForeground(guiGraphics, mouseX, mouseY, 50, totalOffset + 50);
                 pose.popPose();
-            });
+            }
         }
     }
 
@@ -237,91 +304,185 @@ public abstract class GuiElement extends AbstractWidget implements IFancyFontRen
     public void renderBackgroundOverlay(GuiGraphics guiGraphics, int mouseX, int mouseY) {
     }
 
-    //TODO - 1.20: Evaluate new tooltip system and maybe make use of it??
+    public void openPinnedWindows() {
+        children.forEach(GuiElement::openPinnedWindows);
+    }
+
+    //TODO: Evaluate if we can somehow move the remaining uses to the new tooltip system
     public void renderToolTip(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        children.stream().filter(child -> child.isMouseOver(mouseX, mouseY))
-              .forEach(child -> child.renderToolTip(guiGraphics, mouseX, mouseY));
-    }
-
-    public void displayTooltips(GuiGraphics guiGraphics, int mouseX, int mouseY, Component... components) {
-        guiObj.displayTooltips(guiGraphics, mouseX, mouseY, components);
-    }
-
-    public void displayTooltips(GuiGraphics guiGraphics, int mouseX, int mouseY, List<Component> components) {
-        guiObj.displayTooltips(guiGraphics, mouseX, mouseY, components);
-    }
-
-    //TODO - 1.20: Do more testing to make sure all implementations of this behave appropriately
-    // Also do we want things like the merged bars/gauges to have setFocused also mark the "children" as focused?
-    @Nullable
-    public GuiElement mouseClickedNested(double mouseX, double mouseY, int button) {
-        for (int i = children.size() - 1; i >= 0; i--) {
-            GuiElement child = children.get(i);
-            GuiElement childResult = child.mouseClickedNested(mouseX, mouseY, button);
-            if (childResult != null) {
-                return childResult;
+        updateTooltip(mouseX, mouseY);
+        //If there is a tooltip, update it for the next render pass
+        // We also call it regardless of whether the backing tooltip is null so that we properly mark wasDisplayed as false
+        //Note: We only call this method if we are hovering the proper spot
+        tooltip.refreshTooltipForNextRenderPass(true, isFocused(), getTooltipRectangle(mouseX, mouseY));
+        //We do this before child renders so that if one has a tooltip then they can override the target tooltip
+        for (GuiElement child : children) {
+            if (child.isMouseOver(mouseX, mouseY)) {
+                child.renderToolTip(guiGraphics, mouseX, mouseY);
             }
         }
-        //Vanilla Copy of super.mouseClicked modified to make the click keep track of the button used and return a GuiElement instead of a boolean
-        if (this.active && this.visible && isValidClickButton(button) && clicked(mouseX, mouseY)) {
-            playDownSound(minecraft.getSoundManager());
-            onClick(mouseX, mouseY, button);
-            return this;
+    }
+
+    public void updateTooltip(int mouseX, int mouseY) {
+        //TODO: Update child tooltips? Currently sort of is handled by renderTooltip
+    }
+
+    @Override
+    public final boolean isDragging() {
+        return this.isDragging;
+    }
+
+    @Override
+    public final void setDragging(boolean dragging) {
+        this.isDragging = dragging;
+    }
+
+    @NotNull
+    @Override
+    public Optional<GuiEventListener> getChildAt(double mouseX, double mouseY) {
+        if (checkWindows(mouseX, mouseY)) {
+            //If we are are not covered by a window, try to locate which child we are over
+            return Optional.ofNullable(GuiUtils.findChild(children, mouseX, mouseY, GuiElement::isMouseOver));
+        }
+        return Optional.empty();
+    }
+
+    @Nullable
+    @Override
+    public GuiElement getFocused() {
+        return this.focused;
+    }
+
+    @Override
+    public boolean isFocused() {
+        return super.isFocused() || getFocused() != null;
+    }
+
+    @Override
+    public void setFocused(@Nullable GuiEventListener listener) {
+        if (this.focused != null) {
+            this.focused.setFocused(false);
+        }
+        if (listener instanceof GuiElement child) {
+            child.setFocused(true);
+            this.focused = child;
+        } else {
+            this.focused = null;
+        }
+    }
+
+    private void clearFocus() {
+        //Copy of Screen#clearFocus
+        // We use super's getFocusPath so that we don't change the focus of this element
+        ComponentPath path = ContainerEventHandler.super.getCurrentFocusPath();
+        if (path != null) {
+            path.applyFocus(false);
+        }
+    }
+
+    @Nullable
+    @Override
+    public ComponentPath getCurrentFocusPath() {
+        GuiElement currentFocus = getFocused();
+        if (currentFocus != null) {
+            return ComponentPath.path(this, currentFocus.getCurrentFocusPath());
+        } else if (isFocused()) {
+            return ComponentPath.leaf(this);
         }
         return null;
     }
 
+    @Nullable
     @Override
-    public final boolean mouseClicked(double mouseX, double mouseY, int button) {
-        return mouseClickedNested(mouseX, mouseY, button) != null;
+    public ComponentPath nextFocusPath(@NotNull FocusNavigationEvent event) {
+        if (!this.active || !this.visible) {
+            //If we aren't active or aren't visible, don't check if we can be the next focus path
+            return null;
+        }
+        if (!isFocused()) {
+            return switch (event) {
+                case ArrowNavigation arrowNavigation when supportsArrowNavigation() -> ComponentPath.leaf(this);
+                case TabNavigation tabNavigation when supportsTabNavigation() -> ComponentPath.leaf(this);
+                case InitialFocus initialFocus -> ComponentPath.leaf(this);
+                default -> ContainerEventHandler.super.nextFocusPath(event);
+            };
+        }
+        return ContainerEventHandler.super.nextFocusPath(event);
     }
 
-    @Override
-    public final void onClick(double mouseX, double mouseY) {
-        //Redirect any calls of the vanilla on click methods mods may do for some reason to act as if clicked with the left mouse button
-        onClick(mouseX, mouseY, GLFW.GLFW_MOUSE_BUTTON_LEFT);
+    protected boolean supportsTabNavigation() {
+        //TODO: Support navigation (both tab and arrow) for more elements
+        return false;
     }
 
-    public void onClick(double mouseX, double mouseY, int button) {
-        //Pass on to basic super click call, which just happens to be a no-op
-        super.onClick(mouseX, mouseY);
+    protected boolean supportsArrowNavigation() {
+        return false;
+    }
+
+    //TODO - 1.20: Do we want things like the merged bars/gauges to have setFocused also mark the "children" as focused?
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        GuiElement clickedChild = GuiUtils.findChild(children, mouseX, mouseY, button, GuiElement::mouseClicked);
+        //Note: This setFocused call is outside the clickedChild find, so that if we couldn't find one
+        // then we un-focus whatever child is currently focused
+        if (clickedChild != null) {
+            setFocused(clickedChild);
+            return true;
+        } else if (!children.isEmpty()) {
+            //If we can't find a child, but we do have some, allow clearing whatever focus we currently have
+            clearFocus();
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        return GuiUtils.checkChildren(children, child -> child.keyPressed(keyCode, scanCode, modifiers)) || super.keyPressed(keyCode, scanCode, modifiers);
+        return GuiUtils.checkChildren(children, keyCode, scanCode, modifiers, GuiElement::keyPressed) || super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
     public boolean charTyped(char c, int keyCode) {
-        return GuiUtils.checkChildren(children, child -> child.charTyped(c, keyCode)) || super.charTyped(c, keyCode);
+        return GuiUtils.checkChildrenChar(children, c, keyCode, GuiElement::charTyped) || super.charTyped(c, keyCode);
     }
 
     @Override
     public void onDrag(double mouseX, double mouseY, double deltaX, double deltaY) {
-        children.forEach(element -> element.onDrag(mouseX, mouseY, deltaX, deltaY));
+        //TODO - 1.20.4: For this and onRelease etc do we want to somewhat do something like ContainerEventHandler does
+        // where it only does the focused element?
+        for (GuiElement element : children) {
+            element.onDrag(mouseX, mouseY, deltaX, deltaY);
+        }
         super.onDrag(mouseX, mouseY, deltaX, deltaY);
     }
 
     @Override
     public void onRelease(double mouseX, double mouseY) {
-        children.forEach(element -> element.onRelease(mouseX, mouseY));
+        setDragging(false);
+        for (GuiElement element : children) {
+            element.onRelease(mouseX, mouseY);
+        }
         super.onRelease(mouseX, mouseY);
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
-        return GuiUtils.checkChildren(children, child -> child.mouseScrolled(mouseX, mouseY, delta)) || super.mouseScrolled(mouseX, mouseY, delta);
+    public boolean mouseScrolled(double mouseX, double mouseY, double xDelta, double yDelta) {
+        for (int i = children.size() - 1; i >= 0; i--) {
+            GuiElement child = children.get(i);
+            if (child.mouseScrolled(mouseX, mouseY, xDelta, yDelta)) {
+                return true;
+            }
+        }
+        return super.mouseScrolled(mouseX, mouseY, xDelta, yDelta);
     }
 
     @Override
-    public Font getFont() {
-        return guiObj.getFont();
+    public Font font() {
+        return guiObj.font();
     }
 
     @Override
-    public int getXSize() {
-        return width;
+    public final int getXSize() {
+        return getWidth();
     }
 
     public void setButtonBackground(ButtonBackground buttonBackground) {
@@ -373,7 +534,7 @@ public abstract class GuiElement extends AbstractWidget implements IFancyFontRen
 
     @Override
     public boolean isMouseOver(double mouseX, double mouseY) {
-        return super.isMouseOver(mouseX, mouseY) || GuiUtils.checkChildren(children, child -> child.isMouseOver(mouseX, mouseY));
+        return super.isMouseOver(mouseX, mouseY) || GuiUtils.checkChildren(children, mouseX, mouseY, GuiElement::isMouseOver);
     }
 
     /**
@@ -421,7 +582,13 @@ public abstract class GuiElement extends AbstractWidget implements IFancyFontRen
     }
 
     public final void renderShifted(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
-        super.render(guiGraphics, mouseX, mouseY, partialTicks);
+        //Copy of super.render, except doesn't update the tooltip for the next render pass, as we handle that via renderTooltip
+        if (this.visible) {
+            //TODO - 1.21: Do we need to add support for guiGraphics.containsPointInScissor(mouseX, mouseY) to more places where we do adhoc mouse over checks?
+            this.isHovered = guiGraphics.containsPointInScissor(mouseX, mouseY) && mouseX >= this.getX() && mouseY >= this.getY() &&
+                             mouseX < this.getX() + this.width && mouseY < this.getY() + this.height;
+            renderWidget(guiGraphics, mouseX, mouseY, partialTicks);
+        }
     }
 
     @Override
@@ -443,7 +610,7 @@ public abstract class GuiElement extends AbstractWidget implements IFancyFontRen
 
     @Override
     public int getFGColor() {
-        if (packedFGColor != UNSET_FG_COLOR){
+        if (packedFGColor != UNSET_FG_COLOR) {
             return packedFGColor;
         }
         return this.active ? activeButtonTextColor() : inactiveButtonTextColor();
@@ -453,12 +620,19 @@ public abstract class GuiElement extends AbstractWidget implements IFancyFontRen
         return getFGColor();
     }
 
+    protected boolean displayButtonTextShadow() {
+        return true;
+    }
+
     protected void drawButtonText(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         Component text = getMessage();
         //Only attempt to draw the message if we have a message to draw
         if (!text.getString().isEmpty()) {
             int color = getButtonTextColor(mouseX, mouseY) | Mth.ceil(alpha * 255.0F) << 24;
-            drawCenteredTextScaledBound(guiGraphics, text, width - 4, height / 2F - 4, color);
+            //Note: We add one to the button height as it is considered bounds, and we want to include the bottom pixel of the button in our calculations of where the text should land
+            //Note: We call super as currently getButtonX and getButtonY already factor in the relative positioning
+            IFancyFontRenderer.super.drawScrollingString(guiGraphics, text, getButtonX(), getButtonY(), TextAlignment.CENTER, color, getButtonWidth(),
+                  getButtonHeight() + 1, 2, displayButtonTextShadow(), getTimeOpened());
         }
     }
 
@@ -499,16 +673,17 @@ public abstract class GuiElement extends AbstractWidget implements IFancyFontRen
     @Override
     public void playDownSound(@NotNull SoundManager soundHandler) {
         if (clickSound != null) {
-            playClickSound(soundHandler, clickSound);
+            playClickSound(soundHandler, clickSound, clickVolume);
         }
     }
 
     protected static void playClickSound(Supplier<SoundEvent> sound) {
-        playClickSound(minecraft.getSoundManager(), sound);
+        //Default to the value from SimpleSoundInstance.forUI
+        playClickSound(minecraft.getSoundManager(), sound, 0.25F);
     }
 
-    private static void playClickSound(@NotNull SoundManager soundHandler, @NotNull Supplier<SoundEvent> sound) {
-        soundHandler.play(SimpleSoundInstance.forUI(sound.get(), 1.0F));
+    private static void playClickSound(@NotNull SoundManager soundHandler, @NotNull Supplier<SoundEvent> sound, float clickVolume) {
+        soundHandler.play(SimpleSoundInstance.forUI(sound.get(), 1.0F, clickVolume));
     }
 
     protected void drawTiledSprite(GuiGraphics guiGraphics, int xPosition, int yPosition, int yOffset, int desiredWidth, int desiredHeight, TextureAtlasSprite sprite,
@@ -517,8 +692,20 @@ public abstract class GuiElement extends AbstractWidget implements IFancyFontRen
     }
 
     @Override
-    public void drawCenteredTextScaledBound(GuiGraphics guiGraphics, Component text, float maxLength, float x, float y, int color) {
-        IFancyFontRenderer.super.drawCenteredTextScaledBound(guiGraphics, text, maxLength, relativeX + x, relativeY + y, color);
+    public long getTimeOpened() {
+        return guiObj.getTimeOpened();
+    }
+
+    @Override
+    public final void drawScrollingString(GuiGraphics graphics, Component text, int x, int y, TextAlignment alignment, int color, int width, int height, int maxLengthPad,
+          boolean shadow, long msVisible) {
+        IFancyFontRenderer.super.drawScrollingString(graphics, text, relativeX + x, relativeY + y, alignment, color, width, height, maxLengthPad, shadow, msVisible);
+    }
+
+    @Override
+    public final void drawScaledScrollingString(GuiGraphics graphics, Component text, int x, int y, TextAlignment alignment, int color, int width, int height, int maxLengthPad,
+          boolean shadow, float scale, long msVisible) {
+        IFancyFontRenderer.super.drawScaledScrollingString(graphics, text, relativeX + x, relativeY + y, alignment, color, width, height, maxLengthPad, shadow, scale, msVisible);
     }
 
     public enum ButtonBackground {
@@ -538,14 +725,8 @@ public abstract class GuiElement extends AbstractWidget implements IFancyFontRen
     }
 
     @FunctionalInterface
-    public interface IHoverable {
-
-        void onHover(GuiElement element, GuiGraphics guiGraphics, int mouseX, int mouseY);
-    }
-
-    @FunctionalInterface
     public interface IClickable {
 
-        boolean onClick(GuiElement element, int mouseX, int mouseY);
+        boolean onClick(GuiElement element, double mouseX, double mouseY);
     }
 }

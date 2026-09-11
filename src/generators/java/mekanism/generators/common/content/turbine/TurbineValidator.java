@@ -34,7 +34,7 @@ public class TurbineValidator extends CuboidStructureValidator<TurbineMultiblock
     public static final int MAX_BLADES = 28;
 
     public TurbineValidator() {
-        super(new VoxelCuboid(3, 3, 3), new VoxelCuboid(17, 18, 17));
+        super(new VoxelCuboid(5, 3, 5), new VoxelCuboid(17, 18, 17));
     }
 
     @Override
@@ -111,11 +111,17 @@ public class TurbineValidator extends CuboidStructureValidator<TurbineMultiblock
         if (coils.isEmpty()) {
             return FormationResult.fail(GeneratorsLang.TURBINE_INVALID_MISSING_COILS);
         }
+        //Terminate if dispersers don't exist
+        if (dispersers.isEmpty()) {
+            return FormationResult.fail(GeneratorsLang.TURBINE_INVALID_MISSING_DISPERSERS);
+        }
 
         BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
         //Make sure a flat, horizontal plane of dispersers exists within the multiblock around the complex
-        for (int x = complex.getX() - innerRadius; x <= complex.getX() + innerRadius; x++) {
-            for (int z = complex.getZ() - innerRadius; z <= complex.getZ() + innerRadius; z++) {
+        final int innerRadiusX = (structure.length() - 3) / 2;
+        final int innerRadiusZ = (structure.width() - 3) / 2;
+        for (int x = complex.getX() - innerRadiusX; x <= complex.getX() + innerRadiusX; x++) {
+            for (int z = complex.getZ() - innerRadiusZ; z <= complex.getZ() + innerRadiusZ; z++) {
                 if (x != centerX || z != centerZ) {
                     mutablePos.set(x, complex.getY(), z);
                     TileEntityPressureDisperser tile = WorldUtils.getTileEntity(TileEntityPressureDisperser.class, world, chunkMap, mutablePos);
@@ -159,15 +165,16 @@ public class TurbineValidator extends CuboidStructureValidator<TurbineMultiblock
         // If there are any rotors left over, they are in the wrong place in the structure
         if (!turbines.isEmpty()) {
             return FormationResult.fail(GeneratorsLang.TURBINE_INVALID_BAD_ROTORS);
+        } else if (blades == 0) {
+            return FormationResult.fail(GeneratorsLang.TURBINE_INVALID_NO_BLADES);
         }
 
         // Update the structure with number of blades found on rotors
         structure.blades = blades;
 
-        BlockPos startCoord = complex.relative(Direction.UP);
-        if (WorldUtils.getTileEntity(TileEntityElectromagneticCoil.class, world, chunkMap, startCoord) != null) {
-            structure.coils = FormationProtocol.explore(startCoord, coord -> WorldUtils.getTileEntity(TileEntityElectromagneticCoil.class, world, chunkMap, coord) != null);
-        }
+        //Explore short circuits if the start position is not valid
+        structure.coils = FormationProtocol.explore(world, chunkMap, complex.relative(Direction.UP), null,
+              (level, chunks, start, n, pos) -> WorldUtils.getTileEntity(TileEntityElectromagneticCoil.class, level, chunks, pos) != null);
 
         if (coils.size() > structure.coils) {
             return FormationResult.fail(GeneratorsLang.TURBINE_INVALID_MALFORMED_COILS);
@@ -181,6 +188,9 @@ public class TurbineValidator extends CuboidStructureValidator<TurbineMultiblock
                 }
                 ventData.add(new VentData(coord, getSide(coord)));
             }
+        }
+        if (ventData.isEmpty()) {
+            return FormationResult.fail(GeneratorsLang.TURBINE_INVALID_MISSING_VENTS);
         }
         structure.updateVentData(ventData);
         structure.lowerVolume = structure.length() * structure.width() * turbineHeight;

@@ -13,8 +13,10 @@ import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.profiling.ProfilerFiller;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 @NothingNullByDefault
@@ -27,12 +29,9 @@ public class RenderDigitalMiner extends MekanismTileEntityRenderer<TileEntityDig
     private static final int[] colors = new int[EnumUtils.DIRECTIONS.length];
 
     static {
-        colors[Direction.DOWN.ordinal()] = MekanismRenderer.getColorARGB(255, 255, 255, 0.82F);
-        colors[Direction.UP.ordinal()] = MekanismRenderer.getColorARGB(255, 255, 255, 0.82F);
-        colors[Direction.NORTH.ordinal()] = MekanismRenderer.getColorARGB(255, 255, 255, 0.8F);
-        colors[Direction.SOUTH.ordinal()] = MekanismRenderer.getColorARGB(255, 255, 255, 0.8F);
-        colors[Direction.WEST.ordinal()] = MekanismRenderer.getColorARGB(255, 255, 255, 0.78F);
-        colors[Direction.EAST.ordinal()] = MekanismRenderer.getColorARGB(255, 255, 255, 0.78F);
+        colors[Direction.UP.ordinal()] = colors[Direction.DOWN.ordinal()] = MekanismRenderer.getColorARGB(0xFFFFFF, 0.82F);
+        colors[Direction.SOUTH.ordinal()] = colors[Direction.NORTH.ordinal()] = MekanismRenderer.getColorARGB(0xFFFFFF, 0.8F);
+        colors[Direction.EAST.ordinal()] = colors[Direction.WEST.ordinal()] = MekanismRenderer.getColorARGB(0xFFFFFF, 0.78F);
     }
 
     public static void resetCachedVisuals() {
@@ -74,5 +73,22 @@ public class RenderDigitalMiner extends MekanismTileEntityRenderer<TileEntityDig
     @Override
     public boolean shouldRender(TileEntityDigitalMiner tile, Vec3 camera) {
         return tile.isClientRendering() && tile.canDisplayVisuals() && super.shouldRender(tile, camera);
+    }
+
+    @Override
+    public AABB getRenderBoundingBox(TileEntityDigitalMiner tile) {
+        if (tile.isClientRendering() && tile.canDisplayVisuals()) {
+            BlockPos pos = tile.getBlockPos();
+            int radius = tile.getRadius();
+            return new AABB(
+                  pos.getX() - radius,
+                  tile.getMinY(),
+                  pos.getZ() - radius,
+                  pos.getX() + radius + 1,
+                  tile.getMaxY() + 1,
+                  pos.getZ() + radius + 1
+            );
+        }
+        return super.getRenderBoundingBox(tile);
     }
 }

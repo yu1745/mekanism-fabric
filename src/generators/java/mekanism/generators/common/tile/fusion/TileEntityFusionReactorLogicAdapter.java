@@ -1,11 +1,14 @@
 package mekanism.generators.common.tile.fusion;
 
+import com.mojang.serialization.Codec;
+import io.netty.buffer.ByteBuf;
 import java.util.EnumSet;
-import mekanism.api.NBTConstants;
+import java.util.Locale;
+import java.util.function.IntFunction;
+import mekanism.api.SerializationConstants;
 import mekanism.api.annotations.NothingNullByDefault;
-import mekanism.api.math.MathUtils;
 import mekanism.api.text.EnumColor;
-import mekanism.api.text.IHasTranslationKey;
+import mekanism.api.text.IHasTranslationKey.IHasEnumNameTranslationKey;
 import mekanism.api.text.ILangEntry;
 import mekanism.common.integration.computer.annotation.ComputerMethod;
 import mekanism.common.inventory.container.MekanismContainer;
@@ -18,16 +21,24 @@ import mekanism.generators.common.base.IReactorLogic;
 import mekanism.generators.common.base.IReactorLogicMode;
 import mekanism.generators.common.content.fusion.FusionReactorMultiblockData;
 import mekanism.generators.common.registries.GeneratorsBlocks;
+import mekanism.generators.common.registries.GeneratorsDataComponents;
 import mekanism.generators.common.tile.fusion.TileEntityFusionReactorLogicAdapter.FusionReactorLogic;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.util.ByIdMap;
+import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.event.ForgeEventFactory;
+import net.neoforged.neoforge.event.EventHooks;
 import org.jetbrains.annotations.NotNull;
 
 public class TileEntityFusionReactorLogicAdapter extends TileEntityFusionReactorBlock implements IReactorLogic<FusionReactorLogic>, IHasMode {
@@ -48,11 +59,12 @@ public class TileEntityFusionReactorLogicAdapter extends TileEntityFusionReactor
             Level world = getLevel();
             if (world != null) {
                 Direction side = multiblock.getOutsideSide(worldPosition);
+                BlockState state = getBlockState();
                 if (side == null) {
                     //Not formed, just update all sides
-                    world.updateNeighborsAt(getBlockPos(), getBlockType());
-                } else if (!ForgeEventFactory.onNeighborNotify(world, worldPosition, getBlockState(), EnumSet.of(side), false).isCanceled()) {
-                    world.neighborChanged(worldPosition.relative(side), getBlockType(), worldPosition);
+                    world.updateNeighborsAt(getBlockPos(), state.getBlock());
+                } else if (!EventHooks.onNeighborNotify(world, worldPosition, state, EnumSet.of(side), false).isCanceled()) {
+                    world.neighborChanged(worldPosition.relative(side), state.getBlock(), worldPosition);
                 }
             }
             prevOutputting = outputting;
@@ -88,22 +100,31 @@ public class TileEntityFusionReactorLogicAdapter extends TileEntityFusionReactor
     }
 
     @Override
-    public void load(@NotNull CompoundTag nbt) {
-        super.load(nbt);
-        NBTUtils.setEnumIfPresent(nbt, NBTConstants.LOGIC_TYPE, FusionReactorLogic::byIndexStatic, logicType -> this.logicType = logicType);
-        activeCooled = nbt.getBoolean(NBTConstants.ACTIVE_COOLED);
+    public void readSustainedData(HolderLookup.Provider provider, @NotNull CompoundTag nbt) {
+        super.readSustainedData(provider, nbt);
+        NBTUtils.setEnumIfPresent(nbt, SerializationConstants.LOGIC_TYPE, FusionReactorLogic.BY_ID, logicType -> this.logicType = logicType);
+        activeCooled = nbt.getBoolean(SerializationConstants.ACTIVE_COOLED);
     }
 
     @Override
-    public void saveAdditional(@NotNull CompoundTag nbtTags) {
-        super.saveAdditional(nbtTags);
-        NBTUtils.writeEnum(nbtTags, NBTConstants.LOGIC_TYPE, logicType);
-        nbtTags.putBoolean(NBTConstants.ACTIVE_COOLED, activeCooled);
+    public void writeSustainedData(HolderLookup.Provider provider, CompoundTag nbtTags) {
+        super.writeSustainedData(provider, nbtTags);
+        NBTUtils.writeEnum(nbtTags, SerializationConstants.LOGIC_TYPE, logicType);
+        nbtTags.putBoolean(SerializationConstants.ACTIVE_COOLED, activeCooled);
     }
 
     @Override
-    public boolean canBeMaster() {
-        return false;
+    protected void collectImplicitComponents(@NotNull DataComponentMap.Builder builder) {
+        super.collectImplicitComponents(builder);
+        builder.set(GeneratorsDataComponents.FUSION_LOGIC_TYPE, logicType);
+        builder.set(GeneratorsDataComponents.ACTIVE_COOLED, activeCooled);
+    }
+
+    @Override
+    protected void applyImplicitComponents(@NotNull BlockEntity.DataComponentInput input) {
+        super.applyImplicitComponents(input);
+        logicType = input.getOrDefault(GeneratorsDataComponents.FUSION_LOGIC_TYPE, logicType);
+        activeCooled = input.getOrDefault(GeneratorsDataComponents.ACTIVE_COOLED, activeCooled);
     }
 
     @Override
@@ -145,7 +166,7 @@ public class TileEntityFusionReactorLogicAdapter extends TileEntityFusionReactor
     @Override
     public void addContainerTrackers(MekanismContainer container) {
         super.addContainerTrackers(container);
-        container.track(SyncableEnum.create(FusionReactorLogic::byIndexStatic, FusionReactorLogic.DISABLED, this::getMode, value -> logicType = value));
+        container.track(SyncableEnum.create(FusionReactorLogic.BY_ID, FusionReactorLogic.DISABLED, this::getMode, value -> logicType = value));
         container.track(SyncableBoolean.create(this::isActiveCooled, value -> activeCooled = value));
         container.track(SyncableBoolean.create(() -> prevOutputting, value -> prevOutputting = value));
     }
@@ -160,22 +181,26 @@ public class TileEntityFusionReactorLogicAdapter extends TileEntityFusionReactor
     //End methods IComputerTile
 
     @NothingNullByDefault
-    public enum FusionReactorLogic implements IReactorLogicMode<FusionReactorLogic>, IHasTranslationKey {
+    public enum FusionReactorLogic implements IReactorLogicMode<FusionReactorLogic>, IHasEnumNameTranslationKey, StringRepresentable {
         DISABLED(GeneratorsLang.REACTOR_LOGIC_DISABLED, GeneratorsLang.DESCRIPTION_REACTOR_DISABLED, new ItemStack(Items.GUNPOWDER)),
         READY(GeneratorsLang.REACTOR_LOGIC_READY, GeneratorsLang.DESCRIPTION_REACTOR_READY, new ItemStack(Items.REDSTONE)),
         CAPACITY(GeneratorsLang.REACTOR_LOGIC_CAPACITY, GeneratorsLang.DESCRIPTION_REACTOR_CAPACITY, new ItemStack(Items.REDSTONE)),
         DEPLETED(GeneratorsLang.REACTOR_LOGIC_DEPLETED, GeneratorsLang.DESCRIPTION_REACTOR_DEPLETED, new ItemStack(Items.REDSTONE));
 
-        private static final FusionReactorLogic[] MODES = values();
+        public static final Codec<FusionReactorLogic> CODEC = StringRepresentable.fromEnum(FusionReactorLogic::values);
+        public static final IntFunction<FusionReactorLogic> BY_ID = ByIdMap.continuous(FusionReactorLogic::ordinal, values(), ByIdMap.OutOfBoundsStrategy.WRAP);
+        public static final StreamCodec<ByteBuf, FusionReactorLogic> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, FusionReactorLogic::ordinal);
 
         private final ILangEntry name;
         private final ILangEntry description;
         private final ItemStack renderStack;
+        private final String serializedName;
 
         FusionReactorLogic(ILangEntry name, ILangEntry description, ItemStack stack) {
             this.name = name;
             this.description = description;
-            renderStack = stack;
+            this.renderStack = stack;
+            this.serializedName = name().toLowerCase(Locale.ROOT);
         }
 
         @Override
@@ -198,8 +223,9 @@ public class TileEntityFusionReactorLogicAdapter extends TileEntityFusionReactor
             return EnumColor.RED;
         }
 
-        public static FusionReactorLogic byIndexStatic(int index) {
-            return MathUtils.getByIndexMod(MODES, index);
+        @Override
+        public String getSerializedName() {
+            return serializedName;
         }
     }
 }

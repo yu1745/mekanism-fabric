@@ -1,40 +1,37 @@
 package mekanism.common.network.to_server;
 
+import io.netty.buffer.ByteBuf;
+import java.util.UUID;
 import mekanism.common.Mekanism;
 import mekanism.common.network.IMekanismPacket;
-import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.network.NetworkEvent;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import org.jetbrains.annotations.NotNull;
 
-public class PacketKey implements IMekanismPacket {
+public record PacketKey(int key, boolean add) implements IMekanismPacket {
 
-    private final int key;
-    private final boolean add;
+    public static final CustomPacketPayload.Type<PacketKey> TYPE = new CustomPacketPayload.Type<>(Mekanism.rl("key"));
+    public static final StreamCodec<ByteBuf, PacketKey> STREAM_CODEC = StreamCodec.composite(
+          ByteBufCodecs.VAR_INT, PacketKey::key,
+          ByteBufCodecs.BOOL, PacketKey::add,
+          PacketKey::new
+    );
 
-    public PacketKey(int key, boolean add) {
-        this.key = key;
-        this.add = add;
+    @NotNull
+    @Override
+    public CustomPacketPayload.Type<PacketKey> type() {
+        return TYPE;
     }
 
     @Override
-    public void handle(NetworkEvent.Context context) {
-        Player player = context.getSender();
-        if (player != null) {
-            if (add) {
-                Mekanism.keyMap.add(player.getUUID(), key);
-            } else {
-                Mekanism.keyMap.remove(player.getUUID(), key);
-            }
+    public void handle(IPayloadContext context) {
+        UUID player = context.player().getUUID();
+        if (add) {
+            Mekanism.keyMap.add(player, key);
+        } else {
+            Mekanism.keyMap.remove(player, key);
         }
-    }
-
-    @Override
-    public void encode(FriendlyByteBuf buffer) {
-        buffer.writeVarInt(key);
-        buffer.writeBoolean(add);
-    }
-
-    public static PacketKey decode(FriendlyByteBuf buffer) {
-        return new PacketKey(buffer.readVarInt(), buffer.readBoolean());
     }
 }

@@ -6,10 +6,12 @@ import mekanism.client.gui.element.graph.GuiLongGraph;
 import mekanism.client.gui.element.tab.GuiBoilerTab;
 import mekanism.client.gui.element.tab.GuiBoilerTab.BoilerTab;
 import mekanism.client.gui.element.tab.GuiHeatTab;
+import mekanism.client.gui.element.tab.GuiWarningTab;
 import mekanism.common.MekanismLang;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.content.boiler.BoilerMultiblockData;
 import mekanism.common.inventory.container.tile.EmptyTileContainer;
+import mekanism.common.inventory.warning.IWarningTracker;
 import mekanism.common.tile.multiblock.TileEntityBoilerCasing;
 import mekanism.common.util.HeatUtils;
 import mekanism.common.util.MekanismUtils;
@@ -44,13 +46,13 @@ public class GuiBoilerStats extends GuiMekanismTile<TileEntityBoilerCasing, Empt
 
     @Override
     protected void drawForegroundText(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        drawCenteredText(guiGraphics, title, 0, imageWidth, titleLabelY, titleTextColor());
+        renderTitleText(guiGraphics);
         BoilerMultiblockData multiblock = tile.getMultiblock();
-        drawString(guiGraphics, MekanismLang.BOILER_MAX_WATER.translate(TextUtils.format(multiblock.waterTank.getCapacity())), 8, 26, titleTextColor());
-        drawString(guiGraphics, MekanismLang.BOILER_MAX_STEAM.translate(TextUtils.format(multiblock.steamTank.getCapacity())), 8, 35, titleTextColor());
-        drawString(guiGraphics, MekanismLang.BOILER_HEAT_TRANSFER.translate(), 8, 49, subheadingTextColor());
-        drawString(guiGraphics, MekanismLang.BOILER_HEATERS.translate(multiblock.superheatingElements), 14, 58, titleTextColor());
-        drawString(guiGraphics, MekanismLang.BOILER_CAPACITY.translate(TextUtils.format(multiblock.getBoilCapacity())), 8, 72, titleTextColor());
+        drawScrollingString(guiGraphics, MekanismLang.BOILER_MAX_WATER.translate(TextUtils.format(multiblock.waterTank.getCapacity())), 0, 26, TextAlignment.LEFT, titleTextColor(), 8, false);
+        drawScrollingString(guiGraphics, MekanismLang.BOILER_MAX_STEAM.translate(TextUtils.format(multiblock.steamTank.getCapacity())), 0, 35, TextAlignment.LEFT, titleTextColor(), 8, false);
+        drawScrollingString(guiGraphics, MekanismLang.BOILER_HEAT_TRANSFER.translate(), 0, 49, TextAlignment.LEFT, subheadingTextColor(), 8, false);
+        drawScrollingString(guiGraphics, MekanismLang.BOILER_HEATERS.translate(multiblock.superheatingElements), 6, 58, TextAlignment.LEFT, titleTextColor(), getXSize() - 6, 8, false);
+        drawScrollingString(guiGraphics, MekanismLang.BOILER_CAPACITY.translate(TextUtils.format(multiblock.getBoilCapacity())), 0, 72, TextAlignment.LEFT, titleTextColor(), 8, false);
         super.drawForegroundText(guiGraphics, mouseX, mouseY);
     }
 
@@ -60,5 +62,11 @@ public class GuiBoilerStats extends GuiMekanismTile<TileEntityBoilerCasing, Empt
         BoilerMultiblockData multiblock = tile.getMultiblock();
         boilGraph.addData(multiblock.lastBoilRate);
         maxGraph.addData(multiblock.lastMaxBoil);
+    }
+
+    @Override
+    protected void addWarningTab(IWarningTracker warningTracker) {
+        //Move the tab to the right side of the gui so it doesn't intersect the heat tab
+        addRenderableWidget(new GuiWarningTab(this, warningTracker, false));
     }
 }

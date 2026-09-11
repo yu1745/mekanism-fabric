@@ -1,65 +1,43 @@
 package mekanism.common.advancements.triggers;
 
-import com.google.gson.JsonObject;
-import mekanism.api.JsonConstants;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import java.util.Optional;
+import mekanism.api.SerializationConstants;
 import mekanism.common.advancements.MekanismCriteriaTriggers;
-import net.minecraft.advancements.critereon.AbstractCriterionTriggerInstance;
+import net.minecraft.advancements.Criterion;
 import net.minecraft.advancements.critereon.ContextAwarePredicate;
-import net.minecraft.advancements.critereon.DeserializationContext;
-import net.minecraft.advancements.critereon.SerializationContext;
+import net.minecraft.advancements.critereon.EntityPredicate;
 import net.minecraft.advancements.critereon.SimpleCriterionTrigger;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.util.GsonHelper;
 import org.jetbrains.annotations.NotNull;
 
 public class ConfigurationCardTrigger extends SimpleCriterionTrigger<ConfigurationCardTrigger.TriggerInstance> {
 
-    private final ResourceLocation id;
-
-    public ConfigurationCardTrigger(ResourceLocation id) {
-        this.id = id;
-    }
-
     @NotNull
     @Override
-    public ResourceLocation getId() {
-        return id;
-    }
-
-    @NotNull
-    @Override
-    protected TriggerInstance createInstance(@NotNull JsonObject json, @NotNull ContextAwarePredicate playerPredicate, @NotNull DeserializationContext context) {
-        return new TriggerInstance(playerPredicate, GsonHelper.getAsBoolean(json, JsonConstants.COPY));
+    public Codec<TriggerInstance> codec() {
+        return TriggerInstance.CODEC;
     }
 
     public void trigger(ServerPlayer player, boolean copy) {
         this.trigger(player, instance -> instance.copy == copy);
     }
 
-    public static class TriggerInstance extends AbstractCriterionTriggerInstance {
+    public record TriggerInstance(Optional<ContextAwarePredicate> player, boolean copy) implements SimpleCriterionTrigger.SimpleInstance {
 
-        private final boolean copy;
+        public static final Codec<TriggerInstance> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+                    EntityPredicate.ADVANCEMENT_CODEC.optionalFieldOf(SerializationConstants.PLAYER).forGetter(TriggerInstance::player),
+                    Codec.BOOL.fieldOf(SerializationConstants.COPY).forGetter(TriggerInstance::copy)
+              ).apply(instance, TriggerInstance::new)
+        );
 
-        public TriggerInstance(ContextAwarePredicate playerPredicate, boolean copy) {
-            super(MekanismCriteriaTriggers.CONFIGURATION_CARD.getId(), playerPredicate);
-            this.copy = copy;
+        public static Criterion<TriggerInstance> copyTrigger() {
+            return MekanismCriteriaTriggers.CONFIGURATION_CARD.createCriterion(new TriggerInstance(Optional.empty(), true));
         }
 
-        @NotNull
-        @Override
-        public JsonObject serializeToJson(@NotNull SerializationContext context) {
-            JsonObject json = super.serializeToJson(context);
-            json.addProperty(JsonConstants.COPY, copy);
-            return json;
-        }
-
-        public static ConfigurationCardTrigger.TriggerInstance copy() {
-            return new ConfigurationCardTrigger.TriggerInstance(ContextAwarePredicate.ANY, true);
-        }
-
-        public static ConfigurationCardTrigger.TriggerInstance paste() {
-            return new ConfigurationCardTrigger.TriggerInstance(ContextAwarePredicate.ANY, false);
+        public static Criterion<TriggerInstance> pasteTrigger() {
+            return MekanismCriteriaTriggers.CONFIGURATION_CARD.createCriterion(new TriggerInstance(Optional.empty(), false));
         }
     }
 }

@@ -1,14 +1,11 @@
 package mekanism.common.tile.machine;
 
-import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
-import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import mekanism.api.Action;
 import mekanism.api.IContentsListener;
-import mekanism.api.NBTConstants;
 import mekanism.api.RelativeSide;
 import mekanism.common.CommonWorldTickHandler;
 import mekanism.common.capabilities.holder.slot.IInventorySlotHolder;
@@ -28,27 +25,23 @@ import mekanism.common.inventory.slot.InputInventorySlot;
 import mekanism.common.inventory.slot.OutputInventorySlot;
 import mekanism.common.lib.transmitter.TransmissionType;
 import mekanism.common.registries.MekanismBlocks;
-import mekanism.common.tags.TagUtils;
-import mekanism.common.tile.component.TileComponentConfig;
 import mekanism.common.tile.component.TileComponentEjector;
-import mekanism.common.tile.interfaces.ISustainedData;
 import mekanism.common.tile.interfaces.ITileFilterHolder;
 import mekanism.common.tile.prefab.TileEntityConfigurableMachine;
-import mekanism.common.util.MekanismUtils;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.Item;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.items.ItemHandlerHelper;
-import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.tags.ITagManager;
 import org.jetbrains.annotations.NotNull;
 
 //TODO - V11: Make this support other tag types, such as fluids
-public class TileEntityOredictionificator extends TileEntityConfigurableMachine implements ISustainedData, ITileFilterHolder<OredictionificatorItemFilter> {
+public class TileEntityOredictionificator extends TileEntityConfigurableMachine implements ITileFilterHolder<OredictionificatorItemFilter> {
 
     private final FilterManager<OredictionificatorItemFilter> filterManager = new FilterManager<>(OredictionificatorItemFilter.class, this::markForSave);
     public boolean didProcess;
@@ -61,7 +54,6 @@ public class TileEntityOredictionificator extends TileEntityConfigurableMachine 
 
     public TileEntityOredictionificator(BlockPos pos, BlockState state) {
         super(MekanismBlocks.OREDICTIONIFICATOR, pos, state);
-        configComponent = new TileComponentConfig(this, TransmissionType.ITEM);
         configComponent.setupIOConfig(TransmissionType.ITEM, inputSlot, outputSlot, RelativeSide.RIGHT);
 
         ejectorComponent = new TileComponentEjector(this);
@@ -71,37 +63,38 @@ public class TileEntityOredictionificator extends TileEntityConfigurableMachine 
     @NotNull
     @Override
     protected IInventorySlotHolder getInitialInventory(IContentsListener listener) {
-        InventorySlotHelper builder = InventorySlotHelper.forSideWithConfig(this::getDirection, this::getConfig);
+        InventorySlotHelper builder = InventorySlotHelper.forSideWithConfig(this);
         //Only allow inserting items with tags that match filters, but mark all items that have any filterable tags as valid
-        builder.addSlot(inputSlot = InputInventorySlot.at(item -> !getResult(item).isEmpty(), this::hasFilterableTags, listener, 26, 115));
-        builder.addSlot(outputSlot = OutputInventorySlot.at(listener, 134, 115));
+        builder.addSlot(inputSlot = InputInventorySlot.at(item -> hasResult(filterManager.getEnabledFilters(), item), this::hasFilterableTags, listener, 56, 115));
+        builder.addSlot(outputSlot = OutputInventorySlot.at(listener, 164, 115));
         return builder.build();
     }
 
     @Override
-    protected void onUpdateServer() {
-        super.onUpdateServer();
+    protected boolean onUpdateServer() {
+        boolean sendUpdatePacket = super.onUpdateServer();
         if (CommonWorldTickHandler.flushTagAndRecipeCaches) {
             for (OredictionificatorFilter<?, ?, ?> filter : filterManager.getFilters()) {
                 filter.flushCachedTag();
             }
         }
         didProcess = false;
-        if (MekanismUtils.canFunction(this) && !inputSlot.isEmpty()) {
-            ItemStack result = getResult(inputSlot.getStack());
+        if (canFunction() && !inputSlot.isEmpty()) {
+            ItemStack result = getResult(filterManager.getEnabledFilters(), inputSlot.getStack());
             if (!result.isEmpty()) {
                 ItemStack outputStack = outputSlot.getStack();
                 if (outputStack.isEmpty()) {
                     inputSlot.shrinkStack(1, Action.EXECUTE);
                     outputSlot.setStack(result);
                     didProcess = true;
-                } else if (ItemHandlerHelper.canItemStacksStack(outputStack, result) && outputStack.getCount() < outputSlot.getLimit(outputStack)) {
+                } else if (ItemStack.isSameItemSameComponents(outputStack, result) && outputStack.getCount() < outputSlot.getLimit(outputStack)) {
                     inputSlot.shrinkStack(1, Action.EXECUTE);
                     outputSlot.growStack(1, Action.EXECUTE);
                     didProcess = true;
                 }
             }
         }
+        return sendUpdatePacket;
     }
 
     @Override
@@ -116,39 +109,33 @@ public class TileEntityOredictionificator extends TileEntityConfigurableMachine 
         MekanismConfig.general.validOredictionificatorFilters.removeInvalidationListener(validFiltersListener);
     }
 
-    private List<ResourceLocation> getFilterableTags(ItemStack stack) {
+    private static List<ResourceLocation> getFilterableTags(ItemStack stack) {
         //TODO: Cache this and hasFilterableTags?
-        Set<ResourceLocation> tags = TagUtils.tagNames(stack.getTags());
-        if (tags.isEmpty()) {
-            return Collections.emptyList();
-        }
-        Map<String, List<String>> possibleFilters = MekanismConfig.general.validOredictionificatorFilters.get();
-        List<ResourceLocation> filterableTags = new ArrayList<>();
-        for (ResourceLocation resource : tags) {
-            if (possibleFilters.getOrDefault(resource.getNamespace(), Collections.emptyList()).stream().anyMatch(pre -> resource.getPath().startsWith(pre))) {
-                //For each tag that matches a tag that is filterable, add it to the resulting list
-                filterableTags.add(resource);
-            }
-        }
-        return filterableTags;
+        //For each tag that matches a tag that is filterable, add it to the resulting list
+        return stack.getTags()
+              .map(TagKey::location)
+              .filter(TileEntityOredictionificator::isPossibleFilter)
+              .toList();
     }
 
     private boolean hasFilterableTags(ItemStack stack) {
-        Set<ResourceLocation> tags = TagUtils.tagNames(stack.getTags());
-        if (!tags.isEmpty()) {
-            Map<String, List<String>> possibleFilters = MekanismConfig.general.validOredictionificatorFilters.get();
-            for (ResourceLocation resource : tags) {
-                if (possibleFilters.getOrDefault(resource.getNamespace(), Collections.emptyList()).stream().anyMatch(pre -> resource.getPath().startsWith(pre))) {
-                    return true;
-                }
+        return stack.getTags().anyMatch(tag -> isPossibleFilter(tag.location()));
+    }
+
+    private static boolean isPossibleFilter(ResourceLocation resource) {
+        //Note: We get the possible filters inside the stream so that we don't have to capture it
+        // as while we look it for every item, it is cached on the config value, so it becomes a simple getter
+        Map<String, List<String>> possibleFilters = MekanismConfig.general.validOredictionificatorFilters.get();
+        for (String pre : possibleFilters.getOrDefault(resource.getNamespace(), Collections.emptyList())) {
+            if (resource.getPath().startsWith(pre)) {
+                return true;
             }
         }
         return false;
     }
 
     public static boolean isValidTarget(ResourceLocation tag) {
-        ITagManager<Item> manager = TagUtils.manager(ForgeRegistries.ITEMS);
-        if (manager.isKnownTagName(manager.createTagKey(tag))) {
+        if (BuiltInRegistries.ITEM.getTag(TagKey.create(Registries.ITEM, tag)).isPresent()) {
             for (String filter : MekanismConfig.general.validOredictionificatorFilters.get().getOrDefault(tag.getNamespace(), Collections.emptyList())) {
                 if (tag.getPath().startsWith(filter)) {
                     return true;
@@ -158,8 +145,11 @@ public class TileEntityOredictionificator extends TileEntityConfigurableMachine 
         return false;
     }
 
-    private ItemStack getResult(ItemStack stack) {
-        List<OredictionificatorItemFilter> enabledFilters = filterManager.getEnabledFilters();
+    public static boolean hasResult(List<OredictionificatorItemFilter> enabledFilters, ItemStack stack) {
+        return !getResult(enabledFilters, stack).isEmpty();
+    }
+
+    private static ItemStack getResult(List<OredictionificatorItemFilter> enabledFilters, ItemStack stack) {
         if (!enabledFilters.isEmpty()) {
             for (ResourceLocation filterableTag : getFilterableTags(stack)) {
                 for (OredictionificatorItemFilter filter : enabledFilters) {
@@ -177,24 +167,19 @@ public class TileEntityOredictionificator extends TileEntityConfigurableMachine 
     }
 
     @Override
-    public void writeSustainedData(CompoundTag dataMap) {
-        filterManager.writeToNBT(dataMap);
+    public void writeSustainedData(HolderLookup.Provider provider, CompoundTag dataMap) {
+        super.writeSustainedData(provider, dataMap);
+        filterManager.writeToNBT(provider, dataMap);
     }
 
     @Override
-    public void readSustainedData(CompoundTag dataMap) {
-        filterManager.readFromNBT(dataMap);
+    public void readSustainedData(HolderLookup.Provider provider, @NotNull CompoundTag dataMap) {
+        super.readSustainedData(provider, dataMap);
+        filterManager.readFromNBT(provider, dataMap);
     }
 
     @Override
-    public Map<String, String> getTileDataRemap() {
-        Map<String, String> remap = new Object2ObjectOpenHashMap<>();
-        remap.put(NBTConstants.FILTERS, NBTConstants.FILTERS);
-        return remap;
-    }
-
-    @Override
-    public boolean canPulse() {
+    public boolean supportsMode(RedstoneControl mode) {
         return true;
     }
 
@@ -212,7 +197,7 @@ public class TileEntityOredictionificator extends TileEntityConfigurableMachine 
 
     //Methods relating to IComputerTile
     @ComputerMethod
-    List<OredictionificatorItemFilter> getFilters() {
+    Collection<OredictionificatorItemFilter> getFilters() {
         return filterManager.getFilters();
     }
 

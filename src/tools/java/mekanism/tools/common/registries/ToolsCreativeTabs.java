@@ -1,12 +1,12 @@
 package mekanism.tools.common.registries;
 
-import mekanism.api.providers.IItemProvider;
+import mekanism.common.registration.MekanismDeferredHolder;
 import mekanism.common.registration.impl.CreativeTabDeferredRegister;
-import mekanism.common.registration.impl.CreativeTabRegistryObject;
 import mekanism.common.registries.MekanismCreativeTabs;
 import mekanism.tools.common.MekanismTools;
 import mekanism.tools.common.ToolsLang;
 import mekanism.tools.common.item.ItemMekanismArmor;
+import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.CreativeModeTabs;
@@ -14,32 +14,32 @@ import net.minecraft.world.item.DiggerItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ShieldItem;
 import net.minecraft.world.item.SwordItem;
-import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
+import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 
 public class ToolsCreativeTabs {
 
     public static final CreativeTabDeferredRegister CREATIVE_TABS = new CreativeTabDeferredRegister(MekanismTools.MODID, ToolsCreativeTabs::addToExistingTabs);
 
-    public static final CreativeTabRegistryObject TOOLS = CREATIVE_TABS.registerMain(ToolsLang.MEKANISM_TOOLS, ToolsItems.DIAMOND_PAXEL, builder ->
-          builder.withBackgroundLocation(MekanismTools.rl("textures/gui/creative_tab.png"))
+    public static final MekanismDeferredHolder<CreativeModeTab, CreativeModeTab> TOOLS = CREATIVE_TABS.registerMain(ToolsLang.MEKANISM_TOOLS, ToolsItems.DIAMOND_PAXEL, builder ->
+          builder.backgroundTexture(MekanismTools.rl("textures/gui/creative_tab.png"))
                 .withSearchBar(80)//Allow our tabs to be searchable for convenience purposes
-                .withTabsBefore(MekanismCreativeTabs.MEKANISM.key())
+                .withTabsBefore(MekanismCreativeTabs.MEKANISM.getId())
                 .displayItems((displayParameters, output) -> CreativeTabDeferredRegister.addToDisplay(ToolsItems.ITEMS, output))
     );
 
     private static void addToExistingTabs(BuildCreativeModeTabContentsEvent event) {
         ResourceKey<CreativeModeTab> tabKey = event.getTabKey();
         if (tabKey == CreativeModeTabs.TOOLS_AND_UTILITIES) {
-            for (IItemProvider item : ToolsItems.ITEMS.getAllItems()) {
-                if (item.asItem() instanceof DiggerItem) {
-                    CreativeTabDeferredRegister.addToDisplay(event, item);
+            for (Holder<Item> holder : ToolsItems.ITEMS.getEntries()) {
+                if (holder.value() instanceof DiggerItem) {
+                    CreativeTabDeferredRegister.addToDisplay(event, holder);
                 }
             }
         } else if (tabKey == CreativeModeTabs.COMBAT) {
-            for (IItemProvider itemProvider : ToolsItems.ITEMS.getAllItems()) {
-                Item item = itemProvider.asItem();
+            for (Holder<Item> itemProvider : ToolsItems.ITEMS.getEntries()) {
+                Item item = itemProvider.value();
                 if (item instanceof ItemMekanismArmor || item instanceof SwordItem || item instanceof ShieldItem) {
-                    CreativeTabDeferredRegister.addToDisplay(event, item);
+                    CreativeTabDeferredRegister.addToDisplay(event, itemProvider);
                 }
             }
         }

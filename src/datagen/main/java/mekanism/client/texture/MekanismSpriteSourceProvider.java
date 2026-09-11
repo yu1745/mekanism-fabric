@@ -1,18 +1,20 @@
 package mekanism.client.texture;
 
+import java.util.concurrent.CompletableFuture;
 import mekanism.common.Mekanism;
 import mekanism.common.registries.MekanismFluids;
+import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.data.PackOutput;
-import net.minecraftforge.common.data.ExistingFileHelper;
+import net.neoforged.neoforge.common.data.ExistingFileHelper;
 
 public class MekanismSpriteSourceProvider extends BaseSpriteSourceProvider {
 
-    public MekanismSpriteSourceProvider(PackOutput output, ExistingFileHelper fileHelper) {
-        super(output, Mekanism.MODID, fileHelper);
+    public MekanismSpriteSourceProvider(PackOutput output, ExistingFileHelper fileHelper, CompletableFuture<Provider> lookupProvider) {
+        super(output, Mekanism.MODID, fileHelper, lookupProvider);
     }
 
     @Override
-    protected void addSources() {
+    protected void gather() {
         SourceList atlas = atlas(BLOCKS_ATLAS);
         addFiles(atlas, Mekanism.rl("liquid/energy"));
         addFiles(atlas, Mekanism.rl("liquid/heat"));
@@ -31,7 +33,7 @@ public class MekanismSpriteSourceProvider extends BaseSpriteSourceProvider {
               Mekanism.rl("entity/armor/mekatool")
         );
 
-        //TODO - 1.20: Add javadocs stating that chemical resources now need to be added via sources???
+        //TODO - 1.21: Add javadocs stating that chemical resources now need to be added via sources???
         // is this even accurate? See if fluids need it as well. Chemicals potentially should use their own directory as well
         // just to simplify things? Or maybe we add manually and then also add a specific directory to make it easier for others
         addChemicalSprites(atlas);

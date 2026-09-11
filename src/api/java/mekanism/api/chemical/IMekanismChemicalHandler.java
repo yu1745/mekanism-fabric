@@ -9,8 +9,7 @@ import net.minecraft.core.Direction;
 import org.jetbrains.annotations.Nullable;
 
 @NothingNullByDefault
-public interface IMekanismChemicalHandler<CHEMICAL extends Chemical<CHEMICAL>, STACK extends ChemicalStack<CHEMICAL>, TANK extends IChemicalTank<CHEMICAL, STACK>>
-      extends ISidedChemicalHandler<CHEMICAL, STACK>, IContentsListener {
+public interface IMekanismChemicalHandler extends ISidedChemicalHandler, IContentsListener {
 
     /**
      * Used to check if an instance of {@link IMekanismChemicalHandler} actually has the ability to handle chemicals.
@@ -21,7 +20,7 @@ public interface IMekanismChemicalHandler<CHEMICAL extends Chemical<CHEMICAL>, S
      * must call this method to make sure that it really can handle chemicals. As most mekanism tiles have this class in their hierarchy.
      * @implNote If this returns false the capability should not be exposed AND methods should turn reasonable defaults for not doing anything.
      */
-    default boolean canHandle() {
+    default boolean canHandleChemicals() {
         return true;
     }
 
@@ -30,68 +29,92 @@ public interface IMekanismChemicalHandler<CHEMICAL extends Chemical<CHEMICAL>, S
      *
      * @param side The side we are interacting with the handler from (null for internal).
      *
-     * @return The list of all TANKs that this {@link IMekanismChemicalHandler} contains for the given side. If there are no tanks for the side or {@link #canHandle()} is
+     * @return The list of all TANKs that this {@link IMekanismChemicalHandler} contains for the given side. If there are no tanks for the side or {@link #canHandleChemicals()} is
      * false then it returns an empty list.
      *
-     * @implNote When side is null (an internal request), this method <em>MUST</em> return all tanks in the handler. Additionally, if {@link #canHandle()} is false, this
+     * @implNote When side is null (an internal request), this method <em>MUST</em> return all tanks in the handler. Additionally, if {@link #canHandleChemicals()} is false, this
      * <em>MUST</em> return an empty list.
      */
-    List<TANK> getChemicalTanks(@Nullable Direction side);
+    List<IChemicalTank> getChemicalTanks(@Nullable Direction side);
 
     /**
-     * Returns the {@link TANK} that has the given index from the list of tanks on the given side.
+     * Returns the {@link IChemicalTank} that has the given index from the list of tanks on the given side.
      *
      * @param tank The index of the tank to retrieve.
      * @param side The side we are interacting with the handler from (null for internal).
      *
-     * @return The {@link TANK} that has the given index from the list of tanks on the given side.
+     * @return The {@link IChemicalTank} that has the given index from the list of tanks on the given side.
      */
     @Nullable
-    default TANK getChemicalTank(int tank, @Nullable Direction side) {
-        List<TANK> tanks = getChemicalTanks(side);
+    default IChemicalTank getChemicalTank(int tank, @Nullable Direction side) {
+        List<IChemicalTank> tanks = getChemicalTanks(side);
         return tank >= 0 && tank < tanks.size() ? tanks.get(tank) : null;
     }
 
     @Override
-    default int getTanks(@Nullable Direction side) {
+    default int getCountChemicalTanks(@Nullable Direction side) {
         return getChemicalTanks(side).size();
     }
 
     @Override
-    default STACK getChemicalInTank(int tank, @Nullable Direction side) {
-        TANK chemicalTank = getChemicalTank(tank, side);
-        return chemicalTank == null ? getEmptyStack() : chemicalTank.getStack();
+    default ChemicalStack getChemicalInTank(int tank, @Nullable Direction side) {
+        IChemicalTank chemicalTank = getChemicalTank(tank, side);
+        return chemicalTank == null ? ChemicalStack.EMPTY : chemicalTank.getStack();
     }
 
     @Override
-    default void setChemicalInTank(int tank, STACK stack, @Nullable Direction side) {
-        TANK chemicalTank = getChemicalTank(tank, side);
+    default void setChemicalInTank(int tank, ChemicalStack stack, @Nullable Direction side) {
+        IChemicalTank chemicalTank = getChemicalTank(tank, side);
         if (chemicalTank != null) {
             chemicalTank.setStack(stack);
         }
     }
 
     @Override
-    default long getTankCapacity(int tank, @Nullable Direction side) {
-        TANK chemicalTank = getChemicalTank(tank, side);
+    default long getChemicalTankCapacity(int tank, @Nullable Direction side) {
+        IChemicalTank chemicalTank = getChemicalTank(tank, side);
         return chemicalTank == null ? 0 : chemicalTank.getCapacity();
     }
 
     @Override
-    default boolean isValid(int tank, STACK stack, @Nullable Direction side) {
-        TANK chemicalTank = getChemicalTank(tank, side);
+    default boolean isValid(int tank, ChemicalStack stack, @Nullable Direction side) {
+        IChemicalTank chemicalTank = getChemicalTank(tank, side);
         return chemicalTank != null && chemicalTank.isValid(stack);
     }
 
+    /**
+     * @implNote Any overrides to this should also override {@link #insertChemical(ChemicalStack, Direction, Action)} as it bypasses calling this method in order to skip
+     * looking up the containers for every sub operation.
+     */
     @Override
-    default STACK insertChemical(int tank, STACK stack, @Nullable Direction side, Action action) {
-        TANK chemicalTank = getChemicalTank(tank, side);
-        return chemicalTank == null ? stack : chemicalTank.insert(stack, action, side == null ? AutomationType.INTERNAL : AutomationType.EXTERNAL);
+    default ChemicalStack insertChemical(int tank, ChemicalStack stack, @Nullable Direction side, Action action) {
+        IChemicalTank chemicalTank = getChemicalTank(tank, side);
+        return chemicalTank == null ? stack : chemicalTank.insert(stack, action, AutomationType.handler(side));
+    }
+
+    /**
+     * @implNote Any overrides to this should also override {@link #extractChemical(long, Direction, Action)} and
+     * {@link #extractChemical(ChemicalStack, Direction, Action)} as they bypass calling this method in order to skip looking up the containers for every sub
+     * operation.
+     */
+    @Override
+    default ChemicalStack extractChemical(int tank, long amount, @Nullable Direction side, Action action) {
+        IChemicalTank chemicalTank = getChemicalTank(tank, side);
+        return chemicalTank == null ? ChemicalStack.EMPTY : chemicalTank.extract(amount, action, AutomationType.handler(side));
     }
 
     @Override
-    default STACK extractChemical(int tank, long amount, @Nullable Direction side, Action action) {
-        TANK chemicalTank = getChemicalTank(tank, side);
-        return chemicalTank == null ? getEmptyStack() : chemicalTank.extract(amount, action, side == null ? AutomationType.INTERNAL : AutomationType.EXTERNAL);
+    default ChemicalStack insertChemical(ChemicalStack stack, @Nullable Direction side, Action action) {
+        return ChemicalUtils.insert(stack, side, this::getChemicalTanks, action, AutomationType.handler(side));
+    }
+
+    @Override
+    default ChemicalStack extractChemical(long amount, @Nullable Direction side, Action action) {
+        return ChemicalUtils.extract(amount, side, this::getChemicalTanks, action, AutomationType.handler(side));
+    }
+
+    @Override
+    default ChemicalStack extractChemical(ChemicalStack stack, @Nullable Direction side, Action action) {
+        return ChemicalUtils.extract(stack, side, this::getChemicalTanks, action, AutomationType.handler(side));
     }
 }

@@ -11,7 +11,8 @@ import mekanism.client.render.data.RenderData;
 import mekanism.client.render.data.ValveRenderData;
 import mekanism.common.util.MekanismUtils;
 import net.minecraft.core.Direction;
-import net.minecraftforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.FluidType;
 import org.jetbrains.annotations.Nullable;
 
 public final class ModelRenderer {
@@ -19,7 +20,7 @@ public final class ModelRenderer {
     private ModelRenderer() {
     }
 
-    private static final int BLOCK_STAGES = 1_000;
+    private static final int BLOCK_STAGES = FluidType.BUCKET_VOLUME;
 
     private static final Map<RenderData, Int2ObjectMap<Model3D>> cachedCenterData = new Object2ObjectOpenHashMap<>();
     private static final Map<ValveRenderData, Float2ObjectMap<Model3D>> cachedValveFluids = new Object2ObjectOpenHashMap<>();
@@ -49,13 +50,17 @@ public final class ModelRenderer {
         } else {
             stage = Math.min(maxStages, (int) (scale * maxStages));
         }
-        return cachedCenterData.computeIfAbsent(data, d -> new Int2ObjectOpenHashMap<>())
-              .computeIfAbsent(stage, s -> new Model3D()
-                    .setTexture(data.getTexture())
-                    .xBounds(0.01F, data.length - 0.02F)
-                    .yBounds(0.01F, data.height * (s / (float) maxStages) - 0.02F)
-                    .zBounds(0.01F, data.width - 0.02F)
-              );
+        Int2ObjectMap<Model3D> modelMap = cachedCenterData.computeIfAbsent(data, d -> new Int2ObjectOpenHashMap<>());
+        Model3D model = modelMap.get(stage);
+        if (model == null) {
+            model = new Model3D()
+                  .setTexture(data.getTexture())
+                  .xBounds(0.01F, data.length - 0.02F)
+                  .yBounds(0.01F, Math.max(0.02F, data.height * (stage / (float) maxStages) - 0.02F))
+                  .zBounds(0.01F, data.width - 0.02F);
+            modelMap.put(stage, model);
+        }
+        return model;
     }
 
     //Undoes the z-fighting height shift from the model
@@ -72,26 +77,29 @@ public final class ModelRenderer {
         }) {
             return null;
         }
-        return cachedValveFluids.computeIfAbsent(data, d -> new Float2ObjectOpenHashMap<>())
-              .computeIfAbsent(height, fluidHeight -> {
-                  Model3D model = new Model3D()
-                        .prepFlowing(data.fluidType)
-                        .setSideRender(Direction.DOWN, fluidHeight == 0)
-                        .xBounds(0.3F, 0.7F)
-                        .zBounds(0.3F, 0.7F);
-                  Direction side = data.getSide();
-                  if (side.getAxis().isHorizontal()) {
-                      model.yBounds(fluidHeight - data.getValveFluidHeight() + 0.01F, 0.7F);
-                  }
-                  return switch (side) {
-                      case DOWN -> model.yBounds(fluidHeight + 1.01F, 1.5F);
-                      case UP -> model.yBounds(fluidHeight - data.height - 0.01F, -0.01F);
-                      case NORTH -> model.zBounds(1.02F, 1.4F);
-                      case SOUTH -> model.zBounds(-0.4F, -0.03F);
-                      case WEST -> model.xBounds(1.02F, 1.4F);
-                      case EAST -> model.xBounds(-0.4F, -0.03F);
-                  };
-              });
+        Float2ObjectMap<Model3D> modelMap = cachedValveFluids.computeIfAbsent(data, d -> new Float2ObjectOpenHashMap<>());
+        Model3D model = modelMap.get(height);
+        if (model == null) {
+            model = new Model3D()
+                  .prepFlowing(data.fluidType)
+                  .setSideRender(Direction.DOWN, height == 0)
+                  .xBounds(0.3F, 0.7F)
+                  .zBounds(0.3F, 0.7F);
+            Direction side = data.getSide();
+            if (side.getAxis().isHorizontal()) {
+                model.yBounds(height - data.getValveFluidHeight() + 0.01F, 0.7F);
+            }
+            switch (side) {
+                case DOWN -> model.yBounds(height + 1.01F, 1.5F);
+                case UP -> model.yBounds(height - data.height - 0.01F, -0.01F);
+                case NORTH -> model.zBounds(1.02F, 1.4F);
+                case SOUTH -> model.zBounds(-0.4F, -0.03F);
+                case WEST -> model.xBounds(1.02F, 1.4F);
+                case EAST -> model.xBounds(-0.4F, -0.03F);
+            }
+            modelMap.put(height, model);
+        }
+        return model;
     }
 
     public static void resetCachedModels() {

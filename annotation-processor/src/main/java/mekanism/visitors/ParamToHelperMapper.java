@@ -1,9 +1,8 @@
 package mekanism.visitors;
 
-import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.CodeBlock;
-import com.squareup.javapoet.ParameterSpec;
-
+import com.palantir.javapoet.ClassName;
+import com.palantir.javapoet.CodeBlock;
+import com.palantir.javapoet.ParameterSpec;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
@@ -60,7 +59,7 @@ public class ParamToHelperMapper extends SimpleTypeVisitor14<CodeBlock, Integer>
         }
         //check for list or map. List not yet implemented
         return switch (className.canonicalName()) {
-            case "java.util.List" -> CodeBlock.of("$N.getList($L /* $L */)", helperParam, paramNum, t.getTypeArguments().get(0).toString());
+            case "java.util.List" -> CodeBlock.of("$N.getList($L /* $L */)", helperParam, paramNum, t.getTypeArguments().getFirst().toString());
             case "java.util.Map" -> CodeBlock.of("$N.getMap($L)", helperParam, paramNum);
             default -> CodeBlock.of("$N.get$L($L)", helperParam, className.simpleName(), paramNum);
         };

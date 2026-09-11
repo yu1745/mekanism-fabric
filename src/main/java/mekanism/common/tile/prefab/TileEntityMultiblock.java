@@ -1,19 +1,19 @@
 package mekanism.common.tile.prefab;
 
-import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
+import java.util.HashSet;
 import java.util.UUID;
 import mekanism.api.IConfigurable;
 import mekanism.api.IContentsListener;
-import mekanism.api.NBTConstants;
-import mekanism.api.providers.IBlockProvider;
+import mekanism.api.SerializationConstants;
 import mekanism.api.text.EnumColor;
 import mekanism.client.SparkleAnimation;
 import mekanism.common.MekanismLang;
-import mekanism.common.capabilities.Capabilities;
+import mekanism.common.attachments.containers.ContainerType;
 import mekanism.common.capabilities.holder.slot.IInventorySlotHolder;
-import mekanism.common.capabilities.resolver.BasicCapabilityResolver;
 import mekanism.common.config.MekanismConfig;
-import mekanism.common.integration.computer.*;
+import mekanism.common.integration.computer.BoundMethodHolder;
+import mekanism.common.integration.computer.FactoryRegistry;
+import mekanism.common.integration.computer.MethodRestriction;
 import mekanism.common.integration.computer.annotation.ComputerMethod;
 import mekanism.common.inventory.container.MekanismContainer;
 import mekanism.common.inventory.container.sync.dynamic.SyncMapper;
@@ -22,24 +22,27 @@ import mekanism.common.lib.multiblock.IMultiblock;
 import mekanism.common.lib.multiblock.IStructuralMultiblock;
 import mekanism.common.lib.multiblock.MultiblockData;
 import mekanism.common.lib.multiblock.Structure;
-import mekanism.common.tile.base.SubstanceType;
 import mekanism.common.tile.base.TileEntityMekanism;
 import mekanism.common.util.EnumUtils;
+import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.NBTUtils;
 import mekanism.common.util.WorldUtils;
+import net.minecraft.SharedConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.AABB;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -66,12 +69,11 @@ public abstract class TileEntityMultiblock<T extends MultiblockData> extends Til
     private UUID cachedID = null;
 
     // start at 100 to make sure we run the animation
-    private long unformedTicks = 100;
+    private long unformedTicks = 5L * SharedConstants.TICKS_PER_SECOND;
 
-    public TileEntityMultiblock(IBlockProvider blockProvider, BlockPos pos, BlockState state) {
+    public TileEntityMultiblock(Holder<Block> blockProvider, BlockPos pos, BlockState state) {
         super(blockProvider, pos, state);
         cacheCoord();
-        addCapabilityResolver(BasicCapabilityResolver.constant(Capabilities.CONFIGURABLE, this));
     }
 
     @Override
@@ -95,7 +97,7 @@ public abstract class TileEntityMultiblock<T extends MultiblockData> extends Til
         if (!getMultiblock().isFormed()) {
             unformedTicks++;
             if (!playersUsing.isEmpty()) {
-                for (Player player : new ObjectOpenHashSet<>(playersUsing)) {
+                for (Player player : new HashSet<>(playersUsing)) {
                     player.closeContainer();
                 }
             }
@@ -105,17 +107,21 @@ public abstract class TileEntityMultiblock<T extends MultiblockData> extends Til
     }
 
     @Override
-    protected void onUpdateServer() {
-        super.onUpdateServer();
-        boolean needsPacket = false;
+    protected boolean onUpdateServer() {
+        boolean needsPacket = super.onUpdateServer();
         if (ticker >= 3) {
-            structure.tick(this, ticker % 10 == 0);
+            structure.tick(this, ticker % MekanismUtils.TICKS_PER_HALF_SECOND == 0);
         }
         T multiblock = getMultiblock();
         if (isMaster() && multiblock.isFormed() && multiblock.recheckStructure) {
             multiblock.recheckStructure = false;
-            getStructure().doImmediateUpdate(this, ticker % 10 == 0);
-            multiblock = getMultiblock();
+            getStructure().doImmediateUpdate(this, ticker % MekanismUtils.TICKS_PER_HALF_SECOND == 0);
+            T newMultiblock = getMultiblock();
+            if (newMultiblock != multiblock && !newMultiblock.isFormed()) {
+                //force it to sync if it just unformed
+                getManager().handleDirtyMultiblock(multiblock);
+            }
+            multiblock = newMultiblock;
         }
         if (multiblock.isFormed()) {
             if (!prevStructure) {
@@ -133,11 +139,13 @@ public abstract class TileEntityMultiblock<T extends MultiblockData> extends Til
                     if (multiblock.tick(level)) {
                         needsPacket = true;
                     }
-                    getManager().handleDirtyMultiblock(multiblock);
+                    getManager().markTicked(multiblock);
                 }
             }
         } else {
-            playersUsing.forEach(Player::closeContainer);
+            if (!playersUsing.isEmpty()) {
+                playersUsing.forEach(Player::closeContainer);
+            }
             if (prevStructure) {
                 structureChanged(multiblock);
                 prevStructure = false;
@@ -146,9 +154,7 @@ public abstract class TileEntityMultiblock<T extends MultiblockData> extends Til
             isMaster = false;
         }
         needsPacket |= onUpdateServer(multiblock);
-        if (needsPacket) {
-            sendUpdatePacket();
-        }
+        return needsPacket;
     }
 
     /**
@@ -170,7 +176,7 @@ public abstract class TileEntityMultiblock<T extends MultiblockData> extends Til
     }
 
     protected void structureChanged(T multiblock) {
-        invalidateCachedCapabilities();
+        invalidateCapabilitiesFull();
         if (multiblock.isFormed() && !multiblock.hasMaster && canBeMaster()) {
             multiblock.hasMaster = true;
             isMaster = true;
@@ -179,12 +185,14 @@ public abstract class TileEntityMultiblock<T extends MultiblockData> extends Til
             //If we are the block that is rendering the structure make sure to tell all the valves to update their comparator levels
             multiblock.notifyAllUpdateComparator(level);
         }
+        BlockPos.MutableBlockPos mutable = new BlockPos.MutableBlockPos();
+        BlockPos pos = getBlockPos();
         for (Direction side : EnumUtils.DIRECTIONS) {
-            BlockPos pos = getBlockPos().relative(side);
-            if (!multiblock.isFormed() || !multiblock.isKnownLocation(pos)) {
-                BlockEntity tile = WorldUtils.getTileEntity(level, pos);
-                if (!level.isEmptyBlock(pos) && (tile == null || tile.getClass() != getClass()) && !(tile instanceof IStructuralMultiblock || tile instanceof IMultiblock)) {
-                    WorldUtils.notifyNeighborOfChange(level, pos, getBlockPos());
+            mutable.setWithOffset(pos, side);
+            if (!multiblock.isFormed() || !multiblock.isKnownLocation(mutable)) {
+                BlockEntity tile = WorldUtils.getTileEntity(level, mutable);
+                if (!level.isEmptyBlock(mutable) && (tile == null || tile.getClass() != getClass()) && !(tile instanceof IStructuralMultiblock || tile instanceof IMultiblock)) {
+                    WorldUtils.notifyNeighborOfChange(level, mutable, pos);
                 }
             }
         }
@@ -196,7 +204,7 @@ public abstract class TileEntityMultiblock<T extends MultiblockData> extends Til
     }
 
     @Override
-    protected boolean makesComparatorDirty(@Nullable SubstanceType type) {
+    protected boolean makesComparatorDirty(ContainerType<?, ?, ?> type) {
         //Comparators are handled via the multiblock, no special listeners are needed
         return false;
     }
@@ -207,11 +215,18 @@ public abstract class TileEntityMultiblock<T extends MultiblockData> extends Til
     }
 
     @Override
-    public InteractionResult onActivate(Player player, InteractionHand hand, ItemStack stack) {
+    public ItemInteractionResult onActivate(Player player, InteractionHand hand, ItemStack stack) {
         if (player.isShiftKeyDown() || !getMultiblock().isFormed()) {
-            return InteractionResult.PASS;
+            return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
-        return openGui(player);
+        InteractionResult result = openGui(player);
+        return switch (result) {
+            case SUCCESS, SUCCESS_NO_ITEM_USED -> ItemInteractionResult.SUCCESS;
+            case CONSUME -> ItemInteractionResult.CONSUME;
+            case CONSUME_PARTIAL -> ItemInteractionResult.CONSUME_PARTIAL;
+            case PASS -> ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+            case FAIL -> ItemInteractionResult.FAIL;
+        };
     }
 
     @Override
@@ -246,26 +261,26 @@ public abstract class TileEntityMultiblock<T extends MultiblockData> extends Til
 
     @NotNull
     @Override
-    public CompoundTag getReducedUpdateTag() {
-        CompoundTag updateTag = super.getReducedUpdateTag();
-        updateTag.putBoolean(NBTConstants.RENDERING, isMaster());
+    public CompoundTag getReducedUpdateTag(@NotNull HolderLookup.Provider provider) {
+        CompoundTag updateTag = super.getReducedUpdateTag(provider);
+        updateTag.putBoolean(SerializationConstants.RENDERING, isMaster());
         T multiblock = getMultiblock();
-        updateTag.putBoolean(NBTConstants.HAS_STRUCTURE, multiblock.isFormed());
+        updateTag.putBoolean(SerializationConstants.HAS_STRUCTURE, multiblock.isFormed());
         if (multiblock.isFormed() && isMaster()) {
-            multiblock.writeUpdateTag(updateTag);
+            multiblock.writeUpdateTag(updateTag, provider);
         }
         return updateTag;
     }
 
     @Override
-    public void handleUpdateTag(@NotNull CompoundTag tag) {
-        super.handleUpdateTag(tag);
-        NBTUtils.setBooleanIfPresent(tag, NBTConstants.RENDERING, value -> isMaster = value);
+    public void handleUpdateTag(@NotNull CompoundTag tag, @NotNull HolderLookup.Provider provider) {
+        super.handleUpdateTag(tag, provider);
+        NBTUtils.setBooleanIfPresent(tag, SerializationConstants.RENDERING, value -> isMaster = value);
         T multiblock = getMultiblock();
-        NBTUtils.setBooleanIfPresent(tag, NBTConstants.HAS_STRUCTURE, multiblock::setFormedForce);
+        NBTUtils.setBooleanIfPresent(tag, SerializationConstants.HAS_STRUCTURE, multiblock::setFormedForce);
         if (isMaster()) {
             if (multiblock.isFormed()) {
-                multiblock.readUpdateTag(tag);
+                multiblock.readUpdateTag(tag, provider);
                 doMultiblockSparkle(multiblock);
             } else {
                 // this will consecutively be set on the server
@@ -295,20 +310,20 @@ public abstract class TileEntityMultiblock<T extends MultiblockData> extends Til
     }
 
     @Override
-    public void load(@NotNull CompoundTag nbt) {
-        super.load(nbt);
+    public void loadAdditional(@NotNull CompoundTag nbt, @NotNull HolderLookup.Provider provider) {
+        super.loadAdditional(nbt, provider);
         if (!getMultiblock().isFormed()) {
-            NBTUtils.setUUIDIfPresent(nbt, NBTConstants.INVENTORY_ID, id -> cachedID = id);
+            NBTUtils.setUUIDIfPresent(nbt, SerializationConstants.INVENTORY_ID, id -> cachedID = id);
         }
     }
 
     @Override
-    public void saveAdditional(@NotNull CompoundTag nbtTags) {
-        super.saveAdditional(nbtTags);
+    public void saveAdditional(@NotNull CompoundTag nbtTags, @NotNull HolderLookup.Provider provider) {
+        super.saveAdditional(nbtTags, provider);
         if (cachedID != null) {
             //Note: We don't bother validating here the cache still exists as it is irrelevant and unused until attempting to form the multiblock
             // at which point it will gracefully handle multiblock tiles with stale ids and clear them
-            nbtTags.putUUID(NBTConstants.INVENTORY_ID, cachedID);
+            nbtTags.putUUID(SerializationConstants.INVENTORY_ID, cachedID);
         }
     }
 
@@ -318,24 +333,12 @@ public abstract class TileEntityMultiblock<T extends MultiblockData> extends Til
         SyncMapper.INSTANCE.setup(container, getMultiblock().getClass(), this::getMultiblock);
     }
 
-    @NotNull
     @Override
-    public AABB getRenderBoundingBox() {
-        if (isMaster()) {
-            T multiblock = getMultiblock();
-            if (multiblock.isFormed() && multiblock.getBounds() != null) {
-                //TODO: Eventually we may want to look into caching this
-                //Note: We do basically the full dimensions as it still is a lot smaller than always rendering it, and makes sure no matter
-                // how the specific multiblock wants to render, that it is being viewed
-                return new AABB(multiblock.getMinPos(), multiblock.getMaxPos().offset(1, 1, 1));
-            }
+    public boolean persists(ContainerType<?, ?, ?> type) {
+        if (type == ContainerType.ITEM) {
+            return false;
         }
-        return super.getRenderBoundingBox();
-    }
-
-    @Override
-    public boolean persistInventory() {
-        return false;
+        return super.persists(type);
     }
 
     @NotNull

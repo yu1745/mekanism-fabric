@@ -1,5 +1,6 @@
 package mekanism.client.lang;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -17,6 +18,7 @@ public class NonAmericanLanguageProvider extends ConvertibleLanguageProvider {
         addEntry(map, "Pressurized", "Pressurised");
         addEntry(map, "Stabilizer", "Stabiliser");
         addEntry(map, "Stabilizing", "Stabilising");
+        addEntry(map, "Stabilization", "Stabilisation");
         addEntry(map, "Crystallizer", "Crystalliser");
         addEntry(map, "Nucleosynthesizer", "Nucleosynthesiser");
         addEntry(map, "Color", "Colour");
@@ -32,6 +34,7 @@ public class NonAmericanLanguageProvider extends ConvertibleLanguageProvider {
         addEntry(map, "Armor", "Armour");
         addEntry(map, "Armored", "Armoured");
         addEntry(map, "Gray", "Grey");
+        addEntry(map, "Whooshes", "Wooshes");
     }).entrySet().stream().map(entry -> new WordConversion(entry.getKey(), entry.getValue())).toList();
 
     private static void addEntry(Map<String, String> map, String key, String value) {
@@ -44,7 +47,7 @@ public class NonAmericanLanguageProvider extends ConvertibleLanguageProvider {
     }
 
     @Override
-    public void convert(String key, List<Component> splitEnglish) {
+    public void convert(String key, String raw, List<Component> splitEnglish) {
         StringBuilder builder = new StringBuilder();
         boolean foundMatch = false;
         for (Component component : splitEnglish) {
@@ -52,8 +55,12 @@ public class NonAmericanLanguageProvider extends ConvertibleLanguageProvider {
                 builder.append(component.contents());
             } else {
                 String contents = component.contents();
-                String finalContents = contents;
-                List<WordConversion> matched = CONVERSIONS.stream().filter(e -> e.match(finalContents).find()).toList();
+                List<WordConversion> matched = new ArrayList<>();
+                for (WordConversion conversion : CONVERSIONS) {
+                    if (conversion.match(contents).find()) {
+                        matched.add(conversion);
+                    }
+                }
                 if (!matched.isEmpty()) {
                     foundMatch = true;
                     for (WordConversion conversion : matched) {

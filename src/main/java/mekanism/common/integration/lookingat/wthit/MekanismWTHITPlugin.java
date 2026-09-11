@@ -37,27 +37,27 @@ public class MekanismWTHITPlugin implements IWailaPlugin {
         registration.addEntityData(WTHITEntityDataProvider.INSTANCE, EntityRobit.class);
         registration.addConfig(LookingAtUtils.ENERGY, true);
         registration.addConfig(LookingAtUtils.FLUID, true);
-        registration.addConfig(LookingAtUtils.GAS, true);
-        registration.addConfig(LookingAtUtils.INFUSE_TYPE, true);
-        registration.addConfig(LookingAtUtils.PIGMENT, true);
-        registration.addConfig(LookingAtUtils.SLURRY, true);
+        registration.addConfig(LookingAtUtils.CHEMICAL, true);
         registration.addComponent((IEntityComponentProvider) WTHITTooltipRenderer.INSTANCE, TooltipPosition.BODY, EntityRobit.class);
         registration.addComponent((IBlockComponentProvider) WTHITTooltipRenderer.INSTANCE, TooltipPosition.BODY, Block.class);
-        registration.addDataType(MEK_DATA, WTHITLookingAtHelper.class, WTHITLookingAtHelper.SERIALIZER);
+        registration.addDataType(WTHITLookingAtHelper.TYPE, WTHITLookingAtHelper.STREAM_CODEC);
 
         registration.addEventListener(new IEventListener() {
             @Override
             public void onHandleTooltip(ITooltip tooltip, ICommonAccessor accessor, IPluginConfig config) {
                 if (tooltip.getLine(MEK_DATA) != null) {
                     //If we have mekanism data then clear out the default energy and fluid data as we handle that ourselves
+                    // Note: Setting adds it if it is not present, so only set it if it is present
                     if (tooltip.getLine(EnergyData.ID) != null) {
-                        //Setting adds it if it is not present, so only set it if it is present
                         tooltip.setLine(EnergyData.ID);
                     }
                     if (tooltip.getLine(FluidData.ID) != null) {
-                        //Setting adds it if it is not present, so only set it if it is present
                         tooltip.setLine(FluidData.ID);
                     }
+                    //TODO: Figure out how to remove the health bar for the robit from WTHIT
+                    /*if (accessor.getEntity() instanceof EntityRobit && tooltip.getLine(ID) != null) {
+                        tooltip.setLine(ID);
+                    }*/
                 }
             }
         });
@@ -65,7 +65,8 @@ public class MekanismWTHITPlugin implements IWailaPlugin {
             @Nullable
             @Override
             public BlockState getOverride(IBlockAccessor accessor, IPluginConfig config) {
-                if (accessor.getHitResult() instanceof BlockHitResult result && result.getType() != Type.MISS) {
+                BlockHitResult result = accessor.getBlockHitResult();
+                if (result.getType() != Type.MISS) {
                     Level level = accessor.getWorld();
                     BlockPos mainPos = BlockBounding.getMainBlockPos(level, result.getBlockPos());
                     if (mainPos != null) {

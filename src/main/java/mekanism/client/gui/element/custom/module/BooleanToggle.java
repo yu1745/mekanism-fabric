@@ -1,22 +1,22 @@
 package mekanism.client.gui.element.custom.module;
 
+import mekanism.api.gear.config.ModuleBooleanConfig;
 import mekanism.client.gui.element.button.RadioButton;
+import mekanism.client.gui.element.scroll.GuiScrollList;
+import mekanism.client.render.IFancyFontRenderer.TextAlignment;
 import mekanism.common.MekanismLang;
-import mekanism.common.content.gear.ModuleConfigItem;
 import mekanism.common.registries.MekanismSounds;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.network.chat.Component;
 
-class BooleanToggle extends MiniElement {
+class BooleanToggle extends MiniElement<Boolean> {
 
     private static final int RADIO_SIZE = RadioButton.RADIO_SIZE;
 
-    private final ModuleConfigItem<Boolean> data;
-
-    BooleanToggle(GuiModuleScreen parent, ModuleConfigItem<Boolean> data, int xPos, int yPos, int dataIndex) {
-        super(parent, xPos, yPos, dataIndex);
-        this.data = data;
+    BooleanToggle(GuiModuleScreen parent, ModuleBooleanConfig data, Component description, int xPos, int yPos) {
+        super(parent, data, description, xPos, yPos);
     }
 
     @Override
@@ -42,9 +42,15 @@ class BooleanToggle extends MiniElement {
     @Override
     protected void renderForeground(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         int textColor = parent.screenTextColor();
-        parent.drawTextWithScale(guiGraphics, data.getDescription(), getRelativeX() + 3, getRelativeY(), textColor, 0.8F);
-        parent.drawTextWithScale(guiGraphics, MekanismLang.TRUE.translate(), getRelativeX() + 16, getRelativeY() + 11, textColor, 0.8F);
-        parent.drawTextWithScale(guiGraphics, MekanismLang.FALSE.translate(), getRelativeX() + 62, getRelativeY() + 11, textColor, 0.8F);
+        parent.drawScaledScrollingString(guiGraphics, description, xPos, yPos, TextAlignment.LEFT, textColor, parent.getScreenWidth() - GuiScrollList.TEXTURE_WIDTH,
+              2, false, 0.8F);
+
+        int trueShift = 4 + RADIO_SIZE;
+        int falseShift = 50 + RADIO_SIZE;
+        parent.drawScaledScrollingString(guiGraphics, MekanismLang.TRUE.translate(), xPos + trueShift, yPos + 11, TextAlignment.LEFT, textColor,
+              50 - trueShift, 3, false, 0.8F);
+        parent.drawScaledScrollingString(guiGraphics, MekanismLang.FALSE.translate(), xPos + falseShift, yPos + 11, TextAlignment.LEFT, textColor,
+              parent.getScreenWidth() - GuiScrollList.TEXTURE_WIDTH - falseShift, 3, false, 0.8F);
     }
 
     @Override
@@ -59,7 +65,7 @@ class BooleanToggle extends MiniElement {
     }
 
     private void setDataFromClick(boolean value) {
-        setData(data, value);
-        Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(MekanismSounds.BEEP.get(), 1.0F));
+        setData(value);
+        Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(value ? MekanismSounds.BEEP_ON.get() : MekanismSounds.BEEP_OFF.get(), 1.0F, 1.0F));
     }
 }

@@ -5,8 +5,10 @@ import java.util.AbstractCollection;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Queue;
 import java.util.function.Consumer;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class LRU<T> extends AbstractCollection<T> {
 
@@ -55,6 +57,7 @@ public class LRU<T> extends AbstractCollection<T> {
 
     @Override
     public boolean remove(Object element) {
+        //noinspection SuspiciousMethodCalls
         LRUEntry<T> entry = lookupMap.get(element);
         if (entry == null) {
             return false;
@@ -65,6 +68,7 @@ public class LRU<T> extends AbstractCollection<T> {
 
     @Override
     public boolean contains(Object element) {
+        //noinspection SuspiciousMethodCalls
         return lookupMap.containsKey(element);
     }
 
@@ -79,6 +83,31 @@ public class LRU<T> extends AbstractCollection<T> {
             callback.accept(ptr.value);
             ptr = ptr.prev;
         }
+    }
+
+    /**
+     * Get the first element, like {@link Queue#element()}
+     *
+     * @return the first element
+     * @throws NoSuchElementException when there are no items in the LRU
+     */
+    @NotNull
+    public T head() {
+        //head.next is never null as it will be tail when empty
+        if (head.next.value == null) {
+            throw new NoSuchElementException("No entries");
+        }
+        return head.next.value;
+    }
+
+    /**
+     * Like {@link Queue#peek()}
+     *
+     * @return the head of this LRU, or null if this LRU is empty
+     */
+    @Nullable
+    public T peek() {
+        return head.next.value;
     }
 
     private static class LRUEntry<T> {

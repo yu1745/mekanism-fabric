@@ -2,10 +2,10 @@ package mekanism.common.util;
 
 import mekanism.api.RelativeSide;
 import mekanism.api.Upgrade;
-import mekanism.api.chemical.ChemicalType;
 import mekanism.api.text.EnumColor;
 import mekanism.api.tier.BaseTier;
 import mekanism.common.content.blocktype.FactoryType;
+import mekanism.common.entity.RobitPrideSkinData;
 import mekanism.common.lib.transmitter.TransmissionType;
 import mekanism.common.resource.PrimaryResource;
 import mekanism.common.resource.ResourceType;
@@ -22,11 +22,11 @@ import mekanism.common.tier.InductionProviderTier;
 import mekanism.common.tier.PipeTier;
 import mekanism.common.tier.TransporterTier;
 import mekanism.common.tier.TubeTier;
-import mekanism.common.tile.base.SubstanceType;
-import mekanism.common.util.UnitDisplayUtils.FloatingLongMeasurementUnit;
+import mekanism.common.tile.qio.TileEntityQIODriveArray.DriveStatus;
 import mekanism.common.util.UnitDisplayUtils.MeasurementUnit;
 import net.minecraft.core.Direction;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.item.ArmorItem;
 
 public class EnumUtils {
 
@@ -64,11 +64,6 @@ public class EnumUtils {
      * Cached value of {@link MeasurementUnit#values()}. DO NOT MODIFY THIS LIST.
      */
     public static final MeasurementUnit[] MEASUREMENT_UNITS = MeasurementUnit.values();
-
-    /**
-     * Cached value of {@link FloatingLongMeasurementUnit#values()}. DO NOT MODIFY THIS LIST.
-     */
-    public static final FloatingLongMeasurementUnit[] FLOATING_LONG_MEASUREMENT_UNITS = FloatingLongMeasurementUnit.values();
 
     /**
      * Cached value of {@link TransmissionType#values()}. DO NOT MODIFY THIS LIST.
@@ -151,11 +146,6 @@ public class EnumUtils {
     public static final Upgrade[] UPGRADES = Upgrade.values();
 
     /**
-     * Cached value of {@link SubstanceType#values()}. DO NOT MODIFY THIS LIST.
-     */
-    public static final SubstanceType[] SUBSTANCES = SubstanceType.values();
-
-    /**
      * Cached value of {@link OreType#values()}. DO NOT MODIFY THIS LIST.
      */
     public static final OreType[] ORE_TYPES = OreType.values();
@@ -176,12 +166,22 @@ public class EnumUtils {
     public static final EquipmentSlot[] EQUIPMENT_SLOT_TYPES = EquipmentSlot.values();
 
     /**
-     * Cached value of {@link ChemicalType#values()}. DO NOT MODIFY THIS LIST.
-     */
-    public static final ChemicalType[] CHEMICAL_TYPES = ChemicalType.values();
-
-    /**
      * Cached value of {@link EnumColor#values()}. DO NOT MODIFY THIS LIST.
      */
     public static final EnumColor[] COLORS = EnumColor.values();
+
+    /**
+     * Cached value of {@link RobitPrideSkinData#values()}. DO NOT MODIFY THIS LIST.
+     */
+    public static final RobitPrideSkinData[] PRIDE_SKINS = RobitPrideSkinData.values();
+
+    /**
+     * Cached value of {@link DriveStatus#values()}. DO NOT MODIFY THIS LIST.
+     */
+    public static final DriveStatus[] DRIVE_STATUSES = DriveStatus.values();
+
+    /**
+     * Cached value of {@link ArmorItem.Type#values()}. DO NOT MODIFY THIS LIST.
+     */
+    public static final ArmorItem.Type[] ARMOR_TYPES = ArmorItem.Type.values();
 }

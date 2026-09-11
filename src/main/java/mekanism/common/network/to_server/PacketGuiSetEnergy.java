@@ -1,49 +1,43 @@
 package mekanism.common.network.to_server;
 
-import java.util.function.BiConsumer;
-import mekanism.api.math.FloatingLong;
+import io.netty.buffer.ByteBuf;
+import java.util.function.IntFunction;
+import java.util.function.ObjLongConsumer;
+import mekanism.common.Mekanism;
 import mekanism.common.network.IMekanismPacket;
+import mekanism.common.network.PacketUtils;
 import mekanism.common.tile.base.TileEntityMekanism;
 import mekanism.common.tile.laser.TileEntityLaserAmplifier;
 import mekanism.common.tile.machine.TileEntityResistiveHeater;
-import mekanism.common.util.WorldUtils;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.network.NetworkEvent;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.util.ByIdMap;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import org.jetbrains.annotations.NotNull;
 
-public class PacketGuiSetEnergy implements IMekanismPacket {
+public record PacketGuiSetEnergy(GuiEnergyValue interaction, BlockPos pos, long value) implements IMekanismPacket {
 
-    private final GuiEnergyValue interaction;
-    private final BlockPos tilePosition;
-    private final FloatingLong value;
+    public static final CustomPacketPayload.Type<PacketGuiSetEnergy> TYPE = new CustomPacketPayload.Type<>(Mekanism.rl("set_energy"));
+    public static final StreamCodec<ByteBuf, PacketGuiSetEnergy> STREAM_CODEC = StreamCodec.composite(
+          GuiEnergyValue.STREAM_CODEC, PacketGuiSetEnergy::interaction,
+          BlockPos.STREAM_CODEC, PacketGuiSetEnergy::pos,
+          ByteBufCodecs.VAR_LONG, PacketGuiSetEnergy::value,
+          PacketGuiSetEnergy::new
+    );
 
-    public PacketGuiSetEnergy(GuiEnergyValue interaction, BlockPos tilePosition, FloatingLong value) {
-        this.interaction = interaction;
-        this.tilePosition = tilePosition;
-        this.value = value;
+    @NotNull
+    @Override
+    public CustomPacketPayload.Type<PacketGuiSetEnergy> type() {
+        return TYPE;
     }
 
     @Override
-    public void handle(NetworkEvent.Context context) {
-        Player player = context.getSender();
-        if (player != null) {
-            TileEntityMekanism tile = WorldUtils.getTileEntity(TileEntityMekanism.class, player.level(), tilePosition);
-            if (tile != null) {
-                interaction.consume(tile, value);
-            }
+    public void handle(IPayloadContext context) {
+        if (PacketUtils.blockEntity(context, pos) instanceof TileEntityMekanism tile) {
+            interaction.consume(tile, value);
         }
-    }
-
-    @Override
-    public void encode(FriendlyByteBuf buffer) {
-        buffer.writeEnum(interaction);
-        buffer.writeBlockPos(tilePosition);
-        value.writeToBuffer(buffer);
-    }
-
-    public static PacketGuiSetEnergy decode(FriendlyByteBuf buffer) {
-        return new PacketGuiSetEnergy(buffer.readEnum(GuiEnergyValue.class), buffer.readBlockPos(), FloatingLong.readFromBuffer(buffer));
     }
 
     public enum GuiEnergyValue {
@@ -63,13 +57,16 @@ public class PacketGuiSetEnergy implements IMekanismPacket {
             }
         });
 
-        private final BiConsumer<TileEntityMekanism, FloatingLong> consumerForTile;
+        public static final IntFunction<GuiEnergyValue> BY_ID = ByIdMap.continuous(GuiEnergyValue::ordinal, values(), ByIdMap.OutOfBoundsStrategy.WRAP);
+        public static final StreamCodec<ByteBuf, GuiEnergyValue> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, GuiEnergyValue::ordinal);
 
-        GuiEnergyValue(BiConsumer<TileEntityMekanism, FloatingLong> consumerForTile) {
+        private final ObjLongConsumer<TileEntityMekanism> consumerForTile;
+
+        GuiEnergyValue(ObjLongConsumer<TileEntityMekanism> consumerForTile) {
             this.consumerForTile = consumerForTile;
         }
 
-        public void consume(TileEntityMekanism tile, FloatingLong value) {
+        public void consume(TileEntityMekanism tile, long value) {
             consumerForTile.accept(tile, value);
         }
     }

@@ -12,7 +12,7 @@ import mekanism.api.text.EnumColor;
 import mekanism.client.model.ModelTransporterBox;
 import mekanism.client.render.MekanismRenderer;
 import mekanism.client.render.MekanismRenderer.Model3D;
-import mekanism.client.render.MekanismRenderer.Model3D.SpriteInfo;
+import mekanism.client.render.RenderResizableCuboid;
 import mekanism.client.render.RenderResizableCuboid.FaceDisplay;
 import mekanism.common.base.ProfilerConstants;
 import mekanism.common.config.MekanismConfig;
@@ -23,6 +23,7 @@ import mekanism.common.item.ItemConfigurator;
 import mekanism.common.lib.inventory.HashedItem;
 import mekanism.common.tile.transmitter.TileEntityDiversionTransporter;
 import mekanism.common.tile.transmitter.TileEntityLogisticalTransporterBase;
+import mekanism.common.util.EnumUtils;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.TransporterUtils;
 import net.minecraft.client.Minecraft;
@@ -32,6 +33,7 @@ import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
@@ -50,13 +52,13 @@ import org.jetbrains.annotations.Nullable;
 public class RenderLogisticalTransporter extends RenderTransmitterBase<TileEntityLogisticalTransporterBase> {
 
     private static final Map<Direction, Model3D> cachedOverlays = new EnumMap<>(Direction.class);
-    private static final int DIVERSION_OVERLAY_ARGB = MekanismRenderer.getColorARGB(255, 255, 255, 0.8F);
+    private static final int DIVERSION_OVERLAY_ARGB = MekanismRenderer.getColorARGB(0xFFFFFF, 0.8F);
     @Nullable
-    private static SpriteInfo gunpowderIcon;
+    private static TextureAtlasSprite gunpowderIcon;
     @Nullable
-    private static SpriteInfo torchOffIcon;
+    private static TextureAtlasSprite torchOffIcon;
     @Nullable
-    private static SpriteInfo torchOnIcon;
+    private static TextureAtlasSprite torchOnIcon;
     private final ModelTransporterBox modelBox;
     private final LazyItemRenderer itemRenderer = new LazyItemRenderer();
 
@@ -67,9 +69,9 @@ public class RenderLogisticalTransporter extends RenderTransmitterBase<TileEntit
 
     public static void onStitch(TextureAtlas map) {
         cachedOverlays.clear();
-        gunpowderIcon = new SpriteInfo(map.getSprite(new ResourceLocation("minecraft", "item/gunpowder")), 16);
-        torchOffIcon = new SpriteInfo(map.getSprite(new ResourceLocation("minecraft", "block/redstone_torch_off")), 16);
-        torchOnIcon = new SpriteInfo(map.getSprite(new ResourceLocation("minecraft", "block/redstone_torch")), 16);
+        gunpowderIcon = map.getSprite(ResourceLocation.withDefaultNamespace("item/gunpowder"));
+        torchOffIcon = map.getSprite(ResourceLocation.withDefaultNamespace("block/redstone_torch_off"));
+        torchOnIcon = map.getSprite(ResourceLocation.withDefaultNamespace("block/redstone_torch"));
     }
 
     @Override
@@ -93,7 +95,7 @@ public class RenderLogisticalTransporter extends RenderTransmitterBase<TileEntit
                     itemRenderer.renderAsStack(matrix, renderer, stack.itemStack, light);
                     matrix.popPose();
                     if (stack.color != null) {
-                        modelBox.render(matrix, renderer, LightTexture.FULL_BRIGHT, overlayLight, stackPos[0], stackPos[1], stackPos[2], stack.color);
+                        modelBox.render(matrix, renderer, overlayLight, stackPos[0], stackPos[1], stackPos[2], stack.color);
                     }
                 }
                 matrix.popPose();
@@ -101,7 +103,8 @@ public class RenderLogisticalTransporter extends RenderTransmitterBase<TileEntit
         }
         if (transporter instanceof DiversionTransporter diversionTransporter) {
             Player player = Minecraft.getInstance().player;
-            ItemStack itemStack = player.getInventory().getSelected();
+            //Player shouldn't be null here, but validate it
+            ItemStack itemStack = player == null ? ItemStack.EMPTY : player.getMainHandItem();
             if (!itemStack.isEmpty() && itemStack.getItem() instanceof ItemConfigurator) {
                 BlockHitResult rayTraceResult = MekanismUtils.rayTrace(player);
                 if (rayTraceResult.getType() != Type.MISS && rayTraceResult.getBlockPos().equals(pos)) {
@@ -109,8 +112,7 @@ public class RenderLogisticalTransporter extends RenderTransmitterBase<TileEntit
                     matrix.pushPose();
                     matrix.scale(0.5F, 0.5F, 0.5F);
                     matrix.translate(0.5, 0.5, 0.5);
-                    MekanismRenderer.renderObject(getOverlayModel(diversionTransporter, side), matrix, renderer.getBuffer(Sheets.translucentCullBlockSheet()),
-                          DIVERSION_OVERLAY_ARGB, LightTexture.FULL_BRIGHT, overlayLight, FaceDisplay.FRONT, getCamera());
+                    RenderResizableCuboid.renderCube(getOverlayModel(diversionTransporter, side), matrix, renderer.getBuffer(Sheets.translucentCullBlockSheet()), DIVERSION_OVERLAY_ARGB, LightTexture.FULL_BRIGHT, overlayLight, FaceDisplay.FRONT, getCamera(), null);
                     matrix.popPose();
                 }
             }
@@ -146,10 +148,13 @@ public class RenderLogisticalTransporter extends RenderTransmitterBase<TileEntit
 
     private Model3D getOverlayModel(DiversionTransporter transporter, Direction side) {
         //Get the model or set it up if needed
-        Model3D model = cachedOverlays.computeIfAbsent(side, face -> new Model3D()
-              .prepSingleFaceModelSize(face)
-              .setSideRender(direction -> direction == face)
-        );
+        Model3D model = cachedOverlays.computeIfAbsent(side, face -> {
+            Model3D model3D = new Model3D().prepSingleFaceModelSize(face);
+            for (Direction direction : EnumUtils.DIRECTIONS) {
+                model3D.setSideRender(direction, direction == face);
+            }
+            return model3D;
+        });
         //set the proper side to the texture we need to use
         return model.setTexture(side, switch (transporter.modes[side.ordinal()]) {
             case DISABLED -> gunpowderIcon;

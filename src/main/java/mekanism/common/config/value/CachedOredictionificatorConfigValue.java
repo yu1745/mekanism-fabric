@@ -7,10 +7,9 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import mekanism.common.config.IMekanismConfig;
-import net.minecraft.ResourceLocationException;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.common.ForgeConfigSpec;
-import net.minecraftforge.common.ForgeConfigSpec.ConfigValue;
+import net.neoforged.neoforge.common.ModConfigSpec;
+import net.neoforged.neoforge.common.ModConfigSpec.ConfigValue;
 
 public class CachedOredictionificatorConfigValue extends CachedMapConfigValue<String, List<String>> {
 
@@ -18,11 +17,12 @@ public class CachedOredictionificatorConfigValue extends CachedMapConfigValue<St
         super(config, internal);
     }
 
-    public static CachedOredictionificatorConfigValue define(IMekanismConfig config, ForgeConfigSpec.Builder builder, String path,
+    public static CachedOredictionificatorConfigValue define(IMekanismConfig config, ModConfigSpec.Builder builder, String path,
           Supplier<Map<String, List<String>>> defaults) {
         return new CachedOredictionificatorConfigValue(config, builder.defineListAllowEmpty(path,
               () -> encodeStatic(defaults.get(), CachedOredictionificatorConfigValue::encodeStatic),
-              o -> o instanceof String string && ResourceLocation.isValidResourceLocation(string.toLowerCase(Locale.ROOT))));
+              () -> "c:ingots/",
+              o -> o instanceof String string && ResourceLocation.tryParse(string.toLowerCase(Locale.ROOT)) != null));
     }
 
     @Override
@@ -44,12 +44,11 @@ public class CachedOredictionificatorConfigValue extends CachedMapConfigValue<St
         //Ensure it is all lower case
         String namespace = key.toLowerCase(Locale.ROOT);
         for (String path : values) {
-            try {
-                //Try to create a resource location from it to ensure all characters are valid
-                ResourceLocation rl = new ResourceLocation(namespace, path.toLowerCase(Locale.ROOT));
+            //Try to create a resource location from it to ensure all characters are valid
+            ResourceLocation rl = ResourceLocation.tryBuild(namespace, path.toLowerCase(Locale.ROOT));
+            if (rl != null) {
                 // if they are, add it
                 adder.accept(rl.toString());
-            } catch (ResourceLocationException ignored) {
             }
         }
     }

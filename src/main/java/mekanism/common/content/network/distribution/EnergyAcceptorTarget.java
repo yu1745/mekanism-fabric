@@ -3,11 +3,10 @@ package mekanism.common.content.network.distribution;
 import java.util.Collection;
 import mekanism.api.Action;
 import mekanism.api.energy.IStrictEnergyHandler;
-import mekanism.api.math.FloatingLong;
 import mekanism.common.lib.distribution.SplitInfo;
 import mekanism.common.lib.distribution.Target;
 
-public class EnergyAcceptorTarget extends Target<IStrictEnergyHandler, FloatingLong, FloatingLong> {
+public class EnergyAcceptorTarget extends Target<IStrictEnergyHandler, Void> {
 
     public EnergyAcceptorTarget() {
     }
@@ -21,12 +20,12 @@ public class EnergyAcceptorTarget extends Target<IStrictEnergyHandler, FloatingL
     }
 
     @Override
-    protected void acceptAmount(IStrictEnergyHandler handler, SplitInfo<FloatingLong> splitInfo, FloatingLong amount) {
-        splitInfo.send(amount.subtract(handler.insertEnergy(amount, Action.EXECUTE)));
+    protected void acceptAmount(IStrictEnergyHandler handler, SplitInfo splitInfo, Void unused, long amount) {
+        splitInfo.send(amount - (handler.insertEnergy(amount, Action.EXECUTE)));
     }
 
     @Override
-    protected FloatingLong simulate(IStrictEnergyHandler handler, FloatingLong energyToSend) {
-        return energyToSend.subtract(handler.insertEnergy(energyToSend, Action.SIMULATE));
+    protected long simulate(IStrictEnergyHandler handler, Void unused, long amount) {
+        return amount - (handler.insertEnergy(amount, Action.SIMULATE));
     }
 }

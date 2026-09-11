@@ -2,9 +2,7 @@ package mekanism.common.integration.computer;
 
 import com.google.common.hash.Hashing;
 import com.google.common.hash.HashingOutputStream;
-import com.google.gson.JsonElement;
 import com.mojang.serialization.Codec;
-import com.mojang.serialization.JsonOps;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import com.thiakil.yamlops.SnakeYamlOps;
 import com.thiakil.yamlops.YamlHelper;
@@ -24,8 +22,8 @@ import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import mekanism.api.SerializationConstants;
 import mekanism.api.annotations.ParametersAreNotNullByDefault;
-import mekanism.common.Mekanism;
 import mekanism.common.MekanismDataGenerator;
 import mekanism.common.MekanismDataGenerator.IOConsumer;
 import mekanism.common.content.filter.IFilter;
@@ -39,11 +37,10 @@ import mekanism.common.content.qio.filter.QIOFilter;
 import mekanism.common.content.transporter.SorterFilter;
 import mekanism.common.integration.computer.MethodHelpData.Param;
 import mekanism.common.integration.computer.MethodHelpData.Returns;
-import mekanism.common.lib.Version;
 import mekanism.common.lib.multiblock.MultiblockData;
 import mekanism.common.tile.base.TileEntityMekanism;
 import mekanism.common.tile.factory.TileEntityFactory;
-import mekanism.common.tile.factory.TileEntityItemStackGasToItemStackFactory;
+import mekanism.common.tile.factory.TileEntityItemStackChemicalToItemStackFactory;
 import mekanism.common.tile.laser.TileEntityBasicLaser;
 import mekanism.common.tile.multiblock.TileEntityInductionPort;
 import mekanism.common.tile.prefab.TileEntityAdvancedElectricMachine;
@@ -54,13 +51,13 @@ import mekanism.common.tile.qio.TileEntityQIOFilterHandler;
 import mekanism.common.util.MekCodecs;
 import net.minecraft.MethodsReturnNonnullByDefault;
 import net.minecraft.Util;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.data.CachedOutput;
 import net.minecraft.data.DataProvider;
 import net.minecraft.data.PackOutput;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.CsvOutput;
 import net.minecraft.util.CsvOutput.Builder;
-import net.minecraft.util.ExtraCodecs;
 import org.jetbrains.annotations.NotNull;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.nodes.Node;
@@ -68,61 +65,63 @@ import org.yaml.snakeyaml.nodes.Node;
 @MethodsReturnNonnullByDefault
 @ParametersAreNotNullByDefault
 public class ComputerHelpProvider implements DataProvider {
+
     private static final String[] METHOD_CSV_HEADERS = {"Class", "Method Name", "Params", "Returns", "Restriction", "Requires Public Security", "Description"};
     private static final String[] ENUM_CSV_HEADERS = {"Type Name", "Values"};
+    private final CompletableFuture<HolderLookup.Provider> registries;
     private final PackOutput.PathProvider pathProvider;
     private final String modid;
 
-    public ComputerHelpProvider(PackOutput output, String modid) {
+    public ComputerHelpProvider(PackOutput output, CompletableFuture<HolderLookup.Provider> registries, String modid) {
         this.modid = modid;
+        this.registries = registries;
         this.pathProvider = output.createPathProvider(PackOutput.Target.DATA_PACK, "computer_help");
     }
 
     @Override
     public CompletableFuture<?> run(CachedOutput output) {
-        //Manually initialize the computer method factory registry
-        FactoryRegistry.load();
+        return this.registries.thenCompose(lookupProvider -> {
+            //Manually initialize the computer method factory registry
+            FactoryRegistry.load();
 
-        //gather common data
-        Map<Class<?>, List<MethodHelpData>> helpData = FactoryRegistry.getHelpData();
-        Map<Class<?>, List<String>> enumValues = getEnumValues(helpData);
+            //gather common data
+            Map<Class<?>, List<MethodHelpData>> helpData = FactoryRegistry.getHelpData();
+            Map<Class<?>, List<String>> enumValues = getEnumValues(helpData);
 
-        //generate
-        return CompletableFuture.allOf(
-              makeJson(output, helpData, METHODS_DATA_CODEC, "methods"),
-              makeJekyllData(output, helpData, enumValues),
-              makeMethodsCsv(output, helpData),
-              makeJson(output, enumValues, ENUMS_CODEC, "enums"),
-              makeEnumsCsv(output, enumValues)
-        );
+            //generate
+            return CompletableFuture.allOf(
+                  makeJson(output, lookupProvider, helpData, METHODS_DATA_CODEC, "methods"),
+                  makeJekyllData(output, helpData, enumValues),
+                  makeMethodsCsv(output, helpData),
+                  makeJson(output, lookupProvider, enumValues, ENUMS_CODEC, "enums"),
+                  makeEnumsCsv(output, enumValues)
+            );
+        });
     }
 
     @NotNull
-    private <DATA> CompletableFuture<?> makeJson(CachedOutput pOutput, DATA helpData, Codec<DATA> codec, String path) {
-        JsonElement jsonElement = codec.encodeStart(JsonOps.INSTANCE, helpData).getOrThrow(false, e -> {
-            throw new RuntimeException(e);
-        });
-        return DataProvider.saveStable(pOutput, jsonElement, this.pathProvider.json(new ResourceLocation(this.modid, path)));
+    private <DATA> CompletableFuture<?> makeJson(CachedOutput output, HolderLookup.Provider lookupProvider, DATA helpData, Codec<DATA> codec, String path) {
+        return DataProvider.saveStable(output, lookupProvider, codec, helpData, this.pathProvider.json(ResourceLocation.fromNamespaceAndPath(this.modid, path)));
     }
 
     @NotNull
     private CompletableFuture<?> makeJekyllData(CachedOutput output, Map<Class<?>, List<MethodHelpData>> methods, Map<Class<?>, List<String>> enumValues) {
-        return CompletableFuture.runAsync(()->{
-            JekyllData jekyllData = new JekyllData(Mekanism.instance.versionNumber, methods, enumValues, BaseComputerHelper.BUILTIN_TABLES.get());
-            Node frontMatterNode = YamlHelper.sortMappingKeys(JekyllData.CODEC.encodeStart(new SnakeYamlOps(), jekyllData).getOrThrow(false, Mekanism.logger::error), Comparator.naturalOrder());
-            MekanismDataGenerator.save(output, os-> {
-                try (Writer writer = new BufferedWriter(new OutputStreamWriter(os))) {
+        return CompletableFuture.runAsync(() -> {
+            JekyllData jekyllData = new JekyllData(methods, enumValues, BaseComputerHelper.BUILTIN_TABLES.get());
+            Node frontMatterNode = YamlHelper.sortMappingKeys(JekyllData.CODEC.encodeStart(new SnakeYamlOps(), jekyllData).getOrThrow(), Comparator.naturalOrder());
+            MekanismDataGenerator.save(output, os -> {
+                try (Writer writer = new BufferedWriter(new OutputStreamWriter(os, StandardCharsets.UTF_8))) {
                     writer.write("---\n");
                     YamlHelper.dump(writer, frontMatterNode, YAML_OPTIONS);
                     writer.write("---\n");
                 }
-            }, this.pathProvider.file(new ResourceLocation(this.modid, "jekyll"), "md")).join();
+            }, this.pathProvider.file(ResourceLocation.fromNamespaceAndPath(this.modid, "jekyll"), "md")).join();
         });
     }
 
     @NotNull
     private CompletableFuture<?> makeMethodsCsv(CachedOutput pOutput, Map<Class<?>, List<MethodHelpData>> helpData) {
-        return saveCSV(pOutput, this.pathProvider.file(new ResourceLocation(this.modid, "methods"), "csv"), METHOD_CSV_HEADERS, output -> {
+        return saveCSV(pOutput, this.pathProvider.file(ResourceLocation.fromNamespaceAndPath(this.modid, "methods"), "csv"), METHOD_CSV_HEADERS, output -> {
             //NB: list is used as the IOException will be captured in saveCSV
             List<Map.Entry<String, List<MethodHelpData>>> friendlyList = helpData.entrySet().stream()
                   .map(entry -> Map.entry(getFriendlyName(entry.getKey()), entry.getValue()))
@@ -134,11 +133,11 @@ public class ComputerHelpProvider implements DataProvider {
                     output.writeRow(
                           friendlyClassName,
                           method.methodName(),
-                          method.params() != null ? method.params().stream().map(param -> param.name()+": "+param.type()).collect(Collectors.joining(", ")) : "",
+                          method.params() == null ? "" : method.params().stream().map(param -> param.name() + ": " + param.type()).collect(Collectors.joining(", ")),
                           csvReturnsValue(method.returns()),
-                          method.restriction() != MethodRestriction.NONE ? method.restriction().name() : "",
+                          method.restriction() == MethodRestriction.NONE ? "" : method.restriction().name(),
                           method.requiresPublicSecurity(),
-                          method.description() != null ? method.description() : ""
+                          method.description() == null ? "" : method.description()
                     );
                 }
             }
@@ -148,7 +147,7 @@ public class ComputerHelpProvider implements DataProvider {
     @NotNull
     private CompletableFuture<?> makeEnumsCsv(CachedOutput pOutput, Map<Class<?>, List<String>> enumValues) {
         //gather the enums into a sorted map
-        return saveCSV(pOutput, this.pathProvider.file(new ResourceLocation(this.modid, "enums"), "csv"), ENUM_CSV_HEADERS, csvOutput ->{
+        return saveCSV(pOutput, this.pathProvider.file(ResourceLocation.fromNamespaceAndPath(this.modid, "enums"), "csv"), ENUM_CSV_HEADERS, csvOutput -> {
             for (Entry<Class<?>, List<String>> entry : enumValues.entrySet()) {
                 Class<?> clazz = entry.getKey();
                 List<String> values = entry.getValue();
@@ -160,7 +159,7 @@ public class ComputerHelpProvider implements DataProvider {
     @NotNull
     private static Map<Class<?>, List<String>> getEnumValues(Map<Class<?>, List<MethodHelpData>> helpData) {
         Map<Class<?>, List<String>> enumToValues = new TreeMap<>(Comparator.comparing(Class::getSimpleName));
-        helpData.forEach((unused, methods)->{
+        for (List<MethodHelpData> methods : helpData.values()) {
             for (MethodHelpData method : methods) {
                 if (method.returns().javaType().isEnum()) {
                     Class<?> jType = method.returns().javaType();
@@ -179,7 +178,7 @@ public class ComputerHelpProvider implements DataProvider {
                     }
                 }
             }
-        });
+        }
         return enumToValues;
     }
 
@@ -220,7 +219,7 @@ public class ComputerHelpProvider implements DataProvider {
     }
 
     private static String getFriendlyName(Class<?> clazz) {
-        return FRIENDLY_NAME_CACHE.computeIfAbsent(clazz, clz->{
+        return FRIENDLY_NAME_CACHE.computeIfAbsent(clazz, clz -> {
             if (FRIENDLY_NAMES.containsKey(clz)) {
                 return FRIENDLY_NAMES.get(clz);
             }
@@ -238,7 +237,7 @@ public class ComputerHelpProvider implements DataProvider {
                 if ("Config".equals(simpleName)) {
                     simpleName = "Side Configuration";
                 }
-                return "Machine with "+simpleName+" Component";
+                return "Machine with " + simpleName + " Component";
             }
 
             return splitClassName(simpleName);
@@ -249,7 +248,7 @@ public class ComputerHelpProvider implements DataProvider {
         return CLASS_NAME_SPLITTER.splitAsStream(simpleName).collect(Collectors.joining(" "));
     }
 
-    private static final Codec<Class<?>> CLASS_TO_FRIENDLY_NAME_CODEC = ExtraCodecs.stringResolverCodec(ComputerHelpProvider::getFriendlyName, p->null);
+    private static final Codec<Class<?>> CLASS_TO_FRIENDLY_NAME_CODEC = Codec.stringResolver(ComputerHelpProvider::getFriendlyName, p -> null);
     private static final Codec<Map<Class<?>, List<MethodHelpData>>> METHODS_DATA_CODEC = Codec.unboundedMap(CLASS_TO_FRIENDLY_NAME_CODEC, MethodHelpData.CODEC.listOf());
     private static final Codec<Map<Class<?>, List<String>>> ENUMS_CODEC = Codec.unboundedMap(MekCodecs.CLASS_TO_STRING_CODEC, Codec.STRING.listOf());
 
@@ -274,7 +273,7 @@ public class ComputerHelpProvider implements DataProvider {
           Map.entry(TileEntityProgressMachine.class, "Machine with Recipe Progress"),
           Map.entry(TileEntityQIOComponent.class, "QIO Machine"),
           Map.entry(TileEntityAdvancedElectricMachine.class, "Compressing/Injecting/Purifying Machine"),
-          Map.entry(TileEntityItemStackGasToItemStackFactory.class, "Compressing/Injecting/Purifying Factory"),
+          Map.entry(TileEntityItemStackChemicalToItemStackFactory.class, "Compressing/Infusing/Injecting/Purifying Factory"),
           Map.entry(TileEntityQIOFilterHandler.class, "QIO Machine with Filter")
     );
 
@@ -290,21 +289,17 @@ public class ComputerHelpProvider implements DataProvider {
 
     private static final Pattern CLASS_NAME_SPLITTER = Pattern.compile("(?<!(^|[A-Z]))(?=[A-Z])|(?<!^)(?=[A-Z][a-z])");
 
-    private static final DumperOptions YAML_OPTIONS = Util.make(new DumperOptions(), dop->{
+    private static final DumperOptions YAML_OPTIONS = Util.make(new DumperOptions(), dop -> {
         dop.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
         dop.setLineBreak(DumperOptions.LineBreak.UNIX);
     });
 
-    record JekyllData(Version version, Map<Class<?>, List<MethodHelpData>> methods, Map<Class<?>, List<String>> enums, Map<Class<?>, TableType> builtInTables) {
+    record JekyllData(Map<Class<?>, List<MethodHelpData>> methods, Map<Class<?>, List<String>> enums, Map<Class<?>, TableType> builtInTables) {
 
-        static Codec<Version> VERSION_CODEC = ExtraCodecs.stringResolverCodec(Version::toString, Version::get);
-        static Codec<JekyllData> CODEC = RecordCodecBuilder.create(instance ->
-              instance.group(
-                    VERSION_CODEC.fieldOf("version").forGetter(JekyllData::version),
-                    METHODS_DATA_CODEC.fieldOf("methods").forGetter(JekyllData::methods),
-                    ENUMS_CODEC.fieldOf("enums").forGetter(JekyllData::enums),
-                    TableType.TABLE_MAP_CODEC.fieldOf("builtInTables").forGetter(JekyllData::builtInTables)
-              ).apply(instance, JekyllData::new)
-        );
+        static Codec<JekyllData> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+              METHODS_DATA_CODEC.fieldOf(SerializationConstants.METHODS).forGetter(JekyllData::methods),
+              ENUMS_CODEC.fieldOf(SerializationConstants.ENUMS).forGetter(JekyllData::enums),
+              TableType.TABLE_MAP_CODEC.fieldOf(SerializationConstants.BUILT_IN_TABLES).forGetter(JekyllData::builtInTables)
+        ).apply(instance, JekyllData::new));
     }
 }

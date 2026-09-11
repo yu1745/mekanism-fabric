@@ -15,6 +15,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.phys.Vec3;
 
@@ -31,12 +32,12 @@ public class RenderIndustrialTurbine extends MultiblockTileEntityRenderer<Turbin
         BlockPos pos = tile.getBlockPos();
         profiler.push(GeneratorsProfilerConstants.TURBINE_ROTOR);
         if (RenderTurbineRotor.INSTANCE != null) {
-            BlockPos complexPos = multiblock.complex;
+            BlockPos.MutableBlockPos complexPos = new BlockPos.MutableBlockPos(multiblock.complex.getX(), multiblock.complex.getY(), multiblock.complex.getZ());
             VertexConsumer buffer = RenderTurbineRotor.INSTANCE.getBuffer(renderer);
             matrix.pushPose();
             matrix.translate(complexPos.getX() - pos.getX(), complexPos.getY() - pos.getY(), complexPos.getZ() - pos.getZ());
             while (true) {
-                complexPos = complexPos.below();
+                complexPos.move(Direction.DOWN);
                 TileEntityTurbineRotor rotor = WorldUtils.getTileEntity(TileEntityTurbineRotor.class, tile.getLevel(), complexPos);
                 if (rotor == null) {
                     break;
@@ -47,10 +48,10 @@ public class RenderIndustrialTurbine extends MultiblockTileEntityRenderer<Turbin
             matrix.popPose();
         }
         profiler.pop();
-        if (!multiblock.gasTank.isEmpty() && multiblock.length() > 0) {
+        if (!multiblock.chemicalTank.isEmpty() && multiblock.length() > 0) {
             int height = multiblock.lowerVolume / (multiblock.length() * multiblock.width());
             if (height > 0) {
-                RenderData data = RenderData.Builder.create(multiblock.gasTank.getStack())
+                RenderData data = RenderData.Builder.create(multiblock.chemicalTank.getStack())
                       .of(multiblock)
                       .height(height)
                       .build();

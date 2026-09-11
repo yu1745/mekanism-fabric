@@ -14,9 +14,11 @@ import mekanism.common.util.MekanismUtils;
 import net.minecraft.client.Camera;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.NotNull;
 import org.joml.Vector3f;
 
 @NothingNullByDefault
@@ -31,15 +33,16 @@ public class RenderEnergyCube extends ModelTileEntityRenderer<TileEntityEnergyCu
     @Override
     protected void render(TileEntityEnergyCube tile, float partialTicks, PoseStack matrix, MultiBufferSource renderer, int light, int overlayLight, ProfilerFiller profiler) {
         float energyScale = tile.getEnergyScale();
-        Vec3 renderPos = Vec3.atCenterOf(tile.getBlockPos());
+        Vec3 renderPos = tile.getBlockPos().getCenter();
         BaseTier baseTier = tile.getTier().getBaseTier();
-        RenderTickHandler.addTransparentRenderer(ModelEnergyCore.BATCHED_RENDER_TYPE, new LazyRender() {
+        RenderTickHandler.addTransparentRenderer(new LazyRender() {
             @Override
             public void render(Camera camera, VertexConsumer buffer, PoseStack poseStack, int renderTick, float partialTick, ProfilerFiller profiler) {
                 float ticks = renderTick + partialTick;
                 float scaledTicks = 4 * ticks;
                 poseStack.pushPose();
-                poseStack.translate(renderPos.x, renderPos.y, renderPos.z);
+                Vec3 offset = renderPos.subtract(camera.getPosition());
+                poseStack.translate(offset.x, offset.y, offset.z);
                 poseStack.scale(0.4F, 0.4F, 0.4F);
                 poseStack.translate(0, Math.sin(Math.toRadians(3 * ticks)) / 7, 0);
                 poseStack.mulPose(Axis.YP.rotationDegrees(scaledTicks));
@@ -49,13 +52,21 @@ public class RenderEnergyCube extends ModelTileEntityRenderer<TileEntityEnergyCu
             }
 
             @Override
+            @NotNull
             public Vec3 getCenterPos(float partialTick) {
                 return renderPos;
             }
 
             @Override
+            @NotNull
             public String getProfilerSection() {
                 return ProfilerConstants.ENERGY_CUBE_CORE;
+            }
+
+            @Override
+            @NotNull
+            public RenderType getRenderType() {
+                return ModelEnergyCore.BATCHED_RENDER_TYPE;
             }
         });
     }

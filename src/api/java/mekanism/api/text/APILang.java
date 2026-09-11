@@ -19,8 +19,8 @@ public enum APILang implements ILangEntry {
     UPGRADE_ENERGY_DESCRIPTION("upgrade", "energy.description"),
     UPGRADE_FILTER("upgrade", "filter"),
     UPGRADE_FILTER_DESCRIPTION("upgrade", "filter.description"),
-    UPGRADE_GAS("upgrade", "gas"),
-    UPGRADE_GAS_DESCRIPTION("upgrade", "gas.description"),
+    UPGRADE_CHEMICAL("upgrade", "chemical"),
+    UPGRADE_CHEMICAL_DESCRIPTION("upgrade", "chemical.description"),
     UPGRADE_MUFFLING("upgrade", "muffling"),
     UPGRADE_MUFFLING_DESCRIPTION("upgrade", "muffling.description"),
     UPGRADE_ANCHOR("upgrade", "anchor"),
@@ -68,18 +68,21 @@ public enum APILang implements ILangEntry {
     CHEMICAL_ATTRIBUTE_RADIATION("chemical", "attribute.radiation"),
     CHEMICAL_ATTRIBUTE_COOLANT_EFFICIENCY("chemical", "attribute.coolant.efficiency"),
     CHEMICAL_ATTRIBUTE_COOLANT_ENTHALPY("chemical", "attribute.coolant.heat_capacity"),
+    CHEMICAL_ATTRIBUTE_COOLANT_TEMPERATURE("chemical", "attribute.coolant.temperature"),
     CHEMICAL_ATTRIBUTE_FUEL_BURN_TICKS("chemical", "attribute.fuel.burn_ticks"),
     CHEMICAL_ATTRIBUTE_FUEL_ENERGY_DENSITY("chemical", "attribute.fuel.energy_density"),
     //Security
     PUBLIC("security", "public"),
     TRUSTED("security", "trusted"),
     PRIVATE("security", "private"),
+    //Tooltip
+    DECAY_IMMUNE("tooltip", "decay_immune"),
     ;
 
     private final String key;
 
     APILang(String type, String path) {
-        this(Util.makeDescriptionId(type, new ResourceLocation(MekanismAPI.MEKANISM_MODID, path)));
+        this(Util.makeDescriptionId(type, ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, path)));
     }
 
     APILang(String key) {

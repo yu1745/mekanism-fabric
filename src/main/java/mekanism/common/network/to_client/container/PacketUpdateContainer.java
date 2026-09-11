@@ -1,52 +1,40 @@
 package mekanism.common.network.to_client.container;
 
-import java.util.ArrayList;
 import java.util.List;
+import mekanism.common.Mekanism;
 import mekanism.common.inventory.container.MekanismContainer;
 import mekanism.common.network.IMekanismPacket;
 import mekanism.common.network.to_client.container.property.PropertyData;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.network.NetworkEvent;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import org.jetbrains.annotations.NotNull;
 
-public class PacketUpdateContainer implements IMekanismPacket {
+public record PacketUpdateContainer(short windowId, List<PropertyData> data) implements IMekanismPacket {
 
-    //Note: windowId gets transferred over the network as an unsigned byte
-    private final short windowId;
-    private final List<PropertyData> data;
+    public static final CustomPacketPayload.Type<PacketUpdateContainer> TYPE = new CustomPacketPayload.Type<>(Mekanism.rl("update_container"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, PacketUpdateContainer> STREAM_CODEC = StreamCodec.composite(
+          ByteBufCodecs.SHORT, PacketUpdateContainer::windowId,
+          PropertyData.GENERIC_STREAM_CODEC.apply(ByteBufCodecs.list()), PacketUpdateContainer::data,
+          PacketUpdateContainer::new
+    );
 
-    public PacketUpdateContainer(short windowId, List<PropertyData> data) {
-        this.windowId = windowId;
-        this.data = data;
+    @NotNull
+    @Override
+    public CustomPacketPayload.Type<PacketUpdateContainer> type() {
+        return TYPE;
     }
 
     @Override
-    public void handle(NetworkEvent.Context context) {
-        LocalPlayer player = Minecraft.getInstance().player;
-        //Ensure that the container is one of ours and that the window id is the same as we expect it to be
-        if (player != null && player.containerMenu instanceof MekanismContainer container && container.containerId == windowId) {
-            //If so then handle the packet
-            data.forEach(data -> data.handleWindowProperty(container));
-        }
-    }
-
-    @Override
-    public void encode(FriendlyByteBuf buffer) {
-        buffer.writeByte(windowId);
-        buffer.writeCollection(data, (buf, data) -> data.writeToPacket(buf));
-    }
-
-    public static PacketUpdateContainer decode(FriendlyByteBuf buffer) {
-        short windowId = buffer.readUnsignedByte();
-        int size = buffer.readVarInt();
-        List<PropertyData> data = new ArrayList<>(size);
-        for (int i = 0; i < size; i++) {
-            PropertyData propertyData = PropertyData.fromBuffer(buffer);
-            if (propertyData != null) {
-                data.add(propertyData);
+    public void handle(IPayloadContext context) {
+        //Ensure that the container is one of ours, and the window id is the same as we expect it to be
+        if (context.player().containerMenu instanceof MekanismContainer container && container.containerId == windowId) {
+            // and if so handle the packet
+            for (PropertyData datum : data) {
+                datum.handleWindowProperty(container);
             }
         }
-        return new PacketUpdateContainer(windowId, data);
     }
 }

@@ -1,10 +1,9 @@
 package mekanism.api.inventory;
 
 import net.minecraft.MethodsReturnNonnullByDefault;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.core.Holder;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Represents an "item type" for comparing {@link ItemStack ItemStack's} without size.
@@ -42,23 +41,21 @@ public interface IHashedItem {
     }
 
     /**
+     * Helper to get the holder for the {@link Item} that this item type represents.
+     *
+     * @return The holder for the {@link Item} that this item type represents.
+     * @since 10.7.11
+     */
+    default Holder<Item> getItemHolder() {
+        return getInternalStack().getItemHolder();
+    }
+
+    /**
      * Helper to get the max stack size of the {@link Item} that this item type represents.
      *
      * @return Max stack size of the {@link Item} that this item type represents.
      */
     default int getMaxStackSize() {
         return getInternalStack().getMaxStackSize();
-    }
-
-    /**
-     * Helper to get the tag of the internal {@link ItemStack} that backs this item type. It is <strong>IMPORTANT</strong> to not modify the returned tag.
-     *
-     * @return Tag of the internal {@link ItemStack} that backs this item type.
-     *
-     * @apiNote Do not modify the returned tag.
-     */
-    @Nullable
-    default CompoundTag getInternalTag() {
-        return getInternalStack().getTag();
     }
 }

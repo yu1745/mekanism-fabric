@@ -2,7 +2,6 @@ package mekanism.common.block.prefab;
 
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
-import mekanism.api.security.ISecurityUtils;
 import mekanism.common.block.attribute.Attribute;
 import mekanism.common.block.attribute.AttributeGui;
 import mekanism.common.block.attribute.AttributeParticleFX;
@@ -14,18 +13,18 @@ import mekanism.common.config.MekanismConfig;
 import mekanism.common.content.blocktype.BlockTypeTile;
 import mekanism.common.registration.impl.TileEntityTypeRegistryObject;
 import mekanism.common.tile.base.TileEntityMekanism;
-import mekanism.common.tile.base.WrenchResult;
 import mekanism.common.util.WorldUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
@@ -51,24 +50,31 @@ public class BlockTile<TILE extends TileEntityMekanism, TYPE extends BlockTypeTi
 
     @NotNull
     @Override
-    @Deprecated
-    public InteractionResult use(@NotNull BlockState state, @NotNull Level world, @NotNull BlockPos pos, @NotNull Player player, @NotNull InteractionHand hand,
-          @NotNull BlockHitResult hit) {
+    protected ItemInteractionResult useItemOn(@NotNull ItemStack stack, @NotNull BlockState state, @NotNull Level world, @NotNull BlockPos pos, @NotNull Player player,
+          @NotNull InteractionHand hand, @NotNull BlockHitResult hit) {
+        if (stack.isEmpty()) {
+            return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        }
+        TileEntityMekanism tile = WorldUtils.getTileEntity(TileEntityMekanism.class, world, pos);
+        if (tile == null) {
+            //No tile, we can just skip trying to use without an item
+            return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
+        } else if (world.isClientSide) {
+            return genericClientActivated(stack, tile);
+        }
+        return tile.tryWrench(state, player, stack).getInteractionResult();
+    }
+
+    @NotNull
+    @Override
+    protected InteractionResult useWithoutItem(@NotNull BlockState state, @NotNull Level world, @NotNull BlockPos pos, @NotNull Player player, @NotNull BlockHitResult hit) {
         TileEntityMekanism tile = WorldUtils.getTileEntity(TileEntityMekanism.class, world, pos);
         if (tile == null) {
             return InteractionResult.PASS;
         } else if (world.isClientSide) {
-            return genericClientActivated(player, hand);
-        } else if (tile.tryWrench(state, player, hand, hit) != WrenchResult.PASS) {
-            return InteractionResult.SUCCESS;
+            return Attribute.has(this, AttributeGui.class) ? InteractionResult.SUCCESS : InteractionResult.PASS;
         }
-        return type.has(AttributeGui.class) ? tile.openGui(player) : InteractionResult.PASS;
-    }
-
-    @Override
-    protected float getDestroyProgress(@NotNull BlockState state, @NotNull Player player, @NotNull BlockGetter world, @NotNull BlockPos pos,
-          @Nullable BlockEntity tile) {
-        return ISecurityUtils.INSTANCE.canAccess(player, tile) ? super.getDestroyProgress(state, player, world, pos, tile) : 0.0F;
+        return tile.openGui(player);
     }
 
     @Override
@@ -96,8 +102,7 @@ public class BlockTile<TILE extends TileEntityMekanism, TYPE extends BlockTypeTi
     }
 
     @Override
-    @Deprecated
-    public void neighborChanged(@NotNull BlockState state, @NotNull Level world, @NotNull BlockPos pos, @NotNull Block neighborBlock, @NotNull BlockPos neighborPos,
+    protected void neighborChanged(@NotNull BlockState state, @NotNull Level world, @NotNull BlockPos pos, @NotNull Block neighborBlock, @NotNull BlockPos neighborPos,
           boolean isMoving) {
         if (!world.isClientSide) {
             TileEntityMekanism tile = WorldUtils.getTileEntity(TileEntityMekanism.class, world, pos);
@@ -108,19 +113,17 @@ public class BlockTile<TILE extends TileEntityMekanism, TYPE extends BlockTypeTi
     }
 
     @Override
-    @Deprecated
-    public boolean isSignalSource(@NotNull BlockState state) {
+    protected boolean isSignalSource(@NotNull BlockState state) {
         return type.has(AttributeRedstoneEmitter.class);
     }
 
     @Override
-    public boolean canConnectRedstone(BlockState state, BlockGetter world, BlockPos pos, Direction side) {
+    public boolean canConnectRedstone(@NotNull BlockState state, @NotNull BlockGetter world, @NotNull BlockPos pos, @Nullable Direction side) {
         return type.has(AttributeRedstoneEmitter.class) || super.canConnectRedstone(state, world, pos, side);
     }
 
     @Override
-    @Deprecated
-    public int getSignal(@NotNull BlockState state, @NotNull BlockGetter world, @NotNull BlockPos pos, @NotNull Direction side) {
+    protected int getSignal(@NotNull BlockState state, @NotNull BlockGetter world, @NotNull BlockPos pos, @NotNull Direction side) {
         AttributeRedstoneEmitter<TileEntityMekanism> redstoneEmitter = type.get(AttributeRedstoneEmitter.class);
         if (redstoneEmitter != null) {
             TileEntityMekanism tile = WorldUtils.getTileEntity(TileEntityMekanism.class, world, pos);

@@ -2,13 +2,14 @@ package mekanism.common.tile.prefab;
 
 import java.util.Objects;
 import java.util.UUID;
-import mekanism.api.NBTConstants;
-import mekanism.api.providers.IBlockProvider;
+import mekanism.api.SerializationConstants;
 import mekanism.common.lib.multiblock.IInternalMultiblock;
 import mekanism.common.lib.multiblock.MultiblockData;
 import mekanism.common.tile.base.TileEntityMekanism;
 import mekanism.common.util.NBTUtils;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
@@ -21,7 +22,7 @@ public class TileEntityInternalMultiblock extends TileEntityMekanism implements 
     private MultiblockData multiblock;
     private UUID multiblockUUID;
 
-    public TileEntityInternalMultiblock(IBlockProvider blockProvider, BlockPos pos, BlockState state) {
+    public TileEntityInternalMultiblock(Holder<Block> blockProvider, BlockPos pos, BlockState state) {
         super(blockProvider, pos, state);
     }
 
@@ -63,6 +64,13 @@ public class TileEntityInternalMultiblock extends TileEntityMekanism implements 
         //TODO - V11: Make this properly support changing blocks inside the structure when they aren't touching any part of the multiblocks
         //Note: We handle when an internal multiblock is removed that isn't touching anything in BlockMekanism#onRemove
         if (!isRemote() && multiblock != null) {
+            //Check if the neighborPos is really a neighbor of this block for bad mods giving non-neighbors
+            int dX = Math.abs(neighborPos.getX() - worldPosition.getX());
+            int dY = Math.abs(neighborPos.getY() - worldPosition.getY());
+            int dZ = Math.abs(neighborPos.getZ() - worldPosition.getZ());
+            if ((dX + dY + dZ) > 1) {
+                return;
+            }
             //If the neighbor change happened to a block inside a multiblock, and it isn't a block that is part of the multiblock
             if (level.isEmptyBlock(neighborPos) || !multiblock.isKnownLocation(neighborPos)) {
                 //And we are not already an internal part of the structure, or we are changing an internal part to air
@@ -86,17 +94,17 @@ public class TileEntityInternalMultiblock extends TileEntityMekanism implements 
 
     @NotNull
     @Override
-    public CompoundTag getReducedUpdateTag() {
-        CompoundTag updateTag = super.getReducedUpdateTag();
+    public CompoundTag getReducedUpdateTag(@NotNull HolderLookup.Provider provider) {
+        CompoundTag updateTag = super.getReducedUpdateTag(provider);
         if (multiblockUUID != null) {
-            updateTag.putUUID(NBTConstants.INVENTORY_ID, multiblockUUID);
+            updateTag.putUUID(SerializationConstants.INVENTORY_ID, multiblockUUID);
         }
         return updateTag;
     }
 
     @Override
-    public void handleUpdateTag(@NotNull CompoundTag tag) {
-        super.handleUpdateTag(tag);
-        NBTUtils.setUUIDIfPresentElse(tag, NBTConstants.INVENTORY_ID, this::setMultiblock, () -> multiblockUUID = null);
+    public void handleUpdateTag(@NotNull CompoundTag tag, @NotNull HolderLookup.Provider provider) {
+        super.handleUpdateTag(tag, provider);
+        NBTUtils.setUUIDIfPresentElse(tag, SerializationConstants.INVENTORY_ID, this::setMultiblock, () -> multiblockUUID = null);
     }
 }

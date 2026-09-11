@@ -3,13 +3,15 @@ package mekanism.client.gui.element.custom;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import mekanism.api.text.APILang;
+import java.util.UUID;
+import mekanism.api.security.SecurityMode;
 import mekanism.api.text.EnumColor;
 import mekanism.api.text.TextComponentUtil;
 import mekanism.client.gui.IGuiWrapper;
 import mekanism.client.gui.element.GuiElement;
 import mekanism.client.gui.element.button.ColorButton;
 import mekanism.client.gui.element.button.MekanismButton;
+import mekanism.client.gui.element.button.MekanismImageButton;
 import mekanism.client.gui.element.button.TranslationButton;
 import mekanism.client.gui.element.scroll.GuiTextScrollList;
 import mekanism.client.gui.element.slot.GuiSlot;
@@ -18,7 +20,6 @@ import mekanism.client.gui.element.text.BackgroundType;
 import mekanism.client.gui.element.text.GuiTextField;
 import mekanism.client.gui.element.window.GuiConfirmationDialog;
 import mekanism.client.gui.element.window.GuiConfirmationDialog.DialogType;
-import mekanism.common.Mekanism;
 import mekanism.common.MekanismLang;
 import mekanism.common.inventory.container.item.FrequencyItemContainer;
 import mekanism.common.lib.frequency.Frequency;
@@ -27,14 +28,16 @@ import mekanism.common.lib.frequency.FrequencyManager;
 import mekanism.common.lib.frequency.FrequencyType;
 import mekanism.common.lib.frequency.IColorableFrequency;
 import mekanism.common.lib.frequency.IFrequencyHandler;
-import mekanism.common.network.to_server.PacketGuiSetFrequency;
-import mekanism.common.network.to_server.PacketGuiSetFrequency.FrequencyUpdate;
-import mekanism.common.network.to_server.PacketGuiSetFrequencyColor;
+import mekanism.common.network.PacketUtils;
+import mekanism.common.network.to_server.frequency.PacketSetFrequencyColor;
+import mekanism.common.network.to_server.frequency.PacketSetItemFrequency;
+import mekanism.common.network.to_server.frequency.PacketSetTileFrequency;
 import mekanism.common.tile.base.TileEntityMekanism;
 import mekanism.common.util.text.InputValidator;
 import mekanism.common.util.text.OwnerDisplay;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import org.jetbrains.annotations.Nullable;
 
@@ -42,67 +45,85 @@ public class GuiFrequencySelector<FREQ extends Frequency> extends GuiElement {
 
     private final IGuiFrequencySelector<FREQ> frequencySelector;
     private final MekanismButton publicButton;
+    private final MekanismButton trustedButton;
     private final MekanismButton privateButton;
     private final MekanismButton setButton;
     private final MekanismButton deleteButton;
     private final GuiTextScrollList scrollList;
     private final GuiTextField frequencyField;
-    private final int yStart;
     //Used to keep track of the last list of frequencies, by taking advantage of container sync providing a new list object
     // each time things are synced currently so that we can just do an identity compare
     private List<FREQ> lastFrequencies = Collections.emptyList();
-    private boolean publicFreq = true;
+    private SecurityMode securityMode = SecurityMode.PUBLIC;
     private boolean init;
 
     public <SELECTOR extends IGuiWrapper & IGuiFrequencySelector<FREQ>> GuiFrequencySelector(SELECTOR frequencySelector, int yStart) {
         super(frequencySelector, 27, yStart, 132, 121);
         this.frequencySelector = frequencySelector;
-        this.yStart = yStart;
         boolean hasColor = frequencySelector instanceof IGuiColorFrequencySelector;
-        scrollList = addChild(new GuiTextScrollList(frequencySelector, 27, yStart + 22, 122, 42));
-        publicButton = addChild(new TranslationButton(frequencySelector, 27, yStart, 60, 20, APILang.PUBLIC, () -> {
-            this.publicFreq = true;
-            this.scrollList.clearSelection();
-            updateButtons();
-        }));
-        privateButton = addChild(new TranslationButton(frequencySelector, 89, yStart, 60, 20, APILang.PRIVATE, () -> {
-            this.publicFreq = false;
-            this.scrollList.clearSelection();
-            updateButtons();
-        }));
+        scrollList = addChild(new GuiTextScrollList(frequencySelector, relativeX, relativeY + 22, 122, 42));
+        publicButton = addChild(new MekanismImageButton(frequencySelector, relativeX, relativeY, 38, 20, 38, 20, getButtonLocation("public"),
+              (element, mouseX, mouseY) -> {
+                  this.securityMode = SecurityMode.PUBLIC;
+                  this.scrollList.clearSelection();
+                  updateButtons();
+                  return true;
+              })).setTooltip(MekanismLang.PUBLIC_MODE);
+        trustedButton = addChild(new MekanismImageButton(frequencySelector, relativeX + 42, relativeY, 38, 20, 38, 20, getButtonLocation("trusted"),
+              (element, mouseX, mouseY) -> {
+                  this.securityMode = SecurityMode.TRUSTED;
+                  this.scrollList.clearSelection();
+                  updateButtons();
+                  return true;
+              })).setTooltip(MekanismLang.TRUSTED_MODE);
+        privateButton = addChild(new MekanismImageButton(frequencySelector, relativeX + 84, relativeY, 38, 20, 38, 20, getButtonLocation("private"),
+              (element, mouseX, mouseY) -> {
+                  this.securityMode = SecurityMode.PRIVATE;
+                  this.scrollList.clearSelection();
+                  updateButtons();
+                  return true;
+              })).setTooltip(MekanismLang.PRIVATE_MODE);
         int buttonWidth = hasColor ? 50 : 60;
-        setButton = addChild(new TranslationButton(frequencySelector, 27, yStart + 113, buttonWidth, 18,
-              MekanismLang.BUTTON_SET, () -> {
+        setButton = addChild(new TranslationButton(frequencySelector, relativeX, relativeY + 113, buttonWidth, 18, MekanismLang.BUTTON_SET, (element, mouseX, mouseY) -> {
             int selection = this.scrollList.getSelection();
             if (selection != -1) {
                 Frequency frequency = getFrequencies().get(selection);
-                setFrequency(frequency.getName());
+                setFrequency(frequency.getName(), frequency.getOwner());
             }
             //Note: We update the buttons regardless so that if something went wrong, and we don't have a selection
             // we will disable the ability to press the set button
             updateButtons();
+            return true;
         }));
-        deleteButton = addChild(new TranslationButton(frequencySelector, 29 + buttonWidth, yStart + 113, buttonWidth, 18,
-              MekanismLang.BUTTON_DELETE, () -> GuiConfirmationDialog.show(gui(), MekanismLang.FREQUENCY_DELETE_CONFIRM.translate(), () -> {
-            int selection = this.scrollList.getSelection();
-            if (selection != -1) {
-                Frequency frequency = getFrequencies().get(selection);
-                this.frequencySelector.sendRemoveFrequency(frequency.getIdentity());
-                this.scrollList.clearSelection();
-            }
-            //Note: We update the buttons regardless so that if something went wrong, and we don't have a selection
-            // we will disable the ability to press the delete button
-            updateButtons();
-        }, DialogType.DANGER)));
+        deleteButton = addChild(new TranslationButton(frequencySelector, relativeX + 2 + buttonWidth, relativeY + 113, buttonWidth, 18, MekanismLang.BUTTON_DELETE, (element, mouseX, mouseY) -> {
+            GuiConfirmationDialog.show(gui(), MekanismLang.FREQUENCY_DELETE_CONFIRM.translate(), () -> {
+                int selection = this.scrollList.getSelection();
+                if (selection != -1) {
+                    Frequency frequency = getFrequencies().get(selection);
+                    this.frequencySelector.sendRemoveFrequency(frequency.getIdentity());
+                    this.scrollList.clearSelection();
+                }
+                //Note: We update the buttons regardless so that if something went wrong, and we don't have a selection
+                // we will disable the ability to press the delete button
+                updateButtons();
+            }, DialogType.DANGER);
+            return true;
+        }));
         if (hasColor) {
-            addChild(new GuiSlot(SlotType.NORMAL, frequencySelector, 131, yStart + 113).setRenderAboveSlots());
+            addChild(new GuiSlot(SlotType.NORMAL, frequencySelector, relativeX + 104, relativeY + 113));
             IGuiColorFrequencySelector<?> colorFrequencySelector = (IGuiColorFrequencySelector<?>) frequencySelector;
-            addChild(new ColorButton(frequencySelector, 132, yStart + 114, 16, 16, () -> {
+            addChild(new ColorButton(frequencySelector, relativeX + 105, relativeY + 114, 16, 16, () -> {
                 IColorableFrequency frequency = colorFrequencySelector.getFrequency();
                 return frequency == null ? null : frequency.getColor();
-            }, () -> colorFrequencySelector.sendColorUpdate(true), () -> colorFrequencySelector.sendColorUpdate(false)));
+            }, (element, mouseX, mouseY) -> {
+                colorFrequencySelector.sendColorUpdate(true);
+                return true;
+            }, (element, mouseX, mouseY) -> {
+                colorFrequencySelector.sendColorUpdate(false);
+                return true;
+            }));
         }
-        frequencyField = addChild(new GuiTextField(frequencySelector, 50, yStart + 99, 98, 11));
+        frequencyField = addChild(new GuiTextField(frequencySelector, this, relativeX + 23, relativeY + 99, 98, 11));
         frequencyField.setMaxLength(FrequencyManager.MAX_FREQ_LENGTH);
         frequencyField.setBackground(BackgroundType.INNER_SCREEN);
         frequencyField.setEnterHandler(this::setFrequency);
@@ -123,7 +144,7 @@ public class GuiFrequencySelector<FREQ extends Frequency> extends GuiElement {
             // the selected frequency to the client
             FREQ frequency = frequencySelector.getFrequency();
             if (frequency != null) {
-                publicFreq = frequency.isPublic();
+                securityMode = frequency.getSecurity();
             }
         }
         //TODO: Remove the need for this to happen each tick? For starters we managed to reduce the amount
@@ -139,21 +160,17 @@ public class GuiFrequencySelector<FREQ extends Frequency> extends GuiElement {
             lastFrequencies = frequencies;
             List<String> text = new ArrayList<>(frequencies.size());
             for (Frequency freq : frequencies) {
-                if (publicFreq) {
-                    text.add(freq.getName() + " (" + freq.getClientOwner() + ")");
-                } else {
+                if (securityMode == SecurityMode.PRIVATE) {
                     text.add(freq.getName());
+                } else {
+                    text.add(freq.getName() + " (" + freq.getOwnerName() + ")");
                 }
             }
             scrollList.setText(text);
         }
-        if (publicFreq) {
-            publicButton.active = false;
-            privateButton.active = true;
-        } else {
-            publicButton.active = true;
-            privateButton.active = false;
-        }
+        publicButton.active = securityMode != SecurityMode.PUBLIC;
+        trustedButton.active = securityMode != SecurityMode.TRUSTED;
+        privateButton.active = securityMode != SecurityMode.PRIVATE;
         if (scrollList.hasSelection()) {
             FREQ selectedFrequency = frequencies.get(scrollList.getSelection());
             FREQ currentFrequency = frequencySelector.getFrequency();
@@ -171,18 +188,22 @@ public class GuiFrequencySelector<FREQ extends Frequency> extends GuiElement {
     }
 
     private List<FREQ> getFrequencies() {
-        return publicFreq ? frequencySelector.getPublicFrequencies() : frequencySelector.getPrivateFrequencies();
+        return switch (securityMode) {
+            case PUBLIC -> frequencySelector.getPublicFrequencies();
+            case PRIVATE -> frequencySelector.getPrivateFrequencies();
+            case TRUSTED -> frequencySelector.getTrustedFrequencies();
+        };
     }
 
     private void setFrequency() {
-        setFrequency(frequencyField.getText());
+        setFrequency(frequencyField.getText(), Minecraft.getInstance().player == null ? null : Minecraft.getInstance().player.getUUID());
         frequencyField.setText("");
         updateButtons();
     }
 
-    private void setFrequency(String freq) {
+    private void setFrequency(String freq, @Nullable UUID ownerUUID) {
         if (!freq.isEmpty()) {
-            frequencySelector.sendSetFrequency(new FrequencyIdentity(freq, publicFreq));
+            frequencySelector.sendSetFrequency(new FrequencyIdentity(freq, securityMode, ownerUUID));
         }
     }
 
@@ -190,20 +211,28 @@ public class GuiFrequencySelector<FREQ extends Frequency> extends GuiElement {
     public void renderForeground(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         super.renderForeground(guiGraphics, mouseX, mouseY);
         FREQ frequency = frequencySelector.getFrequency();
+        Object frequencyName;
+        Component ownerComponent;
+        Object frequencySecurity;
         if (frequency == null) {
             MutableComponent noneComponent = MekanismLang.NONE.translateColored(EnumColor.DARK_RED);
-            drawString(guiGraphics, MekanismLang.FREQUENCY.translate(noneComponent), 27, yStart + 67, titleTextColor());
-            drawString(guiGraphics, MekanismLang.OWNER.translate(noneComponent), 27, yStart + 77, titleTextColor());
-            drawString(guiGraphics, MekanismLang.SECURITY.translate(noneComponent), 27, yStart + 87, titleTextColor());
+            frequencyName = noneComponent;
+            ownerComponent = MekanismLang.OWNER.translate(noneComponent);
+            frequencySecurity = noneComponent;
         } else {
             //Color the name the same as the subheading text color should be
-            MutableComponent name = TextComponentUtil.color(TextComponentUtil.getString(frequency.getName()), subheadingTextColor());
-            drawTextScaledBound(guiGraphics, MekanismLang.FREQUENCY.translate(name), 27, yStart + 67, titleTextColor(), getGuiWidth() - 36);
-            drawString(guiGraphics, OwnerDisplay.of(Minecraft.getInstance().player, frequency.getOwner(), frequency.getClientOwner(), false).getTextComponent(),
-                  27, yStart + 77, titleTextColor());
-            drawString(guiGraphics, MekanismLang.SECURITY.translate(frequency.getSecurity()), 27, yStart + 87, titleTextColor());
+            frequencyName = TextComponentUtil.color(TextComponentUtil.getString(frequency.getName()), subheadingTextColor());
+            ownerComponent = OwnerDisplay.of(Minecraft.getInstance().player, frequency.getOwner(), frequency.getOwnerName(), false).getTextComponent();
+            frequencySecurity = frequency.getSecurity();
         }
-        drawTextScaledBound(guiGraphics, MekanismLang.SET.translate(), 27, yStart + 100, titleTextColor(), 20);
+        int textEnd = getGuiWidth() - relativeX - 10;
+        drawScrollingString(guiGraphics, MekanismLang.FREQUENCY.translate(frequencyName), 0, 67, TextAlignment.LEFT, titleTextColor(), textEnd, 0, false);
+        drawScrollingString(guiGraphics, ownerComponent, 0, 77, TextAlignment.LEFT, titleTextColor(), textEnd, 0, false);
+        drawScrollingString(guiGraphics, MekanismLang.SECURITY.translate(frequencySecurity), 0, 87, TextAlignment.LEFT, titleTextColor(), textEnd, 0, false);
+
+        //If it gets to wide, allow it to go to the left of the area
+        //TODO: Re-evaluate this behavior, and if we should define some min bound in a different way
+        drawScrollingString(guiGraphics, MekanismLang.SET.translate(), -relativeX, 100, TextAlignment.RIGHT, titleTextColor(), frequencyField.getRelativeX(), 5, false);
     }
 
     public interface IGuiFrequencySelector<FREQ extends Frequency> {
@@ -219,6 +248,8 @@ public class GuiFrequencySelector<FREQ extends Frequency> extends GuiElement {
 
         List<FREQ> getPublicFrequencies();
 
+        List<FREQ> getTrustedFrequencies();
+
         List<FREQ> getPrivateFrequencies();
 
         default void buttonsUpdated() {
@@ -230,7 +261,7 @@ public class GuiFrequencySelector<FREQ extends Frequency> extends GuiElement {
         default void sendColorUpdate(boolean next) {
             FREQ freq = getFrequency();
             if (freq != null) {
-                Mekanism.packetHandler().sendToServer(PacketGuiSetFrequencyColor.create(freq, next));
+                PacketUtils.sendToServer(new PacketSetFrequencyColor(freq, next));
             }
         }
     }
@@ -241,14 +272,19 @@ public class GuiFrequencySelector<FREQ extends Frequency> extends GuiElement {
 
         @Override
         default void sendSetFrequency(FrequencyIdentity identity) {
-            Mekanism.packetHandler().sendToServer(PacketGuiSetFrequency.create(FrequencyUpdate.SET_TILE, getFrequencyType(), identity, getTileEntity().getBlockPos()));
+            sendSetFrequency(identity, true);
         }
 
         @Override
         default void sendRemoveFrequency(FrequencyIdentity identity) {
-            Mekanism.packetHandler().sendToServer(PacketGuiSetFrequency.create(FrequencyUpdate.REMOVE_TILE, getFrequencyType(), identity, getTileEntity().getBlockPos()));
+            sendSetFrequency(identity, false);
         }
 
+        private void sendSetFrequency(FrequencyIdentity identity, boolean set) {
+            PacketUtils.sendToServer(new PacketSetTileFrequency(set, getFrequencyType(), identity, getTileEntity().getBlockPos()));
+        }
+
+        @Nullable
         @Override
         default FREQ getFrequency() {
             return getTileEntity().getFrequency(getFrequencyType());
@@ -257,6 +293,11 @@ public class GuiFrequencySelector<FREQ extends Frequency> extends GuiElement {
         @Override
         default List<FREQ> getPublicFrequencies() {
             return getTileEntity().getPublicCache(getFrequencyType());
+        }
+
+        @Override
+        default List<FREQ> getTrustedFrequencies() {
+            return getTileEntity().getTrustedCache(getFrequencyType());
         }
 
         @Override
@@ -271,22 +312,32 @@ public class GuiFrequencySelector<FREQ extends Frequency> extends GuiElement {
 
         @Override
         default void sendSetFrequency(FrequencyIdentity identity) {
-            Mekanism.packetHandler().sendToServer(PacketGuiSetFrequency.create(FrequencyUpdate.SET_ITEM, getFrequencyType(), identity, getFrequencyContainer().getHand()));
+            sendSetFrequency(identity, true);
         }
 
         @Override
         default void sendRemoveFrequency(FrequencyIdentity identity) {
-            Mekanism.packetHandler().sendToServer(PacketGuiSetFrequency.create(FrequencyUpdate.REMOVE_ITEM, getFrequencyType(), identity, getFrequencyContainer().getHand()));
+            sendSetFrequency(identity, false);
         }
 
+        private void sendSetFrequency(FrequencyIdentity identity, boolean set) {
+            PacketUtils.sendToServer(new PacketSetItemFrequency(set, getFrequencyType(), identity, getFrequencyContainer().getHand()));
+        }
+
+        @Nullable
         @Override
         default FREQ getFrequency() {
-            return getFrequencyContainer().getFrequency();
+            return getFrequencyContainer().getClientFrequency();
         }
 
         @Override
         default List<FREQ> getPublicFrequencies() {
             return getFrequencyContainer().getPublicCache();
+        }
+
+        @Override
+        default List<FREQ> getTrustedFrequencies() {
+            return getFrequencyContainer().getTrustedCache();
         }
 
         @Override

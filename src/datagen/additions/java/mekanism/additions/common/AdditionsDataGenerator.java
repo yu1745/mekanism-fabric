@@ -6,20 +6,22 @@ import mekanism.additions.client.AdditionsItemModelProvider;
 import mekanism.additions.client.AdditionsLangProvider;
 import mekanism.additions.client.AdditionsSoundProvider;
 import mekanism.additions.client.AdditionsSpriteSourceProvider;
+import mekanism.additions.client.integration.emi.AdditionsEmiDefaults;
+import mekanism.additions.client.recipe_viewer.aliases.AdditionsAliasMapping;
 import mekanism.additions.common.loot.AdditionsLootProvider;
 import mekanism.additions.common.recipe.AdditionsRecipeProvider;
 import mekanism.common.BasePackMetadataGenerator;
 import mekanism.common.MekanismDataGenerator;
+import mekanism.common.PersistingDisabledProvidersProvider;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.data.DataGenerator;
 import net.minecraft.data.PackOutput;
-import net.minecraftforge.common.data.ExistingFileHelper;
-import net.minecraftforge.data.event.GatherDataEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
-import net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.common.data.ExistingFileHelper;
+import net.neoforged.neoforge.data.event.GatherDataEvent;
 
-@EventBusSubscriber(modid = MekanismAdditions.MODID, bus = Bus.MOD)
+@EventBusSubscriber(modid = MekanismAdditions.MODID)
 public class AdditionsDataGenerator {
 
     private AdditionsDataGenerator() {
@@ -35,16 +37,21 @@ public class AdditionsDataGenerator {
         CompletableFuture<HolderLookup.Provider> lookupProvider = drProvider.getRegistryProvider();
         gen.addProvider(true, new BasePackMetadataGenerator(output, AdditionsLang.PACK_DESCRIPTION));
         //Client side data generators
-        MekanismDataGenerator.addProvider(gen, event.includeClient(), AdditionsLangProvider::new);
+        gen.addProvider(event.includeClient(), new AdditionsLangProvider(output));
         gen.addProvider(event.includeClient(), new AdditionsSoundProvider(output, existingFileHelper));
-        gen.addProvider(event.includeClient(), new AdditionsSpriteSourceProvider(output, existingFileHelper));
+        gen.addProvider(event.includeClient(), new AdditionsSpriteSourceProvider(output, existingFileHelper, lookupProvider));
         gen.addProvider(event.includeClient(), new AdditionsItemModelProvider(output, existingFileHelper));
         gen.addProvider(event.includeClient(), new AdditionsBlockStateProvider(output, existingFileHelper));
         //Server side data generators
         gen.addProvider(event.includeServer(), new AdditionsTagProvider(output, lookupProvider, existingFileHelper));
-        MekanismDataGenerator.addProvider(gen, event.includeServer(), AdditionsLootProvider::new);
+        gen.addProvider(event.includeServer(), new AdditionsLootProvider(output, lookupProvider));
         gen.addProvider(event.includeServer(), drProvider);
-        gen.addProvider(event.includeServer(), new AdditionsRecipeProvider(output, existingFileHelper));
-        gen.addProvider(event.includeServer(), new AdditionsAdvancementProvider(output, existingFileHelper));
+        gen.addProvider(event.includeServer(), new AdditionsDataMapsProvider(output, lookupProvider));
+        gen.addProvider(event.includeServer(), new AdditionsRecipeProvider(output, lookupProvider, existingFileHelper));
+        gen.addProvider(event.includeServer(), new AdditionsAdvancementProvider(output, lookupProvider, existingFileHelper));
+        //Data generator to help with persisting data when porting across MC versions when optional deps aren't updated yet
+        // DO NOT ADD OTHERS AFTER THIS ONE
+        PersistingDisabledProvidersProvider.addDisabledEmiProvider(event, lookupProvider, MekanismAdditions.MODID, AdditionsAliasMapping::new,
+              () -> AdditionsEmiDefaults::new);
     }
 }

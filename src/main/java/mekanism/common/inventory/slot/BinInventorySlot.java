@@ -1,26 +1,49 @@
 package mekanism.common.inventory.slot;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.function.Predicate;
 import mekanism.api.Action;
 import mekanism.api.AutomationType;
 import mekanism.api.IContentsListener;
-import mekanism.api.NBTConstants;
+import mekanism.api.SerializationConstants;
 import mekanism.api.annotations.NothingNullByDefault;
+import mekanism.api.functions.ConstantPredicates;
+import mekanism.api.inventory.IInventorySlot;
+import mekanism.api.inventory.IMekanismInventory;
+import mekanism.common.attachments.containers.ContainerType;
+import mekanism.common.attachments.containers.item.ComponentBackedBinInventorySlot;
 import mekanism.common.inventory.container.slot.InventoryContainerSlot;
 import mekanism.common.item.block.ItemBlockBin;
 import mekanism.common.tier.BinTier;
 import mekanism.common.util.NBTUtils;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.items.ItemHandlerHelper;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @NothingNullByDefault
 public class BinInventorySlot extends BasicInventorySlot {
 
-    private static final Predicate<@NotNull ItemStack> validator = stack -> !(stack.getItem() instanceof ItemBlockBin);
+    public static final Predicate<@NotNull ItemStack> validator = stack -> !(stack.getItem() instanceof ItemBlockBin);
+
+    @Nullable
+    public static ComponentBackedBinInventorySlot getForStack(@NotNull ItemStack stack) {
+        if (!stack.isEmpty() && stack.getItem() instanceof ItemBlockBin) {
+            IMekanismInventory attachment = ContainerType.ITEM.createHandler(stack);
+            if (attachment != null) {
+                List<IInventorySlot> slots = attachment.getInventorySlots(null);
+                if (slots.size() == 1) {
+                    IInventorySlot slot = slots.getFirst();
+                    if (slot instanceof ComponentBackedBinInventorySlot binSlot) {
+                        return binSlot;
+                    }
+                }
+            }
+        }
+        return null;
+    }
 
     public static BinInventorySlot create(@Nullable IContentsListener listener, BinTier tier) {
         Objects.requireNonNull(tier, "Bin tier cannot be null");
@@ -31,7 +54,7 @@ public class BinInventorySlot extends BasicInventorySlot {
     private ItemStack lockStack = ItemStack.EMPTY;
 
     private BinInventorySlot(@Nullable IContentsListener listener, BinTier tier) {
-        super(tier.getStorage(), alwaysTrueBi, alwaysTrueBi, validator, listener, 0, 0);
+        super(tier.getStorage(), ConstantPredicates.alwaysTrueBi(), ConstantPredicates.alwaysTrueBi(), validator, listener, 0, 0);
         isCreative = tier == BinTier.CREATIVE;
         obeyStackLimit = false;
     }
@@ -39,7 +62,7 @@ public class BinInventorySlot extends BasicInventorySlot {
     @Override
     public ItemStack insertItem(ItemStack stack, Action action, AutomationType automationType) {
         if (isEmpty()) {
-            if (isLocked() && !ItemHandlerHelper.canItemStacksStack(lockStack, stack)) {
+            if (isLocked() && !ItemStack.isSameItemSameComponents(lockStack, stack)) {
                 // When locked, we need to make sure the correct item type is being inserted
                 return stack;
             } else if (isCreative && action.execute() && automationType != AutomationType.EXTERNAL) {
@@ -112,7 +135,7 @@ public class BinInventorySlot extends BasicInventorySlot {
     }
 
     /**
-     * For use by upgrade recipes, do not use this in place of {@link #setLocked(boolean)}
+     * For use by tier installers and parsing placement data, do not use this in place of {@link #setLocked(boolean)}
      */
     public void setLockStack(@NotNull ItemStack stack) {
         lockStack = stack.copyWithCount(1);
@@ -131,17 +154,19 @@ public class BinInventorySlot extends BasicInventorySlot {
     }
 
     @Override
-    public CompoundTag serializeNBT() {
-        CompoundTag nbt = super.serializeNBT();
+    public CompoundTag serializeNBT(HolderLookup.Provider provider) {
+        //Note: While we are able to store this extra data for saving and stuff, when converting to an item we need to have
+        // the tile copy the lock stack as a component
+        CompoundTag nbt = super.serializeNBT(provider);
         if (isLocked()) {
-            nbt.put(NBTConstants.LOCK_STACK, lockStack.serializeNBT());
+            nbt.put(SerializationConstants.LOCK_STACK, lockStack.save(provider));
         }
         return nbt;
     }
 
     @Override
-    public void deserializeNBT(CompoundTag nbt) {
-        NBTUtils.setItemStackOrEmpty(nbt, NBTConstants.LOCK_STACK, s -> this.lockStack = s);
-        super.deserializeNBT(nbt);
+    public void deserializeNBT(HolderLookup.Provider provider, CompoundTag nbt) {
+        NBTUtils.setItemStackOrEmpty(provider, nbt, SerializationConstants.LOCK_STACK, s -> this.lockStack = s);
+        super.deserializeNBT(provider, nbt);
     }
 }

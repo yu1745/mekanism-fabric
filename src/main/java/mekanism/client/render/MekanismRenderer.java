@@ -10,12 +10,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import mekanism.api.MekanismAPI;
+import mekanism.api.MekanismAPITags;
 import mekanism.api.SupportsColorMap;
 import mekanism.api.chemical.Chemical;
 import mekanism.api.chemical.ChemicalStack;
 import mekanism.client.SpecialColors;
 import mekanism.client.gui.element.GuiElementHolder;
-import mekanism.client.model.baked.DigitalMinerBakedModel;
 import mekanism.client.render.RenderResizableCuboid.FaceDisplay;
 import mekanism.client.render.data.FluidRenderData;
 import mekanism.client.render.data.ValveRenderData;
@@ -41,24 +42,26 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FastColor;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.TextureStitchEvent;
-import net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.TextureAtlasStitchedEvent;
+import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
+import net.neoforged.neoforge.fluids.FluidStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-@Mod.EventBusSubscriber(modid = Mekanism.MODID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
+@EventBusSubscriber(modid = Mekanism.MODID, value = Dist.CLIENT)
 public class MekanismRenderer {
 
     //TODO: Replace various usages of LightTexture.FULL_BRIGHT with the getter for calculating glow light, at least if we end up making it only
@@ -100,42 +103,32 @@ public class MekanismRenderer {
         return getSprite(spriteLocation);
     }
 
-    public static TextureAtlasSprite getChemicalTexture(@NotNull Chemical<?> chemical) {
-        return getSprite(chemical.getIcon());
+    public static TextureAtlasSprite getChemicalTexture(@NotNull ChemicalStack stack) {
+        return getChemicalTexture(stack.getChemicalHolder());
+    }
+
+    public static TextureAtlasSprite getChemicalTexture(@NotNull Holder<Chemical> chemical) {
+        return getSprite(chemical.value().getIcon());
     }
 
     public static TextureAtlasSprite getSprite(ResourceLocation spriteLocation) {
+        if (spriteLocation == null) { // e.g. badly implemented fluids
+            spriteLocation = MissingTextureAtlasSprite.getLocation();
+        }
         return Minecraft.getInstance().getTextureAtlas(TextureAtlas.LOCATION_BLOCKS).apply(spriteLocation);
     }
 
     public static void renderObject(@Nullable Model3D object, @NotNull PoseStack matrix, VertexConsumer buffer, int argb, int light, int overlay,
           FaceDisplay faceDisplay, Camera camera, BlockPos renderPos) {
         if (object != null) {
-            renderObject(object, matrix, buffer, argb, light, overlay, faceDisplay, camera, Vec3.atLowerCornerOf(renderPos));
-        }
-    }
-
-    public static void renderObject(@Nullable Model3D object, @NotNull PoseStack matrix, VertexConsumer buffer, int argb, int light, int overlay,
-          FaceDisplay faceDisplay, Camera camera) {
-        renderObject(object, matrix, buffer, argb, light, overlay, faceDisplay, camera, (Vec3) null);
-    }
-
-    public static void renderObject(@Nullable Model3D object, @NotNull PoseStack matrix, VertexConsumer buffer, int argb, int light, int overlay,
-          FaceDisplay faceDisplay, Camera camera, @Nullable Vec3 renderPos) {
-        if (object != null) {
-            RenderResizableCuboid.renderCube(object, matrix, buffer, argb, light, overlay, faceDisplay, camera, renderPos);
+            RenderResizableCuboid.renderCube(object, matrix, buffer, argb, light, overlay, faceDisplay, camera, Vec3.atLowerCornerOf(renderPos));
         }
     }
 
     public static void renderObject(@Nullable Model3D object, @NotNull PoseStack matrix, VertexConsumer buffer, int[] colors, int light, int overlay,
           FaceDisplay faceDisplay, Camera camera) {
-        renderObject(object, matrix, buffer, colors, light, overlay, faceDisplay, camera, null);
-    }
-
-    public static void renderObject(@Nullable Model3D object, @NotNull PoseStack matrix, VertexConsumer buffer, int[] colors, int light, int overlay,
-          FaceDisplay faceDisplay, Camera camera, @Nullable Vec3 renderPos) {
         if (object != null) {
-            RenderResizableCuboid.renderCube(object, matrix, buffer, colors, light, overlay, faceDisplay, camera, renderPos);
+            RenderResizableCuboid.renderCube(object, matrix, buffer, colors, light, overlay, faceDisplay, camera, null);
         }
     }
 
@@ -175,7 +168,11 @@ public class MekanismRenderer {
     }
 
     public static void color(GuiGraphics guiGraphics, int color) {
-        guiGraphics.setColor(getRed(color), getGreen(color), getBlue(color), getAlpha(color));
+        color(guiGraphics, color, getAlpha(color));
+    }
+
+    public static void color(GuiGraphics guiGraphics, int color, float alpha) {
+        guiGraphics.setColor(getRed(color), getGreen(color), getBlue(color), alpha);
     }
 
     public static void color(GuiGraphics guiGraphics, ColorRegistryObject colorRO) {
@@ -192,16 +189,9 @@ public class MekanismRenderer {
         }
     }
 
-    public static void color(GuiGraphics guiGraphics, @NotNull ChemicalStack<?> chemicalStack) {
+    public static void color(GuiGraphics guiGraphics, @NotNull ChemicalStack chemicalStack) {
         if (!chemicalStack.isEmpty()) {
-            color(guiGraphics, chemicalStack.getType());
-        }
-    }
-
-    public static void color(GuiGraphics guiGraphics, @NotNull Chemical<?> chemical) {
-        if (!chemical.isEmptyType()) {
-            int color = chemical.getTint();
-            guiGraphics.setColor(getRed(color), getGreen(color), getBlue(color), 1);
+            color(guiGraphics, chemicalStack.getChemicalTint(), 1F);
         }
     }
 
@@ -216,7 +206,7 @@ public class MekanismRenderer {
     }
 
     public static int getColorARGB(SupportsColorMap color, float alpha) {
-        return getColorARGB(color.getRgbCode()[0], color.getRgbCode()[1], color.getRgbCode()[2], alpha);
+        return getColorARGB(color.getPackedColor(), alpha);
     }
 
     public static int getColorARGB(@NotNull FluidStack fluidStack) {
@@ -230,38 +220,41 @@ public class MekanismRenderer {
         int color = getColorARGB(fluidStack);
         if (MekanismUtils.lighterThanAirGas(fluidStack)) {
             //TODO: We probably want to factor in the fluid's alpha value somehow
-            return getColorARGB(FastColor.ARGB32.red(color), FastColor.ARGB32.green(color), FastColor.ARGB32.blue(color), Math.min(1, fluidScale + 0.2F));
+            return getColorARGB(color, Math.min(1, fluidScale + 0.2F));
         }
         return color;
     }
 
-    public static int getColorARGB(@NotNull ChemicalStack<?> stack, float scale, boolean gaseous) {
-        return getColorARGB(stack.getType(), scale, gaseous);
+    public static int getColorARGB(@NotNull ChemicalStack stack, float scale) {
+        return getColorARGB(stack.getChemicalHolder(), scale);
     }
 
-    public static int getColorARGB(@NotNull Chemical<?> chemical, float scale, boolean gaseous) {
-        if (chemical.isEmptyType()) {
+    public static int getTint(@NotNull Holder<Chemical> chemical) {
+        return chemical.value().getTint();
+    }
+
+    @SuppressWarnings("removal")
+    public static int getColorARGB(@NotNull Holder<Chemical> chemical, float scale) {
+        if (chemical.is(MekanismAPI.EMPTY_CHEMICAL_KEY)) {
             return -1;
+        } else if (chemical.is(MekanismAPITags.Chemicals.GASEOUS) || chemical.value().isGaseousLegacy()) {
+            //TODO - 1.22: Remove the legacy gaseous check
+            return getColorARGB(getTint(chemical), Math.min(1, scale + 0.2F));
         }
-        int color = chemical.getTint();
-        return getColorARGB(FastColor.ARGB32.red(color), FastColor.ARGB32.green(color), FastColor.ARGB32.blue(color), gaseous ? Math.min(1, scale + 0.2F) : 1);
+        return FastColor.ARGB32.opaque(getTint(chemical));
     }
 
-    public static int getColorARGB(float red, float green, float blue, float alpha) {
-        return getColorARGB((int) (255 * red), (int) (255 * green), (int) (255 * blue), alpha);
-    }
-
-    public static int getColorARGB(int red, int green, int blue, float alpha) {
-        if (alpha < 0) {
+    public static int getColorARGB(int rgb, float alpha) {
+        if (alpha >= 1) {
+            return FastColor.ARGB32.opaque(rgb);
+        } else if (alpha < 0) {
             alpha = 0;
-        } else if (alpha > 1) {
-            alpha = 1;
         }
-        return FastColor.ARGB32.color((int) (255 * alpha), red, green, blue);
+        return FastColor.ARGB32.color(FastColor.as8BitChannel(alpha), rgb);
     }
 
     public static int calculateGlowLight(int combinedLight, @NotNull FluidStack fluid) {
-        return fluid.isEmpty() ? combinedLight : calculateGlowLight(combinedLight, fluid.getFluid().getFluidType().getLightLevel(fluid));
+        return fluid.isEmpty() ? combinedLight : calculateGlowLight(combinedLight, fluid.getFluidType().getLightLevel(fluid));
     }
 
     public static int calculateGlowLight(int combinedLight, int glow) {
@@ -273,8 +266,13 @@ public class MekanismRenderer {
         guiGraphics.fill(RenderType.guiOverlay(), x, y, guiGraphics.guiWidth(), guiGraphics.guiHeight(), color);
     }
 
+    public static boolean isRunningNormally() {
+        Minecraft minecraft = Minecraft.getInstance();
+        return !minecraft.isPaused() && MekanismUtils.isTickingNormally(minecraft.level);
+    }
+
     public static float getPartialTick() {
-        return Minecraft.getInstance().getFrameTime();
+        return Minecraft.getInstance().getTimer().getGameTimeDeltaPartialTick(false);
     }
 
     public static void rotate(PoseStack matrix, Direction facing, float north, float south, float west, float east) {
@@ -301,7 +299,7 @@ public class MekanismRenderer {
     }
 
     @SubscribeEvent
-    public static void onStitch(TextureStitchEvent.Post event) {
+    public static void onStitch(TextureAtlasStitchedEvent event) {
         TextureAtlas map = event.getAtlas();
         if (!map.location().equals(TextureAtlas.LOCATION_BLOCKS)) {
             return;
@@ -315,8 +313,6 @@ public class MekanismRenderer {
         heatIcon = map.getSprite(Mekanism.rl("liquid/heat"));
         redstonePulse = map.getSprite(Mekanism.rl("icon/redstone_control_pulse"));
         teleporterPortal = map.getSprite(Mekanism.rl("block/teleporter_portal"));
-
-        DigitalMinerBakedModel.onStitch(event);
 
         //Note: These are called in post rather than pre to make sure the icons have properly been stitched/attached
         RenderLogisticalTransporter.onStitch(map);
@@ -351,7 +347,7 @@ public class MekanismRenderer {
         public float minX, minY, minZ;
         public float maxX, maxY, maxZ;
 
-        private final SpriteInfo[] textures = new SpriteInfo[6];
+        private final TextureAtlasSprite[] textures = new TextureAtlasSprite[6];
         private final boolean[] renderSides = {true, true, true, true, true, true};
 
         public Model3D setSideRender(Predicate<Direction> shouldRender) {
@@ -374,7 +370,7 @@ public class MekanismRenderer {
         }
 
         @Nullable
-        public SpriteInfo getSpriteToRender(Direction side) {
+        public TextureAtlasSprite getSpriteToRender(Direction side) {
             int ordinal = side.ordinal();
             return renderSides[ordinal] ? textures[ordinal] : null;
         }
@@ -428,26 +424,23 @@ public class MekanismRenderer {
         }
 
         public Model3D prepFlowing(@NotNull FluidStack fluid) {
-            SpriteInfo still = new SpriteInfo(getFluidTexture(fluid, FluidTextureType.STILL), 16);
-            SpriteInfo flowing = new SpriteInfo(getFluidTexture(fluid, FluidTextureType.FLOWING), 8);
+            TextureAtlasSprite still = getFluidTexture(fluid, FluidTextureType.STILL);
+            TextureAtlasSprite flowing = getFluidTexture(fluid, FluidTextureType.FLOWING);
             return setTextures(still, still, flowing, flowing, flowing, flowing);
         }
 
-        public Model3D setTexture(Direction side, @Nullable SpriteInfo spriteInfo) {
-            textures[side.ordinal()] = spriteInfo;
+        public Model3D setTexture(Direction side, @Nullable TextureAtlasSprite sprite) {
+            textures[side.ordinal()] = sprite;
             return this;
         }
 
         public Model3D setTexture(TextureAtlasSprite tex) {
-            return setTexture(tex, 16);
-        }
-
-        public Model3D setTexture(TextureAtlasSprite tex, int size) {
-            Arrays.fill(textures, new SpriteInfo(tex, size));
+            Arrays.fill(textures, tex);
             return this;
         }
 
-        public Model3D setTextures(SpriteInfo down, SpriteInfo up, SpriteInfo north, SpriteInfo south, SpriteInfo west, SpriteInfo east) {
+        public Model3D setTextures(TextureAtlasSprite down, TextureAtlasSprite up, TextureAtlasSprite north, TextureAtlasSprite south, TextureAtlasSprite west,
+              TextureAtlasSprite east) {
             textures[0] = down;
             textures[1] = up;
             textures[2] = north;
@@ -455,17 +448,6 @@ public class MekanismRenderer {
             textures[4] = west;
             textures[5] = east;
             return this;
-        }
-
-        public record SpriteInfo(TextureAtlasSprite sprite, int size) {
-
-            public float getU(float u) {
-                return sprite.getU(u * size);
-            }
-
-            public float getV(float v) {
-                return sprite.getV(v * size);
-            }
         }
 
         public interface ModelBoundsSetter {

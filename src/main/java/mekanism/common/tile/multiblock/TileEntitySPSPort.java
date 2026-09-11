@@ -1,37 +1,39 @@
 package mekanism.common.tile.multiblock;
 
-import java.util.Collections;
-import java.util.Set;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
 import mekanism.api.Action;
 import mekanism.api.AutomationType;
 import mekanism.api.IContentsListener;
-import mekanism.api.chemical.gas.Gas;
-import mekanism.api.chemical.gas.GasStack;
-import mekanism.api.chemical.gas.IGasTank;
+import mekanism.api.chemical.IChemicalHandler;
 import mekanism.api.text.EnumColor;
 import mekanism.common.MekanismLang;
+import mekanism.common.attachments.containers.ContainerType;
+import mekanism.common.capabilities.Capabilities;
 import mekanism.common.capabilities.energy.MachineEnergyContainer;
 import mekanism.common.capabilities.holder.chemical.IChemicalTankHolder;
 import mekanism.common.capabilities.holder.energy.EnergyContainerHelper;
 import mekanism.common.capabilities.holder.energy.IEnergyContainerHolder;
 import mekanism.common.content.sps.SPSMultiblockData;
 import mekanism.common.integration.computer.annotation.ComputerMethod;
-import mekanism.common.lib.multiblock.IMultiblockEjector;
+import mekanism.common.lib.multiblock.MultiblockData.CapabilityOutputTarget;
 import mekanism.common.registries.MekanismBlocks;
-import mekanism.common.tile.base.SubstanceType;
-import mekanism.common.util.ChemicalUtil;
 import mekanism.common.util.text.BooleanStateDisplay.InputOutput;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.state.BlockState;
+import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-public class TileEntitySPSPort extends TileEntitySPSCasing implements IMultiblockEjector {
+public class TileEntitySPSPort extends TileEntitySPSCasing {
 
+    private final Map<Direction, BlockCapabilityCache<IChemicalHandler, @Nullable Direction>> chemicalCapabilityCaches = new EnumMap<>(Direction.class);
     private MachineEnergyContainer<TileEntitySPSPort> energyContainer;
-    private Set<Direction> outputDirections = Collections.emptySet();
 
     public TileEntitySPSPort(BlockPos pos, BlockState state) {
         super(MekanismBlocks.SPS_PORT, pos, state);
@@ -42,9 +44,6 @@ public class TileEntitySPSPort extends TileEntitySPSCasing implements IMultibloc
     protected boolean onUpdateServer(SPSMultiblockData multiblock) {
         boolean needsPacket = super.onUpdateServer(multiblock);
         if (multiblock.isFormed()) {
-            if (getActive()) {
-                ChemicalUtil.emit(outputDirections, multiblock.outputTank, this);
-            }
             if (!energyContainer.isEmpty() && multiblock.canSupplyCoilEnergy(this)) {
                 multiblock.supplyCoilEnergy(this, energyContainer.extract(energyContainer.getEnergy(), Action.EXECUTE, AutomationType.INTERNAL));
             }
@@ -55,29 +54,33 @@ public class TileEntitySPSPort extends TileEntitySPSCasing implements IMultibloc
     @NotNull
     @Override
     protected IEnergyContainerHolder getInitialEnergyContainers(IContentsListener listener) {
-        EnergyContainerHelper builder = EnergyContainerHelper.forSide(this::getDirection);
+        EnergyContainerHelper builder = EnergyContainerHelper.forSide(facingSupplier);
         builder.addContainer(energyContainer = MachineEnergyContainer.input(this, listener));
         return builder.build();
     }
 
     @NotNull
     @Override
-    public IChemicalTankHolder<Gas, GasStack, IGasTank> getInitialGasTanks(IContentsListener listener) {
+    public IChemicalTankHolder getInitialChemicalTanks(IContentsListener listener) {
         //Note: We can just use a proxied holder as the input/output restrictions are done in the tanks themselves
-        return side -> getMultiblock().getGasTanks(side);
+        return side -> getMultiblock().getChemicalTanks(side);
     }
 
     @Override
-    public boolean persists(SubstanceType type) {
-        if (type == SubstanceType.GAS) {
+    public boolean persists(ContainerType<?, ?, ?> type) {
+        if (type == ContainerType.CHEMICAL) {
             return false;
         }
         return super.persists(type);
     }
 
-    @Override
-    public void setEjectSides(Set<Direction> sides) {
-        outputDirections = sides;
+    public void addChemicalTargetCapability(List<CapabilityOutputTarget<IChemicalHandler>> outputTargets, Direction side) {
+        BlockCapabilityCache<IChemicalHandler, @Nullable Direction> cache = chemicalCapabilityCaches.get(side);
+        if (cache == null) {
+            cache = Capabilities.CHEMICAL.createCache((ServerLevel) level, worldPosition.relative(side), side.getOpposite());
+            chemicalCapabilityCaches.put(side, cache);
+        }
+        outputTargets.add(new CapabilityOutputTarget<>(cache, this::getActive));
     }
 
     @Override
@@ -96,13 +99,13 @@ public class TileEntitySPSPort extends TileEntitySPSCasing implements IMultibloc
     }
 
     //Methods relating to IComputerTile
-    @ComputerMethod(methodDescription = "true -> output, false -> input.")//TODO change this to enum?
-    boolean getMode() {
+    @ComputerMethod(methodDescription = "true -> output, false -> input.")
+    boolean getMode() {// TODO change this to enum?
         return getActive();
     }
 
-    @ComputerMethod(methodDescription = "true -> output, false -> input.")//TODO change this to enum?
-    void setMode(boolean output) {
+    @ComputerMethod(methodDescription = "true -> output, false -> input.")
+    void setMode(boolean output) {// TODO change this to enum?
         setActive(output);
     }
     //End methods IComputerTile

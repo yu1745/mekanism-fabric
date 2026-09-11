@@ -4,18 +4,12 @@ import mekanism.api.Action;
 import net.minecraft.world.Container;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.items.ItemHandlerHelper;
 import org.jetbrains.annotations.NotNull;
 
 public class InsertableSlot extends Slot implements IInsertableSlot {
 
     public InsertableSlot(Container inventory, int index, int x, int y) {
         super(inventory, index, x, y);
-    }
-
-    @Override
-    public int getMaxStackSize(ItemStack stack) {
-        return Math.min(getMaxStackSize(), stack.getMaxStackSize());
     }
 
     @NotNull
@@ -32,7 +26,7 @@ public class InsertableSlot extends Slot implements IInsertableSlot {
             //Fail if we are a full slot
             return stack;
         }
-        if (current.isEmpty() || ItemHandlerHelper.canItemStacksStack(current, stack)) {
+        if (current.isEmpty() || ItemStack.isSameItemSameComponents(current, stack)) {
             int toAdd = Math.min(stack.getCount(), needed);
             if (action.execute()) {
                 //If we want to actually insert the item, then update the current item

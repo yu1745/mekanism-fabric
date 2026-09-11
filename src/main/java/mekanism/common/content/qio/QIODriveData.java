@@ -4,8 +4,10 @@ import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import mekanism.api.Action;
 import mekanism.common.Mekanism;
-import mekanism.common.content.qio.IQIODriveItem.DriveMetadata;
+import mekanism.common.attachments.qio.DriveContents;
+import mekanism.common.attachments.qio.DriveMetadata;
 import mekanism.common.lib.inventory.HashedItem;
+import mekanism.common.registries.MekanismDataComponents;
 import net.minecraft.world.item.ItemStack;
 
 public class QIODriveData {
@@ -18,13 +20,13 @@ public class QIODriveData {
 
     public QIODriveData(QIODriveKey key) {
         this.key = key;
-        ItemStack stack = key.getDriveStack();
-        IQIODriveItem item = (IQIODriveItem) stack.getItem();
+        ItemStack driveStack = key.getDriveStack();
+        IQIODriveItem driveItem = (IQIODriveItem) driveStack.getItem();
         // load capacity values
-        countCapacity = item.getCountCapacity(stack);
-        typeCapacity = item.getTypeCapacity(stack);
+        countCapacity = driveItem.getCountCapacity(driveStack);
+        typeCapacity = driveItem.getTypeCapacity(driveStack);
         // load item map from drive stack
-        item.loadItemMap(stack, this);
+        driveStack.getOrDefault(MekanismDataComponents.DRIVE_CONTENTS, DriveContents.EMPTY).loadItemMap(this);
         // update cached item count value
         itemCount = itemMap.values().longStream().sum();
 
@@ -105,10 +107,9 @@ public class QIODriveData {
         public void updateMetadata(QIODriveData data) {
             ItemStack stack = getDriveStack();
             if (stack.getItem() instanceof IQIODriveItem) {
-                DriveMetadata meta = new DriveMetadata(data.itemCount, data.itemMap.size());
-                meta.write(stack);
+                stack.set(MekanismDataComponents.DRIVE_METADATA, new DriveMetadata(data));
             } else {
-                Mekanism.logger.error("Tried to update QIO meta values on an invalid ItemStack. Something has gone very wrong!");
+                Mekanism.logger.error("Tried to update QIO meta values on an invalid ItemStack ({}). Something has gone very wrong!", stack.getItem());
             }
         }
 

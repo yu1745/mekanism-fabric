@@ -8,10 +8,10 @@ import java.util.UUID;
 import mekanism.api.Action;
 import mekanism.api.fluid.IExtendedFluidTank;
 import mekanism.api.fluid.IMekanismFluidHandler;
+import mekanism.api.functions.ConstantPredicates;
 import mekanism.api.math.MathUtils;
 import mekanism.common.Mekanism;
 import mekanism.common.MekanismLang;
-import mekanism.common.capabilities.fluid.BasicFluidTank;
 import mekanism.common.capabilities.fluid.VariableCapacityFluidTank;
 import mekanism.common.content.network.distribution.FluidHandlerTarget;
 import mekanism.common.content.network.distribution.FluidTransmitterSaveTarget;
@@ -22,10 +22,10 @@ import mekanism.common.util.FluidUtils;
 import mekanism.common.util.MekanismUtils;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.capability.IFluidHandler;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.FluidType;
+import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -42,7 +42,7 @@ public class FluidNetwork extends DynamicBufferedNetwork<IFluidHandler, FluidNet
 
     public FluidNetwork(UUID networkID) {
         super(networkID);
-        fluidTank = VariableCapacityFluidTank.create(this::getCapacityAsInt, BasicFluidTank.alwaysTrueBi, BasicFluidTank.alwaysTrueBi, BasicFluidTank.alwaysTrue, this);
+        fluidTank = VariableCapacityFluidTank.create(this::getCapacityAsInt, ConstantPredicates.alwaysTrueBi(), ConstantPredicates.alwaysTrueBi(), ConstantPredicates.alwaysTrue(), this);
         fluidTanks = Collections.singletonList(fluidTank);
     }
 
@@ -143,22 +143,24 @@ public class FluidNetwork extends DynamicBufferedNetwork<IFluidHandler, FluidNet
         super.updateSaveShares(triggerTransmitter);
         if (!isEmpty()) {
             FluidStack fluidType = fluidTank.getFluid();
-            FluidTransmitterSaveTarget saveTarget = new FluidTransmitterSaveTarget(fluidType, transmitters);
+            FluidTransmitterSaveTarget saveTarget = new FluidTransmitterSaveTarget(getTransmitters());
             EmitUtils.sendToAcceptors(saveTarget, fluidType.getAmount(), fluidType);
             saveTarget.saveShare();
         }
     }
 
     private int tickEmit(@NotNull FluidStack fluidToSend) {
-        Collection<Map<Direction, LazyOptional<IFluidHandler>>> acceptorValues = acceptorCache.getAcceptorValues();
-        FluidHandlerTarget target = new FluidHandlerTarget(fluidToSend, acceptorValues.size() * 2);
-        for (Map<Direction, LazyOptional<IFluidHandler>> acceptors : acceptorValues) {
-            for (LazyOptional<IFluidHandler> lazyAcceptor : acceptors.values()) {
-                lazyAcceptor.ifPresent(acceptor -> {
-                    if (FluidUtils.canFill(acceptor, fluidToSend)) {
-                        target.addHandler(acceptor);
+        Collection<Map<Direction, IFluidHandler>> acceptorValues = acceptorCache.getAcceptorValues();
+        FluidHandlerTarget target = null;
+        for (Map<Direction, IFluidHandler> acceptors : acceptorValues) {
+            for (IFluidHandler acceptor : acceptors.values()) {
+                if (FluidUtils.canFill(acceptor, fluidToSend)) {
+                    if (target == null) {
+                        //Lazily initialize the target, which allows us to also skip attempting to start emitting
+                        target = new FluidHandlerTarget(acceptorValues.size() * 2);
                     }
-                });
+                    target.addHandler(acceptor);
+                }
             }
         }
         return EmitUtils.sendToAcceptors(target, fluidToSend.getAmount(), fluidToSend);
@@ -168,7 +170,7 @@ public class FluidNetwork extends DynamicBufferedNetwork<IFluidHandler, FluidNet
     public void onUpdate() {
         super.onUpdate();
         if (needsUpdate) {
-            MinecraftForge.EVENT_BUS.post(new FluidTransferEvent(this, lastFluid));
+            NeoForge.EVENT_BUS.post(new FluidTransferEvent(this, lastFluid));
             needsUpdate = false;
         }
         if (fluidTank.isEmpty()) {
@@ -202,7 +204,7 @@ public class FluidNetwork extends DynamicBufferedNetwork<IFluidHandler, FluidNet
 
     @Override
     public Component getNeededInfo() {
-        return MekanismLang.FLUID_NETWORK_NEEDED.translate(fluidTank.getNeeded() / 1_000F);
+        return MekanismLang.FLUID_NETWORK_NEEDED.translate(fluidTank.getNeeded() / (float) FluidType.BUCKET_VOLUME);
     }
 
     @Override
@@ -239,10 +241,10 @@ public class FluidNetwork extends DynamicBufferedNetwork<IFluidHandler, FluidNet
     public void onContentsChanged() {
         markDirty();
         FluidStack type = fluidTank.getFluid();
-        if (!lastFluid.isFluidEqual(type)) {
+        if (!FluidStack.isSameFluidSameComponents(lastFluid, type)) {
             //If the fluid type does not match update it, and mark that we need an update
             if (!type.isEmpty()) {
-                lastFluid = new FluidStack(type, 1);
+                lastFluid = type.copyWithAmount(1);
             }
             needsUpdate = true;
         }
@@ -253,7 +255,7 @@ public class FluidNetwork extends DynamicBufferedNetwork<IFluidHandler, FluidNet
             fluidTank.setEmpty();
         } else {
             lastFluid = fluid;
-            fluidTank.setStack(new FluidStack(fluid, 1));
+            fluidTank.setStack(fluid.copyWithAmount(1));
         }
     }
 

@@ -9,15 +9,18 @@ import mekanism.common.integration.crafttweaker.CrTRecipeComponents;
 import mekanism.common.integration.crafttweaker.CrTUtils;
 import mekanism.common.integration.crafttweaker.chemical.ICrTChemicalStack;
 import mekanism.common.integration.crafttweaker.recipe.manager.ChemicalDissolutionRecipeManager;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.world.item.crafting.Recipe;
+import net.minecraft.world.item.crafting.RecipeHolder;
 
 @IRecipeHandler.For(ChemicalDissolutionRecipe.class)
 public class ChemicalDissolutionRecipeHandler extends MekanismRecipeHandler<ChemicalDissolutionRecipe> {
 
     @Override
-    public String dumpToCommandString(IRecipeManager<? super ChemicalDissolutionRecipe> manager, ChemicalDissolutionRecipe recipe) {
-        return buildCommandString(manager, recipe, recipe.getItemInput(), recipe.getGasInput(), recipe.getOutputDefinition());
+    public String dumpToCommandString(IRecipeManager<? super ChemicalDissolutionRecipe> manager, RegistryAccess registryAccess,
+          RecipeHolder<ChemicalDissolutionRecipe> recipeHolder) {
+        ChemicalDissolutionRecipe recipe = recipeHolder.value();
+        return buildCommandString(manager, recipeHolder, recipe.getItemInput(), recipe.getChemicalInput(), recipe.getOutputDefinition(), recipe.perTickUsage());
     }
 
     @Override
@@ -26,28 +29,26 @@ public class ChemicalDissolutionRecipeHandler extends MekanismRecipeHandler<Chem
         // ensures that it is of the same type
         if (o instanceof ChemicalDissolutionRecipe other) {
             return ingredientConflicts(recipe.getItemInput(), other.getItemInput()) &&
-                   ingredientConflicts(recipe.getGasInput(), other.getGasInput());
+                   ingredientConflicts(recipe.getChemicalInput(), other.getChemicalInput());
         }
         return false;
     }
 
     @Override
-    public Optional<IDecomposedRecipe> decompose(IRecipeManager<? super ChemicalDissolutionRecipe> manager, ChemicalDissolutionRecipe recipe) {
-        return decompose(recipe.getItemInput(), recipe.getGasInput(), recipe.getOutputDefinition());
+    public Optional<IDecomposedRecipe> decompose(IRecipeManager<? super ChemicalDissolutionRecipe> manager, RegistryAccess registryAccess,
+          ChemicalDissolutionRecipe recipe) {
+        return decompose(recipe.getItemInput(), recipe.getChemicalInput(), recipe.getOutputDefinition(), recipe.perTickUsage());
     }
 
     @Override
-    public Optional<ChemicalDissolutionRecipe> recompose(IRecipeManager<? super ChemicalDissolutionRecipe> m, ResourceLocation name, IDecomposedRecipe recipe) {
+    public Optional<ChemicalDissolutionRecipe> recompose(IRecipeManager<? super ChemicalDissolutionRecipe> m, RegistryAccess registryAccess, IDecomposedRecipe recipe) {
         if (m instanceof ChemicalDissolutionRecipeManager manager) {
-            Optional<? extends ICrTChemicalStack<?, ?, ?>> output = CrTRecipeComponents.CHEMICAL_COMPONENTS.stream()
-                  .map(chemicalComponent -> CrTUtils.getSingleIfPresent(recipe, chemicalComponent.output()))
-                  .filter(Optional::isPresent)
-                  .findFirst()
-                  .flatMap(singleIfPresent -> singleIfPresent);
-            return Optional.of(manager.makeRecipe(name,
+            Optional<? extends ICrTChemicalStack> found = CrTUtils.getSingleIfPresent(recipe, CrTRecipeComponents.CHEMICAL.output());
+            return Optional.of(manager.makeRecipe(
                   recipe.getOrThrowSingle(CrTRecipeComponents.ITEM.input()),
-                  recipe.getOrThrowSingle(CrTRecipeComponents.GAS.input()),
-                  output.orElseThrow(() -> new IllegalArgumentException("No specified output chemical."))
+                  recipe.getOrThrowSingle(CrTRecipeComponents.CHEMICAL.input()),
+                  found.orElseThrow(() -> new IllegalArgumentException("No specified output chemical.")),
+                  recipe.getOrThrowSingle(CrTRecipeComponents.PER_TICK_USAGE)
             ));
         }
         return Optional.empty();

@@ -5,12 +5,11 @@ import com.mojang.serialization.MapCodec;
 import java.util.Arrays;
 import java.util.Collections;
 import mekanism.common.integration.computer.MethodRestriction;
-import net.minecraft.util.ExtraCodecs;
 
 public class MekCodecs {
 
-    public static final Codec<MethodRestriction> METHOD_RESTRICTION_CODEC = ExtraCodecs.stringResolverCodec(MethodRestriction::name, MethodRestriction::valueOf);
-    public static final Codec<Class<?>> CLASS_TO_STRING_CODEC = ExtraCodecs.stringResolverCodec(Class::getName, s->{
+    public static final Codec<MethodRestriction> METHOD_RESTRICTION_CODEC = Codec.stringResolver(MethodRestriction::name, MethodRestriction::valueOf);
+    public static final Codec<Class<?>> CLASS_TO_STRING_CODEC = Codec.stringResolver(Class::getName, s -> {
         try {
             return Class.forName(s);
         } catch (ClassNotFoundException e) {

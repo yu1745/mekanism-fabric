@@ -1,7 +1,7 @@
 package mekanism.client.render.lib;
 
+import net.minecraft.SharedConstants;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.util.Mth;
 
 public class ScrollIncrementer {
@@ -14,14 +14,9 @@ public class ScrollIncrementer {
         this.discrete = discrete;
     }
 
-    private long getTime() {
-        ClientLevel level = Minecraft.getInstance().level;
-        return level == null ? -1 : level.getGameTime();
-    }
-
     public int scroll(double delta) {
-        long time = getTime();
-        if (time - lastScrollTime > 20) {
+        long time = Minecraft.getInstance().gui.getGuiTicks();
+        if (time - lastScrollTime > SharedConstants.TICKS_PER_SECOND) {
             scrollDelta = 0;
         }
         lastScrollTime = time;

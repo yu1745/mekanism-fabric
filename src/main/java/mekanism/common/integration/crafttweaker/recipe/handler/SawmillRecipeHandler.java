@@ -1,5 +1,6 @@
 package mekanism.common.integration.crafttweaker.recipe.handler;
 
+import com.blamejared.crafttweaker.api.ingredient.IIngredientWithAmount;
 import com.blamejared.crafttweaker.api.item.IItemStack;
 import com.blamejared.crafttweaker.api.recipe.component.DecomposedRecipeBuilder;
 import com.blamejared.crafttweaker.api.recipe.component.IDecomposedRecipe;
@@ -8,24 +9,25 @@ import com.blamejared.crafttweaker.api.recipe.manager.base.IRecipeManager;
 import java.util.List;
 import java.util.Optional;
 import mekanism.api.recipes.SawmillRecipe;
-import mekanism.api.recipes.ingredients.ItemStackIngredient;
 import mekanism.common.integration.crafttweaker.CrTRecipeComponents;
 import mekanism.common.integration.crafttweaker.CrTUtils;
 import mekanism.common.integration.crafttweaker.recipe.manager.SawmillRecipeManager;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Recipe;
+import net.minecraft.world.item.crafting.RecipeHolder;
 
 @IRecipeHandler.For(SawmillRecipe.class)
 public class SawmillRecipeHandler extends MekanismRecipeHandler<SawmillRecipe> {
 
     @Override
-    public String dumpToCommandString(IRecipeManager<? super SawmillRecipe> manager, SawmillRecipe recipe) {
+    public String dumpToCommandString(IRecipeManager<? super SawmillRecipe> manager, RegistryAccess registryAccess, RecipeHolder<SawmillRecipe> recipeHolder) {
+        SawmillRecipe recipe = recipeHolder.value();
         //Note: We take advantage of the fact that if we have a recipe we have at least one output and that we can skip parameters
         // as if they were optional
         boolean hasSecondary = recipe.getSecondaryChance() > 0;
         List<ItemStack> mainOutputDefinition = recipe.getMainOutputDefinition();
-        return buildCommandString(manager, recipe, recipe.getInput(),
+        return buildCommandString(manager, recipeHolder, recipe.getInput(),
               mainOutputDefinition.isEmpty() ? SKIP_OPTIONAL_PARAM : mainOutputDefinition,
               hasSecondary ? recipe.getSecondaryOutputDefinition() : SKIP_OPTIONAL_PARAM,
               hasSecondary ? recipe.getSecondaryChance() : SKIP_OPTIONAL_PARAM
@@ -40,7 +42,7 @@ public class SawmillRecipeHandler extends MekanismRecipeHandler<SawmillRecipe> {
     }
 
     @Override
-    public Optional<IDecomposedRecipe> decompose(IRecipeManager<? super SawmillRecipe> manager, SawmillRecipe recipe) {
+    public Optional<IDecomposedRecipe> decompose(IRecipeManager<? super SawmillRecipe> manager, RegistryAccess registryAccess, SawmillRecipe recipe) {
         List<ItemStack> mainOutputDefinition = recipe.getMainOutputDefinition();
         if (mainOutputDefinition.size() > 1) {
             return Optional.empty();
@@ -57,7 +59,7 @@ public class SawmillRecipeHandler extends MekanismRecipeHandler<SawmillRecipe> {
             return Optional.empty();
         }
         DecomposedRecipeBuilder builder = IDecomposedRecipe.builder()
-              .with(CrTRecipeComponents.ITEM.input(), recipe.getInput());
+              .with(CrTRecipeComponents.ITEM.input(), CrTUtils.toCrT(recipe.getInput()));
         if (mainOutputDefinition.isEmpty()) {
             //Only has a secondary output
             builder.with(CrTRecipeComponents.ITEM.output(), CrTUtils.convertItems(secondaryOutputDefinition))
@@ -67,16 +69,16 @@ public class SawmillRecipeHandler extends MekanismRecipeHandler<SawmillRecipe> {
             builder.with(CrTRecipeComponents.ITEM.output(), CrTUtils.convertItems(mainOutputDefinition));
         } else {
             //Has both main and secondary outputs
-            builder.with(CrTRecipeComponents.ITEM.output(), CrTUtils.convertItems(List.of(mainOutputDefinition.get(0), secondaryOutputDefinition.get(0))))
+            builder.with(CrTRecipeComponents.ITEM.output(), CrTUtils.convertItems(List.of(mainOutputDefinition.getFirst(), secondaryOutputDefinition.getFirst())))
                   .with(CrTRecipeComponents.CHANCE, recipe.getSecondaryChance());
         }
         return Optional.of(builder.build());
     }
 
     @Override
-    public Optional<SawmillRecipe> recompose(IRecipeManager<? super SawmillRecipe> m, ResourceLocation name, IDecomposedRecipe recipe) {
+    public Optional<SawmillRecipe> recompose(IRecipeManager<? super SawmillRecipe> m, RegistryAccess registryAccess, IDecomposedRecipe recipe) {
         if (m instanceof SawmillRecipeManager manager) {
-            ItemStackIngredient input = recipe.getOrThrowSingle(CrTRecipeComponents.ITEM.input());
+            IIngredientWithAmount input = recipe.getOrThrowSingle(CrTRecipeComponents.ITEM.input());
             List<IItemStack> outputs = recipe.get(CrTRecipeComponents.ITEM.output());
             if (outputs == null || outputs.isEmpty() || outputs.size() > 2) {
                 throw new IllegalArgumentException("Incorrect number of outputs specified. Must be either one or two outputs, and have a secondary chance if two.");
@@ -103,19 +105,19 @@ public class SawmillRecipeHandler extends MekanismRecipeHandler<SawmillRecipe> {
             if (secondaryOutput.isEmpty()) {
                 if (chance == 0 || chance == 1) {
                     //Only has a main output (or only secondary with 100% chance, so we can treat it as a main output)
-                    return Optional.of(manager.makeRecipe(name,
+                    return Optional.of(manager.makeRecipe(
                           input,
                           output
                     ));
                 }
                 //Only has a secondary output
-                return Optional.of(manager.makeRecipe(name,
+                return Optional.of(manager.makeRecipe(
                       input,
                       output,
                       chance
                 ));
             }
-            return Optional.of(manager.makeRecipe(name,
+            return Optional.of(manager.makeRecipe(
                   input,
                   output,
                   secondaryOutput,

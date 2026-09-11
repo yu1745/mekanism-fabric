@@ -1,40 +1,50 @@
 package mekanism.common.tile.laser;
 
+import com.mojang.serialization.Codec;
+import io.netty.buffer.ByteBuf;
+import java.util.Locale;
+import java.util.function.IntFunction;
 import mekanism.api.IContentsListener;
 import mekanism.api.IIncrementalEnum;
-import mekanism.api.NBTConstants;
+import mekanism.api.SerializationConstants;
 import mekanism.api.annotations.NothingNullByDefault;
-import mekanism.api.math.FloatingLong;
-import mekanism.api.math.MathUtils;
-import mekanism.api.text.IHasTranslationKey;
+import mekanism.api.functions.ConstantPredicates;
+import mekanism.api.text.IHasTranslationKey.IHasEnumNameTranslationKey;
 import mekanism.api.text.ILangEntry;
 import mekanism.common.MekanismLang;
-import mekanism.common.capabilities.Capabilities;
+import mekanism.common.attachments.containers.ContainerType;
 import mekanism.common.capabilities.energy.BasicEnergyContainer;
 import mekanism.common.capabilities.energy.LaserEnergyContainer;
 import mekanism.common.capabilities.holder.energy.EnergyContainerHelper;
-import mekanism.common.capabilities.resolver.BasicCapabilityResolver;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.integration.computer.ComputerException;
 import mekanism.common.integration.computer.annotation.ComputerMethod;
 import mekanism.common.inventory.container.MekanismContainer;
 import mekanism.common.inventory.container.sync.SyncableEnum;
-import mekanism.common.inventory.container.sync.SyncableFloatingLong;
 import mekanism.common.inventory.container.sync.SyncableInt;
+import mekanism.common.inventory.container.sync.SyncableLong;
 import mekanism.common.registries.MekanismBlocks;
-import mekanism.common.tile.base.SubstanceType;
+import mekanism.common.registries.MekanismDataComponents;
 import mekanism.common.tile.interfaces.IHasMode;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.NBTUtils;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.util.ByIdMap;
+import net.minecraft.util.StringRepresentable;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import org.jetbrains.annotations.Nullable;
+import net.minecraft.world.level.redstone.Redstone;
+import org.jetbrains.annotations.NotNull;
 
 public class TileEntityLaserAmplifier extends TileEntityLaserReceptor implements IHasMode {
 
-    private FloatingLong minThreshold = FloatingLong.ZERO;
-    private FloatingLong maxThreshold = MekanismConfig.storage.laserAmplifier.get();
+    private long minThreshold = 0L;
+    private long maxThreshold = MekanismConfig.storage.laserAmplifier.get();
     private int ticks = 0;
     private int delay = 0;
     private boolean emittingRedstone;
@@ -42,26 +52,26 @@ public class TileEntityLaserAmplifier extends TileEntityLaserReceptor implements
 
     public TileEntityLaserAmplifier(BlockPos pos, BlockState state) {
         super(MekanismBlocks.LASER_AMPLIFIER, pos, state);
-        addCapabilityResolver(BasicCapabilityResolver.constant(Capabilities.CONFIG_CARD, this));
     }
 
     @Override
     protected void addInitialEnergyContainers(EnergyContainerHelper builder, IContentsListener listener) {
-        builder.addContainer(energyContainer = LaserEnergyContainer.create(BasicEnergyContainer.alwaysTrue, BasicEnergyContainer.internalOnly, this, listener));
+        builder.addContainer(energyContainer = LaserEnergyContainer.create(ConstantPredicates.alwaysTrue(), BasicEnergyContainer.internalOnly, this, listener));
     }
 
     @Override
-    protected void onUpdateServer() {
+    protected boolean onUpdateServer() {
         setEmittingRedstone(false);
         if (ticks < delay) {
             ticks++;
         } else {
             ticks = 0;
         }
-        super.onUpdateServer();
+        boolean sendUpdatePacket = super.onUpdateServer();
         if (outputMode != RedstoneOutput.ENTITY_DETECTION) {
             setEmittingRedstone(false);
         }
+        return sendUpdatePacket;
     }
 
     @Override
@@ -70,12 +80,12 @@ public class TileEntityLaserAmplifier extends TileEntityLaserReceptor implements
     }
 
     private boolean shouldFire() {
-        return ticks >= delay && energyContainer.getEnergy().compareTo(minThreshold) >= 0 && MekanismUtils.canFunction(this);
+        return ticks >= delay && energyContainer.getEnergy() >= minThreshold && canFunction();
     }
 
     @Override
-    protected FloatingLong toFire() {
-        return shouldFire() ? super.toFire().min(maxThreshold) : FloatingLong.ZERO;
+    protected long toFire() {
+        return shouldFire() ? Math.min(super.toFire(), maxThreshold) : 0L;
     }
 
     @Override
@@ -83,18 +93,18 @@ public class TileEntityLaserAmplifier extends TileEntityLaserReceptor implements
         if (outputMode == RedstoneOutput.ENERGY_CONTENTS) {
             return MekanismUtils.redstoneLevelFromContents(energyContainer.getEnergy(), energyContainer.getMaxEnergy());
         }
-        return emittingRedstone ? 15 : 0;
+        return emittingRedstone ? Redstone.SIGNAL_MAX : Redstone.SIGNAL_NONE;
     }
 
     @Override
-    protected boolean makesComparatorDirty(@Nullable SubstanceType type) {
-        return type == SubstanceType.ENERGY;
+    protected boolean makesComparatorDirty(ContainerType<?, ?, ?> type) {
+        return type == ContainerType.ENERGY;
     }
 
     @Override
     protected void notifyComparatorChange() {
         //Notify neighbors instead of just comparators as we also allow for direct redstone levels
-        level.updateNeighborsAt(getBlockPos(), getBlockType());
+        level.updateNeighborsAt(getBlockPos(), getBlockState().getBlock());
     }
 
     public void setDelay(int delay) {
@@ -117,24 +127,24 @@ public class TileEntityLaserAmplifier extends TileEntityLaserReceptor implements
         setChanged();
     }
 
-    public void setMinThresholdFromPacket(FloatingLong target) {
+    public void setMinThresholdFromPacket(long target) {
         if (updateMinThreshold(target)) {
             markForSave();
         }
     }
 
-    public void setMaxThresholdFromPacket(FloatingLong target) {
+    public void setMaxThresholdFromPacket(long target) {
         if (updateMaxThreshold(target)) {
             markForSave();
         }
     }
 
-    private boolean updateMinThreshold(FloatingLong target) {
-        FloatingLong threshold = getThreshold(target);
-        if (!minThreshold.equals(threshold)) {
+    private boolean updateMinThreshold(long target) {
+        long threshold = getThreshold(target);
+        if (minThreshold != threshold) {
             minThreshold = threshold;
             //If the min threshold is greater than the max threshold, update max threshold
-            if (minThreshold.greaterThan(maxThreshold)) {
+            if (minThreshold > maxThreshold) {
                 maxThreshold = minThreshold;
             }
             return true;
@@ -142,13 +152,13 @@ public class TileEntityLaserAmplifier extends TileEntityLaserReceptor implements
         return false;
     }
 
-    private boolean updateMaxThreshold(FloatingLong target) {
+    private boolean updateMaxThreshold(long target) {
         //Cap threshold at max energy capacity
-        FloatingLong threshold = getThreshold(target);
-        if (!maxThreshold.equals(threshold)) {
+        long threshold = getThreshold(target);
+        if (maxThreshold != threshold) {
             maxThreshold = threshold;
             //If the max threshold is smaller than the min threshold, update min threshold
-            if (maxThreshold.smallerThan(minThreshold)) {
+            if (maxThreshold < minThreshold) {
                 minThreshold = maxThreshold;
             }
             return true;
@@ -156,31 +166,48 @@ public class TileEntityLaserAmplifier extends TileEntityLaserReceptor implements
         return false;
     }
 
-    private FloatingLong getThreshold(FloatingLong target) {
-        FloatingLong maxEnergy = energyContainer.getMaxEnergy();
-        return target.smallerOrEqual(maxEnergy) ? target : maxEnergy.copyAsConst();
+    private long getThreshold(long target) {
+        return Math.min(target, energyContainer.getMaxEnergy());
     }
 
     @Override
-    protected void loadGeneralPersistentData(CompoundTag data) {
-        super.loadGeneralPersistentData(data);
-        NBTUtils.setFloatingLongIfPresent(data, NBTConstants.MIN, this::updateMinThreshold);
-        NBTUtils.setFloatingLongIfPresent(data, NBTConstants.MAX, this::updateMaxThreshold);
-        NBTUtils.setIntIfPresent(data, NBTConstants.TIME, value -> delay = value);
-        NBTUtils.setEnumIfPresent(data, NBTConstants.OUTPUT_MODE, RedstoneOutput::byIndexStatic, mode -> outputMode = mode);
+    public void readSustainedData(HolderLookup.Provider provider, @NotNull CompoundTag data) {
+        super.readSustainedData(provider, data);
+        NBTUtils.setLegacyEnergyIfPresent(data, SerializationConstants.MIN, this::updateMinThreshold);
+        NBTUtils.setLegacyEnergyIfPresent(data, SerializationConstants.MAX, this::updateMaxThreshold);
+        NBTUtils.setIntIfPresent(data, SerializationConstants.TIME, value -> delay = value);
+        NBTUtils.setEnumIfPresent(data, SerializationConstants.OUTPUT_MODE, RedstoneOutput.BY_ID, mode -> outputMode = mode);
     }
 
     @Override
-    protected void addGeneralPersistentData(CompoundTag data) {
-        super.addGeneralPersistentData(data);
-        data.putString(NBTConstants.MIN, minThreshold.toString());
-        data.putString(NBTConstants.MAX, maxThreshold.toString());
-        data.putInt(NBTConstants.TIME, delay);
-        NBTUtils.writeEnum(data, NBTConstants.OUTPUT_MODE, outputMode);
+    public void writeSustainedData(HolderLookup.Provider provider, CompoundTag data) {
+        super.writeSustainedData(provider, data);
+        data.putLong(SerializationConstants.MIN, minThreshold);
+        data.putLong(SerializationConstants.MAX, maxThreshold);
+        data.putInt(SerializationConstants.TIME, delay);
+        NBTUtils.writeEnum(data, SerializationConstants.OUTPUT_MODE, outputMode);
     }
 
     @Override
-    public boolean canPulse() {
+    protected void applyImplicitComponents(@NotNull BlockEntity.DataComponentInput input) {
+        super.applyImplicitComponents(input);
+        updateMinThreshold(input.getOrDefault(MekanismDataComponents.MIN_THRESHOLD, minThreshold));
+        updateMaxThreshold(input.getOrDefault(MekanismDataComponents.MAX_THRESHOLD, maxThreshold));
+        setDelay(input.getOrDefault(MekanismDataComponents.DELAY, delay));
+        outputMode = input.getOrDefault(MekanismDataComponents.REDSTONE_OUTPUT, outputMode);
+    }
+
+    @Override
+    protected void collectImplicitComponents(@NotNull DataComponentMap.Builder builder) {
+        super.collectImplicitComponents(builder);
+        builder.set(MekanismDataComponents.MIN_THRESHOLD, minThreshold);
+        builder.set(MekanismDataComponents.MAX_THRESHOLD, maxThreshold);
+        builder.set(MekanismDataComponents.DELAY, delay);
+        builder.set(MekanismDataComponents.REDSTONE_OUTPUT, outputMode);
+    }
+
+    @Override
+    public boolean supportsMode(RedstoneControl mode) {
         return true;
     }
 
@@ -195,22 +222,22 @@ public class TileEntityLaserAmplifier extends TileEntityLaserReceptor implements
     }
 
     @ComputerMethod
-    public FloatingLong getMinThreshold() {
+    public long getMinThreshold() {
         return minThreshold;
     }
 
     @ComputerMethod
-    public FloatingLong getMaxThreshold() {
+    public long getMaxThreshold() {
         return maxThreshold;
     }
 
     @Override
     public void addContainerTrackers(MekanismContainer container) {
         super.addContainerTrackers(container);
-        container.track(SyncableFloatingLong.create(this::getMinThreshold, value -> minThreshold = value));
-        container.track(SyncableFloatingLong.create(this::getMaxThreshold, value -> maxThreshold = value));
+        container.track(SyncableLong.create(this::getMinThreshold, value -> minThreshold = value));
+        container.track(SyncableLong.create(this::getMaxThreshold, value -> maxThreshold = value));
         container.track(SyncableInt.create(this::getDelay, value -> delay = value));
-        container.track(SyncableEnum.create(RedstoneOutput::byIndexStatic, RedstoneOutput.OFF, this::getOutputMode, value -> outputMode = value));
+        container.track(SyncableEnum.create(RedstoneOutput.BY_ID, RedstoneOutput.OFF, this::getOutputMode, value -> outputMode = value));
     }
 
     //Methods relating to IComputerTile
@@ -233,28 +260,33 @@ public class TileEntityLaserAmplifier extends TileEntityLaserReceptor implements
     }
 
     @ComputerMethod(requiresPublicSecurity = true)
-    void setMinThreshold(FloatingLong threshold) throws ComputerException {
+    void setMinThreshold(long threshold) throws ComputerException {
         validateSecurityIsPublic();
         setMinThresholdFromPacket(threshold);
     }
 
     @ComputerMethod(requiresPublicSecurity = true)
-    void setMaxThreshold(FloatingLong threshold) throws ComputerException {
+    void setMaxThreshold(long threshold) throws ComputerException {
         validateSecurityIsPublic();
         setMaxThresholdFromPacket(threshold);
     }
     //End methods IComputerTile
 
     @NothingNullByDefault
-    public enum RedstoneOutput implements IIncrementalEnum<RedstoneOutput>, IHasTranslationKey {
+    public enum RedstoneOutput implements IIncrementalEnum<RedstoneOutput>, IHasEnumNameTranslationKey, StringRepresentable {
         OFF(MekanismLang.OFF),
         ENTITY_DETECTION(MekanismLang.ENTITY_DETECTION),
         ENERGY_CONTENTS(MekanismLang.ENERGY_CONTENTS);
 
-        private static final RedstoneOutput[] MODES = values();
+        public static final Codec<RedstoneOutput> CODEC = StringRepresentable.fromEnum(RedstoneOutput::values);
+        public static final IntFunction<RedstoneOutput> BY_ID = ByIdMap.continuous(RedstoneOutput::ordinal, values(), ByIdMap.OutOfBoundsStrategy.WRAP);
+        public static final StreamCodec<ByteBuf, RedstoneOutput> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, RedstoneOutput::ordinal);
+
+        private final String serializedName;
         private final ILangEntry langEntry;
 
         RedstoneOutput(ILangEntry langEntry) {
+            this.serializedName = name().toLowerCase(Locale.ROOT);
             this.langEntry = langEntry;
         }
 
@@ -265,11 +297,12 @@ public class TileEntityLaserAmplifier extends TileEntityLaserReceptor implements
 
         @Override
         public RedstoneOutput byIndex(int index) {
-            return byIndexStatic(index);
+            return BY_ID.apply(index);
         }
 
-        public static RedstoneOutput byIndexStatic(int index) {
-            return MathUtils.getByIndexMod(MODES, index);
+        @Override
+        public String getSerializedName() {
+            return serializedName;
         }
     }
 }

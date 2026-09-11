@@ -7,9 +7,9 @@ import mekanism.api.Action;
 import mekanism.api.AutomationType;
 import mekanism.api.IContentsListener;
 import mekanism.api.annotations.NothingNullByDefault;
+import mekanism.api.functions.ConstantPredicates;
 import mekanism.common.util.MekanismUtils;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.common.ForgeHooks;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -18,7 +18,8 @@ public class FuelInventorySlot extends BasicInventorySlot {
 
     public static FuelInventorySlot forFuel(ToIntFunction<@NotNull ItemStack> fuelValue, @Nullable IContentsListener listener, int x, int y) {
         Objects.requireNonNull(fuelValue, "Fuel value calculator cannot be null");
-        return new FuelInventorySlot(stack -> fuelValue.applyAsInt(stack) == 0, stack -> fuelValue.applyAsInt(stack) > 0, alwaysTrue, listener, x, y);
+        return new FuelInventorySlot(stack -> fuelValue.applyAsInt(stack) == 0, stack -> fuelValue.applyAsInt(stack) != 0,
+              ConstantPredicates.alwaysTrue(), listener, x, y);
     }
 
     private FuelInventorySlot(Predicate<@NotNull ItemStack> canExtract, Predicate<@NotNull ItemStack> canInsert, Predicate<@NotNull ItemStack> validator,
@@ -31,8 +32,8 @@ public class FuelInventorySlot extends BasicInventorySlot {
         if (isEmpty()) {
             return 0;
         }
-        int burnTime = ForgeHooks.getBurnTime(current, null) / 2;
-        if (burnTime > 0) {
+        int burnTime = current.getBurnTime(null) / 2;
+        if (burnTime != 0) {
             if (current.hasCraftingRemainingItem()) {
                 if (current.getCount() > 1) {
                     //If we have a container but have more than a single stack of it somehow just exit

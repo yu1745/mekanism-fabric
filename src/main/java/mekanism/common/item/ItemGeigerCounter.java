@@ -1,11 +1,13 @@
 package mekanism.common.item;
 
+import mekanism.api.radiation.IRadiationManager;
 import mekanism.api.text.EnumColor;
 import mekanism.common.MekanismLang;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.lib.radiation.RadiationManager;
-import mekanism.common.lib.radiation.RadiationManager.LevelAndMaxMagnitude;
-import mekanism.common.lib.radiation.RadiationManager.RadiationScale;
+import mekanism.common.lib.radiation.LevelAndMaxMagnitude;
+import mekanism.common.lib.radiation.RadiationScale;
+import mekanism.common.lib.radiation.RadiationUtil;
 import mekanism.common.util.UnitDisplayUtils;
 import mekanism.common.util.UnitDisplayUtils.RadiationUnit;
 import mekanism.common.util.text.TextUtils;
@@ -37,9 +39,9 @@ public class ItemGeigerCounter extends Item {
                 EnumColor severityColor = RadiationScale.getSeverityColor(magnitude);
                 player.sendSystemMessage(MekanismLang.RADIATION_EXPOSURE.translateColored(EnumColor.GRAY, severityColor,
                       UnitDisplayUtils.getDisplayShort(magnitude, RadiationUnit.SVH, 3)));
-                if (MekanismConfig.common.enableDecayTimers.get() && magnitude > RadiationManager.BASELINE) {
+                if (MekanismConfig.common.enableDecayTimers.get() && magnitude > IRadiationManager.INSTANCE.baselineRadiation()) {
                     player.sendSystemMessage(MekanismLang.RADIATION_DECAY_TIME.translateColored(EnumColor.GRAY,
-                          severityColor, TextUtils.getHoursMinutes(RadiationManager.get().getDecayTime(levelAndMaxMagnitude.maxMagnitude(), true))));
+                          severityColor, TextUtils.getHoursMinutes(world, RadiationUtil.getDecayTime(levelAndMaxMagnitude.maxMagnitude(), true))));
                 }
                 CriteriaTriggers.USING_ITEM.trigger((ServerPlayer) player, stack);
             }

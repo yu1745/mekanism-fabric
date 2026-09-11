@@ -1,21 +1,16 @@
 package mekanism.client.render.data;
 
 import java.util.Objects;
+import mekanism.api.MekanismAPI;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.chemical.Chemical;
 import mekanism.api.chemical.ChemicalStack;
-import mekanism.api.chemical.gas.Gas;
-import mekanism.api.chemical.infuse.InfuseType;
-import mekanism.api.chemical.pigment.Pigment;
-import mekanism.api.chemical.slurry.Slurry;
-import mekanism.client.render.data.ChemicalRenderData.GasRenderData;
-import mekanism.client.render.data.ChemicalRenderData.InfusionRenderData;
-import mekanism.client.render.data.ChemicalRenderData.PigmentRenderData;
-import mekanism.client.render.data.ChemicalRenderData.SlurryRenderData;
+import mekanism.client.render.ModelRenderer;
 import mekanism.common.lib.multiblock.MultiblockData;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
-import net.minecraftforge.fluids.FluidStack;
+import net.minecraft.core.Holder;
+import net.neoforged.neoforge.fluids.FluidStack;
 import org.jetbrains.annotations.Nullable;
 
 @NothingNullByDefault
@@ -45,18 +40,21 @@ public abstract class RenderData {
 
     @Override
     public int hashCode() {
-        return Objects.hash(height, length, width);
+        int result = location.hashCode();
+        result = 31 * result + height;
+        result = 31 * result + length;
+        result = 31 * result + width;
+        return result;
     }
 
     @Override
-    public boolean equals(Object object) {
+    public boolean equals(@Nullable Object object) {
         return object instanceof RenderData data && data.height == height && data.length == length && data.width == width;
     }
 
     public static class Builder<DATA_TYPE extends RenderData> {
 
-        @Nullable
-        private final Chemical<?> chemical;
+        private final Holder<Chemical> chemical;
         private final FluidStack fluid;
         @Nullable
         private BlockPos location;
@@ -64,23 +62,23 @@ public abstract class RenderData {
         private int length;
         private int width;
 
-        private Builder(@Nullable Chemical<?> chemical, FluidStack fluid) {
+        private Builder(Holder<Chemical> chemical, FluidStack fluid) {
             this.chemical = chemical;
             this.fluid = fluid;
         }
 
-        public static <CHEMICAL extends Chemical<CHEMICAL>> Builder<ChemicalRenderData<CHEMICAL>> create(ChemicalStack<CHEMICAL> chemical) {
+        public static Builder<ChemicalRenderData> create(ChemicalStack chemical) {
             if (chemical.isEmpty()) {
                 throw new IllegalArgumentException("Chemical may not be empty");
             }
-            return new Builder<>(chemical.getType(), FluidStack.EMPTY);
+            return new Builder<>(chemical.getChemicalHolder(), FluidStack.EMPTY);
         }
 
         public static Builder<FluidRenderData> create(FluidStack fluid) {
             if (fluid.isEmpty()) {
                 throw new IllegalArgumentException("Fluid may not be empty");
             }
-            return new Builder<>(null, fluid);
+            return new Builder<>(MekanismAPI.EMPTY_CHEMICAL_HOLDER, fluid);
         }
 
         public Builder<DATA_TYPE> location(BlockPos renderLocation) {
@@ -108,10 +106,8 @@ public abstract class RenderData {
         }
 
         public Builder<DATA_TYPE> of(MultiblockData multiblock) {
-            return location(Objects.requireNonNull(multiblock.renderLocation, "Render location may not be null."))
-                  .height(multiblock.height() - 2)
-                  .length(multiblock.length())
-                  .width(multiblock.width());
+            return location(Objects.requireNonNull(multiblock.renderLocation, "Render location may not be null.").offset(1, 0, 1))
+                  .dimensions(multiblock.width() - 2, multiblock.height() - 2, multiblock.length() - 2);
         }
 
         public DATA_TYPE build() {
@@ -121,19 +117,40 @@ public abstract class RenderData {
             RenderData data;
             if (!fluid.isEmpty()) {
                 data = new FluidRenderData(location, width, height, length, fluid);
-            } else if (chemical instanceof Gas gas) {
-                data = new GasRenderData(location, width, height, length, gas);
-            } else if (chemical instanceof InfuseType infuseType) {
-                data = new InfusionRenderData(location, width, height, length, infuseType);
-            } else if (chemical instanceof Pigment pigment) {
-                data = new PigmentRenderData(location, width, height, length, pigment);
-            } else if (chemical instanceof Slurry slurry) {
-                data = new SlurryRenderData(location, width, height, length, slurry);
+            } else if (!chemical.is(MekanismAPI.EMPTY_CHEMICAL_KEY)) {
+                data = new ChemicalRenderData(location, width, height, length, chemical);
             } else {
                 throw new IllegalStateException("Incomplete render data builder, missing or unknown chemical or fluid.");
             }
             //noinspection unchecked
             return (DATA_TYPE) data;
         }
+
+        public ScaledRenderData buildScaled(float scale) {
+            if (location == null) {
+                throw new IllegalStateException("Incomplete render data builder, no render location set.");
+            }
+            ScaledRenderData data;
+            if (!fluid.isEmpty()) {
+                data = new FluidRenderData.Scaled(location, width, height, length, fluid, scale);
+            } else if (!chemical.is(MekanismAPI.EMPTY_CHEMICAL_KEY)) {
+                data = new ChemicalRenderData.Scaled(location, width, height, length, chemical, scale);
+            } else {
+                throw new IllegalStateException("Incomplete render data builder, missing or unknown chemical or fluid.");
+            }
+            return data;
+        }
+    }
+
+    public interface ScaledRenderData {
+
+        default RenderData asRenderData() {
+            return (RenderData) this;
+        }
+
+        /**
+         * @return the scale to use on {@link ModelRenderer#getModel(RenderData, double)}
+         */
+        float scale();
     }
 }

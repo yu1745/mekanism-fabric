@@ -1,48 +1,39 @@
 package mekanism.common.advancements.triggers;
 
-import com.google.gson.JsonObject;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import java.util.Optional;
+import mekanism.api.SerializationConstants;
 import mekanism.api.functions.ConstantPredicates;
 import mekanism.common.advancements.MekanismCriteriaTriggers;
-import net.minecraft.advancements.critereon.AbstractCriterionTriggerInstance;
+import net.minecraft.advancements.Criterion;
 import net.minecraft.advancements.critereon.ContextAwarePredicate;
-import net.minecraft.advancements.critereon.DeserializationContext;
+import net.minecraft.advancements.critereon.EntityPredicate;
 import net.minecraft.advancements.critereon.SimpleCriterionTrigger;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.NotNull;
 
 public class AlloyUpgradeTrigger extends SimpleCriterionTrigger<AlloyUpgradeTrigger.TriggerInstance> {
 
-    private final ResourceLocation id;
-
-    public AlloyUpgradeTrigger(ResourceLocation id) {
-        this.id = id;
-    }
-
     @NotNull
     @Override
-    public ResourceLocation getId() {
-        return id;
-    }
-
-    @NotNull
-    @Override
-    protected TriggerInstance createInstance(@NotNull JsonObject json, @NotNull ContextAwarePredicate playerPredicate, @NotNull DeserializationContext context) {
-        return new TriggerInstance(playerPredicate);
+    public Codec<TriggerInstance> codec() {
+        return TriggerInstance.CODEC;
     }
 
     public void trigger(ServerPlayer player) {
         this.trigger(player, ConstantPredicates.alwaysTrue());
     }
 
-    public static class TriggerInstance extends AbstractCriterionTriggerInstance {
+    public record TriggerInstance(Optional<ContextAwarePredicate> player) implements SimpleCriterionTrigger.SimpleInstance {
 
-        public TriggerInstance(ContextAwarePredicate playerPredicate) {
-            super(MekanismCriteriaTriggers.ALLOY_UPGRADE.getId(), playerPredicate);
-        }
+        public static final Codec<TriggerInstance> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+                    EntityPredicate.ADVANCEMENT_CODEC.optionalFieldOf(SerializationConstants.PLAYER).forGetter(TriggerInstance::player)
+              ).apply(instance, TriggerInstance::new)
+        );
 
-        public static AlloyUpgradeTrigger.TriggerInstance upgraded() {
-            return new AlloyUpgradeTrigger.TriggerInstance(ContextAwarePredicate.ANY);
+        public static Criterion<TriggerInstance> upgraded() {
+            return MekanismCriteriaTriggers.ALLOY_UPGRADE.createCriterion(new TriggerInstance(Optional.empty()));
         }
     }
 }

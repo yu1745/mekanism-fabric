@@ -2,21 +2,21 @@ package mekanism.generators.client.gui;
 
 import java.util.ArrayList;
 import java.util.List;
+import mekanism.api.math.MathUtils;
 import mekanism.api.text.EnumColor;
 import mekanism.client.gui.GuiMekanismTile;
-import mekanism.client.gui.element.GuiElement;
 import mekanism.client.gui.element.GuiInnerScreen;
 import mekanism.client.gui.element.bar.GuiBar.IBarInfoHandler;
 import mekanism.client.gui.element.bar.GuiVerticalPowerBar;
 import mekanism.client.gui.element.bar.GuiVerticalRateBar;
 import mekanism.client.gui.element.button.GuiGasMode;
 import mekanism.client.gui.element.gauge.GaugeType;
-import mekanism.client.gui.element.gauge.GuiGasGauge;
+import mekanism.client.gui.element.gauge.GuiChemicalGauge;
 import mekanism.client.gui.element.tab.GuiEnergyTab;
+import mekanism.client.gui.tooltip.TooltipUtils;
 import mekanism.common.MekanismLang;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.inventory.container.tile.MekanismTileContainer;
-import mekanism.common.tile.TileEntityChemicalTank.GasMode;
 import mekanism.common.util.text.EnergyDisplay;
 import mekanism.common.util.text.TextUtils;
 import mekanism.generators.client.gui.element.GuiTurbineTab;
@@ -35,6 +35,8 @@ public class GuiIndustrialTurbine extends GuiMekanismTile<TileEntityTurbineCasin
 
     public GuiIndustrialTurbine(MekanismTileContainer<TileEntityTurbineCasing> container, Inventory inv, Component title) {
         super(container, inv, title);
+        imageWidth += 14;
+        inventoryLabelX += 7;
         inventoryLabelY += 2;
         titleLabelY = 5;
         dynamicSlots = true;
@@ -43,7 +45,7 @@ public class GuiIndustrialTurbine extends GuiMekanismTile<TileEntityTurbineCasin
     @Override
     protected void addGuiElements() {
         super.addGuiElements();
-        addRenderableWidget(new GuiInnerScreen(this, 50, 18, 112, 50, () -> {
+        addRenderableWidget(new GuiInnerScreen(this, 50, 18, 126, 50, () -> {
             List<Component> list = new ArrayList<>();
             TurbineMultiblockData multiblock = tile.getMultiblock();
             if (multiblock.isFormed()) {
@@ -69,11 +71,11 @@ public class GuiIndustrialTurbine extends GuiMekanismTile<TileEntityTurbineCasin
             public double getLevel() {
                 TurbineMultiblockData multiblock = tile.getMultiblock();
                 if (multiblock.isFormed()) {
-                    return multiblock.energyContainer.getEnergy().divideToLevel(multiblock.energyContainer.getMaxEnergy());
+                    return MathUtils.divideToLevel(multiblock.energyContainer.getEnergy(), multiblock.energyContainer.getMaxEnergy());
                 }
                 return 1;
             }
-        }, 164, 16));
+        }, 178, 16));
         addRenderableWidget(new GuiVerticalRateBar(this, new IBarInfoHandler() {
             @Override
             public Component getTooltip() {
@@ -86,45 +88,41 @@ public class GuiIndustrialTurbine extends GuiMekanismTile<TileEntityTurbineCasin
                 if (!multiblock.isFormed()) {
                     return 0;
                 }
-                double rate = Math.min(multiblock.lowerVolume * multiblock.getDispersers() * MekanismGeneratorsConfig.generators.turbineDisperserGasFlow.get(),
-                      multiblock.vents * MekanismGeneratorsConfig.generators.turbineVentGasFlow.get());
+                double rate = Math.min(multiblock.lowerVolume * multiblock.getDispersers() * MekanismGeneratorsConfig.generators.turbineDisperserChemicalFlow.get(),
+                      multiblock.vents * MekanismGeneratorsConfig.generators.turbineVentChemicalFlow.get());
                 if (rate == 0) {
                     return 0;
                 }
                 return Math.min(1, multiblock.lastSteamInput / rate);
             }
         }, 40, 13));
-        addRenderableWidget(new GuiGasGauge(() -> tile.getMultiblock().gasTank, () -> tile.getMultiblock().getGasTanks(null), GaugeType.MEDIUM, this, 6, 13));
+        addRenderableWidget(new GuiChemicalGauge(() -> tile.getMultiblock().chemicalTank, () -> tile.getMultiblock().getChemicalTanks(null), GaugeType.MEDIUM, this, 6, 13));
         addRenderableWidget(new GuiEnergyTab(this, () -> {
             EnergyDisplay storing;
             EnergyDisplay producing;
             TurbineMultiblockData multiblock = tile.getMultiblock();
             if (multiblock.isFormed()) {
                 storing = EnergyDisplay.of(multiblock.energyContainer);
-                producing = EnergyDisplay.of(MekanismConfig.general.maxEnergyPerSteam.get().divide(TurbineValidator.MAX_BLADES)
-                      .multiply(multiblock.clientFlow * Math.min(multiblock.blades,
-                            multiblock.coils * MekanismGeneratorsConfig.generators.turbineBladesPerCoil.get())));
+                double steamPerBlade = MekanismConfig.general.maxEnergyPerSteam.get() / (double) TurbineValidator.MAX_BLADES;
+                int bladesSupported = multiblock.coils * MekanismGeneratorsConfig.generators.turbineBladesPerCoil.get();
+                int generationLimiter = Math.min(multiblock.blades, bladesSupported);
+                producing = EnergyDisplay.of(MathUtils.clampToLong(steamPerBlade * (multiblock.clientFlow * generationLimiter)));
             } else {
                 storing = EnergyDisplay.ZERO;
                 producing = EnergyDisplay.ZERO;
             }
             return List.of(MekanismLang.STORING.translate(storing), GeneratorsLang.PRODUCING_AMOUNT.translate(producing));
         }));
-        addRenderableWidget(new GuiGasMode(this, 159, 72, true, () -> tile.getMultiblock().dumpMode, tile.getBlockPos(), 0, this::dumpModeTooltip));
+        Component warning = GeneratorsLang.TURBINE_DUMPING_STEAM_WARNING.translateColored(EnumColor.RED);
+        addRenderableWidget(new GuiGasMode(this, 173, 72, true, () -> tile.getMultiblock().dumpMode, tile.getBlockPos(), 0,
+              TooltipUtils.create(GeneratorsLang.TURBINE_DUMPING_EXCESS_STEAM.translate(), warning),
+              TooltipUtils.create(GeneratorsLang.TURBINE_DUMPING_STEAM.translate(), warning)));
     }
 
     @Override
     protected void drawForegroundText(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY) {
         renderTitleText(guiGraphics);
-        drawString(guiGraphics, playerInventoryTitle, inventoryLabelX, inventoryLabelY, titleTextColor());
+        renderInventoryText(guiGraphics, 99);
         super.drawForegroundText(guiGraphics, mouseX, mouseY);
-    }
-
-    private void dumpModeTooltip(GuiElement element, GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        GasMode dumpMode = tile.getMultiblock().dumpMode;
-        if (dumpMode != GasMode.IDLE) {
-            GeneratorsLang firstLine = dumpMode == GasMode.DUMPING_EXCESS ? GeneratorsLang.TURBINE_DUMPING_EXCESS_STEAM : GeneratorsLang.TURBINE_DUMPING_STEAM;
-            displayTooltips(guiGraphics, mouseX, mouseY, firstLine.translate(), GeneratorsLang.TURBINE_DUMPING_STEAM_WARNING.translateColored(EnumColor.RED));
-        }
     }
 }

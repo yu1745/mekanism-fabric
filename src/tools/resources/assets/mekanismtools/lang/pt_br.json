@@ -9,10 +9,11 @@
   "advancements.mekanismtools.loved_by_piglins.title": "Amado por Piglins",
   "advancements.mekanismtools.not_enough_shielding.description": "Fabrique qualquer escudo adicionado pelo Mekanism Tools",
   "advancements.mekanismtools.not_enough_shielding.title": "Proteção insuficiente",
-  "advancements.mekanismtools.paxel.description": "Fabrique qualquer pacachado (picareta, machado e pá)",
+  "advancements.mekanismtools.paxel.description": "Fabrique qualquer Pacachado (Picareta, Machado e Pá)",
   "advancements.mekanismtools.paxel.title": "Multiferramenta",
-  "constants.mekanismtools.mod_name": "Mekanism: Ferramentas",
-  "constants.mekanismtools.pack_description": "Recursos usados para Mekanism: Adições",
+  "constants.mekanismtools.mod_name": "Mekanism: Tools",
+  "constants.mekanismtools.pack_description": "Recursos usados por Mekanism: Tools",
+  "fml.menu.mods.info.description.mekanismtools": "Módulo de ferramentas para o Mekanism",
   "item.mekanismtools.bronze_axe": "Machado de Bronze",
   "item.mekanismtools.bronze_boots": "Botas de Bronze",
   "item.mekanismtools.bronze_chestplate": "Peitoral de Bronze",
@@ -181,5 +182,6 @@
   "item.mekanismtools.steel_sword": "Espada de Aço",
   "item.mekanismtools.stone_paxel": "Pacachado de Pedra",
   "item.mekanismtools.wood_paxel": "Pacachado de Madeira",
+  "tag.item.c.tools.paxel": "Pacachados",
   "tooltip.mekanismtools.hp": "Vida: %1$s"
 }

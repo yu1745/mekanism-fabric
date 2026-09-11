@@ -1,12 +1,11 @@
 package mekanism.client.gui.element.button;
 
 import java.util.Objects;
+import mekanism.api.text.ILangEntry;
 import mekanism.client.gui.IGuiWrapper;
 import mekanism.client.gui.element.GuiElement;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.navigation.CommonInputs;
 import net.minecraft.network.chat.Component;
-import net.minecraft.sounds.SoundEvents;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
@@ -16,35 +15,37 @@ import org.lwjgl.glfw.GLFW;
  */
 public class MekanismButton extends GuiElement {
 
-    @Nullable
-    private final IHoverable onHover;
     @NotNull
-    private final Runnable onLeftClick;
+    private final IClickable onLeftClick;
     @Nullable
-    private final Runnable onRightClick;
+    private final IClickable onRightClick;
 
-    public MekanismButton(IGuiWrapper gui, int x, int y, int width, int height, Component text, @NotNull Runnable onLeftClick, @Nullable IHoverable onHover) {
-        this(gui, x, y, width, height, text, onLeftClick, onLeftClick, onHover);
+    public MekanismButton(IGuiWrapper gui, int x, int y, int width, int height, Component text, @NotNull IClickable onLeftClick) {
+        this(gui, x, y, width, height, text, onLeftClick, onLeftClick);
         //TODO: Decide if default implementation for right clicking should be do nothing, or act as left click
     }
 
-    public MekanismButton(IGuiWrapper gui, int x, int y, int width, int height, Component text, @NotNull Runnable onLeftClick, @Nullable Runnable onRightClick,
-          @Nullable IHoverable onHover) {
+    public MekanismButton(IGuiWrapper gui, int x, int y, int width, int height, Component text, @NotNull IClickable onLeftClick, @Nullable IClickable onRightClick) {
         super(gui, x, y, width, height, text);
-        this.onHover = onHover;
         this.onLeftClick = Objects.requireNonNull(onLeftClick, "Buttons must have a left click behavior");
         this.onRightClick = onRightClick;
-        this.clickSound = SoundEvents.UI_BUTTON_CLICK;
+        this.clickSound = BUTTON_CLICK_SOUND;
         setButtonBackground(ButtonBackground.DEFAULT);
+    }
+
+    @Override
+    public MekanismButton setTooltip(ILangEntry langEntry) {
+        super.setTooltip(langEntry);
+        return this;
     }
 
     @Override
     public void onClick(double mouseX, double mouseY, int button) {
         if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
-            onLeftClick.run();
+            onLeftClick.onClick(this, mouseX, mouseY);
         } else if (button == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
             if (onRightClick != null) {
-                onRightClick.run();
+                onRightClick.onClick(this, mouseX, mouseY);
             }
         }
     }
@@ -60,17 +61,9 @@ public class MekanismButton extends GuiElement {
         //From AbstractButton with an additional check of validating that it is focused
         if (this.active && this.visible && this.isFocused() && CommonInputs.selected(keyCode)) {
             playDownSound(minecraft.getSoundManager());
-            onLeftClick.run();
-            return true;
+            return onLeftClick.onClick(this, getButtonX() + getButtonWidth() / 2.0, getButtonY() + getButtonHeight() / 2.0);
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
-    @Override
-    public void renderToolTip(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        super.renderToolTip(guiGraphics, mouseX, mouseY);
-        if (onHover != null) {
-            onHover.onHover(this, guiGraphics, mouseX, mouseY);
-        }
-    }
 }

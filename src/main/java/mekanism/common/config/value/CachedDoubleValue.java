@@ -2,7 +2,7 @@ package mekanism.common.config.value;
 
 import java.util.function.DoubleSupplier;
 import mekanism.common.config.IMekanismConfig;
-import net.minecraftforge.common.ForgeConfigSpec.ConfigValue;
+import net.neoforged.neoforge.common.ModConfigSpec.ConfigValue;
 
 public class CachedDoubleValue extends CachedValue<Double> implements DoubleSupplier {
 
@@ -51,7 +51,7 @@ public class CachedDoubleValue extends CachedValue<Double> implements DoubleSupp
         }
         double oldCachedValue = cachedValue;
         resolved = false;
-        //Return if we are meant to check the changed ones, and it is different than it used to be
+        //Return if we are meant to check the changed ones, and it is different then it used to be
         return checkChanged && oldCachedValue != get();
     }
 }

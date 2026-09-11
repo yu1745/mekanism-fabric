@@ -5,6 +5,7 @@ import mekanism.common.resource.ResourceType;
 import mekanism.common.tags.MekanismTags;
 import mekanism.tools.common.ToolsTags;
 import mekanism.tools.common.material.BaseMekanismMaterial;
+import net.minecraft.core.Holder;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.TagKey;
@@ -12,9 +13,8 @@ import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
-public class OsmiumMaterialDefaults extends BaseMekanismMaterial {
+public class OsmiumMaterialDefaults implements BaseMekanismMaterial {
 
     @Override
     public int getShieldDurability() {
@@ -47,17 +47,12 @@ public class OsmiumMaterialDefaults extends BaseMekanismMaterial {
     }
 
     @Override
-    public int getLevel() {
-        return 2;
-    }
-
-    @Override
-    public int getCommonEnchantability() {
+    public int getEnchantmentValue() {
         return 14;
     }
 
     @Override
-    public float getToughness() {
+    public float toughness() {
         return 3;
     }
 
@@ -66,25 +61,20 @@ public class OsmiumMaterialDefaults extends BaseMekanismMaterial {
         return switch (armorType) {
             case BOOTS -> 390;
             case LEGGINGS -> 450;
-            case CHESTPLATE -> 480;
+            case CHESTPLATE, BODY -> 480;
             case HELMET -> 330;
         };
     }
 
     @Override
-    public int getDefenseForType(@NotNull ArmorItem.Type armorType) {
+    public int getDefense(@NotNull ArmorItem.Type armorType) {
         return switch (armorType) {
             case BOOTS -> 3;
             case LEGGINGS -> 6;
             case CHESTPLATE -> 8;
             case HELMET -> 4;
+            default -> 0;
         };
-    }
-
-    @NotNull
-    @Override
-    public String getConfigCommentName() {
-        return "Osmium";
     }
 
     @NotNull
@@ -93,26 +83,26 @@ public class OsmiumMaterialDefaults extends BaseMekanismMaterial {
         return "osmium";
     }
 
-    @Nullable
+    @NotNull
     @Override
-    public TagKey<Block> getTag() {
-        return ToolsTags.Blocks.NEEDS_OSMIUM_TOOL;
+    public TagKey<Block> getIncorrectBlocksForDrops() {
+        return ToolsTags.Blocks.INCORRECT_FOR_OSMIUM_TOOL;
     }
 
     @NotNull
     @Override
-    public SoundEvent getEquipSound() {
+    public Holder<SoundEvent> equipSound() {
         return SoundEvents.ARMOR_EQUIP_IRON;
     }
 
     @NotNull
     @Override
-    public Ingredient getCommonRepairMaterial() {
+    public Ingredient getRepairIngredient() {
         return Ingredient.of(MekanismTags.Items.PROCESSED_RESOURCES.get(ResourceType.INGOT, PrimaryResource.OSMIUM));
     }
 
     @Override
-    public float getKnockbackResistance() {
+    public float knockbackResistance() {
         return 0.1F;
     }
 }

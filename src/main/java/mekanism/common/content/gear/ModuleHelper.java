@@ -1,87 +1,130 @@
 package mekanism.common.content.gear;
 
 import com.google.common.collect.ImmutableSet;
-import it.unimi.dsi.fastutil.objects.Reference2IntMap;
-import it.unimi.dsi.fastutil.objects.Reference2IntMaps;
-import it.unimi.dsi.fastutil.objects.Reference2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectArrayMap;
 import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
-import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
-import mekanism.api.MekanismAPI;
+import java.util.function.Supplier;
 import mekanism.api.MekanismIMC;
-import mekanism.api.NBTConstants;
+import mekanism.api.MekanismIMC.ModuleContainerTarget;
 import mekanism.api.annotations.NothingNullByDefault;
-import mekanism.api.gear.ICustomModule;
 import mekanism.api.gear.IHUDElement;
 import mekanism.api.gear.IHUDElement.HUDColor;
-import mekanism.api.gear.IModule;
 import mekanism.api.gear.IModuleHelper;
 import mekanism.api.gear.ModuleData;
-import mekanism.api.providers.IItemProvider;
 import mekanism.api.providers.IModuleDataProvider;
 import mekanism.client.model.MekanismModelCache;
 import mekanism.client.render.armor.MekaSuitArmor;
 import mekanism.common.Mekanism;
 import mekanism.common.item.ItemModule;
-import mekanism.common.registries.MekanismItems;
-import mekanism.common.util.ItemDataUtils;
+import mekanism.common.registries.MekanismDataComponents;
+import mekanism.common.util.InventoryUtils;
 import mekanism.common.util.text.BooleanStateDisplay.OnOff;
 import mekanism.common.util.text.TextUtils;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderSet;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Item.Properties;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.fml.event.lifecycle.InterModProcessEvent;
+import net.neoforged.fml.event.lifecycle.InterModProcessEvent;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * @apiNote Do not instantiate this class directly as it will be done via the service loader. Instead, access instances of this via {@link IModuleHelper#INSTANCE}
  */
 @NothingNullByDefault
-public class ModuleHelper implements IModuleHelper {
+public class ModuleHelper implements IModuleHelper {//TODO - 1.22: Evaluate moving at least some of this stuff to being defined via datamaps or at least datapack
 
     public static ModuleHelper get() {
         return (ModuleHelper) INSTANCE;
     }
 
+    private final Set<Item> moduleContainers = new ReferenceOpenHashSet<>();
     private final Map<Item, Set<ModuleData<?>>> supportedModules = new Reference2ObjectArrayMap<>(5);
     private final Map<ModuleData<?>, Set<Item>> supportedContainers = new IdentityHashMap<>();
     private final Map<ModuleData<?>, Set<ModuleData<?>>> conflictingModules = new IdentityHashMap<>();
 
     public void processIMC(InterModProcessEvent event) {
+        Map<Item, String> moduleContainers = addModuleContainers(event);
+        this.moduleContainers.addAll(moduleContainers.keySet());
         Map<ModuleData<?>, ImmutableSet.Builder<Item>> supportedContainersBuilderMap = new IdentityHashMap<>();
-        mapSupportedModules(event, MekanismIMC.ADD_MEKA_TOOL_MODULES, MekanismItems.MEKA_TOOL, supportedContainersBuilderMap);
-        mapSupportedModules(event, MekanismIMC.ADD_MEKA_SUIT_HELMET_MODULES, MekanismItems.MEKASUIT_HELMET, supportedContainersBuilderMap);
-        mapSupportedModules(event, MekanismIMC.ADD_MEKA_SUIT_BODYARMOR_MODULES, MekanismItems.MEKASUIT_BODYARMOR, supportedContainersBuilderMap);
-        mapSupportedModules(event, MekanismIMC.ADD_MEKA_SUIT_PANTS_MODULES, MekanismItems.MEKASUIT_PANTS, supportedContainersBuilderMap);
-        mapSupportedModules(event, MekanismIMC.ADD_MEKA_SUIT_BOOTS_MODULES, MekanismItems.MEKASUIT_BOOTS, supportedContainersBuilderMap);
+        for (Map.Entry<Item, String> entry : moduleContainers.entrySet()) {
+            mapSupportedModules(event, entry.getValue(), entry.getKey(), supportedContainersBuilderMap);
+        }
         for (Map.Entry<ModuleData<?>, ImmutableSet.Builder<Item>> entry : supportedContainersBuilderMap.entrySet()) {
             supportedContainers.put(entry.getKey(), entry.getValue().build());
         }
     }
 
-    private void mapSupportedModules(InterModProcessEvent event, String imcMethod, IItemProvider moduleContainer,
+    private Map<Item, String> addModuleContainers(InterModProcessEvent event) {
+        Map<Item, String> moduleContainers = new Reference2ObjectArrayMap<>(5);
+        Set<String> imcMethods = new HashSet<>(5);
+        event.getIMCStream(MekanismIMC.ADD_MODULE_CONTAINER::equals).forEach(message -> {
+            if (message.messageSupplier().get() instanceof ModuleContainerTarget(Holder<Item> container, String imcMethod)) {
+                Mekanism.logger.debug("Received IMC message '{}' from '{}' for new module container '{}' with an imcMethod '{}'.", MekanismIMC.ADD_MODULE_CONTAINER,
+                      message.senderModId(), container.getRegisteredName(), imcMethod);
+                if (moduleContainers.put(container.value(), imcMethod) != null) {
+                    Mekanism.logger.error("Received IMC message for '{}' from mod '{}' for an item '{}' that has already been registered as a container.",
+                          MekanismIMC.ADD_MODULE_CONTAINER, message.senderModId(), container.getRegisteredName());
+                }
+                if (!imcMethods.add(imcMethod)) {
+                    Mekanism.logger.error("Received IMC message for '{}' from mod '{}' for an item '{}' with an imcMethod '{}' that that has already been registered.",
+                          MekanismIMC.ADD_MODULE_CONTAINER, message.senderModId(), container.getRegisteredName(), imcMethod);
+                }
+            } else {
+                Mekanism.logger.warn("Received IMC message for '{}' from mod '{}' with an invalid body.", MekanismIMC.ADD_MODULE_CONTAINER, message.senderModId());
+            }
+        });
+        return moduleContainers;
+    }
+
+    @SuppressWarnings("removal")
+    private void mapSupportedModules(InterModProcessEvent event, String imcMethod, Item moduleContainer,
           Map<ModuleData<?>, ImmutableSet.Builder<Item>> supportedContainersBuilderMap) {
         ImmutableSet.Builder<ModuleData<?>> supportedModulesBuilder = ImmutableSet.builder();
         event.getIMCStream(imcMethod::equals).forEach(message -> {
             Object body = message.messageSupplier().get();
-            if (body instanceof IModuleDataProvider<?> moduleDataProvider) {
-                supportedModulesBuilder.add(moduleDataProvider.getModuleData());
-                logDebugReceivedIMC(imcMethod, message.senderModId(), moduleDataProvider);
+            if (body instanceof Holder<?> holder) {
+                if (holder.value() instanceof ModuleData<?> moduleData) {
+                    supportedModulesBuilder.add(moduleData);
+                    logDebugReceivedIMC(imcMethod, message.senderModId(), moduleData);
+                } else {
+                    //Holder for something other than modules
+                    Mekanism.logger.warn("Received IMC message for '{}' from mod '{}' with an invalid body.", imcMethod, message.senderModId());
+                }
+            } else if (body instanceof HolderSet<?> holderSet) {
+                for (Holder<?> holder : holderSet) {
+                    if (holder.value() instanceof ModuleData<?> moduleData) {
+                        supportedModulesBuilder.add(moduleData);
+                        logDebugReceivedIMC(imcMethod, message.senderModId(), moduleData);
+                    } else {
+                        //Holder set for something other than modules
+                        Mekanism.logger.warn("Received IMC message for '{}' from mod '{}' with an invalid body.", imcMethod, message.senderModId());
+                        break;
+                    }
+                }
+            }
+            //TODO - 1.22: Remove these two deprecated branches
+            else if (body instanceof IModuleDataProvider<?> moduleDataProvider) {
+                ModuleData<?> moduleData = moduleDataProvider.getModuleData();
+                supportedModulesBuilder.add(moduleData);
+                logDebugReceivedIMC(imcMethod, message.senderModId(), moduleData);
             } else if (body instanceof IModuleDataProvider<?>[] providers) {
                 for (IModuleDataProvider<?> moduleDataProvider : providers) {
-                    supportedModulesBuilder.add(moduleDataProvider.getModuleData());
-                    logDebugReceivedIMC(imcMethod, message.senderModId(), moduleDataProvider);
+                    ModuleData<?> moduleData = moduleDataProvider.getModuleData();
+                    supportedModulesBuilder.add(moduleData);
+                    logDebugReceivedIMC(imcMethod, message.senderModId(), moduleData);
                 }
             } else {
                 Mekanism.logger.warn("Received IMC message for '{}' from mod '{}' with an invalid body.", imcMethod, message.senderModId());
@@ -89,161 +132,70 @@ public class ModuleHelper implements IModuleHelper {
         });
         Set<ModuleData<?>> supported = supportedModulesBuilder.build();
         if (!supported.isEmpty()) {
-            Item item = moduleContainer.asItem();
-            supportedModules.put(item, supported);
+            supportedModules.put(moduleContainer, supported);
             for (ModuleData<?> data : supported) {
-                supportedContainersBuilderMap.computeIfAbsent(data, d -> ImmutableSet.builder()).add(item);
+                supportedContainersBuilderMap.computeIfAbsent(data, d -> ImmutableSet.builder()).add(moduleContainer);
             }
         }
     }
 
-    private void logDebugReceivedIMC(String imcMethod, String senderModId, IModuleDataProvider<?> moduleDataProvider) {
-        Mekanism.logger.debug("Received IMC message '{}' from '{}' for module '{}'.", imcMethod, senderModId, moduleDataProvider.getRegistryName());
+    private void logDebugReceivedIMC(String imcMethod, String senderModId, ModuleData<?> moduleData) {
+        Mekanism.logger.debug("Received IMC message '{}' from '{}' for module '{}'.", imcMethod, senderModId, moduleData);
     }
 
     @Override
-    public ItemModule createModuleItem(IModuleDataProvider<?> moduleDataProvider, Item.Properties properties) {
-        return new ItemModule(moduleDataProvider, properties);
+    public ItemModule createModuleItem(Supplier<Holder<ModuleData<?>>> moduleDataSupplier, Properties properties) {
+        return new ItemModule(moduleDataSupplier, properties);
     }
 
     @Override
-    public Set<ModuleData<?>> getSupported(ItemStack container) {
-        return getSupported(container.getItem());
+    public Item.Properties applyModuleContainerProperties(Item.Properties properties) {
+        return properties.component(MekanismDataComponents.MODULE_CONTAINER, ModuleContainer.EMPTY);
     }
 
-    private Set<ModuleData<?>> getSupported(Item item) {
+    @Override
+    public void dropModuleContainerContents(ItemEntity entity, DamageSource source) {
+        InventoryUtils.dropItemContents(entity, source);
+    }
+
+    @Override
+    public Set<ModuleData<?>> getSupported(Item item) {
         return supportedModules.getOrDefault(item, Collections.emptySet());
     }
 
     @Override
-    public Set<Item> getSupported(IModuleDataProvider<?> typeProvider) {
-        return supportedContainers.getOrDefault(typeProvider.getModuleData(), Collections.emptySet());
+    public Set<Item> getSupportedItems(Holder<ModuleData<?>> typeProvider) {
+        return supportedContainers.getOrDefault(typeProvider.value(), Collections.emptySet());
     }
 
     @Override
-    public Set<ModuleData<?>> getConflicting(IModuleDataProvider<?> typeProvider) {
-        return conflictingModules.computeIfAbsent(typeProvider.getModuleData(), moduleType -> {
-            Set<ModuleData<?>> conflicting = new ReferenceOpenHashSet<>();
-            for (Item item : getSupported(moduleType)) {
+    public Set<ModuleData<?>> getConflicting(Holder<ModuleData<?>> type) {
+        ModuleData<?> moduleType = type.value();
+        Set<ModuleData<?>> conflicting = conflictingModules.get(moduleType);
+        if (conflicting == null) {
+            conflicting = new ReferenceOpenHashSet<>();
+            for (Item item : getSupportedItems(type)) {
                 for (ModuleData<?> other : getSupported(item)) {
                     if (moduleType != other && moduleType.isExclusive(other.getExclusiveFlags())) {
                         conflicting.add(other);
                     }
                 }
             }
-            return conflicting;
-        });
+            conflicting = Collections.unmodifiableSet(conflicting);
+            conflictingModules.put(moduleType, conflicting);
+        }
+        return conflicting;
     }
 
     @Override
-    public boolean isEnabled(ItemStack container, IModuleDataProvider<?> typeProvider) {
-        IModule<?> m = load(container, typeProvider);
-        return m != null && m.isEnabled();
-    }
-
     @Nullable
-    @Override
-    public <MODULE extends ICustomModule<MODULE>> Module<MODULE> load(ItemStack container, IModuleDataProvider<MODULE> typeProvider) {
-        if (container.getItem() instanceof IModuleContainerItem) {
-            CompoundTag modulesTag = ItemDataUtils.getCompound(container, NBTConstants.MODULES);
-            return load(container, typeProvider.getModuleData(), modulesTag, null);
-        }
-        return null;
+    public ModuleContainer getModuleContainer(ItemStack stack) {
+        return isModuleContainer(stack) ? stack.getOrDefault(MekanismDataComponents.MODULE_CONTAINER, ModuleContainer.EMPTY) : null;
     }
 
     @Override
-    public List<Module<?>> loadAll(ItemStack container) {
-        if (container.getItem() instanceof IModuleContainerItem) {
-            List<Module<?>> modules = new ArrayList<>();
-            CompoundTag modulesTag = ItemDataUtils.getCompound(container, NBTConstants.MODULES);
-            for (ModuleData<?> moduleType : loadAllTypes(modulesTag)) {
-                Module<?> module = load(container, moduleType, modulesTag, null);
-                if (module != null) {
-                    modules.add(module);
-                }
-            }
-            return modules;
-        }
-        return Collections.emptyList();
-    }
-
-    @Override
-    public <MODULE extends ICustomModule<?>> List<Module<? extends MODULE>> loadAll(ItemStack container, Class<MODULE> moduleClass) {
-        if (container.getItem() instanceof IModuleContainerItem) {
-            List<Module<? extends MODULE>> modules = new ArrayList<>();
-            CompoundTag modulesTag = ItemDataUtils.getCompound(container, NBTConstants.MODULES);
-            for (ModuleData<?> moduleType : loadAllTypes(modulesTag)) {
-                Module<?> module = load(container, moduleType, modulesTag, moduleClass);
-                if (module != null) {
-                    modules.add((Module<? extends MODULE>) module);
-                }
-            }
-            return modules;
-        }
-        return Collections.emptyList();
-    }
-
-    @Override
-    public List<ModuleData<?>> loadAllTypes(ItemStack container) {
-        if (container.getItem() instanceof IModuleContainerItem) {
-            return loadAllTypes(ItemDataUtils.getCompound(container, NBTConstants.MODULES));
-        }
-        return Collections.emptyList();
-    }
-
-    private List<ModuleData<?>> loadAllTypes(CompoundTag modulesTag) {
-        List<ModuleData<?>> moduleTypes = new ArrayList<>();
-        for (String name : modulesTag.getAllKeys()) {
-            ModuleData<?> moduleType = getModuleTypeFromName(name);
-            if (moduleType != null) {
-                moduleTypes.add(moduleType);
-            }
-        }
-        return moduleTypes;
-    }
-
-    public Reference2IntMap<ModuleData<?>> loadAllCounts(ItemStack container) {
-        if (container.getItem() instanceof IModuleContainerItem) {
-            return loadAllCounts(ItemDataUtils.getCompound(container, NBTConstants.MODULES));
-        }
-        return Reference2IntMaps.emptyMap();
-    }
-
-    private Reference2IntMap<ModuleData<?>> loadAllCounts(CompoundTag modulesTag) {
-        Reference2IntMap<ModuleData<?>> counts = new Reference2IntOpenHashMap<>();
-        for (String name : modulesTag.getAllKeys()) {
-            ModuleData<?> moduleType = getModuleTypeFromName(name);
-            if (moduleType != null) {
-                int count = 1;
-                CompoundTag moduleData = modulesTag.getCompound(name);
-                if (moduleData.contains(NBTConstants.AMOUNT, Tag.TAG_INT)) {
-                    count = moduleData.getInt(NBTConstants.AMOUNT);
-                }
-                counts.put(moduleType, count);
-            }
-        }
-        return counts;
-    }
-
-    @Nullable
-    private ModuleData<?> getModuleTypeFromName(String name) {
-        //Otherwise, try getting the registry name and then looking it up in the module registry
-        ResourceLocation registryName = ResourceLocation.tryParse(name);
-        return registryName == null ? null : MekanismAPI.moduleRegistry().getValue(registryName);
-    }
-
-    @Nullable
-    private <MODULE extends ICustomModule<MODULE>> Module<MODULE> load(ItemStack container, ModuleData<MODULE> type, CompoundTag modulesTag,
-          @Nullable Class<? extends ICustomModule<?>> typeFilter) {
-        String registryName = type.getRegistryName().toString();
-        if (modulesTag.contains(registryName, Tag.TAG_COMPOUND)) {
-            Module<MODULE> module = new Module<>(type, container);
-            if (typeFilter == null || typeFilter.isInstance(module.getCustomInstance())) {
-                module.read(modulesTag.getCompound(registryName));
-                return module;
-            }
-        }
-        return null;
+    public boolean isModuleContainer(Item item) {
+        return moduleContainers.contains(item);
     }
 
     @Override
@@ -267,7 +219,7 @@ public class ModuleHelper implements IModuleHelper {
     }
 
     @Override
-    public synchronized void addMekaSuitModuleModelSpec(String name, IModuleDataProvider<?> moduleDataProvider, EquipmentSlot slotType, Predicate<LivingEntity> isActive) {
-        MekaSuitArmor.registerModule(name, moduleDataProvider, slotType, isActive);
+    public synchronized void addMekaSuitModuleModelSpec(String name, Holder<ModuleData<?>> moduleData, EquipmentSlot slotType, Predicate<LivingEntity> isActive) {
+        MekaSuitArmor.registerModule(name, moduleData, slotType, isActive);
     }
 }

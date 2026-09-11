@@ -8,8 +8,8 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
 import java.util.function.Predicate;
-import mekanism.api.NBTConstants;
-import mekanism.api.security.ISecurityUtils;
+import mekanism.api.SerializationConstants;
+import mekanism.api.security.IBlockSecurityUtils;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.content.qio.IQIOCraftingWindowHolder;
 import mekanism.common.content.qio.QIOGlobalItemLookup;
@@ -30,18 +30,16 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.event.TickEvent.LevelTickEvent;
-import net.minecraftforge.event.TickEvent.Phase;
-import net.minecraftforge.event.TickEvent.ServerTickEvent;
-import net.minecraftforge.event.entity.EntityJoinLevelEvent;
-import net.minecraftforge.event.level.BlockEvent;
-import net.minecraftforge.event.level.ChunkDataEvent;
-import net.minecraftforge.event.level.ChunkEvent;
-import net.minecraftforge.event.level.LevelEvent;
-import net.minecraftforge.eventbus.api.EventPriority;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.neoforged.bus.api.EventPriority;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
+import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.neoforge.event.level.ChunkDataEvent;
+import net.neoforged.neoforge.event.level.ChunkEvent;
+import net.neoforged.neoforge.event.level.LevelEvent;
+import net.neoforged.neoforge.event.tick.LevelTickEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.jetbrains.annotations.Nullable;
 
 public class CommonWorldTickHandler {
@@ -92,7 +90,7 @@ public class CommonWorldTickHandler {
                 entity.discard();
                 event.setCanceled(true);
             }
-        } else if (fallbackItemCollector != null && event.getEntity() instanceof ItemEntity entity && fallbackItemCollector.test(entity.getItem())) {
+        } else if (!event.getLevel().isClientSide && fallbackItemCollector != null && event.getEntity() instanceof ItemEntity entity && fallbackItemCollector.test(entity.getItem())) {
             //If we have a fallback item collector active and the entity that is being added is an item,
             // try to let our fallback collector handle the item and keep track of it instead of actually adding it to the world
             entity.discard();
@@ -104,14 +102,13 @@ public class CommonWorldTickHandler {
     public void onBlockBreak(BlockEvent.BreakEvent event) {
         BlockState state = event.getState();
         //Skip empty block, shouldn't be a null state but the BreakEvent still handles that as the empty block,
-        // so we need to skip handling it that way, AND skip and blocks that can never have a block entity
-        if (state != null && !state.isAir() && state.hasBlockEntity()) {
-            //If the block might have a block entity, look it up from the world and see if the player has access to destroy it
-            BlockEntity blockEntity = WorldUtils.getTileEntity(event.getLevel(), event.getPos());
-            if (!ISecurityUtils.INSTANCE.canAccess(event.getPlayer(), blockEntity)) {
-                //If they don't because it is something that is locked, then cancel the event
-                event.setCanceled(true);
-            }
+        // so we need to skip handling it that way, and check if the player has access to destroy it
+        //Note: The level should always be an instance of Level based on what is passed to the constructor of BreakEvent,
+        // but we instance check it just to be safe
+        if (state != null && !state.isAir() && event.getLevel() instanceof Level level &&
+            !IBlockSecurityUtils.INSTANCE.canAccess(event.getPlayer(), level, event.getPos())) {
+            //If they don't because it is something that is locked, then cancel the event
+            event.setCanceled(true);
         }
     }
 
@@ -124,14 +121,14 @@ public class CommonWorldTickHandler {
                 chunkVersion = chunkVersions.getOrDefault(level.dimension().location(), Object2IntMaps.emptyMap())
                       .getOrDefault(event.getChunk().getPos(), chunkVersion);
             }
-            event.getData().putInt(NBTConstants.WORLD_GEN_VERSION, chunkVersion);
+            event.getData().putInt(SerializationConstants.WORLD_GEN_VERSION, chunkVersion);
         }
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public synchronized void onChunkDataLoad(ChunkDataEvent.Load event) {
         if (event.getLevel() instanceof Level level && !level.isClientSide()) {
-            int version = event.getData().getInt(NBTConstants.WORLD_GEN_VERSION);
+            int version = event.getData().getInt(SerializationConstants.WORLD_GEN_VERSION);
             //When a chunk is loaded, if it has an older version than the latest one
             if (version < MekanismConfig.world.userGenVersion.get()) {
                 //Track what version it has so that when we save it, if we haven't gotten a chance to update
@@ -155,8 +152,10 @@ public class CommonWorldTickHandler {
     public void chunkUnloadEvent(ChunkEvent.Unload event) {
         if (event.getLevel() instanceof Level level && !level.isClientSide() && chunkVersions != null) {
             //When a chunk unloads, free up the memory tracking what version it has
-            chunkVersions.getOrDefault(level.dimension().location(), Object2IntMaps.emptyMap())
-                  .removeInt(event.getChunk().getPos());
+            Object2IntMap<ChunkPos> levelMap = chunkVersions.get(level.dimension().location());
+            if (levelMap != null) {
+                levelMap.removeInt(event.getChunk().getPos());
+            }
         }
     }
 
@@ -175,32 +174,20 @@ public class CommonWorldTickHandler {
             FrequencyManager.load();
             MultiblockManager.createOrLoadAll();
             QIOGlobalItemLookup.INSTANCE.createOrLoad();
-            RadiationManager.get().createOrLoad();
         }
     }
 
     @SubscribeEvent
-    public void onTick(ServerTickEvent event) {
-        if (event.side.isServer() && event.phase == Phase.END) {
-            serverTick();
-        }
+    public void onTick(ServerTickEvent.Post event) {
+        boolean tickingNormally = event.getServer().tickRateManager().runsNormally();
+        FrequencyManager.tick(tickingNormally);
     }
 
     @SubscribeEvent
-    public void onTick(LevelTickEvent event) {
-        if (event.side.isServer() && event.phase == Phase.END) {
-            tickEnd((ServerLevel) event.level);
-        }
-    }
-
-    private void serverTick() {
-        FrequencyManager.tick();
-        RadiationManager.get().tickServer();
-    }
-
-    private void tickEnd(ServerLevel world) {
-        if (!world.isClientSide) {
+    public void onTick(LevelTickEvent.Post event) {
+        if (event.getLevel() instanceof ServerLevel world) {
             RadiationManager.get().tickServerWorld(world);
+            //Note: We flush the tag and recipe cache, and also perform retrogen, regardless of if the ticks are frozen or not
             if (flushTagAndRecipeCaches) {
                 //Loop all open containers and if it is a portable qio dashboard force refresh the window's recipes
                 for (ServerPlayer player : world.players()) {

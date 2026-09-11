@@ -8,33 +8,35 @@ import com.blamejared.crafttweaker.api.ingredient.IIngredient;
 import com.blamejared.crafttweaker.api.item.IItemStack;
 import com.blamejared.crafttweaker.api.recipe.manager.base.IRecipeManager;
 import java.util.List;
-import mekanism.api.chemical.Chemical;
 import mekanism.api.chemical.ChemicalStack;
 import mekanism.api.recipes.MekanismRecipe;
+import mekanism.common.Mekanism;
 import mekanism.common.integration.crafttweaker.CrTConstants;
-import mekanism.common.integration.crafttweaker.CrTUtils;
 import mekanism.common.integration.crafttweaker.chemical.ICrTChemicalStack;
 import mekanism.common.recipe.IMekanismRecipeTypeProvider;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.item.crafting.RecipeInput;
 import net.minecraft.world.item.crafting.RecipeType;
-import net.minecraftforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.FluidStack;
 import org.openzen.zencode.java.ZenCodeType;
 
 @ZenRegister
 @ZenCodeType.Name(CrTConstants.CLASS_RECIPE_MANAGER)
-public abstract class MekanismRecipeManager<RECIPE extends MekanismRecipe> implements IRecipeManager<RECIPE> {
+public abstract class MekanismRecipeManager<INPUT extends RecipeInput, RECIPE extends MekanismRecipe<INPUT>> implements IRecipeManager<RECIPE> {
 
-    private final IMekanismRecipeTypeProvider<RECIPE, ?> recipeType;
+    private final IMekanismRecipeTypeProvider<INPUT, RECIPE, ?> recipeType;
 
-    protected MekanismRecipeManager(IMekanismRecipeTypeProvider<RECIPE, ?> recipeType) {
+    protected MekanismRecipeManager(IMekanismRecipeTypeProvider<INPUT, RECIPE, ?> recipeType) {
         this.recipeType = recipeType;
     }
 
     protected abstract String describeOutputs(RECIPE recipe);
 
-    protected void addRecipe(RECIPE recipe) {
-        CraftTweakerAPI.apply(new ActionAddRecipe<>(this, recipe).outputDescriber(this::describeOutputs));
+    protected void addRecipe(String recipeName, RECIPE recipe) {
+        RecipeHolder<RECIPE> recipeHolder = createHolder(Mekanism.hooks.craftTweaker.rl(fixRecipeName(recipeName)), recipe);
+        CraftTweakerAPI.apply(new ActionAddRecipe<>(this, recipeHolder).outputDescriber(holder -> describeOutputs(holder.value())));
     }
 
     @Override
@@ -50,7 +52,7 @@ public abstract class MekanismRecipeManager<RECIPE extends MekanismRecipe> imple
 
     @Override
     @Deprecated
-    public List<RECIPE> getRecipesByOutput(IIngredient output) {
+    public List<RecipeHolder<RECIPE>> getRecipesByOutput(IIngredient output) {
         throw new UnsupportedOperationException("Mekanism's recipe managers don't support reverse lookup by output, please lookup by recipe name.");
     }
 
@@ -58,10 +60,6 @@ public abstract class MekanismRecipeManager<RECIPE extends MekanismRecipe> imple
     @Deprecated
     public void remove(IIngredient output) {
         throw new UnsupportedOperationException("Mekanism's recipe managers don't support removal by output, please remove by recipe name.");
-    }
-
-    protected ResourceLocation getAndValidateName(String path) {
-        return CrTUtils.rl(fixRecipeName(path));
     }
 
     protected ItemStack getAndValidateNotEmpty(IItemStack stack) {
@@ -78,7 +76,7 @@ public abstract class MekanismRecipeManager<RECIPE extends MekanismRecipe> imple
         return stack.getImmutableInternal();
     }
 
-    protected <CHEMICAL extends Chemical<CHEMICAL>, STACK extends ChemicalStack<CHEMICAL>> STACK getAndValidateNotEmpty(ICrTChemicalStack<CHEMICAL, STACK, ?> stack) {
+    protected ChemicalStack getAndValidateNotEmpty(ICrTChemicalStack stack) {
         if (stack.isEmpty()) {
             throw new IllegalArgumentException("Output stack cannot be empty.");
         }

@@ -1,20 +1,21 @@
 package mekanism.additions.common.recipe;
 
 import java.util.Map;
-import java.util.function.Consumer;
 import mekanism.additions.common.MekanismAdditions;
 import mekanism.additions.common.registries.AdditionsBlocks;
-import mekanism.api.chemical.pigment.Pigment;
+import mekanism.api.chemical.Chemical;
+import mekanism.api.chemical.ChemicalStack;
 import mekanism.api.datagen.recipe.builder.ItemStackToChemicalRecipeBuilder;
-import mekanism.api.providers.IItemProvider;
-import mekanism.api.providers.IPigmentProvider;
 import mekanism.api.recipes.ingredients.creator.IngredientCreatorAccess;
 import mekanism.api.text.EnumColor;
 import mekanism.common.recipe.ISubRecipeProvider;
 import mekanism.common.recipe.impl.PigmentExtractingRecipeProvider;
-import mekanism.common.registration.impl.PigmentRegistryObject;
-import mekanism.common.registries.MekanismPigments;
-import net.minecraft.data.recipes.FinishedRecipe;
+import mekanism.common.registration.impl.DeferredChemical;
+import mekanism.common.registries.MekanismChemicals;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.data.recipes.RecipeOutput;
+import net.minecraft.world.level.ItemLike;
 
 public class PigmentExtractingPlasticRecipeProvider implements ISubRecipeProvider {
 
@@ -32,11 +33,11 @@ public class PigmentExtractingPlasticRecipeProvider implements ISubRecipeProvide
     private static final long TRANSPARENT_PLASTIC_SLAB_RATE = TRANSPARENT_PLASTIC_BLOCK_RATE / 2;//21
 
     @Override
-    public void addRecipes(Consumer<FinishedRecipe> consumer) {
+    public void addRecipes(RecipeOutput consumer, HolderLookup.Provider registries) {
         String basePath = "pigment_extracting/plastic/";
-        for (Map.Entry<EnumColor, PigmentRegistryObject<Pigment>> entry : MekanismPigments.PIGMENT_COLOR_LOOKUP.entrySet()) {
+        for (Map.Entry<EnumColor, DeferredChemical<Chemical>> entry : MekanismChemicals.PIGMENT_COLOR_LOOKUP.entrySet()) {
             EnumColor color = entry.getKey();
-            IPigmentProvider pigment = entry.getValue();
+            DeferredChemical<Chemical> pigment = entry.getValue();
             addExtractionRecipe(consumer, color, AdditionsBlocks.PLASTIC_BLOCKS, pigment, PLASTIC_BLOCK_RATE, basePath + "block/");
             addExtractionRecipe(consumer, color, AdditionsBlocks.SLICK_PLASTIC_BLOCKS, pigment, SLICK_PLASTIC_BLOCK_RATE, basePath + "slick/");
             addExtractionRecipe(consumer, color, AdditionsBlocks.PLASTIC_GLOW_BLOCKS, pigment, PLASTIC_GLOW_BLOCK_RATE, basePath + "glow/");
@@ -52,11 +53,11 @@ public class PigmentExtractingPlasticRecipeProvider implements ISubRecipeProvide
         }
     }
 
-    private static void addExtractionRecipe(Consumer<FinishedRecipe> consumer, EnumColor color, Map<EnumColor, ? extends IItemProvider> input, IPigmentProvider pigment,
+    private static void addExtractionRecipe(RecipeOutput consumer, EnumColor color, Map<EnumColor, ? extends ItemLike> input, Holder<Chemical> pigment,
           long rate, String basePath) {
         ItemStackToChemicalRecipeBuilder.pigmentExtracting(
               IngredientCreatorAccess.item().from(input.get(color)),
-              pigment.getStack(rate)
+              new ChemicalStack(pigment, rate)
         ).build(consumer, MekanismAdditions.rl(basePath + color.getRegistryPrefix()));
     }
 }

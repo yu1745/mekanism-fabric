@@ -2,18 +2,24 @@ package mekanism.common.content.boiler;
 
 import it.unimi.dsi.fastutil.objects.Object2BooleanMap;
 import it.unimi.dsi.fastutil.objects.Object2BooleanOpenHashMap;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
+import java.util.function.Predicate;
 import mekanism.api.Action;
 import mekanism.api.AutomationType;
-import mekanism.api.NBTConstants;
-import mekanism.api.chemical.gas.GasStack;
-import mekanism.api.chemical.gas.IGasTank;
-import mekanism.api.chemical.gas.attribute.GasAttributes.CooledCoolant;
-import mekanism.api.chemical.gas.attribute.GasAttributes.HeatedCoolant;
+import mekanism.api.SerializationConstants;
+import mekanism.api.chemical.ChemicalStack;
+import mekanism.api.chemical.IChemicalHandler;
+import mekanism.api.chemical.IChemicalTank;
+import mekanism.api.chemical.attribute.ChemicalAttributes;
+import mekanism.api.datamaps.IMekanismDataMapTypes;
+import mekanism.api.datamaps.chemical.attribute.HeatedCoolant;
 import mekanism.api.heat.HeatAPI;
 import mekanism.api.math.MathUtils;
-import mekanism.common.capabilities.chemical.multiblock.MultiblockChemicalTankBuilder;
+import mekanism.common.block.attribute.AttributeStateBoilerValveMode.BoilerValveMode;
+import mekanism.common.capabilities.chemical.VariableCapacityChemicalTank;
 import mekanism.common.capabilities.fluid.VariableCapacityFluidTank;
 import mekanism.common.capabilities.heat.VariableHeatCapacitor;
 import mekanism.common.config.MekanismConfig;
@@ -26,41 +32,60 @@ import mekanism.common.integration.computer.annotation.WrappingComputerMethod;
 import mekanism.common.inventory.container.sync.dynamic.ContainerSync;
 import mekanism.common.lib.multiblock.IValveHandler;
 import mekanism.common.lib.multiblock.MultiblockData;
-import mekanism.common.registries.MekanismGases;
-import mekanism.common.tags.MekanismTags;
+import mekanism.common.lib.multiblock.Structure;
+import mekanism.common.registries.MekanismChemicals;
 import mekanism.common.tile.multiblock.TileEntityBoilerCasing;
+import mekanism.common.tile.multiblock.TileEntityBoilerValve;
+import mekanism.common.util.ChemicalUtil;
 import mekanism.common.util.HeatUtils;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.NBTUtils;
+import mekanism.common.util.WorldUtils;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtUtils;
+import net.minecraft.tags.FluidTags;
+import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
+import org.jetbrains.annotations.Nullable;
 
 public class BoilerMultiblockData extends MultiblockData implements IValveHandler {
 
+    //TODO - 1.22: Replace the legacy checks for these predicates
+    @SuppressWarnings("removal")
+    public static final Predicate<ChemicalStack> IS_HEATED_COOLANT = chemical -> chemical.getData(IMekanismDataMapTypes.INSTANCE.heatedChemicalCoolant()) != null
+                                                                                    || chemical.hasLegacy(ChemicalAttributes.HeatedCoolant.class);
+    @SuppressWarnings("removal")
+    public static final Predicate<ChemicalStack> IS_COOLED_COOLANT = chemical -> chemical.getData(IMekanismDataMapTypes.INSTANCE.cooledChemicalCoolant()) != null
+                                                                                    || chemical.hasLegacy(ChemicalAttributes.CooledCoolant.class);
     public static final Object2BooleanMap<UUID> hotMap = new Object2BooleanOpenHashMap<>();
 
     public static final double CASING_HEAT_CAPACITY = 50;
     private static final double CASING_INVERSE_INSULATION_COEFFICIENT = 100_000;
     private static final double CASING_INVERSE_CONDUCTION_COEFFICIENT = 1;
 
-    private static final double COOLANT_COOLING_EFFICIENCY = 0.4;
+    private final List<AdvancedCapabilityOutputTarget<IChemicalHandler, BoilerValveMode>> chemicalOutputTargets = new ArrayList<>();
+    private final List<IChemicalTank> inputTanks;
+    private final List<IChemicalTank> outputSteamTanks;
+    private final List<IChemicalTank> outputCoolantTanks;
 
     @ContainerSync
     @WrappingComputerMethod(wrapper = ComputerChemicalTankWrapper.class, methodNames = {"getHeatedCoolant", "getHeatedCoolantCapacity", "getHeatedCoolantNeeded",
                                                                                         "getHeatedCoolantFilledPercentage"}, docPlaceholder = "heated coolant tank")
-    public IGasTank superheatedCoolantTank;
+    public IChemicalTank superheatedCoolantTank;
     @ContainerSync
     @WrappingComputerMethod(wrapper = ComputerChemicalTankWrapper.class, methodNames = {"getCooledCoolant", "getCooledCoolantCapacity", "getCooledCoolantNeeded",
                                                                                         "getCooledCoolantFilledPercentage"}, docPlaceholder = "cooled coolant tank")
-    public IGasTank cooledCoolantTank;
+    public IChemicalTank cooledCoolantTank;
     @ContainerSync
-    @WrappingComputerMethod(wrapper = ComputerFluidTankWrapper.class, methodNames = {"getWater", "getWaterCapacity", "getWaterNeeded", "getWaterFilledPercentage"}, docPlaceholder = "water tank")
+    @WrappingComputerMethod(wrapper = ComputerFluidTankWrapper.class, methodNames = {"getWater", "getWaterCapacity", "getWaterNeeded",
+                                                                                     "getWaterFilledPercentage"}, docPlaceholder = "water tank")
     public VariableCapacityFluidTank waterTank;
     @ContainerSync
-    @WrappingComputerMethod(wrapper = ComputerChemicalTankWrapper.class, methodNames = {"getSteam", "getSteamCapacity", "getSteamNeeded", "getSteamFilledPercentage"}, docPlaceholder = "steam tank")
-    public IGasTank steamTank;
+    @WrappingComputerMethod(wrapper = ComputerChemicalTankWrapper.class, methodNames = {"getSteam", "getSteamCapacity", "getSteamNeeded",
+                                                                                        "getSteamFilledPercentage"}, docPlaceholder = "steam tank")
+    public IChemicalTank steamTank;
     @ContainerSync
     @WrappingComputerMethod(wrapper = ComputerHeatCapacitorWrapper.class, methodNames = "getTemperature", docPlaceholder = "boiler")
     public VariableHeatCapacitor heatCapacitor;
@@ -96,14 +121,17 @@ public class BoilerMultiblockData extends MultiblockData implements IValveHandle
     public BoilerMultiblockData(TileEntityBoilerCasing tile) {
         super(tile);
         //Default biome temp to the ambient temperature at the block we are at
-        biomeAmbientTemp = HeatAPI.getAmbientTemp(tile.getLevel(), tile.getTilePos());
-        superheatedCoolantTank = MultiblockChemicalTankBuilder.GAS.input(this, () -> superheatedCoolantCapacity, gas -> gas.has(HeatedCoolant.class), this);
-        waterTank = VariableCapacityFluidTank.input(this, () -> waterTankCapacity, fluid -> MekanismTags.Fluids.WATER_LOOKUP.contains(fluid.getFluid()),
+        biomeAmbientTemp = HeatAPI.getAmbientTemp(tile.getLevel(), tile.getBlockPos());
+        superheatedCoolantTank = VariableCapacityChemicalTank.input(this, () -> superheatedCoolantCapacity, IS_HEATED_COOLANT, this);
+        waterTank = VariableCapacityFluidTank.input(this, () -> waterTankCapacity, fluid -> fluid.is(FluidTags.WATER),
               createSaveAndComparator());
         fluidTanks.add(waterTank);
-        steamTank = MultiblockChemicalTankBuilder.GAS.output(this, () -> steamTankCapacity, gas -> gas == MekanismGases.STEAM.getChemical(), this);
-        cooledCoolantTank = MultiblockChemicalTankBuilder.GAS.output(this, () -> cooledCoolantCapacity, gas -> gas.has(CooledCoolant.class), this);
-        Collections.addAll(gasTanks, steamTank, superheatedCoolantTank, cooledCoolantTank);
+        steamTank = VariableCapacityChemicalTank.output(this, () -> steamTankCapacity, chemical -> chemical.is(MekanismChemicals.STEAM), this);
+        cooledCoolantTank = VariableCapacityChemicalTank.output(this, () -> cooledCoolantCapacity, IS_COOLED_COOLANT, this);
+        inputTanks = List.of(superheatedCoolantTank);
+        outputSteamTanks = List.of(steamTank);
+        outputCoolantTanks = List.of(cooledCoolantTank);
+        Collections.addAll(chemicalTanks, steamTank, superheatedCoolantTank, cooledCoolantTank);
         heatCapacitor = VariableHeatCapacitor.create(CASING_HEAT_CAPACITY, () -> CASING_INVERSE_CONDUCTION_COEFFICIENT, () -> CASING_INVERSE_INSULATION_COEFFICIENT,
               () -> biomeAmbientTemp, this);
         heatCapacitors.add(heatCapacitor);
@@ -118,9 +146,26 @@ public class BoilerMultiblockData extends MultiblockData implements IValveHandle
     }
 
     @Override
-    public void remove(Level world) {
+    public void remove(Level world, Structure oldStructure) {
         hotMap.removeBoolean(inventoryID);
-        super.remove(world);
+        super.remove(world, oldStructure);
+    }
+
+    @Nullable
+    @SuppressWarnings("removal")
+    private HeatedCoolant getHeatedCoolant() {
+        ChemicalStack stack = superheatedCoolantTank.getStack();
+        if (stack.isEmpty()) {
+            return null;
+        }
+        HeatedCoolant coolant = stack.getData(IMekanismDataMapTypes.INSTANCE.heatedChemicalCoolant());
+        if (coolant == null) {//TODO - 1.22: Remove this handling of legacy data
+            ChemicalAttributes.HeatedCoolant legacyCoolant = stack.getLegacy(ChemicalAttributes.HeatedCoolant.class);
+            if (legacyCoolant != null) {
+                return legacyCoolant.asModern();
+            }
+        }
+        return coolant;
     }
 
     @Override
@@ -133,22 +178,23 @@ public class BoilerMultiblockData extends MultiblockData implements IValveHandle
         updateHeatCapacitors(null);
         // handle coolant heat transfer
         if (!superheatedCoolantTank.isEmpty()) {
-            superheatedCoolantTank.getStack().ifAttributePresent(HeatedCoolant.class, coolantType -> {
-                long toCool = Math.round(BoilerMultiblockData.COOLANT_COOLING_EFFICIENCY * superheatedCoolantTank.getStored());
-                toCool = MathUtils.clampToLong(toCool * (1 - heatCapacitor.getTemperature() / HeatUtils.HEATED_COOLANT_TEMP));
-                GasStack cooledCoolant = coolantType.getCooledGas().getStack(toCool);
-                toCool = Math.min(toCool, toCool - cooledCoolantTank.insert(cooledCoolant, Action.EXECUTE, AutomationType.INTERNAL).getAmount());
-                if (toCool > 0) {
-                    double heatEnergy = toCool * coolantType.getThermalEnthalpy();
+            HeatedCoolant coolantType = getHeatedCoolant();
+            if (coolantType != null) {
+                double portionToCool = coolantType.conductivity() * superheatedCoolantTank.getStored();
+                long toCool = Math.round(portionToCool * (1 - heatCapacitor.getTemperature() / coolantType.temperature()));
+                ChemicalStack cooledCoolant = coolantType.cool(toCool);
+                long amountCooled = toCool - cooledCoolantTank.insert(cooledCoolant, Action.EXECUTE, AutomationType.INTERNAL).getAmount();
+                if (amountCooled > 0) {
+                    double heatEnergy = amountCooled * coolantType.thermalEnthalpy();
                     heatCapacitor.handleHeat(heatEnergy);
-                    superheatedCoolantTank.shrinkStack(toCool, Action.EXECUTE);
+                    superheatedCoolantTank.shrinkStack(amountCooled, Action.EXECUTE);
                 }
-            });
+            }
         }
         // handle water heat transfer
         if (getTotalTemperature() >= HeatUtils.BASE_BOIL_TEMP && !waterTank.isEmpty()) {
             double heatAvailable = getHeatAvailable();
-            lastMaxBoil = (int) Math.floor(HeatUtils.getSteamEnergyEfficiency() * heatAvailable / HeatUtils.getWaterThermalEnthalpy());
+            lastMaxBoil = Mth.floor(HeatUtils.getSteamEnergyEfficiency() * heatAvailable / HeatUtils.getWaterThermalEnthalpy());
 
             int amountToBoil = Math.min(lastMaxBoil, waterTank.getFluidAmount());
             amountToBoil = Math.min(amountToBoil, MathUtils.clampToInt(steamTank.getNeeded()));
@@ -156,7 +202,7 @@ public class BoilerMultiblockData extends MultiblockData implements IValveHandle
                 waterTank.shrinkStack(amountToBoil, Action.EXECUTE);
             }
             if (steamTank.isEmpty()) {
-                steamTank.setStack(MekanismGases.STEAM.getStack(amountToBoil));
+                steamTank.setStack(MekanismChemicals.STEAM.asStack(amountToBoil));
             } else {
                 steamTank.growStack(amountToBoil, Action.EXECUTE);
             }
@@ -167,13 +213,21 @@ public class BoilerMultiblockData extends MultiblockData implements IValveHandle
             lastBoilRate = 0;
             lastMaxBoil = 0;
         }
+        if (!chemicalOutputTargets.isEmpty()) {
+            if (!steamTank.isEmpty()) {
+                ChemicalUtil.emit(getActiveOutputs(chemicalOutputTargets, BoilerValveMode.OUTPUT_STEAM), steamTank);
+            }
+            if (!cooledCoolantTank.isEmpty()) {
+                ChemicalUtil.emit(getActiveOutputs(chemicalOutputTargets, BoilerValveMode.OUTPUT_COOLANT), cooledCoolantTank);
+            }
+        }
         float waterScale = MekanismUtils.getScale(prevWaterScale, waterTank);
-        if (waterScale != prevWaterScale) {
+        if (MekanismUtils.scaleChanged(waterScale, prevWaterScale)) {
             needsPacket = true;
             prevWaterScale = waterScale;
         }
         float steamScale = MekanismUtils.getScale(prevSteamScale, steamTank);
-        if (steamScale != prevSteamScale) {
+        if (MekanismUtils.scaleChanged(steamScale, prevSteamScale)) {
             needsPacket = true;
             prevSteamScale = steamScale;
         }
@@ -181,28 +235,47 @@ public class BoilerMultiblockData extends MultiblockData implements IValveHandle
     }
 
     @Override
-    public void readUpdateTag(CompoundTag tag) {
-        super.readUpdateTag(tag);
-        NBTUtils.setFloatIfPresent(tag, NBTConstants.SCALE, scale -> prevWaterScale = scale);
-        NBTUtils.setFloatIfPresent(tag, NBTConstants.SCALE_ALT, scale -> prevSteamScale = scale);
-        NBTUtils.setIntIfPresent(tag, NBTConstants.VOLUME, this::setWaterVolume);
-        NBTUtils.setIntIfPresent(tag, NBTConstants.LOWER_VOLUME, this::setSteamVolume);
-        NBTUtils.setFluidStackIfPresent(tag, NBTConstants.FLUID_STORED, value -> waterTank.setStack(value));
-        NBTUtils.setGasStackIfPresent(tag, NBTConstants.GAS_STORED, value -> steamTank.setStack(value));
-        NBTUtils.setBlockPosIfPresent(tag, NBTConstants.RENDER_Y, value -> upperRenderLocation = value);
+    protected void updateEjectors(Level world) {
+        chemicalOutputTargets.clear();
+        for (ValveData valve : valves) {
+            TileEntityBoilerValve tile = WorldUtils.getTileEntity(TileEntityBoilerValve.class, world, valve.location);
+            if (tile != null) {
+                tile.addChemicalTargetCapability(chemicalOutputTargets, valve.side);
+            }
+        }
+    }
+
+    public List<IChemicalTank> getChemicalTanks(BoilerValveMode mode) {
+        return switch (mode) {
+            case INPUT -> inputTanks;
+            case OUTPUT_STEAM -> outputSteamTanks;
+            case OUTPUT_COOLANT -> outputCoolantTanks;
+        };
+    }
+
+    @Override
+    public void readUpdateTag(CompoundTag tag, HolderLookup.Provider provider) {
+        super.readUpdateTag(tag, provider);
+        NBTUtils.setFloatIfPresent(tag, SerializationConstants.SCALE, scale -> prevWaterScale = scale);
+        NBTUtils.setFloatIfPresent(tag, SerializationConstants.SCALE_ALT, scale -> prevSteamScale = scale);
+        NBTUtils.setIntIfPresent(tag, SerializationConstants.VOLUME, this::setWaterVolume);
+        NBTUtils.setIntIfPresent(tag, SerializationConstants.LOWER_VOLUME, this::setSteamVolume);
+        NBTUtils.setFluidStackIfPresent(provider, tag, SerializationConstants.FLUID, value -> waterTank.setStack(value));
+        NBTUtils.setChemicalStackIfPresent(provider, tag, SerializationConstants.CHEMICAL, value -> steamTank.setStack(value));
+        NBTUtils.setBlockPosIfPresent(tag, SerializationConstants.RENDER_Y, value -> upperRenderLocation = value);
         readValves(tag);
     }
 
     @Override
-    public void writeUpdateTag(CompoundTag tag) {
-        super.writeUpdateTag(tag);
-        tag.putFloat(NBTConstants.SCALE, prevWaterScale);
-        tag.putFloat(NBTConstants.SCALE_ALT, prevSteamScale);
-        tag.putInt(NBTConstants.VOLUME, getWaterVolume());
-        tag.putInt(NBTConstants.LOWER_VOLUME, getSteamVolume());
-        tag.put(NBTConstants.FLUID_STORED, waterTank.getFluid().writeToNBT(new CompoundTag()));
-        tag.put(NBTConstants.GAS_STORED, steamTank.getStack().write(new CompoundTag()));
-        tag.put(NBTConstants.RENDER_Y, NbtUtils.writeBlockPos(upperRenderLocation));
+    public void writeUpdateTag(CompoundTag tag, HolderLookup.Provider provider) {
+        super.writeUpdateTag(tag, provider);
+        tag.putFloat(SerializationConstants.SCALE, prevWaterScale);
+        tag.putFloat(SerializationConstants.SCALE_ALT, prevSteamScale);
+        tag.putInt(SerializationConstants.VOLUME, getWaterVolume());
+        tag.putInt(SerializationConstants.LOWER_VOLUME, getSteamVolume());
+        tag.put(SerializationConstants.FLUID, waterTank.getFluid().saveOptional(provider));
+        tag.put(SerializationConstants.CHEMICAL, steamTank.getStack().saveOptional(provider));
+        tag.put(SerializationConstants.RENDER_Y, NbtUtils.writeBlockPos(upperRenderLocation));
         writeValves(tag);
     }
 

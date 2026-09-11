@@ -1,13 +1,9 @@
 package mekanism.common.tile.qio;
 
-import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import java.util.Collection;
-import java.util.Map;
-import mekanism.api.NBTConstants;
-import mekanism.api.providers.IBlockProvider;
+import mekanism.api.SerializationConstants;
+import mekanism.api.security.SecurityMode;
 import mekanism.api.text.EnumColor;
-import mekanism.common.capabilities.Capabilities;
-import mekanism.common.capabilities.resolver.BasicCapabilityResolver;
 import mekanism.common.content.qio.IQIOFrequencyHolder;
 import mekanism.common.content.qio.QIOFrequency;
 import mekanism.common.integration.computer.ComputerException;
@@ -15,25 +11,26 @@ import mekanism.common.integration.computer.annotation.ComputerMethod;
 import mekanism.common.lib.frequency.Frequency.FrequencyIdentity;
 import mekanism.common.lib.frequency.FrequencyType;
 import mekanism.common.tile.base.TileEntityMekanism;
-import mekanism.common.tile.interfaces.ISustainedData;
+import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.NBTUtils;
 import mekanism.common.util.WorldUtils;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class TileEntityQIOComponent extends TileEntityMekanism implements IQIOFrequencyHolder, ISustainedData {
+public class TileEntityQIOComponent extends TileEntityMekanism implements IQIOFrequencyHolder {
 
     @Nullable
     private EnumColor lastColor;
 
-    public TileEntityQIOComponent(IBlockProvider blockProvider, BlockPos pos, BlockState state) {
+    public TileEntityQIOComponent(Holder<Block> blockProvider, BlockPos pos, BlockState state) {
         super(blockProvider, pos, state);
         frequencyComponent.track(FrequencyType.QIO, true, true, true);
-        addCapabilityResolver(BasicCapabilityResolver.constant(Capabilities.CONFIG_CARD, this));
     }
 
     @Nullable
@@ -42,55 +39,50 @@ public class TileEntityQIOComponent extends TileEntityMekanism implements IQIOFr
     }
 
     @Override
-    protected void onUpdateServer() {
-        super.onUpdateServer();
+    protected boolean onUpdateServer() {
+        boolean sendUpdatePacket = super.onUpdateServer();
+        sendUpdatePacket |= onUpdateServer(getQIOFrequency());
+        return sendUpdatePacket;
+    }
+
+    protected boolean onUpdateServer(@Nullable QIOFrequency frequency) {
         EnumColor prev = lastColor;
-        QIOFrequency frequency = getQIOFrequency();
         lastColor = frequency == null ? null : frequency.getColor();
-        if (prev != lastColor) {
-            sendUpdatePacket();
-        }
-        if (level.getGameTime() % 10 == 0) {
+        boolean needsUpdate = prev != lastColor;
+        if (level.getGameTime() % MekanismUtils.TICKS_PER_HALF_SECOND == 0) {
             setActive(frequency != null);
         }
+        return needsUpdate;
     }
 
     @Override
-    public void writeSustainedData(CompoundTag dataMap) {
+    public void writeSustainedData(HolderLookup.Provider provider, CompoundTag dataMap) {
+        super.writeSustainedData(provider, dataMap);
         if (lastColor != null) {
-            NBTUtils.writeEnum(dataMap, NBTConstants.COLOR, lastColor);
+            NBTUtils.writeEnum(dataMap, SerializationConstants.COLOR, lastColor);
         }
     }
 
     @Override
-    public void readSustainedData(CompoundTag dataMap) {
-        EnumColor color = dataMap.contains(NBTConstants.COLOR, Tag.TAG_INT) ? EnumColor.byIndexStatic(dataMap.getInt(NBTConstants.COLOR)) : null;
-        if (lastColor != color) {
-            lastColor = color;
-        }
-    }
-
-    @Override
-    public Map<String, String> getTileDataRemap() {
-        Map<String, String> remap = new Object2ObjectOpenHashMap<>();
-        remap.put(NBTConstants.COLOR, NBTConstants.COLOR);
-        return remap;
+    public void readSustainedData(HolderLookup.Provider provider, @NotNull CompoundTag dataMap) {
+        super.readSustainedData(provider, dataMap);
+        lastColor = NBTUtils.getEnum(dataMap, SerializationConstants.COLOR, EnumColor.BY_ID);
     }
 
     @NotNull
     @Override
-    public CompoundTag getReducedUpdateTag() {
-        CompoundTag updateTag = super.getReducedUpdateTag();
+    public CompoundTag getReducedUpdateTag(@NotNull HolderLookup.Provider provider) {
+        CompoundTag updateTag = super.getReducedUpdateTag(provider);
         if (lastColor != null) {
-            NBTUtils.writeEnum(updateTag, NBTConstants.COLOR, lastColor);
+            NBTUtils.writeEnum(updateTag, SerializationConstants.COLOR, lastColor);
         }
         return updateTag;
     }
 
     @Override
-    public void handleUpdateTag(@NotNull CompoundTag tag) {
-        super.handleUpdateTag(tag);
-        EnumColor color = tag.contains(NBTConstants.COLOR, Tag.TAG_INT) ? EnumColor.byIndexStatic(tag.getInt(NBTConstants.COLOR)) : null;
+    public void handleUpdateTag(@NotNull CompoundTag tag, @NotNull HolderLookup.Provider provider) {
+        super.handleUpdateTag(tag, provider);
+        EnumColor color = NBTUtils.getEnum(tag, SerializationConstants.COLOR, EnumColor.BY_ID);
         if (lastColor != color) {
             lastColor = color;
             WorldUtils.updateBlock(getLevel(), getBlockPos(), getBlockState());
@@ -135,7 +127,7 @@ public class TileEntityQIOComponent extends TileEntityMekanism implements IQIOFr
         if (frequency != null) {
             throw new ComputerException("Unable to create public QIO frequency with name '%s' as one already exists.", name);
         }
-        setFrequency(FrequencyType.QIO, new FrequencyIdentity(name, true), getOwnerUUID());
+        setFrequency(FrequencyType.QIO, new FrequencyIdentity(name, SecurityMode.PUBLIC, getOwnerUUID()), getOwnerUUID());
     }
 
     @ComputerMethod(methodDescription = "Requires a frequency to be selected")

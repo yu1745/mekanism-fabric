@@ -17,8 +17,9 @@ public class WarningTracker implements IWarningTracker {
 
     @Override
     public BooleanSupplier trackWarning(@NotNull WarningType type, @NotNull BooleanSupplier warningSupplier) {
-        warnings.computeIfAbsent(Objects.requireNonNull(type, "Warning type cannot be null."), t -> new ArrayList<>(type.expectedWarnings))
-              .add(Objects.requireNonNull(warningSupplier, "Warning check cannot be null."));
+        Objects.requireNonNull(type, "Warning type cannot be null.");
+        Objects.requireNonNull(warningSupplier, "Warning check cannot be null.");
+        warnings.computeIfAbsent(type, t -> new ArrayList<>(t.expectedWarnings)).add(warningSupplier);
         return warningSupplier;
     }
 
@@ -74,6 +75,9 @@ public class WarningTracker implements IWarningTracker {
         NOT_ENOUGH_ENERGY_REDUCED_RATE(MekanismLang.ISSUE_NOT_ENOUGH_ENERGY_REDUCED_RATE),
         INVALID_OREDICTIONIFICATOR_FILTER(MekanismLang.ISSUE_INVALID_OREDICTIONIFICATOR_FILTER, 4),
         FILTER_HAS_BLACKLISTED_ELEMENT(MekanismLang.ISSUE_FILTER_HAS_BLACKLISTED_ELEMENT, 5),
+        REDSTONE_SIGNAL_ABSENT(MekanismLang.ISSUE_REDSTONE_SIGNAL_ABSENT),
+        REDSTONE_SIGNAL_PRESENT(MekanismLang.ISSUE_REDSTONE_SIGNAL_PRESENT),
+        REDSTONE_PULSE_REQUIRED(MekanismLang.ISSUE_REDSTONE_PULSE_REQUIRED),
         ;
 
         private final ILangEntry langEntry;

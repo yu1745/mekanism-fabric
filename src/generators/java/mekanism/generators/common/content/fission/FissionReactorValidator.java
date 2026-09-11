@@ -9,7 +9,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
-import mekanism.api.NBTConstants;
+import mekanism.api.SerializationConstants;
 import mekanism.api.text.EnumColor;
 import mekanism.common.MekanismLang;
 import mekanism.common.content.blocktype.BlockType;
@@ -26,10 +26,12 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtUtils;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
+import org.jetbrains.annotations.Nullable;
 
 public class FissionReactorValidator extends CuboidStructureValidator<FissionReactorMultiblockData> {
 
@@ -60,6 +62,7 @@ public class FissionReactorValidator extends CuboidStructureValidator<FissionRea
         Set<BlockPos> fuelAssemblyCoords = new HashSet<>();
         int assemblyCount = 0, surfaceArea = 0;
 
+        BlockPos.MutableBlockPos mutable = new BlockPos.MutableBlockPos();
         for (BlockPos coord : structure.internalLocations) {
             BlockEntity tile = WorldUtils.getTileEntity(world, chunkMap, coord);
             AssemblyPos pos = new AssemblyPos(coord.getX(), coord.getZ());
@@ -75,7 +78,8 @@ public class FissionReactorValidator extends CuboidStructureValidator<FissionRea
                 // compute surface area
                 surfaceArea += 6;
                 for (Direction side : EnumUtils.DIRECTIONS) {
-                    if (fuelAssemblyCoords.contains(coord.relative(side))) {
+                    mutable.setWithOffset(coord, side);
+                    if (fuelAssemblyCoords.contains(mutable)) {
                         surfaceArea -= 2;
                     }
                 }
@@ -156,16 +160,18 @@ public class FissionReactorValidator extends CuboidStructureValidator<FissionRea
 
         public CompoundTag write() {
             CompoundTag ret = new CompoundTag();
-            ret.putInt(NBTConstants.X, pos.getX());
-            ret.putInt(NBTConstants.Y, pos.getY());
-            ret.putInt(NBTConstants.Z, pos.getZ());
-            ret.putInt(NBTConstants.HEIGHT, height);
+            ret.put(SerializationConstants.POSITION, NbtUtils.writeBlockPos(pos));
+            ret.putInt(SerializationConstants.HEIGHT, height);
             return ret;
         }
 
+        @Nullable
         public static FormedAssembly read(CompoundTag nbt) {
-            return new FormedAssembly(new BlockPos(nbt.getInt(NBTConstants.X), nbt.getInt(NBTConstants.Y), nbt.getInt(NBTConstants.Z)),
-                  nbt.getInt(NBTConstants.HEIGHT));
+            BlockPos blockPos = NbtUtils.readBlockPos(nbt, SerializationConstants.POSITION).orElse(null);
+            if (blockPos == null) {
+                return null;
+            }
+            return new FormedAssembly(blockPos, nbt.getInt(SerializationConstants.HEIGHT));
         }
     }
 

@@ -1,12 +1,15 @@
 package mekanism.api.providers;
 
 import net.minecraft.MethodsReturnNonnullByDefault;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ItemLike;
-import net.minecraftforge.registries.ForgeRegistries;
 
 @MethodsReturnNonnullByDefault
+@Deprecated(forRemoval = true, since = "10.7.11")
+@SuppressWarnings("removal")
 public interface IItemProvider extends IBaseProvider, ItemLike {
 
     /**
@@ -27,11 +30,16 @@ public interface IItemProvider extends IBaseProvider, ItemLike {
 
     @Override
     default ResourceLocation getRegistryName() {
-        return ForgeRegistries.ITEMS.getKey(asItem());
+        return BuiltInRegistries.ITEM.getKey(asItem());
     }
 
     @Override
     default String getTranslationKey() {
         return asItem().getDescriptionId();
+    }
+
+    @Override
+    default Component getTextComponent() {
+        return asItem().getDescription();
     }
 }

@@ -1,25 +1,25 @@
 package mekanism.common.recipe.impl;
 
 import java.util.Map;
-import java.util.function.Consumer;
 import mekanism.api.datagen.recipe.builder.CombinerRecipeBuilder;
 import mekanism.api.recipes.ingredients.ItemStackIngredient;
 import mekanism.api.recipes.ingredients.creator.IngredientCreatorAccess;
 import mekanism.common.Mekanism;
 import mekanism.common.recipe.ISubRecipeProvider;
 import mekanism.common.tags.MekanismTags;
-import net.minecraft.data.recipes.FinishedRecipe;
+import mekanism.common.util.RegistryUtils;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.data.recipes.RecipeOutput;
 import net.minecraft.world.item.HoneycombItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraftforge.common.Tags;
+import net.neoforged.neoforge.common.Tags;
 
 class CombinerRecipeProvider implements ISubRecipeProvider {
 
     @Override
-    public void addRecipes(Consumer<FinishedRecipe> consumer) {
+    public void addRecipes(RecipeOutput consumer, HolderLookup.Provider registries) {
         String basePath = "combining/";
         addCombinerDyeRecipes(consumer, basePath + "dye/");
         addCombinerGlowRecipes(consumer, basePath + "glow/");
@@ -27,36 +27,36 @@ class CombinerRecipeProvider implements ISubRecipeProvider {
         //Gravel
         CombinerRecipeBuilder.combining(
               IngredientCreatorAccess.item().from(Items.FLINT),
-              IngredientCreatorAccess.item().from(Tags.Items.COBBLESTONE_NORMAL),
-              new ItemStack(Blocks.GRAVEL)
+              IngredientCreatorAccess.item().from(Tags.Items.COBBLESTONES_NORMAL),
+              new ItemStack(Items.GRAVEL)
         ).build(consumer, Mekanism.rl(basePath + "gravel"));
         //Obsidian
         CombinerRecipeBuilder.combining(
               IngredientCreatorAccess.item().from(MekanismTags.Items.DUSTS_OBSIDIAN, 4),
-              IngredientCreatorAccess.item().from(Tags.Items.COBBLESTONE_DEEPSLATE),
-              new ItemStack(Blocks.OBSIDIAN)
+              IngredientCreatorAccess.item().from(Tags.Items.COBBLESTONES_DEEPSLATE),
+              new ItemStack(Items.OBSIDIAN)
         ).build(consumer, Mekanism.rl(basePath + "obsidian"));
         //Rooted Dirt
         CombinerRecipeBuilder.combining(
               IngredientCreatorAccess.item().from(Items.HANGING_ROOTS, 3),
-              IngredientCreatorAccess.item().from(Blocks.DIRT),
-              new ItemStack(Blocks.ROOTED_DIRT)
+              IngredientCreatorAccess.item().from(Items.DIRT),
+              new ItemStack(Items.ROOTED_DIRT)
         ).build(consumer, Mekanism.rl(basePath + "rooted_dirt"));
         //Packed mud
         CombinerRecipeBuilder.combining(
               IngredientCreatorAccess.item().from(Tags.Items.CROPS_WHEAT),
-              IngredientCreatorAccess.item().from(Blocks.MUD),
-              new ItemStack(Blocks.PACKED_MUD)
+              IngredientCreatorAccess.item().from(Items.MUD),
+              new ItemStack(Items.PACKED_MUD)
         ).build(consumer, Mekanism.rl(basePath + "packed_mud"));
         //Muddy mangrove roots
         CombinerRecipeBuilder.combining(
-              IngredientCreatorAccess.item().from(Blocks.MANGROVE_ROOTS),
-              IngredientCreatorAccess.item().from(Blocks.MUD),
-              new ItemStack(Blocks.MUDDY_MANGROVE_ROOTS)
+              IngredientCreatorAccess.item().from(Items.MANGROVE_ROOTS),
+              IngredientCreatorAccess.item().from(Items.MUD),
+              new ItemStack(Items.MUDDY_MANGROVE_ROOTS)
         ).build(consumer, Mekanism.rl(basePath + "muddy_mangrove_roots"));
     }
 
-    private void addCombinerDyeRecipes(Consumer<FinishedRecipe> consumer, String basePath) {
+    private void addCombinerDyeRecipes(RecipeOutput consumer, String basePath) {
         //Black + white -> light gray
         CombinerRecipeBuilder.combining(
               IngredientCreatorAccess.item().from(Tags.Items.DYES_BLACK),
@@ -113,7 +113,7 @@ class CombinerRecipeProvider implements ISubRecipeProvider {
         ).build(consumer, Mekanism.rl(basePath + "purple"));
     }
 
-    private void addCombinerGlowRecipes(Consumer<FinishedRecipe> consumer, String basePath) {
+    private void addCombinerGlowRecipes(RecipeOutput consumer, String basePath) {
         ItemStackIngredient glow = IngredientCreatorAccess.item().from(Tags.Items.DUSTS_GLOWSTONE);
         //Sweet Berries -> Glow Berries
         CombinerRecipeBuilder.combining(
@@ -135,7 +135,7 @@ class CombinerRecipeProvider implements ISubRecipeProvider {
         ).build(consumer, Mekanism.rl(basePath + "item_frame"));
     }
 
-    private void addCombinerWaxingRecipes(Consumer<FinishedRecipe> consumer, String basePath) {
+    private void addCombinerWaxingRecipes(RecipeOutput consumer, String basePath) {
         //Generate baseline recipes from waxing recipe set
         ItemStackIngredient wax = IngredientCreatorAccess.item().from(Items.HONEYCOMB);
         for (Map.Entry<Block, Block> entry : HoneycombItem.WAXABLES.get().entrySet()) {
@@ -144,7 +144,7 @@ class CombinerRecipeProvider implements ISubRecipeProvider {
                   IngredientCreatorAccess.item().from(entry.getKey()),
                   wax,
                   new ItemStack(result)
-            ).build(consumer, Mekanism.rl(basePath + result.asItem()));
+            ).build(consumer, Mekanism.rl(basePath + RegistryUtils.getPath(result)));
         }
     }
 }

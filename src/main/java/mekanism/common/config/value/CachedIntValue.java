@@ -1,10 +1,11 @@
 package mekanism.common.config.value;
 
 import java.util.function.IntSupplier;
+import java.util.function.LongSupplier;
 import mekanism.common.config.IMekanismConfig;
-import net.minecraftforge.common.ForgeConfigSpec.ConfigValue;
+import net.neoforged.neoforge.common.ModConfigSpec.ConfigValue;
 
-public class CachedIntValue extends CachedValue<Integer> implements IntSupplier {
+public class CachedIntValue extends CachedValue<Integer> implements IntSupplier, LongSupplier {
 
     private boolean resolved;
     private int cachedValue;
@@ -38,6 +39,11 @@ public class CachedIntValue extends CachedValue<Integer> implements IntSupplier 
         return get();
     }
 
+    @Override
+    public long getAsLong() {
+        return get();
+    }
+
     public void set(int value) {
         internal.set(value);
         cachedValue = value;
@@ -51,7 +57,7 @@ public class CachedIntValue extends CachedValue<Integer> implements IntSupplier 
         }
         int oldCachedValue = cachedValue;
         resolved = false;
-        //Return if we are meant to check the changed ones, and it is different than it used to be
+        //Return if we are meant to check the changed ones, and it is different then it used to be
         return checkChanged && oldCachedValue != get();
     }
 }

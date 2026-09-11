@@ -1,6 +1,5 @@
 package mekanism.common.tile.component;
 
-import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
@@ -9,22 +8,25 @@ import it.unimi.dsi.fastutil.longs.LongSets;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import mekanism.api.NBTConstants;
+import mekanism.api.MekanismAPI;
+import mekanism.api.SerializationConstants;
 import mekanism.api.Upgrade;
 import mekanism.common.Mekanism;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.lib.chunkloading.IChunkLoader;
 import mekanism.common.tile.base.TileEntityMekanism;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.common.world.ForgeChunkManager;
-import net.minecraftforge.common.world.ForgeChunkManager.LoadingValidationCallback;
-import net.minecraftforge.common.world.ForgeChunkManager.TicketHelper;
+import net.neoforged.neoforge.common.world.chunk.LoadingValidationCallback;
+import net.neoforged.neoforge.common.world.chunk.TicketController;
+import net.neoforged.neoforge.common.world.chunk.TicketHelper;
+import net.neoforged.neoforge.common.world.chunk.TicketSet;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -32,6 +34,8 @@ import org.slf4j.Logger;
 public class TileComponentChunkLoader<T extends TileEntityMekanism & IChunkLoader> implements ITileComponent {
 
     private static final Logger LOGGER = LogUtils.getLogger();
+    public static final TicketController TICKET_CONTROLLER = new TicketController(Mekanism.rl("chunk_loader"), ChunkValidationCallback.INSTANCE);
+
     /**
      * TileEntity implementing this component.
      */
@@ -63,7 +67,10 @@ public class TileComponentChunkLoader<T extends TileEntityMekanism & IChunkLoade
         LOGGER.debug("Attempting to remove {} chunk tickets. Pos: {} World: {}", tickets, pos, world.dimension().location());
         if (tickets > 0) {
             for (long chunkPos : chunkSet) {
-                ForgeChunkManager.forceChunk(world, Mekanism.MODID, pos, (int) chunkPos, (int) (chunkPos >> 32), false, forceTicks);
+                boolean success = TICKET_CONTROLLER.forceChunk(world, pos, ChunkPos.getX(chunkPos), ChunkPos.getZ(chunkPos), false, forceTicks);
+                if (!success) {
+                    LOGGER.warn("Failed to release chunk ticket for {}", chunkPos);
+                }
             }
             chunkSet.clear();
             markDirty();
@@ -80,8 +87,11 @@ public class TileComponentChunkLoader<T extends TileEntityMekanism & IChunkLoade
         LOGGER.debug("Attempting to add {} chunk tickets. Pos: {} World: {}", tickets, prevPos, world.dimension().location());
         if (tickets > 0) {
             for (ChunkPos chunkPos : chunks) {
-                ForgeChunkManager.forceChunk(world, Mekanism.MODID, prevPos, chunkPos.x, chunkPos.z, true, forceTicks);
+                boolean success = TICKET_CONTROLLER.forceChunk(world, prevPos, chunkPos.x, chunkPos.z, true, forceTicks);
                 chunkSet.add(chunkPos.toLong());
+                if (!success) {
+                    LOGGER.error("Failed to force chunk during registration {}", chunkPos);
+                }
             }
             markDirty();
         }
@@ -104,6 +114,9 @@ public class TileComponentChunkLoader<T extends TileEntityMekanism & IChunkLoade
      */
     private void refreshChunkTickets(@NotNull ServerLevel world, @NotNull BlockPos pos, boolean ticketsChanged) {
         boolean canOperate = canOperate();
+        if (MekanismAPI.debug) {
+            LOGGER.debug("refreshChunkTickets called for {}. Can operate = {}", pos, canOperate);
+        }
         if (hasRegistered && prevWorld != null && prevPos != null) {
             //Note: If we have already registered the previous world and previous position
             // should never be null, but we validate this just in case
@@ -127,8 +140,8 @@ public class TileComponentChunkLoader<T extends TileEntityMekanism & IChunkLoade
                     registerChunkTickets(world);
                 } else {
                     //Otherwise, we need to do some more checks
-                    LongSet chunks = getTileChunks();
-                    if (chunks.isEmpty()) {
+                    LongSet newChunks = getTileChunks();
+                    if (newChunks.isEmpty()) {
                         //Probably never the case, but if we have no chunks that should be loaded anymore;
                         // just release them all normally
                         releaseChunkTickets(world, pos);
@@ -140,28 +153,39 @@ public class TileComponentChunkLoader<T extends TileEntityMekanism & IChunkLoade
                         LongIterator chunkIt = chunkSet.iterator();
                         while (chunkIt.hasNext()) {
                             long chunkPos = chunkIt.nextLong();
-                            if (!chunks.contains(chunkPos)) {
+                            if (!newChunks.contains(chunkPos)) {
                                 //If the chunk is no longer in our chunks we want loaded
                                 // then we need to unforce the chunk and remove it
-                                ForgeChunkManager.forceChunk(world, Mekanism.MODID, pos, (int) chunkPos, (int) (chunkPos >> 32), false, forceTicks);
+                                boolean success = TICKET_CONTROLLER.forceChunk(world, pos, ChunkPos.getX(chunkPos), ChunkPos.getZ(chunkPos), false, forceTicks);
+                                if (!success) {
+                                    LOGGER.warn("Failed to remove forced chunk {}", chunkPos);
+                                }
                                 chunkIt.remove();
                                 removed++;
                             }
                         }
                         //And add any that are valid now that weren't before
-                        for (long chunkPos : chunks) {
+                        for (long chunkPos : newChunks) {
                             if (chunkSet.add(chunkPos)) {
                                 //If we didn't already have it in our chunk set and added actually added it as it is new
                                 // then we also need to force the chunk
-                                ForgeChunkManager.forceChunk(world, Mekanism.MODID, pos, (int) chunkPos, (int) (chunkPos >> 32), true, forceTicks);
+                                boolean success = TICKET_CONTROLLER.forceChunk(world, pos, ChunkPos.getX(chunkPos), ChunkPos.getZ(chunkPos), true, forceTicks);
+                                if (!success) {
+                                    LOGGER.error("Failed to force chunk during refresh {}", chunkPos);
+                                }
                                 added++;
                             }
                         }
                         if (removed != 0 || added != 0) {
                             markDirty();
                         }
-                        LOGGER.debug("Removed {} no longer valid chunk tickets, and added {} newly valid chunk tickets. Pos: {} World: {}", removed, added, pos,
+                        LOGGER.debug("refreshChunkTickets(): Removed {} no longer valid chunk tickets, and added {} newly valid chunk tickets. Pos: {} World: {}", removed, added, pos,
                               world.dimension().location());
+                        if (MekanismAPI.debug) {
+                            LOGGER.debug("Current set: {}", chunkSet);
+                            LOGGER.debug("Tile chunk: {}", ChunkPos.asLong(tile.getBlockPos()));
+                            LOGGER.debug("Tile requested: {}", newChunks);
+                        }
                     }
                 }
             }
@@ -180,7 +204,22 @@ public class TileComponentChunkLoader<T extends TileEntityMekanism & IChunkLoade
     }
 
     @Override
-    public void read(CompoundTag nbtTags) {
+    public String getComponentKey() {
+        //Unused
+        return "componentChunkLoader";
+    }
+
+    @Override
+    public void deserialize(CompoundTag componentTag, HolderLookup.Provider provider) {
+    }
+
+    @Override
+    public CompoundTag serialize(HolderLookup.Provider provider) {
+        return new CompoundTag();
+    }
+
+    @Override
+    public void read(CompoundTag nbtTags, HolderLookup.Provider provider) {
         if (!chunkSet.isEmpty()) {
             //If we currently have any chunks loaded, remove their tickets and clear them
             if (tile.hasLevel() && !tile.isRemote() && hasRegistered && prevWorld != null && prevPos != null) {
@@ -192,14 +231,16 @@ public class TileComponentChunkLoader<T extends TileEntityMekanism & IChunkLoade
                 chunkSet.clear();
             }
         }
-        for (long chunk : nbtTags.getLongArray(NBTConstants.CHUNK_SET)) {
+        for (long chunk : nbtTags.getLongArray(SerializationConstants.CHUNK_SET)) {
             chunkSet.add(chunk);
         }
     }
 
     @Override
-    public void write(CompoundTag nbtTags) {
-        nbtTags.putLongArray(NBTConstants.CHUNK_SET, chunkSet.toLongArray());
+    public void write(CompoundTag nbtTags, HolderLookup.Provider provider) {
+        if (!chunkSet.isEmpty()) {
+            nbtTags.putLongArray(SerializationConstants.CHUNK_SET, chunkSet.toLongArray());
+        }
     }
 
     @Override
@@ -240,13 +281,13 @@ public class TileComponentChunkLoader<T extends TileEntityMekanism & IChunkLoade
             ResourceLocation worldName = world.dimension().location();
             LOGGER.debug("Validating tickets for: {}. Blocks: {}, Entities: {}", worldName, ticketHelper.getBlockTickets().size(),
                   ticketHelper.getEntityTickets().size());
-            for (Map.Entry<BlockPos, Pair<LongSet, LongSet>> entry : ticketHelper.getBlockTickets().entrySet()) {
+            for (Map.Entry<BlockPos, TicketSet> entry : ticketHelper.getBlockTickets().entrySet()) {
                 //Only bother looking at non ticking chunks as we don't register any "fully" ticking chunks
                 BlockPos pos = entry.getKey();
-                LongSet forcedChunks = entry.getValue().getFirst();
-                LongSet tickingForcedChunks = entry.getValue().getSecond();
+                LongSet forcedChunks = entry.getValue().nonTicking();
+                LongSet tickingForcedChunks = entry.getValue().ticking();
                 LOGGER.debug("Validating tickets for: {}, BlockPos: {}, Forced chunks: {}, Ticking forced chunks: {}", worldName, pos, forcedChunks.size(),
-                      entry.getValue().getSecond().size());
+                      tickingForcedChunks.size());
                 validateTickets(world, worldName, pos, ticketHelper, forcedChunks, false);
                 validateTickets(world, worldName, pos, ticketHelper, tickingForcedChunks, true);
             }
@@ -303,7 +344,7 @@ public class TileComponentChunkLoader<T extends TileEntityMekanism & IChunkLoade
                                 if (chunkLoader.chunkSet.add(chunkPos) || ticking != chunkLoader.forceTicks) {
                                     //If we didn't already have it in our chunk set and added, or we had removed it due to it fully ticking changing,
                                     // then we also need to force the chunk
-                                    ForgeChunkManager.forceChunk(world, Mekanism.MODID, pos, (int) chunkPos, (int) (chunkPos >> 32), true, chunkLoader.forceTicks);
+                                    TICKET_CONTROLLER.forceChunk(world, pos, ChunkPos.getX(chunkPos), ChunkPos.getZ(chunkPos), true, chunkLoader.forceTicks);
                                     added++;
                                 }
                             }
@@ -317,8 +358,9 @@ public class TileComponentChunkLoader<T extends TileEntityMekanism & IChunkLoade
                                 chunkLoader.markDirty();
                                 //Note: Info level as this may be intended/expected when configs change (for example reducing max radius of digital miner),
                                 // or if some of it needs to be recalculated such as the miner no longer having a target chunk
-                                LOGGER.info("Removed {} no longer valid chunk tickets, and added {} newly valid chunk tickets. Pos: {} World: {}",
+                                LOGGER.info("validateTickets(): Removed {} no longer valid chunk tickets, and added {} newly valid chunk tickets. Pos: {} World: {}",
                                       removed, added, pos, worldName);
+
                             }
                         }
                     } else {

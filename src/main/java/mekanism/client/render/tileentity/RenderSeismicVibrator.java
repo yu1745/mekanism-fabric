@@ -3,29 +3,33 @@ package mekanism.client.render.tileentity;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.PoseStack.Pose;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Consumer;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.client.model.MekanismModelCache;
 import mekanism.client.render.RenderTickHandler;
-import mekanism.client.render.lib.Vertex;
+import mekanism.client.render.lib.Outlines;
+import mekanism.client.render.lib.Outlines.Line;
 import mekanism.common.base.ProfilerConstants;
 import mekanism.common.tile.machine.TileEntitySeismicVibrator;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
+import net.minecraft.core.BlockPos;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.phys.AABB;
+import net.neoforged.neoforge.client.model.data.ModelData;
+import org.jetbrains.annotations.Nullable;
 
 @NothingNullByDefault
 public class RenderSeismicVibrator extends MekanismTileEntityRenderer<TileEntitySeismicVibrator> implements IWireFrameRenderer {
 
-    private static final List<Vertex[]> vertices = new ArrayList<>();
+    @Nullable
+    private static List<Line> lines;
 
     public static void resetCached() {
-        vertices.clear();
+        lines = null;
     }
 
     public RenderSeismicVibrator(BlockEntityRendererProvider.Context context) {
@@ -35,13 +39,13 @@ public class RenderSeismicVibrator extends MekanismTileEntityRenderer<TileEntity
     @Override
     protected void render(TileEntitySeismicVibrator tile, float partialTick, PoseStack matrix, MultiBufferSource renderer, int light, int overlayLight,
           ProfilerFiller profiler) {
-        renderTranslated(tile, partialTick, matrix, poseStack -> {
-            Pose entry = poseStack.last();
-            VertexConsumer buffer = renderer.getBuffer(Sheets.solidBlockSheet());
-            for (BakedQuad quad : MekanismModelCache.INSTANCE.VIBRATOR_SHAFT.getQuads(tile.getLevel().random)) {
-                buffer.putBulkData(entry, quad, 1, 1, 1, light, overlayLight);
-            }
-        });
+        setupRenderer(tile, partialTick, matrix);
+        Pose entry = matrix.last();
+        VertexConsumer buffer = renderer.getBuffer(Sheets.solidBlockSheet());
+        for (BakedQuad quad : MekanismModelCache.INSTANCE.VIBRATOR_SHAFT.getQuads(tile.getLevel().random)) {
+            buffer.putBulkData(entry, quad, 1, 1, 1, 1, light, overlayLight);
+        }
+        matrix.popPose();
     }
 
     @Override
@@ -55,21 +59,27 @@ public class RenderSeismicVibrator extends MekanismTileEntityRenderer<TileEntity
     }
 
     @Override
-    public void renderWireFrame(BlockEntity tile, float partialTick, PoseStack matrix, VertexConsumer buffer, int red, int green, int blue, int alpha) {
+    public void renderWireFrame(BlockEntity tile, float partialTick, PoseStack matrix, VertexConsumer buffer) {
         if (tile instanceof TileEntitySeismicVibrator vibrator) {
-            if (vertices.isEmpty()) {
-                MekanismModelCache.INSTANCE.VIBRATOR_SHAFT.collectQuadVertices(vertices, tile.getLevel().random);
+            if (lines == null) {
+                lines = Outlines.extract(MekanismModelCache.INSTANCE.VIBRATOR_SHAFT.getBakedModel(), null, tile.getLevel().random, ModelData.EMPTY, null);
             }
-            renderTranslated(vibrator, partialTick, matrix, poseStack -> RenderTickHandler.renderVertexWireFrame(vertices, buffer, poseStack.last().pose(),
-                  red, green, blue, alpha));
+            setupRenderer(vibrator, partialTick, matrix);
+            Pose pose = matrix.last();
+            RenderTickHandler.renderVertexWireFrame(lines, buffer, pose.pose(), pose.normal());
+            matrix.popPose();
         }
     }
 
-    private void renderTranslated(TileEntitySeismicVibrator tile, float partialTick, PoseStack matrix, Consumer<PoseStack> renderer) {
+    private void setupRenderer(TileEntitySeismicVibrator tile, float partialTick, PoseStack matrix) {
         matrix.pushPose();
         float piston = Math.max(0, (float) Math.sin((tile.clientPiston + (tile.getActive() ? partialTick : 0)) / 5F));
         matrix.translate(0, piston * 0.625, 0);
-        renderer.accept(matrix);
-        matrix.popPose();
+    }
+
+    @Override
+    public AABB getRenderBoundingBox(TileEntitySeismicVibrator tile) {
+        BlockPos pos = tile.getBlockPos();
+        return AABB.encapsulatingFullBlocks(pos, pos.above());
     }
 }

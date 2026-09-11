@@ -1,63 +1,37 @@
 package mekanism.common.recipe.condition;
 
-import com.google.gson.JsonObject;
-import mekanism.common.Mekanism;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.GsonHelper;
-import net.minecraftforge.common.crafting.conditions.ICondition;
-import net.minecraftforge.common.crafting.conditions.IConditionSerializer;
-import net.minecraftforge.fml.ModList;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import java.util.Optional;
+import mekanism.api.SerializationConstants;
+import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.ModList;
+import net.neoforged.neoforge.common.conditions.ICondition;
 import org.apache.maven.artifact.versioning.ComparableVersion;
 
-public class ModVersionLoadedCondition implements ICondition {
-
-    private static final ResourceLocation NAME = Mekanism.rl("mod_version_loaded");
-    private final String minVersion;
-    private final String modid;
-
-    public ModVersionLoadedCondition(String modid, String version) {
-        this.modid = modid;
-        this.minVersion = version;
-    }
-
-    @Override
-    public ResourceLocation getID() {
-        return NAME;
-    }
+public record ModVersionLoadedCondition(String modid, String minVersion) implements ICondition {
 
     @Override
     public boolean test(IContext context) {
         //They match or we are ahead of the min version
-        return ModList.get().getModContainerById(modid).filter(modContainer -> new ComparableVersion(minVersion).compareTo(
-              new ComparableVersion(modContainer.getModInfo().getVersion().toString())) <= 0).isPresent();
+        Optional<? extends ModContainer> containerById = ModList.get().getModContainerById(modid);
+        if (containerById.isEmpty()) {
+            return false;
+        }
+        ModContainer modContainer = containerById.get();
+        return new ComparableVersion(minVersion).compareTo(new ComparableVersion(modContainer.getModInfo().getVersion().toString())) <= 0;
     }
 
     @Override
-    public String toString() {
-        return "mod_version_loaded(\"" + modid + "\", \"" + minVersion + "\")";
+    public MapCodec<? extends ICondition> codec() {
+        return MekanismRecipeConditions.MOD_VERSION_LOADED.get();
     }
 
-    public static class Serializer implements IConditionSerializer<ModVersionLoadedCondition> {
-
-        public static final Serializer INSTANCE = new Serializer();
-
-        private Serializer() {
-        }
-
-        @Override
-        public void write(JsonObject json, ModVersionLoadedCondition value) {
-            json.addProperty("modid", value.modid);
-            json.addProperty("minVersion", value.minVersion);
-        }
-
-        @Override
-        public ModVersionLoadedCondition read(JsonObject json) {
-            return new ModVersionLoadedCondition(GsonHelper.getAsString(json, "modid"), GsonHelper.getAsString(json, "minVersion"));
-        }
-
-        @Override
-        public ResourceLocation getID() {
-            return ModVersionLoadedCondition.NAME;
-        }
+    public static MapCodec<ModVersionLoadedCondition> makeCodec() {
+        return RecordCodecBuilder.mapCodec(instance -> instance.group(
+              Codec.STRING.fieldOf(SerializationConstants.MODID).forGetter(ModVersionLoadedCondition::modid),
+              Codec.STRING.fieldOf(SerializationConstants.VERSION).forGetter(ModVersionLoadedCondition::minVersion)
+        ).apply(instance, ModVersionLoadedCondition::new));
     }
 }

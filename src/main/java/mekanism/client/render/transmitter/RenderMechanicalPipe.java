@@ -5,8 +5,8 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenCustomHashMap;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -32,7 +32,8 @@ import net.minecraft.core.Direction.Axis;
 import net.minecraft.core.Direction.AxisDirection;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.FluidStackLinkedSet;
 import org.jetbrains.annotations.Nullable;
 
 @NothingNullByDefault
@@ -144,42 +145,47 @@ public class RenderMechanicalPipe extends RenderTransmitterBase<TileEntityMechan
         } else {
             sideOrdinal = side.ordinal();
         }
-        return cachedLiquids.computeIfAbsent(sideOrdinal, s -> new HashMap<>())
-              .computeIfAbsent(fluid, f -> new Int2ObjectOpenHashMap<>())
-              .computeIfAbsent(stage, s -> {
-                  float stageRatio = (s / (float) stages) * height;
-                  Model3D model = new Model3D()
-                        .setTexture(MekanismRenderer.getFluidTexture(fluid, FluidTextureType.STILL));
-                  if (side == null) {
-                      float min;
-                      float max;
-                      if (renderBase) {
-                          min = 0.25F + offset;
-                          max = 0.75F - offset;
-                      } else {
-                          min = 0.5F - stageRatio / 2;
-                          max = 0.5F + stageRatio / 2;
-                      }
-                      return model.xBounds(min, max)
-                            .yBounds(0.25F + offset, 0.25F + offset + stageRatio)
-                            .zBounds(min, max);
-                  }
-                  model.setSideRender(side, false)
-                        .setSideRender(side.getOpposite(), false);
-                  if (side.getAxis().isHorizontal()) {
-                      model.yBounds(0.25F + offset, 0.25F + offset + stageRatio);
-                      if (side.getAxis() == Axis.Z) {
-                          return setHorizontalBounds(side, model::xBounds, model::zBounds);
-                      }
-                      return setHorizontalBounds(side, model::zBounds, model::xBounds);
-                  }
-                  float min = 0.5F - stageRatio / 2;
-                  float max = 0.5F + stageRatio / 2;
-                  model.xBounds(min, max)
-                        .zBounds(min, max);
-                  return side == Direction.DOWN ? model.yBounds(0, 0.25F + offset)
-                                                : model.yBounds(0.25F + offset + stageRatio, 1);//Up
-              });
+        Int2ObjectMap<Model3D> modelMap = cachedLiquids.computeIfAbsent(sideOrdinal, s -> new Object2ObjectOpenCustomHashMap<>(FluidStackLinkedSet.TYPE_AND_COMPONENTS))
+              .computeIfAbsent(fluid, f -> new Int2ObjectOpenHashMap<>());
+        Model3D model = modelMap.get(stage);
+        if (model == null) {
+            model = new Model3D().setTexture(MekanismRenderer.getFluidTexture(fluid, FluidTextureType.STILL));
+            float stageRatio = (stage / (float) stages) * height;
+            if (side == null) {
+                float min;
+                float max;
+                if (renderBase) {
+                    min = 0.25F + offset;
+                    max = 0.75F - offset;
+                } else {
+                    min = 0.5F - stageRatio / 2;
+                    max = 0.5F + stageRatio / 2;
+                }
+                return model.xBounds(min, max)
+                      .yBounds(0.25F + offset, 0.25F + offset + stageRatio)
+                      .zBounds(min, max);
+            }
+            model.setSideRender(side, false)
+                  .setSideRender(side.getOpposite(), false);
+            if (side.getAxis().isHorizontal()) {
+                model.yBounds(0.25F + offset, 0.25F + offset + stageRatio);
+                if (side.getAxis() == Axis.Z) {
+                    return setHorizontalBounds(side, model::xBounds, model::zBounds);
+                }
+                return setHorizontalBounds(side, model::zBounds, model::xBounds);
+            }
+            float min = 0.5F - stageRatio / 2;
+            float max = 0.5F + stageRatio / 2;
+            model.xBounds(min, max)
+                  .zBounds(min, max);
+            if (side == Direction.DOWN) {
+                model.yBounds(0, 0.25F + offset);
+            } else {//Up
+                model.yBounds(0.25F + offset + stageRatio, 1);
+            }
+            modelMap.put(stage, model);
+        }
+        return model;
     }
 
     private static Model3D setHorizontalBounds(Direction horizontal, ModelBoundsSetter axisBased, ModelBoundsSetter directionBased) {

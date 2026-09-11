@@ -5,9 +5,12 @@ import mekanism.client.gui.GuiMekanismTile;
 import mekanism.client.gui.element.bar.GuiBar.IBarInfoHandler;
 import mekanism.client.gui.element.bar.GuiDynamicHorizontalRateBar;
 import mekanism.client.gui.element.tab.GuiHeatTab;
+import mekanism.client.gui.element.tab.GuiWarningTab;
 import mekanism.client.gui.element.text.GuiTextField;
 import mekanism.common.MekanismLang;
 import mekanism.common.inventory.container.tile.EmptyTileContainer;
+import mekanism.common.inventory.warning.IWarningTracker;
+import mekanism.common.network.PacketUtils;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.UnitDisplayUtils;
 import mekanism.common.util.UnitDisplayUtils.TemperatureUnit;
@@ -16,7 +19,6 @@ import mekanism.common.util.text.TextUtils;
 import mekanism.generators.client.gui.element.GuiFissionReactorTab;
 import mekanism.generators.client.gui.element.GuiFissionReactorTab.FissionReactorTab;
 import mekanism.generators.common.GeneratorsLang;
-import mekanism.generators.common.MekanismGenerators;
 import mekanism.generators.common.content.fission.FissionReactorMultiblockData;
 import mekanism.generators.common.network.to_server.PacketGeneratorsGuiInteract;
 import mekanism.generators.common.network.to_server.PacketGeneratorsGuiInteract.GeneratorsGuiInteraction;
@@ -71,7 +73,7 @@ public class GuiFissionReactorStats extends GuiMekanismTile<TileEntityFissionRea
                 if (limit >= 0 && limit <= tile.getMultiblock().getMaxBurnRate()) {
                     // round to two decimals
                     limit = UnitDisplayUtils.roundDecimals(limit);
-                    MekanismGenerators.packetHandler().sendToServer(new PacketGeneratorsGuiInteract(GeneratorsGuiInteraction.INJECTION_RATE, tile, limit));
+                    PacketUtils.sendToServer(new PacketGeneratorsGuiInteract(GeneratorsGuiInteraction.INJECTION_RATE, tile, limit));
                     rateLimitField.setText("");
                 }
             } catch (NumberFormatException ignored) {
@@ -84,16 +86,23 @@ public class GuiFissionReactorStats extends GuiMekanismTile<TileEntityFissionRea
         renderTitleText(guiGraphics);
         FissionReactorMultiblockData multiblock = tile.getMultiblock();
         // heat stats
-        drawTextScaledBound(guiGraphics, GeneratorsLang.FISSION_HEAT_STATISTICS.translate(), 6, 20, headingTextColor(), imageWidth - 12);
-        drawTextScaledBound(guiGraphics, GeneratorsLang.FISSION_HEAT_CAPACITY.translate(TextUtils.format((long) multiblock.heatCapacitor.getHeatCapacity())), 6, 32, titleTextColor(), imageWidth - 12);
-        drawTextScaledBound(guiGraphics, GeneratorsLang.FISSION_SURFACE_AREA.translate(TextUtils.format(multiblock.surfaceArea)), 6, 42, titleTextColor(), imageWidth - 12);
-        drawTextScaledBound(guiGraphics, GeneratorsLang.FISSION_BOIL_EFFICIENCY.translate(tile.getBoilEfficiency()), 6, 52, titleTextColor(), imageWidth - 12);
+        drawScrollingString(guiGraphics, GeneratorsLang.FISSION_HEAT_STATISTICS.translate(), 0, 20, TextAlignment.LEFT, headingTextColor(), 6, false);
+        drawScrollingString(guiGraphics, GeneratorsLang.FISSION_HEAT_CAPACITY.translate(TextUtils.format((long) multiblock.heatCapacitor.getHeatCapacity())), 0, 32, TextAlignment.LEFT, titleTextColor(), 6, false);
+        drawScrollingString(guiGraphics, GeneratorsLang.FISSION_SURFACE_AREA.translate(TextUtils.format(multiblock.surfaceArea)), 0, 42, TextAlignment.LEFT, titleTextColor(), 6, false);
+        drawScrollingString(guiGraphics, GeneratorsLang.FISSION_BOIL_EFFICIENCY.translate(tile.getBoilEfficiency()), 0, 52, TextAlignment.LEFT, titleTextColor(), 6, false);
         // fuel stats
-        drawTextScaledBound(guiGraphics, GeneratorsLang.FISSION_FUEL_STATISTICS.translate(), 6, 68, headingTextColor(), imageWidth - 12);
-        drawTextScaledBound(guiGraphics, GeneratorsLang.FISSION_MAX_BURN_RATE.translate(TextUtils.format(multiblock.getMaxBurnRate())), 6, 80, titleTextColor(), imageWidth - 12);
-        drawTextScaledBound(guiGraphics, GeneratorsLang.FISSION_RATE_LIMIT.translate(multiblock.rateLimit), 6, 90, titleTextColor(), imageWidth - 12);
-        drawTextScaledBound(guiGraphics, GeneratorsLang.FISSION_CURRENT_BURN_RATE.translate(), 6, 104, titleTextColor(), imageWidth - 12);
-        drawTextScaledBound(guiGraphics, GeneratorsLang.FISSION_SET_RATE_LIMIT.translate(), 6, 130, titleTextColor(), 69);
+        drawScrollingString(guiGraphics, GeneratorsLang.FISSION_FUEL_STATISTICS.translate(), 0, 68, TextAlignment.LEFT, headingTextColor(), 6, false);
+        drawScrollingString(guiGraphics, GeneratorsLang.FISSION_MAX_BURN_RATE.translate(TextUtils.format(multiblock.getMaxBurnRate())), 0, 80, TextAlignment.LEFT, titleTextColor(), 6, false);
+        drawScrollingString(guiGraphics, GeneratorsLang.FISSION_RATE_LIMIT.translate(multiblock.rateLimit), 0, 90, TextAlignment.LEFT, titleTextColor(), 6, false);
+        drawScrollingString(guiGraphics, GeneratorsLang.FISSION_CURRENT_BURN_RATE.translate(), 0, 104, TextAlignment.LEFT, titleTextColor(), 6, false);
+
+        drawScrollingString(guiGraphics, GeneratorsLang.FISSION_SET_RATE_LIMIT.translate(), 3, 130, TextAlignment.RIGHT, titleTextColor(), rateLimitField.getRelativeX() - 2, 3, false);
         super.drawForegroundText(guiGraphics, mouseX, mouseY);
+    }
+
+    @Override
+    protected void addWarningTab(IWarningTracker warningTracker) {
+        //Move the tab to the right side of the gui so it doesn't intersect the heat tab
+        addRenderableWidget(new GuiWarningTab(this, warningTracker, false));
     }
 }

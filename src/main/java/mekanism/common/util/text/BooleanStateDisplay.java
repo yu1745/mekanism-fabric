@@ -4,8 +4,10 @@ import mekanism.api.text.EnumColor;
 import mekanism.api.text.IHasTextComponent;
 import mekanism.api.text.ILangEntry;
 import mekanism.common.MekanismLang;
+import mekanism.common.attachments.containers.ContainerType;
 import net.minecraft.MethodsReturnNonnullByDefault;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.ItemStack;
 
 @MethodsReturnNonnullByDefault
 public abstract class BooleanStateDisplay implements IHasTextComponent {
@@ -30,16 +32,28 @@ public abstract class BooleanStateDisplay implements IHasTextComponent {
 
     public static class YesNo extends BooleanStateDisplay {
 
+        public static final YesNo YES = new YesNo(true, false);
+        public static final YesNo NO = new YesNo(false, false);
+        public static final YesNo YES_COLORED = new YesNo(true, true);
+        public static final YesNo NO_COLORED = new YesNo(false, true);
+
         private YesNo(boolean value, boolean colored) {
             super(value, colored);
         }
 
         public static YesNo of(boolean value) {
-            return of(value, false);
+            return value ? YES : NO;
+        }
+
+        public static YesNo hasInventory(ItemStack stack) {
+            return of(ContainerType.ITEM.getAttachmentContainersIfPresent(stack).stream().anyMatch(slot -> !slot.isEmpty()), true);
         }
 
         public static YesNo of(boolean value, boolean colored) {
-            return new YesNo(value, colored);
+            if (colored) {
+                return value ? YES_COLORED : NO_COLORED;
+            }
+            return of(value);
         }
 
         @Override
@@ -50,6 +64,11 @@ public abstract class BooleanStateDisplay implements IHasTextComponent {
 
     public static class OnOff extends BooleanStateDisplay {
 
+        public static final OnOff ON = new OnOff(true, false, false);
+        public static final OnOff OFF = new OnOff(false, false, false);
+        public static final OnOff ON_COLORED = new OnOff(true, true, false);
+        public static final OnOff OFF_COLORED = new OnOff(false, true, false);
+
         private final boolean caps;
 
         private OnOff(boolean value, boolean colored, boolean caps) {
@@ -58,11 +77,14 @@ public abstract class BooleanStateDisplay implements IHasTextComponent {
         }
 
         public static OnOff of(boolean value) {
-            return of(value, false);
+            return value ? ON : OFF;
         }
 
         public static OnOff of(boolean value, boolean colored) {
-            return new OnOff(value, colored, false);
+            if (colored) {
+                return value ? ON_COLORED : OFF_COLORED;
+            }
+            return of(value);
         }
 
         public static OnOff caps(boolean value, boolean colored) {

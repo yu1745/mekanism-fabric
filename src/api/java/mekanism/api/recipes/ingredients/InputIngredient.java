@@ -1,10 +1,8 @@
 package mekanism.api.recipes.ingredients;
 
-import com.google.gson.JsonElement;
 import java.util.List;
 import java.util.function.Predicate;
 import net.minecraft.MethodsReturnNonnullByDefault;
-import net.minecraft.network.FriendlyByteBuf;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -44,14 +42,10 @@ public interface InputIngredient<TYPE> extends Predicate<TYPE> {
      * Checks if this ingredient has any matching instances, in most cases this should be {@code false}, but for cases like tags this may not always be the case.
      *
      * @return {@code true} for no matching instances, {@code false} if there are any matching instances.
-     *
-     * @implNote Defaults to checking that {@link #getRepresentations()} is empty, but usually this will be overridden with a more efficient implementation.
      */
-    default boolean hasNoMatchingInstances() {
-        return getRepresentations().isEmpty();
-    }
+    boolean hasNoMatchingInstances();
 
-    default void logMissingTags(){}
+    void logMissingTags();
 
     /**
      * Primarily for JEI, a list of valid instances of the type
@@ -61,18 +55,4 @@ public interface InputIngredient<TYPE> extends Predicate<TYPE> {
      * @apiNote Do not modify any of the values returned by the representations
      */
     List<TYPE> getRepresentations();
-
-    /**
-     * Writes this ingredient to a PacketBuffer.
-     *
-     * @param buffer The buffer to write to.
-     */
-    void write(FriendlyByteBuf buffer);
-
-    /**
-     * Serializes this ingredient to a JsonElement
-     *
-     * @return JsonElement representation of this ingredient.
-     */
-    JsonElement serialize();
 }

@@ -1,33 +1,23 @@
 package mekanism.common.registration.impl;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.function.Supplier;
+import java.util.function.Function;
 import mekanism.api.recipes.MekanismRecipe;
-import mekanism.common.recipe.IMekanismRecipeTypeProvider;
 import mekanism.common.recipe.MekanismRecipeType;
 import mekanism.common.recipe.lookup.cache.IInputRecipeCache;
-import mekanism.common.registration.WrappedDeferredRegister;
+import mekanism.common.registration.MekanismDeferredRegister;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.crafting.RecipeInput;
 import net.minecraft.world.item.crafting.RecipeType;
-import net.minecraftforge.registries.ForgeRegistries;
 
-public class RecipeTypeDeferredRegister extends WrappedDeferredRegister<RecipeType<?>> {
-
-    private final List<IMekanismRecipeTypeProvider<?, ?>> recipeTypes = new ArrayList<>();
+public class RecipeTypeDeferredRegister extends MekanismDeferredRegister<RecipeType<?>> {
 
     public RecipeTypeDeferredRegister(String modid) {
-        super(modid, ForgeRegistries.RECIPE_TYPES);
+        super(Registries.RECIPE_TYPE, modid, RecipeTypeRegistryObject::new);
     }
 
-    public <RECIPE extends MekanismRecipe, INPUT_CACHE extends IInputRecipeCache> RecipeTypeRegistryObject<RECIPE, INPUT_CACHE> register(String name,
-          Supplier<? extends MekanismRecipeType<RECIPE, INPUT_CACHE>> sup) {
-        RecipeTypeRegistryObject<RECIPE, INPUT_CACHE> registeredRecipeType = register(name, sup, RecipeTypeRegistryObject::new);
-        recipeTypes.add(registeredRecipeType);
-        return registeredRecipeType;
-    }
-
-    public List<IMekanismRecipeTypeProvider<?, ?>> getAllRecipeTypes() {
-        return Collections.unmodifiableList(recipeTypes);
+    public <VANILLA_INPUT extends RecipeInput, RECIPE extends MekanismRecipe<VANILLA_INPUT>, INPUT_CACHE extends IInputRecipeCache>
+    RecipeTypeRegistryObject<VANILLA_INPUT, RECIPE, INPUT_CACHE> registerMek(String name, Function<ResourceLocation, ? extends MekanismRecipeType<VANILLA_INPUT, RECIPE, INPUT_CACHE>> func) {
+        return (RecipeTypeRegistryObject<VANILLA_INPUT, RECIPE, INPUT_CACHE>) super.register(name, func);
     }
 }

@@ -4,27 +4,33 @@ import mekanism.common.config.value.CachedBooleanValue;
 import mekanism.common.config.value.CachedEnumValue;
 import mekanism.common.util.UnitDisplayUtils.EnergyUnit;
 import mekanism.common.util.UnitDisplayUtils.TemperatureUnit;
-import net.minecraftforge.common.ForgeConfigSpec;
-import net.minecraftforge.fml.config.ModConfig.Type;
+import net.neoforged.fml.config.ModConfig.Type;
+import net.neoforged.neoforge.common.ModConfigSpec;
 
 public class CommonConfig extends BaseMekanismConfig {
 
-    private final ForgeConfigSpec configSpec;
+    private final ModConfigSpec configSpec;
 
     public final CachedEnumValue<EnergyUnit> energyUnit;
     public final CachedEnumValue<TemperatureUnit> tempUnit;
     public final CachedBooleanValue enableDecayTimers;
+    public final CachedBooleanValue copyBlockData;
+    public final CachedBooleanValue holidays;
 
     CommonConfig() {
-        ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
-        builder.comment("Mekanism Common Config. This config is not synced between server and client.").push("common");
-        energyUnit = CachedEnumValue.wrap(this, builder.comment("Displayed energy type in Mekanism GUIs and network reader readings.")
+        ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
+
+        energyUnit = CachedEnumValue.wrap(this, MekanismConfigTranslations.COMMON_UNIT_ENERGY.applyToBuilder(builder)
               .defineEnum("energyType", EnergyUnit.FORGE_ENERGY));
-        tempUnit = CachedEnumValue.wrap(this, builder.comment("Displayed temperature unit in Mekanism GUIs and network reader readings.")
+        tempUnit = CachedEnumValue.wrap(this, MekanismConfigTranslations.COMMON_UNIT_TEMPERATURE.applyToBuilder(builder)
               .defineEnum("temperatureUnit", TemperatureUnit.KELVIN));
-        enableDecayTimers = CachedBooleanValue.wrap(this, builder.comment("Show time to decay radiation when readings are above safe levels. Set to false on the client side to disable MekaSuit Geiger and Dosimeter Unit timers. Set to false on the server side to disable handheld Geiger Counter and Dosimeter timers.")
+        enableDecayTimers = CachedBooleanValue.wrap(this, MekanismConfigTranslations.COMMON_DECAY_TIMERS.applyToBuilder(builder)
               .define("enableDecayTimers", true));
-        builder.pop();
+        copyBlockData = CachedBooleanValue.wrap(this, MekanismConfigTranslations.COMMON_COPY_BLOCK_DATA.applyToBuilder(builder)
+              .define("copyBlockData", true));
+        holidays = CachedBooleanValue.wrap(this, MekanismConfigTranslations.COMMON_HOLIDAYS.applyToBuilder(builder)
+              .define("holidays", true));
+
         configSpec = builder.build();
     }
 
@@ -34,7 +40,12 @@ public class CommonConfig extends BaseMekanismConfig {
     }
 
     @Override
-    public ForgeConfigSpec getConfigSpec() {
+    public String getTranslation() {
+        return "Common Config";
+    }
+
+    @Override
+    public ModConfigSpec getConfigSpec() {
         return configSpec;
     }
 

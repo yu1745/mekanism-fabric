@@ -1,8 +1,9 @@
 package mekanism.common.tile.component;
 
+import java.util.List;
 import java.util.UUID;
-import mekanism.api.NBTConstants;
-import mekanism.api.security.ISecurityUtils;
+import mekanism.api.SerializationConstants;
+import mekanism.api.security.IBlockSecurityUtils;
 import mekanism.api.security.SecurityMode;
 import mekanism.common.integration.computer.annotation.ComputerMethod;
 import mekanism.common.inventory.container.MekanismContainer;
@@ -10,11 +11,16 @@ import mekanism.common.inventory.container.sync.SyncableEnum;
 import mekanism.common.lib.frequency.Frequency.FrequencyIdentity;
 import mekanism.common.lib.frequency.FrequencyType;
 import mekanism.common.lib.security.SecurityFrequency;
+import mekanism.common.registries.MekanismDataComponents;
 import mekanism.common.tile.base.TileEntityMekanism;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.NBTUtils;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.component.DataComponentMap;
+import net.minecraft.core.component.DataComponentType;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import org.jetbrains.annotations.NotNull;
 
 public class TileComponentSecurity implements ITileComponent {
 
@@ -48,7 +54,7 @@ public class TileComponentSecurity implements ITileComponent {
         if (ownerUUID == null) {
             tile.getFrequencyComponent().unsetFrequency(FrequencyType.SECURITY);
         } else {
-            tile.setFrequency(FrequencyType.SECURITY, new FrequencyIdentity(ownerUUID, true), ownerUUID);
+            tile.setFrequency(FrequencyType.SECURITY, new FrequencyIdentity(ownerUUID, SecurityMode.PUBLIC, ownerUUID), ownerUUID);
         }
     }
 
@@ -73,51 +79,81 @@ public class TileComponentSecurity implements ITileComponent {
     }
 
     @Override
-    public void read(CompoundTag nbtTags) {
-        if (nbtTags.contains(NBTConstants.COMPONENT_SECURITY, Tag.TAG_COMPOUND)) {
-            CompoundTag securityNBT = nbtTags.getCompound(NBTConstants.COMPONENT_SECURITY);
-            NBTUtils.setEnumIfPresent(securityNBT, NBTConstants.SECURITY_MODE, SecurityMode::byIndexStatic, mode -> securityMode = mode);
-            //Note: We can just set the owner uuid directly as the frequency data should be set already from the frequency component
-            // Or if it was cleared due to changing owner data as an item, the block place should update it properly
-            //TODO: If this ends up causing issues anywhere we may want to consider ensuring the frequency gets set if it is missing
-            NBTUtils.setUUIDIfPresent(securityNBT, NBTConstants.OWNER_UUID, uuid -> ownerUUID = uuid);
+    public String getComponentKey() {
+        return SerializationConstants.COMPONENT_SECURITY;
+    }
+
+    @Override
+    public void applyImplicitComponents(@NotNull BlockEntity.DataComponentInput input) {
+        securityMode = input.getOrDefault(MekanismDataComponents.SECURITY, securityMode);
+        setOwnerUUID(input.getOrDefault(MekanismDataComponents.OWNER, ownerUUID));
+    }
+
+    @Override
+    public void addRemapEntries(List<DataComponentType<?>> remapEntries) {
+        if (ownerUUID == null) {
+            remapEntries.add(MekanismDataComponents.OWNER.get());
         }
     }
 
     @Override
-    public void write(CompoundTag nbtTags) {
-        CompoundTag securityNBT = new CompoundTag();
-        NBTUtils.writeEnum(securityNBT, NBTConstants.SECURITY_MODE, securityMode);
+    public void collectImplicitComponents(DataComponentMap.Builder builder) {
+        builder.set(MekanismDataComponents.SECURITY, securityMode);
         if (ownerUUID != null) {
-            securityNBT.putUUID(NBTConstants.OWNER_UUID, ownerUUID);
+            builder.set(MekanismDataComponents.OWNER, ownerUUID);
         }
-        nbtTags.put(NBTConstants.COMPONENT_SECURITY, securityNBT);
+    }
+
+    @Override
+    public void deserialize(CompoundTag securityNBT, HolderLookup.Provider provider) {
+        NBTUtils.setEnumIfPresent(securityNBT, SerializationConstants.SECURITY_MODE, SecurityMode.BY_ID, mode -> securityMode = mode);
+        //Note: We can just set the owner uuid directly as the frequency data should be set already from the frequency component
+        // Or if it was cleared due to changing owner data as an item, the block place should update it properly
+        //TODO: If this ends up causing issues anywhere we may want to consider ensuring the frequency gets set if it is missing
+        NBTUtils.setUUIDIfPresent(securityNBT, SerializationConstants.OWNER_UUID, uuid -> ownerUUID = uuid);
+    }
+
+    @Override
+    public CompoundTag serialize(HolderLookup.Provider provider) {
+        CompoundTag securityNBT = new CompoundTag();
+        if (securityMode != SecurityMode.PUBLIC) {
+            NBTUtils.writeEnum(securityNBT, SerializationConstants.SECURITY_MODE, securityMode);
+        }
+        if (ownerUUID != null) {
+            securityNBT.putUUID(SerializationConstants.OWNER_UUID, ownerUUID);
+        }
+        return securityNBT;
     }
 
     @Override
     public void trackForMainContainer(MekanismContainer container) {
-        container.track(SyncableEnum.create(SecurityMode::byIndexStatic, SecurityMode.PUBLIC, this::getMode, this::setMode));
+        container.track(SyncableEnum.create(SecurityMode.BY_ID, SecurityMode.PUBLIC, this::getMode, this::setMode));
     }
 
     @Override
     public void addToUpdateTag(CompoundTag updateTag) {
         if (ownerUUID != null) {
-            updateTag.putUUID(NBTConstants.OWNER_UUID, ownerUUID);
-            updateTag.putString(NBTConstants.OWNER_NAME, MekanismUtils.getLastKnownUsername(ownerUUID));
+            updateTag.putUUID(SerializationConstants.OWNER_UUID, ownerUUID);
+            updateTag.putString(SerializationConstants.OWNER_NAME, MekanismUtils.getLastKnownUsername(ownerUUID));
         }
     }
 
     @Override
     public void readFromUpdateTag(CompoundTag updateTag) {
-        NBTUtils.setUUIDIfPresent(updateTag, NBTConstants.OWNER_UUID, uuid -> ownerUUID = uuid);
-        NBTUtils.setStringIfPresent(updateTag, NBTConstants.OWNER_NAME, name -> ownerName = name);
+        NBTUtils.setUUIDIfPresent(updateTag, SerializationConstants.OWNER_UUID, uuid -> ownerUUID = uuid);
+        NBTUtils.setStringIfPresent(updateTag, SerializationConstants.OWNER_NAME, name -> ownerName = name);
     }
 
     //Computer related methods
     @ComputerMethod(nameOverride = "getSecurityMode")
     SecurityMode getComputerSecurityMode() {
         //Get the effective security mode
-        return ISecurityUtils.INSTANCE.getSecurityMode(tile, tile.isRemote());
+        if (tile.getLevel() == null) {
+            //If we don't have a level yet do our best effort to return a usable value
+            // though given this is just for computer access we should theoretically always have a level
+            return getMode();
+        }
+        return IBlockSecurityUtils.INSTANCE.getSecurityMode(tile.getLevel(), tile.getBlockPos(), tile);
     }
     //End computer related methods
 }

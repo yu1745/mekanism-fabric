@@ -4,32 +4,34 @@ import com.mojang.datafixers.util.Pair;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
-import mekanism.api.NBTConstants;
+import mekanism.api.SerializationConstants;
+import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.WorldUtils;
+import net.minecraft.SharedConstants;
 import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtUtils;
+import net.minecraft.network.protocol.game.ClientboundExplodePacket;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
-import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Explosion;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
-import net.minecraft.world.level.storage.loot.LootParams;
-import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.event.ForgeEventFactory;
+import net.neoforged.neoforge.event.EventHooks;
+import org.jetbrains.annotations.Nullable;
 
 public class Meltdown {
 
-    private static final int DURATION = 100;
+    private static final int DURATION = 5 * SharedConstants.TICKS_PER_SECOND;
 
     private final BlockPos minPos, maxPos;
     private final double magnitude, chance;
@@ -52,32 +54,40 @@ public class Meltdown {
         this.ticksExisted = ticksExisted;
     }
 
+    @Nullable
     public static Meltdown load(CompoundTag tag) {
+        Optional<BlockPos> minPos = NbtUtils.readBlockPos(tag, SerializationConstants.MIN);
+        Optional<BlockPos> maxPos = NbtUtils.readBlockPos(tag, SerializationConstants.MAX);
+        if (minPos.isEmpty() || maxPos.isEmpty()) {
+            return null;
+        }
         return new Meltdown(
-              NbtUtils.readBlockPos(tag.getCompound(NBTConstants.MIN)),
-              NbtUtils.readBlockPos(tag.getCompound(NBTConstants.MAX)),
-              tag.getDouble(NBTConstants.MAGNITUDE),
-              tag.getDouble(NBTConstants.CHANCE),
-              tag.getFloat(NBTConstants.RADIUS),
-              tag.getUUID(NBTConstants.INVENTORY_ID),
-              tag.getInt(NBTConstants.AGE)
+              minPos.get(),
+              maxPos.get(),
+              tag.getDouble(SerializationConstants.MAGNITUDE),
+              tag.getDouble(SerializationConstants.CHANCE),
+              tag.getFloat(SerializationConstants.RADIUS),
+              tag.getUUID(SerializationConstants.INVENTORY_ID),
+              tag.getInt(SerializationConstants.AGE)
         );
     }
 
-    public void write(CompoundTag tag) {
-        tag.put(NBTConstants.MIN, NbtUtils.writeBlockPos(minPos));
-        tag.put(NBTConstants.MAX, NbtUtils.writeBlockPos(maxPos));
-        tag.putDouble(NBTConstants.MAGNITUDE, magnitude);
-        tag.putDouble(NBTConstants.CHANCE, chance);
-        tag.putFloat(NBTConstants.RADIUS, radius);
-        tag.putUUID(NBTConstants.INVENTORY_ID, multiblockID);
-        tag.putInt(NBTConstants.AGE, ticksExisted);
+    public CompoundTag write() {
+        CompoundTag tag = new CompoundTag();
+        tag.put(SerializationConstants.MIN, NbtUtils.writeBlockPos(minPos));
+        tag.put(SerializationConstants.MAX, NbtUtils.writeBlockPos(maxPos));
+        tag.putDouble(SerializationConstants.MAGNITUDE, magnitude);
+        tag.putDouble(SerializationConstants.CHANCE, chance);
+        tag.putFloat(SerializationConstants.RADIUS, radius);
+        tag.putUUID(SerializationConstants.INVENTORY_ID, multiblockID);
+        tag.putInt(SerializationConstants.AGE, ticksExisted);
+        return tag;
     }
 
-    public boolean update(Level world) {
+    public boolean update(ServerLevel world) {
         ticksExisted++;
 
-        if (world.random.nextInt() % 10 == 0 && world.random.nextDouble() < magnitude * chance) {
+        if (world.random.nextInt() % MekanismUtils.TICKS_PER_HALF_SECOND == 0 && world.random.nextDouble() < magnitude * chance) {
             int x = Mth.nextInt(world.random, minPos.getX(), maxPos.getX());
             int y = Mth.nextInt(world.random, minPos.getY(), maxPos.getY());
             int z = Mth.nextInt(world.random, minPos.getZ(), maxPos.getZ());
@@ -96,7 +106,7 @@ public class Meltdown {
     /**
      * Creates an explosion and ensures all blocks that are inside our meltdown radius actually get destroyed
      */
-    private void createExplosion(Level world, double x, double y, double z, float radius, boolean causesFire, Explosion.BlockInteraction mode) {
+    private void createExplosion(ServerLevel world, double x, double y, double z, float radius, boolean causesFire, Explosion.BlockInteraction mode) {
         Explosion explosion = new MeltdownExplosion(world, x, y, z, radius, causesFire, mode, multiblockID);
         //Calculate which block positions should get broken based on the logic that would happen in Explosion#explode
         ObjectArrayList<BlockPos> toBlow = new ObjectArrayList<>();
@@ -138,54 +148,47 @@ public class Meltdown {
             }
         }
         //Try to make the explosion actually happen
-        if (!ForgeEventFactory.onExplosionStart(world, explosion)) {
+        if (!EventHooks.onExplosionStart(world, explosion)) {
             explosion.explode();
-            explosion.finalizeExplosion(true);
+            explosion.finalizeExplosion(false);
         }
+        //Note: Regardless of if the event got canceled vanilla syncs it to the client so that sounds and the like can play
+        syncExplosionToClient(world, explosion);
+
         //Next go through the different locations that were inside our reactor that should have exploded and make sure
         // that if they didn't explode that we manually run the logic to make them "explode" so that the reactor stops
         //Note: Shuffle so that the drops don't end up all in one corner of an explosion
         Util.shuffle(toBlow, world.random);
         List<Pair<ItemStack, BlockPos>> drops = new ArrayList<>();
         for (BlockPos toExplode : toBlow) {
-            BlockState state = world.getBlockState(toExplode);
-            //If the block didn't already get broken when running the normal explosion
-            if (!state.isAir()) {
-                if (state.canDropFromExplosion(world, toExplode, explosion) && world instanceof ServerLevel level) {
-                    BlockEntity tileentity = state.hasBlockEntity() ? world.getBlockEntity(toExplode) : null;
-                    LootParams.Builder lootContextBuilder = new LootParams.Builder(level)
-                          .withParameter(LootContextParams.ORIGIN, Vec3.atCenterOf(toExplode))
-                          .withParameter(LootContextParams.TOOL, ItemStack.EMPTY)
-                          .withOptionalParameter(LootContextParams.BLOCK_ENTITY, tileentity)
-                          .withOptionalParameter(LootContextParams.THIS_ENTITY, null);
-                    if (mode == Explosion.BlockInteraction.DESTROY_WITH_DECAY) {
-                        lootContextBuilder.withParameter(LootContextParams.EXPLOSION_RADIUS, radius);
-                    }
-                    state.spawnAfterBreak(level, toExplode, ItemStack.EMPTY, false);
-                    state.getDrops(lootContextBuilder).forEach(stack -> addBlockDrops(drops, stack, toExplode));
-                }
-                state.onBlockExploded(world, toExplode, explosion);
-            }
+            world.getBlockState(toExplode)
+                  .onExplosionHit(world, toExplode, explosion, (stack, position) -> Explosion.addOrAppendStack(drops, stack, position));
         }
         for (Pair<ItemStack, BlockPos> pair : drops) {
             Block.popResource(world, pair.getSecond(), pair.getFirst());
         }
     }
 
-    //Copy of Explosion#addBlockDrops
-    private static void addBlockDrops(List<Pair<ItemStack, BlockPos>> dropPositions, ItemStack stack, BlockPos pos) {
-        for (int i = 0, size = dropPositions.size(); i < size; ++i) {
-            Pair<ItemStack, BlockPos> pair = dropPositions.get(i);
-            ItemStack itemstack = pair.getFirst();
-            if (ItemEntity.areMergable(itemstack, stack)) {
-                ItemStack itemstack1 = ItemEntity.merge(itemstack, stack, 16);
-                dropPositions.set(i, Pair.of(itemstack1, pair.getSecond()));
-                if (stack.isEmpty()) {
-                    return;
-                }
+    private static void syncExplosionToClient(ServerLevel level, Explosion explosion) {
+        //Note: We can just sync the explosion the same way vanilla does (ServerLevel#explode) after setting it off
+        // as the client doesn't need to know about the multiblock's uuid that caused the meltdown
+        if (!explosion.interactsWithBlocks()) {
+            explosion.clearToBlow();
+        }
+        Vec3 center = explosion.center();
+        for (ServerPlayer player : level.players()) {
+            if (player.distanceToSqr(center.x, center.y, center.z) < 4096.0) {
+                player.connection.send(new ClientboundExplodePacket(center.x, center.y, center.z,
+                      explosion.radius(),
+                      explosion.getToBlow(),
+                      explosion.getHitPlayers().get(player),
+                      explosion.getBlockInteraction(),
+                      explosion.getSmallExplosionParticles(),
+                      explosion.getLargeExplosionParticles(),
+                      explosion.getExplosionSound()
+                ));
             }
         }
-        dropPositions.add(Pair.of(stack, pos));
     }
 
     public static class MeltdownExplosion extends Explosion {
@@ -193,7 +196,7 @@ public class Meltdown {
         private final UUID multiblockID;
 
         private MeltdownExplosion(Level world, double x, double y, double z, float radius, boolean causesFire, BlockInteraction mode, UUID multiblockID) {
-            super(world, null, null, null, x, y, z, radius, causesFire, mode);
+            super(world, null, x, y, z, radius, causesFire, mode);
             this.multiblockID = multiblockID;
         }
 

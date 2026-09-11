@@ -1,46 +1,29 @@
 package mekanism.common.config;
 
-import java.util.stream.Collectors;
-import mekanism.api.math.FloatingLong;
 import mekanism.common.config.value.CachedBooleanValue;
 import mekanism.common.config.value.CachedDoubleValue;
 import mekanism.common.config.value.CachedFloatValue;
-import mekanism.common.config.value.CachedFloatingLongValue;
 import mekanism.common.config.value.CachedIntValue;
 import mekanism.common.config.value.CachedLongValue;
-import mekanism.common.config.value.CachedRL2FloatMapConfigValue;
-import mekanism.common.item.gear.ItemMekaSuitArmor;
-import net.minecraft.resources.ResourceKey;
+import mekanism.common.content.gear.mekasuit.ModuleGravitationalModulatingUnit;
+import net.minecraft.SharedConstants;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.item.ArmorItem;
-import net.minecraft.world.item.ArmorMaterials;
-import net.minecraftforge.common.ForgeConfigSpec;
-import net.minecraftforge.fml.config.ModConfig.Type;
+import net.neoforged.fml.config.ModConfig.Type;
+import net.neoforged.neoforge.common.ModConfigSpec;
+import net.neoforged.neoforge.fluids.FluidType;
 
 public class GearConfig extends BaseMekanismConfig {
 
-    private static final String DISASSEMBLER_CATEGORY = "atomic_disassembler";
-    private static final String CONFIGURATOR_CATEGORY = "configurator";
-    private static final String ELECTRIC_BOW_CATEGORY = "electric_bow";
-    private static final String ENERGY_TABLET_CATEGORY = "energy_tablet";
-    private static final String FLAMETHROWER_CATEGORY = "flamethrower";
-    private static final String FREE_RUNNER_CATEGORY = "free_runner";
-    private static final String ARMORED_SUBCATEGORY = "armored";
-    private static final String JETPACK_CATEGORY = "jetpack";
-    private static final String NETWORK_READER_CATEGORY = "network_reader";
-    private static final String PORTABLE_TELEPORTER_CATEGORY = "portable_teleporter";
-    private static final String SCUBA_TANK_CATEGORY = "scuba_tank";
-    private static final String SEISMIC_READER_CATEGORY = "seismic_reader";
-    private static final String CANTEEN_CATEGORY = "canteen";
-    private static final String MEKATOOL_CATEGORY = "mekatool";
-    private static final String MEKASUIT_CATEGORY = "mekasuit";
-    private static final String MEKASUIT_DAMAGE_CATEGORY = "damage_absorption";
+    public static final String FREE_RUNNER_CATEGORY = "free_runner";
+    public static final String JETPACK_CATEGORY = "jetpack";
+    public static final String MEKASUIT_CATEGORY = "mekasuit";
+    public static final String MEKASUIT_DAMAGE_CATEGORY = "damage_absorption";
 
-    private final ForgeConfigSpec configSpec;
+    private final ModConfigSpec configSpec;
 
     //Atomic Disassembler
-    public final CachedFloatingLongValue disassemblerEnergyUsage;
-    public final CachedFloatingLongValue disassemblerEnergyUsageWeapon;
+    public final CachedLongValue disassemblerEnergyUsage;
+    public final CachedLongValue disassemblerEnergyUsageWeapon;
     public final CachedIntValue disassemblerMiningCount;
     public final CachedBooleanValue disassemblerSlowMode;
     public final CachedBooleanValue disassemblerFastMode;
@@ -48,351 +31,261 @@ public class GearConfig extends BaseMekanismConfig {
     public final CachedIntValue disassemblerMinDamage;
     public final CachedIntValue disassemblerMaxDamage;
     public final CachedDoubleValue disassemblerAttackSpeed;
-    public final CachedFloatingLongValue disassemblerMaxEnergy;
-    public final CachedFloatingLongValue disassemblerChargeRate;
-    //Configurator
-    public final CachedFloatingLongValue configuratorMaxEnergy;
-    public final CachedFloatingLongValue configuratorChargeRate;
-    public final CachedFloatingLongValue configuratorEnergyPerConfigure;
-    public final CachedFloatingLongValue configuratorEnergyPerItem;
+    public final CachedLongValue disassemblerMaxEnergy;
+    public final CachedLongValue disassemblerChargeRate;
+    
     //Electric Bow
-    public final CachedFloatingLongValue electricBowMaxEnergy;
-    public final CachedFloatingLongValue electricBowChargeRate;
-    public final CachedFloatingLongValue electricBowEnergyUsage;
-    public final CachedFloatingLongValue electricBowEnergyUsageFire;
+    public final CachedLongValue electricBowMaxEnergy;
+    public final CachedLongValue electricBowChargeRate;
+    public final CachedLongValue electricBowEnergyUsage;
+    public final CachedLongValue electricBowEnergyUsageFire;
     //Energy Tablet
-    public final CachedFloatingLongValue tabletMaxEnergy;
-    public final CachedFloatingLongValue tabletChargeRate;
+    public final CachedLongValue tabletMaxEnergy;
+    public final CachedLongValue tabletChargeRate;
+    //Gauge Dropper
+    public final CachedIntValue gaugeDroppedTransferRate;
+    public final CachedIntValue gaugeDropperCapacity;
     //Flamethrower
-    public final CachedLongValue flamethrowerMaxGas;
+    public final CachedLongValue flamethrowerCapacity;
     public final CachedLongValue flamethrowerFillRate;
     public final CachedBooleanValue flamethrowerDestroyItems;
     //Free runner
-    public final CachedFloatingLongValue freeRunnerFallEnergyCost;
+    public final CachedLongValue freeRunnerFallEnergyCost;
     public final CachedFloatValue freeRunnerFallDamageRatio;
-    public final CachedFloatingLongValue freeRunnerMaxEnergy;
-    public final CachedFloatingLongValue freeRunnerChargeRate;
-    //Armored Free Runner
-    public final CachedIntValue armoredFreeRunnerArmor;
-    public final CachedFloatValue armoredFreeRunnerToughness;
-    public final CachedFloatValue armoredFreeRunnerKnockbackResistance;
+    public final CachedLongValue freeRunnerMaxEnergy;
+    public final CachedLongValue freeRunnerChargeRate;
     //Jetpack
-    public final CachedLongValue jetpackMaxGas;
+    public final CachedLongValue jetpackCapacity;
     public final CachedLongValue jetpackFillRate;
-    //Armored Jetpack
-    public final CachedIntValue armoredJetpackArmor;
-    public final CachedFloatValue armoredJetpackToughness;
-    public final CachedFloatValue armoredJetpackKnockbackResistance;
     //Portable Teleporter
-    public final CachedFloatingLongValue portableTeleporterMaxEnergy;
-    public final CachedFloatingLongValue portableTeleporterChargeRate;
+    public final CachedLongValue portableTeleporterMaxEnergy;
+    public final CachedLongValue portableTeleporterChargeRate;
     public final CachedIntValue portableTeleporterDelay;
     //Network Reader
-    public final CachedFloatingLongValue networkReaderMaxEnergy;
-    public final CachedFloatingLongValue networkReaderChargeRate;
-    public final CachedFloatingLongValue networkReaderEnergyUsage;
+    public final CachedLongValue networkReaderMaxEnergy;
+    public final CachedLongValue networkReaderChargeRate;
+    public final CachedLongValue networkReaderEnergyUsage;
     //Scuba Tank
-    public final CachedLongValue scubaMaxGas;
+    public final CachedLongValue scubaTankCapacity;
     public final CachedLongValue scubaFillRate;
     //Seismic Reader
-    public final CachedFloatingLongValue seismicReaderMaxEnergy;
-    public final CachedFloatingLongValue seismicReaderChargeRate;
-    public final CachedFloatingLongValue seismicReaderEnergyUsage;
+    public final CachedLongValue seismicReaderMaxEnergy;
+    public final CachedLongValue seismicReaderChargeRate;
+    public final CachedLongValue seismicReaderEnergyUsage;
     //Canteen
     public final CachedIntValue canteenMaxStorage;
     public final CachedIntValue canteenTransferRate;
     //Meka-Tool
-    public final CachedFloatingLongValue mekaToolEnergyUsageWeapon;
-    public final CachedFloatingLongValue mekaToolEnergyUsageTeleport;
-    public final CachedFloatingLongValue mekaToolEnergyUsage;
-    public final CachedFloatingLongValue mekaToolEnergyUsageSilk;
+    public final CachedLongValue mekaToolEnergyUsageWeapon;
+    public final CachedLongValue mekaToolEnergyUsageTeleport;
+    public final CachedLongValue mekaToolEnergyUsage;
+    public final CachedLongValue mekaToolEnergyUsageSilk;
     public final CachedIntValue mekaToolMaxTeleportReach;
     public final CachedIntValue mekaToolBaseDamage;
     public final CachedDoubleValue mekaToolAttackSpeed;
     public final CachedFloatValue mekaToolBaseEfficiency;
-    public final CachedFloatingLongValue mekaToolBaseEnergyCapacity;
-    public final CachedFloatingLongValue mekaToolBaseChargeRate;
-    public final CachedFloatingLongValue mekaToolEnergyUsageHoe;
-    public final CachedFloatingLongValue mekaToolEnergyUsageShovel;
-    public final CachedFloatingLongValue mekaToolEnergyUsageAxe;
-    public final CachedFloatingLongValue mekaToolEnergyUsageShearEntity;
+    public final CachedLongValue mekaToolBaseEnergyCapacity;
+    public final CachedLongValue mekaToolBaseChargeRate;
+    public final CachedLongValue mekaToolEnergyUsageHoe;
+    public final CachedLongValue mekaToolEnergyUsageShovel;
+    public final CachedLongValue mekaToolEnergyUsageAxe;
+    public final CachedLongValue mekaToolEnergyUsageShearEntity;
+    public final CachedLongValue mekaToolEnergyUsageShearTrim;
     public final CachedBooleanValue mekaToolExtendedMining;
     //MekaSuit
-    public final CachedFloatingLongValue mekaSuitBaseEnergyCapacity;
-    public final CachedFloatingLongValue mekaSuitBaseChargeRate;
-    public final CachedFloatingLongValue mekaSuitBaseJumpEnergyUsage;
-    public final CachedFloatingLongValue mekaSuitElytraEnergyUsage;
-    public final CachedFloatingLongValue mekaSuitEnergyUsagePotionTick;
-    public final CachedFloatingLongValue mekaSuitEnergyUsageMagicReduce;
-    public final CachedFloatingLongValue mekaSuitEnergyUsageFall;
-    public final CachedFloatingLongValue mekaSuitEnergyUsageSprintBoost;
-    public final CachedFloatingLongValue mekaSuitEnergyUsageGravitationalModulation;
-    public final CachedFloatingLongValue mekaSuitInventoryChargeRate;
-    public final CachedFloatingLongValue mekaSuitSolarRechargingRate;
-    public final CachedFloatingLongValue mekaSuitEnergyUsageVisionEnhancement;
-    public final CachedFloatingLongValue mekaSuitEnergyUsageHydrostaticRepulsion;
-    public final CachedFloatingLongValue mekaSuitEnergyUsageNutritionalInjection;
-    public final CachedFloatingLongValue mekaSuitEnergyUsageDamage;
-    public final CachedFloatingLongValue mekaSuitEnergyUsageItemAttraction;
+    public final CachedLongValue mekaSuitBaseEnergyCapacity;
+    public final CachedLongValue mekaSuitBaseChargeRate;
+    public final CachedLongValue mekaSuitBaseJumpEnergyUsage;
+    public final CachedLongValue mekaSuitElytraEnergyUsage;
+    public final CachedLongValue mekaSuitEnergyUsagePotionTick;
+    public final CachedLongValue mekaSuitEnergyUsageMagicReduce;
+    public final CachedLongValue mekaSuitEnergyUsageFall;
+    public final CachedLongValue mekaSuitEnergyUsageSprintBoost;
+    public final CachedLongValue mekaSuitEnergyUsageGravitationalModulation;
+    public final CachedLongValue mekaSuitInventoryChargeRate;
+    public final CachedLongValue mekaSuitSolarRechargingRate;
+    public final CachedLongValue mekaSuitEnergyUsageVisionEnhancement;
+    public final CachedLongValue mekaSuitEnergyUsageHydrostaticRepulsion;
+    public final CachedLongValue mekaSuitEnergyUsageNutritionalInjection;
+    public final CachedLongValue mekaSuitEnergyUsageDamage;
+    public final CachedLongValue mekaSuitEnergyUsageItemAttraction;
     public final CachedBooleanValue mekaSuitGravitationalVibrations;
     public final CachedIntValue mekaSuitNutritionalMaxStorage;
     public final CachedIntValue mekaSuitNutritionalTransferRate;
     public final CachedLongValue mekaSuitJetpackMaxStorage;
     public final CachedLongValue mekaSuitJetpackTransferRate;
-    public final CachedIntValue mekaSuitHelmetArmor;
-    public final CachedIntValue mekaSuitBodyArmorArmor;
-    public final CachedIntValue mekaSuitPantsArmor;
-    public final CachedIntValue mekaSuitBootsArmor;
-    public final CachedFloatValue mekaSuitToughness;
-    public final CachedFloatValue mekaSuitKnockbackResistance;
-    public final CachedRL2FloatMapConfigValue mekaSuitDamageRatios;
+
     public final CachedFloatValue mekaSuitFallDamageRatio;
     public final CachedFloatValue mekaSuitMagicDamageRatio;
     public final CachedFloatValue mekaSuitUnspecifiedDamageRatio;
 
     GearConfig() {
-        ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
-        builder.comment("Gear Config. This config is synced from server to client.").push("gear");
+        ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
 
-        builder.comment("Atomic Disassembler Settings").push(DISASSEMBLER_CATEGORY);
-        disassemblerEnergyUsage = CachedFloatingLongValue.define(this, builder, "Base Energy (Joules) usage of the Atomic Disassembler. (Gets multiplied by speed factor)",
-              "energyUsage", FloatingLong.createConst(10));
-        disassemblerEnergyUsageWeapon = CachedFloatingLongValue.define(this, builder, "Cost in Joules of using the Atomic Disassembler as a weapon.",
-              "energyUsageWeapon", FloatingLong.createConst(2_000));
-        disassemblerMiningCount = CachedIntValue.wrap(this, builder.comment("The max Atomic Disassembler Vein Mining Block Count.")
-              .defineInRange("miningCount", 128, 2, 1_000_000));
-        disassemblerSlowMode = CachedBooleanValue.wrap(this, builder.comment("Enable the 'Slow' mode for the Atomic Disassembler.")
-              .define("slowMode", true));
-        disassemblerFastMode = CachedBooleanValue.wrap(this, builder.comment("Enable the 'Fast' mode for the Atomic Disassembler.")
-              .define("fastMode", true));
-        disassemblerVeinMining = CachedBooleanValue.wrap(this, builder.comment("Enable the 'Vein Mining' mode for the Atomic Disassembler.")
-              .define("veinMining", false));
-        disassemblerMinDamage = CachedIntValue.wrap(this, builder.comment("The bonus attack damage of the Atomic Disassembler when it is out of power. (Value is in number of half hearts)")
+        MekanismConfigTranslations.GEAR_DISASSEMBLER.applyToBuilder(builder).push("atomic_disassembler");
+        disassemblerMaxEnergy = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_DISASSEMBLER_MAX_ENERGY, "maxEnergy", 1_000_000);
+        disassemblerChargeRate = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_DISASSEMBLER_CHARGE_RATE, "chargeRate", 5_000);
+        disassemblerEnergyUsage = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_DISASSEMBLER_ENERGY_USAGE, "energyUsage", 10);
+        disassemblerEnergyUsageWeapon = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_DISASSEMBLER_ENERGY_USAGE_WEAPON, "energyUsageWeapon", 2_000);
+        disassemblerMinDamage = CachedIntValue.wrap(this, MekanismConfigTranslations.GEAR_DISASSEMBLER_MIN_DAMAGE.applyToBuilder(builder)
               .defineInRange("minDamage", 4, 0, 1_000));
-        disassemblerMaxDamage = CachedIntValue.wrap(this, builder.comment("The bonus attack damage of the Atomic Disassembler when it has at least energyUsageWeapon power stored. (Value is in number of half hearts)")
+        disassemblerMaxDamage = CachedIntValue.wrap(this, MekanismConfigTranslations.GEAR_DISASSEMBLER_MAX_DAMAGE.applyToBuilder(builder)
               .defineInRange("maxDamage", 20, 1, 10_000));
-        disassemblerAttackSpeed = CachedDoubleValue.wrap(this, builder.comment("Attack speed of the Atomic Disassembler.")
-              .defineInRange("attackSpeed", -2.4, -Attributes.ATTACK_SPEED.getDefaultValue(), 100));
-        disassemblerMaxEnergy = CachedFloatingLongValue.define(this, builder, "Maximum amount (joules) of energy the Atomic Disassembler can contain.",
-              "maxEnergy", FloatingLong.createConst(1_000_000));
-        disassemblerChargeRate = CachedFloatingLongValue.define(this, builder, "Amount (joules) of energy the Atomic Disassembler can accept per tick.",
-              "chargeRate", FloatingLong.createConst(5_000));
+        disassemblerAttackSpeed = CachedDoubleValue.wrap(this, MekanismConfigTranslations.GEAR_DISASSEMBLER_ATTACK_SPEED.applyToBuilder(builder)
+              .defineInRange("attackSpeed", -2.4, -Attributes.ATTACK_SPEED.value().getDefaultValue(), 100));
+        disassemblerSlowMode = CachedBooleanValue.wrap(this, MekanismConfigTranslations.GEAR_DISASSEMBLER_SLOW.applyToBuilder(builder)
+              .define("slowMode", true));
+        disassemblerFastMode = CachedBooleanValue.wrap(this, MekanismConfigTranslations.GEAR_DISASSEMBLER_FAST.applyToBuilder(builder)
+              .define("fastMode", true));
+        disassemblerVeinMining = CachedBooleanValue.wrap(this, MekanismConfigTranslations.GEAR_DISASSEMBLER_VEIN_MINING.applyToBuilder(builder)
+              .define("veinMining", false));
+        disassemblerMiningCount = CachedIntValue.wrap(this, MekanismConfigTranslations.GEAR_DISASSEMBLER_MINING_COUNT.applyToBuilder(builder)
+              .defineInRange("miningCount", 128, 2, 1_000_000));
         builder.pop();
 
-        builder.comment("Configurator Settings").push(CONFIGURATOR_CATEGORY);
-        configuratorMaxEnergy = CachedFloatingLongValue.define(this, builder, "Maximum amount (joules) of energy the Configurator can contain.",
-              "maxEnergy", FloatingLong.createConst(60_000));
-        configuratorChargeRate = CachedFloatingLongValue.define(this, builder, "Amount (joules) of energy the Configurator can accept per tick.",
-              "chargeRate", FloatingLong.createConst(300));
-        configuratorEnergyPerConfigure = CachedFloatingLongValue.define(this, builder, "Energy usage in joules of using the configurator to configure machines.",
-              "energyPerConfigure", FloatingLong.createConst(400));
-        configuratorEnergyPerItem = CachedFloatingLongValue.define(this, builder, "Energy cost in joules for each item the configurator ejects from a machine on empty mode.",
-              "energyPerItem", FloatingLong.createConst(8));
+        MekanismConfigTranslations.GEAR_BOW.applyToBuilder(builder).push("electric_bow");
+        electricBowMaxEnergy = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_BOW_MAX_ENERGY, "maxEnergy", 120_000);
+        electricBowChargeRate = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_BOW_CHARGE_RATE, "chargeRate", 600);
+        electricBowEnergyUsage = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_BOW_ENERGY_USAGE, "energyUsage", 120);
+        electricBowEnergyUsageFire = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_BOW_ENERGY_USAGE_FLAME, "energyUsageFlame", 1_200);
         builder.pop();
 
-        builder.comment("Electric Bow Settings").push(ELECTRIC_BOW_CATEGORY);
-        electricBowMaxEnergy = CachedFloatingLongValue.define(this, builder, "Maximum amount (joules) of energy the Electric Bow can contain.",
-              "maxEnergy", FloatingLong.createConst(120_000));
-        electricBowChargeRate = CachedFloatingLongValue.define(this, builder, "Amount (joules) of energy the Electric Bow can accept per tick.",
-              "chargeRate", FloatingLong.createConst(600));
-        electricBowEnergyUsage = CachedFloatingLongValue.define(this, builder, "Cost in Joules of using the Electric Bow.",
-              "energyUsage", FloatingLong.createConst(120));
-        electricBowEnergyUsageFire = CachedFloatingLongValue.define(this, builder, "Cost in Joules of using the Electric Bow with flame mode active.",
-              "energyUsageFire", FloatingLong.createConst(1_200));
+        MekanismConfigTranslations.GEAR_ENERGY_TABLET.applyToBuilder(builder).push("energy_tablet");
+        tabletMaxEnergy = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_ENERGY_TABLET_MAX_ENERGY, "maxEnergy", 1_000_000);
+        tabletChargeRate = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_ENERGY_TABLET_CHARGE_RATE, "chargeRate", 5_000L);
         builder.pop();
 
-        builder.comment("Energy Tablet Settings").push(ENERGY_TABLET_CATEGORY);
-        tabletMaxEnergy = CachedFloatingLongValue.define(this, builder, "Maximum amount (joules) of energy the Energy Tablet can contain.",
-              "maxEnergy", FloatingLong.createConst(1_000_000));
-        tabletChargeRate = CachedFloatingLongValue.define(this, builder, "Amount (joules) of energy the Energy Tablet can accept per tick.",
-              "chargeRate", FloatingLong.createConst(5_000));
+        MekanismConfigTranslations.GEAR_GAUGE_DROPPER.applyToBuilder(builder).push("gauge_dropper");
+        gaugeDropperCapacity = CachedIntValue.wrap(this, MekanismConfigTranslations.GEAR_GAUGE_DROPPER_CAPACITY.applyToBuilder(builder)
+              .defineInRange("capacity", 16 * FluidType.BUCKET_VOLUME, 1, Integer.MAX_VALUE));
+        gaugeDroppedTransferRate = CachedIntValue.wrap(this, MekanismConfigTranslations.GEAR_GAUGE_DROPPER_TRANSFER_RATE.applyToBuilder(builder)
+              .defineInRange("transferRate", 250, 1, Integer.MAX_VALUE));
         builder.pop();
 
-        builder.comment("Flamethrower Settings").push(FLAMETHROWER_CATEGORY);
-        flamethrowerMaxGas = CachedLongValue.wrap(this, builder.comment("Flamethrower Gas Tank capacity in mB.")
-              .defineInRange("maxGas", 24_000, 1, Long.MAX_VALUE));
-        flamethrowerFillRate = CachedLongValue.wrap(this, builder.comment("Amount of hydrogen the Flamethrower can accept per tick.")
+        MekanismConfigTranslations.GEAR_FLAMETHROWER.applyToBuilder(builder).push("flamethrower");
+        flamethrowerCapacity = CachedLongValue.wrap(this, MekanismConfigTranslations.GEAR_FLAMETHROWER_CAPACITY.applyToBuilder(builder)
+              .defineInRange("capacity", 24 * FluidType.BUCKET_VOLUME, 1, Long.MAX_VALUE));
+        flamethrowerFillRate = CachedLongValue.wrap(this, MekanismConfigTranslations.GEAR_FLAMETHROWER_FILL_RATE.applyToBuilder(builder)
               .defineInRange("fillRate", 16, 1, Long.MAX_VALUE));
-        flamethrowerDestroyItems = CachedBooleanValue.wrap(this, builder.comment("Determines whether or not the Flamethrower can destroy items if it fails to smelt them.")
+        flamethrowerDestroyItems = CachedBooleanValue.wrap(this, MekanismConfigTranslations.GEAR_FLAMETHROWER_DESTROY_ITEMS.applyToBuilder(builder)
               .define("destroyItems", true));
         builder.pop();
 
-        builder.comment("Free Runner Settings").push(FREE_RUNNER_CATEGORY);
-        freeRunnerFallEnergyCost = CachedFloatingLongValue.define(this, builder, "Energy cost/multiplier in Joules for reducing fall damage with free runners. Energy cost is: FallDamage * freeRunnerFallEnergyCost. (1 FallDamage is 1 half heart)",
-              "fallEnergyCost", FloatingLong.createConst(50));
-        freeRunnerFallDamageRatio = CachedFloatValue.wrap(this, builder.comment("Percent of damage taken from falling that can be absorbed by Free Runners when they have enough power.")
+        MekanismConfigTranslations.GEAR_FREE_RUNNERS.applyToBuilder(builder).push(FREE_RUNNER_CATEGORY);
+        freeRunnerMaxEnergy = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_FREE_RUNNERS_MAX_ENERGY, "maxEnergy", 64_000L);
+        freeRunnerChargeRate = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_FREE_RUNNERS_CHARGE_RATE, "chargeRate", 320L);
+        freeRunnerFallEnergyCost = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_FREE_RUNNERS_FALL_COST, "fallEnergyCost", 50L);
+        freeRunnerFallDamageRatio = CachedFloatValue.wrap(this, MekanismConfigTranslations.GEAR_FREE_RUNNERS_FALL_DAMAGE.applyToBuilder(builder)
               .defineInRange("fallDamageReductionRatio", 1D, 0, 1));
-        freeRunnerMaxEnergy = CachedFloatingLongValue.define(this, builder, "Maximum amount (joules) of energy Free Runners can contain.",
-              "maxEnergy", FloatingLong.createConst(64_000));
-        freeRunnerChargeRate = CachedFloatingLongValue.define(this, builder, "Amount (joules) of energy the Free Runners can accept per tick.",
-              "chargeRate", FloatingLong.createConst(320));
-        builder.comment("Armored Free Runner Settings").push(ARMORED_SUBCATEGORY);
-        armoredFreeRunnerArmor = CachedIntValue.wrap(this, builder.comment("Armor value of the Armored Free Runners")
-              .defineInRange("armor", 3, 0, Integer.MAX_VALUE));
-        armoredFreeRunnerToughness = CachedFloatValue.wrap(this, builder.comment("Toughness value of the Armored Free Runners.")
-              .defineInRange("toughness", 2.0, 0, Float.MAX_VALUE));
-        armoredFreeRunnerKnockbackResistance = CachedFloatValue.wrap(this, builder.comment("Knockback resistance value of the Armored Free Runners.")
-              .defineInRange("knockbackResistance", 0.0, 0, Float.MAX_VALUE));
-        builder.pop(2);
-
-        builder.comment("Jetpack Settings").push(JETPACK_CATEGORY);
-        jetpackMaxGas = CachedLongValue.wrap(this, builder.comment("Jetpack Gas Tank capacity in mB.")
-              .defineInRange("maxGas", 24_000, 1, Long.MAX_VALUE));
-        jetpackFillRate = CachedLongValue.wrap(this, builder.comment("Amount of hydrogen the Jetpack can accept per tick.")
-              .defineInRange("fillRate", 16, 1, Long.MAX_VALUE));
-        builder.comment("Armored Jetpack Settings").push(ARMORED_SUBCATEGORY);
-        armoredJetpackArmor = CachedIntValue.wrap(this, builder.comment("Armor value of the Armored Jetpack.")
-              .defineInRange("armor", 8, 0, Integer.MAX_VALUE));
-        armoredJetpackToughness = CachedFloatValue.wrap(this, builder.comment("Toughness value of the Armored Jetpack.")
-              .defineInRange("toughness", 2.0, 0, Float.MAX_VALUE));
-        armoredJetpackKnockbackResistance = CachedFloatValue.wrap(this, builder.comment("Knockback resistance value of the Armored Jetpack.")
-              .defineInRange("knockbackResistance", 0.0, 0, Float.MAX_VALUE));
-        builder.pop(2);
-
-        builder.comment("Network Reader Settings").push(NETWORK_READER_CATEGORY);
-        networkReaderMaxEnergy = CachedFloatingLongValue.define(this, builder, "Maximum amount (joules) of energy the Network Reader can contain.",
-              "maxEnergy", FloatingLong.createConst(60_000));
-        networkReaderChargeRate = CachedFloatingLongValue.define(this, builder, "Amount (joules) of energy the Network Reader can accept per tick.",
-              "chargeRate", FloatingLong.createConst(300));
-        networkReaderEnergyUsage = CachedFloatingLongValue.define(this, builder, "Energy usage in joules for each network reading.",
-              "energyUsage", FloatingLong.createConst(400));
         builder.pop();
 
-        builder.comment("Portable Teleporter Settings").push(PORTABLE_TELEPORTER_CATEGORY);
-        portableTeleporterMaxEnergy = CachedFloatingLongValue.define(this, builder, "Maximum amount (joules) of energy the Portable Teleporter can contain.",
-              "maxEnergy", FloatingLong.createConst(1_000_000));
-        portableTeleporterChargeRate = CachedFloatingLongValue.define(this, builder, "Amount (joules) of energy the Portable Teleporter can accept per tick.",
-              "chargeRate", FloatingLong.createConst(5_000));
-        portableTeleporterDelay = CachedIntValue.wrap(this, builder.comment("Delay in ticks before a player is teleported after clicking the Teleport button in the portable teleporter.")
-              .defineInRange("delay", 0, 0, 6_000));//Max is 5 minutes
-        builder.pop();
-
-        builder.comment("Scuba Tank Settings").push(SCUBA_TANK_CATEGORY);
-        scubaMaxGas = CachedLongValue.wrap(this, builder.comment("Scuba Tank Gas Tank capacity in mB.")
-              .defineInRange("maxGas", 24_000, 1, Long.MAX_VALUE));
-        scubaFillRate = CachedLongValue.wrap(this, builder.comment("Amount of oxygen the Scuba Tank Gas Tank can accept per tick.")
+        MekanismConfigTranslations.GEAR_JETPACK.applyToBuilder(builder).push(JETPACK_CATEGORY);
+        jetpackCapacity = CachedLongValue.wrap(this, MekanismConfigTranslations.GEAR_JETPACK_CAPACITY.applyToBuilder(builder)
+              .defineInRange("capacity", 24 * FluidType.BUCKET_VOLUME, 1, Long.MAX_VALUE));
+        jetpackFillRate = CachedLongValue.wrap(this, MekanismConfigTranslations.GEAR_JETPACK_FILL_RATE.applyToBuilder(builder)
               .defineInRange("fillRate", 16, 1, Long.MAX_VALUE));
         builder.pop();
 
-        builder.comment("Seismic Reader Settings").push(SEISMIC_READER_CATEGORY);
-        seismicReaderMaxEnergy = CachedFloatingLongValue.define(this, builder, "Maximum amount (joules) of energy the Seismic Reader can contain.",
-              "maxEnergy", FloatingLong.createConst(12_000));
-        seismicReaderChargeRate = CachedFloatingLongValue.define(this, builder, "Amount (joules) of energy the Seismic Reader can accept per tick.",
-              "chargeRate", FloatingLong.createConst(60));
-        seismicReaderEnergyUsage = CachedFloatingLongValue.define(this, builder, "Energy usage in joules required to use the Seismic Reader.",
-              "energyUsage", FloatingLong.createConst(250));
+        MekanismConfigTranslations.GEAR_NETWORK_READER.applyToBuilder(builder).push("network_reader");
+        networkReaderMaxEnergy = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_NETWORK_READER_MAX_ENERGY, "maxEnergy", 60_000L);
+        networkReaderChargeRate = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_NETWORK_READER_CHARGE_RATE, "chargeRate", 300L);
+        networkReaderEnergyUsage = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_NETWORK_READER_ENERGY_USAGE, "energyUsage", 400L);
         builder.pop();
 
-        builder.comment("Canteen Settings").push(CANTEEN_CATEGORY);
-        canteenMaxStorage = CachedIntValue.wrap(this, builder.comment("Maximum amount of Nutritional Paste storable by the Canteen.")
-              .defineInRange("maxStorage", 64_000, 1, Integer.MAX_VALUE));
-        canteenTransferRate = CachedIntValue.wrap(this, builder.comment("Rate at which Nutritional Paste can be transferred into a Canteen.")
+        MekanismConfigTranslations.GEAR_PORTABLE_TELEPORTER.applyToBuilder(builder).push("portable_teleporter");
+        portableTeleporterMaxEnergy = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_PORTABLE_TELEPORTER_MAX_ENERGY, "maxEnergy", 1_000_000L);
+        portableTeleporterChargeRate = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_PORTABLE_TELEPORTER_CHARGE_RATE, "chargeRate", 5_000L);
+        portableTeleporterDelay = CachedIntValue.wrap(this, MekanismConfigTranslations.GEAR_PORTABLE_TELEPORTER_DELAY.applyToBuilder(builder)
+              .defineInRange("delay", 0, 0, 5 * SharedConstants.TICKS_PER_MINUTE));
+        builder.pop();
+
+        MekanismConfigTranslations.GEAR_SCUBA_TANK.applyToBuilder(builder).push("scuba_tank");
+        scubaTankCapacity = CachedLongValue.wrap(this, MekanismConfigTranslations.GEAR_SCUBA_TANK_CAPACITY.applyToBuilder(builder)
+              .defineInRange("capacity", 24 * FluidType.BUCKET_VOLUME, 1, Long.MAX_VALUE));
+        scubaFillRate = CachedLongValue.wrap(this, MekanismConfigTranslations.GEAR_SCUBA_TANK_FILL_RATE.applyToBuilder(builder)
+              .defineInRange("fillRate", 16, 1, Long.MAX_VALUE));
+        builder.pop();
+
+        MekanismConfigTranslations.GEAR_SEISMIC_READER.applyToBuilder(builder).push("seismic_reader");
+        seismicReaderMaxEnergy = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_SEISMIC_READER_MAX_ENERGY, "maxEnergy", 12_000L);
+        seismicReaderChargeRate = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_SEISMIC_READER_CHARGE_RATE, "chargeRate", 60L);
+        seismicReaderEnergyUsage = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_SEISMIC_READER_ENERGY_USAGE, "energyUsage", 250L);
+        builder.pop();
+
+        MekanismConfigTranslations.GEAR_CANTEEN.applyToBuilder(builder).push("canteen");
+        canteenMaxStorage = CachedIntValue.wrap(this, MekanismConfigTranslations.GEAR_CANTEEN_CAPACITY.applyToBuilder(builder)
+              .defineInRange("maxStorage", 64 * FluidType.BUCKET_VOLUME, 1, Integer.MAX_VALUE));
+        canteenTransferRate = CachedIntValue.wrap(this, MekanismConfigTranslations.GEAR_CANTEEN_TRANSFER_RATE.applyToBuilder(builder)
               .defineInRange("transferRate", 128, 1, Integer.MAX_VALUE));
         builder.pop();
 
-        builder.comment("Meka-Tool Settings").push(MEKATOOL_CATEGORY);
-        mekaToolEnergyUsage = CachedFloatingLongValue.define(this, builder, "Base energy (Joules) usage of the Meka-Tool. (Gets multiplied by speed factor)",
-              "energyUsage", FloatingLong.createConst(10));
-        mekaToolEnergyUsageSilk = CachedFloatingLongValue.define(this, builder, "Silk touch energy (Joules) usage of the Meka-Tool. (Gets multiplied by speed factor)",
-              "energyUsageSilk", FloatingLong.createConst(100));
-        mekaToolEnergyUsageWeapon = CachedFloatingLongValue.define(this, builder, "Cost in Joules of using the Meka-Tool to deal 4 units of damage.",
-              "energyUsageWeapon", FloatingLong.createConst(2_000));
-        mekaToolEnergyUsageTeleport = CachedFloatingLongValue.define(this, builder, "Cost in Joules of using the Meka-Tool to teleport 10 blocks.",
-              "energyUsageTeleport", FloatingLong.createConst(1_000));
-        mekaToolMaxTeleportReach = CachedIntValue.wrap(this, builder.comment("Maximum distance a player can teleport with the Meka-Tool.")
-              .defineInRange("maxTeleportReach", 100, 3, 1_024));
-        mekaToolBaseDamage = CachedIntValue.wrap(this, builder.comment("Base bonus damage applied by the Meka-Tool without using any energy.")
+        MekanismConfigTranslations.GEAR_MEKA_TOOL.applyToBuilder(builder).push("mekatool");
+        mekaToolBaseEnergyCapacity = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_MEKA_TOOL_CAPACITY, "baseEnergyCapacity", 16_000_000L);
+        mekaToolBaseChargeRate = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_MEKA_TOOL_CHARGE_RATE, "chargeRate", 100_000L);
+        mekaToolBaseDamage = CachedIntValue.wrap(this, MekanismConfigTranslations.GEAR_MEKA_TOOL_DAMAGE.applyToBuilder(builder)
               .defineInRange("baseDamage", 4, 0, 100_000));
-        mekaToolAttackSpeed = CachedDoubleValue.wrap(this, builder.comment("Attack speed of the Meka-Tool.")
-              .defineInRange("attackSpeed", -2.4, -Attributes.ATTACK_SPEED.getDefaultValue(), 100));
-        mekaToolBaseEfficiency = CachedFloatValue.wrap(this, builder.comment("Efficiency of the Meka-Tool with energy but without any upgrades.")
+        mekaToolAttackSpeed = CachedDoubleValue.wrap(this, MekanismConfigTranslations.GEAR_MEKA_TOOL_ATTACK_SPEED.applyToBuilder(builder)
+              .defineInRange("attackSpeed", -2.4, -Attributes.ATTACK_SPEED.value().getDefaultValue(), 100));
+        mekaToolBaseEfficiency = CachedFloatValue.wrap(this, MekanismConfigTranslations.GEAR_MEKA_TOOL_EFFICIENCY.applyToBuilder(builder)
               .defineInRange("baseEfficiency", 4, 0.1, 100));
-        mekaToolBaseEnergyCapacity = CachedFloatingLongValue.define(this, builder, "Energy capacity (Joules) of the Meka-Tool without any installed upgrades. Quadratically scaled by upgrades.",
-              "baseEnergyCapacity", FloatingLong.createConst(16_000_000));
-        mekaToolBaseChargeRate = CachedFloatingLongValue.define(this, builder, "Amount (joules) of energy the Meka-Tool can accept per tick. Quadratically scaled by upgrades.",
-              "chargeRate", FloatingLong.createConst(100_000));
-        mekaToolEnergyUsageHoe = CachedFloatingLongValue.define(this, builder, "Cost in Joules of using the Meka-Tool as a hoe.",
-              "energyUsageHoe", FloatingLong.createConst(10));
-        mekaToolEnergyUsageShovel = CachedFloatingLongValue.define(this, builder, "Cost in Joules of using the Meka-Tool as a shovel for making paths and dowsing campfires.",
-              "energyUsageShovel", FloatingLong.createConst(10));
-        mekaToolEnergyUsageAxe = CachedFloatingLongValue.define(this, builder, "Cost in Joules of using the Meka-Tool as an axe for stripping logs, scraping, or removing wax.",
-              "energyUsageAxe", FloatingLong.createConst(10));
-        mekaToolEnergyUsageShearEntity = CachedFloatingLongValue.define(this, builder, "Cost in Joules of using the Meka-Tool to shear entities.",
-              "energyUsageShearEntity", FloatingLong.createConst(10));
-        mekaToolExtendedMining = CachedBooleanValue.wrap(this, builder.comment("Enable the 'Extended Vein Mining' mode for the Meka-Tool. (Allows vein mining everything not just ores/logs)")
+        mekaToolExtendedMining = CachedBooleanValue.wrap(this, MekanismConfigTranslations.GEAR_MEKA_TOOL_EXTENDED_VEIN.applyToBuilder(builder)
               .define("extendedMining", true));
-        builder.pop();
+        mekaToolMaxTeleportReach = CachedIntValue.wrap(this, MekanismConfigTranslations.GEAR_MEKA_TOOL_TELEPORTATION_DISTANCE.applyToBuilder(builder)
+              .defineInRange("maxTeleportReach", 100, 3, 1_024));
 
-        builder.comment("MekaSuit Settings").push(MEKASUIT_CATEGORY);
-        mekaSuitBaseEnergyCapacity = CachedFloatingLongValue.define(this, builder, "Energy capacity (Joules) of MekaSuit items without any installed upgrades. Quadratically scaled by upgrades.",
-              "baseEnergyCapacity", FloatingLong.createConst(16_000_000));
-        mekaSuitBaseChargeRate = CachedFloatingLongValue.define(this, builder, "Amount (joules) of energy the MekaSuit can accept per tick. Quadratically scaled by upgrades.",
-              "chargeRate", FloatingLong.createConst(100_000));
-        mekaSuitBaseJumpEnergyUsage = CachedFloatingLongValue.define(this, builder, "Energy usage (Joules) of MekaSuit when adding 0.1 to jump motion.",
-              "baseJumpEnergyUsage", FloatingLong.createConst(1_000));
-        mekaSuitElytraEnergyUsage = CachedFloatingLongValue.define(this, builder, "Energy usage (Joules) per second of the MekaSuit when flying with the Elytra Unit.",
-              "elytraEnergyUsage", FloatingLong.createConst(32_000));
-        mekaSuitEnergyUsagePotionTick = CachedFloatingLongValue.define(this, builder, "Energy usage (Joules) of MekaSuit when lessening a potion effect.",
-              "energyUsagePotionTick", FloatingLong.createConst(40_000));
-        mekaSuitEnergyUsageMagicReduce = CachedFloatingLongValue.define(this, builder, "Energy cost/multiplier in Joules for reducing magic damage via the inhalation purification unit. Energy cost is: MagicDamage * energyUsageMagicPrevent. (1 MagicDamage is 1 half heart).",
-              "energyUsageMagicReduce", FloatingLong.createConst(1_000));
-        mekaSuitEnergyUsageFall = CachedFloatingLongValue.define(this, builder, "Energy cost/multiplier in Joules for reducing fall damage with MekaSuit Boots. Energy cost is: FallDamage * freeRunnerFallEnergyCost. (1 FallDamage is 1 half heart)",
-              "energyUsageFall", FloatingLong.createConst(50));
-        mekaSuitEnergyUsageSprintBoost = CachedFloatingLongValue.define(this, builder, "Energy usage (Joules) of MekaSuit when adding 0.1 to sprint motion.",
-              "energyUsageSprintBoost", FloatingLong.createConst(100));
-        mekaSuitEnergyUsageGravitationalModulation = CachedFloatingLongValue.define(this, builder, "Energy usage (Joules) of MekaSuit per tick when flying via Gravitational Modulation.",
-              "energyUsageGravitationalModulation", FloatingLong.createConst(1_000));
-        mekaSuitInventoryChargeRate = CachedFloatingLongValue.define(this, builder, "Charge rate of inventory items (Joules) per tick.",
-              "inventoryChargeRate", FloatingLong.createConst(10_000));
-        mekaSuitSolarRechargingRate = CachedFloatingLongValue.define(this, builder, "Solar recharging rate (Joules) of helmet per tick, per upgrade installed.",
-              "solarRechargingRate", FloatingLong.createConst(500));
-        mekaSuitEnergyUsageVisionEnhancement = CachedFloatingLongValue.define(this, builder, "Energy usage (Joules) of MekaSuit per tick of using vision enhancement.",
-              "energyUsageVisionEnhancement", FloatingLong.createConst(500));
-        mekaSuitEnergyUsageHydrostaticRepulsion = CachedFloatingLongValue.define(this, builder, "Energy usage (Joules) of MekaSuit per tick of using hydrostatic repulsion.",
-              "energyUsageHydrostaticRepulsion", FloatingLong.createConst(500));
-        mekaSuitEnergyUsageNutritionalInjection = CachedFloatingLongValue.define(this, builder, "Energy usage (Joules) of MekaSuit per half-food of nutritional injection.",
-              "energyUsageNutritionalInjection", FloatingLong.createConst(20_000));
-        mekaSuitEnergyUsageDamage = CachedFloatingLongValue.define(this, builder, "Energy usage (Joules) of MekaSuit per unit of damage applied.",
-              "energyUsageDamage", FloatingLong.createConst(100_000));
-        mekaSuitEnergyUsageItemAttraction = CachedFloatingLongValue.define(this, builder, "Energy usage (Joules) of MekaSuit per tick of attracting a single item.",
-              "energyUsageItemAttraction", FloatingLong.createConst(250));
-        mekaSuitGravitationalVibrations = CachedBooleanValue.wrap(this, builder.comment("Should the Gravitational Modulation unit give off vibrations when in use.")
-              .define("gravitationalVibrations", true));
-        mekaSuitNutritionalMaxStorage = CachedIntValue.wrap(this, builder.comment("Maximum amount of Nutritional Paste storable by the nutritional injection unit.")
-              .defineInRange("nutritionalMaxStorage", 128_000, 1, Integer.MAX_VALUE));
-        mekaSuitNutritionalTransferRate = CachedIntValue.wrap(this, builder.comment("Rate at which Nutritional Paste can be transferred into the nutritional injection unit.")
-              .defineInRange("nutritionalTransferRate", 256, 1, Integer.MAX_VALUE));
-        mekaSuitJetpackMaxStorage = CachedLongValue.wrap(this, builder.comment("Maximum amount of Hydrogen storable in the jetpack unit.")
-              .defineInRange("jetpackMaxStorage", 48_000, 1, Long.MAX_VALUE));
-        mekaSuitJetpackTransferRate = CachedLongValue.wrap(this, builder.comment("Rate at which Hydrogen can be transferred into the jetpack unit.")
-              .defineInRange("jetpackTransferRate", 256, 1, Long.MAX_VALUE));
-        mekaSuitHelmetArmor = CachedIntValue.wrap(this, builder.comment("Armor value of MekaSuit Helmets.")
-              .defineInRange("helmetArmor", ArmorMaterials.NETHERITE.getDefenseForType(ArmorItem.Type.HELMET), 0, Integer.MAX_VALUE));
-        mekaSuitBodyArmorArmor = CachedIntValue.wrap(this, builder.comment("Armor value of MekaSuit BodyArmor.")
-              .defineInRange("bodyArmorArmor", ArmorMaterials.NETHERITE.getDefenseForType(ArmorItem.Type.CHESTPLATE), 0, Integer.MAX_VALUE));
-        mekaSuitPantsArmor = CachedIntValue.wrap(this, builder.comment("Armor value of MekaSuit Pants.")
-              .defineInRange("pantsArmor", ArmorMaterials.NETHERITE.getDefenseForType(ArmorItem.Type.LEGGINGS), 0, Integer.MAX_VALUE));
-        mekaSuitBootsArmor = CachedIntValue.wrap(this, builder.comment("Armor value of MekaSuit Boots.")
-              .defineInRange("bootsArmor", ArmorMaterials.NETHERITE.getDefenseForType(ArmorItem.Type.BOOTS), 0, Integer.MAX_VALUE));
-        mekaSuitToughness = CachedFloatValue.wrap(this, builder.comment("Toughness value of the MekaSuit.")
-              .defineInRange("toughness", ArmorMaterials.NETHERITE.getToughness(), 0, Float.MAX_VALUE));
-        mekaSuitKnockbackResistance = CachedFloatValue.wrap(this, builder.comment("Knockback resistance value of the MekaSuit.")
-              .defineInRange("knockbackResistance", ArmorMaterials.NETHERITE.getKnockbackResistance(), 0, Float.MAX_VALUE));
-        builder.push(MEKASUIT_DAMAGE_CATEGORY);
-        mekaSuitFallDamageRatio = CachedFloatValue.wrap(this, builder.comment("Percent of damage taken from falling that can be absorbed by MekaSuit Boots when they have enough power.")
-              .defineInRange("fallDamageReductionRatio", 1D, 0, 1));
-        mekaSuitMagicDamageRatio = CachedFloatValue.wrap(this, builder.comment("Percent of damage taken from magic damage that can be absorbed by MekaSuit Helmet with Purification unit when it has enough power.")
-              .defineInRange("magicDamageReductionRatio", 1D, 0, 1));
-        mekaSuitUnspecifiedDamageRatio = CachedFloatValue.wrap(this, builder.comment("Percent of damage taken from other non explicitly supported damage types that don't bypass armor when the MekaSuit has enough power and a full suit is equipped.",
-                    "Note: Support for specific damage types can be added by adding an entry for the damage type in the damageReductionRatio config.")
-              .defineInRange("unspecifiedDamageReductionRatio", 1D, 0, 1));
-        mekaSuitDamageRatios = CachedRL2FloatMapConfigValue.define(this, builder.comment("Map representing the percent of damage from different damage types that can be absorbed by the MekaSuit when there is enough power and a full suit is equipped.",
-                    "Values may be in the range [0.0, 1.0].", "See the #mekainsm:mekasuit_always_supported damage type tag for allowing damage that bypasses armor to be blocked."),
-              "damageReductionRatio", () -> ItemMekaSuitArmor.BASE_ALWAYS_SUPPORTED.stream().collect(Collectors.toMap(ResourceKey::location, ItemMekaSuitArmor::getBaseDamageRatio)),
-              f -> f >= 0F && f <= 1F);
+        MekanismConfigTranslations.GEAR_MEKA_TOOL_ENERGY_USAGE.applyToBuilder(builder).push("energy_usage");
+        mekaToolEnergyUsage = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_MEKA_TOOL_ENERGY_USAGE_BASE, "base", 10L);
+        mekaToolEnergyUsageSilk = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_MEKA_TOOL_ENERGY_USAGE_SILK, "silk", 100L);
+        mekaToolEnergyUsageWeapon = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_MEKA_TOOL_ENERGY_USAGE_WEAPON, "weapon", 2_000L);
+        mekaToolEnergyUsageHoe = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_MEKA_TOOL_HOE, "hoe", 10L);
+        mekaToolEnergyUsageShovel = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_MEKA_TOOL_SHOVEL, "shovel", 10L);
+        mekaToolEnergyUsageAxe = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_MEKA_TOOL_AXE, "axe", 10L);
+        mekaToolEnergyUsageShearEntity = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_MEKA_TOOL_SHEAR_ENTITY, "shearEntity", 10L);
+        mekaToolEnergyUsageShearTrim = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_MEKA_TOOL_SHEAR_BLOCK, "shearTrim", 10L);
+        mekaToolEnergyUsageTeleport = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_MEKA_TOOL_ENERGY_USAGE_TELEPORT, "teleport", 1_000L);
         builder.pop(2);
 
+        MekanismConfigTranslations.GEAR_MEKA_SUIT.applyToBuilder(builder).push(MEKASUIT_CATEGORY);
+        mekaSuitBaseEnergyCapacity = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_MEKA_SUIT_CAPACITY, "baseEnergyCapacity", 16_000_000L);
+        mekaSuitBaseChargeRate = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_MEKA_SUIT_CHARGE_RATE, "chargeRate", 100_000L);
+        mekaSuitInventoryChargeRate = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_MEKA_SUIT_CHARGE_RATE_INVENTORY, "inventoryChargeRate", 10_000L);
+        mekaSuitSolarRechargingRate = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_MEKA_SUIT_CHARGE_RATE_SOLAR, "solarRechargingRate", 500L);
+        mekaSuitGravitationalVibrations = CachedBooleanValue.wrap(this, MekanismConfigTranslations.GEAR_MEKA_SUIT_FLIGHT_VIBRATIONS.applyToBuilder(builder)
+              .define("gravitationalVibrations", true));
+        mekaSuitNutritionalMaxStorage = CachedIntValue.wrap(this, MekanismConfigTranslations.GEAR_MEKA_SUIT_PASTE_CAPACITY.applyToBuilder(builder)
+              .defineInRange("nutritionalMaxStorage", 128 * FluidType.BUCKET_VOLUME, 1, Integer.MAX_VALUE));
+        mekaSuitNutritionalTransferRate = CachedIntValue.wrap(this, MekanismConfigTranslations.GEAR_MEKA_SUIT_PASTE_TRANSFER_RATE.applyToBuilder(builder)
+              .defineInRange("nutritionalTransferRate", 256, 1, Integer.MAX_VALUE));
+        mekaSuitJetpackMaxStorage = CachedLongValue.wrap(this, MekanismConfigTranslations.GEAR_MEKA_SUIT_JETPACK_CAPACITY.applyToBuilder(builder)
+              .defineInRange("jetpackMaxStorage", 24 * FluidType.BUCKET_VOLUME, 1, Long.MAX_VALUE));
+        mekaSuitJetpackTransferRate = CachedLongValue.wrap(this, MekanismConfigTranslations.GEAR_MEKA_SUIT_JETPACK_TRANSFER_RATE.applyToBuilder(builder)
+              .defineInRange("jetpackTransferRate", 256, 1, Long.MAX_VALUE));
+
+        MekanismConfigTranslations.GEAR_MEKA_SUIT_ENERGY_USAGE.applyToBuilder(builder).push("energy_usage");
+        mekaSuitEnergyUsageDamage = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_MEKA_SUIT_ENERGY_USAGE_DAMAGE, "damage", 100_000L);
+        mekaSuitEnergyUsageMagicReduce = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_MEKA_SUIT_ENERGY_USAGE_MAGIC, "magicReduce", 1_000L);
+        mekaSuitEnergyUsageFall = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_MEKA_SUIT_ENERGY_USAGE_FALL, "fall", 50L);
+        mekaSuitBaseJumpEnergyUsage = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_MEKA_SUIT_ENERGY_USAGE_JUMP, "jump", 1_000L);
+        mekaSuitElytraEnergyUsage = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_MEKA_SUIT_ENERGY_USAGE_ELYTRA, "elytra", 32_000L);
+        mekaSuitEnergyUsagePotionTick = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_MEKA_SUIT_ENERGY_USAGE_POTION, "energyUsagePotionTick", 40_000L);
+        mekaSuitEnergyUsageSprintBoost = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_MEKA_SUIT_ENERGY_USAGE_SPRINT, "sprintBoost", 100L);
+        mekaSuitEnergyUsageGravitationalModulation = CachedLongValue.define(this, builder, MekanismConfigTranslations.GEAR_MEKA_SUIT_ENERGY_USAGE_FLIGHT,
+              "gravitationalModulation", 1_000L, 0, Long.MAX_VALUE / ModuleGravitationalModulatingUnit.BOOST_ENERGY_MULTIPLIER);
+        mekaSuitEnergyUsageVisionEnhancement = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_MEKA_SUIT_ENERGY_USAGE_VISION, "visionEnhancement", 500L);
+        mekaSuitEnergyUsageHydrostaticRepulsion = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_MEKA_SUIT_ENERGY_USAGE_SWIM, "hydrostaticRepulsion", 500L);
+        mekaSuitEnergyUsageNutritionalInjection = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_MEKA_SUIT_ENERGY_USAGE_FOOD, "nutritionalInjection", 20_000L);
+        mekaSuitEnergyUsageItemAttraction = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_MEKA_SUIT_ENERGY_USAGE_MAGNET, "itemAttraction", 250L);
         builder.pop();
+
+        MekanismConfigTranslations.GEAR_MEKA_SUIT_DAMAGE_ABSORPTION.applyToBuilder(builder).push(MEKASUIT_DAMAGE_CATEGORY);
+        mekaSuitFallDamageRatio = CachedFloatValue.wrap(this, MekanismConfigTranslations.GEAR_MEKA_SUIT_ABSORPTION_FALL.applyToBuilder(builder)
+              .defineInRange("fallDamageReductionRatio", 1D, 0, 1));
+        mekaSuitMagicDamageRatio = CachedFloatValue.wrap(this, MekanismConfigTranslations.GEAR_MEKA_SUIT_ABSORPTION_MAGIC.applyToBuilder(builder)
+              .defineInRange("magicDamageReductionRatio", 1D, 0, 1));
+        mekaSuitUnspecifiedDamageRatio = CachedFloatValue.wrap(this, MekanismConfigTranslations.GEAR_MEKA_SUIT_ABSORPTION_UNSPECIFIED.applyToBuilder(builder)
+              .defineInRange("unspecifiedDamageReductionRatio", 1D, 0, 1));
+        builder.pop(2);
+
         configSpec = builder.build();
     }
 
@@ -402,17 +295,17 @@ public class GearConfig extends BaseMekanismConfig {
     }
 
     @Override
-    public ForgeConfigSpec getConfigSpec() {
+    public String getTranslation() {
+        return "Gear Config";
+    }
+
+    @Override
+    public ModConfigSpec getConfigSpec() {
         return configSpec;
     }
 
     @Override
     public Type getConfigType() {
         return Type.SERVER;
-    }
-
-    @Override
-    public boolean addToContainer() {
-        return false;
     }
 }

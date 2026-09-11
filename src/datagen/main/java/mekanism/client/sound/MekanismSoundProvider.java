@@ -4,7 +4,7 @@ import java.util.function.UnaryOperator;
 import mekanism.common.Mekanism;
 import mekanism.common.registries.MekanismSounds;
 import net.minecraft.data.PackOutput;
-import net.minecraftforge.common.data.ExistingFileHelper;
+import net.neoforged.neoforge.common.data.ExistingFileHelper;
 
 public class MekanismSoundProvider extends BaseSoundProvider {
 
@@ -80,7 +80,8 @@ public class MekanismSoundProvider extends BaseSoundProvider {
 
     private void addGuiSoundEvents() {
         String basePath = "gui/";
-        //Manually call this to skip applying a subtitle
-        addSoundEvent(MekanismSounds.BEEP, basePath + "beep", UnaryOperator.identity(), sound -> sound.pitch(0.8F));
+        //Manually call this to skip applying subtitles
+        addSoundEvent(MekanismSounds.BEEP_ON, basePath + "beep_on", UnaryOperator.identity(), sound -> sound.pitch(0.8F));
+        addSoundEvent(MekanismSounds.BEEP_OFF, basePath + "beep_off", UnaryOperator.identity(), sound -> sound.pitch(0.8F));
     }
 }

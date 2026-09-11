@@ -2,17 +2,16 @@ package mekanism.generators.common.content.turbine;
 
 import it.unimi.dsi.fastutil.objects.Object2FloatMap;
 import it.unimi.dsi.fastutil.objects.Object2FloatOpenHashMap;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 import mekanism.api.Action;
 import mekanism.api.AutomationType;
-import mekanism.api.NBTConstants;
-import mekanism.api.chemical.gas.IGasTank;
+import mekanism.api.SerializationConstants;
+import mekanism.api.chemical.IChemicalTank;
 import mekanism.api.energy.IEnergyContainer;
 import mekanism.api.fluid.IExtendedFluidTank;
-import mekanism.api.math.FloatingLong;
 import mekanism.api.math.MathUtils;
 import mekanism.common.capabilities.energy.VariableCapacityEnergyContainer;
 import mekanism.common.capabilities.fluid.VariableCapacityFluidTank;
@@ -21,43 +20,54 @@ import mekanism.common.integration.computer.SpecialComputerMethodWrapper.Compute
 import mekanism.common.integration.computer.annotation.ComputerMethod;
 import mekanism.common.integration.computer.annotation.SyntheticComputerMethod;
 import mekanism.common.integration.computer.annotation.WrappingComputerMethod;
+import mekanism.common.integration.energy.BlockEnergyCapabilityCache;
 import mekanism.common.inventory.container.sync.dynamic.ContainerSync;
+import mekanism.common.lib.multiblock.IValveHandler.ValveData;
 import mekanism.common.lib.multiblock.MultiblockData;
-import mekanism.common.tags.MekanismTags;
 import mekanism.common.tile.TileEntityChemicalTank.GasMode;
+import mekanism.common.util.CableUtils;
+import mekanism.common.util.FluidUtils;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.NBTUtils;
 import mekanism.common.util.WorldUtils;
 import mekanism.generators.common.config.MekanismGeneratorsConfig;
 import mekanism.generators.common.tile.turbine.TileEntityTurbineCasing;
+import mekanism.generators.common.tile.turbine.TileEntityTurbineValve;
 import mekanism.generators.common.tile.turbine.TileEntityTurbineVent;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtUtils;
+import net.minecraft.tags.FluidTags;
+import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.material.Fluids;
-import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.FluidType;
-import org.jetbrains.annotations.NotNull;
+import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.FluidType;
+import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import org.jetbrains.annotations.Nullable;
 
 public class TurbineMultiblockData extends MultiblockData {
 
     public static final float ROTATION_THRESHOLD = 0.001F;
     public static final Object2FloatMap<UUID> clientRotationMap = new Object2FloatOpenHashMap<>();
 
+    private final List<BlockCapabilityCache<IFluidHandler, @Nullable Direction>> fluidOutputTargets = new ArrayList<>();
+    private final List<BlockEnergyCapabilityCache> energyOutputTargets = new ArrayList<>();
     @ContainerSync
-    @WrappingComputerMethod(wrapper = ComputerChemicalTankWrapper.class, methodNames = {"getSteam", "getSteamCapacity", "getSteamNeeded", "getSteamFilledPercentage"}, docPlaceholder = "steam tank")
-    public IGasTank gasTank;
+    @WrappingComputerMethod(wrapper = ComputerChemicalTankWrapper.class, methodNames = {"getSteam", "getSteamCapacity", "getSteamNeeded",
+                                                                                        "getSteamFilledPercentage"}, docPlaceholder = "steam tank")
+    public IChemicalTank chemicalTank;
     @ContainerSync
     public IExtendedFluidTank ventTank;
-    public final List<IExtendedFluidTank> ventTanks;
     @ContainerSync
     public IEnergyContainer energyContainer;
     @ContainerSync
     @SyntheticComputerMethod(getter = "getDumpingMode")
     public GasMode dumpMode = GasMode.IDLE;
-    private FloatingLong energyCapacity = FloatingLong.ZERO;
+    private long energyCapacity = 0;
 
     @ContainerSync
     @SyntheticComputerMethod(getter = "getBlades")
@@ -91,10 +101,9 @@ public class TurbineMultiblockData extends MultiblockData {
 
     public TurbineMultiblockData(TileEntityTurbineCasing tile) {
         super(tile);
-        gasTanks.add(gasTank = new TurbineGasTank(this, createSaveAndComparator()));
-        ventTank = VariableCapacityFluidTank.output(this, () -> isFormed() ? condensers * MekanismGeneratorsConfig.generators.condenserRate.get() : FluidType.BUCKET_VOLUME,
-              fluid -> MekanismTags.Fluids.WATER_LOOKUP.contains(fluid.getFluid()), this);
-        ventTanks = Collections.singletonList(ventTank);
+        chemicalTanks.add(chemicalTank = new TurbineChemicalTank(this, createSaveAndComparator()));
+        fluidTanks.add(ventTank = VariableCapacityFluidTank.output(this, () -> isFormed() ? condensers * MekanismGeneratorsConfig.generators.condenserRate.get() : FluidType.BUCKET_VOLUME,
+              fluid -> fluid.is(FluidTags.WATER), this));
         energyContainer = VariableCapacityEnergyContainer.create(this::getEnergyCapacity, automationType -> isFormed(),
               automationType -> automationType == AutomationType.INTERNAL && isFormed(), this);
         energyContainers.add(energyContainer);
@@ -102,13 +111,18 @@ public class TurbineMultiblockData extends MultiblockData {
 
     @Override
     protected void updateEjectors(Level world) {
-        super.updateEjectors(world);
+        fluidOutputTargets.clear();
+        energyOutputTargets.clear();
+        for (ValveData valve : valves) {
+            TileEntityTurbineValve tile = WorldUtils.getTileEntity(TileEntityTurbineValve.class, world, valve.location);
+            if (tile != null) {
+                tile.addEnergyTargetCapability(energyOutputTargets, valve.side);
+            }
+        }
         for (VentData data : ventData) {
             TileEntityTurbineVent vent = WorldUtils.getTileEntity(TileEntityTurbineVent.class, world, data.location);
             if (vent != null) {
-                //Ensure we don't use create a bunch of identical collections potentially using up a bunch of memory
-                Set<Direction> sides = SIDE_REFERENCES.computeIfAbsent(data.side, Collections::singleton);
-                vent.setEjectSides(sides);
+                vent.addFluidTargetCapability(fluidOutputTargets, data.side);
             }
         }
     }
@@ -119,54 +133,59 @@ public class TurbineMultiblockData extends MultiblockData {
 
         lastSteamInput = newSteamInput;
         newSteamInput = 0;
-        long stored = gasTank.getStored();
+        long stored = chemicalTank.getStored();
         double flowRate = 0;
 
-        FloatingLong energyNeeded = energyContainer.getNeeded();
-        if (stored > 0 && !energyNeeded.isZero()) {
-            FloatingLong energyMultiplier = MekanismConfig.general.maxEnergyPerSteam.get().divide(TurbineValidator.MAX_BLADES)
-                  .multiply(Math.min(blades, coils * MekanismGeneratorsConfig.generators.turbineBladesPerCoil.get()));
-            if (energyMultiplier.isZero()) {
+        long energyNeeded = energyContainer.getNeeded();
+        if (stored > 0 && energyNeeded > 0L) {
+            double energyMultiplier = (MekanismConfig.general.maxEnergyPerSteam.get() / (double) TurbineValidator.MAX_BLADES)
+                                      * (Math.min(blades, coils * MekanismGeneratorsConfig.generators.turbineBladesPerCoil.get()));
+            if (energyMultiplier < Mth.EPSILON) {
                 clientFlow = 0;
             } else {
-                double rate = lowerVolume * (getDispersers() * MekanismGeneratorsConfig.generators.turbineDisperserGasFlow.get());
-                rate = Math.min(rate, vents * MekanismGeneratorsConfig.generators.turbineVentGasFlow.get());
+                double rate = lowerVolume * (getDispersers() * MekanismGeneratorsConfig.generators.turbineDisperserChemicalFlow.get());
+                rate = Math.min(rate, vents * MekanismGeneratorsConfig.generators.turbineVentChemicalFlow.get());
                 double proportion = stored / (double) getSteamCapacity();
                 double origRate = rate;
-                rate = Math.min(Math.min(stored, rate), energyNeeded.divide(energyMultiplier).doubleValue()) * proportion;
+                rate = Math.min(Math.min(stored, rate), (energyNeeded / energyMultiplier)) * proportion;
                 clientFlow = MathUtils.clampToLong(rate);
                 if (clientFlow > 0) {
                     flowRate = rate / origRate;
-                    energyContainer.insert(energyMultiplier.multiply(rate), Action.EXECUTE, AutomationType.INTERNAL);
-                    gasTank.shrinkStack(clientFlow, Action.EXECUTE);
-                    ventTank.setStack(new FluidStack(Fluids.WATER, Math.min(MathUtils.clampToInt(rate), condensers * MekanismGeneratorsConfig.generators.condenserRate.get())));
+                    energyContainer.insert(MathUtils.clampToLong(energyMultiplier * rate), Action.EXECUTE, AutomationType.INTERNAL);
+                    chemicalTank.shrinkStack(clientFlow, Action.EXECUTE);
+                    ventTank.insert(new FluidStack(Fluids.WATER, Math.min(MathUtils.clampToInt(rate), condensers * MekanismGeneratorsConfig.generators.condenserRate.get())), Action.EXECUTE, AutomationType.INTERNAL);
                 }
             }
         } else {
             clientFlow = 0;
         }
+        if (!fluidOutputTargets.isEmpty() && !ventTank.isEmpty()) {
+            //Note: We know that the tank has whatever amount it has stored, we can the simulated extraction
+            ventTank.extract(FluidUtils.emit(fluidOutputTargets, ventTank.getFluid()), Action.EXECUTE, AutomationType.INTERNAL);
+        }
+        CableUtils.emit(energyOutputTargets, energyContainer);
 
-        if (dumpMode != GasMode.IDLE && !gasTank.isEmpty()) {
-            long amount = gasTank.getStored();
+        if (dumpMode != GasMode.IDLE && !chemicalTank.isEmpty()) {
+            long amount = chemicalTank.getStored();
             if (dumpMode == GasMode.DUMPING) {
-                gasTank.shrinkStack(getDumpingAmount(amount), Action.EXECUTE);
+                chemicalTank.shrinkStack(getDumpingAmount(amount), Action.EXECUTE);
             } else {//DUMPING_EXCESS
                 //Don't allow dumping more than the configured amount
-                long targetLevel = MathUtils.clampToLong(gasTank.getCapacity() * MekanismConfig.general.dumpExcessKeepRatio.get());
+                long targetLevel = MathUtils.clampToLong(chemicalTank.getCapacity() * MekanismConfig.general.dumpExcessKeepRatio.get());
                 if (targetLevel < amount) {
-                    gasTank.shrinkStack(Math.min(amount - targetLevel, getDumpingAmount(amount)), Action.EXECUTE);
+                    chemicalTank.shrinkStack(Math.min(amount - targetLevel, getDumpingAmount(amount)), Action.EXECUTE);
                 }
             }
         }
 
         float newRotation = (float) flowRate;
 
-        if (Math.abs(newRotation - clientRotation) > TurbineMultiblockData.ROTATION_THRESHOLD) {
+        if (Math.abs(newRotation - clientRotation) > ROTATION_THRESHOLD) {
             clientRotation = newRotation;
             needsPacket = true;
         }
-        float scale = MekanismUtils.getScale(prevSteamScale, gasTank);
-        if (scale != prevSteamScale) {
+        float scale = MekanismUtils.getScale(prevSteamScale, chemicalTank);
+        if (MekanismUtils.scaleChanged(scale, prevSteamScale)) {
             needsPacket = true;
             prevSteamScale = scale;
         }
@@ -183,26 +202,28 @@ public class TurbineMultiblockData extends MultiblockData {
     }
 
     @Override
-    public void readUpdateTag(CompoundTag tag) {
-        super.readUpdateTag(tag);
-        NBTUtils.setFloatIfPresent(tag, NBTConstants.SCALE, scale -> prevSteamScale = scale);
-        NBTUtils.setIntIfPresent(tag, NBTConstants.VOLUME, this::setVolume);
-        NBTUtils.setIntIfPresent(tag, NBTConstants.LOWER_VOLUME, value -> lowerVolume = value);
-        NBTUtils.setGasStackIfPresent(tag, NBTConstants.GAS_STORED, value -> gasTank.setStack(value));
-        NBTUtils.setBlockPosIfPresent(tag, NBTConstants.COMPLEX, value -> complex = value);
-        NBTUtils.setFloatIfPresent(tag, NBTConstants.ROTATION, value -> clientRotation = value);
+    public void readUpdateTag(CompoundTag tag, HolderLookup.Provider provider) {
+        super.readUpdateTag(tag, provider);
+        NBTUtils.setFloatIfPresent(tag, SerializationConstants.SCALE, scale -> prevSteamScale = scale);
+        NBTUtils.setIntIfPresent(tag, SerializationConstants.VOLUME, this::setVolume);
+        NBTUtils.setIntIfPresent(tag, SerializationConstants.LOWER_VOLUME, value -> lowerVolume = value);
+        NBTUtils.setChemicalStackIfPresent(provider, tag, SerializationConstants.CHEMICAL, value -> chemicalTank.setStack(value));
+        NBTUtils.setFluidStackIfPresent(provider, tag, SerializationConstants.FLUID, ventTank::setStack);
+        NBTUtils.setBlockPosIfPresent(tag, SerializationConstants.COMPLEX, value -> complex = value);
+        NBTUtils.setFloatIfPresent(tag, SerializationConstants.ROTATION, value -> clientRotation = value);
         clientRotationMap.put(inventoryID, clientRotation);
     }
 
     @Override
-    public void writeUpdateTag(CompoundTag tag) {
-        super.writeUpdateTag(tag);
-        tag.putFloat(NBTConstants.SCALE, prevSteamScale);
-        tag.putInt(NBTConstants.VOLUME, getVolume());
-        tag.putInt(NBTConstants.LOWER_VOLUME, lowerVolume);
-        tag.put(NBTConstants.GAS_STORED, gasTank.getStack().write(new CompoundTag()));
-        tag.put(NBTConstants.COMPLEX, NbtUtils.writeBlockPos(complex));
-        tag.putFloat(NBTConstants.ROTATION, clientRotation);
+    public void writeUpdateTag(CompoundTag tag, HolderLookup.Provider provider) {
+        super.writeUpdateTag(tag, provider);
+        tag.putFloat(SerializationConstants.SCALE, prevSteamScale);
+        tag.putInt(SerializationConstants.VOLUME, getVolume());
+        tag.putInt(SerializationConstants.LOWER_VOLUME, lowerVolume);
+        tag.put(SerializationConstants.CHEMICAL, chemicalTank.getStack().saveOptional(provider));
+        tag.put(SerializationConstants.FLUID, ventTank.getFluid().saveOptional(provider));
+        tag.put(SerializationConstants.COMPLEX, NbtUtils.writeBlockPos(complex));
+        tag.putFloat(SerializationConstants.ROTATION, clientRotation);
     }
 
     @ComputerMethod
@@ -211,11 +232,10 @@ public class TurbineMultiblockData extends MultiblockData {
     }
 
     public long getSteamCapacity() {
-        return lowerVolume * MekanismGeneratorsConfig.generators.turbineGasPerTank.get();
+        return lowerVolume * MekanismGeneratorsConfig.generators.turbineChemicalPerTank.get();
     }
 
-    @NotNull
-    public FloatingLong getEnergyCapacity() {
+    public long getEnergyCapacity() {
         return energyCapacity;
     }
 
@@ -223,35 +243,35 @@ public class TurbineMultiblockData extends MultiblockData {
     public void setVolume(int volume) {
         if (getVolume() != volume) {
             super.setVolume(volume);
-            energyCapacity = MekanismGeneratorsConfig.generators.turbineEnergyCapacityPerVolume.get().multiply(volume).copyAsConst();
+            energyCapacity = volume * MekanismGeneratorsConfig.generators.turbineEnergyCapacityPerVolume.get();
         }
     }
 
     @Override
     protected int getMultiblockRedstoneLevel() {
-        return MekanismUtils.redstoneLevelFromContents(gasTank.getStored(), gasTank.getCapacity());
+        return MekanismUtils.redstoneLevelFromContents(chemicalTank.getStored(), chemicalTank.getCapacity());
     }
 
     @ComputerMethod
-    public FloatingLong getProductionRate() {
-        FloatingLong energyMultiplier = MekanismConfig.general.maxEnergyPerSteam.get().divide(TurbineValidator.MAX_BLADES)
-              .multiply(Math.min(blades, coils * MekanismGeneratorsConfig.generators.turbineBladesPerCoil.get()));
-        return energyMultiplier.multiply(clientFlow);
+    public long getProductionRate() {
+        double energyMultiplier = ((double) MekanismConfig.general.maxEnergyPerSteam.get() / TurbineValidator.MAX_BLADES)
+                                  * (Math.min(blades, coils * MekanismGeneratorsConfig.generators.turbineBladesPerCoil.get()));
+        return MathUtils.clampToLong(energyMultiplier * clientFlow);
     }
 
     @ComputerMethod
-    public FloatingLong getMaxProduction() {
-        FloatingLong energyMultiplier = MekanismConfig.general.maxEnergyPerSteam.get().divide(TurbineValidator.MAX_BLADES)
-              .multiply(Math.min(blades, coils * MekanismGeneratorsConfig.generators.turbineBladesPerCoil.get()));
-        double rate = lowerVolume * (getDispersers() * MekanismGeneratorsConfig.generators.turbineDisperserGasFlow.get());
-        rate = Math.min(rate, vents * MekanismGeneratorsConfig.generators.turbineVentGasFlow.get());
-        return energyMultiplier.multiply(rate);
+    public long getMaxProduction() {
+        double energyMultiplier = ((double) MekanismConfig.general.maxEnergyPerSteam.get() / TurbineValidator.MAX_BLADES)
+                                  * (Math.min(blades, coils * MekanismGeneratorsConfig.generators.turbineBladesPerCoil.get()));
+        double rate = lowerVolume * (getDispersers() * MekanismGeneratorsConfig.generators.turbineDisperserChemicalFlow.get());
+        rate = Math.min(rate, vents * MekanismGeneratorsConfig.generators.turbineVentChemicalFlow.get());
+        return MathUtils.clampToLong(energyMultiplier * rate);
     }
 
     @ComputerMethod
     public long getMaxFlowRate() {
-        double rate = lowerVolume * (getDispersers() * MekanismGeneratorsConfig.generators.turbineDisperserGasFlow.get());
-        rate = Math.min(rate, vents * MekanismGeneratorsConfig.generators.turbineVentGasFlow.get());
+        double rate = lowerVolume * (getDispersers() * MekanismGeneratorsConfig.generators.turbineDisperserChemicalFlow.get());
+        rate = Math.min(rate, vents * MekanismGeneratorsConfig.generators.turbineVentChemicalFlow.get());
         return MathUtils.clampToLong(rate);
     }
 

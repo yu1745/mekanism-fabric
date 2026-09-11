@@ -1,16 +1,17 @@
 package mekanism.client.gui.element.tab;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BooleanSupplier;
+import java.util.function.LongSupplier;
 import java.util.function.UnaryOperator;
 import mekanism.api.IIncrementalEnum;
-import mekanism.api.math.FloatingLong;
-import mekanism.api.math.FloatingLongSupplier;
 import mekanism.client.gui.IGuiWrapper;
 import mekanism.client.gui.element.GuiTexturedElement;
+import mekanism.client.gui.tooltip.TooltipUtils;
 import mekanism.common.MekanismLang;
 import mekanism.common.capabilities.energy.MachineEnergyContainer;
 import mekanism.common.config.MekanismConfig;
@@ -19,9 +20,11 @@ import mekanism.common.util.MekanismUtils.ResourceType;
 import mekanism.common.util.UnitDisplayUtils.EnergyUnit;
 import mekanism.common.util.text.EnergyDisplay;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 public class GuiEnergyTab extends GuiTexturedElement {
@@ -29,13 +32,17 @@ public class GuiEnergyTab extends GuiTexturedElement {
     private static final Map<EnergyUnit, ResourceLocation> ICONS = new EnumMap<>(EnergyUnit.class);
     private final IInfoHandler infoHandler;
 
+    private List<Component> lastInfo = Collections.emptyList();
+    @Nullable
+    private Tooltip lastTooltip;
+
     public GuiEnergyTab(IGuiWrapper gui, IInfoHandler handler) {
         super(MekanismUtils.getResource(ResourceType.GUI_TAB, "energy_info.png"), gui, -26, 137, 26, 26);
         infoHandler = handler;
     }
 
-    public GuiEnergyTab(IGuiWrapper gui, MachineEnergyContainer<?> energyContainer, FloatingLongSupplier lastEnergyUsed) {
-        this(gui, () -> List.of(MekanismLang.USING.translate(EnergyDisplay.of(lastEnergyUsed.get())),
+    public GuiEnergyTab(IGuiWrapper gui, MachineEnergyContainer<?> energyContainer, LongSupplier lastEnergyUsed) {
+        this(gui, () -> List.of(MekanismLang.USING.translate(EnergyDisplay.of(lastEnergyUsed.getAsLong())),
               MekanismLang.NEEDED.translate(EnergyDisplay.of(energyContainer.getNeeded()))));
     }
 
@@ -45,7 +52,7 @@ public class GuiEnergyTab extends GuiTexturedElement {
             //Note: This isn't the most accurate using calculation as deactivation doesn't sync instantly
             // to the client, but it is close enough given a lot more things would have to be kept track of otherwise
             // which would lead to higher memory usage
-            FloatingLong using = isActive.getAsBoolean() ? energyContainer.getEnergyPerTick() : FloatingLong.ZERO;
+            long using = isActive.getAsBoolean() ? energyContainer.getEnergyPerTick() : 0L;
             return List.of(MekanismLang.USING.translate(EnergyDisplay.of(using)),
                   MekanismLang.NEEDED.translate(EnergyDisplay.of(energyContainer.getNeeded())));
         });
@@ -58,11 +65,14 @@ public class GuiEnergyTab extends GuiTexturedElement {
     }
 
     @Override
-    public void renderToolTip(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        super.renderToolTip(guiGraphics, mouseX, mouseY);
+    public void updateTooltip(int mouseX, int mouseY) {
         List<Component> info = new ArrayList<>(infoHandler.getInfo());
         info.add(MekanismLang.UNIT.translate(EnergyUnit.getConfigured()));
-        displayTooltips(guiGraphics, mouseX, mouseY, info);
+        if (!info.equals(lastInfo)) {
+            lastInfo = info;
+            lastTooltip = TooltipUtils.create(info);
+        }
+        setTooltip(lastTooltip);
     }
 
     @Override

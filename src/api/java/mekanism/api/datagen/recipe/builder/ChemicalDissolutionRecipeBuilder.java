@@ -1,62 +1,45 @@
 package mekanism.api.datagen.recipe.builder;
 
-import com.google.gson.JsonObject;
-import mekanism.api.JsonConstants;
-import mekanism.api.SerializerHelper;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.chemical.ChemicalStack;
-import mekanism.api.chemical.merged.BoxedChemicalStack;
 import mekanism.api.datagen.recipe.MekanismRecipeBuilder;
-import mekanism.api.recipes.ingredients.ChemicalStackIngredient.GasStackIngredient;
+import mekanism.api.recipes.ChemicalDissolutionRecipe;
+import mekanism.api.recipes.basic.BasicChemicalDissolutionRecipe;
+import mekanism.api.recipes.ingredients.ChemicalStackIngredient;
 import mekanism.api.recipes.ingredients.ItemStackIngredient;
-import net.minecraft.resources.ResourceLocation;
-import org.jetbrains.annotations.NotNull;
 
 @NothingNullByDefault
 public class ChemicalDissolutionRecipeBuilder extends MekanismRecipeBuilder<ChemicalDissolutionRecipeBuilder> {
 
     private final ItemStackIngredient itemInput;
-    private final GasStackIngredient gasInput;
-    private final BoxedChemicalStack output;
+    private final ChemicalStackIngredient chemicalInput;
+    private final ChemicalStack output;
+    private final boolean perTickUsage;
 
-    protected ChemicalDissolutionRecipeBuilder(ResourceLocation serializerName, ItemStackIngredient itemInput, GasStackIngredient gasInput,
-          ChemicalStack<?> output) {
-        super(serializerName);
+    protected ChemicalDissolutionRecipeBuilder(ItemStackIngredient itemInput, ChemicalStackIngredient chemicalInput, ChemicalStack output, boolean perTickUsage) {
         this.itemInput = itemInput;
-        this.gasInput = gasInput;
-        this.output = BoxedChemicalStack.box(output);
+        this.chemicalInput = chemicalInput;
+        this.output = output;
+        this.perTickUsage = perTickUsage;
     }
 
     /**
      * Creates a Chemical Dissolution recipe builder.
      *
-     * @param itemInput Item Input.
-     * @param gasInput  Gas Input.
-     * @param output    Output.
+     * @param itemInput     Item Input.
+     * @param chemicalInput Chemical Input.
+     * @param output        Output.
+     * @param perTickUsage  Should the recipe consume the chemical input each tick it is processing.
      */
-    public static ChemicalDissolutionRecipeBuilder dissolution(ItemStackIngredient itemInput, GasStackIngredient gasInput, ChemicalStack<?> output) {
+    public static ChemicalDissolutionRecipeBuilder dissolution(ItemStackIngredient itemInput, ChemicalStackIngredient chemicalInput, ChemicalStack output, boolean perTickUsage) {
         if (output.isEmpty()) {
             throw new IllegalArgumentException("This dissolution chamber recipe requires a non empty chemical output.");
         }
-        return new ChemicalDissolutionRecipeBuilder(mekSerializer("dissolution"), itemInput, gasInput, output);
+        return new ChemicalDissolutionRecipeBuilder(itemInput, chemicalInput, output, perTickUsage);
     }
 
     @Override
-    protected ChemicalDissolutionRecipeResult getResult(ResourceLocation id) {
-        return new ChemicalDissolutionRecipeResult(id);
-    }
-
-    public class ChemicalDissolutionRecipeResult extends RecipeResult {
-
-        protected ChemicalDissolutionRecipeResult(ResourceLocation id) {
-            super(id);
-        }
-
-        @Override
-        public void serializeRecipeData(@NotNull JsonObject json) {
-            json.add(JsonConstants.ITEM_INPUT, itemInput.serialize());
-            json.add(JsonConstants.GAS_INPUT, gasInput.serialize());
-            json.add(JsonConstants.OUTPUT, SerializerHelper.serializeBoxedChemicalStack(output));
-        }
+    protected ChemicalDissolutionRecipe asRecipe() {
+        return new BasicChemicalDissolutionRecipe(itemInput, chemicalInput, output, perTickUsage);
     }
 }

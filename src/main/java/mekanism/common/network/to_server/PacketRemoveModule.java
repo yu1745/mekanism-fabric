@@ -2,42 +2,42 @@ package mekanism.common.network.to_server;
 
 import mekanism.api.MekanismAPI;
 import mekanism.api.gear.ModuleData;
+import mekanism.common.Mekanism;
 import mekanism.common.network.IMekanismPacket;
 import mekanism.common.tile.TileEntityModificationStation;
 import mekanism.common.util.WorldUtils;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.core.Holder;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import org.jetbrains.annotations.NotNull;
 
-public class PacketRemoveModule implements IMekanismPacket {
+public record PacketRemoveModule(BlockPos pos, Holder<ModuleData<?>> moduleType, boolean removeAll) implements IMekanismPacket {
 
-    private final BlockPos pos;
-    private final ModuleData<?> moduleType;
+    public static final CustomPacketPayload.Type<PacketRemoveModule> TYPE = new CustomPacketPayload.Type<>(Mekanism.rl("remove_module"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, PacketRemoveModule> STREAM_CODEC = StreamCodec.composite(
+          BlockPos.STREAM_CODEC, PacketRemoveModule::pos,
+          ByteBufCodecs.holderRegistry(MekanismAPI.MODULE_REGISTRY_NAME), PacketRemoveModule::moduleType,
+          ByteBufCodecs.BOOL, PacketRemoveModule::removeAll,
+          PacketRemoveModule::new
+    );
 
-    public PacketRemoveModule(BlockPos pos, ModuleData<?> type) {
-        this.pos = pos;
-        moduleType = type;
+    @NotNull
+    @Override
+    public CustomPacketPayload.Type<PacketRemoveModule> type() {
+        return TYPE;
     }
 
     @Override
-    public void handle(NetworkEvent.Context context) {
-        Player player = context.getSender();
-        if (player != null) {
-            TileEntityModificationStation tile = WorldUtils.getTileEntity(TileEntityModificationStation.class, player.level(), pos);
-            if (tile != null) {
-                tile.removeModule(player, moduleType);
-            }
+    public void handle(IPayloadContext context) {
+        Player player = context.player();
+        TileEntityModificationStation tile = WorldUtils.getTileEntity(TileEntityModificationStation.class, player.level(), pos);
+        if (tile != null) {
+            tile.removeModule(player, moduleType, removeAll);
         }
-    }
-
-    @Override
-    public void encode(FriendlyByteBuf buffer) {
-        buffer.writeBlockPos(pos);
-        buffer.writeRegistryId(MekanismAPI.moduleRegistry(), moduleType);
-    }
-
-    public static PacketRemoveModule decode(FriendlyByteBuf buffer) {
-        return new PacketRemoveModule(buffer.readBlockPos(), buffer.readRegistryIdSafe(ModuleData.class));
     }
 }

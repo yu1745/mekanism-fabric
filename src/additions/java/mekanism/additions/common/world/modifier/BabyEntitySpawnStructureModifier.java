@@ -1,23 +1,24 @@
 package mekanism.additions.common.world.modifier;
 
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import mekanism.additions.common.config.AdditionsConfig;
 import mekanism.additions.common.config.MekanismAdditionsConfig;
 import mekanism.additions.common.entity.baby.BabyType;
 import mekanism.additions.common.registries.AdditionsStructureModifierSerializers;
+import mekanism.api.SerializationConstants;
 import mekanism.common.Mekanism;
-import mekanism.common.util.RegistryUtils;
+import net.minecraft.Util;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.level.biome.MobSpawnSettings;
 import net.minecraft.world.level.levelgen.structure.Structure;
-import net.minecraftforge.common.world.ModifiableStructureInfo.StructureInfo;
-import net.minecraftforge.common.world.StructureModifier;
-import net.minecraftforge.common.world.StructureSettingsBuilder;
-import net.minecraftforge.common.world.StructureSettingsBuilder.StructureSpawnOverrideBuilder;
+import net.neoforged.neoforge.common.world.ModifiableStructureInfo.StructureInfo;
+import net.neoforged.neoforge.common.world.StructureModifier;
+import net.neoforged.neoforge.common.world.StructureSettingsBuilder;
+import net.neoforged.neoforge.common.world.StructureSettingsBuilder.StructureSpawnOverrideBuilder;
 
 public record BabyEntitySpawnStructureModifier(BabyType babyType, AdditionsConfig.SpawnConfig spawnConfig) implements StructureModifier {
 
@@ -33,25 +34,26 @@ public record BabyEntitySpawnStructureModifier(BabyType babyType, AdditionsConfi
             StructureSettingsBuilder structureSettings = builder.getStructureSettings();
             StructureSpawnOverrideBuilder spawnOverrides = structureSettings.getSpawnOverrides(MobCategory.MONSTER);
             //Fail quick if there are no overrides for this structure, or it is blacklisted
-            ResourceLocation structureName = BuiltInRegistries.STRUCTURE_TYPE.getKey(structure.get().type());
-            if (spawnOverrides != null && !spawnConfig.structureBlackList.get().contains(structureName)) {
+            if (spawnOverrides != null && !structure.is(babyType.structureBlacklist)) {
                 for (MobSpawnSettings.SpawnerData spawner : spawnConfig.getSpawnersToAdd(spawnOverrides.getSpawns())) {
                     spawnOverrides.addSpawn(spawner);
+                    ResourceKey<Structure> structureKey = structure.getKey();
                     Mekanism.logger.debug("Adding spawn rate for '{}' in structure '{}', with weight: {}, minSize: {}, maxSize: {}",
-                          RegistryUtils.getName(spawner.type), structureName, spawner.getWeight(), spawner.minCount, spawner.maxCount);
+                          Util.getRegisteredName(BuiltInRegistries.ENTITY_TYPE, spawner.type), structureKey == null ? null : structureKey.location(), spawner.getWeight(),
+                          spawner.minCount, spawner.maxCount);
                 }
             }
         }
     }
 
     @Override
-    public Codec<? extends StructureModifier> codec() {
+    public MapCodec<? extends StructureModifier> codec() {
         return AdditionsStructureModifierSerializers.SPAWN_BABIES.get();
     }
 
-    public static Codec<BabyEntitySpawnStructureModifier> makeCodec() {
-        return RecordCodecBuilder.create(builder -> builder.group(
-              BabyType.CODEC.fieldOf("babyType").forGetter(BabyEntitySpawnStructureModifier::babyType)
+    public static MapCodec<BabyEntitySpawnStructureModifier> makeCodec() {
+        return RecordCodecBuilder.mapCodec(builder -> builder.group(
+              BabyType.CODEC.fieldOf(SerializationConstants.BABY_TYPE).forGetter(BabyEntitySpawnStructureModifier::babyType)
         ).apply(builder, BabyEntitySpawnStructureModifier::new));
     }
 }

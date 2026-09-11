@@ -1,121 +1,79 @@
 package mekanism.api.recipes;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import mekanism.api.MekanismAPI;
 import mekanism.api.annotations.NothingNullByDefault;
-import mekanism.api.chemical.gas.GasStack;
-import mekanism.api.math.FloatingLong;
-import mekanism.api.recipes.ingredients.ChemicalStackIngredient.GasStackIngredient;
+import mekanism.api.chemical.ChemicalStack;
+import mekanism.api.recipes.ingredients.ChemicalStackIngredient;
 import mekanism.api.recipes.ingredients.FluidStackIngredient;
 import mekanism.api.recipes.ingredients.ItemStackIngredient;
-import net.minecraft.network.FriendlyByteBuf;
+import mekanism.api.recipes.vanilla_input.ReactionRecipeInput;
+import net.minecraft.core.Holder;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.common.util.TriPredicate;
-import net.minecraftforge.fluids.FluidStack;
+import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.level.Level;
+import net.neoforged.neoforge.common.util.TriPredicate;
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.registries.DeferredHolder;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Range;
 
 /**
  * Input: ItemStack
  * <br>
  * Input: FluidStack
  * <br>
- * Input: GasStack
+ * Input: ChemicalStack
  * <br>
- * Item Output: ItemStack (can be empty if gas output is not empty)
+ * Item Output: ItemStack (can be empty if chemical output is not empty)
  * <br>
- * Gas Output: GasStack (can be empty if item output is not empty)
+ * Chemical Output: ChemicalStack (can be empty if item output is not empty)
  *
  * @apiNote Pressurized Reaction Chambers can process this recipe type.
  */
 @NothingNullByDefault
-public abstract class PressurizedReactionRecipe extends MekanismRecipe implements TriPredicate<@NotNull ItemStack, @NotNull FluidStack, @NotNull GasStack> {
+public abstract class PressurizedReactionRecipe extends MekanismRecipe<ReactionRecipeInput> implements TriPredicate<@NotNull ItemStack, @NotNull FluidStack, @NotNull ChemicalStack> {
 
-    private final ItemStackIngredient inputSolid;
-    private final FluidStackIngredient inputFluid;
-    private final GasStackIngredient inputGas;
-    private final FloatingLong energyRequired;
-    private final int duration;
-    private final ItemStack outputItem;
-    private final GasStack outputGas;
-
-    /**
-     * @param id             Recipe name.
-     * @param inputSolid     Item input.
-     * @param inputFluid     Fluid input.
-     * @param inputGas       Gas input.
-     * @param energyRequired Amount of "extra" energy this recipe requires, compared to the base energy requirements of the machine performing the recipe.
-     * @param duration       Base duration in ticks that this recipe takes to complete. Must be greater than zero.
-     * @param outputItem     Item output.
-     * @param outputGas      Gas output.
-     *
-     * @apiNote At least one output must not be empty.
-     */
-    public PressurizedReactionRecipe(ResourceLocation id, ItemStackIngredient inputSolid, FluidStackIngredient inputFluid, GasStackIngredient inputGas,
-          FloatingLong energyRequired, int duration, ItemStack outputItem, GasStack outputGas) {
-        super(id);
-        this.inputSolid = Objects.requireNonNull(inputSolid, "Item input cannot be null.");
-        this.inputFluid = Objects.requireNonNull(inputFluid, "Fluid input cannot be null.");
-        this.inputGas = Objects.requireNonNull(inputGas, "Gas input cannot be null.");
-        this.energyRequired = Objects.requireNonNull(energyRequired, "Required energy cannot be null.").copyAsConst();
-        if (duration <= 0) {
-            throw new IllegalArgumentException("Duration must be positive.");
-        }
-        this.duration = duration;
-        Objects.requireNonNull(outputItem, "Item output cannot be null.");
-        Objects.requireNonNull(outputGas, "Gas output cannot be null.");
-        if (outputItem.isEmpty() && outputGas.isEmpty()) {
-            throw new IllegalArgumentException("At least one output must not be empty.");
-        }
-        Objects.requireNonNull(outputItem, "Item output cannot be null.");
-        Objects.requireNonNull(outputGas, "Gas output cannot be null.");
-        if (outputItem.isEmpty() && outputGas.isEmpty()) {
-            throw new IllegalArgumentException("At least one output must not be empty.");
-        }
-        this.outputItem = outputItem.copy();
-        this.outputGas = outputGas.copy();
-    }
+    private static final Holder<Item> PRESSURIZED_REACTION_CHAMBER = DeferredHolder.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, "pressurized_reaction_chamber"));
 
     /**
      * Gets the item input ingredient.
      */
-    public ItemStackIngredient getInputSolid() {
-        return inputSolid;
-    }
+    public abstract ItemStackIngredient getInputSolid();
 
     /**
      * Gets the fluid input ingredient.
      */
-    public FluidStackIngredient getInputFluid() {
-        return inputFluid;
-    }
+    public abstract FluidStackIngredient getInputFluid();
 
     /**
-     * Gets the gas input ingredient.
+     * Gets the chemical input ingredient.
      */
-    public GasStackIngredient getInputGas() {
-        return inputGas;
-    }
+    public abstract ChemicalStackIngredient getInputChemical();
 
     /**
      * Gets the amount of "extra" energy this recipe requires, compared to the base energy requirements of the machine performing the recipe.
      */
-    public FloatingLong getEnergyRequired() {
-        return energyRequired;
-    }
+    @Range(from = 0, to = Long.MAX_VALUE)
+    public abstract long getEnergyRequired();
 
     /**
      * Gets the base duration in ticks that this recipe takes to complete.
      */
-    public int getDuration() {
-        return duration;
-    }
+    public abstract int getDuration();
 
     @Override
-    public boolean test(ItemStack solid, FluidStack liquid, GasStack gas) {
-        return this.inputSolid.test(solid) && this.inputFluid.test(liquid) && this.inputGas.test(gas);
+    public abstract boolean test(ItemStack solid, FluidStack liquid, ChemicalStack chemical);
+
+    @Override
+    public boolean matches(ReactionRecipeInput input, Level level) {
+        //Don't match incomplete recipes or ones that don't match
+        return !isIncomplete() && test(input.item(), input.fluid(), input.chemical());
     }
 
     /**
@@ -123,16 +81,14 @@ public abstract class PressurizedReactionRecipe extends MekanismRecipe implement
      *
      * @return Representation of the output, <strong>MUST NOT</strong> be modified.
      */
-    public List<PressurizedReactionRecipeOutput> getOutputDefinition() {
-        return Collections.singletonList(new PressurizedReactionRecipeOutput(outputItem, outputGas));
-    }
+    public abstract List<PressurizedReactionRecipeOutput> getOutputDefinition();
 
     /**
      * Gets a new output based on the given inputs.
      *
      * @param solid  Specific item input.
      * @param liquid Specific fluid input.
-     * @param gas    Specific gas input.
+     * @param chemical    Specific chemical input.
      *
      * @return New output.
      *
@@ -141,44 +97,67 @@ public abstract class PressurizedReactionRecipe extends MekanismRecipe implement
      * @implNote The passed in inputs should <strong>NOT</strong> be modified.
      */
     @Contract(value = "_, _, _ -> new", pure = true)
-    public PressurizedReactionRecipeOutput getOutput(ItemStack solid, FluidStack liquid, GasStack gas) {
-        return new PressurizedReactionRecipeOutput(this.outputItem.copy(), this.outputGas.copy());
-    }
+    public abstract PressurizedReactionRecipeOutput getOutput(ItemStack solid, FluidStack liquid, ChemicalStack chemical);
 
     @Override
     public boolean isIncomplete() {
-        return inputSolid.hasNoMatchingInstances() || inputFluid.hasNoMatchingInstances() || inputGas.hasNoMatchingInstances();
+        return getInputSolid().hasNoMatchingInstances() || getInputFluid().hasNoMatchingInstances() || getInputChemical().hasNoMatchingInstances();
     }
 
     @Override
     public void logMissingTags() {
-        inputSolid.logMissingTags();
-        inputFluid.logMissingTags();
-        inputGas.logMissingTags();
+        getInputSolid().logMissingTags();
+        getInputFluid().logMissingTags();
+        getInputChemical().logMissingTags();
     }
 
     @Override
-    public void write(FriendlyByteBuf buffer) {
-        inputSolid.write(buffer);
-        inputFluid.write(buffer);
-        inputGas.write(buffer);
-        energyRequired.writeToBuffer(buffer);
-        buffer.writeVarInt(duration);
-        buffer.writeItem(outputItem);
-        outputGas.writeToPacket(buffer);
+    public final RecipeType<?> getType() {
+        return MekanismRecipeTypes.TYPE_REACTION.value();
+    }
+
+    @Override
+    public String getGroup() {
+        return "pressurized_reaction_chamber";
+    }
+
+    @Override
+    public ItemStack getToastSymbol() {
+        return new ItemStack(PRESSURIZED_REACTION_CHAMBER);
     }
 
     /**
-     * @apiNote Both item and gas may be present or one may be empty.
+     * @apiNote Both item and chemical may be present or one may be empty.
      */
-    public record PressurizedReactionRecipeOutput(@NotNull ItemStack item, @NotNull GasStack gas) {
+    public record PressurizedReactionRecipeOutput(@NotNull ItemStack item, @NotNull ChemicalStack chemical) {
 
         public PressurizedReactionRecipeOutput {
             Objects.requireNonNull(item, "Item output cannot be null.");
-            Objects.requireNonNull(gas, "Gas output cannot be null.");
-            if (item.isEmpty() && gas.isEmpty()) {
+            Objects.requireNonNull(chemical, "Chemical output cannot be null.");
+            if (item.isEmpty() && chemical.isEmpty()) {
                 throw new IllegalArgumentException("At least one output must be present.");
             }
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (o == this) {
+                return true;
+            } else if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            PressurizedReactionRecipeOutput other = (PressurizedReactionRecipeOutput) o;
+            return ItemStack.matches(item, other.item) && chemical.equals(other.chemical);
+        }
+
+        @Override
+        public int hashCode() {
+            int hash = chemical.hashCode();
+            if (!item.isEmpty()) {
+                hash = 31 * hash + ItemStack.hashItemAndComponents(item);
+                hash = 31 * hash + item.getCount();
+            }
+            return hash;
         }
     }
 }

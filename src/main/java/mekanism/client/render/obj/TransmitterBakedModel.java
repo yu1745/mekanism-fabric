@@ -26,17 +26,16 @@ import net.minecraft.client.resources.model.Material;
 import net.minecraft.client.resources.model.ModelBaker;
 import net.minecraft.client.resources.model.ModelState;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.client.ChunkRenderTypeSet;
-import net.minecraftforge.client.model.BakedModelWrapper;
-import net.minecraftforge.client.model.SimpleModelState;
-import net.minecraftforge.client.model.data.ModelData;
-import net.minecraftforge.client.model.geometry.IGeometryBakingContext;
-import net.minecraftforge.client.model.obj.ObjModel;
+import net.neoforged.neoforge.client.ChunkRenderTypeSet;
+import net.neoforged.neoforge.client.model.BakedModelWrapper;
+import net.neoforged.neoforge.client.model.SimpleModelState;
+import net.neoforged.neoforge.client.model.data.ModelData;
+import net.neoforged.neoforge.client.model.geometry.IGeometryBakingContext;
+import net.neoforged.neoforge.client.model.obj.ObjModel;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Quaternionf;
@@ -53,7 +52,6 @@ public class TransmitterBakedModel extends BakedModelWrapper<BakedModel> {
     private final Function<Material, TextureAtlasSprite> spriteGetter;
     private final ModelState modelTransform;
     private final ItemOverrides overrides;
-    private final ResourceLocation modelLocation;
     private final LoadingCache<SidedConnection, List<BakedQuad>> internalPartsCache;
     @Nullable
     private final LoadingCache<SidedConnection, List<BakedQuad>> glassPartsCache;
@@ -77,16 +75,15 @@ public class TransmitterBakedModel extends BakedModelWrapper<BakedModel> {
     });
 
     public TransmitterBakedModel(ObjModel internal, @Nullable ObjModel glass, IGeometryBakingContext owner, ModelBaker baker,
-          Function<Material, TextureAtlasSprite> spriteGetter, ModelState modelTransform, ItemOverrides overrides, ResourceLocation modelLocation) {
+          Function<Material, TextureAtlasSprite> spriteGetter, ModelState modelTransform, ItemOverrides overrides) {
         //We define our baked variant to be how the item is. As we should always have model data when we have a state
         super(internal.bake(new VisibleModelConfiguration(owner, Arrays.stream(EnumUtils.DIRECTIONS).map(side -> getPartName(side, ConnectionType.NONE)).toList()),
-              baker, spriteGetter, modelTransform, overrides, modelLocation));
+              baker, spriteGetter, modelTransform, overrides));
         this.owner = owner;
         this.baker = baker;
         this.spriteGetter = spriteGetter;
         this.modelTransform = modelTransform;
         this.overrides = overrides;
-        this.modelLocation = modelLocation;
         this.internalPartsCache = CacheBuilder.newBuilder().build(createPartCacheLoader(internal));
         this.glassPartsCache = glass == null ? null : CacheBuilder.newBuilder().build(createPartCacheLoader(glass));
     }
@@ -160,7 +157,7 @@ public class TransmitterBakedModel extends BakedModelWrapper<BakedModel> {
                     Transformation matrix = new Transformation(null, quaternion, null, null);
                     transform = new SimpleModelState(transform.getRotation().compose(matrix), transform.isUvLocked());
                 }
-                BakedModel bakedModel = model.bake(new TransmitterModelConfiguration(owner, part, iconStatus), baker, spriteGetter, transform, overrides, modelLocation);
+                BakedModel bakedModel = model.bake(new TransmitterModelConfiguration(owner, part, iconStatus), baker, spriteGetter, transform, overrides);
                 //Note: We don't actually care about the state, or the side anywhere and the model returns the proper values even if we don't provide a render type
                 // We also just use a new random source as we don't have one in our current context
                 return bakedModel.getQuads(null, null, RandomSource.create(), ModelData.EMPTY, null);
@@ -180,7 +177,7 @@ public class TransmitterBakedModel extends BakedModelWrapper<BakedModel> {
         public TransmitterDataKey(TransmitterModelData data, boolean renderGlass) {
             this.data = data;
             this.renderGlass = renderGlass;
-            this.hash = Objects.hash(this.data.getConnectionsMap(), this.renderGlass);
+            this.hash = 31 * this.data.getConnectionsMap().hashCode() + Boolean.hashCode(this.renderGlass);
         }
 
         @Override

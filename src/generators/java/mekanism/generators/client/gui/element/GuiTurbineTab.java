@@ -7,13 +7,13 @@ import mekanism.client.gui.element.tab.GuiTabElementType;
 import mekanism.client.gui.element.tab.TabType;
 import mekanism.client.render.lib.ColorAtlas.ColorRegistryObject;
 import mekanism.common.MekanismLang;
+import mekanism.common.network.PacketUtils;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.MekanismUtils.ResourceType;
 import mekanism.generators.client.gui.element.GuiTurbineTab.TurbineTab;
 import mekanism.generators.common.GeneratorsLang;
-import mekanism.generators.common.MekanismGenerators;
-import mekanism.generators.common.network.to_server.PacketGeneratorsGuiButtonPress;
-import mekanism.generators.common.network.to_server.PacketGeneratorsGuiButtonPress.ClickedGeneratorsTileButton;
+import mekanism.generators.common.network.to_server.PacketGeneratorsTileButtonPress;
+import mekanism.generators.common.network.to_server.PacketGeneratorsTileButtonPress.ClickedGeneratorsTileButton;
 import mekanism.generators.common.tile.turbine.TileEntityTurbineCasing;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -25,7 +25,7 @@ public class GuiTurbineTab extends GuiTabElementType<TileEntityTurbineCasing, Tu
     }
 
     public enum TurbineTab implements TabType<TileEntityTurbineCasing> {
-        MAIN("gases.png", MekanismLang.MAIN_TAB, ClickedGeneratorsTileButton.TAB_MAIN, SpecialColors.TAB_MULTIBLOCK_MAIN),
+        MAIN("chemicals.png", MekanismLang.MAIN_TAB, ClickedGeneratorsTileButton.TAB_MAIN, SpecialColors.TAB_MULTIBLOCK_MAIN),
         STAT("stats.png", GeneratorsLang.TURBINE_STATS, ClickedGeneratorsTileButton.TAB_STATS, SpecialColors.TAB_MULTIBLOCK_STATS);
 
         private final ClickedGeneratorsTileButton button;
@@ -47,7 +47,7 @@ public class GuiTurbineTab extends GuiTabElementType<TileEntityTurbineCasing, Tu
 
         @Override
         public void onClick(TileEntityTurbineCasing tile) {
-            MekanismGenerators.packetHandler().sendToServer(new PacketGeneratorsGuiButtonPress(button, tile.getBlockPos()));
+            PacketUtils.sendToServer(new PacketGeneratorsTileButtonPress(button, tile.getBlockPos()));
         }
 
         @Override

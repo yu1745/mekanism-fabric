@@ -1,15 +1,15 @@
 package mekanism.api.recipes;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Predicate;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.recipes.ingredients.ItemStackIngredient;
-import net.minecraft.core.RegistryAccess;
-import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.item.crafting.SingleRecipeInput;
+import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
@@ -26,37 +26,36 @@ import org.jetbrains.annotations.NotNull;
  * </ul>
  */
 @NothingNullByDefault
-public abstract class ItemStackToItemStackRecipe extends MekanismRecipe implements Predicate<@NotNull ItemStack> {
+public abstract class ItemStackToItemStackRecipe extends MekanismRecipe<SingleRecipeInput> implements Predicate<@NotNull ItemStack> {
 
-    private final ItemStackIngredient input;
-    private final ItemStack output;
+    protected final RecipeType<ItemStackToItemStackRecipe> recipeType;
 
-    /**
-     * @param id     Recipe name.
-     * @param input  Input.
-     * @param output Output.
-     */
-    public ItemStackToItemStackRecipe(ResourceLocation id, ItemStackIngredient input, ItemStack output) {
-        super(id);
-        this.input = Objects.requireNonNull(input, "Input cannot be null.");
-        Objects.requireNonNull(output, "Output cannot be null.");
-        if (output.isEmpty()) {
-            throw new IllegalArgumentException("Output cannot be empty.");
-        }
-        this.output = output.copy();
+    public ItemStackToItemStackRecipe(RecipeType<ItemStackToItemStackRecipe> recipeType) {
+        this.recipeType = Objects.requireNonNull(recipeType, "Recipe type cannot be null");
     }
 
     @Override
-    public boolean test(ItemStack input) {
-        return this.input.test(input);
+    public abstract boolean test(ItemStack input);
+
+    @NotNull
+    @Override
+    public ItemStack assemble(SingleRecipeInput input, HolderLookup.Provider provider) {
+        if (!isIncomplete() && test(input.item())) {
+            return getOutput(input.item());
+        }
+        return ItemStack.EMPTY;
+    }
+
+    @Override
+    public boolean matches(SingleRecipeInput input, Level level) {
+        //Don't match incomplete recipes or ones that don't match
+        return !isIncomplete() && test(input.item());
     }
 
     /**
      * Gets the input ingredient.
      */
-    public ItemStackIngredient getInput() {
-        return input;
-    }
+    public abstract ItemStackIngredient getInput();
 
     /**
      * Gets a new output based on the given input.
@@ -70,38 +69,31 @@ public abstract class ItemStackToItemStackRecipe extends MekanismRecipe implemen
      * @implNote The passed in input should <strong>NOT</strong> be modified.
      */
     @Contract(value = "_ -> new", pure = true)
-    public ItemStack getOutput(ItemStack input) {
-        return output.copy();
-    }
+    public abstract ItemStack getOutput(ItemStack input);
 
     @NotNull
     @Override
-    public ItemStack getResultItem(@NotNull RegistryAccess registryAccess) {
-        return output.copy();
-    }
+    public abstract ItemStack getResultItem(@NotNull HolderLookup.Provider provider);
 
     /**
      * For JEI, gets the output representations to display.
      *
      * @return Representation of the output, <strong>MUST NOT</strong> be modified.
      */
-    public List<ItemStack> getOutputDefinition() {
-        return Collections.singletonList(output);
-    }
+    public abstract List<ItemStack> getOutputDefinition();
 
     @Override
     public boolean isIncomplete() {
-        return input.hasNoMatchingInstances();
+        return getInput().hasNoMatchingInstances();
     }
 
     @Override
     public void logMissingTags() {
-        input.logMissingTags();
+        getInput().logMissingTags();
     }
 
     @Override
-    public void write(FriendlyByteBuf buffer) {
-        input.write(buffer);
-        buffer.writeItem(output);
+    public final RecipeType<ItemStackToItemStackRecipe> getType() {
+        return this.recipeType;
     }
 }

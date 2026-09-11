@@ -10,10 +10,11 @@ import mekanism.generators.client.model.ModelTurbine;
 import mekanism.generators.common.GeneratorsProfilerConstants;
 import mekanism.generators.common.content.turbine.TurbineMultiblockData;
 import mekanism.generators.common.tile.turbine.TileEntityTurbineRotor;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
+import net.minecraft.core.BlockPos;
 import net.minecraft.util.profiling.ProfilerFiller;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -45,7 +46,7 @@ public class RenderTurbineRotor extends ModelTileEntityRenderer<TileEntityTurbin
             return;
         }
         int baseIndex = tile.getPosition() * 2;
-        if (!Minecraft.getInstance().isPaused()) {
+        if (isTickingNormally(tile)) {
             UUID multiblockUUID = tile.getMultiblockUUID();
             if (multiblockUUID != null && TurbineMultiblockData.clientRotationMap.containsKey(multiblockUUID)) {
                 float rotateSpeed = TurbineMultiblockData.clientRotationMap.getFloat(multiblockUUID) * BASE_SPEED;
@@ -85,5 +86,16 @@ public class RenderTurbineRotor extends ModelTileEntityRenderer<TileEntityTurbin
     @Override
     public boolean shouldRender(TileEntityTurbineRotor tile, Vec3 camera) {
         return tile.getMultiblockUUID() == null && tile.getHousedBlades() > 0 && super.shouldRender(tile, camera);
+    }
+
+    @Override
+    public AABB getRenderBoundingBox(TileEntityTurbineRotor tile) {
+        int radius = tile.getRadius();
+        if (tile.blades == 0 || radius == -1) {
+            //If there are no blades default to the collision box of the rotor
+            return super.getRenderBoundingBox(tile);
+        }
+        BlockPos pos = tile.getBlockPos();
+        return AABB.encapsulatingFullBlocks(pos.offset(-radius, 0, -radius), pos.offset(radius, 0, radius));
     }
 }

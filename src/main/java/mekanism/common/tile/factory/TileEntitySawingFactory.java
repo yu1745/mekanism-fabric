@@ -5,7 +5,6 @@ import java.util.Set;
 import mekanism.api.IContentsListener;
 import mekanism.api.inventory.IInventorySlot;
 import mekanism.api.math.MathUtils;
-import mekanism.api.providers.IBlockProvider;
 import mekanism.api.recipes.SawmillRecipe;
 import mekanism.api.recipes.SawmillRecipe.ChanceOutput;
 import mekanism.api.recipes.cache.CachedRecipe;
@@ -15,6 +14,8 @@ import mekanism.api.recipes.inputs.IInputHandler;
 import mekanism.api.recipes.inputs.InputHelper;
 import mekanism.api.recipes.outputs.IOutputHandler;
 import mekanism.api.recipes.outputs.OutputHelper;
+import mekanism.client.recipe_viewer.type.IRecipeViewerRecipeType;
+import mekanism.client.recipe_viewer.type.RecipeViewerRecipeType;
 import mekanism.common.Mekanism;
 import mekanism.common.capabilities.holder.slot.InventorySlotHelper;
 import mekanism.common.integration.computer.ComputerException;
@@ -26,21 +27,38 @@ import mekanism.common.recipe.IMekanismRecipeTypeProvider;
 import mekanism.common.recipe.MekanismRecipeType;
 import mekanism.common.recipe.lookup.ISingleRecipeLookupHandler.ItemRecipeLookupHandler;
 import mekanism.common.recipe.lookup.cache.InputRecipeCache.SingleItem;
+import mekanism.common.recipe.lookup.cache.SingleInputRecipeCache.CheckRecipeType;
+import mekanism.common.recipe.lookup.monitor.FactoryRecipeCacheLookupMonitor;
 import mekanism.common.tier.FactoryTier;
 import mekanism.common.tile.machine.TileEntityPrecisionSawmill;
 import mekanism.common.upgrade.IUpgradeData;
 import mekanism.common.upgrade.SawmillUpgradeData;
 import mekanism.common.util.InventoryUtils;
-import mekanism.common.util.MekanismUtils;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.SingleRecipeInput;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.items.ItemHandlerHelper;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class TileEntitySawingFactory extends TileEntityFactory<SawmillRecipe> implements ItemRecipeLookupHandler<SawmillRecipe> {
 
+    private static final CheckRecipeType<ItemStack, SawmillRecipe, ItemStack, ItemStack> OUTPUT_CHECK = (recipe, input, output, extra) -> {
+        ChanceOutput chanceOutput = recipe.getOutput(input);
+        if (InventoryUtils.areItemsStackable(chanceOutput.getMainOutput(), output)) {
+            //If the input is good and the primary output matches, make sure that the secondary
+            // output of this recipe will stack with what is currently in the secondary slot
+            if (extra.isEmpty()) {
+                return true;
+            }
+            ItemStack secondaryOutput = chanceOutput.getMaxSecondaryOutput();
+            return secondaryOutput.isEmpty() || ItemStack.isSameItemSameComponents(secondaryOutput, extra);
+        }
+        return false;
+    };
     private static final List<RecipeError> TRACKED_ERROR_TYPES = List.of(
           RecipeError.NOT_ENOUGH_ENERGY,
           RecipeError.NOT_ENOUGH_INPUT,
@@ -53,7 +71,7 @@ public class TileEntitySawingFactory extends TileEntityFactory<SawmillRecipe> im
     protected IInputHandler<@NotNull ItemStack>[] inputHandlers;
     protected IOutputHandler<@NotNull ChanceOutput>[] outputHandlers;
 
-    public TileEntitySawingFactory(IBlockProvider blockProvider, BlockPos pos, BlockState state) {
+    public TileEntitySawingFactory(Holder<Block> blockProvider, BlockPos pos, BlockState state) {
         super(blockProvider, pos, state, TRACKED_ERROR_TYPES, GLOBAL_ERROR_TYPES);
     }
 
@@ -66,10 +84,15 @@ public class TileEntitySawingFactory extends TileEntityFactory<SawmillRecipe> im
         int baseXMult = tier == FactoryTier.BASIC ? 38 : tier == FactoryTier.ADVANCED ? 26 : 19;
         for (int i = 0; i < tier.processes; i++) {
             int xPos = baseX + (i * baseXMult);
-            OutputInventorySlot outputSlot = OutputInventorySlot.at(updateSortingListener, xPos, 57);
-            OutputInventorySlot secondaryOutputSlot = OutputInventorySlot.at(updateSortingListener, xPos, 77);
+            FactoryRecipeCacheLookupMonitor<SawmillRecipe> lookupMonitor = recipeCacheLookupMonitors[i];
+            IContentsListener updateSortingAndUnpause = () -> {
+                updateSortingListener.onContentsChanged();
+                lookupMonitor.unpause();
+            };
+            OutputInventorySlot outputSlot = OutputInventorySlot.at(updateSortingAndUnpause, xPos, 57);
+            OutputInventorySlot secondaryOutputSlot = OutputInventorySlot.at(updateSortingAndUnpause, xPos, 77);
             //Note: As we are an item factory that has comparator's based on items we can just use the monitor as a listener directly
-            FactoryInputInventorySlot inputSlot = FactoryInputInventorySlot.create(this, i, outputSlot, secondaryOutputSlot, recipeCacheLookupMonitors[i], xPos, 13);
+            FactoryInputInventorySlot inputSlot = FactoryInputInventorySlot.create(this, i, outputSlot, secondaryOutputSlot, lookupMonitor, xPos, 13);
             int index = i;
             builder.addSlot(inputSlot).tracksWarnings(slot -> slot.warning(WarningType.NO_MATCHING_RECIPE, getWarningCheck(RecipeError.NOT_ENOUGH_INPUT, index)));
             builder.addSlot(outputSlot).tracksWarnings(slot -> slot.warning(WarningType.NO_SPACE_IN_OUTPUT, getWarningCheck(RecipeError.NOT_ENOUGH_OUTPUT_SPACE, index)));
@@ -80,6 +103,12 @@ public class TileEntitySawingFactory extends TileEntityFactory<SawmillRecipe> im
                   TileEntityPrecisionSawmill.NOT_ENOUGH_SPACE_SECONDARY_OUTPUT_ERROR);
             processInfoSlots[i] = new ProcessInfo(i, inputSlot, outputSlot, secondaryOutputSlot);
         }
+    }
+
+    @Override
+    public boolean isItemValidForSlot(@NotNull ItemStack stack) {
+        //contains recipe in general already validated by isValidInputItem
+        return true;
     }
 
     @Override
@@ -99,27 +128,19 @@ public class TileEntitySawingFactory extends TileEntityFactory<SawmillRecipe> im
 
     @Override
     protected SawmillRecipe findRecipe(int process, @NotNull ItemStack fallbackInput, @NotNull IInventorySlot outputSlot, @Nullable IInventorySlot secondaryOutputSlot) {
-        ItemStack output = outputSlot.getStack();
         ItemStack extra = secondaryOutputSlot == null ? ItemStack.EMPTY : secondaryOutputSlot.getStack();
-        return getRecipeType().getInputCache().findTypeBasedRecipe(level, fallbackInput, recipe -> {
-            ChanceOutput chanceOutput = recipe.getOutput(fallbackInput);
-            if (InventoryUtils.areItemsStackable(chanceOutput.getMainOutput(), output)) {
-                //If the input is good and the primary output matches, make sure that the secondary
-                // output of this recipe will stack with what is currently in the secondary slot
-                if (extra.isEmpty()) {
-                    return true;
-                }
-                ItemStack secondaryOutput = chanceOutput.getMaxSecondaryOutput();
-                return secondaryOutput.isEmpty() || ItemHandlerHelper.canItemStacksStack(secondaryOutput, extra);
-            }
-            return false;
-        });
+        return getRecipeType().getInputCache().findTypeBasedRecipe(level, fallbackInput, outputSlot.getStack(), extra, OUTPUT_CHECK);
     }
 
     @NotNull
     @Override
-    public IMekanismRecipeTypeProvider<SawmillRecipe, SingleItem<SawmillRecipe>> getRecipeType() {
+    public IMekanismRecipeTypeProvider<SingleRecipeInput, SawmillRecipe, SingleItem<SawmillRecipe>> getRecipeType() {
         return MekanismRecipeType.SAWING;
+    }
+
+    @Override
+    public IRecipeViewerRecipeType<SawmillRecipe> recipeViewerType() {
+        return RecipeViewerRecipeType.SAWING;
     }
 
     @Nullable
@@ -133,19 +154,20 @@ public class TileEntitySawingFactory extends TileEntityFactory<SawmillRecipe> im
     public CachedRecipe<SawmillRecipe> createNewCachedRecipe(@NotNull SawmillRecipe recipe, int cacheIndex) {
         return OneInputCachedRecipe.sawing(recipe, recheckAllRecipeErrors[cacheIndex], inputHandlers[cacheIndex], outputHandlers[cacheIndex])
               .setErrorsChanged(errors -> errorTracker.onErrorsChanged(errors, cacheIndex))
-              .setCanHolderFunction(() -> MekanismUtils.canFunction(this))
+              .setCanHolderFunction(this::canFunction)
               .setActive(active -> setActiveState(active, cacheIndex))
               .setEnergyRequirements(energyContainer::getEnergyPerTick, energyContainer)
               .setRequiredTicks(this::getTicksRequired)
               .setOnFinish(this::markForSave)
-              .setOperatingTicksChanged(operatingTicks -> progress[cacheIndex] = operatingTicks);
+              .setOperatingTicksChanged(operatingTicks -> progress[cacheIndex] = operatingTicks)
+              .setBaselineMaxOperations(this::getOperationsPerTick);
     }
 
     @Override
-    public void parseUpgradeData(@NotNull IUpgradeData upgradeData) {
+    public void parseUpgradeData(HolderLookup.Provider provider, @NotNull IUpgradeData upgradeData) {
         if (upgradeData instanceof SawmillUpgradeData) {
             //Validate we have the correct type of data before passing it upwards
-            super.parseUpgradeData(upgradeData);
+            super.parseUpgradeData(provider, upgradeData);
         } else {
             Mekanism.logger.warn("Unhandled upgrade data.", new Throwable());
         }
@@ -153,8 +175,8 @@ public class TileEntitySawingFactory extends TileEntityFactory<SawmillRecipe> im
 
     @NotNull
     @Override
-    public SawmillUpgradeData getUpgradeData() {
-        return new SawmillUpgradeData(redstone, getControlType(), getEnergyContainer(), progress, energySlot, inputSlots, outputSlots, isSorting(), getComponents());
+    public SawmillUpgradeData getUpgradeData(HolderLookup.Provider provider) {
+        return new SawmillUpgradeData(provider, redstone, getControlType(), getEnergyContainer(), progress, energySlot, inputSlots, outputSlots, isSorting(), getComponents());
     }
 
     //Methods relating to IComputerTile

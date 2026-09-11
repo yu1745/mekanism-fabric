@@ -1,18 +1,25 @@
 package mekanism.common.content.filter;
 
+import com.mojang.serialization.DataResult;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import javax.annotation.Nullable;
-import mekanism.api.NBTConstants;
+import mekanism.api.SerializationConstants;
+import mekanism.common.Mekanism;
 import mekanism.common.inventory.container.MekanismContainer;
 import mekanism.common.inventory.container.sync.list.SyncableFilterList;
 import mekanism.common.lib.collection.HashList;
 import mekanism.common.util.NBTUtils;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
+import net.minecraft.resources.RegistryOps;
+import org.jetbrains.annotations.Nullable;
 
 public class FilterManager<FILTER extends IFilter<?>> {
 
@@ -28,7 +35,7 @@ public class FilterManager<FILTER extends IFilter<?>> {
         this.markForSave = markForSave;
     }
 
-    public final List<FILTER> getFilters() {
+    public final HashList<FILTER> getFilters() {
         //TODO: Decide at some point if we want getFilters and getEnabledFilters to return an unmodifiable view
         return filters;
     }
@@ -46,7 +53,21 @@ public class FilterManager<FILTER extends IFilter<?>> {
     }
 
     public boolean anyEnabledMatch(Predicate<FILTER> validator) {
-        return getEnabledFilters().stream().anyMatch(validator);
+        for (FILTER filter : getEnabledFilters()) {
+            if (validator.test(filter)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public <DATA> boolean anyEnabledMatch(DATA extra, BiPredicate<FILTER, DATA> validator) {
+        for (FILTER filter : getEnabledFilters()) {
+            if (validator.test(filter, extra)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public boolean hasEnabledFilters() {
@@ -61,6 +82,17 @@ public class FilterManager<FILTER extends IFilter<?>> {
             //Clear the cache of enabled filters as we either need to remove the element from it or add to it
             enabledFilters = null;
         }
+    }
+
+    public void trySetFilters(Collection<IFilter<?>> filters) {
+        this.filters.clear();
+        //Instantiate an empty cache for enabled filters so that when we add enabled filters
+        // we can also add them to the enabled ones, and also overwrite our old cache
+        enabledFilters = new ArrayList<>();
+        for (IFilter<?> filter : filters) {
+            tryAddFilter(filter, false);
+        }
+        markForSave.run();
     }
 
     public void tryAddFilter(IFilter<?> toAdd, boolean save) {
@@ -106,6 +138,7 @@ public class FilterManager<FILTER extends IFilter<?>> {
     }
 
     private void editFilter(FILTER currentFilter, FILTER newFilter) {
+        //TODO: Add in validation so that if a filter tries to be saved that is invalid we don't add it/save it?
         if (filters.replace(currentFilter, newFilter)) {
             //Save the filters
             markForSave.run();
@@ -128,25 +161,35 @@ public class FilterManager<FILTER extends IFilter<?>> {
         }));
     }
 
-    public void writeToNBT(CompoundTag nbt) {
+    public void writeToNBT(HolderLookup.Provider provider, CompoundTag nbt) {
         if (!filters.isEmpty()) {
-            ListTag filterTags = new ListTag();
+            ListTag filterTags = new ListTag(filters.size());
+            RegistryOps<Tag> serializationContext = provider.createSerializationContext(NbtOps.INSTANCE);
             for (FILTER filter : filters) {
-                filterTags.add(filter.write(new CompoundTag()));
+                DataResult<Tag> encoded = BaseFilter.GENERIC_CODEC.encodeStart(serializationContext, filter);
+                encoded.ifSuccess(filterTags::add);
+                encoded.ifError(error -> Mekanism.logger.warn("Failed to serialize filter: {}", error.message()));
             }
-            nbt.put(NBTConstants.FILTERS, filterTags);
+            if (!filterTags.isEmpty()) {
+                nbt.put(SerializationConstants.FILTERS, filterTags);
+            }
         }
     }
 
-    public void readFromNBT(CompoundTag nbt) {
+    public void readFromNBT(HolderLookup.Provider provider, CompoundTag nbt) {
         filters.clear();
         //Instantiate an empty cache for enabled filters so that when we add enabled filters
         // we can also add them to the enabled ones, and also overwrite our old cache
         enabledFilters = new ArrayList<>();
-        NBTUtils.setListIfPresent(nbt, NBTConstants.FILTERS, Tag.TAG_COMPOUND, tagList -> {
+        NBTUtils.setListIfPresent(nbt, SerializationConstants.FILTERS, Tag.TAG_COMPOUND, tagList -> {
+            RegistryOps<Tag> serializationContext = provider.createSerializationContext(NbtOps.INSTANCE);
             for (int i = 0, size = tagList.size(); i < size; i++) {
-                IFilter<?> filter = BaseFilter.readFromNBT(tagList.getCompound(i));
-                tryAddFilter(filter, false);
+                DataResult<IFilter<?>> decoded = BaseFilter.GENERIC_CODEC.parse(serializationContext, tagList.getCompound(i));
+                if (decoded.isSuccess()) {
+                    tryAddFilter(decoded.getOrThrow(), false);
+                } else {
+                    decoded.ifError(error -> Mekanism.logger.warn("Failed to deserialize stored filter: {}", error.message()));
+                }
             }
         });
     }

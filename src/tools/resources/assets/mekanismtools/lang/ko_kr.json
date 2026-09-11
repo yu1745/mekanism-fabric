@@ -11,6 +11,9 @@
   "advancements.mekanismtools.not_enough_shielding.title": "방패가 부족해",
   "advancements.mekanismtools.paxel.description": "아무 종류의 팩셀을 만드세요(곡괭이, 도끼, 삽)",
   "advancements.mekanismtools.paxel.title": "멀티 툴",
+  "constants.mekanismtools.mod_name": "Mekanism: Tools",
+  "constants.mekanismtools.pack_description": "Mekanism: Tools에서 사용되는 리소스",
+  "fml.menu.mods.info.description.mekanismtools": "Mekanism의 도구 모듈입니다.",
   "item.mekanismtools.bronze_axe": "청동 도끼",
   "item.mekanismtools.bronze_boots": "청동 부츠",
   "item.mekanismtools.bronze_chestplate": "청동 흉갑",
@@ -179,5 +182,6 @@
   "item.mekanismtools.steel_sword": "강철 검",
   "item.mekanismtools.stone_paxel": "돌 팩셀",
   "item.mekanismtools.wood_paxel": "나무 팩셀",
+  "tag.item.c.tools.paxel": "팩셀",
   "tooltip.mekanismtools.hp": "내구도: %1$s"
 }

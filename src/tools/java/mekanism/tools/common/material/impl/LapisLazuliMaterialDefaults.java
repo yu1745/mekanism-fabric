@@ -2,17 +2,17 @@ package mekanism.tools.common.material.impl;
 
 import mekanism.tools.common.ToolsTags;
 import mekanism.tools.common.material.BaseMekanismMaterial;
+import net.minecraft.core.Holder;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
-import net.minecraftforge.common.Tags;
+import net.neoforged.neoforge.common.Tags;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
-public class LapisLazuliMaterialDefaults extends BaseMekanismMaterial {
+public class LapisLazuliMaterialDefaults implements BaseMekanismMaterial {
 
     @Override
     public int getShieldDurability() {
@@ -45,17 +45,12 @@ public class LapisLazuliMaterialDefaults extends BaseMekanismMaterial {
     }
 
     @Override
-    public int getLevel() {
-        return 1;
-    }
-
-    @Override
-    public int getCommonEnchantability() {
+    public int getEnchantmentValue() {
         return 32;
     }
 
     @Override
-    public float getToughness() {
+    public float toughness() {
         return 0;
     }
 
@@ -64,25 +59,19 @@ public class LapisLazuliMaterialDefaults extends BaseMekanismMaterial {
         return switch (armorType) {
             case BOOTS -> 130;
             case LEGGINGS -> 150;
-            case CHESTPLATE -> 160;
+            case CHESTPLATE, BODY -> 160;
             case HELMET -> 110;
         };
     }
 
     @Override
-    public int getDefenseForType(@NotNull ArmorItem.Type armorType) {
+    public int getDefense(@NotNull ArmorItem.Type armorType) {
         return switch (armorType) {
-            case BOOTS -> 1;
+            case BOOTS, HELMET -> 1;
             case LEGGINGS -> 3;
             case CHESTPLATE -> 4;
-            case HELMET -> 1;
+            default -> 0;
         };
-    }
-
-    @NotNull
-    @Override
-    public String getConfigCommentName() {
-        return "Lapis Lazuli";
     }
 
     @NotNull
@@ -91,26 +80,26 @@ public class LapisLazuliMaterialDefaults extends BaseMekanismMaterial {
         return "lapis_lazuli";
     }
 
-    @Nullable
+    @NotNull
     @Override
-    public TagKey<Block> getTag() {
-        return ToolsTags.Blocks.NEEDS_LAPIS_LAZULI_TOOL;
+    public TagKey<Block> getIncorrectBlocksForDrops() {
+        return ToolsTags.Blocks.INCORRECT_FOR_LAPIS_LAZULI_TOOL;
     }
 
     @NotNull
     @Override
-    public SoundEvent getEquipSound() {
+    public Holder<SoundEvent> equipSound() {
         return SoundEvents.ARMOR_EQUIP_DIAMOND;
     }
 
     @NotNull
     @Override
-    public Ingredient getCommonRepairMaterial() {
+    public Ingredient getRepairIngredient() {
         return Ingredient.of(Tags.Items.GEMS_LAPIS);
     }
 
     @Override
-    public float getKnockbackResistance() {
+    public float knockbackResistance() {
         return 0;
     }
 }

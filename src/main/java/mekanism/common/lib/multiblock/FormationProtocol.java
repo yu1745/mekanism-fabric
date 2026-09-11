@@ -9,16 +9,14 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.UUID;
-import java.util.function.Predicate;
-import mekanism.api.Coord4D;
-import mekanism.api.chemical.gas.GasStack;
-import mekanism.api.chemical.gas.attribute.GasAttributes;
+import mekanism.api.chemical.ChemicalStack;
 import mekanism.api.radiation.IRadiationManager;
 import mekanism.api.text.EnumColor;
 import mekanism.api.text.ILangEntry;
 import mekanism.common.MekanismLang;
 import mekanism.common.lib.multiblock.IValveHandler.ValveData;
 import mekanism.common.lib.multiblock.MultiblockCache.RejectContents;
+import mekanism.common.lib.radiation.RadiationManager;
 import mekanism.common.util.EnumUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -27,6 +25,7 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.phys.Vec3;
 
@@ -76,7 +75,7 @@ public class FormationProtocol<T extends MultiblockData> {
      */
     public FormationResult doUpdate() {
         IStructureValidator<T> validator = manager.createValidator();
-        Level world = pointer.getTileWorld();
+        Level world = pointer.getLevel();
         validator.init(world, manager, structure);
         if (!validator.precheck()) {
             return FormationResult.FAIL;
@@ -84,7 +83,7 @@ public class FormationProtocol<T extends MultiblockData> {
         StructureResult<T> result = buildStructure(validator);
         T structureFound = result.structureFound;
 
-        BlockPos pointerPos = pointer.getTilePos();
+        BlockPos pointerPos = pointer.getBlockPos();
         if (structureFound != null && structureFound.locations.contains(pointerPos)) {
             pointer.setMultiblockData(manager, structureFound);
             structureFound.setFormedForce(true);
@@ -94,9 +93,9 @@ public class FormationProtocol<T extends MultiblockData> {
             // In theory we could partially get around this issue by keeping track of all the positions for the multiblock in the cache and only
             // reuse the id if we contain all elements we previously had, but doing so is not currently worth all the extra checks
             UUID idToUse = manager.getUniqueInventoryID();
-            if (!result.idsFound.isEmpty()) {
+            if (!result.idsFound().isEmpty()) {
                 RejectContents rejectContents = new RejectContents();
-                for (Map.Entry<UUID, MultiblockCache<T>> entry : result.idsFound.entrySet()) {
+                for (Map.Entry<UUID, MultiblockCache<T>> entry : result.idsFound().entrySet()) {
                     if (cache == null) {
                         cache = entry.getValue();
                     } else {
@@ -106,7 +105,8 @@ public class FormationProtocol<T extends MultiblockData> {
                 //Replace the caches for all the old ids with a singular merged cache with our desired id
                 manager.replaceCaches(result.idsFound().keySet(), idToUse, cache);
                 if (!rejectContents.rejectedItems.isEmpty()) {
-                    Vec3 dropPosition = Vec3.atCenterOf(pointerPos);
+                    //TODO - 1.20.4: Don't drop it in the center if there is no nearest player, maybe drop it on top of the multiblock? Or to one of the sides
+                    Vec3 dropPosition = pointerPos.getCenter();
                     //Try to see which player was nearest to multiblocks that have rejected items
                     Player nearestPlayer = world.getNearestPlayer(dropPosition.x, dropPosition.y, dropPosition.z, 25, true);
                     if (nearestPlayer != null) {
@@ -117,17 +117,16 @@ public class FormationProtocol<T extends MultiblockData> {
                         world.addFreshEntity(new ItemEntity(world, dropPosition.x, dropPosition.y, dropPosition.z, rejectedItem));
                     }
                 }
-                if (!rejectContents.rejectedGases.isEmpty() && IRadiationManager.INSTANCE.isRadiationEnabled()) {
+                if (!rejectContents.rejectedChemicals.isEmpty() && RadiationManager.isGlobalRadiationEnabled()) {
                     //Dump any rejected gases, if they are radioactive vent them into the atmosphere
                     // we are able to skip this if radiation is disabled as it will just NO-OP further down the line
                     double radiation = 0;
-                    for (GasStack rejectedGas : rejectContents.rejectedGases) {
+                    for (ChemicalStack rejectedChemical : rejectContents.rejectedChemicals) {
                         //If we have a radioactive substance, then we need to set the tank to empty
-                        radiation += rejectedGas.mapAttributeToDouble(GasAttributes.Radiation.class, (stored, attribute) -> stored.getAmount() * attribute.getRadioactivity());
+                        radiation += rejectedChemical.getRadioactivity();
                     }
                     if (radiation > 0) {
-                        Coord4D dumpLocation = new Coord4D(structureFound.getBounds().getCenter(), world);
-                        IRadiationManager.INSTANCE.radiate(dumpLocation, radiation);
+                        IRadiationManager.INSTANCE.radiate(world, structureFound.getBounds().getCenter(), radiation);
                     }
                 }
             }
@@ -136,7 +135,7 @@ public class FormationProtocol<T extends MultiblockData> {
                 cache = manager.createCache();
             }
 
-            cache.apply(structureFound);
+            cache.apply(world.registryAccess(), structureFound);
             structureFound.inventoryID = idToUse;
             structureFound.onCreated(world);
             if (trackCache) {
@@ -157,15 +156,26 @@ public class FormationProtocol<T extends MultiblockData> {
         return MekanismLang.GENERIC_PARENTHESIS.translate(MekanismLang.GENERIC_BLOCK_POS.translate(pos.getX(), pos.getY(), pos.getZ()));
     }
 
-    public static int explore(BlockPos start, Predicate<BlockPos> checker) {
-        return explore(start, checker, MAX_SIZE * MAX_SIZE * MAX_SIZE);
+    protected static Component text(BlockState state) {
+        return state.getBlock().getName();
     }
 
-    public static int explore(BlockPos start, Predicate<BlockPos> checker, int maxCount) {
-        if (!checker.test(start)) {
+    @FunctionalInterface
+    public interface FormationChecker<NODE> {
+
+        boolean check(Level level, Long2ObjectMap<ChunkAccess> chunkMap, BlockPos start, NODE node, BlockPos toCheck);
+    }
+
+    public static <NODE> int explore(Level level, Long2ObjectMap<ChunkAccess> chunkMap, BlockPos start, NODE node, FormationChecker<NODE> checker) {
+        return explore(level, chunkMap, start, node, checker, MAX_SIZE * MAX_SIZE * MAX_SIZE);
+    }
+
+    public static <NODE> int explore(Level level, Long2ObjectMap<ChunkAccess> chunkMap, BlockPos start, NODE node, FormationChecker<NODE> checker, int maxCount) {
+        if (!checker.check(level, chunkMap, start, node, start)) {
             return 0;
         }
 
+        BlockPos.MutableBlockPos mutable = new BlockPos.MutableBlockPos();
         Queue<BlockPos> openSet = new LinkedList<>();
         Set<BlockPos> traversed = new ObjectOpenHashSet<>();
         openSet.add(start);
@@ -177,8 +187,9 @@ public class FormationProtocol<T extends MultiblockData> {
                 return traversedSize;
             }
             for (Direction side : EnumUtils.DIRECTIONS) {
-                BlockPos offset = ptr.relative(side);
-                if (!traversed.contains(offset) && checker.test(offset)) {
+                mutable.setWithOffset(ptr, side);
+                if (!traversed.contains(mutable) && checker.check(level, chunkMap, start, node, mutable)) {
+                    BlockPos offset = mutable.immutable();
                     openSet.add(offset);
                     traversed.add(offset);
                 }
@@ -208,6 +219,14 @@ public class FormationProtocol<T extends MultiblockData> {
 
         public static FormationResult fail(ILangEntry text, BlockPos pos, boolean noIgnore) {
             return fail(text.translateColored(EnumColor.GRAY, EnumColor.INDIGO, text(pos)), noIgnore);
+        }
+
+        public static FormationResult fail(ILangEntry text, BlockPos pos, BlockState state) {
+            return fail(text, pos, state, false);
+        }
+
+        public static FormationResult fail(ILangEntry text, BlockPos pos, BlockState state, boolean noIgnore) {
+            return fail(text.translateColored(EnumColor.GRAY, EnumColor.INDIGO, text(pos), EnumColor.WHITE, text(state)), noIgnore);
         }
 
         public static FormationResult fail(ILangEntry text) {

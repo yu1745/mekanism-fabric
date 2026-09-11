@@ -4,19 +4,26 @@ import mekanism.common.Mekanism;
 import mekanism.common.integration.curios.CuriosIntegration;
 import mekanism.common.item.interfaces.IModeItem;
 import mekanism.common.item.interfaces.IModeItem.DisplayChange;
-import mekanism.common.network.BasePacketHandler;
 import mekanism.common.network.IMekanismPacket;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import org.jetbrains.annotations.NotNull;
 
-public class PacketModeChangeCurios implements IMekanismPacket {
+public record PacketModeChangeCurios(String slotType, int slot, int shift, boolean displayChangeMessage) implements IMekanismPacket {
 
-    private final boolean displayChangeMessage;
-    private final String slotType;
-    private final int slot;
-    private final int shift;
+    public static final CustomPacketPayload.Type<PacketModeChangeCurios> TYPE = new CustomPacketPayload.Type<>(Mekanism.rl("mode_curios"));
+    public static final StreamCodec<FriendlyByteBuf, PacketModeChangeCurios> STREAM_CODEC = StreamCodec.composite(
+          ByteBufCodecs.STRING_UTF8, PacketModeChangeCurios::slotType,
+          ByteBufCodecs.VAR_INT, PacketModeChangeCurios::slot,
+          ByteBufCodecs.VAR_INT, PacketModeChangeCurios::shift,
+          ByteBufCodecs.BOOL, PacketModeChangeCurios::displayChangeMessage,
+          PacketModeChangeCurios::new
+    );
 
     public PacketModeChangeCurios(String slotType, int slot, boolean holdingShift) {
         this(slotType, slot, holdingShift ? -1 : 1, true);
@@ -26,33 +33,20 @@ public class PacketModeChangeCurios implements IMekanismPacket {
         this(slotType, slot, shift, false);
     }
 
-    private PacketModeChangeCurios(String slotType, int slot, int shift, boolean displayChangeMessage) {
-        this.slot = slot;
-        this.shift = shift;
-        this.slotType = slotType;
-        this.displayChangeMessage = displayChangeMessage;
+    @NotNull
+    @Override
+    public CustomPacketPayload.Type<PacketModeChangeCurios> type() {
+        return TYPE;
     }
 
     @Override
-    public void handle(NetworkEvent.Context context) {
-        Player player = context.getSender();
-        if (player != null && Mekanism.hooks.CuriosLoaded) {
+    public void handle(IPayloadContext context) {
+        if (Mekanism.hooks.curios.isLoaded()) {
+            Player player = context.player();
             ItemStack stack = CuriosIntegration.getCurioStack(player, slotType, slot);
             if (!stack.isEmpty() && stack.getItem() instanceof IModeItem modeItem) {
                 modeItem.changeMode(player, stack, shift, displayChangeMessage ? DisplayChange.OTHER : DisplayChange.NONE);
             }
         }
-    }
-
-    @Override
-    public void encode(FriendlyByteBuf buffer) {
-        buffer.writeUtf(slotType);
-        buffer.writeVarInt(slot);
-        buffer.writeVarInt(shift);
-        buffer.writeBoolean(displayChangeMessage);
-    }
-
-    public static PacketModeChangeCurios decode(FriendlyByteBuf buffer) {
-        return new PacketModeChangeCurios(BasePacketHandler.readString(buffer), buffer.readVarInt(), buffer.readVarInt(), buffer.readBoolean());
     }
 }

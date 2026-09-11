@@ -1,6 +1,6 @@
 package mekanism.api.robit;
 
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import java.util.List;
 import mekanism.api.MekanismAPI;
 import mekanism.api.annotations.NothingNullByDefault;
@@ -10,11 +10,12 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
+import net.neoforged.neoforge.common.data.DatapackBuiltinEntriesProvider;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Represents a skin for a robit. Register these during datagen using {@link net.minecraftforge.common.data.DatapackBuiltinEntriesProvider}.
+ * Represents a skin for a robit. Register these during datagen using {@link DatapackBuiltinEntriesProvider}.
  * <br>
  * See also the <a href="https://github.com/mekanism/Mekanism/wiki/Robit-Skins">Mekanism GitHub wiki</a> for the syntax of creating these manually.
  */
@@ -24,10 +25,10 @@ public interface RobitSkin {
     /**
      * @return the codec which serializes and deserializes this {@link RobitSkin}.
      *
-     * @implNote The returned codec should be registered in the {@link MekanismAPI#robitSkinSerializerRegistry() robit skin serializer registry}.
+     * @implNote The returned codec should be registered in the {@link MekanismAPI#ROBIT_SKIN_SERIALIZER_REGISTRY robit skin serializer registry}.
      * @since 10.4.0
      */
-    Codec<? extends RobitSkin> codec();
+    MapCodec<? extends RobitSkin> codec();
 
 
     /**

@@ -1,11 +1,11 @@
 package mekanism.common.integration.crafttweaker.recipe;
 
 import com.blamejared.crafttweaker.api.annotation.ZenRegister;
+import com.blamejared.crafttweaker.api.ingredient.IIngredientWithAmount;
 import com.blamejared.crafttweaker_annotations.annotations.NativeTypeRegistration;
 import java.util.List;
-import mekanism.api.math.FloatingLong;
+import java.util.stream.LongStream;
 import mekanism.api.recipes.ItemStackToEnergyRecipe;
-import mekanism.api.recipes.ingredients.ItemStackIngredient;
 import mekanism.common.integration.crafttweaker.CrTConstants;
 import mekanism.common.integration.crafttweaker.CrTUtils;
 import org.openzen.zencode.java.ZenCodeType;
@@ -22,8 +22,8 @@ public class CrTItemStackToEnergyRecipe {
      */
     @ZenCodeType.Method
     @ZenCodeType.Getter("input")
-    public static ItemStackIngredient getInput(ItemStackToEnergyRecipe _this) {
-        return _this.getInput();
+    public static IIngredientWithAmount getInput(ItemStackToEnergyRecipe _this) {
+        return CrTUtils.toCrT(_this.getInput());
     }
 
 
@@ -32,7 +32,7 @@ public class CrTItemStackToEnergyRecipe {
      */
     @ZenCodeType.Method
     @ZenCodeType.Getter("outputs")
-    public static List<FloatingLong> getOutput(ItemStackToEnergyRecipe _this) {
-        return CrTUtils.convert(_this.getOutputDefinition(), FloatingLong::copyAsConst);
+    public static List<Long> getOutput(ItemStackToEnergyRecipe _this) {
+        return LongStream.of(_this.getOutputDefinition()).boxed().toList();
     }
 }

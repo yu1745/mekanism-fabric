@@ -41,6 +41,11 @@ public class VirtualCraftingOutputSlot extends VirtualInventoryContainerSlot imp
         return false;
     }
 
+    @Override
+    protected boolean allowPartialRemoval() {
+        return false;
+    }
+
     @NotNull
     @Override
     public ItemStack insertItem(@NotNull ItemStack stack, Action action) {
@@ -155,5 +160,10 @@ public class VirtualCraftingOutputSlot extends VirtualInventoryContainerSlot imp
             // for purposes of our getItem and hasItem overrides
             tracker.accept(SyncableBoolean.create(() -> canCraft = craftingWindow.canViewRecipe(serverPlayer), value -> canCraft = value));
         }
+    }
+
+    @Override
+    public boolean isFake() {
+        return true;
     }
 }

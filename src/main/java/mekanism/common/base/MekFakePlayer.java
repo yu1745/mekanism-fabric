@@ -9,7 +9,7 @@ import mekanism.common.Mekanism;
 import mekanism.common.util.MekanismUtils;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraftforge.common.util.FakePlayer;
+import net.neoforged.neoforge.common.util.FakePlayer;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -54,6 +54,30 @@ public class MekFakePlayer extends FakePlayer {
         return this.emulatingUUID == null ? super.getUUID() : this.emulatingUUID;
     }
 
+    public void cleanupFakePlayer(ServerLevel world) {
+        emulatingUUID = null;
+        //don't keep reference to the World, note we set it to the overworld to avoid any potential null pointers
+        setServerLevel(world.getServer().overworld());
+    }
+
+    @SuppressWarnings("WeakerAccess")
+    public static MekFakePlayer setupFakePlayer(ServerLevel world) {
+        MekFakePlayer actual = INSTANCE == null ? null : INSTANCE.get();
+        if (actual == null) {
+            actual = new MekFakePlayer(world);
+            INSTANCE = new WeakReference<>(actual);
+        }
+        MekFakePlayer player = actual;
+        player.setServerLevel(world);
+        return player;
+    }
+
+    public static MekFakePlayer setupFakePlayer(ServerLevel world, double x, double y, double z) {
+        MekFakePlayer player = setupFakePlayer(world);
+        player.setPosRaw(x, y, z);
+        return player;
+    }
+
     /**
      * Acquire a Fake Player and call a function which makes use of the player. Afterwards, the Fake Player's world is nulled out to prevent GC issues. Emulated UUID is
      * also reset.
@@ -68,17 +92,9 @@ public class MekFakePlayer extends FakePlayer {
      */
     @SuppressWarnings("WeakerAccess")
     public static <R> R withFakePlayer(ServerLevel world, Function<MekFakePlayer, R> fakePlayerConsumer) {
-        MekFakePlayer actual = INSTANCE == null ? null : INSTANCE.get();
-        if (actual == null) {
-            actual = new MekFakePlayer(world);
-            INSTANCE = new WeakReference<>(actual);
-        }
-        MekFakePlayer player = actual;
-        player.setServerLevel(world);
+        MekFakePlayer player = setupFakePlayer(world);
         R result = fakePlayerConsumer.apply(player);
-        player.emulatingUUID = null;
-        //don't keep reference to the World, note we set it to the overworld to avoid any potential null pointers
-        player.setServerLevel(world.getServer().overworld());
+        player.cleanupFakePlayer(world);
         return result;
     }
 
@@ -96,10 +112,10 @@ public class MekFakePlayer extends FakePlayer {
      * @return the return value of fakePlayerConsumer
      */
     public static <R> R withFakePlayer(ServerLevel world, double x, double y, double z, Function<MekFakePlayer, R> fakePlayerConsumer) {
-        return withFakePlayer(world, fakePlayer -> {
-            fakePlayer.setPosRaw(x, y, z);
-            return fakePlayerConsumer.apply(fakePlayer);
-        });
+        MekFakePlayer player = setupFakePlayer(world, x, y, z);
+        R result = fakePlayerConsumer.apply(player);
+        player.cleanupFakePlayer(world);
+        return result;
     }
 
     public static void releaseInstance(ServerLevel world) {

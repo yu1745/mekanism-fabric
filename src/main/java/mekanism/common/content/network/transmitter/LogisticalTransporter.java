@@ -1,7 +1,6 @@
 package mekanism.common.content.network.transmitter;
 
-import mekanism.api.NBTConstants;
-import mekanism.api.providers.IBlockProvider;
+import mekanism.api.SerializationConstants;
 import mekanism.api.text.EnumColor;
 import mekanism.common.MekanismLang;
 import mekanism.common.block.attribute.Attribute;
@@ -13,17 +12,21 @@ import mekanism.common.upgrade.transmitter.TransmitterUpgradeData;
 import mekanism.common.util.NBTUtils;
 import mekanism.common.util.TransporterUtils;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.block.Block;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class LogisticalTransporter extends LogisticalTransporterBase implements IUpgradeableTransmitter<LogisticalTransporterUpgradeData> {
 
+    @Nullable
     private EnumColor color;
 
-    public LogisticalTransporter(IBlockProvider blockProvider, TileEntityTransmitter tile) {
+    public LogisticalTransporter(Holder<Block> blockProvider, TileEntityTransmitter tile) {
         super(tile, Attribute.getTier(blockProvider, TransporterTier.class));
     }
 
@@ -32,18 +35,19 @@ public class LogisticalTransporter extends LogisticalTransporterBase implements 
         return tier;
     }
 
+    @Nullable
     @Override
     public EnumColor getColor() {
         return color;
     }
 
-    public void setColor(EnumColor c) {
+    public void setColor(@Nullable EnumColor c) {
         color = c;
     }
 
     @Override
     public InteractionResult onConfigure(Player player, Direction side) {
-        TransporterUtils.incrementColor(this);
+        setColor(TransporterUtils.increment(getColor()));
         PathfinderCache.onChanged(getTransmitterNetwork());
         getTransmitterTile().sendUpdatePacket();
         EnumColor color = getColor();
@@ -82,28 +86,38 @@ public class LogisticalTransporter extends LogisticalTransporterBase implements 
     }
 
     @Override
-    protected void readFromNBT(CompoundTag nbtTags) {
-        super.readFromNBT(nbtTags);
-        NBTUtils.setEnumIfPresent(nbtTags, NBTConstants.COLOR, TransporterUtils::readColor, this::setColor);
+    protected void readFromNBT(HolderLookup.Provider provider, CompoundTag nbtTags) {
+        super.readFromNBT(provider, nbtTags);
+        setColor(NBTUtils.getEnum(nbtTags, SerializationConstants.COLOR, EnumColor.BY_ID));
     }
 
     @Override
-    public void writeToNBT(CompoundTag nbtTags) {
-        super.writeToNBT(nbtTags);
-        nbtTags.putInt(NBTConstants.COLOR, TransporterUtils.getColorIndex(getColor()));
+    public void writeToNBT(HolderLookup.Provider provider, CompoundTag nbtTags) {
+        super.writeToNBT(provider, nbtTags);
+        if (getColor() != null) {
+            NBTUtils.writeEnum(nbtTags, SerializationConstants.COLOR, getColor());
+        }
     }
 
     @NotNull
     @Override
-    public CompoundTag getReducedUpdateTag(CompoundTag updateTag) {
-        updateTag = super.getReducedUpdateTag(updateTag);
-        updateTag.putInt(NBTConstants.COLOR, TransporterUtils.getColorIndex(getColor()));
+    public CompoundTag getReducedUpdateTag(@NotNull HolderLookup.Provider provider, CompoundTag updateTag) {
+        updateTag = super.getReducedUpdateTag(provider, updateTag);
+        if (getColor() != null) {
+            NBTUtils.writeEnum(updateTag, SerializationConstants.COLOR, getColor());
+        }
         return updateTag;
     }
 
     @Override
-    public void handleUpdateTag(@NotNull CompoundTag tag) {
-        super.handleUpdateTag(tag);
-        NBTUtils.setEnumIfPresent(tag, NBTConstants.COLOR, TransporterUtils::readColor, this::setColor);
+    public boolean handleUpdateTag(@NotNull CompoundTag tag, @NotNull HolderLookup.Provider provider) {
+        boolean refreshModelData = super.handleUpdateTag(tag, provider);
+        EnumColor color = NBTUtils.getEnum(tag, SerializationConstants.COLOR, EnumColor.BY_ID);
+        if (this.color != color) {
+            setColor(color);
+            //Color changed, mark the model data as needing to be refreshed
+            refreshModelData = true;
+        }
+        return refreshModelData;
     }
 }

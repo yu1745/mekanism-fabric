@@ -5,13 +5,14 @@ import java.util.Set;
 import mekanism.api.IContentsListener;
 import mekanism.api.inventory.IInventorySlot;
 import mekanism.api.math.MathUtils;
-import mekanism.api.providers.IBlockProvider;
 import mekanism.api.recipes.CombinerRecipe;
 import mekanism.api.recipes.cache.CachedRecipe;
 import mekanism.api.recipes.cache.CachedRecipe.OperationTracker.RecipeError;
 import mekanism.api.recipes.cache.TwoInputCachedRecipe;
 import mekanism.api.recipes.inputs.IInputHandler;
 import mekanism.api.recipes.inputs.InputHelper;
+import mekanism.client.recipe_viewer.type.IRecipeViewerRecipeType;
+import mekanism.client.recipe_viewer.type.RecipeViewerRecipeType;
 import mekanism.common.Mekanism;
 import mekanism.common.capabilities.holder.slot.InventorySlotHelper;
 import mekanism.common.integration.computer.SpecialComputerMethodWrapper.ComputerIInventorySlotWrapper;
@@ -21,19 +22,25 @@ import mekanism.common.inventory.slot.InputInventorySlot;
 import mekanism.common.recipe.IMekanismRecipeTypeProvider;
 import mekanism.common.recipe.MekanismRecipeType;
 import mekanism.common.recipe.lookup.IDoubleRecipeLookupHandler.DoubleItemRecipeLookupHandler;
+import mekanism.common.recipe.lookup.cache.DoubleInputRecipeCache.CheckRecipeType;
 import mekanism.common.recipe.lookup.cache.InputRecipeCache.DoubleItem;
 import mekanism.common.upgrade.CombinerUpgradeData;
 import mekanism.common.upgrade.IUpgradeData;
 import mekanism.common.util.InventoryUtils;
-import mekanism.common.util.MekanismUtils;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.RecipeInput;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class TileEntityCombiningFactory extends TileEntityItemToItemFactory<CombinerRecipe> implements DoubleItemRecipeLookupHandler<CombinerRecipe> {
 
+    private static final CheckRecipeType<ItemStack, ItemStack, CombinerRecipe, ItemStack> OUTPUT_CHECK =
+          (recipe, input, extra, output) -> InventoryUtils.areItemsStackable(recipe.getOutput(input, extra), output);
     private static final List<RecipeError> TRACKED_ERROR_TYPES = List.of(
           RecipeError.NOT_ENOUGH_ENERGY,
           RecipeError.NOT_ENOUGH_INPUT,
@@ -51,7 +58,7 @@ public class TileEntityCombiningFactory extends TileEntityItemToItemFactory<Comb
     @WrappingComputerMethod(wrapper = ComputerIInventorySlotWrapper.class, methodNames = "getSecondaryInput", docPlaceholder = "secondary input slot")
     InputInventorySlot extraSlot;
 
-    public TileEntityCombiningFactory(IBlockProvider blockProvider, BlockPos pos, BlockState state) {
+    public TileEntityCombiningFactory(Holder<Block> blockProvider, BlockPos pos, BlockState state) {
         super(blockProvider, pos, state, TRACKED_ERROR_TYPES, GLOBAL_ERROR_TYPES);
         extraInputHandler = InputHelper.getInputHandler(extraSlot, RecipeError.NOT_ENOUGH_SECONDARY_INPUT);
     }
@@ -67,6 +74,11 @@ public class TileEntityCombiningFactory extends TileEntityItemToItemFactory<Comb
     @Override
     protected InputInventorySlot getExtraSlot() {
         return extraSlot;
+    }
+
+    @Override
+    public boolean isItemValidForSlot(@NotNull ItemStack stack) {
+        return containsRecipeAB(stack, extraSlot.getStack());
     }
 
     @Override
@@ -90,17 +102,19 @@ public class TileEntityCombiningFactory extends TileEntityItemToItemFactory<Comb
 
     @Override
     protected CombinerRecipe findRecipe(int process, @NotNull ItemStack fallbackInput, @NotNull IInventorySlot outputSlot, @Nullable IInventorySlot secondaryOutputSlot) {
-        ItemStack extra = extraSlot.getStack();
-        ItemStack output = outputSlot.getStack();
         //TODO: Give it something that is not empty when we don't have a stored secondary stack for getting the output?
-        return getRecipeType().getInputCache().findTypeBasedRecipe(level, fallbackInput, extra,
-              recipe -> InventoryUtils.areItemsStackable(recipe.getOutput(fallbackInput, extra), output));
+        return getRecipeType().getInputCache().findTypeBasedRecipe(level, fallbackInput, extraSlot.getStack(), outputSlot.getStack(), OUTPUT_CHECK);
     }
 
     @NotNull
     @Override
-    public IMekanismRecipeTypeProvider<CombinerRecipe, DoubleItem<CombinerRecipe>> getRecipeType() {
+    public IMekanismRecipeTypeProvider<RecipeInput, CombinerRecipe, DoubleItem<CombinerRecipe>> getRecipeType() {
         return MekanismRecipeType.COMBINING;
+    }
+
+    @Override
+    public IRecipeViewerRecipeType<CombinerRecipe> recipeViewerType() {
+        return RecipeViewerRecipeType.COMBINING;
     }
 
     @Nullable
@@ -114,21 +128,22 @@ public class TileEntityCombiningFactory extends TileEntityItemToItemFactory<Comb
     public CachedRecipe<CombinerRecipe> createNewCachedRecipe(@NotNull CombinerRecipe recipe, int cacheIndex) {
         return TwoInputCachedRecipe.combiner(recipe, recheckAllRecipeErrors[cacheIndex], inputHandlers[cacheIndex], extraInputHandler, outputHandlers[cacheIndex])
               .setErrorsChanged(errors -> errorTracker.onErrorsChanged(errors, cacheIndex))
-              .setCanHolderFunction(() -> MekanismUtils.canFunction(this))
+              .setCanHolderFunction(this::canFunction)
               .setActive(active -> setActiveState(active, cacheIndex))
               .setEnergyRequirements(energyContainer::getEnergyPerTick, energyContainer)
               .setRequiredTicks(this::getTicksRequired)
               .setOnFinish(this::markForSave)
-              .setOperatingTicksChanged(operatingTicks -> progress[cacheIndex] = operatingTicks);
+              .setOperatingTicksChanged(operatingTicks -> progress[cacheIndex] = operatingTicks)
+              .setBaselineMaxOperations(this::getOperationsPerTick);
     }
 
     @Override
-    public void parseUpgradeData(@NotNull IUpgradeData upgradeData) {
+    public void parseUpgradeData(HolderLookup.Provider provider, @NotNull IUpgradeData upgradeData) {
         if (upgradeData instanceof CombinerUpgradeData data) {
             //Generic factory upgrade data handling
-            super.parseUpgradeData(upgradeData);
+            super.parseUpgradeData(provider, upgradeData);
             //Copy the stack using NBT so that if it is not actually valid due to a reload we don't crash
-            extraSlot.deserializeNBT(data.extraSlot.serializeNBT());
+            extraSlot.deserializeNBT(provider, data.extraSlot.serializeNBT(provider));
         } else {
             Mekanism.logger.warn("Unhandled upgrade data.", new Throwable());
         }
@@ -136,7 +151,7 @@ public class TileEntityCombiningFactory extends TileEntityItemToItemFactory<Comb
 
     @NotNull
     @Override
-    public CombinerUpgradeData getUpgradeData() {
-        return new CombinerUpgradeData(redstone, getControlType(), getEnergyContainer(), progress, energySlot, extraSlot, inputSlots, outputSlots, isSorting(), getComponents());
+    public CombinerUpgradeData getUpgradeData(HolderLookup.Provider provider) {
+        return new CombinerUpgradeData(provider, redstone, getControlType(), getEnergyContainer(), progress, energySlot, extraSlot, inputSlots, outputSlots, isSorting(), getComponents());
     }
 }

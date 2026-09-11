@@ -1,7 +1,5 @@
 package mekanism.common.recipe.impl;
 
-import java.util.function.Consumer;
-import mekanism.api.providers.IItemProvider;
 import mekanism.common.Mekanism;
 import mekanism.common.block.attribute.Attribute;
 import mekanism.common.block.attribute.AttributeFactoryType;
@@ -18,15 +16,16 @@ import mekanism.common.resource.ResourceType;
 import mekanism.common.tags.MekanismTags;
 import mekanism.common.tier.FactoryTier;
 import mekanism.common.util.EnumUtils;
-import net.minecraft.data.recipes.FinishedRecipe;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.data.recipes.RecipeOutput;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
-import net.minecraftforge.common.Tags;
+import net.neoforged.neoforge.common.Tags;
 
 class FactoryRecipeProvider implements ISubRecipeProvider {
 
     @Override
-    public void addRecipes(Consumer<FinishedRecipe> consumer) {
+    public void addRecipes(RecipeOutput consumer, HolderLookup.Provider registries) {
         String basePath = "factory/";
         String basicPath = basePath + "basic/";
         String advancedPath = basePath + "advanced/";
@@ -44,14 +43,14 @@ class FactoryRecipeProvider implements ISubRecipeProvider {
         }
     }
 
-    private void addFactoryRecipe(Consumer<FinishedRecipe> consumer, String basePath, BlockRegistryObject<BlockFactory<?>, ?> factory, IItemProvider toUpgrade,
-          TagKey<Item> ingotTag, TagKey<Item> alloyTag, TagKey<Item> circuitTag) {
+    private void addFactoryRecipe(RecipeOutput consumer, String basePath, BlockRegistryObject<?, ?> factory, BlockRegistryObject<?, ?> toUpgrade, TagKey<Item> ingotTag,
+          TagKey<Item> alloyTag, TagKey<Item> circuitTag) {
         MekDataShapedRecipeBuilder.shapedRecipe(factory)
               .pattern(MekanismRecipeProvider.TIER_PATTERN)
               .key(Pattern.PREVIOUS, toUpgrade)
               .key(Pattern.CIRCUIT, circuitTag)
               .key(Pattern.INGOT, ingotTag)
               .key(Pattern.ALLOY, alloyTag)
-              .build(consumer, Mekanism.rl(basePath + Attribute.get(factory, AttributeFactoryType.class).getFactoryType().getRegistryNameComponent()));
+              .build(consumer, Mekanism.rl(basePath + Attribute.getOrThrow(factory, AttributeFactoryType.class).getFactoryType().getRegistryNameComponent()));
     }
 }

@@ -1,43 +1,70 @@
 package mekanism.common.lib.security;
 
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import io.netty.buffer.ByteBuf;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
-import mekanism.api.NBTConstants;
+import mekanism.api.SerializationConstants;
 import mekanism.api.security.SecurityMode;
 import mekanism.common.lib.collection.HashList;
 import mekanism.common.lib.frequency.Frequency;
 import mekanism.common.lib.frequency.FrequencyType;
-import mekanism.common.network.BasePacketHandler;
+import mekanism.common.network.PacketUtils;
 import mekanism.common.util.MekanismUtils;
-import mekanism.common.util.NBTUtils;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.NbtUtils;
-import net.minecraft.nbt.Tag;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.core.UUIDUtil;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import org.jetbrains.annotations.Nullable;
 
 public class SecurityFrequency extends Frequency {
 
     public static final String SECURITY = "Security";
 
+    public static final Codec<SecurityFrequency> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+          UUIDUtil.CODEC.optionalFieldOf(SerializationConstants.OWNER_UUID).forGetter(freq -> Optional.ofNullable(freq.getOwner())),
+          SecurityMode.CODEC.fieldOf(SerializationConstants.SECURITY_MODE).forGetter(SecurityFrequency::getSecurity),
+          Codec.BOOL.fieldOf(SerializationConstants.OVERRIDE).forGetter(SecurityFrequency::isOverridden),
+          UUIDUtil.CODEC.listOf().optionalFieldOf(SerializationConstants.TRUSTED).forGetter(freq -> freq.trusted.isEmpty() ? Optional.empty() : Optional.of(freq.trusted.elements()))
+    ).apply(instance, (owner, securityMode, override, trustedCache) -> {
+        SecurityFrequency frequency = new SecurityFrequency(owner.orElse(null), securityMode);
+        frequency.override = override;
+        for (UUID trusted : trustedCache.orElse(Collections.emptyList())) {
+            frequency.addTrustedRaw(trusted, MekanismUtils.getLastKnownUsername(trusted));
+        }
+        return frequency;
+    }));
+    public static final StreamCodec<ByteBuf, SecurityFrequency> STREAM_CODEC = StreamCodec.composite(
+          ByteBufCodecs.optional(UUIDUtil.STREAM_CODEC), freq -> Optional.ofNullable(freq.getOwner()),
+          ByteBufCodecs.stringUtf8(PacketUtils.LAST_USERNAME_LENGTH), SecurityFrequency::getOwnerName,
+          SecurityMode.STREAM_CODEC, SecurityFrequency::getSecurity,
+          ByteBufCodecs.BOOL, SecurityFrequency::isOverridden,
+          ByteBufCodecs.stringUtf8(PacketUtils.LAST_USERNAME_LENGTH).<HashList<String>>apply(buf -> ByteBufCodecs.collection(HashList::new, buf)), freq -> freq.trustedCache,
+          (owner, ownerName, securityMode, override, trustedCache) -> {
+              SecurityFrequency frequency = new SecurityFrequency(owner.orElse(null), ownerName, securityMode);
+              frequency.override = override;
+              frequency.trustedCache = trustedCache;
+              return frequency;
+          }
+    );
+
     private boolean override = false;
 
-    private final List<UUID> trusted = new HashList<>();
-    private List<String> trustedCache = new HashList<>();
+    private final HashList<UUID> trusted = new HashList<>();
+    private HashList<String> trustedCache = new HashList<>();
     private int trustedCacheHash;
-
-    private SecurityMode securityMode = SecurityMode.PUBLIC;
 
     /**
      * @param uuid Should only be null if we have incomplete data that we are loading
      */
-    public SecurityFrequency(@Nullable UUID uuid) {
-        super(FrequencyType.SECURITY, SECURITY, uuid);
+    public SecurityFrequency(@Nullable UUID uuid, SecurityMode securityMode) {
+        super(FrequencyType.SECURITY, SECURITY, uuid, securityMode);
     }
 
-    public SecurityFrequency() {
-        super(FrequencyType.SECURITY, SECURITY, null);
+    private SecurityFrequency(@Nullable UUID owner, String ownerName, SecurityMode securityMode) {
+        super(FrequencyType.SECURITY, SECURITY, owner, ownerName, securityMode);
     }
 
     @Override
@@ -46,54 +73,11 @@ public class SecurityFrequency extends Frequency {
     }
 
     @Override
-    public void write(CompoundTag nbtTags) {
-        super.write(nbtTags);
-        nbtTags.putBoolean(NBTConstants.OVERRIDE, override);
-        NBTUtils.writeEnum(nbtTags, NBTConstants.SECURITY_MODE, securityMode);
-        if (!trusted.isEmpty()) {
-            ListTag trustedList = new ListTag();
-            for (UUID uuid : trusted) {
-                trustedList.add(NbtUtils.createUUID(uuid));
-            }
-            nbtTags.put(NBTConstants.TRUSTED, trustedList);
-        }
-    }
-
-    @Override
-    protected void read(CompoundTag nbtTags) {
-        super.read(nbtTags);
-        NBTUtils.setBooleanIfPresent(nbtTags, NBTConstants.OVERRIDE, value -> override = value);
-        NBTUtils.setEnumIfPresent(nbtTags, NBTConstants.SECURITY_MODE, SecurityMode::byIndexStatic, mode -> securityMode = mode);
-        if (nbtTags.contains(NBTConstants.TRUSTED, Tag.TAG_LIST)) {
-            ListTag trustedList = nbtTags.getList(NBTConstants.TRUSTED, Tag.TAG_INT_ARRAY);
-            for (Tag trusted : trustedList) {
-                UUID uuid = NbtUtils.loadUUID(trusted);
-                addTrustedRaw(uuid, MekanismUtils.getLastKnownUsername(uuid));
-            }
-        }
-    }
-
-    @Override
-    public void write(FriendlyByteBuf buffer) {
-        super.write(buffer);
-        buffer.writeBoolean(override);
-        buffer.writeEnum(securityMode);
-        buffer.writeCollection(trustedCache, FriendlyByteBuf::writeUtf);
-    }
-
-    @Override
-    protected void read(FriendlyByteBuf dataStream) {
-        super.read(dataStream);
-        override = dataStream.readBoolean();
-        securityMode = dataStream.readEnum(SecurityMode.class);
-        trustedCache = dataStream.readList(BasePacketHandler::readString);
-    }
-
-    @Override
     public int getSyncHash() {
         int code = super.getSyncHash();
         code = 31 * code + (override ? 1 : 0);
-        code = 31 * code + (securityMode == null ? 0 : securityMode.ordinal());
+        //We skip including the security in the normal hashcode, but we do need to include it in the sync hashcode
+        code = 31 * code + getSecurity().ordinal();
         code = 31 * code + trustedCacheHash;
         return code;
     }
@@ -105,27 +89,21 @@ public class SecurityFrequency extends Frequency {
         }
     }
 
+    @Override
+    public FrequencyIdentity getIdentity() {
+        return new FrequencyIdentity(getKey(), SecurityMode.PUBLIC, getOwner());
+    }
+
     public boolean isOverridden() {
         return override;
     }
 
-    public void setSecurityMode(SecurityMode securityMode) {
-        if (this.securityMode != securityMode) {
-            this.securityMode = securityMode;
-            this.dirty = true;
-        }
-    }
-
-    public SecurityMode getSecurityMode() {
-        return securityMode;
-    }
-
-    public List<UUID> getTrustedUUIDs() {
-        return trusted;
+    public boolean isTrusted(UUID subject) {
+        return trusted.contains(subject);
     }
 
     public List<String> getTrustedUsernameCache() {
-        return trustedCache;
+        return trustedCache.elements();
     }
 
     public void addTrusted(UUID uuid, String name) {

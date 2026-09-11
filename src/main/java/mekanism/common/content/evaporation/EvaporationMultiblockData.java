@@ -2,12 +2,12 @@ package mekanism.common.content.evaporation;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import java.lang.ref.WeakReference;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.BooleanSupplier;
 import mekanism.api.IEvaporationSolar;
-import mekanism.api.NBTConstants;
+import mekanism.api.SerializationConstants;
+import mekanism.api.functions.ConstantPredicates;
 import mekanism.api.heat.HeatAPI;
 import mekanism.api.recipes.FluidToFluidRecipe;
 import mekanism.api.recipes.cache.CachedRecipe;
@@ -17,6 +17,9 @@ import mekanism.api.recipes.inputs.IInputHandler;
 import mekanism.api.recipes.inputs.InputHelper;
 import mekanism.api.recipes.outputs.IOutputHandler;
 import mekanism.api.recipes.outputs.OutputHelper;
+import mekanism.api.recipes.vanilla_input.SingleFluidRecipeInput;
+import mekanism.client.recipe_viewer.type.IRecipeViewerRecipeType;
+import mekanism.client.recipe_viewer.type.RecipeViewerRecipeType;
 import mekanism.common.capabilities.Capabilities;
 import mekanism.common.capabilities.fluid.BasicFluidTank;
 import mekanism.common.capabilities.fluid.VariableCapacityFluidTank;
@@ -33,6 +36,7 @@ import mekanism.common.inventory.slot.FluidInventorySlot;
 import mekanism.common.inventory.slot.OutputInventorySlot;
 import mekanism.common.lib.multiblock.IValveHandler;
 import mekanism.common.lib.multiblock.MultiblockData;
+import mekanism.common.lib.multiblock.Structure;
 import mekanism.common.recipe.IMekanismRecipeTypeProvider;
 import mekanism.common.recipe.MekanismRecipeType;
 import mekanism.common.recipe.lookup.ISingleRecipeLookupHandler.FluidRecipeLookupHandler;
@@ -40,18 +44,17 @@ import mekanism.common.recipe.lookup.cache.InputRecipeCache.SingleFluid;
 import mekanism.common.recipe.lookup.monitor.RecipeCacheLookupMonitor;
 import mekanism.common.tile.multiblock.TileEntityThermalEvaporationBlock;
 import mekanism.common.tile.prefab.TileEntityRecipeMachine;
-import mekanism.common.util.CapabilityUtils;
+import mekanism.common.tile.prefab.TileEntityStructuralMultiblock;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.NBTUtils;
-import mekanism.common.util.WorldUtils;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.common.util.NonNullConsumer;
-import net.minecraftforge.fluids.FluidStack;
+import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
+import net.neoforged.neoforge.fluids.FluidStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -66,10 +69,12 @@ public class EvaporationMultiblockData extends MultiblockData implements IValveH
     public static final double MAX_MULTIPLIER_TEMP = 3_000;
 
     @ContainerSync
-    @WrappingComputerMethod(wrapper = ComputerFluidTankWrapper.class, methodNames = {"getInput", "getInputCapacity", "getInputNeeded", "getInputFilledPercentage"}, docPlaceholder = "input tank")
+    @WrappingComputerMethod(wrapper = ComputerFluidTankWrapper.class, methodNames = {"getInput", "getInputCapacity", "getInputNeeded",
+                                                                                     "getInputFilledPercentage"}, docPlaceholder = "input tank")
     public BasicFluidTank inputTank;
     @ContainerSync
-    @WrappingComputerMethod(wrapper = ComputerFluidTankWrapper.class, methodNames = {"getOutput", "getOutputCapacity", "getOutputNeeded", "getOutputFilledPercentage"}, docPlaceholder = "output tank")
+    @WrappingComputerMethod(wrapper = ComputerFluidTankWrapper.class, methodNames = {"getOutput", "getOutputCapacity", "getOutputNeeded",
+                                                                                     "getOutputFilledPercentage"}, docPlaceholder = "output tank")
     public BasicFluidTank outputTank;
     @ContainerSync
     public VariableHeatCapacitor heatCapacitor;
@@ -91,8 +96,7 @@ public class EvaporationMultiblockData extends MultiblockData implements IValveH
     @ContainerSync
     private final boolean[] trackedErrors = new boolean[TRACKED_ERROR_TYPES.size()];
 
-    private final Int2ObjectMap<NonNullConsumer<LazyOptional<IEvaporationSolar>>> cachedSolarListeners = new Int2ObjectArrayMap<>(4);
-    private final Int2ObjectMap<LazyOptional<IEvaporationSolar>> cachedSolar = new Int2ObjectArrayMap<>(4);
+    private final Int2ObjectMap<BlockCapabilityCache<IEvaporationSolar, Void>> cachedSolar = new Int2ObjectArrayMap<>(4);
 
     private final IOutputHandler<@NotNull FluidStack> outputHandler;
     private final IInputHandler<@NotNull FluidStack> inputHandler;
@@ -111,15 +115,15 @@ public class EvaporationMultiblockData extends MultiblockData implements IValveH
         recipeCacheLookupMonitor = new RecipeCacheLookupMonitor<>(this);
         recheckAllRecipeErrors = TileEntityRecipeMachine.shouldRecheckAllErrors(tile);
         //Default biome temp to the ambient temperature at the block we are at
-        biomeAmbientTemp = HeatAPI.getAmbientTemp(tile.getLevel(), tile.getTilePos());
+        biomeAmbientTemp = HeatAPI.getAmbientTemp(tile.getLevel(), tile.getBlockPos());
         fluidTanks.add(inputTank = VariableCapacityFluidTank.input(this, this::getMaxFluid, this::containsRecipe, createSaveAndComparator(recipeCacheLookupMonitor)));
-        fluidTanks.add(outputTank = VariableCapacityFluidTank.output(this, MekanismConfig.general.evaporationOutputTankCapacity, BasicFluidTank.alwaysTrue, this));
+        fluidTanks.add(outputTank = VariableCapacityFluidTank.output(this, MekanismConfig.general.evaporationOutputTankCapacity, ConstantPredicates.alwaysTrue(), this));
         inputHandler = InputHelper.getInputHandler(inputTank, RecipeError.NOT_ENOUGH_INPUT);
         outputHandler = OutputHelper.getOutputHandler(outputTank, RecipeError.NOT_ENOUGH_OUTPUT_SPACE);
         inventorySlots.add(inputInputSlot = FluidInventorySlot.fill(inputTank, this, 28, 20));
         inventorySlots.add(outputInputSlot = OutputInventorySlot.at(this, 28, 51));
-        inventorySlots.add(inputOutputSlot = FluidInventorySlot.drain(outputTank, this, 132, 20));
-        inventorySlots.add(outputOutputSlot = OutputInventorySlot.at(this, 132, 51));
+        inventorySlots.add(inputOutputSlot = FluidInventorySlot.drain(outputTank, this, 152, 20));
+        inventorySlots.add(outputOutputSlot = OutputInventorySlot.at(this, 152, 51));
         inputInputSlot.setSlotType(ContainerSlotType.INPUT);
         inputOutputSlot.setSlotType(ContainerSlotType.INPUT);
         heatCapacitors.add(heatCapacitor = VariableHeatCapacitor.create(MekanismConfig.general.evaporationHeatCapacity.get() * 3, () -> biomeAmbientTemp, this));
@@ -132,6 +136,14 @@ public class EvaporationMultiblockData extends MultiblockData implements IValveH
         // update the heat capacity now that we've read
         heatCapacitor.setHeatCapacity(MekanismConfig.general.evaporationHeatCapacity.get() * height(), true);
         updateSolars(world);
+    }
+
+    @Override
+    public void onContentsChanged() {
+        super.onContentsChanged();
+        if (getTemperature() > HeatAPI.AMBIENT_TEMP) {
+            recipeCacheLookupMonitor.unpause();
+        }
     }
 
     @Override
@@ -149,7 +161,7 @@ public class EvaporationMultiblockData extends MultiblockData implements IValveH
         inputInputSlot.fillTank(outputInputSlot);
         recipeCacheLookupMonitor.updateAndProcess();
         float scale = MekanismUtils.getScale(prevScale, inputTank);
-        if (scale != prevScale) {
+        if (!Mth.equal(scale, prevScale)) {
             prevScale = scale;
             needsPacket = true;
         }
@@ -157,18 +169,23 @@ public class EvaporationMultiblockData extends MultiblockData implements IValveH
     }
 
     @Override
-    public void readUpdateTag(CompoundTag tag) {
-        super.readUpdateTag(tag);
-        NBTUtils.setFluidStackIfPresent(tag, NBTConstants.FLUID_STORED, fluid -> inputTank.setStack(fluid));
-        NBTUtils.setFloatIfPresent(tag, NBTConstants.SCALE, scale -> prevScale = scale);
+    public boolean allowsStructuralGuiAccess(TileEntityStructuralMultiblock multiblock) {
+        return false;
+    }
+
+    @Override
+    public void readUpdateTag(CompoundTag tag, HolderLookup.Provider provider) {
+        super.readUpdateTag(tag, provider);
+        NBTUtils.setFluidStackIfPresent(provider, tag, SerializationConstants.FLUID, fluid -> inputTank.setStack(fluid));
+        NBTUtils.setFloatIfPresent(tag, SerializationConstants.SCALE, scale -> prevScale = scale);
         readValves(tag);
     }
 
     @Override
-    public void writeUpdateTag(CompoundTag tag) {
-        super.writeUpdateTag(tag);
-        tag.put(NBTConstants.FLUID_STORED, inputTank.getFluid().writeToNBT(new CompoundTag()));
-        tag.putFloat(NBTConstants.SCALE, prevScale);
+    public void writeUpdateTag(CompoundTag tag, HolderLookup.Provider provider) {
+        super.writeUpdateTag(tag, provider);
+        tag.put(SerializationConstants.FLUID, inputTank.getFluid().saveOptional(provider));
+        tag.putFloat(SerializationConstants.SCALE, prevScale);
         writeValves(tag);
     }
 
@@ -212,8 +229,13 @@ public class EvaporationMultiblockData extends MultiblockData implements IValveH
 
     @NotNull
     @Override
-    public IMekanismRecipeTypeProvider<FluidToFluidRecipe, SingleFluid<FluidToFluidRecipe>> getRecipeType() {
+    public IMekanismRecipeTypeProvider<SingleFluidRecipeInput, FluidToFluidRecipe, SingleFluid<FluidToFluidRecipe>> getRecipeType() {
         return MekanismRecipeType.EVAPORATING;
+    }
+
+    @Override
+    public IRecipeViewerRecipeType<FluidToFluidRecipe> recipeViewerType() {
+        return RecipeViewerRecipeType.EVAPORATING;
     }
 
     @Nullable
@@ -242,7 +264,7 @@ public class EvaporationMultiblockData extends MultiblockData implements IValveH
                   // amount
                   if (active) {
                       if (tempMultiplier > 0 && tempMultiplier < 1) {
-                          lastGain = 1F / (int) Math.ceil(1 / tempMultiplier);
+                          lastGain = 1F / Mth.ceil(1 / tempMultiplier);
                       } else {
                           lastGain = tempMultiplier;
                       }
@@ -250,7 +272,7 @@ public class EvaporationMultiblockData extends MultiblockData implements IValveH
                       lastGain = 0;
                   }
               })
-              .setRequiredTicks(() -> tempMultiplier > 0 && tempMultiplier < 1 ? (int) Math.ceil(1 / tempMultiplier) : 1)
+              .setRequiredTicks(() -> tempMultiplier > 0 && tempMultiplier < 1 ? Mth.ceil(1 / tempMultiplier) : 1)
               .setBaselineMaxOperations(() -> tempMultiplier > 0 && tempMultiplier < 1 ? 1 : (int) tempMultiplier);
     }
 
@@ -263,16 +285,12 @@ public class EvaporationMultiblockData extends MultiblockData implements IValveH
         return trackedErrors[errorIndex];
     }
 
-    @Override
-    public Level getHandlerWorld() {
-        return getWorld();
-    }
-
     @ComputerMethod
     int getActiveSolars() {
         int ret = 0;
-        for (LazyOptional<IEvaporationSolar> capability : cachedSolar.values()) {
-            if (capability.map(IEvaporationSolar::canSeeSun).orElse(false)) {
+        for (BlockCapabilityCache<IEvaporationSolar, Void> capability : cachedSolar.values()) {
+            IEvaporationSolar solar = capability.getCapability();
+            if (solar != null && solar.canSeeSun()) {
                 ret++;
             }
         }
@@ -280,33 +298,9 @@ public class EvaporationMultiblockData extends MultiblockData implements IValveH
     }
 
     private void updateSolarSpot(Level world, BlockPos pos, int corner) {
-        //If we have the corner cached remove it
-        cachedSolar.remove(corner);
-        BlockEntity tile = WorldUtils.getTileEntity(world, pos);
-        if (tile != null && !tile.isRemoved()) {
-            LazyOptional<IEvaporationSolar> capability = CapabilityUtils.getCapability(tile, Capabilities.EVAPORATION_SOLAR, Direction.DOWN);
-            if (capability.isPresent()) {
-                capability.addListener(cachedSolarListeners.computeIfAbsent(corner, c -> new RefreshListener(this, c)));
-                cachedSolar.put(corner, capability);
-            }
-        }
-    }
-
-    public void updateSolarSpot(Level world, BlockPos pos) {
-        BlockPos maxPos = getMaxPos();
-        //Validate it is actually one of the spots solar panels can go
-        if (pos.getY() == maxPos.getY() && getBounds().isOnCorner(pos)) {
-            int i = 0;
-            if (pos.getX() + 3 == maxPos.getX()) {
-                //If we are westwards our index goes up by one
-                i++;
-            }
-            if (pos.getZ() + 3 == maxPos.getZ()) {
-                //If we are northwards it goes up by two
-                i += 2;
-            }
-            updateSolarSpot(world, pos, i);
-        }
+        //Create a capability cache for the given corner. When we are unformed we will clear references to our caches
+        // which allow them to be garbage collected
+        cachedSolar.put(corner, BlockCapabilityCache.create(Capabilities.EVAPORATION_SOLAR, (ServerLevel) world, pos, null));
     }
 
     private void updateSolars(Level world) {
@@ -323,41 +317,9 @@ public class EvaporationMultiblockData extends MultiblockData implements IValveH
     }
 
     @Override
-    public void remove(Level world) {
+    public void remove(Level world, Structure oldStructure) {
         //Clear the cached solar panels so that we don't hold references to them and prevent them from being able to be garbage collected
         cachedSolar.clear();
-        super.remove(world);
-    }
-
-    private static class RefreshListener implements NonNullConsumer<LazyOptional<IEvaporationSolar>> {
-
-        //Note: We only keep a weak reference to the multiblock from inside the listener so that if it gets unformed it can be released from memory
-        // instead of being referenced by the listener still in the tile in a neighboring chunk
-        private final WeakReference<EvaporationMultiblockData> multiblock;
-        private final int corner;
-
-        private RefreshListener(EvaporationMultiblockData multiblock, int corner) {
-            this.multiblock = new WeakReference<>(multiblock);
-            this.corner = corner;
-        }
-
-        @Override
-        public void accept(@NotNull LazyOptional<IEvaporationSolar> ignored) {
-            EvaporationMultiblockData multiblockData = multiblock.get();
-            //Check to make sure the multiblock is still valid and that the position we are going to check is actually still loaded
-            if (multiblockData != null && multiblockData.isFormed()) {
-                BlockPos maxPos = multiblockData.getMaxPos();
-                BlockPos pos = switch (corner) {
-                    case 1 -> maxPos.west(3);
-                    case 2 -> maxPos.north(3);
-                    case 3 -> maxPos.offset(-3, 0, -3);
-                    default -> maxPos;//Corner 0
-                };
-                if (WorldUtils.isBlockLoaded(multiblockData.getWorld(), pos)) {
-                    //Refresh the solar
-                    multiblockData.updateSolarSpot(multiblockData.getWorld(), pos, corner);
-                }
-            }
-        }
+        super.remove(world, oldStructure);
     }
 }

@@ -1,13 +1,13 @@
 package mekanism.api.recipes.ingredients.creator;
 
-import com.google.gson.JsonElement;
-import java.util.stream.Stream;
+import com.mojang.serialization.Codec;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.recipes.ingredients.InputIngredient;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.core.Holder;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.tags.TagKey;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 @NothingNullByDefault
 public interface IIngredientCreator<TYPE, STACK, INGREDIENT extends InputIngredient<@NotNull STACK>> {
@@ -30,8 +30,53 @@ public interface IIngredientCreator<TYPE, STACK, INGREDIENT extends InputIngredi
      *
      * @throws NullPointerException     if the given instance is null.
      * @throws IllegalArgumentException if the given instance is empty or an amount smaller than one.
+     * @deprecated Use {@link #fromHolder(Holder, int)} instead
      */
+    @Deprecated(forRemoval = true, since = "10.7.11")
     INGREDIENT from(TYPE instance, int amount);
+
+    /**
+     * Creates an Ingredient that matches any of the provided types.
+     *
+     * @param amount Amount needed.
+     * @param items  Types to match.
+     *
+     * @throws NullPointerException     if the given instance is null.
+     * @throws IllegalArgumentException if the given instance is empty or an amount smaller than one; or if no types are passed.
+     * @since 10.6.0
+     * @deprecated Use {@link #fromHolders(int, Holder[])} instead
+     */
+    @SuppressWarnings("unchecked")
+    @Deprecated(forRemoval = true, since = "10.7.11")
+    INGREDIENT from(int amount, TYPE... items);
+
+    /**
+     * Creates an Ingredient that matches a provided type and amount.
+     *
+     * @param instance Type to match.
+     * @param amount   Amount needed.
+     *
+     * @throws NullPointerException     if the given instance is null.
+     * @throws IllegalArgumentException if the given instance is empty or an amount smaller than one.
+     * @since 10.5.0
+     */
+    default INGREDIENT fromHolder(Holder<TYPE> instance, int amount) {
+        return from(instance.value(), amount);
+    }
+
+    /**
+     * Creates an Item Stack Ingredient that matches a provided items and amount.
+     *
+     * @param amount  Amount needed.
+     * @param holders Types to match.
+     *
+     * @since 10.7.11
+     */
+    @SuppressWarnings("unchecked")
+    default INGREDIENT fromHolders(int amount, Holder<TYPE>... holders) {
+        //TODO - 1.22: Make this not be defaulted, we only default it on the off chance someone is implementing their own ingredient creator using this interface
+        throw new UnsupportedOperationException("Not implemented yet");
+    }
 
     /**
      * Creates an Ingredient that matches a given tag and amount.
@@ -45,44 +90,20 @@ public interface IIngredientCreator<TYPE, STACK, INGREDIENT extends InputIngredi
     INGREDIENT from(TagKey<TYPE> tag, int amount);
 
     /**
-     * Reads an Ingredient from a Packet Buffer.
+     * Retrieve a codec which can (de)encode a single or multi ingredient of this type.
      *
-     * @param buffer Buffer to read from.
+     * @return a codec for this ingredient type
      *
-     * @throws NullPointerException if the given buffer is null.
+     * @since 10.5.0
      */
-    INGREDIENT read(FriendlyByteBuf buffer);
+    Codec<INGREDIENT> codec();
 
     /**
-     * Helper to deserialize a Json Object into an Ingredient.
+     * Retrieve a stream codec which can be used to encode and decode ingredients of this type over the network.
      *
-     * @param json Json object to deserialize.
+     * @return a stream codec for this ingredient type
      *
-     * @throws com.google.gson.JsonSyntaxException if the ingredient failed to deserialize or was invalid.
+     * @since 10.6.0
      */
-    INGREDIENT deserialize(@Nullable JsonElement json);
-
-    /**
-     * Combines multiple Ingredients into a single Ingredient.
-     *
-     * @param ingredients Ingredients to combine.
-     *
-     * @return Combined Ingredient.
-     *
-     * @throws NullPointerException     if the given array is null.
-     * @throws IllegalArgumentException if the given array is empty.
-     */
-    INGREDIENT createMulti(INGREDIENT... ingredients);
-
-    /**
-     * Creates an Ingredient out of a stream of Ingredients.
-     *
-     * @param ingredients Ingredient(s) to combine.
-     *
-     * @return Given Ingredient or Combined Ingredient if multiple were in the stream.
-     *
-     * @throws NullPointerException     if the given stream is null.
-     * @throws IllegalArgumentException if the given stream is empty.
-     */
-    INGREDIENT from(Stream<INGREDIENT> ingredients);
+    StreamCodec<RegistryFriendlyByteBuf, INGREDIENT> streamCodec();
 }

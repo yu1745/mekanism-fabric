@@ -17,7 +17,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.FluidStack;
 import org.jetbrains.annotations.Nullable;
 
 public class GuiFluidGauge extends GuiTankGauge<FluidStack, IExtendedFluidTank> {
@@ -74,12 +74,11 @@ public class GuiFluidGauge extends GuiTankGauge<FluidStack, IExtendedFluidTank> 
         IExtendedFluidTank tank = getTank();
         if (tank == null || tank.isEmpty() || tank.getCapacity() == 0) {
             return 0;
-        }
-        if (tank.getFluidAmount() == Integer.MAX_VALUE) {
+        } else if (tank.getFluidAmount() == Integer.MAX_VALUE) {
             return height - 2;
         }
-        float scale = (float) tank.getFluidAmount() / (float) tank.getCapacity();
-        return Math.round(scale * (height - 2));
+        float scale = tank.getFluidAmount() / (float) tank.getCapacity();
+        return Math.max(1, Math.round(scale * (height - 2)));
     }
 
     @Nullable

@@ -1,20 +1,17 @@
 package mekanism.common.registration.impl;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.Collection;
 import java.util.function.BiFunction;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 import mekanism.common.Mekanism;
 import mekanism.common.base.IChemicalConstant;
 import net.minecraft.Util;
-import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.BlockSource;
+import net.minecraft.core.Holder;
+import net.minecraft.core.dispenser.BlockSource;
 import net.minecraft.core.dispenser.DefaultDispenseItemBehavior;
 import net.minecraft.core.dispenser.DispenseItemBehavior;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.FastColor;
@@ -32,23 +29,22 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.level.material.PushReaction;
-import net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions;
-import net.minecraftforge.common.SoundActions;
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.FluidType;
-import net.minecraftforge.fluids.ForgeFlowingFluid;
-import net.minecraftforge.fluids.ForgeFlowingFluid.Flowing;
-import net.minecraftforge.fluids.ForgeFlowingFluid.Source;
-import net.minecraftforge.registries.DeferredRegister;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.neoforge.common.SoundActions;
+import net.neoforged.neoforge.fluids.BaseFlowingFluid;
+import net.neoforged.neoforge.fluids.BaseFlowingFluid.Flowing;
+import net.neoforged.neoforge.fluids.BaseFlowingFluid.Source;
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.FluidType;
+import net.neoforged.neoforge.registries.DeferredHolder;
+import net.neoforged.neoforge.registries.DeferredRegister;
+import net.neoforged.neoforge.registries.NeoForgeRegistries;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 public class FluidDeferredRegister {
 
-    private static final ResourceLocation OVERLAY = new ResourceLocation("block/water_overlay");
-    private static final ResourceLocation RENDER_OVERLAY = new ResourceLocation("misc/underwater");
+    private static final ResourceLocation OVERLAY = ResourceLocation.withDefaultNamespace("block/water_overlay");
+    private static final ResourceLocation RENDER_OVERLAY = ResourceLocation.withDefaultNamespace("textures/misc/underwater.png");
     private static final ResourceLocation LIQUID = Mekanism.rl("liquid/liquid");
     private static final ResourceLocation LIQUID_FLOW = Mekanism.rl("liquid/liquid_flow");
     //Copy of/based off of vanilla's lava/water bucket dispense behavior
@@ -56,9 +52,9 @@ public class FluidDeferredRegister {
         @NotNull
         @Override
         public ItemStack execute(@NotNull BlockSource source, @NotNull ItemStack stack) {
-            Level world = source.getLevel();
+            Level world = source.level();
             DispensibleContainerItem bucket = (DispensibleContainerItem) stack.getItem();
-            BlockPos pos = source.getPos().relative(source.getBlockState().getValue(DispenserBlock.FACING));
+            BlockPos pos = source.pos().relative(source.state().getValue(DispenserBlock.FACING));
             if (bucket.emptyContents(null, world, pos, null, stack)) {
                 bucket.checkExtraContent(null, world, stack, pos);
                 return new ItemStack(Items.BUCKET);
@@ -73,20 +69,17 @@ public class FluidDeferredRegister {
               .sound(SoundActions.BUCKET_EMPTY, SoundEvents.BUCKET_EMPTY);
     }
 
-    private final List<FluidRegistryObject<? extends MekanismFluidType, ?, ?, ?, ?>> allFluids = new ArrayList<>();
-
     private final DeferredRegister<FluidType> fluidTypeRegister;
     private final DeferredRegister<Fluid> fluidRegister;
     private final DeferredRegister<Block> blockRegister;
-    private final DeferredRegister<Item> itemRegister;
-    private final String modid;
+    private final ItemDeferredRegister itemRegister;
 
     public FluidDeferredRegister(String modid) {
-        this.modid = modid;
-        blockRegister = DeferredRegister.create(ForgeRegistries.BLOCKS, modid);
-        fluidRegister = DeferredRegister.create(ForgeRegistries.FLUIDS, modid);
-        fluidTypeRegister = DeferredRegister.create(ForgeRegistries.Keys.FLUID_TYPES, modid);
-        itemRegister = DeferredRegister.create(ForgeRegistries.ITEMS, modid);
+        blockRegister = DeferredRegister.create(Registries.BLOCK, modid);
+        fluidRegister = DeferredRegister.create(Registries.FLUID, modid);
+        fluidTypeRegister = DeferredRegister.create(NeoForgeRegistries.Keys.FLUID_TYPES, modid);
+        //Note: We use our own deferred register so that we also can automatically attach any capability aware buckets we register
+        itemRegister = new ItemDeferredRegister(modid);
     }
 
     public FluidRegistryObject<MekanismFluidType, Source, Flowing, LiquidBlock, BucketItem> registerLiquidChemical(IChemicalConstant constants) {
@@ -115,34 +108,35 @@ public class FluidDeferredRegister {
               MekanismFluidType::new);
     }
 
-    public <TYPE extends MekanismFluidType, BUCKET extends BucketItem> FluidRegistryObject<TYPE, Source, Flowing, LiquidBlock, BUCKET> register(String name,
+    public <BUCKET extends BucketItem> FluidRegistryObject<MekanismFluidType, Source, Flowing, LiquidBlock, BUCKET> register(String name,
           FluidType.Properties properties, FluidTypeRenderProperties renderProperties, BucketCreator<BUCKET> bucketCreator,
-          BiFunction<FluidType.Properties, FluidTypeRenderProperties, TYPE> fluidTypeCreator) {
-        String flowingName = "flowing_" + name;
-        String bucketName = name + "_bucket";
-        //Set the translation string to the same as the block
-        properties.descriptionId(Util.makeDescriptionId("block", new ResourceLocation(modid, name)));
-        //Create the registry object and let the values init to null as before we actually call get on them, we will update the backing values
-        FluidRegistryObject<TYPE, Source, Flowing, LiquidBlock, BUCKET> fluidRegistryObject = new FluidRegistryObject<>();
-        //Pass in suppliers that are wrapped instead of direct references to the registry objects, so that when we update the registry object to
-        // point to a new object it gets updated properly.
-        ForgeFlowingFluid.Properties fluidProperties = new ForgeFlowingFluid.Properties(fluidRegistryObject::getFluidType, fluidRegistryObject::getStillFluid,
-              fluidRegistryObject::getFlowingFluid).bucket(fluidRegistryObject::getBucket).block(fluidRegistryObject::getBlock);
-        //Update the references to objects that are retrieved from the deferred registers
-        fluidRegistryObject.updateFluidType(fluidTypeRegister.register(name, () -> fluidTypeCreator.apply(properties, renderProperties)));
-        fluidRegistryObject.updateStill(fluidRegister.register(name, () -> new Source(fluidProperties)));
-        fluidRegistryObject.updateFlowing(fluidRegister.register(flowingName, () -> new Flowing(fluidProperties)));
-        fluidRegistryObject.updateBucket(itemRegister.register(bucketName, () -> bucketCreator.create(fluidRegistryObject::getStillFluid,
-              new Item.Properties().stacksTo(1).craftRemainder(Items.BUCKET))));
+          BiFunction<FluidType.Properties, FluidTypeRenderProperties, MekanismFluidType> fluidTypeCreator) {
+        DeferredHolder<FluidType, MekanismFluidType> fluidType = fluidTypeRegister.register(name, rl -> {
+            //Set the translation string to the same as the block (we rely on the implementation detail that we make our fluid type's name is the same as the block's)
+            properties.descriptionId(Util.makeDescriptionId("block", rl));
+            return fluidTypeCreator.apply(properties, renderProperties);
+        });
+
+        //TODO: Ideally we wouldn't have to create holders for these suppliers and instead could just somehow use the actual registered ones
+        ResourceLocation baseKey = ResourceLocation.fromNamespaceAndPath(fluidRegister.getNamespace(), name);
+        BaseFlowingFluid.Properties fluidProperties = new BaseFlowingFluid.Properties(
+              fluidType,
+              DeferredHolder.create(Registries.FLUID, baseKey),
+              DeferredHolder.create(Registries.FLUID, baseKey.withPrefix("flowing_"))
+        ).bucket(DeferredHolder.create(Registries.ITEM, baseKey.withSuffix("_bucket")))
+              .block(DeferredHolder.create(Registries.BLOCK, baseKey));
+
+        DeferredHolder<Fluid, Source> stillFluid = fluidRegister.register(name, () -> new Source(fluidProperties));
+        DeferredHolder<Fluid, Flowing> flowingFluid = fluidRegister.register("flowing_" + name, () -> new Flowing(fluidProperties));
+        ItemRegistryObject<BUCKET> bucket = itemRegister.register(name + "_bucket", () -> bucketCreator.create(stillFluid.get(), new Item.Properties().stacksTo(1).craftRemainder(Items.BUCKET)));
         MapColor color = getClosestColor(renderProperties.color);
         //Note: The block properties used here is a copy of the ones for water
-        fluidRegistryObject.updateBlock(blockRegister.register(name, () -> new LiquidBlock(fluidRegistryObject::getStillFluid, BlockBehaviour.Properties.of()
-              .noCollission().strength(100.0F).noLootTable().replaceable().pushReaction(PushReaction.DESTROY).liquid().mapColor(color))));
-        allFluids.add(fluidRegistryObject);
-        return fluidRegistryObject;
+        DeferredHolder<Block, LiquidBlock> block = blockRegister.register(name, () -> new LiquidBlock(stillFluid.get(), BlockBehaviour.Properties.of()
+              .noCollission().strength(100.0F).noLootTable().replaceable().pushReaction(PushReaction.DESTROY).liquid().mapColor(color)));
+        return new FluidRegistryObject<>(fluidType, stillFluid, flowingFluid, bucket, block);
     }
 
-    private static MapColor getClosestColor(int tint) {
+    public static MapColor getClosestColor(int tint) {
         if (tint == 0xFFFFFFFF) {
             return MapColor.NONE;
         }
@@ -186,20 +180,32 @@ public class FluidDeferredRegister {
         itemRegister.register(bus);
     }
 
-    public List<FluidRegistryObject<? extends MekanismFluidType, ?, ?, ?, ?>> getAllFluids() {
-        return Collections.unmodifiableList(allFluids);
+    public Collection<DeferredHolder<FluidType, ? extends FluidType>> getFluidTypeEntries() {
+        return fluidTypeRegister.getEntries();
+    }
+
+    public Collection<DeferredHolder<Fluid, ? extends Fluid>> getFluidEntries() {
+        return fluidRegister.getEntries();
+    }
+
+    public Collection<DeferredHolder<Block, ? extends Block>> getBlockEntries() {
+        return blockRegister.getEntries();
+    }
+
+    public Collection<DeferredHolder<Item, ? extends Item>> getBucketEntries() {
+        return itemRegister.getEntries();
     }
 
     public void registerBucketDispenserBehavior() {
-        for (FluidRegistryObject<?, ?, ?, ?, ?> fluidRO : getAllFluids()) {
-            DispenserBlock.registerBehavior(fluidRO.getBucket(), BUCKET_DISPENSE_BEHAVIOR);
+        for (Holder<Item> bucket : getBucketEntries()) {
+            DispenserBlock.registerBehavior(bucket.value(), BUCKET_DISPENSE_BEHAVIOR);
         }
     }
 
     @FunctionalInterface
     public interface BucketCreator<BUCKET extends BucketItem> {
 
-        BUCKET create(Supplier<? extends Fluid> supplier, Properties builder);
+        BUCKET create(Fluid fluid, Properties builder);
     }
 
     public static class FluidTypeRenderProperties {
@@ -248,7 +254,7 @@ public class FluidDeferredRegister {
         public final ResourceLocation flowingTexture;
         public final ResourceLocation overlayTexture;
         public final ResourceLocation renderOverlayTexture;
-        private final int color;
+        public final int color;
 
         public MekanismFluidType(FluidType.Properties properties, FluidTypeRenderProperties renderProperties) {
             super(properties);
@@ -263,37 +269,6 @@ public class FluidDeferredRegister {
         public boolean isVaporizedOnPlacement(Level level, BlockPos pos, FluidStack stack) {
             //TODO - 1.19: Decide on this for our fluids for now default to not vaporizing
             return false;
-        }
-
-        @Override
-        public void initializeClient(Consumer<IClientFluidTypeExtensions> consumer) {
-            consumer.accept(new IClientFluidTypeExtensions() {
-                @Override
-                public ResourceLocation getStillTexture() {
-                    return stillTexture;
-                }
-
-                @Override
-                public ResourceLocation getFlowingTexture() {
-                    return flowingTexture;
-                }
-
-                @Override
-                public ResourceLocation getOverlayTexture() {
-                    return overlayTexture;
-                }
-
-                @Nullable
-                @Override
-                public ResourceLocation getRenderOverlayTexture(Minecraft mc) {
-                    return renderOverlayTexture;
-                }
-
-                @Override
-                public int getTintColor() {
-                    return color;
-                }
-            });
         }
     }
 }

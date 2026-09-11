@@ -1,7 +1,7 @@
 package mekanism.common.tile.machine;
 
 import mekanism.api.IContentsListener;
-import mekanism.api.NBTConstants;
+import mekanism.api.SerializationConstants;
 import mekanism.api.heat.HeatAPI.HeatTransfer;
 import mekanism.common.capabilities.heat.BasicHeatCapacitor;
 import mekanism.common.capabilities.heat.CachedAmbientTemperature;
@@ -21,12 +21,16 @@ import mekanism.common.inventory.slot.FuelInventorySlot;
 import mekanism.common.registries.MekanismBlocks;
 import mekanism.common.tile.base.TileEntityMekanism;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.common.ForgeHooks;
 import org.jetbrains.annotations.NotNull;
 
 public class TileEntityFuelwoodHeater extends TileEntityMekanism {
+
+    public static final double HEAT_CAPACITY = 100;
+    public static final double INVERSE_CONDUCTION_COEFFICIENT = 5;
+    public static final double INVERSE_INSULATION_COEFFICIENT = 10;
 
     public int burnTime;
     public int maxBurnTime;
@@ -46,22 +50,22 @@ public class TileEntityFuelwoodHeater extends TileEntityMekanism {
     @NotNull
     @Override
     protected IInventorySlotHolder getInitialInventory(IContentsListener listener) {
-        InventorySlotHelper builder = InventorySlotHelper.forSide(this::getDirection);
-        builder.addSlot(fuelSlot = FuelInventorySlot.forFuel(stack -> ForgeHooks.getBurnTime(stack, null), listener, 15, 29));
+        InventorySlotHelper builder = InventorySlotHelper.forSide(facingSupplier);
+        builder.addSlot(fuelSlot = FuelInventorySlot.forFuel(stack -> stack.getBurnTime(null), listener, 15, 29));
         return builder.build();
     }
 
     @NotNull
     @Override
     protected IHeatCapacitorHolder getInitialHeatCapacitors(IContentsListener listener, CachedAmbientTemperature ambientTemperature) {
-        HeatCapacitorHelper builder = HeatCapacitorHelper.forSide(this::getDirection);
-        builder.addCapacitor(heatCapacitor = BasicHeatCapacitor.create(100, 5, 10, ambientTemperature, listener));
+        HeatCapacitorHelper builder = HeatCapacitorHelper.forSide(facingSupplier);
+        builder.addCapacitor(heatCapacitor = BasicHeatCapacitor.create(HEAT_CAPACITY, INVERSE_CONDUCTION_COEFFICIENT, INVERSE_INSULATION_COEFFICIENT, ambientTemperature, listener));
         return builder.build();
     }
 
     @Override
-    protected void onUpdateServer() {
-        super.onUpdateServer();
+    protected boolean onUpdateServer() {
+        boolean sendUpdatePacket = super.onUpdateServer();
         if (burnTime == 0) {
             maxBurnTime = burnTime = fuelSlot.burn();
         }
@@ -76,6 +80,7 @@ public class TileEntityFuelwoodHeater extends TileEntityMekanism {
         HeatTransfer loss = simulate();
         lastEnvironmentLoss = loss.environmentTransfer();
         lastTransferLoss = loss.adjacentTransfer();
+        return sendUpdatePacket;
     }
 
     @ComputerMethod(nameOverride = "getTransferLoss")
@@ -89,17 +94,17 @@ public class TileEntityFuelwoodHeater extends TileEntityMekanism {
     }
 
     @Override
-    public void load(@NotNull CompoundTag nbt) {
-        super.load(nbt);
-        burnTime = nbt.getInt(NBTConstants.BURN_TIME);
-        maxBurnTime = nbt.getInt(NBTConstants.MAX_BURN_TIME);
+    public void loadAdditional(@NotNull CompoundTag nbt, @NotNull HolderLookup.Provider provider) {
+        super.loadAdditional(nbt, provider);
+        burnTime = nbt.getInt(SerializationConstants.BURN_TIME);
+        maxBurnTime = nbt.getInt(SerializationConstants.MAX_BURN_TIME);
     }
 
     @Override
-    public void saveAdditional(@NotNull CompoundTag nbtTags) {
-        super.saveAdditional(nbtTags);
-        nbtTags.putInt(NBTConstants.BURN_TIME, burnTime);
-        nbtTags.putInt(NBTConstants.MAX_BURN_TIME, maxBurnTime);
+    public void saveAdditional(@NotNull CompoundTag nbtTags, @NotNull HolderLookup.Provider provider) {
+        super.saveAdditional(nbtTags, provider);
+        nbtTags.putInt(SerializationConstants.BURN_TIME, burnTime);
+        nbtTags.putInt(SerializationConstants.MAX_BURN_TIME, maxBurnTime);
     }
 
     @Override

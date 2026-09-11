@@ -1,40 +1,66 @@
 package mekanism.common.integration.lookingat.jade;
 
-import com.mojang.blaze3d.vertex.PoseStack;
-import mekanism.api.NBTConstants;
-import mekanism.api.chemical.ChemicalStack;
-import mekanism.api.chemical.gas.GasStack;
-import mekanism.api.chemical.infuse.InfusionStack;
-import mekanism.api.chemical.pigment.PigmentStack;
-import mekanism.api.chemical.slurry.SlurryStack;
-import mekanism.api.math.FloatingLong;
+import com.mojang.datafixers.util.Either;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
+import com.mojang.serialization.MapCodec;
+import java.util.Optional;
+import java.util.function.Function;
+import mekanism.api.SerializationConstants;
+import mekanism.client.render.IFancyFontRenderer.TextAlignment;
 import mekanism.common.integration.lookingat.ChemicalElement;
 import mekanism.common.integration.lookingat.EnergyElement;
 import mekanism.common.integration.lookingat.FluidElement;
+import mekanism.common.integration.lookingat.ILookingAtElement;
 import mekanism.common.integration.lookingat.LookingAtElement;
-import mekanism.common.integration.lookingat.LookingAtUtils;
-import net.minecraft.client.Minecraft;
+import mekanism.common.integration.lookingat.TextElement;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec2;
-import net.minecraftforge.fluids.FluidStack;
+import net.neoforged.neoforge.common.util.NeoForgeExtraCodecs;
 import org.jetbrains.annotations.Nullable;
 import snownee.jade.api.Accessor;
-import snownee.jade.api.BlockAccessor;
-import snownee.jade.api.EntityAccessor;
-import snownee.jade.api.IBlockComponentProvider;
-import snownee.jade.api.IEntityComponentProvider;
+import snownee.jade.api.IComponentProvider;
 import snownee.jade.api.ITooltip;
 import snownee.jade.api.config.IPluginConfig;
 import snownee.jade.api.ui.Element;
 
-public class JadeTooltipRenderer implements IBlockComponentProvider, IEntityComponentProvider {
+public class JadeTooltipRenderer<ACCESSOR extends Accessor<?>> implements IComponentProvider<ACCESSOR> {
 
-    static final JadeTooltipRenderer INSTANCE = new JadeTooltipRenderer();
+    static final JadeTooltipRenderer<?> INSTANCE = new JadeTooltipRenderer<>();
+
+    private static <B, L extends B, R extends B> MapCodec<B> alternativeElement(MapCodec<L> leftBase, MapCodec<R> rightBase,
+          final Function<? super B, ? extends DataResult<? extends Either<L, R>>> from) {
+        MapCodec<Either<L, R>> base = Codec.mapEither(leftBase, rightBase);
+        return Codec.of(base.flatComap(from), base.map(Either::unwrap), () -> base + "[flatComapMapped]");
+    }
+
+    private static final MapCodec<ILookingAtElement> FLUID_OR_CHEMICAL_CODEC = alternativeElement(
+          FluidElement.CODEC,
+          ChemicalElement.CODEC,
+          (ILookingAtElement element) -> switch (element) {
+              case FluidElement fluidElement -> DataResult.success(Either.left(fluidElement));
+              case ChemicalElement chemicalElement -> DataResult.success(Either.right(chemicalElement));
+              default -> DataResult.error(() -> "Unknown Element Type, expected either fluid or chemical");
+          }
+    );
+    private static final MapCodec<ILookingAtElement> ENERGY_OR_TEXT_CODEC = alternativeElement(
+          EnergyElement.CODEC,
+          TextElement.CODEC,
+          (ILookingAtElement element) -> switch (element) {
+              case EnergyElement energyElement -> DataResult.success(Either.left(energyElement));
+              case TextElement textElement -> DataResult.success(Either.right(textElement));
+              default -> DataResult.error(() -> "Unknown Element Type, expected either energy or text");
+          }
+    );
+    static final Codec<ILookingAtElement> ELEMENT_CODEC = NeoForgeExtraCodecs.withAlternative(FLUID_OR_CHEMICAL_CODEC, ENERGY_OR_TEXT_CODEC).codec();
 
     @Override
     public ResourceLocation getUid() {
@@ -42,68 +68,33 @@ public class JadeTooltipRenderer implements IBlockComponentProvider, IEntityComp
     }
 
     @Override
-    public void appendTooltip(ITooltip tooltip, EntityAccessor accessor, IPluginConfig config) {
-        append(tooltip, accessor, config);
-    }
-
-    @Override
-    public void appendTooltip(ITooltip tooltip, BlockAccessor accessor, IPluginConfig config) {
-        append(tooltip, accessor, config);
-    }
-
-    private void append(ITooltip tooltip, Accessor<?> accessor, IPluginConfig config) {
+    public void appendTooltip(ITooltip tooltip, ACCESSOR accessor, IPluginConfig config) {
         CompoundTag data = accessor.getServerData();
-        if (data.contains(NBTConstants.MEK_DATA, Tag.TAG_LIST)) {
+        if (data.contains(SerializationConstants.MEK_DATA, Tag.TAG_LIST)) {
             Component lastText = null;
+            RegistryOps<Tag> registryOps = accessor.getLevel().registryAccess().createSerializationContext(NbtOps.INSTANCE);
             //Copy the data we need and have from the server and pass it on to the tooltip rendering
-            ListTag list = data.getList(NBTConstants.MEK_DATA, Tag.TAG_COMPOUND);
+            ListTag list = data.getList(SerializationConstants.MEK_DATA, Tag.TAG_COMPOUND);
             for (int i = 0; i < list.size(); i++) {
                 CompoundTag elementData = list.getCompound(i);
-                LookingAtElement element;
-                ResourceLocation name;
-                if (elementData.contains(JadeLookingAtHelper.TEXT, Tag.TAG_STRING)) {
-                    Component text = Component.Serializer.fromJson(elementData.getString(JadeLookingAtHelper.TEXT));
-                    if (text != null) {
-                        if (lastText != null) {
-                            //Fallback to printing the last text
-                            tooltip.add(lastText);
-                        }
-                        lastText = text;
-                    }
-                    continue;
-                } else if (elementData.contains(NBTConstants.ENERGY_STORED, Tag.TAG_STRING)) {
-                    element = new EnergyElement(FloatingLong.parseFloatingLong(elementData.getString(NBTConstants.ENERGY_STORED), true),
-                          FloatingLong.parseFloatingLong(elementData.getString(NBTConstants.MAX), true));
-                    name = LookingAtUtils.ENERGY;
-                } else if (elementData.contains(NBTConstants.FLUID_STORED, Tag.TAG_COMPOUND)) {
-                    element = new FluidElement(FluidStack.loadFluidStackFromNBT(elementData.getCompound(NBTConstants.FLUID_STORED)), elementData.getInt(NBTConstants.MAX));
-                    name = LookingAtUtils.FLUID;
-                } else if (elementData.contains(JadeLookingAtHelper.CHEMICAL_STACK, Tag.TAG_COMPOUND)) {
-                    ChemicalStack<?> chemicalStack;
-                    CompoundTag chemicalData = elementData.getCompound(JadeLookingAtHelper.CHEMICAL_STACK);
-                    if (chemicalData.contains(NBTConstants.GAS_NAME, Tag.TAG_STRING)) {
-                        chemicalStack = GasStack.readFromNBT(chemicalData);
-                        name = LookingAtUtils.GAS;
-                    } else if (chemicalData.contains(NBTConstants.INFUSE_TYPE_NAME, Tag.TAG_STRING)) {
-                        chemicalStack = InfusionStack.readFromNBT(chemicalData);
-                        name = LookingAtUtils.INFUSE_TYPE;
-                    } else if (chemicalData.contains(NBTConstants.PIGMENT_NAME, Tag.TAG_STRING)) {
-                        chemicalStack = PigmentStack.readFromNBT(chemicalData);
-                        name = LookingAtUtils.PIGMENT;
-                    } else if (chemicalData.contains(NBTConstants.SLURRY_NAME, Tag.TAG_STRING)) {
-                        chemicalStack = SlurryStack.readFromNBT(chemicalData);
-                        name = LookingAtUtils.SLURRY;
-                    } else {//Unknown chemical
-                        continue;
-                    }
-                    element = new ChemicalElement(chemicalStack, elementData.getLong(NBTConstants.MAX));
-                } else {//Skip, unknown
+                Optional<ILookingAtElement> lookingAtElement = ELEMENT_CODEC.parse(registryOps, elementData).result();
+                if (lookingAtElement.isEmpty()) {
+                    //Error deserializing, skip it
                     continue;
                 }
-                if (config.get(name)) {
-                    tooltip.add(new MekElement(lastText, element).tag(name));
+                ILookingAtElement element = lookingAtElement.get();
+                if (element instanceof TextElement(Component text)) {
+                    if (lastText != null) {//Fallback to printing the last text
+                        tooltip.add(lastText);
+                    }
+                    lastText = text;
+                } else {
+                    ResourceLocation name = element.getID();
+                    if (config.get(name)) {
+                        tooltip.add(new MekElement(lastText, (LookingAtElement) element).tag(name));
+                    }
+                    lastText = null;
                 }
-                lastText = null;
             }
             if (lastText != null) {
                 tooltip.add(lastText);
@@ -134,16 +125,14 @@ public class JadeTooltipRenderer implements IBlockComponentProvider, IEntityComp
         }
 
         @Override
-        public void render(GuiGraphics guiGraphics, float x, float y, float maxX, float maxY) {
+        public void render(GuiGraphics guiGraphics, float rawX, float rawY, float maxX, float maxY) {
+            int x = Mth.floor(rawX);
+            int y = Mth.floor(rawY);
             if (text != null) {
-                LookingAtElement.renderScaledText(Minecraft.getInstance(), guiGraphics, x + 4, y + 3, 0xFFFFFF, 92, text);
+                element.drawScrollingString(guiGraphics, text, x,y + 3, TextAlignment.LEFT, 0xFFFFFF, 4, false);
                 y += 13;
             }
-            PoseStack pose = guiGraphics.pose();
-            pose.pushPose();
-            pose.translate(x, y, 0);
-            element.render(guiGraphics, 0, 1);
-            pose.popPose();
+            element.render(guiGraphics, x, y + 1);
         }
     }
 }

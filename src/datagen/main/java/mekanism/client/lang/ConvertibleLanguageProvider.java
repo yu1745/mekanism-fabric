@@ -3,7 +3,7 @@ package mekanism.client.lang;
 import java.util.List;
 import mekanism.client.lang.FormatSplitter.Component;
 import net.minecraft.data.PackOutput;
-import net.minecraftforge.common.data.LanguageProvider;
+import net.neoforged.neoforge.common.data.LanguageProvider;
 
 public abstract class ConvertibleLanguageProvider extends LanguageProvider {
 
@@ -11,7 +11,7 @@ public abstract class ConvertibleLanguageProvider extends LanguageProvider {
         super(output, modid, locale);
     }
 
-    public abstract void convert(String key, List<Component> splitEnglish);
+    public abstract void convert(String key, String raw, List<Component> splitEnglish);
 
     @Override
     protected void addTranslations() {

@@ -1,20 +1,28 @@
 package mekanism.common.network.to_server;
 
+import io.netty.buffer.ByteBuf;
+import java.util.function.IntFunction;
 import mekanism.api.Upgrade;
 import mekanism.api.functions.TriConsumer;
+import mekanism.api.security.IBlockSecurityUtils;
+import mekanism.api.security.IEntitySecurityUtils;
 import mekanism.api.security.SecurityMode;
+import mekanism.common.Mekanism;
 import mekanism.common.content.filter.SortableFilterManager;
+import mekanism.common.entity.EntityRobit;
 import mekanism.common.inventory.container.MekanismContainer;
 import mekanism.common.inventory.container.entity.robit.MainRobitContainer;
+import mekanism.common.lib.inventory.IAdvancedTransportEjector;
+import mekanism.common.lib.security.SecurityUtils;
 import mekanism.common.network.IMekanismPacket;
 import mekanism.common.tile.TileEntityLogisticalSorter;
 import mekanism.common.tile.TileEntitySecurityDesk;
 import mekanism.common.tile.base.TileEntityMekanism;
+import mekanism.common.tile.component.TileComponentEjector;
 import mekanism.common.tile.factory.TileEntityFactory;
 import mekanism.common.tile.interfaces.IHasDumpButton;
 import mekanism.common.tile.interfaces.IHasGasMode;
 import mekanism.common.tile.interfaces.IHasMode;
-import mekanism.common.tile.interfaces.IRedstoneControl.RedstoneControl;
 import mekanism.common.tile.interfaces.ISideConfiguration;
 import mekanism.common.tile.interfaces.ITileFilterHolder;
 import mekanism.common.tile.interfaces.IUpgradeTile;
@@ -22,26 +30,56 @@ import mekanism.common.tile.laser.TileEntityLaserAmplifier;
 import mekanism.common.tile.machine.TileEntityDigitalMiner;
 import mekanism.common.tile.machine.TileEntityDimensionalStabilizer;
 import mekanism.common.tile.machine.TileEntityFormulaicAssemblicator;
+import mekanism.common.tile.qio.TileEntityQIODashboard;
 import mekanism.common.tile.qio.TileEntityQIOExporter;
 import mekanism.common.tile.qio.TileEntityQIOImporter;
 import mekanism.common.tile.qio.TileEntityQIORedstoneAdapter;
-import mekanism.common.util.SecurityUtils;
 import mekanism.common.util.TransporterUtils;
 import mekanism.common.util.WorldUtils;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.util.ByIdMap;
+import net.minecraft.util.ByIdMap.OutOfBoundsStrategy;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Used for informing the server that an action happened in a GUI
  */
 public class PacketGuiInteract implements IMekanismPacket {
 
-    private final Type interactionType;
+    public static final CustomPacketPayload.Type<PacketGuiInteract> TYPE = new CustomPacketPayload.Type<>(Mekanism.rl("gui_interact"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, PacketGuiInteract> STREAM_CODEC = InteractionType.STREAM_CODEC.<RegistryFriendlyByteBuf>cast()
+          .dispatch(packet -> packet.interactionType, type -> switch (type) {
+              case ENTITY -> StreamCodec.composite(
+                    GuiInteractionEntity.STREAM_CODEC, packet -> packet.entityInteraction,
+                    ByteBufCodecs.VAR_INT, packet -> packet.entityID,
+                    ByteBufCodecs.VAR_INT, packet -> packet.extra,
+                    PacketGuiInteract::new
+              );
+              case INT -> StreamCodec.composite(
+                    GuiInteraction.STREAM_CODEC, packet -> packet.interaction,
+                    BlockPos.STREAM_CODEC, packet -> packet.tilePosition,
+                    //TODO - 1.18?: Eventually we may want to try to make some form of this that can compact negatives better as well
+                    ByteBufCodecs.VAR_INT, packet -> packet.extra,
+                    PacketGuiInteract::new
+              );
+              case ITEM -> StreamCodec.composite(
+                    GuiInteractionItem.STREAM_CODEC, packet -> packet.itemInteraction,
+                    BlockPos.STREAM_CODEC, packet -> packet.tilePosition,
+                    ItemStack.OPTIONAL_STREAM_CODEC, packet -> packet.extraItem,
+                    PacketGuiInteract::new
+              );
+          });
+
+    private final InteractionType interactionType;
 
     private GuiInteraction interaction;
     private GuiInteractionItem itemInteraction;
@@ -60,7 +98,7 @@ public class PacketGuiInteract implements IMekanismPacket {
     }
 
     public PacketGuiInteract(GuiInteractionEntity interaction, int entityID, int extra) {
-        this.interactionType = Type.ENTITY;
+        this.interactionType = InteractionType.ENTITY;
         this.entityInteraction = interaction;
         this.entityID = entityID;
         this.extra = extra;
@@ -79,7 +117,7 @@ public class PacketGuiInteract implements IMekanismPacket {
     }
 
     public PacketGuiInteract(GuiInteraction interaction, BlockPos tilePosition, int extra) {
-        this.interactionType = Type.INT;
+        this.interactionType = InteractionType.INT;
         this.interaction = interaction;
         this.tilePosition = tilePosition;
         this.extra = extra;
@@ -90,63 +128,36 @@ public class PacketGuiInteract implements IMekanismPacket {
     }
 
     public PacketGuiInteract(GuiInteractionItem interaction, BlockPos tilePosition, ItemStack stack) {
-        this.interactionType = Type.ITEM;
+        this.interactionType = InteractionType.ITEM;
         this.itemInteraction = interaction;
         this.tilePosition = tilePosition;
         this.extraItem = stack;
     }
 
+    @NotNull
     @Override
-    public void handle(NetworkEvent.Context context) {
-        Player player = context.getSender();
-        if (player != null) {
-            if (interactionType == Type.ENTITY) {
-                Entity entity = player.level().getEntity(entityID);
-                if (entity != null) {
-                    entityInteraction.consume(entity, player, extra);
-                }
-            } else {
-                TileEntityMekanism tile = WorldUtils.getTileEntity(TileEntityMekanism.class, player.level(), tilePosition);
-                if (tile != null) {
-                    if (interactionType == Type.INT) {
-                        interaction.consume(tile, player, extra);
-                    } else if (interactionType == Type.ITEM) {
-                        itemInteraction.consume(tile, player, extraItem);
-                    }
-                }
-            }
-        }
+    public CustomPacketPayload.Type<PacketGuiInteract> type() {
+        return TYPE;
     }
 
     @Override
-    public void encode(FriendlyByteBuf buffer) {
-        buffer.writeEnum(interactionType);
-        switch (interactionType) {
-            case ENTITY -> {
-                buffer.writeEnum(entityInteraction);
-                buffer.writeVarInt(entityID);
-                buffer.writeVarInt(extra);
+    public void handle(IPayloadContext context) {
+        Player player = context.player();
+        if (interactionType == InteractionType.ENTITY) {
+            Entity entity = player.level().getEntity(entityID);
+            if (entity != null) {
+                entityInteraction.consume(entity, player, extra);
             }
-            case INT -> {
-                buffer.writeEnum(interaction);
-                buffer.writeBlockPos(tilePosition);
-                //TODO - 1.18?: Eventually we may want to try to make some form of this that can compact negatives better as well
-                buffer.writeVarInt(extra);
-            }
-            case ITEM -> {
-                buffer.writeEnum(itemInteraction);
-                buffer.writeBlockPos(tilePosition);
-                buffer.writeItem(extraItem);
+        } else {
+            TileEntityMekanism tile = WorldUtils.getTileEntity(TileEntityMekanism.class, player.level(), tilePosition);
+            if (tile != null) {
+                if (interactionType == InteractionType.INT) {
+                    interaction.consume(tile, player, extra);
+                } else if (interactionType == InteractionType.ITEM) {
+                    itemInteraction.consume(tile, player, extraItem);
+                }
             }
         }
-    }
-
-    public static PacketGuiInteract decode(FriendlyByteBuf buffer) {
-        return switch (buffer.readEnum(Type.class)) {
-            case ENTITY -> new PacketGuiInteract(buffer.readEnum(GuiInteractionEntity.class), buffer.readVarInt(), buffer.readVarInt());
-            case INT -> new PacketGuiInteract(buffer.readEnum(GuiInteraction.class), buffer.readBlockPos(), buffer.readVarInt());
-            case ITEM -> new PacketGuiInteract(buffer.readEnum(GuiInteractionItem.class), buffer.readBlockPos(), buffer.readItem());
-        };
     }
 
     public enum GuiInteractionItem {
@@ -160,6 +171,9 @@ public class PacketGuiInteract implements IMekanismPacket {
                 redstoneAdapter.handleStackChange(stack);
             }
         });
+
+        public static final IntFunction<GuiInteractionItem> BY_ID = ByIdMap.continuous(GuiInteractionItem::ordinal, values(), OutOfBoundsStrategy.WRAP);
+        public static final StreamCodec<ByteBuf, GuiInteractionItem> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, GuiInteractionItem::ordinal);
 
         private final TriConsumer<TileEntityMekanism, Player, ItemStack> consumerForTile;
 
@@ -190,7 +204,7 @@ public class PacketGuiInteract implements IMekanismPacket {
         }),
         CONTAINER_TRACK_UPGRADES((tile, player, extra) -> {
             if (player.containerMenu instanceof MekanismContainer container) {//tile instanceof IUpgradeTile
-                container.startTrackingServer(extra, ((IUpgradeTile) tile).getComponent());
+                container.startTrackingServer(extra, tile.getComponent());
             }
         }),
         QIO_REDSTONE_ADAPTER_COUNT((tile, player, extra) -> {
@@ -216,6 +230,11 @@ public class PacketGuiInteract implements IMekanismPacket {
         AUTO_SORT_BUTTON((tile, player, extra) -> {
             if (tile instanceof TileEntityFactory<?> factory) {
                 factory.toggleSorting();
+            }
+        }),
+        TARGET_DIRECTION_BUTTON((tile, player, extra) -> {
+            if (tile instanceof TileEntityQIODashboard dashboard) {
+                dashboard.toggleShiftClickDirection();
             }
         }),
         DUMP_BUTTON((tile, player, extra) -> {
@@ -244,6 +263,8 @@ public class PacketGuiInteract implements IMekanismPacket {
         INVERSE_BUTTON((tile, player, extra) -> {
             if (tile instanceof TileEntityDigitalMiner miner) {
                 miner.toggleInverse();
+            } else if (tile instanceof TileEntityQIORedstoneAdapter adapter) {
+                adapter.invertSignal();
             }
         }),
         INVERSE_REQUIRES_REPLACEMENT_BUTTON((tile, player, extra) -> {
@@ -315,21 +336,29 @@ public class PacketGuiInteract implements IMekanismPacket {
 
         REMOVE_UPGRADE((tile, player, extra) -> {
             if (tile.supportsUpgrades()) {
-                tile.getComponent().removeUpgrade(Upgrade.byIndexStatic(extra), false);
+                tile.getComponent().removeUpgrade(Upgrade.BY_ID.apply(extra), false);
             }
         }),
         REMOVE_ALL_UPGRADE((tile, player, extra) -> {
             if (tile.supportsUpgrades()) {
-                tile.getComponent().removeUpgrade(Upgrade.byIndexStatic(extra), true);
+                tile.getComponent().removeUpgrade(Upgrade.BY_ID.apply(extra), true);
             }
         }),
 
-        NEXT_SECURITY_MODE((tile, player, extra) -> SecurityUtils.get().incrementSecurityMode(player, tile)),
-        PREVIOUS_SECURITY_MODE((tile, player, extra) -> SecurityUtils.get().decrementSecurityMode(player, tile)),
+        NEXT_SECURITY_MODE((tile, player, extra) -> {
+            if (tile.getLevel() != null) {
+                SecurityUtils.get().incrementSecurityMode(player, IBlockSecurityUtils.INSTANCE.securityCapability(tile.getLevel(), tile.getBlockPos(), tile));
+            }
+        }),
+        PREVIOUS_SECURITY_MODE((tile, player, extra) -> {
+            if (tile.getLevel() != null) {
+                SecurityUtils.get().decrementSecurityMode(player, IBlockSecurityUtils.INSTANCE.securityCapability(tile.getLevel(), tile.getBlockPos(), tile));
+            }
+        }),
 
         SECURITY_DESK_MODE((tile, player, extra) -> {
             if (tile instanceof TileEntitySecurityDesk desk) {
-                desk.setSecurityDeskMode(SecurityMode.byIndexStatic(extra));
+                desk.setSecurityDeskMode(SecurityMode.BY_ID.apply(extra));
             }
         }),
 
@@ -343,8 +372,8 @@ public class PacketGuiInteract implements IMekanismPacket {
                 hasMode.previousMode();
             }
         }),
-        NEXT_REDSTONE_CONTROL((tile, player, extra) -> tile.setControlType(tile.getControlType().getNext(mode -> mode != RedstoneControl.PULSE || tile.canPulse()))),
-        PREVIOUS_REDSTONE_CONTROL((tile, player, extra) -> tile.setControlType(tile.getControlType().getPrevious(mode -> mode != RedstoneControl.PULSE || tile.canPulse()))),
+        NEXT_REDSTONE_CONTROL((tile, player, extra) -> tile.setControlType(tile.getControlType().getNext(tile::supportsMode))),
+        PREVIOUS_REDSTONE_CONTROL((tile, player, extra) -> tile.setControlType(tile.getControlType().getPrevious(tile::supportsMode))),
         ENCODE_FORMULA((tile, player, extra) -> {
             if (tile instanceof TileEntityFormulaicAssemblicator assemblicator) {
                 assemblicator.encodeFormula();
@@ -376,8 +405,15 @@ public class PacketGuiInteract implements IMekanismPacket {
             }
         }),
 
+        STRICT_INPUT((tile, player, extra) -> {
+            if (tile instanceof ISideConfiguration sideConfiguration) {
+                TileComponentEjector ejector = sideConfiguration.getEjector();
+                ejector.setStrictInput(!ejector.hasStrictInput());
+            }
+        }),
+
         ROUND_ROBIN_BUTTON((tile, player, extra) -> {
-            if (tile instanceof TileEntityLogisticalSorter sorter) {
+            if (tile instanceof IAdvancedTransportEjector sorter) {
                 sorter.toggleRoundRobin();
             }
         }),
@@ -425,6 +461,9 @@ public class PacketGuiInteract implements IMekanismPacket {
             }
         });
 
+        public static final IntFunction<GuiInteraction> BY_ID = ByIdMap.continuous(GuiInteraction::ordinal, values(), OutOfBoundsStrategy.WRAP);
+        public static final StreamCodec<ByteBuf, GuiInteraction> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, GuiInteraction::ordinal);
+
         private final TriConsumer<TileEntityMekanism, Player, Integer> consumerForTile;
 
         GuiInteraction(TriConsumer<TileEntityMekanism, Player, Integer> consumerForTile) {
@@ -437,8 +476,8 @@ public class PacketGuiInteract implements IMekanismPacket {
     }
 
     public enum GuiInteractionEntity {
-        NEXT_SECURITY_MODE((entity, player, extra) -> SecurityUtils.get().incrementSecurityMode(player, entity)),
-        PREVIOUS_SECURITY_MODE((entity, player, extra) -> SecurityUtils.get().decrementSecurityMode(player, entity)),
+        NEXT_SECURITY_MODE((entity, player, extra) -> SecurityUtils.get().incrementSecurityMode(player, IEntitySecurityUtils.INSTANCE.securityCapability(entity))),
+        PREVIOUS_SECURITY_MODE((entity, player, extra) -> SecurityUtils.get().decrementSecurityMode(player, IEntitySecurityUtils.INSTANCE.securityCapability(entity))),
         CONTAINER_STOP_TRACKING((entity, player, extra) -> {
             if (player.containerMenu instanceof MekanismContainer container) {
                 container.stopTracking(extra);
@@ -449,7 +488,26 @@ public class PacketGuiInteract implements IMekanismPacket {
                 container.startTrackingServer(extra, container);
             }
         }),
+
+        GO_HOME((entity, player, extra) -> {
+            if (entity instanceof EntityRobit robit && IEntitySecurityUtils.INSTANCE.canAccess(player, robit)) {
+                robit.goHome();
+            }
+        }),
+        FOLLOW((entity, player, extra) -> {
+            if (entity instanceof EntityRobit robit && IEntitySecurityUtils.INSTANCE.canAccess(player, robit)) {
+                robit.setFollowing(!robit.getFollowing());
+            }
+        }),
+        PICKUP_DROPS((entity, player, extra) -> {
+            if (entity instanceof EntityRobit robit && IEntitySecurityUtils.INSTANCE.canAccess(player, robit)) {
+                robit.setDropPickup(!robit.getDropPickup());
+            }
+        }),
         ;
+
+        public static final IntFunction<GuiInteractionEntity> BY_ID = ByIdMap.continuous(GuiInteractionEntity::ordinal, values(), OutOfBoundsStrategy.WRAP);
+        public static final StreamCodec<ByteBuf, GuiInteractionEntity> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, GuiInteractionEntity::ordinal);
 
         private final TriConsumer<Entity, Player, Integer> consumerForEntity;
 
@@ -462,9 +520,12 @@ public class PacketGuiInteract implements IMekanismPacket {
         }
     }
 
-    private enum Type {
+    private enum InteractionType {
         ENTITY,
         ITEM,
         INT;
+
+        public static final IntFunction<InteractionType> BY_ID = ByIdMap.continuous(InteractionType::ordinal, values(), OutOfBoundsStrategy.WRAP);
+        public static final StreamCodec<ByteBuf, InteractionType> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, InteractionType::ordinal);
     }
 }

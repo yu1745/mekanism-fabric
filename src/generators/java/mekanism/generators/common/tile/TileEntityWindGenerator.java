@@ -3,8 +3,9 @@ package mekanism.generators.common.tile;
 import mekanism.api.Action;
 import mekanism.api.AutomationType;
 import mekanism.api.IContentsListener;
+import mekanism.api.MekanismAPITags;
 import mekanism.api.RelativeSide;
-import mekanism.api.math.FloatingLong;
+import mekanism.api.math.MathUtils;
 import mekanism.common.capabilities.holder.slot.IInventorySlotHolder;
 import mekanism.common.capabilities.holder.slot.InventorySlotHelper;
 import mekanism.common.integration.computer.SpecialComputerMethodWrapper.ComputerIInventorySlotWrapper;
@@ -12,26 +13,25 @@ import mekanism.common.integration.computer.annotation.ComputerMethod;
 import mekanism.common.integration.computer.annotation.WrappingComputerMethod;
 import mekanism.common.inventory.container.MekanismContainer;
 import mekanism.common.inventory.container.sync.SyncableBoolean;
-import mekanism.common.inventory.container.sync.SyncableFloatingLong;
+import mekanism.common.inventory.container.sync.SyncableDouble;
 import mekanism.common.inventory.slot.EnergyInventorySlot;
 import mekanism.common.tile.interfaces.IBoundingBlock;
-import mekanism.common.util.MekanismUtils;
 import mekanism.generators.common.config.MekanismGeneratorsConfig;
 import mekanism.generators.common.registries.GeneratorsBlocks;
+import net.minecraft.SharedConstants;
 import net.minecraft.core.BlockPos;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.AABB;
 import org.jetbrains.annotations.NotNull;
 
 public class TileEntityWindGenerator extends TileEntityGenerator implements IBoundingBlock {
 
-    public static final float SPEED = 32F;
-    public static final float SPEED_SCALED = 256F / SPEED;
+    private static final float SPEED = 32F;
+    private static final RelativeSide[] ENERGY_SIDES = {RelativeSide.FRONT, RelativeSide.BOTTOM};
 
-    private double angle;
-    private FloatingLong currentMultiplier = FloatingLong.ZERO;
+    private float angle;
+    private double currentMultiplier = 0;
     private boolean isBlacklistDimension;
     @WrappingComputerMethod(wrapper = ComputerIInventorySlotWrapper.class, methodNames = "getEnergyItem", docPlaceholder = "energy item slot")
     EnergyInventorySlot energySlot;
@@ -43,62 +43,83 @@ public class TileEntityWindGenerator extends TileEntityGenerator implements IBou
     @NotNull
     @Override
     protected IInventorySlotHolder getInitialInventory(IContentsListener listener) {
-        InventorySlotHelper builder = InventorySlotHelper.forSide(this::getDirection);
+        InventorySlotHelper builder = InventorySlotHelper.forSide(facingSupplier);
         builder.addSlot(energySlot = EnergyInventorySlot.drain(getEnergyContainer(), listener, 143, 35));
         return builder.build();
     }
 
     @Override
     protected RelativeSide[] getEnergySides() {
-        return new RelativeSide[]{RelativeSide.FRONT, RelativeSide.BOTTOM};
+        return ENERGY_SIDES;
     }
 
     @Override
-    protected void onUpdateServer() {
-        super.onUpdateServer();
+    protected boolean onUpdateServer() {
+        boolean sendUpdatePacket = super.onUpdateServer();
         energySlot.drainContainer();
         // If we're in a blacklisted dimension, there's nothing more to do
         if (isBlacklistDimension) {
-            return;
+            return sendUpdatePacket;
         }
-        if (ticker % 20 == 0) {
+        if (ticker % SharedConstants.TICKS_PER_SECOND == 0) {
             // Recalculate the current multiplier once a second
             currentMultiplier = getMultiplier();
-            setActive(MekanismUtils.canFunction(this) && !currentMultiplier.isZero());
+            setActive(canFunction() && currentMultiplier != 0L);
         }
-        if (!currentMultiplier.isZero() && MekanismUtils.canFunction(this) && !getEnergyContainer().getNeeded().isZero()) {
-            getEnergyContainer().insert(MekanismGeneratorsConfig.generators.windGenerationMin.get().multiply(currentMultiplier), Action.EXECUTE, AutomationType.INTERNAL);
+        if (currentMultiplier != 0L && canFunction() && getEnergyContainer().getNeeded() > 0L) {
+            getEnergyContainer().insert(getCurrentGeneration(), Action.EXECUTE, AutomationType.INTERNAL);
         }
+        return sendUpdatePacket;
+    }
+
+    public long getCurrentGeneration() {
+        return MathUtils.clampToLong(MekanismGeneratorsConfig.generators.windGenerationMin.get() * currentMultiplier);
     }
 
     @Override
     protected void onUpdateClient() {
         super.onUpdateClient();
         if (getActive()) {
-            angle = (angle + (getBlockPos().getY() + 4F) / SPEED_SCALED) % 360;
+            angle = (angle + getHeightSpeedRatio()) % 360;
         }
+    }
+
+    public float getHeightSpeedRatio() {
+        int height = getBlockPos().getY() + 4;
+        if (level == null) {
+            //Fallback to default values, but in general this is not going to happen
+            return SPEED * height / 384F;
+        }
+        //Shift so that a wind generator at the min build height acts as if it was at a height of zero
+        int minBuildHeight = level.getMinBuildHeight();
+        height -= minBuildHeight;
+        return SPEED * height / (level.getMaxBuildHeight() - minBuildHeight);
     }
 
     /**
      * Determines the current output multiplier, taking sky visibility and height into account.
      **/
-    private FloatingLong getMultiplier() {
+    private double getMultiplier() {
         if (level != null) {
             BlockPos top = getBlockPos().above(4);
+            //Validate it isn't fluid logged to help try and prevent https://github.com/mekanism/Mekanism/issues/7344
+            //Clamp the height limits as the logical bounds of the world
             if (level.getFluidState(top).isEmpty() && level.canSeeSky(top)) {
-                //Validate it isn't fluid logged to help try and prevent https://github.com/mekanism/Mekanism/issues/7344
-                //Clamp the height limits as the logical bounds of the world
-                int minY = Math.max(MekanismGeneratorsConfig.generators.windGenerationMinY.get(), level.getMinBuildHeight());
-                int maxY = Math.min(MekanismGeneratorsConfig.generators.windGenerationMaxY.get(), level.dimensionType().logicalHeight());
-                float clampedY = Math.min(maxY, Math.max(minY, top.getY()));
-                FloatingLong minG = MekanismGeneratorsConfig.generators.windGenerationMin.get();
-                FloatingLong maxG = MekanismGeneratorsConfig.generators.windGenerationMax.get();
-                FloatingLong slope = maxG.subtract(minG).divide(maxY - minY);
-                FloatingLong toGen = minG.add(slope.multiply(clampedY - minY));
-                return toGen.divide(minG);
+                int minBuildHeight = level.getMinBuildHeight();
+                //Based off of how PortalForcer#createPortal calculates
+                // The minus one is to handle that the max level height is treated as exclusive
+                int maxLevelHeight = Math.min(level.getMaxBuildHeight(), minBuildHeight + level.dimensionType().logicalHeight()) - 1;
+                int minY = Math.max(MekanismGeneratorsConfig.generators.windGenerationMinY.get(), minBuildHeight);
+                int maxY = Math.min(MekanismGeneratorsConfig.generators.windGenerationMaxY.get(), maxLevelHeight);
+                int clampedY = Math.min(maxY, Math.max(minY, top.getY()));
+                long minG = MekanismGeneratorsConfig.generators.windGenerationMin.get();
+                long maxG = MekanismGeneratorsConfig.generators.windGenerationMax.get();
+                double slope = ((double) (maxG - minG)) / (maxY - minY);
+                double toGen = minG + (slope * (clampedY - minY));
+                return (toGen / minG);
             }
         }
-        return FloatingLong.ZERO;
+        return 0L;
     }
 
     @Override
@@ -107,17 +128,17 @@ public class TileEntityWindGenerator extends TileEntityGenerator implements IBou
         // Check the blacklist and force an update if we're in the blacklist. Otherwise, we'll never send
         // an initial activity status and the client (in MP) will show the windmills turning while not
         // generating any power
-        isBlacklistDimension = MekanismGeneratorsConfig.generators.windGenerationDimBlacklist.get().contains(world.dimension().location());
+        isBlacklistDimension = world.dimensionTypeRegistration().is(MekanismAPITags.DimensionTypes.NO_WIND);
         if (isBlacklistDimension) {
             setActive(false);
         }
     }
 
-    public FloatingLong getCurrentMultiplier() {
+    public double getCurrentMultiplier() {
         return currentMultiplier;
     }
 
-    public double getAngle() {
+    public float getAngle() {
         return angle;
     }
 
@@ -139,21 +160,14 @@ public class TileEntityWindGenerator extends TileEntityGenerator implements IBou
     @Override
     public void addContainerTrackers(MekanismContainer container) {
         super.addContainerTrackers(container);
-        container.track(SyncableFloatingLong.create(this::getCurrentMultiplier, value -> currentMultiplier = value));
+        container.track(SyncableDouble.create(this::getCurrentMultiplier, value -> currentMultiplier = value));
         container.track(SyncableBoolean.create(this::isBlacklistDimension, value -> isBlacklistDimension = value));
-    }
-
-    @NotNull
-    @Override
-    public AABB getRenderBoundingBox() {
-        //Note: we just extend it to the max size it could be ignoring what direction it is actually facing
-        return new AABB(worldPosition.offset(-2, 0, -2), worldPosition.offset(3, 7, 3));
     }
 
     //Methods relating to IComputerTile
     @Override
-    FloatingLong getProductionRate() {
-        return getActive() ? MekanismGeneratorsConfig.generators.windGenerationMin.get().multiply(getCurrentMultiplier()) : FloatingLong.ZERO;
+    long getProductionRate() {
+        return getActive() ? getCurrentGeneration() : 0L;
     }
     //End methods IComputerTile
 }

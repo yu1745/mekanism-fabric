@@ -21,13 +21,17 @@ import mekanism.client.render.ModelRenderer;
 import mekanism.client.render.RenderResizableCuboid.FaceDisplay;
 import mekanism.common.base.ProfilerConstants;
 import mekanism.common.tile.machine.TileEntityNutritionalLiquifier;
+import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.ParticleStatus;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.particle.SingleQuadParticle;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.Direction;
 import net.minecraft.util.Mth;
 import net.minecraft.util.profiling.ProfilerFiller;
@@ -35,8 +39,8 @@ import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
-import net.minecraftforge.client.model.data.ModelData;
-import net.minecraftforge.fluids.FluidStack;
+import net.neoforged.neoforge.client.model.data.ModelData;
+import net.neoforged.neoforge.fluids.FluidStack;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
@@ -77,7 +81,7 @@ public class RenderNutritionalLiquifier extends MekanismTileEntityRenderer<TileE
             Pose entry = matrix.last();
             VertexConsumer bladeBuffer = renderer.getBuffer(Sheets.solidBlockSheet());
             for (BakedQuad quad : MekanismModelCache.INSTANCE.LIQUIFIER_BLADE.getQuads(tile.getLevel().random)) {
-                bladeBuffer.putBulkData(entry, quad, 1, 1, 1, light, overlayLight);
+                bladeBuffer.putBulkData(entry, quad, 1, 1, 1, 1, light, overlayLight);
             }
             matrix.popPose();
         }
@@ -96,13 +100,13 @@ public class RenderNutritionalLiquifier extends MekanismTileEntityRenderer<TileE
             if (active && Minecraft.getInstance().options.particles().get() != ParticleStatus.MINIMAL) {
                 //Render eating particles
                 PseudoParticleData pseudoParticles = particles.computeIfAbsent(tile, t -> new PseudoParticleData());
-                if (!Minecraft.getInstance().isPaused()) {
+                if (isTickingNormally(tile)) {
                     //Don't add particles if the game is paused
                     if (pseudoParticles.lastTick != tile.getLevel().getGameTime()) {
                         pseudoParticles.lastTick = tile.getLevel().getGameTime();
                         pseudoParticles.particles.removeIf(PseudoParticle::tick);
                     }
-                    int rate = Minecraft.getInstance().options.particles().get() == ParticleStatus.DECREASED ? 12 : 4;
+                    int rate = Minecraft.getInstance().options.particles().get() == ParticleStatus.DECREASED ? 10 : 3;
                     if (tile.getLevel().getGameTime() % rate == 0) {
                         pseudoParticles.particles.add(new PseudoParticle(tile.getLevel(), stack));
                     }
@@ -128,14 +132,19 @@ public class RenderNutritionalLiquifier extends MekanismTileEntityRenderer<TileE
     }
 
     private Model3D getPasteModel(FluidStack paste, float fluidScale) {
-        return cachedModels.computeIfAbsent(ModelRenderer.getStage(paste, stages, fluidScale), stage -> new Model3D()
-              .setTexture(MekanismRenderer.getFluidTexture(paste, FluidTextureType.STILL))
-              .setSideRender(Direction.DOWN, false)
-              .setSideRender(Direction.UP, stage < stages)
-              .xBounds(0.001F, 0.999F)
-              .yBounds(0.313F, 0.313F + 0.624F * (stage / (float) stages))
-              .zBounds(0.001F, 0.999F)
-        );
+        int stage = ModelRenderer.getStage(paste, stages, fluidScale);
+        Model3D model = cachedModels.get(stage);
+        if (model == null) {
+            model = new Model3D()
+                  .setTexture(MekanismRenderer.getFluidTexture(paste, FluidTextureType.STILL))
+                  .setSideRender(Direction.DOWN, false)
+                  .setSideRender(Direction.UP, stage < stages)
+                  .xBounds(0.001F, 0.999F)
+                  .yBounds(0.313F, 0.313F + 0.624F * (stage / (float) stages))
+                  .zBounds(0.001F, 0.999F);
+            cachedModels.put(stage, model);
+        }
+        return model;
     }
 
     private static class PseudoParticleData {
@@ -170,6 +179,7 @@ public class RenderNutritionalLiquifier extends MekanismTileEntityRenderer<TileE
         protected float bbHeight = 1.8F;
 
         protected PseudoParticle(Level world, ItemStack stack) {
+            //Particle Constructor
             setSize(0.2F, 0.2F);
             this.x = (world.random.nextFloat() - 0.5D) * 0.3D;
             this.y = (world.random.nextFloat() - 0.5D) * 0.3D;
@@ -179,6 +189,7 @@ public class RenderNutritionalLiquifier extends MekanismTileEntityRenderer<TileE
             this.zo = z;
             this.lifetime = (int) (4.0F / (world.random.nextFloat() * 0.9F + 0.1F));
 
+            //Particle Constructor that takes speed
             this.xd = (Math.random() * 2.0D - 1.0D) * 0.4;
             this.yd = (Math.random() * 2.0D - 1.0D) * 0.4;
             this.zd = (Math.random() * 2.0D - 1.0D) * 0.4;
@@ -188,12 +199,19 @@ public class RenderNutritionalLiquifier extends MekanismTileEntityRenderer<TileE
             this.yd = (this.yd / f1) * f * 0.4 + 0.1;
             this.zd = (this.zd / f1) * f * 0.4;
 
-            sprite = Minecraft.getInstance().getItemRenderer().getModel(stack, world, null, 0).getParticleIcon(ModelData.EMPTY);
+            //BreakingItemParticle Constructor
+            BakedModel model = Minecraft.getInstance().getItemRenderer().getModel(stack, world, null, 0);
+            BakedModel override = model.getOverrides().resolve(model, stack, world instanceof ClientLevel level ? level : null, null, 0);
+            if (override != null) {
+                model = override;
+            }
+            sprite = model.getParticleIcon(ModelData.EMPTY);
             this.gravity = 1.0F;
             this.quadSize = 0.1F * (world.random.nextFloat() * 0.5F + 0.5F);
             this.uo = world.random.nextFloat() * 3.0F;
             this.vo = world.random.nextFloat() * 3.0F;
 
+            //BreakingItemParticle Constructor that takes speed
             this.xd *= 0.1;
             this.yd *= 0.1;
             this.zd *= 0.1;
@@ -203,12 +221,12 @@ public class RenderNutritionalLiquifier extends MekanismTileEntityRenderer<TileE
         }
 
         public boolean tick() {
-            if (this.age++ >= this.lifetime || this.y < -0.25) {
-                return true;
-            }
             this.xo = this.x;
             this.yo = this.y;
             this.zo = this.z;
+            if (this.age++ >= this.lifetime || this.y < -0.25) {
+                return true;
+            }
             this.yd -= 0.04D * this.gravity;
             if (this.xd != 0.0D || this.yd != 0.0D || this.zd != 0.0D) {
                 bb = bb.move(this.xd, this.yd, this.zd);
@@ -223,62 +241,54 @@ public class RenderNutritionalLiquifier extends MekanismTileEntityRenderer<TileE
         }
 
         public void render(Matrix4f matrix, VertexConsumer buffer, float partialTicks, int light) {
+            Camera camera = Minecraft.getInstance().getEntityRenderDispatcher().camera;
+            //From SingleQuadParticle#render
+            Quaternionf quaternion = new Quaternionf();
+            SingleQuadParticle.FacingCameraMode.LOOKAT_XYZ.setRotation(quaternion, camera, partialTicks);
+
+            //From SingleQuadParticle#renderRotatedQuad
             float f = (float) Mth.lerp(partialTicks, this.xo, this.x);
             float f1 = (float) Mth.lerp(partialTicks, this.yo, this.y);
             float f2 = (float) Mth.lerp(partialTicks, this.zo, this.z);
-            Quaternionf quaternion = Minecraft.getInstance().getEntityRenderDispatcher().camera.rotation();
+            renderRotatedQuad(matrix, buffer, quaternion, f, f1, f2, light);
+        }
 
-            //Vector3f vector3f1 = new Vector3f(-1.0F, -1.0F, 0.0F);
-            //quaternion.transform(vector3f1);
-            Vector3f[] vectors = {new Vector3f(-1.0F, -1.0F, 0.0F), new Vector3f(-1.0F, 1.0F, 0.0F),
-                                  new Vector3f(1.0F, 1.0F, 0.0F), new Vector3f(1.0F, -1.0F, 0.0F)};
-            for (int i = 0; i < 4; ++i) {
-                Vector3f vector3f = vectors[i];
-                quaternion.transform(vector3f);
-                vector3f.mul(quadSize);
-                vector3f.add(f, f1, f2);
-            }
+        //Copy of SingleQuadParticle#renderRotatedQuad
+        protected void renderRotatedQuad(Matrix4f matrix,VertexConsumer buffer, Quaternionf quaternion, float x, float y, float z, int light) {
+            float minU = this.getU0();
+            float maxU = this.getU1();
+            float minV = this.getV0();
+            float maxV = this.getV1();
+            this.renderVertex(matrix, buffer, quaternion, x, y, z, 1.0F, -1.0F, maxU, maxV, light);
+            this.renderVertex(matrix, buffer, quaternion, x, y, z, 1.0F, 1.0F, maxU, minV, light);
+            this.renderVertex(matrix, buffer, quaternion, x, y, z, -1.0F, 1.0F, minU, minV, light);
+            this.renderVertex(matrix, buffer, quaternion, x, y, z, -1.0F, -1.0F, minU, maxV, light);
+        }
 
-            float f7 = this.getU0();
-            float f8 = this.getU1();
-            float f5 = this.getV0();
-            float f6 = this.getV1();
-            buffer.vertex(matrix, vectors[0].x(), vectors[0].y(), vectors[0].z())
-                  .uv(f8, f6)
-                  .color(0xFF, 0xFF, 0xFF, 0xFF)
-                  .uv2(light)
-                  .endVertex();
-            buffer.vertex(matrix, vectors[1].x(), vectors[1].y(), vectors[1].z())
-                  .uv(f8, f5)
-                  .color(0xFF, 0xFF, 0xFF, 0xFF)
-                  .uv2(light)
-                  .endVertex();
-            buffer.vertex(matrix, vectors[2].x(), vectors[2].y(), vectors[2].z())
-                  .uv(f7, f5)
-                  .color(0xFF, 0xFF, 0xFF, 0xFF)
-                  .uv2(light)
-                  .endVertex();
-            buffer.vertex(matrix, vectors[3].x(), vectors[3].y(), vectors[3].z())
-                  .uv(f7, f6)
-                  .color(0xFF, 0xFF, 0xFF, 0xFF)
-                  .uv2(light)
-                  .endVertex();
+        //Copy of SingleQuadParticle#renderVertex
+        private void renderVertex(Matrix4f matrix, VertexConsumer buffer, Quaternionf quaternion, float x, float y, float z, float xOffset, float yOffset, float u,
+              float v, int light) {
+            Vector3f vector3f = new Vector3f(xOffset, yOffset, 0.0F).rotate(quaternion).mul(quadSize).add(x, y, z);
+            buffer.addVertex(matrix, vector3f.x(), vector3f.y(), vector3f.z())
+                  .setUv(u, v)
+                  .setColor(0xFF, 0xFF, 0xFF, 0xFF)
+                  .setLight(light);
         }
 
         protected float getU0() {
-            return this.sprite.getU((this.uo + 1.0F) / 4.0F * 16.0F);
+            return this.sprite.getU((this.uo + 1.0F) / 4.0F);
         }
 
         protected float getU1() {
-            return this.sprite.getU(this.uo / 4.0F * 16.0F);
+            return this.sprite.getU(this.uo / 4.0F);
         }
 
         protected float getV0() {
-            return this.sprite.getV(this.vo / 4.0F * 16.0F);
+            return this.sprite.getV(this.vo / 4.0F);
         }
 
         protected float getV1() {
-            return this.sprite.getV((this.vo + 1.0F) / 4.0F * 16.0F);
+            return this.sprite.getV((this.vo + 1.0F) / 4.0F);
         }
 
         protected void setSize(float particleWidth, float particleHeight) {

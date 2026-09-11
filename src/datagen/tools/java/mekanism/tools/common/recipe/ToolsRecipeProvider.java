@@ -1,13 +1,11 @@
 package mekanism.tools.common.recipe;
 
-import java.util.function.Consumer;
+import java.util.concurrent.CompletableFuture;
 import mekanism.api.annotations.NothingNullByDefault;
-import mekanism.api.providers.IItemProvider;
 import mekanism.common.recipe.BaseRecipeProvider;
 import mekanism.common.recipe.RecipeProviderUtil;
 import mekanism.common.recipe.builder.ExtendedShapedRecipeBuilder;
 import mekanism.common.recipe.builder.ExtendedSmithingRecipeBuilder;
-import mekanism.common.recipe.builder.SpecialRecipeBuilder;
 import mekanism.common.recipe.pattern.Pattern;
 import mekanism.common.recipe.pattern.RecipePattern;
 import mekanism.common.recipe.pattern.RecipePattern.DoubleLine;
@@ -20,17 +18,18 @@ import mekanism.common.util.RegistryUtils;
 import mekanism.tools.common.MekanismTools;
 import mekanism.tools.common.registries.ToolsItems;
 import mekanism.tools.common.registries.ToolsRecipeSerializers;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.data.PackOutput;
-import net.minecraft.data.recipes.FinishedRecipe;
 import net.minecraft.data.recipes.RecipeCategory;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.tags.ItemTags;
+import net.minecraft.data.recipes.RecipeOutput;
+import net.minecraft.data.recipes.SpecialRecipeBuilder;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraftforge.common.Tags;
-import net.minecraftforge.common.data.ExistingFileHelper;
+import net.neoforged.neoforge.common.Tags;
+import net.neoforged.neoforge.common.data.ExistingFileHelper;
 import org.jetbrains.annotations.Nullable;
 
 @NothingNullByDefault
@@ -80,12 +79,12 @@ public class ToolsRecipeProvider extends BaseRecipeProvider {
           TripleLine.of(Pattern.EMPTY, ROD_CHAR, Pattern.EMPTY),
           TripleLine.of(Pattern.EMPTY, ROD_CHAR, Pattern.EMPTY));
 
-    public ToolsRecipeProvider(PackOutput output, ExistingFileHelper existingFileHelper) {
-        super(output, existingFileHelper, MekanismTools.MODID);
+    public ToolsRecipeProvider(PackOutput output, CompletableFuture<HolderLookup.Provider> provider, ExistingFileHelper existingFileHelper) {
+        super(output, provider, existingFileHelper);
     }
 
     @Override
-    protected void addRecipes(Consumer<FinishedRecipe> consumer) {
+    protected void addRecipes(RecipeOutput consumer, HolderLookup.Provider registries) {
         registerRecipeSet(consumer, "bronze", ToolsItems.BRONZE_HELMET, ToolsItems.BRONZE_CHESTPLATE, ToolsItems.BRONZE_LEGGINGS, ToolsItems.BRONZE_BOOTS,
               ToolsItems.BRONZE_SWORD, ToolsItems.BRONZE_PICKAXE, ToolsItems.BRONZE_AXE, ToolsItems.BRONZE_SHOVEL, ToolsItems.BRONZE_HOE, ToolsItems.BRONZE_PAXEL,
               ToolsItems.BRONZE_SHIELD, MekanismTags.Items.INGOTS_BRONZE, Tags.Items.RODS_WOODEN, MekanismItems.BRONZE_NUGGET);
@@ -108,12 +107,12 @@ public class ToolsRecipeProvider extends BaseRecipeProvider {
               ToolsItems.STEEL_SWORD, ToolsItems.STEEL_PICKAXE, ToolsItems.STEEL_AXE, ToolsItems.STEEL_SHOVEL, ToolsItems.STEEL_HOE, ToolsItems.STEEL_PAXEL,
               ToolsItems.STEEL_SHIELD, MekanismTags.Items.INGOTS_STEEL, Tags.Items.INGOTS_IRON, MekanismItems.STEEL_NUGGET);
         registerVanillaPaxels(consumer);
-        SpecialRecipeBuilder.build(consumer, ToolsRecipeSerializers.BANNER_SHIELD);
+        SpecialRecipeBuilder.special(MekBannerShieldRecipe::new).save(consumer, ToolsRecipeSerializers.BANNER_SHIELD.getId());
     }
 
-    private void registerRecipeSet(Consumer<FinishedRecipe> consumer, String name, IItemProvider helmet, IItemProvider chestplate, IItemProvider leggings,
-          IItemProvider boots, IItemProvider sword, IItemProvider pickaxe, IItemProvider axe, IItemProvider shovel, IItemProvider hoe, IItemProvider paxel,
-          IItemProvider shield, TagKey<Item> ingot, TagKey<Item> rod, @Nullable IItemProvider nugget) {
+    private void registerRecipeSet(RecipeOutput consumer, String name, Holder<Item> helmet, Holder<Item> chestplate, Holder<Item> leggings, Holder<Item> boots,
+          Holder<Item> sword, Holder<Item> pickaxe, Holder<Item> axe, Holder<Item> shovel, Holder<Item> hoe, Holder<Item> paxel, Holder<Item> shield,
+          TagKey<Item> ingot, TagKey<Item> rod, @Nullable Holder<Item> nugget) {
         String baseArmorPath = name + "/armor/";
         armor(HELMET, helmet, ingot).build(consumer, MekanismTools.rl(baseArmorPath + "helmet"));
         armor(CHESTPLATE, chestplate, ingot).build(consumer, MekanismTools.rl(baseArmorPath + "chestplate"));
@@ -131,31 +130,32 @@ public class ToolsRecipeProvider extends BaseRecipeProvider {
         tool(AXE, axe, ingot, rod).category(RecipeCategory.TOOLS).build(consumer, MekanismTools.rl(baseToolsPath + "axe"));
         tool(SHOVEL, shovel, ingot, rod).category(RecipeCategory.TOOLS).build(consumer, MekanismTools.rl(baseToolsPath + "shovel"));
         tool(HOE, hoe, ingot, rod).category(RecipeCategory.TOOLS).build(consumer, MekanismTools.rl(baseToolsPath + "hoe"));
+        //TODO - 1.20.5: Do we care this no longer accepts tools from other mods?
         PaxelShapedRecipeBuilder.shapedRecipe(paxel)
               .pattern(PAXEL)
-              .key(AXE_CHAR, ItemTags.create(new ResourceLocation("forge", "tools/axes/" + name)))
-              .key(PICKAXE_CHAR, ItemTags.create(new ResourceLocation("forge", "tools/pickaxes/" + name)))
-              .key(SHOVEL_CHAR, ItemTags.create(new ResourceLocation("forge", "tools/shovels/" + name)))
+              .key(AXE_CHAR, axe)
+              .key(PICKAXE_CHAR, pickaxe)
+              .key(SHOVEL_CHAR, shovel)
               .key(ROD_CHAR, rod)
               .build(consumer, MekanismTools.rl(baseToolsPath + "paxel"));
         //If we have a nugget that means we also want to add recipes for smelting tools/armor into the nugget
         if (nugget != null) {
             String baseNuggetFrom = name + "/nugget_from_";
-            RecipeProviderUtil.addSmeltingBlastingRecipes(consumer, Ingredient.of(helmet, chestplate, leggings, boots, sword, pickaxe, axe, shovel, hoe, paxel),
+            RecipeProviderUtil.addSmeltingBlastingRecipes(consumer, createIngredient(helmet, chestplate, leggings, boots, sword, pickaxe, axe, shovel, hoe, paxel),
                   nugget, 0.1F, 200, MekanismTools.rl(baseNuggetFrom + "blasting"), MekanismTools.rl(baseNuggetFrom + "smelting"));
         }
     }
 
-    private void registerVanillaPaxels(Consumer<FinishedRecipe> consumer) {
+    private void registerVanillaPaxels(RecipeOutput consumer) {
         registerVanillaPaxel(consumer, ToolsItems.WOOD_PAXEL, Items.WOODEN_AXE, Items.WOODEN_PICKAXE, Items.WOODEN_SHOVEL, null);
         registerVanillaPaxel(consumer, ToolsItems.STONE_PAXEL, Items.STONE_AXE, Items.STONE_PICKAXE, Items.STONE_SHOVEL, null);
-        registerVanillaPaxel(consumer, ToolsItems.IRON_PAXEL, Items.IRON_AXE, Items.IRON_PICKAXE, Items.IRON_SHOVEL, Items.IRON_NUGGET);
-        registerVanillaPaxel(consumer, ToolsItems.GOLD_PAXEL, Items.GOLDEN_AXE, Items.GOLDEN_PICKAXE, Items.GOLDEN_SHOVEL, Items.GOLD_NUGGET);
+        registerVanillaPaxel(consumer, ToolsItems.IRON_PAXEL, Items.IRON_AXE, Items.IRON_PICKAXE, Items.IRON_SHOVEL, Items.IRON_NUGGET.builtInRegistryHolder());
+        registerVanillaPaxel(consumer, ToolsItems.GOLD_PAXEL, Items.GOLDEN_AXE, Items.GOLDEN_PICKAXE, Items.GOLDEN_SHOVEL, Items.GOLD_NUGGET.builtInRegistryHolder());
         registerVanillaPaxel(consumer, ToolsItems.DIAMOND_PAXEL, Items.DIAMOND_AXE, Items.DIAMOND_PICKAXE, Items.DIAMOND_SHOVEL, null);
         ExtendedSmithingRecipeBuilder.smithing(Items.NETHERITE_UPGRADE_SMITHING_TEMPLATE, ToolsItems.DIAMOND_PAXEL, Items.NETHERITE_INGOT, ToolsItems.NETHERITE_PAXEL).build(consumer);
     }
 
-    private void registerVanillaPaxel(Consumer<FinishedRecipe> consumer, IItemProvider paxel, Item axe, Item pickaxe, Item shovel, @Nullable Item nugget) {
+    private void registerVanillaPaxel(RecipeOutput consumer, Holder<Item> paxel, Item axe, Item pickaxe, Item shovel, @Nullable Holder<Item> nugget) {
         PaxelShapedRecipeBuilder.shapedRecipe(paxel)
               .pattern(PAXEL)
               .key(AXE_CHAR, axe)
@@ -165,20 +165,20 @@ public class ToolsRecipeProvider extends BaseRecipeProvider {
               .build(consumer);
         //If we have a nugget that means we also want to add recipes for smelting tools/armor into the nugget
         if (nugget != null) {
-            String baseNuggetFrom = RegistryUtils.getPath(nugget) + "_from_";
-            RecipeProviderUtil.addSmeltingBlastingRecipes(consumer, Ingredient.of(paxel), nugget, 0.1F, 200,
+            String baseNuggetFrom = RegistryUtils.getName(nugget, BuiltInRegistries.ITEM).getPath() + "_from_";
+            RecipeProviderUtil.addSmeltingBlastingRecipes(consumer, createIngredient(paxel), nugget, 0.1F, 200,
                   MekanismTools.rl(baseNuggetFrom + "blasting"), MekanismTools.rl(baseNuggetFrom + "smelting"));
         }
     }
 
-    private ExtendedShapedRecipeBuilder armor(RecipePattern pattern, IItemProvider armor, TagKey<Item> ingot) {
+    private ExtendedShapedRecipeBuilder armor(RecipePattern pattern, Holder<Item> armor, TagKey<Item> ingot) {
         return ExtendedShapedRecipeBuilder.shapedRecipe(armor)
               .pattern(pattern)
               .key(Pattern.INGOT, ingot)
               .category(RecipeCategory.COMBAT);
     }
 
-    private ExtendedShapedRecipeBuilder tool(RecipePattern pattern, IItemProvider tool, TagKey<Item> ingot, TagKey<Item> rod) {
+    private ExtendedShapedRecipeBuilder tool(RecipePattern pattern, Holder<Item> tool, TagKey<Item> ingot, TagKey<Item> rod) {
         return ExtendedShapedRecipeBuilder.shapedRecipe(tool)
               .pattern(pattern)
               .key(Pattern.INGOT, ingot)

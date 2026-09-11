@@ -11,26 +11,29 @@ import mekanism.client.gui.element.bar.GuiBar.IBarInfoHandler;
 import mekanism.client.gui.element.bar.GuiDynamicHorizontalRateBar;
 import mekanism.client.gui.element.button.TranslationButton;
 import mekanism.client.gui.element.gauge.GaugeType;
-import mekanism.client.gui.element.gauge.GuiGasGauge;
-import mekanism.client.gui.element.gauge.GuiHybridGauge;
+import mekanism.client.gui.element.gauge.GuiChemicalGauge;
+import mekanism.client.gui.element.gauge.GuiMergedTankGauge;
 import mekanism.client.gui.element.graph.GuiDoubleGraph;
 import mekanism.client.gui.element.tab.GuiHeatTab;
+import mekanism.client.gui.element.tab.GuiWarningTab;
 import mekanism.common.MekanismLang;
 import mekanism.common.inventory.container.tile.MekanismTileContainer;
+import mekanism.common.inventory.warning.IWarningTracker;
+import mekanism.common.network.PacketUtils;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.UnitDisplayUtils.TemperatureUnit;
 import mekanism.common.util.text.BooleanStateDisplay.ActiveDisabled;
 import mekanism.common.util.text.TextUtils;
 import mekanism.generators.client.gui.element.GuiFissionReactorTab;
 import mekanism.generators.client.gui.element.GuiFissionReactorTab.FissionReactorTab;
-import mekanism.generators.client.jei.GeneratorsJEIRecipeType;
+import mekanism.generators.client.recipe_viewer.GeneratorsRVRecipeType;
 import mekanism.generators.common.GeneratorsLang;
-import mekanism.generators.common.MekanismGenerators;
 import mekanism.generators.common.content.fission.FissionReactorMultiblockData;
 import mekanism.generators.common.network.to_server.PacketGeneratorsGuiInteract;
 import mekanism.generators.common.network.to_server.PacketGeneratorsGuiInteract.GeneratorsGuiInteraction;
 import mekanism.generators.common.tile.fission.TileEntityFissionReactorCasing;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import org.jetbrains.annotations.NotNull;
@@ -65,35 +68,36 @@ public class GuiFissionReactor extends GuiMekanismTile<TileEntityFissionReactorC
                   MekanismLang.TEMPERATURE.translate(tile.getTempColor(), MekanismUtils.getTemperatureDisplay(multiblock.heatCapacitor.getTemperature(), TemperatureUnit.KELVIN, true)),
                   GeneratorsLang.FISSION_DAMAGE.translate(tile.getDamageColor(), tile.getDamageString())
             );
-        }).spacing(2).jeiCategories(GeneratorsJEIRecipeType.FISSION));
-        addRenderableWidget(new GuiHybridGauge(() -> tile.getMultiblock().gasCoolantTank, () -> tile.getMultiblock().getGasTanks(null),
-              () -> tile.getMultiblock().fluidCoolantTank, () -> tile.getMultiblock().getFluidTanks(null), GaugeType.STANDARD, this, 6, 13)
+        }).spacing(1).recipeViewerCategories(GeneratorsRVRecipeType.FISSION));
+        addRenderableWidget(new GuiMergedTankGauge<>(() -> tile.getMultiblock().coolantTank, tile::getMultiblock, GaugeType.STANDARD, this, 6, 13)
               .setLabel(GeneratorsLang.FISSION_COOLANT_TANK.translateColored(EnumColor.AQUA)));
-        addRenderableWidget(new GuiGasGauge(() -> tile.getMultiblock().fuelTank, () -> tile.getMultiblock().getGasTanks(null), GaugeType.STANDARD, this, 25, 13)
+        addRenderableWidget(new GuiChemicalGauge(() -> tile.getMultiblock().fuelTank, () -> tile.getMultiblock().getChemicalTanks((Direction) null), GaugeType.STANDARD, this, 25, 13)
               .setLabel(GeneratorsLang.FISSION_FUEL_TANK.translateColored(EnumColor.DARK_GREEN)));
-        addRenderableWidget(new GuiGasGauge(() -> tile.getMultiblock().heatedCoolantTank, () -> tile.getMultiblock().getGasTanks(null), GaugeType.STANDARD, this, 152, 13)
+        addRenderableWidget(new GuiChemicalGauge(() -> tile.getMultiblock().heatedCoolantTank, () -> tile.getMultiblock().getChemicalTanks((Direction) null), GaugeType.STANDARD, this, 152, 13)
               .setLabel(GeneratorsLang.FISSION_HEATED_COOLANT_TANK.translateColored(EnumColor.ORANGE)));
-        addRenderableWidget(new GuiGasGauge(() -> tile.getMultiblock().wasteTank, () -> tile.getMultiblock().getGasTanks(null), GaugeType.STANDARD, this, 171, 13)
+        addRenderableWidget(new GuiChemicalGauge(() -> tile.getMultiblock().wasteTank, () -> tile.getMultiblock().getChemicalTanks((Direction) null), GaugeType.STANDARD, this, 171, 13)
               .setLabel(GeneratorsLang.FISSION_WASTE_TANK.translateColored(EnumColor.BROWN)));
         addRenderableWidget(new GuiHeatTab(this, () -> {
             Component environment = MekanismUtils.getTemperatureDisplay(tile.getMultiblock().lastEnvironmentLoss, TemperatureUnit.KELVIN, false);
             return Collections.singletonList(MekanismLang.DISSIPATED_RATE.translate(environment));
         }));
         activateButton = addRenderableWidget(new TranslationButton(this, 6, 75, 81, 16, GeneratorsLang.FISSION_ACTIVATE,
-              () -> MekanismGenerators.packetHandler().sendToServer(new PacketGeneratorsGuiInteract(GeneratorsGuiInteraction.FISSION_ACTIVE, tile, 1)), null,
-              () -> EnumColor.DARK_GREEN) {
+              (element, mouseX, mouseY) -> PacketUtils.sendToServer(new PacketGeneratorsGuiInteract(GeneratorsGuiInteraction.FISSION_ACTIVE,
+                    ((GuiFissionReactor) element.gui()).tile, 1)), () -> EnumColor.DARK_GREEN) {
             @Override
             public void renderForeground(GuiGraphics guiGraphics, int mouseX, int mouseY) {
                 super.renderForeground(guiGraphics, mouseX, mouseY);
                 if (!active && tile.getMultiblock().isForceDisabled()) {
                     active = true;
                     //Temporarily set active to true, so we can easily check if the mouse is over the button
+                    // Note: We can't just use the delayed tooltip rendering as it doesn't work for inactive buttons
                     if (isMouseOverCheckWindows(mouseX, mouseY)) {
                         PoseStack pose = guiGraphics.pose();
                         pose.pushPose();
                         //Offset to fix rendering position
                         pose.translate(-getGuiLeft(), -getGuiTop(), 0);
-                        displayTooltips(guiGraphics, mouseX, mouseY, GeneratorsLang.FISSION_FORCE_DISABLED.translate());
+                        //Tooltip.MAX_WIDTH = 170
+                        guiGraphics.renderTooltip(font, font.split(GeneratorsLang.FISSION_FORCE_DISABLED.translate(), 170), mouseX, mouseY);
                         pose.popPose();
                     }
                     active = false;
@@ -101,8 +105,8 @@ public class GuiFissionReactor extends GuiMekanismTile<TileEntityFissionReactorC
             }
         });
         scramButton = addRenderableWidget(new TranslationButton(this, 89, 75, 81, 16, GeneratorsLang.FISSION_SCRAM,
-              () -> MekanismGenerators.packetHandler().sendToServer(new PacketGeneratorsGuiInteract(GeneratorsGuiInteraction.FISSION_ACTIVE, tile, 0)), null,
-              () -> EnumColor.DARK_RED));
+              (element, mouseX, mouseY) -> PacketUtils.sendToServer(new PacketGeneratorsGuiInteract(GeneratorsGuiInteraction.FISSION_ACTIVE,
+                    ((GuiFissionReactor) element.gui()).tile, 0)), () -> EnumColor.DARK_RED));
         addRenderableWidget(new GuiBigLight(this, 173, 76, tile.getMultiblock()::isActive));
         addRenderableWidget(new GuiDynamicHorizontalRateBar(this, new IBarInfoHandler() {
             @Override
@@ -131,9 +135,9 @@ public class GuiFissionReactor extends GuiMekanismTile<TileEntityFissionReactorC
     protected void drawForegroundText(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY) {
         updateButtons();
         renderTitleText(guiGraphics);
-        drawString(guiGraphics, playerInventoryTitle, inventoryLabelX, inventoryLabelY, titleTextColor());
-        drawString(guiGraphics, MekanismLang.TEMPERATURE_LONG.translate(""), 6, 93, titleTextColor());
-        drawString(guiGraphics, GeneratorsLang.FISSION_HEAT_GRAPH.translate(), 6, 114, titleTextColor());
+        renderInventoryText(guiGraphics);
+        drawScrollingString(guiGraphics, MekanismLang.TEMPERATURE_LONG.translate(""), 0, 93, TextAlignment.LEFT, titleTextColor(), 5, false);
+        drawScrollingString(guiGraphics, GeneratorsLang.FISSION_HEAT_GRAPH.translate(), 0, 114, TextAlignment.LEFT, titleTextColor(), 5, false);
         super.drawForegroundText(guiGraphics, mouseX, mouseY);
     }
 
@@ -141,5 +145,11 @@ public class GuiFissionReactor extends GuiMekanismTile<TileEntityFissionReactorC
     public void containerTick() {
         super.containerTick();
         heatGraph.addData(tile.getMultiblock().heatCapacitor.getTemperature());
+    }
+
+    @Override
+    protected void addWarningTab(IWarningTracker warningTracker) {
+        //Move the tab to the right side of the gui so it doesn't intersect the heat tab
+        addRenderableWidget(new GuiWarningTab(this, warningTracker, false));
     }
 }

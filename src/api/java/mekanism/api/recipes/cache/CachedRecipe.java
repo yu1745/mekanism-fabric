@@ -9,13 +9,14 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.IntConsumer;
 import java.util.function.IntSupplier;
+import java.util.function.LongConsumer;
+import java.util.function.LongSupplier;
 import mekanism.api.Action;
 import mekanism.api.AutomationType;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.energy.IEnergyContainer;
-import mekanism.api.math.FloatingLong;
-import mekanism.api.math.FloatingLongConsumer;
-import mekanism.api.math.FloatingLongSupplier;
+import mekanism.api.functions.ConstantPredicates;
+import mekanism.api.math.MathUtils;
 import mekanism.api.recipes.MekanismRecipe;
 import mekanism.api.recipes.cache.CachedRecipe.OperationTracker.RecipeError;
 
@@ -23,7 +24,7 @@ import mekanism.api.recipes.cache.CachedRecipe.OperationTracker.RecipeError;
  * Base class to help implement handling of Mekanism recipes.
  */
 @NothingNullByDefault
-public abstract class CachedRecipe<RECIPE extends MekanismRecipe> {
+public abstract class CachedRecipe<RECIPE extends MekanismRecipe<?>> {
 
     /**
      * Internal recipe object this cached recipe acts on.
@@ -34,6 +35,12 @@ public abstract class CachedRecipe<RECIPE extends MekanismRecipe> {
      */
     private Set<RecipeError> errors = Collections.emptySet();
     /**
+     * Tracks whether recipe processing is currently paused due to errors.
+     *
+     * @since 10.5.15
+     */
+    private boolean pausedForErrors = false;
+    /**
      * Used to check if the {@link CachedRecipe} should recheck for all errors.
      */
     private final BooleanSupplier recheckAllErrors;
@@ -43,7 +50,7 @@ public abstract class CachedRecipe<RECIPE extends MekanismRecipe> {
      *
      * @implNote Defaults to returning {@code true}.
      */
-    private BooleanSupplier canHolderFunction = () -> true;
+    private BooleanSupplier canHolderFunction = ConstantPredicates.ALWAYS_TRUE;
     /**
      * Called to set the active state of the holder.
      *
@@ -71,19 +78,19 @@ public abstract class CachedRecipe<RECIPE extends MekanismRecipe> {
      *
      * @implNote Defaults to not requiring any energy.
      */
-    private FloatingLongSupplier perTickEnergy = () -> FloatingLong.ZERO;
+    private LongSupplier perTickEnergy = ConstantPredicates.ZERO_LONG;
     /**
      * Gets the energy currently stored in the machine/object executing this {@link CachedRecipe}.
      *
      * @implNote Defaults to returning no energy stored.
      */
-    private FloatingLongSupplier storedEnergy = () -> FloatingLong.ZERO;
+    private LongSupplier storedEnergy = ConstantPredicates.ZERO_LONG;
     /**
      * Called to consume energy.
      *
      * @implNote Defaults to doing nothing.
      */
-    private FloatingLongConsumer useEnergy = energy -> {
+    private LongConsumer useEnergy = energy -> {
     };
 
     /**
@@ -164,7 +171,7 @@ public abstract class CachedRecipe<RECIPE extends MekanismRecipe> {
      *
      * @apiNote If this method is not used, this {@link CachedRecipe} defaults to not requiring or using any energy.
      */
-    public CachedRecipe<RECIPE> setEnergyRequirements(FloatingLongSupplier perTickEnergy, IEnergyContainer energyContainer) {
+    public CachedRecipe<RECIPE> setEnergyRequirements(LongSupplier perTickEnergy, IEnergyContainer energyContainer) {
         //TODO: Re-evaluate if we want to change this to a system similar to the InputHandler, so that we can simulate extracting energy
         // from our container, it likely is not worth it as if we make the assumption we can extract all stored energy it cuts down on
         // processing. If we move the energy requirement checks to after checking about inputs it may become worthwhile
@@ -264,8 +271,22 @@ public abstract class CachedRecipe<RECIPE extends MekanismRecipe> {
         //Validate the errors actually changed as they potentially are just the same ones we found last go around
         if (!this.errors.equals(errors)) {
             this.errors = errors;
+            if (this.errors.size() > 1) {
+                pausedForErrors = true;
+            } else {
+                pausedForErrors = !this.errors.contains(RecipeError.NOT_ENOUGH_ENERGY_REDUCED_RATE);
+            }
             onErrorsChange.accept(errors);
         }
+    }
+
+    /**
+     * Unpauses any recipes that got paused due to errors that cause processing to stop.
+     *
+     * @since 10.5.15
+     */
+    public void unpauseErrors() {
+        pausedForErrors = false;
     }
 
     /**
@@ -285,6 +306,11 @@ public abstract class CachedRecipe<RECIPE extends MekanismRecipe> {
     public void process() {
         //TODO: Evaluate adding in some marker that gets set to true here that then denies the various callbacks/builders from being used
         // as once we start processing the cached recipe should basically be immutable
+        if (pausedForErrors) {
+            //Note: We just set active as false if we are paused for errors and then don't do any other processing
+            setActive.accept(false);
+            return;
+        }
         int operations;
         if (canHolderFunction.getAsBoolean()) {
             setupVariableValues();
@@ -377,13 +403,13 @@ public abstract class CachedRecipe<RECIPE extends MekanismRecipe> {
      * @param operations Number of operations being performed.
      */
     protected void useEnergy(int operations) {
-        FloatingLong energy = perTickEnergy.get();
+        long energy = perTickEnergy.getAsLong();
         if (operations == 1) {
             //While floating long will short circuit any calculations if multiplied by one given we require making a copy to ensure we don't
             // modify the source value, if we do the check here manually as well, then we can skip creating unnecessary objects
             useEnergy.accept(energy);
         } else {
-            useEnergy.accept(energy.multiply(operations));
+            useEnergy.accept(energy * operations);
         }
     }
 
@@ -399,12 +425,11 @@ public abstract class CachedRecipe<RECIPE extends MekanismRecipe> {
      */
     protected void calculateOperationsThisTick(OperationTracker tracker) {
         if (tracker.shouldContinueChecking()) {
-            FloatingLong energyPerTick = perTickEnergy.get();
+            long energyPerTick = perTickEnergy.getAsLong();
             //If we don't have an energy requirement return what we were told the max is
-            if (!energyPerTick.isZero()) {
+            if (energyPerTick != 0L) {
                 //Make sure we don't have any integer overflow in calculating how much we have room for
-                //TODO: Evaluate moving this check to after checking if inputs are empty, as those may be a cheaper check
-                int operations = storedEnergy.get().divideToInt(energyPerTick);
+                int operations = MathUtils.clampToInt(storedEnergy.getAsLong() / energyPerTick);
                 //Update the max amount we can perform from our energy (we apply this at the end so that we can see if we have a reduced
                 // operation count due to energy
                 tracker.maxForEnergy = operations;
@@ -645,23 +670,23 @@ public abstract class CachedRecipe<RECIPE extends MekanismRecipe> {
             /**
              * Common representation for when a recipe errors due to not having enough of the input.
              */
-            public static final RecipeError NOT_ENOUGH_INPUT = RecipeError.create();
+            public static final RecipeError NOT_ENOUGH_INPUT = create();
             /**
              * Common representation for when a recipe errors due to not having enough of the secondary input.
              */
-            public static final RecipeError NOT_ENOUGH_SECONDARY_INPUT = RecipeError.create();
+            public static final RecipeError NOT_ENOUGH_SECONDARY_INPUT = create();
             /**
              * Common representation for when a recipe errors due to not having enough of the left input.
              */
-            public static final RecipeError NOT_ENOUGH_LEFT_INPUT = RecipeError.create();
+            public static final RecipeError NOT_ENOUGH_LEFT_INPUT = create();
             /**
              * Common representation for when a recipe errors due to not having enough of the right input.
              */
-            public static final RecipeError NOT_ENOUGH_RIGHT_INPUT = RecipeError.create();
+            public static final RecipeError NOT_ENOUGH_RIGHT_INPUT = create();
             /**
              * Common representation for when a recipe errors due to not having enough space in the output.
              */
-            public static final RecipeError NOT_ENOUGH_OUTPUT_SPACE = RecipeError.create();
+            public static final RecipeError NOT_ENOUGH_OUTPUT_SPACE = create();
 
             /**
              * Creates a new marker for tracking an error.

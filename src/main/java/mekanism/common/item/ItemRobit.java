@@ -2,53 +2,56 @@ package mekanism.common.item;
 
 import java.util.List;
 import java.util.UUID;
-import mekanism.api.MekanismAPI;
-import mekanism.api.NBTConstants;
 import mekanism.api.energy.IEnergyContainer;
 import mekanism.api.robit.RobitSkin;
+import mekanism.api.security.IItemSecurityUtils;
 import mekanism.api.security.ISecurityObject;
-import mekanism.api.security.ISecurityUtils;
 import mekanism.api.security.SecurityMode;
 import mekanism.api.text.EnumColor;
-import mekanism.common.Mekanism;
 import mekanism.common.MekanismLang;
-import mekanism.common.capabilities.Capabilities;
-import mekanism.common.capabilities.ItemCapabilityWrapper.ItemCapability;
-import mekanism.common.capabilities.security.item.ItemStackSecurityObject;
+import mekanism.common.attachments.containers.ContainerType;
+import mekanism.common.capabilities.security.SecurityObject;
+import mekanism.common.base.holiday.HolidayManager;
+import mekanism.common.capabilities.ICapabilityAware;
 import mekanism.common.entity.EntityRobit;
-import mekanism.common.item.interfaces.IItemSustainedInventory;
-import mekanism.common.network.to_client.PacketSecurityUpdate;
+import mekanism.common.network.to_client.security.PacketSyncSecurity;
+import mekanism.common.registries.MekanismDataComponents;
 import mekanism.common.registries.MekanismRobitSkins;
 import mekanism.common.tile.TileEntityChargepad;
 import mekanism.common.tile.base.TileEntityMekanism;
 import mekanism.common.util.InventoryUtils;
-import mekanism.common.util.ItemDataUtils;
 import mekanism.common.util.StorageUtils;
 import mekanism.common.util.WorldUtils;
 import mekanism.common.util.text.BooleanStateDisplay.YesNo;
 import net.minecraft.advancements.CriteriaTriggers;
 import net.minecraft.core.BlockPos;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.gameevent.GameEvent;
+import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
+import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.NotNull;
 
-public class ItemRobit extends ItemEnergized implements IItemSustainedInventory {
+public class ItemRobit extends ItemEnergized implements ICapabilityAware {
 
     public ItemRobit(Properties properties) {
-        super(() -> EntityRobit.MAX_ENERGY.multiply(0.005), () -> EntityRobit.MAX_ENERGY, properties.rarity(Rarity.RARE));
+        super(properties.rarity(Rarity.RARE).stacksTo(1)
+              .component(MekanismDataComponents.ROBIT_SKIN, MekanismRobitSkins.BASE)
+              .component(MekanismDataComponents.SECURITY, SecurityMode.PUBLIC)
+              .component(MekanismDataComponents.DEFAULT_MANUALLY_SELECTED, false)
+        );
     }
 
     @Override
@@ -57,12 +60,16 @@ public class ItemRobit extends ItemEnergized implements IItemSustainedInventory 
     }
 
     @Override
-    public void appendHoverText(@NotNull ItemStack stack, Level world, @NotNull List<Component> tooltip, @NotNull TooltipFlag flag) {
-        super.appendHoverText(stack, world, tooltip, flag);
-        tooltip.add(MekanismLang.ROBIT_NAME.translateColored(EnumColor.INDIGO, EnumColor.GRAY, getRobitName(stack)));
-        tooltip.add(MekanismLang.ROBIT_SKIN.translateColored(EnumColor.INDIGO, EnumColor.GRAY, RobitSkin.getTranslatedName(getRobitSkin(stack))));
-        ISecurityUtils.INSTANCE.addSecurityTooltip(stack, tooltip);
-        tooltip.add(MekanismLang.HAS_INVENTORY.translateColored(EnumColor.AQUA, EnumColor.GRAY, YesNo.of(hasSustainedInventory(stack))));
+    public void appendHoverText(@NotNull ItemStack stack, @NotNull Item.TooltipContext context, @NotNull List<Component> tooltip, @NotNull TooltipFlag flag) {
+        super.appendHoverText(stack, context, tooltip, flag);
+        Component name = stack.get(MekanismDataComponents.ROBIT_NAME);
+        if (name == null) {
+            name = MekanismLang.ROBIT.translate();
+        }
+        tooltip.add(MekanismLang.ROBIT_NAME.translateColored(EnumColor.INDIGO, EnumColor.GRAY, name));
+        tooltip.add(MekanismLang.ROBIT_SKIN.translateColored(EnumColor.INDIGO, EnumColor.GRAY, RobitSkin.getTranslatedName(stack.getOrDefault(MekanismDataComponents.ROBIT_SKIN, MekanismRobitSkins.BASE))));
+        IItemSecurityUtils.INSTANCE.addSecurityTooltip(stack, tooltip);
+        tooltip.add(MekanismLang.HAS_INVENTORY.translateColored(EnumColor.AQUA, EnumColor.GRAY, YesNo.hasInventory(stack)));
     }
 
     @NotNull
@@ -82,24 +89,30 @@ public class ItemRobit extends ItemEnergized implements IItemSustainedInventory 
                 if (robit == null) {
                     return InteractionResult.FAIL;
                 }
-                robit.setHome(chargepad.getTileCoord());
+                robit.setHome(chargepad.getTileGlobalPos());
                 IEnergyContainer energyContainer = StorageUtils.getEnergyContainer(stack, 0);
                 if (energyContainer != null) {
                     robit.getEnergyContainer().setEnergy(energyContainer.getEnergy());
                 }
-                ISecurityUtils securityUtils = ISecurityUtils.INSTANCE;
-                UUID ownerUUID = securityUtils.getOwnerUUID(stack);
+                UUID ownerUUID = IItemSecurityUtils.INSTANCE.getOwnerUUID(stack);
                 if (ownerUUID == null) {
                     robit.setOwnerUUID(player.getUUID());
                     //If the robit doesn't already have an owner, make sure we portray this
-                    Mekanism.packetHandler().sendToAll(new PacketSecurityUpdate(player.getUUID()));
+                    PacketDistributor.sendToAllPlayers(new PacketSyncSecurity(player.getUUID()));
                 } else {
                     robit.setOwnerUUID(ownerUUID);
                 }
-                robit.setSustainedInventory(getSustainedInventory(stack));
-                robit.setCustomName(getRobitName(stack));
-                robit.setSecurityMode(stack.getCapability(Capabilities.SECURITY_OBJECT).map(ISecurityObject::getSecurityMode).orElse(SecurityMode.PUBLIC));
-                robit.setSkin(getRobitSkin(stack), player);
+                ContainerType.ITEM.copyFromStack(world.registryAccess(), stack, robit.getInventorySlots(null));
+                Component name = stack.get(MekanismDataComponents.ROBIT_NAME);
+                if (name != null) {
+                    robit.setCustomName(name);
+                }
+                ISecurityObject securityObject = IItemSecurityUtils.INSTANCE.securityCapability(stack);
+                if (securityObject != null) {
+                    robit.setSecurityMode(securityObject.getSecurityMode());
+                }
+                robit.setSkin(stack.getOrDefault(MekanismDataComponents.ROBIT_SKIN, MekanismRobitSkins.BASE), player);
+                robit.setDefaultSkinManuallySelected(stack.getOrDefault(MekanismDataComponents.DEFAULT_MANUALLY_SELECTED, false));
                 world.addFreshEntity(robit);
                 world.gameEvent(player, GameEvent.ENTITY_PLACE, robit.blockPosition());
                 stack.shrink(1);
@@ -110,33 +123,21 @@ public class ItemRobit extends ItemEnergized implements IItemSustainedInventory 
         return InteractionResult.PASS;
     }
 
-    public void setName(ItemStack stack, Component name) {
-        ItemDataUtils.setString(stack, NBTConstants.NAME, Component.Serializer.toJson(name));
-    }
-
-    private Component getRobitName(ItemStack stack) {
-        String name = ItemDataUtils.getString(stack, NBTConstants.NAME);
-        return name.isEmpty() ? MekanismLang.ROBIT.translate() : Component.Serializer.fromJson(name);
-    }
-
-    public void setSkin(ItemStack stack, ResourceKey<RobitSkin> skin) {
-        ItemDataUtils.setString(stack, NBTConstants.SKIN, skin.location().toString());
-    }
-
-    public ResourceKey<RobitSkin> getRobitSkin(ItemStack stack) {
-        String skin = ItemDataUtils.getString(stack, NBTConstants.SKIN);
-        if (!skin.isEmpty()) {
-            ResourceLocation rl = ResourceLocation.tryParse(skin);
-            if (rl != null) {
-                return ResourceKey.create(MekanismAPI.ROBIT_SKIN_REGISTRY_NAME, rl);
-            }
-        }
-        return MekanismRobitSkins.BASE;
+    @Override
+    public void attachCapabilities(RegisterCapabilitiesEvent event) {
+        event.registerItem(IItemSecurityUtils.INSTANCE.ownerCapability(), (stack, ctx) -> new SecurityObject(stack), this);
+        event.registerItem(IItemSecurityUtils.INSTANCE.securityCapability(), (stack, ctx) -> new SecurityObject(stack), this);
     }
 
     @Override
-    protected void gatherCapabilities(List<ItemCapability> capabilities, ItemStack stack, CompoundTag nbt) {
-        capabilities.add(new ItemStackSecurityObject());
-        super.gatherCapabilities(capabilities, stack, nbt);
+    public void inventoryTick(@NotNull ItemStack stack, @NotNull Level level, @NotNull Entity entity, int slot, boolean isSelected) {
+        super.inventoryTick(stack, level, entity, slot, isSelected);
+        if (!level.isClientSide && HolidayManager.hasRobitSkinsToday() && !stack.getOrDefault(MekanismDataComponents.DEFAULT_MANUALLY_SELECTED, false)) {
+            ResourceKey<RobitSkin> skin = stack.get(MekanismDataComponents.ROBIT_SKIN);
+            if (skin == null || skin == MekanismRobitSkins.BASE) {
+                //Randomize the robit's skin
+                stack.set(MekanismDataComponents.ROBIT_SKIN, HolidayManager.getRandomBaseSkin(level.random));
+            }
+        }
     }
 }

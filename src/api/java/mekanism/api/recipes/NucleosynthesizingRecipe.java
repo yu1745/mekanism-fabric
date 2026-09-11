@@ -1,51 +1,46 @@
 package mekanism.api.recipes;
 
+import mekanism.api.MekanismAPI;
 import mekanism.api.annotations.NothingNullByDefault;
-import mekanism.api.recipes.ingredients.ChemicalStackIngredient.GasStackIngredient;
-import mekanism.api.recipes.ingredients.ItemStackIngredient;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.core.Holder;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.RecipeType;
+import net.neoforged.neoforge.registries.DeferredHolder;
 
 /**
- * Extension of {@link ItemStackGasToItemStackRecipe} with a defined amount of ticks needed to process. Input: ItemStack
+ * Extension of {@link ItemStackChemicalToItemStackRecipe} with a defined amount of ticks needed to process. Input: ItemStack
  * <br>
- * Input: Gas (Base value, will be multiplied by a per tick amount)
+ * Input: Chemical (Base value, will be multiplied by a per tick amount)
  * <br>
  * Output: ItemStack
  *
  * @apiNote Nucleosynthesizers can process this recipe type.
  */
 @NothingNullByDefault
-public abstract class NucleosynthesizingRecipe extends ItemStackGasToItemStackRecipe {
+public abstract class NucleosynthesizingRecipe extends ItemStackChemicalToItemStackRecipe {
 
-    private final int duration;
-
-    /**
-     * @param id        Recipe name.
-     * @param itemInput Item input.
-     * @param gasInput  Gas input.
-     * @param output    Output.
-     * @param duration  Duration in ticks that it takes the recipe to complete. Must be greater than zero.
-     */
-    public NucleosynthesizingRecipe(ResourceLocation id, ItemStackIngredient itemInput, GasStackIngredient gasInput, ItemStack output, int duration) {
-        super(id, itemInput, gasInput, output);
-        if (duration <= 0) {
-            throw new IllegalArgumentException("Duration must be a number greater than zero.");
-        }
-        this.duration = duration;
-    }
+    private static final Holder<Item> ANTIPROTONIC_NUCLEOSYNTHESIZER = DeferredHolder.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, "antiprotonic_nucleosynthesizer"));
 
     @Override
-    public void write(FriendlyByteBuf buffer) {
-        super.write(buffer);
-        buffer.writeVarInt(duration);
+    public final RecipeType<NucleosynthesizingRecipe> getType() {
+        return MekanismRecipeTypes.TYPE_NUCLEOSYNTHESIZING.value();
     }
 
     /**
      * Gets the duration in ticks this recipe takes to complete.
      */
-    public int getDuration() {
-        return duration;
+    public abstract int getDuration();
+
+    @Override
+    public String getGroup() {
+        return "antiprotonic_nucleosynthesizer";
+    }
+
+    @Override
+    public ItemStack getToastSymbol() {
+        return new ItemStack(ANTIPROTONIC_NUCLEOSYNTHESIZER);
     }
 }
