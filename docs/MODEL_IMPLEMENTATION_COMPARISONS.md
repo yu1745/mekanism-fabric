@@ -27,6 +27,7 @@
 - 可以选择单一最佳实现，也可以由主代理取各实现优点形成综合版本；综合版本必须重新审查并独立运行门禁。
 - 每次实验只形成该任务上的评价，不直接推导永久模型排名。
 - 参评分支在完成检查和整合后删除；禁止 push 或部署比较分支。
+- 已知 provider/计量故障必须标注；受污染的 token 数据不能归因于模型本身，也不参与跨模型效率结论。
 
 ---
 
@@ -244,3 +245,71 @@
 - **Gemini：** 两项任务均明显消耗更多 tokens；任务 001 有未被门禁触发的语义回退，任务 002 功能正确但未清理冗余与思考痕迹。
 
 继续累计不同类型任务；不把当前顺序视为永久模型排名。
+
+---
+
+## 任务 003：纳入平台无关通配符匹配器
+
+### 任务简述
+
+- **基线：** `21b61941c8361e35809ff27c16b0a32fd5a6b6ee`
+- **目标：** 原样纳入官方 `WildcardMatcher`，保留官方 `*`/`?`/`#`、递归回溯、`Locale.ROOT` 与 UTF-16 `char` 语义，增加真实 `TagKey`、非 ASCII BMP digit 和打包边界测试。
+- **关键验收：** 只增加一个 common slice（最终 API 35 / common 24 / platform 10）；官方 21 个断言全部保留；默认 locale 临时切换必须 `finally` 恢复；不得声称 QIO/miner/Finder 等消费者已移植；最终 JAR 精确包含该类且无 fixture/NeoForge 类。
+
+### 5.6 SOL
+
+- **提交：** `6bdbf2404f37ae92ae9efd60d19d25739c2a982c`
+- **规模：** 7 files，`+98/-6`；83 行、7 个 tests。
+- **资源：** 325.6s，65.1k tokens，35 次工具调用，约 `$0.79`。
+- **优点：** 原样保留四个官方 test methods 和全部断言，以最少增量精确覆盖 Turkish locale 恢复、真实 `TagKey`、BMP digit；README 和独立 matrix 小节简洁、边界明确。
+- **不足：** 未额外固定 supplementary digit surrogate 负例和自然 null failure；前者后来作为有价值的 UTF-16 边界补入综合版，后者属于可选范围。
+- **本任务评价：** 最佳平衡和最佳整合基底。
+
+### Gemini 3.8 Flash
+
+- **提交：** `409b0e823e938d2de2e6fc52720f4d7378befb6b`
+- **规模：** 7 files，`+144/-6`；128 行、8 个 tests。
+- **资源：** 597.6s，362.2k tokens，71 次工具调用，约 `$0.47`。
+- **优点：** 验收完整，额外覆盖两个 registry 类型、多组 TagKey、supplementary surrogate、三个 null 输入；文档事实正确。
+- **不足：** 相比 5.6 SOL 有较多重复正反例，测试长约 54%；packaged smoke 诊断过程多次重跑，整体最慢之一。
+- **计量说明：** 用户已确认 Reload 前 Gemini provider 存在缓存击穿 bug；任务 001–003 的 Gemini token 数均受污染，不能作为模型自身效率结论。外部修复已完成但需 Reload，任务 004 将作为修复后首个观测样本。
+- **本任务评价：** 正确但冗长；质量第四，token 效率不在本任务据此判定。
+
+### DeepSeek v4.1 Flash
+
+- **提交：** `9696583e52fd96b3b4ee14938f171743605ec3a2`
+- **规模：** 7 files，`+119/-7`；104 行、8 个 tests。
+- **资源：** 314.6s，62.1k tokens，57 次工具调用；通知未提供成本。
+- **优点：** 在接近 5.6 SOL 的体积下增加 supplementary-plane digit/UTF-16 surrogate 负例和完整自然 null failure；验收、文档、打包均正确；本任务墙钟和 tokens 最低。
+- **不足：** 将官方测试统一改为 static imports，虽保留全部用例但产生无必要 churn；额外 null 测试不是必需，工具调用明显多于 5.6 SOL。
+- **本任务评价：** 质量第二；supplementary surrogate 负例被综合版吸收。
+
+### GLM 5.3（`thinking=high`）
+
+- **提交：** `d685c8d6efbf4a22dab3662dcdd27a015ddad3ba`
+- **规模：** 7 files，`+134/-6`；117 行、8 个 tests。
+- **资源：** 626.4s，94.3k tokens，47 次工具调用，约 `$0.64`。
+- **优点：** 与任务 002 默认 effort 相比，本次没有验收或文档事实遗漏；locale 测试同时证明 Turkish 环境生效及恢复，digit 测试覆盖多个 BMP 数字和 supplementary code-point/char 差异，文档边界完整。
+- **不足：** 声称官方测试“unchanged”，但实际改成 static imports；测试比必要实现更长；本任务耗时最高，tokens 相比任务 002 的默认 effort 24.3k 明显增加。任务复杂度和并发负载不同，不能把变化完全归因于 high effort。
+- **本任务评价：** high effort 明显改善完整性，质量第三；需要更多任务判断提升是否稳定以及成本是否值得。
+
+### 本任务结论
+
+- **单体代码质量：** 5.6 SOL > DeepSeek > GLM 5.3 high > Gemini。
+- **执行效率：** DeepSeek 与 5.6 SOL 接近领先；GLM high 明显更重；Gemini 数据受 provider bug 污染。
+- **最终策略：** 以 5.6 SOL 为基底，把 TagKey 正例改为同时覆盖路径大小写，并吸收后三者验证的 supplementary Unicode digit/UTF-16 surrogate 负例。
+- **综合提交：** `05827bc28bb576aab9b396eda3b0e54e96cc5545`，7 files，`+104/-6`，89 行、7 个 tests。
+- **主代理独立验证：**
+  - 官方源 diff 为空，slice 精确为 35 / 24 / 10；
+  - 75 个 JUnit tests，0 failures / 0 errors；source slice 与 fixture isolation gates 通过，14.88s；
+  - `fabric-build.sh` 通过，1.75s；packaged smoke 通过，45.24s；
+  - clean release 通过，7.30s；一个 JAR，`WildcardMatcher.class` 恰好一次，无 fixture/NeoForge 类，build-info commit 与 `05827bc2` 一致。
+
+### 三项任务后的暂时纵向信号
+
+- 5.6 SOL 连续三项给出最适合作为基底的实现，优势仍是完整性与克制的平衡；
+- DeepSeek 连续提供有价值的边界测试/重构建议，本任务在时间与 tokens 上也接近或略优于 5.6 SOL；
+- GLM high 在本任务补齐了此前遗漏，但成本优势消失；继续以 high effort 观察，不能跨不同任务直接比较倍数；
+- Gemini 三项 Reload 前 token 数据统一标记为 provider 缓存 bug 污染；修复效果必须从 Reload 后任务 004 开始衡量。
+
+三个样本仍不足以形成永久排名，且尚未覆盖大型 adapter、并发和事务语义。
