@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -157,7 +158,8 @@ class CommonCollectionUtilityTest {
         assertNull(map.pollFirstEntry());
         assertNull(map.pollLastEntry());
         assertEquals(7, map.getOrDefault("missing", 7));
-        assertEquals(new LinkedHashMap<>(), map);
+        assertTrue(map.equals(new LinkedHashMap<>()));
+        assertFalse(map.equals(new HashMap<>()));
         assertEquals(0, map.hashCode());
     }
 
