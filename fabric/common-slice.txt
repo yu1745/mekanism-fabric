@@ -54,6 +54,12 @@ mekanism/common/util/LambdaMetaFactoryUtil.java
 mekanism/common/util/MultipartUtils.java
 mekanism/common/util/RegistryUtils.java
 mekanism/common/util/StatUtils.java
+mekanism/common/resource/IResource.java
+mekanism/common/resource/MiscResource.java
+mekanism/common/resource/BlockResourceInfo.java
+mekanism/common/tier/BinTier.java
+mekanism/common/tier/FactoryTier.java
+mekanism/common/tier/QIODriveTier.java
 mekanism/common/registration/INamedEntry.java
 mekanism/common/registration/MekanismDeferredHolder.java
 mekanism/common/registration/MekanismDeferredRegister.java

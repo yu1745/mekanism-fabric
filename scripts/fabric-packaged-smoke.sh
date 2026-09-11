@@ -143,6 +143,28 @@ required = {
 }
 with zipfile.ZipFile(sys.argv[1]) as artifact:
     entries = artifact.namelist()
+expected_tiers = {
+    "mekanism/common/tier/BinTier.class",
+    "mekanism/common/tier/FactoryTier.class",
+    "mekanism/common/tier/QIODriveTier.class",
+}
+actual_tiers = {
+    entry for entry in entries
+    if entry.startswith("mekanism/common/tier/") and entry.endswith(".class")
+}
+if actual_tiers != expected_tiers or any(entries.count(entry) != 1 for entry in expected_tiers):
+    raise SystemExit(f"unexpected tier class family: {sorted(actual_tiers)!r}")
+expected_resources = {
+    "mekanism/common/resource/IResource.class",
+    "mekanism/common/resource/MiscResource.class",
+    "mekanism/common/resource/BlockResourceInfo.class",
+}
+actual_resources = {
+    entry for entry in entries
+    if entry.startswith("mekanism/common/resource/") and entry.endswith(".class")
+}
+if actual_resources != expected_resources or any(entries.count(entry) != 1 for entry in expected_resources):
+    raise SystemExit(f"unexpected resource class family: {sorted(actual_resources)!r}")
 expected_direct_common_lib = {
     "mekanism/common/lib/Color.class",
     "mekanism/common/lib/Color$ColorFunction.class",
@@ -385,7 +407,7 @@ if unexpected_energy_api:
     )
 PYEOF
 then
-  echo "fabric-packaged-smoke: codec/collection/distribution/ChunkUtils/RegistryUtils/LambdaMetaFactoryUtil/long-transfer/dynamic-strict-energy/proxy/config-listener/common-lib-root production/test packaging contract failed" >&2
+  echo "fabric-packaged-smoke: tier/resource/codec/collection/distribution/ChunkUtils/RegistryUtils/LambdaMetaFactoryUtil/long-transfer/dynamic-strict-energy/proxy/config-listener/common-lib-root production/test packaging contract failed" >&2
   exit 1
 fi
 for required_entry in \
