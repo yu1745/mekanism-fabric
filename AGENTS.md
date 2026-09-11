@@ -54,6 +54,16 @@ scripts/fabric-paired-network-smoke.sh  # 隔离 Loom server + 两个顺序新 c
 scripts/fabric-configuration-rejection-smoke.sh # 错版/同版本显式拒绝/缺失协议 receiver 客户端的拒绝门禁（同上环境要求）
 ```
 
+## 测试增长约束
+
+现有测试不得仅因数量或行数增长而消融；只有发现测试本身错误、失效或明确重复且用户另行要求清理时才删除。以下约束只适用于后续新增测试：
+
+- byte-identical 官方闭包已有可执行官方测试时，优先直接纳入精确官方 oracle；Fabric-local 测试只补官方未覆盖的平台差异、关键边界或新层间连接。
+- 每个新闭包默认新增 **3–6 个 Fabric-local tests**，目标不超过 **200 行**；超过 **250 行或 8 个 tests** 前必须逐项说明每个超额测试能独立捕获的 production mutation，并将理由写入模型实现评估。无法证明独有价值的测试不得加入。
+- 已完整测试的下层负责排列组合；上层 bridge 通常只保留一个 happy path 和一个平台特有边界，不重复下层全部算术、方向或状态矩阵。
+- 精确输出已经蕴含的长度、唯一性、范围等派生断言不重复添加；不为 Mekanism 测试 vanilla/JDK 自身行为。
+- platform adapter、transaction/simulation、序列化兼容、registry freeze、config 原子发布、network handshake/rejection、true-long/overflow、patched-Minecraft 语义替换与打包隔离可按独立风险突破默认目标，但仍须保持最小并记录理由。
+
 ## 双模型并行实现评估
 
 四模型阶段已在任务 001–004 后结束；结论与原始指标见 `docs/MODEL_IMPLEMENTATION_COMPARISONS.md`。后续有明确边界和可执行验收门禁的开发任务，默认让 **5.6 SOL** 与 **DeepSeek v4.1 Flash** 从同一 clean commit 在隔离 worktree 中并行实现，并为两个顶层代理默认开启 300 秒 supervision watch。主代理必须检查真实 diff、综合取舍并独立验证，不能只采信代理总结；watch 只用于发现方向、范围或验收漂移，不干预可自行修复的普通构建/测试错误。每次任务的简述、两份评价、指标和最终选择持续追加到 `docs/MODEL_IMPLEMENTATION_COMPARISONS.md`。一次结果只评价该任务，不直接形成跨项目的永久模型排名。
