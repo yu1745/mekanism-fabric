@@ -109,12 +109,31 @@ class LambdaMetaFactoryUtilTest {
     }
 
     @Test
+    void mismatchedNamedAccessorSignaturesPropagateLookupFailure() throws NoSuchFieldException {
+        Field booleanField = NamedFixture.class.getDeclaredField("booleanValue");
+        assertThrows(NoSuchMethodException.class,
+              () -> LambdaMetaFactoryUtil.createGetter(booleanField, NamedFixture.class, "getIntValue"));
+        assertThrows(NoSuchMethodException.class,
+              () -> LambdaMetaFactoryUtil.createSetter(booleanField, NamedFixture.class, "setIntValue"));
+    }
+
+    @Test
     void inaccessiblePrivateDirectFieldIsNotSilentlyOpened() throws NoSuchFieldException {
         Field field = DirectFixture.class.getDeclaredField("intValue");
         assertThrows(IllegalAccessException.class,
               () -> LambdaMetaFactoryUtil.createGetter(field, DirectFixture.class, ""));
         assertThrows(IllegalAccessException.class,
               () -> LambdaMetaFactoryUtil.createSetter(field, DirectFixture.class, ""));
+    }
+
+    @Test
+    void primitiveNamedSetterRejectsNullAndWrongBoxedType() throws Throwable {
+        Field field = NamedFixture.class.getDeclaredField("intValue");
+        BiConsumer<NamedFixture, Object> setter = LambdaMetaFactoryUtil.createSetter(field, NamedFixture.class, "setIntValue");
+        NamedFixture fixture = new NamedFixture();
+
+        assertThrows(NullPointerException.class, () -> setter.accept(fixture, null));
+        assertThrows(ClassCastException.class, () -> setter.accept(fixture, "not an int"));
     }
 
     @Test
