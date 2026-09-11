@@ -6,13 +6,12 @@ import mekanism.api.energy.IEnergyConversion;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Shared validation and fixed-point quantization for the Team Reborn Energy boundary.
+ * Shared validation and conservative fixed-point quantization for the Team Reborn Energy boundary.
  * Reportable pairs always survive both official {@link IEnergyConversion} conversions.
  */
 final class FabricEnergyConversions {
 
-    private static final int NEARBY_ATTEMPTS = 64;
-    private static final int PROJECTION_ATTEMPTS = 256;
+    private static final BigInteger LONG_MAX = BigInteger.valueOf(Long.MAX_VALUE);
 
     private FabricEnergyConversions() {
     }
@@ -29,12 +28,20 @@ final class FabricEnergyConversions {
         if (otherUnits <= 0 || !isUsable(conversion)) {
             return 0;
         }
+        // IEnergyConversion necessarily passes a long through double. Preserve the exact identity case at this
+        // adapter boundary so odd values above 2^53 are not rounded before they reach either storage domain.
+        if (isExactIdentity(conversion)) {
+            return otherUnits;
+        }
         return Math.max(0, conversion.convertFrom(otherUnits));
     }
 
     static long toOther(IEnergyConversion conversion, long joules) {
         if (joules <= 0 || !isUsable(conversion)) {
             return 0;
+        }
+        if (isExactIdentity(conversion)) {
+            return joules;
         }
         return Math.max(0, conversion.convertTo(joules));
     }
@@ -45,6 +52,9 @@ final class FabricEnergyConversions {
     static long otherForJoules(IEnergyConversion conversion, long maxJoules) {
         if (maxJoules <= 0 || !isUsable(conversion)) {
             return 0;
+        }
+        if (isExactIdentity(conversion)) {
+            return maxJoules;
         }
         long maxOther = toOther(conversion, maxJoules);
         return quantizedOther(conversion, maxOther, maxJoules);
@@ -57,6 +67,9 @@ final class FabricEnergyConversions {
         if (maxOther <= 0 || !isUsable(conversion)) {
             return 0;
         }
+        if (isExactIdentity(conversion)) {
+            return maxOther;
+        }
         long maxJoules = fromOther(conversion, maxOther);
         long other = quantizedOther(conversion, maxOther, maxJoules);
         return other == 0 ? 0 : fromOther(conversion, other);
@@ -68,13 +81,54 @@ final class FabricEnergyConversions {
               && toOther(conversion, joules) == otherUnits;
     }
 
+    /**
+     * Selects from one conversion-defined, bound-independent family rather than searching down from each bound.
+     * The seed is the smallest verified continued-fraction convergent of the canonical decimal rate (the exact
+     * decimal numerator/denominator quantum is the final convergent). The descending powers-of-two basis has at
+     * most 63 members. A member and every cumulative sum are independently verified through the official methods;
+     * a failed candidate is simply skipped while the best verified sum is retained.
+     *
+     * <p>The fixed basis makes selection deterministic and monotone for component-wise increasing bounds: a newly
+     * eligible power is larger than the sum of all lower powers. This is deliberately conservative and does not
+     * claim the globally largest fixed point for arbitrary double rates.
+     */
     private static long quantizedOther(IEnergyConversion conversion, long maxOther, long maxJoules) {
         if (maxOther <= 0 || maxJoules <= 0) {
             return 0;
         }
-        // BigDecimal.valueOf uses the canonical decimal representation of the caller's double. Reducing that
-        // ratio gives the intended whole-unit quantum, while all candidates are still verified through the
-        // official double conversion methods before they can be used or reported.
+        long seedOther = findVerifiedSeedOther(conversion);
+        if (seedOther == 0) {
+            return 0;
+        }
+        long seedJoules = fromOther(conversion, seedOther);
+        long bestOther = 0;
+        long bestJoules = 0;
+        for (int shift = 62; shift >= 0; shift--) {
+            if (seedOther > (maxOther >> shift) || seedJoules > (maxJoules >> shift)) {
+                continue;
+            }
+            long chunkOther = seedOther << shift;
+            long chunkJoules = seedJoules << shift;
+            if (!isExactPair(conversion, chunkOther, chunkJoules)
+                  || chunkOther > maxOther - bestOther || chunkJoules > maxJoules - bestJoules) {
+                continue;
+            }
+            long candidateOther = bestOther + chunkOther;
+            long candidateJoules = bestJoules + chunkJoules;
+            if (isExactPair(conversion, candidateOther, candidateJoules)) {
+                bestOther = candidateOther;
+                bestJoules = candidateJoules;
+            }
+        }
+        return bestOther;
+    }
+
+    /**
+     * Euclid's algorithm is finite and its convergent denominators increase, so this fallback has no attempt cap
+     * or linear decrement. A verified early convergent can provide a useful exact pair even when the full decimal
+     * denominator is larger than the caller's bound.
+     */
+    private static long findVerifiedSeedOther(IEnergyConversion conversion) {
         BigDecimal decimalRate = BigDecimal.valueOf(conversion.getConversion()).stripTrailingZeros();
         BigInteger numerator = decimalRate.unscaledValue();
         BigInteger denominator = BigInteger.ONE;
@@ -87,54 +141,32 @@ final class FabricEnergyConversions {
         BigInteger gcd = numerator.gcd(denominator);
         numerator = numerator.divide(gcd);
         denominator = denominator.divide(gcd);
-        if (numerator.signum() <= 0 || numerator.bitLength() > 63 || denominator.bitLength() > 63) {
-            return projectedFixedPoint(conversion, maxOther, maxJoules);
-        }
-        long jouleQuantum = numerator.longValueExact();
-        long otherQuantum = denominator.longValueExact();
-        long multiplier = Math.min(maxOther / otherQuantum, maxJoules / jouleQuantum);
-        if (multiplier <= 0) {
-            return projectedFixedPoint(conversion, maxOther, maxJoules);
-        }
-        long candidate = tryMultipliers(conversion, otherQuantum, jouleQuantum, multiplier, maxOther, maxJoules);
-        if (candidate != 0) {
-            return candidate;
-        }
-        // Large long values may stop being exactly distinguishable by the official double contract. Halving
-        // finds a smaller verified multiple without ever claiming precision the conversion cannot represent.
-        while (multiplier > 1) {
-            multiplier /= 2;
-            candidate = tryMultipliers(conversion, otherQuantum, jouleQuantum, multiplier, maxOther, maxJoules);
-            if (candidate != 0) {
-                return candidate;
+
+        BigInteger remainderNumerator = numerator;
+        BigInteger remainderDenominator = denominator;
+        BigInteger denominatorMinusTwo = BigInteger.ONE;
+        BigInteger denominatorMinusOne = BigInteger.ZERO;
+        long bestSeed = 0;
+        while (remainderDenominator.signum() != 0) {
+            BigInteger[] division = remainderNumerator.divideAndRemainder(remainderDenominator);
+            BigInteger convergentDenominator = division[0].multiply(denominatorMinusOne).add(denominatorMinusTwo);
+            if (convergentDenominator.signum() > 0 && convergentDenominator.compareTo(LONG_MAX) <= 0) {
+                long candidateOther = convergentDenominator.longValueExact();
+                long candidateJoules = fromOther(conversion, candidateOther);
+                if (isExactPair(conversion, candidateOther, candidateJoules)
+                      && (bestSeed == 0 || candidateOther < bestSeed)) {
+                    bestSeed = candidateOther;
+                }
             }
+            denominatorMinusTwo = denominatorMinusOne;
+            denominatorMinusOne = convergentDenominator;
+            remainderNumerator = remainderDenominator;
+            remainderDenominator = division[1];
         }
-        return projectedFixedPoint(conversion, maxOther, maxJoules);
+        return bestSeed;
     }
 
-    private static long tryMultipliers(IEnergyConversion conversion, long otherQuantum, long jouleQuantum,
-          long initialMultiplier, long maxOther, long maxJoules) {
-        long multiplier = initialMultiplier;
-        for (int attempt = 0; attempt < NEARBY_ATTEMPTS && multiplier > 0; attempt++, multiplier--) {
-            long other = otherQuantum * multiplier;
-            long joules = jouleQuantum * multiplier;
-            if (other <= maxOther && joules <= maxJoules && isExactPair(conversion, other, joules)) {
-                return other;
-            }
-        }
-        return 0;
-    }
-
-    private static long projectedFixedPoint(IEnergyConversion conversion, long initialOther, long maxJoules) {
-        long candidate = initialOther;
-        for (int attempt = 0; attempt < PROJECTION_ATTEMPTS && candidate > 0; attempt++) {
-            long joules = fromOther(conversion, candidate);
-            if (joules > 0 && joules <= maxJoules && isExactPair(conversion, candidate, joules)) {
-                return candidate;
-            }
-            long projected = joules <= 0 ? 0 : toOther(conversion, Math.min(joules, maxJoules));
-            candidate = projected > 0 && projected < candidate ? projected : candidate - 1;
-        }
-        return 0;
+    private static boolean isExactIdentity(IEnergyConversion conversion) {
+        return conversion.getConversion() == 1.0D;
     }
 }

@@ -2,6 +2,7 @@ package mekanism.fabric.energy;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -11,7 +12,9 @@ import mekanism.api.Action;
 import mekanism.api.energy.IEnergyConversion;
 import mekanism.api.energy.IStrictEnergyHandler;
 import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
+import net.minecraft.core.Direction;
 import org.junit.jupiter.api.Test;
+import team.reborn.energy.api.base.SimpleEnergyStorage;
 
 class FabricEnergyStorageTest {
 
@@ -19,7 +22,7 @@ class FabricEnergyStorageTest {
     void preconditionsSupportSaturationAndOrdinaryFractionalReturnsMatchRawState() {
         ArrayHandler saturatedHandler = new ArrayHandler(
               new long[]{Long.MAX_VALUE - 5, 10}, new long[]{Long.MAX_VALUE, 20});
-        FabricEnergyStorage saturated = new FabricEnergyStorage(saturatedHandler, conversion(true, 1));
+        FabricEnergyStorage saturated = new FabricEnergyStorage(saturatedHandler, Direction.NORTH, conversion(true, 1));
         assertTrue(saturated.supportsInsertion());
         assertTrue(saturated.supportsExtraction());
         assertEquals(Long.MAX_VALUE, saturated.getAmount());
@@ -29,7 +32,20 @@ class FabricEnergyStorageTest {
             assertThrows(IllegalArgumentException.class, () -> saturated.extract(-1, transaction));
         }
 
-        FabricEnergyStorage disabled = new FabricEnergyStorage(saturatedHandler, conversion(false, 1));
+        long oddAboveDoublePrecision = (1L << 53) + 1;
+        ArrayHandler preciseHandler = new ArrayHandler(
+              new long[]{oddAboveDoublePrecision, 3}, new long[]{oddAboveDoublePrecision + 100, 7});
+        FabricEnergyStorage precise = new FabricEnergyStorage(preciseHandler, Direction.NORTH, conversion(true, 1));
+        assertEquals(oddAboveDoublePrecision + 3, precise.getAmount());
+        assertEquals(oddAboveDoublePrecision + 107, precise.getCapacity());
+        ArrayHandler aggregateBeforeConversion = new ArrayHandler(new long[]{2, 3}, new long[]{2, 3});
+        FabricEnergyStorage aggregate = new FabricEnergyStorage(
+              aggregateBeforeConversion, Direction.NORTH, conversion(true, 2.5));
+        assertEquals(2, aggregate.getAmount());
+        assertEquals(2, aggregate.getCapacity());
+
+        FabricEnergyStorage disabled = new FabricEnergyStorage(
+              saturatedHandler, Direction.NORTH, conversion(false, 1));
         assertFalse(disabled.supportsInsertion());
         assertFalse(disabled.supportsExtraction());
         assertEquals(0, disabled.getAmount());
@@ -39,12 +55,13 @@ class FabricEnergyStorageTest {
             assertEquals(0, disabled.extract(10, transaction));
             assertThrows(IllegalArgumentException.class, () -> disabled.insert(-1, transaction));
         }
-        FabricEnergyStorage invalid = new FabricEnergyStorage(saturatedHandler, conversion(true, Double.NaN));
+        FabricEnergyStorage invalid = new FabricEnergyStorage(
+              saturatedHandler, Direction.NORTH, conversion(true, Double.NaN));
         assertFalse(invalid.supportsInsertion());
         assertFalse(invalid.supportsExtraction());
 
         ArrayHandler ordinaryHandler = new ArrayHandler(new long[]{10}, new long[]{100});
-        FabricEnergyStorage ordinary = new FabricEnergyStorage(ordinaryHandler, conversion(true, 1));
+        FabricEnergyStorage ordinary = new FabricEnergyStorage(ordinaryHandler, Direction.NORTH, conversion(true, 1));
         try (Transaction transaction = Transaction.openOuter()) {
             assertEquals(15, ordinary.insert(15, transaction));
             assertEquals(25, ordinaryHandler.energy[0]);
@@ -54,8 +71,22 @@ class FabricEnergyStorageTest {
         }
         assertEquals(20, ordinaryHandler.energy[0]);
 
+        ArrayHandler hugeHandler = new ArrayHandler(
+              new long[]{oddAboveDoublePrecision}, new long[]{Long.MAX_VALUE});
+        FabricEnergyStorage huge = new FabricEnergyStorage(hugeHandler, Direction.NORTH, conversion(true, 1));
+        try (Transaction transaction = Transaction.openOuter()) {
+            long inserted = (1L << 59) + 1;
+            assertEquals(inserted, huge.insert(inserted, transaction));
+            assertEquals(oddAboveDoublePrecision + inserted, hugeHandler.energy[0]);
+            long extracted = (1L << 58) + 1;
+            assertEquals(extracted, huge.extract(extracted, transaction));
+            assertEquals(oddAboveDoublePrecision + inserted - extracted, hugeHandler.energy[0]);
+            transaction.commit();
+        }
+
         ArrayHandler fractionalHandler = new ArrayHandler(new long[]{0}, new long[]{100});
-        FabricEnergyStorage fractional = new FabricEnergyStorage(fractionalHandler, conversion(true, 2.5));
+        FabricEnergyStorage fractional = new FabricEnergyStorage(
+              fractionalHandler, Direction.NORTH, conversion(true, 2.5));
         try (Transaction transaction = Transaction.openOuter()) {
             assertEquals(2, fractional.insert(3, transaction));
             assertEquals(5, fractionalHandler.energy[0]);
@@ -69,7 +100,8 @@ class FabricEnergyStorageTest {
         assertEquals(0, fractionalHandler.energy[0]);
 
         ArrayHandler inverseFractionalHandler = new ArrayHandler(new long[]{0}, new long[]{100});
-        FabricEnergyStorage inverseFractional = new FabricEnergyStorage(inverseFractionalHandler, conversion(true, 0.4));
+        FabricEnergyStorage inverseFractional = new FabricEnergyStorage(
+              inverseFractionalHandler, Direction.NORTH, conversion(true, 0.4));
         try (Transaction transaction = Transaction.openOuter()) {
             assertEquals(5, inverseFractional.insert(9, transaction));
             assertEquals(2, inverseFractionalHandler.energy[0]);
@@ -81,12 +113,17 @@ class FabricEnergyStorageTest {
             transaction.commit();
         }
         assertEquals(0, inverseFractionalHandler.energy[0]);
+
+        SimpleEnergyStorage teamStorage = new SimpleEnergyStorage(100, 100, 100);
+        FabricStrictEnergyHandler nonRestoring = new FabricStrictEnergyHandler(teamStorage, conversion(true, 1));
+        assertThrows(IllegalArgumentException.class,
+              () -> new FabricEnergyStorage(nonRestoring, Direction.NORTH, conversion(true, 1)));
     }
 
     @Test
     void stableSnapshotsCoverRepeatedNestedAbortOuterAbortCommitAndCountFailure() {
         ArrayHandler handler = new ArrayHandler(new long[]{10, 20}, new long[]{100, 100});
-        FabricEnergyStorage storage = new FabricEnergyStorage(handler, conversion(true, 1));
+        FabricEnergyStorage storage = new FabricEnergyStorage(handler, Direction.NORTH, conversion(true, 1));
 
         try (Transaction outer = Transaction.openOuter()) {
             assertEquals(5, storage.insert(5, outer));
@@ -126,13 +163,49 @@ class FabricEnergyStorageTest {
               handler.setEvents);
 
         ArrayHandler changing = new ArrayHandler(new long[]{1}, new long[]{10});
-        FabricEnergyStorage unstableCount = new FabricEnergyStorage(changing, conversion(true, 1));
+        FabricEnergyStorage unstableCount = new FabricEnergyStorage(changing, Direction.NORTH, conversion(true, 1));
         changing.reportedCount = 2;
         assertThrows(IllegalStateException.class, unstableCount::supportsInsertion);
         assertThrows(IllegalStateException.class, unstableCount::getAmount);
         try (Transaction transaction = Transaction.openOuter()) {
             assertThrows(IllegalStateException.class, () -> unstableCount.insert(1, transaction));
         }
+
+        ArrayHandler changesDuringExecute = new ArrayHandler(new long[]{4}, new long[]{10});
+        FabricEnergyStorage guarded = new FabricEnergyStorage(
+              changesDuringExecute, Direction.NORTH, conversion(true, 1));
+        changesDuringExecute.changeCountOnExecute = true;
+        try (Transaction transaction = Transaction.openOuter()) {
+            assertEquals(0, guarded.insert(3, transaction));
+            assertEquals(List.of(4L), changesDuringExecute.values());
+            transaction.commit();
+        }
+        assertEquals(List.of(4L), changesDuringExecute.values());
+        assertThrows(IllegalStateException.class, guarded::supportsInsertion);
+
+        // setEnergy is an explicit backing precondition, not a guarantee the adapter can synthesize. All four
+        // captured indices are attempted even after index 1 fails; index 2 is actually restored before index 3
+        // supplies a suppressed failure. Index 1's mutation survives, proving atomicity is unavailable and close
+        // propagates when the precondition is violated.
+        ArrayHandler throwing = new ArrayHandler(
+              new long[]{10, 20, 30, 40}, new long[]{10, 100, 100, 100});
+        FabricEnergyStorage cannotRestore = new FabricEnergyStorage(
+              throwing, Direction.NORTH, conversion(true, 1));
+        Transaction failedRestore = Transaction.openOuter();
+        assertEquals(85, cannotRestore.insert(85, failedRestore));
+        assertEquals(List.of(10L, 100L, 35L, 40L), throwing.values());
+        throwing.throwOnSet[1] = true;
+        throwing.throwOnSet[3] = true;
+        RuntimeException closeFailure = assertThrows(RuntimeException.class, failedRestore::close);
+        assertEquals(List.of(10L, 100L, 30L, 40L), throwing.values());
+        assertEquals(List.of("1=100", "2=35", "0=10", "1=20", "2=30", "3=40"), throwing.setEvents);
+        Throwable aggregateFailure = closeFailure.getCause();
+        assertNotNull(aggregateFailure);
+        Throwable firstSetterFailure = aggregateFailure.getCause();
+        assertNotNull(firstSetterFailure);
+        assertEquals(1, firstSetterFailure.getSuppressed().length);
+        assertTrue(firstSetterFailure.getMessage().contains("container 1"));
+        assertTrue(firstSetterFailure.getSuppressed()[0].getMessage().contains("container 3"));
     }
 
     private static IEnergyConversion conversion(boolean enabled, double rate) {
@@ -152,13 +225,16 @@ class FabricEnergyStorageTest {
     private static final class ArrayHandler implements IStrictEnergyHandler {
         private final long[] energy;
         private final long[] capacity;
+        private final boolean[] throwOnSet;
         private final List<String> setEvents = new ArrayList<>();
         private int reportedCount;
         private int listenerCalls;
+        private boolean changeCountOnExecute;
 
         private ArrayHandler(long[] energy, long[] capacity) {
             this.energy = energy;
             this.capacity = capacity;
+            this.throwOnSet = new boolean[energy.length];
             this.reportedCount = energy.length;
         }
 
@@ -182,9 +258,12 @@ class FabricEnergyStorageTest {
 
         @Override
         public void setEnergy(int container, long value) {
+            setEvents.add(container + "=" + value);
+            if (throwOnSet[container]) {
+                throw new UnsupportedOperationException("cannot restore container " + container);
+            }
             long previous = energy[container];
             energy[container] = value;
-            setEvents.add(container + "=" + value);
             if (previous != value) {
                 // Mirrors the immediate onContentsChanged behavior of Mekanism containers.
                 listenerCalls++;
@@ -209,6 +288,10 @@ class FabricEnergyStorageTest {
             long accepted = Math.min(amount, capacity[container] - energy[container]);
             if (accepted > 0 && action.execute()) {
                 setEnergy(container, energy[container] + accepted);
+                if (changeCountOnExecute) {
+                    changeCountOnExecute = false;
+                    reportedCount = energy.length + 1;
+                }
             }
             return amount - accepted;
         }
@@ -221,6 +304,10 @@ class FabricEnergyStorageTest {
             long extracted = Math.min(amount, energy[container]);
             if (extracted > 0 && action.execute()) {
                 setEnergy(container, energy[container] - extracted);
+                if (changeCountOnExecute) {
+                    changeCountOnExecute = false;
+                    reportedCount = energy.length + 1;
+                }
             }
             return extracted;
         }

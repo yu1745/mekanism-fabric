@@ -16,6 +16,11 @@ class IEnergyConversionTest {
         assertEquals(0, one.convertTo(0));
         assertEquals(3_000_000_000L, one.convertFrom(3_000_000_000L));
         assertEquals(3_000_000_000L, one.convertTo(3_000_000_000L));
+        // This loss is the unchanged official double contract. The Fabric adapter, not this API, bypasses it only
+        // for an exact 1.0D rate so that identity-domain longs remain exact.
+        long oddAboveDoublePrecision = (1L << 53) + 1;
+        assertEquals(1L << 53, one.convertFrom(oddAboveDoublePrecision));
+        assertEquals(1L << 53, one.convertTo(oddAboveDoublePrecision));
         assertEquals(Integer.MAX_VALUE, one.convertToAsInt(3_000_000_000L));
         assertEquals(3_000_000_000L, one.convertToAsLong(3_000_000_000L));
         assertTrue(one.isOneToOne());

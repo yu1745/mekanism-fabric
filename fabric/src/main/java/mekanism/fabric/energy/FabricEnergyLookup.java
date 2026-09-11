@@ -37,7 +37,15 @@ public final class FabricEnergyLookup {
     @Nullable
     static IStrictEnergyHandler wrap(@Nullable EnergyStorage storage, @Nullable Direction side,
           @Nullable IEnergyConversion conversion) {
-        if (storage == null || side == null || !FabricEnergyConversions.isUsable(conversion)) {
+        if (storage == null || side == null) {
+            return null;
+        }
+        if (storage instanceof FabricEnergyStorage fabricStorage && !fabricStorage.isExposedOn(side)) {
+            // Never turn a storage bound to one physical side into a handler requested from another side, even
+            // when another conversion would otherwise cause an additional adapter layer.
+            return null;
+        }
+        if (!FabricEnergyConversions.isUsable(conversion)) {
             return null;
         }
         if (storage instanceof FabricEnergyStorage fabricStorage && fabricStorage.hasConversion(conversion)) {
@@ -47,8 +55,13 @@ public final class FabricEnergyLookup {
     }
 
     /**
-     * Creates one stable external view for a physical side. The owner is responsible for caching that view for the
-     * lifetime of the stable side-bound handler and invalidating it with the owner lifecycle.
+     * Creates one stable external view for a physical side. Every exposed container must support deterministic
+     * {@link IStrictEnergyHandler#setEnergy(int, long)} restoration; a restore failure is propagated and breaks
+     * transaction atomicity after all captured indices have been attempted. The owner is responsible for caching
+     * the view for the stable side-bound handler's lifetime and invalidating it with the owner lifecycle.
+     *
+     * <p>The nullable holder's insertion and extraction policy is consulted live for support queries and operations.
+     * When that support changes, the owner must notify neighboring capability consumers; owner wiring is deferred.
      */
     @Nullable
     public static EnergyStorage expose(@Nullable IMekanismStrictEnergyHandler handler, @Nullable Direction side,
@@ -57,6 +70,9 @@ public final class FabricEnergyLookup {
               || !handler.canHandleEnergy() || handler.getEnergyContainerCount(side) <= 0) {
             return null;
         }
-        return new FabricEnergyStorage(new ProxyStrictEnergyHandler(handler, side, holder), conversion);
+        ProxyStrictEnergyHandler proxy = new ProxyStrictEnergyHandler(handler, side, holder);
+        return new FabricEnergyStorage(proxy, side, conversion,
+              () -> holder == null || holder.canInsert(side),
+              () -> holder == null || holder.canExtract(side));
     }
 }

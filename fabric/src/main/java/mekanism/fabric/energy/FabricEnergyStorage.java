@@ -1,6 +1,7 @@
 package mekanism.fabric.energy;
 
 import java.util.Objects;
+import java.util.function.BooleanSupplier;
 import mekanism.api.Action;
 import mekanism.api.energy.IEnergyConversion;
 import mekanism.api.energy.IStrictEnergyHandler;
@@ -8,24 +9,42 @@ import net.fabricmc.fabric.api.transfer.v1.storage.StoragePreconditions;
 import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
 import net.fabricmc.fabric.api.transfer.v1.transaction.TransactionContext;
 import net.fabricmc.fabric.api.transfer.v1.transaction.base.SnapshotParticipant;
+import net.minecraft.core.Direction;
 import team.reborn.energy.api.EnergyStorage;
 
 /**
- * Transactional Team Reborn Energy view of one stable Mekanism handler.
+ * Transactional Team Reborn Energy view of one stable, physical-side-bound Mekanism handler.
  *
- * <p>The container count is captured at construction. Owners must retain one adapter for each stable handler and
- * physical side. Rollback necessarily restores through {@link IStrictEnergyHandler#setEnergy}; listeners, saves, or
- * synchronization triggered immediately by execute/restore cannot be made transactional by this compatibility layer.
+ * <p>The container count and exposure side are captured at construction. Every captured container is required to
+ * support deterministic restoration through {@link IStrictEnergyHandler#setEnergy}; construction rejects the known
+ * non-restoring {@link FabricStrictEnergyHandler}, but arbitrary handlers must uphold this caller precondition.
+ * Restore attempts every captured index before propagating a failure. If any setter cannot restore, atomicity is no
+ * longer possible and transaction close reports the failure. Listeners, saves, or synchronization triggered
+ * immediately by execute/restore cannot be made transactional by this compatibility layer.
  */
 public final class FabricEnergyStorage extends SnapshotParticipant<long[]> implements EnergyStorage {
 
     private final IStrictEnergyHandler handler;
+    private final Direction exposureSide;
     private final IEnergyConversion conversion;
+    private final BooleanSupplier insertionAllowed;
+    private final BooleanSupplier extractionAllowed;
     private final int containerCount;
 
-    FabricEnergyStorage(IStrictEnergyHandler handler, IEnergyConversion conversion) {
+    FabricEnergyStorage(IStrictEnergyHandler handler, Direction exposureSide, IEnergyConversion conversion) {
+        this(handler, exposureSide, conversion, () -> true, () -> true);
+    }
+
+    FabricEnergyStorage(IStrictEnergyHandler handler, Direction exposureSide, IEnergyConversion conversion,
+          BooleanSupplier insertionAllowed, BooleanSupplier extractionAllowed) {
         this.handler = Objects.requireNonNull(handler, "handler");
+        if (handler instanceof FabricStrictEnergyHandler) {
+            throw new IllegalArgumentException("FabricStrictEnergyHandler cannot provide transactional setEnergy restoration");
+        }
+        this.exposureSide = Objects.requireNonNull(exposureSide, "exposureSide");
         this.conversion = Objects.requireNonNull(conversion, "conversion");
+        this.insertionAllowed = Objects.requireNonNull(insertionAllowed, "insertionAllowed");
+        this.extractionAllowed = Objects.requireNonNull(extractionAllowed, "extractionAllowed");
         this.containerCount = handler.getEnergyContainerCount();
         if (containerCount < 0) {
             throw new IllegalArgumentException("Energy container count may not be negative: " + containerCount);
@@ -35,7 +54,7 @@ public final class FabricEnergyStorage extends SnapshotParticipant<long[]> imple
     @Override
     public boolean supportsInsertion() {
         checkStableContainerCount();
-        return FabricEnergyConversions.isUsable(conversion);
+        return FabricEnergyConversions.isUsable(conversion) && insertionAllowed.getAsBoolean();
     }
 
     @Override
@@ -43,7 +62,7 @@ public final class FabricEnergyStorage extends SnapshotParticipant<long[]> imple
         checkStableContainerCount();
         StoragePreconditions.notNegative(maxAmount);
         Objects.requireNonNull(transaction, "transaction");
-        if (maxAmount == 0 || !FabricEnergyConversions.isUsable(conversion)) {
+        if (maxAmount == 0 || !FabricEnergyConversions.isUsable(conversion) || !insertionAllowed.getAsBoolean()) {
             return 0;
         }
         long offeredJoules = FabricEnergyConversions.joulesForOther(conversion, maxAmount);
@@ -61,11 +80,17 @@ public final class FabricEnergyStorage extends SnapshotParticipant<long[]> imple
             return 0;
         }
         try (Transaction nested = Transaction.openNested(transaction)) {
+            // This is the final stable-topology and live-policy check before mutation.
             checkStableContainerCount();
+            if (!insertionAllowed.getAsBoolean()) {
+                return 0;
+            }
             updateSnapshots(nested);
             long remainder = handler.insertEnergy(acceptedJoules, Action.EXECUTE);
-            checkStableContainerCount();
-            if (remainder == 0 && FabricEnergyConversions.isExactPair(conversion, acceptedOther, acceptedJoules)) {
+            // A count change caused by execute invalidates the result, but must not prevent this child from aborting
+            // and restoring the captured topology. The next public operation will fail its entry check.
+            if (hasStableContainerCount() && remainder == 0
+                  && FabricEnergyConversions.isExactPair(conversion, acceptedOther, acceptedJoules)) {
                 nested.commit();
                 return acceptedOther;
             }
@@ -76,7 +101,7 @@ public final class FabricEnergyStorage extends SnapshotParticipant<long[]> imple
     @Override
     public boolean supportsExtraction() {
         checkStableContainerCount();
-        return FabricEnergyConversions.isUsable(conversion);
+        return FabricEnergyConversions.isUsable(conversion) && extractionAllowed.getAsBoolean();
     }
 
     @Override
@@ -84,7 +109,7 @@ public final class FabricEnergyStorage extends SnapshotParticipant<long[]> imple
         checkStableContainerCount();
         StoragePreconditions.notNegative(maxAmount);
         Objects.requireNonNull(transaction, "transaction");
-        if (maxAmount == 0 || !FabricEnergyConversions.isUsable(conversion)) {
+        if (maxAmount == 0 || !FabricEnergyConversions.isUsable(conversion) || !extractionAllowed.getAsBoolean()) {
             return 0;
         }
         long requestedJoules = FabricEnergyConversions.joulesForOther(conversion, maxAmount);
@@ -102,10 +127,13 @@ public final class FabricEnergyStorage extends SnapshotParticipant<long[]> imple
         }
         try (Transaction nested = Transaction.openNested(transaction)) {
             checkStableContainerCount();
+            if (!extractionAllowed.getAsBoolean()) {
+                return 0;
+            }
             updateSnapshots(nested);
             long extracted = handler.extractEnergy(extractedJoules, Action.EXECUTE);
-            checkStableContainerCount();
-            if (extracted == extractedJoules && FabricEnergyConversions.isExactPair(conversion, extractedOther, extractedJoules)) {
+            if (hasStableContainerCount() && extracted == extractedJoules
+                  && FabricEnergyConversions.isExactPair(conversion, extractedOther, extractedJoules)) {
                 nested.commit();
                 return extractedOther;
             }
@@ -119,11 +147,11 @@ public final class FabricEnergyStorage extends SnapshotParticipant<long[]> imple
         if (!FabricEnergyConversions.isUsable(conversion)) {
             return 0;
         }
-        long amount = 0;
+        long joules = 0;
         for (int container = 0; container < containerCount; container++) {
-            amount = addClamped(amount, FabricEnergyConversions.toOther(conversion, handler.getEnergy(container)));
+            joules = addClamped(joules, handler.getEnergy(container));
         }
-        return amount;
+        return FabricEnergyConversions.toOther(conversion, joules);
     }
 
     @Override
@@ -132,11 +160,11 @@ public final class FabricEnergyStorage extends SnapshotParticipant<long[]> imple
         if (!FabricEnergyConversions.isUsable(conversion)) {
             return 0;
         }
-        long capacity = 0;
+        long joules = 0;
         for (int container = 0; container < containerCount; container++) {
-            capacity = addClamped(capacity, FabricEnergyConversions.toOther(conversion, handler.getMaxEnergy(container)));
+            joules = addClamped(joules, handler.getMaxEnergy(container));
         }
-        return capacity;
+        return FabricEnergyConversions.toOther(conversion, joules);
     }
 
     @Override
@@ -151,17 +179,32 @@ public final class FabricEnergyStorage extends SnapshotParticipant<long[]> imple
 
     @Override
     protected void readSnapshot(long[] snapshot) {
-        checkStableContainerCount();
-        if (snapshot.length != containerCount) {
-            throw new IllegalStateException("Energy snapshot container count changed from " + containerCount + " to " + snapshot.length);
+        // Never consult the handler's now-reported count here: execution may have changed it. The snapshot length
+        // is the captured topology, and every captured index gets a best-effort restoration attempt.
+        Throwable failure = null;
+        for (int container = 0; container < snapshot.length; container++) {
+            try {
+                handler.setEnergy(container, snapshot[container]);
+            } catch (Throwable restoreFailure) {
+                if (failure == null) {
+                    failure = restoreFailure;
+                } else if (failure != restoreFailure) {
+                    failure.addSuppressed(restoreFailure);
+                }
+            }
         }
-        for (int container = 0; container < containerCount; container++) {
-            handler.setEnergy(container, snapshot[container]);
+        if (failure != null) {
+            // Always propagate as an Exception so Transfer API can finish all callbacks and repair its lifecycle.
+            throw new IllegalStateException("Failed to restore one or more captured energy containers", failure);
         }
     }
 
     boolean hasConversion(IEnergyConversion candidate) {
         return conversion == candidate;
+    }
+
+    boolean isExposedOn(Direction side) {
+        return exposureSide == side;
     }
 
     IStrictEnergyHandler stableHandler() {
@@ -177,7 +220,14 @@ public final class FabricEnergyStorage extends SnapshotParticipant<long[]> imple
         }
     }
 
+    private boolean hasStableContainerCount() {
+        return handler.getEnergyContainerCount() == containerCount;
+    }
+
     private static long addClamped(long total, long value) {
+        if (value <= 0) {
+            return total;
+        }
         return value > Long.MAX_VALUE - total ? Long.MAX_VALUE : total + value;
     }
 }

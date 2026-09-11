@@ -51,6 +51,19 @@ class FabricStrictEnergyHandlerTest {
         assertEquals(20, disabled.insertEnergy(20, Action.EXECUTE));
         assertEquals(0, disabled.extractEnergy(20, Action.EXECUTE));
         assertEquals(3_000_000_000L, storage.amount);
+
+        long oddAboveDoublePrecision = (1L << 53) + 1;
+        SimpleEnergyStorage hugeStorage = new SimpleEnergyStorage(Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE);
+        hugeStorage.amount = oddAboveDoublePrecision;
+        FabricStrictEnergyHandler huge = new FabricStrictEnergyHandler(hugeStorage, conversion(true, 1.0D));
+        assertEquals(oddAboveDoublePrecision, huge.getEnergy(0));
+        assertEquals(Long.MAX_VALUE, huge.getMaxEnergy(0));
+        long inserted = (1L << 59) + 1;
+        assertEquals(0, huge.insertEnergy(inserted, Action.EXECUTE));
+        assertEquals(oddAboveDoublePrecision + inserted, hugeStorage.amount);
+        long extracted = (1L << 58) + 1;
+        assertEquals(extracted, huge.extractEnergy(extracted, Action.EXECUTE));
+        assertEquals(oddAboveDoublePrecision + inserted - extracted, hugeStorage.amount);
     }
 
     @Test
@@ -79,6 +92,25 @@ class FabricStrictEnergyHandlerTest {
             outer.commit();
         }
         assertEquals(60, storage.amount);
+
+        LifecycleProbe closeProbe = new LifecycleProbe(handler, false);
+        try (Transaction outer = Transaction.openOuter()) {
+            closeProbe.updateSnapshots(outer);
+            // Deliberately abort so readSnapshot invokes the adapter during Lifecycle.CLOSING.
+        }
+        assertEquals(7, closeProbe.insertRemainder);
+        assertEquals(0, closeProbe.extracted);
+        assertEquals(60, storage.amount);
+
+        LifecycleProbe outerCloseProbe = new LifecycleProbe(handler, true);
+        try (Transaction outer = Transaction.openOuter()) {
+            outerCloseProbe.updateSnapshots(outer);
+            outer.commit();
+        }
+        assertEquals(7, outerCloseProbe.insertRemainder);
+        assertEquals(0, outerCloseProbe.extracted);
+        assertEquals(60, storage.amount);
+        assertEquals(Transaction.Lifecycle.NONE, Transaction.getLifecycle());
     }
 
     @Test
@@ -122,6 +154,42 @@ class FabricStrictEnergyHandlerTest {
                 return rate;
             }
         };
+    }
+
+    private static final class LifecycleProbe extends SnapshotParticipant<Long> {
+        private final FabricStrictEnergyHandler handler;
+        private final boolean probeOuterClose;
+        private long insertRemainder = Long.MIN_VALUE;
+        private long extracted = Long.MIN_VALUE;
+
+        private LifecycleProbe(FabricStrictEnergyHandler handler, boolean probeOuterClose) {
+            this.handler = handler;
+            this.probeOuterClose = probeOuterClose;
+        }
+
+        @Override
+        protected Long createSnapshot() {
+            return 0L;
+        }
+
+        @Override
+        protected void readSnapshot(Long snapshot) {
+            if (!probeOuterClose) {
+                probe();
+            }
+        }
+
+        @Override
+        protected void onFinalCommit() {
+            if (probeOuterClose) {
+                probe();
+            }
+        }
+
+        private void probe() {
+            insertRemainder = handler.insertEnergy(7, Action.EXECUTE);
+            extracted = handler.extractEnergy(7, Action.EXECUTE);
+        }
     }
 
     private static final class UnstableStorage extends SnapshotParticipant<Long> implements EnergyStorage {
