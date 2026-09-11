@@ -108,7 +108,9 @@ class ColorEffectStatTest {
         assertEquals(1, effect.ticker());
         Vec3 random = effect.randomVector();
         assertTrue(Double.isFinite(random.x) && Double.isFinite(random.y) && Double.isFinite(random.z));
-        assertEquals(1, random.length(), 1E-6);
+        double length = random.length();
+        assertTrue(length < 1E-4 || Math.abs(length - 1) < 1E-9,
+              "normalized random vector must be unit length or vanilla's near-zero fallback");
         assertEquals(4, new ExposedEffect(texture).getTextureGridSize());
     }
 

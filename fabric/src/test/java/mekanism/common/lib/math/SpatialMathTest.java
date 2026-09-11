@@ -23,6 +23,7 @@ class SpatialMathTest {
         GlobalPos global = raw.getGlobalPos(Level.OVERWORLD);
         assertEquals(Level.OVERWORLD, global.dimension());
         assertEquals(BlockPos.containing(-1.2, 3.9, -4.01), global.pos());
+        assertVec(Pos3D.create(global), -2, 3, -5);
 
         Range3D range = new Range3D(-5, -4, 7, 9, Level.NETHER);
         assertAll(() -> assertEquals(-5, range.xMin()), () -> assertEquals(-4, range.zMin()),
@@ -49,6 +50,7 @@ class SpatialMathTest {
         assertVec(p.xCrossProduct(), 0, 3, -2);
         assertVec(p.zCrossProduct(), -2, 1, 0);
         assertVec(p.getPerpendicular(), 0, 3, -2);
+        assertVec(new Pos3D(1, 2, 0).getPerpendicular(), -2, 1, 0);
         assertEquals(p, p.clone());
         assertNotSame(p, p.clone());
         assertEquals("[Pos3D: 1.0, 2.0, 3.0]", p.toString());
@@ -78,6 +80,8 @@ class SpatialMathTest {
         Quaternion y = new Quaternion(new Vec3(0, 1, 0), 90, true);
         Quaternion xy = x.copy().multiply(y);
         Quaternion yx = y.copy().multiply(x);
+        assertQuaternion(xy, 0.5, 0.5, 0.5, 0.5);
+        assertQuaternion(yx, 0.5, 0.5, -0.5, 0.5);
         assertNotEquals(xy, yx);
         assertNotEquals(x, x.copy().conjugate());
         assertEquals(x, x.copy().conjugate().conjugate());
