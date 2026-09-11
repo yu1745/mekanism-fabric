@@ -45,7 +45,7 @@ The three-layer handler closure connects the admitted sequential utility to Meka
 
 ## Sequential transfer utilities
 
-The unchanged official long-valued transfer closure is admitted as part of the API slice count 41 / common 32 / platform 10:
+The unchanged official long-valued transfer closure is admitted as part of the API slice count 41 / common 35 / platform 10:
 
 - `mekanism.api.math.LongTransferUtils`
 - `mekanism.api.container.InContainerGetterLong`

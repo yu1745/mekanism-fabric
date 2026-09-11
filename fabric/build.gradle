@@ -95,6 +95,8 @@ def platformSliceFiles = platformSlice.collect { file("src/main/java/${it}") }
 // behavior, in place, through this exact allowlist. Do not add ../src/test/java as a
 // source root: unrelated NeoForge tests must remain outside the Fabric test closure.
 def officialRootTestOracle = [
+      'mekanism/common/lib/collection/BiLongMultimapTest.java',
+      'mekanism/common/lib/collection/IndexedCuboidMapTest.java',
       'mekanism/common/lib/distribution/DistributionTest.java',
       'mekanism/common/lib/distribution/DistributionLongTest.java',
       'mekanism/common/lib/distribution/DistributionPropertyTest.java',
@@ -140,11 +142,11 @@ registerPortableSliceCheck('verifyPlatformSliceNoNeoForge',
 
 def verifyOfficialRootTestSources = tasks.register('verifyOfficialRootTestSources') {
     group = 'verification'
-    description = 'Checks the exact 16-file official root-test oracle allowlist.'
+    description = 'Checks the exact 18-file official root-test oracle allowlist.'
     inputs.files(officialRootTestOracleFiles)
     doLast {
-        if (officialRootTestOracle.size() != 16 || officialRootTestOracle.size() != officialRootTestOracle.toSet().size()) {
-            throw new GradleException('The official root-test oracle must contain exactly 16 unique paths')
+        if (officialRootTestOracle.size() != 18 || officialRootTestOracle.size() != officialRootTestOracle.toSet().size()) {
+            throw new GradleException('The official root-test oracle must contain exactly 18 unique paths')
         }
         def missing = officialRootTestOracleFiles.findAll { !it.isFile() }
         if (!missing.isEmpty()) {

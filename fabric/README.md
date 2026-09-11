@@ -18,7 +18,7 @@ fluid-import/link cleanup; `IMekanismStrictEnergyHandler` remains byte-identical
 See `../docs/API_DELTAS.md`. JetBrains annotations and JSR-305 remain `compileOnly`
 and are not bundled in the mod.
 
-`common-slice.txt` contains **32 official source files**, and
+`common-slice.txt` contains **35 official source files**, and
 `platform-slice.txt` contains **10 project-owned Fabric sources**. Together with
 the **41-file API slice**, they form bounded registry/GameEvent, TOML
 startup-config, configuration-handshake, internal energy storage/holder, internal
@@ -28,8 +28,8 @@ lambda-metafactory, and vanilla-registry utility closures. The unchanged
 QIO, miner, Finder, and other consumers remain future work. The unchanged
 distribution closure preserves the separate `int`/`long` split arithmetic,
 rebalancing, remainder order, lying-handler fallback, collection order, and
-`Target` handler contract. The exact 16-file official root-test oracle is
-compiled through an explicit path allowlist (19 JUnit examples and three jqwik
+`Target` handler contract. The exact 18-file official root-test oracle is
+compiled through an explicit path allowlist (including the two unchanged collection tests and three jqwik
 properties at 100,000 tries), with separate Fabric boundary coverage.
 Callers must provide nonnegative offers, a fresh/non-reused `Target`, and handlers
 whose simulation/acceptance and `SplitInfo.send` accounting obey the documented
@@ -42,8 +42,13 @@ packed `long` behavior, and `packedBlockToChunk`'s `>> 4` floor-section semantic
 for negative coordinates. `rangeClosed` returns a `long[]` sized from the
 inclusive dimensions, so the caller owns the precondition that the requested
 rectangle is representable and small enough to allocate; no new validation or API
-guarantee is added. `IndexedCuboidMap`, spatial indexes, QIO/miner logic,
-machines, and their callers are not ported.
+guarantee is added. The unchanged `BiLongMultimap`, `FilterTransformIterator`, and
+`IndexedCuboidMap` now provide the bounded in-memory indexed lookup closure; official
+and Fabric-local Java 21 tests cover bidirectional mutation, filtering/exhaustion,
+negative chunk and inclusive-box edges, replacement, and index cleanup. Packaging
+requires exactly the six expected collection outer/anonymous/record classes and
+rejects the rest of that package. Miner/QIO/spatial callers, world/chunk
+lifecycle/loading, persistence, concurrency, and multi-thread mutation are not ported or claimed.
 
 The unchanged Java 21 `LambdaMetaFactoryUtil` preserves its two distinct access
 modes: an empty method name binds the caller-prepared `Field` with an unreflected

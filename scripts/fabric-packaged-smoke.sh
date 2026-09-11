@@ -143,6 +143,20 @@ required = {
 }
 with zipfile.ZipFile(sys.argv[1]) as artifact:
     entries = artifact.namelist()
+expected_collection = {
+    "mekanism/common/lib/collection/BiLongMultimap.class",
+    "mekanism/common/lib/collection/FilterTransformIterator.class",
+    "mekanism/common/lib/collection/IndexedCuboidMap.class",
+    "mekanism/common/lib/collection/IndexedCuboidMap$1.class",
+    "mekanism/common/lib/collection/IndexedCuboidMap$2.class",
+    "mekanism/common/lib/collection/IndexedCuboidMap$CenteredBoundingBox.class",
+}
+actual_collection = [
+    entry for entry in entries
+    if entry.startswith("mekanism/common/lib/collection/") and entry.endswith(".class")
+]
+if set(actual_collection) != expected_collection or any(entries.count(entry) != 1 for entry in expected_collection):
+    raise SystemExit(f"unexpected collection class family: {sorted(actual_collection)!r}")
 for entry in required:
     if entries.count(entry) != 1:
         raise SystemExit(f"distribution class must be packaged exactly once: {entry}")
@@ -236,7 +250,7 @@ if unexpected_energy_api:
     )
 PYEOF
 then
-  echo "fabric-packaged-smoke: distribution/ChunkUtils/RegistryUtils/LambdaMetaFactoryUtil/long-transfer/strict-energy-handler production/test packaging contract failed" >&2
+  echo "fabric-packaged-smoke: collection/distribution/ChunkUtils/RegistryUtils/LambdaMetaFactoryUtil/long-transfer/strict-energy-handler production/test packaging contract failed" >&2
   exit 1
 fi
 for required_entry in \
