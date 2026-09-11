@@ -583,3 +583,39 @@ Gemini 3.8 Flash 与 GLM 5.3 不再进入默认实现面板；需要其特定能
 - **最终策略：** 采用 SOL 候选并在主线 cherry-pick 为 `6fe8e6b9`；综合提交 `c763da5d` 将 sided fixture 拆为真正使用接口 default-null 的基类和 fixed-side 子类，增加一个聚焦 null-forwarding test，并把发布门禁收紧为只允许 `IEnergyContainer` 与三个 strict handler interface，文档同步改成 exact-package 边界。没有吸收其余重复测试或违约 `canHandleEnergy=false` fixture。
 - **综合规模：** 相对基线 13 files，`+560/-32`；三份测试共 485 行、9 tests。
 - **主代理独立验证：** `IMekanismStrictEnergyHandler` 与 `4646f509` 字节一致，另两份 production source 只有各两个 import 删除和两个 Javadoc 替换；16 个 root oracle、`fabric/build.gradle`、common/platform slices 不变；slice 41/32/10 且无重复；28 suites、144 tests、0 failures/errors/skips，三个 jqwik properties 各 100,000 tries/checks；完整 Gradle gate 9.49s，`fabric-build.sh` 2.24s，packaged smoke 51.17s 并到达 `Done`；clean release contract 10.47s，恰好一个 JAR，energy API 集合精确为四类，无 test/fixture/NeoForge/JUnit/jqwik 泄漏，`build-info.json` source commit 与实现 HEAD `c763da5d` 一致，JAR sha256 为 `0de740d57c2de93683e87b6d17e4e4a64e4d270144528264186eb01fd69d44fb`。
+
+---
+
+## 任务 010：纳入 indexed spatial-lookup collection 闭包
+
+### 任务简述
+
+- **基线：** `99ad0abdc69d473815e752eb3c07cf1bfa08eebd`
+- **目标：** 原样纳入 `BiLongMultimap`、`FilterTransformIterator` 与 `IndexedCuboidMap`，并把官方 `BiLongMultimapTest`、`IndexedCuboidMapTest` 加入精确 root oracle。
+- **关键验收：** 三个 production 与两份 official test 均保持 baseline 字节一致；slice 41/35/10，root oracle 16→18；本地只补 dual-index mutation return、negative/extreme long、filter-transform exhaustion、negative chunk/inclusive box、invalid center、same-box replacement 与 mixed removal；发布 JAR 的 collection package 精确为 outer、两个 anonymous iterator 与 `CenteredBoundingBox` 共六类；不宣称 miner/QIO/spatial caller、world/chunk lifecycle/loading、persistence、concurrency 或多线程 mutation 已移植。
+- **运行中约束调整：** 用户明确要求只限制未来测试增长、不消融现有测试；两个候选收到同一 steer，要求依赖官方测试、Fabric-local 总计不超过 200 行/5 tests。两者均满足。长期规则另以独立提交 `917a122a` 写入 `AGENTS.md`。
+
+### 5.6 SOL
+
+- **提交：** `828125087c350de392c017088947cf0e1095ffc3`
+- **规模：** 9 files，`+146/-16`；单一 local suite 106 行、3 tests。
+- **资源：** 379.3s，89.6k tokens，46 次工具调用，约 `$1.29`。
+- **优点：** 两份官方测试承担完整正向 grid/removal coverage，本地三个聚合测试只补缺失边界；BiLongMultimap 同时证明 duplicate put/putAll、pair remove、极值排序与双向清理；Indexed 测试实际让 remove、removeAt、removeIf、clear 各自移除对象并保留 survivor，same-box replacement 也证明 value 数量为一；exact package gate 最短，文档没有新增独立文件且同步修正 `FABRIC_ENERGY.md` 的 slice 数量。全部门禁通过。
+- **不足：** iterator 用例最初只调用一次 `hasNext`，没有固定 repeated `hasNext` 不消费 prefetched value；空间用例虽用宽 Y 范围证明边界，却没有显式查询“同 X/Z chunk、Y 超界”；`removeAt` 只证明首次 true，没有固定重复删除 false。
+- **本任务评价：** 正确性、有效 mixed-removal 证据、测试预算和文档克制均最佳，是明显更合适的整合基底。
+
+### DeepSeek v4.1 Flash
+
+- **提交：** `3269aaebe48cf51c6d0feda5188bbf90931ef34b`
+- **规模：** 9 files，`+266/-18`；单一 local suite 160 行、4 tests。
+- **资源：** 493.2s，155.2k tokens，78 次工具调用；通知未提供成本。
+- **优点：** 明确覆盖 repeated `hasNext`、trailing/fully-filtered iterator、同 X/Z chunk 的 Y 超界、invalid-center 不污染独立 map、更多 BiLongMultimap mutation return 和 repeated `removeAt=false`；测试仍低于临时预算，exact package 诊断清楚，全部门禁通过。
+- **不足：** mixed-mutation 用例在 remove 与 removeAt 已清空 map 后才调用 `removeIf(value -> true)`，因此没有实际证明 removeIf 的 index/value 清理；相比 SOL 多 54 行测试、120 行总 diff、32 次工具调用与 113.9s；新增 41 行 `FABRIC_COLLECTIONS.md` 并在 README 重复较多细节，同时漏改 `FABRIC_ENERGY.md` 中当前 common count，留下 32 而非 35。
+- **本任务评价：** 提供三个值得吸收的独立断言，但单体在有效覆盖、文档一致性、体积与效率上均逊于 SOL。
+
+### 本任务结论
+
+- **单体代码质量与执行效率：** 5.6 SOL > DeepSeek。
+- **最终策略：** 在用户测试政策提交 `917a122a` 后，以 SOL candidate cherry-pick 为主线提交 `398160f0`；综合提交 `1e17e80b` 只吸收 repeated `hasNext`、同 chunk/Y 超界和第二次 `removeAt=false` 三条独有断言，保留 SOL 实际执行 removeIf 的 mixed-removal fixture，不引入 DeepSeek 的空/尾 iterator 重复、独立文档或冗长说明。
+- **综合规模：** Task010 本身相对基线 9 files，`+149/-16`；local suite 109 行、3 tests，低于后续长期目标。
+- **主代理独立验证：** 三个 production 和两份新 official tests 与 `4646f509` 字节一致，先前 16 个 oracle 文件无修改，oracle 精确 18 个 existing unique paths；slice 41/35/10 且无重复；31 suites、169 tests、0 failures/errors/skips，三个 jqwik properties 各 100,000 tries/checks；完整 Gradle gate 9.37s，`fabric-build.sh` 2.81s，packaged smoke 56.22s 并到达 `Done`；clean release 10.55s，恰好一个 JAR，collection package 精确六类，无 test/fixture/NeoForge/JUnit/jqwik 泄漏，`build-info.json` source commit 与实现 HEAD `1e17e80b` 一致，JAR sha256 为 `e889fd46b206468e07c096f258c0378ebb59e22575a14a5812149bb69194ca37`。
