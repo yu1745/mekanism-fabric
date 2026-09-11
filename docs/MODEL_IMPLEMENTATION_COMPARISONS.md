@@ -476,3 +476,39 @@ Gemini 3.8 Flash 与 GLM 5.3 不再进入默认实现面板；需要其特定能
 - **最终策略：** 采用 SOL 提交 `5641af25` 为基底，并在 `86846220` 中吸收 DeepSeek 的精确签名 mismatch 与 primitive null/错误 boxed-type 两组失败断言；保留 SOL 的 transform/counter 与同一异常对象传播设计，不引入其余冗余 fixture。
 - **综合规模：** 相对基线 7 files，`+282/-10`；最终测试 232 行、8 个 tests。
 - **主代理独立验证：** 官方 production source 相对 `4646f509` 保持不变；slice 35/31/10；115 tests、0 failures/errors/skips，三个 jqwik properties 各 100,000 tries/checks；完整 Gradle gate 10.25s，`fabric-build.sh` 3.02s，packaged smoke 45.10s；clean release contract 10.72s，恰好一个 JAR，七个 lambda family classes 精确各一次，无 fixture/NeoForge/JUnit/jqwik 泄漏，`build-info.json` source commit 与最终 HEAD 一致，服务端到达 `Done`。
+
+---
+
+## 任务 007：纳入 RegistryUtils 并替换 NeoForge 注入方法
+
+### 任务简述
+
+- **基线：** `ee9240db66049f4d2ec332cf53d4d055dfec6812`
+- **目标：** 将官方 `RegistryUtils` 纳入 common slice，保持 holder key、defaulted registry、NBT ID 与 generic built-in registry lookup 语义。
+- **约束调整：** 初始任务误判该类可原样编译；实际编译证明 `Holder.getKey()` 和 `Registry.getKeyOrNull()` 都是 NeoForge 注入方法。两个候选收到相同修订：只允许用 vanilla `unwrapKey` / `getResourceKey` 作最小替换，禁止用会让 defaulted registry 对未知对象返回默认 key 的 `Registry.getKey`。用户随后要求把 NeoForge 21.1.200 patched Minecraft 源码解压到 `upstream/neoforge-minecraft/`，主线以独立提交 `1994bba9` 登记；候选保持固定基线，只读取其中三个精确相关文件。
+- **关键验收：** slice 35/32/10；built-in block entity canonical holder、NBT null/missing/wrong-type/malformed/unknown/valid ID、block path、reference/direct naming、registered/unknown raw object 与 direct-holder short circuit；不变更 registry、不强造 `getBEHolder` null fallback；RegistryUtils production class 精确一次且测试/helper 不泄漏；不纳入 caller、lifecycle 或 custom registry。
+
+### 5.6 SOL
+
+- **提交：** `17a2f8d5f39e724f858e3affaaba89d56262bd49`
+- **规模：** 9 files，`+143/-11`；98 行、6 个 tests；production `+3/-3`。
+- **资源：** 恢复后的累计通知为 466.4s、180.0k tokens、90 次工具调用、约 `$3.02`；其中包含最初严格按“原样源码”尝试、以三处缺失符号证据停止并清理 worktree 的诊断轮。
+- **优点：** 最先明确报告不可编译边界；修订后实现最小，六个紧凑测试覆盖全部显式验收；文档和 ZIP contract 简洁；全部门禁及 121 tests 通过。
+- **不足：** registry generic lookup 以内联 unchecked cast 表达，行较长；直接把 holder 替换为 `unwrapKey().orElse(null)`，没有发现 key 未绑定 intrusive `Holder.Reference` 上 vanilla 会抛异常、NeoForge nullable getter 返回 null 的隐藏差异，并错误概括为完全无返回值影响。
+- **本任务评价：** 显式验收内最精炼且执行明显更高效，适合作为整合基底；patched-source 深层边界审计逊于 DeepSeek。
+
+### DeepSeek v4.1 Flash
+
+- **提交：** `17e299d439bc18be778518ff2e3032119ac346bc`
+- **规模：** 9 files，`+259/-12`；154 行、7 个 tests；production `+9/-4`。
+- **资源：** 891.1s，233.0k tokens，146 次工具调用；通知未提供成本。
+- **优点：** 用窄泛型 helper 代替 inline raw-style cast；测试额外覆盖第二种 built-in registry 类型并更细拆分结果；最重要的是直接从新加入的 patched `Holder.Reference` 源码发现并准确记录 unbound intrusive key 的异常/null 差异，避免 SOL 的错误“零差异”结论；全部门禁及 122 tests 通过。
+- **不足：** 虽发现隐藏差异，候选仍把它作为 residual 留下，没有在生产 helper 中恢复 NeoForge 行为或增加对应测试；测试比 SOL 长 56 行，API delta 增量 49 行，README/Matrix 重复较多；耗时约 1.9 倍、tokens 约 1.3 倍、工具调用约 1.6 倍。
+- **本任务评价：** 语义审计质量最佳但实现不够克制；其关键发现必须吸收，整体代码不宜原样采用。
+
+### 本任务结论
+
+- **单体语义审计：** DeepSeek > 5.6 SOL；**单体实现克制与效率：** 5.6 SOL > DeepSeek。
+- **最终策略：** 在用户要求的 patched-source 登记提交 `1994bba9` 之后，以 SOL 候选 cherry-pick `c7fa833a` 为基底；主代理依据 DeepSeek 发现增加只针对 vanilla `Holder.Reference` 的 nullable-key helper：key-only standalone 仍返回 key，value-only intrusive 在 key 未绑定时恢复 NeoForge null；同时采用窄 registry helper。`5498f98a` 增加一个不注册、不变更 registry 的 focused test，固定 standalone/intrusive 两种 unbound 状态及三个公开入口，不采用 DeepSeek 的其余冗余断言。
+- **综合规模：** Task007 slice 本身 9 files，`+185/-12`，最终测试 120 行、7 tests；另有用户单独要求的 `AGENTS.md` patched-source 登记 `+11/-7`。
+- **主代理独立验证：** source diff 仅含两个 NeoForge-extension 边界的 vanilla helper；16 个 official root oracle 和 `fabric/build.gradle` 均未改变；slice 35/32/10；122 tests、0 failures/errors/skips，三个 jqwik properties 各 100,000 tries/checks；完整 Gradle gate 9.66s，`fabric-build.sh` 2.35s，packaged smoke 46.96s 并到达 `Done`；`RegistryUtils.class` 精确一次，无同名前缀测试/helper；最终 clean release contract 10.32s，恰好一个 JAR，无 fixture/NeoForge/JUnit/jqwik 泄漏，`build-info.json` source commit 与最终 HEAD 一致。
