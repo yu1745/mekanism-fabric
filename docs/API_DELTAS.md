@@ -126,3 +126,13 @@ void deserializeNBT(HolderLookup.Provider provider, T tag)
 `IEnergyContainer` 的 NeoForge `INBTSerializable<CompoundTag>` 父接口替换为上文的 Mekanism-owned registry-aware 契约；energy getter/setter、execute/simulate、automation、listener、capacity 和 NBT 方法签名保持。仅删除了指向 NeoForge fluid handler 的 Javadoc 类型链接，改用平台中立文字描述同一返回值差异。
 
 `BasicEnergyContainer` 保留官方 public factory/predicate 表面与行为。为避免引入 chemical/fluid 和 broad NBT helper 闭包，`ConstantPredicates.alwaysTrue()` 改为类内缓存 predicate，`NBTUtils.setLegacyEnergyIfPresent` 的 `stored` long/legacy string 读取语义窄化到类内；Guava 参数检查改为同类型的显式 `IllegalArgumentException`。兼容细节、暂缓边界和验证见 `docs/FABRIC_ENERGY.md` 与 `fabric/src/test/java/mekanism/common/capabilities/energy/BasicEnergyContainerTest.java`。
+
+## Relative-side translation contract
+
+状态：`RelativeSide` 与非配置 energy holder 闭包已移植。
+
+`RelativeSide` 保持 `mekanism.api.RelativeSide` 类型身份、枚举顺序、serialized names、translation keys、`CODEC`、`BY_ID`、`STREAM_CODEC` 和全部方向映射。为避免仅六个 key 拉入 `APILang` → `MekanismAPI`/text 的广泛闭包，私有构造参数改为稳定 path，并通过 vanilla `Util.makeDescriptionId` 生成相同的 `side.mekanism.*` key。
+
+`IHasTranslationKey.IHasEnumNameTranslationKey` 保持原 FQN、父级 Mekanism interface 和 `getTranslatedName()` 方法，但不再继承 NeoForge `TranslatableEnum`；default 实现直接调用 `Component.translatable`，与原 `TextComponentUtil.translate(String)` 行为相同。依赖该 NeoForge subtype 关系的 addon 需要迁移到 Mekanism-visible interface。这一变化集中在 API 边界，不在 Fabric 上伪造 `TranslatableEnum`。
+
+`IHolder`、`BasicHolder`、`IEnergyContainerHolder` 与 `EnergyContainerHolder` 未改公开/可见性表面；方向过滤、内部访问、动态 facing、identity/order、duplicate 与 live-list 行为保持。详见 `docs/FABRIC_HOLDERS.md` 及对应测试。

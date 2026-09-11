@@ -2,7 +2,7 @@
 
 ## Current slice
 
-The first storage milestone admits the official Mekanism energy-container contract and implementation without machines, sided holders, capabilities, or a third-party energy API:
+The first storage milestone admits the official Mekanism energy-container contract and implementation without machines, configurable holders, external lookups, or a third-party energy API:
 
 - `mekanism.api.energy.IEnergyContainer`
 - `mekanism.common.capabilities.energy.BasicEnergyContainer`
@@ -36,14 +36,14 @@ Guava `Preconditions.checkArgument` was replaced by the equivalent explicit `Ill
 
 This is an internal storage slice, not external Fabric energy interoperability. It does not yet include:
 
-- `RelativeSide` or energy container holders;
+- configurable energy holders and machine side configuration;
 - block/item/entity lookups;
 - Team Reborn Energy API;
 - Fabric transaction rollback;
 - Joule/FE/Energy conversion policy;
 - machines, menus, sync packets, or persistence owners.
 
-Those boundaries must be added only after conversion configuration and sided holder semantics are available. Fabric API itself does not define a standard energy API.
+The non-config relative-side holder layer is now available and documented in `FABRIC_HOLDERS.md`. External energy boundaries must still wait for explicit conversion configuration and configurable exposure policy. Fabric API itself does not define a standard energy API.
 
 ## Verification
 

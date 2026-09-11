@@ -116,8 +116,14 @@ if jar tf "${MOD_JARS[0]}" | grep -Eq '^net/neoforged/'; then
   exit 1
 fi
 for required_entry in \
+    mekanism/api/RelativeSide.class \
     mekanism/api/energy/IEnergyContainer.class \
+    'mekanism/api/text/IHasTranslationKey$IHasEnumNameTranslationKey.class' \
     mekanism/common/capabilities/energy/BasicEnergyContainer.class \
+    mekanism/common/capabilities/holder/BasicHolder.class \
+    mekanism/common/capabilities/holder/IHolder.class \
+    mekanism/common/capabilities/holder/energy/EnergyContainerHolder.class \
+    mekanism/common/capabilities/holder/energy/IEnergyContainerHolder.class \
     mekanism/fabric/MekanismFabricBootstrap.class \
     mekanism/fabric/MekanismFabricClientBootstrap.class \
     mekanism/fabric/network/FabricMekanismNetworking.class \

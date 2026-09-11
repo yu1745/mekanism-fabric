@@ -83,7 +83,7 @@ scripts/scan-platform-deps.py
 
 ### 当前 energy storage 落点
 
-官方 `IEnergyContainer` 与 `BasicEnergyContainer` 已作为内部 `long` storage 窄切片纳入，保留 capacity、execute/simulate、automation policy、listener 和 legacy NBT 语义。该切片不宣称 Fabric energy interoperability：sided holder、Team Reborn Energy API、transaction rollback 和单位换算均仍属 P1 后续边界，详见 `FABRIC_ENERGY.md`。
+官方 `IEnergyContainer` 与 `BasicEnergyContainer` 已作为内部 `long` storage 窄切片纳入，保留 capacity、execute/simulate、automation policy、listener 和 legacy NBT 语义。`RelativeSide` 与非配置 `EnergyContainerHolder` 也已保留全方向映射、动态 facing 和 internal/external visibility。该切片不宣称 Fabric energy interoperability：config holder、Team Reborn Energy API、transaction rollback 和单位换算均仍属 P1 后续边界，详见 `FABRIC_ENERGY.md`、`FABRIC_HOLDERS.md`。
 
 ## `other` 桶的处理
 
