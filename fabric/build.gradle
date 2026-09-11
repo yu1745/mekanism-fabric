@@ -13,6 +13,21 @@ base {
 repositories {
     // Loom supplies Minecraft and Fabric repositories. Keep this build isolated
     // from the NeoForge repositories in the root build.
+    mavenCentral()
+}
+
+def apiSlice = file('api-slice.txt').readLines()
+      .collect { it.trim() }
+      .findAll { it && !it.startsWith('#') }
+
+sourceSets {
+    main {
+        java {
+            srcDirs = ['src/main/java', '../src/api/java']
+            include 'mekanism/fabric/**/*.java'
+            apiSlice.each { include it }
+        }
+    }
 }
 
 dependencies {
@@ -20,6 +35,10 @@ dependencies {
     mappings loom.officialMojangMappings()
     modImplementation "net.fabricmc:fabric-loader:${loader_version}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
+
+    // Annotation types referenced by the official API slice; neither is bundled.
+    compileOnly 'org.jetbrains:annotations:24.1.0'
+    compileOnly 'com.google.code.findbugs:jsr305:3.0.2'
 }
 
 def resolvedModVersion = project.version.toString()

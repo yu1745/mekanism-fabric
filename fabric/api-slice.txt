@@ -1,0 +1,18 @@
+# Paths are relative to ../src/api/java. Keep one auditable API source per line.
+mekanism/api/IContentsListener.java
+mekanism/api/IEvaporationSolar.java
+mekanism/api/SerializationConstants.java
+mekanism/api/annotations/FieldsAreNotNullByDefault.java
+mekanism/api/annotations/NothingNullByDefault.java
+mekanism/api/annotations/ParametersAreNotNullByDefault.java
+mekanism/api/functions/ByteSupplier.java
+mekanism/api/functions/CharPredicate.java
+mekanism/api/functions/CharUnaryOperator.java
+mekanism/api/functions/FloatSupplier.java
+mekanism/api/functions/LongObjectToLongFunction.java
+mekanism/api/functions/ShortSupplier.java
+mekanism/api/functions/ToFloatFunction.java
+mekanism/api/functions/TriConsumer.java
+mekanism/api/lasers/ILaserDissipation.java
+mekanism/api/lasers/ILaserReceptor.java
+mekanism/api/math/MathUtils.java
