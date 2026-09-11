@@ -83,7 +83,11 @@ scripts/scan-platform-deps.py
 
 ### 当前 platform-neutral utility 落点
 
-官方 `WildcardMatcher` 已原样纳入 bounded common slice，保持递归/回溯、`Locale.ROOT` 大小写折叠、`TagKey.location()` 和 UTF-16 `char`/`Character.isDigit(char)` 语义。Fabric 测试与 packaged JAR 门禁覆盖该边界；这不表示 QIO、miner、Finder 或其他未来调用方已经移植。
+当前 allowlist 数量为 API **35**、common **29**、platform **10**。官方 `WildcardMatcher` 已原样纳入 bounded common slice，保持递归/回溯、`Locale.ROOT` 大小写折叠、`TagKey.location()` 和 UTF-16 `char`/`Character.isDigit(char)` 语义。Fabric 测试与 packaged JAR 门禁覆盖该边界；这不表示 QIO、miner、Finder 或其他未来调用方已经移植。
+
+官方 `EmitUtils`、`SplitInfo`、`IntegerSplitInfo`、`LongSplitInfo` 和 `Target` 也以 byte-identical 源码纳入同一 bounded common slice。它们保留 `int`/`long` 分流、低容量目标触发的重平衡、按 collection 插入序分 remainder，以及 simulation 高报但实际少收时的 fallback；`Target.acceptAmount` 必须把实际接收量传给 `SplitInfo.send`。官方 15-file distribution oracle 由精确路径 allowlist 原地编译，而非复制或广纳 root tests；发布物仅检查六个 production class entries 和测试/helper 隔离，算法行为由 examples/properties/boundary tests 证明，不以 server startup marker 代替。
+
+该原样算法维持官方调用契约而不增加策略：调用者提供非负 offer、每次分配使用未复用的 `Target`；handler 的 simulation/accept 必须遵守非负、容量及实际接收记账约定。负输入、复用已积累内部状态的 `Target`、或违约 handler 不获得额外防御保证。此落点不代表 energy/item/fluid/chemical transport caller、Fabric transaction/rollback、lookup/cache invalidation 或 machine/network owner 已移植，这些仍属于 P1 边界。
 
 ### 当前 energy storage 落点
 

@@ -17,18 +17,30 @@ contract. Intentional API adaptations remain limited to that contract and
 `../docs/API_DELTAS.md`. JetBrains annotations and JSR-305 remain `compileOnly`
 and are not bundled in the mod.
 
-`common-slice.txt` contains **24 official source files**, and
+`common-slice.txt` contains **29 official source files**, and
 `platform-slice.txt` contains **10 project-owned Fabric sources**. Together they
 form bounded registry/GameEvent, TOML startup-config, configuration-handshake,
-internal energy storage/holder, internal heat storage/holder, and wildcard-matching
-utility closures. The unchanged `WildcardMatcher` retains official recursive,
-UTF-16 `char` matching semantics; QIO, miner, Finder, and other consumers remain
-future work. Heat includes the unchanged dynamic `VariableHeatCapacitor`; neither
-energy nor heat claims external API, transaction, configurable-holder, network,
-or machine-owner integration. See `../docs/FABRIC_REGISTRY.md`, `../docs/FABRIC_CONFIG.md`,
-`../docs/FABRIC_NETWORK.md`, `../docs/FABRIC_ENERGY.md`, and
-`../docs/FABRIC_HEAT.md`. Night Config core/toml 3.8.3 are nested in the remapped
-mod JAR.
+internal energy storage/holder, internal heat storage/holder, wildcard-matching,
+and fair-distribution utility closures. The unchanged `WildcardMatcher` retains
+official recursive, UTF-16 `char` matching semantics; QIO, miner, Finder, and
+other consumers remain future work. The unchanged distribution closure preserves
+the separate `int`/`long` split arithmetic, rebalancing, remainder order, lying-handler
+fallback, collection order, and `Target` handler contract. Its exact 15-file root
+test oracle is compiled through an explicit allowlist (14 JUnit examples and three
+jqwik properties at 100,000 tries), with separate Fabric boundary coverage.
+Callers must provide nonnegative offers, a fresh/non-reused `Target`, and handlers
+whose simulation/acceptance and `SplitInfo.send` accounting obey the documented
+contract; the official implementation intentionally adds no defensive behavior
+for contract violations.
+
+Heat includes the unchanged dynamic `VariableHeatCapacitor`; neither energy nor
+heat claims external API, transaction, configurable-holder, network, or
+machine-owner integration. Likewise, admitting distribution utilities does not
+port energy/item/fluid/chemical transport callers, Fabric transactions, or their
+machine/network owners. See `../docs/FABRIC_REGISTRY.md`,
+`../docs/FABRIC_CONFIG.md`, `../docs/FABRIC_NETWORK.md`,
+`../docs/FABRIC_ENERGY.md`, and `../docs/FABRIC_HEAT.md`. Night Config core/toml
+3.8.3 are nested in the remapped mod JAR.
 
 The next nearby API candidates are blocked by deliberately excluded boundaries:
 incremental-enum helpers close over `ConstantPredicates` (which imports

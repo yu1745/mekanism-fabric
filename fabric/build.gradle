@@ -91,6 +91,28 @@ def apiSliceFiles = apiSlice.collect { file("../src/api/java/${it}") }
 def commonSliceFiles = commonSlice.collect { file("../src/main/java/${it}") }
 def platformSliceFiles = platformSlice.collect { file("src/main/java/${it}") }
 
+// Compile the unchanged official distribution oracle in place through this exact
+// allowlist. Do not add ../src/test/java as a source root: unrelated NeoForge tests
+// must remain outside the Fabric test closure.
+def distributionOracle = [
+      'mekanism/common/lib/distribution/DistributionTest.java',
+      'mekanism/common/lib/distribution/DistributionLongTest.java',
+      'mekanism/common/lib/distribution/DistributionPropertyTest.java',
+      'mekanism/common/lib/distribution/handler/InfiniteIntegerHandler.java',
+      'mekanism/common/lib/distribution/handler/InfiniteLongHandler.java',
+      'mekanism/common/lib/distribution/handler/IntegerHandler.java',
+      'mekanism/common/lib/distribution/handler/LongHandler.java',
+      'mekanism/common/lib/distribution/handler/LyingAmountIntegerHandler.java',
+      'mekanism/common/lib/distribution/handler/LyingAmountLongHandler.java',
+      'mekanism/common/lib/distribution/handler/PartialIntegerHandler.java',
+      'mekanism/common/lib/distribution/handler/PartialLongHandler.java',
+      'mekanism/common/lib/distribution/handler/SpecificAmountIntegerHandler.java',
+      'mekanism/common/lib/distribution/handler/SpecificAmountLongHandler.java',
+      'mekanism/common/lib/distribution/target/IntegerTarget.java',
+      'mekanism/common/lib/distribution/target/LongTarget.java',
+]
+def distributionOracleFiles = distributionOracle.collect { file("../src/test/java/${it}") }
+
 def registerPortableSliceCheck = { String taskName, String descriptionText, List<File> sources ->
     tasks.register(taskName) {
         group = 'verification'
@@ -114,6 +136,21 @@ registerPortableSliceCheck('verifyCommonSliceNoNeoForge',
       'Checks that every allowlisted official common source exists and has no NeoForge reference.', commonSliceFiles)
 registerPortableSliceCheck('verifyPlatformSliceNoNeoForge',
       'Checks that every allowlisted Fabric platform source exists and has no NeoForge reference.', platformSliceFiles)
+
+def verifyDistributionOracleSources = tasks.register('verifyDistributionOracleSources') {
+    group = 'verification'
+    description = 'Checks the exact 15-file official distribution test oracle allowlist.'
+    inputs.files(distributionOracleFiles)
+    doLast {
+        if (distributionOracle.size() != 15 || distributionOracle.size() != distributionOracle.toSet().size()) {
+            throw new GradleException('The distribution oracle must contain exactly 15 unique paths')
+        }
+        def missing = distributionOracleFiles.findAll { !it.isFile() }
+        if (!missing.isEmpty()) {
+            throw new GradleException("Missing official distribution oracle sources: ${missing.join(', ')}")
+        }
+    }
+}
 
 sourceSets {
     handshakeMismatchFixture {
@@ -220,8 +257,10 @@ dependencies {
     compileOnly 'org.jetbrains:annotations:24.1.0'
     compileOnly 'com.google.code.findbugs:jsr305:3.0.2'
 
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    // Keep the official root JUnit pin and its Platform generation aligned with jqwik.
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.13.4'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.13.4'
+    testImplementation 'net.jqwik:jqwik:1.9.3'
 }
 
 def resolvedModVersion = project.version.toString()
@@ -236,6 +275,11 @@ tasks.withType(JavaCompile).configureEach {
     dependsOn tasks.named('verifyApiSliceNoNeoForge'), tasks.named('verifyCommonSliceNoNeoForge'), tasks.named('verifyPlatformSliceNoNeoForge')
     options.release = 21
     options.encoding = 'UTF-8'
+}
+
+tasks.named('compileTestJava', JavaCompile) {
+    dependsOn verifyDistributionOracleSources
+    source distributionOracleFiles
 }
 
 def testWorkingDirectory = layout.buildDirectory.dir('test-working')

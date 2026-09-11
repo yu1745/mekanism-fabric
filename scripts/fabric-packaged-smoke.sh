@@ -130,6 +130,37 @@ if jar tf "${MOD_JARS[0]}" | grep -Eq '^mekanism/fixture/'; then
   echo "fabric-packaged-smoke: artifact unexpectedly contains handshake fixture classes" >&2
   exit 1
 fi
+if ! python3 - "${MOD_JARS[0]}" <<'PYEOF'
+import sys, zipfile
+
+required = {
+    "mekanism/common/util/EmitUtils.class",
+    "mekanism/common/lib/distribution/SplitInfo.class",
+    "mekanism/common/lib/distribution/IntegerSplitInfo.class",
+    "mekanism/common/lib/distribution/LongSplitInfo.class",
+    "mekanism/common/lib/distribution/Target.class",
+    "mekanism/common/lib/distribution/Target$HandlerType.class",
+}
+with zipfile.ZipFile(sys.argv[1]) as artifact:
+    entries = artifact.namelist()
+for entry in required:
+    if entries.count(entry) != 1:
+        raise SystemExit(f"distribution class must be packaged exactly once: {entry}")
+allowed_distribution = required - {"mekanism/common/util/EmitUtils.class"}
+unexpected = sorted(
+    entry for entry in entries
+    if entry.startswith("mekanism/common/lib/distribution/")
+    and entry.endswith(".class") and entry not in allowed_distribution
+)
+if unexpected:
+    raise SystemExit(
+        "packaged distribution test/helper classes are forbidden: " + ", ".join(unexpected)
+    )
+PYEOF
+then
+  echo "fabric-packaged-smoke: distribution production/test packaging contract failed" >&2
+  exit 1
+fi
 for required_entry in \
     mekanism/api/RelativeSide.class \
     mekanism/api/energy/IEnergyContainer.class \
@@ -149,6 +180,12 @@ for required_entry in \
     mekanism/common/capabilities/holder/heat/HeatCapacitorHolder.class \
     mekanism/common/capabilities/holder/heat/IHeatCapacitorHolder.class \
     mekanism/common/lib/WildcardMatcher.class \
+    mekanism/common/util/EmitUtils.class \
+    mekanism/common/lib/distribution/SplitInfo.class \
+    mekanism/common/lib/distribution/IntegerSplitInfo.class \
+    mekanism/common/lib/distribution/LongSplitInfo.class \
+    mekanism/common/lib/distribution/Target.class \
+    'mekanism/common/lib/distribution/Target$HandlerType.class' \
     mekanism/fabric/MekanismFabricBootstrap.class \
     mekanism/fabric/MekanismFabricClientBootstrap.class \
     mekanism/fabric/network/FabricMekanismNetworking.class \

@@ -18,6 +18,11 @@ mekanism/common/config/value/CachedFloatValue.java
 mekanism/common/config/value/CachedIntValue.java
 mekanism/common/config/value/CachedValue.java
 mekanism/common/lib/WildcardMatcher.java
+mekanism/common/lib/distribution/IntegerSplitInfo.java
+mekanism/common/lib/distribution/LongSplitInfo.java
+mekanism/common/lib/distribution/SplitInfo.java
+mekanism/common/lib/distribution/Target.java
+mekanism/common/util/EmitUtils.java
 mekanism/common/registration/INamedEntry.java
 mekanism/common/registration/MekanismDeferredHolder.java
 mekanism/common/registration/MekanismDeferredRegister.java
