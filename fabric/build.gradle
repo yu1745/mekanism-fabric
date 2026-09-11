@@ -91,10 +91,10 @@ def apiSliceFiles = apiSlice.collect { file("../src/api/java/${it}") }
 def commonSliceFiles = commonSlice.collect { file("../src/main/java/${it}") }
 def platformSliceFiles = platformSlice.collect { file("src/main/java/${it}") }
 
-// Compile the unchanged official distribution oracle in place through this exact
-// allowlist. Do not add ../src/test/java as a source root: unrelated NeoForge tests
-// must remain outside the Fabric test closure.
-def distributionOracle = [
+// Compile only the unchanged official root tests that cover admitted common-slice
+// behavior, in place, through this exact allowlist. Do not add ../src/test/java as a
+// source root: unrelated NeoForge tests must remain outside the Fabric test closure.
+def officialRootTestOracle = [
       'mekanism/common/lib/distribution/DistributionTest.java',
       'mekanism/common/lib/distribution/DistributionLongTest.java',
       'mekanism/common/lib/distribution/DistributionPropertyTest.java',
@@ -110,8 +110,9 @@ def distributionOracle = [
       'mekanism/common/lib/distribution/handler/SpecificAmountLongHandler.java',
       'mekanism/common/lib/distribution/target/IntegerTarget.java',
       'mekanism/common/lib/distribution/target/LongTarget.java',
+      'mekanism/common/util/ChunkUtilsTest.java',
 ]
-def distributionOracleFiles = distributionOracle.collect { file("../src/test/java/${it}") }
+def officialRootTestOracleFiles = officialRootTestOracle.collect { file("../src/test/java/${it}") }
 
 def registerPortableSliceCheck = { String taskName, String descriptionText, List<File> sources ->
     tasks.register(taskName) {
@@ -137,17 +138,17 @@ registerPortableSliceCheck('verifyCommonSliceNoNeoForge',
 registerPortableSliceCheck('verifyPlatformSliceNoNeoForge',
       'Checks that every allowlisted Fabric platform source exists and has no NeoForge reference.', platformSliceFiles)
 
-def verifyDistributionOracleSources = tasks.register('verifyDistributionOracleSources') {
+def verifyOfficialRootTestSources = tasks.register('verifyOfficialRootTestSources') {
     group = 'verification'
-    description = 'Checks the exact 15-file official distribution test oracle allowlist.'
-    inputs.files(distributionOracleFiles)
+    description = 'Checks the exact 16-file official root-test oracle allowlist.'
+    inputs.files(officialRootTestOracleFiles)
     doLast {
-        if (distributionOracle.size() != 15 || distributionOracle.size() != distributionOracle.toSet().size()) {
-            throw new GradleException('The distribution oracle must contain exactly 15 unique paths')
+        if (officialRootTestOracle.size() != 16 || officialRootTestOracle.size() != officialRootTestOracle.toSet().size()) {
+            throw new GradleException('The official root-test oracle must contain exactly 16 unique paths')
         }
-        def missing = distributionOracleFiles.findAll { !it.isFile() }
+        def missing = officialRootTestOracleFiles.findAll { !it.isFile() }
         if (!missing.isEmpty()) {
-            throw new GradleException("Missing official distribution oracle sources: ${missing.join(', ')}")
+            throw new GradleException("Missing official root-test oracle sources: ${missing.join(', ')}")
         }
     }
 }
@@ -278,8 +279,8 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 tasks.named('compileTestJava', JavaCompile) {
-    dependsOn verifyDistributionOracleSources
-    source distributionOracleFiles
+    dependsOn verifyOfficialRootTestSources
+    source officialRootTestOracleFiles
 }
 
 def testWorkingDirectory = layout.buildDirectory.dir('test-working')

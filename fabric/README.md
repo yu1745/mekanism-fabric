@@ -17,21 +17,31 @@ contract. Intentional API adaptations remain limited to that contract and
 `../docs/API_DELTAS.md`. JetBrains annotations and JSR-305 remain `compileOnly`
 and are not bundled in the mod.
 
-`common-slice.txt` contains **29 official source files**, and
+`common-slice.txt` contains **30 official source files**, and
 `platform-slice.txt` contains **10 project-owned Fabric sources**. Together they
 form bounded registry/GameEvent, TOML startup-config, configuration-handshake,
 internal energy storage/holder, internal heat storage/holder, wildcard-matching,
-and fair-distribution utility closures. The unchanged `WildcardMatcher` retains
-official recursive, UTF-16 `char` matching semantics; QIO, miner, Finder, and
-other consumers remain future work. The unchanged distribution closure preserves
-the separate `int`/`long` split arithmetic, rebalancing, remainder order, lying-handler
-fallback, collection order, and `Target` handler contract. Its exact 15-file root
-test oracle is compiled through an explicit allowlist (14 JUnit examples and three
-jqwik properties at 100,000 tries), with separate Fabric boundary coverage.
+fair-distribution, and chunk-coordinate utility closures. The unchanged
+`WildcardMatcher` retains official recursive, UTF-16 `char` matching semantics;
+QIO, miner, Finder, and other consumers remain future work. The unchanged
+distribution closure preserves the separate `int`/`long` split arithmetic,
+rebalancing, remainder order, lying-handler fallback, collection order, and
+`Target` handler contract. The exact 16-file official root-test oracle is
+compiled through an explicit path allowlist (19 JUnit examples and three jqwik
+properties at 100,000 tries), with separate Fabric boundary coverage.
 Callers must provide nonnegative offers, a fresh/non-reused `Target`, and handlers
 whose simulation/acceptance and `SplitInfo.send` accounting obey the documented
 contract; the official implementation intentionally adds no defensive behavior
 for contract violations.
+
+The unchanged `ChunkUtils` keeps `rangeClosed`'s inclusive, row-major ordering
+(X changes fastest, then Z) for all four traversal directions together with its
+packed `long` behavior, and `packedBlockToChunk`'s `>> 4` floor-section semantics
+for negative coordinates. `rangeClosed` returns a `long[]` sized from the
+inclusive dimensions, so the caller owns the precondition that the requested
+rectangle is representable and small enough to allocate; no new validation or API
+guarantee is added. `IndexedCuboidMap`, spatial indexes, QIO/miner logic,
+machines, and their callers are not ported.
 
 Heat includes the unchanged dynamic `VariableHeatCapacitor`; neither energy nor
 heat claims external API, transaction, configurable-holder, network, or

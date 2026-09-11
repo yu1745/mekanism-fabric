@@ -156,9 +156,20 @@ if unexpected:
     raise SystemExit(
         "packaged distribution test/helper classes are forbidden: " + ", ".join(unexpected)
     )
+if entries.count("mekanism/common/util/ChunkUtils.class") != 1:
+    raise SystemExit("mekanism/common/util/ChunkUtils.class must be packaged exactly once")
+unexpected_chunk_utils = sorted(
+    entry for entry in entries
+    if entry.startswith("mekanism/common/util/ChunkUtils") and entry.endswith(".class")
+    and entry != "mekanism/common/util/ChunkUtils.class"
+)
+if unexpected_chunk_utils:
+    raise SystemExit(
+        "packaged ChunkUtils test classes are forbidden: " + ", ".join(unexpected_chunk_utils)
+    )
 PYEOF
 then
-  echo "fabric-packaged-smoke: distribution production/test packaging contract failed" >&2
+  echo "fabric-packaged-smoke: distribution/ChunkUtils production/test packaging contract failed" >&2
   exit 1
 fi
 for required_entry in \
@@ -180,6 +191,7 @@ for required_entry in \
     mekanism/common/capabilities/holder/heat/HeatCapacitorHolder.class \
     mekanism/common/capabilities/holder/heat/IHeatCapacitorHolder.class \
     mekanism/common/lib/WildcardMatcher.class \
+    mekanism/common/util/ChunkUtils.class \
     mekanism/common/util/EmitUtils.class \
     mekanism/common/lib/distribution/SplitInfo.class \
     mekanism/common/lib/distribution/IntegerSplitInfo.class \
