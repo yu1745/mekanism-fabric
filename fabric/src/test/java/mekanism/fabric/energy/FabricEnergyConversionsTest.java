@@ -131,6 +131,107 @@ class FabricEnergyConversionsTest {
                 previousJoules = joules;
             }
         }
+
+        // A cold identity/rate pair may enumerate the complete family once. Every later pair of real searches is a
+        // cache lookup plus projections and final verification: 11 getConversion, three convertFrom, and four
+        // convertTo calls here, with no BigDecimal/Euclid/family rebuild. Exact rate-bit changes must rebuild, and a
+        // different identity advertising the same rate must build and verify its own behavior-sensitive snapshot.
+        boolean[] mutableEnabled = {true};
+        double[] mutableRate = {2.5D};
+        int[] rateReads = {0};
+        int[] fromCalls = {0};
+        int[] toCalls = {0};
+        IEnergyConversion mutable = new IEnergyConversion() {
+            @Override
+            public boolean isEnabled() {
+                return mutableEnabled[0];
+            }
+
+            @Override
+            public double getConversion() {
+                rateReads[0]++;
+                return mutableRate[0];
+            }
+
+            @Override
+            public long convertFrom(long energy) {
+                fromCalls[0]++;
+                return IEnergyConversion.super.convertFrom(energy);
+            }
+
+            @Override
+            public long convertTo(long joules) {
+                toCalls[0]++;
+                return IEnergyConversion.super.convertTo(joules);
+            }
+        };
+        assertEquals(2, FabricEnergyConversions.otherForJoules(mutable, 5));
+        assertTrue(fromCalls[0] > 20_000, "the first identity/rate lookup must build its verified snapshot");
+        assertTrue(toCalls[0] > 20_000, "the cold build must verify candidates in both directions");
+
+        rateReads[0] = 0;
+        fromCalls[0] = 0;
+        toCalls[0] = 0;
+        for (int repetition = 0; repetition < 16; repetition++) {
+            assertEquals(2, FabricEnergyConversions.otherForJoules(mutable, 5));
+            assertEquals(5, FabricEnergyConversions.joulesForOther(mutable, 2));
+        }
+        assertEquals(176, rateReads[0], "warm paired searches have eleven exact rate reads each");
+        assertEquals(48, fromCalls[0], "warm paired searches have three forward conversions each");
+        assertEquals(64, toCalls[0], "warm paired searches have four reverse conversions each");
+
+        mutableEnabled[0] = false;
+        rateReads[0] = 0;
+        fromCalls[0] = 0;
+        toCalls[0] = 0;
+        assertEquals(0, FabricEnergyConversions.otherForJoules(mutable, 5));
+        assertEquals(0, FabricEnergyConversions.joulesForOther(mutable, 2));
+        assertEquals(0, rateReads[0], "disabled state must be consulted before a cached rate is read");
+        assertEquals(0, fromCalls[0]);
+        assertEquals(0, toCalls[0]);
+
+        mutableEnabled[0] = true;
+        mutableRate[0] = 0.4D;
+        rateReads[0] = 0;
+        fromCalls[0] = 0;
+        toCalls[0] = 0;
+        assertEquals(5, FabricEnergyConversions.otherForJoules(mutable, 2));
+        assertEquals(2, FabricEnergyConversions.joulesForOther(mutable, 5));
+        assertTrue(fromCalls[0] > 20_000, "changed exact rate bits must rebuild the identity snapshot");
+        assertTrue(toCalls[0] > 20_000, "the rebuilt snapshot must be verified under the new rate");
+        assertTrue(FabricEnergyConversions.isExactPair(mutable, 5, 2));
+
+        int[] distinctFromCalls = {0};
+        int[] distinctToCalls = {0};
+        IEnergyConversion sameAdvertisedRateDifferentBehavior = new IEnergyConversion() {
+            @Override
+            public boolean isEnabled() {
+                return true;
+            }
+
+            @Override
+            public double getConversion() {
+                return 0.4D;
+            }
+
+            @Override
+            public long convertFrom(long energy) {
+                distinctFromCalls[0]++;
+                return energy == 4 ? 6 : energy == 6 ? 4 : energy;
+            }
+
+            @Override
+            public long convertTo(long joules) {
+                distinctToCalls[0]++;
+                return joules == 4 ? 6 : joules == 6 ? 4 : joules;
+            }
+        };
+        assertEquals(6, FabricEnergyConversions.otherForJoules(sameAdvertisedRateDifferentBehavior, 4));
+        assertTrue(distinctFromCalls[0] > 20_000,
+              "a distinct identity must not reuse another conversion's same-rate candidates");
+        assertTrue(distinctToCalls[0] > 20_000,
+              "the distinct identity must verify its snapshot with its own conversion methods");
+        assertTrue(FabricEnergyConversions.isExactPair(sameAdvertisedRateDifferentBehavior, 6, 4));
     }
 
     private static void assertMonotoneAndBounded(IEnergyConversion conversion, long[] increasingBounds) {
