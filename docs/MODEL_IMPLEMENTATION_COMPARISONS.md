@@ -825,3 +825,15 @@ GLM 在任务 013、014 完成两轮临时复测；任务 015 以受支持的 hi
 - **综合规模：** 排除独立代理架构政策文档，10 files，`+360/-17`；三份 local suites 共 299 行、12 tests。
 - **主代理独立验证：** 七份 production source 与 `4646f509` 字节一致；protected surfaces/既有测试不变；slice 42/52/10 且无重复；38 suites、202 tests、0 failures/errors/skips，三个 jqwik properties 各 100,000 tries/checks；完整 Gradle gate 10.12s，`fabric-build.sh` 4.05s；最终版本才运行的 packaged smoke 38.22s 并到达 `Done`，证明候选阶段省去了两次约 38 秒 server startup；clean release 11.40s，恰好一个 JAR，所有五组 task class family 精确且无 test/fixture/NeoForge/JUnit/jqwik 泄漏，`build-info.json` source commit 与 `39a9cf36` 一致，JAR sha256 为 `d1e42185e6bdebcd32e98694a64920adb64f7995e528ab3e49530e0191c83f68`。
 - **最终默认架构：** 用户认可停止常规多实现，并在 Task015 运行中立即取消 GLM。任务 016 起只由 SOL 在隔离 worktree 实现，默认不 watch；主代理审查/综合并运行最终门禁。DeepSeek、GLM 或其它模型只在已识别的高风险平台、patched、registry、transaction、network、serialization、thread/owner 边界中按需做只读 adversarial review。此架构选择使“GLM 替换 DeepSeek”的问题失去必要性，二者都不再是常驻实现代理。
+
+---
+
+## 任务 019：signed-long TOML/config 边界（风险触发审查）
+
+- **固定基线与范围：** `1165abd3`；SOL 增加 `MekanismConfigSpec` signed-long schema、仅替换两个 import 的 `CachedLongValue`，并原样纳入 `EnergyCubeTier`、`InductionCellTier`、`InductionProviderTier`。最终 slice 42/74/10；六个新增测试方法。
+- **SOL 初始候选：** `300011fa`，460.1s、135.5k tokens、56 次工具调用、约 `$2.08`。source/slice、228 tests、build 与静态 JAR 门禁通过，但其 `Float.toString`/`BigDecimal.valueOf` 规范化没有按 exact IEEE 值转换，且未发现 Night Config 3.8.3 对超出 signed-long 的 TOML integer 做 modulo-2^64 wrap。
+- **DeepSeek 第一次只读审查：** 257.9s、87.0k tokens、43 次工具调用。以真实 pinned parser 复现 `9223372036854775808 -> Long.MIN_VALUE`、`-9223372036854775809 -> Long.MAX_VALUE`、`18446744073709551616 -> 0`，并指出 overflow assertions 只落在 `[-10,10]` 会产生 range-only 假阳性；结论 `ACCEPT WITH FIXES`，阻止不安全候选进入主线。
+- **SOL 修复：** corrective `e487b939`（修复运行 407.1s、84.7k tokens、34 次工具调用、约 `$1.46`）改用 exact IEEE `BigDecimal` 构造，并在 Night Config 前增加 decimal/hex/octal/binary integer lexical preflight，使 overflow 进入既有 `.invalid` 备份→默认文档持久化→一次性发布路径；测试保持六方法并移到 full-range 验证。
+- **DeepSeek 第二次只读审查：** 365.8s、104.6k tokens、56 次工具调用。再次用有效 TOML 证明四引号 multiline string 可令 scanner 失步并重新暴露 wrap，同时发现 whitespace-around-dot numeric key 误报与 nested-array 潜在漏检；仍判 `ACCEPT WITH FIXES`。这三项均由主代理提交 `7da25680` 修复：multiline closing delimiter 吞并最多两个合法内容 quote、single-line string 禁止跨行、`.` 识别为 dotted-key continuation，并区分 line-leading table header 与 nested value array；同一测试方法加入 literal/basic 四引号、dotted numeric key 与 nested-array overflow 回归。
+- **最终取舍：** 保留 SOL 的完整实现与测试结构，但没有采信“候选 gates 通过即正确”；两轮 adversarial review 均发现可执行的高严重度反例，审查价值明确。主线序列为 `e0fe72d9`、`26fccb9f`、`7da25680`。
+- **主代理独立验证：** 三个 tier source 与 `4646f509` 字节一致，`CachedLongValue` 精确只有两个 import 替换；42/74/10 无重复；46 suites、228 tests、0 failures/errors/skips，三个 jqwik properties 各 100,000 tries/checks；完整 Gradle gate 19.94s，`fabric-build.sh` 2.96s，packaged smoke 37.21s 到达 `Done`；implementation clean release 12.44s，恰好一个 JAR，config-value 五项与 tier 六项精确且无 NeoForge/test/fixture 泄漏，`build-info.json` source commit 为 `7da25680`，JAR sha256 `c44ce83bada8428a26d05ff7c372c74c88b0bb5b08b4e222aa8b5adad83b9ab0`。
