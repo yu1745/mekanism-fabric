@@ -17,12 +17,15 @@
 
 以下目录被 `.gitignore` 排除，不进入本仓库提交，也不是运行时依赖：
 
-| 相对路径 | 上游与分支 | 当前参考 commit | 用途 |
+| 相对路径 | 上游与版本 | 当前参考身份 | 用途 |
 |---|---|---|---|
-| `upstream/kilt/` | `KiltMC/Kilt` `version/1.21.1` | `9e8f0d67411f10234bf0d864bd151a6dbcef14b4` | 查看 (Neo)Forge API、对象和生命周期如何在 Fabric 上承接 |
-| `upstream/connector/` | `Sinytra/Connector` `1.21.x` | `8b27f1ad042aae8037bcc522b321c03fcce1a12a` | 从反方向查看 Fabric API 到 NeoForge 的对象转换与调用语义 |
+| `upstream/neoforge-minecraft/` | Minecraft `1.21.1`，NeoForge `21.1.200`，NeoForm `1.21.1-20240808.144430` | patched-source archive SHA-256 `a2003718973f1b772e1b7a1c8527bd2b19a86aa938104a77515e8140ca865ce1` | 直接查看 NeoForge patch 后的 `com.mojang.*` / `net.minecraft.*` 源码，识别 vanilla 类中新增的接口、方法和语义 |
+| `upstream/kilt/` | `KiltMC/Kilt` `version/1.21.1` | commit `9e8f0d67411f10234bf0d864bd151a6dbcef14b4` | 查看 (Neo)Forge API、对象和生命周期如何在 Fabric 上承接 |
+| `upstream/connector/` | `Sinytra/Connector` `1.21.x` | commit `8b27f1ad042aae8037bcc522b321c03fcce1a12a` | 从反方向查看 Fabric API 到 NeoForge 的对象转换与调用语义 |
 
-仅在任务相关的具体子目录内使用 `rg`/`fd` 搜索；禁止扫描 `~`、`/`、`~/server` 或宽泛父目录。参考仓库默认只读，不要在其中改代码、生成构建产物或提交。需要更新参考版本时必须显式执行，并同步更新本表的 commit。
+`upstream/neoforge-minecraft/` 是匹配本项目 NeoForge 基线的 patched-source JAR 直接解压结果，只保留 5,363 个 `com/mojang/**/*.java` 与 `net/minecraft/**/*.java`；本地来源、过滤条件和版本同时记录在该目录的 `SOURCE.txt`。它用于核对 patch 后 Minecraft 表面，禁止作为编译依赖，也不要复制或修改 Minecraft 源码。
+
+仅在任务相关的具体子目录内使用 `rg`/`fd` 搜索；禁止扫描 `~`、`/`、`~/server` 或宽泛父目录。所有参考目录默认只读，不要在其中改代码、生成构建产物或提交。需要更新参考版本时必须显式执行；同时更新本表身份，patched Minecraft 还须重建 `SOURCE.txt` 并核对 Java 文件数量。
 
 ## 平台 API 映射规则
 
@@ -30,9 +33,10 @@
 
 1. 优先判断是否可直接使用 vanilla Minecraft/Mojang 类型；
 2. 再寻找 Fabric API 的直接能力；
-3. 在 `upstream/kilt/` 查看 NeoForge→Fabric 的实现与边界；
-4. 在 `upstream/connector/` 查看 Fabric→NeoForge 的反向映射；
-5. 基于双方行为实现最小的 Mekanism 专用 adapter，并补语义测试。
+3. 在 `upstream/neoforge-minecraft/` 查看目标 vanilla 类被 NeoForge patch 后具体增加或改变了什么；
+4. 在 `upstream/kilt/` 查看 NeoForge→Fabric 的实现与边界；
+5. 在 `upstream/connector/` 查看 Fabric→NeoForge 的反向映射；
+6. 基于上述行为实现最小的 Mekanism 专用 adapter，并补语义测试。
 
 Kilt 与 Connector 是参考实现，不是必须照抄的架构。本项目不实现通用 Forge/Fabric 转换层，不批量伪造 `net.neoforged.*`，也不默认把二者加入依赖。若直接采用具体代码，必须在实现或提交中记录来源仓库、commit、文件路径并遵守许可证；Kilt 为 LGPL-2.1，Connector 为 MIT。默认做法是参考行为和测试后独立实现。
 
