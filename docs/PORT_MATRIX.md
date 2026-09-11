@@ -79,7 +79,7 @@ scripts/scan-platform-deps.py
 
 ### 当前 P0 network 落点
 
-首个窄切片已实现 configuration phase 的双向 payload、强制 `10.7.19` 精确协商和服务端 `ConfigurationTask` gate；common/client 注册类严格分离，dedicated packaged smoke 验证不会加载 client adapter。它只建立协议与阶段边界，不提前引入官方 packet catalog 或通用 context facade。配对 Loader 客户端的 matching/mismatch/reconnect/thread 门禁以及 gameplay dispatcher 仍是 P0 未完成项，详见 `FABRIC_NETWORK.md`。
+首个窄切片已实现 configuration phase 的双向 payload、强制 `10.7.19` 精确协商和服务端 `ConfigurationTask` gate；common/client 注册类严格分离，dedicated packaged smoke 验证不会加载 client adapter。隔离 Loom server + 两个顺序启动的独立 Xvfb client JVM 已验证 matching round-trip、Netty callback 与每连接重新协商（尚不等于同一 client 进程 reconnect）。它只建立协议与阶段边界，不提前引入官方 packet catalog 或通用 context facade；missing-mod/mismatch/rejection/timeout fixture 以及 gameplay dispatcher 仍是 P0 未完成项，详见 `FABRIC_NETWORK.md`。
 
 ### 当前 energy storage 落点
 

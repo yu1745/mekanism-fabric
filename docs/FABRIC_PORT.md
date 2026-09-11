@@ -50,7 +50,7 @@
 - [~] 官方 API allowlist：已编译 28/265 个文件；`Action`、registry-aware NBT 与 `IEnergyContainer` 是首批登记的平台适配；
 - [~] lifecycle/registry：官方 deferred wrapper 已组合 Fabric adapter，四个官方 GameEvent 已验证同步注册、canonical holder 和冻结前时序；
 - [~] config：Mekanism-owned TOML spec/manager 与官方 12 项 startup 配置已通过缓存、校验、原子保存和 packaged server 门禁；其余八份 Core config 暂未纳入；
-- [~] network adapter：configuration `FriendlyByteBuf` 双向 codec、强制 `10.7.19` 协议协商、服务端 task gate、独立 client entrypoint 与 dedicated-server 打包门禁已完成；配对客户端往返/错版/重连门禁和 gameplay dispatcher 尚未完成（见 `FABRIC_NETWORK.md`）；
+- [~] network adapter：configuration `FriendlyByteBuf` 双向 codec、强制 `10.7.19` 协议协商、服务端 task gate、独立 client entrypoint、dedicated-server 打包门禁及两个独立客户端 JVM 的顺序 join 已完成；缺失 mod/错版/拒绝/超时 fixture 与 gameplay dispatcher 尚未完成（见 `FABRIC_NETWORK.md`）；
 - [~] holder/storage：官方 `IEnergyContainer` 与 `BasicEnergyContainer` 内部存储语义已移植并通过 execute/simulate、automation、listener 与 legacy NBT 测试；sided holder、外部 Energy API/transaction adapter 及其余存储族尚未完成（见 `FABRIC_ENERGY.md`）；
 - [ ] CachedRecipe、机器基类与 Crusher。
 

@@ -10,6 +10,23 @@ base {
     archivesName = project.archives_base_name
 }
 
+loom {
+    runs {
+        handshakeServer {
+            server()
+            name = 'Mekanism handshake server'
+            runDir = System.getProperty('mekanism.handshake.serverDir', 'run/handshake-server')
+        }
+        handshakeClient {
+            client()
+            name = 'Mekanism handshake client'
+            runDir = System.getProperty('mekanism.handshake.clientDir', 'run/handshake-client')
+            programArgs '--quickPlayMultiplayer', System.getProperty('mekanism.handshake.address', '127.0.0.1:25567'),
+                  '--username', System.getProperty('mekanism.handshake.username', 'MekanismSmoke')
+        }
+    }
+}
+
 repositories {
     // Loom supplies Minecraft and Fabric repositories. Keep this build isolated
     // from the NeoForge repositories in the root build.

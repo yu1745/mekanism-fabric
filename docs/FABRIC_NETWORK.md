@@ -51,8 +51,16 @@ The common bootstrap has no static reference to the client bootstrap or client n
   - both common and client network classes are packaged;
   - common networking registration emits the exact proof marker;
   - a clean dedicated server reaches `Done` without linking client classes.
+- `scripts/fabric-paired-network-smoke.sh`
+  - launches an isolated Loom server and two sequential fresh Xvfb client JVMs through Quick Play;
+  - requires each client to advertise its receiver, start and complete protocol `10.7.19` negotiation, and enter play;
+  - requires the first disconnect to be observed before launching the second client;
+  - pairs structured session IDs and requires every server start/complete marker to report a Netty event-loop thread;
+  - removes disposable run directories and retains diagnostic logs.
 
-The dedicated-server smoke cannot exercise a client response, and the unit tests do not instantiate Fabric/Minecraft network handlers. Consequently the real `canSend` rejection, task enqueue/start/complete calls, and handler disconnect paths are compile-checked and reviewed but not yet executed automatically. A paired clean Loader client/server gate is still required to prove those branches, matching join, mismatch disconnect, callback thread behavior, and reconnect state. The current task has no Mekanism-specific timeout; a peer that advertises the channel and then withholds its response remains subject to the base connection lifecycle until that paired gate defines and verifies an explicit policy.
+The paired gate is Linux-oriented and requires `flock`, Java, Python 3, a systemd user manager, `systemd-run`/`systemctl`, `xvfb-run`, and Xvfb. It serializes access to shared Loom outputs, runs each Gradle/game tree in a transient user scope for reliable cleanup, retries loopback-port bind races, and applies `FABRIC_PAIRED_SMOKE_TIMEOUT` as one overall deadline.
+
+The paired gate now executes the matching-response task enqueue/start/complete path and proves fresh server-side negotiation for two independent connections. It does not exercise same-client-process reconnect or its static client registration state. It also does not yet execute the missing receiver, mismatched/rejected response, pending-task disconnect cleanup, or withheld-response timeout branches; those need a dedicated fixture client. The current task has no Mekanism-specific timeout, so a peer that advertises the channel and then withholds its response remains subject to the base connection lifecycle until that fixture gate defines and verifies an explicit policy.
 
 ## Semantic references
 
