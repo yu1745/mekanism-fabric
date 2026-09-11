@@ -59,6 +59,9 @@ dependencies {
     // Annotation types referenced by the official API slice; neither is bundled.
     compileOnly 'org.jetbrains:annotations:24.1.0'
     compileOnly 'com.google.code.findbugs:jsr305:3.0.2'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 def resolvedModVersion = project.version.toString()
@@ -73,6 +76,10 @@ tasks.withType(JavaCompile).configureEach {
     dependsOn tasks.named('verifyApiSliceNoNeoForge')
     options.release = 21
     options.encoding = 'UTF-8'
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
 }
 
 java {

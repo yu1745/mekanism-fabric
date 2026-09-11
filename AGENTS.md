@@ -8,6 +8,7 @@
 
 - `docs/FABRIC_PORT.md`
 - `docs/PORT_MATRIX.md`
+- `docs/API_DELTAS.md`
 - `docs/FABRIC_SMOKE.md`
 
 ## 本地只读参考源码

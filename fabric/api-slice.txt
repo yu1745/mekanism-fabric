@@ -1,4 +1,5 @@
 # Paths are relative to ../src/api/java. Keep one auditable API source per line.
+mekanism/api/Action.java
 mekanism/api/AutomationType.java
 mekanism/api/Chunk3D.java
 mekanism/api/IContentsListener.java
