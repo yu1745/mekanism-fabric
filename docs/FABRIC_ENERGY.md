@@ -65,7 +65,7 @@ The three dynamic handler sources are byte-identical to `4646f509`. Insert and e
 
 ## Sequential transfer utilities
 
-The unchanged official long-valued transfer closure is admitted as part of the current API/common/platform slice count 42 / 70 / 10:
+The unchanged official long-valued transfer closure is admitted as part of the current API/common/platform slice count 42 / 74 / 10:
 
 - `mekanism.api.math.LongTransferUtils`
 - `mekanism.api.container.InContainerGetterLong`
@@ -103,6 +103,12 @@ Invalid handler returns, mismatched `containerCount`/list size, and overflow rem
 `ProxiedEnergyContainerHolder`, `EnergyAcceptorTarget`, `EnergySaveTarget`, and `LaserDissipationHandler` are admitted unchanged and remain byte-identical to official baseline `4646f509`. Six Fabric-local tests bind three narrow contracts: the proxied holder keeps independent insert/extract predicates and forwards exact nullable sides while returning the function's list identity; the acceptor bridge uses `EmitUtils`, forwards exact `SIMULATE`/`EXECUTE`, preserves true-`long` order/results, computes acceptance as offer minus remainder, and accounts execution shortfall from the actual remainder; save handlers simulate remaining capacity, accept fairly, defer publication until `save()`, publish saturated/zero values repeatedly, clamp aggregate stored totals, and have delegates snapshot max capacity, call `setEnergy`, and read current storage. The immutable laser handler retains 0, 1, ordinary values, validates each percentage independently (including infinities), and intentionally preserves raw-comparison NaN acceptance.
 
 These classes add no wire protocol or adapter. All owners/callers, transmitter/dynamic-network lifecycle, actual emission ticks, capability registration/lookup/exposure, Fabric Energy API/conversion/transactions/rollback, side configuration/ejection, machine/tile/item integration, laser armor/item attachment registration, damage handling, networking/serialization/persistence/threading remain deferred.
+
+## Long-valued tier metadata closure
+
+`EnergyCubeTier`, `InductionCellTier`, and `InductionProviderTier` are admitted byte-identically to `4646f509`; `CachedLongValue` differs only in replacing the two NeoForge builder/value imports with `MekanismConfigSpec` types. The Fabric spec now preserves exact signed-long config values through TOML load/correction/save, including values above `2^53`, `Long.MIN_VALUE`, and `Long.MAX_VALUE`; its explicit normalizer rejects fractions, non-finite values, overflow (including floating `2^63`), and configured range misses without rounding, truncation, saturation, or lossy comparisons.
+
+This closure is only config schema/value support and energy-tier metadata. It does not activate `tiers.toml`; `TierConfig`, `MekanismConfig` and other real config files, other cached value kinds/tier families, config sync/UI/watchers/world restart, owners/callers, machines/blocks/items, capability registration, external energy/transactions, networking/serialization/persistence/lifecycle/threading remain deferred.
 
 ## Deliberately deferred
 

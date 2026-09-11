@@ -145,7 +145,10 @@ with zipfile.ZipFile(sys.argv[1]) as artifact:
     entries = artifact.namelist()
 expected_tiers = {
     "mekanism/common/tier/BinTier.class",
+    "mekanism/common/tier/EnergyCubeTier.class",
     "mekanism/common/tier/FactoryTier.class",
+    "mekanism/common/tier/InductionCellTier.class",
+    "mekanism/common/tier/InductionProviderTier.class",
     "mekanism/common/tier/QIODriveTier.class",
 }
 actual_tiers = {
@@ -154,6 +157,20 @@ actual_tiers = {
 }
 if actual_tiers != expected_tiers or any(entries.count(entry) != 1 for entry in expected_tiers):
     raise SystemExit(f"unexpected tier class family: {sorted(actual_tiers)!r}")
+expected_config_values = {
+    "mekanism/common/config/value/CachedValue.class",
+    "mekanism/common/config/value/CachedValue$IConfigValueInvalidationListener.class",
+    "mekanism/common/config/value/CachedFloatValue.class",
+    "mekanism/common/config/value/CachedIntValue.class",
+    "mekanism/common/config/value/CachedLongValue.class",
+}
+actual_config_values = {
+    entry for entry in entries
+    if entry.startswith("mekanism/common/config/value/") and entry.endswith(".class")
+}
+if (actual_config_values != expected_config_values
+        or any(entries.count(entry) != 1 for entry in expected_config_values)):
+    raise SystemExit(f"unexpected config-value class family: {sorted(actual_config_values)!r}")
 expected_resources = {
     "mekanism/common/resource/IResource.class",
     "mekanism/common/resource/MiscResource.class",

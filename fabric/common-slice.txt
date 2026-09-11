@@ -29,6 +29,7 @@ mekanism/common/config/listener/ConfigBasedCachedLongSupplier.java
 mekanism/common/config/listener/ConfigBasedCachedSupplier.java
 mekanism/common/config/value/CachedFloatValue.java
 mekanism/common/config/value/CachedIntValue.java
+mekanism/common/config/value/CachedLongValue.java
 mekanism/common/config/value/CachedValue.java
 mekanism/common/content/network/distribution/EnergyAcceptorTarget.java
 mekanism/common/content/network/distribution/EnergySaveTarget.java
@@ -62,7 +63,10 @@ mekanism/common/resource/IResource.java
 mekanism/common/resource/MiscResource.java
 mekanism/common/resource/BlockResourceInfo.java
 mekanism/common/tier/BinTier.java
+mekanism/common/tier/EnergyCubeTier.java
 mekanism/common/tier/FactoryTier.java
+mekanism/common/tier/InductionCellTier.java
+mekanism/common/tier/InductionProviderTier.java
 mekanism/common/tier/QIODriveTier.java
 mekanism/common/registration/INamedEntry.java
 mekanism/common/registration/MekanismDeferredHolder.java

@@ -8,6 +8,8 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
@@ -382,6 +384,13 @@ public final class MekanismConfigSpec {
             return define(name, defaultValue, raw -> normalizeInteger(raw, minimum, maximum));
         }
 
+        public ConfigValue<Long> defineInRange(String name, long defaultValue, long minimum, long maximum) {
+            if (minimum > maximum || defaultValue < minimum || defaultValue > maximum) {
+                throw new IllegalArgumentException("Invalid long range/default for " + name);
+            }
+            return define(name, defaultValue, raw -> normalizeLong(raw, minimum, maximum));
+        }
+
         public ConfigValue<Double> defineInRange(String name, double defaultValue, double minimum, double maximum) {
             if (!Double.isFinite(defaultValue) || !Double.isFinite(minimum) || !Double.isFinite(maximum)
                   || minimum > maximum || defaultValue < minimum || defaultValue > maximum) {
@@ -461,6 +470,34 @@ public final class MekanismConfigSpec {
                 return Optional.empty();
             }
             return Optional.of((int) asLong);
+        }
+
+        private static Optional<Long> normalizeLong(Object raw, long minimum, long maximum) {
+            final long value;
+            try {
+                if (raw instanceof Byte || raw instanceof Short || raw instanceof Integer || raw instanceof Long) {
+                    value = ((Number) raw).longValue();
+                } else if (raw instanceof BigInteger integer) {
+                    value = integer.longValueExact();
+                } else if (raw instanceof BigDecimal decimal) {
+                    value = decimal.longValueExact();
+                } else if (raw instanceof Float floating) {
+                    if (!Float.isFinite(floating)) {
+                        return Optional.empty();
+                    }
+                    value = new BigDecimal(Float.toString(floating)).longValueExact();
+                } else if (raw instanceof Double floating) {
+                    if (!Double.isFinite(floating)) {
+                        return Optional.empty();
+                    }
+                    value = BigDecimal.valueOf(floating).longValueExact();
+                } else {
+                    return Optional.empty();
+                }
+            } catch (ArithmeticException ignored) {
+                return Optional.empty();
+            }
+            return value >= minimum && value <= maximum ? Optional.of(value) : Optional.empty();
         }
 
         private static Optional<Double> normalizeDouble(Object raw, double minimum, double maximum) {

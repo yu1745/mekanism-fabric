@@ -85,7 +85,7 @@ scripts/scan-platform-deps.py
 
 当前还原样纳入 `DependentMapCodec`、`SequencedCollectionCodec`、`DroppingUnboundedMapCodec`（均与 `4646f509` 字节一致）。紧凑 Java 21 oracle 仅覆盖 dependency-first 选择及字段错误、sequenced encode/decode 边界/顺序/immutable/partial remainder，以及 dropping map 的 first-wins、保留 partial success/failed input 和重复 partial-value 的早返回；打包精确允许 1 个 API 与 3 个 common codec class，无 startup marker。`ModuleContainer`、`AttachedSideConfig`、recipes、data components、config/network owners 和所有 callers 延期；不声明 persistence、registry、packet、lifecycle-owner 或 serialized-format backward compatibility。
 
-当前 allowlist 数量为 API **42**、common **70**、platform **10**。`Color`、`CustomEffect`、`Pos3D`、`Quaternion`、`Range3D`、`MultipartUtils`、`StatUtils` 七个 foundation 源文件均与 `4646f509` 字节一致；12 个本地 Java 21 测试仅界定 color/stat/effect、spatial/range/rotation/quaternion 与 direct raycast，JAR 精确限定 direct common-lib 四项、effect 一项、math 三项、Multipart 三项和 StatUtils 一项。renderers/particles/GUI/recipe viewers/client lifecycle、transmitters/multipart blocks/gear、machines/block types/entities、packet tracking/network ranges、SPS/multiblock、additions/generators、external energy、world/chunk lifecycle、registries/config/persistence 及所有 callers/owners 延期；无 rendering integration、entity/player lifecycle、block registration、networking、thread safety 或 collision-owner guarantee。
+当前 allowlist 数量为 API **42**、common **74**、platform **10**。`Color`、`CustomEffect`、`Pos3D`、`Quaternion`、`Range3D`、`MultipartUtils`、`StatUtils` 七个 foundation 源文件均与 `4646f509` 字节一致；12 个本地 Java 21 测试仅界定 color/stat/effect、spatial/range/rotation/quaternion 与 direct raycast，JAR 精确限定 direct common-lib 四项、effect 一项、math 三项、Multipart 三项和 StatUtils 一项。renderers/particles/GUI/recipe viewers/client lifecycle、transmitters/multipart blocks/gear、machines/block types/entities、packet tracking/network ranges、SPS/multiblock、additions/generators、external energy、world/chunk lifecycle、registries/config/persistence 及所有 callers/owners 延期；无 rendering integration、entity/player lifecycle、block registration、networking、thread safety 或 collision-owner guarantee。
 
 官方 `WildcardMatcher` 已原样纳入 bounded common slice，保持递归/回溯、`Locale.ROOT` 大小写折叠、`TagKey.location()` 和 UTF-16 `char`/`Character.isDigit(char)` 语义。Fabric 测试与 packaged JAR 门禁覆盖该边界；这不表示 QIO、miner、Finder 或其他未来调用方已经移植。官方 `ChunkUtils` 也原样纳入同一 slice，保留 `rangeClosed` 四方向的 inclusive 行主序遍历（X 最快、其次 Z）、packed `long` 行为与 `packedBlockToChunk` 对负数坐标的 `>> 4` floor-section 语义；返回数组按 inclusive 维度分配，representable/可分配矩形属调用者前置条件。同样保持 baseline 字节不变的 `BiLongMultimap`、`FilterTransformIterator`、`IndexedCuboidMap` 已构成仅内存的索引查找闭包；两份官方测试与 Fabric-local Java 21 边界测试覆盖双向 mutation、null filter/exhaustion、负 chunk 与 inclusive box、同 box replacement 和混合清理。JAR 精确限定六个 collection class entries。Miner/QIO/spatial caller、world/chunk lifecycle/loading、persistence、concurrency 与多线程 mutation 均未移植或声明。
 
@@ -113,6 +113,12 @@ scripts/scan-platform-deps.py
 
 该闭包不纳入任何 owners/callers、capability registration/lookup/exposure、external energy/transactions/conversion、side configuration/ejection、machines/transmitters/networks，也不证明 real config load/reload/file I/O/lifecycle/threading 或 persistence/network serialization；不据此声明 broader Fabric integration。
 
+### 当前 signed-long config/tier metadata 落点
+
+allowlist 当前为 API **42** / common **74** / platform **10**。三个 energy/induction tier 源与 `4646f509` byte-identical；`CachedLongValue` 仅替换 NeoForge `Builder` 与 `ConfigValue` 两个 import。Fabric long schema 对 TOML integer 保持 `>2^53` 和完整 signed-long 精度，只规范化指定 primitive wrapper、精确 integral/representable 的 `BigInteger`/`BigDecimal` 与 finite floating values；fraction、NaN/infinity、overflow、range miss 和 rounded-double `2^63` 均拒绝，绝不 rounding/truncation/saturation 或 lossy `double == long`。
+
+边界仅是 schema/value support 与 tier metadata，不激活 `tiers.toml`。`TierConfig`、`MekanismConfig`/其他 real config files、其他 cached value kinds/tier families、config sync/UI/watchers/world restart、owners/callers、machines/blocks/items、capability registration、external energy/transactions、networking/serialization/persistence/lifecycle/threading 均延期。
+
 ### 当前 energy storage 落点
 
 官方 `LastEnergyTracker` 与 `4646f509` 字节一致，作为平台中立的 per-game-time accounting closure：同时间戳累加 current bucket 且 visible last 不变，任何不同（含跳跃/递减）时间戳发布旧 bucket；tick zero、raw `long` 输入及 setter 仅控制 visible client-sync value 的语义由黑盒测试固定。JAR 的 direct `mekanism/common/lib` 由它、`WildcardMatcher` 与 `Color` 两项组成精确四项且各一次，无 startup marker。唯一生产 caller `TileEntityMekanism`、world tick/client synchronization、network owner/persistence、machines/networks、external energy API/conversion/lookup/Fabric transaction integration 均延期。
@@ -127,7 +133,7 @@ scripts/scan-platform-deps.py
 
 ### Task 018 bounded internal energy support
 
-四个新增 common sources（proxied energy holder、两个 energy distribution/save bridge、laser dissipation value handler）均与 `4646f509` byte-identical；当前 slice 为 **42/70/10**。6 个 tests 只固定 nullable-side 独立权限/list identity、exact action/remainder/true-long/fallback、fair delayed/repeated save 与 clamped/delegate storage、以及 laser bounds/infinity/NaN raw comparisons；exact JAR families 拒绝 helper 泄漏。它不新增 wire protocol 或 adapter。owners/callers、transmitter/dynamic network lifecycle、emission ticks、capability exposure、Fabric Energy conversion/transactions/rollback、side config/ejection、machine/tile/item、laser attachment/damage、networking/serialization/persistence/threading 全部延期。
+四个新增 common sources（proxied energy holder、两个 energy distribution/save bridge、laser dissipation value handler）均与 `4646f509` byte-identical；当前 slice 为 **42/74/10**。6 个 tests 只固定 nullable-side 独立权限/list identity、exact action/remainder/true-long/fallback、fair delayed/repeated save 与 clamped/delegate storage、以及 laser bounds/infinity/NaN raw comparisons；exact JAR families 拒绝 helper 泄漏。它不新增 wire protocol 或 adapter。owners/callers、transmitter/dynamic network lifecycle、emission ticks、capability exposure、Fabric Energy conversion/transactions/rollback、side config/ejection、machine/tile/item、laser attachment/damage、networking/serialization/persistence/threading 全部延期。
 
 ## `other` 桶的处理
 

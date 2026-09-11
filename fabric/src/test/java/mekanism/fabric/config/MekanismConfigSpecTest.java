@@ -7,6 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Set;
@@ -126,6 +128,69 @@ class MekanismConfigSpecTest {
         assertThrows(UncheckedIOException.class, () -> spec.load(nonDirectory.resolve("proof.toml")));
         assertFalse(spec.isLoaded());
         assertEquals(3, count.get());
+    }
+
+    @Test
+    void signedLongTomlRoundTripsExactFullRangeValues() throws IOException {
+        MekanismConfigSpec.Builder builder = new MekanismConfigSpec.Builder();
+        MekanismConfigSpec.ConfigValue<Long> above53 = builder.defineInRange("above53", 9_007_199_254_740_993L, Long.MIN_VALUE, Long.MAX_VALUE);
+        MekanismConfigSpec.ConfigValue<Long> negativeAbove53 = builder.defineInRange("negativeAbove53", -9_007_199_254_740_993L, Long.MIN_VALUE, Long.MAX_VALUE);
+        MekanismConfigSpec.ConfigValue<Long> minimum = builder.defineInRange("minimum", Long.MIN_VALUE, Long.MIN_VALUE, Long.MAX_VALUE);
+        MekanismConfigSpec.ConfigValue<Long> maximum = builder.defineInRange("maximum", Long.MAX_VALUE, Long.MIN_VALUE, Long.MAX_VALUE);
+        MekanismConfigSpec spec = builder.build();
+        Path file = temporaryDirectory.resolve("longs.toml");
+
+        MekanismConfigSpec.LoadResult created = spec.load(file);
+        assertTrue(created.created());
+        assertEquals(4, created.correctedValues());
+        assertEquals(9_007_199_254_740_993L, above53.get());
+        assertEquals(-9_007_199_254_740_993L, negativeAbove53.get());
+        assertEquals(Long.MIN_VALUE, minimum.get());
+        assertEquals(Long.MAX_VALUE, maximum.get());
+        String exactDefaults = Files.readString(file);
+        assertTrue(exactDefaults.contains("above53 = 9007199254740993"));
+        assertTrue(exactDefaults.contains("negativeAbove53 = -9007199254740993"));
+        assertTrue(exactDefaults.contains("minimum = -9223372036854775808"));
+        assertTrue(exactDefaults.contains("maximum = 9223372036854775807"));
+
+        Files.writeString(file, "above53 = 9007199254740995\nnegativeAbove53 = -9007199254740995\nminimum = -9223372036854775808\nmaximum = 9223372036854775807\n");
+        MekanismConfigSpec.LoadResult loaded = spec.load(file);
+        assertEquals(0, loaded.correctedValues());
+        assertEquals(9_007_199_254_740_995L, above53.get());
+        assertEquals(-9_007_199_254_740_995L, negativeAbove53.get());
+        spec.save();
+        String exactSaved = Files.readString(file);
+        assertEquals(Set.of("above53 = 9007199254740995", "negativeAbove53 = -9007199254740995",
+                    "minimum = -9223372036854775808", "maximum = 9223372036854775807"),
+              Set.of(exactSaved.strip().split("\\R")));
+    }
+
+    @Test
+    void signedLongBuilderAndNormalizerRejectLossyOrOutOfRangeNumbers() {
+        assertThrows(IllegalArgumentException.class,
+              () -> new MekanismConfigSpec.Builder().defineInRange("reversed", 0L, 1L, -1L));
+        assertThrows(IllegalArgumentException.class,
+              () -> new MekanismConfigSpec.Builder().defineInRange("defaultLow", -2L, -1L, 1L));
+        assertThrows(IllegalArgumentException.class,
+              () -> new MekanismConfigSpec.Builder().defineInRange("defaultHigh", 2L, -1L, 1L));
+
+        MekanismConfigSpec.Builder builder = new MekanismConfigSpec.Builder();
+        builder.defineInRange("bounded", 0L, -10L, 10L);
+        builder.defineInRange("full", 0L, Long.MIN_VALUE, Long.MAX_VALUE);
+        MekanismConfigSpec spec = builder.build();
+        for (Object accepted : new Object[]{(byte) 1, (short) -2, 3, 4L, BigInteger.TEN,
+              new BigDecimal("-10.000"), 5.0F, -6.0D}) {
+            assertTrue(spec.isValidValue("bounded", accepted), () -> "expected accepted: " + accepted);
+        }
+        for (Object rejected : new Object[]{null, "1", 1.5F, -2.25D, Float.NaN, Float.POSITIVE_INFINITY,
+              Double.NaN, Double.NEGATIVE_INFINITY, 11L, -11, BigInteger.valueOf(Long.MAX_VALUE).add(BigInteger.ONE),
+              BigInteger.valueOf(Long.MIN_VALUE).subtract(BigInteger.ONE), new BigDecimal("9223372036854775808"),
+              new BigDecimal("-9223372036854775809"), new BigDecimal("1.0001"), Math.scalb(1.0, 63)}) {
+            assertFalse(spec.isValidValue("bounded", rejected), () -> "expected rejected: " + rejected);
+        }
+        assertTrue(spec.isValidValue("full", BigInteger.valueOf(Long.MAX_VALUE)));
+        assertTrue(spec.isValidValue("full", new BigDecimal(Long.MIN_VALUE)));
+        assertFalse(spec.isValidValue("full", Math.scalb(1.0, 63)));
     }
 
     @Test
