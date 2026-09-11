@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "id": "mekanism",
+  "version": "${version}",
+  "name": "Mekanism (Fabric Bootstrap)",
+  "description": "Minimal Java bootstrap for the incremental Mekanism Fabric port.",
+  "authors": [
+    "Aidan C. Brady",
+    "Mekanism contributors"
+  ],
+  "contact": {
+    "homepage": "https://aidancbrady.com/mekanism/",
+    "sources": "https://github.com/mekanism/Mekanism"
+  },
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "mekanism.fabric.MekanismFabricBootstrap"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "minecraft": "~1.21.1",
+    "java": ">=21",
+    "fabric-api": ">=0.116.17"
+  }
+}
