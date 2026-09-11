@@ -47,8 +47,10 @@ Build from the repository root:
 
 The remapped mod JAR is written to `fabric/build/libs/`. It contains the
 Fabric bootstrap and every class compiled from the allowlisted API sources.
-The existing `./build.sh` contract is unchanged and continues to build the
-NeoForge baseline.
+The repository-level `./build.sh [--clean] [--out <dir>]` contract invokes this
+Fabric build and collects only its remapped release JAR. The exact buildable
+NeoForge oracle remains available at baseline commit `4646f509`; current ported
+sources are not expected to compile with the root NeoForge Gradle build.
 
 Dependency versions were checked against Fabric's official Maven metadata:
 

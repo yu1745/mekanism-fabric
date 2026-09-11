@@ -40,8 +40,8 @@ Kilt 与 Connector 是参考实现，不是必须照抄的架构。本项目不�
 ## 当前构建入口
 
 ```bash
-./build.sh                              # 官方 NeoForge 基线 oracle
-./fabric-build.sh                       # 当前 Fabric allowlist 构建
+./build.sh [--clean] [--out <dir>]      # 当前 Fabric 发布物统一契约
+./fabric-build.sh                       # Fabric allowlist 开发构建
 ./gradlew -p fabric verifyApiSliceNoNeoForge
 scripts/scan-platform-deps.py
 scripts/fabric-packaged-smoke.sh        # 最终 remapped JAR 的干净服务端门禁

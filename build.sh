@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ═══════════════════════════════════════════════════════════════════════
-# build.sh — 统一构建契约（通用 Gradle 实现）
+# build.sh — Mekanism Fabric 统一构建契约
 #
 # 契约（所有 T0/T1 仓库一致，外部调用方式不得更改）：
 #   用法:   ./build.sh [--clean] [--out <dir>]      # 默认 out=dist
@@ -8,10 +8,9 @@
 #   产出:   <out>/*.jar  +  <out>/build-info.json
 #           build-info.json = { repo, version, source_commit, jars:[{file,sha256}], built_at }
 #
-# 内部实现可自由改写（gradle 目标、模块过滤、重命名、多产物、外部前置任务）。
-# 可选仓库级覆盖：
-#   - build-tasks.txt  存在则其内容（一行一个任务）替代默认 `build` 任务
-#   - build-jars.txt   存在则只收集其中列出的 jar 文件名模式（每行一个 glob）
+# 当前只发布 fabric/ 独立 Loom 构建的 remapped JAR；根 NeoForge 构建仅存在于
+# 基线提交中，不再作为当前移植源码的构建入口。
+# 可选：build-jars.txt 存在则只保留其中列出的 jar 文件名模式。
 # ═══════════════════════════════════════════════════════════════════════
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -32,20 +31,16 @@ if [ ! -x ./gradlew ]; then
   exit 1
 fi
 
-TASKS=build
-[ -f build-tasks.txt ] && TASKS="$(tr '\n' ' ' < build-tasks.txt)"
-
 if [ "$CLEAN" = 1 ]; then
-  ./gradlew clean --console=plain
+  ./gradlew -p fabric clean --console=plain
 fi
-./gradlew $TASKS --console=plain
+./fabric-build.sh
 
 rm -rf "$OUT"
 mkdir -p "$OUT"
 
-# 收集产物 jar：排除 sources/dev 件；其余（含 shadow/-all）都收
-find . -path '*/build/libs/*.jar' \
-  ! -path './buildSrc/*' ! -path './annotation-processor/*' \
+# 只收集 Fabric Loom 的 remapped 发布 JAR。
+find fabric/build/libs -maxdepth 1 -type f -name '*.jar' \
   ! -name '*-sources.jar' ! -name '*-dev.jar' -print0 \
   | while IFS= read -r -d '' j; do cp "$j" "$OUT/"; done
 
@@ -85,15 +80,18 @@ def git_remote():
     r = subprocess.run(["git", "remote", "get-url", "origin"], capture_output=True, text=True)
     return r.stdout.strip() if r.returncode == 0 else None
 
-# version：gradle.properties 的 mod_version/version，否则 git describe
+# version：优先 Fabric 构建配置，再回退根配置或 git describe
 version = None
-gp = pathlib.Path("gradle.properties")
-if gp.exists():
+for gp in (pathlib.Path("fabric/gradle.properties"), pathlib.Path("gradle.properties")):
+    if not gp.exists():
+        continue
     for line in gp.read_text().splitlines():
         line = line.strip()
         if line.startswith("mod_version=") or line.startswith("version="):
             version = line.split("=", 1)[1].strip()
             break
+    if version:
+        break
 if not version:
     r = subprocess.run(["git", "describe", "--tags", "--always"], capture_output=True, text=True)
     version = r.stdout.strip() or "unknown"
