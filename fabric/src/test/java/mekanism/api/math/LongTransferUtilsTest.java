@@ -1,7 +1,6 @@
 package mekanism.api.math;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
@@ -89,10 +88,7 @@ class LongTransferUtilsTest {
         assertEquals(64L, LongTransferUtils.insert(64L, Direction.UP, Action.EXECUTE, count, getter, interaction));
         assertEquals(List.of("count:up"), events);
 
-        List<String> containerEvents = new ArrayList<>();
-        TrackingEnergyContainer unused = new TrackingEnergyContainer("unused", 100, containerEvents, null);
         assertEquals(64L, LongTransferUtils.insert(64L, Action.EXECUTE, AutomationType.INTERNAL, 0, List.of()));
-        assertEquals(List.of(), containerEvents);
 
         AtomicInteger supplierCalls = new AtomicInteger();
         assertEquals(64L, LongTransferUtils.insert(64L, Direction.DOWN, side -> {
@@ -100,7 +96,6 @@ class LongTransferUtilsTest {
             return List.of();
         }, Action.EXECUTE, AutomationType.INTERNAL));
         assertEquals(1, supplierCalls.get());
-        assertTrue(unused.inserts.isEmpty());
     }
 
     @Test
