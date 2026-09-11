@@ -144,8 +144,8 @@ required = {
 with zipfile.ZipFile(sys.argv[1]) as artifact:
     entries = artifact.namelist()
 expected_direct_common_lib = {
-    "mekanism/common/lib/WildcardMatcher.class",
     "mekanism/common/lib/LastEnergyTracker.class",
+    "mekanism/common/lib/WildcardMatcher.class",
 }
 actual_direct_common_lib = {
     entry for entry in entries
@@ -305,7 +305,7 @@ if unexpected_energy_api:
     )
 PYEOF
 then
-  echo "fabric-packaged-smoke: codec/collection/distribution/ChunkUtils/RegistryUtils/LambdaMetaFactoryUtil/long-transfer/dynamic-strict-energy production/test packaging contract failed" >&2
+  echo "fabric-packaged-smoke: codec/collection/distribution/ChunkUtils/RegistryUtils/LambdaMetaFactoryUtil/long-transfer/dynamic-strict-energy/common-lib-root production/test packaging contract failed" >&2
   exit 1
 fi
 for required_entry in \
@@ -332,8 +332,8 @@ for required_entry in \
     mekanism/common/capabilities/holder/energy/IEnergyContainerHolder.class \
     mekanism/common/capabilities/holder/heat/HeatCapacitorHolder.class \
     mekanism/common/capabilities/holder/heat/IHeatCapacitorHolder.class \
-    mekanism/common/lib/WildcardMatcher.class \
     mekanism/common/lib/LastEnergyTracker.class \
+    mekanism/common/lib/WildcardMatcher.class \
     mekanism/common/util/ChunkUtils.class \
     mekanism/common/util/EmitUtils.class \
     mekanism/common/lib/distribution/SplitInfo.class \
