@@ -33,13 +33,13 @@ class LastEnergyTrackerTest {
         LastEnergyTracker tracker = new LastEnergyTracker();
         assertEquals(0, tracker.getLastEnergyReceived());
 
-        tracker.received(0, (long) Integer.MAX_VALUE + 9);
+        tracker.received(0, Long.MAX_VALUE);
         tracker.received(0, 0);
         tracker.received(0, -4);
         assertEquals(0, tracker.getLastEnergyReceived());
 
         tracker.received(1, -6);
-        assertEquals((long) Integer.MAX_VALUE + 5, tracker.getLastEnergyReceived());
+        assertEquals(Long.MAX_VALUE - 4, tracker.getLastEnergyReceived());
         tracker.received(2, 0);
         assertEquals(-6, tracker.getLastEnergyReceived());
     }
