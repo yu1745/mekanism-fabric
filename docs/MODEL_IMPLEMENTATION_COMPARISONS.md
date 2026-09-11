@@ -738,3 +738,49 @@ Gemini 3.8 Flash 与 GLM 5.3 不再进入默认实现面板；需要其特定能
 - **最终策略：** 采用 SOL candidate，在主线 cherry-pick 为 `830859ad`；`a1607d4d` 吸收 DeepSeek/GLM 都采用的词法 slice 顺序，并吸收 DeepSeek 的 common-lib-root 外层诊断标签；`e231cbee` 将 SOL 的 true-long 输入提升为 GLM 的 `Long.MAX_VALUE`，但继续使用 SOL 的短测试结构，不加入 DeepSeek overflow 或 GLM 冗长 DisplayName/messages。`docs/MODEL_IMPLEMENTATION_COMPARISONS.md` 的 GLM 三轮临时说明同提交写入，不改变 `AGENTS.md`。
 - **综合规模：** 排除评估文档本身，8 files，`+114/-8`；local suite 58 行、4 tests。
 - **主代理独立验证：** production source 与 `4646f509` 字节一致；18-file oracle、`fabric/build.gradle`、API/platform slices 和既有测试不变；slice 42/41/10 且无重复；34 suites、182 tests、0 failures/errors/skips，三个 jqwik properties 各 100,000 tries/checks；最终完整 Gradle gate 9.12s，`fabric-build.sh` 0.64s，packaged smoke 49.70s 并到达 `Done`；direct common-lib package 精确为两个 class 且无 test/fixture/NeoForge/JUnit/jqwik 泄漏；implementation clean release 11.42s，恰好一个 JAR，`build-info.json` source commit 与 `e231cbee` 一致，JAR sha256 为 `ee8b7fc16e7d95069627dde04e74366e82308090ae6980bbd2bf6bef148b0498`。
+
+---
+
+## 任务 014：纳入 platform-neutral common collection utilities
+
+### 任务简述
+
+- **基线：** `8489dbcadbf70608d019ccea59d0c2a6657416e6`
+- **目标：** 原样纳入 `BiMultimap`、`EmptySequencedMap`、`HashList`、`LRU`，把既有 indexed spatial collection 扩展为不依赖 owner 的十二 class-entry common collection utility 闭包。
+- **关键验收：** 四份 production source 与 `4646f509` 字节一致；slice 42/45/10，18-file oracle、build script、API/platform slices、AGENTS 与既有测试不变；最多八个本地测试覆盖双向 index、empty SequencedMap、ordered unique list 与 unique/non-null LRU 的独立状态转换；collection package 精确十二类；所有 security/frequency/filter/sync、QIO、module/gear/data component/codec、GUI/recipe/client、network/persistence/registry caller 继续延期，不声明 thread safety、concurrent mutation 或通用 mutable-view 契约。
+- **GLM 临时复测：** 第 2/3 轮。主代理启动时误传通用 `medium`，随后用户说明 GLM 5.3 只支持 low/high/max，且原本想给 medium 时必须传 low；运行中已 steer 为 low scope，但底层启动参数无法追溯修改。因此本轮如实记为“配置修正样本”，不把 effort-sensitive 差异解释成干净的 low 或 medium 结论；Task015 起只传受支持档位。
+
+### 5.6 SOL
+
+- **提交：** `ee2a76cd23c7d680fd19e73dbf40ded80f0d8140`
+- **规模：** 8 files，`+213/-16`；单一 local suite 183 行、8 tests。
+- **资源：** 372.7s，72.2k tokens，38 次工具调用，约 `$1.11`。
+- **优点：** 用三者约 56% 的测试行数覆盖同样八个独立 test methods；BiMultimap 预先持有 live read views 后验证插入可见性，并完整走 pair/key/value/clear；HashList 在两个方法内覆盖全部安全 replace 分支、callback 顺序、invalid swap、clone 与 ordered equality；LRU 和 empty map 边界紧凑；文档最短，精确十二类 package gate 清楚，全部门禁通过。
+- **不足：** `assertEquals(new LinkedHashMap<>(), map)` 把普通 map 放在 JUnit expected 一侧，只调用 expected 的 `equals`，没有直接证明 `EmptySequencedMap.equals` 的 `SequencedMap` 类型限制；没有像 GLM 那样固定空 `HashMap` 不相等。全部四类放在一个 suite，文件级诊断不如分开四个 suite。
+- **本任务评价：** 覆盖/体积/执行资源比明显最佳；唯一实质语义缺口可用两条不新增 method 的断言修复。
+
+### DeepSeek v4.1 Flash
+
+- **提交：** `a1e9442b5753985f96e9c3ab1981eca5184c5a60`
+- **规模：** 11 files，`+361/-14`；四份 local suites 共 329 行、8 tests。
+- **资源：** 388.4s，81.9k tokens，64 次工具调用；通知未提供成本。
+- **优点：** 四类各自独立 suite，失败定位最直接；empty map 以被测 map 为 receiver 正确固定 empty `LinkedHashMap` equality；LRU 额外覆盖已在 head 的 `moveUp` 与非空 forward/descending iterator exhaustion；HashList 的 set membership/index 和 clone 两侧状态断言较细；全部门禁通过，墙钟只比 SOL 多 15.7s。
+- **不足：** 相比 SOL 多 146 行测试、26 次工具调用和 15.7s，但多数增量是断言 message、派生 size/contains/hash 与已有状态输出的重复；没有固定 empty non-SequencedMap 的特殊 inequality，也没有形成需要整体采用的独有 production boundary。
+- **本任务评价：** 诊断组织最好但测试信息密度最低；可提供 equality 方向审查，整体不宜替代 SOL 基底。
+
+### GLM 5.3（临时复测 2/3，effort 配置修正样本）
+
+- **提交：** `170613f404c0e2a4f43ede34de9b74f89374d1f6`
+- **规模：** 11 files，`+356/-14`；四份 local suites 共 314 行、8 tests。
+- **资源：** 650.6s，122.3k tokens，66 次工具调用，约 `$1.12`。
+- **优点：** 三者单体语义覆盖最细：明确固定 `EmptySequencedMap` 等于 empty `SequencedMap`、不等于 empty `HashMap` 的官方特殊行为；BiMultimap 固定失败 pair removal 不破坏任一 index 且 clear 后可复用；LRU 移除到空，HashList callback 两参数顺序均清楚；测试比 DeepSeek 少 15 行，全部门禁通过，并在一次错误 reverse-key 预期后正确判断 production 无误、修复自身测试。
+- **不足：** 测试仍比 SOL 多 131 行；README 新增说明最长；墙钟约 SOL 的 1.75 倍，tokens 约 1.69 倍，工具调用多 28 次。启动 effort 参数发生上述中途修正，不能把效率差异归因于某个有效 GLM 档位。
+- **本任务评价：** 语义审计贡献最佳、综合单体质量第二；提供一个必须吸收的 equality 边界，但资源与体积明显逊于 SOL。本轮只作为正确信号与配置纠错记录。
+
+### 本任务结论
+
+- **综合代码取舍：** 5.6 SOL > GLM 5.3 > DeepSeek；**墙钟/token/工具：** SOL 最佳。
+- **最终策略：** 采用 SOL candidate，在主线 cherry-pick 为 `b392a4f4`；综合提交 `99ff667e` 修正 equality receiver，并吸收 GLM 独有的 empty non-SequencedMap inequality，保留 SOL 185 行单 suite，不引入其余重复断言或文档扩张。
+- **综合规模：** 8 files，`+215/-16`；local suite 185 行、8 tests。
+- **主代理独立验证：** 四份 production source 与 `4646f509` 字节一致；protected surfaces 和既有测试不变；slice 42/45/10 且无重复；35 suites、190 tests、0 failures/errors/skips，三个 jqwik properties 各 100,000 tries/checks；完整 Gradle gate 9.88s，`fabric-build.sh` 2.41s，packaged smoke 38.67s 并到达 `Done`；collection package 精确十二类且无 test/fixture/NeoForge/JUnit/jqwik 泄漏；implementation clean release 11.26s，恰好一个 JAR，`build-info.json` source commit 与 `99ff667e` 一致，JAR sha256 为 `507b231f0c935f466af92148ddef4dcacd444b2a31d30ef9f1731633f4442470`。
+- **后续效率调整：** 用户指出单类任务固定成本过高。从 Task015 起按同一 dependency/ownership boundary 批量纳入约 4–12 个紧密相关 production files；候选代理只跑 source/slice、编译、单测和静态 JAR package contract，真实 dedicated-server packaged smoke 与 clean release 由主代理在选定/综合版本上各跑一次。遇到平台 API、registry lifecycle、transaction 或 patched-Minecraft 语义分歧时仍立即拆分，不能为追求数量混合不相关边界。
