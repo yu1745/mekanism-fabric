@@ -13,7 +13,7 @@ This milestone adds the platform-neutral side-routing layer used by Mekanism's i
 - `mekanism.common.capabilities.holder.heat.IHeatCapacitorHolder`
 - `mekanism.common.capabilities.holder.heat.HeatCapacitorHolder`
 
-It builds on the internal energy and heat containers but does not expose either storage family through a Fabric block/item lookup. The current audited source counts are API **42** / common **84** / platform **10**.
+It builds on the internal energy and heat containers but does not expose either storage family through a Fabric block/item lookup. The current audited source counts are API **42** / common **88** / platform **10**.
 
 ## Relative-side contract
 

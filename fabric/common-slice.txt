@@ -1,4 +1,8 @@
 # Paths are relative to ../src/main/java. Keep one auditable common source per line.
+mekanism/common/base/holiday/KnownDate.java
+mekanism/common/base/holiday/MonthlyDate.java
+mekanism/common/base/holiday/YearlyDate.java
+mekanism/common/base/holiday/HolidayMessage.java
 mekanism/common/capabilities/SimpleDynamicHandler.java
 mekanism/common/capabilities/DynamicHandler.java
 mekanism/common/capabilities/energy/BasicEnergyContainer.java

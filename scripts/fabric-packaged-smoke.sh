@@ -143,6 +143,19 @@ required = {
 }
 with zipfile.ZipFile(sys.argv[1]) as artifact:
     entries = artifact.namelist()
+expected_holiday_values = {
+    "mekanism/common/base/holiday/KnownDate.class",
+    "mekanism/common/base/holiday/MonthlyDate.class",
+    "mekanism/common/base/holiday/YearlyDate.class",
+    "mekanism/common/base/holiday/HolidayMessage.class",
+}
+actual_holiday_values = {
+    entry for entry in entries
+    if entry.startswith("mekanism/common/base/holiday/") and entry.endswith(".class")
+}
+if (actual_holiday_values != expected_holiday_values
+        or any(entries.count(entry) != 1 for entry in expected_holiday_values)):
+    raise SystemExit(f"unexpected holiday value class family: {sorted(actual_holiday_values)!r}")
 expected_tile_interfaces = {
     "mekanism/common/tile/interfaces/IHasDumpButton.class",
     "mekanism/common/tile/interfaces/IHasGasMode.class",
