@@ -385,7 +385,7 @@ if unexpected_energy_api:
     )
 PYEOF
 then
-  echo "fabric-packaged-smoke: codec/collection/distribution/ChunkUtils/RegistryUtils/LambdaMetaFactoryUtil/long-transfer/dynamic-strict-energy/common-lib-root production/test packaging contract failed" >&2
+  echo "fabric-packaged-smoke: codec/collection/distribution/ChunkUtils/RegistryUtils/LambdaMetaFactoryUtil/long-transfer/dynamic-strict-energy/proxy/config-listener/common-lib-root production/test packaging contract failed" >&2
   exit 1
 fi
 for required_entry in \
