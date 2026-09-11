@@ -11,10 +11,19 @@ mappings.
 `api-slice.txt` is the auditable allowlist of API source paths, relative to
 `src/api/java`. The Fabric source set reads that file directly, so the listed
 sources retain their original `mekanism.api.*` names without being copied or
-modified. The first slice contains **17 source files** (the original candidate
-summary said 18, but its itemized list contains 17); their dependency closure
-requires no additional Mekanism source. JetBrains annotations and JSR-305 are
-available as `compileOnly` dependencies and are not bundled in the mod.
+modified. The allowlist now contains **24 source files**. The second slice adds
+**7 sources**: the vanilla-only `AutomationType` and `Chunk3D` value types,
+`SupportsColorMap`, and the complete four-file alloy/base tier closure
+(`ITier`, `IAlloyTier`, `BaseTier`, and `AlloyTier`). Their dependency closure
+uses only JDK, Minecraft, the existing annotation slice, and one another; no
+additional dependency is required. JetBrains annotations and JSR-305 remain
+`compileOnly` dependencies and are not bundled in the mod.
+
+The next nearby API candidates are blocked by deliberately excluded boundaries:
+`Action` imports NeoForge's fluid action, incremental-enum helpers close over
+`ConstantPredicates` (which imports NeoForge fluid/tri-predicate and chemical
+types), and the text/provider enums close over NeoForge `TranslatableEnum` or
+larger API text graphs. Those families remain outside this low-risk slice.
 
 To repeat the portability audit and fail on a missing source, duplicate path,
 or any `net.neoforged` reference, run from the repository root:
