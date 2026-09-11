@@ -5,6 +5,9 @@
 The first storage milestone admits the official Mekanism energy-container contract and implementation without machines, configurable holders, external lookups, or a third-party energy API:
 
 - `mekanism.api.energy.IEnergyContainer`
+- `mekanism.api.energy.IStrictEnergyHandler`
+- `mekanism.api.energy.ISidedStrictEnergyHandler`
+- `mekanism.api.energy.IMekanismStrictEnergyHandler`
 - `mekanism.common.capabilities.energy.BasicEnergyContainer`
 
 The domain remains measured in Mekanism's `long` energy units. `insert` returns the unaccepted remainder; `extract` returns the extracted amount. `Action.SIMULATE` performs the same capacity/rate/policy calculation as execution without mutating storage or notifying listeners.
@@ -12,6 +15,8 @@ The domain remains measured in Mekanism's `long` energy units. `insert` returns 
 ## Platform adaptations
 
 `IEnergyContainer` now extends the project-owned, registry-aware `mekanism.api.INBTSerializable<CompoundTag>` instead of NeoForge's serialization interface. Its method names, arguments, return values, listener contract, and NBT key remain unchanged. A Javadoc-only NeoForge fluid-handler comparison was replaced with the same behavior described in plain text.
+
+`IStrictEnergyHandler` and `ISidedStrictEnergyHandler` remove only their two NeoForge fluid imports and replace the Javadoc-only `fill` links with platform-neutral prose preserving the exact contrast: fluid fill reports accepted amount, while Mekanism insertion reports the unaccepted remainder. This has no compatibility impact; executable code, signatures, annotations, control flow, and all other Javadoc meaning are unchanged. `IMekanismStrictEnergyHandler` is byte-identical to baseline `4646f509`.
 
 `BasicEnergyContainer` keeps its official factories and automation predicates. Two broad helper dependencies were removed at the Fabric boundary:
 
@@ -32,9 +37,15 @@ Guava `Preconditions.checkArgument` was replaced by the equivalent explicit `Ill
 - empty serialization omits `stored`; populated serialization writes a long;
 - legacy string energy is loaded with the official unsigned/decimal compatibility behavior.
 
+## Strict handler defaults
+
+The three-layer handler closure connects the admitted sequential utility to Mekanism's indexed, sided, and container-backed contracts. `IStrictEnergyHandler` aggregates with the nullable internal context: insertion visits non-empty indexed containers before deferred empties, extraction uses source order, and the exact `Action`, shrinking remainder/request, and result are preserved. `ISidedStrictEnergyHandler` routes every unsided bridge through `getEnergySideFor()` and forwards the exact nullable side and `Action` through sided per-container and aggregate calls.
+
+`IMekanismStrictEnergyHandler` defaults expose the side-specific list supplied by the implementer. Valid indexes delegate to their `IEnergyContainer`; invalid indexes return zero/null/remainder defaults or perform no mutation; direct setting clamps negative values to zero. A null side maps to `AutomationType.INTERNAL`, and a non-null side maps to `EXTERNAL`. Aggregate insert/extract obtains the side-specific list once per operation, then applies the unchanged sequential semantics under both `SIMULATE` and `EXECUTE`, including true-`long` values. `canHandleEnergy()` defaults to true; an implementation returning false remains responsible for returning an empty list from `getEnergyContainers`, exactly as the official contract states.
+
 ## Sequential transfer utilities
 
-The unchanged official long-valued transfer closure is now admitted (API slice count 38, common 32, platform 10):
+The unchanged official long-valued transfer closure is admitted as part of the API slice count 41 / common 32 / platform 10:
 
 - `mekanism.api.math.LongTransferUtils`
 - `mekanism.api.container.InContainerGetterLong`
@@ -77,11 +88,13 @@ This is an internal storage slice, not external Fabric energy interoperability. 
 - Fabric transaction rollback;
 - Joule/FE/Energy conversion policy;
 - machines, menus, sync packets, or persistence owners;
-- `IStrictEnergyHandler`, `EnergyHandler`, configurable holders/helpers, and every caller of the sequential closure (`ComponentBackedEnergyHandler`, `EnergyRecipeData`).
+- concrete `EnergyHandler`, configurable holders/helpers, and every caller of the sequential closure (`ComponentBackedEnergyHandler`, `EnergyRecipeData`).
 
 The non-config relative-side holder layer is now available and documented in `FABRIC_HOLDERS.md`. External energy boundaries must still wait for explicit conversion configuration and configurable exposure policy. Fabric API itself does not define a standard energy API.
 
 ## Verification
+
+`fabric/src/test/java/mekanism/api/energy/{IStrictEnergyHandlerTest,ISidedStrictEnergyHandlerTest,IMekanismStrictEnergyHandlerTest}.java` covers indexed delegation/order, every unsided-to-sided bridge, exact nullable side/`Action`, invalid indexes, negative-set clamping, null/internal versus non-null/external automation, one-list-lookup aggregates, simulation/execution, and a value above `Integer.MAX_VALUE`. The tracking fixtures are limited to delegation identity/order; real `BasicEnergyContainer` provides storage and mutation behavior.
 
 `fabric/src/test/java/mekanism/common/capabilities/energy/BasicEnergyContainerTest.java` covers:
 
@@ -101,7 +114,7 @@ Required gates:
 scripts/fabric-packaged-smoke.sh
 ```
 
-The packaged smoke verifies both energy classes are present in the remapped JAR as before, plus exactly one occurrence of each long-transfer production class, rejecting any other `LongTransferUtils*.class` so test/helper leakage cannot reach the release JAR. Energy behavior is exercised by JUnit rather than by constructing test state during production bootstrap.
+The packaged smoke verifies the storage classes and all three strict handler interfaces are present exactly once, rejects same-prefix handler nested/test/helper classes, and still requires exactly one occurrence of each long-transfer production class while rejecting any other `LongTransferUtils*.class`. Handler and energy behavior is exercised by JUnit rather than by constructing test state during production bootstrap; there is no handler startup marker.
 
 `fabric/src/test/java/mekanism/api/math/LongTransferUtilsTest.java` covers the sequential closure with observable event/order/value assertions:
 

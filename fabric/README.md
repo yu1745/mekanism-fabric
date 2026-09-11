@@ -10,16 +10,17 @@ excluded. It uses Minecraft 1.21.1, Java 21, and Mojang official mappings.
 `api-slice.txt` is the auditable allowlist of API source paths, relative to
 `src/api/java`. The Fabric source set reads that file directly, so the listed
 sources retain their original `mekanism.api.*` names without being copied or
-modified. The allowlist contains **38 current source files**: **37 unchanged official
-baseline files** plus the project-owned registry-aware `INBTSerializable` NBT
-contract. Intentional API adaptations remain limited to that contract and
-`Action`'s removal of two NeoForge `FluidAction` conversion methods; see
-`../docs/API_DELTAS.md`. JetBrains annotations and JSR-305 remain `compileOnly`
+modified. The allowlist contains **41 current source files**: **40 official baseline
+sources** plus the project-owned registry-aware `INBTSerializable` NBT contract.
+Intentional API adaptations include that contract, `Action`'s removal of two
+NeoForge `FluidAction` conversion methods, and the Javadoc-only strict-handler
+fluid-import/link cleanup; `IMekanismStrictEnergyHandler` remains byte-identical.
+See `../docs/API_DELTAS.md`. JetBrains annotations and JSR-305 remain `compileOnly`
 and are not bundled in the mod.
 
 `common-slice.txt` contains **32 official source files**, and
 `platform-slice.txt` contains **10 project-owned Fabric sources**. Together with
-the **38-file API slice**, they form bounded registry/GameEvent, TOML
+the **41-file API slice**, they form bounded registry/GameEvent, TOML
 startup-config, configuration-handshake, internal energy storage/holder, internal
 heat storage/holder, wildcard-matching, fair-distribution, chunk-coordinate,
 lambda-metafactory, and vanilla-registry utility closures. The unchanged
@@ -80,10 +81,18 @@ the supplier lookup, while a negative amount still reaches the supplier and is t
 rejected by the explicit overload. Fabric-local Java 21 tests prove all six public
 overload families through observable event/order/value assertions, and the packaged
 smoke proves the three production classes occur exactly once with no
-`LongTransferUtils*` test/helper leakage and no startup marker. `IStrictEnergyHandler`,
-`EnergyHandler`, configurable holders/helpers, machines, network owners, the Team
-Reborn Energy API, Joule/FE conversion, Fabric lookup/transaction code, and all
-callers (`ComponentBackedEnergyHandler`, `EnergyRecipeData`) remain deferred.
+`LongTransferUtils*` test/helper leakage and no startup marker. The strict energy-handler closure (`IStrictEnergyHandler`,
+`ISidedStrictEnergyHandler`, `IMekanismStrictEnergyHandler`) now connects those
+helpers to indexed, sided, and container-backed defaults. Fabric-local Java 21
+tests prove non-empty-first/source-order aggregation, exact side and `Action`
+propagation, invalid-index/no-op defaults, negative-set clamping, null/internal
+versus non-null/external automation, one list lookup per aggregate, and
+`SIMULATE`/`EXECUTE` behavior with a true-`long` amount. Packaging requires all
+three interfaces exactly once, rejects same-prefix nested/test/helper classes,
+and adds no startup marker. Concrete `EnergyHandler`, configurable
+holders/helpers, external Energy API and conversion, Fabric lookup/transaction,
+machines, network/persistence owners, and all callers
+(`ComponentBackedEnergyHandler`, `EnergyRecipeData`) remain deferred.
 
 `RegistryUtils` has only the two minimal vanilla equivalents documented in
 `../docs/API_DELTAS.md`. Its holder-key helper uses `unwrapKey()` and preserves

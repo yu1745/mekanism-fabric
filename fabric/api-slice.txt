@@ -15,6 +15,9 @@ mekanism/api/annotations/ParametersAreNotNullByDefault.java
 mekanism/api/container/InContainerGetterLong.java
 mekanism/api/container/LongToLongContainerInteraction.java
 mekanism/api/energy/IEnergyContainer.java
+mekanism/api/energy/IMekanismStrictEnergyHandler.java
+mekanism/api/energy/ISidedStrictEnergyHandler.java
+mekanism/api/energy/IStrictEnergyHandler.java
 mekanism/api/functions/ByteSupplier.java
 mekanism/api/functions/CharPredicate.java
 mekanism/api/functions/CharUnaryOperator.java

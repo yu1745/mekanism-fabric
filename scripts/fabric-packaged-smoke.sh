@@ -216,9 +216,26 @@ if unexpected_long_transfer:
     raise SystemExit(
         "packaged LongTransferUtils test/helper classes are forbidden: " + ", ".join(unexpected_long_transfer)
     )
+expected_energy_handlers = {
+    "mekanism/api/energy/IStrictEnergyHandler.class",
+    "mekanism/api/energy/ISidedStrictEnergyHandler.class",
+    "mekanism/api/energy/IMekanismStrictEnergyHandler.class",
+}
+for entry in expected_energy_handlers:
+    if entries.count(entry) != 1:
+        raise SystemExit(f"strict energy-handler interface must be packaged exactly once: {entry}")
+unexpected_energy_handlers = sorted(
+    entry for entry in entries
+    if any(entry.startswith(expected.removesuffix(".class")) for expected in expected_energy_handlers)
+    and entry.endswith(".class") and entry not in expected_energy_handlers
+)
+if unexpected_energy_handlers:
+    raise SystemExit(
+        "unexpected packaged strict energy-handler nested/test/helper class: " + ", ".join(unexpected_energy_handlers)
+    )
 PYEOF
 then
-  echo "fabric-packaged-smoke: distribution/ChunkUtils/RegistryUtils/LambdaMetaFactoryUtil/long-transfer production/test packaging contract failed" >&2
+  echo "fabric-packaged-smoke: distribution/ChunkUtils/RegistryUtils/LambdaMetaFactoryUtil/long-transfer/strict-energy-handler production/test packaging contract failed" >&2
   exit 1
 fi
 for required_entry in \
