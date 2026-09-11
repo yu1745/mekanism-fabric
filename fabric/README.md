@@ -17,11 +17,12 @@ contract. Intentional API adaptations remain limited to that contract and
 `../docs/API_DELTAS.md`. JetBrains annotations and JSR-305 remain `compileOnly`
 and are not bundled in the mod.
 
-`common-slice.txt` contains **30 official source files**, and
-`platform-slice.txt` contains **10 project-owned Fabric sources**. Together they
-form bounded registry/GameEvent, TOML startup-config, configuration-handshake,
-internal energy storage/holder, internal heat storage/holder, wildcard-matching,
-fair-distribution, and chunk-coordinate utility closures. The unchanged
+`common-slice.txt` contains **31 official source files**, and
+`platform-slice.txt` contains **10 project-owned Fabric sources**. Together with
+the **35-file API slice**, they form bounded registry/GameEvent, TOML
+startup-config, configuration-handshake, internal energy storage/holder, internal
+heat storage/holder, wildcard-matching, fair-distribution, chunk-coordinate, and
+lambda-metafactory utility closures. The unchanged
 `WildcardMatcher` retains official recursive, UTF-16 `char` matching semantics;
 QIO, miner, Finder, and other consumers remain future work. The unchanged
 distribution closure preserves the separate `int`/`long` split arithmetic,
@@ -42,6 +43,21 @@ inclusive dimensions, so the caller owns the precondition that the requested
 rectangle is representable and small enough to allocate; no new validation or API
 guarantee is added. `IndexedCuboidMap`, spatial indexes, QIO/miner logic,
 machines, and their callers are not ported.
+
+The unchanged Java 21 `LambdaMetaFactoryUtil` preserves its two distinct access
+modes: an empty method name binds the caller-prepared `Field` with an unreflected
+getter/setter, while a non-empty name binds the exact named virtual method (which
+may intentionally transform values or otherwise differ from raw-field access).
+Fabric-local tests cover boxed/unboxed round trips for all eight primitives,
+reference/null values, per-instance reuse, every named setter branch, unchanged
+exception propagation, missing methods, and inaccessible fields. Callers must
+supply an accessible/module-open instance field for direct access, the exact
+`objType` and named-method signature, type-compatible boxed values, and non-null
+values for primitive setters. Static/final fields are unsupported boundaries.
+Packaging checks only prove the exact outer/nested production class family is
+present once and tests are absent; behavior is proved by Java 21 tests, not a
+startup marker. `SyncMapper`, annotations, tracked data, containers, networking,
+reflection scanning, and all callers remain deferred.
 
 Heat includes the unchanged dynamic `VariableHeatCapacitor`; neither energy nor
 heat claims external API, transaction, configurable-holder, network, or

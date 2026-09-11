@@ -167,9 +167,30 @@ if unexpected_chunk_utils:
     raise SystemExit(
         "packaged ChunkUtils test classes are forbidden: " + ", ".join(unexpected_chunk_utils)
     )
+expected_lambda_meta_factory = {
+    "mekanism/common/util/LambdaMetaFactoryUtil.class",
+    "mekanism/common/util/LambdaMetaFactoryUtil$CallSiteInfo.class",
+    "mekanism/common/util/LambdaMetaFactoryUtil$BooleanSetter.class",
+    "mekanism/common/util/LambdaMetaFactoryUtil$ByteSetter.class",
+    "mekanism/common/util/LambdaMetaFactoryUtil$CharSetter.class",
+    "mekanism/common/util/LambdaMetaFactoryUtil$FloatSetter.class",
+    "mekanism/common/util/LambdaMetaFactoryUtil$ShortSetter.class",
+}
+for entry in expected_lambda_meta_factory:
+    if entries.count(entry) != 1:
+        raise SystemExit(f"LambdaMetaFactoryUtil production class must be packaged exactly once: {entry}")
+unexpected_lambda_meta_factory = sorted(
+    entry for entry in entries
+    if entry.startswith("mekanism/common/util/LambdaMetaFactoryUtil")
+    and entry.endswith(".class") and entry not in expected_lambda_meta_factory
+)
+if unexpected_lambda_meta_factory:
+    raise SystemExit(
+        "unexpected packaged LambdaMetaFactoryUtil class: " + ", ".join(unexpected_lambda_meta_factory)
+    )
 PYEOF
 then
-  echo "fabric-packaged-smoke: distribution/ChunkUtils production/test packaging contract failed" >&2
+  echo "fabric-packaged-smoke: distribution/ChunkUtils/LambdaMetaFactoryUtil production/test packaging contract failed" >&2
   exit 1
 fi
 for required_entry in \
