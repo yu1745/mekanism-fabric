@@ -64,9 +64,9 @@ class FabricEnergyConversionsTest {
         assertMonotoneAndBounded(pointFour, largeBounds);
         assertMonotoneAndBounded(pointSeven, largeBounds);
         long largeUtilizationBound = (1L << 62) + 9;
-        assertAtLeastHalfOfProjectedBounds(twoPointFive, largeUtilizationBound);
-        assertAtLeastHalfOfProjectedBounds(pointFour, largeUtilizationBound);
-        assertAtLeastHalfOfProjectedBounds(pointSeven, largeUtilizationBound);
+        assertAtLeastNinetyNinePercentOfProjectedBounds(twoPointFive, largeUtilizationBound);
+        assertAtLeastNinetyNinePercentOfProjectedBounds(pointFour, largeUtilizationBound);
+        assertAtLeastNinetyNinePercentOfProjectedBounds(pointSeven, largeUtilizationBound);
 
         // This canonical decimal rate has a denominator far above the bound. Its 682nd-denominator continued-
         // fraction convergent is nevertheless an official-double fixed pair and must not be missed by a capped
@@ -83,6 +83,37 @@ class FabricEnergyConversionsTest {
               1, 14_127_416_996L, 268_420_922_934L, 9_634_898_391_630L,
               9_634_898_391_631L, reviewerBound, 1L << 60, Long.MAX_VALUE
         });
+
+        // None of this decimal rate's bare convergent denominators (1, 2, 13, 15, 28, 43, 200) verifies, but the
+        // fixed mesh/multiplier family must still discover exact pairs rather than returning zero for every bound.
+        IEnergyConversion missedByBareConvergents = conversion(true, 372_965_497_689.465);
+        long firstMissedJoules = 90_630_615_938_540L;
+        assertEquals(0, FabricEnergyConversions.otherForJoules(
+              missedByBareConvergents, firstMissedJoules - 1));
+        assertEquals(243, FabricEnergyConversions.otherForJoules(
+              missedByBareConvergents, firstMissedJoules));
+        assertEquals(firstMissedJoules, FabricEnergyConversions.joulesForOther(missedByBareConvergents, 243));
+        assertEquals(600, FabricEnergyConversions.otherForJoules(
+              missedByBareConvergents, 223_779_298_613_679L));
+        assertEquals(447_558_597_227_358L,
+              FabricEnergyConversions.joulesForOther(missedByBareConvergents, 1_200));
+        IEnergyConversion ordinaryMissedConvergents = conversion(true, 0.07);
+        assertEquals(4_100, FabricEnergyConversions.otherForJoules(ordinaryMissedConvergents, 287));
+        assertEquals(287, FabricEnergyConversions.joulesForOther(ordinaryMissedConvergents, 4_100));
+        assertTrue(FabricEnergyConversions.isExactPair(ordinaryMissedConvergents, 4_100, 287));
+        assertMonotoneAndBounded(missedByBareConvergents, new long[]{
+              1, 200, 242, 243, 599, 600, 1_199, 1_200, 1L << 20, 1L << 40, Long.MAX_VALUE
+        });
+
+        // These rates exposed permanent high-bound collapse when one verified seed was represented only by
+        // power-of-two chunks. Both directions must now retain at least 99% of their official projection, and the
+        // same fixed family must stay monotone over independently increasing Joule and external-unit bounds.
+        IEnergyConversion nonPowerOfTwo = conversion(true, 10.906989658246147);
+        IEnergyConversion threeDecimalPlaces = conversion(true, 575.403);
+        assertAtLeastNinetyNinePercentOfProjectedBounds(nonPowerOfTwo, Long.MAX_VALUE);
+        assertAtLeastNinetyNinePercentOfProjectedBounds(threeDecimalPlaces, Long.MAX_VALUE);
+        assertMonotoneAndBounded(nonPowerOfTwo, largeBounds);
+        assertMonotoneAndBounded(threeDecimalPlaces, largeBounds);
 
         // Dense deterministic bounds catch regressions in monotonic selection between adjacent values without
         // adding another JUnit method.
@@ -117,15 +148,17 @@ class FabricEnergyConversionsTest {
         }
     }
 
-    private static void assertAtLeastHalfOfProjectedBounds(IEnergyConversion conversion, long bound) {
+    private static void assertAtLeastNinetyNinePercentOfProjectedBounds(IEnergyConversion conversion, long bound) {
         long projectedOther = FabricEnergyConversions.toOther(conversion, bound);
+        assertTrue(projectedOther > 0, "forward utilization projection must be non-vacuous");
         long selectedOther = FabricEnergyConversions.otherForJoules(conversion, bound);
-        assertTrue(selectedOther >= projectedOther / 2,
-              "large forward selection collapsed below its largest power-of-two quantum");
+        assertTrue(selectedOther >= projectedOther - projectedOther / 100,
+              "large forward selection must retain at least 99% of the official projection");
         long projectedJoules = FabricEnergyConversions.fromOther(conversion, bound);
+        assertTrue(projectedJoules > 0, "reverse utilization projection must be non-vacuous");
         long selectedJoules = FabricEnergyConversions.joulesForOther(conversion, bound);
-        assertTrue(selectedJoules >= projectedJoules / 2,
-              "large reverse selection collapsed below its largest power-of-two quantum");
+        assertTrue(selectedJoules >= projectedJoules - projectedJoules / 100,
+              "large reverse selection must retain at least 99% of the official projection");
     }
 
     private static void assertForwardBoundedPair(IEnergyConversion conversion, long maxJoules, long other) {

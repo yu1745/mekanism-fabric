@@ -11,6 +11,7 @@ import java.util.List;
 import mekanism.api.Action;
 import mekanism.api.energy.IEnergyConversion;
 import mekanism.api.energy.IStrictEnergyHandler;
+import mekanism.common.capabilities.energy.BasicEnergyContainer;
 import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
 import net.minecraft.core.Direction;
 import org.junit.jupiter.api.Test;
@@ -165,11 +166,24 @@ class FabricEnergyStorageTest {
         ArrayHandler changing = new ArrayHandler(new long[]{1}, new long[]{10});
         FabricEnergyStorage unstableCount = new FabricEnergyStorage(changing, Direction.NORTH, conversion(true, 1));
         changing.reportedCount = 2;
-        assertThrows(IllegalStateException.class, unstableCount::supportsInsertion);
-        assertThrows(IllegalStateException.class, unstableCount::getAmount);
+        assertFalse(unstableCount.supportsInsertion());
+        assertFalse(unstableCount.supportsExtraction());
+        assertEquals(0, unstableCount.getAmount());
+        assertEquals(0, unstableCount.getCapacity());
+        assertThrows(IllegalStateException.class, unstableCount::stableHandler);
         try (Transaction transaction = Transaction.openOuter()) {
             assertThrows(IllegalStateException.class, () -> unstableCount.insert(1, transaction));
+            assertThrows(IllegalStateException.class, () -> unstableCount.extract(1, transaction));
         }
+
+        ArrayHandler driftsDuringQuery = new ArrayHandler(new long[]{2, 3}, new long[]{10, 20});
+        FabricEnergyStorage guardedQueries = new FabricEnergyStorage(
+              driftsDuringQuery, Direction.NORTH, conversion(true, 1));
+        driftsDuringQuery.changeCountOnEnergyRead = true;
+        assertEquals(0, guardedQueries.getAmount());
+        driftsDuringQuery.reportedCount = 2;
+        driftsDuringQuery.changeCountOnCapacityRead = true;
+        assertEquals(0, guardedQueries.getCapacity());
 
         ArrayHandler changesDuringExecute = new ArrayHandler(new long[]{4}, new long[]{10});
         FabricEnergyStorage guarded = new FabricEnergyStorage(
@@ -181,12 +195,34 @@ class FabricEnergyStorageTest {
             transaction.commit();
         }
         assertEquals(List.of(4L), changesDuringExecute.values());
-        assertThrows(IllegalStateException.class, guarded::supportsInsertion);
+        assertFalse(guarded.supportsInsertion());
+        assertFalse(guarded.supportsExtraction());
+        assertEquals(0, guarded.getAmount());
+        assertEquals(0, guarded.getCapacity());
+        assertThrows(IllegalStateException.class, guarded::stableHandler);
+
+        // ArrayHandler routes every set through a real BasicEnergyContainer, whose setter clamps to capacity.
+        // Shrinking capacity does not change topology, so only read-back detects the silent under-restore.
+        ArrayHandler capacityShrinks = new ArrayHandler(new long[]{80}, new long[]{100});
+        FabricEnergyStorage clampedRestore = new FabricEnergyStorage(
+              capacityShrinks, Direction.NORTH, conversion(true, 1));
+        Transaction clampedAbort = Transaction.openOuter();
+        assertEquals(20, clampedRestore.extract(20, clampedAbort));
+        assertEquals(List.of(60L), capacityShrinks.values());
+        capacityShrinks.capacity[0] = 50;
+        RuntimeException clampedCloseFailure = assertThrows(RuntimeException.class, clampedAbort::close);
+        assertEquals(List.of(50L), capacityShrinks.values());
+        assertEquals(List.of("0=60", "0=80"), capacityShrinks.setEvents);
+        Throwable clampedAggregateFailure = clampedCloseFailure.getCause();
+        assertNotNull(clampedAggregateFailure);
+        Throwable clampedMismatchFailure = clampedAggregateFailure.getCause();
+        assertNotNull(clampedMismatchFailure);
+        assertTrue(clampedMismatchFailure.getMessage().contains("container 0 restored 50 instead of 80"));
 
         // setEnergy is an explicit backing precondition, not a guarantee the adapter can synthesize. All four
-        // captured indices are attempted even after index 1 fails; index 2 is actually restored before index 3
-        // supplies a suppressed failure. Index 1's mutation survives, proving atomicity is unavailable and close
-        // propagates when the precondition is violated.
+        // captured indices are attempted even after index 1 fails; its read-back mismatch is suppressed, index 2
+        // is restored, and index 3 supplies the next suppressed setter failure. Index 1's mutation survives,
+        // proving atomicity is unavailable and close propagates when the precondition is violated.
         ArrayHandler throwing = new ArrayHandler(
               new long[]{10, 20, 30, 40}, new long[]{10, 100, 100, 100});
         FabricEnergyStorage cannotRestore = new FabricEnergyStorage(
@@ -203,9 +239,11 @@ class FabricEnergyStorageTest {
         assertNotNull(aggregateFailure);
         Throwable firstSetterFailure = aggregateFailure.getCause();
         assertNotNull(firstSetterFailure);
-        assertEquals(1, firstSetterFailure.getSuppressed().length);
+        assertEquals(2, firstSetterFailure.getSuppressed().length);
         assertTrue(firstSetterFailure.getMessage().contains("container 1"));
-        assertTrue(firstSetterFailure.getSuppressed()[0].getMessage().contains("container 3"));
+        assertTrue(firstSetterFailure.getSuppressed()[0].getMessage().contains(
+              "container 1 restored 100 instead of 20"));
+        assertTrue(firstSetterFailure.getSuppressed()[1].getMessage().contains("container 3"));
     }
 
     private static IEnergyConversion conversion(boolean enabled, double rate) {
@@ -230,6 +268,8 @@ class FabricEnergyStorageTest {
         private int reportedCount;
         private int listenerCalls;
         private boolean changeCountOnExecute;
+        private boolean changeCountOnEnergyRead;
+        private boolean changeCountOnCapacityRead;
 
         private ArrayHandler(long[] energy, long[] capacity) {
             this.energy = energy;
@@ -253,7 +293,12 @@ class FabricEnergyStorageTest {
 
         @Override
         public long getEnergy(int container) {
-            return energy[container];
+            long value = energy[container];
+            if (changeCountOnEnergyRead) {
+                changeCountOnEnergyRead = false;
+                reportedCount = energy.length + 1;
+            }
+            return value;
         }
 
         @Override
@@ -263,8 +308,10 @@ class FabricEnergyStorageTest {
                 throw new UnsupportedOperationException("cannot restore container " + container);
             }
             long previous = energy[container];
-            energy[container] = value;
-            if (previous != value) {
+            BasicEnergyContainer clamped = BasicEnergyContainer.create(capacity[container], null);
+            clamped.setEnergy(value);
+            energy[container] = clamped.getEnergy();
+            if (previous != energy[container]) {
                 // Mirrors the immediate onContentsChanged behavior of Mekanism containers.
                 listenerCalls++;
             }
@@ -272,7 +319,12 @@ class FabricEnergyStorageTest {
 
         @Override
         public long getMaxEnergy(int container) {
-            return capacity[container];
+            long value = capacity[container];
+            if (changeCountOnCapacityRead) {
+                changeCountOnCapacityRead = false;
+                reportedCount = energy.length + 1;
+            }
+            return value;
         }
 
         @Override

@@ -56,8 +56,9 @@ public final class FabricEnergyLookup {
 
     /**
      * Creates one stable external view for a physical side. Every exposed container must support deterministic
-     * {@link IStrictEnergyHandler#setEnergy(int, long)} restoration; a restore failure is propagated and breaks
-     * transaction atomicity after all captured indices have been attempted. The owner is responsible for caching
+     * {@link IStrictEnergyHandler#setEnergy(int, long)} restoration with exact read-back; a restore failure is
+     * propagated and breaks transaction atomicity after all captured indices have been attempted. The owner is
+     * responsible for caching
      * the view for the stable side-bound handler's lifetime and invalidating it with the owner lifecycle.
      *
      * <p>The nullable holder's insertion and extraction policy is consulted live for support queries and operations.

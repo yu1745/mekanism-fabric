@@ -18,9 +18,10 @@ import team.reborn.energy.api.EnergyStorage;
  * <p>The container count and exposure side are captured at construction. Every captured container is required to
  * support deterministic restoration through {@link IStrictEnergyHandler#setEnergy}; construction rejects the known
  * non-restoring {@link FabricStrictEnergyHandler}, but arbitrary handlers must uphold this caller precondition.
- * Restore attempts every captured index before propagating a failure. If any setter cannot restore, atomicity is no
- * longer possible and transaction close reports the failure. Listeners, saves, or synchronization triggered
- * immediately by execute/restore cannot be made transactional by this compatibility layer.
+ * Restore attempts every captured index and reads it back before propagating a setter, read, or mismatch failure.
+ * If any index cannot be restored exactly, atomicity is no longer possible and transaction close reports the
+ * failure. Listeners, saves, or synchronization triggered immediately by execute/restore cannot be made
+ * transactional by this compatibility layer.
  */
 public final class FabricEnergyStorage extends SnapshotParticipant<long[]> implements EnergyStorage {
 
@@ -53,8 +54,11 @@ public final class FabricEnergyStorage extends SnapshotParticipant<long[]> imple
 
     @Override
     public boolean supportsInsertion() {
-        checkStableContainerCount();
-        return FabricEnergyConversions.isUsable(conversion) && insertionAllowed.getAsBoolean();
+        if (!hasStableContainerCount() || !FabricEnergyConversions.isUsable(conversion)) {
+            return false;
+        }
+        boolean allowed = insertionAllowed.getAsBoolean();
+        return allowed && hasStableContainerCount();
     }
 
     @Override
@@ -88,7 +92,7 @@ public final class FabricEnergyStorage extends SnapshotParticipant<long[]> imple
             updateSnapshots(nested);
             long remainder = handler.insertEnergy(acceptedJoules, Action.EXECUTE);
             // A count change caused by execute invalidates the result, but must not prevent this child from aborting
-            // and restoring the captured topology. The next public operation will fail its entry check.
+            // and restoring the captured topology. Later mutations fail fast; non-mutating queries return defaults.
             if (hasStableContainerCount() && remainder == 0
                   && FabricEnergyConversions.isExactPair(conversion, acceptedOther, acceptedJoules)) {
                 nested.commit();
@@ -100,8 +104,11 @@ public final class FabricEnergyStorage extends SnapshotParticipant<long[]> imple
 
     @Override
     public boolean supportsExtraction() {
-        checkStableContainerCount();
-        return FabricEnergyConversions.isUsable(conversion) && extractionAllowed.getAsBoolean();
+        if (!hasStableContainerCount() || !FabricEnergyConversions.isUsable(conversion)) {
+            return false;
+        }
+        boolean allowed = extractionAllowed.getAsBoolean();
+        return allowed && hasStableContainerCount();
     }
 
     @Override
@@ -143,28 +150,58 @@ public final class FabricEnergyStorage extends SnapshotParticipant<long[]> imple
 
     @Override
     public long getAmount() {
-        checkStableContainerCount();
-        if (!FabricEnergyConversions.isUsable(conversion)) {
+        if (!hasStableContainerCount() || !FabricEnergyConversions.isUsable(conversion)) {
             return 0;
         }
         long joules = 0;
         for (int container = 0; container < containerCount; container++) {
-            joules = addClamped(joules, handler.getEnergy(container));
+            if (!hasStableContainerCount()) {
+                return 0;
+            }
+            long energy;
+            try {
+                energy = handler.getEnergy(container);
+            } catch (RuntimeException readFailure) {
+                if (!hasStableContainerCount()) {
+                    return 0;
+                }
+                throw readFailure;
+            }
+            if (!hasStableContainerCount()) {
+                return 0;
+            }
+            joules = addClamped(joules, energy);
         }
-        return FabricEnergyConversions.toOther(conversion, joules);
+        long amount = FabricEnergyConversions.toOther(conversion, joules);
+        return hasStableContainerCount() ? amount : 0;
     }
 
     @Override
     public long getCapacity() {
-        checkStableContainerCount();
-        if (!FabricEnergyConversions.isUsable(conversion)) {
+        if (!hasStableContainerCount() || !FabricEnergyConversions.isUsable(conversion)) {
             return 0;
         }
         long joules = 0;
         for (int container = 0; container < containerCount; container++) {
-            joules = addClamped(joules, handler.getMaxEnergy(container));
+            if (!hasStableContainerCount()) {
+                return 0;
+            }
+            long capacity;
+            try {
+                capacity = handler.getMaxEnergy(container);
+            } catch (RuntimeException readFailure) {
+                if (!hasStableContainerCount()) {
+                    return 0;
+                }
+                throw readFailure;
+            }
+            if (!hasStableContainerCount()) {
+                return 0;
+            }
+            joules = addClamped(joules, capacity);
         }
-        return FabricEnergyConversions.toOther(conversion, joules);
+        long capacity = FabricEnergyConversions.toOther(conversion, joules);
+        return hasStableContainerCount() ? capacity : 0;
     }
 
     @Override
@@ -180,17 +217,23 @@ public final class FabricEnergyStorage extends SnapshotParticipant<long[]> imple
     @Override
     protected void readSnapshot(long[] snapshot) {
         // Never consult the handler's now-reported count here: execution may have changed it. The snapshot length
-        // is the captured topology, and every captured index gets a best-effort restoration attempt.
+        // is the captured topology, and every captured index gets a best-effort set attempt and read-back check.
         Throwable failure = null;
         for (int container = 0; container < snapshot.length; container++) {
             try {
                 handler.setEnergy(container, snapshot[container]);
             } catch (Throwable restoreFailure) {
-                if (failure == null) {
-                    failure = restoreFailure;
-                } else if (failure != restoreFailure) {
-                    failure.addSuppressed(restoreFailure);
+                failure = collectRestoreFailure(failure, restoreFailure);
+            }
+            try {
+                long restored = handler.getEnergy(container);
+                if (restored != snapshot[container]) {
+                    failure = collectRestoreFailure(failure, new IllegalStateException(
+                          "Energy container " + container + " restored " + restored + " instead of "
+                                + snapshot[container]));
                 }
+            } catch (Throwable readFailure) {
+                failure = collectRestoreFailure(failure, readFailure);
             }
         }
         if (failure != null) {
@@ -222,6 +265,16 @@ public final class FabricEnergyStorage extends SnapshotParticipant<long[]> imple
 
     private boolean hasStableContainerCount() {
         return handler.getEnergyContainerCount() == containerCount;
+    }
+
+    private static Throwable collectRestoreFailure(Throwable failure, Throwable restoreFailure) {
+        if (failure == null) {
+            return restoreFailure;
+        }
+        if (failure != restoreFailure) {
+            failure.addSuppressed(restoreFailure);
+        }
+        return failure;
     }
 
     private static long addClamped(long total, long value) {
