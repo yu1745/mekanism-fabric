@@ -73,7 +73,7 @@ scripts/fabric-configuration-rejection-smoke.sh # 错版/同版本显式拒绝/�
 
 ## 默认单实现代理与风险审查
 
-任务 001–015 的多模型实现比较已结束；原始评价和指标完整保留在 `docs/MODEL_IMPLEMENTATION_COMPARISONS.md`。后续有明确边界和可执行验收门禁的开发任务，默认只让 **5.6 SOL** 从 clean commit 在隔离 worktree 中实现，并为该顶层代理开启 300 秒 supervision watch。主代理必须检查真实 diff、补足遗漏并独立运行最终门禁，不能只采信代理总结；watch 只用于发现方向、范围或验收漂移，不干预可自行修复的普通构建/测试错误。
+任务 001–015 的多模型实现比较已结束；原始评价和指标完整保留在 `docs/MODEL_IMPLEMENTATION_COMPARISONS.md`。后续有明确边界和可执行验收门禁的开发任务，默认只让 **5.6 SOL** 从 clean commit 在隔离 worktree 中实现。SOL 有足够能力自行保持既定路线，默认不再开启 supervision watch；只有用户显式要求监督，或任务出现已证实的高风险不可逆操作时才临时启用。主代理仍必须检查真实 diff、补足遗漏并独立运行最终门禁，不能只采信代理总结。
 
 不再为常规任务复制完整实现。只有涉及 NeoForge/Fabric 语义替换、patched Minecraft、registry lifecycle、transaction/rollback、networking、序列化兼容、线程/owner 生命周期等高风险边界时，主代理才按风险临时调用一个独立模型做**只读 adversarial review**；审查者默认不改代码、不重复完整文档与发布门禁。DeepSeek、GLM 或其他模型均可按任务临时选择，但不作为常驻实现代理。单代理常规任务不再追加模型比较记录；只有真实发生额外模型比较或独立审查时才在比较文档中记录相应证据。
 
