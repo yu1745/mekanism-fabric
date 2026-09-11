@@ -80,12 +80,14 @@ class CodecBoundaryTest {
         assertEquals(List.of(1, 2), retained.getFirst());
         assertEquals(json("[\"bad\"]"), retained.getSecond());
 
-        assertTrue(new SequencedCollectionCodec<>(Codec.INT, 3, 4)
-              .decode(JsonOps.INSTANCE, json("[1,\"bad\",2]")).error().isPresent());
+        DataResult<Pair<SequencedCollection<Integer>, JsonElement>> tooFew =
+              new SequencedCollectionCodec<>(Codec.INT, 3, 4).decode(JsonOps.INSTANCE, json("[1,\"bad\",2]"));
+        assertTrue(tooFew.error().orElseThrow().message().contains("List is too short: 2"));
         DataResult<Pair<SequencedCollection<Integer>, JsonElement>> tooMany =
               new SequencedCollectionCodec<>(Codec.INT, 0, 2).decode(JsonOps.INSTANCE, json("[1,\"bad\",2]"));
         assertTrue(tooMany.error().orElseThrow().message().contains("List is too long: 3"));
         assertEquals(List.of(1, 2), tooMany.resultOrPartial().orElseThrow().getFirst());
+        assertEquals(json("[\"bad\"]"), tooMany.resultOrPartial().orElseThrow().getSecond());
     }
 
     @Test
