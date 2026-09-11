@@ -26,6 +26,7 @@ property() {
 MINECRAFT_VERSION=$(property minecraft_version)
 LOADER_VERSION=$(property loader_version)
 FABRIC_API_VERSION=$(property fabric_api_version)
+TEAM_REBORN_ENERGY_VERSION=$(property team_reborn_energy_version)
 NIGHT_CONFIG_VERSION=$(property night_config_version)
 INSTALLER_VERSION=${FABRIC_INSTALLER_VERSION:-$(property fabric_installer_version)}
 
@@ -96,7 +97,7 @@ if [[ ${#MOD_JARS[@]} -ne 1 ]]; then
   printf '  %s\n' "${MOD_JARS[@]:-<none>}" >&2
   exit 1
 fi
-if ! python3 - "${MOD_JARS[0]}" <<'PYEOF'
+if ! python3 - "${MOD_JARS[0]}" "$TEAM_REBORN_ENERGY_VERSION" <<'PYEOF'
 import json, sys, zipfile
 with zipfile.ZipFile(sys.argv[1]) as artifact:
     metadata = json.loads(artifact.read("fabric.mod.json"))
@@ -106,10 +107,12 @@ expected = {
     "client": ["mekanism.fabric.MekanismFabricClientBootstrap"],
 }
 if (metadata.get("id") != "mekanism" or metadata.get("entrypoints") != expected
-        or metadata.get("accessWidener") != "mekanism.accesswidener"):
+        or metadata.get("accessWidener") != "mekanism.accesswidener"
+        or metadata.get("depends", {}).get("team_reborn_energy") != f">={sys.argv[2]}"):
     raise SystemExit(
         f"unexpected Fabric metadata: id={metadata.get('id')!r} "
-        f"entrypoints={metadata.get('entrypoints')!r} accessWidener={metadata.get('accessWidener')!r}"
+        f"entrypoints={metadata.get('entrypoints')!r} accessWidener={metadata.get('accessWidener')!r} "
+        f"team_reborn_energy={metadata.get('depends', {}).get('team_reborn_energy')!r}"
     )
 expected_access_widener = [
     "accessWidener\tv2\tintermediary",
@@ -124,6 +127,10 @@ then
 fi
 if jar tf "${MOD_JARS[0]}" | grep -Eq '^net/neoforged/'; then
   echo "fabric-packaged-smoke: artifact unexpectedly contains NeoForge classes" >&2
+  exit 1
+fi
+if jar tf "${MOD_JARS[0]}" | grep -Eq '^team/reborn/'; then
+  echo "fabric-packaged-smoke: Team Reborn Energy must remain an external dependency" >&2
   exit 1
 fi
 if jar tf "${MOD_JARS[0]}" | grep -Eq '^mekanism/fixture/'; then
@@ -485,16 +492,28 @@ expected_energy_handlers = {
 for entry in expected_energy_handlers:
     if entries.count(entry) != 1:
         raise SystemExit(f"strict energy-handler interface must be packaged exactly once: {entry}")
-expected_energy_api = expected_energy_handlers | {"mekanism/api/energy/IEnergyContainer.class"}
-unexpected_energy_api = sorted(
+expected_energy_api = expected_energy_handlers | {
+    "mekanism/api/energy/IEnergyContainer.class",
+    "mekanism/api/energy/IEnergyConversion.class",
+}
+actual_energy_api = {
     entry for entry in entries
     if entry.startswith("mekanism/api/energy/") and entry.endswith(".class")
-    and entry not in expected_energy_api
-)
-if unexpected_energy_api:
-    raise SystemExit(
-        "unexpected packaged energy API class: " + ", ".join(unexpected_energy_api)
-    )
+}
+if actual_energy_api != expected_energy_api or any(entries.count(entry) != 1 for entry in expected_energy_api):
+    raise SystemExit(f"unexpected packaged energy API class family: {sorted(actual_energy_api)!r}")
+expected_fabric_energy = {
+    "mekanism/fabric/energy/FabricEnergyConversions.class",
+    "mekanism/fabric/energy/FabricEnergyLookup.class",
+    "mekanism/fabric/energy/FabricEnergyStorage.class",
+    "mekanism/fabric/energy/FabricStrictEnergyHandler.class",
+}
+actual_fabric_energy = {
+    entry for entry in entries
+    if entry.startswith("mekanism/fabric/energy/") and entry.endswith(".class")
+}
+if actual_fabric_energy != expected_fabric_energy or any(entries.count(entry) != 1 for entry in expected_fabric_energy):
+    raise SystemExit(f"unexpected Fabric energy adapter class family: {sorted(actual_fabric_energy)!r}")
 PYEOF
 then
   echo "fabric-packaged-smoke: tile-interface/slot-info/tier/resource/codec/collection/distribution/ChunkUtils/RegistryUtils/LambdaMetaFactoryUtil/long-transfer/dynamic-strict-energy/proxy/config-listener/common-lib-root production/test packaging contract failed" >&2
@@ -506,6 +525,7 @@ for required_entry in \
     mekanism/api/container/LongToLongContainerInteraction.class \
     mekanism/api/math/LongTransferUtils.class \
     mekanism/api/energy/IEnergyContainer.class \
+    mekanism/api/energy/IEnergyConversion.class \
     mekanism/api/heat/HeatAPI.class \
     mekanism/api/heat/IHeatCapacitor.class \
     mekanism/api/heat/IHeatHandler.class \
@@ -543,6 +563,10 @@ for required_entry in \
     'mekanism/common/lib/distribution/Target$HandlerType.class' \
     mekanism/fabric/MekanismFabricBootstrap.class \
     mekanism/fabric/MekanismFabricClientBootstrap.class \
+    mekanism/fabric/energy/FabricEnergyConversions.class \
+    mekanism/fabric/energy/FabricEnergyLookup.class \
+    mekanism/fabric/energy/FabricEnergyStorage.class \
+    mekanism/fabric/energy/FabricStrictEnergyHandler.class \
     mekanism/fabric/network/FabricMekanismNetworking.class \
     mekanism/fabric/network/FabricMekanismClientNetworking.class \
     mekanism.accesswidener \
@@ -558,8 +582,24 @@ done
 
 LAUNCHER="$CACHE_DIR/fabric-server-${MINECRAFT_VERSION}-${LOADER_VERSION}-${INSTALLER_VERSION}.jar"
 API_JAR="$CACHE_DIR/fabric-api-${FABRIC_API_VERSION}.jar"
+ENERGY_API_JAR="$CACHE_DIR/energy-${TEAM_REBORN_ENERGY_VERSION}.jar"
 fetch "https://meta.fabricmc.net/v2/versions/loader/${MINECRAFT_VERSION}/${LOADER_VERSION}/${INSTALLER_VERSION}/server/jar" "$LAUNCHER"
 fetch "https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/${FABRIC_API_VERSION}/fabric-api-${FABRIC_API_VERSION}.jar" "$API_JAR"
+fetch "https://maven.fabricmc.net/teamreborn/energy/${TEAM_REBORN_ENERGY_VERSION}/energy-${TEAM_REBORN_ENERGY_VERSION}.jar" "$ENERGY_API_JAR"
+if ! python3 - "$ENERGY_API_JAR" "$TEAM_REBORN_ENERGY_VERSION" <<'PYEOF'
+import json, sys, zipfile
+with zipfile.ZipFile(sys.argv[1]) as artifact:
+    metadata = json.loads(artifact.read("fabric.mod.json"))
+    entries = artifact.namelist()
+if metadata.get("id") != "team_reborn_energy" or metadata.get("version") != sys.argv[2]:
+    raise SystemExit(f"unexpected Team Reborn Energy metadata: {metadata.get('id')!r} {metadata.get('version')!r}")
+if entries.count("team/reborn/energy/api/EnergyStorage.class") != 1:
+    raise SystemExit("Team Reborn Energy API is missing EnergyStorage.class")
+PYEOF
+then
+  echo "fabric-packaged-smoke: Team Reborn Energy dependency validation failed" >&2
+  exit 1
+fi
 
 SERVER_DIR=$(mktemp -d "${TMPDIR:-/tmp}/mekanism-fabric-smoke.XXXXXX")
 LOG_FILE="$SERVER_DIR/latest.log"
@@ -568,9 +608,11 @@ printf 'eula=true\n' > "$SERVER_DIR/eula.txt"
 printf 'online-mode=false\nserver-port=0\n' > "$SERVER_DIR/server.properties"
 cp "$LAUNCHER" "$SERVER_DIR/fabric-server-launch.jar"
 cp "$API_JAR" "$SERVER_DIR/mods/"
+cp "$ENERGY_API_JAR" "$SERVER_DIR/mods/"
 cp "${MOD_JARS[0]}" "$SERVER_DIR/mods/"
 printf '%s\n' "artifact=${MOD_JARS[0]}" "minecraft=$MINECRAFT_VERSION" "loader=$LOADER_VERSION" \
-  "fabric_api=$FABRIC_API_VERSION" "night_config=$NIGHT_CONFIG_VERSION" "installer=$INSTALLER_VERSION" > "$DIAGNOSTIC_DIR/run-info.txt"
+  "fabric_api=$FABRIC_API_VERSION" "team_reborn_energy=$TEAM_REBORN_ENERGY_VERSION" \
+  "night_config=$NIGHT_CONFIG_VERSION" "installer=$INSTALLER_VERSION" > "$DIAGNOSTIC_DIR/run-info.txt"
 
 printf 'fabric-packaged-smoke: starting clean server in %s\n' "$SERVER_DIR"
 (
@@ -581,6 +623,7 @@ SERVER_PID=$!
 
 deadline=$((SECONDS + TIMEOUT))
 mod_loaded=0
+energy_mod_loaded=0
 config_proof=0
 network_proof=0
 registry_proof=0
@@ -589,6 +632,7 @@ done_loaded=0
 crash_pattern='(Exception in thread|A mod crashed on startup|Could not execute entrypoint|Failed to start the minecraft server|---- Minecraft Crash Report ----|NoClassDefFoundError|ClassNotFoundException|[[:space:]]ERROR[[:space:]])'
 while (( SECONDS < deadline )); do
   if grep -Eq '(^|[[:space:]])- mekanism([[:space:]]|$)' "$LOG_FILE"; then mod_loaded=1; fi
+  if grep -Eq '(^|[[:space:]])- team_reborn_energy([[:space:]]|$)' "$LOG_FILE"; then energy_mod_loaded=1; fi
   if grep -Fq 'MEKANISM_FABRIC_CONFIG_PROOF file=startup.toml values=12 loaded=true created=true corrected=12' "$LOG_FILE"; then config_proof=1; fi
   if grep -Fq 'MEKANISM_FABRIC_NETWORK_PROOF protocol=10.7.19 phase=configuration codecs=2 server_receiver=true client_required=true' "$LOG_FILE"; then network_proof=1; fi
   if grep -Fq 'MEKANISM_FABRIC_NETWORK_CLIENT_PROOF' "$LOG_FILE"; then
@@ -603,7 +647,7 @@ while (( SECONDS < deadline )); do
     grep -Ei "$crash_pattern" "$LOG_FILE" | tail -n 10 >&2 || true
     exit 1
   fi
-  if (( mod_loaded && config_proof && network_proof && registry_proof && heat_proof && done_loaded )); then
+  if (( mod_loaded && energy_mod_loaded && config_proof && network_proof && registry_proof && heat_proof && done_loaded )); then
     STARTUP_CONFIG="$SERVER_DIR/config/Mekanism/startup.toml"
     if [[ ! -s "$STARTUP_CONFIG" ]]; then
       echo 'fabric-packaged-smoke: startup config proof logged but startup.toml is missing or empty' >&2
@@ -631,8 +675,8 @@ PYEOF
       exit 1
     fi
     RESULT=0
-    printf 'fabric-packaged-smoke: PASS (mekanism loaded, config/network/registry/heat proofs passed, and server reached Done)\n'
-    grep -E '(^|[[:space:]])- mekanism([[:space:]]|$)|MEKANISM_FABRIC_(CONFIG|NETWORK|REGISTRY|HEAT)_PROOF|Done \(' "$LOG_FILE" | tail -n 10
+    printf 'fabric-packaged-smoke: PASS (Mekanism and Team Reborn Energy loaded, config/network/registry/heat proofs passed, and server reached Done)\n'
+    grep -E '(^|[[:space:]])- (mekanism|team_reborn_energy)([[:space:]]|$)|MEKANISM_FABRIC_(CONFIG|NETWORK|REGISTRY|HEAT)_PROOF|Done \(' "$LOG_FILE" | tail -n 12
     exit 0
   fi
   if ! kill -0 "$SERVER_PID" 2>/dev/null; then
@@ -645,6 +689,6 @@ PYEOF
   sleep 1
 done
 
-echo "fabric-packaged-smoke: timed out after ${TIMEOUT}s (mod_loaded=$mod_loaded config_proof=$config_proof network_proof=$network_proof registry_proof=$registry_proof heat_proof=$heat_proof done=$done_loaded)" >&2
+echo "fabric-packaged-smoke: timed out after ${TIMEOUT}s (mod_loaded=$mod_loaded energy_mod_loaded=$energy_mod_loaded config_proof=$config_proof network_proof=$network_proof registry_proof=$registry_proof heat_proof=$heat_proof done=$done_loaded)" >&2
 tail -n 80 "$LOG_FILE" >&2
 exit 1

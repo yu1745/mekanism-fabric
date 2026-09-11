@@ -2,9 +2,10 @@
 
 ## Current slice
 
-The first storage milestone admits the official Mekanism energy-container contract and implementation without machines, configurable holders, external lookups, or a third-party energy API:
+The current storage milestone admits the official Mekanism energy-container contract and implementation plus the first bounded Team Reborn Energy boundary, without machines, configurable holders, or registered providers:
 
 - `mekanism.api.energy.IEnergyContainer`
+- `mekanism.api.energy.IEnergyConversion`
 - `mekanism.api.energy.IStrictEnergyHandler`
 - `mekanism.api.energy.ISidedStrictEnergyHandler`
 - `mekanism.api.energy.IMekanismStrictEnergyHandler`
@@ -12,8 +13,12 @@ The first storage milestone admits the official Mekanism energy-container contra
 - `mekanism.common.capabilities.SimpleDynamicHandler`
 - `mekanism.common.capabilities.DynamicHandler`
 - `mekanism.common.capabilities.energy.DynamicStrictEnergyHandler`
+- `mekanism.fabric.energy.FabricEnergyConversions`
+- `mekanism.fabric.energy.FabricStrictEnergyHandler`
+- `mekanism.fabric.energy.FabricEnergyStorage`
+- `mekanism.fabric.energy.FabricEnergyLookup`
 
-The current global slice count is API 42 / common 88 / platform 10. The common count includes the seven byte-identical `4646f509` color/effect/spatial foundations documented in `FABRIC_PORT.md`; their exact JAR families and bounded tests do not admit any energy caller, owner, external API, lifecycle, networking, persistence, registry, or thread-safety guarantee. It also admits official
+The current global slice count is API 43 / common 88 / platform 14. The common count includes the seven byte-identical `4646f509` color/effect/spatial foundations documented in `FABRIC_PORT.md`; their exact JAR families and bounded tests do not admit any energy caller, owner, external API, lifecycle, networking, persistence, registry, or thread-safety guarantee. It also admits official
 `mekanism.common.lib.LastEnergyTracker` byte-identically to `4646f509` as a
 platform-neutral per-game-time accounting closure. Same-time calls accumulate a current
 bucket while the visible last bucket remains unchanged; every different timestamp—including
@@ -61,7 +66,7 @@ The three dynamic handler sources are byte-identical to `4646f509`. Insert and e
 
 ## Permission proxy closure
 
-`ProxiedHolder`, `ProxyHandler`, `ProxyStrictEnergyHandler`, and `ProxyHeatHandler` are admitted byte-identically to `4646f509`. A null side is intrinsically read-only: strict-energy direct set and indexed/aggregate insert/extract, plus indexed/aggregate heat mutation, are suppressed while all getters still receive exact null. For a non-null side, holder insert and extract predicates gate their operation families independently; denial returns the exact offered insertion amount or zero extraction, while allowance forwards exact side, container, amount, `Action`, and handler result. Heat reads and indexed/aggregate `handleHeat` likewise forward exactly. This is only a permission/forwarding wrapper: all owners/callers, capability registration/lookup/exposure, external Energy API/transactions/conversion, side configuration/ejection, machines/transmitters/networks, config lifecycle, persistence/network serialization, and broader Fabric integration remain deferred.
+`ProxiedHolder`, `ProxyHandler`, `ProxyStrictEnergyHandler`, and `ProxyHeatHandler` are admitted byte-identically to `4646f509`. A null side is intrinsically read-only: strict-energy direct set and indexed/aggregate insert/extract, plus indexed/aggregate heat mutation, are suppressed while all getters still receive exact null. For a non-null side, holder insert and extract predicates gate their operation families independently; denial returns the exact offered insertion amount or zero extraction, while allowance forwards exact side, container, amount, `Action`, and handler result. Heat reads and indexed/aggregate `handleHeat` likewise forward exactly. This is a permission/forwarding wrapper. Task 023 now composes `ProxyStrictEnergyHandler` in its narrow physical-side exposure factory, but actual owner/provider registration, side configuration/ejection, machines/transmitters/networks, config lifecycle, persistence/network serialization, and broader Fabric integration remain deferred.
 
 ## Sequential transfer utilities
 
@@ -71,7 +76,7 @@ The unchanged official long-valued transfer closure was admitted when the API/co
 - `mekanism.api.container.InContainerGetterLong`
 - `mekanism.api.container.LongToLongContainerInteraction`
 
-All three are byte-identical to baseline `4646f509`; `docs/API_DELTAS.md` is unchanged because the closure needs no adaptation. This restores Mekanism's sequential generic/energy-container insert/extract helpers. It is **not** the fair-distribution layer (that is `SplitInfo`/`Target`, already admitted) and **not** a Fabric transaction or external Energy API adapter (`Action` is forwarded, no rollback policy is added).
+All three are byte-identical to baseline `4646f509`; that closure required no API-delta entry when admitted. This restores Mekanism's sequential generic/energy-container insert/extract helpers. It is **not** the fair-distribution layer (that is `SplitInfo`/`Target`, already admitted) and **not** a Fabric transaction or external Energy API adapter (`Action` is forwarded, no rollback policy is added).
 
 Observable semantics preserved:
 
@@ -116,22 +121,37 @@ This is descriptor metadata only. `ConfigInfo`, `DataType`, `TileComponentConfig
 
 This closure is only config schema/value support and energy-tier metadata. It does not activate `tiers.toml`; `TierConfig`, `MekanismConfig` and other real config files, other cached value kinds/tier families, config sync/UI/watchers/world restart, owners/callers, machines/blocks/items, capability registration, external energy/transactions, networking/serialization/persistence/lifecycle/threading remain deferred.
 
+## Task 023 Team Reborn Energy boundary
+
+The Fabric build pins external mod `teamreborn:energy:4.1.0` and resolves Fabric Transfer API `5.4.4`; Energy is a runtime metadata dependency and is not nested in the Mekanism JAR. The official `IEnergyConversion` is admitted byte-identically to oracle `4646f509`. Every adapter receives the conversion object from its caller: no `2.5` constant, Forge Energy equivalence, or hardcoded FE config activation enters production.
+
+`FabricEnergyConversions` rejects disabled, NaN, infinite, zero, and negative rates. It uses official `convertFrom`/`convertTo` rounding and saturation, derives whole-unit candidates from the conversion's canonical decimal ratio, and accepts a pair only when both conversions round-trip exactly. Thus 2.5 uses 2 external units ↔ 5 J, 0.4 uses 5 external units ↔ 2 J, and smaller partial values transfer zero instead of creating or voiding energy. Large candidates that exceed the official double's exact distinguishability are reduced until a verified pair is found; no precision beyond `IEnergyConversion`'s double contract is claimed.
+
+`FabricStrictEnergyHandler` exposes one indexed container around an `EnergyStorage`, keeps official invalid-index and unsupported-set defaults, respects support flags, and remains true-`long`. Each simulation runs in an aborted Fabric transaction. Execution first probes when quantization/partial acceptance is relevant, then commits only an exact fixed-point acceptance. Because this simulation-style API has no transaction parameter, the bridge uses Transfer API's explicitly compatibility-oriented `Transaction.getCurrentUnsafe()` and opens a nested transaction when a parent exists; a later parent abort therefore restores the external storage. Simulation/execution mismatch aborts the mutation and reports no transfer.
+
+`FabricEnergyStorage` is a `SnapshotParticipant<long[]>` over one stable `IStrictEnergyHandler`. Every attempted mutation opens a child transaction, snapshots every fixed container before Mekanism `EXECUTE`, and commits only an exactly reportable result. Repeated/nested commits merge into the parent snapshot; nested abort and later outer abort restore every container. Amount and capacity aggregate with saturation at `Long.MAX_VALUE`; negative Team API requests throw through `StoragePreconditions`. The container count captured by construction is checked before queries, mutations, snapshot creation, and restore. Owners must retain one adapter per stable handler/physical side.
+
+Rollback necessarily calls `IStrictEnergyHandler.setEnergy` for every captured container. Mekanism listeners, dirty/save work, or synchronization performed immediately during the original execute or restore are therefore observable before transaction outcome and cannot be undone by this adapter. Tests explicitly observe these calls; this boundary does not pretend simulation is side-effect-free at those owner layers. Future owners must either tolerate/idempotently coalesce them or defer irreversible effects themselves.
+
+`FabricEnergyLookup` is the sole lookup/factory seam. Public lookup and exposure reject null/internal sides and unusable conversions. Exposure also rejects `canHandleEnergy() == false` and empty physical sides, and builds a `ProxyStrictEnergyHandler` so the exact side and live `IHolder` insertion/extraction policy are consulted on each operation. A same-project `FabricEnergyStorage` is unwrapped only when the identical conversion object is supplied, avoiding recursive adapters; another conversion remains wrapped. No global lookup registration is performed here.
+
+Exactly eight Fabric-local JUnit methods cover the official conversion oracle, shared fixed points, strict queries/transfers/nested transaction rollback and unstable acceptance, reverse adapter preconditions/saturation/fractional returns/full snapshots/listener effects/count stability, and direct lookup/exposure/self-unwrapping.
+
 ## Deliberately deferred
 
-This is an internal storage slice, not external Fabric energy interoperability. It does not yet include:
+This first external boundary does not yet include:
 
-- configurable energy holders and machine side configuration;
-- block/item/entity lookups;
-- Team Reborn Energy API;
-- Fabric transaction rollback;
-- Joule/FE/Energy conversion policy;
-- machines, menus, sync packets, or persistence owners;
+- `ConfigHolder`, `ConfigInfo`, `DataType`, `ISideConfiguration`, configurable holders/helpers, or hardcoded FE configuration activation;
+- `TileComponentConfig`, `TileComponentEjector`, Universal Cable, cables/networks/emission, or machines;
+- actual block/item/entity provider registration, owner caching/invalidation, or world/chunk lifecycle;
+- item, fluid, chemical, or heat adapters;
+- persistence, packets/client sync, menus, recipes, or thread-safety guarantees;
 - `EnergyContainerHelper` and its static dependency `ConfigEnergyContainerHolder`;
-- side configuration/ejector, Universal Cable, machines, network/persistence owners, and all callers (including `ComponentBackedEnergyHandler` and `EnergyRecipeData`).
+- all callers including `ComponentBackedEnergyHandler` and `EnergyRecipeData`.
 
 There is no official `mekanism.common.capabilities.energy.EnergyHandler` source in baseline `4646f509`; older generic/concrete `EnergyHandler` deferral wording was stale naming. The helper remains unsplit because its official class statically reaches the config holder and broad tile side-config/ejector/chemical/fluid/inventory owner closure.
 
-The non-config relative-side holder layer is now available and documented in `FABRIC_HOLDERS.md`. External energy boundaries must still wait for explicit conversion configuration and configurable exposure policy. Fabric API itself does not define a standard energy API.
+The non-config relative-side holder layer is documented in `FABRIC_HOLDERS.md`. Actual owners still require explicit conversion configuration and configurable exposure policy. Fabric API itself does not define energy, so this bounded integration depends on Team Reborn Energy 4.1.0.
 
 ## Verification
 
@@ -150,16 +170,18 @@ The non-config relative-side holder layer is now available and documented in `FA
 - non-positive transfer behavior;
 - long NBT round trip plus decimal, overflow, invalid, and absent legacy values.
 
+Task 023's exact eight methods are in `IEnergyConversionTest`, `FabricEnergyConversionsTest`, `FabricStrictEnergyHandlerTest`, `FabricEnergyStorageTest`, and `FabricEnergyLookupTest`; they assert transaction return values and underlying raw states.
+
 Required gates:
 
 ```bash
 ./gradlew -p fabric test
-./gradlew -p fabric verifyApiSliceNoNeoForge verifyCommonSliceNoNeoForge
+./gradlew -p fabric verifyApiSliceNoNeoForge verifyCommonSliceNoNeoForge verifyPlatformSliceNoNeoForge
 ./fabric-build.sh
 scripts/fabric-packaged-smoke.sh
 ```
 
-The packaged smoke verifies the root capability package is exactly `SimpleDynamicHandler.class` and `DynamicHandler.class`, the exact energy implementation package is `BasicEnergyContainer.class` plus `DynamicStrictEnergyHandler.class`, and the exact slot descriptor package is `ISlotInfo.class`, `BaseSlotInfo.class`, `EnergySlotInfo.class`, and `HeatSlotInfo.class`, each once. It retains the exact energy API and long-transfer contracts. Handler and descriptor behavior is exercised by JUnit rather than production bootstrap; there is no dynamic-handler or slot-descriptor startup marker.
+The packaged smoke verifies the root capability package is exactly `SimpleDynamicHandler.class` and `DynamicHandler.class`, the exact energy implementation package is `BasicEnergyContainer.class` plus `DynamicStrictEnergyHandler.class`, and the exact slot descriptor package is `ISlotInfo.class`, `BaseSlotInfo.class`, `EnergySlotInfo.class`, and `HeatSlotInfo.class`, each once. The energy API family is exactly the current four classes plus `IEnergyConversion.class`; `mekanism/fabric/energy/` is exactly the four Task 023 classes, with no nested/helper/test leakage. The script rejects `team/reborn/**` inside Mekanism, validates and installs external Energy 4.1.0, and requires both mod IDs in the server log before `Done`. Transaction behavior remains JUnit evidence; there is no fabricated startup transfer marker.
 
 `fabric/src/test/java/mekanism/api/math/LongTransferUtilsTest.java` covers the sequential closure with observable event/order/value assertions:
 
@@ -172,8 +194,4 @@ The packaged smoke verifies the root capability package is exactly `SimpleDynami
 
 ## Reference boundary
 
-No compatibility-layer code was copied. The later transactional adapter may compare behavior with Kilt commit `9e8f0d67411f10234bf0d864bd151a6dbcef14b4`, especially:
-
-- `upstream/kilt/compat/transfer-api-compat/src/main/kotlin/xyz/bluspring/kilt/compat/transfer/energy/NeoForgeEnergyStorage.kt`
-
-That reference's fixed conversion and integer narrowing are not adopted here; Mekanism needs an explicit, tested conversion policy before external exposure.
+No Kilt, Connector, or Team API source was copied. Team Reborn Energy 4.1.0 and resolved Transfer API 5.4.4 were inspected for the `EnergyStorage`, `TransactionContext`, `Transaction.getCurrentUnsafe`/nested transaction, `SnapshotParticipant`, and `StoragePreconditions` contracts. Kilt's fixed conversion and integer narrowing were not adopted; the implementation is an independent Mekanism-specific, caller-conversion, true-`long` adapter.

@@ -127,9 +127,15 @@ void deserializeNBT(HolderLookup.Provider provider, T tag)
 - `./fabric-build.sh`
 - `scripts/fabric-packaged-smoke.sh`
 
+## Energy conversion admission
+
+状态：`mekanism.api.energy.IEnergyConversion` 已加入 Fabric API allowlist，源码与官方 oracle commit `4646f509` byte-identical；这不是 API 变更。
+
+`isEnabled`、`getConversion`、`convertFrom`、`convertTo`/`convertToDouble`、deprecated `convertToAsLong`、`convertToAsInt` 与 `isOneToOne` 的签名、double rounding 和 saturation 均未修改。Task 023 的 Team Reborn Energy 4.1.0 adapter 只在 `mekanism.fabric.energy` 内验证 conversion 可用性并选择双向 round-trip 的 whole-unit fixed point；换算对象由 caller 提供，不把第三方类型、硬编码 2.5 或 FE 等价写进 Mekanism API。
+
 ## Energy container contract
 
-状态：内部 energy storage 首个垂直切片已移植，外部 Fabric energy lookup/transaction adapter 尚未实现。
+状态：内部 energy storage 首个垂直切片及首个外部 Team Reborn Energy lookup/transaction adapter 已移植；实际 provider/owner lifecycle 尚未实现。
 
 `IEnergyContainer` 的 NeoForge `INBTSerializable<CompoundTag>` 父接口替换为上文的 Mekanism-owned registry-aware 契约；energy getter/setter、execute/simulate、automation、listener、capacity 和 NBT 方法签名保持。仅删除了指向 NeoForge fluid handler 的 Javadoc 类型链接，改用平台中立文字描述同一返回值差异。
 

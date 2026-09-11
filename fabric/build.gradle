@@ -70,8 +70,9 @@ loom {
 }
 
 repositories {
-    // Loom supplies Minecraft and Fabric repositories. Keep this build isolated
+    // Team Reborn Energy is published on Fabric's Maven. Keep this build isolated
     // from the NeoForge repositories in the root build.
+    maven { url = 'https://maven.fabricmc.net/' }
     mavenCentral()
 }
 
@@ -246,6 +247,7 @@ dependencies {
     mappings loom.officialMojangMappings()
     modImplementation "net.fabricmc:fabric-loader:${loader_version}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
+    modImplementation "teamreborn:energy:${team_reborn_energy_version}"
     modHandshakeMismatchFixtureImplementation "net.fabricmc:fabric-loader:${loader_version}"
     modHandshakeMismatchFixtureImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
     modHandshakeMissingReceiverFixtureImplementation "net.fabricmc:fabric-loader:${loader_version}"

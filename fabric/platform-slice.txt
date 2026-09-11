@@ -3,6 +3,10 @@ mekanism/fabric/MekanismFabricBootstrap.java
 mekanism/fabric/MekanismFabricClientBootstrap.java
 mekanism/fabric/config/FabricMekanismConfigManager.java
 mekanism/fabric/config/MekanismConfigSpec.java
+mekanism/fabric/energy/FabricEnergyConversions.java
+mekanism/fabric/energy/FabricEnergyLookup.java
+mekanism/fabric/energy/FabricEnergyStorage.java
+mekanism/fabric/energy/FabricStrictEnergyHandler.java
 mekanism/fabric/network/FabricMekanismClientNetworking.java
 mekanism/fabric/network/FabricMekanismNetworking.java
 mekanism/fabric/network/MekanismNetworkProtocol.java

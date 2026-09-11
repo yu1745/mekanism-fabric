@@ -13,7 +13,7 @@ This milestone adds the platform-neutral side-routing layer used by Mekanism's i
 - `mekanism.common.capabilities.holder.heat.IHeatCapacitorHolder`
 - `mekanism.common.capabilities.holder.heat.HeatCapacitorHolder`
 
-It builds on the internal energy and heat containers but does not expose either storage family through a Fabric block/item lookup. The current audited source counts are API **42** / common **88** / platform **10**.
+It builds on the internal energy and heat containers. Task 023 adds a side-bound Team Reborn Energy adapter/factory seam, but no block/item/entity provider is registered by this slice. The current audited source counts are API **43** / common **88** / platform **14**.
 
 ## Relative-side contract
 
@@ -49,6 +49,12 @@ The enum no longer pulls `APILang`, `ILangEntry`, `TextComponentUtil`, or `Mekan
 
 The adjacent platform-neutral descriptors `ISlotInfo`, `BaseSlotInfo`, `EnergySlotInfo`, and `HeatSlotInfo` are admitted byte-identically to `4646f509`. They preserve constructor flags and exact list references; enablement is exactly input OR output. Energy emptiness scans in source order and stops at the first non-empty container, while later list membership and contained state remain live. Heat descriptors always report non-empty and do not inspect capacitor heat state. Five focused JUnit methods bind those contracts, and the remapped JAR package is exactly the four corresponding classes, once each, without nested/synthetic/test/helper/fixture leakage or a startup marker.
 
+## Task 023 physical-side exposure seam
+
+`FabricEnergyLookup.expose` accepts only a non-null physical `Direction`, rejects disabled/invalid conversions, handlers with `canHandleEnergy() == false`, and sides with no containers, then binds the exact side through `ProxyStrictEnergyHandler`. The optional `IHolder` is retained by that proxy, so insertion and extraction permission changes are consulted on every operation. The resulting `FabricEnergyStorage` is stable: its owner must cache one adapter per handler/physical side and invalidate it with the future owner lifecycle; a changed container count fails fast.
+
+This is a factory seam, not provider registration. Null/internal-side access is never exposed. `ConfigHolder`, `ConfigInfo`, `DataType`, `ISideConfiguration`, configurable holders/helpers, `TileComponentConfig`, and `TileComponentEjector` remain deferred.
+
 ## Deliberately deferred
 
 This slice excludes:
@@ -57,8 +63,8 @@ This slice excludes:
 - `ConfigHolder`, `ConfigEnergyContainerHolder`, and `ConfigHeatCapacitorHolder`;
 - `ConfigInfo`, `DataType`, `TileComponentConfig`, `TileComponentEjector`, and side-configuration execution/ejection;
 - chemical, fluid, inventory, and proxy slot descriptors;
-- capability exposure/lookup registration, every tile/machine/block caller, and specialized holders;
-- Team Reborn Energy API, transactions, persistence, networking/wire serialization, config/registry lifecycle, and thread ownership.
+- actual block/item/entity provider registration, owner caching/invalidation, every tile/machine/block caller, and specialized holders;
+- item/fluid/chemical/heat adapters, persistence, networking/wire serialization, config/registry lifecycle, and thread ownership.
 
 The energy and heat helpers currently couple their non-config and configurable factories. They must be split or admitted with their real side-configuration closure rather than stubbed.
 

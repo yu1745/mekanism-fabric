@@ -16,6 +16,7 @@ mekanism/api/codec/DependentMapCodec.java
 mekanism/api/container/InContainerGetterLong.java
 mekanism/api/container/LongToLongContainerInteraction.java
 mekanism/api/energy/IEnergyContainer.java
+mekanism/api/energy/IEnergyConversion.java
 mekanism/api/energy/IMekanismStrictEnergyHandler.java
 mekanism/api/energy/ISidedStrictEnergyHandler.java
 mekanism/api/energy/IStrictEnergyHandler.java
