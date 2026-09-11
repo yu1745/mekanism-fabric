@@ -693,3 +693,48 @@ Gemini 3.8 Flash 与 GLM 5.3 不再进入默认实现面板；需要其特定能
 - **最终策略：** 将 SOL candidate 在包含最新测试政策的主线上 cherry-pick 为 `4d804f64`；综合提交 `b6ee11db` 把其 indexed fixture 改为 `[untouched, target]` 并调用 index 1，立即断言第一个 container 无事件，随后用独立 aggregate handler 保留 SOL 原有双向 aggregate 证据。没有吸收 DeepSeek 的 insertion-only allowed 结构或冗长文档。
 - **综合规模：** Task012 本身相对固定基线（排除独立 `AGENTS.md` 政策提交）8 files，`+200/-18`；local suite 136 行、4 tests。
 - **主代理独立验证：** 三个 production source 与 `4646f509` 字节一致，18 个 official root oracle、`fabric/build.gradle` 和既有测试均未改变；slice 42/40/10 且无重复；33 suites、178 tests、0 failures/errors/skips，三个 jqwik properties 各 100,000 tries/checks；完整 clean Gradle gate 20.23s，`fabric-build.sh` 2.79s，packaged smoke 51.87s 并到达 `Done`；root capability 与 common energy 包精确匹配预期四个 production class，无 test/fixture/NeoForge/JUnit/jqwik 泄漏；implementation clean release 11.05s，恰好一个 JAR，`build-info.json` source commit 与 `b6ee11db` 一致，JAR sha256 为 `2b0a9f18f9e316ac51831403e3618d3d7216e807036df2d381108334a6bf60e1`。
+
+---
+
+## 任务 013：纳入 per-game-time energy tracker
+
+### 任务简述
+
+- **基线：** `b34f721e8bdf3b291b976cbe89c945468c5d7eec`
+- **目标：** 原样纳入 `mekanism.common.lib.LastEnergyTracker`，恢复只以三个 `long` 字段完成的 current/last game-time bucket accounting。
+- **关键验收：** production source 与 `4646f509` 字节一致；slice 42/41/10，18-file official oracle、`fabric/build.gradle`、API/platform slices 和既有测试不变；3–4 个黑盒测试覆盖 same-time accumulation、任意不同时间戳（跳号/回退）、初始 tick zero、zero/negative/true-long amount 与 client-sync setter；direct common-lib package 精确为它与 `WildcardMatcher` 各一次；不引入唯一 caller `TileEntityMekanism`、world tick、client sync/network/persistence、machine/network owner、external energy 或 Fabric transaction。
+- **GLM 临时复测：** 本任务是用户指定三轮 GLM 5.3 复测的第 1/3 轮；因闭包极小，GLM 使用 `thinking=low`，且未修改 `AGENTS.md`。
+
+### 5.6 SOL
+
+- **提交：** `b21e768a580ac1b6ce19102688af13ef56431067`
+- **规模：** 8 files，`+113/-7`；local suite 58 行、4 tests。
+- **资源：** 363.4s，79.7k tokens，49 次工具调用，约 `$1.28`。
+- **优点：** 三者中测试最短，四个方法仍完整区分同 tick 累加/下一 tick 发布、跳号/回退、初始 tick zero、zero/negative/>int long 与 setter 生命周期；每条断言都通过 public API，未引入 overflow 或反射 fixture；文档和 exact-package gate 完整且总体最克制，182 tests 与全部门禁通过。
+- **不足：** common slice 新路径放在 `WildcardMatcher` 后而非词法顺序；packaged Python check 的外层错误标签未加入 common-lib-root，失败诊断稍弱；true-long 使用 `Integer.MAX_VALUE + 9` 而非 long 极值。
+- **本任务评价：** 以明显最少测试代码获得完整需求覆盖，production/package/docs 边界也准确，是最佳整合基底。
+
+### DeepSeek v4.1 Flash
+
+- **提交：** `f8cc00d597ad137d7074727f4539ee6e5585e93c`
+- **规模：** 8 files，`+159/-9`；local suite 86 行、4 tests。
+- **资源：** 311.1s，70.2k tokens，60 次工具调用；通知未提供成本。
+- **优点：** 三者最快；slice 顺序和 packaged 外层错误标签正确；测试独有地固定 `Long.MAX_VALUE + 1` 采用 Java raw-long wrap，并把多个负/零 bucket transition 连续串起；source identity、182 tests、package/release 门禁均通过。
+- **不足：** overflow 并非本闭包必须新增的策略边界，复杂 setter 用例将 wrap、负 bucket、zero transition 混在一起，诊断和可读性逊于 SOL；测试多 28 行，总 diff 多 46 行，`FABRIC_ENERGY.md`/README 重复较多逐步说明；工具调用最多。
+- **本任务评价：** 执行最快并提供两个可吸收的 gate 细节，但测试/文档体积相对一个 25 行类偏重，单体质量第三。
+
+### GLM 5.3（临时复测 1/3，thinking=low）
+
+- **提交：** `625516c7ce33f0f15a079c88aabe31b7aa29df91`
+- **规模：** 8 files，`+117/-5`；local suite 87 行、4 tests。
+- **资源：** 354.0s，55.6k tokens，38 次工具调用，约 `$0.36`。
+- **优点：** tokens、工具调用和已知成本均最低，墙钟略快于 SOL；文档增量是三者最短且覆盖全部延期边界；测试用 `Long.MAX_VALUE` 做不溢出的完整 bucket round-trip，并把 setter 放在独立 tracker 上避免前段状态干扰；slice/source/182 tests/package/release 全部通过，严格未改 `AGENTS.md`。
+- **不足：** 87 行测试主要因每个方法同时使用长 `@DisplayName`、断言 message 和解释性注释，信息密度低于 SOL；package check 在 exact set 前又单独重复检查 `WildcardMatcher` 一次，并未复用后续 required-entry 结构或更新外层诊断标签。
+- **本任务评价：** 单体质量第二；低 reasoning effort 下正确完成全部验收并表现出本轮最佳 token/调用/成本效率，是值得继续观察的正面信号，但一轮简单任务不足以恢复默认席位。
+
+### 本任务结论
+
+- **单体代码质量：** 5.6 SOL > GLM 5.3 > DeepSeek；**墙钟：** DeepSeek > GLM > SOL；**token/工具/已知成本：** GLM 最佳。
+- **最终策略：** 采用 SOL candidate，在主线 cherry-pick 为 `830859ad`；`a1607d4d` 吸收 DeepSeek/GLM 都采用的词法 slice 顺序，并吸收 DeepSeek 的 common-lib-root 外层诊断标签；`e231cbee` 将 SOL 的 true-long 输入提升为 GLM 的 `Long.MAX_VALUE`，但继续使用 SOL 的短测试结构，不加入 DeepSeek overflow 或 GLM 冗长 DisplayName/messages。`docs/MODEL_IMPLEMENTATION_COMPARISONS.md` 的 GLM 三轮临时说明同提交写入，不改变 `AGENTS.md`。
+- **综合规模：** 排除评估文档本身，8 files，`+114/-8`；local suite 58 行、4 tests。
+- **主代理独立验证：** production source 与 `4646f509` 字节一致；18-file oracle、`fabric/build.gradle`、API/platform slices 和既有测试不变；slice 42/41/10 且无重复；34 suites、182 tests、0 failures/errors/skips，三个 jqwik properties 各 100,000 tries/checks；最终完整 Gradle gate 9.12s，`fabric-build.sh` 0.64s，packaged smoke 49.70s 并到达 `Done`；direct common-lib package 精确为两个 class 且无 test/fixture/NeoForge/JUnit/jqwik 泄漏；implementation clean release 11.42s，恰好一个 JAR，`build-info.json` source commit 与 `e231cbee` 一致，JAR sha256 为 `ee8b7fc16e7d95069627dde04e74366e82308090ae6980bbd2bf6bef148b0498`。
