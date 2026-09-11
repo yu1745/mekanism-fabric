@@ -48,7 +48,8 @@
 - [x] 最终 remapped JAR 的干净 Fabric 服务端冒烟门禁；
 - [x] NeoForge 平台依赖矩阵与可重复扫描脚本；
 - [~] 官方 API allowlist：已编译 27/265 个文件；`Action` 与 registry-aware NBT 是首批登记的平台适配；
-- [ ] lifecycle、registry、config、network adapter；
+- [~] lifecycle/registry：已用一个官方 GameEvent 声明验证同步注册、canonical holder 和冻结前时序；
+- [ ] config、network adapter；
 - [ ] holder/storage、CachedRecipe、机器基类与 Crusher。
 
 ## 阶段顺序
