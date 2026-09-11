@@ -17,12 +17,12 @@ contract. Intentional API adaptations remain limited to that contract and
 `../docs/API_DELTAS.md`. JetBrains annotations and JSR-305 remain `compileOnly`
 and are not bundled in the mod.
 
-`common-slice.txt` contains **31 official source files**, and
+`common-slice.txt` contains **32 official source files**, and
 `platform-slice.txt` contains **10 project-owned Fabric sources**. Together with
 the **35-file API slice**, they form bounded registry/GameEvent, TOML
 startup-config, configuration-handshake, internal energy storage/holder, internal
-heat storage/holder, wildcard-matching, fair-distribution, chunk-coordinate, and
-lambda-metafactory utility closures. The unchanged
+heat storage/holder, wildcard-matching, fair-distribution, chunk-coordinate,
+lambda-metafactory, and vanilla-registry utility closures. The unchanged
 `WildcardMatcher` retains official recursive, UTF-16 `char` matching semantics;
 QIO, miner, Finder, and other consumers remain future work. The unchanged
 distribution closure preserves the separate `int`/`long` split arithmetic,
@@ -58,6 +58,18 @@ Packaging checks only prove the exact outer/nested production class family is
 present once and tests are absent; behavior is proved by Java 21 tests, not a
 startup marker. `SyncMapper`, annotations, tracked data, containers, networking,
 reflection scanning, and all callers remain deferred.
+
+`RegistryUtils` has only the two minimal vanilla equivalents documented in
+`../docs/API_DELTAS.md`: `unwrapKey().orElse(null)` preserves nullable NeoForge
+holder-key behavior, while `getResourceKey(...).map(ResourceKey::location)`
+preserves null for unknown values even when scanning a defaulted registry.
+Fabric-local tests prove canonical built-in block-entity/block holders, all NBT ID
+rejection paths, block paths, keyed/direct holder naming, registered/unknown raw
+objects, and the direct-holder short circuit. The null fallback in `getBEHolder`
+is not forced because normal vanilla built-ins make it unreachable and tests do
+not mutate registries. Packaging proves only that `RegistryUtils.class` occurs
+once and no same-prefix test/helper leaks; behavior is not a startup marker.
+No caller, registry lifecycle/mutation, or custom registry is admitted.
 
 Heat includes the unchanged dynamic `VariableHeatCapacitor`; neither energy nor
 heat claims external API, transaction, configurable-holder, network, or

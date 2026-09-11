@@ -167,6 +167,17 @@ if unexpected_chunk_utils:
     raise SystemExit(
         "packaged ChunkUtils test classes are forbidden: " + ", ".join(unexpected_chunk_utils)
     )
+if entries.count("mekanism/common/util/RegistryUtils.class") != 1:
+    raise SystemExit("mekanism/common/util/RegistryUtils.class must be packaged exactly once")
+unexpected_registry_utils = sorted(
+    entry for entry in entries
+    if entry.startswith("mekanism/common/util/RegistryUtils") and entry.endswith(".class")
+    and entry != "mekanism/common/util/RegistryUtils.class"
+)
+if unexpected_registry_utils:
+    raise SystemExit(
+        "unexpected packaged RegistryUtils class: " + ", ".join(unexpected_registry_utils)
+    )
 expected_lambda_meta_factory = {
     "mekanism/common/util/LambdaMetaFactoryUtil.class",
     "mekanism/common/util/LambdaMetaFactoryUtil$CallSiteInfo.class",
@@ -190,7 +201,7 @@ if unexpected_lambda_meta_factory:
     )
 PYEOF
 then
-  echo "fabric-packaged-smoke: distribution/ChunkUtils/LambdaMetaFactoryUtil production/test packaging contract failed" >&2
+  echo "fabric-packaged-smoke: distribution/ChunkUtils/RegistryUtils/LambdaMetaFactoryUtil production/test packaging contract failed" >&2
   exit 1
 fi
 for required_entry in \

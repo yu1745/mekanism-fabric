@@ -43,7 +43,7 @@ public class RegistryUtils {
     }
 
     public static <TYPE> ResourceLocation getName(Holder<TYPE> element, DefaultedRegistry<TYPE> registry) {
-        ResourceKey<?> key = element.getKey();
+        ResourceKey<?> key = element.unwrapKey().orElse(null);
         if (key == null) {
             return registry.getKey(element.value());
         }
@@ -52,7 +52,7 @@ public class RegistryUtils {
 
     @Nullable
     public static ResourceLocation getName(Holder<?> element) {
-        ResourceKey<?> key = element.getKey();
+        ResourceKey<?> key = element.unwrapKey().orElse(null);
         return key == null ? null : key.location();
     }
 
@@ -65,7 +65,7 @@ public class RegistryUtils {
             return getName(holder);
         }
         for (Registry<?> registry : BuiltInRegistries.REGISTRY) {
-            ResourceLocation name = ((Registry) registry).getKeyOrNull(element);
+            ResourceLocation name = ((Registry<Object>) registry).getResourceKey(element).map(ResourceKey::location).orElse(null);
             if (name != null) {
                 return name;
             }

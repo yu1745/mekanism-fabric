@@ -48,6 +48,14 @@ Kilt 的转换表明 execute/simulate 应在 transfer 边界映射为 transactio
 - `./fabric-build.sh`
 - `scripts/fabric-packaged-smoke.sh`
 
+## `mekanism.common.util.RegistryUtils`
+
+状态：作为内部 common utility 纳入；仅将 NeoForge 注入到 vanilla 类型上的两个 convenience contract 改写为 vanilla 1.21.1 API。
+
+两个 `Holder.getKey()` 调用改为 `unwrapKey().orElse(null)`；built-in registry 扫描中的 `Registry.getKeyOrNull(element)` 改为 `getResourceKey(element).map(ResourceKey::location).orElse(null)`。后者刻意不使用 `Registry.getKey`，因为 defaulted registry 会为未知对象返回默认 key。返回值兼容影响为无：reference holder 仍返回自身 key、direct holder 仍为 null，registered raw object 返回 canonical key，未知对象仍为 null；direct-holder 分支仍立即返回而不扫描其 value。
+
+语义依据：NeoForge 21.1.200 的 `IHolderExtension#getKey` 与 `IRegistryExtension#getKeyOrNull` contract，以及同版 patched Minecraft 源码 `upstream/neoforge-minecraft/net/minecraft/core/Holder.java`、`Registry.java`、`DefaultedMappedRegistry.java`；Kilt commit `9e8f0d67411f10234bf0d864bd151a6dbcef14b4` 的 `upstream/kilt/src/main/java/xyz/bluspring/kilt/injects/core/HolderInject.java` 与 `DefaultedMappedRegistryInject.java`。Fabric-local 测试验证 vanilla built-in canonical holder/key、NBT ID 拒绝路径、direct-holder fallback/short-circuit 与 raw registry lookup；不声明 registry lifecycle、mutation、custom registry 或任何 caller 已移植。
+
 ## Deferred registry wrapper surface
 
 状态：首个 common source slice 已移植，用于官方 GameEvent 声明。

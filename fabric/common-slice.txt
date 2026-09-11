@@ -25,6 +25,7 @@ mekanism/common/lib/distribution/Target.java
 mekanism/common/util/ChunkUtils.java
 mekanism/common/util/EmitUtils.java
 mekanism/common/util/LambdaMetaFactoryUtil.java
+mekanism/common/util/RegistryUtils.java
 mekanism/common/registration/INamedEntry.java
 mekanism/common/registration/MekanismDeferredHolder.java
 mekanism/common/registration/MekanismDeferredRegister.java
