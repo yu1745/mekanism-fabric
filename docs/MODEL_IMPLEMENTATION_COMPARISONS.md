@@ -548,3 +548,38 @@ Gemini 3.8 Flash 与 GLM 5.3 不再进入默认实现面板；需要其特定能
 - **最终策略：** 采用 DeepSeek 提交并在主线上 cherry-pick 为 `096a8b7d`；`274445b6` 只删除未使用 import 和不参与 transfer 的 tautological fixture，不改变覆盖或行为。未吸收 SOL 的自定义 `IEnergyContainer` probe 和混合 package-set 结构。
 - **综合规模：** 8 files，`+582/-11`；最终测试 473 行、13 tests。
 - **主代理独立验证：** 三个 production source 与 `4646f509` byte-identical；16 个 root oracle、`fabric/build.gradle`、common/platform slices 和 `docs/API_DELTAS.md` 不变；slice 38/32/10；135 tests、0 failures/errors/skips，三个 jqwik properties 各 100,000 tries/checks；完整 Gradle gate 10.08s，`fabric-build.sh` 2.35s，packaged smoke 49.34s 并到达 `Done`；三个 transfer classes 精确各一次且无 `LongTransferUtils*` test/helper；最终 clean release contract 10.94s，恰好一个 JAR，无 test/fixture/NeoForge/JUnit/jqwik 泄漏，`build-info.json` source commit 与最终 HEAD 一致。
+
+---
+
+## 任务 009：纳入 strict energy-handler API 闭包
+
+### 任务简述
+
+- **基线：** `2b1c56881ab92a99c1013d6a87611daebb5313d0`
+- **目标：** 纳入 `IStrictEnergyHandler`、`ISidedStrictEnergyHandler` 与 `IMekanismStrictEnergyHandler`，把已验证的顺序 long-transfer 与 energy-container 语义连接成 unsided、sided 和 container-backed 三层 default-method API。
+- **关键验收：** `IMekanismStrictEnergyHandler` 与官方基线字节一致；前两份接口只删除 `FluidStack`/`IFluidHandler` import 并把两个 Javadoc-only fluid-fill 链接改成 accepted amount 与 unaccepted remainder 的平台中立文字。API/common/platform 为 41/32/10；覆盖 unsided aggregation、全部 per-container/aggregate side bridge、nullable default side、invalid index/no-op、negative-set clamp、`AutomationType.handler`、一次 list lookup、`SIMULATE`/`EXECUTE` 和 true-`long`；精确限制发布 JAR 的 energy API class；不引入外部 Energy API、换算、lookup/transaction、configurable holder、concrete handler、owner 或 caller。
+
+### 5.6 SOL
+
+- **提交：** `97f4c69dd59e2047967449e1afb576603cf29d2a`
+- **规模：** 13 files，`+541/-32`；三份测试共 467 行、8 个 tests。
+- **资源：** 762.7s，151.1k tokens，80 次工具调用，约 `$3.19`。
+- **优点：** 三层接口各自一份测试，结构与生产层次对应清楚；以较短实现完整覆盖 indexed non-empty-first insertion、source-order extraction、所有 unsided per-container bridge、显式 null/non-null side、Action/Automation identity、invalid-index defaults、单次 aggregate lookup、simulation/execution 和 true-`long`；文档最克制，全部门禁通过。
+- **不足：** sided fixture 始终覆写 `getEnergySideFor()` 为非空值，没有直接证明接口自身默认实现返回 null；发布门禁只拒绝三个 handler 同名前缀的额外 class，不能拒绝其它意外进入的 energy API class。
+- **本任务评价：** 单体实现质量最佳：验收覆盖与体积平衡更好，两个缺口都能用很小的综合改动补齐。
+
+### DeepSeek v4.1 Flash
+
+- **提交：** `c9bab09c3b07009f69f8d3ed2b52de271f819e86`
+- **规模：** 12 files，`+669/-31`；两份测试共 558 行、14 个 tests。
+- **资源：** 586.8s，154.3k tokens，93 次工具调用；通知未提供成本。
+- **优点：** 比 SOL 快 175.9s；直接测试 actual default null side 和 unsided null forwarding；精确拒绝既有 `IEnergyContainer` 与三个新接口之外的全部 energy API class；还固定 `canHandleEnergy=false` 是实现者 empty-list 契约、default 本身不会暗中强制，以及 IStrict/IMekanism 两层各自的 true-`long`；测试分组细、诊断粒度高，全部门禁通过。
+- **不足：** 总 diff 多 128 行、测试多 91 行和 6 个 test；多处重复已经由 `LongTransferUtils` 与同文件其它用例证明的 sequential insertion/extraction、simulate/execute 和 true-long 事实，README/API delta 也更长；`canHandleEnergy=false` 的一半用例故意构造违反接口文档的实现，适合审计 default 不加策略，但不属于调用者可依赖的有效实现契约。
+- **本任务评价：** 边界审计与执行速度更强，单体质量第二；其 default-null 与 exact-package 发现应吸收，但无需采用整体较重的测试/文档版本。
+
+### 本任务结论
+
+- **单体代码质量：** 5.6 SOL > DeepSeek；**执行效率：** DeepSeek 墙钟更快，tokens 基本持平（多约 3.2k），SOL 少 13 次工具调用。
+- **最终策略：** 采用 SOL 候选并在主线 cherry-pick 为 `6fe8e6b9`；综合提交 `c763da5d` 将 sided fixture 拆为真正使用接口 default-null 的基类和 fixed-side 子类，增加一个聚焦 null-forwarding test，并把发布门禁收紧为只允许 `IEnergyContainer` 与三个 strict handler interface，文档同步改成 exact-package 边界。没有吸收其余重复测试或违约 `canHandleEnergy=false` fixture。
+- **综合规模：** 相对基线 13 files，`+560/-32`；三份测试共 485 行、9 tests。
+- **主代理独立验证：** `IMekanismStrictEnergyHandler` 与 `4646f509` 字节一致，另两份 production source 只有各两个 import 删除和两个 Javadoc 替换；16 个 root oracle、`fabric/build.gradle`、common/platform slices 不变；slice 41/32/10 且无重复；28 suites、144 tests、0 failures/errors/skips，三个 jqwik properties 各 100,000 tries/checks；完整 Gradle gate 9.49s，`fabric-build.sh` 2.24s，packaged smoke 51.17s 并到达 `Done`；clean release contract 10.47s，恰好一个 JAR，energy API 集合精确为四类，无 test/fixture/NeoForge/JUnit/jqwik 泄漏，`build-info.json` source commit 与实现 HEAD `c763da5d` 一致，JAR sha256 为 `0de740d57c2de93683e87b6d17e4e4a64e4d270144528264186eb01fd69d44fb`。
