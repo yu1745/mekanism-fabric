@@ -31,6 +31,17 @@
 6. 开发 classpath 启动不算发布成功，最终 JAR 必须在干净 Fabric Loader 环境验证。
 7. 生产服务器不是测试环境；运行时验证使用本地开发服或镜像服。
 
+## NeoForge / Fabric 对照参考
+
+遇到没有明确一一对应关系的平台 API 或对象语义时，可查阅两个本地只读参考仓库：
+
+- [`upstream/kilt`](../upstream/kilt)：[KiltMC/Kilt](https://github.com/KiltMC/Kilt)，主要展示如何在 Fabric 上承接 (Neo)Forge API 与对象语义；
+- [`upstream/connector`](../upstream/connector)：[Sinytra/Connector](https://github.com/Sinytra/Connector)，从反方向展示 Fabric API 与 NeoForge 对象、生命周期和调用约定的转换；仓库内另有生产补丁分支，但本目录固定使用官方上游作移植参考。
+
+使用顺序：先找 vanilla/Fabric 的直接能力，再对照 Kilt 和 Connector 如何保持双方语义，最后实现最小的 Mekanism 专用 adapter。它们是语义与边界案例库，**不是必须采用的依赖或设计模板**；本项目不实现通用 Forge/Fabric 转换层，也不批量复制它们的兼容架构。若采用具体实现代码，必须记录仓库、commit、源文件并遵守相应许可证；默认只参考行为和测试思路后独立实现。
+
+具体相对路径、分支和搜索规则记录在仓库根部 `AGENTS.md`。
+
 ## 阶段顺序
 
 1. Java 21 构建系统、Fabric metadata、Mojang official mappings、source sets 与发布物结构；
