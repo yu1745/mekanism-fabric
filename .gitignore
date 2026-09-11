@@ -24,3 +24,4 @@ MDK.zip
 /annotation-processor/bin
 libs/
 /fabric/.gradle
+/fabric/run
