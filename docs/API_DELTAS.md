@@ -47,3 +47,39 @@ Kilt 的转换表明 execute/simulate 应在 transfer 边界映射为 transactio
 - `./gradlew -p fabric verifyApiSliceNoNeoForge`
 - `./fabric-build.sh`
 - `scripts/fabric-packaged-smoke.sh`
+
+## Registry-aware NBT contract
+
+状态：基础契约与 `DataHandlerUtils` 已移植；容器接口将在各自依赖闭包可编译时逐项切换。
+
+新增 Mekanism-owned 公共契约：
+
+```java
+mekanism.api.INBTSerializable<T extends Tag>
+```
+
+它保留 NeoForge 1.21.1 接口的两个注册表感知方法：
+
+```java
+T serializeNBT(HolderLookup.Provider provider)
+void deserializeNBT(HolderLookup.Provider provider, T tag)
+```
+
+`DataHandlerUtils` 仅把泛型约束从 NeoForge 接口切换为上述 Mekanism 接口；列表顺序、byte 索引、空标签跳过和 NBT 键格式保持官方行为。后续 `IChemicalTank`、`IEnergyContainer`、`IExtendedFluidTank`、`IHeatCapacitor`、`IInventorySlot` 的父接口变化必须随各自完整依赖闭包迁移，不能为了扩大 allowlist 添加 stub。
+
+兼容影响：实现容器接口的 Fabric addon 将实现 `mekanism.api.INBTSerializable`，而不是 NeoForge 父接口；序列化方法本身保持同名同参。Attachment、Data Component、Codec 和 Fabric 生命周期不进入这个值级契约，持久化 owner 负责传入 `HolderLookup.Provider`。
+
+参考：
+
+- Kilt `9e8f0d67411f10234bf0d864bd151a6dbcef14b4`
+  - `upstream/kilt/src/main/java/xyz/bluspring/kilt/injects/world/level/block/entity/BlockEntityInject.java`
+  - `upstream/kilt/src/main/java/xyz/bluspring/kilt/injects/world/entity/EntityInject.java`
+  - `upstream/kilt/src/main/java/xyz/bluspring/kilt/injects/world/level/chunk/ChunkAccessInject.java`
+- Connector `8b27f1ad042aae8037bcc522b321c03fcce1a12a` 没有提供可直接采用的同类 NBT/attachment 契约，因此不据此构造兼容层。
+
+验证：
+
+- `fabric/src/test/java/mekanism/api/DataHandlerUtilsTest.java`
+- `./gradlew -p fabric verifyApiSliceNoNeoForge`
+- `./fabric-build.sh`
+- `scripts/fabric-packaged-smoke.sh`

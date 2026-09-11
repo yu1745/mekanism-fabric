@@ -2,8 +2,10 @@
 mekanism/api/Action.java
 mekanism/api/AutomationType.java
 mekanism/api/Chunk3D.java
+mekanism/api/DataHandlerUtils.java
 mekanism/api/IContentsListener.java
 mekanism/api/IEvaporationSolar.java
+mekanism/api/INBTSerializable.java
 mekanism/api/SerializationConstants.java
 mekanism/api/SupportsColorMap.java
 mekanism/api/annotations/FieldsAreNotNullByDefault.java

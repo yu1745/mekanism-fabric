@@ -11,14 +11,17 @@ mappings.
 `api-slice.txt` is the auditable allowlist of API source paths, relative to
 `src/api/java`. The Fabric source set reads that file directly, so the listed
 sources retain their original `mekanism.api.*` names without being copied or
-modified. The allowlist now contains **25 source files**. The portable second
+modified. The allowlist now contains **27 source files**. The portable second
 slice added the vanilla-only `AutomationType` and `Chunk3D` value types,
 `SupportsColorMap`, and the complete four-file alloy/base tier closure
 (`ITier`, `IAlloyTier`, `BaseTier`, and `AlloyTier`). The first intentional
 platform adaptation adds `Action` while removing only its two NeoForge
-`FluidAction` conversion methods; see `../docs/API_DELTAS.md`. These sources use
-only JDK, Minecraft, the existing annotation slice, and one another. JetBrains annotations and JSR-305 remain
-`compileOnly` dependencies and are not bundled in the mod.
+`FluidAction` conversion methods. The first NBT slice adds the Mekanism-owned
+registry-aware `INBTSerializable` contract and ports `DataHandlerUtils` without
+changing its NBT layout or index behavior. See `../docs/API_DELTAS.md` for both
+adaptations. These sources use only JDK, Minecraft, the existing annotation
+slice, and one another. JetBrains annotations and JSR-305 remain `compileOnly`
+dependencies and are not bundled in the mod.
 
 The next nearby API candidates are blocked by deliberately excluded boundaries:
 incremental-enum helpers close over `ConstantPredicates` (which imports
