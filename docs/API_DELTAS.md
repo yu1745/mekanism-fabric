@@ -129,11 +129,11 @@ void deserializeNBT(HolderLookup.Provider provider, T tag)
 
 ## Heat container contract
 
-状态：内部 heat storage 首个垂直切片已移植，heat handler/holder、网络、机器 owner 与外部边界尚未实现。
+状态：内部 heat storage、官方 handler aggregation 与非配置 holder 已移植；config holder/helper、网络、机器 owner 与外部边界尚未实现。
 
 `IHeatCapacitor` 的 NeoForge `INBTSerializable<CompoundTag>` 父接口替换为上文的 Mekanism-owned registry-aware 契约；其 getter/setter、batch update、listener、capacity 和 NBT 方法签名保持。
 
-`BasicHeatCapacitor` 为避免引入 broad `NBTUtils` 闭包，局部实现 `stored` 与 `heat_capacity` 的 exact `TAG_DOUBLE` 读取；缺失/错误类型忽略、加载不通知、pending heat 保留等语义不变。`HeatAPI` 本身与官方基线字节一致；Fabric access widener 仅镜像官方 access transformer 对 `Biome.getTemperature(BlockPos)` 的 public access，以保留位置修正温度。兼容细节、暂缓边界和验证见 `docs/FABRIC_HEAT.md` 与 `fabric/src/test/java/mekanism/common/capabilities/heat/BasicHeatCapacitorTest.java`。
+`BasicHeatCapacitor` 为避免引入 broad `NBTUtils` 闭包，局部实现 `stored` 与 `heat_capacity` 的 exact `TAG_DOUBLE` 读取；缺失/错误类型忽略、加载不通知、pending heat 保留等语义不变。`HeatAPI` 本身与官方基线字节一致；Fabric access widener 仅镜像官方 access transformer 对 `Biome.getTemperature(BlockPos)` 的 public access，以保留位置修正温度。`IHeatHandler`、`ISidedHeatHandler`、`IMekanismHeatHandler` 与两种 heat holder 类型未作源码修改。兼容细节、暂缓边界和验证见 `docs/FABRIC_HEAT.md` 与对应测试。
 
 ## Relative-side translation contract
 

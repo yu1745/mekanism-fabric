@@ -23,6 +23,9 @@ mekanism/api/functions/ToFloatFunction.java
 mekanism/api/functions/TriConsumer.java
 mekanism/api/heat/HeatAPI.java
 mekanism/api/heat/IHeatCapacitor.java
+mekanism/api/heat/IHeatHandler.java
+mekanism/api/heat/IMekanismHeatHandler.java
+mekanism/api/heat/ISidedHeatHandler.java
 mekanism/api/lasers/ILaserDissipation.java
 mekanism/api/lasers/ILaserReceptor.java
 mekanism/api/math/MathUtils.java

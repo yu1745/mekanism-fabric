@@ -1,4 +1,4 @@
-# Fabric relative-side and energy-holder core
+# Fabric relative-side energy and heat holders
 
 ## Current slice
 
@@ -10,8 +10,10 @@ This milestone adds the platform-neutral side-routing layer used by Mekanism's i
 - `mekanism.common.capabilities.holder.BasicHolder`
 - `mekanism.common.capabilities.holder.energy.IEnergyContainerHolder`
 - `mekanism.common.capabilities.holder.energy.EnergyContainerHolder`
+- `mekanism.common.capabilities.holder.heat.IHeatCapacitorHolder`
+- `mekanism.common.capabilities.holder.heat.HeatCapacitorHolder`
 
-It builds on `IEnergyContainer` and `BasicEnergyContainer` but does not expose energy through a Fabric block/item lookup.
+It builds on the internal energy and heat containers but does not expose either storage family through a Fabric block/item lookup.
 
 ## Relative-side contract
 
@@ -41,20 +43,20 @@ The enum no longer pulls `APILang`, `ILangEntry`, `TextComponentUtil`, or `Mekan
 - duplicate side declarations remain duplicate entries;
 - populated lists remain live mutable lists, while absent mappings return the immutable empty list.
 
-`IHolder`/`IEnergyContainerHolder` retain unrestricted default `canInsert` and `canExtract` behavior. Configurable holders and helpers remain separate.
+`IHolder`/`IEnergyContainerHolder` retain unrestricted default `canInsert` and `canExtract` behavior. `HeatCapacitorHolder` applies the same official routing model without adding energy-style permission methods. Configurable holders and helpers remain separate.
 
 ## Deliberately deferred
 
 This slice excludes:
 
-- `EnergyContainerHelper`;
-- `ConfigHolder` and `ConfigEnergyContainerHolder`;
+- `EnergyContainerHelper` and `HeatCapacitorHelper`;
+- `ConfigHolder`, `ConfigEnergyContainerHolder`, and `ConfigHeatCapacitorHolder`;
 - `ISideConfiguration` and machine component configuration;
 - capability/lookup registration and proxies;
 - Team Reborn Energy API and Fabric transactions;
 - quantum-entangloporter and other specialized holders.
 
-`EnergyContainerHelper` currently couples its non-config and configurable factories. It must be split or admitted with its real side-configuration closure rather than stubbed.
+The energy and heat helpers currently couple their non-config and configurable factories. They must be split or admitted with their real side-configuration closure rather than stubbed.
 
 ## Verification
 
@@ -69,6 +71,9 @@ This slice excludes:
   - internal-only entries after side configuration;
   - identity, duplicate mapping, mutable live-list and immutable empty-list behavior;
   - unrestricted default permissions.
+- `fabric/src/test/java/mekanism/common/capabilities/holder/heat/HeatCapacitorHolderTest.java`
+  - exercises representative horizontal and vertical routing for the official heat-holder specialization;
+  - verifies internal/all-side identity, filtering, live facing, order, duplicates, and list mutability.
 
 Required gates:
 
@@ -79,4 +84,4 @@ Required gates:
 scripts/fabric-packaged-smoke.sh
 ```
 
-The packaged smoke verifies the relative-side translation interface and energy-holder classes are present in the remapped JAR. Directional behavior is exercised in JUnit and does not create synthetic holder state during normal mod bootstrap.
+The packaged smoke verifies the relative-side translation interface plus energy- and heat-holder classes are present in the remapped JAR. Directional behavior is exercised in JUnit and does not create synthetic holder state during normal mod bootstrap.

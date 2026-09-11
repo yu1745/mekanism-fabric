@@ -4,6 +4,8 @@ mekanism/common/capabilities/holder/BasicHolder.java
 mekanism/common/capabilities/holder/IHolder.java
 mekanism/common/capabilities/holder/energy/EnergyContainerHolder.java
 mekanism/common/capabilities/holder/energy/IEnergyContainerHolder.java
+mekanism/common/capabilities/holder/heat/HeatCapacitorHolder.java
+mekanism/common/capabilities/holder/heat/IHeatCapacitorHolder.java
 mekanism/common/capabilities/heat/BasicHeatCapacitor.java
 mekanism/common/config/BaseMekanismConfig.java
 mekanism/common/config/IConfigTranslation.java

@@ -131,6 +131,9 @@ for required_entry in \
     mekanism/api/energy/IEnergyContainer.class \
     mekanism/api/heat/HeatAPI.class \
     mekanism/api/heat/IHeatCapacitor.class \
+    mekanism/api/heat/IHeatHandler.class \
+    mekanism/api/heat/IMekanismHeatHandler.class \
+    mekanism/api/heat/ISidedHeatHandler.class \
     'mekanism/api/text/IHasTranslationKey$IHasEnumNameTranslationKey.class' \
     mekanism/common/capabilities/energy/BasicEnergyContainer.class \
     mekanism/common/capabilities/heat/BasicHeatCapacitor.class \
@@ -138,6 +141,8 @@ for required_entry in \
     mekanism/common/capabilities/holder/IHolder.class \
     mekanism/common/capabilities/holder/energy/EnergyContainerHolder.class \
     mekanism/common/capabilities/holder/energy/IEnergyContainerHolder.class \
+    mekanism/common/capabilities/holder/heat/HeatCapacitorHolder.class \
+    mekanism/common/capabilities/holder/heat/IHeatCapacitorHolder.class \
     mekanism/fabric/MekanismFabricBootstrap.class \
     mekanism/fabric/MekanismFabricClientBootstrap.class \
     mekanism/fabric/network/FabricMekanismNetworking.class \
