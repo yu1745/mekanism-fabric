@@ -440,3 +440,39 @@ Gemini 3.8 Flash 与 GLM 5.3 不再进入默认实现面板；需要其特定能
 - **效率：** DeepSeek 最快且 tokens/调用数最低；SOL 接近；MiniMax 在未进入任何完整门禁前已耗时最长、调用最多。
 - **最终策略：** 采用 DeepSeek 提交 `cc5367ae`。它比 SOL 多 31 additions，但更完整覆盖 packed 坐标/Y 边界，同时运行资源更低；不吸收 MiniMax 内容。
 - **主代理独立验证：** 官方 `ChunkUtils`、`ChunkUtilsTest` 与 15 个 distribution oracle 相对 `4646f509` 均无 diff；slice 35/30/10；107 tests、0 failures/errors/skips，三个 jqwik properties 各 100,000 tries；完整 Gradle gate 18.12s，`fabric-build.sh` 2.27s，packaged smoke 43.55s，clean release 10.20s；一个 JAR、`ChunkUtils` 与六个 distribution entries 各一次、无测试/helper、fixture、NeoForge、jqwik 或 JUnit 类，`build-info.json` source commit 与 `cc5367ae` 一致。
+
+---
+
+## 任务 006：纳入 Java 21 LambdaMetaFactoryUtil
+
+### 任务简述
+
+- **基线：** `4935a7c182c8bb3bda36ab34a01dc0e4583c7520`
+- **目标：** 原样纳入官方 `LambdaMetaFactoryUtil`，固定 Java 21 下空名称直接 `Field` 与非空名称 virtual method 两条绑定路径。
+- **关键验收：** common slice 增至 31；覆盖八种 primitive 与 reference 的装箱/拆箱、null、每实例独立、named method 确实执行并可变换值，以及 lookup/access/invocation failure；最终 JAR 只含 outer、`CallSiteInfo` 和五个私有 primitive setter interface 共七个 class entries；保持 16-file root oracle 不变；不纳入 `SyncMapper`、annotations、tracked data、containers、networking、反射扫描或调用方。
+
+### 5.6 SOL
+
+- **提交：** `5641af258d6da16322323500ec80d6894a18081b`
+- **规模：** 7 files，`+263/-10`；213 行、6 个 tests。
+- **资源：** 562.7s，103.7k tokens，55 次工具调用，约 `$1.73`。
+- **优点：** 用两个紧凑 table 覆盖 direct 与 named 的九种类型；每个 named setter 都执行可观察的值变换并计数，直接证明走的是方法而非字段；同时覆盖双实例、重复读取、reference null，以及 getter/setter 抛出的同一异常对象原样传播；七类 ZIP allowlist、文档和全部门禁完整。
+- **不足：** 单体测试没有固定“方法名存在但签名不匹配”的 `NoSuchMethodException`，也没有断言 primitive named setter 对 null/错误 boxed 类型的自然失败；这两项后来从 DeepSeek 方案提炼补入综合版。
+- **本任务评价：** 单体质量最佳：语义证明更直接，尤其是九条 named 分支的变换与实际 invocation exception identity，同时测试显著更短。
+
+### DeepSeek v4.1 Flash
+
+- **提交：** `77d3beb028974aee2d735cd8e255e5088fa894f0`
+- **规模：** 7 files，`+414/-8`；354 行、9 个 tests。
+- **资源：** 551.3s，100.4k tokens，69 次工具调用；通知未提供成本。
+- **优点：** 本轮墙钟和 tokens 略低；除九种 direct/named 类型外，单独证明 named path 只把未开放的 `Field` 当类型见证、named getter/setter 可与 raw field 相差 100、精确签名 mismatch、primitive null/错误 boxed type，以及 direct/named 多实例不捕获状态；打包和文档边界完整。
+- **不足：** 测试比 SOL 长 141 行（约 66%），同一核心事实拆成较多独立 fixture/assertion；虽然报告概括为异常传播，但实际没有像 SOL 那样让 named accessor 主体抛出 sentinel 并断言异常对象 identity；文档也相对更长。
+- **本任务评价：** 质量第二且提供了有价值的失败边界；额外覆盖适合择要吸收，不值得整体替换更紧凑且 invocation 证据更强的 SOL 版本。
+
+### 本任务结论
+
+- **单体代码质量：** 5.6 SOL > DeepSeek。
+- **执行效率：** DeepSeek 墙钟快 11.4s、tokens 少约 3.3k；SOL 少 14 次工具调用且有已知成本数据，整体接近。
+- **最终策略：** 采用 SOL 提交 `5641af25` 为基底，并在 `86846220` 中吸收 DeepSeek 的精确签名 mismatch 与 primitive null/错误 boxed-type 两组失败断言；保留 SOL 的 transform/counter 与同一异常对象传播设计，不引入其余冗余 fixture。
+- **综合规模：** 相对基线 7 files，`+282/-10`；最终测试 232 行、8 个 tests。
+- **主代理独立验证：** 官方 production source 相对 `4646f509` 保持不变；slice 35/31/10；115 tests、0 failures/errors/skips，三个 jqwik properties 各 100,000 tries/checks；完整 Gradle gate 10.25s，`fabric-build.sh` 3.02s，packaged smoke 45.10s；clean release contract 10.72s，恰好一个 JAR，七个 lambda family classes 精确各一次，无 fixture/NeoForge/JUnit/jqwik 泄漏，`build-info.json` source commit 与最终 HEAD 一致，服务端到达 `Done`。
