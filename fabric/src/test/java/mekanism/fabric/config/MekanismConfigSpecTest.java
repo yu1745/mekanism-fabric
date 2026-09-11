@@ -158,7 +158,10 @@ class MekanismConfigSpecTest {
               + "minimum = -9223372036854775808\n"
               + "maximum = 9223372036854775807\n"
               + "18446744073709551616.key = \"9223372036854775808\"\n"
+              + "dotted = { a = 1, 18446744073709551617 . b = 2 }\n"
               + "quoted = '18446744073709551616'\n"
+              + "literalQuotes = '''a''''\n"
+              + "basicQuotes = \"\"\"a\"\"\"\"\n"
               + "multiline = \"\"\"\n-9223372036854775809\n\"\"\"\n"
               + "# 0x8000000000000000\n";
         Files.writeString(file, harmlessHugeText);
@@ -174,14 +177,17 @@ class MekanismConfigSpecTest {
         assertTrue(exactSaved.contains("minimum = -9223372036854775808"));
         assertTrue(exactSaved.contains("maximum = 9223372036854775807"));
 
-        for (String overflow : new String[]{"9223372036854775808", "-9223372036854775809",
-              "18446744073709551616", "0x8000_0000_0000_0000"}) {
-            String invalid = "above53 = " + overflow + "\n"
+        for (String overflowAssignment : new String[]{"above53 = 9223372036854775808",
+              "above53 = -9223372036854775809", "above53 = 18446744073709551616",
+              "above53 = 0x8000_0000_0000_0000", "note = '''a''''\nabove53 = 18446744073709551617",
+              "note = \"\"\"a\"\"\"\"\nabove53 = 18446744073709551617",
+              "nested = [\n  [18446744073709551616]\n]\nabove53 = 9007199254740995"}) {
+            String invalid = overflowAssignment + "\n"
                   + "negativeAbove53 = -9007199254740995\nminimum = -9223372036854775808\nmaximum = 9223372036854775807\n"
                   + "safe = \"18446744073709551616\" # 9223372036854775808\n";
             Files.writeString(file, invalid);
             MekanismConfigSpec.LoadResult rejected = spec.load(file);
-            assertTrue(rejected.malformed(), () -> "expected malformed overflow: " + overflow);
+            assertTrue(rejected.malformed(), () -> "expected malformed overflow: " + overflowAssignment);
             assertEquals(invalid, Files.readString(temporaryDirectory.resolve("longs.toml.invalid")));
             assertEquals(4, rejected.correctedValues());
             assertEquals(9_007_199_254_740_993L, above53.get());

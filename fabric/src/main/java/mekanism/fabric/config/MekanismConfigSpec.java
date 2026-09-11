@@ -257,7 +257,7 @@ public final class MekanismConfigSpec {
                 continue;
             }
             if ("=[]{},".indexOf(current) >= 0) {
-                if (current == '[' && lineStart) {
+                if (current == '[' && lineStart && previous != '=' && previous != '[' && previous != ',') {
                     tableHeader = true;
                 }
                 previous = current;
@@ -279,7 +279,7 @@ public final class MekanismConfigSpec {
             while (next < source.length() && Character.isWhitespace(source.charAt(next))) {
                 next++;
             }
-            boolean keyToken = next < source.length() && source.charAt(next) == '=';
+            boolean keyToken = next < source.length() && (source.charAt(next) == '=' || source.charAt(next) == '.');
             if (!tableHeader && !keyToken && (previous == '=' || previous == '[' || previous == ',') && isTomlInteger(token)) {
                 BigInteger value = parseTomlInteger(token);
                 if (value.compareTo(BigInteger.valueOf(Long.MIN_VALUE)) < 0
@@ -304,11 +304,17 @@ public final class MekanismConfigSpec {
         while (index < source.length()) {
             if (multiline && index + 2 < source.length() && source.charAt(index) == quote
                   && source.charAt(index + 1) == quote && source.charAt(index + 2) == quote) {
-                return index + 3;
+                int end = index + 3;
+                for (int extra = 0; extra < 2 && end < source.length() && source.charAt(end) == quote; extra++) {
+                    end++;
+                }
+                return end;
             }
             char current = source.charAt(index++);
             if (!multiline && current == quote) {
                 return index;
+            } else if (!multiline && (current == '\n' || current == '\r')) {
+                throw new IllegalArgumentException("Unterminated single-line TOML string");
             }
             if (quote == '"' && current == '\\' && index < source.length()) {
                 index++;
