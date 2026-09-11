@@ -1,11 +1,14 @@
 package mekanism.fabric;
 
+import mekanism.api.heat.HeatAPI;
 import mekanism.common.config.MekanismStartupConfig;
 import mekanism.common.registration.MekanismDeferredHolder;
 import mekanism.common.registries.MekanismGameEvents;
 import mekanism.fabric.config.FabricMekanismConfigManager;
 import mekanism.fabric.network.FabricMekanismNetworking;
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
@@ -33,6 +36,13 @@ public final class MekanismFabricBootstrap implements ModInitializer {
         verifyGameEvent(MekanismGameEvents.GRAVITY_MODULATE, "gravity_modulate", 16);
         verifyGameEvent(MekanismGameEvents.GRAVITY_MODULATE_BOOSTED, "gravity_modulate_boosted", 32);
         LOGGER.info("MEKANISM_FABRIC_REGISTRY_PROOF key=mekanism:seismic_vibration canonical_identity=true entries=4");
+        ServerLifecycleEvents.SERVER_STARTED.register(server -> {
+            double ambient = HeatAPI.getAmbientTemp(server.overworld(), BlockPos.ZERO);
+            if (!Double.isFinite(ambient) || ambient <= 0) {
+                throw new IllegalStateException("Fabric positional ambient-temperature proof failed: " + ambient);
+            }
+            LOGGER.info("MEKANISM_FABRIC_HEAT_PROOF positional=true ambient_finite=true");
+        });
     }
 
     private static void verifyStartupConfig(FabricMekanismConfigManager.Registration registration) {

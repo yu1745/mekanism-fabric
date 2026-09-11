@@ -1,0 +1,5 @@
+accessWidener v2 named
+
+# Mirrors Mekanism's NeoForge access transformer so HeatAPI can retain
+# position-adjusted biome ambient-temperature semantics.
+accessible method net/minecraft/world/level/biome/Biome getTemperature (Lnet/minecraft/core/BlockPos;)F

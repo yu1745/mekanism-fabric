@@ -14,33 +14,33 @@ scripts/scan-platform-deps.py
 
 | 指标 | 数量 |
 |---|---:|
-| `src/**/*.java` | 2,445 |
-| 含 NeoForge import 的文件 | 723 |
-| NeoForge import 出现次数 | 1,480 |
-| 不含 NeoForge import 的文件 | 1,722 |
+| `src/**/*.java` | 2,448 |
+| 含 NeoForge import 的文件 | 709 |
+| NeoForge import 出现次数 | 1,462 |
+| 不含 NeoForge import 的文件 | 1,739 |
 
 分类是按脚本中的有序规则将每条 `net.neoforged` import **唯一归类**，不是工作量估算：
 
 | 类别 | import | 文件 |
 |---|---:|---:|
 | lifecycle | 93 | 54 |
-| registry | 117 | 88 |
-| config | 72 | 43 |
+| registry | 115 | 86 |
+| config | 63 | 36 |
 | network | 84 | 79 |
 | capability + attachments | 105 | 75 |
 | item | 54 | 45 |
-| fluid | 302 | 205 |
+| fluid | 299 | 203 |
 | chemical | 0 | 0 |
 | energy | 6 | 5 |
 | datagen | 106 | 93 |
 | integration | 39 | 15 |
 | events | 192 | 91 |
 | client | 97 | 49 |
-| other | 213 | 160 |
+| other | 209 | 156 |
 
-`chemical = 0` 是有意义的结果：NeoForge 没有 Mekanism chemical 类型；Chemical 是 Mekanism 自有领域模型，其平台边界通过 capability/lookup、物品暴露和网络同步出现。扫描器只统计 import；另有 3 个含全限定 `net.neoforged` 引用而无对应 import 的文件，应在实际改类时检查。注释、字符串、静态 import 和间接 Gradle 依赖不计入。因此 1,722 只能视为“优先原样保留候选”，不能仅凭此数字断言完全无平台耦合。
+`chemical = 0` 是有意义的结果：NeoForge 没有 Mekanism chemical 类型；Chemical 是 Mekanism 自有领域模型，其平台边界通过 capability/lookup、物品暴露和网络同步出现。扫描器只统计 import；另有 3 个含全限定 `net.neoforged` 引用而无对应 import 的文件，应在实际改类时检查。注释、字符串、静态 import 和间接 Gradle 依赖不计入。因此 1,739 只能视为“优先原样保留候选”，不能仅凭此数字断言完全无平台耦合。
 
-高频依赖显示真正的迁移热点：`FluidStack` 167、`DeferredHolder` 66、`IPayloadContext` 57、`ExistingFileHelper` 52、`FluidType` 52、`Tags` 38、`ModelData` 31、`IFluidHandler` 29、`IItemHandler` 28、`IEventBus` 27、`SubscribeEvent` 26、`BlockCapability`/`BlockCapabilityCache`/`ModConfigSpec` 各 25。
+高频依赖显示真正的迁移热点：`FluidStack` 166、`DeferredHolder` 65、`IPayloadContext` 57、`ExistingFileHelper`/`FluidType` 各 52、`Tags` 38、`ModelData` 31、`IFluidHandler`/`IItemHandler` 各 28、`IEventBus` 27、`SubscribeEvent` 26、`BlockCapability`/`BlockCapabilityCache` 各 25、`ModConfigSpec` 21。
 
 ## 保留区与边界原则
 
@@ -85,9 +85,13 @@ scripts/scan-platform-deps.py
 
 官方 `IEnergyContainer` 与 `BasicEnergyContainer` 已作为内部 `long` storage 窄切片纳入，保留 capacity、execute/simulate、automation policy、listener 和 legacy NBT 语义。`RelativeSide` 与非配置 `EnergyContainerHolder` 也已保留全方向映射、动态 facing 和 internal/external visibility。该切片不宣称 Fabric energy interoperability：config holder、Team Reborn Energy API、transaction rollback 和单位换算均仍属 P1 后续边界，详见 `FABRIC_ENERGY.md`、`FABRIC_HOLDERS.md`。
 
+### 当前 heat storage 落点
+
+官方 `HeatAPI`、`IHeatCapacitor` 与 `BasicHeatCapacitor` 已作为内部 `double` storage 窄切片纳入，保留 ambient initialization、batched update、epsilon、listener、capacity adjustment 与 strict-double NBT 语义。Fabric access widener 精确承接官方 access transformer 对位置修正 biome temperature 的访问，不以 base temperature 降级。Heat handler/holder、side exposure、network、machine owner 与 persistence lifecycle 仍属后续 P1 闭包，详见 `FABRIC_HEAT.md`。
+
 ## `other` 桶的处理
 
-213 个 import 尚落在通用桶，主要包括 `common.Tags`、conditions/crafting、`INBTSerializable`、`Lazy`/函数式 helper、permissions、world/biome modifiers 和测试辅助。处理顺序不是批量建 shim：
+209 个 import 尚落在通用桶，主要包括 `common.Tags`、conditions/crafting、`INBTSerializable`、`Lazy`/函数式 helper、permissions、world/biome modifiers 和测试辅助。处理顺序不是批量建 shim：
 
 1. JDK/Mojang 已有等价物（`Supplier`、codec、tag key 等）直接替换并保持调用语义；
 2. recipe condition、permission、world modifier 分别建立小边界并补数据/行为测试；

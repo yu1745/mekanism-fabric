@@ -100,15 +100,26 @@ if ! python3 - "${MOD_JARS[0]}" <<'PYEOF'
 import json, sys, zipfile
 with zipfile.ZipFile(sys.argv[1]) as artifact:
     metadata = json.loads(artifact.read("fabric.mod.json"))
+    access_widener = artifact.read("mekanism.accesswidener").decode().splitlines()
 expected = {
     "main": ["mekanism.fabric.MekanismFabricBootstrap"],
     "client": ["mekanism.fabric.MekanismFabricClientBootstrap"],
 }
-if metadata.get("id") != "mekanism" or metadata.get("entrypoints") != expected:
-    raise SystemExit(f"unexpected Fabric metadata: id={metadata.get('id')!r} entrypoints={metadata.get('entrypoints')!r}")
+if (metadata.get("id") != "mekanism" or metadata.get("entrypoints") != expected
+        or metadata.get("accessWidener") != "mekanism.accesswidener"):
+    raise SystemExit(
+        f"unexpected Fabric metadata: id={metadata.get('id')!r} "
+        f"entrypoints={metadata.get('entrypoints')!r} accessWidener={metadata.get('accessWidener')!r}"
+    )
+expected_access_widener = [
+    "accessWidener\tv2\tintermediary",
+    "accessible\tmethod\tnet/minecraft/class_1959\tmethod_21740\t(Lnet/minecraft/class_2338;)F",
+]
+if access_widener != expected_access_widener:
+    raise SystemExit(f"unexpected remapped access widener: {access_widener!r}")
 PYEOF
 then
-  echo "fabric-packaged-smoke: artifact does not contain the expected Mekanism entrypoints" >&2
+  echo "fabric-packaged-smoke: artifact metadata or access widener does not match the expected Mekanism contract" >&2
   exit 1
 fi
 if jar tf "${MOD_JARS[0]}" | grep -Eq '^net/neoforged/'; then
@@ -118,8 +129,11 @@ fi
 for required_entry in \
     mekanism/api/RelativeSide.class \
     mekanism/api/energy/IEnergyContainer.class \
+    mekanism/api/heat/HeatAPI.class \
+    mekanism/api/heat/IHeatCapacitor.class \
     'mekanism/api/text/IHasTranslationKey$IHasEnumNameTranslationKey.class' \
     mekanism/common/capabilities/energy/BasicEnergyContainer.class \
+    mekanism/common/capabilities/heat/BasicHeatCapacitor.class \
     mekanism/common/capabilities/holder/BasicHolder.class \
     mekanism/common/capabilities/holder/IHolder.class \
     mekanism/common/capabilities/holder/energy/EnergyContainerHolder.class \
@@ -128,6 +142,7 @@ for required_entry in \
     mekanism/fabric/MekanismFabricClientBootstrap.class \
     mekanism/fabric/network/FabricMekanismNetworking.class \
     mekanism/fabric/network/FabricMekanismClientNetworking.class \
+    mekanism.accesswidener \
     "META-INF/jars/core-${NIGHT_CONFIG_VERSION}.jar" \
     "META-INF/jars/toml-${NIGHT_CONFIG_VERSION}.jar" \
     META-INF/licenses/night-config-LGPL-3.0.txt \
@@ -166,6 +181,7 @@ mod_loaded=0
 config_proof=0
 network_proof=0
 registry_proof=0
+heat_proof=0
 done_loaded=0
 crash_pattern='(Exception in thread|A mod crashed on startup|Could not execute entrypoint|Failed to start the minecraft server|---- Minecraft Crash Report ----|NoClassDefFoundError|ClassNotFoundException|[[:space:]]ERROR[[:space:]])'
 while (( SECONDS < deadline )); do
@@ -177,13 +193,14 @@ while (( SECONDS < deadline )); do
     exit 1
   fi
   if grep -Fq 'MEKANISM_FABRIC_REGISTRY_PROOF key=mekanism:seismic_vibration canonical_identity=true entries=4' "$LOG_FILE"; then registry_proof=1; fi
+  if grep -Fq 'MEKANISM_FABRIC_HEAT_PROOF positional=true ambient_finite=true' "$LOG_FILE"; then heat_proof=1; fi
   if grep -Eq 'Done \(' "$LOG_FILE"; then done_loaded=1; fi
   if grep -Eiq "$crash_pattern" "$LOG_FILE"; then
     echo 'fabric-packaged-smoke: crash signature detected' >&2
     grep -Ei "$crash_pattern" "$LOG_FILE" | tail -n 10 >&2 || true
     exit 1
   fi
-  if (( mod_loaded && config_proof && network_proof && registry_proof && done_loaded )); then
+  if (( mod_loaded && config_proof && network_proof && registry_proof && heat_proof && done_loaded )); then
     STARTUP_CONFIG="$SERVER_DIR/config/Mekanism/startup.toml"
     if [[ ! -s "$STARTUP_CONFIG" ]]; then
       echo 'fabric-packaged-smoke: startup config proof logged but startup.toml is missing or empty' >&2
@@ -211,8 +228,8 @@ PYEOF
       exit 1
     fi
     RESULT=0
-    printf 'fabric-packaged-smoke: PASS (mekanism loaded, config/network/registry proofs passed, and server reached Done)\n'
-    grep -E '(^|[[:space:]])- mekanism([[:space:]]|$)|MEKANISM_FABRIC_(CONFIG|NETWORK|REGISTRY)_PROOF|Done \(' "$LOG_FILE" | tail -n 10
+    printf 'fabric-packaged-smoke: PASS (mekanism loaded, config/network/registry/heat proofs passed, and server reached Done)\n'
+    grep -E '(^|[[:space:]])- mekanism([[:space:]]|$)|MEKANISM_FABRIC_(CONFIG|NETWORK|REGISTRY|HEAT)_PROOF|Done \(' "$LOG_FILE" | tail -n 10
     exit 0
   fi
   if ! kill -0 "$SERVER_PID" 2>/dev/null; then
@@ -225,6 +242,6 @@ PYEOF
   sleep 1
 done
 
-echo "fabric-packaged-smoke: timed out after ${TIMEOUT}s (mod_loaded=$mod_loaded config_proof=$config_proof network_proof=$network_proof registry_proof=$registry_proof done=$done_loaded)" >&2
+echo "fabric-packaged-smoke: timed out after ${TIMEOUT}s (mod_loaded=$mod_loaded config_proof=$config_proof network_proof=$network_proof registry_proof=$registry_proof heat_proof=$heat_proof done=$done_loaded)" >&2
 tail -n 80 "$LOG_FILE" >&2
 exit 1

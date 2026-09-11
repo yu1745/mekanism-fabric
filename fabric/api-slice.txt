@@ -21,6 +21,8 @@ mekanism/api/functions/LongObjectToLongFunction.java
 mekanism/api/functions/ShortSupplier.java
 mekanism/api/functions/ToFloatFunction.java
 mekanism/api/functions/TriConsumer.java
+mekanism/api/heat/HeatAPI.java
+mekanism/api/heat/IHeatCapacitor.java
 mekanism/api/lasers/ILaserDissipation.java
 mekanism/api/lasers/ILaserReceptor.java
 mekanism/api/math/MathUtils.java

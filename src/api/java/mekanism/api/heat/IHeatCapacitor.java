@@ -1,12 +1,12 @@
 package mekanism.api.heat;
 
 import mekanism.api.IContentsListener;
+import mekanism.api.INBTSerializable;
 import mekanism.api.SerializationConstants;
 import mekanism.api.annotations.NothingNullByDefault;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.util.Mth;
-import net.neoforged.neoforge.common.util.INBTSerializable;
 
 @NothingNullByDefault
 public interface IHeatCapacitor extends INBTSerializable<CompoundTag>, IContentsListener {
