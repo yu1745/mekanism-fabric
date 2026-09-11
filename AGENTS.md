@@ -59,7 +59,7 @@ scripts/fabric-configuration-rejection-smoke.sh # 错版/同版本显式拒绝/�
 现有测试不得仅因数量或行数增长而消融；只有发现测试本身错误、失效或明确重复且用户另行要求清理时才删除。以下约束只适用于后续新增测试：
 
 - byte-identical 官方闭包已有可执行官方测试时，优先直接纳入精确官方 oracle；Fabric-local 测试只补官方未覆盖的平台差异、关键边界或新层间连接。
-- 每个新闭包默认新增 **3–6 个 Fabric-local tests**，目标不超过 **200 行**；超过 **250 行或 8 个 tests** 前必须逐项说明每个超额测试能独立捕获的 production mutation，并将理由写入模型实现评估。无法证明独有价值的测试不得加入。
+- 每个新闭包默认新增 **3–6 个 Fabric-local tests**；超过 **8 个 tests** 前必须逐项说明每个超额测试能独立捕获的 production mutation，并将理由写入模型实现评估。无法证明独有价值的测试不得加入。测试源码不设行数限制，避免为压缩行数投入额外设计时间或牺牲可读性。
 - 已完整测试的下层负责排列组合；上层 bridge 通常只保留一个 happy path 和一个平台特有边界，不重复下层全部算术、方向或状态矩阵。
 - 精确输出已经蕴含的长度、唯一性、范围等派生断言不重复添加；不为 Mekanism 测试 vanilla/JDK 自身行为。
 - platform adapter、transaction/simulation、序列化兼容、registry freeze、config 原子发布、network handshake/rejection、true-long/overflow、patched-Minecraft 语义替换与打包隔离可按独立风险突破默认目标，但仍须保持最小并记录理由。
