@@ -65,7 +65,7 @@ The three dynamic handler sources are byte-identical to `4646f509`. Insert and e
 
 ## Sequential transfer utilities
 
-The unchanged official long-valued transfer closure is admitted as part of the current API/common/platform slice count 42 / 60 / 10:
+The unchanged official long-valued transfer closure is admitted as part of the current API/common/platform slice count 42 / 66 / 10:
 
 - `mekanism.api.math.LongTransferUtils`
 - `mekanism.api.container.InContainerGetterLong`
