@@ -50,6 +50,7 @@ class CollectionBoundaryTest {
             }
         };
         assertTrue(iterator.hasNext());
+        assertTrue(iterator.hasNext(), "hasNext must not consume the prefetched element");
         assertEquals("v2", iterator.next());
         assertEquals("v4", iterator.next());
         assertFalse(iterator.hasNext());
@@ -64,6 +65,7 @@ class CollectionBoundaryTest {
         assertEquals(List.of("old"), values(map.find(new BlockPos(-32, -5, -16))));
         assertEquals(List.of("old"), values(map.find(new BlockPos(-1, 400, 15))));
         assertTrue(values(map.find(new BlockPos(-33, 0, 0))).isEmpty());
+        assertTrue(values(map.find(new BlockPos(-16, 401, -1))).isEmpty(), "chunk index is X/Z-only but the box filter includes Y");
         assertTrue(values(map.find(new BlockPos(0, 0, 0))).isEmpty());
         assertEquals(List.of("old"), values(map.allCenteredInChunk(-1, -1)));
         assertTrue(values(map.allCenteredInChunk(-2, -1)).isEmpty());
@@ -84,6 +86,7 @@ class CollectionBoundaryTest {
         map.track("survivor", survivor, 0);
         map.remove("value");
         assertTrue(map.removeAt(removeAt));
+        assertFalse(map.removeAt(removeAt));
         map.removeIf("predicate"::equals);
         assertEquals(java.util.Set.of("replacement", "survivor"), java.util.Set.copyOf(map.values()));
         assertTrue(values(map.find(removeByValue)).isEmpty());
