@@ -43,11 +43,27 @@ class DynamicStrictEnergyHandlerTest {
 
     @Test
     void allowedOperationsDelegateOnceWithExactBridgeArguments() {
+        RecordingContainer untouched = new RecordingContainer();
         RecordingContainer container = new RecordingContainer();
         List<Direction> lookups = new ArrayList<>();
         List<Direction> inserts = new ArrayList<>();
         List<Direction> extracts = new ArrayList<>();
-        DynamicStrictEnergyHandler handler = new DynamicStrictEnergyHandler(side -> {
+        DynamicStrictEnergyHandler indexed = new DynamicStrictEnergyHandler(side -> {
+            lookups.add(side);
+            return List.of(untouched, container);
+        }, side -> {
+            extracts.add(side);
+            return side == Direction.SOUTH;
+        }, side -> {
+            inserts.add(side);
+            return side == Direction.NORTH;
+        }, null);
+
+        assertEquals(0, indexed.insertEnergy(1, 11, Direction.NORTH, Action.SIMULATE));
+        assertEquals(7, indexed.extractEnergy(1, 7, Direction.SOUTH, Action.EXECUTE));
+        assertEquals(List.of(), untouched.calls);
+
+        DynamicStrictEnergyHandler aggregate = new DynamicStrictEnergyHandler(side -> {
             lookups.add(side);
             return List.of(container);
         }, side -> {
@@ -57,11 +73,8 @@ class DynamicStrictEnergyHandlerTest {
             inserts.add(side);
             return side == Direction.NORTH;
         }, null);
-
-        assertEquals(0, handler.insertEnergy(0, 11, Direction.NORTH, Action.SIMULATE));
-        assertEquals(7, handler.extractEnergy(0, 7, Direction.SOUTH, Action.EXECUTE));
-        assertEquals(0, handler.insertEnergy(13, Direction.NORTH, Action.EXECUTE));
-        assertEquals(5, handler.extractEnergy(5, Direction.SOUTH, Action.SIMULATE));
+        assertEquals(0, aggregate.insertEnergy(13, Direction.NORTH, Action.EXECUTE));
+        assertEquals(5, aggregate.extractEnergy(5, Direction.SOUTH, Action.SIMULATE));
         assertEquals(List.of(Direction.NORTH, Direction.SOUTH, Direction.NORTH, Direction.SOUTH), lookups);
         assertEquals(List.of(Direction.NORTH, Direction.NORTH), inserts);
         assertEquals(List.of(Direction.SOUTH, Direction.SOUTH), extracts);
