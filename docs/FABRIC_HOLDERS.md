@@ -13,7 +13,7 @@ This milestone adds the platform-neutral side-routing layer used by Mekanism's i
 - `mekanism.common.capabilities.holder.heat.IHeatCapacitorHolder`
 - `mekanism.common.capabilities.holder.heat.HeatCapacitorHolder`
 
-It builds on the internal energy and heat containers. Task 023 adds a side-bound Team Reborn Energy adapter/factory seam, but no block/item/entity provider is registered by this slice. The current audited source counts are API **47** / common **92** / platform **14**.
+It builds on the internal energy and heat containers. Task 023 adds a side-bound Team Reborn Energy adapter/factory seam, but no block/item/entity provider is registered by this slice. The current audited source counts are API **47** / common **96** / platform **14**.
 
 ## Relative-side contract
 

@@ -3,6 +3,10 @@ mekanism/common/base/holiday/KnownDate.java
 mekanism/common/base/holiday/MonthlyDate.java
 mekanism/common/base/holiday/YearlyDate.java
 mekanism/common/base/holiday/HolidayMessage.java
+mekanism/common/block/states/IStateStorage.java
+mekanism/common/block/states/IFluidLogType.java
+mekanism/common/block/states/FluidLogType.java
+mekanism/common/block/states/TransmitterType.java
 mekanism/common/capabilities/SimpleDynamicHandler.java
 mekanism/common/capabilities/DynamicHandler.java
 mekanism/common/capabilities/energy/BasicEnergyContainer.java

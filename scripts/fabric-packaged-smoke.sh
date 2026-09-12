@@ -163,6 +163,20 @@ actual_holiday_values = {
 if (actual_holiday_values != expected_holiday_values
         or any(entries.count(entry) != 1 for entry in expected_holiday_values)):
     raise SystemExit(f"unexpected holiday value class family: {sorted(actual_holiday_values)!r}")
+expected_block_state_descriptors = {
+    "mekanism/common/block/states/IStateStorage.class",
+    "mekanism/common/block/states/IFluidLogType.class",
+    "mekanism/common/block/states/FluidLogType.class",
+    "mekanism/common/block/states/TransmitterType.class",
+    "mekanism/common/block/states/TransmitterType$Size.class",
+}
+actual_block_state_descriptors = {
+    entry for entry in entries
+    if entry.startswith("mekanism/common/block/states/") and entry.endswith(".class")
+}
+if (actual_block_state_descriptors != expected_block_state_descriptors
+        or any(entries.count(entry) != 1 for entry in expected_block_state_descriptors)):
+    raise SystemExit(f"unexpected block-state descriptor class family: {sorted(actual_block_state_descriptors)!r}")
 expected_tile_interfaces = {
     "mekanism/common/tile/interfaces/IHasDumpButton.class",
     "mekanism/common/tile/interfaces/IHasGasMode.class",
@@ -533,7 +547,7 @@ if actual_fabric_energy != expected_fabric_energy or any(entries.count(entry) !=
     raise SystemExit(f"unexpected Fabric energy adapter class family: {sorted(actual_fabric_energy)!r}")
 PYEOF
 then
-  echo "fabric-packaged-smoke: tile-interface/slot-info/tier/resource/codec/collection/distribution/ChunkUtils/RegistryUtils/LambdaMetaFactoryUtil/long-transfer/dynamic-strict-energy/proxy/config-listener/common-lib-root production/test packaging contract failed" >&2
+  echo "fabric-packaged-smoke: block-state-descriptor/tile-interface/slot-info/tier/resource/codec/collection/distribution/ChunkUtils/RegistryUtils/LambdaMetaFactoryUtil/long-transfer/dynamic-strict-energy/proxy/config-listener/common-lib-root production/test packaging contract failed" >&2
   exit 1
 fi
 for required_entry in \
