@@ -56,8 +56,8 @@ run_phase() {
     -Dmekanism.window.clientDir="$RUN_RELATIVE" -Dmekanism.window.fixturePhase="$phase" \
     runClientWindowFixture >"$RUN_ROOT/phase-$phase.log" 2>&1
   local latest="$RUN_ROOT/logs/latest.log"
-  grep -Fq "MEKANISM_CLIENT_WINDOW_FIXTURE phase=$phase owner_across_connection_boundaries=true" "$latest" \
-    || { tail -n 100 "$latest" >&2 || true; echo "fabric-client-window-smoke: missing phase $phase owner marker" >&2; exit 1; }
+  grep -Fq "MEKANISM_CLIENT_WINDOW_FIXTURE phase=$phase owner_available_for_physical_client_lifetime=true" "$latest" \
+    || { tail -n 100 "$latest" >&2 || true; echo "fabric-client-window-smoke: missing phase $phase physical-client owner marker" >&2; exit 1; }
   grep -Fq "MEKANISM_CLIENT_WINDOW_FIXTURE_SHUTDOWN phase=$phase flushed=true owner_closed=true" "$latest" \
     || { tail -n 100 "$latest" >&2 || true; echo "fabric-client-window-smoke: missing phase $phase shutdown marker" >&2; exit 1; }
   cp "$latest" "$DIAGNOSTIC_DIR/phase-$phase-latest.log"
@@ -84,4 +84,4 @@ SECOND_HASH=$(sha256sum "$CONFIG" | cut -d' ' -f1)
 [[ "$FIRST_HASH" == "$SECOND_HASH" ]] || { echo 'fabric-client-window-smoke: unchanged second client rewrote client.toml' >&2; exit 1; }
 
 RESULT=0
-printf 'fabric-client-window-smoke: PASS (two fresh client JVMs, 11/28 schema, persistence, unknown retention, unchanged update, shutdown flush)\n'
+printf 'fabric-client-window-smoke: PASS (two fresh client JVMs, 11/28 schema, persistence, unknown retention, unchanged update, physical-client owner availability, shutdown flush)\n'

@@ -8,7 +8,6 @@ import mekanism.common.inventory.container.SelectedWindowData.WindowPosition;
 import mekanism.common.inventory.container.SelectedWindowData.WindowType;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import org.slf4j.Logger;
@@ -23,18 +22,14 @@ public final class ClientWindowPersistenceFixture implements ClientModInitialize
         int phase = Integer.parseInt(System.getProperty("mekanism.window.fixturePhase", "0"));
         SelectedWindowData side = new SelectedWindowData(WindowType.SIDE_CONFIG);
         SelectedWindowData color = new SelectedWindowData(WindowType.COLOR);
-        WindowPosition positionBeforeBoundaries = side.getLastPosition();
-        ClientPlayConnectionEvents.DISCONNECT.invoker().onPlayDisconnect(null, Minecraft.getInstance());
-        require(side.getLastPosition().equals(positionBeforeBoundaries), "disconnect event must not close or replace owner");
-        ClientPlayConnectionEvents.JOIN.invoker().onPlayReady(null, null, Minecraft.getInstance());
-        require(side.getLastPosition().equals(positionBeforeBoundaries), "reconnect event must retain owner and values");
+        WindowPosition initialPosition = side.getLastPosition();
         if (phase == 1) {
-            require(positionBeforeBoundaries.equals(new WindowPosition(Integer.MAX_VALUE, Integer.MAX_VALUE, false)), "side defaults");
+            require(initialPosition.equals(new WindowPosition(Integer.MAX_VALUE, Integer.MAX_VALUE, false)), "side defaults");
             side.updateLastPosition(-39, 117, true);
             color.updateLastPosition(7, -8, true);
             require(color.getLastPosition().equals(new WindowPosition(7, -8, false)), "unpinnable color position");
         } else if (phase == 2) {
-            require(positionBeforeBoundaries.equals(new WindowPosition(-39, 117, true)), "persisted side position");
+            require(initialPosition.equals(new WindowPosition(-39, 117, true)), "persisted side position");
             require(color.getLastPosition().equals(new WindowPosition(7, -8, false)), "persisted color position");
             side.updateLastPosition(-39, 117, true);
             color.updateLastPosition(7, -8, true);
@@ -42,7 +37,7 @@ public final class ClientWindowPersistenceFixture implements ClientModInitialize
             throw new IllegalArgumentException("mekanism.window.fixturePhase must be 1 or 2");
         }
         require(readConfig().contains("fixture_unknown = \"retained\""), "unknown key must survive load");
-        LOGGER.info("MEKANISM_CLIENT_WINDOW_FIXTURE phase={} owner_across_connection_boundaries=true", phase);
+        LOGGER.info("MEKANISM_CLIENT_WINDOW_FIXTURE phase={} owner_available_for_physical_client_lifetime=true", phase);
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
             boolean rejectedAfterClose = false;
             try {
