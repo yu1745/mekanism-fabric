@@ -303,6 +303,12 @@ Task 033 因当时 `FluidStack` 尚未纳入而把唯一 shared-helper call 暂�
 
 `IMekanismInventory` 的 invalid-index defaults、`AutomationType.handler(side)`、side routing、live lists 和 `hasInventory` implementation contract 未改变。行为与 package gates 见 `FABRIC_ITEM.md`、`InventoryApiHolderTest` 和 `FabricItemStorageTest`。
 
+## Client window and concrete slot contracts (Task 039)
+
+状态：Task 039 后 API/common/platform slice 为 **65/145/24**。`SelectedWindowData` 的 public constructors、fields、records、enum order、codec、equals/hash 与 methods 保持官方 surface；内部 owner 从完整 `MekanismConfig.client` 改为不含 Fabric/client import 的 `ClientWindowConfigAccess`。crafting window 上限以经审计的 `(byte) 3` 编译常量替代未纳入 QIO holder，resource IDs 改用 vanilla `ResourceLocation.fromNamespaceAndPath("mekanism", ...)`。适用窗口 pre-init/post-close/wrong-thread 现在明确失败，而 `UNSPECIFIED` 继续返回 default 且不访问配置；这是 Fabric physical-client owner 的显式生命周期 contract，不提供隐式 fallback。
+
+Basic/Input/Output slot 的 public surface 与 domain behavior 不变；仅把 private non-escaping `ConstantPredicates` 调用换成 exact lambda。Armor/Offhand 不依赖 NeoForge-injected slot background extension，改由 vanilla `getNoItemIcon()` 返回相同 atlas/texture pair。Armor placement 使用 owning player 的 vanilla `getEquipmentSlotForItem(stack) == slotType`；因此 vanilla/Fabric equipment slot 保持，但 arbitrary NeoForge item `canEquip` hook override 不具 parity，也不提供 facade。完整 owner、路径、事务/测试与延期见 `FABRIC_CONFIG.md`、`FABRIC_ITEM.md`。
+
 ## Container callback contract admission
 
 状态：当前 API/common/platform allowlist 为 **47/99/14**。`ContainerInteraction`、`InContainerGetter`、`IntContainerInteraction` 与 `LongContainerInteraction` 原样加入，均与官方 oracle `4646f509` byte-identical；连同既有 `InContainerGetterLong`、`LongToLongContainerInteraction`，这六个 functional interfaces 的 FQN、泛型、nullable side、signed amount、`Action` 与 return contracts 都没有 API delta。一个 Fabric-local 同包测试类中的恰好四个 methods 只固定 identity/raw-argument forwarding；发布物 exact-package gate 拒绝其它 direct/nested/synthetic/test/helper/fixture class，不使用 startup marker。

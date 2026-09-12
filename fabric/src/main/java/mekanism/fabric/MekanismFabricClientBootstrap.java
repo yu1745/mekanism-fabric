@@ -1,5 +1,6 @@
 package mekanism.fabric;
 
+import mekanism.fabric.config.FabricClientConfigLifecycle;
 import mekanism.fabric.network.FabricMekanismClientNetworking;
 import mekanism.fabric.network.MekanismNetworkProtocol;
 import net.fabricmc.api.ClientModInitializer;
@@ -12,6 +13,7 @@ public final class MekanismFabricClientBootstrap implements ClientModInitializer
 
     @Override
     public void onInitializeClient() {
+        FabricClientConfigLifecycle.initialize();
         FabricMekanismClientNetworking.initialize();
         LOGGER.info("MEKANISM_FABRIC_NETWORK_CLIENT_PROOF protocol={} receiver=true", MekanismNetworkProtocol.CURRENT);
     }

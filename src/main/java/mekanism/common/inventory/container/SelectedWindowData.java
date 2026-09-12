@@ -6,16 +6,15 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.IntFunction;
-import mekanism.common.Mekanism;
+import mekanism.common.config.ClientWindowConfigAccess;
 import mekanism.common.config.IConfigTranslation;
-import mekanism.common.config.MekanismConfig;
 import mekanism.common.config.value.CachedBooleanValue;
 import mekanism.common.config.value.CachedIntValue;
-import mekanism.common.content.qio.IQIOCraftingWindowHolder;
 import mekanism.common.util.text.TextUtils;
 import net.minecraft.Util;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.ByIdMap;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -62,28 +61,7 @@ public class SelectedWindowData {
     public void updateLastPosition(int x, int y, boolean pinned) {
         String saveName = type.getSaveName(extraData);
         if (saveName != null) {
-            CachedWindowPosition cachedPosition = MekanismConfig.client.lastWindowPositions.get(saveName);
-            if (cachedPosition != null) {
-                boolean changed = false;
-                CachedIntValue cachedX = cachedPosition.x();
-                if (cachedX.get() != x) {
-                    cachedX.set(x);
-                    changed = true;
-                }
-                CachedIntValue cachedY = cachedPosition.y();
-                if (cachedY.get() != y) {
-                    cachedY.set(y);
-                    changed = true;
-                }
-                CachedBooleanValue cachedPinned = cachedPosition.pinned;
-                if (cachedPinned != null && cachedPinned.get() != pinned) {
-                    cachedPinned.set(pinned);
-                    changed = true;
-                }
-                if (changed) {
-                    MekanismConfig.client.save();
-                }
-            }
+            ClientWindowConfigAccess.update(saveName, x, y, pinned, type.canPin());
         }
     }
 
@@ -97,10 +75,8 @@ public class SelectedWindowData {
     public WindowPosition getLastPosition() {
         String saveName = type.getSaveName(extraData);
         if (saveName != null) {
-            CachedWindowPosition cachedPosition = MekanismConfig.client.lastWindowPositions.get(saveName);
-            if (cachedPosition != null) {
-                return new WindowPosition(cachedPosition.x().get(), cachedPosition.y().get(), cachedPosition.pinned() != null && cachedPosition.pinned().get());
-            }
+            ClientWindowConfigAccess.Position position = ClientWindowConfigAccess.get(saveName);
+            return new WindowPosition(position.x(), position.y(), position.pinned());
         }
         return new WindowPosition(Integer.MAX_VALUE, Integer.MAX_VALUE, false);
     }
@@ -114,7 +90,7 @@ public class SelectedWindowData {
     public enum WindowType {
         COLOR("color", false),
         CONFIRMATION("confirmation", false),
-        CRAFTING("crafting", true, IQIOCraftingWindowHolder.MAX_CRAFTING_WINDOWS),
+        CRAFTING("crafting", true, (byte) 3),
         MEKA_SUIT_HELMET("mekasuit_helmet", false),
         RENAME("rename", false),
         SKIN_SELECT("skin_select", false),
@@ -185,7 +161,7 @@ public class SelectedWindowData {
                     tooltip += ", and whether it was pinned";
                 }
                 return new ConfigSaveData(savePath, title, tooltip + ".", "Edit " + saveName + " Position",
-                      Util.makeDescriptionId("configuration", Mekanism.rl("client.last_window_positions." + savePath))
+                      Util.makeDescriptionId("configuration", ResourceLocation.fromNamespaceAndPath("mekanism", "client.last_window_positions." + savePath))
                 );
             }
         }

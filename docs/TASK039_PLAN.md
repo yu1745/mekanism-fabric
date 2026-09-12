@@ -1,6 +1,6 @@
 # Task 039 plan — client window configuration and concrete inventory slots
 
-Status: **candidate implemented; mandatory review pending**
+Status: **corrective candidate in progress; pending focused rereview**
 
 ## Candidate checkpoint
 
@@ -8,13 +8,13 @@ SOL5.6 high produced isolated commit `c591ad4df395c33874f32b0a0203c9e3b4adbfad` 
 
 This report is not acceptance. Parent source inspection before review identified three explicit questions for adversarial verification: whether a queued save can snapshot x/y/pin between individual config-value updates because the save worker does not acquire the update admission monitor; whether the existing atomic-move fallback weakens the promised failed-write contract; and whether manually invoking Fabric JOIN/DISCONNECT invokers with null handlers is adequate evidence for the documented real connection-lifetime claim. The fixture also did not exercise Armor/Offhand with the planned real connected player. Integration remains forbidden until an independent high-risk review resolves these and the full source/artifact boundary.
 
-GLM 5.3 high independently reviewed the exact candidate in run `099d5295-f34c-41b` (1286.0s, 211.3k tokens, 111 tool calls, about `$2.34`) and returned **ACCEPT WITH FIXES**. It reproduced full `check` at **75/353**, slices **65/145/24**, static packaged families/resources/leakage, and verified the28-source oracle deltas. Its executable stress probe observed 72 transient torn x/y disk snapshots in85,615 saves, but proved this race already exists in the official asynchronous per-field update and converges through the FIFO update-owned save; production code need not diverge from the oracle. Required repair is to document that bounded race and re-qualify the pre-existing ATOMIC_MOVE→REPLACE_EXISTING fallback. Parent additionally promotes the reviewer’s optional fixture cleanup: do not invoke Fabric JOIN/DISCONNECT callbacks with null network handlers or label them as real reconnect evidence; the current owner’s connection independence is structural, while an actual same-process reconnect remains unproved. Armor/Offhand hook equivalence was source/bytecode reviewed and its absent real-player test remains an explicit evidence boundary, not a runtime claim.
+GLM 5.3 high independently reviewed the exact candidate in run `099d5295-f34c-41b` (1286.0s, 211.3k tokens, 111 tool calls, about `$2.34`) and returned **ACCEPT WITH FIXES**. It reproduced full `check` at **75/353**, slices **65/145/24**, static packaged families/resources/leakage, and verified the 28-source oracle deltas. Its executable stress probe observed 72 transient torn x/y disk snapshots in 85,615 saves, but proved this race already exists in the official asynchronous per-field update and converges through the FIFO update-owned save; production code need not diverge from the oracle. Required repair is to document that bounded race and re-qualify the pre-existing ATOMIC_MOVE→REPLACE_EXISTING fallback. Parent additionally promotes the reviewer’s optional fixture cleanup: do not invoke Fabric JOIN/DISCONNECT callbacks with null network handlers or label them as real reconnect evidence; the current owner’s connection independence is structural, while an actual same-process reconnect remains unproved. Armor/Offhand hook equivalence was source/bytecode reviewed and its absent real-player test remains an explicit evidence boundary, not a runtime claim.
 
-The corrective candidate must preserve all production code, add the two config-contract qualifications, remove the synthetic null connection-event calls/overclaim from the isolated fixture and smoke markers, and rerun the client-window/static/local gates before focused rereview.
+The corrective candidate preserves all production code while adding the two config-contract qualifications and removing the synthetic null connection-event calls and associated runtime overclaim from the isolated fixture, smoke markers, and docs. Its focused and reconstruction gates must be recorded only after they run; focused rereview remains required.
 
 ## Baseline and reason
 
-- Candidate baseline: clean `java-port` commit `970d67c0`.
+- Candidate baseline: clean `java-port` commit `2921ee0ff184126e6154fce94f460831b1e03668` (the committed approved-plan revision).
 - Official source oracle: `4646f509`.
 - Starting slices: API/common/platform **65/122/22**; tests **72 suites / 334 tests**.
 - User direction in `AGENTS.md`: use complete 15–40+ dependency/owner verticals rather than repeatedly stopping at small prerequisite batches.
@@ -120,6 +120,10 @@ Expected totals: ordinary **70/336**, transfer **3/15**, registry-root **1/1**, 
 Add an isolated client-window fixture and real `scripts/fabric-client-window-smoke.sh`: two sequential fresh client JVMs share one disposable config directory; the first loads seeded unknown sections, performs real bootstrap/SelectedWindowData changes and flushes; the second verifies persisted values, unknown retention and unchanged-update behavior. Also prove owner survives disconnect/reconnect and closes on physical-client shutdown. Fixture code/resources must remain outside the production artifact.
 
 Static gates must enforce exact source/class/resource families, full generated language-resource identity, no fixture/test/NeoForge/QIO/Chemical leakage, unchanged common/client entrypoint separation, and no client-owner linkage from the common bootstrap. Candidate runs focused/full local tests, slice/fixture/static gates, build, client-window smoke and existing paired/rejection networking regressions because the client bootstrap changes. Candidate does not run clean release. Parent reruns accepted gates, packaged dedicated-server smoke and final clean release.
+
+## Candidate verification note
+
+The sole SOL5.6 candidate implements the full 28-production-source vertical without widening into QIO/Chemical/full ClientConfig. Local candidate gates passed: focused 6+6 ordinary and 6+5 transfer tests; slice counts **65/145/24**; full `check` totals ordinary/transfer/root/data-map/aggregate **70/336**, **3/15**, **1/1**, **1/1**, **75/353**; fixture isolation; normal Fabric build; static remapped-JAR exact family/resource/leakage gates; two-fresh-JVM client-window smoke; paired matching-network smoke; and mismatch/same-version-reject/missing-receiver regression smoke. This note records candidate evidence only and does not claim parent acceptance, dedicated packaged-server rerun, clean release, deployment, or completion of deferred owners.
 
 ## Mandatory review and deferrals
 

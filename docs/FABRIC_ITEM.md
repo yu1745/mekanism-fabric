@@ -2,7 +2,7 @@
 
 ## Task 033 scope
 
-Task 033 is the first deliberate P1 item owner/platform gateway. It landed at API **56** / common **122** / platform **16**. Task 034 left all seven item production sources unchanged; Task 035 admits the shared serialization owner and restores `IInventorySlot` delegation. Task 036 adds only the oracle-identical `IHashedItem` text-dispatch interface (not a concrete implementation), bringing current global slices to **64/122/17**. Task 033 production scope remains exactly seven sources:
+Task 033 is the first deliberate P1 item owner/platform gateway. It landed at API **56** / common **122** / platform **16**. Task 034 left all seven item production sources unchanged; Task 035 admits the shared serialization owner and restores `IInventorySlot` delegation. Task 036 adds only the oracle-identical `IHashedItem` text-dispatch interface (not a concrete implementation), bringing the slices at that landing point to **64/122/17**. Task 033 production scope remains exactly seven sources:
 
 - adapted API contracts:
   - `mekanism.api.inventory.IInventorySlot`
@@ -72,7 +72,7 @@ Mekanism listeners, dirty marks, saves or synchronization triggered immediately 
 
 ## Verification boundary
 
-Exactly two Fabric-local classes contain exactly eight meaningful JUnit methods:
+Task 033 originally used exactly two Fabric-local classes/eight methods; Task 039 retains those methods and adds the concrete-slot evidence described below:
 
 - `InventoryApiHolderTest` (four): oversized component-bearing NBT and empty failure; slot defaults/caller immutability/limits/signed grow-shrink; unsided/sided routing, boolean simulation mapping, invalid indexes and automation; holder facing, null-vs-physical policy and live list identity.
 - `FabricItemStorageTest` (four): exact `ItemVariant` components, blank/zero/capacity and invalid exposure; stable ordered views plus multi-slot true-long transfer; nested commit/outer abort, mismatch/full-copy restore, observable notifications and all-attempt restore failure; live policy, explicit invalidation and topology drift before/during execution.
@@ -87,19 +87,19 @@ The remapped-JAR static gate requires exactly four direct inventory API interfac
 
 The direct inventory API check does not consume or forbid already-admitted subpackages. Every unexpected item-boundary nested/synthetic/test/helper/fixture class is rejected. Task 035 additionally requires the exact `SerializerHelper.class`, `$1`, `$2`, and `$3` family once each, keeps `IInventorySlot.class` once, and rejects `MekanismAPI.class`, platform leakage, or a serialization startup reference/marker. Task 036 requires `IHashedItem.class` once and explicitly rejects `mekanism.common.lib.inventory.HashedItem*`; the anonymous test implementation is test-only. There is no item startup/provider proof.
 
-## Task 039 planning checkpoint
+## Task 039 concrete-slot vertical
 
-After Task 038, source review at clean commit `a04faa22` established that the first concrete item-slot path no longer needs a public partial `ConstantPredicates`. All uses in `BasicInventorySlot`, `InputInventorySlot`, and `OutputInventorySlot` are private and non-escaping and can be replaced exactly by stateless predicates preserving null behavior: always true, automation not external, and automation internal only. The now-admitted text/color helpers also make the complete `WarningTracker`/`ISupportsWarning` branch bounded; `InventoryContainerSlot` and `IInsertableSlot` do not intrinsically require a machine menu implementation or QIO owner.
+Task 039 已将 23 个 common source 与 5 个 Fabric source 接入 **65/145/24** slice。`BasicInventorySlot`、`InputInventorySlot`、`OutputInventorySlot` 保留完整官方方法；唯一 predicate delta 是把 private、non-escaping `ConstantPredicates` 调用展开为相同 stateless lambda：always true、`automation != EXTERNAL` 与 `automation == INTERNAL`，包含 null comparison behavior。没有加入 partial `ConstantPredicates`、TriPredicate 或 Chemical。
 
-The remaining direct dependency is `SelectedWindowData`, whose official public surface includes ten window types, three crafting-window IDs, stream encoding, and persisted client positions. Its 11 save records contain 28 scalar fields under `window.*` (x/y for every record and pinned for the six pinnable records), not merely four values. A concrete-slot batch must therefore include one real physical-client `client.toml` owner and preserve the official path/default/update/save behavior; it may not substitute fallback positions or a test-only owner.
+`InventoryContainerSlot`、`IInsertableSlot`、Main/HotBar/Armor/Offhand、virtual slot/window linkage、完整 warning tracker 与 `InventorySlotInfo` 现在构成真实 concrete menu-slot closure。Armor 的 placement 使用 owning vanilla player 的 `getEquipmentSlotForItem`，Armor/Offhand 的 `getNoItemIcon()` 返回官方同一 `InventoryMenu.BLOCK_ATLAS` + empty texture pair；Fabric 不声称 NeoForge arbitrary item `canEquip` hook parity。其余 public constructor/method/field、manual insertion/removal、unchecked client sync、warning order/dedup 与 virtual linkage 保留官方行为。
 
-Per the user-directed large-batch policy recorded in `AGENTS.md`, Task 039 is approved for one 28-production-Java-file client-config → `SelectedWindowData` → Basic/Input/Output slot → container/warning candidate; its exact scope, lifecycle and gates are recorded in [`TASK039_PLAN.md`](TASK039_PLAN.md). A larger full dependency closure is preferred when it avoids truncated public behavior. This checkpoint is planning evidence, not a claim that these classes are already admitted; current shipped item behavior remains Task 033's gateway.
+`ConcreteInventorySlotTest` 恰好六个 Knot methods；`FabricItemStorageTest` 增至五个 methods，新方法把 real Basic/Input/Output slot 经既有 holder/exposure/transaction commit 与 rollback 连接。transfer 总数现为 **3 suites/15 tests**。静态 artifact gate 精确限制 concrete/container/warning/window/slot-info families 并拒绝 QIO/Chemical/fixture/test leakage。`SelectedWindowData` 与 window owner 细节见 [`FABRIC_CONFIG.md`](FABRIC_CONFIG.md)。
 
 ## Deliberately deferred
 
 The following remain outside Task 033:
 
-- every concrete Mekanism inventory slot and `IInsertableSlot` implementation;
+- concrete slots beyond the admitted Basic/Input/Output and player/container/virtual closure;
 - external Fabric-to-Mekanism reverse lookup/adapter;
 - actual `ItemStorage.SIDED` provider registration, owner cache and invalidation wiring;
 - side configuration, ejector, configurable holder/helper and proxy slot descriptors;
