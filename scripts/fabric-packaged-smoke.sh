@@ -296,6 +296,11 @@ expected_config_values = {
     "mekanism/common/config/value/CachedFloatValue.class",
     "mekanism/common/config/value/CachedIntValue.class",
     "mekanism/common/config/value/CachedLongValue.class",
+    "mekanism/common/config/value/CachedResolvableConfigValue.class",
+    "mekanism/common/config/value/CachedConfigValue.class",
+    "mekanism/common/config/value/CachedMapConfigValue.class",
+    "mekanism/common/config/value/CachedMapConfigValue$ValueEncoder.class",
+    "mekanism/common/config/value/CachedOredictionificatorConfigValue.class",
 }
 actual_config_values = {
     entry for entry in entries

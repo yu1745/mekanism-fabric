@@ -8,8 +8,8 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import mekanism.common.config.IMekanismConfig;
 import net.minecraft.resources.ResourceLocation;
-import net.neoforged.neoforge.common.ModConfigSpec;
-import net.neoforged.neoforge.common.ModConfigSpec.ConfigValue;
+import mekanism.fabric.config.MekanismConfigSpec;
+import mekanism.fabric.config.MekanismConfigSpec.ConfigValue;
 
 public class CachedOredictionificatorConfigValue extends CachedMapConfigValue<String, List<String>> {
 
@@ -17,7 +17,7 @@ public class CachedOredictionificatorConfigValue extends CachedMapConfigValue<St
         super(config, internal);
     }
 
-    public static CachedOredictionificatorConfigValue define(IMekanismConfig config, ModConfigSpec.Builder builder, String path,
+    public static CachedOredictionificatorConfigValue define(IMekanismConfig config, MekanismConfigSpec.Builder builder, String path,
           Supplier<Map<String, List<String>>> defaults) {
         return new CachedOredictionificatorConfigValue(config, builder.defineListAllowEmpty(path,
               () -> encodeStatic(defaults.get(), CachedOredictionificatorConfigValue::encodeStatic),

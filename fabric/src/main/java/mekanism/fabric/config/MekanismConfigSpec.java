@@ -28,6 +28,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -493,6 +495,21 @@ public final class MekanismConfigSpec {
             return define(name, defaultValue, Builder::normalizeBoolean);
         }
 
+        /**
+         * Defines the immutable list schema needed by admitted common config values. The new-element supplier is
+         * null-checked for source compatibility, but is intentionally not invoked because this spec has no UI/editor.
+         */
+        public <T> ConfigValue<List<? extends T>> defineListAllowEmpty(String name,
+              Supplier<List<? extends T>> defaultSupplier, Supplier<T> newElementSupplier, Predicate<Object> elementValidator) {
+            ensureMutable();
+            Objects.requireNonNull(defaultSupplier, "defaultSupplier");
+            Objects.requireNonNull(newElementSupplier, "newElementSupplier");
+            Objects.requireNonNull(elementValidator, "elementValidator");
+            List<? extends T> defaultValue = Builder.<T>normalizeList(defaultSupplier.get(), elementValidator)
+                  .orElseThrow(() -> new IllegalArgumentException("Invalid list default for " + name));
+            return define(name, defaultValue, raw -> normalizeList(raw, elementValidator));
+        }
+
         public ConfigValue<Byte> defineInRange(String name, byte defaultValue, byte minimum, byte maximum) {
             if (minimum > maximum || defaultValue < minimum || defaultValue > maximum) {
                 throw new IllegalArgumentException("Invalid byte range/default for " + name);
@@ -592,6 +609,22 @@ public final class MekanismConfigSpec {
 
         private static Optional<Boolean> normalizeBoolean(Object raw) {
             return raw instanceof Boolean value ? Optional.of(value) : Optional.empty();
+        }
+
+        private static <T> Optional<List<? extends T>> normalizeList(Object raw, Predicate<Object> elementValidator) {
+            if (!(raw instanceof List<?> values)) {
+                return Optional.empty();
+            }
+            List<T> normalized = new ArrayList<>(values.size());
+            for (Object element : values) {
+                if (element == null || !elementValidator.test(element)) {
+                    return Optional.empty();
+                }
+                @SuppressWarnings("unchecked")
+                T typedElement = (T) element;
+                normalized.add(typedElement);
+            }
+            return Optional.of(List.copyOf(normalized));
         }
 
         private static Optional<Byte> normalizeByte(Object raw, byte minimum, byte maximum) {

@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import mekanism.common.config.IMekanismConfig;
-import net.neoforged.neoforge.common.ModConfigSpec.ConfigValue;
+import mekanism.fabric.config.MekanismConfigSpec.ConfigValue;
 
 public abstract class CachedMapConfigValue<KEY, VALUE> extends CachedResolvableConfigValue<Map<KEY, VALUE>, List<? extends String>> {
 
