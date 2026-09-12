@@ -232,6 +232,35 @@ class FabricEnergyConversionsTest {
         assertTrue(distinctToCalls[0] > 20_000,
               "the distinct identity must verify its snapshot with its own conversion methods");
         assertTrue(FabricEnergyConversions.isExactPair(sameAdvertisedRateDifferentBehavior, 6, 4));
+
+        // A behavior change with unchanged advertised rate bits must also invalidate when the old snapshot has no
+        // pair inside the new projection window; otherwise this lookup would remain zero forever.
+        double[] effectiveRate = {2.5D};
+        IEnergyConversion sameBitsMutableBehavior = new IEnergyConversion() {
+            @Override
+            public boolean isEnabled() {
+                return true;
+            }
+
+            @Override
+            public double getConversion() {
+                return 2.5D;
+            }
+
+            @Override
+            public long convertFrom(long energy) {
+                return (long) (energy * effectiveRate[0]);
+            }
+
+            @Override
+            public long convertTo(long joules) {
+                return (long) (joules / effectiveRate[0]);
+            }
+        };
+        assertEquals(2, FabricEnergyConversions.otherForJoules(sameBitsMutableBehavior, 5));
+        effectiveRate[0] = 5.0D;
+        assertEquals(1, FabricEnergyConversions.otherForJoules(sameBitsMutableBehavior, 5));
+        assertTrue(FabricEnergyConversions.isExactPair(sameBitsMutableBehavior, 1, 5));
     }
 
     private static void assertMonotoneAndBounded(IEnergyConversion conversion, long[] increasingBounds) {

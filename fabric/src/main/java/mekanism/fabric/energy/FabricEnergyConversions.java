@@ -202,12 +202,12 @@ final class FabricEnergyConversions {
         }
         int pairCount = Math.toIntExact(snapshot[SNAPSHOT_PAIR_COUNT]);
         int otherOffset = SNAPSHOT_HEADER_SIZE;
+        int jouleOffset = otherOffset + pairCount;
         int upperOtherIndex = upperBound(snapshot, otherOffset, pairCount, maxOther) - 1;
         if (upperOtherIndex < 0) {
-            return hasCurrentRate(conversion, rateBits) ? 0 : RETRY_WITH_CURRENT_RATE;
+            return verifyEmptySelection(conversion, rateBits, snapshot, pairCount, otherOffset, jouleOffset);
         }
 
-        int jouleOffset = otherOffset + pairCount;
         int treeBase = Math.toIntExact(snapshot[SNAPSHOT_TREE_BASE]);
         int selectedIndex;
         if (treeBase == 0) {
@@ -219,7 +219,7 @@ final class FabricEnergyConversions {
                   snapshot, treeOffset, 1, 0, treeBase - 1, upperOtherIndex, maxJoules);
         }
         if (selectedIndex < 0) {
-            return hasCurrentRate(conversion, rateBits) ? 0 : RETRY_WITH_CURRENT_RATE;
+            return verifyEmptySelection(conversion, rateBits, snapshot, pairCount, otherOffset, jouleOffset);
         }
 
         long other = snapshot[otherOffset + selectedIndex];
@@ -237,6 +237,29 @@ final class FabricEnergyConversions {
             return RETRY_WITH_CURRENT_RATE;
         }
         return returnJoules ? currentJoules : other;
+    }
+
+    private static long verifyEmptySelection(IEnergyConversion conversion, long rateBits, long[] snapshot,
+          int pairCount, int otherOffset, int jouleOffset) {
+        if (pairCount > 0) {
+            // There is no in-bound result to verify. Probe the first cached pair instead so a same-rate-bit behavior
+            // change cannot leave a stale snapshot returning zero forever merely because its old first pair is now
+            // outside the requested window.
+            long sentinelOther = snapshot[otherOffset];
+            long sentinelJoules = snapshot[jouleOffset];
+            boolean verified = conversion.convertFrom(sentinelOther) == sentinelJoules
+                  && conversion.convertTo(sentinelJoules) == sentinelOther;
+            if (!hasCurrentRate(conversion, rateBits)) {
+                return RETRY_WITH_CURRENT_RATE;
+            }
+            if (!verified) {
+                invalidateSnapshot(conversion, snapshot);
+                return RETRY_WITH_CURRENT_RATE;
+            }
+            return 0;
+        }
+        // No cached pair exists to probe. Stable behavior at unchanged rate bits is the conversion-owner contract.
+        return hasCurrentRate(conversion, rateBits) ? 0 : RETRY_WITH_CURRENT_RATE;
     }
 
     @Nullable
