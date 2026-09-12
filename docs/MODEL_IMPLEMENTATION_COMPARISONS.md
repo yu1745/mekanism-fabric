@@ -890,3 +890,14 @@ GLM 在任务 013、014 完成两轮临时复测；任务 015 以受支持的 hi
 - **环境发现：** 本机 PATH 中裸 `diff` 指向会对不同文件错误返回“无差异”的 OpenHarmony SDK 程序。审查已用 `/usr/bin/diff`、`cmp` 与 hashes 重做证据；后续源码比较禁止信任裸 `diff`，`git diff` 不受影响。
 - **最终取舍：** 主线 fast-forward 采用 `e63b783a`，无需综合修复。可选未落地项只有把 reviewer 已实证通过的 fresh-spec write-failure 场景也加入 shipped tests；现有测试已覆盖 already-loaded failure 且生产 pipeline 是既有行为，不为此增加第五个测试。
 - **主代理独立验证：** focused4 tests 4.39s；full gate 9.36s，60 suites/280 tests/0 failures/errors/skips；`fabric-build.sh` 3.95s；packaged smoke 38.50s 并到达 `Done`；release contract 0.76s。JAR config-value family 精确14项，无 test/helper/NeoForge 泄漏；一个 JAR sha256 `bd75a2af5c6491bcf3062276dcd62aa704fd198dbd01e403bd71201a053537a7`，build-info source `e63b783a`。最终文档提交后须重跑 release 对齐 source commit。
+
+---
+
+## 任务 031：sound/damage declaration metadata（风险触发审查）
+
+- **固定基线与范围：** `f146e0ce`；纳入 `SoundEventDeferredRegister`、`SoundEventRegistryObject`、`DamageTypeRegister`、`MekanismDamageType`、`MekanismSounds`、`MekanismDamageTypes`。最终 slice **47/120/14**；完整 sound 表是一个 registrar owner + **46** holders，共47个 public declarations，damage 表四项。真实 owner registration/datapack/playback/combat/Level/entity 全部延期。
+- **SOL 首轮阻断：** 648.6s、192.4k tokens、93 次调用、约 `$3.14`；严格 byte-identical 约束下编译发现 `RegistryAccess.holderOrThrow(ResourceKey)` 是 NeoForge 注入 API，Fabric/Mojang 不存在，因此清理全部草稿、无提交。主代理随后读取 pinned NeoForge 21.1.200 `IHolderLookupProviderExtension`，确认其实现恰为 `lookupOrThrow(key.registryKey()).getOrThrow(key)`，据此精确修订范围。
+- **SOL 修正版：** `4c4d0666`，16 files、`+482/-37`，1034.8s、277.8k tokens、165 次工具调用、约 `$7.69`。`SoundEventRegistryObject`/`DamageTypeRegister` byte-identical；sound register 改接已审计 deferred base/holder factory，两个 owners 只使用 literal namespace，damage holder 只展开上述 vanilla chain。五个测试覆盖 fresh sound lazy/canonical/range/lifecycle、47-declaration owner table、damage overload/live duplicate/metadata，以及 disposable local frozen damage registry；285 tests/build/static gates 通过。
+- **GLM 5.3 只读审查（`thinking=high`）：** 699.4s、184.5k tokens、78 次调用、约 `$1.15`；结论 **ACCEPT**。从 pinned source 与 vanilla bytecode证明扩展/展开在 registry/key missing exception 和 exact Holder identity 上一致，且正确避免语义不同的 `registryOrThrow`；确认 specialized holder 的两个 compiler bridge 无递归、46 holders 全覆盖、owner class-init 不创建/注册 SoundEvent、local MappedRegistry 不污染 global、Bootstrap 幂等、package/docs 边界完整，无 required fix。
+- **最终取舍：** 主线 fast-forward 采用 `4c4d0666`，无需综合修复。首轮阻断证明 source byte-identical 不能代替平台注入审计；修订只承接已证实的 vanilla 等价表达式，没有新增通用 shim。
+- **主代理独立验证：** focused5 tests 10.66s；full gate 11.71s，61 suites/285 tests/0 failures/errors/skips；`fabric-build.sh` 5.62s；packaged smoke 45.24s 并到达 `Done`；release contract 0.86s。JAR registration/impl 精确7项、registries精确3项，无 test/helper/NeoForge 泄漏；一个 JAR sha256 `6fdbf366e8cda78a5920436a9aeb9374a83417731a7b196ea8d0ece34433d04a`，build-info source `4c4d0666`。最终文档提交后须重跑 release 对齐 source commit。
