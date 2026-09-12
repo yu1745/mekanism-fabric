@@ -5,7 +5,6 @@ import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import com.mojang.serialization.codecs.RecordCodecBuilder.Mu;
 import java.util.Objects;
 import java.util.function.Function;
-import mekanism.api.MekanismAPI;
 import mekanism.api.SerializationConstants;
 import mekanism.api.annotations.NothingNullByDefault;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -25,7 +24,7 @@ import net.minecraft.resources.ResourceLocation;
 public abstract class ModuleConfig<DATA> {
 
     private static ResourceLocation rl(String path) {
-        return ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, path);
+        return ResourceLocation.fromNamespaceAndPath("mekanism", path);
     }
 
     /**

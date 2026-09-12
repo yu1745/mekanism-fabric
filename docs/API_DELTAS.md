@@ -48,6 +48,20 @@ Kilt 的转换表明 execute/simulate 应在 transfer 边界映射为 transactio
 - `./fabric-build.sh`
 - `scripts/fabric-packaged-smoke.sh`
 
+## Module config value contracts (Task 032)
+
+状态：当前 API/common/platform allowlist 精确为 **53/120/14** unique sources；common、platform 与 18-file official root-test oracle 不变。新增六份官方 API source 中，`ModuleBooleanConfig`、`ModuleColorConfig` 与 `IHasModeIcon` 和 `4646f509` byte-identical；其余三份仅作以下封闭适配：
+
+- `ModuleConfig` 只删除 `MekanismAPI` import，并以 literal `"mekanism"` 构造三个 canonical key 及 legacy name。`baseCodec` 保留官方行为：decode 时仅把 `minecraft:<path>` 改写为 `mekanism:<path>`，其它 namespace 原样保留；encode 始终写出 config 当前的 exact name。
+- `ModuleEnumConfig` 只以 method-local vanilla `StreamCodec` 替换 NeoForge `enumCodec`。它捕获 declaring enum constants，并通过 `ByteBufCodecs.VAR_INT` 写 `ordinal()`、读 ordinal 后直接数组索引，因此 wire bytes 不变；负数或过高 ordinal 继续抛 `ArrayIndexOutOfBoundsException`，null encode 继续抛 `NullPointerException`。没有 anonymous/new packaged class、platform source 或通用 shim。
+- `IHasTextComponent.IHasEnumNameTextComponent` 删除 NeoForge `TranslatableEnum` 父型、import 与失效的 `@Override`；public default `Component getTranslatedName()` 及其 exact `return getTextComponent();` body 保留。直接 Mekanism source/binary method behavior 不变，但依赖 NeoForge subtype assignment 的 addon 必须迁移；Fabric 不提供 shim。
+
+官方 module value behavior也保持：boolean codec/stream/name/value 与 immutable `with`；color 的 RGB 构造/codec/stream 强制 alpha 为 `0xFF`、ARGB 保留全部 signed 32-bit bits，两者继续分别使用 VAR_INT 与 fixed INT；enum selectable count 对 `<= 0`、大于 enum length 和 out-of-range bounded initial value的失败、equal-count 的 unlimited 形态、subset immutable option list、data-codec validation 及 supplied-stream behavior 均未修改。特别地，bounded config 的 changed `with(TYPE)`/`with(int)` 仍经官方两参数 constructor 返回 full enum option list；没有“修复”这一既有行为。
+
+一个 Fabric-local same-package class恰有七个 `@Test`，使用真实 Mojang codecs 与 Netty/`FriendlyByteBuf`，固定 canonical/legacy names、boolean/color data 与 exact wire forms、RGB/ARGB、enum bounds/validation、named VAR_INT bytes及异常、官方 bounded `with`、equality/hash/class/count，以及三个 text/icon interface 的 exact component/icon identity。静态 JAR gate 要求 direct `mekanism/api/gear/config/` 精确只有五个 production classes 各一次，并要求 `IHasTextComponent` prefix 精确只有 outer 与 `IHasEnumNameTextComponent` 两项；拒绝 nested/synthetic/test/helper/fixture 泄漏且无 startup marker。
+
+`ModuleData`、module containers/items、codec catalog、GUI/radial/client rendering、packets/network owner integration、persistence/data components/registration/lifecycle 与全部 callers 均延期。
+
 ## `mekanism.common.util.RegistryUtils`
 
 状态：作为内部 common utility 纳入；仅将 NeoForge 注入到 vanilla 类型上的两个 convenience contract 改写为 vanilla 1.21.1 API，公共签名和返回值语义不变。
@@ -88,7 +102,7 @@ Task 031 的 `SoundEventDeferredRegister` 用既有 `MekanismDeferredRegister<So
 `fabric/src/test/java/mekanism/common/registration/MekanismDeferredRegisterTest.java`、
 `SoundAndDamageRegistrationTest.java` 以及 static packaged-JAR gates。Kilt/Connector 与 NeoForge
 21.1.200 extension source 仅用于核对生命周期、冻结、canonical holder 和 lookup 语义；实现未复制。
-当前 **47/120/14** slice 不把 sound/damage owners 接入 entrypoint。
+当前 **53/120/14** slice 不把 sound/damage owners 接入 entrypoint。
 
 ## Config contract
 
@@ -105,7 +119,7 @@ Task 030 的四个 common source 只替换 config backing types：`CachedResolva
 
 兼容影响：直接依赖 NeoForge config spec/type 或 `IConfigTranslation` 到
 `IHasTranslationKey` 赋值关系的 addon 必须改用 Fabric 侧契约。TOML 文件名、12 个 startup
-路径、默认值、范围、restart 元数据与缓存行为保持。官方 resolvable `set` 仍缓存 caller 的原始 `TYPE`：encoded list backing 是 immutable copy，但 map 在 clear/reload 前仍可与 caller alias；clear/reload 后才按 deterministic sorted strings 重建。当前 **47/120/14** slice 不激活 `GeneralConfig`/`MekanismConfig`、cardboard blacklist、Oredictionificator filters/items、`CachedEnumValue`、UI/watch/sync 或 config ownership/lifecycle/threading。细节和验证见 `docs/FABRIC_CONFIG.md`。
+路径、默认值、范围、restart 元数据与缓存行为保持。官方 resolvable `set` 仍缓存 caller 的原始 `TYPE`：encoded list backing 是 immutable copy，但 map 在 clear/reload 前仍可与 caller alias；clear/reload 后才按 deterministic sorted strings 重建。当前 **53/120/14** slice 不激活 `GeneralConfig`/`MekanismConfig`、cardboard blacklist、Oredictionificator filters/items、`CachedEnumValue`、UI/watch/sync 或 config ownership/lifecycle/threading。细节和验证见 `docs/FABRIC_CONFIG.md`。
 
 ## Registry-aware NBT contract
 

@@ -397,6 +397,34 @@ actual_api_codec = {
 }
 if actual_api_codec != expected_api_codec or any(entries.count(entry) != 1 for entry in expected_api_codec):
     raise SystemExit(f"unexpected API codec class family: {sorted(actual_api_codec)!r}")
+expected_module_configs = {
+    "mekanism/api/gear/config/ModuleConfig.class",
+    "mekanism/api/gear/config/ModuleBooleanConfig.class",
+    "mekanism/api/gear/config/ModuleColorConfig.class",
+    "mekanism/api/gear/config/ModuleEnumConfig.class",
+    "mekanism/api/gear/config/IHasModeIcon.class",
+}
+module_config_prefix = "mekanism/api/gear/config/"
+actual_module_configs = {
+    entry for entry in entries
+    if entry.startswith(module_config_prefix)
+    and "/" not in entry[len(module_config_prefix):]
+    and entry.endswith(".class")
+}
+if (actual_module_configs != expected_module_configs
+        or any(entries.count(entry) != 1 for entry in expected_module_configs)):
+    raise SystemExit(f"unexpected direct module-config class family: {sorted(actual_module_configs)!r}")
+expected_has_text_component = {
+    "mekanism/api/text/IHasTextComponent.class",
+    "mekanism/api/text/IHasTextComponent$IHasEnumNameTextComponent.class",
+}
+actual_has_text_component = {
+    entry for entry in entries
+    if entry.startswith("mekanism/api/text/IHasTextComponent") and entry.endswith(".class")
+}
+if (actual_has_text_component != expected_has_text_component
+        or any(entries.count(entry) != 1 for entry in expected_has_text_component)):
+    raise SystemExit(f"unexpected IHasTextComponent class family: {sorted(actual_has_text_component)!r}")
 expected_common_codec = {
     "mekanism/common/lib/codec/DroppingUnboundedMapCodec.class",
     "mekanism/common/lib/codec/SequencedCollectionCodec.class",

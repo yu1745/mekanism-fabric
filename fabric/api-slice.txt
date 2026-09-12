@@ -32,6 +32,11 @@ mekanism/api/functions/LongObjectToLongFunction.java
 mekanism/api/functions/ShortSupplier.java
 mekanism/api/functions/ToFloatFunction.java
 mekanism/api/functions/TriConsumer.java
+mekanism/api/gear/config/IHasModeIcon.java
+mekanism/api/gear/config/ModuleBooleanConfig.java
+mekanism/api/gear/config/ModuleColorConfig.java
+mekanism/api/gear/config/ModuleConfig.java
+mekanism/api/gear/config/ModuleEnumConfig.java
 mekanism/api/heat/HeatAPI.java
 mekanism/api/heat/IHeatCapacitor.java
 mekanism/api/heat/IHeatHandler.java
@@ -41,6 +46,7 @@ mekanism/api/lasers/ILaserDissipation.java
 mekanism/api/lasers/ILaserReceptor.java
 mekanism/api/math/LongTransferUtils.java
 mekanism/api/math/MathUtils.java
+mekanism/api/text/IHasTextComponent.java
 mekanism/api/text/IHasTranslationKey.java
 mekanism/api/tier/AlloyTier.java
 mekanism/api/tier/BaseTier.java

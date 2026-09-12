@@ -10,17 +10,18 @@ excluded. It uses Minecraft 1.21.1, Java 21, and Mojang official mappings.
 `api-slice.txt` is the auditable allowlist of API source paths, relative to
 `src/api/java`. The Fabric source set reads that file directly, so the listed
 sources retain their original `mekanism.api.*` names without being copied or
-modified. The allowlist contains **47 current source files**: **46 official baseline
+modified. The allowlist contains **53 current source files**: **52 official baseline
 sources** plus the project-owned registry-aware `INBTSerializable` NBT contract.
 Intentional API adaptations include that contract, `Action`'s removal of two
-NeoForge `FluidAction` conversion methods, and the Javadoc-only strict-handler
-fluid-import/link cleanup; `IMekanismStrictEnergyHandler` remains byte-identical.
+NeoForge `FluidAction` conversion methods, the Javadoc-only strict-handler
+fluid-import/link cleanup, and Task 032's bounded module-config namespace/enum/text
+adaptations; `IMekanismStrictEnergyHandler` remains byte-identical.
 See `../docs/API_DELTAS.md`. JetBrains annotations and JSR-305 remain `compileOnly`
 and are not bundled in the mod.
 
 `common-slice.txt` contains **120 official source files**, and
 `platform-slice.txt` contains **14 project-owned Fabric sources**. Seven spatial/color/effect foundations (`Color`, `CustomEffect`, `Pos3D`, `Quaternion`, `Range3D`, `MultipartUtils`, and `StatUtils`) remain byte-identical to `4646f509`. Twelve Java 21 tests bound channel/HSV/compositing/statistics, effect state, vector/range/rotation/quaternion state, and direct multipart ray selection. Packaging permits exactly four direct common-lib classes, one effect class, three math classes, the three `MultipartUtils` classes, and one `StatUtils` class. This admits no caller or owner: renderers/particles/GUI/recipe viewers/client lifecycle, transmitters/multipart blocks/gear, machines/block types/entities, packet tracking/network ranges, SPS/multiblock, additions/generators, external energy, world/chunk lifecycle, registries/config/persistence all remain deferred; there is no rendering integration, entity/player lifecycle, block registration, networking, thread-safety, or collision-owner guarantee. Together with
-the **47-file API slice**, they form bounded registry/GameEvent, TOML
+the **53-file API slice**, they form bounded registry/GameEvent, TOML
 startup-config, configuration-handshake, internal energy storage/holder, internal
 heat storage/holder, wildcard-matching, fair-distribution, chunk-coordinate,
 lambda-metafactory, and vanilla-registry utility closures. The unchanged
@@ -78,7 +79,11 @@ Task 029 brought the API/common/platform slices to **47/110/14** by admitting th
 
 Task 030 brought its slices to **47/114/14** with the bounded generic/list cached-value closure described above. The 18-file root oracle and API/platform slices stayed unchanged; exact import/type-only oracle diffs, four real-TOML tests, and the 14-entry static package family are its evidence rather than a startup marker.
 
-Task 031 brings the current slices to **47/120/14** by admitting the sound/damage declaration closure. `SoundEventRegistryObject` and `DamageTypeRegister` remain byte-identical to `4646f509`; `SoundEventDeferredRegister` only switches from NeoForge `DeferredRegister` to the existing `MekanismDeferredRegister` plus `SoundEventRegistryObject::new`, the two declaration owners only use literal `"mekanism"`, and `MekanismDamageType` only expands the injected holder lookup to vanilla `lookupOrThrow(...).getOrThrow(...)`. Exactly five tests cover fresh sound laziness/typed holders/canonical identity/range/lifecycle, the complete 47-public-declaration sound table (one owner and 46 unbound holders), every damage overload/live collection/duplicate and the four declared damage identities, plus one frozen disposable local damage registry. Static packaging permits exactly seven direct registration implementations and three registry declaration classes; there is no startup marker or owner registration. Real sound registration/freeze/playback/client/resources/subtitles, real damage registration/freeze/datapack bootstrap, production `RegistryAccess`/`Level`/entities/combat, and all owners/callers remain deferred.
+Task 031 brought the slices to **47/120/14** by admitting the sound/damage declaration closure. `SoundEventRegistryObject` and `DamageTypeRegister` remain byte-identical to `4646f509`; `SoundEventDeferredRegister` only switches from NeoForge `DeferredRegister` to the existing `MekanismDeferredRegister` plus `SoundEventRegistryObject::new`, the two declaration owners only use literal `"mekanism"`, and `MekanismDamageType` only expands the injected holder lookup to vanilla `lookupOrThrow(...).getOrThrow(...)`. Exactly five tests cover fresh sound laziness/typed holders/canonical identity/range/lifecycle, the complete 47-public-declaration sound table (one owner and 46 unbound holders), every damage overload/live collection/duplicate and the four declared damage identities, plus one frozen disposable local damage registry. Static packaging permits exactly seven direct registration implementations and three registry declaration classes; there is no startup marker or owner registration. Real sound registration/freeze/playback/client/resources/subtitles, real damage registration/freeze/datapack bootstrap, production `RegistryAccess`/`Level`/entities/combat, and all owners/callers remain deferred.
+
+Task 032 brings the current slices to **53/120/14** with six module-config API sources. `ModuleBooleanConfig`, `ModuleColorConfig`, and `IHasModeIcon` remain byte-identical to `4646f509`. `ModuleConfig` only replaces the `MekanismAPI` owner with literal `"mekanism"`, retaining canonical keys, legacy `minecraft`-namespace decode rewrite, other namespaces, and exact encode names. `ModuleEnumConfig` only replaces NeoForge's enum codec with a method-local captured-constants codec built on `ByteBufCodecs.VAR_INT`: ordinal bytes are unchanged, negative/high decode still throws `ArrayIndexOutOfBoundsException`, and null encode still throws `NullPointerException`, with no anonymous/package/platform class. `IHasTextComponent` removes only the NeoForge `TranslatableEnum` subtype/import and obsolete override; its public default `getTranslatedName()` and exact component forwarding body remain, but NeoForge subtype compatibility is intentionally unavailable with no shim.
+
+Exactly seven same-package tests use real Mojang codecs and Netty/`FriendlyByteBuf` to bind boolean and signed RGB/ARGB data/wire forms, alpha locking, enum count/list/data/supplied/named stream behavior, exact VAR_INT failures, official bounded changed-`with` return-to-full-list behavior, equality/hash/class/count, and text/icon identity. Packaging requires exactly five direct gear-config entries and exactly the `IHasTextComponent` outer+nested pair, once each, rejecting nested/synthetic/test/helper/fixture leakage; no startup marker. Deferred are `ModuleData`, module containers/items, codec catalog, GUI/radial/client rendering, packets/network owner integration, persistence/data components/registration/lifecycle, and every caller.
 
 The official `DependentMapCodec`, `SequencedCollectionCodec`, and `DroppingUnboundedMapCodec` are admitted byte-identically as a platform-neutral codec closure. A five-method, table-driven Java 21 oracle covers dependency-first codec selection and field errors, sequenced min/max/order/immutable/partial-remainder semantics, and first-wins map collisions including malformed and deliberately ignored duplicate partial values. Packaging allows exactly the one API and three common codec class entries (including `SequencedCollectionCodec$DecoderState`) and uses no startup marker. This proves only those codec behaviors: `ModuleContainer`, `AttachedSideConfig`, recipes, data components, config/network owners, and every caller remain deferred; no persistence, registry, packet, lifecycle-owner, or backward-compatible serialized-format claim is made.
 
@@ -176,9 +181,9 @@ machine/network owners. See `../docs/FABRIC_REGISTRY.md`,
 
 The next nearby API candidates are blocked by deliberately excluded boundaries:
 incremental-enum helpers close over `ConstantPredicates` (which imports
-NeoForge fluid/tri-predicate and chemical types), and the text/provider enums
-close over NeoForge `TranslatableEnum` or larger API text graphs. Those families
-remain outside the current slice.
+NeoForge fluid/tri-predicate and chemical types), while `ModuleData`, module
+containers/items, codec catalogs, GUI/radial/client rendering, and their owner
+integration close over larger deferred graphs. Those families remain outside the current slice.
 
 To repeat the portability audit and fail on a missing source, duplicate path,
 or any `net.neoforged` reference, run from the repository root:

@@ -10,9 +10,9 @@ import mekanism.api.SerializationConstants;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.text.IHasTextComponent;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.ResourceLocation;
-import net.neoforged.neoforge.network.codec.NeoForgeStreamCodecs;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -169,10 +169,12 @@ public class ModuleEnumConfig<TYPE extends Enum<TYPE> & IHasTextComponent> exten
 
     @Override
     public StreamCodec<FriendlyByteBuf, ModuleConfig<TYPE>> namedStreamCodec(ResourceLocation name) {
-        return NeoForgeStreamCodecs.enumCodec(value.getDeclaringClass()).map(
-              value -> new ModuleEnumConfig<>(name, value, enumConstants),
-              ModuleConfig::get
+        TYPE[] constants = value.getDeclaringClass().getEnumConstants();
+        StreamCodec<FriendlyByteBuf, TYPE> enumCodec = StreamCodec.of(
+              (buffer, enumValue) -> ByteBufCodecs.VAR_INT.encode(buffer, enumValue.ordinal()),
+              buffer -> constants[ByteBufCodecs.VAR_INT.decode(buffer)]
         );
+        return enumCodec.map(value -> new ModuleEnumConfig<>(name, value, enumConstants), ModuleConfig::get);
     }
 
     @Override
