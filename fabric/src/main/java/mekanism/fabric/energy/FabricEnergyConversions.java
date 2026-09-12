@@ -242,9 +242,9 @@ final class FabricEnergyConversions {
     private static long verifyEmptySelection(IEnergyConversion conversion, long rateBits, long[] snapshot,
           int pairCount, int otherOffset, int jouleOffset) {
         if (pairCount > 0) {
-            // There is no in-bound result to verify. Probe the first cached pair instead so a same-rate-bit behavior
-            // change cannot leave a stale snapshot returning zero forever merely because its old first pair is now
-            // outside the requested window.
+            // There is no in-bound result to verify. Probe the first cached pair instead so behavior drift that
+            // changes that sentinel invalidates the snapshot even when the old first pair is outside the window.
+            // Stable conversion behavior while advertised rate bits remain unchanged is still the owner contract.
             long sentinelOther = snapshot[otherOffset];
             long sentinelJoules = snapshot[jouleOffset];
             boolean verified = conversion.convertFrom(sentinelOther) == sentinelJoules
