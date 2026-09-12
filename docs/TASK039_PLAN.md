@@ -1,6 +1,6 @@
 # Task 039 plan — client window configuration and concrete inventory slots
 
-Status: **corrective candidate locally verified; pending focused rereview**
+Status: **accepted and integrated; parent final gates pending**
 
 ## Candidate checkpoint
 
@@ -146,6 +146,6 @@ Paired/rejection networking, packaged dedicated-server smoke, clean release, pus
 
 ## Review outcome and deferrals
 
-The independent read-only high-risk review examined owner publication/replacement, cross-manager path claims, strict typing/correction, unknown retention, atomic writes, save retry/drain races, thread/lifetime handling, exact SelectedWindowData behavior, equipment substitutions, warnings and artifact isolation, and returned **ACCEPT WITH FIXES** as recorded above. This corrective candidate is pending focused rereview of the documentation qualifications, fixture honesty cleanup, unchanged production tree, and bounded rerun evidence.
+The independent read-only high-risk review examined owner publication/replacement, cross-manager path claims, strict typing/correction, unknown retention, atomic writes, save retry/drain races, thread/lifetime handling, exact SelectedWindowData behavior, equipment substitutions, warnings and artifact isolation, and returned **ACCEPT WITH FIXES** as recorded above. The fresh focused rereview then returned **ACCEPT**, closing both required documentation findings and accepting the fixture honesty cleanup with an unchanged production tree. The corrected candidate is integrated; only parent final gates and final evaluation/release remain.
 
 Deferred after Task039: full ClientConfig and QIO SCC, external config watching/events/backups/comment-pruning, actual GUI windows, menu networking, ItemStorage provider/cache owner, side configuration/ejector, machine registration, recipes/CachedRecipe, Chemical and Crusher. Task039 immediately removes the concrete input/output slot and menu-slot barriers from that path.
