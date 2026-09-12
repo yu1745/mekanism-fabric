@@ -28,7 +28,7 @@ Task 039 前置审计确认 `SelectedWindowData` 需要官方 `<config dir>/Meka
 
 未来实现必须让 `MekanismFabricClientBootstrap` 建立唯一 physical-client-lifetime owner，并保证 common/dedicated-server classloading 不引用客户端类。同一 `client.toml` 不允许两个独立 manager/writer；窗口 schema 必须作为可扩展 fragment 归属一个 owner，保留尚未纳入的 qio/hud/rendering 等未知 sections，使未来完整 ClientConfig 扩展同一 owner 而不丢数据或路径冲突。
 
-本项目不把 NeoForge loader 的全部基础设施细节当作该 fragment 的先决条件。外部文件 watcher、NeoForge 配置事件、五级 `.bak` 轮转、comment-only correction 与 unspecified-key pruning 可以作为明确的 Fabric 平台差异延期；但 owned `window.*` 字段的类型验证、默认值、原子 correction/publication、条件保存、异步写序列化、shutdown/flush 和失败行为必须有可执行证据。该 checkpoint 只是已落盘的规划边界，不表示 client owner、SelectedWindowData 或 concrete slots 已进入当前 slice。
+本项目不把 NeoForge loader 的全部基础设施细节当作该 fragment 的先决条件。外部文件 watcher、NeoForge 配置事件、五级 `.bak` 轮转、comment-only correction 与 unspecified-key pruning 可以作为明确的 Fabric 平台差异延期；但 owned `window.*` 字段的类型验证、默认值、原子 correction/publication、条件保存、异步写序列化、shutdown/flush 和失败行为必须有可执行证据。Task 039 的28-source候选范围与完整门禁见 [`TASK039_PLAN.md`](TASK039_PLAN.md)；在候选通过审查并集成前，本节不表示 client owner、SelectedWindowData 或 concrete slots 已进入当前 slice。
 
 ## Startup 契约
 

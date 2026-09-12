@@ -93,7 +93,7 @@ After Task 038, source review at clean commit `a04faa22` established that the fi
 
 The remaining direct dependency is `SelectedWindowData`, whose official public surface includes ten window types, three crafting-window IDs, stream encoding, and persisted client positions. Its 11 save records contain 28 scalar fields under `window.*` (x/y for every record and pinned for the six pinnable records), not merely four values. A concrete-slot batch must therefore include one real physical-client `client.toml` owner and preserve the official path/default/update/save behavior; it may not substitute fallback positions or a test-only owner.
 
-Per the user-directed large-batch policy recorded in `AGENTS.md`, the next candidate is evaluated as one client-config → `SelectedWindowData` → Basic/Input/Output slot → container/warning vertical, normally 15–40 production files rather than another small prerequisite. A larger full dependency closure is preferred when it avoids truncated public behavior. This checkpoint is planning evidence, not a claim that these classes are already admitted; current shipped item behavior remains Task 033's gateway.
+Per the user-directed large-batch policy recorded in `AGENTS.md`, Task 039 is approved for one 28-production-Java-file client-config → `SelectedWindowData` → Basic/Input/Output slot → container/warning candidate; its exact scope, lifecycle and gates are recorded in [`TASK039_PLAN.md`](TASK039_PLAN.md). A larger full dependency closure is preferred when it avoids truncated public behavior. This checkpoint is planning evidence, not a claim that these classes are already admitted; current shipped item behavior remains Task 033's gateway.
 
 ## Deliberately deferred
 
