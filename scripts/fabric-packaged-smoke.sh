@@ -138,8 +138,8 @@ if jar tf "${MOD_JARS[0]}" | grep -Eq '^net/fabricmc/loader/'; then
   echo "fabric-packaged-smoke: Fabric Loader classes must remain external" >&2
   exit 1
 fi
-if jar tf "${MOD_JARS[0]}" | grep -Eq '^mekanism/fixture/'; then
-  echo "fabric-packaged-smoke: artifact unexpectedly contains handshake fixture classes" >&2
+if jar tf "${MOD_JARS[0]}" | grep -Eq '^mekanism/fixture/|^mekanism/fabric/datamaps/fixture/'; then
+  echo "fabric-packaged-smoke: artifact unexpectedly contains fixture classes" >&2
   exit 1
 fi
 if ! python3 - "${MOD_JARS[0]}" <<'PYEOF'
@@ -868,6 +868,58 @@ then
   echo "fabric-packaged-smoke: custom-registry/portable-text/SerializerHelper/item-boundary/block-state-descriptor/inventory-metadata/deferred-registration/tile-interface/slot-info/tier/resource/codec/collection/distribution/ChunkUtils/RegistryUtils/LambdaMetaFactoryUtil/long-transfer/dynamic-strict-energy/proxy/config-listener/common-lib-root production/test packaging contract failed" >&2
   exit 1
 fi
+if ! python3 - "${MOD_JARS[0]}" <<'PYEOF'
+import hashlib, sys, zipfile
+
+expected_api = {"mekanism/api/datamaps/MekaSuitAbsorption.class"}
+expected_platform = {
+    "mekanism/fabric/datamaps/FabricDataMapType.class",
+    "mekanism/fabric/datamaps/FabricDataMapLoader.class",
+    "mekanism/fabric/datamaps/FabricDataMapLoader$Entry.class",
+    "mekanism/fabric/datamaps/FabricDataMapLoader$Layer.class",
+    "mekanism/fabric/datamaps/FabricDataMapLoader$Result.class",
+    "mekanism/fabric/datamaps/FabricMekanismDataMaps.class",
+    "mekanism/fabric/datamaps/FabricMekanismDataMaps$Session.class",
+    "mekanism/fabric/datamaps/FabricMekanismDataMaps$Snapshot.class",
+}
+resources = {
+    "data/mekanism/data_maps/damage_type/mekasuit_absorption.json": "437587714884bfef9045ac987b97e8b2d63ccb304142181d934e8ef21b471d41",
+    "data/mekanism/tags/damage_type/mekasuit_always_supported.json": "7237a571f951f8deef3cacb86518b3b8560f145dad16777701142004814b07da",
+}
+with zipfile.ZipFile(sys.argv[1]) as artifact:
+    entries = artifact.namelist()
+    actual_api = {e for e in entries if e.startswith("mekanism/api/datamaps/") and e.endswith(".class")}
+    actual_platform = {e for e in entries if e.startswith("mekanism/fabric/datamaps/") and e.endswith(".class")}
+    if actual_api != expected_api or actual_platform != expected_platform:
+        raise SystemExit(f"unexpected data-map class families: api={sorted(actual_api)!r} platform={sorted(actual_platform)!r}")
+    for entry in expected_api | expected_platform:
+        if entries.count(entry) != 1:
+            raise SystemExit(f"data-map class must occur exactly once: {entry}")
+        bytecode = artifact.read(entry)
+        lowered = bytecode.lower()
+        if (b"net/neoforged/" in bytecode or b"mekanism/api/chemical" in lowered
+                or b"mekanism/api/mekanismapi" in lowered or b"advanceddatamap" in lowered
+                or b"datamaptyperegister" in lowered or b"imekanismdatamaptypes" in lowered
+                or b"kilt" in lowered or b"connector" in lowered):
+            raise SystemExit(f"unsupported architecture leaked into data-map bytecode: {entry}")
+    for entry, expected_hash in resources.items():
+        if entries.count(entry) != 1:
+            raise SystemExit(f"connected data-map resource must occur exactly once: {entry}")
+        actual_hash = hashlib.sha256(artifact.read(entry)).hexdigest()
+        if actual_hash != expected_hash:
+            raise SystemExit(f"wrong data-map resource hash for {entry}: {actual_hash}")
+    generated_prefix = "data/mekanism/"
+    admitted = set(resources)
+    unexpected_generated = sorted(e for e in entries if e.startswith(generated_prefix) and not e.endswith("/")
+                                  and ("/data_maps/" in e or "/tags/damage_type/" in e) and e not in admitted)
+    if unexpected_generated:
+        raise SystemExit(f"unexpected generated data-map closure resources: {unexpected_generated!r}")
+PYEOF
+then
+  echo "fabric-packaged-smoke: data-map class/resource/leakage contract failed" >&2
+  exit 1
+fi
+
 for required_entry in \
     mekanism/api/IIncrementalEnum.class \
     mekanism/api/RelativeSide.class \
@@ -1005,6 +1057,7 @@ config_proof=0
 network_proof=0
 registry_proof=0
 heat_proof=0
+data_map_proof=0
 done_loaded=0
 crash_pattern='(Exception in thread|A mod crashed on startup|Could not execute entrypoint|Failed to start the minecraft server|---- Minecraft Crash Report ----|NoClassDefFoundError|ClassNotFoundException|[[:space:]]ERROR[[:space:]])'
 while (( SECONDS < deadline )); do
@@ -1018,13 +1071,14 @@ while (( SECONDS < deadline )); do
   fi
   if grep -Fq 'MEKANISM_FABRIC_REGISTRY_PROOF key=mekanism:seismic_vibration canonical_identity=true entries=4' "$LOG_FILE"; then registry_proof=1; fi
   if grep -Fq 'MEKANISM_FABRIC_HEAT_PROOF positional=true ambient_finite=true' "$LOG_FILE"; then heat_proof=1; fi
+  if grep -Fq 'MEKANISM_FABRIC_DATAMAP_PROOF phase=startup epoch=1 published=21 skipped=0' "$LOG_FILE"; then data_map_proof=1; fi
   if grep -Eq 'Done \(' "$LOG_FILE"; then done_loaded=1; fi
   if grep -Eiq "$crash_pattern" "$LOG_FILE"; then
     echo 'fabric-packaged-smoke: crash signature detected' >&2
     grep -Ei "$crash_pattern" "$LOG_FILE" | tail -n 10 >&2 || true
     exit 1
   fi
-  if (( mod_loaded && energy_mod_loaded && config_proof && network_proof && registry_proof && heat_proof && done_loaded )); then
+  if (( mod_loaded && energy_mod_loaded && config_proof && network_proof && registry_proof && heat_proof && data_map_proof && done_loaded )); then
     STARTUP_CONFIG="$SERVER_DIR/config/Mekanism/startup.toml"
     if [[ ! -s "$STARTUP_CONFIG" ]]; then
       echo 'fabric-packaged-smoke: startup config proof logged but startup.toml is missing or empty' >&2
@@ -1052,8 +1106,8 @@ PYEOF
       exit 1
     fi
     RESULT=0
-    printf 'fabric-packaged-smoke: PASS (Mekanism and Team Reborn Energy loaded, config/network/registry/heat proofs passed, and server reached Done)\n'
-    grep -E '(^|[[:space:]])- (mekanism|team_reborn_energy)([[:space:]]|$)|MEKANISM_FABRIC_(CONFIG|NETWORK|REGISTRY|HEAT)_PROOF|Done \(' "$LOG_FILE" | tail -n 12
+    printf 'fabric-packaged-smoke: PASS (Mekanism and Team Reborn Energy loaded, config/network/registry/heat/data-map proofs passed, and server reached Done)\n'
+    grep -E '(^|[[:space:]])- (mekanism|team_reborn_energy)([[:space:]]|$)|MEKANISM_FABRIC_(CONFIG|NETWORK|REGISTRY|HEAT|DATAMAP)_PROOF|Done \(' "$LOG_FILE" | tail -n 14
     exit 0
   fi
   if ! kill -0 "$SERVER_PID" 2>/dev/null; then
@@ -1066,6 +1120,6 @@ PYEOF
   sleep 1
 done
 
-echo "fabric-packaged-smoke: timed out after ${TIMEOUT}s (mod_loaded=$mod_loaded energy_mod_loaded=$energy_mod_loaded config_proof=$config_proof network_proof=$network_proof registry_proof=$registry_proof heat_proof=$heat_proof done=$done_loaded)" >&2
+echo "fabric-packaged-smoke: timed out after ${TIMEOUT}s (mod_loaded=$mod_loaded energy_mod_loaded=$energy_mod_loaded config_proof=$config_proof network_proof=$network_proof registry_proof=$registry_proof heat_proof=$heat_proof data_map_proof=$data_map_proof done=$done_loaded)" >&2
 tail -n 80 "$LOG_FILE" >&2
 exit 1

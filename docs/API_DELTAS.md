@@ -342,3 +342,19 @@ Task 033 因当时 `FluidStack` 尚未纳入而把唯一 shared-helper call 暂�
 `IHasTranslationKey.IHasEnumNameTranslationKey` 保持原 FQN、父级 Mekanism interface 和 `getTranslatedName()` 方法，但不再继承 NeoForge `TranslatableEnum`；这是既有、已批准的 Fabric nominal-parent 变化。Task 036 将 default body 从临时 direct `Component.translatable` 恢复为 oracle 的 `TextComponentUtil.translate(getTranslationKey())`。依赖 NeoForge subtype 关系的 addon 仍需迁移到 Mekanism-visible interface；Fabric 不提供 shim。
 
 `IHolder`、`BasicHolder`、`IEnergyContainerHolder` 与 `EnergyContainerHolder` 未改公开/可见性表面；方向过滤、内部访问、动态 facing、identity/order、duplicate 与 live-list 行为保持。详见 `docs/FABRIC_HOLDERS.md` 及对应测试。
+
+## `mekanism.api.datamaps.MekaSuitAbsorption` (Task 038)
+
+状态：作为唯一直接 `mekanism.api.datamaps` admission 启用。相对官方
+`v1.21.1-10.7.19.85`，唯一 executable delta 是 `ID` 的 namespace 来源由
+`MekanismAPI.MEKANISM_MODID` 改成稳定 literal `"mekanism"`，从而不触发尚未纳入的 broad facade。
+record identity、constructor、`absorption()`、ID path、object-first `CODEC`、bare-float alternative、
+`[0,1]` codec 与 constructor rejection、Javadoc/public surface 均保持。未新增 public
+`mekanism.api` descriptor，也未纳入 `IMekanismDataMapTypes`/`MekanismDataMapTypes`/
+`DataMapTypeRegister`。
+
+Fabric 的 descriptor/loader/session 是 `mekanism.fabric.datamaps` 平台实现，不伪造
+`net.neoforged.*`。它只承诺 ordinary、unconditional、server-side、non-synced MekaSuit absorption；
+Chemical、conditions、Advanced merger/remover、sync、holder mixin、radiation/tooltip/tank owner 与
+networking 明确延期。NeoForge 21.1.200 oracle source/binary hash、资源 hash、layer/lifecycle/failure
+truth table、query 规则和验证见 `docs/FABRIC_DATA_MAPS.md`。

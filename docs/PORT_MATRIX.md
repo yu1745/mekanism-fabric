@@ -64,7 +64,7 @@ scripts/scan-platform-deps.py
 | 类别 | 关键 NeoForge 依赖与调用面 | Fabric 替代 / adapter 策略 | 优先级 | 风险 |
 |---|---|---|---:|---|
 | lifecycle | `@Mod`、`ModContainer`、FML common/client setup、`InterModEnqueueEvent`、`ServerLifecycleHooks`、dist marker | Fabric `ModInitializer`/`ClientModInitializer` 只做组合根；server lifecycle callbacks；把 setup 拆成显式、幂等的 common/client bootstrap，环境判断集中一处 | P0 | 高：FML 阶段顺序和 enqueue 时机没有一一对应关系；静态初始化可能早于 registry ready |
-| registry | `DeferredRegister`、`DeferredHolder`、`RegisterEvent`、`NeoForgeRegistries`、data maps | built-in 走 vanilla register/holder；Task 037 另以 vanilla `DefaultedMappedRegistry` + Fabric root builder 建立 owner-thread/fail-closed intrusive foundation。具体 registry、data map/tag/reload table 仍逐 owner 映射，不由 foundation 假定 | P0 | 高：66 处 `DeferredHolder` 已进入类型签名；canonical default、root conflict、冻结副作用、optional fallback 与同步 ID 必须对账 |
+| registry | `DeferredRegister`、`DeferredHolder`、`RegisterEvent`、`NeoForgeRegistries`、data maps | built-in 走 vanilla register/holder；Task 037 以 vanilla `DefaultedMappedRegistry` + Fabric root builder 建立 intrusive foundation；Task 038 只连接普通、unconditional、non-synced MekaSuitAbsorption owner。其它 registry 与 data-map families 仍逐 owner 映射 | P0 | 高：canonical default/root conflict/freeze、resource-stack order、tag expansion、reload failure、owner cleanup 与同步 ID 必须对账 |
 | config | `ModConfigSpec`、`ConfigValue`、`ModConfigEvent`、`IConfigSpec`、config screen factory | 保留 config DTO、默认值和校验逻辑；用小型 config service 负责加载/保存/重载，服务端同步沿既有 packet；配置屏幕作为 client 可选 adapter | P0 | 中高：格式兼容、world/server config 路径和热重载语义；不要让 UI 库进入 common API |
 | network | payload registrar/handler、`IPayloadContext`、`PacketDistributor`、`IContainerFactory`、NeoForge stream codecs | 使用 Fabric networking 的 payload type registry、play/configuration networking 与 vanilla `CustomPacketPayload`/`StreamCodec`；自有 context 仅暴露 player、enqueue/execute、reply；分发策略封装在 packet dispatcher | P0 | 高：线程切换、登录阶段、方向、断线及 packet ID/codec 必须逐项验证 |
 | capability + attachments | `Block/Item/EntityCapability`、provider、register event、`BlockCapabilityCache`、attachments | 使用 Fabric `BlockApiLookup`/`ItemApiLookup`（适用处）和 entity/block hooks；以小型 lookup facade 隔离查询；缓存必须监听失效/区块卸载，数据附件用 Fabric attachment API 或明确的 component/持久化 owner | P1 | 很高：缓存失效、side/context、生命周期和持久化最容易造成复制、泄漏或 stale reference |
@@ -85,7 +85,7 @@ scripts/scan-platform-deps.py
 
 当前还原样纳入 `DependentMapCodec`、`SequencedCollectionCodec`、`DroppingUnboundedMapCodec`（均与 `4646f509` 字节一致）。紧凑 Java 21 oracle 仅覆盖 dependency-first 选择及字段错误、sequenced encode/decode 边界/顺序/immutable/partial remainder，以及 dropping map 的 first-wins、保留 partial success/failed input 和重复 partial-value 的早返回；打包精确允许 1 个 API 与 3 个 common codec class，无 startup marker。`ModuleContainer`、`AttachedSideConfig`、recipes、data components、config/network owners 和所有 callers 延期；不声明 persistence、registry、packet、lifecycle-owner 或 serialized-format backward compatibility。
 
-Task 037 后当前 allowlist 数量为 API **64**、common **122**、platform **19**。`Color`、`CustomEffect`、`Pos3D`、`Quaternion`、`Range3D`、`MultipartUtils`、`StatUtils` 七个 foundation 源文件均与 `4646f509` 字节一致；12 个本地 Java 21 测试仅界定 color/stat/effect、spatial/range/rotation/quaternion 与 direct raycast，JAR 精确限定 direct common-lib 四项、effect 一项、math 三项、Multipart 三项和 StatUtils 一项。renderers/particles/GUI/recipe viewers/client lifecycle、transmitters/multipart blocks/gear、machines/block types/entities、packet tracking/network ranges、SPS/multiblock、additions/generators、external energy、world/chunk lifecycle、registries/config/persistence 及所有 callers/owners 延期；无 rendering integration、entity/player lifecycle、block registration、networking、thread safety 或 collision-owner guarantee。
+Task 038 后当前 allowlist 数量为 API **65**、common **122**、platform **22**。`Color`、`CustomEffect`、`Pos3D`、`Quaternion`、`Range3D`、`MultipartUtils`、`StatUtils` 七个 foundation 源文件均与 `4646f509` 字节一致；12 个本地 Java 21 测试仅界定 color/stat/effect、spatial/range/rotation/quaternion 与 direct raycast，JAR 精确限定 direct common-lib 四项、effect 一项、math 三项、Multipart 三项和 StatUtils 一项。renderers/particles/GUI/recipe viewers/client lifecycle、transmitters/multipart blocks/gear、machines/block types/entities、packet tracking/network ranges、SPS/multiblock、additions/generators、external energy、world/chunk lifecycle、registries/config/persistence 及所有 callers/owners 延期；无 rendering integration、entity/player lifecycle、block registration、networking、thread safety 或 collision-owner guarantee。
 
 官方 `WildcardMatcher` 已原样纳入 bounded common slice，保持递归/回溯、`Locale.ROOT` 大小写折叠、`TagKey.location()` 和 UTF-16 `char`/`Character.isDigit(char)` 语义。Fabric 测试与 packaged JAR 门禁覆盖该边界；这不表示 QIO、miner、Finder 或其他未来调用方已经移植。官方 `ChunkUtils` 也原样纳入同一 slice，保留 `rangeClosed` 四方向的 inclusive 行主序遍历（X 最快、其次 Z）、packed `long` 行为与 `packedBlockToChunk` 对负数坐标的 `>> 4` floor-section 语义；返回数组按 inclusive 维度分配，representable/可分配矩形属调用者前置条件。同样保持 baseline 字节不变的 `BiLongMultimap`、`FilterTransformIterator`、`IndexedCuboidMap` 已构成仅内存的索引查找闭包；两份官方测试与 Fabric-local Java 21 边界测试覆盖双向 mutation、null filter/exhaustion、负 chunk 与 inclusive box、同 box replacement 和混合清理。JAR 精确限定六个 collection class entries。Miner/QIO/spatial caller、world/chunk lifecycle/loading、persistence、concurrency 与多线程 mutation 均未移植或声明。
 
@@ -253,7 +253,7 @@ Task 035 将 allowlist 扩为 API/common/platform **58/122/17**。这是经 conc
 
 `SerializerHelper` 相对 `4646f509` 只把 NeoForge `FluidStack` import 换成 project-owned `mekanism.api.fluid.FluidStack`，并把两处 `MekanismAPI.logger.error` 改由 private `LoggerFactory.getLogger("mekanism.api.MekanismAPI")` 记录，以避开 unfinished facade 的 eager class initialization。logger category、ERROR level、`Tried to load invalid item: '{}'` / `Tried to load invalid fluid: '{}'` 保持。11 个 public codec fields、6 个 public methods、legacy floating-long、item/fluid optional/lenient/oversized、conditional map 与 stringify semantics/error/defaults 均保留；无 startup entrypoint reference。
 
-一个新 ordinary class 恰好五个 methods，与 unchanged `InventoryApiHolderTest` 四个 methods构成 focused 2/9。Task 035 落地 totals 为 ordinary **65/310**、Knot transfer **2/8**、aggregate **67/318**；Task 036 落地为 **66/315**、**2/8**、**68/323**；Task 037 后当前 ordinary/transfer/root/aggregate 为 **67/320**、**2/8**、**1/1**、**70/329**，三项 jqwik properties 各100,000。实编译 JAR family 为 `SerializerHelper` outer + 三个 anonymous classes `$1`/`$2`/`$3`；exact gate 各允许一次并拒绝 same-prefix extras、`MekanismAPI.class`、NeoForge/Loader leakage 与 startup marker/reference。ChemicalStack、完整 ConstantPredicates、concrete slots、menu/warning/recipes、registry/config/lifecycle/transaction/transfer/thread owner 和 broad facade 全部仍延期。
+一个新 ordinary class 恰好五个 methods，与 unchanged `InventoryApiHolderTest` 四个 methods构成 focused 2/9。Task 035 落地 totals 为 ordinary **65/310**、Knot transfer **2/8**、aggregate **67/318**；Task 036 落地为 **66/315**、**2/8**、**68/323**；Task 037 落地 ordinary/transfer/root/aggregate 为 **67/320**、**2/8**、**1/1**、**70/329**；Task 038 当前 ordinary/transfer/root/data-map/aggregate 为 **68/324**、**2/8**、**1/1**、**1/1**、**72/334**，三项 jqwik properties 各100,000。实编译 JAR family 为 `SerializerHelper` outer + 三个 anonymous classes `$1`/`$2`/`$3`；exact gate 各允许一次并拒绝 same-prefix extras、`MekanismAPI.class`、NeoForge/Loader leakage 与 startup marker/reference。ChemicalStack、完整 ConstantPredicates、concrete slots、menu/warning/recipes、registry/config/lifecycle/transaction/transfer/thread owner 和 broad facade 全部仍延期。
 
 ### Task 036 portable text/color SCC
 
@@ -287,6 +287,22 @@ Fabric server 所用的 `BuiltInRegistries.bootStrap()` automatic root freeze �
 Loader、Kilt/Connector、bypass string、startup marker 或两 bootstrap reference。现有 GameEvent proof
 不改。本任务没有 Chemical、`mekanism:empty`、data maps/radiation、MekanismAPI/facade、reload/client、
 具体 registry owner、production startup wiring、manual production freeze 或 concurrent-read promise。
+
+### Task 038 ordinary MekaSuitAbsorption data map
+
+Task 038 将当前 API/common/platform 扩为 **65/122/22**。唯一 API admission 是
+`MekaSuitAbsorption`（仅 `MekanismAPI` namespace 改 literal）；新增 identity-only descriptor、ordinary
+loader 与实际 server identity/session owner，并在既有 bootstrap 注册 STARTING、END reload、STOPPED
+三回调。folder mapping、完整 low→high resource stacks、replace→ordered values/tag expansion→ordered
+remove、object-first codec alternatives 与 `[0,1]` failure 均按固定 NeoForge 21.1.200 oracle 独立复现。
+逐 resource layer 失败原子跳过并发布其余候选；false vanilla END 不变更；global invariant 的 startup
+fail 与 later stale-local 行为分离，不声称 vanilla joint rollback。
+
+资源只纳入固定 map/tag 两项且各一次；clean packaged baseline 查询为 21 项（20×1.0、sonic 0.75）。
+owner snapshots immutable、只含 copied keys/values；reference/direct queries 分别走 key 与当前 registry
+canonicalization，stop 清除 exact server session。四个 ordinary methods + 一个隔离 Knot method 和专用
+packaged reload fixture/gate 提供边界证据。NeoForge source/binary hash、layer truth table 与完整延期项见
+`FABRIC_DATA_MAPS.md`；Chemical/sync/conditions/Advanced/holder mixin/facade/network/service owner 未纳入。
 
 ## `other` 桶的处理
 

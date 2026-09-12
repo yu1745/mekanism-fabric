@@ -10,9 +10,9 @@ excluded. It uses Minecraft 1.21.1, Java 21, and Mojang official mappings.
 `api-slice.txt` is the auditable allowlist of API source paths, relative to
 `src/api/java`. The Fabric source set reads that file directly, so the listed
 sources retain their original `mekanism.api.*` names without being copied or
-modified. The allowlist contains **64 current source files**: **62 official baseline
-sources** plus the project-owned registry-aware `INBTSerializable` and bounded
-`FluidStack` contracts.
+modified. The allowlist contains **65 current source files**: **62 official baseline
+sources** plus the project-owned registry-aware `INBTSerializable`, bounded
+`FluidStack`, and Task 038 `MekaSuitAbsorption` contracts.
 Intentional API adaptations include that contract, `Action`'s removal of two
 NeoForge `FluidAction` conversion methods, the Javadoc-only strict-handler
 fluid-import/link cleanup, Task 032's bounded module-config namespace/enum/text
@@ -28,8 +28,8 @@ and `../docs/FABRIC_TEXT.md`. JetBrains annotations and JSR-305 remain `compileO
 and are not bundled in the mod.
 
 `common-slice.txt` contains **122 official source files**, and
-`platform-slice.txt` contains **19 project-owned Fabric sources**. Seven spatial/color/effect foundations (`Color`, `CustomEffect`, `Pos3D`, `Quaternion`, `Range3D`, `MultipartUtils`, and `StatUtils`) remain byte-identical to `4646f509`. Twelve Java 21 tests bound channel/HSV/compositing/statistics, effect state, vector/range/rotation/quaternion state, and direct multipart ray selection. Packaging permits exactly four direct common-lib classes, one effect class, three math classes, the three `MultipartUtils` classes, and one `StatUtils` class. This admits no caller or owner: renderers/particles/GUI/recipe viewers/client lifecycle, transmitters/multipart blocks/gear, machines/block types/entities, packet tracking/network ranges, SPS/multiblock, additions/generators, external energy, world/chunk lifecycle, registries/config/persistence all remain deferred; there is no rendering integration, entity/player lifecycle, block registration, networking, thread-safety, or collision-owner guarantee. Together with
-the **64-file API slice**, they form bounded registry/GameEvent, TOML
+`platform-slice.txt` contains **22 project-owned Fabric sources**. Seven spatial/color/effect foundations (`Color`, `CustomEffect`, `Pos3D`, `Quaternion`, `Range3D`, `MultipartUtils`, and `StatUtils`) remain byte-identical to `4646f509`. Twelve Java 21 tests bound channel/HSV/compositing/statistics, effect state, vector/range/rotation/quaternion state, and direct multipart ray selection. Packaging permits exactly four direct common-lib classes, one effect class, three math classes, the three `MultipartUtils` classes, and one `StatUtils` class. This admits no caller or owner: renderers/particles/GUI/recipe viewers/client lifecycle, transmitters/multipart blocks/gear, machines/block types/entities, packet tracking/network ranges, SPS/multiblock, additions/generators, external energy, world/chunk lifecycle, registries/config/persistence all remain deferred; there is no rendering integration, entity/player lifecycle, block registration, networking, thread-safety, or collision-owner guarantee. Together with
+the **65-file API slice**, they form bounded registry/GameEvent, TOML
 startup-config, configuration-handshake, internal energy storage/holder, internal
 heat storage/holder, wildcard-matching, fair-distribution, chunk-coordinate,
 lambda-metafactory, and vanilla-registry utility closures. The unchanged
@@ -182,7 +182,16 @@ Heat includes the unchanged dynamic `VariableHeatCapacitor`; Task 023 provides o
 external Energy transaction seam, while neither domain claims configurable-holder, network, or
 machine-owner integration and heat has no external adapter. Likewise, admitting distribution utilities does not
 port energy/item/fluid/chemical transport callers, Fabric transactions, or their
-machine/network owners. See `../docs/FABRIC_REGISTRY.md`,
+machine/network owners. Task 038 adds the one ordinary/unconditional/non-synced server-side
+`MekaSuitAbsorption` data-map vertical. The complete low-to-high layer stack,
+replace/write/remove order, atomic per-resource failures, immutable per-server epochs,
+reference/direct query rules, exact two-resource packaging, dedicated Knot test and
+isolated packaged reload fixture are documented in `../docs/FABRIC_DATA_MAPS.md`.
+The current exact test contract is ordinary **68/324**, transfer **2/8**, root **1/1**,
+data-map Knot **1/1**, aggregate **72/334**, retaining jqwik 3×100,000. Chemical,
+synced/conditional/Advanced maps, holder mixins and broad owners remain deferred.
+
+See `../docs/FABRIC_REGISTRY.md`, `../docs/FABRIC_DATA_MAPS.md`,
 `../docs/FABRIC_CONFIG.md`, `../docs/FABRIC_NETWORK.md`,
 `../docs/FABRIC_ENERGY.md`, `../docs/FABRIC_HEAT.md`, and
 `../docs/FABRIC_ITEM.md`. Night Config core/toml
@@ -229,8 +238,9 @@ test reference.
 One new ordinary class has exactly five methods; unchanged `InventoryApiHolderTest`
 keeps four integration methods. Task 035 landing totals were ordinary **65 suites/310 tests**,
 transfer **2 suites/8 tests**, aggregate **67 suites/318 tests**; Task 036 landing totals
-were **66/315**, **2/8**, and **68/323**. Task 037 current ordinary/transfer/root/aggregate
-totals are **67/320**, **2/8**, **1/1**, and **70/329**, with three jqwik properties at 100,000 each. The remapped JAR must contain exactly the compiled
+were **66/315**, **2/8**, and **68/323**. Task 037 landing ordinary/transfer/root/aggregate
+totals were **67/320**, **2/8**, **1/1**, and **70/329**; Task 038 current totals are ordinary/transfer/root/data-map/aggregate
+**68/324**, **2/8**, **1/1**, **1/1**, and **72/334**, with three jqwik properties at 100,000 each. The remapped JAR must contain exactly the compiled
 SerializerHelper outer plus `$1`/`$2`/`$3`, once each, no `MekanismAPI.class`,
 platform leakage, test/helper extras, startup reference, or marker. API/common/platform
 Task 035 counts were **58/122/17**; no dependency, common, or platform source changed.
@@ -275,8 +285,9 @@ working directory; it performs the only global mutation, genuinely root-register
 unique synced registry via the Fabric builder, and invokes the real built-in automatic freeze
 path before the worker exits.
 
-Current API/common/platform is **64/122/19**; ordinary **67/320**, transfer **2/8**, isolated
-root **1/1**, aggregate **70/329**, and jqwik remains 3×100,000 in ordinary only. Static packaging
+Task 037 landed at API/common/platform **64/122/19** with ordinary **67/320**, transfer **2/8**, isolated
+root **1/1**, aggregate **70/329**. Task 038 current counts are **65/122/22** with ordinary **68/324**,
+transfer **2/8**, root **1/1**, data-map Knot **1/1**, aggregate **72/334**; jqwik remains 3×100,000 in ordinary only. Static packaging
 requires exactly seven direct registry classes and rejects synthetic/test/helper, NeoForge/
 Loader, Chemical/MekanismAPI, Kilt/Connector, bypass strings, startup markers, and references
 from either bootstrap. There is no chemical owner, `mekanism:empty`, data map/radiation,

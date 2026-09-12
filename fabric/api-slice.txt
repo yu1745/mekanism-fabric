@@ -21,6 +21,7 @@ mekanism/api/container/InContainerGetterLong.java
 mekanism/api/container/IntContainerInteraction.java
 mekanism/api/container/LongContainerInteraction.java
 mekanism/api/container/LongToLongContainerInteraction.java
+mekanism/api/datamaps/MekaSuitAbsorption.java
 mekanism/api/energy/IEnergyContainer.java
 mekanism/api/energy/IEnergyConversion.java
 mekanism/api/energy/IMekanismStrictEnergyHandler.java

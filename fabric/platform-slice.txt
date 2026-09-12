@@ -3,6 +3,9 @@ mekanism/fabric/MekanismFabricBootstrap.java
 mekanism/fabric/MekanismFabricClientBootstrap.java
 mekanism/fabric/config/FabricMekanismConfigManager.java
 mekanism/fabric/config/MekanismConfigSpec.java
+mekanism/fabric/datamaps/FabricDataMapLoader.java
+mekanism/fabric/datamaps/FabricDataMapType.java
+mekanism/fabric/datamaps/FabricMekanismDataMaps.java
 mekanism/fabric/energy/FabricEnergyConversions.java
 mekanism/fabric/energy/FabricEnergyLookup.java
 mekanism/fabric/energy/FabricEnergyStorage.java

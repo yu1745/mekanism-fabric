@@ -2,7 +2,6 @@ package mekanism.api.datamaps;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import mekanism.api.MekanismAPI;
 import mekanism.api.SerializationConstants;
 import net.minecraft.resources.ResourceLocation;
 
@@ -20,7 +19,7 @@ public record MekaSuitAbsorption(float absorption) {
      *
      * @see mekanism.api.datamaps.IMekanismDataMapTypes#mekaSuitAbsorption()
      */
-    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, "mekasuit_absorption");
+    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath("mekanism", "mekasuit_absorption");
 
     private static final Codec<Float> ABSORPTION_CODEC = Codec.floatRange(0, 1);
     /**
