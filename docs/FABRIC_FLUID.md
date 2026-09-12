@@ -2,9 +2,10 @@
 
 ## Task 034 scope
 
-Task 034 is a deliberately bounded two-source platform gateway. The audited source
-slices are API **57** / common **122** / platform **17**. The common slice is
-byte-for-byte unchanged. The only new production sources are:
+Task 034 is a deliberately bounded two-source platform gateway. It landed with
+API **57** / common **122** / platform **17** sources. Task 035 leaves both Task 034
+production sources unchanged and brings the current slices to **58/122/17**. The
+common slice remains byte-for-byte unchanged. The only Task 034 production sources are:
 
 - `src/api/java/mekanism/api/fluid/FluidStack.java`
 - `fabric/src/main/java/mekanism/fabric/fluid/FabricFluidConversions.java`
@@ -160,9 +161,28 @@ identity; normalization of flowing water/lava causes a deterministic
 `IllegalArgumentException` instead of a false round-trip claim. Built-in source
 water and lava round-trip exactly. No floor/bounded transaction helper is exposed.
 
+## Task 035 shared serialization owner
+
+Task 035 admits `mekanism.api.SerializerHelper` and replaces only its NeoForge
+`FluidStack` import with this project-owned value. `LENIENT_OPTIONAL_FLUID_CODEC`
+therefore retains the official `FluidStack.OPTIONAL_CODEC.promotePartial(...).orElse(FluidStack.EMPTY)`
+behavior while using the Fabric-port domain type directly. Valid component-bearing
+values and canonical `{}` empty values round-trip; malformed values fall back to the
+canonical empty singleton.
+
+The only non-import adaptation avoids eagerly initializing the unfinished
+`MekanismAPI` facade: both item/fluid diagnostics use one private SLF4J logger named
+exactly `mekanism.api.MekanismAPI`, at error level, with the unchanged message
+patterns `Tried to load invalid item: '{}'` and `Tried to load invalid fluid: '{}'`.
+This preserves the public diagnostic category without loading `MekanismAPI.class`.
+`SerializerHelper` itself is not referenced from a Fabric entrypoint; callers/tests
+must initialize vanilla registries before first touching its eager static codec
+family. No fluid registry, handler, storage, transaction, lookup, provider, cache,
+or lifecycle owner is added.
+
 ## Test and package boundary
 
-Task 034 adds exactly two test classes and thirteen `@Test` methods:
+Task 034 added exactly two test classes and thirteen `@Test` methods:
 
 - ordinary `FluidStackTest`: nine methods covering emptiness/copies, raw amount
   families, component mutation/copy independence, every restored component
@@ -174,27 +194,29 @@ Task 034 adds exactly two test classes and thirteen `@Test` methods:
   deterministic 100,000-case amount loop with 4,096 value round trips.
 
 The ordinary runtime remains free of `fabric-loader-junit` and retains all three
-jqwik properties. Task 033's unchanged item transaction suite and the new fluid
+jqwik properties. Task 033's unchanged item transaction suite and the Task 034 fluid
 conversion suite share one `fabricTransferTest` source set/task, so a full transfer
-run starts Knot once. Expected totals are ordinary **64 suites / 305 tests**,
-transfer **2 suites / 8 tests**, aggregate **66 suites / 313 tests**.
+run starts Knot once. Task 035 adds one ordinary five-method serialization suite;
+current expected totals are ordinary **65 suites / 310 tests**, transfer **2 suites / 8 tests**,
+aggregate **67 suites / 318 tests**.
 
 The remapped-JAR static gate requires exactly one
 `mekanism/api/fluid/FluidStack.class` and exactly one
 `mekanism/fabric/fluid/FabricFluidConversions.class`; lambdas/private methods
-avoid incidental nested production classes. It rejects unexpected same-prefix
-helpers/tests, NeoForge classes, nested Team Energy classes, and Fabric Loader
-classes. `FABRIC_SMOKE_STATIC_ONLY=1 scripts/fabric-packaged-smoke.sh` runs these
-pre-server gates without downloading or starting a server. There is no fluid
-startup marker.
+avoid incidental nested production classes. Task 035 additionally requires exactly
+`SerializerHelper.class` plus its three verified anonymous classes (`$1`, `$2`, `$3`),
+all once, and rejects `MekanismAPI.class`, same-prefix extras, NeoForge/Loader bytecode
+references, and any serialization startup marker/reference. `FABRIC_SMOKE_STATIC_ONLY=1
+scripts/fabric-packaged-smoke.sh` runs these pre-server gates without downloading or
+starting a server. There is no fluid or serialization startup marker.
 
 ## Deliberately deferred
 
-Task 034 does not admit or adapt:
+Task 034 did not admit `SerializerHelper`; Task 035 now admits only that shared
+owner. The following remain deferred:
 
-- `SerializerHelper`, `ConstantPredicates`, `TextComponentUtil`, translation or
-  predicate callers;
-- any of the 197 progressive import replacements;
+- `ConstantPredicates`, `TextComponentUtil`, translation or predicate callers;
+- the remaining 196 progressive NeoForge `FluidStack` import replacements;
 - fluid types/attributes or custom description overrides;
 - fluid tanks, handlers, storage adapters, transactions, lookup/provider/cache
   owners, listeners, or lifecycle wiring;

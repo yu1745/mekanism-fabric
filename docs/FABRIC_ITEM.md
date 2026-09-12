@@ -2,7 +2,7 @@
 
 ## Task 033 scope
 
-Task 033 is the first deliberate P1 item owner/platform gateway. It landed at API **56** / common **122** / platform **16**; Task 034 leaves all seven item production sources unchanged and brings the current global slices to **57/122/17**. Task 033 production scope is exactly seven sources:
+Task 033 is the first deliberate P1 item owner/platform gateway. It landed at API **56** / common **122** / platform **16**. Task 034 left all seven item production sources unchanged; Task 035 now admits the shared serialization owner and restores `IInventorySlot` delegation, bringing the current global slices to **58/122/17**. Task 033 production scope remains exactly seven sources:
 
 - adapted API contracts:
   - `mekanism.api.inventory.IInventorySlot`
@@ -21,15 +21,9 @@ Task 033 is the first deliberate P1 item owner/platform gateway. It landed at AP
 
 `IInventorySlot` now extends the existing registry-aware `mekanism.api.INBTSerializable<CompoundTag>` instead of NeoForge's nominal serialization interface. Its public methods and behavior are otherwise retained. NeoForge item/fluid imports used only by Javadoc are removed and the two stale comparisons are expressed in platform-neutral prose.
 
-The broad `SerializerHelper` remains deliberately unadmitted. Task 034 adds the bounded Mekanism-owned `FluidStack` value, but does not migrate `SerializerHelper` or alter this Task 033 implementation. The existing private serialization call remains replaced by a private interface method with a method-local codec. That codec exactly mirrors official `SerializerHelper.OVERSIZED_ITEM_CODEC`:
+Task 035 admits `mekanism.api.SerializerHelper` as the shared serialization owner now that the project-owned `FluidStack` value exists. `IInventorySlot.serializeNBT` again delegates directly to `SerializerHelper.saveOversized(provider, getStack())`; the Task 033 private method-local codec and only its now-unused imports are removed. The shared `OVERSIZED_ITEM_CODEC` retains exactly the same non-air `id`, positive `count` defaulting to one, optional empty `components`, registry-aware `NbtOps`, and exact `IllegalStateException("Cannot encode empty ItemStack")`. Counts above an item's vanilla maximum and exact data-component patches therefore remain serializable.
 
-- `ItemStack.ITEM_NON_AIR_CODEC` under `id`;
-- `ExtraCodecs.POSITIVE_INT` under `count`, defaulting to one;
-- optional `DataComponentPatch.CODEC` under `components`, defaulting to the empty patch;
-- registry-aware `provider.createSerializationContext(NbtOps.INSTANCE)`;
-- exact `IllegalStateException("Cannot encode empty ItemStack")` before encoding.
-
-No public or nested helper type is introduced. Counts above an item's vanilla maximum and exact data-component patches remain serializable.
+All legitimate Task 033 nominal-parent and Javadoc adaptations remain. No public/default inventory method, signature, body, nullable-side behavior, or listener contract changes in Task 035.
 
 `ISidedItemHandler` no longer extends NeoForge `IItemHandlerModifiable`. The import, nominal parent and now-invalid `@Override` annotations are removed, but every Mekanism-owned unsided compatibility method and every sided method remain with the same signatures and bodies. The unsided boolean bridge still maps exactly through `Action.get(!simulate)`, and `getInventorySideFor()` remains nullable for internal access. Addons that assigned this interface to the NeoForge parent type lose that nominal subtype on Fabric; no shim is provided.
 
@@ -83,7 +77,7 @@ Exactly two Fabric-local classes contain exactly eight meaningful JUnit methods:
 - `InventoryApiHolderTest` (four): oversized component-bearing NBT and empty failure; slot defaults/caller immutability/limits/signed grow-shrink; unsided/sided routing, boolean simulation mapping, invalid indexes and automation; holder facing, null-vs-physical policy and live list identity.
 - `FabricItemStorageTest` (four): exact `ItemVariant` components, blank/zero/capacity and invalid exposure; stable ordered views plus multi-slot true-long transfer; nested commit/outer abort, mismatch/full-copy restore, observable notifications and all-attempt restore failure; live policy, explicit invalidation and topology drift before/during execution.
 
-At Task 033 landing, ordinary `test` was 63 suites / 296 tests and the isolated item task was one suite / four tests. Task 034 keeps `fabric-loader-junit` off the ordinary runtime and retains all three `DistributionPropertyTest` properties at 100,000 tries/checks each. It generalizes the old `fabricItemTest` source set/task to `fabricTransferTest`: the unchanged `FabricItemStorageTest` and new fluid conversion suite now share one pinned loader-JUnit runtime and one full Knot startup. Current totals are ordinary 64 suites / 305 tests, transfer 2 suites / 8 tests, aggregate 66 suites / 313 tests. `check` runs each task exactly once. Item tests still use only standard vanilla bootstrap, do not mutate registries, and add no startup marker.
+At Task 033 landing, ordinary `test` was 63 suites / 296 tests and the isolated item task was one suite / four tests. Task 034 kept `fabric-loader-junit` off the ordinary runtime and generalized the old `fabricItemTest` source set/task to `fabricTransferTest`, where the unchanged item and fluid conversion suites share one pinned loader-JUnit runtime and one full Knot startup. Task 035 adds exactly five ordinary `SerializerHelperTest` methods and leaves the four-method `InventoryApiHolderTest` unchanged as integration proof. Current expected totals are ordinary **65 suites / 310 tests**, transfer **2 suites / 8 tests**, aggregate **67 suites / 318 tests**; all three `DistributionPropertyTest` properties remain at 100,000 tries/checks each. `check` runs each task exactly once. Item/serialization tests use standard vanilla bootstrap before the first `SerializerHelper` reference, do not mutate registries, and add no startup marker.
 
 The remapped-JAR static gate requires exactly the three direct inventory API classes, exactly the two direct holder/slot classes, and exactly these platform entries, each once:
 
@@ -91,7 +85,7 @@ The remapped-JAR static gate requires exactly the three direct inventory API cla
 - `FabricItemStorage.class`
 - `FabricItemStorage$SlotView.class`
 
-The direct inventory API check does not consume or forbid already-admitted subpackages. Every unexpected item-boundary nested/synthetic/test/helper/fixture class is rejected. There is no item startup/provider proof.
+The direct inventory API check does not consume or forbid already-admitted subpackages. Every unexpected item-boundary nested/synthetic/test/helper/fixture class is rejected. Task 035 additionally requires the exact `SerializerHelper.class`, `$1`, `$2`, and `$3` family once each, keeps `IInventorySlot.class` once, and rejects `MekanismAPI.class`, platform leakage, or a serialization startup reference/marker. There is no item startup/provider proof.
 
 ## Deliberately deferred
 

@@ -402,6 +402,30 @@ actual_api_codec = {
 }
 if actual_api_codec != expected_api_codec or any(entries.count(entry) != 1 for entry in expected_api_codec):
     raise SystemExit(f"unexpected API codec class family: {sorted(actual_api_codec)!r}")
+expected_serializer_helper = {
+    "mekanism/api/SerializerHelper.class",
+    "mekanism/api/SerializerHelper$1.class",
+    "mekanism/api/SerializerHelper$2.class",
+    "mekanism/api/SerializerHelper$3.class",
+}
+actual_serializer_helper = {
+    entry for entry in entries
+    if entry.startswith("mekanism/api/SerializerHelper") and entry.endswith(".class")
+}
+if (actual_serializer_helper != expected_serializer_helper
+        or any(entries.count(entry) != 1 for entry in expected_serializer_helper)):
+    raise SystemExit(f"unexpected SerializerHelper class family: {sorted(actual_serializer_helper)!r}")
+if "mekanism/api/MekanismAPI.class" in entries:
+    raise SystemExit("SerializerHelper must not admit MekanismAPI.class")
+with zipfile.ZipFile(sys.argv[1]) as serializer_artifact:
+    for entry in expected_serializer_helper:
+        bytecode = serializer_artifact.read(entry)
+        if b"net/neoforged/" in bytecode or b"net/fabricmc/loader/" in bytecode:
+            raise SystemExit(f"platform leakage in SerializerHelper bytecode: {entry}")
+        if b"MEKANISM_FABRIC_" in bytecode:
+            raise SystemExit(f"SerializerHelper must not contain a startup marker: {entry}")
+    if b"mekanism/api/SerializerHelper" in serializer_artifact.read("mekanism/fabric/MekanismFabricBootstrap.class"):
+        raise SystemExit("SerializerHelper must not be initialized by the Fabric startup entrypoint")
 expected_module_configs = {
     "mekanism/api/gear/config/ModuleConfig.class",
     "mekanism/api/gear/config/ModuleBooleanConfig.class",
@@ -722,7 +746,7 @@ if actual_fabric_fluid != expected_fabric_fluid or any(entries.count(entry) != 1
     raise SystemExit(f"unexpected Fabric fluid conversion class family: {sorted(actual_fabric_fluid)!r}")
 PYEOF
 then
-  echo "fabric-packaged-smoke: item-boundary/block-state-descriptor/inventory-metadata/deferred-registration/tile-interface/slot-info/tier/resource/codec/collection/distribution/ChunkUtils/RegistryUtils/LambdaMetaFactoryUtil/long-transfer/dynamic-strict-energy/proxy/config-listener/common-lib-root production/test packaging contract failed" >&2
+  echo "fabric-packaged-smoke: SerializerHelper/item-boundary/block-state-descriptor/inventory-metadata/deferred-registration/tile-interface/slot-info/tier/resource/codec/collection/distribution/ChunkUtils/RegistryUtils/LambdaMetaFactoryUtil/long-transfer/dynamic-strict-energy/proxy/config-listener/common-lib-root production/test packaging contract failed" >&2
   exit 1
 fi
 for required_entry in \

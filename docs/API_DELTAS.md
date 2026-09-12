@@ -50,8 +50,9 @@ Kilt 的转换表明 execute/simulate 应在 transfer 边界映射为 transactio
 
 ## Mekanism-owned `FluidStack` value (Task 034)
 
-状态：当前 API/common/platform allowlist 精确为 **57/122/17**。新增
-`mekanism.api.fluid.FluidStack` 是 final、项目自有、平台中立的 mutable
+状态：Task 034 落地时 API/common/platform allowlist 精确为 **57/122/17**；
+Task 035 后当前为 **58/122/17**。`mekanism.api.fluid.FluidStack` 是 final、
+项目自有、平台中立的 mutable
 `int` mB value；`FluidVariant` 与 Fabric Transfer units 只出现在新增的
 `mekanism.fabric.fluid.FabricFluidConversions`。不创建 `net.neoforged.*`
 shim，也不把 API domain 改成 droplet `long`。
@@ -93,9 +94,46 @@ Fabric 没有 nominal `FluidType`，所以 custom `FluidType` description overri
 不可用；Fabric convention 明确为 block-derived。
 
 刻意删除 `getFluidType()`、`is(FluidType)` 与 deprecated
-`isFluidEqual(ItemStack)` capability bridge。所有既有 NeoForge FluidStack imports
-及 callers 仍未替换；完整 provenance、单位 seam、测试与延期边界见
+`isFluidEqual(ItemStack)` capability bridge。Task 034 落地时所有既有 NeoForge FluidStack
+imports 及 callers 均未替换；Task 035 只替换 `SerializerHelper` 的一处 import；完整 provenance、单位 seam、测试与延期边界见
 `docs/FABRIC_FLUID.md`。
+
+## Shared serialization owner (Task 035)
+
+状态：`mekanism.api.SerializerHelper` 已加入 API allowlist；这是具体 slot 调用点与
+item/fluid codec 的共享 owner，不是 registry、config、lifecycle 或 persistence owner。
+Task 035 是经 concrete-slot scouting 后批准的两份紧耦合 production-source 架构例外：
+新增 admission 为 `SerializerHelper`，另一份只修改已纳入的 `IInventorySlot`。
+
+相对 oracle `4646f509`，`SerializerHelper` 保留全部 11 个 public codec fields、6 个
+public methods、signatures、codec field/default/error semantics、legacy floating-long
+unsigned/clamp/decimal behavior、`promotePartial(...).orElse(...)`、oversized item
+components/count、两个 conditional map codec 与 `stringify`。production delta 精确为：
+
+1. NeoForge `FluidStack` import 换成既有 `mekanism.api.fluid.FluidStack`；
+2. 为避免未完成 `MekanismAPI` facade 的 eager class initialization，两个
+   `MekanismAPI.logger.error(...)` call 由一个 private
+   `LoggerFactory.getLogger("mekanism.api.MekanismAPI")` SLF4J logger 承接。
+
+第二项是唯一非 import adaptation。logger category 精确保持
+`mekanism.api.MekanismAPI`，level 保持 error，消息模板精确保持
+`Tried to load invalid item: '{}'` 与 `Tried to load invalid fluid: '{}'`；不改用
+caller-derived category，也不新增 public logger。`SerializerHelper` 的 static codec family
+仍在首次类引用时 eager 初始化，因此普通测试在首次引用前执行 vanilla
+`SharedConstants`/`Bootstrap`；Fabric startup entrypoint 不引用该类，发布物不含
+`MekanismAPI.class` 或 serialization startup marker。
+
+`IInventorySlot` 删除 Task 033 的 private oversized codec 与仅由它使用的 imports，并
+恢复 exact `SerializerHelper.saveOversized(provider, getStack())` delegation。Task 033 的
+Mekanism-owned NBT nominal parent、两处 Javadoc prose 以及全部 public/default methods
+保持。兼容效果是共享 codec owner 恢复；无新增依赖、common/platform source、chemical
+behavior、concrete slot、menu、recipe、warning 或 broad facade。
+
+验证由恰好五个 `SerializerHelperTest` methods 与 unchanged 四个
+`InventoryApiHolderTest` methods 提供；当前预期 ordinary **65/310**、Knot transfer
+**2/8**、aggregate **67/318**，三项 jqwik property 各 100,000。JAR family 精确为
+`SerializerHelper.class` 加 `$1`/`$2`/`$3`，各一次；unexpected nested/test/helper、
+`MekanismAPI.class`、NeoForge/Loader leakage 与 startup marker 均拒绝。
 
 ## Module config value contracts (Task 032)
 
@@ -151,7 +189,7 @@ Task 031 的 `SoundEventDeferredRegister` 用既有 `MekanismDeferredRegister<So
 `fabric/src/test/java/mekanism/common/registration/MekanismDeferredRegisterTest.java`、
 `SoundAndDamageRegistrationTest.java` 以及 static packaged-JAR gates。Kilt/Connector 与 NeoForge
 21.1.200 extension source 仅用于核对生命周期、冻结、canonical holder 和 lookup 语义；实现未复制。
-当前 **57/122/17** slice 不把 sound/damage owners 接入 entrypoint。
+当前 **58/122/17** slice 不把 sound/damage owners 接入 entrypoint。
 
 ## Config contract
 
@@ -168,7 +206,7 @@ Task 030 的四个 common source 只替换 config backing types：`CachedResolva
 
 兼容影响：直接依赖 NeoForge config spec/type 或 `IConfigTranslation` 到
 `IHasTranslationKey` 赋值关系的 addon 必须改用 Fabric 侧契约。TOML 文件名、12 个 startup
-路径、默认值、范围、restart 元数据与缓存行为保持。官方 resolvable `set` 仍缓存 caller 的原始 `TYPE`：encoded list backing 是 immutable copy，但 map 在 clear/reload 前仍可与 caller alias；clear/reload 后才按 deterministic sorted strings 重建。当前 **57/122/17** slice 不激活 `GeneralConfig`/`MekanismConfig`、cardboard blacklist、Oredictionificator filters/items、`CachedEnumValue`、UI/watch/sync 或 config ownership/lifecycle/threading。细节和验证见 `docs/FABRIC_CONFIG.md`。
+路径、默认值、范围、restart 元数据与缓存行为保持。官方 resolvable `set` 仍缓存 caller 的原始 `TYPE`：encoded list backing 是 immutable copy，但 map 在 clear/reload 前仍可与 caller alias；clear/reload 后才按 deterministic sorted strings 重建。当前 **58/122/17** slice 不激活 `GeneralConfig`/`MekanismConfig`、cardboard blacklist、Oredictionificator filters/items、`CachedEnumValue`、UI/watch/sync 或 config ownership/lifecycle/threading。细节和验证见 `docs/FABRIC_CONFIG.md`。
 
 ## Registry-aware NBT contract
 
@@ -208,13 +246,13 @@ void deserializeNBT(HolderLookup.Provider provider, T tag)
 
 ## Item inventory contracts (Task 033)
 
-状态：Task 033 落地时 API/common/platform allowlist 精确为 **56/122/16**；Task 034 后当前为 **57/122/17**。三份 inventory API source 中，`IMekanismInventory` 与 `4646f509` byte-identical；另两份只有以下有界平台适配。
+状态：Task 033 落地时 API/common/platform allowlist 精确为 **56/122/16**；Task 034 后为 **57/122/17**，Task 035 后当前为 **58/122/17**。三份 inventory API source 中，`IMekanismInventory` 与 `4646f509` byte-identical；另两份只有以下有界平台适配。
 
 ### `IInventorySlot`
 
 NeoForge `INBTSerializable<CompoundTag>` nominal parent 换成既有 `mekanism.api.INBTSerializable<CompoundTag>`。两个仅供 Javadoc 的 item/fluid links/imports 换成平台中立文字；所有 public methods、default bodies、listener、amount/limit、oversized stack 与 nullable container-slot behavior 均保留。
 
-未纳入 `SerializerHelper`，因为它的 public surface 暴露延期的 `FluidStack`。唯一 private call site 换成 private interface method，其 method-local lazy codec 精确复现 official `OVERSIZED_ITEM_CODEC`：non-air item holder `id`、positive int `count` default 1、optional `DataComponentPatch` `components` default empty，以及 registry-aware `NbtOps`。empty stack 仍抛 exact `IllegalStateException("Cannot encode empty ItemStack")`。无 public/nested helper type；oversized count 与 components 不丢失。
+Task 033 因当时 `FluidStack` 尚未纳入而把唯一 shared-helper call 暂时换成 private method-local codec。Task 035 在 shared owner 可闭合后删除该 private codec 和仅由它使用的 imports，并恢复 `SerializerHelper.saveOversized(provider, getStack())`。共享 `OVERSIZED_ITEM_CODEC` 仍精确使用 non-air item holder `id`、positive int `count` default 1、optional empty `DataComponentPatch` `components` 和 registry-aware `NbtOps`；empty stack 仍抛 exact `IllegalStateException("Cannot encode empty ItemStack")`。oversized count/components 与全部既有 inventory behavior 不变。
 
 兼容影响：Fabric implementation 改为实现 Mekanism-owned registry-aware NBT nominal type，而不是 NeoForge nominal type；两个 serialize/deserialize method signatures 不变。依赖 NeoForge parent assignment 的 addon 需迁移。
 

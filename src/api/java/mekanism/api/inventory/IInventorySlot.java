@@ -1,19 +1,14 @@
 package mekanism.api.inventory;
 
-import com.mojang.serialization.Codec;
-import com.mojang.serialization.codecs.RecordCodecBuilder;
 import mekanism.api.Action;
 import mekanism.api.AutomationType;
 import mekanism.api.IContentsListener;
 import mekanism.api.INBTSerializable;
 import mekanism.api.SerializationConstants;
+import mekanism.api.SerializerHelper;
 import mekanism.api.annotations.NothingNullByDefault;
 import net.minecraft.core.HolderLookup;
-import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtOps;
-import net.minecraft.nbt.Tag;
-import net.minecraft.util.ExtraCodecs;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
@@ -299,20 +294,8 @@ public interface IInventorySlot extends INBTSerializable<CompoundTag>, IContents
     default CompoundTag serializeNBT(HolderLookup.Provider provider) {
         CompoundTag nbt = new CompoundTag();
         if (!isEmpty()) {
-            nbt.put(SerializationConstants.ITEM, saveOversized(provider, getStack()));
+            nbt.put(SerializationConstants.ITEM, SerializerHelper.saveOversized(provider, getStack()));
         }
         return nbt;
-    }
-
-    private static Tag saveOversized(HolderLookup.Provider provider, ItemStack stack) {
-        if (stack.isEmpty()) {
-            throw new IllegalStateException("Cannot encode empty ItemStack");
-        }
-        Codec<ItemStack> oversizedItemCodec = Codec.lazyInitialized(() -> RecordCodecBuilder.create(instance -> instance.group(
-              ItemStack.ITEM_NON_AIR_CODEC.fieldOf(SerializationConstants.ID).forGetter(ItemStack::getItemHolder),
-              ExtraCodecs.POSITIVE_INT.fieldOf(SerializationConstants.COUNT).orElse(1).forGetter(ItemStack::getCount),
-              DataComponentPatch.CODEC.optionalFieldOf(SerializationConstants.COMPONENTS, DataComponentPatch.EMPTY).forGetter(ItemStack::getComponentsPatch)
-        ).apply(instance, ItemStack::new)));
-        return oversizedItemCodec.encodeStart(provider.createSerializationContext(NbtOps.INSTANCE), stack).getOrThrow();
     }
 }

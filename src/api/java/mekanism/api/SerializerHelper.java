@@ -16,6 +16,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import mekanism.api.annotations.NothingNullByDefault;
+import mekanism.api.fluid.FluidStack;
 import net.minecraft.Util;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.HolderLookup.Provider;
@@ -25,12 +26,15 @@ import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.fluids.FluidStack;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 //TODO - 1.21: Update the wiki docs to fix the syntax
 @NothingNullByDefault
 public class SerializerHelper {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger("mekanism.api.MekanismAPI");
 
     private SerializerHelper() {
     }
@@ -114,7 +118,7 @@ public class SerializerHelper {
           LEGACY_CODEC_FLOATING_LONG.validate(val -> val == 0 ? DataResult.error(() -> "Value must be greater than zero") : DataResult.success(val))
     );
 
-    private static final Consumer<String> ON_STACK_LOAD_ERROR = error -> MekanismAPI.logger.error("Tried to load invalid item: '{}'", error);
+    private static final Consumer<String> ON_STACK_LOAD_ERROR = error -> LOGGER.error("Tried to load invalid item: '{}'", error);
     /**
      * Helper codec to deserialize an optional item stack and fall back to the empty stack if an error is encountered in deserialization.
      *
@@ -144,7 +148,7 @@ public class SerializerHelper {
      * @since 10.7.9
      */
     public static final Codec<FluidStack> LENIENT_OPTIONAL_FLUID_CODEC = FluidStack.OPTIONAL_CODEC
-          .promotePartial(error -> MekanismAPI.logger.error("Tried to load invalid fluid: '{}'", error))
+          .promotePartial(error -> LOGGER.error("Tried to load invalid fluid: '{}'", error))
           .orElse(FluidStack.EMPTY);
 
     /**
