@@ -48,9 +48,8 @@ switch，实际产物无额外 synthetic class。
 独立核对固定依赖而非只采信设计假设：Fabric API `0.116.17+1.21.1` 解析出的
 `fabric-registry-sync-v0:5.3.2+e3eddc2119` 原始 binary/source SHA-256 分别为
 `20b69b97f1f56c4e201e842ef2c0a2ab93f0728fbd3ca78034d4de7e4a12c5a7` 与
-`9bfb198cd68fbc28a2275c40b51cddb812d015a1f4ea54f9f30d66e2112c8198`；Loom official-mapped
-binary/source 分别为 `1cf460ad4db85600c7d6c2f3d549d255bdfc686c6913bb7b7e0ffe07727ffdfc` 与
-`d34eae3555b507fda3dc308ed6651a83869477f889e3a48dc667d142339ab3c4`。检查确认 builder 先写
+`9bfb198cd68fbc28a2275c40b51cddb812d015a1f4ea54f9f30d66e2112c8198`；Loom 生成的
+official-mapped binary/source 副本会随重新生成而变化，因此不作为稳定 provenance pin。检查确认 builder 先写
 attributes、默认总含 `MODDED`，随后把 exact instance 注册进 root；server `MainMixin` 在 mod init
 后调用 `BuiltInRegistries.bootStrap()`。
 
