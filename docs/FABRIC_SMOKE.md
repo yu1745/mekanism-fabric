@@ -157,13 +157,19 @@ production remapped JAR and an isolated fixture JAR under `fabric/build/datamap-
 (never `fabric/build/libs`), then uses a disposable real server and console commands. Its query probe
 checks startup 21/20×1.0/sonic 0.75, discovers and auto-enables the newly created high pack through
 console `reload`, verifies its replace/remove epoch 2, then checks a malformed high layer with valid
-low publication epoch 3, real vanilla reload-future failure with no epoch increment, repair epoch 4,
-and exact owner removal on normal stop. Contiguous log-line checkpoints allow no `ERROR` during
-startup, the valid high-pack reload, repair, or normal stop. The malformed window requires exactly one
+low publication epoch 3. For the failed-reload phase, the isolated fixture's Fabric `SERVER_DATA`
+listener detects only its dedicated `mekanism_datamap_reload_fixture:reload_failure.marker` resource
+and throws from the real resource reload; it supplies no data map and never invokes the production
+loader. The gate requires the resulting `END_DATA_PACK_RELOAD success=false` epoch-stability marker
+and a fresh probe proving the epoch-3 published state is unchanged, removes the marker, verifies
+recovery epoch 4, and checks exact owner removal on normal stop.
+
+Contiguous phase-bounded log checkpoints allow no `ERROR` during startup, the valid high-pack reload,
+fixture-induced reload failure, repair, or normal stop. The malformed window requires exactly one
 `Mekanism/FabricDataMaps` invalid-layer `ERROR` for
-`mekanism:data_maps/damage_type/mekasuit_absorption.json`; the deliberately broken vanilla window
-allows only `ERROR` lines naming `reload_future_failure` or vanilla `Failed to execute reload`. Final
-line-count accounting proves that no other `ERROR` was hidden, and crash signatures remain fatal.
+`mekanism:data_maps/damage_type/mekasuit_absorption.json`. The fixture-failure window additionally
+requires the exact `WARN` evidence `Failed to execute reload`; it does not whitelist any `ERROR`.
+Final line-count accounting proves that no other `ERROR` was hidden, and crash signatures remain fatal.
 Candidate Task 038 verification builds and shell-checks this gate but does not execute either
 real-server smoke. Full semantics and oracle pins are in `FABRIC_DATA_MAPS.md`.
 

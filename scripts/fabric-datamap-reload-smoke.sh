@@ -90,6 +90,19 @@ wait_for() {
   fail "timed out waiting for $description"
 }
 
+wait_for_after() {
+  local first=$1 pattern=$2 description=$3 deadline=$((SECONDS + TIMEOUT))
+  while (( SECONDS < deadline )); do
+    if awk -v first="$((first + 1))" -v pattern="$pattern" 'NR >= first && index($0, pattern) { found = 1; exit } END { exit !found }' \
+          "$SERVER_DIR/logs/latest.log" 2>/dev/null; then
+      return 0
+    fi
+    assert_alive_clean
+    sleep 0.5
+  done
+  fail "timed out waiting for $description"
+}
+
 send_command() {
   printf '%s\n' "$1" >&3
 }
@@ -131,19 +144,28 @@ assert_malformed_map_errors() {
   LOG_CHECKPOINT=$end
 }
 
-assert_vanilla_failure_errors() {
-  local end line
+assert_fixture_failure_logs() {
+  local end warn_count marker
   local -a errors=()
   end=$(log_line_count)
   mapfile -t errors < <(log_errors_between "$LOG_CHECKPOINT" "$end")
-  (( ${#errors[@]} > 0 )) || fail 'vanilla-failure window contained no ERROR diagnostic'
-  for line in "${errors[@]}"; do
-    if [[ "$line" != *reload_future_failure* && "$line" != *'Failed to execute reload'* ]]; then
-      printf 'fabric-datamap-reload-smoke: unexpected vanilla-failure ERROR:\n%s\n' "$line" >&2
-      fail 'unexpected ERROR output during deliberately broken vanilla reload'
-    fi
+  if (( ${#errors[@]} != 0 )); then
+    printf 'fabric-datamap-reload-smoke: unexpected ERROR during fixture-induced reload failure:\n' >&2
+    printf '%s\n' "${errors[@]}" >&2
+    fail 'unexpected ERROR output during fixture-induced reload failure'
+  fi
+  warn_count=$(awk -v first="$((LOG_CHECKPOINT + 1))" -v last="$end" \
+        'NR >= first && NR <= last && /\[[^]]*WARN\]/ && index($0, "Failed to execute reload") { count++ } END { print count + 0 }' \
+        "$SERVER_DIR/logs/latest.log")
+  (( warn_count > 0 )) || fail 'fixture-failure window is missing WARN: Failed to execute reload'
+  for marker in \
+        'MEKANISM_DATAMAP_FIXTURE_FAILURE_TRIGGER marker_present=true' \
+        'MEKANISM_FABRIC_DATAMAP_RELOAD_REJECTED success=false epoch_unchanged=3' \
+        'MEKANISM_DATAMAP_FIXTURE_PROBE epoch=3 entries=21 ones=20 sonic=0.75 session=true'; do
+    awk -v first="$((LOG_CHECKPOINT + 1))" -v last="$end" -v marker="$marker" \
+          'NR >= first && NR <= last && index($0, marker) { found = 1; exit } END { exit !found }' \
+          "$SERVER_DIR/logs/latest.log" || fail "fixture-failure window is missing marker: $marker"
   done
-  ACCOUNTED_ERROR_LINES=$((ACCOUNTED_ERROR_LINES + ${#errors[@]}))
   LOG_CHECKPOINT=$end
 }
 
@@ -167,6 +189,9 @@ mapfile -t FIXTURE_JARS < <(find "$ROOT/fabric/build/datamap-reload-fixture/rema
 [[ ${#FIXTURE_JARS[@]} -eq 1 ]] || fail "expected one fixture JAR, found ${#FIXTURE_JARS[@]}"
 if jar tf "${MOD_JARS[0]}" | grep -Fq 'mekanism/fabric/datamaps/fixture/'; then fail 'fixture leaked into production JAR'; fi
 if ! jar tf "${FIXTURE_JARS[0]}" | grep -Fxq 'mekanism/fabric/datamaps/fixture/DataMapReloadFixture.class'; then fail 'fixture JAR is missing its probe'; fi
+if ! jar tf "${FIXTURE_JARS[0]}" | grep -Fxq 'mekanism/fabric/datamaps/fixture/DataMapReloadFixture$FailureReloadListener.class'; then
+  fail 'fixture JAR is missing its server-data failure listener'
+fi
 
 LAUNCHER="$CACHE_DIR/fabric-server-${MINECRAFT_VERSION}-${LOADER_VERSION}-${INSTALLER_VERSION}.jar"
 API_JAR="$CACHE_DIR/fabric-api-${FABRIC_API_VERSION}.jar"
@@ -215,16 +240,20 @@ send_command 'mekanism_datamap_probe'
 wait_for 'MEKANISM_DATAMAP_FIXTURE_PROBE epoch=3 entries=21 ones=20 sonic=0.75 session=true' 'epoch 3 fresh-low query proof'
 assert_malformed_map_errors
 
-BROKEN_REGISTRY="$PACK/data/mekanism/damage_type/reload_future_failure.json"
-mkdir -p "$(dirname "$BROKEN_REGISTRY")"
-printf '%s\n' '{"message_id":"broken"' > "$BROKEN_REGISTRY"
+FAILURE_MARKER="$PACK/data/mekanism_datamap_reload_fixture/reload_failure.marker"
+mkdir -p "$(dirname "$FAILURE_MARKER")"
+printf '%s\n' 'intentional fixture-only reload failure' > "$FAILURE_MARKER"
+FAILURE_PHASE_START=$(log_line_count)
 send_command 'reload'
-wait_for 'MEKANISM_FABRIC_DATAMAP_RELOAD_REJECTED success=false epoch_unchanged=3' 'vanilla failed-reload callback'
+wait_for_after "$FAILURE_PHASE_START" 'MEKANISM_DATAMAP_FIXTURE_FAILURE_TRIGGER marker_present=true' 'fixture failure trigger'
+wait_for_after "$FAILURE_PHASE_START" 'MEKANISM_FABRIC_DATAMAP_RELOAD_REJECTED success=false epoch_unchanged=3' 'END-false epoch-stability callback'
+wait_for_after "$FAILURE_PHASE_START" 'Failed to execute reload' 'reload command WARN'
+FAILURE_PROBE_START=$(log_line_count)
 send_command 'mekanism_datamap_probe'
-wait_for 'MEKANISM_DATAMAP_FIXTURE_PROBE epoch=3 entries=21 ones=20 sonic=0.75 session=true' 'failed reload epoch stability'
-assert_vanilla_failure_errors
+wait_for_after "$FAILURE_PROBE_START" 'MEKANISM_DATAMAP_FIXTURE_PROBE epoch=3 entries=21 ones=20 sonic=0.75 session=true' 'failed reload published-state stability'
+assert_fixture_failure_logs
 
-rm -f "$BROKEN_REGISTRY"
+rm -f "$FAILURE_MARKER"
 printf '%s\n' '{"values":{"#mekanism:mekasuit_always_supported":{"absorption":1.0},"minecraft:sonic_boom":0.75}}' > "$MAP"
 send_command 'reload'
 wait_for 'MEKANISM_FABRIC_DATAMAP_PROOF phase=reload epoch=4 published=21 skipped=0' 'repaired epoch 4 publication'
@@ -243,4 +272,4 @@ SERVER_PID=
 assert_no_new_errors 'normal stop'
 assert_all_errors_accounted
 RESULT=0
-printf 'fabric-datamap-reload-smoke: PASS (epochs 1-4, layered failure semantics, vanilla failure stability, and stop cleanup)\n'
+printf 'fabric-datamap-reload-smoke: PASS (epochs 1-4, layered failure semantics, fixture-induced reload failure stability, and stop cleanup)\n'

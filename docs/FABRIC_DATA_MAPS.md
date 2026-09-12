@@ -125,13 +125,20 @@ isolated remapped fixture JAR outside `fabric/build/libs`; on a disposable packa
 epochs 1–4. After readiness it creates the high-priority world pack and uses console `reload`, whose
 vanilla `ReloadCommand.discoverNewPacks` rescan discovers and auto-enables the new pack; it does not
 issue a stale-repository `datapack enable`. The gate then exercises an invalid high data-map layer
-with vanilla reload success, a real vanilla reload-future failure with no increment, repair, and stop
-cleanup. Log-line checkpoints reject every `ERROR` during startup, valid high-pack reload, repair, and
-normal stop. The malformed window requires exactly the single `Mekanism/FabricDataMaps` invalid-layer
-message for `mekanism:data_maps/damage_type/mekasuit_absorption.json`; the deliberately broken vanilla
-window permits only `ERROR` lines naming `reload_future_failure` or vanilla `Failed to execute reload`.
-A final total proves that every `ERROR` line was accounted for in one of those two negative windows.
-The fixture supplies no data map and never calls the loader directly.
+with vanilla reload success, a real reload-future failure with no increment, repair, and stop cleanup.
+The failure is induced only by the isolated fixture JAR: its Fabric `SERVER_DATA` reload listener is
+inert until the high pack contains the dedicated
+`mekanism_datamap_reload_fixture:reload_failure.marker` resource, then throws from its synchronous
+reload stage so `MinecraftServer.reloadResources` fails and `END_DATA_PACK_RELOAD` receives
+`success=false`. Removing the marker permits the epoch-4 recovery reload. The listener neither
+supplies data maps nor calls the production loader.
+
+Phase-bounded log checkpoints reject every `ERROR` during startup, valid high-pack reload, repair, and
+normal stop. The malformed-layer window requires exactly the single `Mekanism/FabricDataMaps` `ERROR`
+for `mekanism:data_maps/damage_type/mekasuit_absorption.json`. The fixture-failure window requires the
+fixture trigger, the explicit END-false/epoch-3-stability callback, a fresh epoch-3 published-state
+probe, and the exact `WARN` text `Failed to execute reload`; it allows zero `ERROR` lines. Final total
+accounting proves that the malformed-layer diagnostic is the only `ERROR` emitted by the complete gate.
 
 Deferred without partial compatibility claims: Chemical data maps, synced maps, conditions,
 Advanced mergers/removers, holder mixins, NeoForge facade/classes, radiation, tooltip/tank consumers,
