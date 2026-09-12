@@ -66,9 +66,10 @@ scripts/fabric-configuration-rejection-smoke.sh # 错版/同版本显式拒绝/�
 
 ## 任务批次与候选门禁
 
-- 默认按同一 dependency/ownership boundary 组成约 **4–12 个紧密相关 production files** 的批次；可以包含 2–4 个相关子闭包。除非单文件本身跨平台、注册、事务、序列化或 patched-Minecraft 高风险边界，不再为简单 byte-identical 单类重复完整开发周期。
-- 不为凑数量混合无关代码。遇到 NeoForge/Fabric 语义分歧、registry lifecycle、transaction/rollback、线程或 owner 生命周期边界时，应立即缩小或拆分任务，并为每个分歧单独建立可执行验收。
-- 候选实现默认验证 source identity/delta、slice/fixture isolation、focused 与 full local unit tests、Fabric build 及静态 JAR class/leakage contract；不再由每个候选重复启动真实 dedicated server 或执行 clean release contract。
+- 为提高整体移植速度，默认按完整 dependency/ownership vertical 组成约 **15–40 个紧密相关 production files** 的批次；不再把 4–12 个文件作为常规目标。应主动一并纳入同一主路径上的直接前置、owner 与立即调用方，而不是为了保持小 diff 反复停在外围 foundation。
+- 不为凑数量混合无关代码，也不只因闭包较大就回避主干。超过 40 个文件时，只要它们属于不可诚实拆分的 registry、配置、事务、序列化、机器或生命周期闭包，且能定义分阶段实现和统一的可执行验收，也允许作为一个任务；拆分必须沿真实 owner/生命周期边界，而不是沿文件数。
+- 遇到 NeoForge/Fabric 语义分歧、registry lifecycle、transaction/rollback、线程或 owner 生命周期边界时，先隔离并证明该风险边界，但默认继续完成其所属纵向闭包。只有无法建立真实 owner、不得不截断 public behavior 或使用 fake/no-op 实现时才阻断整批。
+- 大批次测试按独立风险和层间连接设计，不按 production 文件数线性增加；复用已验证下层的排列组合，上层集中覆盖 owner lifecycle、平台差异和端到端连接。候选实现默认验证 source identity/delta、slice/fixture isolation、focused 与 full local unit tests、Fabric build 及静态 JAR class/leakage contract；不再由每个候选重复启动真实 dedicated server 或执行 clean release contract。
 - 主代理在审查并选定/综合真实 diff 后，独立重跑完整测试，再对最终实现各执行一次 `scripts/fabric-packaged-smoke.sh` 和 `./build.sh --clean`，核对最终 commit、JAR 数量与 sha256。高风险网络/注册/启动任务可在任务验收中显式恢复候选级真实运行门禁。
 
 ## 默认单实现代理与风险审查
