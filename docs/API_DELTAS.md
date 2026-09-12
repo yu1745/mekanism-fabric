@@ -58,7 +58,7 @@ Kilt 的转换表明 execute/simulate 应在 transfer 边界映射为 transactio
 
 ## Deferred registry wrapper surface
 
-状态：首个 common source slice 已移植，用于官方 GameEvent 声明。
+状态：common wrapper 已移植，用于官方 GameEvent，并已扩到 Task 031 的 sound/damage declaration closure。
 
 `MekanismDeferredRegister<T>` 不再继承 NeoForge `DeferredRegister<T>`，而是组合
 `FabricDeferredRegister<T>`；保留 Mekanism 自身使用的两个 typed `register` 重载，并新增通过
@@ -67,14 +67,28 @@ vanilla `Registry<T>` 提交批次的入口。`MekanismDeferredHolder<R, T>` 不
 `Supplier<T>`。`get/getKey/key/getId/getName/is/keyMatches`、绑定前 key 可用性、绑定后 canonical
 对象身份均保留；绑定前读取值继续明确失败。
 
+Task 031 的 `SoundEventDeferredRegister` 用既有 `MekanismDeferredRegister<SoundEvent>` 取代 NeoForge
+父类，并在构造器传入 `SoundEventRegistryObject::new`；三种 registration behavior/typed return 保留，
+`createHolder` 与旧 imports 删除，无 shim。`SoundEventRegistryObject` 与 `DamageTypeRegister` 仍和
+`4646f509` byte-identical。`MekanismSounds`/`MekanismDamageTypes` 仅删除尚未纳入的完整
+`Mekanism` owner import，并以 literal `"mekanism"` 替代 `Mekanism.MODID`，声明顺序和值不变。
+
+`MekanismDamageType` 唯一变化位于 private holder lookup：NeoForge 注入的
+`registryAccess.holderOrThrow(key())` 被 vanilla 语义展开
+`registryAccess.lookupOrThrow(key().registryKey()).getOrThrow(key())` 取代。该表达式就是 NeoForge
+21.1.200 `IHolderLookupProviderExtension.holderOrThrow` 的 lookup chain，保持 registry 或 key 缺失时的
+`IllegalStateException`；没有 import、公开 API 或其它 method drift。
+
 兼容影响：依赖 NeoForge `DeferredRegister`/`DeferredHolder` 继承关系或其额外方法的 addon
 需要迁移到 Fabric/vanilla 注册 API。Mekanism 自身面向 holder/value/key 的公共用法保持源码级
 表面。当前只承诺 `fabric/common-slice.txt` 已纳入的闭包；后续每引入一种 registry wrapper，
 都必须补足实际调用到的 holder 语义，而不是伪造整个 NeoForge registry API。
 
 语义依据与验证见 `docs/FABRIC_REGISTRY.md`、
-`fabric/src/test/java/mekanism/common/registration/MekanismDeferredRegisterTest.java` 以及 packaged
-server smoke。Kilt/Connector 仅用于核对生命周期、冻结和 canonical holder 行为；实现未复制。
+`fabric/src/test/java/mekanism/common/registration/MekanismDeferredRegisterTest.java`、
+`SoundAndDamageRegistrationTest.java` 以及 static packaged-JAR gates。Kilt/Connector 与 NeoForge
+21.1.200 extension source 仅用于核对生命周期、冻结、canonical holder 和 lookup 语义；实现未复制。
+当前 **47/120/14** slice 不把 sound/damage owners 接入 entrypoint。
 
 ## Config contract
 
@@ -91,7 +105,7 @@ Task 030 的四个 common source 只替换 config backing types：`CachedResolva
 
 兼容影响：直接依赖 NeoForge config spec/type 或 `IConfigTranslation` 到
 `IHasTranslationKey` 赋值关系的 addon 必须改用 Fabric 侧契约。TOML 文件名、12 个 startup
-路径、默认值、范围、restart 元数据与缓存行为保持。官方 resolvable `set` 仍缓存 caller 的原始 `TYPE`：encoded list backing 是 immutable copy，但 map 在 clear/reload 前仍可与 caller alias；clear/reload 后才按 deterministic sorted strings 重建。当前 **47/114/14** slice 不激活 `GeneralConfig`/`MekanismConfig`、cardboard blacklist、Oredictionificator filters/items、`CachedEnumValue`、UI/watch/sync 或 config ownership/lifecycle/threading。细节和验证见 `docs/FABRIC_CONFIG.md`。
+路径、默认值、范围、restart 元数据与缓存行为保持。官方 resolvable `set` 仍缓存 caller 的原始 `TYPE`：encoded list backing 是 immutable copy，但 map 在 clear/reload 前仍可与 caller alias；clear/reload 后才按 deterministic sorted strings 重建。当前 **47/120/14** slice 不激活 `GeneralConfig`/`MekanismConfig`、cardboard blacklist、Oredictionificator filters/items、`CachedEnumValue`、UI/watch/sync 或 config ownership/lifecycle/threading。细节和验证见 `docs/FABRIC_CONFIG.md`。
 
 ## Registry-aware NBT contract
 

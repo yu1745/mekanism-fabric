@@ -55,6 +55,6 @@ public record MekanismDamageType(ResourceKey<DamageType> key, float exhaustion, 
     }
 
     private Holder<DamageType> holder(RegistryAccess registryAccess) {
-        return registryAccess.holderOrThrow(key());
+        return registryAccess.lookupOrThrow(key().registryKey()).getOrThrow(key());
     }
 }

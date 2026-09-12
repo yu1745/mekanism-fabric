@@ -225,6 +225,10 @@ expected_registration_impl = {
     "mekanism/common/registration/impl/GameEventDeferredRegister.class",
     "mekanism/common/registration/impl/DeferredCriterionTrigger.class",
     "mekanism/common/registration/impl/LootFunctionDeferredRegister.class",
+    "mekanism/common/registration/impl/SoundEventDeferredRegister.class",
+    "mekanism/common/registration/impl/SoundEventRegistryObject.class",
+    "mekanism/common/registration/impl/DamageTypeRegister.class",
+    "mekanism/common/registration/impl/MekanismDamageType.class",
 }
 registration_impl_prefix = "mekanism/common/registration/impl/"
 actual_registration_impl = {
@@ -236,6 +240,21 @@ actual_registration_impl = {
 if (actual_registration_impl != expected_registration_impl
         or any(entries.count(entry) != 1 for entry in expected_registration_impl)):
     raise SystemExit(f"unexpected deferred-registration impl class family: {sorted(actual_registration_impl)!r}")
+expected_registries = {
+    "mekanism/common/registries/MekanismGameEvents.class",
+    "mekanism/common/registries/MekanismSounds.class",
+    "mekanism/common/registries/MekanismDamageTypes.class",
+}
+registries_prefix = "mekanism/common/registries/"
+actual_registries = {
+    entry for entry in entries
+    if entry.startswith(registries_prefix)
+    and "/" not in entry[len(registries_prefix):]
+    and entry.endswith(".class")
+}
+if (actual_registries != expected_registries
+        or any(entries.count(entry) != 1 for entry in expected_registries)):
+    raise SystemExit(f"unexpected registry declaration class family: {sorted(actual_registries)!r}")
 expected_tile_interfaces = {
     "mekanism/common/tile/interfaces/IHasDumpButton.class",
     "mekanism/common/tile/interfaces/IHasGasMode.class",

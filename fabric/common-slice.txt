@@ -112,4 +112,10 @@ mekanism/common/registration/DeferredMapCodecRegister.java
 mekanism/common/registration/impl/DeferredCriterionTrigger.java
 mekanism/common/registration/impl/GameEventDeferredRegister.java
 mekanism/common/registration/impl/LootFunctionDeferredRegister.java
+mekanism/common/registration/impl/SoundEventDeferredRegister.java
+mekanism/common/registration/impl/SoundEventRegistryObject.java
+mekanism/common/registration/impl/DamageTypeRegister.java
+mekanism/common/registration/impl/MekanismDamageType.java
 mekanism/common/registries/MekanismGameEvents.java
+mekanism/common/registries/MekanismSounds.java
+mekanism/common/registries/MekanismDamageTypes.java
