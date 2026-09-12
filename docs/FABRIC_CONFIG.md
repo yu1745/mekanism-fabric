@@ -38,7 +38,7 @@ JAR 保持独立，LGPL-3.0 文本与 attribution 位于 `META-INF/licenses/`。
 
 - 整份 TOML 先解析、逐项规范化和范围验证，再一次性发布给 config values；
 - boolean 只接受 TOML/programmatic `Boolean`，数字和字符串不会转换为 boolean；
-- byte/short 复用 long 的 exact-integral normalizer：先拒绝非 number、fraction、NaN/infinity、signed-long overflow 及各自 primitive/configured range miss，全部验证通过后才精确收窄，绝不截断、wrap、舍入或饱和；
+- byte/short 复用 long 的 exact-integral normalizer：先拒绝非 number、fraction、NaN/infinity、signed-long overflow 及各自 primitive/configured range miss，全部验证通过后才精确收窄，绝不截断、wrap、舍入或饱和；调用 typed overload 时 default/minimum/maximum 三个参数都必须显式为对应 primitive 类型，混入 int literal 会按 Java overload resolution 选择 int overload；
 - long 仅接受范围内的 `Byte`/`Short`/`Integer`/`Long`，以及恰为整数、可无损表示为 signed long 且范围内的 `BigInteger`/`BigDecimal`/finite `Float`/`Double`；Float/Double 按运行时 IEEE 值的精确十进制展开验证，null、非 number、fraction、NaN/infinity、signed-long overflow、配置越界及 rounded `2^63` 全部拒绝，不舍入、截断、饱和，也不以有损 `double == long` 比较；
 - 既有 int/long/double normalizer、strict long TOML lexical preflight、同步边界与 parse→correct/persist→atomic publish 顺序保持不变；TOML integer literal 在 Night Config 解析前对 decimal/hex/octal/binary 作 signed-long 无损范围检查，避免 parser 的 modulo wrap；合法范围内 integer literal 在 load/correction/save 中保持 `2^53` 以上及 `Long.MIN_VALUE`/`Long.MAX_VALUE` 的精确 round trip（该保证只针对 TOML integer literal）；
 - 缺失、类型错误、非有限或 schema 越界数值恢复官方默认；lexical signed-long overflow 走 malformed-file 保留/默认替换路径，并记录完整 dotted path；

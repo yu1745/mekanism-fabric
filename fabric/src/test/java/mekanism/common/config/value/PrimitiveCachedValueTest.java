@@ -58,6 +58,7 @@ class PrimitiveCachedValueTest {
         assertFalse(companion.get());
         assertFalse(cached.get());
         config.clearCache(false);
+        assertTrue(cached.getOrDefault());
         assertTrue(cached.getAsBoolean());
         assertEquals(1, invalidations.get());
 
@@ -143,11 +144,21 @@ class PrimitiveCachedValueTest {
         spec.load(file);
         config.clearCache(false);
         assertEquals(Byte.MAX_VALUE, full.get());
+        assertEquals((byte) 100, cached.getOrDefault());
         assertEquals((byte) 100, cached.get());
+
+        AtomicInteger invalidations = new AtomicInteger();
+        cached.addInvalidationListener(invalidations::incrementAndGet);
+        config.clearCache(false);
+        assertEquals(0, invalidations.get());
         bounded.set((byte) -73);
         assertEquals((byte) 100, cached.get());
         cached.clearCache(false);
         assertEquals((byte) -73, cached.getAsByte());
+        assertEquals(1, invalidations.get());
+        bounded.set((byte) -73);
+        cached.clearCache(false);
+        assertEquals(1, invalidations.get());
 
         cached.set((byte) -99);
         assertEquals((byte) -99, bounded.get());
@@ -228,6 +239,7 @@ class PrimitiveCachedValueTest {
         spec.load(file);
         config.clearCache(false);
         assertEquals(Short.MAX_VALUE, full.get());
+        assertEquals((short) 30_000, cached.getOrDefault());
         assertEquals((short) 30_000, cached.get());
 
         AtomicInteger invalidations = new AtomicInteger();
@@ -316,6 +328,7 @@ class PrimitiveCachedValueTest {
         assertEquals(0, negativeZero.correctedValues());
         assertRawDoubleEquals(-0.0D, bounded.get());
         config.clearCache(false);
+        assertRawDoubleEquals(-0.0D, cached.getOrDefault());
         assertRawDoubleEquals(-0.0D, cached.get());
         assertRawDoubleEquals(-0.0D, cached.getAsDouble());
 
