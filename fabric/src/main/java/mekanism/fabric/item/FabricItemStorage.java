@@ -29,12 +29,15 @@ import org.jetbrains.annotations.Nullable;
  * call {@link #invalidate()} on removal, reload, facing or side-configuration changes, and every known topology
  * change. Retained aggregate and single-slot views then fail closed.
  *
- * <p>Each mutation first obtains a deterministic per-slot simulation plan, then executes that plan in a nested
- * Fabric transaction after taking one participant snapshot containing defensive copies of every captured stack.
- * Execution commits only when return values and complete read-back state exactly match the simulated item,
- * components, counts, and total. Abort restores every captured slot and reads every one back; setter, getter, or
- * mismatch failures are aggregated and propagated after all restore attempts. Immediate dirty, listener, save, or
- * synchronization effects caused by execute or restore are observable and cannot be rolled back by this adapter.
+ * <p>Each mutation first obtains a deterministic per-slot simulation plan. Backing {@link IInventorySlot}
+ * implementations must honor {@link Action#SIMULATE} by neither mutating nor notifying; this adapter relies on that
+ * API precondition and does not snapshot around simulation, so it cannot prevent or undo side effects from a
+ * violating implementation. It then executes the plan in a nested Fabric transaction after taking one participant
+ * snapshot containing defensive copies of every captured stack. Execution commits only when return values and
+ * complete read-back state exactly match the simulated item, components, counts, and total. Abort restores every
+ * captured slot and reads every one back; setter, getter, or mismatch failures are aggregated and propagated after
+ * all restore attempts. Immediate dirty, listener, save, or synchronization effects caused by execute or restore
+ * are observable and cannot be rolled back by this adapter.
  *
  * <p>Fabric amounts are {@code long}; each Mekanism call is capped to {@link Integer#MAX_VALUE}, and totals are
  * accumulated with saturating arithmetic before being checked against the request. No mutable {@link ItemStack}

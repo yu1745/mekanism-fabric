@@ -65,7 +65,7 @@ Fabric requests use `long`, while Mekanism slot methods use `int`. Each per-slot
 For insertion or extraction:
 
 1. check topology and live holder policy;
-2. run a deterministic captured-order plan with `Action.SIMULATE`; this phase does not mutate or notify;
+2. run a deterministic captured-order plan with `Action.SIMULATE`; every backing `IInventorySlot` implementation is required by its API contract to avoid mutation and notification in this mode. The adapter relies on that precondition, takes no snapshot around simulation, and therefore cannot prevent or roll back simulation side effects from a violating implementation;
 3. open a nested Fabric transaction under the caller;
 4. recheck topology/policy and enlist one `SnapshotParticipant` snapshot containing defensive copies of **all** captured slot stacks;
 5. execute exactly the planned amount for each participating slot with `Action.EXECUTE`, rechecking topology and policy during the operation;
@@ -83,7 +83,7 @@ Exactly two Fabric-local classes contain exactly eight meaningful JUnit methods:
 - `InventoryApiHolderTest` (four): oversized component-bearing NBT and empty failure; slot defaults/caller immutability/limits/signed grow-shrink; unsided/sided routing, boolean simulation mapping, invalid indexes and automation; holder facing, null-vs-physical policy and live list identity.
 - `FabricItemStorageTest` (four): exact `ItemVariant` components, blank/zero/capacity and invalid exposure; stable ordered views plus multi-slot true-long transfer; nested commit/outer abort, mismatch/full-copy restore, observable notifications and all-attempt restore failure; live policy, explicit invalidation and topology drift before/during execution.
 
-Plain JUnit needs Fabric's item-cache mixin for `ItemVariant.blank()` and component-less variants, so the Fabric test runtime uses the pinned `fabric-loader-junit` matching `loader_version`. Tests use only standard vanilla bootstrap and do not mutate registries or add startup markers.
+The ordinary `test` task keeps `fabric-loader-junit` off its runtime and runs `InventoryApiHolderTest` with the rest of the Jupiter/jqwik suite: 63 suites / 296 tests, including all three `DistributionPropertyTest` properties at 100,000 tries/checks each. `FabricItemStorageTest` lives in the separate `fabricItemTest` source set and is executed only by the dedicated task of the same name: one suite / four tests with pinned `fabric-loader-junit:${loader_version}` starting real Knot and applying Fabric API's item-cache mixin. `check` depends on both tasks, so the aggregate remains 64 suites / 300 tests without double execution. Tests use only standard vanilla bootstrap and do not mutate registries or add startup markers.
 
 The remapped-JAR static gate requires exactly the three direct inventory API classes, exactly the two direct holder/slot classes, and exactly these platform entries, each once:
 

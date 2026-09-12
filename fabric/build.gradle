@@ -15,6 +15,7 @@ base {
 sourceSets {
     handshakeMismatchFixture
     handshakeMissingReceiverFixture
+    fabricItemTest
 }
 
 loom {
@@ -167,6 +168,12 @@ sourceSets {
         compileClasspath += sourceSets.main.compileClasspath
         runtimeClasspath += sourceSets.main.runtimeClasspath - sourceSets.main.output
     }
+    fabricItemTest {
+        // Keep Knot and its TCCL out of the ordinary jqwik/Jupiter suite. This source set
+        // sees production output and its own pinned Jupiter libraries, but never ordinary test output.
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.runtimeClasspath
+    }
     main {
         java {
             srcDirs = ['src/main/java', '../src/api/java', '../src/main/java']
@@ -265,8 +272,12 @@ dependencies {
     // Keep the official root JUnit pin and its Platform generation aligned with jqwik.
     testImplementation 'org.junit.jupiter:junit-jupiter:5.13.4'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.13.4'
-    testRuntimeOnly "net.fabricmc:fabric-loader-junit:${loader_version}"
     testImplementation 'net.jqwik:jqwik:1.9.3'
+
+    // Only FabricItemStorageTest needs Knot so that Fabric API item mixins are active.
+    fabricItemTestImplementation 'org.junit.jupiter:junit-jupiter:5.13.4'
+    fabricItemTestRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.13.4'
+    fabricItemTestRuntimeOnly "net.fabricmc:fabric-loader-junit:${loader_version}"
 }
 
 def resolvedModVersion = project.version.toString()
@@ -286,6 +297,17 @@ tasks.withType(JavaCompile).configureEach {
 tasks.named('compileTestJava', JavaCompile) {
     dependsOn verifyOfficialRootTestSources
     source officialRootTestOracleFiles
+}
+
+def fabricItemTest = tasks.register('fabricItemTest', Test) {
+    group = 'verification'
+    description = 'Runs the isolated Fabric item storage tests under real Knot/mixins.'
+    testClassesDirs = sourceSets.fabricItemTest.output.classesDirs
+    classpath = sourceSets.fabricItemTest.runtimeClasspath
+    mustRunAfter tasks.named('test')
+}
+tasks.named('check') {
+    dependsOn fabricItemTest
 }
 
 def testWorkingDirectory = layout.buildDirectory.dir('test-working')

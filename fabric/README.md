@@ -182,10 +182,13 @@ machine/network owners. See `../docs/FABRIC_REGISTRY.md`,
 3.8.3 are nested in the remapped mod JAR.
 
 Task 033 adds the two byte-identical inventory holder sources and the bounded
-physical-side item transaction seam described in `../docs/FABRIC_ITEM.md`. The
-factory performs no provider registration; future ownership must cache exactly one
-view per physical side and invalidate it for removal/reload/facing/side-config or
-topology changes. Concrete slots, reverse lookup, provider/cache wiring,
+physical-side item transaction seam described in `../docs/FABRIC_ITEM.md`. Its
+`InventoryApiHolderTest` stays in ordinary `test` without Knot, while
+`FabricItemStorageTest` is isolated in the `fabricItemTest` source set/task whose
+runtime alone includes pinned `fabric-loader-junit`; `check` runs both exactly once.
+The factory performs no provider registration; future ownership must cache exactly
+one view per physical side and invalidate it for removal/reload/facing/side-config
+or topology changes. Concrete slots, reverse lookup, provider/cache wiring,
 persistence, recipes, tiles, machines, and Crusher remain deferred.
 
 The next nearby API candidates are blocked by deliberately excluded boundaries:
