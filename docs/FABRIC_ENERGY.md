@@ -18,7 +18,7 @@ The current storage milestone admits the official Mekanism energy-container cont
 - `mekanism.fabric.energy.FabricEnergyStorage`
 - `mekanism.fabric.energy.FabricEnergyLookup`
 
-Task 033 brings the current global slice count to API 56 / common 122 / platform 16. The common count includes the seven byte-identical `4646f509` color/effect/spatial foundations documented in `FABRIC_PORT.md`; their exact JAR families and bounded tests do not admit any energy caller, owner, external API, lifecycle, networking, persistence, registry, or thread-safety guarantee. It also admits official
+Task 034 leaves energy unchanged and brings the current global slice count to API 57 / common 122 / platform 17. The common count includes the seven byte-identical `4646f509` color/effect/spatial foundations documented in `FABRIC_PORT.md`; their exact JAR families and bounded tests do not admit any energy caller, owner, external API, lifecycle, networking, persistence, registry, or thread-safety guarantee. It also admits official
 `mekanism.common.lib.LastEnergyTracker` byte-identically to `4646f509` as a
 platform-neutral per-game-time accounting closure. Same-time calls accumulate a current
 bucket while the visible last bucket remains unchanged; every different timestamp—including

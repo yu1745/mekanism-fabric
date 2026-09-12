@@ -2,7 +2,7 @@
 
 ## Task 033 scope
 
-Task 033 is the first deliberate P1 item owner/platform gateway. The audited source slices are now API **56** / common **122** / platform **16**. Production scope is exactly seven sources:
+Task 033 is the first deliberate P1 item owner/platform gateway. It landed at API **56** / common **122** / platform **16**; Task 034 leaves all seven item production sources unchanged and brings the current global slices to **57/122/17**. Task 033 production scope is exactly seven sources:
 
 - adapted API contracts:
   - `mekanism.api.inventory.IInventorySlot`
@@ -21,7 +21,7 @@ Task 033 is the first deliberate P1 item owner/platform gateway. The audited sou
 
 `IInventorySlot` now extends the existing registry-aware `mekanism.api.INBTSerializable<CompoundTag>` instead of NeoForge's nominal serialization interface. Its public methods and behavior are otherwise retained. NeoForge item/fluid imports used only by Javadoc are removed and the two stale comparisons are expressed in platform-neutral prose.
 
-The broad `SerializerHelper` is not admitted because it exposes deferred `FluidStack` APIs. Only the existing private serialization call is replaced by a private interface method with a method-local codec. That codec exactly mirrors official `SerializerHelper.OVERSIZED_ITEM_CODEC`:
+The broad `SerializerHelper` remains deliberately unadmitted. Task 034 adds the bounded Mekanism-owned `FluidStack` value, but does not migrate `SerializerHelper` or alter this Task 033 implementation. The existing private serialization call remains replaced by a private interface method with a method-local codec. That codec exactly mirrors official `SerializerHelper.OVERSIZED_ITEM_CODEC`:
 
 - `ItemStack.ITEM_NON_AIR_CODEC` under `id`;
 - `ExtraCodecs.POSITIVE_INT` under `count`, defaulting to one;
@@ -83,7 +83,7 @@ Exactly two Fabric-local classes contain exactly eight meaningful JUnit methods:
 - `InventoryApiHolderTest` (four): oversized component-bearing NBT and empty failure; slot defaults/caller immutability/limits/signed grow-shrink; unsided/sided routing, boolean simulation mapping, invalid indexes and automation; holder facing, null-vs-physical policy and live list identity.
 - `FabricItemStorageTest` (four): exact `ItemVariant` components, blank/zero/capacity and invalid exposure; stable ordered views plus multi-slot true-long transfer; nested commit/outer abort, mismatch/full-copy restore, observable notifications and all-attempt restore failure; live policy, explicit invalidation and topology drift before/during execution.
 
-The ordinary `test` task keeps `fabric-loader-junit` off its runtime and runs `InventoryApiHolderTest` with the rest of the Jupiter/jqwik suite: 63 suites / 296 tests, including all three `DistributionPropertyTest` properties at 100,000 tries/checks each. `FabricItemStorageTest` lives in the separate `fabricItemTest` source set and is executed only by the dedicated task of the same name: one suite / four tests with pinned `fabric-loader-junit:${loader_version}` starting real Knot and applying Fabric API's item-cache mixin. `check` depends on both tasks, so the aggregate remains 64 suites / 300 tests without double execution. Tests use only standard vanilla bootstrap and do not mutate registries or add startup markers.
+At Task 033 landing, ordinary `test` was 63 suites / 296 tests and the isolated item task was one suite / four tests. Task 034 keeps `fabric-loader-junit` off the ordinary runtime and retains all three `DistributionPropertyTest` properties at 100,000 tries/checks each. It generalizes the old `fabricItemTest` source set/task to `fabricTransferTest`: the unchanged `FabricItemStorageTest` and new fluid conversion suite now share one pinned loader-JUnit runtime and one full Knot startup. Current totals are ordinary 64 suites / 304 tests, transfer 2 suites / 8 tests, aggregate 66 suites / 312 tests. `check` runs each task exactly once. Item tests still use only standard vanilla bootstrap, do not mutate registries, and add no startup marker.
 
 The remapped-JAR static gate requires exactly the three direct inventory API classes, exactly the two direct holder/slot classes, and exactly these platform entries, each once:
 
@@ -104,5 +104,5 @@ The following remain outside Task 033:
 - persistence attachment/component owner and load/save lifecycle;
 - `InputHelper`, `OutputHelper`, `CachedRecipe`, recipes and upgrades;
 - `TileEntityMekanism`, every machine including Crusher, menus and player inventory;
-- fluid, chemical and item-container interoperability beyond this block-side seam;
+- fluid storage/transaction interoperability beyond Task 034's separate pure value/unit seam, plus chemical and item-container interoperability beyond this block-side seam;
 - networking/client synchronization and thread-safety guarantees.

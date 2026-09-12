@@ -7,6 +7,7 @@ mekanism/fabric/energy/FabricEnergyConversions.java
 mekanism/fabric/energy/FabricEnergyLookup.java
 mekanism/fabric/energy/FabricEnergyStorage.java
 mekanism/fabric/energy/FabricStrictEnergyHandler.java
+mekanism/fabric/fluid/FabricFluidConversions.java
 mekanism/fabric/item/FabricItemLookup.java
 mekanism/fabric/item/FabricItemStorage.java
 mekanism/fabric/network/FabricMekanismClientNetworking.java

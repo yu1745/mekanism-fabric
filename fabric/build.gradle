@@ -15,7 +15,7 @@ base {
 sourceSets {
     handshakeMismatchFixture
     handshakeMissingReceiverFixture
-    fabricItemTest
+    fabricTransferTest
 }
 
 loom {
@@ -168,9 +168,10 @@ sourceSets {
         compileClasspath += sourceSets.main.compileClasspath
         runtimeClasspath += sourceSets.main.runtimeClasspath - sourceSets.main.output
     }
-    fabricItemTest {
+    fabricTransferTest {
         // Keep Knot and its TCCL out of the ordinary jqwik/Jupiter suite. This source set
-        // sees production output and its own pinned Jupiter libraries, but never ordinary test output.
+        // contains the item transaction and fluid conversion suites, sees production output and
+        // its own pinned Jupiter libraries, but never ordinary test output.
         compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
         runtimeClasspath += sourceSets.main.runtimeClasspath
     }
@@ -274,10 +275,10 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.13.4'
     testImplementation 'net.jqwik:jqwik:1.9.3'
 
-    // Only FabricItemStorageTest needs Knot so that Fabric API item mixins are active.
-    fabricItemTestImplementation 'org.junit.jupiter:junit-jupiter:5.13.4'
-    fabricItemTestRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.13.4'
-    fabricItemTestRuntimeOnly "net.fabricmc:fabric-loader-junit:${loader_version}"
+    // Only transfer-boundary tests need Knot so Fabric API's item/fluid mixins are active.
+    fabricTransferTestImplementation 'org.junit.jupiter:junit-jupiter:5.13.4'
+    fabricTransferTestRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.13.4'
+    fabricTransferTestRuntimeOnly "net.fabricmc:fabric-loader-junit:${loader_version}"
 }
 
 def resolvedModVersion = project.version.toString()
@@ -299,15 +300,15 @@ tasks.named('compileTestJava', JavaCompile) {
     source officialRootTestOracleFiles
 }
 
-def fabricItemTest = tasks.register('fabricItemTest', Test) {
+def fabricTransferTest = tasks.register('fabricTransferTest', Test) {
     group = 'verification'
-    description = 'Runs the isolated Fabric item storage tests under real Knot/mixins.'
-    testClassesDirs = sourceSets.fabricItemTest.output.classesDirs
-    classpath = sourceSets.fabricItemTest.runtimeClasspath
+    description = 'Runs the isolated Fabric item and fluid transfer tests under one real Knot startup.'
+    testClassesDirs = sourceSets.fabricTransferTest.output.classesDirs
+    classpath = sourceSets.fabricTransferTest.runtimeClasspath
     mustRunAfter tasks.named('test')
 }
 tasks.named('check') {
-    dependsOn fabricItemTest
+    dependsOn fabricTransferTest
 }
 
 def testWorkingDirectory = layout.buildDirectory.dir('test-working')

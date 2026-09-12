@@ -17,7 +17,7 @@ The current heat milestone admits the official internal heat contract, implement
 - `mekanism.common.tile.component.config.slot.BaseSlotInfo`
 - `mekanism.common.tile.component.config.slot.HeatSlotInfo`
 
-Task 033 brings the current audited source counts to API **56** / common **122** / platform **16**. Heat and capacity remain `double` values with the official Kelvin-based temperature calculation. The three handler interfaces, both capacitor implementations, and two holder types are unchanged from the official baseline. This is a domain-storage and routing slice, not a Fabric capability or transaction bridge.
+Task 034 leaves heat unchanged and brings the current audited source counts to API **57** / common **122** / platform **17**. Heat and capacity remain `double` values with the official Kelvin-based temperature calculation. The three handler interfaces, both capacitor implementations, and two holder types are unchanged from the official baseline. This is a domain-storage and routing slice, not a Fabric capability or transaction bridge.
 
 ## Platform adaptations
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Start the remapped Fabric artifact in a clean, disposable dedicated server.
+# Validate the remapped Fabric artifact, then optionally start it in a clean disposable server.
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
@@ -8,6 +8,7 @@ CACHE_DIR=${FABRIC_SMOKE_CACHE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/mekanism-fab
 LOG_ROOT=${FABRIC_SMOKE_LOG_DIR:-$ROOT/build/fabric-packaged-smoke}
 TIMEOUT=${FABRIC_SMOKE_TIMEOUT:-180}
 KEEP_SERVER=${FABRIC_SMOKE_KEEP_SERVER:-0}
+STATIC_ONLY=${FABRIC_SMOKE_STATIC_ONLY:-0}
 SERVER_DIR=
 SERVER_PID=
 LOG_FILE=
@@ -131,6 +132,10 @@ if jar tf "${MOD_JARS[0]}" | grep -Eq '^net/neoforged/'; then
 fi
 if jar tf "${MOD_JARS[0]}" | grep -Eq '^team/reborn/'; then
   echo "fabric-packaged-smoke: Team Reborn Energy must remain an external dependency" >&2
+  exit 1
+fi
+if jar tf "${MOD_JARS[0]}" | grep -Eq '^net/fabricmc/loader/'; then
+  echo "fabric-packaged-smoke: Fabric Loader classes must remain external" >&2
   exit 1
 fi
 if jar tf "${MOD_JARS[0]}" | grep -Eq '^mekanism/fixture/'; then
@@ -701,6 +706,20 @@ actual_fabric_item = {
 }
 if actual_fabric_item != expected_fabric_item or any(entries.count(entry) != 1 for entry in expected_fabric_item):
     raise SystemExit(f"unexpected Fabric item adapter class family: {sorted(actual_fabric_item)!r}")
+expected_fluid_stack = {"mekanism/api/fluid/FluidStack.class"}
+actual_fluid_stack = {
+    entry for entry in entries
+    if entry.startswith("mekanism/api/fluid/FluidStack") and entry.endswith(".class")
+}
+if actual_fluid_stack != expected_fluid_stack or any(entries.count(entry) != 1 for entry in expected_fluid_stack):
+    raise SystemExit(f"unexpected FluidStack class family: {sorted(actual_fluid_stack)!r}")
+expected_fabric_fluid = {"mekanism/fabric/fluid/FabricFluidConversions.class"}
+actual_fabric_fluid = {
+    entry for entry in entries
+    if entry.startswith("mekanism/fabric/fluid/FabricFluidConversions") and entry.endswith(".class")
+}
+if actual_fabric_fluid != expected_fabric_fluid or any(entries.count(entry) != 1 for entry in expected_fabric_fluid):
+    raise SystemExit(f"unexpected Fabric fluid conversion class family: {sorted(actual_fabric_fluid)!r}")
 PYEOF
 then
   echo "fabric-packaged-smoke: item-boundary/block-state-descriptor/inventory-metadata/deferred-registration/tile-interface/slot-info/tier/resource/codec/collection/distribution/ChunkUtils/RegistryUtils/LambdaMetaFactoryUtil/long-transfer/dynamic-strict-energy/proxy/config-listener/common-lib-root production/test packaging contract failed" >&2
@@ -718,6 +737,7 @@ for required_entry in \
     mekanism/api/inventory/IInventorySlot.class \
     mekanism/api/inventory/IMekanismInventory.class \
     mekanism/api/inventory/ISidedItemHandler.class \
+    mekanism/api/fluid/FluidStack.class \
     mekanism/api/energy/IEnergyContainer.class \
     mekanism/api/energy/IEnergyConversion.class \
     mekanism/api/heat/HeatAPI.class \
@@ -766,6 +786,7 @@ for required_entry in \
     mekanism/fabric/item/FabricItemLookup.class \
     mekanism/fabric/item/FabricItemStorage.class \
     'mekanism/fabric/item/FabricItemStorage$SlotView.class' \
+    mekanism/fabric/fluid/FabricFluidConversions.class \
     mekanism/fabric/network/FabricMekanismNetworking.class \
     mekanism/fabric/network/FabricMekanismClientNetworking.class \
     mekanism.accesswidener \
@@ -778,6 +799,12 @@ for required_entry in \
     exit 1
   fi
 done
+
+if [[ "$STATIC_ONLY" == 1 ]]; then
+  RESULT=0
+  printf 'fabric-packaged-smoke: PASS (static remapped-JAR gates only; no server started)\n'
+  exit 0
+fi
 
 LAUNCHER="$CACHE_DIR/fabric-server-${MINECRAFT_VERSION}-${LOADER_VERSION}-${INSTALLER_VERSION}.jar"
 API_JAR="$CACHE_DIR/fabric-api-${FABRIC_API_VERSION}.jar"

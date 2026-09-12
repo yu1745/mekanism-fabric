@@ -15,7 +15,7 @@ This milestone adds the platform-neutral side-routing layer used by Mekanism's i
 - `mekanism.common.capabilities.holder.slot.IInventorySlotHolder`
 - `mekanism.common.capabilities.holder.slot.InventorySlotHolder`
 
-It builds on the internal energy and heat containers. Task 023 adds a side-bound Team Reborn Energy adapter/factory seam, and Task 033 adds a physical-side Fabric item view, but no block/item/entity provider is registered by this slice. The current audited source counts are API **56** / common **122** / platform **16**.
+It builds on the internal energy and heat containers. Task 023 adds a side-bound Team Reborn Energy adapter/factory seam, and Task 033 adds a physical-side Fabric item view, but no block/item/entity provider is registered by this slice. Task 034 leaves these holder sources unchanged and brings the current audited counts to API **57** / common **122** / platform **17**; its separate fluid value/unit seam adds no holder or provider.
 
 ## Relative-side contract
 

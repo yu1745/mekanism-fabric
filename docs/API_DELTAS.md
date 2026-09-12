@@ -48,6 +48,48 @@ Kilt 的转换表明 execute/simulate 应在 transfer 边界映射为 transactio
 - `./fabric-build.sh`
 - `scripts/fabric-packaged-smoke.sh`
 
+## Mekanism-owned `FluidStack` value (Task 034)
+
+状态：当前 API/common/platform allowlist 精确为 **57/122/17**。新增
+`mekanism.api.fluid.FluidStack` 是 final、项目自有、平台中立的 mutable
+`int` mB value；`FluidVariant` 与 Fabric Transfer units 只出现在新增的
+`mekanism.fabric.fluid.FabricFluidConversions`。不创建 `net.neoforged.*`
+shim，也不把 API domain 改成 droplet `long`。
+
+### 保留 surface 与行为
+
+保留 holder/fluid 的 `int` constructors、optional `DataComponentPatch`、public
+`EMPTY`、`DataComponentHolder`/`PatchedDataComponentMap`、显式
+`set`/`remove`/两种 `applyComponents`、raw amount/copy/split/clear family、
+tag/fluid/holder/holder-set/predicate queries、matching/hash helpers、identity
+`Object.equals/hashCode`、`lenientOtionalFieldOf` 拼写、registry-aware
+parse/save、JSON/NBT/stream formats、toString，以及不需 capability 的 deprecated
+display/equality/containment methods。empty 精确为 identity EMPTY、
+`Fluids.EMPTY` 或 raw amount `<= 0`；observer 返回 empty fluid/zero/empty patch。
+
+`FLUID_NON_EMPTY_CODEC` 排除 `minecraft:empty`；lazy `CODEC` 精确使用 required
+`id`、无 default 的 positive `amount`、optional empty `components`。
+optional stream 先写 VAR_INT amount，decode `<= 0` 直接 canonical EMPTY，再写
+fluid holder 与 patch；strict empty exceptions 精确为
+`Empty FluidStack not allowed`。save empty message 精确为
+`Cannot encode empty FluidStack`。NeoForge diagnostic logging wrapper 删除，vanilla
+codec 的 data/result/exception behavior 不改。
+
+### Fabric delta
+
+`getDescriptionId()` 固定为
+`Util.makeDescriptionId("fluid", BuiltInRegistries.FLUID.getKey(getFluid()))`，
+`getHoverName()` 固定为该 ID 的 translatable component。测试固定 water/lava 为
+`fluid.minecraft.water`/`fluid.minecraft.lava`；custom `FluidType` override 不可用。
+精确 NeoForge 21.1.200 source 同时显示 built-in FluidType registrations 显式使用
+`block.minecraft.water`/`block.minecraft.lava`，因此这两个 string ID 是明确
+platform delta，不能误写成 byte-identical。
+
+刻意删除 `getFluidType()`、`is(FluidType)` 与 deprecated
+`isFluidEqual(ItemStack)` capability bridge。所有既有 NeoForge FluidStack imports
+及 callers 仍未替换；完整 provenance、单位 seam、测试与延期边界见
+`docs/FABRIC_FLUID.md`。
+
 ## Module config value contracts (Task 032)
 
 状态：Task 032 落地时 API/common/platform allowlist 精确为 **53/120/14** unique sources；common、platform 与 18-file official root-test oracle 不变。新增六份官方 API source 中，`ModuleBooleanConfig`、`ModuleColorConfig` 与 `IHasModeIcon` 和 `4646f509` byte-identical；其余三份仅作以下封闭适配：
@@ -102,7 +144,7 @@ Task 031 的 `SoundEventDeferredRegister` 用既有 `MekanismDeferredRegister<So
 `fabric/src/test/java/mekanism/common/registration/MekanismDeferredRegisterTest.java`、
 `SoundAndDamageRegistrationTest.java` 以及 static packaged-JAR gates。Kilt/Connector 与 NeoForge
 21.1.200 extension source 仅用于核对生命周期、冻结、canonical holder 和 lookup 语义；实现未复制。
-当前 **56/122/16** slice 不把 sound/damage owners 接入 entrypoint。
+当前 **57/122/17** slice 不把 sound/damage owners 接入 entrypoint。
 
 ## Config contract
 
@@ -119,7 +161,7 @@ Task 030 的四个 common source 只替换 config backing types：`CachedResolva
 
 兼容影响：直接依赖 NeoForge config spec/type 或 `IConfigTranslation` 到
 `IHasTranslationKey` 赋值关系的 addon 必须改用 Fabric 侧契约。TOML 文件名、12 个 startup
-路径、默认值、范围、restart 元数据与缓存行为保持。官方 resolvable `set` 仍缓存 caller 的原始 `TYPE`：encoded list backing 是 immutable copy，但 map 在 clear/reload 前仍可与 caller alias；clear/reload 后才按 deterministic sorted strings 重建。当前 **56/122/16** slice 不激活 `GeneralConfig`/`MekanismConfig`、cardboard blacklist、Oredictionificator filters/items、`CachedEnumValue`、UI/watch/sync 或 config ownership/lifecycle/threading。细节和验证见 `docs/FABRIC_CONFIG.md`。
+路径、默认值、范围、restart 元数据与缓存行为保持。官方 resolvable `set` 仍缓存 caller 的原始 `TYPE`：encoded list backing 是 immutable copy，但 map 在 clear/reload 前仍可与 caller alias；clear/reload 后才按 deterministic sorted strings 重建。当前 **57/122/17** slice 不激活 `GeneralConfig`/`MekanismConfig`、cardboard blacklist、Oredictionificator filters/items、`CachedEnumValue`、UI/watch/sync 或 config ownership/lifecycle/threading。细节和验证见 `docs/FABRIC_CONFIG.md`。
 
 ## Registry-aware NBT contract
 
@@ -159,7 +201,7 @@ void deserializeNBT(HolderLookup.Provider provider, T tag)
 
 ## Item inventory contracts (Task 033)
 
-状态：当前 API/common/platform allowlist 精确为 **56/122/16**。三份 inventory API source 中，`IMekanismInventory` 与 `4646f509` byte-identical；另两份只有以下有界平台适配。
+状态：Task 033 落地时 API/common/platform allowlist 精确为 **56/122/16**；Task 034 后当前为 **57/122/17**。三份 inventory API source 中，`IMekanismInventory` 与 `4646f509` byte-identical；另两份只有以下有界平台适配。
 
 ### `IInventorySlot`
 

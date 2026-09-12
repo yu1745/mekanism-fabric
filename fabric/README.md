@@ -10,19 +10,21 @@ excluded. It uses Minecraft 1.21.1, Java 21, and Mojang official mappings.
 `api-slice.txt` is the auditable allowlist of API source paths, relative to
 `src/api/java`. The Fabric source set reads that file directly, so the listed
 sources retain their original `mekanism.api.*` names without being copied or
-modified. The allowlist contains **56 current source files**: **55 official baseline
-sources** plus the project-owned registry-aware `INBTSerializable` NBT contract.
+modified. The allowlist contains **57 current source files**: **55 official baseline
+sources** plus the project-owned registry-aware `INBTSerializable` and bounded
+`FluidStack` contracts.
 Intentional API adaptations include that contract, `Action`'s removal of two
 NeoForge `FluidAction` conversion methods, the Javadoc-only strict-handler
 fluid-import/link cleanup, Task 032's bounded module-config namespace/enum/text
-adaptations, and Task 033's inventory NBT/nominal-parent boundary;
+adaptations, Task 033's inventory NBT/nominal-parent boundary, and Task 034's
+Mekanism-owned int-mB fluid value/API delta;
 `IMekanismStrictEnergyHandler` and `IMekanismInventory` remain byte-identical.
-See `../docs/API_DELTAS.md` and `../docs/FABRIC_ITEM.md`. JetBrains annotations and JSR-305 remain `compileOnly`
+See `../docs/API_DELTAS.md`, `../docs/FABRIC_ITEM.md`, and `../docs/FABRIC_FLUID.md`. JetBrains annotations and JSR-305 remain `compileOnly`
 and are not bundled in the mod.
 
 `common-slice.txt` contains **122 official source files**, and
-`platform-slice.txt` contains **16 project-owned Fabric sources**. Seven spatial/color/effect foundations (`Color`, `CustomEffect`, `Pos3D`, `Quaternion`, `Range3D`, `MultipartUtils`, and `StatUtils`) remain byte-identical to `4646f509`. Twelve Java 21 tests bound channel/HSV/compositing/statistics, effect state, vector/range/rotation/quaternion state, and direct multipart ray selection. Packaging permits exactly four direct common-lib classes, one effect class, three math classes, the three `MultipartUtils` classes, and one `StatUtils` class. This admits no caller or owner: renderers/particles/GUI/recipe viewers/client lifecycle, transmitters/multipart blocks/gear, machines/block types/entities, packet tracking/network ranges, SPS/multiblock, additions/generators, external energy, world/chunk lifecycle, registries/config/persistence all remain deferred; there is no rendering integration, entity/player lifecycle, block registration, networking, thread-safety, or collision-owner guarantee. Together with
-the **56-file API slice**, they form bounded registry/GameEvent, TOML
+`platform-slice.txt` contains **17 project-owned Fabric sources**. Seven spatial/color/effect foundations (`Color`, `CustomEffect`, `Pos3D`, `Quaternion`, `Range3D`, `MultipartUtils`, and `StatUtils`) remain byte-identical to `4646f509`. Twelve Java 21 tests bound channel/HSV/compositing/statistics, effect state, vector/range/rotation/quaternion state, and direct multipart ray selection. Packaging permits exactly four direct common-lib classes, one effect class, three math classes, the three `MultipartUtils` classes, and one `StatUtils` class. This admits no caller or owner: renderers/particles/GUI/recipe viewers/client lifecycle, transmitters/multipart blocks/gear, machines/block types/entities, packet tracking/network ranges, SPS/multiblock, additions/generators, external energy, world/chunk lifecycle, registries/config/persistence all remain deferred; there is no rendering integration, entity/player lifecycle, block registration, networking, thread-safety, or collision-owner guarantee. Together with
+the **57-file API slice**, they form bounded registry/GameEvent, TOML
 startup-config, configuration-handshake, internal energy storage/holder, internal
 heat storage/holder, wildcard-matching, fair-distribution, chunk-coordinate,
 lambda-metafactory, and vanilla-registry utility closures. The unchanged
@@ -64,7 +66,7 @@ The external-to-strict direction has one true-long indexed container, aborts `SI
 
 The sole lookup/factory seam rejects null/internal sides, unusable conversions, disabled handlers, and empty side views. It stores the exact physical exposure side and rejects every mismatched-side wrap regardless of conversion; same-side identical conversion unwraps, while another usable conversion may wrap. Live exact-side nullable-holder suppliers drive both support flags and operations through allow→deny→allow transitions. Owners must cache one adapter per stable handler/physical side and notify neighbors when support changes; owner wiring remains deferred. Exactly eight local JUnit methods prove the conversion, true-long, lifecycle, rollback/precondition, aggregate, exact-side, live-support, and self-unwrapping contracts. Packaging requires exactly these four platform classes and the five-class API energy family, rejects nested `team/reborn/**`, validates external Energy 4.1.0, and has no transfer marker.
 
-Deferred are ConfigHolder/ConfigInfo/DataType/ISideConfiguration/configurable holders/helpers, TileComponentConfig/Ejector, real block/item/entity providers and owner caching/invalidation, cables/networks/emission/machines, hardcoded FE config activation, item/fluid/chemical/heat adapters, persistence, packets/client sync, and thread safety.
+Deferred are ConfigHolder/ConfigInfo/DataType/ISideConfiguration/configurable holders/helpers, TileComponentConfig/Ejector, real block/item/entity providers and owner caching/invalidation, cables/networks/emission/machines, hardcoded FE config activation, the item reverse/provider path, every fluid storage/transaction adapter beyond Task 034's value seam, chemical/heat adapters, persistence, packets/client sync, and thread safety.
 
 Task 024 brought the API/common/platform slices to **47/88/14** by admitting unchanged official `ContainerInteraction`, `InContainerGetter`, `IntContainerInteraction`, and `LongContainerInteraction`; all four are byte-identical to `4646f509`. One Fabric-local same-package class has exactly four deterministic JUnit methods covering exact generic stack/result identity, arbitrary/negative index, nullable/physical side, exact `SIMULATE`/`EXECUTE`, raw signed `int` endpoints, and true-`long` endpoints plus an odd value above `2^53`, without normalization. The remapped JAR's direct `mekanism/api/container/` family must be exactly these four plus `InContainerGetterLong` and `LongToLongContainerInteraction`, each once, with no other direct/nested/synthetic/test/helper/fixture class and no startup marker. These are callback contracts only: `ChemicalUtils`, `ExtendedFluidHandlerUtils`, chemical/fluid handlers, component-backed/recipe-upgrade owners, actual transfer/platform transactions, registries, serialization/networking, and lifecycle/thread ownership remain deferred.
 
@@ -184,18 +186,32 @@ machine/network owners. See `../docs/FABRIC_REGISTRY.md`,
 Task 033 adds the two byte-identical inventory holder sources and the bounded
 physical-side item transaction seam described in `../docs/FABRIC_ITEM.md`. Its
 `InventoryApiHolderTest` stays in ordinary `test` without Knot, while
-`FabricItemStorageTest` is isolated in the `fabricItemTest` source set/task whose
-runtime alone includes pinned `fabric-loader-junit`; `check` runs both exactly once.
+`FabricItemStorageTest` is byte-identically relocated into the generalized
+`fabricTransferTest` source set/task. Its runtime alone includes pinned
+`fabric-loader-junit`, and it shares one full Knot startup with Task 034's
+`FabricFluidConversionsTest`; `check` runs ordinary and transfer tasks exactly once.
 The factory performs no provider registration; future ownership must cache exactly
 one view per physical side and invalidate it for removal/reload/facing/side-config
 or topology changes. Concrete slots, reverse lookup, provider/cache wiring,
 persistence, recipes, tiles, machines, and Crusher remain deferred.
 
-The next nearby API candidates are blocked by deliberately excluded boundaries:
-incremental-enum helpers close over `ConstantPredicates` (which imports
-NeoForge fluid/tri-predicate and chemical types), while `ModuleData`, module
-containers/items, codec catalogs, GUI/radial/client rendering, and their owner
-integration close over larger deferred graphs. Those families remain outside the current slice.
+Task 034 adds only the independently implemented `mekanism.api.fluid.FluidStack`
+value and `mekanism.fabric.fluid.FabricFluidConversions` value/unit seam. The API
+retains signed-int mB, empty/component/copy/matching and exact JSON/NBT/stream
+contracts while explicitly omitting FluidType/capability-only methods. The Fabric
+class pins factor 81, exact divisibility/int-domain checks, component/fluid identity,
+blank/zero mapping, and fail-closed flowing normalization. It adds no Storage,
+Transaction, handler, lookup, provider, cache, or lifecycle claim. Eight ordinary
+and four Knot methods bring expected totals to 64 suites/304 tests and 2 suites/8
+tests respectively; the three jqwik properties remain ordinary-only. The static JAR
+gate permits exactly the two new outer classes and no fluid startup marker. See
+`../docs/FABRIC_FLUID.md`.
+
+The next nearby API candidates remain blocked by deliberately excluded boundaries:
+`SerializerHelper`, incremental-enum helpers through `ConstantPredicates`,
+`TextComponentUtil`, all 197 FluidStack import replacements, and `ModuleData`, module
+containers/items, codec catalogs, GUI/radial/client rendering, and owner integration
+remain outside the current slice.
 
 To repeat the portability audit and fail on a missing source, duplicate path,
 or any `net.neoforged` reference, run from the repository root:
