@@ -1,7 +1,7 @@
 package mekanism.api.providers;
 
-import mekanism.api.MekanismAPI;
 import mekanism.api.chemical.Chemical;
+import mekanism.api.chemical.ChemicalRegistry;
 import mekanism.api.chemical.ChemicalStack;
 import net.minecraft.MethodsReturnNonnullByDefault;
 import net.minecraft.network.chat.Component;
@@ -28,7 +28,7 @@ public interface IChemicalProvider extends IBaseProvider {
 
     @Override
     default ResourceLocation getRegistryName() {
-        return MekanismAPI.CHEMICAL_REGISTRY.getKey(getChemical());
+        return ChemicalRegistry.registry().getKey(getChemical());
     }
 
     @Override

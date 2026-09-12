@@ -10,9 +10,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
-import net.neoforged.neoforge.common.util.INBTSerializable;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import mekanism.api.INBTSerializable;
 
 @NothingNullByDefault
 public interface IChemicalTank extends INBTSerializable<CompoundTag>, IContentsListener {
@@ -60,7 +58,7 @@ public interface IChemicalTank extends INBTSerializable<CompoundTag>, IContentsL
      * Inserts a {@link ChemicalStack} into this {@link IChemicalTank} and return the remainder. The {@link ChemicalStack} <em>should not</em> be modified in this
      * function!
      * </p>
-     * Note: This behaviour is subtly different from {@link IFluidHandler#fill(FluidStack, IFluidHandler.FluidAction)}
+     * Note: This behaviour is subtly different from fluid insertion
      *
      * @param stack          {@link ChemicalStack} to insert. This must not be modified by the tank.
      * @param action         The action to perform, either {@link Action#EXECUTE} or {@link Action#SIMULATE}

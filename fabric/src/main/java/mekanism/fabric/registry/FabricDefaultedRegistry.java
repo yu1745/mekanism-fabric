@@ -15,8 +15,8 @@ import net.minecraft.resources.ResourceKey;
 /**
  * Intrusive, defaulted custom registry with a fail-closed lifecycle.
  *
- * <p>All population, root registration, and freezing belongs to the thread that creates the registry.
- * Synchronization serializes those mutations; it does not make concurrent population reads safe.
+ * <p>All population, root registration, and the mutable-to-frozen transition belong to the thread that creates the registry.
+ * Already-frozen calls are idempotent on reload workers. Synchronization serializes mutations; it does not make population reads safe.
  */
 public final class FabricDefaultedRegistry<T> extends DefaultedMappedRegistry<T> {
     private final ResourceKey<T> defaultEntryKey;
@@ -144,10 +144,12 @@ public final class FabricDefaultedRegistry<T> extends DefaultedMappedRegistry<T>
 
     @Override
     public synchronized FabricDefaultedRegistry<T> freeze() {
-        requireOwnerThread("freeze the registry");
+        // RegistryAccess snapshots may idempotently re-freeze custom roots from a reload worker.
+        // The actual mutable-to-frozen transition remains construction-thread-only.
         if (lifecycle == FabricCustomRegistryLifecycle.FROZEN) {
             return this;
         }
+        requireOwnerThread("freeze the registry");
         if (lifecycle != FabricCustomRegistryLifecycle.CREATED
               && lifecycle != FabricCustomRegistryLifecycle.ROOT_REGISTERED) {
             throw new IllegalStateException("Cannot freeze registry while lifecycle is " + lifecycle);

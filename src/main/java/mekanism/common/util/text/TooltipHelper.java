@@ -2,7 +2,7 @@ package mekanism.common.util.text;
 
 import mekanism.api.text.ITooltipHelper;
 import mekanism.common.MekanismLang;
-import mekanism.common.util.MekanismUtils;
+import mekanism.common.config.ChemicalConfigAccess;
 import mekanism.common.util.UnitDisplayUtils;
 import mekanism.common.util.UnitDisplayUtils.RadiationUnit;
 import mekanism.common.util.UnitDisplayUtils.TemperatureUnit;
@@ -15,7 +15,7 @@ public class TooltipHelper implements ITooltipHelper {
 
     @Override
     public Component getEnergyPerMBDisplayShort(long energy) {
-        return MekanismLang.GENERIC_PER_MB.translate(MekanismUtils.getEnergyDisplayShort(energy));
+        return MekanismLang.GENERIC_PER_MB.translate(UnitDisplayUtils.getDisplayShort(energy, UnitDisplayUtils.EnergyUnit.getConfigured()));
     }
 
     @Override
@@ -25,7 +25,7 @@ public class TooltipHelper implements ITooltipHelper {
 
     @Override
     public Component getTemperatureDisplayShort(double temperature) {
-        return MekanismUtils.getTemperatureDisplay(temperature, TemperatureUnit.KELVIN, true);
+        return UnitDisplayUtils.getDisplayShort(temperature, ChemicalConfigAccess.temperatureUnit(), true);
     }
 
     @Override

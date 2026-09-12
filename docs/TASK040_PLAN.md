@@ -1,10 +1,10 @@
 # Task 040 plan — complete Chemical registry, data-map, tank and synchronization vertical
 
-Status: **approved for one isolated implementation candidate**
+Status: **isolated implementation candidate complete; awaiting parent review/integration**
 
 ## Decision and baseline
 
-- Baseline: clean `java-port` commit `1a65b0a8e92fdea5cf81fccac1e46e563d461ad5`.
+- Approved code baseline: `1a65b0a8e92fdea5cf81fccac1e46e563d461ad5`; candidate worktree started clean from its docs-only approval child `5aadf581`.
 - Official source oracle: `4646f509` (Mekanism `v1.21.1-10.7.19.85`).
 - Starting slices: API/common/platform **65/145/24**; aggregate **75 suites / 353 tests**.
 - User direction: prefer complete 15–40+ owner/dependency verticals; an indivisible registry/config/reload/network SCC may exceed 40 files rather than being split into fake leaf tasks.
@@ -228,6 +228,32 @@ Mandatory independent read-only review before integration:
 3. config path ownership, enum semantics, publication and shutdown;
 4. configuration/play ordering, bounded decoding, ACK/reload/disconnect races;
 5. public surface, oracle deltas, resource/service and artifact isolation.
+
+## Candidate outcome and evidence
+
+The candidate reaches the planned **98/164/33** slices and exact **80 suites / 379 tests**. Its actual
+unique touched-production-path count is 69 rather than the headline 68: the numbered plan did not
+include its separately described `FabricDataMapLoader` update. The expected config-manager change was
+unnecessary; real packaged startup instead required an idempotent already-frozen path in
+`FabricDefaultedRegistry` because a reload worker creates a registry snapshot. Net compiled growth
+remains exactly 61.
+
+The exact five maps, 13 Chemical tags, and two service descriptors pass the remapped-JAR hash/content
+and leakage gate. Focused/full tests, ordinary build, packaged dedicated-server startup, the new real
+Chemical server/client/reconnect gate, data-map reload, paired network, rejection, and client-window
+regressions form the candidate evidence. The runtime gate observes a 65-entry canonical synchronized
+registry, initial radioactive nuclear waste rejecting a real tank and producing a tooltip, exact
+true-long NBT/stream round trips, authoritative removal at epoch 2, subsequent tank acceptance and
+tooltip removal, two distinct ACK sessions, disconnect cleanup, same-process reconnect, and
+same-JVM server/client context isolation.
+
+The mandatory independent read-only review found three concrete gaps. The candidate closes them with
+raw-ID declaration-order assertions (raw IDs remain verification-only), length-delimited value chunks
+encoded/decoded by each descriptor's declared network codec with name-based coolant references, and
+generation-aware fail-closed play handling that cannot disconnect a replacement connection. Full
+implementation, source delta, resource hashes, runtime protocol, and non-claims are recorded in
+[`FABRIC_CHEMICAL.md`](FABRIC_CHEMICAL.md). This status does not claim parent integration,
+`./build.sh --clean`, deployment, production, or mirror execution.
 
 ## Explicit deferrals and next boundary
 

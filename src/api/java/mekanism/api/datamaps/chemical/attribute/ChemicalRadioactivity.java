@@ -4,10 +4,9 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.List;
-import mekanism.api.MekanismAPI;
 import mekanism.api.SerializationConstants;
 import mekanism.api.chemical.attribute.ChemicalAttributes;
-import mekanism.api.radiation.IRadiationManager;
+import mekanism.api.radiation.RadiationValidation;
 import mekanism.api.text.APILang;
 import mekanism.api.text.EnumColor;
 import mekanism.api.text.ITooltipHelper;
@@ -21,7 +20,7 @@ import org.jetbrains.annotations.ApiStatus.Internal;
  * A {@link MekanismAPI#CHEMICAL_REGISTRY chemical} data map that allows defining radioactivity values for a chemical. If the radiation manager is enabled, this attribute
  * <i>requires validation</i>, meaning chemical containers won't be able to accept chemicals with this attribute by default. Radioactivity is measured in Sv/h.
  *
- * @param radioactivity Radioactivity of the chemical measured in Sv/h, must be greater than {@link IRadiationManager#baselineRadiation() baseline radiation}.
+ * @param radioactivity Radioactivity of the chemical measured in Sv/h, must be greater than baseline radiation.
  *
  * @since 10.7.11
  */
@@ -32,10 +31,10 @@ public record ChemicalRadioactivity(double radioactivity) implements IChemicalAt
      *
      * @see mekanism.api.datamaps.IMekanismDataMapTypes#chemicalRadioactivity()
      */
-    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, "chemical_attribute_radioactivity");
+    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath("mekanism", "chemical_attribute_radioactivity");
 
-    private static final Codec<Double> RADIATION_CODEC = Codec.doubleRange(IRadiationManager.INSTANCE.baselineRadiation(), Double.MAX_VALUE).validate(val -> {
-        if (val == IRadiationManager.INSTANCE.baselineRadiation()) {
+    private static final Codec<Double> RADIATION_CODEC = Codec.doubleRange(RadiationValidation.BASELINE, Double.MAX_VALUE).validate(val -> {
+        if (val == RadiationValidation.BASELINE) {
             return DataResult.error(() -> "Radiation must be greater than the baseline value");
         }
         return DataResult.success(val);
@@ -52,7 +51,7 @@ public record ChemicalRadioactivity(double radioactivity) implements IChemicalAt
     ).apply(in, ChemicalRadioactivity::new)), RADIOACTIVITY_CODEC);
 
     public ChemicalRadioactivity {
-        if (radioactivity <= IRadiationManager.INSTANCE.baselineRadiation()) {
+        if (radioactivity <= RadiationValidation.BASELINE) {
             throw new IllegalArgumentException("Radiation attribute should only be used when there actually is radiation! Radioactivity: " + radioactivity);
         }
     }
@@ -69,7 +68,7 @@ public record ChemicalRadioactivity(double radioactivity) implements IChemicalAt
     @Override
     public boolean needsValidation() {
         //This attribute only actually needs validation if radiation is enabled
-        return IRadiationManager.INSTANCE.isRadiationEnabled();
+        return RadiationValidation.isEnabled();
     }
 
     @Internal

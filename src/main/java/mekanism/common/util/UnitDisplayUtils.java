@@ -3,6 +3,7 @@ package mekanism.common.util;
 import io.netty.buffer.ByteBuf;
 import java.util.function.BooleanSupplier;
 import java.util.function.IntFunction;
+import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 import mekanism.api.IDisableableEnum;
 import mekanism.api.IIncrementalEnum;
@@ -13,14 +14,12 @@ import mekanism.api.text.IHasTranslationKey;
 import mekanism.api.text.ILangEntry;
 import mekanism.api.text.TextComponentUtil;
 import mekanism.common.MekanismLang;
-import mekanism.common.config.MekanismConfig;
-import mekanism.common.config.value.CachedDoubleValue;
+import mekanism.common.config.ChemicalConfigAccess;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.util.ByIdMap;
 import net.minecraft.util.Mth;
-import net.neoforged.neoforge.common.TranslatableEnum;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -70,11 +69,11 @@ public class UnitDisplayUtils {
         if (negative) {
             value = Math.abs(value);
         }
-        for (int i = 0; i < EnumUtils.MEASUREMENT_UNITS.length; i++) {
-            MeasurementUnit lowerMeasure = EnumUtils.MEASUREMENT_UNITS[i];
+        for (int i = 0; i < MeasurementUnit.values().length; i++) {
+            MeasurementUnit lowerMeasure = MeasurementUnit.values()[i];
             if ((i == 0 && lowerMeasure.below(value)) ||
-                i + 1 >= EnumUtils.MEASUREMENT_UNITS.length ||
-                (lowerMeasure.aboveEqual(value) && EnumUtils.MEASUREMENT_UNITS[i + 1].below(value))) {
+                i + 1 >= MeasurementUnit.values().length ||
+                (lowerMeasure.aboveEqual(value) && MeasurementUnit.values()[i + 1].below(value))) {
                 //First element and it is below it (no more unit abbreviations before),
                 // or last element (no more unit abbreviations past),
                 // or we are within the bounds between this one and the next one
@@ -82,7 +81,7 @@ public class UnitDisplayUtils {
             }
         }
         //Fallback, should never be reached as should have been captured by the check in the loop
-        return EnumUtils.MEASUREMENT_UNITS[EnumUtils.MEASUREMENT_UNITS.length - 1].getDisplay(value, unit, decimalPlaces, isShort, spaceBetweenSymbol, negative, singular);
+        return MeasurementUnit.values()[MeasurementUnit.values().length - 1].getDisplay(value, unit, decimalPlaces, isShort, spaceBetweenSymbol, negative, singular);
     }
 
     public static Component getDisplayShort(double value, TemperatureUnit unit) {
@@ -133,7 +132,7 @@ public class UnitDisplayUtils {
     }
 
     @NothingNullByDefault
-    public enum EnergyUnit implements IDisableableEnum<EnergyUnit>, IEnergyConversion, Unit, IHasTranslationKey, TranslatableEnum {
+    public enum EnergyUnit implements IDisableableEnum<EnergyUnit>, IEnergyConversion, Unit, IHasTranslationKey {
         JOULES(MekanismLang.ENERGY_JOULES, MekanismLang.ENERGY_JOULES_PLURAL, MekanismLang.ENERGY_JOULES_SHORT, "j", null, ConstantPredicates.ALWAYS_TRUE) {
             @Override
             public double getConversion() {
@@ -156,14 +155,12 @@ public class UnitDisplayUtils {
                 return joules;
             }
         },
-        FORGE_ENERGY(MekanismLang.ENERGY_FORGE, MekanismLang.ENERGY_FORGE, MekanismLang.ENERGY_FORGE_SHORT, "fe", () -> MekanismConfig.general.forgeConversionRate,
-              //Note: Use default value if called before configs are loaded. In general this should never happen, but third party mods may just call it regardless
-              () -> !MekanismConfig.general.blacklistForge.getOrDefault());
+        FORGE_ENERGY(MekanismLang.ENERGY_FORGE, MekanismLang.ENERGY_FORGE, MekanismLang.ENERGY_FORGE_SHORT, "fe", ChemicalConfigAccess::feConversionRate, ChemicalConfigAccess::forgeEnabled);
 
         public static final IntFunction<EnergyUnit> BY_ID = ByIdMap.continuous(EnergyUnit::ordinal, values(), ByIdMap.OutOfBoundsStrategy.WRAP);
         public static final StreamCodec<ByteBuf, EnergyUnit> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, EnergyUnit::ordinal);
 
-        private final Supplier<CachedDoubleValue> conversion;
+        private final DoubleSupplier conversion;
         private final BooleanSupplier checkEnabled;
         private final ILangEntry singularLangEntry;
         private final ILangEntry pluralLangEntry;
@@ -173,7 +170,7 @@ public class UnitDisplayUtils {
         //Note: We ignore improper nulls as they only are null for joules which overrides the various use places
         @SuppressWarnings("ConstantConditions")
         EnergyUnit(ILangEntry singularLangEntry, ILangEntry pluralLangEntry, ILangEntry shortLangEntry, String tabName,
-              @Nullable Supplier<CachedDoubleValue> conversionRate, BooleanSupplier checkEnabled) {
+              @Nullable DoubleSupplier conversionRate, BooleanSupplier checkEnabled) {
             this.singularLangEntry = singularLangEntry;
             this.pluralLangEntry = pluralLangEntry;
             this.shortLangEntry = shortLangEntry;
@@ -196,7 +193,7 @@ public class UnitDisplayUtils {
         public double getConversion() {
             //Note: Use default value if called before configs are loaded. In general this should never happen,
             // but third party mods may just call it regardless
-            return conversion.get().getOrDefault();
+            return conversion.getAsDouble();
         }
 
         @Override
@@ -205,7 +202,6 @@ public class UnitDisplayUtils {
         }
 
         @NotNull
-        @Override
         public Component getTranslatedName() {
             return getLabel(false).translate();
         }
@@ -226,13 +222,13 @@ public class UnitDisplayUtils {
         }
 
         public static EnergyUnit getConfigured() {
-            EnergyUnit type = MekanismConfig.common.energyUnit.get();
+            EnergyUnit type = ChemicalConfigAccess.energyUnit();
             return type.isEnabled() ? type : JOULES;
         }
     }
 
     @NothingNullByDefault
-    public enum TemperatureUnit implements IIncrementalEnum<TemperatureUnit>, IHasTranslationKey, Unit, TranslatableEnum {
+    public enum TemperatureUnit implements IIncrementalEnum<TemperatureUnit>, IHasTranslationKey, Unit {
         KELVIN(MekanismLang.TEMPERATURE_KELVIN, MekanismLang.TEMPERATURE_KELVIN_SHORT, "K", "k", 0, 1),
         CELSIUS(MekanismLang.TEMPERATURE_CELSIUS, MekanismLang.TEMPERATURE_CELSIUS_SHORT, "°C", "c", 273.15, 1),
         RANKINE(MekanismLang.TEMPERATURE_RANKINE, MekanismLang.TEMPERATURE_RANKINE_SHORT, "R", "r", 0, 1.8),
@@ -277,7 +273,6 @@ public class UnitDisplayUtils {
         }
 
         @NotNull
-        @Override
         public Component getTranslatedName() {
             return getLabel(false).translate();
         }

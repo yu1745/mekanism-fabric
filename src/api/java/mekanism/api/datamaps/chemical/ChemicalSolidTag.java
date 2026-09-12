@@ -3,7 +3,6 @@ package mekanism.api.datamaps.chemical;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.Optional;
-import mekanism.api.MekanismAPI;
 import mekanism.api.SerializationConstants;
 import net.minecraft.core.HolderSet;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -26,7 +25,7 @@ public record ChemicalSolidTag(TagKey<Item> solidRepresentation) {//TODO - 1.22:
      *
      * @see mekanism.api.datamaps.IMekanismDataMapTypes#chemicalSolidTag()
      */
-    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, "chemical_solid_tag");
+    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath("mekanism", "chemical_solid_tag");
 
     private static final Codec<TagKey<Item>> TAG_CODEC = TagKey.codec(Registries.ITEM);
     /**

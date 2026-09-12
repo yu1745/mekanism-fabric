@@ -1,6 +1,8 @@
 package mekanism.api.datamaps;
 
-import mekanism.api.MekanismAPI;
+import mekanism.api.MekanismServices;
+import mekanism.api.chemical.ChemicalRegistry;
+
 import mekanism.api.chemical.Chemical;
 import mekanism.api.datamaps.chemical.ChemicalSolidTag;
 import mekanism.api.datamaps.chemical.attribute.ChemicalFuel;
@@ -13,7 +15,7 @@ import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.damagesource.DamageType;
-import net.neoforged.neoforge.registries.datamaps.DataMapType;
+import mekanism.api.datamaps.MekanismDataMapType;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -26,7 +28,7 @@ public interface IMekanismDataMapTypes {
     /**
      * Provides access to Mekanism's data map types.
      */
-    IMekanismDataMapTypes INSTANCE = MekanismAPI.getService(IMekanismDataMapTypes.class);
+    IMekanismDataMapTypes INSTANCE = MekanismServices.load(IMekanismDataMapTypes.class);
 
     /**
      * Helper to get data from a holder. This method supports both reference and direct holders.
@@ -39,7 +41,11 @@ public interface IMekanismDataMapTypes {
      * @return Absorption values or null if there are no absorption values defined for the damage type.
      */
     @Nullable
-    <TYPE, DATA> DATA getData(RegistryAccess registryAccess, ResourceKey<? extends Registry<? extends TYPE>> registryName, Holder<TYPE> holder, DataMapType<TYPE, DATA> type);
+    <TYPE, DATA> DATA getData(RegistryAccess registryAccess, ResourceKey<? extends Registry<? extends TYPE>> registryName, Holder<TYPE> holder, MekanismDataMapType<TYPE, DATA> type);
+
+    /** Queries the chemical map bound to the current logical server or physical-client context. */
+    @Nullable
+    <DATA> DATA getChemicalData(Holder<Chemical> holder, MekanismDataMapType<Chemical, DATA> type);
 
     /**
      * The {@linkplain DamageType} data map that defines how much of a particular damage type the MekaSuit can absorb.
@@ -53,7 +59,7 @@ public interface IMekanismDataMapTypes {
      *
      * @implNote This data map is not synced to the client.
      */
-    DataMapType<DamageType, MekaSuitAbsorption> mekaSuitAbsorption();
+    MekanismDataMapType<DamageType, MekaSuitAbsorption> mekaSuitAbsorption();
 
     /**
      * Helper to get the MekaSuit absorption data from a damage type holder. This method supports both reference and direct holders.
@@ -78,7 +84,7 @@ public interface IMekanismDataMapTypes {
      *
      * The use of a tag key as the value is also possible, though discouraged in case more options are added in the future.
      */
-    DataMapType<Chemical, ChemicalSolidTag> chemicalSolidTag();
+    MekanismDataMapType<Chemical, ChemicalSolidTag> chemicalSolidTag();
 
     /**
      * The {@linkplain Chemical} data map that defines fuel properties of a chemical.
@@ -89,7 +95,7 @@ public interface IMekanismDataMapTypes {
      * <li>{@code energy}, a positive long - how much energy will the fuel produce each tick of its burn</li>
      * </ul>
      */
-    DataMapType<Chemical, ChemicalFuel> chemicalFuel();
+    MekanismDataMapType<Chemical, ChemicalFuel> chemicalFuel();
 
     /**
      * The {@linkplain Chemical} data map that defines how radioactive a chemical is.
@@ -101,7 +107,7 @@ public interface IMekanismDataMapTypes {
      *
      * The use of a double as the value is also possible, though discouraged in case more options are added in the future.
      */
-    DataMapType<Chemical, ChemicalRadioactivity> chemicalRadioactivity();
+    MekanismDataMapType<Chemical, ChemicalRadioactivity> chemicalRadioactivity();
 
     /**
      * The {@linkplain Chemical} data map that defines coolant properties of a chemical.
@@ -117,7 +123,7 @@ public interface IMekanismDataMapTypes {
      *
      * @apiNote While having the coolant reference itself as a target works, it is highly discouraged.
      */
-    DataMapType<Chemical, CooledCoolant> cooledChemicalCoolant();
+    MekanismDataMapType<Chemical, CooledCoolant> cooledChemicalCoolant();
 
     /**
      * The {@linkplain Chemical} data map that defines heated coolant properties of a chemical.
@@ -134,5 +140,5 @@ public interface IMekanismDataMapTypes {
      *
      * @apiNote While having the coolant reference itself as a target works, it is highly discouraged.
      */
-    DataMapType<Chemical, HeatedCoolant> heatedChemicalCoolant();
+    MekanismDataMapType<Chemical, HeatedCoolant> heatedChemicalCoolant();
 }

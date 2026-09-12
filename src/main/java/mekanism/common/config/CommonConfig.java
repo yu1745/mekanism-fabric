@@ -4,12 +4,11 @@ import mekanism.common.config.value.CachedBooleanValue;
 import mekanism.common.config.value.CachedEnumValue;
 import mekanism.common.util.UnitDisplayUtils.EnergyUnit;
 import mekanism.common.util.UnitDisplayUtils.TemperatureUnit;
-import net.neoforged.fml.config.ModConfig.Type;
-import net.neoforged.neoforge.common.ModConfigSpec;
+import mekanism.fabric.config.MekanismConfigSpec;
 
 public class CommonConfig extends BaseMekanismConfig {
 
-    private final ModConfigSpec configSpec;
+    private final MekanismConfigSpec configSpec;
 
     public final CachedEnumValue<EnergyUnit> energyUnit;
     public final CachedEnumValue<TemperatureUnit> tempUnit;
@@ -17,8 +16,8 @@ public class CommonConfig extends BaseMekanismConfig {
     public final CachedBooleanValue copyBlockData;
     public final CachedBooleanValue holidays;
 
-    CommonConfig() {
-        ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
+    public CommonConfig() {
+        MekanismConfigSpec.Builder builder = new MekanismConfigSpec.Builder();
 
         energyUnit = CachedEnumValue.wrap(this, MekanismConfigTranslations.COMMON_UNIT_ENERGY.applyToBuilder(builder)
               .defineEnum("energyType", EnergyUnit.FORGE_ENERGY));
@@ -45,12 +44,12 @@ public class CommonConfig extends BaseMekanismConfig {
     }
 
     @Override
-    public ModConfigSpec getConfigSpec() {
+    public MekanismConfigSpec getConfigSpec() {
         return configSpec;
     }
 
     @Override
-    public Type getConfigType() {
-        return Type.COMMON;
+    public MekanismConfigType getConfigType() {
+        return MekanismConfigType.COMMON;
     }
 }

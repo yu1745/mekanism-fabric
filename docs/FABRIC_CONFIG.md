@@ -1,8 +1,9 @@
 # Fabric config 最小适配
 
-当前 config 垂直切片移植官方 `MekanismStartupConfig`，并由 Task 039 加入 physical-client-lifetime
-`client.toml` window fragment owner；Mekanism 自有窄接口替代 NeoForge `ModConfigSpec` / `ModConfig.Type`。
-它不是 Forge Config API 兼容层，也不提供事件总线。
+当前 config 垂直切片包含 official selected startup、Task 039 physical-client-lifetime
+`client.toml` window fragment，以及 Task 040 `common.toml` + world `general.toml` Chemical policy fragment；
+Mekanism 自有窄接口替代 NeoForge `ModConfigSpec` / `ModConfig.Type`。它不是 Forge Config API 兼容层，
+也不提供事件总线或完整九配置 facade。
 
 ## 当前闭包
 
@@ -10,8 +11,8 @@
 
 - `IMekanismConfig`、`BaseMekanismConfig`、`MekanismConfigType`；
 - `IConfigTranslation` 与仅含 startup 元数据的 `StartupConfigTranslations`；
-- `MekanismStartupConfig`；
-- `CachedValue`、`CachedBooleanValue`、`CachedByteValue`、`CachedShortValue`、`CachedDoubleValue`、`CachedFloatValue`、`CachedIntValue`、`CachedLongValue`，以及 `CachedResolvableConfigValue`、`CachedConfigValue`、`CachedMapConfigValue`、`CachedOredictionificatorConfigValue`；
+- `MekanismStartupConfig`，以及 Task 040 的 `CommonConfig`、完整 selected `MekanismConfigTranslations` 与 `ChemicalConfigAccess`；
+- `CachedValue`、`CachedBooleanValue`、`CachedByteValue`、`CachedShortValue`、`CachedDoubleValue`、`CachedFloatValue`、`CachedIntValue`、`CachedLongValue`、`CachedEnumValue`，以及 `CachedResolvableConfigValue`、`CachedConfigValue`、`CachedMapConfigValue`、`CachedOredictionificatorConfigValue`；
 - `EnergyCubeTier`、`InductionCellTier`、`InductionProviderTier` 三份 long-valued tier metadata；
 - Task 029 的 `CableTier`、`ChemicalTankTier`、`ConductorTier`、`FluidTankTier`、`PipeTier`、`TransporterTier`、`TubeTier` 七份 transport/tank tier metadata。
 
@@ -21,7 +22,7 @@ Fabric 侧 `MekanismConfigSpec` 提供当前声明实际需要的 category、tra
 
 `FabricMekanismConfigManager` 仍只管理 `config/Mekanism/<name>.toml` 的安全路径、load/unload 和 cache invalidation。TOML 存储使用直接打包的 Night Config 3.8.3 core/toml，不向 common 公共签名泄漏 Night Config 类型。两个嵌套 JAR 保持独立，LGPL-3.0 文本与 attribution 位于 `META-INF/licenses/`。官方 `CachedResolvableConfigValue.set` 未修改：它先 encode/set immutable backing value，再把原始 resolved `TYPE` 放进 cache。因此 encoded `ConfigValue` list 不受 caller 或 Night Config list mutation 影响，但 `CachedMapConfigValue`/oredictionificator 在 set 后、clear/reload 前的 resolved `Map` 仍是 caller-owned alias；clear/reload 后才从排序后的 encoded strings 重建 normalized map。这里不承诺任意 `TYPE` 或 map 的 deep immutability。
 
-当前仍不激活 `GeneralConfig`、会一次构造九份配置的 `MekanismConfig`、cardboard blacklist 或 Oredictionificator filter/item owner；`CachedEnumValue`、其它 define schema、world restart、文件监听、配置同步和客户端 UI 也延期。这些 cached-value/tier metadata 本身不激活对应 tier owners/callers、cables/pipes/tubes/transporters/conductors/tanks、machines/blocks/items 或 `tiers.toml`；Task 039 新增的窄 window owner/lifecycle/threading 仅以后一节为准。
+当前仍不激活完整 `GeneralConfig`、会一次构造九份配置的 `MekanismConfig`、cardboard blacklist 或 Oredictionificator filter/item owner；Task 040 只为三个 world policy 值实现 world-restart metadata。其它 define schema、文件监听、通用配置同步和客户端 UI 仍延期。这些 cached-value/tier metadata 本身不激活对应 tier owners/callers、cables/pipes/tubes/transporters/conductors、machines/blocks/items 或 `tiers.toml`；窄 owner 生命周期仅以下两节为准。
 
 ## Task 039 `client.toml` window owner
 
@@ -32,6 +33,30 @@ Task 039 已把 API/common/platform slice 扩为 **65/145/24**，并启用 `<con
 `MekanismFabricClientBootstrap` 在 client networking 前同步建立 `FabricClientConfigLifecycle`。common `ClientWindowConfigAccess` 不 import Fabric/client、不含 default/lazy fallback；适用窗口在 pre-init、post-close 或 wrong owner thread 明确失败，`UNSPECIFIED` 不访问 owner。production lifecycle 只注册 physical `CLIENT_STOPPING`，没有 JOIN/DISCONNECT 回调，因此 owner 的 connection independence 是结构性结论；同一进程中的真实 disconnect/reconnect 尚未 runtime 证明并明确延期。每次 changed `SelectedWindowData` update 保持官方 x→y→pinned 的逐字段修改，再向 owner 的 single-thread executor 提交一个 logical job。官方与 candidate 都可能让此前已排队的异步 save 在这些逐字段修改之间读取状态，短暂将 mixed x/y/pinned tuple 写到磁盘；本次 update 自己随后排入 FIFO 的 save 会收敛为完整 tuple，但该小窗口内的 JVM crash 或终止性写失败可能让 mixed tuple 留在磁盘，所以不承诺 tuple-atomic persistence。每个 logical job 内最多尝试四次；shutdown 先停止 admission，再在不持有 admission monitor 时 drain/join，最后 unload/release/remove。
 
 `src/clientWindowFixture` 保持生产 artifact 外；`scripts/fabric-client-window-smoke.sh` 以两个顺序的新 client JVM 和同一 disposable config dir 验证 11/28 schema、unknown retention、持久化、unchanged update 不重写、physical-client-lifetime owner 可用及 physical shutdown flush。它不伪造 connection callbacks，也不声称实际证明同一进程 disconnect/reconnect。完整 ClientConfig/QIO、真实 same-process reconnect、外部 watcher、NeoForge config events、`.bak` rotation、comment-only correction 与 unspecified-key pruning 仍延期；未来 schema 必须在 drain 后扩展/替换此 owner 并加载保留文档，不得并行创建第二 writer。
+
+## Task 040 common/general Chemical policy owners
+
+Task 040 candidate 将 slices 扩为 **98/164/33**。common bootstrap在 registry 前通过既有
+`FabricMekanismConfigManager` 唯一加载 `<config>/Mekanism/common.toml`；official `CommonConfig` 完整
+selected 五值为 `energyType=FORGE_ENERGY`、`temperatureUnit=KELVIN`、`enableDecayTimers=true`、
+`copyBlockData=true`、`holidays=true`。`MekanismConfigSpec#defineEnum` 只接受 declared enum name/value；
+错误 string/type在 publish 前修正。`CachedEnumValue` 除 NeoForge nested config type替换外保持
+官方 cache/set semantics。
+
+每个 `MinecraftServer` 在 server thread claim normalized
+`<world>/serverconfig/Mekanism/general.toml`。`FabricChemicalConfig` 只拥有并保留式更新：
+
+- `radiation.enabled=true`；
+- `energy_conversion.feConversionRate=2.5`，finite 且范围 `0.0001..10000`；
+- `energy_conversion.blacklistForge=false`，带 world-restart metadata。
+
+同路径第二 owner、wrong-thread、duplicate server owner均失败；startup异常释放 claim，stop unload并
+恢复 `ChemicalConfigAccess.ServerPolicy.DEFAULT` 与 `RadiationValidation` default supplier。unowned TOML
+section/key保持。common unit values不通过网络覆盖；连接只把上述三项 server behavior policy封装进
+`ChemicalDataContext`，disconnect 清 context后恢复 local/default view。`ChemicalConfigAccess` 不 import
+Fabric且 pre-owner使用明确 official defaults，不构造第二 owner。单元测试覆盖 strict enum、五值真实
+TOML、unowned world fragment保留、exclusive claims、owner publish/reset；real packaged/chemical gates
+覆盖 server path与 client policy behavior。详见 `FABRIC_CHEMICAL.md`。
 
 ## Startup 契约
 
@@ -83,11 +108,12 @@ Mekanism TOML。
 - `fabric/src/test/java/mekanism/fabric/config/FabricWindowConfigTest.java` 恰好六个方法；
 - `fabric/src/test/java/mekanism/fabric/config/WindowDomainTest.java` 恰好六个方法；
 - `scripts/fabric-client-window-smoke.sh` 两个顺序 real client JVM；
-- `fabric/src/test/java/mekanism/common/config/MekanismStartupConfigTest.java`；
+- `scripts/fabric-chemical-runtime-smoke.sh` 的 server-policy snapshot、disconnect/reconnect与 reload gate；
+- `fabric/src/test/java/mekanism/common/config/MekanismStartupConfigTest.java` 与 `ChemicalServiceConfigTest.java`；
 - `fabric/src/test/java/mekanism/common/config/value/PrimitiveCachedValueTest.java` 中恰好四个 `@Test`（每个 primitive wrapper 一个）；
 - `fabric/src/test/java/mekanism/common/config/value/GenericCachedConfigValueTest.java` 中恰好四个 `@Test`（逐一对应 generic、resolvable、map、oredictionificator source），使用真实 spec/TOML 固定 list correction/immutability、cache/null sentinel、map order/sort 和 official set alias boundary；
 - `fabric/src/test/java/mekanism/common/tier/TierMetadataTest.java` 恰好 12 个 `@Test`，其中 Task 029 一 enum 一个新方法，固定完整 metadata 与 loaded config-reference override/live-set/reflective-finally restoration；
 - 三个 source-slice NeoForge 引用门禁，以及 config-value JAR family 精确 14 类（含 `CachedMapConfigValue$ValueEncoder`）、direct tier family 精确 13 类且无 test/helper/fixture 泄漏的静态门禁；
 - `./fabric-build.sh test`；
 - `scripts/fabric-packaged-smoke.sh`；
-- `./build.sh --clean --out <dir>`。
+- `./build.sh --clean --out <dir>`（仅 integration parent 的最终 clean-release gate；Task 040 candidate 不执行）。

@@ -1,4 +1,4 @@
-# Fabric relative-side energy, heat, and item holders
+# Fabric relative-side energy, heat, item, and Chemical holders
 
 ## Current slice
 
@@ -15,7 +15,7 @@ This milestone adds the platform-neutral side-routing layer used by Mekanism's i
 - `mekanism.common.capabilities.holder.slot.IInventorySlotHolder`
 - `mekanism.common.capabilities.holder.slot.InventorySlotHolder`
 
-It builds on the internal energy and heat containers. Task 023 adds a side-bound Team Reborn Energy adapter/factory seam, and Task 033 adds a physical-side Fabric item view, but no block/item/entity provider is registered by this slice. Task 034 leaves these holder sources unchanged. Task 036 restores RelativeSide's portable text dependency and brings current audited counts to API **64** / common **122** / platform **17**; neither the fluid seam nor the text closure adds a holder or provider.
+It builds on the internal energy and heat containers. Task 023 adds a side-bound Team Reborn Energy adapter/factory seam, Task 033 adds a physical-side Fabric item view, and Task 040 adds the official internal Chemical tank/handler/holder closure. No block/item/entity Chemical provider is registered. Task 040 candidate current counts are API **98** / common **164** / platform **33**.
 
 ## Relative-side contract
 
@@ -61,6 +61,33 @@ This is a factory seam, not provider registration; owner invalidation and neighb
 
 The two item-holder sources are unchanged from `4646f509`; tests fix live facing rotation, internal versus physical list identity, independent policies and null denial. `FabricItemLookup.expose` optionally composes that live `IHolder` policy with the captured physical-side inventory. It never exposes null/internal access. Unlike the energy adapter, the concrete `FabricItemStorage` has explicit permanent `invalidate()` and also self-invalidates on slot identity/order drift or `hasInventory() == false`. Future ownership must cache one view per side and wire removal/reload/facing/side-config/topology invalidation. Full item transaction and restore semantics are in `FABRIC_ITEM.md`.
 
+## Task 040 internal Chemical tank/handler closure
+
+Task 040 admits byte-identical `BasicChemicalTank`, `ChemicalUtils`, `IMekanismChemicalHandler`,
+`DynamicChemicalHandler`, `IChemicalTankHolder`, `ChemicalTankHolder`, `ProxyChemicalHandler`, and
+`ChemicalSlotInfo`; adapted API interfaces retain the official domain methods while removing only
+NeoForge fluid/capability documentation/supertypes that have no Fabric equivalent. The registry,
+`Chemical`, `ChemicalStack`, attributes and predicates complete their dependency boundary.
+
+`BasicChemicalTank` keeps capacity, validator, insert/extract rate predicates, listener, exact
+`AutomationType`/`Action`, deprecated-vs-modern predicate singleton detection, type lock, empty
+canonicalization and true-long saturation behavior. Tank NBT is the selected registry-aware project
+contract; `ChemicalStack` stream order is amount then holder and does not use fluid's factor 81.
+Dynamic/sided/proxy handlers preserve indexed order, side forwarding and distribution behavior.
+`ChemicalTankHolder` is the non-config live-list holder matching the existing holder pattern;
+`ChemicalSlotInfo` retains canInput/canOutput and live tank list identity.
+
+Chemical validation is context-sensitive rather than copied into holders: a default tank rejects
+radioactive nuclear waste at epoch 1, then accepts it after the authoritative radioactivity map is
+removed at epoch 2. This behavior, exact `(1L << 60) + 123` NBT/stream round trips, listener/action
+boundaries and server/client context isolation are covered by six ordinary domain tests, six
+transfer-Knot codec/tank tests, three data-map-Knot tests and the real Chemical runtime gate.
+
+This remains an **internal** Mekanism domain. There is no `ChemicalApiLookup`, Fabric
+`Storage<ChemicalVariant>`, provider registration, snapshot rollback adapter, owner cache/invalidation,
+configurable side holder/ejector, block/item capability surface, or machine caller. See
+`FABRIC_CHEMICAL.md`.
+
 ## Deliberately deferred
 
 This slice excludes:
@@ -68,9 +95,9 @@ This slice excludes:
 - `EnergyContainerHelper`, `HeatCapacitorHelper`, and all other configurable holder/helper paths;
 - `ConfigHolder`, `ConfigEnergyContainerHolder`, and `ConfigHeatCapacitorHolder`;
 - `ConfigInfo`, `DataType`, `TileComponentConfig`, `TileComponentEjector`, and side-configuration execution/ejection;
-- chemical, fluid, inventory, and proxy slot descriptors;
+- configurable chemical/energy/heat holders, fluid holders, inventory proxy descriptors, and helper builders;
 - actual block/item/entity provider registration, owner caching/invalidation wiring, every tile/machine/block caller, and specialized holders;
-- item reverse adapters plus fluid/chemical/heat adapters, persistence, networking/wire serialization, config/registry lifecycle, and thread ownership.
+- item reverse adapters plus external fluid/Chemical/heat transaction adapters, side ejection and persistence owners. Task 040's internal Chemical registry/NBT/snapshot lifecycle is included, but it is not an external storage contract.
 
 The energy and heat helpers currently couple their non-config and configurable factories. They must be split or admitted with their real side-configuration closure rather than stubbed.
 
@@ -108,4 +135,4 @@ Required gates:
 FABRIC_SMOKE_STATIC_ONLY=1 scripts/fabric-packaged-smoke.sh
 ```
 
-The packaged smoke verifies RelativeSide outer + `$1`, the complete direct text package, and energy-/heat-holder classes are present exactly once in the remapped JAR, and statically restricts the slot descriptor family to exactly `ISlotInfo.class`, `BaseSlotInfo.class`, `EnergySlotInfo.class`, and `HeatSlotInfo.class`, once each. Directional, text, and descriptor behavior is exercised in JUnit; Task 036 creates no synthetic holder state, startup reference, or startup marker.
+The packaged smoke verifies RelativeSide outer + `$1`, complete direct text, energy/heat holders, and the exact Chemical API/common holder/handler/slot families once each. The slot descriptor family now includes exact `ChemicalSlotInfo.class` beside `ISlotInfo`, `BaseSlotInfo`, `EnergySlotInfo`, and `HeatSlotInfo`; tests/helpers/fixtures remain forbidden. Task 040 Chemical behavior additionally has focused Knot and real server/client runtime evidence rather than a class-presence claim alone.

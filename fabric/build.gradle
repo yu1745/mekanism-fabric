@@ -22,6 +22,7 @@ sourceSets {
     fabricRegistryTest
     fabricDataMapTest
     dataMapReloadFixture
+    chemicalRuntimeFixture
 }
 
 loom {
@@ -30,6 +31,7 @@ loom {
     createRemapConfigurations(sourceSets.handshakeMissingReceiverFixture)
     createRemapConfigurations(sourceSets.clientWindowFixture)
     createRemapConfigurations(sourceSets.dataMapReloadFixture)
+    createRemapConfigurations(sourceSets.chemicalRuntimeFixture)
 
     mods {
         mekanism {
@@ -46,6 +48,9 @@ loom {
         }
         dataMapReloadFixture {
             sourceSet sourceSets.dataMapReloadFixture
+        }
+        chemicalRuntimeFixture {
+            sourceSet sourceSets.chemicalRuntimeFixture
         }
     }
 
@@ -70,6 +75,25 @@ loom {
             source sourceSets.clientWindowFixture
             runDir = System.getProperty('mekanism.window.clientDir', 'run/client-window-fixture')
             property 'mekanism.window.fixturePhase', System.getProperty('mekanism.window.fixturePhase', '1')
+        }
+        chemicalRuntimeServer {
+            server()
+            name = 'Mekanism chemical runtime server'
+            source sourceSets.main
+            source sourceSets.chemicalRuntimeFixture
+            runDir = System.getProperty('mekanism.chemical.serverDir', 'run/chemical-runtime-server')
+            property 'mekanism.chemical.runtimeRoot', System.getProperty('mekanism.chemical.runtimeRoot', 'run/chemical-runtime')
+        }
+        chemicalRuntimeClient {
+            client()
+            name = 'Mekanism chemical runtime client'
+            source sourceSets.main
+            source sourceSets.chemicalRuntimeFixture
+            runDir = System.getProperty('mekanism.chemical.clientDir', 'run/chemical-runtime-client')
+            property 'mekanism.chemical.runtimeRoot', System.getProperty('mekanism.chemical.runtimeRoot', 'run/chemical-runtime')
+            property 'mekanism.chemical.address', System.getProperty('mekanism.chemical.address', '127.0.0.1:25568')
+            programArgs '--quickPlayMultiplayer', System.getProperty('mekanism.chemical.address', '127.0.0.1:25568'),
+                  '--username', System.getProperty('mekanism.chemical.username', 'MekanismChemical')
         }
         handshakeMismatchClient {
             client()
@@ -113,7 +137,7 @@ def platformSlice = loadSlice('platform-slice.txt')
 def apiSliceFiles = apiSlice.collect { file("../src/api/java/${it}") }
 def commonSliceFiles = commonSlice.collect { file("../src/main/java/${it}") }
 def platformSliceFiles = platformSlice.collect { file("src/main/java/${it}") }
-if (apiSlice.size() != 65 || commonSlice.size() != 145 || platformSlice.size() != 24) {
+if (apiSlice.size() != 98 || commonSlice.size() != 164 || platformSlice.size() != 33) {
     throw new GradleException("Unexpected Fabric source slice counts: api=${apiSlice.size()} common=${commonSlice.size()} platform=${platformSlice.size()}")
 }
 
@@ -199,7 +223,7 @@ sourceSets {
     }
     fabricTransferTest {
         // Keep Knot and its TCCL out of the ordinary jqwik/Jupiter suite. This source set
-        // contains the item transaction and fluid conversion suites, sees production output and
+        // contains the item transaction, fluid conversion, and Chemical codec/tank suites, sees production output and
         // its own pinned Jupiter libraries, but never ordinary test output.
         compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
         runtimeClasspath += sourceSets.main.runtimeClasspath
@@ -211,7 +235,7 @@ sourceSets {
         runtimeClasspath += sourceSets.main.runtimeClasspath
     }
     fabricDataMapTest {
-        // Data-map ResourceManager/session integration gets a fresh server-side Knot worker,
+        // Damage-map ResourceManager and Chemical context/session integration get a fresh server-side Knot worker,
         // isolated from ordinary, transfer, root-registry, and fixture outputs.
         compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
         runtimeClasspath += sourceSets.main.runtimeClasspath
@@ -219,6 +243,11 @@ sourceSets {
     dataMapReloadFixture {
         // Packaged-server fixture sees production and external dependencies only. Its output is
         // remapped to an isolated directory and never enters the release JAR.
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
+    }
+    chemicalRuntimeFixture {
+        // Real server/client probe sees production but remains an isolated Loom mod root.
         compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
         runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
     }
@@ -301,10 +330,16 @@ def clientWindowFixtureSources = files(sourceSets.clientWindowFixture.allJava)
 def clientWindowFixtureRuntime = files(sourceSets.clientWindowFixture.runtimeClasspath)
 def mainResourceOutputFiles = files(sourceSets.main.output.resourcesDir)
 def clientWindowFixtureMetadata = layout.projectDirectory.file('src/clientWindowFixture/resources/fabric.mod.json')
+def clientWindowFixtureResourceOutput = layout.buildDirectory.dir('resources/clientWindowFixture')
+def clientWindowFixtureServices = [
+      layout.projectDirectory.file('../src/main/resources/META-INF/services/mekanism.api.text.ITooltipHelper'),
+      layout.projectDirectory.file('../src/main/resources/META-INF/services/mekanism.api.datamaps.IMekanismDataMapTypes'),
+]
 def verifyClientWindowFixtureIsolation = tasks.register('verifyClientWindowFixtureIsolation') {
     group = 'verification'
     description = 'Checks the single real-client window probe stays outside production output and metadata.'
-    inputs.files(clientWindowFixtureSources, clientWindowFixtureMetadata)
+    dependsOn tasks.named('processClientWindowFixtureResources')
+    inputs.files(clientWindowFixtureSources, clientWindowFixtureMetadata, clientWindowFixtureServices)
     doLast {
         def sources = clientWindowFixtureSources.files
         if (sources.size() != 1 || sources.first().name != 'ClientWindowPersistenceFixture.java') {
@@ -330,6 +365,16 @@ def verifyClientWindowFixtureIsolation = tasks.register('verifyClientWindowFixtu
         if (!productionSources.intersect(sources.collect { it.canonicalFile }.toSet()).isEmpty()) {
             throw new GradleException('Client-window fixture source entered the production allowlist')
         }
+        def serviceDirectory = new File(clientWindowFixtureResourceOutput.get().asFile, 'META-INF/services')
+        def actualServices = serviceDirectory.listFiles()?.findAll { it.isFile() }?.collectEntries { [(it.name): it.getBytes()] } ?: [:]
+        def expectedServices = [
+              'mekanism.api.text.ITooltipHelper': 'mekanism.common.util.text.TooltipHelper'.bytes,
+              'mekanism.api.datamaps.IMekanismDataMapTypes': 'mekanism.fabric.datamaps.FabricChemicalDataMaps\n'.bytes,
+        ]
+        if (actualServices.keySet() != expectedServices.keySet()
+              || actualServices.any { name, bytes -> !java.util.Arrays.equals(bytes, expectedServices[name]) }) {
+            throw new GradleException("Client-window fixture must copy exactly both production service descriptors: ${actualServices.keySet()}")
+        }
     }
 }
 tasks.named('compileClientWindowFixtureJava') {
@@ -340,6 +385,48 @@ tasks.named('runClientWindowFixture') {
 }
 tasks.named('check') {
     dependsOn verifyClientWindowFixtureIsolation
+}
+
+def chemicalRuntimeFixtureSources = files(sourceSets.chemicalRuntimeFixture.allJava)
+def chemicalRuntimeFixtureMetadata = layout.projectDirectory.file('src/chemicalRuntimeFixture/resources/fabric.mod.json')
+def verifyChemicalRuntimeFixtureIsolation = tasks.register('verifyChemicalRuntimeFixtureIsolation') {
+    group = 'verification'
+    description = 'Checks the two real chemical runtime probes remain an isolated non-release Loom mod.'
+    inputs.files(chemicalRuntimeFixtureSources, chemicalRuntimeFixtureMetadata)
+    doLast {
+        def sources = chemicalRuntimeFixtureSources.files
+        if (sources.size() != 2 || sources.collect { it.name }.toSet() != [
+              'ChemicalRuntimeServerFixture.java', 'ChemicalRuntimeClientFixture.java'] as Set) {
+            throw new GradleException("chemicalRuntimeFixture must contain exactly its two fixed probes: ${sources}")
+        }
+        def metadata = new JsonSlurper().parse(chemicalRuntimeFixtureMetadata.asFile)
+        if (metadata.id != 'mekanism_chemical_runtime_fixture' || metadata.environment != '*'
+              || metadata.entrypoints?.main != ['mekanism.fabric.chemical.fixture.ChemicalRuntimeServerFixture']
+              || metadata.entrypoints?.client != ['mekanism.fabric.chemical.fixture.ChemicalRuntimeClientFixture']
+              || metadata.depends?.mekanism != '*') {
+            throw new GradleException('Chemical runtime fixture metadata must remain a distinct two-sided mod depending on production Mekanism')
+        }
+        def leaks = sources.findAll { it.text.contains('net.neoforged.') }
+        if (!leaks.isEmpty()) {
+            throw new GradleException("Chemical runtime fixture contains NeoForge references: ${leaks}")
+        }
+        def productionSources = (apiSliceFiles + commonSliceFiles + platformSliceFiles).collect { it.canonicalFile }.toSet()
+        if (!productionSources.intersect(sources.collect { it.canonicalFile }.toSet()).isEmpty()) {
+            throw new GradleException('Chemical runtime fixture source entered the production allowlist')
+        }
+    }
+}
+tasks.named('compileChemicalRuntimeFixtureJava') {
+    dependsOn verifyChemicalRuntimeFixtureIsolation
+}
+tasks.named('runChemicalRuntimeServer') {
+    dependsOn verifyChemicalRuntimeFixtureIsolation
+}
+tasks.named('runChemicalRuntimeClient') {
+    dependsOn verifyChemicalRuntimeFixtureIsolation
+}
+tasks.named('check') {
+    dependsOn verifyChemicalRuntimeFixtureIsolation
 }
 
 dependencies {
@@ -354,6 +441,8 @@ dependencies {
     modHandshakeMissingReceiverFixtureImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
     modClientWindowFixtureImplementation "net.fabricmc:fabric-loader:${loader_version}"
     modClientWindowFixtureImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
+    modChemicalRuntimeFixtureImplementation "net.fabricmc:fabric-loader:${loader_version}"
+    modChemicalRuntimeFixtureImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
 
     implementation "com.electronwill.night-config:core:${night_config_version}"
     implementation "com.electronwill.night-config:toml:${night_config_version}"
@@ -374,7 +463,7 @@ dependencies {
     fabricTransferTestRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.13.4'
     fabricTransferTestRuntimeOnly "net.fabricmc:fabric-loader-junit:${loader_version}"
 
-    // Root mutation is isolated in a fresh, server-side Knot worker that exits after one method.
+    // Root mutation is isolated in a fresh, server-side Knot worker that exits after its two ordered methods.
     fabricRegistryTestImplementation 'org.junit.jupiter:junit-jupiter:5.13.4'
     fabricRegistryTestRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.13.4'
     fabricRegistryTestRuntimeOnly "net.fabricmc:fabric-loader-junit:${loader_version}"
@@ -391,10 +480,32 @@ processResources {
     filesMatching('fabric.mod.json') {
         expand version: resolvedModVersion
     }
+    from('../src/main/resources') {
+        include 'META-INF/services/mekanism.api.text.ITooltipHelper'
+        include 'META-INF/services/mekanism.api.datamaps.IMekanismDataMapTypes'
+    }
     from('../src/datagen/generated/mekanism') {
         include 'assets/mekanism/lang/en_us.json'
         include 'data/mekanism/data_maps/damage_type/mekasuit_absorption.json'
         include 'data/mekanism/tags/damage_type/mekasuit_always_supported.json'
+        include 'data/mekanism/data_maps/mekanism/chemical/chemical_solid_tag.json'
+        include 'data/mekanism/data_maps/mekanism/chemical/chemical_attribute_fuel.json'
+        include 'data/mekanism/data_maps/mekanism/chemical/chemical_attribute_radioactivity.json'
+        include 'data/mekanism/data_maps/mekanism/chemical/chemical_attribute_cooled_coolant.json'
+        include 'data/mekanism/data_maps/mekanism/chemical/chemical_attribute_heated_coolant.json'
+        include 'data/mekanism/tags/mekanism/chemical/bio.json'
+        include 'data/mekanism/tags/mekanism/chemical/carbon.json'
+        include 'data/mekanism/tags/mekanism/chemical/clean.json'
+        include 'data/mekanism/tags/mekanism/chemical/diamond.json'
+        include 'data/mekanism/tags/mekanism/chemical/dirty.json'
+        include 'data/mekanism/tags/mekanism/chemical/fungi.json'
+        include 'data/mekanism/tags/mekanism/chemical/gaseous.json'
+        include 'data/mekanism/tags/mekanism/chemical/gold.json'
+        include 'data/mekanism/tags/mekanism/chemical/redstone.json'
+        include 'data/mekanism/tags/mekanism/chemical/refined_obsidian.json'
+        include 'data/mekanism/tags/mekanism/chemical/tin.json'
+        include 'data/mekanism/tags/mekanism/chemical/waste_barrel_decay_blacklist.json'
+        include 'data/mekanism/tags/mekanism/chemical/water_vapor.json'
     }
 }
 
@@ -402,6 +513,18 @@ tasks.named('processDataMapReloadFixtureResources') {
     inputs.property 'version', resolvedModVersion
     filesMatching('fabric.mod.json') {
         expand version: resolvedModVersion
+    }
+}
+tasks.named('processChemicalRuntimeFixtureResources') {
+    inputs.property 'version', resolvedModVersion
+    filesMatching('fabric.mod.json') {
+        expand version: resolvedModVersion
+    }
+}
+tasks.named('processClientWindowFixtureResources') {
+    from('../src/main/resources') {
+        include 'META-INF/services/mekanism.api.text.ITooltipHelper'
+        include 'META-INF/services/mekanism.api.datamaps.IMekanismDataMapTypes'
     }
 }
 
@@ -479,6 +602,11 @@ def deferredOrdinaryTestSource = layout.projectDirectory.file('src/test/java/mek
 def registryRootTestSource = layout.projectDirectory.file('src/fabricRegistryTest/java/mekanism/fabric/registry/FabricRegistryRootIntegrationTest.java')
 def dataMapOrdinaryTestSource = layout.projectDirectory.file('src/test/java/mekanism/fabric/datamaps/FabricDataMapSemanticsTest.java')
 def dataMapKnotTestSource = layout.projectDirectory.file('src/fabricDataMapTest/java/mekanism/fabric/datamaps/FabricDataMapResourceStackIntegrationTest.java')
+def chemicalDataMapKnotTestSource = layout.projectDirectory.file('src/fabricDataMapTest/java/mekanism/fabric/datamaps/ChemicalDataMapOwnerIntegrationTest.java')
+def chemicalDomainTestSource = layout.projectDirectory.file('src/test/java/mekanism/api/chemical/ChemicalDomainTest.java')
+def chemicalServiceTestSource = layout.projectDirectory.file('src/test/java/mekanism/common/config/ChemicalServiceConfigTest.java')
+def chemicalSnapshotTestSource = layout.projectDirectory.file('src/test/java/mekanism/fabric/network/ChemicalSnapshotProtocolTest.java')
+def chemicalTransferTestSource = layout.projectDirectory.file('src/fabricTransferTest/java/mekanism/api/chemical/ChemicalCodecTankConnectionTest.java')
 def distributionPropertySource = layout.projectDirectory.file('../src/test/java/mekanism/common/lib/distribution/DistributionPropertyTest.java')
 def windowConfigTestSource = layout.projectDirectory.file('src/test/java/mekanism/fabric/config/FabricWindowConfigTest.java')
 def windowDomainTestSource = layout.projectDirectory.file('src/test/java/mekanism/fabric/config/WindowDomainTest.java')
@@ -495,8 +623,9 @@ def verifyFabricTestContract = tasks.register('verifyFabricTestContract') {
     description = 'Checks isolated loader runtimes and exact ordinary/transfer/root/data-map test totals.'
     dependsOn tasks.named('test'), fabricTransferTest, fabricRegistryTest, fabricDataMapTest
     inputs.files(registryOrdinaryTestSource, deferredOrdinaryTestSource, registryRootTestSource,
-          dataMapOrdinaryTestSource, dataMapKnotTestSource, distributionPropertySource,
-          windowConfigTestSource, windowDomainTestSource, concreteSlotTestSource, fabricItemStorageTestSource)
+          dataMapOrdinaryTestSource, dataMapKnotTestSource, chemicalDataMapKnotTestSource,
+          chemicalDomainTestSource, chemicalServiceTestSource, chemicalSnapshotTestSource, chemicalTransferTestSource,
+          distributionPropertySource, windowConfigTestSource, windowDomainTestSource, concreteSlotTestSource, fabricItemStorageTestSource)
     doLast {
         def loaderJunitFiles = { runtimeFiles ->
             runtimeFiles.files.findAll { it.name.startsWith('fabric-loader-junit-') && it.name.endsWith('.jar') }
@@ -513,16 +642,20 @@ def verifyFabricTestContract = tasks.register('verifyFabricTestContract') {
         if (rootSources.size() != 1 || rootSources.first().canonicalFile != registryRootTestSource.asFile.canonicalFile) {
             throw new GradleException("fabricRegistryTest must contain exactly its one fixed integration source: ${rootSources}")
         }
-        def dataMapSources = dataMapKnotTestSources.files
-        if (dataMapSources.size() != 1 || dataMapSources.first().canonicalFile != dataMapKnotTestSource.asFile.canonicalFile) {
-            throw new GradleException("fabricDataMapTest must contain exactly its one fixed integration source: ${dataMapSources}")
+        def dataMapSources = dataMapKnotTestSources.files.collect { it.canonicalFile }.toSet()
+        def expectedDataMapSources = [dataMapKnotTestSource.asFile.canonicalFile, chemicalDataMapKnotTestSource.asFile.canonicalFile] as Set
+        if (dataMapSources != expectedDataMapSources) {
+            throw new GradleException("fabricDataMapTest must contain exactly its two fixed integration sources: ${dataMapSources}")
         }
         def annotationCount = { regularFile ->
             (regularFile.asFile.text =~ /(?m)^\s*@Test\s*$/).count
         }
         if (annotationCount(registryOrdinaryTestSource) != 5 || annotationCount(deferredOrdinaryTestSource) != 5
-              || annotationCount(registryRootTestSource) != 1 || annotationCount(dataMapOrdinaryTestSource) != 4
-              || annotationCount(dataMapKnotTestSource) != 1 || annotationCount(windowConfigTestSource) != 6
+              || annotationCount(registryRootTestSource) != 2 || annotationCount(dataMapOrdinaryTestSource) != 4
+              || annotationCount(dataMapKnotTestSource) != 1 || annotationCount(chemicalDataMapKnotTestSource) != 3
+              || annotationCount(chemicalDomainTestSource) != 6 || annotationCount(chemicalServiceTestSource) != 5
+              || annotationCount(chemicalSnapshotTestSource) != 5 || annotationCount(chemicalTransferTestSource) != 6
+              || annotationCount(windowConfigTestSource) != 6
               || annotationCount(windowDomainTestSource) != 6 || annotationCount(concreteSlotTestSource) != 6
               || annotationCount(fabricItemStorageTestSource) != 5) {
             throw new GradleException('Registry/data-map/window/slot fixed test method counts changed')
@@ -548,12 +681,12 @@ def verifyFabricTestContract = tasks.register('verifyFabricTestContract') {
             }
             [reports.length, tests]
         }
-        def ordinary = readTotals(ordinaryXmlResults, 'ordinary', 70, 336)
-        def transfer = readTotals(transferXmlResults, 'transfer', 3, 15)
-        def registry = readTotals(registryXmlResults, 'root-registry', 1, 1)
-        def dataMap = readTotals(dataMapXmlResults, 'data-map', 1, 1)
-        if (ordinary[0] + transfer[0] + registry[0] + dataMap[0] != 75
-              || ordinary[1] + transfer[1] + registry[1] + dataMap[1] != 353) {
+        def ordinary = readTotals(ordinaryXmlResults, 'ordinary', 73, 352)
+        def transfer = readTotals(transferXmlResults, 'transfer', 4, 21)
+        def registry = readTotals(registryXmlResults, 'root-registry', 1, 2)
+        def dataMap = readTotals(dataMapXmlResults, 'data-map', 2, 4)
+        if (ordinary[0] + transfer[0] + registry[0] + dataMap[0] != 80
+              || ordinary[1] + transfer[1] + registry[1] + dataMap[1] != 379) {
             throw new GradleException('Unexpected aggregate Fabric test totals')
         }
     }

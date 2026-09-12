@@ -1,14 +1,15 @@
-# Fabric ordinary data maps
+# Fabric ordinary and Chemical data maps
 
-## Task 038 boundary
+## Task 038 boundary and Task 040 extension
 
 Task 038 implements one connected server-side data-map vertical: `MekaSuitAbsorption` on
 `Registries.DAMAGE_TYPE`. It is ordinary, unconditional, and non-synced. The API record keeps its
 codec, constructor, public ID and serialized forms; its only source adaptation is replacing the
 executable `MekanismAPI.MEKANISM_MODID` reference with the stable literal namespace `"mekanism"`.
-No public descriptor API was added. `FabricDataMapType` is a platform-internal identity descriptor:
-descriptor equality is object identity, while catalog collisions use `(registryKey, id)`, so the same
-ID remains legal on another registry.
+Task 040 removes the platform-only `FabricDataMapType` and relocates its identity contract to public,
+layer-neutral `MekanismDataMapType<R,T>`, adding optional synchronized codec/flag. Descriptor equality
+remains object identity; catalog collisions use `(registryKey, id)`, so the same ID remains legal on
+another registry. API/common code does not depend on Fabric.
 
 This work was audited against NeoForge 21.1.200 without copying its LGPL implementation:
 
@@ -66,9 +67,9 @@ Each reader is closed. Invalid key syntax, malformed structure, I/O failure, cod
 unsupported conditions fails the whole resource layer. No writes from that layer publish; loading
 continues with the remaining valid low/high layers. Every successful owner load publishes the new
 candidate even when some resource layers failed, so the old snapshot is not retained. A failed high
-`replace` consequently cannot clear valid low results. Unknown descriptor files in this owner's map
-namespace warn and are skipped. Files below another namespace's `data_maps` tree are neither counted
-nor diagnosed by this owner-local loader.
+`replace` consequently cannot clear valid low results. Unknown descriptor files in this descriptor catalog's exact registry folder warn and are skipped.
+Files below another registry folder or namespace's `data_maps` tree are neither counted nor diagnosed;
+this prevents Task 038 damage and Task 040 Chemical catalogs from warning about each other's siblings.
 
 ## Lifecycle and ownership
 
@@ -108,19 +109,54 @@ vanilla reload retains only the prior local snapshot and logs an explicit stale 
 callback catches the failure so it cannot turn the original vanilla future into a failure. This is
 not joint rollback: already committed vanilla resources and tags are never claimed to roll back.
 
+## Task 040 five-map Chemical catalog and atomic epoch
+
+`FabricChemicalDataMaps` is the selected `IMekanismDataMapTypes` service provider. It retains the
+Task 038 descriptor and adds five synchronized descriptors on `ChemicalRegistry.REGISTRY_KEY`:
+`chemical_solid_tag`, fuel, radioactivity, cooled coolant, and heated coolant. Their persistent codecs
+remain the admitted official codecs. Their declared `RegistryFriendlyByteBuf` codecs are the sole value
+wire-format owners; coolant references encode resource names rather than raw holder IDs.
+
+`FabricChemicalDataMapSession` is a distinct server-thread owner. Each successful load starts every map
+from empty, uses the ordinary loader semantics above, validates every resulting key against the
+Chemical registry, copies all five maps, reads the sole current world policy, and publishes one
+immutable `ChemicalDataContext` with exactly one increased epoch. All five descriptors are present in
+the candidate even when a result is empty. Fatal catalog/registry/owner failure at startup fails startup;
+a fatal local failure after a prior epoch is caught by the Chemical callback and retains that prior
+complete epoch. As in Task 038, malformed individual resource layers are isolated and do not claim
+vanilla resource rollback.
+
+Chemical and MekaSuit sessions share lifecycle callbacks but not state. `FabricChemicalDataMaps`
+delegates damage-type queries to Task 038's server identity owner, while Chemical queries read the
+current logical owner context and accept only exact registry reference/direct canonicalization.
+Server stop removes/closes both owners through their respective callbacks. `ChemicalDataContext` is
+ThreadLocal and immutable, so integrated server and physical client views of the same registered
+Chemical objects do not mutate each other.
+
+`processResources` admits exactly five generated Chemical data maps and 13 generated Chemical tags,
+in addition to Task 038's two resources; every path occurs once and has a fixed SHA-256 in
+`FABRIC_CHEMICAL.md`/the static JAR gate. Clean packaged startup requires
+`MEKANISM_FABRIC_CHEMICAL_DATAMAP_PROOF phase=startup epoch=1 maps=5`. The real Chemical runtime pack
+removes nuclear-waste radioactivity, producing epoch 2, then proves that real tank admission and
+client tooltip behavior change with the authoritative context. Play publication uses the bounded
+name-based protocol in `FABRIC_NETWORK.md`.
+
 ## Verification surfaces
 
 `FabricDataMapSemanticsTest` contains exactly four ordinary methods for descriptor/catalog identity,
 value alternatives, low-to-high/tag/remove behavior, and atomic invalid-layer/unknown-target/
-condition behavior. `FabricDataMapResourceStackIntegrationTest` is the only source and method in its
-fresh server-side Knot source set; it uses real `PathPackResources`/`MultiPackResourceManager`, a
+condition behavior. `FabricDataMapResourceStackIntegrationTest` plus the three-method
+`ChemicalDataMapOwnerIntegrationTest` are the two suites/four methods in the fresh server-side Knot
+source set; they use real `PathPackResources`/`MultiPackResourceManager` where applicable, a
 fresh non-root damage registry, immutable publication, reference/direct queries, disappearance and
-close behavior. Current exact totals are ordinary **68 suites / 324 tests**, transfer **2/8**, root
-**1/1**, data-map Knot **1/1**, aggregate **72/334**; jqwik remains three properties at 100,000 tries.
+close behavior. Task 038 landing totals were ordinary **68 suites / 324 tests**, transfer **2/8**, root
+**1/1**, data-map Knot **1/1**, aggregate **72/334**. Task 040 candidate current totals are
+**73/352**, **4/21**, **1/2**, **2/4**, aggregate **80/379**; jqwik remains three properties at 100,000 tries.
 
-`scripts/fabric-packaged-smoke.sh` statically enforces the one API class, exact eight platform class
-entries, resource hashes/counts, and forbidden architecture leakage, and its normal server mode now
-requires the real startup epoch-1/21-entry proof. `scripts/fabric-datamap-reload-smoke.sh` builds an
+`scripts/fabric-packaged-smoke.sh` statically enforces the exact API/platform data-map class families,
+absence of relocated `FabricDataMapType`, resource/service hashes/counts, fixture isolation and forbidden
+architecture leakage. Normal server mode requires both Task 038 epoch-1/21-entry and Task 040
+epoch-1/five-map proofs. `scripts/fabric-datamap-reload-smoke.sh` builds an
 isolated remapped fixture JAR outside `fabric/build/libs`; on a disposable packaged server it queries
 epochs 1–4. After readiness it creates the high-priority world pack and uses console `reload`, whose
 vanilla `ReloadCommand.discoverNewPacks` rescan discovers and auto-enables the new pack; it does not
@@ -140,6 +176,7 @@ fixture trigger, the explicit END-false/epoch-3-stability callback, a fresh epoc
 probe, and the exact `WARN` text `Failed to execute reload`; it allows zero `ERROR` lines. Final total
 accounting proves that the malformed-layer diagnostic is the only `ERROR` emitted by the complete gate.
 
-Deferred without partial compatibility claims: Chemical data maps, synced maps, conditions,
-Advanced mergers/removers, holder mixins, NeoForge facade/classes, radiation, tooltip/tank consumers,
-networking, and broader service owners.
+Task 040 closes the selected Chemical maps, synchronized snapshot, context-local radiation/tooltip/tank
+consumers, and complete selected service owner described below. Still deferred without partial claims:
+conditions, Advanced mergers/removers, holder mixins, NeoForge facade/classes, generic data-map sync,
+environmental radiation, external Chemical providers/transactions, and broader service owners.

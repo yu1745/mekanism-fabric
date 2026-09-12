@@ -138,7 +138,7 @@ if jar tf "${MOD_JARS[0]}" | grep -Eq '^net/fabricmc/loader/'; then
   echo "fabric-packaged-smoke: Fabric Loader classes must remain external" >&2
   exit 1
 fi
-if jar tf "${MOD_JARS[0]}" | grep -Eq '^mekanism/fixture/|^mekanism/fabric/datamaps/fixture/'; then
+if jar tf "${MOD_JARS[0]}" | grep -Eq '^mekanism/fixture/|^mekanism/fabric/(datamaps|chemical)/fixture/'; then
   echo "fabric-packaged-smoke: artifact unexpectedly contains fixture classes" >&2
   exit 1
 fi
@@ -319,6 +319,7 @@ expected_registration = {
     "mekanism/common/registration/MekanismDeferredRegister$Registrar.class",
     "mekanism/common/registration/DeferredMapCodecHolder.class",
     "mekanism/common/registration/DeferredMapCodecRegister.class",
+    "mekanism/common/registration/DoubleWrappedRegistryObject.class",
 }
 registration_prefix = "mekanism/common/registration/"
 actual_registration = {
@@ -338,6 +339,9 @@ expected_registration_impl = {
     "mekanism/common/registration/impl/SoundEventRegistryObject.class",
     "mekanism/common/registration/impl/DamageTypeRegister.class",
     "mekanism/common/registration/impl/MekanismDamageType.class",
+    "mekanism/common/registration/impl/ChemicalDeferredRegister.class",
+    "mekanism/common/registration/impl/DeferredChemical.class",
+    "mekanism/common/registration/impl/SlurryRegistryObject.class",
 }
 registration_impl_prefix = "mekanism/common/registration/impl/"
 actual_registration_impl = {
@@ -353,6 +357,7 @@ expected_registries = {
     "mekanism/common/registries/MekanismGameEvents.class",
     "mekanism/common/registries/MekanismSounds.class",
     "mekanism/common/registries/MekanismDamageTypes.class",
+    "mekanism/common/registries/MekanismChemicals.class",
 }
 registries_prefix = "mekanism/common/registries/"
 actual_registries = {
@@ -387,6 +392,7 @@ expected_slot_info = {
     "mekanism/common/tile/component/config/slot/EnergySlotInfo.class",
     "mekanism/common/tile/component/config/slot/HeatSlotInfo.class",
     "mekanism/common/tile/component/config/slot/InventorySlotInfo.class",
+    "mekanism/common/tile/component/config/slot/ChemicalSlotInfo.class",
 }
 actual_slot_info = {
     entry for entry in entries
@@ -430,6 +436,7 @@ expected_config_values = {
     "mekanism/common/config/value/CachedMapConfigValue.class",
     "mekanism/common/config/value/CachedMapConfigValue$ValueEncoder.class",
     "mekanism/common/config/value/CachedOredictionificatorConfigValue.class",
+    "mekanism/common/config/value/CachedEnumValue.class",
 }
 actual_config_values = {
     entry for entry in entries
@@ -456,6 +463,9 @@ expected_direct_config = {
     "mekanism/common/config/MekanismStartupConfig.class",
     "mekanism/common/config/StartupConfigTranslations.class",
     "mekanism/common/config/TranslationPreset.class",
+    "mekanism/common/config/CommonConfig.class",
+    "mekanism/common/config/ChemicalConfigAccess.class",
+    "mekanism/common/config/ChemicalConfigAccess$ServerPolicy.class",
 }
 common_config_prefix = "mekanism/common/config/"
 actual_direct_config = {
@@ -477,6 +487,9 @@ expected_fabric_config = {
     "mekanism/fabric/config/MekanismConfigSpec$LoadResult.class",
     "mekanism/fabric/config/MekanismConfigSpec$Metadata.class",
     "mekanism/fabric/config/MekanismConfigSpec$RestartScope.class",
+    "mekanism/fabric/config/MekanismConfigSpec$EnumValue.class",
+    "mekanism/fabric/config/FabricChemicalConfig.class",
+    "mekanism/fabric/config/FabricChemicalConfig$GeneralFragment.class",
 }
 actual_fabric_config = {
     entry for entry in entries if entry.startswith("mekanism/fabric/config/") and entry.endswith(".class")
@@ -487,7 +500,10 @@ expected_language_classes = {"mekanism/common/MekanismLang.class", "mekanism/com
 actual_language_classes = {entry for entry in entries if entry.startswith("mekanism/common/MekanismLang") and entry.endswith(".class")}
 if actual_language_classes != expected_language_classes or any(entries.count(entry) != 1 for entry in expected_language_classes):
     raise SystemExit(f"unexpected MekanismLang class family: {sorted(actual_language_classes)!r}")
-expected_text_utils = {"mekanism/common/util/text/TextUtils.class"}
+expected_text_utils = {
+    "mekanism/common/util/text/TextUtils.class",
+    "mekanism/common/util/text/TooltipHelper.class",
+}
 actual_text_utils = {entry for entry in entries if entry.startswith("mekanism/common/util/text/") and entry.endswith(".class")}
 if actual_text_utils != expected_text_utils or entries.count("mekanism/common/util/text/TextUtils.class") != 1:
     raise SystemExit(f"unexpected common text utility family: {sorted(actual_text_utils)!r}")
@@ -499,8 +515,18 @@ with zipfile.ZipFile(sys.argv[1]) as task39_artifact:
     if hashlib.sha256(language).hexdigest() != "20c06e55147089e6d4b2fc3688da3970e8a6a96b61f8efd9e6f9841d40ec34a5":
         raise SystemExit("generated en_us.json differs from the exact oracle")
     task39_classes = (expected_inventory_slot_metadata | expected_concrete_inventory | expected_warning_family
-                      | expected_window_domain | expected_direct_config | expected_fabric_config
-                      | expected_language_classes | expected_text_utils | {"mekanism/common/tile/component/config/slot/InventorySlotInfo.class"})
+                      | expected_window_domain
+                      | (expected_direct_config - {
+                          "mekanism/common/config/CommonConfig.class",
+                          "mekanism/common/config/ChemicalConfigAccess.class",
+                          "mekanism/common/config/ChemicalConfigAccess$ServerPolicy.class",
+                      })
+                      | (expected_fabric_config - {
+                          "mekanism/fabric/config/FabricChemicalConfig.class",
+                          "mekanism/fabric/config/FabricChemicalConfig$GeneralFragment.class",
+                      })
+                      | expected_language_classes | {"mekanism/common/util/text/TextUtils.class",
+                          "mekanism/common/tile/component/config/slot/InventorySlotInfo.class"})
     for entry in task39_classes:
         bytecode = task39_artifact.read(entry)
         lowered = bytecode.lower()
@@ -518,7 +544,7 @@ with zipfile.ZipFile(sys.argv[1]) as task39_artifact:
     if b"FabricClientConfigLifecycle" not in client_bootstrap or b"FabricMekanismClientNetworking" not in client_bootstrap:
         raise SystemExit("client bootstrap must link synchronous config lifecycle and networking")
 forbidden_task39_entries = sorted(entry for entry in entries if entry.startswith((
-    "mekanism/fixture/", "mekanism/common/content/qio/", "mekanism/api/chemical/"
+    "mekanism/fixture/", "mekanism/common/content/qio/"
 )) or entry in {"mekanism/common/config/ClientConfig.class", "mekanism/common/config/MekanismConfig.class"})
 if forbidden_task39_entries:
     raise SystemExit(f"fixture/deferred Task039 class leakage: {forbidden_task39_entries!r}")
@@ -526,6 +552,8 @@ expected_resources = {
     "mekanism/common/resource/IResource.class",
     "mekanism/common/resource/MiscResource.class",
     "mekanism/common/resource/BlockResourceInfo.class",
+    "mekanism/common/resource/PrimaryResource.class",
+    "mekanism/common/resource/ResourceType.class",
 }
 actual_resources = {
     entry for entry in entries
@@ -661,6 +689,7 @@ expected_text_api = {
     "mekanism/api/text/ILangEntry.class",
     "mekanism/api/text/TextComponentUtil.class",
     "mekanism/api/text/TextComponentUtil$1.class",
+    "mekanism/api/text/ITooltipHelper.class",
 }
 text_api_prefix = "mekanism/api/text/"
 actual_text_api = {
@@ -673,10 +702,7 @@ if actual_text_api != expected_text_api or any(entries.count(entry) != 1 for ent
     raise SystemExit(f"unexpected direct text API class family: {sorted(actual_text_api)!r}")
 forbidden_portable_text_entries = sorted(
     entry for entry in entries
-    if entry.startswith("mekanism/api/functions/ConstantPredicates")
-    or entry.startswith("mekanism/api/functions/TriPredicate")
-    or entry.startswith("mekanism/api/chemical/")
-    or entry.startswith("mekanism/common/lib/inventory/HashedItem")
+    if entry.startswith("mekanism/common/lib/inventory/HashedItem")
 )
 if forbidden_portable_text_entries:
     raise SystemExit(f"portable text closure admitted a deferred class: {forbidden_portable_text_entries!r}")
@@ -835,6 +861,7 @@ expected_proxy_handlers = {
     "mekanism/common/capabilities/proxy/ProxyHandler.class",
     "mekanism/common/capabilities/proxy/ProxyHeatHandler.class",
     "mekanism/common/capabilities/proxy/ProxyStrictEnergyHandler.class",
+    "mekanism/common/capabilities/proxy/ProxyChemicalHandler.class",
 }
 actual_proxy_handlers = {
     entry for entry in entries
@@ -1001,9 +1028,24 @@ fi
 if ! python3 - "${MOD_JARS[0]}" <<'PYEOF'
 import hashlib, sys, zipfile
 
-expected_api = {"mekanism/api/datamaps/MekaSuitAbsorption.class"}
+expected_api = {
+    "mekanism/api/datamaps/IMekanismDataMapTypes.class",
+    "mekanism/api/datamaps/MekaSuitAbsorption.class",
+    "mekanism/api/datamaps/MekanismDataMapType.class",
+    "mekanism/api/datamaps/chemical/ChemicalSolidTag.class",
+    "mekanism/api/datamaps/chemical/attribute/ChemicalFuel.class",
+    "mekanism/api/datamaps/chemical/attribute/ChemicalRadioactivity.class",
+    "mekanism/api/datamaps/chemical/attribute/CooledCoolant.class",
+    "mekanism/api/datamaps/chemical/attribute/HeatedCoolant.class",
+    "mekanism/api/datamaps/chemical/attribute/IChemicalAttribute.class",
+    "mekanism/api/datamaps/chemical/attribute/IChemicalCoolant.class",
+}
 expected_platform = {
-    "mekanism/fabric/datamaps/FabricDataMapType.class",
+    "mekanism/fabric/datamaps/FabricChemicalDataMapSession.class",
+    "mekanism/fabric/datamaps/FabricChemicalDataMaps.class",
+    "mekanism/fabric/datamaps/FabricChemicalDataMaps$1.class",
+    "mekanism/fabric/datamaps/FabricChemicalDataMaps$Decoder.class",
+    "mekanism/fabric/datamaps/FabricChemicalDataMaps$Encoder.class",
     "mekanism/fabric/datamaps/FabricDataMapLoader.class",
     "mekanism/fabric/datamaps/FabricDataMapLoader$Entry.class",
     "mekanism/fabric/datamaps/FabricDataMapLoader$Layer.class",
@@ -1015,6 +1057,28 @@ expected_platform = {
 resources = {
     "data/mekanism/data_maps/damage_type/mekasuit_absorption.json": "437587714884bfef9045ac987b97e8b2d63ccb304142181d934e8ef21b471d41",
     "data/mekanism/tags/damage_type/mekasuit_always_supported.json": "7237a571f951f8deef3cacb86518b3b8560f145dad16777701142004814b07da",
+    "data/mekanism/data_maps/mekanism/chemical/chemical_attribute_cooled_coolant.json": "14a5f5aec6647b753aadb2afb340fe6cc0bdbbf8f70a19665386038422cfb6b7",
+    "data/mekanism/data_maps/mekanism/chemical/chemical_attribute_fuel.json": "4ddf704615c656b520aae009910df3430b372584f60073c229e6ba3144ca573e",
+    "data/mekanism/data_maps/mekanism/chemical/chemical_attribute_heated_coolant.json": "550e66bcd2ee76d12554e54f40833966d90a7850ee2e4499f763c93963725391",
+    "data/mekanism/data_maps/mekanism/chemical/chemical_attribute_radioactivity.json": "c3e432ad8af5b89256d527be0c718ecd9cad7b3ea734a6e620d43000f4f05b4a",
+    "data/mekanism/data_maps/mekanism/chemical/chemical_solid_tag.json": "8899452dcc86851401e43dddc75b805b18466cd23462a986bd132a12475b1dca",
+    "data/mekanism/tags/mekanism/chemical/bio.json": "cdd00ab957e9a853f213d618e891ca7d6a98f75967a93a5b23dcf201531e1880",
+    "data/mekanism/tags/mekanism/chemical/carbon.json": "82d649000e6aecec5b154c75ae19f6b484a86326e72bfd3e437a8bbd44b8642b",
+    "data/mekanism/tags/mekanism/chemical/clean.json": "886efcb61350c3997c64e5a301cb7bb083158f8ccb0449ea0722a520f1c89763",
+    "data/mekanism/tags/mekanism/chemical/diamond.json": "9fecc5a3aa0de60d6e2ba6daf2b0558f56b0f6237748f056143620ea3e8c8812",
+    "data/mekanism/tags/mekanism/chemical/dirty.json": "cccead98fd5747b5c9174263f2d04960323872021b2dc40eacd43769e775aa47",
+    "data/mekanism/tags/mekanism/chemical/fungi.json": "cb07aff1a17f37cfe8b95b59577ed3503be6ad51cec8b267f80780eaf7cee943",
+    "data/mekanism/tags/mekanism/chemical/gaseous.json": "e2a66162f320d3015f378ab20f6f87fbf4c3265abf3b781be15632ad81274f6f",
+    "data/mekanism/tags/mekanism/chemical/gold.json": "92ce68c2d11a2918d6600f193de250e46e5d1fbf11eaa0d2062dd703deb2ad20",
+    "data/mekanism/tags/mekanism/chemical/redstone.json": "092242cbc81247ff4c21f6f1402470578413568a9b9e3722609fa0f47d0c7fa0",
+    "data/mekanism/tags/mekanism/chemical/refined_obsidian.json": "71feeecaa60653021681f435f432fa3f63311adaa34829037b86d5c08fb23798",
+    "data/mekanism/tags/mekanism/chemical/tin.json": "bcb708d7ed1d247de6d55c17b72f879f5a8868b740d231f82d6ea78e87478646",
+    "data/mekanism/tags/mekanism/chemical/waste_barrel_decay_blacklist.json": "21c3c44a56d76779e7a8c779f69e50c9494f2da7a3f43d22b8ebe336b39863fe",
+    "data/mekanism/tags/mekanism/chemical/water_vapor.json": "7177474643986262ece934f42d35a24ca4bd9ed3bf4f6307e82557ebf4c7147b",
+}
+services = {
+    "META-INF/services/mekanism.api.text.ITooltipHelper": b"mekanism.common.util.text.TooltipHelper",
+    "META-INF/services/mekanism.api.datamaps.IMekanismDataMapTypes": b"mekanism.fabric.datamaps.FabricChemicalDataMaps\n",
 }
 with zipfile.ZipFile(sys.argv[1]) as artifact:
     entries = artifact.namelist()
@@ -1022,14 +1086,15 @@ with zipfile.ZipFile(sys.argv[1]) as artifact:
     actual_platform = {e for e in entries if e.startswith("mekanism/fabric/datamaps/") and e.endswith(".class")}
     if actual_api != expected_api or actual_platform != expected_platform:
         raise SystemExit(f"unexpected data-map class families: api={sorted(actual_api)!r} platform={sorted(actual_platform)!r}")
+    if "mekanism/fabric/datamaps/FabricDataMapType.class" in entries:
+        raise SystemExit("relocated FabricDataMapType must not remain in the artifact")
     for entry in expected_api | expected_platform:
         if entries.count(entry) != 1:
             raise SystemExit(f"data-map class must occur exactly once: {entry}")
         bytecode = artifact.read(entry)
         lowered = bytecode.lower()
-        if (b"net/neoforged/" in bytecode or b"mekanism/api/chemical" in lowered
-                or b"mekanism/api/mekanismapi" in lowered or b"advanceddatamap" in lowered
-                or b"datamaptyperegister" in lowered or b"imekanismdatamaptypes" in lowered
+        if (b"net/neoforged/" in bytecode or b"mekanism/api/mekanismapi" in lowered
+                or b"advanceddatamap" in lowered or b"datamaptyperegister" in lowered
                 or b"kilt" in lowered or b"connector" in lowered):
             raise SystemExit(f"unsupported architecture leaked into data-map bytecode: {entry}")
     for entry, expected_hash in resources.items():
@@ -1038,15 +1103,120 @@ with zipfile.ZipFile(sys.argv[1]) as artifact:
         actual_hash = hashlib.sha256(artifact.read(entry)).hexdigest()
         if actual_hash != expected_hash:
             raise SystemExit(f"wrong data-map resource hash for {entry}: {actual_hash}")
-    generated_prefix = "data/mekanism/"
+    for entry, expected_content in services.items():
+        if entries.count(entry) != 1 or artifact.read(entry) != expected_content:
+            raise SystemExit(f"wrong or duplicate service descriptor: {entry}")
     admitted = set(resources)
-    unexpected_generated = sorted(e for e in entries if e.startswith(generated_prefix) and not e.endswith("/")
-                                  and ("/data_maps/" in e or "/tags/damage_type/" in e) and e not in admitted)
+    unexpected_generated = sorted(e for e in entries if e.startswith("data/mekanism/") and not e.endswith("/")
+                                  and ("/data_maps/" in e or "/tags/damage_type/" in e
+                                       or "/tags/mekanism/chemical/" in e) and e not in admitted)
     if unexpected_generated:
         raise SystemExit(f"unexpected generated data-map closure resources: {unexpected_generated!r}")
 PYEOF
 then
-  echo "fabric-packaged-smoke: data-map class/resource/leakage contract failed" >&2
+  echo "fabric-packaged-smoke: data-map/resource/service/leakage contract failed" >&2
+  exit 1
+fi
+if ! python3 - "${MOD_JARS[0]}" <<'PYEOF'
+import sys, zipfile
+
+expected_api_chemical = {
+    "mekanism/api/chemical/BasicChemicalTank.class",
+    "mekanism/api/chemical/Chemical.class",
+    "mekanism/api/chemical/Chemical$Derived.class",
+    "mekanism/api/chemical/Chemical$DerivedBuilder.class",
+    "mekanism/api/chemical/ChemicalBuilder.class",
+    "mekanism/api/chemical/ChemicalDataContext.class",
+    "mekanism/api/chemical/ChemicalRegistry.class",
+    "mekanism/api/chemical/ChemicalStack.class",
+    "mekanism/api/chemical/ChemicalStack$1.class",
+    "mekanism/api/chemical/ChemicalStack$2.class",
+    "mekanism/api/chemical/ChemicalUtils.class",
+    "mekanism/api/chemical/IChemicalHandler.class",
+    "mekanism/api/chemical/IChemicalTank.class",
+    "mekanism/api/chemical/IMekanismChemicalHandler.class",
+    "mekanism/api/chemical/ISidedChemicalHandler.class",
+    "mekanism/api/chemical/attribute/ChemicalAttribute.class",
+    "mekanism/api/chemical/attribute/ChemicalAttributeValidator.class",
+    "mekanism/api/chemical/attribute/ChemicalAttributeValidator$1.class",
+    "mekanism/api/chemical/attribute/ChemicalAttributeValidator$2.class",
+    "mekanism/api/chemical/attribute/ChemicalAttributeValidator$ChemicalAttributeValidatorLegacyAdapter.class",
+    "mekanism/api/chemical/attribute/ChemicalAttributeValidator$SimpleAttributeValidator.class",
+    "mekanism/api/chemical/attribute/ChemicalAttributes.class",
+    "mekanism/api/chemical/attribute/ChemicalAttributes$Coolant.class",
+    "mekanism/api/chemical/attribute/ChemicalAttributes$CooledCoolant.class",
+    "mekanism/api/chemical/attribute/ChemicalAttributes$Fuel.class",
+    "mekanism/api/chemical/attribute/ChemicalAttributes$HeatedCoolant.class",
+    "mekanism/api/chemical/attribute/ChemicalAttributes$Radiation.class",
+    "mekanism/api/chemical/attribute/IChemicalAttributeContainer.class",
+}
+expected_platform_chemical = {
+    "mekanism/fabric/chemical/FabricChemicalClientLifecycle.class",
+    "mekanism/fabric/chemical/FabricChemicalLifecycle.class",
+    "mekanism/fabric/chemical/FabricChemicalRegistryLifecycle.class",
+}
+expected_network_chemical = {
+    "mekanism/fabric/network/ChemicalSnapshotAckPayload.class",
+    "mekanism/fabric/network/ChemicalSnapshotPayload.class",
+    "mekanism/fabric/network/ChemicalSnapshotPayload$1.class",
+    "mekanism/fabric/network/ChemicalSnapshotPayload$Allocation.class",
+    "mekanism/fabric/network/ChemicalSnapshotPayload$Cooled.class",
+    "mekanism/fabric/network/ChemicalSnapshotPayload$EntryFactory.class",
+    "mekanism/fabric/network/ChemicalSnapshotPayload$Fuel.class",
+    "mekanism/fabric/network/ChemicalSnapshotPayload$Heated.class",
+    "mekanism/fabric/network/ChemicalSnapshotPayload$Radioactivity.class",
+    "mekanism/fabric/network/ChemicalSnapshotPayload$Solid.class",
+    "mekanism/fabric/network/FabricChemicalClientNetworking.class",
+    "mekanism/fabric/network/FabricChemicalNetworking.class",
+    "mekanism/fabric/network/FabricChemicalNetworking$Pending.class",
+    "mekanism/fabric/network/FabricChemicalNetworking$SnapshotTask.class",
+}
+expected_common_chemical = {
+    "mekanism/common/capabilities/chemical/DynamicChemicalHandler.class",
+    "mekanism/common/capabilities/holder/chemical/ChemicalTankHolder.class",
+    "mekanism/common/capabilities/holder/chemical/IChemicalTankHolder.class",
+}
+required_singletons = {
+    "mekanism/api/MekanismServices.class",
+    "mekanism/api/IDisableableEnum.class",
+    "mekanism/api/functions/ConstantPredicates.class",
+    "mekanism/api/functions/TriPredicate.class",
+    "mekanism/api/providers/IBaseProvider.class",
+    "mekanism/api/providers/IChemicalProvider.class",
+    "mekanism/api/radiation/RadiationValidation.class",
+    "mekanism/common/ChemicalConstants.class",
+    "mekanism/common/base/IChemicalConstant.class",
+}
+with zipfile.ZipFile(sys.argv[1]) as artifact:
+    entries = artifact.namelist()
+    actual_api_chemical = {e for e in entries if e.startswith("mekanism/api/chemical/") and e.endswith(".class")}
+    actual_platform_chemical = {e for e in entries if e.startswith("mekanism/fabric/chemical/") and e.endswith(".class")}
+    actual_network_chemical = {e for e in entries if e.startswith("mekanism/fabric/network/") and e.endswith(".class")
+                               and (e.rsplit("/", 1)[-1].startswith("ChemicalSnapshot")
+                                    or e.rsplit("/", 1)[-1].startswith("FabricChemical"))}
+    actual_common_chemical = {e for e in entries if e.endswith(".class") and (
+          e.startswith("mekanism/common/capabilities/chemical/")
+          or e.startswith("mekanism/common/capabilities/holder/chemical/"))}
+    families = ((actual_api_chemical, expected_api_chemical, "API chemical"),
+                (actual_platform_chemical, expected_platform_chemical, "Fabric chemical"),
+                (actual_network_chemical, expected_network_chemical, "chemical network"),
+                (actual_common_chemical, expected_common_chemical, "common chemical"))
+    for actual, expected, label in families:
+        if actual != expected or any(entries.count(entry) != 1 for entry in expected):
+            raise SystemExit(f"unexpected {label} class family: {sorted(actual)!r}")
+    for entry in required_singletons:
+        if entries.count(entry) != 1:
+            raise SystemExit(f"chemical closure singleton must occur exactly once: {entry}")
+    for entry in expected_api_chemical | required_singletons:
+        bytecode = artifact.read(entry)
+        if b"net/neoforged/" in bytecode or b"net/fabricmc/" in bytecode:
+            raise SystemExit(f"platform dependency leaked into portable chemical bytecode: {entry}")
+    leaked_fixtures = sorted(e for e in entries if e.startswith("mekanism/fabric/chemical/fixture/"))
+    if leaked_fixtures:
+        raise SystemExit(f"chemical runtime fixture leaked into release artifact: {leaked_fixtures!r}")
+PYEOF
+then
+  echo "fabric-packaged-smoke: exact chemical class/leakage contract failed" >&2
   exit 1
 fi
 
@@ -1188,6 +1358,7 @@ network_proof=0
 registry_proof=0
 heat_proof=0
 data_map_proof=0
+chemical_data_map_proof=0
 done_loaded=0
 crash_pattern='(Exception in thread|A mod crashed on startup|Could not execute entrypoint|Failed to start the minecraft server|---- Minecraft Crash Report ----|NoClassDefFoundError|ClassNotFoundException|[[:space:]]ERROR[[:space:]])'
 while (( SECONDS < deadline )); do
@@ -1202,13 +1373,14 @@ while (( SECONDS < deadline )); do
   if grep -Fq 'MEKANISM_FABRIC_REGISTRY_PROOF key=mekanism:seismic_vibration canonical_identity=true entries=4' "$LOG_FILE"; then registry_proof=1; fi
   if grep -Fq 'MEKANISM_FABRIC_HEAT_PROOF positional=true ambient_finite=true' "$LOG_FILE"; then heat_proof=1; fi
   if grep -Fq 'MEKANISM_FABRIC_DATAMAP_PROOF phase=startup epoch=1 published=21 skipped=0' "$LOG_FILE"; then data_map_proof=1; fi
+  if grep -Fq 'MEKANISM_FABRIC_CHEMICAL_DATAMAP_PROOF phase=startup epoch=1 maps=5' "$LOG_FILE"; then chemical_data_map_proof=1; fi
   if grep -Eq 'Done \(' "$LOG_FILE"; then done_loaded=1; fi
   if grep -Eiq "$crash_pattern" "$LOG_FILE"; then
     echo 'fabric-packaged-smoke: crash signature detected' >&2
     grep -Ei "$crash_pattern" "$LOG_FILE" | tail -n 10 >&2 || true
     exit 1
   fi
-  if (( mod_loaded && energy_mod_loaded && config_proof && network_proof && registry_proof && heat_proof && data_map_proof && done_loaded )); then
+  if (( mod_loaded && energy_mod_loaded && config_proof && network_proof && registry_proof && heat_proof && data_map_proof && chemical_data_map_proof && done_loaded )); then
     STARTUP_CONFIG="$SERVER_DIR/config/Mekanism/startup.toml"
     if [[ ! -s "$STARTUP_CONFIG" ]]; then
       echo 'fabric-packaged-smoke: startup config proof logged but startup.toml is missing or empty' >&2
@@ -1236,8 +1408,8 @@ PYEOF
       exit 1
     fi
     RESULT=0
-    printf 'fabric-packaged-smoke: PASS (Mekanism and Team Reborn Energy loaded, config/network/registry/heat/data-map proofs passed, and server reached Done)\n'
-    grep -E '(^|[[:space:]])- (mekanism|team_reborn_energy)([[:space:]]|$)|MEKANISM_FABRIC_(CONFIG|NETWORK|REGISTRY|HEAT|DATAMAP)_PROOF|Done \(' "$LOG_FILE" | tail -n 14
+    printf 'fabric-packaged-smoke: PASS (Mekanism and Team Reborn Energy loaded, config/network/registry/heat/data-map/chemical proofs passed, and server reached Done)\n'
+    grep -E '(^|[[:space:]])- (mekanism|team_reborn_energy)([[:space:]]|$)|MEKANISM_FABRIC_(CONFIG|NETWORK|REGISTRY|HEAT|DATAMAP|CHEMICAL_DATAMAP)_PROOF|Done \(' "$LOG_FILE" | tail -n 16
     exit 0
   fi
   if ! kill -0 "$SERVER_PID" 2>/dev/null; then
@@ -1250,6 +1422,6 @@ PYEOF
   sleep 1
 done
 
-echo "fabric-packaged-smoke: timed out after ${TIMEOUT}s (mod_loaded=$mod_loaded energy_mod_loaded=$energy_mod_loaded config_proof=$config_proof network_proof=$network_proof registry_proof=$registry_proof heat_proof=$heat_proof data_map_proof=$data_map_proof done=$done_loaded)" >&2
+echo "fabric-packaged-smoke: timed out after ${TIMEOUT}s (mod_loaded=$mod_loaded energy_mod_loaded=$energy_mod_loaded config_proof=$config_proof network_proof=$network_proof registry_proof=$registry_proof heat_proof=$heat_proof data_map_proof=$data_map_proof chemical_data_map_proof=$chemical_data_map_proof done=$done_loaded)" >&2
 tail -n 80 "$LOG_FILE" >&2
 exit 1

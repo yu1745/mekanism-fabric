@@ -7,22 +7,20 @@ import mekanism.api.chemical.Chemical;
 import mekanism.api.chemical.ChemicalBuilder;
 import mekanism.api.text.EnumColor;
 import mekanism.common.ChemicalConstants;
-import mekanism.common.Mekanism;
 import mekanism.common.registration.impl.ChemicalDeferredRegister;
 import mekanism.common.registration.impl.DeferredChemical;
 import mekanism.common.registration.impl.SlurryRegistryObject;
 import mekanism.common.resource.PrimaryResource;
-import mekanism.common.util.EnumUtils;
 
 public class MekanismChemicals {
 
     private MekanismChemicals() {
     }
 
-    public static final ChemicalDeferredRegister CHEMICALS = new ChemicalDeferredRegister(Mekanism.MODID);
+    public static final ChemicalDeferredRegister CHEMICALS = new ChemicalDeferredRegister("mekanism");
 
-    public static final DeferredChemical<Chemical> BIO = CHEMICALS.register("bio", Mekanism.rl("infuse_type/bio"), 0x5A4630);
-    public static final DeferredChemical<Chemical> FUNGI = CHEMICALS.register("fungi", Mekanism.rl("infuse_type/fungi"), 0x74656A);
+    public static final DeferredChemical<Chemical> BIO = CHEMICALS.register("bio", rl("infuse_type/bio"), 0x5A4630);
+    public static final DeferredChemical<Chemical> FUNGI = CHEMICALS.register("fungi", rl("infuse_type/fungi"), 0x74656A);
     public static final DeferredChemical<Chemical> TIN = CHEMICALS.registerInfuse("tin", 0xCCCCD9);
     public static final DeferredChemical<Chemical> GOLD = CHEMICALS.registerInfuse("gold", 0xF2CD67);
     public static final DeferredChemical<Chemical> REFINED_OBSIDIAN = CHEMICALS.registerInfuse("refined_obsidian", 0x7C00ED);
@@ -32,8 +30,8 @@ public class MekanismChemicals {
 
     public static final DeferredChemical<Chemical> HYDROGEN = CHEMICALS.register(ChemicalConstants.HYDROGEN);
     public static final DeferredChemical<Chemical> OXYGEN = CHEMICALS.register(ChemicalConstants.OXYGEN);
-    public static final DeferredChemical<Chemical> STEAM = CHEMICALS.register("steam", () -> new Chemical(ChemicalBuilder.builder(Mekanism.rl("liquid/steam"))));
-    public static final DeferredChemical<Chemical> WATER_VAPOR = CHEMICALS.register("water_vapor", () -> new Chemical(ChemicalBuilder.builder(Mekanism.rl("liquid/steam"))));
+    public static final DeferredChemical<Chemical> STEAM = CHEMICALS.register("steam", () -> new Chemical(ChemicalBuilder.builder(rl("liquid/steam"))));
+    public static final DeferredChemical<Chemical> WATER_VAPOR = CHEMICALS.register("water_vapor", () -> new Chemical(ChemicalBuilder.builder(rl("liquid/steam"))));
     public static final DeferredChemical<Chemical> CHLORINE = CHEMICALS.register(ChemicalConstants.CHLORINE);
     public static final DeferredChemical<Chemical> SULFUR_DIOXIDE = CHEMICALS.register(ChemicalConstants.SULFUR_DIOXIDE);
     public static final DeferredChemical<Chemical> SULFUR_TRIOXIDE = CHEMICALS.register(ChemicalConstants.SULFUR_TRIOXIDE);
@@ -60,12 +58,16 @@ public class MekanismChemicals {
     public static final Map<PrimaryResource, SlurryRegistryObject<Chemical, Chemical>> PROCESSED_RESOURCES = new LinkedHashMap<>();
 
     static {
-        for (EnumColor color : EnumUtils.COLORS) {
+        for (EnumColor color : EnumColor.values()) {
             PIGMENT_COLOR_LOOKUP.put(color, registerPigment(color));
         }
-        for (PrimaryResource resource : EnumUtils.PRIMARY_RESOURCES) {
+        for (PrimaryResource resource : PrimaryResource.values()) {
             PROCESSED_RESOURCES.put(resource, CHEMICALS.registerSlurry(resource));
         }
+    }
+
+    private static net.minecraft.resources.ResourceLocation rl(String path) {
+        return net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("mekanism", path);
     }
 
     private static DeferredChemical<Chemical> registerPigment(EnumColor color) {

@@ -4,6 +4,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
+import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.JsonOps;
 import java.io.Reader;
 import java.util.ArrayList;
@@ -14,6 +15,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import mekanism.api.datamaps.MekanismDataMapType;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.Registry;
@@ -34,26 +36,33 @@ public final class FabricDataMapLoader {
     }
 
     /** Validates catalog uniqueness by registry key and id, while preserving descriptor identity. */
-    public static void validateCatalog(Collection<? extends FabricDataMapType<?, ?>> descriptors) {
+    public static void validateCatalog(Collection<? extends MekanismDataMapType<?, ?>> descriptors) {
         Map<ResourceKey<?>, Set<ResourceLocation>> ids = new HashMap<>();
-        for (FabricDataMapType<?, ?> descriptor : descriptors) {
+        for (MekanismDataMapType<?, ?> descriptor : descriptors) {
             if (!ids.computeIfAbsent(descriptor.registryKey(), ignored -> new HashSet<>()).add(descriptor.id())) {
                 throw new IllegalStateException("Duplicate Fabric data-map descriptor for " + descriptor.registryKey().location() + " / " + descriptor.id());
             }
         }
     }
 
-    public static <R, T> Result<R, T> load(ResourceManager resources, HolderLookup.Provider registries, FabricDataMapType<R, T> descriptor) {
-        validateCatalog(List.of(descriptor));
+    public static <R, T> Result<R, T> load(ResourceManager resources, HolderLookup.Provider registries, MekanismDataMapType<R, T> descriptor) {
+        return load(resources, registries, descriptor, List.of(descriptor));
+    }
+
+    public static <R, T> Result<R, T> load(ResourceManager resources, HolderLookup.Provider registries,
+          MekanismDataMapType<R, T> descriptor, Collection<? extends MekanismDataMapType<?, ?>> catalog) {
+        validateCatalog(catalog);
         HolderLookup.RegistryLookup<R> registry = registries.lookup(descriptor.registryKey())
               .orElseThrow(() -> new IllegalStateException("Missing data-map registry " + descriptor.registryKey().location()));
         ResourceLocation file = fileLocation(descriptor);
-        int skipped = warnUnknownDescriptors(resources, Set.of(file), file.getNamespace());
+        Set<ResourceLocation> known = new HashSet<>();
+        for (MekanismDataMapType<?, ?> knownDescriptor : catalog) known.add(fileLocation(knownDescriptor));
+        int skipped = warnUnknownDescriptors(resources, known, file);
         Map<ResourceKey<R>, T> accumulated = new LinkedHashMap<>();
         for (Resource resource : resources.getResourceStack(file)) {
             final Layer<T> layer;
             try (Reader reader = resource.openAsReader()) {
-                layer = decodeLayer(JsonParser.parseReader(reader), descriptor);
+                layer = decodeLayer(JsonParser.parseReader(reader), descriptor, registries.createSerializationContext(JsonOps.INSTANCE));
             } catch (Exception e) {
                 skipped++;
                 LOGGER.error("Skipping invalid data-map layer {} from pack {}", file, resource.sourcePackId(), e);
@@ -72,7 +81,7 @@ public final class FabricDataMapLoader {
         return new Result<>(accumulated, skipped);
     }
 
-    static ResourceLocation fileLocation(FabricDataMapType<?, ?> descriptor) {
+    static ResourceLocation fileLocation(MekanismDataMapType<?, ?> descriptor) {
         ResourceLocation registry = descriptor.registryKey().location();
         String folder = registry.getNamespace().equals(ResourceLocation.DEFAULT_NAMESPACE)
               ? registry.getPath()
@@ -81,7 +90,11 @@ public final class FabricDataMapLoader {
               "data_maps/" + folder + "/" + descriptor.id().getPath() + ".json");
     }
 
-    static <T> Layer<T> decodeLayer(JsonElement json, FabricDataMapType<?, T> descriptor) {
+    static <T> Layer<T> decodeLayer(JsonElement json, MekanismDataMapType<?, T> descriptor) {
+        return decodeLayer(json, descriptor, JsonOps.INSTANCE);
+    }
+
+    static <T> Layer<T> decodeLayer(JsonElement json, MekanismDataMapType<?, T> descriptor, DynamicOps<JsonElement> ops) {
         if (!json.isJsonObject()) {
             throw new IllegalArgumentException("Data-map file must be an object");
         }
@@ -95,7 +108,7 @@ public final class FabricDataMapLoader {
         List<Map.Entry<String, Entry<T>>> values = new ArrayList<>();
         for (Map.Entry<String, JsonElement> raw : valuesElement.getAsJsonObject().entrySet()) {
             validateTarget(raw.getKey());
-            values.add(Map.entry(raw.getKey(), decodeEntry(raw.getValue(), descriptor)));
+            values.add(Map.entry(raw.getKey(), decodeEntry(raw.getValue(), descriptor, ops)));
         }
         List<String> removals = new ArrayList<>();
         JsonElement removeElement = object.get("remove");
@@ -115,27 +128,31 @@ public final class FabricDataMapLoader {
         return new Layer<>(replace, values, removals);
     }
 
-    static <T> Entry<T> decodeEntry(JsonElement json, FabricDataMapType<?, T> descriptor) {
+    static <T> Entry<T> decodeEntry(JsonElement json, MekanismDataMapType<?, T> descriptor) {
+        return decodeEntry(json, descriptor, JsonOps.INSTANCE);
+    }
+
+    static <T> Entry<T> decodeEntry(JsonElement json, MekanismDataMapType<?, T> descriptor, DynamicOps<JsonElement> ops) {
         if (json.isJsonObject() && json.getAsJsonObject().has("value")) {
             JsonObject wrapper = json.getAsJsonObject();
             try {
-                T wrapped = decodeValue(wrapper.get("value"), descriptor);
+                T wrapped = decodeValue(wrapper.get("value"), descriptor, ops);
                 return new Entry<>(wrapped, readBoolean(wrapper, "replace", false));
             } catch (RuntimeException wrapperFailure) {
                 // Codec.either tries the ordinary bare-value alternative when the wrapper fails.
                 try {
-                    return new Entry<>(decodeValue(json, descriptor), false);
+                    return new Entry<>(decodeValue(json, descriptor, ops), false);
                 } catch (RuntimeException bareFailure) {
                     bareFailure.addSuppressed(wrapperFailure);
                     throw bareFailure;
                 }
             }
         }
-        return new Entry<>(decodeValue(json, descriptor), false);
+        return new Entry<>(decodeValue(json, descriptor, ops), false);
     }
 
-    private static <T> T decodeValue(JsonElement json, FabricDataMapType<?, T> descriptor) {
-        return descriptor.codec().parse(JsonOps.INSTANCE, json)
+    private static <T> T decodeValue(JsonElement json, MekanismDataMapType<?, T> descriptor, DynamicOps<JsonElement> ops) {
+        return descriptor.codec().parse(ops, json)
               .getOrThrow(error -> new IllegalArgumentException("Invalid data-map value: " + error));
     }
 
@@ -209,10 +226,13 @@ public final class FabricDataMapLoader {
         }
     }
 
-    private static int warnUnknownDescriptors(ResourceManager resources, Set<ResourceLocation> known, String namespace) {
+    private static int warnUnknownDescriptors(ResourceManager resources, Set<ResourceLocation> known, ResourceLocation expectedFile) {
         int skipped = 0;
+        String path = expectedFile.getPath();
+        String registryFolder = path.substring(0, path.lastIndexOf('/') + 1);
         for (Map.Entry<ResourceLocation, List<Resource>> entry : resources.listResourceStacks("data_maps", id ->
-              id.getNamespace().equals(namespace) && id.getPath().endsWith(".json")).entrySet()) {
+              id.getNamespace().equals(expectedFile.getNamespace()) && id.getPath().startsWith(registryFolder)
+                    && id.getPath().endsWith(".json")).entrySet()) {
             if (!known.contains(entry.getKey())) {
                 skipped += entry.getValue().size();
                 LOGGER.warn("Skipping unknown Fabric data-map descriptor file {} ({} layer(s))", entry.getKey(), entry.getValue().size());

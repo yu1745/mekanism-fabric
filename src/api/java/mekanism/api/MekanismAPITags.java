@@ -2,6 +2,7 @@ package mekanism.api;
 
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.chemical.Chemical;
+import mekanism.api.chemical.ChemicalRegistry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
@@ -28,7 +29,7 @@ public class MekanismAPITags {
     }
 
     private static ResourceLocation rl(String path) {
-        return ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, path);
+        return ResourceLocation.fromNamespaceAndPath("mekanism", path);
     }
 
     /**
@@ -98,7 +99,7 @@ public class MekanismAPITags {
         /**
          * Tag that holds all chemicals that recipe viewers should not show to users.
          */
-        public static final TagKey<Chemical> HIDDEN_FROM_RECIPE_VIEWERS = TagKey.create(MekanismAPI.CHEMICAL_REGISTRY_NAME, HIDDEN_RL);
+        public static final TagKey<Chemical> HIDDEN_FROM_RECIPE_VIEWERS = TagKey.create(ChemicalRegistry.REGISTRY_KEY, HIDDEN_RL);
 
         /**
          * Chemicals in this tag that are radioactive will not decay inside a Radioactive Waste Barrel.
@@ -159,7 +160,7 @@ public class MekanismAPITags {
         public static final TagKey<Chemical> FRAMEDBLOCKS_BLACKLISTED = tag("framedblocks_blacklisted");
 
         private static TagKey<Chemical> tag(String name) {
-            return TagKey.create(MekanismAPI.CHEMICAL_REGISTRY_NAME, rl(name));
+            return TagKey.create(ChemicalRegistry.REGISTRY_KEY, rl(name));
         }
     }
 

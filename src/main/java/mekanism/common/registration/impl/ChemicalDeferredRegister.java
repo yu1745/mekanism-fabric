@@ -2,21 +2,20 @@ package mekanism.common.registration.impl;
 
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
-import mekanism.api.MekanismAPI;
+import mekanism.api.chemical.ChemicalRegistry;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.chemical.Chemical;
 import mekanism.api.chemical.ChemicalBuilder;
 import mekanism.common.base.IChemicalConstant;
 import mekanism.common.registration.MekanismDeferredRegister;
 import mekanism.common.resource.PrimaryResource;
-import mekanism.common.util.ChemicalUtil;
 import net.minecraft.resources.ResourceLocation;
 
 @NothingNullByDefault//TODO - 1.20.2: Do we want to expose a basic form of this to the API
 public class ChemicalDeferredRegister extends MekanismDeferredRegister<Chemical> {
 
     public ChemicalDeferredRegister(String modid) {
-        super(MekanismAPI.CHEMICAL_REGISTRY_NAME, modid, DeferredChemical::new);
+        super(ChemicalRegistry.REGISTRY_KEY, modid, DeferredChemical::new);
     }
 
     public DeferredChemical<Chemical> register(IChemicalConstant constants) {
@@ -36,7 +35,11 @@ public class ChemicalDeferredRegister extends MekanismDeferredRegister<Chemical>
     }
 
     public DeferredChemical<Chemical> register(String name, ResourceLocation texture, int barColor) {
-        return register(name, () -> ChemicalUtil.chemical(ChemicalBuilder.builder(texture), barColor));
+        return register(name, () -> new Chemical(ChemicalBuilder.builder(texture).tint(colorRepresentation(barColor))));
+    }
+
+    private static int colorRepresentation(int color) {
+        return (color >> 16 & 0xFF) << 16 | (color >> 8 & 0xFF) << 8 | color & 0xFF;
     }
 
     @Override
