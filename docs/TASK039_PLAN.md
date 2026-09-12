@@ -12,7 +12,9 @@ GLM 5.3 high independently reviewed the exact candidate in run `099d5295-f34c-41
 
 The corrective candidate must preserve all production code, add the two config-contract qualifications, remove the synthetic null connection-event calls/overclaim from the isolated fixture and smoke markers, and rerun the client-window/static/local gates before focused rereview.
 
-SOL high reconstructed the candidate as `3b143709` over durable main and committed the focused correction as `58a62d7463d33d0640fe5c3553343cccdb3982b8` (505.6s, 115.7k tokens, 58 tool calls, about `$1.85`). Production source is tree-identical to `c591ad4d`; only three docs, the isolated client fixture and its smoke script differ. Focused12/12, full75/353, slices65/145/24, static packaged gate and corrected two-fresh-client smoke passed; the remapped JAR remains `ffb87660205c6a70612b589ad8c1315e84ed7c3e2f3b575aeb410b90f9aac7fa`. Integration remains pending focused rereview.
+SOL high reconstructed the candidate as `3b143709` over durable main and committed the focused correction as `58a62d7463d33d0640fe5c3553343cccdb3982b8` (505.6s, 115.7k tokens, 58 tool calls, about `$1.85`). Production source is tree-identical to `c591ad4d`; only three docs, the isolated client fixture and its smoke script differ. Focused12/12, full75/353, slices65/145/24, static packaged gate and corrected two-fresh-client smoke passed; the remapped JAR remains `ffb87660205c6a70612b589ad8c1315e84ed7c3e2f3b575aeb410b90f9aac7fa`.
+
+Fresh GLM 5.3 high focused rereview `2a39f6d6-304a-459` (196.4s, 53.7k tokens, 31 tool calls, about `$0.28`) returned **ACCEPT**. It verified production zero-diff, both persistence-contract corrections, removal of all synthetic null connection events/old markers, honest two-physical-client-lifetime evidence, explicit reconnect/real-player boundaries, plan integrity, arithmetic and fixture isolation. Task039 is approved for integration and parent final gates.
 
 ## Baseline and reason
 
