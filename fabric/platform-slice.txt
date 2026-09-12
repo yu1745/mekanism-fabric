@@ -13,6 +13,8 @@ mekanism/fabric/item/FabricItemStorage.java
 mekanism/fabric/network/FabricMekanismClientNetworking.java
 mekanism/fabric/network/FabricMekanismNetworking.java
 mekanism/fabric/network/MekanismNetworkProtocol.java
+mekanism/fabric/registry/FabricCustomRegistryLifecycle.java
+mekanism/fabric/registry/FabricDefaultedRegistry.java
 mekanism/fabric/registry/FabricDeferredHolder.java
 mekanism/fabric/registry/FabricDeferredRegister.java
 mekanism/fabric/registry/FabricRegistryLifecycle.java

@@ -28,7 +28,7 @@ and `../docs/FABRIC_TEXT.md`. JetBrains annotations and JSR-305 remain `compileO
 and are not bundled in the mod.
 
 `common-slice.txt` contains **122 official source files**, and
-`platform-slice.txt` contains **17 project-owned Fabric sources**. Seven spatial/color/effect foundations (`Color`, `CustomEffect`, `Pos3D`, `Quaternion`, `Range3D`, `MultipartUtils`, and `StatUtils`) remain byte-identical to `4646f509`. Twelve Java 21 tests bound channel/HSV/compositing/statistics, effect state, vector/range/rotation/quaternion state, and direct multipart ray selection. Packaging permits exactly four direct common-lib classes, one effect class, three math classes, the three `MultipartUtils` classes, and one `StatUtils` class. This admits no caller or owner: renderers/particles/GUI/recipe viewers/client lifecycle, transmitters/multipart blocks/gear, machines/block types/entities, packet tracking/network ranges, SPS/multiblock, additions/generators, external energy, world/chunk lifecycle, registries/config/persistence all remain deferred; there is no rendering integration, entity/player lifecycle, block registration, networking, thread-safety, or collision-owner guarantee. Together with
+`platform-slice.txt` contains **19 project-owned Fabric sources**. Seven spatial/color/effect foundations (`Color`, `CustomEffect`, `Pos3D`, `Quaternion`, `Range3D`, `MultipartUtils`, and `StatUtils`) remain byte-identical to `4646f509`. Twelve Java 21 tests bound channel/HSV/compositing/statistics, effect state, vector/range/rotation/quaternion state, and direct multipart ray selection. Packaging permits exactly four direct common-lib classes, one effect class, three math classes, the three `MultipartUtils` classes, and one `StatUtils` class. This admits no caller or owner: renderers/particles/GUI/recipe viewers/client lifecycle, transmitters/multipart blocks/gear, machines/block types/entities, packet tracking/network ranges, SPS/multiblock, additions/generators, external energy, world/chunk lifecycle, registries/config/persistence all remain deferred; there is no rendering integration, entity/player lifecycle, block registration, networking, thread-safety, or collision-owner guarantee. Together with
 the **64-file API slice**, they form bounded registry/GameEvent, TOML
 startup-config, configuration-handshake, internal energy storage/holder, internal
 heat storage/holder, wildcard-matching, fair-distribution, chunk-coordinate,
@@ -228,8 +228,9 @@ test reference.
 
 One new ordinary class has exactly five methods; unchanged `InventoryApiHolderTest`
 keeps four integration methods. Task 035 landing totals were ordinary **65 suites/310 tests**,
-transfer **2 suites/8 tests**, aggregate **67 suites/318 tests**; Task 036 current totals
-are **66/315**, **2/8**, and **68/323**, with three jqwik properties at 100,000 each. The remapped JAR must contain exactly the compiled
+transfer **2 suites/8 tests**, aggregate **67 suites/318 tests**; Task 036 landing totals
+were **66/315**, **2/8**, and **68/323**. Task 037 current ordinary/transfer/root/aggregate
+totals are **67/320**, **2/8**, **1/1**, and **70/329**, with three jqwik properties at 100,000 each. The remapped JAR must contain exactly the compiled
 SerializerHelper outer plus `$1`/`$2`/`$3`, once each, no `MekanismAPI.class`,
 platform leakage, test/helper extras, startup reference, or marker. API/common/platform
 Task 035 counts were **58/122/17**; no dependency, common, or platform source changed.
@@ -245,8 +246,8 @@ Level description calls are expanded to the same vanilla dimension language-key
 and ID-fallback component. Public methods, dispatch/style/null order, smart-translate
 argument semantics, and RelativeSide behavior remain.
 
-One bootstrapped ordinary class has exactly five methods. Current slice and test
-totals are **64/122/17**, ordinary **66/315**, transfer **2/8**, aggregate **68/323**;
+One bootstrapped ordinary class has exactly five methods. Task 036 landing slice and test
+totals were **64/122/17**, ordinary **66/315**, transfer **2/8**, aggregate **68/323**;
 the three jqwik properties remain 100,000 each. Mechanical JAR inspection fixes
 TextComponentUtil to outer + `$1` and the complete direct text/RelativeSide/
 incremental/inventory families exactly once. Static gates reject concrete
@@ -255,6 +256,33 @@ unexpected nested/test/helper/fixture leakage, NeoForge/Loader bytecode, and sta
 markers/references. This task makes no startup claim. Raw-fluid naming deliberately
 cannot preserve custom NeoForge FluidType description overrides; it remains
 block-derived. See `../docs/FABRIC_TEXT.md`.
+
+Task 037 adds the reusable intrusive/defaulted custom-registry prerequisite. The final
+`FabricDefaultedRegistry<T>` directly subclasses vanilla `DefaultedMappedRegistry<T>` with
+stable lifecycle and intrusive holders; `FabricCustomRegistryLifecycle` records exact
+CREATED/root-registration/freezing/frozen/failed phases without enum-switch synthetic output.
+Factory key/default validation occurs before super-backed use, mutation/root/freeze is
+construction-owner-only and synchronized, pure preflights remain recoverable, and any failure
+after vanilla/Fabric side effects is terminal. Exact canonical default references, default
+fallback versus optional lookup, and vanilla dangling-holder failure are preserved.
+
+The existing deferred register now checks custom context before batch state/suppliers, checks
+occupancy before each supplier and identity after construction, uses `Registry.registerForHolder`,
+and publishes its exact reference before holder value. The registrar seam and terminal partial
+commit remain. Ordinary tests add exactly five methods without rooting any registry. A dedicated
+`fabricRegistryTest` adds one class/one method in a fresh server-side Knot fork with its own
+working directory; it performs the only global mutation, genuinely root-registers one fixed
+unique synced registry via the Fabric builder, and invokes the real built-in automatic freeze
+path before the worker exits.
+
+Current API/common/platform is **64/122/19**; ordinary **67/320**, transfer **2/8**, isolated
+root **1/1**, aggregate **70/329**, and jqwik remains 3×100,000 in ordinary only. Static packaging
+requires exactly seven direct registry classes and rejects synthetic/test/helper, NeoForge/
+Loader, Chemical/MekanismAPI, Kilt/Connector, bypass strings, startup markers, and references
+from either bootstrap. There is no chemical owner, `mekanism:empty`, data map/radiation,
+reload/client class, production startup wiring, manual production freeze, or concurrent-read
+promise. Existing GameEvent startup behavior is unchanged. Verified pinned behavior and hashes
+are recorded in `../docs/FABRIC_REGISTRY.md`.
 
 Nearby boundaries still excluded are `ChemicalStack`, full `ConstantPredicates`,
 all remaining 195 FluidStack import replacements, concrete slots, menu/warning/

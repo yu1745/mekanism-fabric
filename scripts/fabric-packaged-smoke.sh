@@ -155,6 +155,19 @@ required = {
 }
 with zipfile.ZipFile(sys.argv[1]) as artifact:
     entries = artifact.namelist()
+forbidden_test_entries = sorted(
+    entry for entry in entries
+    if entry.endswith("Test.class") or "Test$" in entry.rsplit("/", 1)[-1]
+)
+if forbidden_test_entries:
+    raise SystemExit(f"test classes leaked into the production artifact: {forbidden_test_entries!r}")
+forbidden_compat_entries = sorted(
+    entry for entry in entries
+    if entry.startswith("xyz/bluspring/kilt/") or entry.startswith("org/sinytra/connector/")
+    or "unfreeze" in entry.lower()
+)
+if forbidden_compat_entries:
+    raise SystemExit(f"compatibility or registry-bypass classes leaked into the artifact: {forbidden_compat_entries!r}")
 expected_holiday_values = {
     "mekanism/common/base/holiday/KnownDate.class",
     "mekanism/common/base/holiday/MonthlyDate.class",
@@ -208,6 +221,52 @@ actual_inventory_slot_metadata = {
 if (actual_inventory_slot_metadata != expected_inventory_slot_metadata
         or any(entries.count(entry) != 1 for entry in expected_inventory_slot_metadata)):
     raise SystemExit(f"unexpected direct inventory-slot class family: {sorted(actual_inventory_slot_metadata)!r}")
+expected_fabric_registry = {
+    "mekanism/fabric/registry/FabricCustomRegistryLifecycle.class",
+    "mekanism/fabric/registry/FabricDefaultedRegistry.class",
+    "mekanism/fabric/registry/FabricDeferredHolder.class",
+    "mekanism/fabric/registry/FabricDeferredRegister.class",
+    "mekanism/fabric/registry/FabricDeferredRegister$Entry.class",
+    "mekanism/fabric/registry/FabricDeferredRegister$Registrar.class",
+    "mekanism/fabric/registry/FabricRegistryLifecycle.class",
+}
+fabric_registry_prefix = "mekanism/fabric/registry/"
+actual_fabric_registry = {
+    entry for entry in entries
+    if entry.startswith(fabric_registry_prefix) and entry.endswith(".class")
+}
+if (actual_fabric_registry != expected_fabric_registry
+        or any(entries.count(entry) != 1 for entry in expected_fabric_registry)):
+    raise SystemExit(f"unexpected Fabric custom-registry class family: {sorted(actual_fabric_registry)!r}")
+with zipfile.ZipFile(sys.argv[1]) as registry_artifact:
+    for entry in expected_fabric_registry:
+        bytecode = registry_artifact.read(entry)
+        lowered = bytecode.lower()
+        if b"net/neoforged/" in bytecode or b"net/fabricmc/loader/" in bytecode:
+            raise SystemExit(f"platform leakage in Fabric custom-registry bytecode: {entry}")
+        if (b"mekanism/api/chemical/" in bytecode or b"mekanism/api/mekanismapi" in lowered
+                or b"mekanism:empty" in lowered or b"radiation" in lowered or b"datamap" in lowered
+                or b"data_map" in lowered or b"kilt" in lowered or b"connector" in lowered
+                or b"unfreeze" in lowered):
+            raise SystemExit(f"deferred registry architecture leaked into Fabric custom-registry bytecode: {entry}")
+        if b"MEKANISM_FABRIC_" in bytecode:
+            raise SystemExit(f"Fabric custom-registry foundation must not contain a startup marker: {entry}")
+    registry_startup_bytecode = (
+        registry_artifact.read("mekanism/fabric/MekanismFabricBootstrap.class")
+        + registry_artifact.read("mekanism/fabric/MekanismFabricClientBootstrap.class")
+    )
+    registry_startup_references = {
+        entry.split("$", 1)[0].removesuffix(".class").encode()
+        for entry in expected_fabric_registry
+    }
+    leaked_registry_startup_references = sorted(
+        reference.decode() for reference in registry_startup_references if reference in registry_startup_bytecode
+    )
+    if leaked_registry_startup_references:
+        raise SystemExit(
+            "Fabric custom-registry foundation must not be wired from either bootstrap: "
+            f"{leaked_registry_startup_references!r}"
+        )
 expected_registration = {
     "mekanism/common/registration/INamedEntry.class",
     "mekanism/common/registration/MekanismDeferredHolder.class",
@@ -806,7 +865,7 @@ if actual_fabric_fluid != expected_fabric_fluid or any(entries.count(entry) != 1
     raise SystemExit(f"unexpected Fabric fluid conversion class family: {sorted(actual_fabric_fluid)!r}")
 PYEOF
 then
-  echo "fabric-packaged-smoke: portable-text/SerializerHelper/item-boundary/block-state-descriptor/inventory-metadata/deferred-registration/tile-interface/slot-info/tier/resource/codec/collection/distribution/ChunkUtils/RegistryUtils/LambdaMetaFactoryUtil/long-transfer/dynamic-strict-energy/proxy/config-listener/common-lib-root production/test packaging contract failed" >&2
+  echo "fabric-packaged-smoke: custom-registry/portable-text/SerializerHelper/item-boundary/block-state-descriptor/inventory-metadata/deferred-registration/tile-interface/slot-info/tier/resource/codec/collection/distribution/ChunkUtils/RegistryUtils/LambdaMetaFactoryUtil/long-transfer/dynamic-strict-energy/proxy/config-listener/common-lib-root production/test packaging contract failed" >&2
   exit 1
 fi
 for required_entry in \

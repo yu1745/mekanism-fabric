@@ -3,7 +3,6 @@ package mekanism.fabric.registry;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
@@ -44,31 +43,41 @@ public final class FabricDeferredRegister<T> {
     }
 
     public synchronized void registerAll(Registrar<T> registrar) {
-        registerAll(registrar, null);
+        requireLifecycle(FabricRegistryLifecycle.COLLECTING, "register entries");
+        registerAll(Objects.requireNonNull(registrar), null);
     }
 
-    /** Registers through a vanilla registry and retains its canonical holder reference. */
+    /** Registers through a vanilla registry and retains its exact canonical holder reference. */
     public synchronized void registerAll(Registry<T> registry) {
         Objects.requireNonNull(registry);
         if (!registryKey.equals(registry.key())) {
             throw new IllegalArgumentException("Expected registry " + registryKey.location() + " but got " + registry.key().location());
         }
-        registerAll((ignoredRegistryKey, key, value) -> Registry.register(registry, key, value), registry::getHolderOrThrow);
+        requireLifecycle(FabricRegistryLifecycle.COLLECTING, "register entries");
+        if (registry instanceof FabricDefaultedRegistry<?> customRegistry) {
+            customRegistry.preflightDeferredRegistration();
+        }
+        registerAll(null, registry);
     }
 
-    private void registerAll(Registrar<T> registrar, Function<ResourceKey<T>, Holder<T>> holderLookup) {
-        requireLifecycle(FabricRegistryLifecycle.COLLECTING, "register entries");
-        Objects.requireNonNull(registrar);
+    private void registerAll(Registrar<T> registrar, Registry<T> registry) {
         lifecycle = FabricRegistryLifecycle.REGISTERING;
         try {
             for (Map.Entry<ResourceKey<T>, Entry<T>> pending : entries.entrySet()) {
+                ResourceKey<T> key = pending.getKey();
+                if (registry != null && (registry.containsKey(key) || registry.containsKey(key.location()))) {
+                    throw new IllegalStateException("Registry key is already occupied: " + key.location());
+                }
                 T created = Objects.requireNonNull(pending.getValue().factory().get(),
-                      "factory returned null for " + pending.getKey().location());
-                T canonical = registrar.register(registryKey, pending.getKey(), created);
-                if (holderLookup != null) {
-                    pending.getValue().holder().bind(canonical, holderLookup.apply(pending.getKey()));
+                      "factory returned null for " + key.location());
+                if (registry == null) {
+                    pending.getValue().holder().bind(registrar.register(registryKey, key, created));
                 } else {
-                    pending.getValue().holder().bind(canonical);
+                    if (registry.getResourceKey(created).isPresent()) {
+                        throw new IllegalStateException("Registry value is already registered by identity: " + created);
+                    }
+                    Holder.Reference<T> canonical = Registry.registerForHolder(registry, key, created);
+                    pending.getValue().holder().bind(canonical.value(), canonical);
                 }
             }
             lifecycle = FabricRegistryLifecycle.REGISTERED;

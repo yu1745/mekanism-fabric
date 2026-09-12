@@ -16,7 +16,7 @@ import net.minecraft.tags.TagKey;
 public final class FabricDeferredHolder<T> implements Holder<T>, Supplier<T> {
     private final ResourceKey<T> key;
     private volatile T value;
-    private volatile Holder<T> canonicalHolder;
+    private volatile Holder.Reference<T> canonicalHolder;
 
     FabricDeferredHolder(ResourceKey<T> key) {
         this.key = Objects.requireNonNull(key);
@@ -96,20 +96,29 @@ public final class FabricDeferredHolder<T> implements Holder<T>, Supplier<T> {
 
     @Override
     public boolean canSerializeIn(HolderOwner<T> owner) {
-        Holder<T> holder = canonicalHolder;
+        Holder.Reference<T> holder = canonicalHolder;
         return holder != null && holder.canSerializeIn(owner);
     }
 
-    void bind(T canonicalValue) {
+    /** Returns the exact canonical reference returned by vanilla registration. */
+    public Holder.Reference<T> canonicalHolder() {
+        Holder.Reference<T> holder = canonicalHolder;
+        if (holder == null) {
+            throw new IllegalStateException("Registry holder " + key.location() + " has no canonical reference");
+        }
+        return holder;
+    }
+
+    synchronized void bind(T canonicalValue) {
         bind(canonicalValue, null);
     }
 
-    void bind(T canonicalValue, Holder<T> registryHolder) {
+    synchronized void bind(T canonicalValue, Holder.Reference<T> registryHolder) {
         if (value != null) {
             throw new IllegalStateException("Registry value " + key.location() + " is already bound");
         }
         T nonNullValue = Objects.requireNonNull(canonicalValue, "registrar returned null for " + key.location());
-        if (registryHolder != null && (!registryHolder.is(key) || registryHolder.value() != nonNullValue)) {
+        if (registryHolder != null && (registryHolder.key() != key || registryHolder.value() != nonNullValue)) {
             throw new IllegalArgumentException("Registry holder does not match canonical value " + key.location());
         }
         canonicalHolder = registryHolder;

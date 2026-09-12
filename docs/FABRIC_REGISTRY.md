@@ -1,17 +1,79 @@
 # Fabric registry 最小适配
 
-当前 P0 切片在 `mekanism.fabric.registry` 提供 Mekanism 专用的同步适配器。它只收集
-`ResourceKey` 与 `Supplier`，在 Fabric `onInitialize` 中调用 vanilla
-`Registry.register`，并将其返回的 canonical 实例及 `Holder.Reference` 绑定到 holder。holder
-在绑定前读取值会失败，但 key/id 可用；批次拒绝重复键、重复提交，以及 supplier 注册期间
-递归读取 holder。这里不实例化官方 `Mekanism.java`，不模拟 EventBus/NeoForge lifecycle，
-也不提供通用转换层。
+当前 `mekanism.fabric.registry` 有两个相连但 ownership 分离的层次。既有
+`FabricDeferredRegister`/`FabricDeferredHolder` 继续为 built-in registry 提供同步 deferred
+提交；Task 037 新增的 `FabricDefaultedRegistry`/`FabricCustomRegistryLifecycle` 只建立可复用的
+intrusive + defaulted custom-registry 基础，不拥有任何具体 registry。
 
-官方 `MekanismDeferredRegister` 与 `MekanismDeferredHolder` 已改为组合该 adapter，
+## Task 037 generic intrusive/defaulted foundation
+
+`FabricDefaultedRegistry<T>` 是 vanilla `DefaultedMappedRegistry<T>` 的 final 精确子类，固定
+`Lifecycle.stable()` 与 intrusive holders。唯一 factory 在构造 super 之前验证 registry/default
+key 非空且 `defaultEntryKey.isFor(registryKey)`，并捕获构造线程。直接 entry mutation、
+`createIntrusiveHolder`、root registration 与首次 freeze 都只允许该 owner thread；同步只串行化
+mutation，不承诺 population 期间或之后的并发读取安全。
+
+custom lifecycle 精确为 `CREATED -> REGISTERING_ROOT -> ROOT_REGISTERED` 与
+`CREATED|ROOT_REGISTERED -> FREEZING -> FROZEN`，任一已经进入 vanilla/Fabric side effect 后的
+异常进入 terminal `FAILED`。key/location occupancy、wrong-registry key、registered value identity、
+null `RegistrationInfo`、root key/value identity与 default canonical identity 都在对应 side effect 前
+检查；这些纯 precondition failure 不污染 registry。实际注册不补造 intrusive holder，因此遗漏
+`createIntrusiveHolder` 时保留 vanilla `AssertionError` 并进入 `FAILED`。freeze 先要求 exact canonical
+default holder，再交给 vanilla 检出 dangling intrusive holder；vanilla 可能先置 frozen 再抛错，故该
+失败也不可重试。成功 freeze 幂等返回同一实例。`get` 与非法 `byId` 保留 default fallback，而
+`getOptional` 不回退。
+
+root path 只使用 `FabricRegistryBuilder.from(this)`：builder 的默认 `MODDED` 必须存在，boolean
+选项为 true 时还必须有 `SYNCED`；返回对象、root 中的 value/key 与 attributes 全部按 identity/值
+复核。production 没有手动 freeze、unfreeze 或 mixin 绕过：Fabric 的 server automatic root-freeze
+路径会调用同一个 vanilla `BuiltInRegistries.bootStrap()`。唯一真实 root mutation 位于专用
+`fabricRegistryTest` 的单方法、server-side Knot worker；该 worker固定
+`maxParallelForks=1`/`forkEvery=1`、使用自己的工作目录，并在全局 registry frozen 后立即退出。
+ordinary tests 全部使用 never-rooted fresh registries，runtime 不含 `fabric-loader-junit`。
+
+`FabricDeferredRegister.registerAll(Registry)` 保留既有 registry-key check，并在改变 batch state 或
+调用 supplier 前询问 custom-registry owner/lifecycle；每个 key/location occupancy 在对应 supplier
+前检查，value identity 在构造后、注册前检查。真实 registry path 只调用
+`Registry.registerForHolder`，`FabricDeferredHolder` 发布其 exact `Holder.Reference` 后才写最终
+volatile value；public `canonicalHolder()` 在 registrar seam 或注册前没有 reference 时失败。
+registrar seam 仍可只绑定 value，prefix partial commit 与 batch terminal `FAILED` 语义不变。
+
+测试分区现为 ordinary **67 suites/320 tests**（包含既有五方法与新增五方法 registry suites，三项
+jqwik 各 100,000 tries）、transfer **2/8**、isolated root **1/1**，总计 **70/329**。platform
+allowlist 只新增上述两个 production source，当前 API/common/platform 为 **64/122/19**。remapped
+JAR 的 direct `mekanism/fabric/registry/` family 必须精确七项：holder、register outer + `Entry` +
+`Registrar`、既有 lifecycle、新 defaulted registry 与新 custom lifecycle；enum comparison 不使用
+switch，实际产物无额外 synthetic class。
+
+独立核对固定依赖而非只采信设计假设：Fabric API `0.116.17+1.21.1` 解析出的
+`fabric-registry-sync-v0:5.3.2+e3eddc2119` 原始 binary/source SHA-256 分别为
+`20b69b97f1f56c4e201e842ef2c0a2ab93f0728fbd3ca78034d4de7e4a12c5a7` 与
+`9bfb198cd68fbc28a2275c40b51cddb812d015a1f4ea54f9f30d66e2112c8198`；Loom official-mapped
+binary/source 分别为 `1cf460ad4db85600c7d6c2f3d549d255bdfc686c6913bb7b7e0ffe07727ffdfc` 与
+`d34eae3555b507fda3dc308ed6651a83869477f889e3a48dc667d142339ab3c4`。检查确认 builder 先写
+attributes、默认总含 `MODDED`，随后把 exact instance 注册进 root；server `MainMixin` 在 mod init
+后调用 `BuiltInRegistries.bootStrap()`。
+
+vanilla 行为直接从 Minecraft `1.21.1` official-mapped compile JAR
+`3a08db47199e250250d442bba772583748c4846d9df70b67428b7a502b7706a2` 核对：
+`MappedRegistry` 的 value map 使用 identity、intrusive register 从 pending map remove 且缺失时
+assert、freeze 先置 frozen 再检查 dangling holder；`DefaultedMappedRegistry.getOptional` 直接查
+actual entry，不走 default fallback；built-in freeze 先 freeze root 再逐 registry freeze。隔离 worker
+使用的 `fabric-loader-junit:0.19.5` binary SHA-256 为
+`d8a34f60d0653d8be60673411f5e29125d709be298f9883bbdaf12412b03ec3c`，并显式设置 server side。
+
+这是 prerequisite，不是 chemical registry owner：本闭包没有 `Chemical`、`mekanism:empty`、
+data map、radiation、`MekanismAPI`/NeoForge facade、reload/client 类、production startup wiring 或
+manual production freeze。两个 Fabric bootstrap 未新增对该 foundation 的引用，现有 GameEvent
+startup proof 原样保留。
+
+## 既有 built-in GameEvent owner
+
+官方 `MekanismDeferredRegister` 与 `MekanismDeferredHolder` 已组合既有 adapter，
 `GameEventDeferredRegister` 和 `MekanismGameEvents` 通过 `fabric/common-slice.txt` 审计后直接参与
 Fabric 构建；Task 031 又纳入 sound/damage declaration closure，但尚未把这两个 owner 接入
-entrypoint。本地 adapter/entrypoint 同样由 `fabric/platform-slice.txt` 精确列举。临时
-`MekanismFabricGameEvents` 已删除。当前 entrypoint 仍只同步注册并验证四个官方 GameEvent 声明：
+entrypoint。临时 `MekanismFabricGameEvents` 已删除。当前 entrypoint 仍只同步注册并验证四个官方
+GameEvent 声明：
 
 - `mekanism:seismic_vibration`（radius 64）；
 - `mekanism:jetpack_burn`（radius 16）；

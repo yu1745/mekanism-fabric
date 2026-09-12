@@ -1,4 +1,5 @@
 import groovy.json.JsonSlurper
+import groovy.xml.XmlSlurper
 
 plugins {
     id 'fabric-loom' version "${loom_version}"
@@ -16,6 +17,7 @@ sourceSets {
     handshakeMismatchFixture
     handshakeMissingReceiverFixture
     fabricTransferTest
+    fabricRegistryTest
 }
 
 loom {
@@ -92,6 +94,9 @@ def platformSlice = loadSlice('platform-slice.txt')
 def apiSliceFiles = apiSlice.collect { file("../src/api/java/${it}") }
 def commonSliceFiles = commonSlice.collect { file("../src/main/java/${it}") }
 def platformSliceFiles = platformSlice.collect { file("src/main/java/${it}") }
+if (apiSlice.size() != 64 || commonSlice.size() != 122 || platformSlice.size() != 19) {
+    throw new GradleException("Unexpected Fabric source slice counts: api=${apiSlice.size()} common=${commonSlice.size()} platform=${platformSlice.size()}")
+}
 
 // Compile only the unchanged official root tests that cover admitted common-slice
 // behavior, in place, through this exact allowlist. Do not add ../src/test/java as a
@@ -172,6 +177,12 @@ sourceSets {
         // Keep Knot and its TCCL out of the ordinary jqwik/Jupiter suite. This source set
         // contains the item transaction and fluid conversion suites, sees production output and
         // its own pinned Jupiter libraries, but never ordinary test output.
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.runtimeClasspath
+    }
+    fabricRegistryTest {
+        // The sole root-registry integration test gets its own Knot worker and never sees
+        // ordinary or transfer-test output.
         compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
         runtimeClasspath += sourceSets.main.runtimeClasspath
     }
@@ -279,6 +290,11 @@ dependencies {
     fabricTransferTestImplementation 'org.junit.jupiter:junit-jupiter:5.13.4'
     fabricTransferTestRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.13.4'
     fabricTransferTestRuntimeOnly "net.fabricmc:fabric-loader-junit:${loader_version}"
+
+    // Root mutation is isolated in a fresh, server-side Knot worker that exits after one method.
+    fabricRegistryTestImplementation 'org.junit.jupiter:junit-jupiter:5.13.4'
+    fabricRegistryTestRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.13.4'
+    fabricRegistryTestRuntimeOnly "net.fabricmc:fabric-loader-junit:${loader_version}"
 }
 
 def resolvedModVersion = project.version.toString()
@@ -318,6 +334,92 @@ tasks.withType(Test).configureEach {
     doFirst {
         testWorkingDirectory.get().asFile.mkdirs()
     }
+}
+
+def fabricRegistryWorkingDirectory = layout.buildDirectory.dir('fabric-registry-test-working')
+def fabricRegistryTest = tasks.register('fabricRegistryTest', Test) {
+    group = 'verification'
+    description = 'Runs the single custom-root-registry lifecycle test in a fresh server-side Knot worker.'
+    testClassesDirs = sourceSets.fabricRegistryTest.output.classesDirs
+    classpath = sourceSets.fabricRegistryTest.runtimeClasspath
+    maxParallelForks = 1
+    forkEvery = 1
+    systemProperty 'fabric.side', 'server'
+    workingDir fabricRegistryWorkingDirectory
+    doFirst {
+        fabricRegistryWorkingDirectory.get().asFile.mkdirs()
+    }
+    mustRunAfter tasks.named('test'), fabricTransferTest
+}
+def ordinaryXmlResults = layout.buildDirectory.dir('test-results/test')
+def transferXmlResults = layout.buildDirectory.dir('test-results/fabricTransferTest')
+def registryXmlResults = layout.buildDirectory.dir('test-results/fabricRegistryTest')
+def registryOrdinaryTestSource = layout.projectDirectory.file('src/test/java/mekanism/fabric/registry/FabricDefaultedRegistryTest.java')
+def deferredOrdinaryTestSource = layout.projectDirectory.file('src/test/java/mekanism/fabric/registry/FabricDeferredRegisterTest.java')
+def registryRootTestSource = layout.projectDirectory.file('src/fabricRegistryTest/java/mekanism/fabric/registry/FabricRegistryRootIntegrationTest.java')
+def distributionPropertySource = layout.projectDirectory.file('../src/test/java/mekanism/common/lib/distribution/DistributionPropertyTest.java')
+def ordinaryTestRuntimeFiles = files(sourceSets.test.runtimeClasspath)
+def transferTestRuntimeFiles = files(sourceSets.fabricTransferTest.runtimeClasspath)
+def registryTestRuntimeFiles = files(sourceSets.fabricRegistryTest.runtimeClasspath)
+def registryRootTestSources = files(sourceSets.fabricRegistryTest.allJava)
+def verifyFabricTestContract = tasks.register('verifyFabricTestContract') {
+    group = 'verification'
+    description = 'Checks isolated loader runtimes and exact ordinary/transfer/root-registry test totals.'
+    dependsOn tasks.named('test'), fabricTransferTest, fabricRegistryTest
+    inputs.files(registryOrdinaryTestSource, deferredOrdinaryTestSource, registryRootTestSource, distributionPropertySource)
+    doLast {
+        def loaderJunitFiles = { runtimeFiles ->
+            runtimeFiles.files.findAll { it.name.startsWith('fabric-loader-junit-') && it.name.endsWith('.jar') }
+        }
+        if (!loaderJunitFiles(ordinaryTestRuntimeFiles).isEmpty()) {
+            throw new GradleException('The ordinary test runtime must not contain fabric-loader-junit')
+        }
+        if (loaderJunitFiles(transferTestRuntimeFiles).size() != 1
+              || loaderJunitFiles(registryTestRuntimeFiles).size() != 1) {
+            throw new GradleException('Transfer and root-registry test runtimes must each contain exactly one pinned fabric-loader-junit')
+        }
+        def rootSources = registryRootTestSources.files
+        if (rootSources.size() != 1 || rootSources.first().canonicalFile != registryRootTestSource.asFile.canonicalFile) {
+            throw new GradleException("fabricRegistryTest must contain exactly its one fixed integration source: ${rootSources}")
+        }
+        def annotationCount = { regularFile ->
+            (regularFile.asFile.text =~ /(?m)^\s*@Test\s*$/).count
+        }
+        if (annotationCount(registryOrdinaryTestSource) != 5 || annotationCount(deferredOrdinaryTestSource) != 5
+              || annotationCount(registryRootTestSource) != 1) {
+            throw new GradleException('Registry tests must remain exactly 5 existing + 5 ordinary custom + 1 isolated root method')
+        }
+        def propertyText = distributionPropertySource.asFile.text
+        if ((propertyText =~ /@Property\(tries = TRIES\)/).count != 3
+              || !(propertyText =~ /private static final int TRIES = 100_000;/).find()) {
+            throw new GradleException('The three ordinary jqwik properties must remain pinned to 100,000 tries')
+        }
+        def readTotals = { output, label, expectedSuites, expectedTests ->
+            File directory = output.get().asFile
+            File[] reports = directory.listFiles({ File ignored, String name ->
+                name.startsWith('TEST-') && name.endsWith('.xml')
+            } as FilenameFilter)
+            if (reports == null) {
+                throw new GradleException("Missing ${label} JUnit XML results in ${directory}")
+            }
+            int tests = reports.sum(0) { report ->
+                new XmlSlurper(false, false).parse(report).@tests.toInteger()
+            }
+            if (reports.length != expectedSuites || tests != expectedTests) {
+                throw new GradleException("Unexpected ${label} totals: suites=${reports.length} tests=${tests}")
+            }
+            [reports.length, tests]
+        }
+        def ordinary = readTotals(ordinaryXmlResults, 'ordinary', 67, 320)
+        def transfer = readTotals(transferXmlResults, 'transfer', 2, 8)
+        def registry = readTotals(registryXmlResults, 'root-registry', 1, 1)
+        if (ordinary[0] + transfer[0] + registry[0] != 70 || ordinary[1] + transfer[1] + registry[1] != 329) {
+            throw new GradleException('Unexpected aggregate Fabric test totals')
+        }
+    }
+}
+tasks.named('check') {
+    dependsOn verifyFabricTestContract
 }
 
 java {
