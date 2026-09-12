@@ -2,7 +2,7 @@
 
 ## Task 033 scope
 
-Task 033 is the first deliberate P1 item owner/platform gateway. It landed at API **56** / common **122** / platform **16**. Task 034 left all seven item production sources unchanged; Task 035 now admits the shared serialization owner and restores `IInventorySlot` delegation, bringing the current global slices to **58/122/17**. Task 033 production scope remains exactly seven sources:
+Task 033 is the first deliberate P1 item owner/platform gateway. It landed at API **56** / common **122** / platform **16**. Task 034 left all seven item production sources unchanged; Task 035 admits the shared serialization owner and restores `IInventorySlot` delegation. Task 036 adds only the oracle-identical `IHashedItem` text-dispatch interface (not a concrete implementation), bringing current global slices to **64/122/17**. Task 033 production scope remains exactly seven sources:
 
 - adapted API contracts:
   - `mekanism.api.inventory.IInventorySlot`
@@ -77,15 +77,15 @@ Exactly two Fabric-local classes contain exactly eight meaningful JUnit methods:
 - `InventoryApiHolderTest` (four): oversized component-bearing NBT and empty failure; slot defaults/caller immutability/limits/signed grow-shrink; unsided/sided routing, boolean simulation mapping, invalid indexes and automation; holder facing, null-vs-physical policy and live list identity.
 - `FabricItemStorageTest` (four): exact `ItemVariant` components, blank/zero/capacity and invalid exposure; stable ordered views plus multi-slot true-long transfer; nested commit/outer abort, mismatch/full-copy restore, observable notifications and all-attempt restore failure; live policy, explicit invalidation and topology drift before/during execution.
 
-At Task 033 landing, ordinary `test` was 63 suites / 296 tests and the isolated item task was one suite / four tests. Task 034 kept `fabric-loader-junit` off the ordinary runtime and generalized the old `fabricItemTest` source set/task to `fabricTransferTest`, where the unchanged item and fluid conversion suites share one pinned loader-JUnit runtime and one full Knot startup. Task 035 adds exactly five ordinary `SerializerHelperTest` methods and leaves the four-method `InventoryApiHolderTest` unchanged as integration proof. Current expected totals are ordinary **65 suites / 310 tests**, transfer **2 suites / 8 tests**, aggregate **67 suites / 318 tests**; all three `DistributionPropertyTest` properties remain at 100,000 tries/checks each. `check` runs each task exactly once. Item/serialization tests use standard vanilla bootstrap before the first `SerializerHelper` reference, do not mutate registries, and add no startup marker.
+At Task 033 landing, ordinary `test` was 63 suites / 296 tests and the isolated item task was one suite / four tests. Task 034 kept `fabric-loader-junit` off the ordinary runtime and generalized the old `fabricItemTest` source set/task to `fabricTransferTest`, where the unchanged item and fluid conversion suites share one pinned loader-JUnit runtime and one full Knot startup. Task 035 adds exactly five ordinary `SerializerHelperTest` methods and leaves the four-method `InventoryApiHolderTest` unchanged as integration proof. Its landing totals were ordinary **65 suites / 310 tests**, transfer **2 suites / 8 tests**, aggregate **67 suites / 318 tests**. Task 036 adds one five-method ordinary text/color class; current totals are **66/315**, **2/8**, and **68/323**. All three `DistributionPropertyTest` properties remain at 100,000 tries/checks each. `check` runs each task exactly once. Item/serialization tests use standard vanilla bootstrap before the first `SerializerHelper` reference, do not mutate registries, and add no startup marker.
 
-The remapped-JAR static gate requires exactly the three direct inventory API classes, exactly the two direct holder/slot classes, and exactly these platform entries, each once:
+The remapped-JAR static gate requires exactly four direct inventory API interfaces—`IHashedItem`, `IInventorySlot`, `IMekanismInventory`, and `ISidedItemHandler`—exactly the two direct holder/slot classes, and exactly these platform entries, each once:
 
 - `FabricItemLookup.class`
 - `FabricItemStorage.class`
 - `FabricItemStorage$SlotView.class`
 
-The direct inventory API check does not consume or forbid already-admitted subpackages. Every unexpected item-boundary nested/synthetic/test/helper/fixture class is rejected. Task 035 additionally requires the exact `SerializerHelper.class`, `$1`, `$2`, and `$3` family once each, keeps `IInventorySlot.class` once, and rejects `MekanismAPI.class`, platform leakage, or a serialization startup reference/marker. There is no item startup/provider proof.
+The direct inventory API check does not consume or forbid already-admitted subpackages. Every unexpected item-boundary nested/synthetic/test/helper/fixture class is rejected. Task 035 additionally requires the exact `SerializerHelper.class`, `$1`, `$2`, and `$3` family once each, keeps `IInventorySlot.class` once, and rejects `MekanismAPI.class`, platform leakage, or a serialization startup reference/marker. Task 036 requires `IHashedItem.class` once and explicitly rejects `mekanism.common.lib.inventory.HashedItem*`; the anonymous test implementation is test-only. There is no item startup/provider proof.
 
 ## Deliberately deferred
 

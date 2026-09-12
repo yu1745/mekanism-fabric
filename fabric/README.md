@@ -10,22 +10,26 @@ excluded. It uses Minecraft 1.21.1, Java 21, and Mojang official mappings.
 `api-slice.txt` is the auditable allowlist of API source paths, relative to
 `src/api/java`. The Fabric source set reads that file directly, so the listed
 sources retain their original `mekanism.api.*` names without being copied or
-modified. The allowlist contains **58 current source files**: **56 official baseline
+modified. The allowlist contains **64 current source files**: **62 official baseline
 sources** plus the project-owned registry-aware `INBTSerializable` and bounded
 `FluidStack` contracts.
 Intentional API adaptations include that contract, `Action`'s removal of two
 NeoForge `FluidAction` conversion methods, the Javadoc-only strict-handler
 fluid-import/link cleanup, Task 032's bounded module-config namespace/enum/text
 adaptations, Task 033's inventory NBT/nominal-parent boundary, Task 034's
-Mekanism-owned int-mB fluid value/API delta, and Task 035's shared serialization
-owner/logger adaptation;
-`IMekanismStrictEnergyHandler` and `IMekanismInventory` remain byte-identical.
-See `../docs/API_DELTAS.md`, `../docs/FABRIC_ITEM.md`, and `../docs/FABRIC_FLUID.md`. JetBrains annotations and JSR-305 remain `compileOnly`
+Mekanism-owned int-mB fluid value/API delta, Task 035's shared serialization
+owner/logger adaptation, and Task 036's stateless incremental predicate, stable
+APILang namespace, project-fluid/raw-fluid naming, vanilla level-description, and
+existing nominal-parent adaptations. `IMekanismStrictEnergyHandler`,
+`IMekanismInventory`, `IHashedItem`, `EnumColor`, and `ILangEntry` remain
+byte-identical.
+See `../docs/API_DELTAS.md`, `../docs/FABRIC_ITEM.md`, `../docs/FABRIC_FLUID.md`,
+and `../docs/FABRIC_TEXT.md`. JetBrains annotations and JSR-305 remain `compileOnly`
 and are not bundled in the mod.
 
 `common-slice.txt` contains **122 official source files**, and
 `platform-slice.txt` contains **17 project-owned Fabric sources**. Seven spatial/color/effect foundations (`Color`, `CustomEffect`, `Pos3D`, `Quaternion`, `Range3D`, `MultipartUtils`, and `StatUtils`) remain byte-identical to `4646f509`. Twelve Java 21 tests bound channel/HSV/compositing/statistics, effect state, vector/range/rotation/quaternion state, and direct multipart ray selection. Packaging permits exactly four direct common-lib classes, one effect class, three math classes, the three `MultipartUtils` classes, and one `StatUtils` class. This admits no caller or owner: renderers/particles/GUI/recipe viewers/client lifecycle, transmitters/multipart blocks/gear, machines/block types/entities, packet tracking/network ranges, SPS/multiblock, additions/generators, external energy, world/chunk lifecycle, registries/config/persistence all remain deferred; there is no rendering integration, entity/player lifecycle, block registration, networking, thread-safety, or collision-owner guarantee. Together with
-the **58-file API slice**, they form bounded registry/GameEvent, TOML
+the **64-file API slice**, they form bounded registry/GameEvent, TOML
 startup-config, configuration-handshake, internal energy storage/holder, internal
 heat storage/holder, wildcard-matching, fair-distribution, chunk-coordinate,
 lambda-metafactory, and vanilla-registry utility closures. The unchanged
@@ -223,18 +227,39 @@ is not referenced by a startup entrypoint, and vanilla bootstrap precedes its fi
 test reference.
 
 One new ordinary class has exactly five methods; unchanged `InventoryApiHolderTest`
-keeps four integration methods. Expected totals are ordinary **65 suites/310 tests**,
-transfer **2 suites/8 tests**, aggregate **67 suites/318 tests**, with three jqwik
-properties at 100,000 each. The remapped JAR must contain exactly the compiled
+keeps four integration methods. Task 035 landing totals were ordinary **65 suites/310 tests**,
+transfer **2 suites/8 tests**, aggregate **67 suites/318 tests**; Task 036 current totals
+are **66/315**, **2/8**, and **68/323**, with three jqwik properties at 100,000 each. The remapped JAR must contain exactly the compiled
 SerializerHelper outer plus `$1`/`$2`/`$3`, once each, no `MekanismAPI.class`,
 platform leakage, test/helper extras, startup reference, or marker. API/common/platform
-counts are now **58/122/17**; no dependency, common, or platform source changed.
+Task 035 counts were **58/122/17**; no dependency, common, or platform source changed.
 
-The next nearby API candidates remain blocked by deliberately excluded boundaries:
-`ChemicalStack`, incremental-enum helpers through `ConstantPredicates`,
-`TextComponentUtil`, all remaining FluidStack import replacements, concrete slots,
-menu/warning/recipes, and `ModuleData`, module containers/items, codec catalogs,
-GUI/radial/client rendering, and owner integration remain outside the current slice.
+Task 036 admits the exact portable text/color SCC: new allowlist entries are
+`IIncrementalEnum`, `IHashedItem`, `APILang`, `EnumColor`, `ILangEntry`, and
+`TextComponentUtil`, while existing `IHasTranslationKey` and `RelativeSide` are
+immediately restored to helper/APILang delegation. Only two internal always-true
+arguments avoid the still-excluded `ConstantPredicates`; APILang uses literal
+`"mekanism"` without initializing `MekanismAPI`; TextComponentUtil uses the owned
+FluidStack and block-derived raw-fluid translation keys. Its two NeoForge-injected
+Level description calls are expanded to the same vanilla dimension language-key
+and ID-fallback component. Public methods, dispatch/style/null order, smart-translate
+argument semantics, and RelativeSide behavior remain.
+
+One bootstrapped ordinary class has exactly five methods. Current slice and test
+totals are **64/122/17**, ordinary **66/315**, transfer **2/8**, aggregate **68/323**;
+the three jqwik properties remain 100,000 each. Mechanical JAR inspection fixes
+TextComponentUtil to outer + `$1` and the complete direct text/RelativeSide/
+incremental/inventory families exactly once. Static gates reject concrete
+`HashedItem`, `MekanismAPI`, `ConstantPredicates`, chemical/TriPredicate classes,
+unexpected nested/test/helper/fixture leakage, NeoForge/Loader bytecode, and startup
+markers/references. This task makes no startup claim. Raw-fluid naming deliberately
+cannot preserve custom NeoForge FluidType description overrides; it remains
+block-derived. See `../docs/FABRIC_TEXT.md`.
+
+Nearby boundaries still excluded are `ChemicalStack`, full `ConstantPredicates`,
+all remaining 195 FluidStack import replacements, concrete slots, menu/warning/
+recipes, `ModuleData`, module containers/items, codec catalogs, GUI/radial/client
+rendering, and every owner integration.
 
 To repeat the portability audit and fail on a missing source, duplicate path,
 or any `net.neoforged` reference, run from the repository root:

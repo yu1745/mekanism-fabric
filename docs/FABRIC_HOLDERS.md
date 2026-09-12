@@ -15,7 +15,7 @@ This milestone adds the platform-neutral side-routing layer used by Mekanism's i
 - `mekanism.common.capabilities.holder.slot.IInventorySlotHolder`
 - `mekanism.common.capabilities.holder.slot.InventorySlotHolder`
 
-It builds on the internal energy and heat containers. Task 023 adds a side-bound Team Reborn Energy adapter/factory seam, and Task 033 adds a physical-side Fabric item view, but no block/item/entity provider is registered by this slice. Task 034 leaves these holder sources unchanged and brings the current audited counts to API **57** / common **122** / platform **17**; its separate fluid value/unit seam adds no holder or provider.
+It builds on the internal energy and heat containers. Task 023 adds a side-bound Team Reborn Energy adapter/factory seam, and Task 033 adds a physical-side Fabric item view, but no block/item/entity provider is registered by this slice. Task 034 leaves these holder sources unchanged. Task 036 restores RelativeSide's portable text dependency and brings current audited counts to API **64** / common **122** / platform **17**; neither the fluid seam nor the text closure adds a holder or provider.
 
 ## Relative-side contract
 
@@ -28,9 +28,9 @@ It builds on the internal energy and heat containers. Task 023 adds a side-bound
 - translation keys `side.mekanism.<name>`;
 - `IHasEnumNameTranslationKey` nominal identity and `getTranslatedName()` method.
 
-The enum no longer pulls `APILang`, `ILangEntry`, `TextComponentUtil`, or `MekanismAPI` merely to obtain six stable keys. It derives the same vanilla description IDs locally.
+Task 036 removes the temporary local `Util`/`ResourceLocation`/string-key construction and restores the oracle representation: every enum constant stores its corresponding `APILang` as an `ILangEntry`, and `getTranslationKey()` delegates to that entry. `APILang` itself uses the bounded stable literal namespace `"mekanism"`, so this restoration does not initialize the unfinished `MekanismAPI` facade. The resulting six keys are unchanged, and the returned key object is the entry's own key.
 
-`IHasEnumNameTranslationKey` no longer extends NeoForge `TranslatableEnum`. Its Mekanism-visible method now directly returns `Component.translatable(getTranslationKey())`, which is the exact behavior of the former helper call. The removed NeoForge subtype relationship is a deliberate Fabric API boundary and is registered in `API_DELTAS.md`.
+`IHasEnumNameTranslationKey` still does not extend NeoForge `TranslatableEnum`. That removed subtype relationship and adjusted Javadoc remain the approved Fabric API boundary. Task 036 restores only its default body to `TextComponentUtil.translate(getTranslationKey())`; the public method and returned fresh translatable component behavior are unchanged. See `API_DELTAS.md` and `FABRIC_TEXT.md`.
 
 ## Holder behavior
 
@@ -80,6 +80,9 @@ The energy and heat helpers currently couple their non-config and configurable f
   - exact order, names, translations, `BY_ID`, data/stream codecs;
   - one fixed 6×6 projection table covering every horizontal and vertical facing;
   - all 36 relative/physical round trips against that table.
+- `fabric/src/test/java/mekanism/api/text/PortableTextColorTest.java`
+  - its RelativeSide method checks all six exact APILang key-object delegations, serialized identities, and fresh translation ownership;
+  - its other four methods bind the connected incremental/text/color closure without changing this holder suite.
 - `fabric/src/test/java/mekanism/common/capabilities/holder/energy/EnergyContainerHolderTest.java`
   - unconfigured all-side behavior without facing evaluation;
   - internal ordering and external filtering;
@@ -102,7 +105,7 @@ Required gates:
 ./gradlew -p fabric test
 ./gradlew -p fabric verifyApiSliceNoNeoForge verifyCommonSliceNoNeoForge
 ./fabric-build.sh
-scripts/fabric-packaged-smoke.sh
+FABRIC_SMOKE_STATIC_ONLY=1 scripts/fabric-packaged-smoke.sh
 ```
 
-The packaged smoke verifies the relative-side translation interface plus energy- and heat-holder classes are present in the remapped JAR, and statically restricts the slot descriptor family to exactly `ISlotInfo.class`, `BaseSlotInfo.class`, `EnergySlotInfo.class`, and `HeatSlotInfo.class`, once each. Directional and descriptor behavior is exercised in JUnit and does not create synthetic holder state or a descriptor startup marker during normal mod bootstrap.
+The packaged smoke verifies RelativeSide outer + `$1`, the complete direct text package, and energy-/heat-holder classes are present exactly once in the remapped JAR, and statically restricts the slot descriptor family to exactly `ISlotInfo.class`, `BaseSlotInfo.class`, `EnergySlotInfo.class`, and `HeatSlotInfo.class`, once each. Directional, text, and descriptor behavior is exercised in JUnit; Task 036 creates no synthetic holder state, startup reference, or startup marker.

@@ -3,6 +3,7 @@ package mekanism.api.text;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import mekanism.api.fluid.FluidStack;
 import mekanism.api.inventory.IHashedItem;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Direction;
@@ -20,7 +21,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.material.Fluid;
-import net.neoforged.neoforge.fluids.FluidStack;
 
 public class TextComponentUtil {
 
@@ -80,9 +80,10 @@ public class TextComponentUtil {
                 case ItemStack stack -> current = stack.getHoverName().copy();
                 case IHashedItem item -> current = item.getInternalStack().getHoverName().copy();
                 case FluidStack stack -> current = stack.getHoverName().copy();
-                case Fluid fluid -> current = fluid.getFluidType().getDescription().copy();
+                case Fluid fluid -> current = translate(fluid.defaultFluidState().createLegacyBlock().getBlock().getDescriptionId());
                 case EntityType<?> entityType -> current = entityType.getDescription().copy();
-                case Level level -> current = level.getDescription().copy();
+                case Level level -> current = Component.translatableWithFallback(level.dimension().location().toLanguageKey("dimension"),
+                      level.dimension().location().toString());
                 case Direction direction -> current = getTranslatedDirection(direction);
                 case Boolean bool -> current = getTranslatedBoolean(bool);
                 //Fallback to a generic replacement
@@ -217,11 +218,12 @@ public class TextComponentUtil {
             } else if (component instanceof FluidStack stack) {
                 current = stack.getHoverName().copy();
             } else if (component instanceof Fluid fluid) {
-                current = fluid.getFluidType().getDescription().copy();
+                current = translate(fluid.defaultFluidState().createLegacyBlock().getBlock().getDescriptionId());
             } else if (component instanceof EntityType<?> entityType) {
                 current = entityType.getDescription().copy();
             } else if (component instanceof Level level) {
-                current = level.getDescription().copy();
+                current = Component.translatableWithFallback(level.dimension().location().toLanguageKey("dimension"),
+                      level.dimension().location().toString());
             } else if (component instanceof Direction direction) {
                 current = getTranslatedDirection(direction);
             } else if (component instanceof Boolean bool) {

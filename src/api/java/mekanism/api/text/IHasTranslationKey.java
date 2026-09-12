@@ -20,7 +20,7 @@ public interface IHasTranslationKey {
 
         @NotNull
         default Component getTranslatedName() {
-            return Component.translatable(getTranslationKey());
+            return TextComponentUtil.translate(getTranslationKey());
         }
     }
 }

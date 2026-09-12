@@ -3,8 +3,8 @@
 ## Task 034 scope
 
 Task 034 is a deliberately bounded two-source platform gateway. It landed with
-API **57** / common **122** / platform **17** sources. Task 035 leaves both Task 034
-production sources unchanged and brings the current slices to **58/122/17**. The
+API **57** / common **122** / platform **17** sources. Tasks 035–036 leave both Task 034
+production sources unchanged and bring the current slices to **64/122/17**. The
 common slice remains byte-for-byte unchanged. The only Task 034 production sources are:
 
 - `src/api/java/mekanism/api/fluid/FluidStack.java`
@@ -14,9 +14,10 @@ common slice remains byte-for-byte unchanged. The only Task 034 production sourc
 `int` millibucket (mB) state. Fabric `FluidVariant` and Fabric Transfer units occur
 only in `mekanism.fabric.fluid`. Nothing is added under `net.neoforged.*`.
 
-This batch does **not** replace any existing NeoForge `FluidStack` import. In
-particular, the complete scout inventory of 197 progressive import replacements is
-left for later bounded closures. Admitting the value does not admit a caller.
+Task 034 itself did **not** replace any existing NeoForge `FluidStack` import. Of
+the complete scout inventory of 197 progressive replacements, Task 035 later changes
+`SerializerHelper` and Task 036 changes only `TextComponentUtil`; 195 remain for
+future bounded closures. Admitting the value does not broadly admit callers.
 
 ## Behavioral provenance
 
@@ -180,6 +181,22 @@ must initialize vanilla registries before first touching its eager static codec
 family. No fluid registry, handler, storage, transaction, lookup, provider, cache,
 or lifecycle owner is added.
 
+## Task 036 portable text consumer
+
+Task 036 replaces only `TextComponentUtil`'s NeoForge FluidStack import with this
+project-owned value. Its owned-stack path still calls `getHoverName()`. Both raw
+`Fluid` paths now construct a translatable component from the exact same convention:
+
+```java
+fluid.defaultFluidState().createLegacyBlock().getBlock().getDescriptionId()
+```
+
+Dispatch order and smart-translation formatting remain unchanged. Fabric has no
+NeoForge FluidType facade, so raw custom `FluidType#getDescription()` overrides are
+not observable; Task 036 deliberately does not invent a facade or custom-name table.
+Built-in/block-backed names remain block-derived. This is a text prerequisite only,
+not fluid storage, transfer, transaction, provider, cache, or owner integration.
+
 ## Test and package boundary
 
 Task 034 added exactly two test classes and thirteen `@Test` methods:
@@ -196,9 +213,10 @@ Task 034 added exactly two test classes and thirteen `@Test` methods:
 The ordinary runtime remains free of `fabric-loader-junit` and retains all three
 jqwik properties. Task 033's unchanged item transaction suite and the Task 034 fluid
 conversion suite share one `fabricTransferTest` source set/task, so a full transfer
-run starts Knot once. Task 035 adds one ordinary five-method serialization suite;
-current expected totals are ordinary **65 suites / 310 tests**, transfer **2 suites / 8 tests**,
-aggregate **67 suites / 318 tests**.
+run starts Knot once. Task 035 adds one ordinary five-method serialization suite; its landing totals were
+ordinary **65 suites / 310 tests**, transfer **2 suites / 8 tests**, aggregate
+**67 suites / 318 tests**. Task 036 adds one ordinary five-method text/color suite;
+current totals are **66/315**, **2/8**, and **68/323**.
 
 The remapped-JAR static gate requires exactly one
 `mekanism/api/fluid/FluidStack.class` and exactly one
@@ -206,18 +224,21 @@ The remapped-JAR static gate requires exactly one
 avoid incidental nested production classes. Task 035 additionally requires exactly
 `SerializerHelper.class` plus its three verified anonymous classes (`$1`, `$2`, `$3`),
 all once, and rejects `MekanismAPI.class`, same-prefix extras, NeoForge/Loader bytecode
-references, and any serialization startup marker/reference. `FABRIC_SMOKE_STATIC_ONLY=1
-scripts/fabric-packaged-smoke.sh` runs these pre-server gates without downloading or
-starting a server. There is no fluid or serialization startup marker.
+references, and any serialization startup marker/reference. Task 036 further fixes the
+actual compiled `TextComponentUtil.class` + `$1` family and rejects deferred fluid/chemical
+classes plus any text startup marker/reference.
+`FABRIC_SMOKE_STATIC_ONLY=1 scripts/fabric-packaged-smoke.sh` runs these pre-server gates
+without downloading or starting a server. There is no fluid, serialization, or text startup marker.
 
 ## Deliberately deferred
 
-Task 034 did not admit `SerializerHelper`; Task 035 now admits only that shared
-owner. The following remain deferred:
+Task 034 did not admit `SerializerHelper`; Task 035 admits that shared owner, and
+Task 036 admits only the portable TextComponentUtil closure while retaining local,
+non-escaping predicates instead of full `ConstantPredicates`. The following remain deferred:
 
-- `ConstantPredicates`, `TextComponentUtil`, translation or predicate callers;
-- the remaining 196 progressive NeoForge `FluidStack` import replacements;
-- fluid types/attributes or custom description overrides;
+- full `ConstantPredicates`, `ChemicalStack`, `TriPredicate`, and all other translation/predicate callers;
+- the remaining 195 progressive NeoForge `FluidStack` import replacements;
+- fluid types/attributes or custom FluidType description overrides;
 - fluid tanks, handlers, storage adapters, transactions, lookup/provider/cache
   owners, listeners, or lifecycle wiring;
 - Task 033's deferred item concrete slots or item provider/cache owner;

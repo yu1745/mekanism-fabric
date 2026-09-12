@@ -2,7 +2,6 @@ package mekanism.api;
 
 import java.util.function.Predicate;
 import mekanism.api.annotations.NothingNullByDefault;
-import mekanism.api.functions.ConstantPredicates;
 
 /**
  * Interface for enum's to make them easily incremental
@@ -66,7 +65,7 @@ public interface IIncrementalEnum<TYPE extends Enum<TYPE> & IIncrementalEnum<TYP
      * @return The next "valid" element
      */
     default TYPE getNext() {
-        return getNext(ConstantPredicates.alwaysTrue());
+        return getNext(ignored -> true);
     }
 
     /**
@@ -75,7 +74,7 @@ public interface IIncrementalEnum<TYPE extends Enum<TYPE> & IIncrementalEnum<TYP
      * @return The previous "valid" element
      */
     default TYPE getPrevious() {
-        return getPrevious(ConstantPredicates.alwaysTrue());
+        return getPrevious(ignored -> true);
     }
 
     /**

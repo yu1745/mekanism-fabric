@@ -51,7 +51,7 @@ Kilt 的转换表明 execute/simulate 应在 transfer 边界映射为 transactio
 ## Mekanism-owned `FluidStack` value (Task 034)
 
 状态：Task 034 落地时 API/common/platform allowlist 精确为 **57/122/17**；
-Task 035 后当前为 **58/122/17**。`mekanism.api.fluid.FluidStack` 是 final、
+Task 035 后为 **58/122/17**，Task 036 后当前为 **64/122/17**。`mekanism.api.fluid.FluidStack` 是 final、
 项目自有、平台中立的 mutable
 `int` mB value；`FluidVariant` 与 Fabric Transfer units 只出现在新增的
 `mekanism.fabric.fluid.FabricFluidConversions`。不创建 `net.neoforged.*`
@@ -130,10 +130,49 @@ Mekanism-owned NBT nominal parent、两处 Javadoc prose 以及全部 public/def
 behavior、concrete slot、menu、recipe、warning 或 broad facade。
 
 验证由恰好五个 `SerializerHelperTest` methods 与 unchanged 四个
-`InventoryApiHolderTest` methods 提供；当前预期 ordinary **65/310**、Knot transfer
-**2/8**、aggregate **67/318**，三项 jqwik property 各 100,000。JAR family 精确为
-`SerializerHelper.class` 加 `$1`/`$2`/`$3`，各一次；unexpected nested/test/helper、
-`MekanismAPI.class`、NeoForge/Loader leakage 与 startup marker 均拒绝。
+`InventoryApiHolderTest` methods 提供；Task 035 落地 totals 为 ordinary **65/310**、Knot transfer
+**2/8**、aggregate **67/318**；Task 036 后当前为 **66/315**、**2/8**、**68/323**，
+三项 jqwik property 各 100,000。JAR family 精确为 `SerializerHelper.class` 加
+`$1`/`$2`/`$3`，各一次；unexpected nested/test/helper、`MekanismAPI.class`、
+NeoForge/Loader leakage 与 startup marker 均拒绝。
+
+## Portable text/color prerequisite closure (Task 036)
+
+状态：API/common/platform allowlist 当前为 **64/122/17**。新增 API admissions 精确为
+`IIncrementalEnum`、`IHashedItem`、`APILang`、`EnumColor`、`ILangEntry` 与
+`TextComponentUtil`；同时恢复已纳入的 `IHasTranslationKey`、`RelativeSide` 两个 caller。
+`IHashedItem`、`EnumColor`、`ILangEntry` 与 oracle `4646f509` byte-identical，
+`RelativeSide` 恢复 oracle-byte-identical 的 APILang/ILangEntry field、constructor 与 delegation。
+无 common/platform production source 或 dependency change。
+
+有意 delta 精确为：`IIncrementalEnum` 只移除 `ConstantPredicates` import，并在两个
+无参 default 中传入不逃逸的 stateless `ignored -> true`；`APILang` 只以 literal
+`"mekanism"` 替代 private constructor 的 `MekanismAPI.MEKANISM_MODID`；
+`TextComponentUtil` 只把 NeoForge FluidStack 换成 project-owned value，并把两处 raw
+`Fluid` name 改为 default-state legacy-block description ID 的 translatable component。
+此外 vanilla `Level` 不含 NeoForge 注入的 `getDescription()`，故原两个 dispatch position
+精确展开为 `dimension().location().toLanguageKey("dimension")` 加 dimension-ID fallback 的
+`Component.translatableWithFallback`。所有 public methods、dispatch order、bound-holder/null/
+style/copy 以及 `smartTranslate` primitive/string/trailing-format behavior 保持。
+
+`IHasTranslationKey.IHasEnumNameTranslationKey` 保持已批准的 NeoForge
+`TranslatableEnum` nominal-parent/Javadoc removal，但 default body 恢复
+`TextComponentUtil.translate(getTranslationKey())`。`RelativeSide` 六项再次直接持有相应
+APILang entry；serialized names、keys、codecs 和 direction behavior 不变。Fabric 没有
+`FluidType` description facade，因此 raw-fluid custom `FluidType#getDescription()` override
+不可保留；与 Task 034 一致只承诺 block-derived key，不发明 custom-name facade。
+
+一个新 ordinary class 恰好五个 methods；加 unchanged `RelativeSideTest` 固定 key ownership、
+方向/codec 与 text/color behavior。当前预期 ordinary **66/315**、transfer **2/8**、aggregate
+**68/323**，jqwik 三项各 100,000。实际 remapped family 为 `IIncrementalEnum`、`IHashedItem`、
+`APILang`、`EnumColor`、`ILangEntry`、`TextComponentUtil` outer + `$1`，以及既有 exact
+RelativeSide/IHasTextComponent/IHasTranslationKey families，各一次。static gate 拒绝
+`MekanismAPI`、`ConstantPredicates`、chemical API、`TriPredicate`、concrete `HashedItem`、
+unexpected nested/test/helper/fixture、NeoForge/Loader 与 startup marker/reference；无 startup claim。
+完整边界见 `docs/FABRIC_TEXT.md`。
+
+本任务只关闭 portable text prerequisites。`ChemicalStack`、完整 `ConstantPredicates`、warning、
+menu、concrete slots、recipes、translation consumers 与所有 owners/callers 仍延期。
 
 ## Module config value contracts (Task 032)
 
@@ -189,7 +228,7 @@ Task 031 的 `SoundEventDeferredRegister` 用既有 `MekanismDeferredRegister<So
 `fabric/src/test/java/mekanism/common/registration/MekanismDeferredRegisterTest.java`、
 `SoundAndDamageRegistrationTest.java` 以及 static packaged-JAR gates。Kilt/Connector 与 NeoForge
 21.1.200 extension source 仅用于核对生命周期、冻结、canonical holder 和 lookup 语义；实现未复制。
-当前 **58/122/17** slice 不把 sound/damage owners 接入 entrypoint。
+当前 **64/122/17** slice 不把 sound/damage owners 接入 entrypoint。
 
 ## Config contract
 
@@ -206,7 +245,7 @@ Task 030 的四个 common source 只替换 config backing types：`CachedResolva
 
 兼容影响：直接依赖 NeoForge config spec/type 或 `IConfigTranslation` 到
 `IHasTranslationKey` 赋值关系的 addon 必须改用 Fabric 侧契约。TOML 文件名、12 个 startup
-路径、默认值、范围、restart 元数据与缓存行为保持。官方 resolvable `set` 仍缓存 caller 的原始 `TYPE`：encoded list backing 是 immutable copy，但 map 在 clear/reload 前仍可与 caller alias；clear/reload 后才按 deterministic sorted strings 重建。当前 **58/122/17** slice 不激活 `GeneralConfig`/`MekanismConfig`、cardboard blacklist、Oredictionificator filters/items、`CachedEnumValue`、UI/watch/sync 或 config ownership/lifecycle/threading。细节和验证见 `docs/FABRIC_CONFIG.md`。
+路径、默认值、范围、restart 元数据与缓存行为保持。官方 resolvable `set` 仍缓存 caller 的原始 `TYPE`：encoded list backing 是 immutable copy，但 map 在 clear/reload 前仍可与 caller alias；clear/reload 后才按 deterministic sorted strings 重建。当前 **64/122/17** slice 不激活 `GeneralConfig`/`MekanismConfig`、cardboard blacklist、Oredictionificator filters/items、`CachedEnumValue`、UI/watch/sync 或 config ownership/lifecycle/threading。细节和验证见 `docs/FABRIC_CONFIG.md`。
 
 ## Registry-aware NBT contract
 
@@ -246,7 +285,7 @@ void deserializeNBT(HolderLookup.Provider provider, T tag)
 
 ## Item inventory contracts (Task 033)
 
-状态：Task 033 落地时 API/common/platform allowlist 精确为 **56/122/16**；Task 034 后为 **57/122/17**，Task 035 后当前为 **58/122/17**。三份 inventory API source 中，`IMekanismInventory` 与 `4646f509` byte-identical；另两份只有以下有界平台适配。
+状态：Task 033 落地时 API/common/platform allowlist 精确为 **56/122/16**；Task 034 后为 **57/122/17**，Task 035 后为 **58/122/17**，Task 036 后当前为 **64/122/17**。三份 inventory API source 中，`IMekanismInventory` 与 `4646f509` byte-identical；另两份只有以下有界平台适配。
 
 ### `IInventorySlot`
 
@@ -298,8 +337,8 @@ Task 033 因当时 `FluidStack` 尚未纳入而把唯一 shared-helper call 暂�
 
 状态：`RelativeSide` 与非配置 energy holder 闭包已移植。
 
-`RelativeSide` 保持 `mekanism.api.RelativeSide` 类型身份、枚举顺序、serialized names、translation keys、`CODEC`、`BY_ID`、`STREAM_CODEC` 和全部方向映射。为避免仅六个 key 拉入 `APILang` → `MekanismAPI`/text 的广泛闭包，私有构造参数改为稳定 path，并通过 vanilla `Util.makeDescriptionId` 生成相同的 `side.mekanism.*` key。
+`RelativeSide` 保持 `mekanism.api.RelativeSide` 类型身份、枚举顺序、serialized names、translation keys、`CODEC`、`BY_ID`、`STREAM_CODEC` 和全部方向映射。Task 036 已恢复 oracle 的 APILang/ILangEntry representation：六项持有对应 entry，constructor 保留 serialized name，并由 `getTranslationKey()` 精确 delegation 得到同一 `side.mekanism.*` key。
 
-`IHasTranslationKey.IHasEnumNameTranslationKey` 保持原 FQN、父级 Mekanism interface 和 `getTranslatedName()` 方法，但不再继承 NeoForge `TranslatableEnum`；default 实现直接调用 `Component.translatable`，与原 `TextComponentUtil.translate(String)` 行为相同。依赖该 NeoForge subtype 关系的 addon 需要迁移到 Mekanism-visible interface。这一变化集中在 API 边界，不在 Fabric 上伪造 `TranslatableEnum`。
+`IHasTranslationKey.IHasEnumNameTranslationKey` 保持原 FQN、父级 Mekanism interface 和 `getTranslatedName()` 方法，但不再继承 NeoForge `TranslatableEnum`；这是既有、已批准的 Fabric nominal-parent 变化。Task 036 将 default body 从临时 direct `Component.translatable` 恢复为 oracle 的 `TextComponentUtil.translate(getTranslationKey())`。依赖 NeoForge subtype 关系的 addon 仍需迁移到 Mekanism-visible interface；Fabric 不提供 shim。
 
 `IHolder`、`BasicHolder`、`IEnergyContainerHolder` 与 `EnergyContainerHolder` 未改公开/可见性表面；方向过滤、内部访问、动态 facing、identity/order、duplicate 与 live-list 行为保持。详见 `docs/FABRIC_HOLDERS.md` 及对应测试。

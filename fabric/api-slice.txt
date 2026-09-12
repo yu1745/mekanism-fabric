@@ -5,6 +5,7 @@ mekanism/api/Chunk3D.java
 mekanism/api/DataHandlerUtils.java
 mekanism/api/IContentsListener.java
 mekanism/api/IEvaporationSolar.java
+mekanism/api/IIncrementalEnum.java
 mekanism/api/INBTSerializable.java
 mekanism/api/RelativeSide.java
 mekanism/api/SerializationConstants.java
@@ -44,6 +45,7 @@ mekanism/api/heat/IHeatCapacitor.java
 mekanism/api/heat/IHeatHandler.java
 mekanism/api/heat/IMekanismHeatHandler.java
 mekanism/api/heat/ISidedHeatHandler.java
+mekanism/api/inventory/IHashedItem.java
 mekanism/api/inventory/IInventorySlot.java
 mekanism/api/inventory/IMekanismInventory.java
 mekanism/api/inventory/ISidedItemHandler.java
@@ -51,8 +53,12 @@ mekanism/api/lasers/ILaserDissipation.java
 mekanism/api/lasers/ILaserReceptor.java
 mekanism/api/math/LongTransferUtils.java
 mekanism/api/math/MathUtils.java
+mekanism/api/text/APILang.java
+mekanism/api/text/EnumColor.java
 mekanism/api/text/IHasTextComponent.java
 mekanism/api/text/IHasTranslationKey.java
+mekanism/api/text/ILangEntry.java
+mekanism/api/text/TextComponentUtil.java
 mekanism/api/tier/AlloyTier.java
 mekanism/api/tier/BaseTier.java
 mekanism/api/tier/IAlloyTier.java

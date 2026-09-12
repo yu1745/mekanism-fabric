@@ -1,6 +1,5 @@
 package mekanism.api.text;
 
-import mekanism.api.MekanismAPI;
 import mekanism.api.annotations.NothingNullByDefault;
 import net.minecraft.Util;
 import net.minecraft.resources.ResourceLocation;
@@ -82,7 +81,7 @@ public enum APILang implements ILangEntry {
     private final String key;
 
     APILang(String type, String path) {
-        this(Util.makeDescriptionId(type, ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, path)));
+        this(Util.makeDescriptionId(type, ResourceLocation.fromNamespaceAndPath("mekanism", path)));
     }
 
     APILang(String key) {

@@ -443,17 +443,76 @@ actual_module_configs = {
 if (actual_module_configs != expected_module_configs
         or any(entries.count(entry) != 1 for entry in expected_module_configs)):
     raise SystemExit(f"unexpected direct module-config class family: {sorted(actual_module_configs)!r}")
-expected_has_text_component = {
+expected_incremental_enum = {"mekanism/api/IIncrementalEnum.class"}
+actual_incremental_enum = {
+    entry for entry in entries
+    if entry.startswith("mekanism/api/IIncrementalEnum") and entry.endswith(".class")
+}
+if (actual_incremental_enum != expected_incremental_enum
+        or any(entries.count(entry) != 1 for entry in expected_incremental_enum)):
+    raise SystemExit(f"unexpected IIncrementalEnum class family: {sorted(actual_incremental_enum)!r}")
+expected_relative_side = {
+    "mekanism/api/RelativeSide.class",
+    "mekanism/api/RelativeSide$1.class",
+}
+actual_relative_side = {
+    entry for entry in entries
+    if entry.startswith("mekanism/api/RelativeSide") and entry.endswith(".class")
+}
+if (actual_relative_side != expected_relative_side
+        or any(entries.count(entry) != 1 for entry in expected_relative_side)):
+    raise SystemExit(f"unexpected RelativeSide class family: {sorted(actual_relative_side)!r}")
+expected_text_api = {
+    "mekanism/api/text/APILang.class",
+    "mekanism/api/text/EnumColor.class",
     "mekanism/api/text/IHasTextComponent.class",
     "mekanism/api/text/IHasTextComponent$IHasEnumNameTextComponent.class",
+    "mekanism/api/text/IHasTranslationKey.class",
+    "mekanism/api/text/IHasTranslationKey$IHasEnumNameTranslationKey.class",
+    "mekanism/api/text/ILangEntry.class",
+    "mekanism/api/text/TextComponentUtil.class",
+    "mekanism/api/text/TextComponentUtil$1.class",
 }
-actual_has_text_component = {
+text_api_prefix = "mekanism/api/text/"
+actual_text_api = {
     entry for entry in entries
-    if entry.startswith("mekanism/api/text/IHasTextComponent") and entry.endswith(".class")
+    if entry.startswith(text_api_prefix)
+    and "/" not in entry[len(text_api_prefix):]
+    and entry.endswith(".class")
 }
-if (actual_has_text_component != expected_has_text_component
-        or any(entries.count(entry) != 1 for entry in expected_has_text_component)):
-    raise SystemExit(f"unexpected IHasTextComponent class family: {sorted(actual_has_text_component)!r}")
+if actual_text_api != expected_text_api or any(entries.count(entry) != 1 for entry in expected_text_api):
+    raise SystemExit(f"unexpected direct text API class family: {sorted(actual_text_api)!r}")
+forbidden_portable_text_entries = sorted(
+    entry for entry in entries
+    if entry.startswith("mekanism/api/functions/ConstantPredicates")
+    or entry.startswith("mekanism/api/functions/TriPredicate")
+    or entry.startswith("mekanism/api/chemical/")
+    or entry.startswith("mekanism/common/lib/inventory/HashedItem")
+)
+if forbidden_portable_text_entries:
+    raise SystemExit(f"portable text closure admitted a deferred class: {forbidden_portable_text_entries!r}")
+portable_text_classes = expected_incremental_enum | expected_relative_side | expected_text_api | {
+    "mekanism/api/inventory/IHashedItem.class",
+}
+with zipfile.ZipFile(sys.argv[1]) as text_artifact:
+    for entry in portable_text_classes:
+        bytecode = text_artifact.read(entry)
+        if b"net/neoforged/" in bytecode or b"net/fabricmc/loader/" in bytecode:
+            raise SystemExit(f"platform leakage in portable text bytecode: {entry}")
+        if b"MEKANISM_FABRIC_" in bytecode:
+            raise SystemExit(f"portable text class must not contain a startup marker: {entry}")
+    startup_bytecode = (
+        text_artifact.read("mekanism/fabric/MekanismFabricBootstrap.class")
+        + text_artifact.read("mekanism/fabric/MekanismFabricClientBootstrap.class")
+    )
+    startup_references = {
+        entry.split("$", 1)[0].removesuffix(".class").encode()
+        for entry in portable_text_classes
+        if entry.endswith(".class")
+    }
+    leaked_startup_references = sorted(reference.decode() for reference in startup_references if reference in startup_bytecode)
+    if leaked_startup_references:
+        raise SystemExit(f"portable text closure must not be initialized by a Fabric entrypoint: {leaked_startup_references!r}")
 expected_common_codec = {
     "mekanism/common/lib/codec/DroppingUnboundedMapCodec.class",
     "mekanism/common/lib/codec/SequencedCollectionCodec.class",
@@ -676,6 +735,7 @@ actual_common_energy = {
 if actual_common_energy != expected_common_energy or any(entries.count(entry) != 1 for entry in expected_common_energy):
     raise SystemExit(f"unexpected common energy class family: {sorted(actual_common_energy)!r}")
 expected_inventory_api = {
+    "mekanism/api/inventory/IHashedItem.class",
     "mekanism/api/inventory/IInventorySlot.class",
     "mekanism/api/inventory/IMekanismInventory.class",
     "mekanism/api/inventory/ISidedItemHandler.class",
@@ -746,11 +806,20 @@ if actual_fabric_fluid != expected_fabric_fluid or any(entries.count(entry) != 1
     raise SystemExit(f"unexpected Fabric fluid conversion class family: {sorted(actual_fabric_fluid)!r}")
 PYEOF
 then
-  echo "fabric-packaged-smoke: SerializerHelper/item-boundary/block-state-descriptor/inventory-metadata/deferred-registration/tile-interface/slot-info/tier/resource/codec/collection/distribution/ChunkUtils/RegistryUtils/LambdaMetaFactoryUtil/long-transfer/dynamic-strict-energy/proxy/config-listener/common-lib-root production/test packaging contract failed" >&2
+  echo "fabric-packaged-smoke: portable-text/SerializerHelper/item-boundary/block-state-descriptor/inventory-metadata/deferred-registration/tile-interface/slot-info/tier/resource/codec/collection/distribution/ChunkUtils/RegistryUtils/LambdaMetaFactoryUtil/long-transfer/dynamic-strict-energy/proxy/config-listener/common-lib-root production/test packaging contract failed" >&2
   exit 1
 fi
 for required_entry in \
+    mekanism/api/IIncrementalEnum.class \
     mekanism/api/RelativeSide.class \
+    mekanism/api/inventory/IHashedItem.class \
+    mekanism/api/text/APILang.class \
+    mekanism/api/text/EnumColor.class \
+    mekanism/api/text/IHasTranslationKey.class \
+    'mekanism/api/text/IHasTranslationKey$IHasEnumNameTranslationKey.class' \
+    mekanism/api/text/ILangEntry.class \
+    mekanism/api/text/TextComponentUtil.class \
+    'mekanism/api/text/TextComponentUtil$1.class' \
     mekanism/api/container/ContainerInteraction.class \
     mekanism/api/container/InContainerGetter.class \
     mekanism/api/container/InContainerGetterLong.class \
@@ -769,7 +838,6 @@ for required_entry in \
     mekanism/api/heat/IHeatHandler.class \
     mekanism/api/heat/IMekanismHeatHandler.class \
     mekanism/api/heat/ISidedHeatHandler.class \
-    'mekanism/api/text/IHasTranslationKey$IHasEnumNameTranslationKey.class' \
     mekanism/common/capabilities/SimpleDynamicHandler.class \
     mekanism/common/capabilities/DynamicHandler.class \
     mekanism/common/capabilities/energy/BasicEnergyContainer.class \

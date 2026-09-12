@@ -5,23 +5,23 @@ import io.netty.buffer.ByteBuf;
 import java.util.Locale;
 import java.util.function.IntFunction;
 import mekanism.api.annotations.NothingNullByDefault;
+import mekanism.api.text.APILang;
 import mekanism.api.text.IHasTranslationKey.IHasEnumNameTranslationKey;
-import net.minecraft.Util;
+import mekanism.api.text.ILangEntry;
 import net.minecraft.core.Direction;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.ByIdMap;
 import net.minecraft.util.StringRepresentable;
 
 @NothingNullByDefault
 public enum RelativeSide implements IHasEnumNameTranslationKey, StringRepresentable {
-    FRONT("front"),
-    LEFT("left"),
-    RIGHT("right"),
-    BACK("back"),
-    TOP("top"),
-    BOTTOM("bottom");
+    FRONT(APILang.FRONT),
+    LEFT(APILang.LEFT),
+    RIGHT(APILang.RIGHT),
+    BACK(APILang.BACK),
+    TOP(APILang.TOP),
+    BOTTOM(APILang.BOTTOM);
 
     /**
      * Codec for serializing sides based on their name.
@@ -43,17 +43,16 @@ public enum RelativeSide implements IHasEnumNameTranslationKey, StringRepresenta
     public static final StreamCodec<ByteBuf, RelativeSide> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, RelativeSide::ordinal);
 
     private final String serializedName;
-    private final String translationKey;
+    private final ILangEntry langEntry;
 
-    RelativeSide(String path) {
+    RelativeSide(ILangEntry langEntry) {
         this.serializedName = name().toLowerCase(Locale.ROOT);
-        this.translationKey = Util.makeDescriptionId("side",
-              ResourceLocation.fromNamespaceAndPath("mekanism", path));
+        this.langEntry = langEntry;
     }
 
     @Override
     public String getTranslationKey() {
-        return translationKey;
+        return langEntry.getTranslationKey();
     }
 
     /**
