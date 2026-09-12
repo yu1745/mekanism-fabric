@@ -5,7 +5,6 @@ import mekanism.api.tier.BaseTier;
 import mekanism.api.tier.ITier;
 import mekanism.common.config.value.CachedDoubleValue;
 import mekanism.common.lib.Color;
-import mekanism.common.util.EnumUtils;
 
 public enum ConductorTier implements ITier {
     BASIC(BaseTier.BASIC, 5, HeatAPI.DEFAULT_HEAT_CAPACITY, 10, Color.rgbad(0.2, 0.2, 0.2, 1)),
@@ -32,7 +31,7 @@ public enum ConductorTier implements ITier {
     }
 
     public static ConductorTier get(BaseTier tier) {
-        for (ConductorTier transmitter : EnumUtils.CONDUCTOR_TIERS) {
+        for (ConductorTier transmitter : values()) {
             if (transmitter.getBaseTier() == tier) {
                 return transmitter;
             }

@@ -4,7 +4,6 @@ import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.tier.BaseTier;
 import mekanism.api.tier.ITier;
 import mekanism.common.config.value.CachedLongValue;
-import mekanism.common.util.EnumUtils;
 import org.jetbrains.annotations.Nullable;
 
 @NothingNullByDefault
@@ -25,7 +24,7 @@ public enum CableTier implements ITier {
     }
 
     public static CableTier get(BaseTier tier) {
-        for (CableTier transmitter : EnumUtils.CABLE_TIERS) {
+        for (CableTier transmitter : values()) {
             if (transmitter.getBaseTier() == tier) {
                 return transmitter;
             }

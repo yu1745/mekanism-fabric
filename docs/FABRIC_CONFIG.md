@@ -11,9 +11,10 @@ NeoForge `ModConfigSpec` / `ModConfig.Type`。它不是 Forge Config API 兼容�
 - `IConfigTranslation` 与仅含 startup 元数据的 `StartupConfigTranslations`；
 - `MekanismStartupConfig`；
 - `CachedValue`、`CachedBooleanValue`、`CachedByteValue`、`CachedShortValue`、`CachedDoubleValue`、`CachedFloatValue`、`CachedIntValue`、`CachedLongValue`；
-- `EnergyCubeTier`、`InductionCellTier`、`InductionProviderTier` 三份 long-valued tier metadata。
+- `EnergyCubeTier`、`InductionCellTier`、`InductionProviderTier` 三份 long-valued tier metadata；
+- Task 029 的 `CableTier`、`ChemicalTankTier`、`ConductorTier`、`FluidTankTier`、`PipeTier`、`TransporterTier`、`TubeTier` 七份 transport/tank tier metadata。
 
-三个 tier 源与 `4646f509` byte-identical；`CachedLongValue` 相对该基线只把 NeoForge `Builder`/`ConfigValue` 两个 import 替换为 `MekanismConfigSpec.Builder`/`.ConfigValue`。新增四个 primitive cached-value 官方源各自相对 `4646f509` **精确只有一个** source-byte 差异：将 NeoForge `ConfigValue` import 替换为 `MekanismConfigSpec.ConfigValue`，其余字节不变。当前 allowlist 为 API/common/platform **47/99/14**。
+前三个 tier 源与 `4646f509` byte-identical；`CachedLongValue` 相对该基线只把 NeoForge `Builder`/`ConfigValue` 两个 import 替换为 `MekanismConfigSpec.Builder`/`.ConfigValue`。新增四个 primitive cached-value 官方源各自相对 `4646f509` **精确只有一个** source-byte 差异：将 NeoForge `ConfigValue` import 替换为 `MekanismConfigSpec.ConfigValue`，其余字节不变。Task 029 七源的 production adaptation 也严格封闭：五个带 `get(BaseTier)` 的 enum 只移除 `EnumUtils` import 并以自身 `values()` 替代对应数组，保持 order/identity/mapping/`BASIC` fallback；四个引用 NeoForge fluid 常量的 enum 只移除 `FluidType` import，并将全部 compile-time `FluidType.BUCKET_VOLUME` 精确替换为 integer literal `1_000`，保持当前 metadata 值和 `int`/`long` 表达式行为。这个 `1_000` 是 Mekanism 既有 mB/config metadata bucket basis，刻意不是 Fabric Transfer API 的 81,000-droplet transaction unit。当前 allowlist 为 API/common/platform **47/110/14**，各 slice 内唯一。
 
 Fabric 侧 `MekanismConfigSpec` 提供当前声明实际需要的 category、translation/comment、
 `gameRestart`、strict boolean、typed byte/short、int/long/double 范围与 value API；`FabricMekanismConfigManager` 只管理
@@ -22,7 +23,7 @@ Fabric 侧 `MekanismConfigSpec` 提供当前声明实际需要的 category、tra
 JAR 保持独立，LGPL-3.0 文本与 attribution 位于 `META-INF/licenses/`。
 
 当前明确不实现 generic/resolvable/list/map/enum cached values 或相应 define API、world restart、文件监听、配置同步、客户端 UI，也不纳入
-`TierConfig`、会一次构造九份配置的 `MekanismConfig` 或其他真实 config 文件。其他 tier family、owners/callers、machines/blocks/items、capability registration、external energy/transactions、networking/serialization/persistence/lifecycle/threading 同样延期。这只是 schema/value 支持与 tier metadata，并未激活任何新增真实配置或 `tiers.toml`。
+`TierConfig`、会一次构造九份配置的 `MekanismConfig` 或其他真实 config 文件。所有 tier owners/callers、cables/pipes/tubes/transporters/conductors/tanks、machines/blocks/items、capability registration、Fabric fluid/chemical storage/conversion/transactions、external energy、networking/serialization/persistence/lifecycle/threading 同样延期。这只是 schema/value 支持与 tier metadata，并未激活任何新增真实配置或 `tiers.toml`。
 
 ## Startup 契约
 
@@ -72,7 +73,8 @@ Mekanism TOML。
 - `fabric/src/test/java/mekanism/fabric/config/MekanismConfigSpecTest.java`；
 - `fabric/src/test/java/mekanism/common/config/MekanismStartupConfigTest.java`；
 - `fabric/src/test/java/mekanism/common/config/value/PrimitiveCachedValueTest.java` 中恰好四个 `@Test`（每个 wrapper 一个）；
-- 三个 source-slice NeoForge 引用门禁，以及 config-value JAR family 精确九类、无 test/helper/fixture 泄漏的静态门禁；
+- `fabric/src/test/java/mekanism/common/tier/TierMetadataTest.java` 恰好 12 个 `@Test`，其中 Task 029 一 enum 一个新方法，固定完整 metadata 与 loaded config-reference override/live-set/reflective-finally restoration；
+- 三个 source-slice NeoForge 引用门禁，以及 config-value JAR family 精确九类、direct tier family 精确 13 类且无 test/helper/fixture 泄漏的静态门禁；
 - `./fabric-build.sh test`；
 - `scripts/fabric-packaged-smoke.sh`；
 - `./build.sh --clean --out <dir>`。

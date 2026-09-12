@@ -267,11 +267,18 @@ if actual_slot_info != expected_slot_info or any(entries.count(entry) != 1 for e
     raise SystemExit(f"unexpected slot-info class family: {sorted(actual_slot_info)!r}")
 expected_tiers = {
     "mekanism/common/tier/BinTier.class",
+    "mekanism/common/tier/CableTier.class",
+    "mekanism/common/tier/ChemicalTankTier.class",
+    "mekanism/common/tier/ConductorTier.class",
     "mekanism/common/tier/EnergyCubeTier.class",
     "mekanism/common/tier/FactoryTier.class",
+    "mekanism/common/tier/FluidTankTier.class",
     "mekanism/common/tier/InductionCellTier.class",
     "mekanism/common/tier/InductionProviderTier.class",
+    "mekanism/common/tier/PipeTier.class",
     "mekanism/common/tier/QIODriveTier.class",
+    "mekanism/common/tier/TransporterTier.class",
+    "mekanism/common/tier/TubeTier.class",
 }
 actual_tiers = {
     entry for entry in entries

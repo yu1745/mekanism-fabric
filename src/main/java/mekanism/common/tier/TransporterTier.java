@@ -3,7 +3,6 @@ package mekanism.common.tier;
 import mekanism.api.tier.BaseTier;
 import mekanism.api.tier.ITier;
 import mekanism.common.config.value.CachedIntValue;
-import mekanism.common.util.EnumUtils;
 
 public enum TransporterTier implements ITier {
     BASIC(BaseTier.BASIC, 1, 5),
@@ -24,7 +23,7 @@ public enum TransporterTier implements ITier {
     }
 
     public static TransporterTier get(BaseTier tier) {
-        for (TransporterTier transmitter : EnumUtils.TRANSPORTER_TIERS) {
+        for (TransporterTier transmitter : values()) {
             if (transmitter.getBaseTier() == tier) {
                 return transmitter;
             }
