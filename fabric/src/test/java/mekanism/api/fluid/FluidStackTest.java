@@ -21,6 +21,7 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
@@ -28,6 +29,7 @@ import net.minecraft.core.HolderSet;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.core.component.DataComponentPatch;
+import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.component.PatchedDataComponentMap;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -180,6 +182,45 @@ class FluidStackTest {
         stack.setAmount(1);
         assertEquals(Component.literal("map-applied"), stack.get(DataComponents.CUSTOM_NAME));
         assertFalse(stack.getComponentsPatch().isEmpty());
+    }
+
+    @Test
+    void mutableComponentConvenienceOverloadsPreserveDefaultsReturnsAndAbsentCopyClearing() {
+        FluidStack stack = new FluidStack(Fluids.WATER, 1_000);
+        Supplier<DataComponentType<Component>> customName = () -> DataComponents.CUSTOM_NAME;
+        Supplier<DataComponentType<Integer>> maxStackSize = () -> DataComponents.MAX_STACK_SIZE;
+
+        Component suppliedName = Component.literal("supplier-set");
+        assertEquals(null, stack.set(customName, suppliedName));
+        assertSame(suppliedName, stack.get(DataComponents.CUSTOM_NAME));
+        assertSame(suppliedName, stack.remove(customName));
+        assertEquals(null, stack.get(DataComponents.CUSTOM_NAME));
+
+        assertEquals(null, stack.update(DataComponents.MAX_STACK_SIZE, 4, 3, Integer::sum));
+        assertEquals(7, stack.get(DataComponents.MAX_STACK_SIZE));
+        assertEquals(7, stack.update(maxStackSize, 100, 2, (current, factor) -> current * factor));
+        assertEquals(14, stack.get(DataComponents.MAX_STACK_SIZE));
+        assertEquals(14, stack.remove(DataComponents.MAX_STACK_SIZE));
+        assertEquals(null, stack.update(DataComponents.MAX_STACK_SIZE, 5, current -> current + 1));
+        assertEquals(6, stack.get(DataComponents.MAX_STACK_SIZE));
+        assertEquals(6, stack.update(maxStackSize, 100, current -> current * 2));
+        assertEquals(12, stack.get(DataComponents.MAX_STACK_SIZE));
+
+        FluidStack directSource = new FluidStack(Fluids.LAVA, 1);
+        Component directName = Component.literal("direct-copy");
+        directSource.set(DataComponents.CUSTOM_NAME, directName);
+        stack.set(DataComponents.CUSTOM_NAME, Component.literal("stale"));
+        stack.copyFrom(directSource, DataComponents.CUSTOM_NAME, DataComponents.MAX_STACK_SIZE);
+        assertSame(directName, stack.get(DataComponents.CUSTOM_NAME));
+        assertEquals(null, stack.get(DataComponents.MAX_STACK_SIZE));
+
+        FluidStack supplierSource = new FluidStack(Fluids.LAVA, 1);
+        supplierSource.set(DataComponents.MAX_STACK_SIZE, 48);
+        stack.set(DataComponents.CUSTOM_NAME, Component.literal("stale-again"));
+        stack.set(DataComponents.MAX_STACK_SIZE, 16);
+        stack.copyFrom(supplierSource, customName, maxStackSize);
+        assertEquals(null, stack.get(DataComponents.CUSTOM_NAME));
+        assertEquals(48, stack.get(DataComponents.MAX_STACK_SIZE));
     }
 
     @Test
@@ -339,11 +380,13 @@ class FluidStackTest {
     void vanillaDescriptionsDeprecatedBehaviorToStringAndOmittedNeoForgeSurfaceAreExplicit() throws Exception {
         FluidStack water = new FluidStack(Fluids.WATER, 1_000);
         FluidStack lava = new FluidStack(Fluids.LAVA, 1_000);
-        assertEquals("fluid.minecraft.water", water.getDescriptionId());
-        assertEquals("fluid.minecraft.lava", lava.getDescriptionId());
-        assertEquals(Component.translatable("fluid.minecraft.water"), water.getHoverName());
+        assertEquals("block.minecraft.water", water.getDescriptionId());
+        assertEquals("block.minecraft.lava", lava.getDescriptionId());
+        assertEquals("block.minecraft.air", FluidStack.EMPTY.getDescriptionId());
+        assertEquals("block.minecraft.water", new FluidStack(Fluids.FLOWING_WATER, 1).getDescriptionId());
+        assertEquals(Component.translatable("block.minecraft.water"), water.getHoverName());
         assertEquals(water.getHoverName(), water.getDisplayName());
-        assertEquals("fluid.minecraft.water", water.getTranslationKey());
+        assertEquals("block.minecraft.water", water.getTranslationKey());
         assertEquals("1000 " + Fluids.WATER, water.toString());
         assertTrue(water.toString().startsWith("1000 net.minecraft.world.level.material.WaterFluid$Source@"));
 

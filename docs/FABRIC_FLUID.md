@@ -51,9 +51,11 @@ The public value surface retains the platform-neutral NeoForge/Mekanism contract
 - holder/amount/patch, holder/amount, and fluid/amount constructors;
 - mutable `int` amount and a `PatchedDataComponentMap` over
   `DataComponentMap.EMPTY`;
-- vanilla `DataComponentHolder`, plus public `set`, `remove`, and both
-  `applyComponents` overloads because NeoForge's
-  `MutableDataComponentHolder` is unavailable;
+- vanilla `DataComponentHolder`; NeoForge's nominal
+  `MutableDataComponentHolder` parent is unavailable, but callable parity is restored
+  with direct and `Supplier` `set`/`remove`, both direct/`Supplier` `update`
+  families, both direct/`Supplier` varargs `copyFrom` families, and both
+  `applyComponents` overloads;
 - holder, fluid, tag, holder-set, and holder-predicate tests plus `getTags`;
 - copies, split/clear, amount limits, raw signed growth/shrinkage, matching, and
   fluid/component hashing;
@@ -69,30 +71,31 @@ new nonpositive object with the singleton; copying an already empty stack does.
 overflow and the empty-observing amount behavior. These are compatibility
 semantics, not recommended arithmetic.
 
-Component copies own independent `PatchedDataComponentMap` instances. Component
-comparison is structural only in the explicit static/deprecated helpers.
-`Object.equals` and `Object.hashCode` deliberately remain identity-based; no
-structural overrides are added.
+Component copies own independent `PatchedDataComponentMap` instances. Each
+`update` overload delegates through `getOrDefault` and `set`; each `copyFrom`
+overload passes the source value (including `null`) to `set`, so a target component
+is removed when the source lacks it. Component comparison is structural only in
+the explicit static/deprecated helpers. `Object.equals` and `Object.hashCode`
+deliberately remain identity-based; no structural overrides are added.
 
-### Description delta and omitted methods
+### Block-derived descriptions and omitted methods
 
-Fabric has no NeoForge `FluidType` contract. Task 034 therefore defines:
+Fabric has no NeoForge `FluidType` contract. Task 034 uses the vanilla block
+represented by the fluid's default state:
 
 ```java
-Util.makeDescriptionId("fluid", BuiltInRegistries.FLUID.getKey(getFluid()))
+getFluid().defaultFluidState().createLegacyBlock().getBlock().getDescriptionId()
 Component.translatable(getDescriptionId())
 ```
 
-for `getDescriptionId()` and `getHoverName()`. Tests bind the resulting built-in
-IDs `fluid.minecraft.water` and `fluid.minecraft.lava`. Custom NeoForge
-`FluidType` description overrides are intentionally unavailable.
-
-The exact pinned NeoForge registration source also assigns its built-in water and
-lava `FluidType` properties the explicit IDs `block.minecraft.water` and
-`block.minecraft.lava`. Consequently, the mandated registry-derived Fabric IDs
-above are an intentional observable platform delta rather than byte-for-byte IDs
-of those two explicit NeoForge registrations. This discrepancy must not be hidden
-by a false compatibility claim.
+for `getDescriptionId()` and `getHoverName()`. Tests bind water, lava, and empty
+to `block.minecraft.water`, `block.minecraft.lava`, and `block.minecraft.air`,
+and bind flowing water as a representative built-in block-fluid case without a
+synthetic registry fixture. The exact pinned NeoForge registrations assign the
+same explicit water/lava IDs, so built-in behavior has parity rather than the
+previously documented false `fluid.*` delta. The remaining adaptation is nominal:
+Fabric has no `FluidType`, and a custom NeoForge `FluidType` description override
+is therefore unavailable; the Fabric convention is block-derived.
 
 The following NeoForge-only methods are deliberately absent:
 
@@ -159,12 +162,13 @@ water and lava round-trip exactly. No floor/bounded transaction helper is expose
 
 ## Test and package boundary
 
-Task 034 adds exactly two test classes and twelve `@Test` methods:
+Task 034 adds exactly two test classes and thirteen `@Test` methods:
 
-- ordinary `FluidStackTest`: eight methods covering emptiness/copies, raw amount
-  families, component mutation/copy independence, holder/tag/predicate/identity
+- ordinary `FluidStackTest`: nine methods covering emptiness/copies, raw amount
+  families, component mutation/copy independence, every restored component
+  overload family (including absent-source clearing), holder/tag/predicate/identity
   helpers, JSON codecs, registry-aware NBT, exact stream bytes/errors, and
-  description/deprecated/omitted surfaces;
+  block-derived description/deprecated/omitted surfaces;
 - Knot `FabricFluidConversionsTest`: four methods covering source water/lava,
   components/blank, flowing rejection, exact factor/boundaries/failures, and a
   deterministic 100,000-case amount loop with 4,096 value round trips.
@@ -172,8 +176,8 @@ Task 034 adds exactly two test classes and twelve `@Test` methods:
 The ordinary runtime remains free of `fabric-loader-junit` and retains all three
 jqwik properties. Task 033's unchanged item transaction suite and the new fluid
 conversion suite share one `fabricTransferTest` source set/task, so a full transfer
-run starts Knot once. Expected totals are ordinary **64 suites / 304 tests**,
-transfer **2 suites / 8 tests**, aggregate **66 suites / 312 tests**.
+run starts Knot once. Expected totals are ordinary **64 suites / 305 tests**,
+transfer **2 suites / 8 tests**, aggregate **66 suites / 313 tests**.
 
 The remapped-JAR static gate requires exactly one
 `mekanism/api/fluid/FluidStack.class` and exactly one

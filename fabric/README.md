@@ -198,13 +198,15 @@ persistence, recipes, tiles, machines, and Crusher remain deferred.
 Task 034 adds only the independently implemented `mekanism.api.fluid.FluidStack`
 value and `mekanism.fabric.fluid.FabricFluidConversions` value/unit seam. The API
 retains signed-int mB, empty/component/copy/matching and exact JSON/NBT/stream
-contracts while explicitly omitting FluidType/capability-only methods. The Fabric
-class pins factor 81, exact divisibility/int-domain checks, component/fluid identity,
-blank/zero mapping, and fail-closed flowing normalization. It adds no Storage,
-Transaction, handler, lookup, provider, cache, or lifecycle claim. Eight ordinary
-and four Knot methods bring expected totals to 64 suites/304 tests and 2 suites/8
-tests respectively; the three jqwik properties remain ordinary-only. The static JAR
-gate permits exactly the two new outer classes and no fluid startup marker. See
+contracts while explicitly omitting FluidType/capability-only methods. Although the
+NeoForge mutable nominal parent is absent, all platform-neutral component overload
+families remain callable; descriptions follow the default-state legacy block. The
+Fabric class pins factor 81, exact divisibility/int-domain checks, component/fluid
+identity, blank/zero mapping, and fail-closed flowing normalization. It adds no
+Storage, Transaction, handler, lookup, provider, cache, or lifecycle claim. Nine
+ordinary and four Knot methods bring expected totals to 64 suites/305 tests and 2
+suites/8 tests respectively; the three jqwik properties remain ordinary-only. The
+static JAR gate permits exactly the two new outer classes and no fluid startup marker. See
 `../docs/FABRIC_FLUID.md`.
 
 The next nearby API candidates remain blocked by deliberately excluded boundaries:

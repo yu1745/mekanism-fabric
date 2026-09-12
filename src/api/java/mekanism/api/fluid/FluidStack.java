@@ -8,10 +8,12 @@ import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.EncoderException;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.BiFunction;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
 import mekanism.api.annotations.NothingNullByDefault;
-import net.minecraft.Util;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.HolderSet;
@@ -277,8 +279,55 @@ public final class FluidStack implements DataComponentHolder {
     }
 
     @Nullable
+    public <T> T set(Supplier<? extends DataComponentType<? super T>> type, @Nullable T component) {
+        return set(type.get(), component);
+    }
+
+    @Nullable
+    public <T, U> T update(DataComponentType<T> type, T defaultValue, U extraValue, BiFunction<T, U, T> updater) {
+        return set(type, updater.apply(getOrDefault(type, defaultValue), extraValue));
+    }
+
+    @Nullable
+    public <T, U> T update(Supplier<? extends DataComponentType<T>> type, T defaultValue, U extraValue,
+          BiFunction<T, U, T> updater) {
+        return update(type.get(), defaultValue, extraValue, updater);
+    }
+
+    @Nullable
+    public <T> T update(DataComponentType<T> type, T defaultValue, UnaryOperator<T> updater) {
+        return set(type, updater.apply(getOrDefault(type, defaultValue)));
+    }
+
+    @Nullable
+    public <T> T update(Supplier<? extends DataComponentType<T>> type, T defaultValue, UnaryOperator<T> updater) {
+        return update(type.get(), defaultValue, updater);
+    }
+
+    @Nullable
     public <T> T remove(DataComponentType<? extends T> type) {
         return components.remove(type);
+    }
+
+    @Nullable
+    public <T> T remove(Supplier<? extends DataComponentType<? extends T>> type) {
+        return remove(type.get());
+    }
+
+    public void copyFrom(DataComponentHolder source, DataComponentType<?>... types) {
+        for (DataComponentType<?> type : types) {
+            copyFrom(type, source);
+        }
+    }
+
+    public void copyFrom(DataComponentHolder source, Supplier<? extends DataComponentType<?>>... types) {
+        for (Supplier<? extends DataComponentType<?>> type : types) {
+            copyFrom(type.get(), source);
+        }
+    }
+
+    private <T> void copyFrom(DataComponentType<T> type, DataComponentHolder source) {
+        set(type, source.get(type));
     }
 
     public void applyComponents(DataComponentPatch patch) {
@@ -318,7 +367,7 @@ public final class FluidStack implements DataComponentHolder {
     }
 
     public String getDescriptionId() {
-        return Util.makeDescriptionId("fluid", BuiltInRegistries.FLUID.getKey(getFluid()));
+        return getFluid().defaultFluidState().createLegacyBlock().getBlock().getDescriptionId();
     }
 
     public Component getHoverName() {

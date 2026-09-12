@@ -59,13 +59,18 @@ shim，也不把 API domain 改成 droplet `long`。
 ### 保留 surface 与行为
 
 保留 holder/fluid 的 `int` constructors、optional `DataComponentPatch`、public
-`EMPTY`、`DataComponentHolder`/`PatchedDataComponentMap`、显式
-`set`/`remove`/两种 `applyComponents`、raw amount/copy/split/clear family、
-tag/fluid/holder/holder-set/predicate queries、matching/hash helpers、identity
-`Object.equals/hashCode`、`lenientOtionalFieldOf` 拼写、registry-aware
-parse/save、JSON/NBT/stream formats、toString，以及不需 capability 的 deprecated
-display/equality/containment methods。empty 精确为 identity EMPTY、
-`Fluids.EMPTY` 或 raw amount `<= 0`；observer 返回 empty fluid/zero/empty patch。
+`EMPTY`、`DataComponentHolder`/`PatchedDataComponentMap`、raw
+amount/copy/split/clear family、tag/fluid/holder/holder-set/predicate queries、
+matching/hash helpers、identity `Object.equals/hashCode`、
+`lenientOtionalFieldOf` 拼写、registry-aware parse/save、JSON/NBT/stream
+formats、toString，以及不需 capability 的 deprecated display/equality/containment
+methods。NeoForge `MutableDataComponentHolder` nominal parent 不可用，但 callable
+platform-neutral parity 已恢复：direct/Supplier `set`、direct/Supplier `remove`、
+BiFunction 与 UnaryOperator 两组 direct/Supplier `update`，以及
+DataComponentType/Supplier 两组 varargs `copyFrom` 和两种 `applyComponents`。
+`update` 精确经 `getOrDefault`/`set`，`copyFrom` 在 source 缺值时删除 target
+值。empty 精确为 identity EMPTY、`Fluids.EMPTY` 或 raw amount `<= 0`；observer
+返回 empty fluid/zero/empty patch。
 
 `FLUID_NON_EMPTY_CODEC` 排除 `minecraft:empty`；lazy `CODEC` 精确使用 required
 `id`、无 default 的 positive `amount`、optional empty `components`。
@@ -75,15 +80,17 @@ fluid holder 与 patch；strict empty exceptions 精确为
 `Cannot encode empty FluidStack`。NeoForge diagnostic logging wrapper 删除，vanilla
 codec 的 data/result/exception behavior 不改。
 
-### Fabric delta
+### Fabric adaptation
 
 `getDescriptionId()` 固定为
-`Util.makeDescriptionId("fluid", BuiltInRegistries.FLUID.getKey(getFluid()))`，
-`getHoverName()` 固定为该 ID 的 translatable component。测试固定 water/lava 为
-`fluid.minecraft.water`/`fluid.minecraft.lava`；custom `FluidType` override 不可用。
-精确 NeoForge 21.1.200 source 同时显示 built-in FluidType registrations 显式使用
-`block.minecraft.water`/`block.minecraft.lava`，因此这两个 string ID 是明确
-platform delta，不能误写成 byte-identical。
+`getFluid().defaultFluidState().createLegacyBlock().getBlock().getDescriptionId()`，
+`getHoverName()` 仍是该 ID 的 translatable component。测试固定 WATER/LAVA/EMPTY
+为 `block.minecraft.water`/`block.minecraft.lava`/`block.minecraft.air`，并以
+flowing water 固定一个无需自造 registry 的代表性 block-fluid 行为。精确
+NeoForge 21.1.200 built-in registrations 对 water/lava 使用相同 explicit block
+IDs，因此内建行为保持 parity，不存在先前误记的 `fluid.*` delta。剩余差异是
+Fabric 没有 nominal `FluidType`，所以 custom `FluidType` description override
+不可用；Fabric convention 明确为 block-derived。
 
 刻意删除 `getFluidType()`、`is(FluidType)` 与 deprecated
 `isFluidEqual(ItemStack)` capability bridge。所有既有 NeoForge FluidStack imports
