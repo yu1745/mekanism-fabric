@@ -17,6 +17,7 @@ base {
 sourceSets {
     handshakeMismatchFixture
     handshakeMissingReceiverFixture
+    clientWindowFixture
     fabricTransferTest
     fabricRegistryTest
     fabricDataMapTest
@@ -27,6 +28,7 @@ loom {
     accessWidenerPath = file('src/main/resources/mekanism.accesswidener')
     createRemapConfigurations(sourceSets.handshakeMismatchFixture)
     createRemapConfigurations(sourceSets.handshakeMissingReceiverFixture)
+    createRemapConfigurations(sourceSets.clientWindowFixture)
     createRemapConfigurations(sourceSets.dataMapReloadFixture)
 
     mods {
@@ -38,6 +40,9 @@ loom {
         }
         handshakeMissingReceiverFixture {
             sourceSet sourceSets.handshakeMissingReceiverFixture
+        }
+        clientWindowFixture {
+            sourceSet sourceSets.clientWindowFixture
         }
         dataMapReloadFixture {
             sourceSet sourceSets.dataMapReloadFixture
@@ -58,6 +63,13 @@ loom {
             runDir = System.getProperty('mekanism.handshake.clientDir', 'run/handshake-client')
             programArgs '--quickPlayMultiplayer', System.getProperty('mekanism.handshake.address', '127.0.0.1:25567'),
                   '--username', System.getProperty('mekanism.handshake.username', 'MekanismSmoke')
+        }
+        clientWindowFixture {
+            client()
+            name = 'Mekanism client window persistence fixture'
+            source sourceSets.clientWindowFixture
+            runDir = System.getProperty('mekanism.window.clientDir', 'run/client-window-fixture')
+            property 'mekanism.window.fixturePhase', System.getProperty('mekanism.window.fixturePhase', '1')
         }
         handshakeMismatchClient {
             client()
@@ -101,7 +113,7 @@ def platformSlice = loadSlice('platform-slice.txt')
 def apiSliceFiles = apiSlice.collect { file("../src/api/java/${it}") }
 def commonSliceFiles = commonSlice.collect { file("../src/main/java/${it}") }
 def platformSliceFiles = platformSlice.collect { file("src/main/java/${it}") }
-if (apiSlice.size() != 65 || commonSlice.size() != 122 || platformSlice.size() != 22) {
+if (apiSlice.size() != 65 || commonSlice.size() != 145 || platformSlice.size() != 24) {
     throw new GradleException("Unexpected Fabric source slice counts: api=${apiSlice.size()} common=${commonSlice.size()} platform=${platformSlice.size()}")
 }
 
@@ -179,6 +191,11 @@ sourceSets {
         // Reuse external dependencies but never main or mismatch-fixture output.
         compileClasspath += sourceSets.main.compileClasspath
         runtimeClasspath += sourceSets.main.runtimeClasspath - sourceSets.main.output
+    }
+    clientWindowFixture {
+        // The real-client probe sees production, but production never sees fixture output.
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.output.classesDirs + (sourceSets.main.runtimeClasspath - sourceSets.main.output)
     }
     fabricTransferTest {
         // Keep Knot and its TCCL out of the ordinary jqwik/Jupiter suite. This source set
@@ -280,6 +297,51 @@ tasks.named('check') {
     dependsOn verifyHandshakeFixtureIsolation
 }
 
+def clientWindowFixtureSources = files(sourceSets.clientWindowFixture.allJava)
+def clientWindowFixtureRuntime = files(sourceSets.clientWindowFixture.runtimeClasspath)
+def mainResourceOutputFiles = files(sourceSets.main.output.resourcesDir)
+def clientWindowFixtureMetadata = layout.projectDirectory.file('src/clientWindowFixture/resources/fabric.mod.json')
+def verifyClientWindowFixtureIsolation = tasks.register('verifyClientWindowFixtureIsolation') {
+    group = 'verification'
+    description = 'Checks the single real-client window probe stays outside production output and metadata.'
+    inputs.files(clientWindowFixtureSources, clientWindowFixtureMetadata)
+    doLast {
+        def sources = clientWindowFixtureSources.files
+        if (sources.size() != 1 || sources.first().name != 'ClientWindowPersistenceFixture.java') {
+            throw new GradleException("clientWindowFixture must contain exactly its one fixed source: ${sources}")
+        }
+        def metadata = new JsonSlurper().parse(clientWindowFixtureMetadata.asFile)
+        if (metadata.id != 'mekanism' || metadata.environment != 'client'
+              || metadata.entrypoints?.main != ['mekanism.fabric.MekanismFabricBootstrap']
+              || metadata.entrypoints?.client != ['mekanism.fabric.MekanismFabricClientBootstrap', 'mekanism.fixture.ClientWindowPersistenceFixture']) {
+            throw new GradleException('Client-window fixture metadata must combine the real bootstraps and sole fixture in one isolated client mod')
+        }
+        def leaks = sources.findAll { it.text.contains('net.neoforged.') || it.text.contains('mekanism.api.chemical')
+              || it.text.contains('mekanism.common.content.qio') }
+        if (!leaks.isEmpty()) {
+            throw new GradleException("Client-window fixture contains forbidden platform/deferred references: ${leaks}")
+        }
+        def mainResourceOutput = mainResourceOutputFiles.files.collect { it.canonicalFile }.toSet()
+        def fixtureRuntime = clientWindowFixtureRuntime.files.collect { it.canonicalFile }.toSet()
+        if (!mainResourceOutput.intersect(fixtureRuntime).isEmpty()) {
+            throw new GradleException('Client-window fixture runtime must not load the production fabric.mod.json as a second mod root')
+        }
+        def productionSources = (apiSliceFiles + commonSliceFiles + platformSliceFiles).collect { it.canonicalFile }.toSet()
+        if (!productionSources.intersect(sources.collect { it.canonicalFile }.toSet()).isEmpty()) {
+            throw new GradleException('Client-window fixture source entered the production allowlist')
+        }
+    }
+}
+tasks.named('compileClientWindowFixtureJava') {
+    dependsOn verifyClientWindowFixtureIsolation
+}
+tasks.named('runClientWindowFixture') {
+    dependsOn verifyClientWindowFixtureIsolation
+}
+tasks.named('check') {
+    dependsOn verifyClientWindowFixtureIsolation
+}
+
 dependencies {
     minecraft "com.mojang:minecraft:${minecraft_version}"
     mappings loom.officialMojangMappings()
@@ -290,6 +352,8 @@ dependencies {
     modHandshakeMismatchFixtureImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
     modHandshakeMissingReceiverFixtureImplementation "net.fabricmc:fabric-loader:${loader_version}"
     modHandshakeMissingReceiverFixtureImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
+    modClientWindowFixtureImplementation "net.fabricmc:fabric-loader:${loader_version}"
+    modClientWindowFixtureImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
 
     implementation "com.electronwill.night-config:core:${night_config_version}"
     implementation "com.electronwill.night-config:toml:${night_config_version}"
@@ -328,6 +392,7 @@ processResources {
         expand version: resolvedModVersion
     }
     from('../src/datagen/generated/mekanism') {
+        include 'assets/mekanism/lang/en_us.json'
         include 'data/mekanism/data_maps/damage_type/mekasuit_absorption.json'
         include 'data/mekanism/tags/damage_type/mekasuit_always_supported.json'
     }
@@ -415,6 +480,10 @@ def registryRootTestSource = layout.projectDirectory.file('src/fabricRegistryTes
 def dataMapOrdinaryTestSource = layout.projectDirectory.file('src/test/java/mekanism/fabric/datamaps/FabricDataMapSemanticsTest.java')
 def dataMapKnotTestSource = layout.projectDirectory.file('src/fabricDataMapTest/java/mekanism/fabric/datamaps/FabricDataMapResourceStackIntegrationTest.java')
 def distributionPropertySource = layout.projectDirectory.file('../src/test/java/mekanism/common/lib/distribution/DistributionPropertyTest.java')
+def windowConfigTestSource = layout.projectDirectory.file('src/test/java/mekanism/fabric/config/FabricWindowConfigTest.java')
+def windowDomainTestSource = layout.projectDirectory.file('src/test/java/mekanism/fabric/config/WindowDomainTest.java')
+def concreteSlotTestSource = layout.projectDirectory.file('src/fabricTransferTest/java/mekanism/common/inventory/ConcreteInventorySlotTest.java')
+def fabricItemStorageTestSource = layout.projectDirectory.file('src/fabricTransferTest/java/mekanism/fabric/item/FabricItemStorageTest.java')
 def ordinaryTestRuntimeFiles = files(sourceSets.test.runtimeClasspath)
 def transferTestRuntimeFiles = files(sourceSets.fabricTransferTest.runtimeClasspath)
 def registryTestRuntimeFiles = files(sourceSets.fabricRegistryTest.runtimeClasspath)
@@ -426,7 +495,8 @@ def verifyFabricTestContract = tasks.register('verifyFabricTestContract') {
     description = 'Checks isolated loader runtimes and exact ordinary/transfer/root/data-map test totals.'
     dependsOn tasks.named('test'), fabricTransferTest, fabricRegistryTest, fabricDataMapTest
     inputs.files(registryOrdinaryTestSource, deferredOrdinaryTestSource, registryRootTestSource,
-          dataMapOrdinaryTestSource, dataMapKnotTestSource, distributionPropertySource)
+          dataMapOrdinaryTestSource, dataMapKnotTestSource, distributionPropertySource,
+          windowConfigTestSource, windowDomainTestSource, concreteSlotTestSource, fabricItemStorageTestSource)
     doLast {
         def loaderJunitFiles = { runtimeFiles ->
             runtimeFiles.files.findAll { it.name.startsWith('fabric-loader-junit-') && it.name.endsWith('.jar') }
@@ -452,8 +522,10 @@ def verifyFabricTestContract = tasks.register('verifyFabricTestContract') {
         }
         if (annotationCount(registryOrdinaryTestSource) != 5 || annotationCount(deferredOrdinaryTestSource) != 5
               || annotationCount(registryRootTestSource) != 1 || annotationCount(dataMapOrdinaryTestSource) != 4
-              || annotationCount(dataMapKnotTestSource) != 1) {
-            throw new GradleException('Registry/data-map tests must remain exactly 5 + 5 registry ordinary, 1 root, 4 data-map ordinary, and 1 data-map Knot methods')
+              || annotationCount(dataMapKnotTestSource) != 1 || annotationCount(windowConfigTestSource) != 6
+              || annotationCount(windowDomainTestSource) != 6 || annotationCount(concreteSlotTestSource) != 6
+              || annotationCount(fabricItemStorageTestSource) != 5) {
+            throw new GradleException('Registry/data-map/window/slot fixed test method counts changed')
         }
         def propertyText = distributionPropertySource.asFile.text
         if ((propertyText =~ /@Property\(tries = TRIES\)/).count != 3
@@ -476,12 +548,12 @@ def verifyFabricTestContract = tasks.register('verifyFabricTestContract') {
             }
             [reports.length, tests]
         }
-        def ordinary = readTotals(ordinaryXmlResults, 'ordinary', 68, 324)
-        def transfer = readTotals(transferXmlResults, 'transfer', 2, 8)
+        def ordinary = readTotals(ordinaryXmlResults, 'ordinary', 70, 336)
+        def transfer = readTotals(transferXmlResults, 'transfer', 3, 15)
         def registry = readTotals(registryXmlResults, 'root-registry', 1, 1)
         def dataMap = readTotals(dataMapXmlResults, 'data-map', 1, 1)
-        if (ordinary[0] + transfer[0] + registry[0] + dataMap[0] != 72
-              || ordinary[1] + transfer[1] + registry[1] + dataMap[1] != 334) {
+        if (ordinary[0] + transfer[0] + registry[0] + dataMap[0] != 75
+              || ordinary[1] + transfer[1] + registry[1] + dataMap[1] != 353) {
             throw new GradleException('Unexpected aggregate Fabric test totals')
         }
     }

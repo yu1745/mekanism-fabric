@@ -10,7 +10,6 @@ import mekanism.api.IContentsListener;
 import mekanism.api.SerializationConstants;
 import mekanism.api.SerializerHelper;
 import mekanism.api.annotations.NothingNullByDefault;
-import mekanism.api.functions.ConstantPredicates;
 import mekanism.api.inventory.IInventorySlot;
 import mekanism.common.inventory.container.slot.ContainerSlotType;
 import mekanism.common.inventory.container.slot.InventoryContainerSlot;
@@ -28,7 +27,7 @@ import org.jetbrains.annotations.Nullable;
 public class BasicInventorySlot implements IInventorySlot {
 
     public static BasicInventorySlot at(@Nullable IContentsListener listener, int x, int y) {
-        return at(ConstantPredicates.alwaysTrue(), listener, x, y);
+        return at(stack -> true, listener, x, y);
     }
 
     public static BasicInventorySlot at(Predicate<@NotNull ItemStack> validator, @Nullable IContentsListener listener, int x, int y) {
@@ -40,18 +39,18 @@ public class BasicInventorySlot implements IInventorySlot {
         if (limit < 1) {
             throw new IllegalArgumentException("Slots with a custom limit must allow at least one item");
         }
-        return new BasicInventorySlot(limit, ConstantPredicates.alwaysTrueBi(), ConstantPredicates.alwaysTrueBi(), validator, listener, x, y);
+        return new BasicInventorySlot(limit, (stack, automation) -> true, (stack, automation) -> true, validator, listener, x, y);
     }
 
     public static BasicInventorySlot at(Predicate<@NotNull ItemStack> canExtract, Predicate<@NotNull ItemStack> canInsert, @Nullable IContentsListener listener, int x, int y) {
         Objects.requireNonNull(canExtract, "Extraction validity check cannot be null");
         Objects.requireNonNull(canInsert, "Insertion validity check cannot be null");
-        return new BasicInventorySlot(canExtract, canInsert, ConstantPredicates.alwaysTrue(), listener, x, y);
+        return new BasicInventorySlot(canExtract, canInsert, stack -> true, listener, x, y);
     }
 
     public static BasicInventorySlot at(BiPredicate<@NotNull ItemStack, @NotNull AutomationType> canExtract,
           BiPredicate<@NotNull ItemStack, @NotNull AutomationType> canInsert, @Nullable IContentsListener listener, int x, int y) {
-        return at(canExtract, canInsert, ConstantPredicates.alwaysTrue(), listener, x, y);
+        return at(canExtract, canInsert, stack -> true, listener, x, y);
     }
 
     public static BasicInventorySlot at(BiPredicate<@NotNull ItemStack, @NotNull AutomationType> canExtract,

@@ -5,7 +5,6 @@ import java.util.Objects;
 import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
 import mekanism.api.tier.ITier;
-import mekanism.common.Mekanism;
 import mekanism.common.tier.BinTier;
 import mekanism.common.tier.CableTier;
 import mekanism.common.tier.ChemicalTankTier;
@@ -19,6 +18,7 @@ import mekanism.common.tier.TransporterTier;
 import mekanism.common.tier.TubeTier;
 import mekanism.common.util.text.TextUtils;
 import net.minecraft.Util;
+import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -144,7 +144,7 @@ public enum MekanismConfigTranslations implements IConfigTranslation {
           + "remainder of the block. For example with this disabled trying to unbox a waterlogged slab in the nether will leave just the slab, but with this enabled "
           + "the cardboard box won't open."),
     GENERAL_CARDBOARD_MOD_BLACKLIST("general.cardboard.mod_blacklist", "Cardboard Box Mod Blacklist",
-          "Any modids added to this list will not be able to have any of their blocks, picked up by the cardboard box. For example: [\"" + Mekanism.MODID + "\"]",
+          "Any modids added to this list will not be able to have any of their blocks, picked up by the cardboard box. For example: [\"" + "mekanism" + "\"]",
           "Edit Blacklist"),
 
     GENERAL_DYNAMIC_TANK("general.dynamic_tank", "Dynamic Tank Settings", "Settings for configuring Dynamic Tanks", true),
@@ -546,25 +546,25 @@ public enum MekanismConfigTranslations implements IConfigTranslation {
     PE_CONTENTS_PROCESSOR("projecte.data_component_processor.contents", "Mek Contents Processor",
           "Increases the EMC value of any Mekanism items by the value of the stored or installed contents", true),
 
-    PE_MAPPER_CHEMICAL_CHEMICAL_TO_CHEMICAL("projecte.mapper.chemical_chemical_to_chemical", Mekanism.MOD_NAME + " CC2C",
+    PE_MAPPER_CHEMICAL_CHEMICAL_TO_CHEMICAL("projecte.mapper.chemical_chemical_to_chemical", "Mekanism" + " CC2C",
           "Maps Mekanism chemical infuser and pigment mixer recipes.", true),
-    PE_MAPPER_CRYSTALLIZER("projecte.mapper.chemical_crystallizer", Mekanism.MOD_NAME + " Crystallizer", "Maps Mekanism crystallizing recipes.", true),
-    PE_MAPPER_DISSOLUTION("projecte.mapper.chemical_dissolution", Mekanism.MOD_NAME + " Dissolution", "Maps Mekanism dissolution recipes.", true),
-    PE_MAPPER_CHEMICAL_TO_CHEMICAL("projecte.mapper.chemical_to_chemical", Mekanism.MOD_NAME + " C2C",
+    PE_MAPPER_CRYSTALLIZER("projecte.mapper.chemical_crystallizer", "Mekanism" + " Crystallizer", "Maps Mekanism crystallizing recipes.", true),
+    PE_MAPPER_DISSOLUTION("projecte.mapper.chemical_dissolution", "Mekanism" + " Dissolution", "Maps Mekanism dissolution recipes.", true),
+    PE_MAPPER_CHEMICAL_TO_CHEMICAL("projecte.mapper.chemical_to_chemical", "Mekanism" + " C2C",
           "Maps Mekanism activating and centrifuging recipes.", true),
-    PE_MAPPER_COMBINER("projecte.mapper.combiner", Mekanism.MOD_NAME + " Combiner", "Maps Mekanism combiner recipes.", true),
-    PE_MAPPER_ELECTROLYSIS("projecte.mapper.electrolysis", Mekanism.MOD_NAME + " Electrolysis", "Maps Mekanism electrolytic separator recipes.", true),
-    PE_MAPPER_WASHING("projecte.mapper.todo", Mekanism.MOD_NAME + " Washing", "Maps Mekanism washing recipes.", true),
-    PE_MAPPER_EVAPORATING("projecte.mapper.evaporating", Mekanism.MOD_NAME + " Evaporating", "Maps Mekanism evaporating recipes.", true),
-    PE_MAPPER_ITEM_CHEMICAL_TO_ITEM("projecte.mapper.item_chemical_to_item", Mekanism.MOD_NAME + " IC2I",
+    PE_MAPPER_COMBINER("projecte.mapper.combiner", "Mekanism" + " Combiner", "Maps Mekanism combiner recipes.", true),
+    PE_MAPPER_ELECTROLYSIS("projecte.mapper.electrolysis", "Mekanism" + " Electrolysis", "Maps Mekanism electrolytic separator recipes.", true),
+    PE_MAPPER_WASHING("projecte.mapper.todo", "Mekanism" + " Washing", "Maps Mekanism washing recipes.", true),
+    PE_MAPPER_EVAPORATING("projecte.mapper.evaporating", "Mekanism" + " Evaporating", "Maps Mekanism evaporating recipes.", true),
+    PE_MAPPER_ITEM_CHEMICAL_TO_ITEM("projecte.mapper.item_chemical_to_item", "Mekanism" + " IC2I",
           "Maps Mekanism Machine recipes that go from item, chemical to item. (Compressing, Purifying, Injecting, Metallurgic Infusing, Painting, Nucleosynthesizing)", true),
-    PE_MAPPER_ITEM_TO_CHEMICAL("projecte.mapper.item_to_chemical", Mekanism.MOD_NAME + " I2C",
+    PE_MAPPER_ITEM_TO_CHEMICAL("projecte.mapper.item_to_chemical", "Mekanism" + " I2C",
           "Maps Mekanism item stack to chemical recipes. (Chemical conversion, Oxidizing, Pigment Extracting)", true),
-    PE_MAPPER_ITEM_TO_ITEM("projecte.mapper.item_to_item", Mekanism.MOD_NAME + " Item To Item",
+    PE_MAPPER_ITEM_TO_ITEM("projecte.mapper.item_to_item", "Mekanism" + " Item To Item",
           "Maps Mekanism Machine recipes that go from item to item. (Crushing, Enriching, Smelting)", true),
-    PE_MAPPER_PRESSURIZED_REACTION("projecte.mapper.pressurized_reaction", Mekanism.MOD_NAME + " PRC", "Maps Mekanism pressurized reaction recipes. (Disabled by default)", true),
-    PE_MAPPER_ROTARY("projecte.mapper.rotary", Mekanism.MOD_NAME + " Rotary", "Maps Mekanism rotary condensentrator recipes.", true),
-    PE_MAPPER_SAWING("projecte.mapper.sawing", Mekanism.MOD_NAME + " Sawing",
+    PE_MAPPER_PRESSURIZED_REACTION("projecte.mapper.pressurized_reaction", "Mekanism" + " PRC", "Maps Mekanism pressurized reaction recipes. (Disabled by default)", true),
+    PE_MAPPER_ROTARY("projecte.mapper.rotary", "Mekanism" + " Rotary", "Maps Mekanism rotary condensentrator recipes.", true),
+    PE_MAPPER_SAWING("projecte.mapper.sawing", "Mekanism" + " Sawing",
           "Maps Mekanism sawmill recipes. (Disabled by default, due to causing various EMC values to be removed pertaining to charcoal/wood)", true),
     ;
 
@@ -591,7 +591,7 @@ public enum MekanismConfigTranslations implements IConfigTranslation {
     }
 
     MekanismConfigTranslations(String path, String title, String tooltip, @Nullable String button) {
-        this.key = Util.makeDescriptionId("configuration", Mekanism.rl(path));
+        this.key = Util.makeDescriptionId("configuration", ResourceLocation.fromNamespaceAndPath("mekanism", path));
         this.title = title;
         this.tooltip = tooltip;
         this.button = button;
@@ -659,7 +659,7 @@ public enum MekanismConfigTranslations implements IConfigTranslation {
         }
 
         private static String getKey(String type, String tier, String path) {
-            return Util.makeDescriptionId("configuration", Mekanism.rl("tier." + type + "." + tier + "." + path));
+            return Util.makeDescriptionId("configuration", ResourceLocation.fromNamespaceAndPath("mekanism", "tier." + type + "." + tier + "." + path));
         }
 
         public static TierTranslations create(ITier tier, String type, @Nullable UnaryOperator<String> storageTooltip, @Nullable UnaryOperator<String> outputTooltip) {
@@ -755,7 +755,7 @@ public enum MekanismConfigTranslations implements IConfigTranslation {
         }
 
         private static String getKey(String ore, String path) {
-            return Util.makeDescriptionId("configuration", Mekanism.rl("world." + ore + "." + path));
+            return Util.makeDescriptionId("configuration", ResourceLocation.fromNamespaceAndPath("mekanism", "world." + ore + "." + path));
         }
 
         public static OreConfigTranslations create(String ore) {
@@ -779,7 +779,7 @@ public enum MekanismConfigTranslations implements IConfigTranslation {
         }
 
         private static String getKey(String ore, String vein, String path) {
-            return Util.makeDescriptionId("configuration", Mekanism.rl("world." + ore + "." + vein + "." + path));
+            return Util.makeDescriptionId("configuration", ResourceLocation.fromNamespaceAndPath("mekanism", "world." + ore + "." + vein + "." + path));
         }
 
         public static OreVeinConfigTranslations create(String ore, String vein) {

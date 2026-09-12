@@ -208,8 +208,17 @@ if (actual_gui_components != expected_gui_components
         or any(entries.count(entry) != 1 for entry in expected_gui_components)):
     raise SystemExit(f"unexpected GuiComponents class family: {sorted(actual_gui_components)!r}")
 expected_inventory_slot_metadata = {
+    "mekanism/common/inventory/container/slot/ArmorSlot.class",
     "mekanism/common/inventory/container/slot/ContainerSlotType.class",
+    "mekanism/common/inventory/container/slot/HotBarSlot.class",
+    "mekanism/common/inventory/container/slot/IInsertableSlot.class",
+    "mekanism/common/inventory/container/slot/InsertableSlot.class",
+    "mekanism/common/inventory/container/slot/InventoryContainerSlot.class",
+    "mekanism/common/inventory/container/slot/IVirtualSlot.class",
+    "mekanism/common/inventory/container/slot/MainInventorySlot.class",
+    "mekanism/common/inventory/container/slot/OffhandSlot.class",
     "mekanism/common/inventory/container/slot/SlotOverlay.class",
+    "mekanism/common/inventory/container/slot/VirtualInventoryContainerSlot.class",
 }
 slot_package_prefix = "mekanism/common/inventory/container/slot/"
 actual_inventory_slot_metadata = {
@@ -221,6 +230,42 @@ actual_inventory_slot_metadata = {
 if (actual_inventory_slot_metadata != expected_inventory_slot_metadata
         or any(entries.count(entry) != 1 for entry in expected_inventory_slot_metadata)):
     raise SystemExit(f"unexpected direct inventory-slot class family: {sorted(actual_inventory_slot_metadata)!r}")
+expected_concrete_inventory = {
+    "mekanism/common/inventory/slot/BasicInventorySlot.class",
+    "mekanism/common/inventory/slot/InputInventorySlot.class",
+    "mekanism/common/inventory/slot/OutputInventorySlot.class",
+}
+actual_concrete_inventory = {
+    entry for entry in entries if entry.startswith("mekanism/common/inventory/slot/") and entry.endswith(".class")
+}
+if actual_concrete_inventory != expected_concrete_inventory or any(entries.count(entry) != 1 for entry in expected_concrete_inventory):
+    raise SystemExit(f"unexpected concrete inventory-slot family: {sorted(actual_concrete_inventory)!r}")
+expected_warning_family = {
+    "mekanism/common/inventory/warning/ISupportsWarning.class",
+    "mekanism/common/inventory/warning/IWarningTracker.class",
+    "mekanism/common/inventory/warning/WarningTracker.class",
+    "mekanism/common/inventory/warning/WarningTracker$WarningType.class",
+}
+actual_warning_family = {
+    entry for entry in entries if entry.startswith("mekanism/common/inventory/warning/") and entry.endswith(".class")
+}
+if actual_warning_family != expected_warning_family or any(entries.count(entry) != 1 for entry in expected_warning_family):
+    raise SystemExit(f"unexpected warning family: {sorted(actual_warning_family)!r}")
+expected_window_domain = {
+    "mekanism/common/inventory/container/IGUIWindow.class",
+    "mekanism/common/inventory/container/SelectedWindowData.class",
+    "mekanism/common/inventory/container/SelectedWindowData$CachedWindowPosition.class",
+    "mekanism/common/inventory/container/SelectedWindowData$WindowPosition.class",
+    "mekanism/common/inventory/container/SelectedWindowData$WindowType.class",
+    "mekanism/common/inventory/container/SelectedWindowData$WindowType$ConfigSaveData.class",
+}
+container_prefix = "mekanism/common/inventory/container/"
+actual_window_domain = {
+    entry for entry in entries if entry.startswith(container_prefix)
+    and "/" not in entry[len(container_prefix):] and entry.endswith(".class")
+}
+if actual_window_domain != expected_window_domain or any(entries.count(entry) != 1 for entry in expected_window_domain):
+    raise SystemExit(f"unexpected direct window-domain family: {sorted(actual_window_domain)!r}")
 expected_fabric_registry = {
     "mekanism/fabric/registry/FabricCustomRegistryLifecycle.class",
     "mekanism/fabric/registry/FabricDefaultedRegistry.class",
@@ -341,6 +386,7 @@ expected_slot_info = {
     "mekanism/common/tile/component/config/slot/BaseSlotInfo.class",
     "mekanism/common/tile/component/config/slot/EnergySlotInfo.class",
     "mekanism/common/tile/component/config/slot/HeatSlotInfo.class",
+    "mekanism/common/tile/component/config/slot/InventorySlotInfo.class",
 }
 actual_slot_info = {
     entry for entry in entries
@@ -392,6 +438,90 @@ actual_config_values = {
 if (actual_config_values != expected_config_values
         or any(entries.count(entry) != 1 for entry in expected_config_values)):
     raise SystemExit(f"unexpected config-value class family: {sorted(actual_config_values)!r}")
+expected_direct_config = {
+    "mekanism/common/config/BaseMekanismConfig.class",
+    "mekanism/common/config/BaseMekanismConfig$ConfigSaver.class",
+    "mekanism/common/config/ClientWindowConfigAccess.class",
+    "mekanism/common/config/ClientWindowConfigAccess$Owner.class",
+    "mekanism/common/config/ClientWindowConfigAccess$Position.class",
+    "mekanism/common/config/ClientWindowConfigAccess$Registration.class",
+    "mekanism/common/config/IConfigTranslation.class",
+    "mekanism/common/config/IConfigTranslation$ConfigTranslation.class",
+    "mekanism/common/config/IMekanismConfig.class",
+    "mekanism/common/config/MekanismConfigTranslations.class",
+    "mekanism/common/config/MekanismConfigTranslations$OreConfigTranslations.class",
+    "mekanism/common/config/MekanismConfigTranslations$OreVeinConfigTranslations.class",
+    "mekanism/common/config/MekanismConfigTranslations$TierTranslations.class",
+    "mekanism/common/config/MekanismConfigType.class",
+    "mekanism/common/config/MekanismStartupConfig.class",
+    "mekanism/common/config/StartupConfigTranslations.class",
+    "mekanism/common/config/TranslationPreset.class",
+}
+common_config_prefix = "mekanism/common/config/"
+actual_direct_config = {
+    entry for entry in entries if entry.startswith(common_config_prefix)
+    and "/" not in entry[len(common_config_prefix):] and entry.endswith(".class")
+}
+if actual_direct_config != expected_direct_config or any(entries.count(entry) != 1 for entry in expected_direct_config):
+    raise SystemExit(f"unexpected direct common-config family: {sorted(actual_direct_config)!r}")
+expected_fabric_config = {
+    "mekanism/fabric/config/FabricClientConfigLifecycle.class",
+    "mekanism/fabric/config/FabricMekanismConfigManager.class",
+    "mekanism/fabric/config/FabricMekanismConfigManager$Registration.class",
+    "mekanism/fabric/config/FabricWindowConfig.class",
+    "mekanism/fabric/config/FabricWindowConfig$SaveOperation.class",
+    "mekanism/fabric/config/FabricWindowConfig$WindowValues.class",
+    "mekanism/fabric/config/MekanismConfigSpec.class",
+    "mekanism/fabric/config/MekanismConfigSpec$Builder.class",
+    "mekanism/fabric/config/MekanismConfigSpec$ConfigValue.class",
+    "mekanism/fabric/config/MekanismConfigSpec$LoadResult.class",
+    "mekanism/fabric/config/MekanismConfigSpec$Metadata.class",
+    "mekanism/fabric/config/MekanismConfigSpec$RestartScope.class",
+}
+actual_fabric_config = {
+    entry for entry in entries if entry.startswith("mekanism/fabric/config/") and entry.endswith(".class")
+}
+if actual_fabric_config != expected_fabric_config or any(entries.count(entry) != 1 for entry in expected_fabric_config):
+    raise SystemExit(f"unexpected Fabric config family: {sorted(actual_fabric_config)!r}")
+expected_language_classes = {"mekanism/common/MekanismLang.class", "mekanism/common/MekanismLang$1.class"}
+actual_language_classes = {entry for entry in entries if entry.startswith("mekanism/common/MekanismLang") and entry.endswith(".class")}
+if actual_language_classes != expected_language_classes or any(entries.count(entry) != 1 for entry in expected_language_classes):
+    raise SystemExit(f"unexpected MekanismLang class family: {sorted(actual_language_classes)!r}")
+expected_text_utils = {"mekanism/common/util/text/TextUtils.class"}
+actual_text_utils = {entry for entry in entries if entry.startswith("mekanism/common/util/text/") and entry.endswith(".class")}
+if actual_text_utils != expected_text_utils or entries.count("mekanism/common/util/text/TextUtils.class") != 1:
+    raise SystemExit(f"unexpected common text utility family: {sorted(actual_text_utils)!r}")
+import hashlib
+with zipfile.ZipFile(sys.argv[1]) as task39_artifact:
+    language = task39_artifact.read("assets/mekanism/lang/en_us.json")
+    if task39_artifact.namelist().count("assets/mekanism/lang/en_us.json") != 1:
+        raise SystemExit("generated en_us.json must occur exactly once")
+    if hashlib.sha256(language).hexdigest() != "20c06e55147089e6d4b2fc3688da3970e8a6a96b61f8efd9e6f9841d40ec34a5":
+        raise SystemExit("generated en_us.json differs from the exact oracle")
+    task39_classes = (expected_inventory_slot_metadata | expected_concrete_inventory | expected_warning_family
+                      | expected_window_domain | expected_direct_config | expected_fabric_config
+                      | expected_language_classes | expected_text_utils | {"mekanism/common/tile/component/config/slot/InventorySlotInfo.class"})
+    for entry in task39_classes:
+        bytecode = task39_artifact.read(entry)
+        lowered = bytecode.lower()
+        if (b"net/neoforged/" in bytecode or b"mekanism/api/chemical/" in bytecode
+              or b"mekanism/common/content/qio/" in bytecode or b"constantpredicates" in lowered):
+            raise SystemExit(f"deferred platform/QIO/Chemical/predicate dependency leaked into Task039 bytecode: {entry}")
+    seam = task39_artifact.read("mekanism/common/config/ClientWindowConfigAccess.class")
+    if b"mekanism/fabric/" in seam or b"net/fabricmc/" in seam or b"net/minecraft/client/" in seam:
+        raise SystemExit("common client-window seam contains a Fabric or client linkage")
+    common_bootstrap = task39_artifact.read("mekanism/fabric/MekanismFabricBootstrap.class")
+    for forbidden in (b"FabricClientConfigLifecycle", b"FabricWindowConfig", b"ClientWindowConfigAccess", b"SelectedWindowData"):
+        if forbidden in common_bootstrap:
+            raise SystemExit(f"dedicated-server common bootstrap links client window owner: {forbidden!r}")
+    client_bootstrap = task39_artifact.read("mekanism/fabric/MekanismFabricClientBootstrap.class")
+    if b"FabricClientConfigLifecycle" not in client_bootstrap or b"FabricMekanismClientNetworking" not in client_bootstrap:
+        raise SystemExit("client bootstrap must link synchronous config lifecycle and networking")
+forbidden_task39_entries = sorted(entry for entry in entries if entry.startswith((
+    "mekanism/fixture/", "mekanism/common/content/qio/", "mekanism/api/chemical/"
+)) or entry in {"mekanism/common/config/ClientConfig.class", "mekanism/common/config/MekanismConfig.class"})
+if forbidden_task39_entries:
+    raise SystemExit(f"fixture/deferred Task039 class leakage: {forbidden_task39_entries!r}")
 expected_resources = {
     "mekanism/common/resource/IResource.class",
     "mekanism/common/resource/MiscResource.class",

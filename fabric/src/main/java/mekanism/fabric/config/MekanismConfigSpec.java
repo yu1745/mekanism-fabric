@@ -1,6 +1,7 @@
 package mekanism.fabric.config;
 
 import com.electronwill.nightconfig.core.CommentedConfig;
+import com.electronwill.nightconfig.core.Config;
 import com.electronwill.nightconfig.toml.TomlFormat;
 import com.electronwill.nightconfig.toml.TomlParser;
 import com.electronwill.nightconfig.toml.TomlWriter;
@@ -123,6 +124,7 @@ public final class MekanismConfigSpec {
         Map<ConfigValue<?>, Object> resolved = new IdentityHashMap<>();
         int corrected = 0;
         for (ConfigValue<?> value : values.values()) {
+            ensureParentTables(candidate, value.path());
             Object raw = candidate.contains(value.path()) ? candidate.getRaw(value.path()) : null;
             Optional<?> normalized = raw == null ? Optional.empty() : value.normalize(raw);
             Object accepted;
@@ -231,6 +233,18 @@ public final class MekanismConfigSpec {
 
     private static CommentedConfig newDocument() {
         return TomlFormat.newConfig(LinkedHashMap::new);
+    }
+
+    /** Replaces scalar parents of owned values while retaining every unrelated table and key. */
+    private static void ensureParentTables(CommentedConfig target, List<String> valuePath) {
+        for (int length = 1; length < valuePath.size(); length++) {
+            List<String> parentPath = valuePath.subList(0, length);
+            Object parent = target.getRaw(parentPath);
+            if (parent != null && !(parent instanceof Config)) {
+                target.remove(parentPath);
+                target.set(parentPath, newDocument());
+            }
+        }
     }
 
     /** Rejects valid-looking TOML integer value tokens that Night Config would wrap before schema validation. */
@@ -495,6 +509,11 @@ public final class MekanismConfigSpec {
             return define(name, defaultValue, Builder::normalizeBoolean);
         }
 
+        /** Defines a strict signed-32-bit integer. Floating-point and decimal values are rejected even when integral. */
+        public ConfigValue<Integer> define(String name, int defaultValue) {
+            return define(name, defaultValue, Builder::normalizeStrictInteger);
+        }
+
         /**
          * Defines the immutable list schema needed by admitted common config values. The new-element supplier is
          * null-checked for source compatibility, but is intentionally not invoked because this spec has no UI/editor.
@@ -645,6 +664,22 @@ public final class MekanismConfigSpec {
                 return Optional.empty();
             }
             return Optional.of((int) asLong);
+        }
+
+        private static Optional<Integer> normalizeStrictInteger(Object raw) {
+            final long value;
+            if (raw instanceof Byte || raw instanceof Short || raw instanceof Integer || raw instanceof Long) {
+                value = ((Number) raw).longValue();
+            } else if (raw instanceof BigInteger integer) {
+                try {
+                    value = integer.longValueExact();
+                } catch (ArithmeticException ignored) {
+                    return Optional.empty();
+                }
+            } else {
+                return Optional.empty();
+            }
+            return value >= Integer.MIN_VALUE && value <= Integer.MAX_VALUE ? Optional.of((int) value) : Optional.empty();
         }
 
         private static Optional<Long> normalizeLong(Object raw, long minimum, long maximum) {

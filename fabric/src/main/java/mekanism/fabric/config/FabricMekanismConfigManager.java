@@ -14,6 +14,9 @@ public final class FabricMekanismConfigManager {
     public record Registration(Path file, MekanismConfigSpec.LoadResult loadResult) {
     }
 
+    private static final Object CLAIM_MONITOR = new Object();
+    private static final Map<Path, IMekanismConfig> PROCESS_FILE_CLAIMS = new HashMap<>();
+
     private final Path configRoot;
     private final Map<MekanismConfigSpec, IMekanismConfig> knownConfigs = Collections.synchronizedMap(new IdentityHashMap<>());
     private final Map<Path, IMekanismConfig> knownFiles = new HashMap<>();
@@ -45,27 +48,99 @@ public final class FabricMekanismConfigManager {
             if (knownFiles.containsKey(file)) {
                 throw new IllegalStateException("Config file is already registered: " + file);
             }
-            MekanismConfigSpec.LoadResult result = spec.load(file);
+            claim(file, config);
+            boolean registered = false;
             try {
-                config.clearCache(false);
-            } catch (RuntimeException | Error callbackFailure) {
+                MekanismConfigSpec.LoadResult result = spec.load(file);
+                try {
+                    config.clearCache(false);
+                } catch (RuntimeException | Error callbackFailure) {
+                    spec.unload();
+                    throw callbackFailure;
+                }
+                knownConfigs.put(spec, config);
+                knownFiles.put(file, config);
+                registered = true;
+                return new Registration(file, result);
+            } finally {
+                if (!registered) {
+                    release(file, config);
+                }
+            }
+        }
+    }
+
+    public void unregister(IMekanismConfig config) {
+        Objects.requireNonNull(config);
+        synchronized (knownConfigs) {
+            MekanismConfigSpec spec = config.getConfigSpec();
+            if (knownConfigs.get(spec) != config) {
+                throw new IllegalStateException("Config is not registered: " + config.getFileName());
+            }
+            Path file = findFile(config);
+            RuntimeException callbackFailure = null;
+            try {
+                config.clearCache(true);
+            } catch (RuntimeException failure) {
+                callbackFailure = failure;
+            } finally {
                 spec.unload();
+                knownConfigs.remove(spec);
+                knownFiles.remove(file);
+                release(file, config);
+            }
+            if (callbackFailure != null) {
                 throw callbackFailure;
             }
-            knownConfigs.put(spec, config);
-            knownFiles.put(file, config);
-            return new Registration(file, result);
         }
     }
 
     public void unloadAll() {
+        RuntimeException firstFailure = null;
         synchronized (knownConfigs) {
             for (Map.Entry<MekanismConfigSpec, IMekanismConfig> entry : knownConfigs.entrySet()) {
-                entry.getValue().clearCache(true);
-                entry.getKey().unload();
+                IMekanismConfig config = entry.getValue();
+                Path file = findFile(config);
+                try {
+                    config.clearCache(true);
+                } catch (RuntimeException failure) {
+                    if (firstFailure == null) {
+                        firstFailure = failure;
+                    } else {
+                        firstFailure.addSuppressed(failure);
+                    }
+                } finally {
+                    entry.getKey().unload();
+                    release(file, config);
+                }
             }
             knownConfigs.clear();
             knownFiles.clear();
+        }
+        if (firstFailure != null) {
+            throw firstFailure;
+        }
+    }
+
+    private Path findFile(IMekanismConfig config) {
+        return knownFiles.entrySet().stream().filter(entry -> entry.getValue() == config).map(Map.Entry::getKey).findFirst()
+              .orElseThrow(() -> new IllegalStateException("Missing file claim for config " + config.getFileName()));
+    }
+
+    private static void claim(Path file, IMekanismConfig config) {
+        synchronized (CLAIM_MONITOR) {
+            IMekanismConfig existing = PROCESS_FILE_CLAIMS.putIfAbsent(file, config);
+            if (existing != null) {
+                throw new IllegalStateException("Config file is already owned process-wide: " + file);
+            }
+        }
+    }
+
+    private static void release(Path file, IMekanismConfig config) {
+        synchronized (CLAIM_MONITOR) {
+            if (!PROCESS_FILE_CLAIMS.remove(file, config)) {
+                throw new IllegalStateException("Config file claim is not owned by the requested config: " + file);
+            }
         }
     }
 }

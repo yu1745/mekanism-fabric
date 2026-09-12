@@ -15,6 +15,9 @@ import mekanism.api.AutomationType;
 import mekanism.api.inventory.IInventorySlot;
 import mekanism.api.inventory.IMekanismInventory;
 import mekanism.common.capabilities.holder.IHolder;
+import mekanism.common.inventory.slot.BasicInventorySlot;
+import mekanism.common.inventory.slot.InputInventorySlot;
+import mekanism.common.inventory.slot.OutputInventorySlot;
 import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
 import net.fabricmc.fabric.api.transfer.v1.storage.StorageView;
 import net.fabricmc.fabric.api.transfer.v1.storage.base.SingleSlotStorage;
@@ -284,6 +287,35 @@ class FabricItemStorageTest {
         assertEquals(0, during.getCount());
         assertFalse(duringStorage.supportsInsertion());
         assertTrue(duringStorage.getSlot(0).isResourceBlank());
+    }
+
+    @Test
+    void realBasicInputAndOutputSlotsParticipateInExposureCommitAndRollback() {
+        BasicInventorySlot basic = BasicInventorySlot.at(stack -> stack.is(Items.DIAMOND), null, 0, 0);
+        InputInventorySlot input = InputInventorySlot.at(stack -> stack.is(Items.IRON_INGOT), null, 0, 0);
+        OutputInventorySlot output = OutputInventorySlot.at(null, 0, 0);
+        output.setStack(new ItemStack(Items.GOLD_INGOT, 4));
+        FabricItemStorage storage = FabricItemLookup.expose(
+              new MutableInventory(List.of(basic, input, output)), Direction.NORTH, null);
+        assertNotNull(storage);
+
+        try (Transaction transaction = Transaction.openOuter()) {
+            assertEquals(5, storage.insert(ItemVariant.of(Items.IRON_INGOT), 5, transaction));
+            assertEquals(5, input.getCount());
+            transaction.commit();
+        }
+        assertEquals(5, input.getCount());
+        try (Transaction transaction = Transaction.openOuter()) {
+            assertEquals(3, storage.insert(ItemVariant.of(Items.DIAMOND), 3, transaction));
+            assertEquals(3, basic.getCount());
+            assertEquals(4, storage.extract(ItemVariant.of(Items.GOLD_INGOT), 4, transaction));
+            assertTrue(output.isEmpty());
+            // Abort: all three real slot implementations must be restored through setStack.
+        }
+        assertTrue(basic.isEmpty());
+        assertEquals(5, input.getCount());
+        assertEquals(4, output.getCount());
+        assertTrue(output.getStack().is(Items.GOLD_INGOT));
     }
 
     private static void assertStack(ItemStack expected, ItemStack actual) {
