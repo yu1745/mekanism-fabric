@@ -85,7 +85,7 @@ scripts/scan-platform-deps.py
 
 当前还原样纳入 `DependentMapCodec`、`SequencedCollectionCodec`、`DroppingUnboundedMapCodec`（均与 `4646f509` 字节一致）。紧凑 Java 21 oracle 仅覆盖 dependency-first 选择及字段错误、sequenced encode/decode 边界/顺序/immutable/partial remainder，以及 dropping map 的 first-wins、保留 partial success/failed input 和重复 partial-value 的早返回；打包精确允许 1 个 API 与 3 个 common codec class，无 startup marker。`ModuleContainer`、`AttachedSideConfig`、recipes、data components、config/network owners 和所有 callers 延期；不声明 persistence、registry、packet、lifecycle-owner 或 serialized-format backward compatibility。
 
-当前 allowlist 数量为 API **47**、common **88**、platform **14**。`Color`、`CustomEffect`、`Pos3D`、`Quaternion`、`Range3D`、`MultipartUtils`、`StatUtils` 七个 foundation 源文件均与 `4646f509` 字节一致；12 个本地 Java 21 测试仅界定 color/stat/effect、spatial/range/rotation/quaternion 与 direct raycast，JAR 精确限定 direct common-lib 四项、effect 一项、math 三项、Multipart 三项和 StatUtils 一项。renderers/particles/GUI/recipe viewers/client lifecycle、transmitters/multipart blocks/gear、machines/block types/entities、packet tracking/network ranges、SPS/multiblock、additions/generators、external energy、world/chunk lifecycle、registries/config/persistence 及所有 callers/owners 延期；无 rendering integration、entity/player lifecycle、block registration、networking、thread safety 或 collision-owner guarantee。
+当前 allowlist 数量为 API **47**、common **92**、platform **14**。`Color`、`CustomEffect`、`Pos3D`、`Quaternion`、`Range3D`、`MultipartUtils`、`StatUtils` 七个 foundation 源文件均与 `4646f509` 字节一致；12 个本地 Java 21 测试仅界定 color/stat/effect、spatial/range/rotation/quaternion 与 direct raycast，JAR 精确限定 direct common-lib 四项、effect 一项、math 三项、Multipart 三项和 StatUtils 一项。renderers/particles/GUI/recipe viewers/client lifecycle、transmitters/multipart blocks/gear、machines/block types/entities、packet tracking/network ranges、SPS/multiblock、additions/generators、external energy、world/chunk lifecycle、registries/config/persistence 及所有 callers/owners 延期；无 rendering integration、entity/player lifecycle、block registration、networking、thread safety 或 collision-owner guarantee。
 
 官方 `WildcardMatcher` 已原样纳入 bounded common slice，保持递归/回溯、`Locale.ROOT` 大小写折叠、`TagKey.location()` 和 UTF-16 `char`/`Character.isDigit(char)` 语义。Fabric 测试与 packaged JAR 门禁覆盖该边界；这不表示 QIO、miner、Finder 或其他未来调用方已经移植。官方 `ChunkUtils` 也原样纳入同一 slice，保留 `rangeClosed` 四方向的 inclusive 行主序遍历（X 最快、其次 Z）、packed `long` 行为与 `packedBlockToChunk` 对负数坐标的 `>> 4` floor-section 语义；返回数组按 inclusive 维度分配，representable/可分配矩形属调用者前置条件。同样保持 baseline 字节不变的 `BiLongMultimap`、`FilterTransformIterator`、`IndexedCuboidMap` 已构成仅内存的索引查找闭包；两份官方测试与 Fabric-local Java 21 边界测试覆盖双向 mutation、null filter/exhaustion、负 chunk 与 inclusive box、同 box replacement 和混合清理。JAR 精确限定六个 collection class entries。Miner/QIO/spatial caller、world/chunk lifecycle/loading、persistence、concurrency 与多线程 mutation 均未移植或声明。
 
@@ -113,11 +113,13 @@ scripts/scan-platform-deps.py
 
 该闭包不纳入任何 owners/callers、capability registration/lookup/exposure、external energy/transactions/conversion、side configuration/ejection、machines/transmitters/networks，也不证明 real config load/reload/file I/O/lifecycle/threading 或 persistence/network serialization；不据此声明 broader Fabric integration。
 
-### 当前 signed-long config/tier metadata 落点
+### 当前 primitive config/tier metadata 落点
 
 Task 019 当时的 allowlist 为 API **42** / common **74** / platform **10**。三个 energy/induction tier 源与 `4646f509` byte-identical；`CachedLongValue` 仅替换 NeoForge `Builder` 与 `ConfigValue` 两个 import。Fabric long schema 对合法 signed-long TOML integer literal 保持 `>2^53` 和端点精度，并在 Night Config 前以 decimal/hex/octal/binary lexical preflight 拒绝 modulo-wrap overflow；只规范化指定 primitive wrapper、精确 integral/representable 的 `BigInteger`/`BigDecimal` 与按 exact runtime IEEE 值检查的 finite Float/Double。fraction、NaN/infinity、overflow、range miss 和 `2^63` 均拒绝，绝不 rounding/truncation/saturation 或 lossy `double == long`。
 
-边界仅是 schema/value support 与 tier metadata，不激活 `tiers.toml`。`TierConfig`、`MekanismConfig`/其他 real config files、其他 cached value kinds/tier families、config sync/UI/watchers/world restart、owners/callers、machines/blocks/items、capability registration、external energy/transactions、networking/serialization/persistence/lifecycle/threading 均延期。
+Task 025 在不改变上述 long 行为的前提下加入四个官方 primitive cached wrappers；每份源与 oracle 的唯一差异都是 `ConfigValue` import。spec 仅新增 strict boolean 与 typed byte/short overloads：byte/short 走同一 exact-integral long path，先验证 representability、primitive/configured bounds 后收窄，不允许 truncation/wrap/round/saturation；double 继续使用既有 finite runtime-number 语义。一个同包类恰好四个真实 TOML tests 固定 boolean/byte/short/double 的 default/lazy/supplier/set/cache/invalidation、错误修正与原子 publication，以及 double raw `-0.0` 和 signed-zero unchanged 比较。direct config-value JAR family 精确九项，无 startup marker。
+
+边界仅是 schema/value support 与 tier metadata，不新增 real config activation 或 `tiers.toml`。`TierConfig`、`MekanismConfig`/其他 real config files、generic/resolvable/list/map/enum cached values 与 define APIs、其他 tier families、config sync/UI/watchers/owners/world restart、machines/blocks/items、capability registration、external energy/transactions、networking/serialization/persistence/lifecycle/threading 均延期。
 
 ### 当前 energy storage 落点
 
@@ -165,9 +167,15 @@ lookup/factory 只接受 physical non-null side，拒绝 unusable conversion、`
 
 ### Task 024 container callback contracts
 
-当前 allowlist 为 API **47** / common **88** / platform **14**。四个 byte-identical official callbacks `ContainerInteraction`、`InContainerGetter`、`IntContainerInteraction`、`LongContainerInteraction` 加入既有 long callbacks；一个同包测试类的恰好四个 deterministic methods 证明 object identity、任意/负 index、nullable/physical side、exact `Action`，以及 raw signed `int`/true-`long` boundaries（含 `>2^53`）原样转发。JAR direct `mekanism/api/container/` family 精确只有六个 callback interfaces 各一次，无 nested/synthetic/test/helper/fixture，也无 startup marker。
+Task 024 落地时 allowlist 为 API **47** / common **88** / platform **14**。四个 byte-identical official callbacks `ContainerInteraction`、`InContainerGetter`、`IntContainerInteraction`、`LongContainerInteraction` 加入既有 long callbacks；一个同包测试类的恰好四个 deterministic methods 证明 object identity、任意/负 index、nullable/physical side、exact `Action`，以及 raw signed `int`/true-`long` boundaries（含 `>2^53`）原样转发。JAR direct `mekanism/api/container/` family 精确只有六个 callback interfaces 各一次，无 nested/synthetic/test/helper/fixture，也无 startup marker。
 
 这只是 callback contracts。`ChemicalUtils`、`ExtendedFluidHandlerUtils`、chemical/fluid handlers、component-backed/recipe-upgrade owners、actual transfer/platform transactions、registries、serialization/networking 与 lifecycle/thread ownership 仍延期；不声明 transfer 或 owner integration。
+
+### Task 025 primitive cached-value sources
+
+当前 allowlist 为 API **47** / common **92** / platform **14**。`CachedBooleanValue`、`CachedByteValue`、`CachedShortValue`、`CachedDoubleValue` 四份官方 common source 各自相对 `4646f509` 精确只有 NeoForge→Fabric `ConfigValue` 的一个 import replacement。`MekanismConfigSpec` 只扩展 strict boolean 与 typed byte/short range API；byte/short 复用 exact integral long normalizer 并在 narrowing 前完成 primitive/configured range 检查，既有 int/long/double、long lexical overflow preflight、同步和 publication ordering 保持不变。
+
+唯一新增的同包测试类恰好四个 methods，使用真实 `BaseMekanismConfig`、Builder/spec 和 temporary TOML，证明四个 wrapper 的 typed normalization、signed/endpoints、lazy cache/supplier、validated set、changed/unchanged invalidation、correction persistence/failure isolation，以及 double raw negative-zero semantics。JAR family 精确九项且不泄漏 excluded cached families 或 test/helper/fixture，无 startup marker。real config activation、generic/resolvable/list/map/enum cached values、sync/UI/watchers/owners 继续延期。
 
 ## `other` 桶的处理
 

@@ -209,6 +209,10 @@ if actual_tiers != expected_tiers or any(entries.count(entry) != 1 for entry in 
 expected_config_values = {
     "mekanism/common/config/value/CachedValue.class",
     "mekanism/common/config/value/CachedValue$IConfigValueInvalidationListener.class",
+    "mekanism/common/config/value/CachedBooleanValue.class",
+    "mekanism/common/config/value/CachedByteValue.class",
+    "mekanism/common/config/value/CachedShortValue.class",
+    "mekanism/common/config/value/CachedDoubleValue.class",
     "mekanism/common/config/value/CachedFloatValue.class",
     "mekanism/common/config/value/CachedIntValue.class",
     "mekanism/common/config/value/CachedLongValue.class",

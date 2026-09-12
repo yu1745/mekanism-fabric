@@ -2,7 +2,7 @@ package mekanism.common.config.value;
 
 import mekanism.api.functions.ByteSupplier;
 import mekanism.common.config.IMekanismConfig;
-import net.neoforged.neoforge.common.ModConfigSpec.ConfigValue;
+import mekanism.fabric.config.MekanismConfigSpec.ConfigValue;
 
 public class CachedByteValue extends CachedValue<Byte> implements ByteSupplier {
 

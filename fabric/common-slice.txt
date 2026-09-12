@@ -31,9 +31,13 @@ mekanism/common/config/listener/ConfigBasedCachedFloatSupplier.java
 mekanism/common/config/listener/ConfigBasedCachedIntSupplier.java
 mekanism/common/config/listener/ConfigBasedCachedLongSupplier.java
 mekanism/common/config/listener/ConfigBasedCachedSupplier.java
+mekanism/common/config/value/CachedBooleanValue.java
+mekanism/common/config/value/CachedByteValue.java
+mekanism/common/config/value/CachedDoubleValue.java
 mekanism/common/config/value/CachedFloatValue.java
 mekanism/common/config/value/CachedIntValue.java
 mekanism/common/config/value/CachedLongValue.java
+mekanism/common/config/value/CachedShortValue.java
 mekanism/common/config/value/CachedValue.java
 mekanism/common/content/network/distribution/EnergyAcceptorTarget.java
 mekanism/common/content/network/distribution/EnergySaveTarget.java

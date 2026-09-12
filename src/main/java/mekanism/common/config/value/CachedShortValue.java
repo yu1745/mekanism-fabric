@@ -2,7 +2,7 @@ package mekanism.common.config.value;
 
 import mekanism.api.functions.ShortSupplier;
 import mekanism.common.config.IMekanismConfig;
-import net.neoforged.neoforge.common.ModConfigSpec.ConfigValue;
+import mekanism.fabric.config.MekanismConfigSpec.ConfigValue;
 
 public class CachedShortValue extends CachedValue<Short> implements ShortSupplier {
 

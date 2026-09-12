@@ -489,6 +489,24 @@ public final class MekanismConfigSpec {
             return this;
         }
 
+        public ConfigValue<Boolean> define(String name, boolean defaultValue) {
+            return define(name, defaultValue, Builder::normalizeBoolean);
+        }
+
+        public ConfigValue<Byte> defineInRange(String name, byte defaultValue, byte minimum, byte maximum) {
+            if (minimum > maximum || defaultValue < minimum || defaultValue > maximum) {
+                throw new IllegalArgumentException("Invalid byte range/default for " + name);
+            }
+            return define(name, defaultValue, raw -> normalizeByte(raw, minimum, maximum));
+        }
+
+        public ConfigValue<Short> defineInRange(String name, short defaultValue, short minimum, short maximum) {
+            if (minimum > maximum || defaultValue < minimum || defaultValue > maximum) {
+                throw new IllegalArgumentException("Invalid short range/default for " + name);
+            }
+            return define(name, defaultValue, raw -> normalizeShort(raw, minimum, maximum));
+        }
+
         public ConfigValue<Integer> defineInRange(String name, int defaultValue, int minimum, int maximum) {
             if (minimum > maximum || defaultValue < minimum || defaultValue > maximum) {
                 throw new IllegalArgumentException("Invalid integer range/default for " + name);
@@ -570,6 +588,18 @@ public final class MekanismConfigSpec {
             if (segment == null || !segment.matches("[A-Za-z0-9_-]+")) {
                 throw new IllegalArgumentException("Invalid config path segment " + segment);
             }
+        }
+
+        private static Optional<Boolean> normalizeBoolean(Object raw) {
+            return raw instanceof Boolean value ? Optional.of(value) : Optional.empty();
+        }
+
+        private static Optional<Byte> normalizeByte(Object raw, byte minimum, byte maximum) {
+            return normalizeLong(raw, minimum, maximum).map(Long::byteValue);
+        }
+
+        private static Optional<Short> normalizeShort(Object raw, short minimum, short maximum) {
+            return normalizeLong(raw, minimum, maximum).map(Long::shortValue);
         }
 
         private static Optional<Integer> normalizeInteger(Object raw, int minimum, int maximum) {

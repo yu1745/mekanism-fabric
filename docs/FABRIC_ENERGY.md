@@ -18,7 +18,7 @@ The current storage milestone admits the official Mekanism energy-container cont
 - `mekanism.fabric.energy.FabricEnergyStorage`
 - `mekanism.fabric.energy.FabricEnergyLookup`
 
-The current global slice count is API 47 / common 88 / platform 14. The common count includes the seven byte-identical `4646f509` color/effect/spatial foundations documented in `FABRIC_PORT.md`; their exact JAR families and bounded tests do not admit any energy caller, owner, external API, lifecycle, networking, persistence, registry, or thread-safety guarantee. It also admits official
+The current global slice count is API 47 / common 92 / platform 14. The common count includes the seven byte-identical `4646f509` color/effect/spatial foundations documented in `FABRIC_PORT.md`; their exact JAR families and bounded tests do not admit any energy caller, owner, external API, lifecycle, networking, persistence, registry, or thread-safety guarantee. It also admits official
 `mekanism.common.lib.LastEnergyTracker` byte-identically to `4646f509` as a
 platform-neutral per-game-time accounting closure. Same-time calls accumulate a current
 bucket while the visible last bucket remains unchanged; every different timestamp—including
@@ -105,7 +105,7 @@ Invalid handler returns, mismatched `containerCount`/list size, and overflow rem
 
 ## Task 024 generic container callback contracts
 
-The current API/common/platform allowlist is **47/88/14**. Official `ContainerInteraction`, `InContainerGetter`, `IntContainerInteraction`, and `LongContainerInteraction` are admitted unchanged and remain byte-identical to `4646f509`. Together with the two existing long callbacks, the direct `mekanism/api/container/` production family is exactly six functional interfaces. Exactly four deterministic methods in one Fabric-local same-package test class prove exact generic stack/result identity, arbitrary and negative index, nullable/physical side, exact `SIMULATE`/`EXECUTE`, and unnormalized raw signed `int`/true-`long` boundaries including an odd value above `2^53`. The exact package gate excludes the test class and all other direct/nested/synthetic/test/helper/fixture entries; there is no startup marker.
+The current API/common/platform allowlist is **47/92/14**. Official `ContainerInteraction`, `InContainerGetter`, `IntContainerInteraction`, and `LongContainerInteraction` are admitted unchanged and remain byte-identical to `4646f509`. Together with the two existing long callbacks, the direct `mekanism/api/container/` production family is exactly six functional interfaces. Exactly four deterministic methods in one Fabric-local same-package test class prove exact generic stack/result identity, arbitrary and negative index, nullable/physical side, exact `SIMULATE`/`EXECUTE`, and unnormalized raw signed `int`/true-`long` boundaries including an odd value above `2^53`. The exact package gate excludes the test class and all other direct/nested/synthetic/test/helper/fixture entries; there is no startup marker.
 
 These are callback contracts only; they add no transfer behavior. `ChemicalUtils`, `ExtendedFluidHandlerUtils`, chemical/fluid handlers, component-backed/recipe-upgrade owners, actual transfer/platform transactions, registries, serialization/networking, and lifecycle/thread ownership remain deferred.
 
