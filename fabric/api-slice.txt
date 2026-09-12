@@ -13,7 +13,11 @@ mekanism/api/annotations/FieldsAreNotNullByDefault.java
 mekanism/api/annotations/NothingNullByDefault.java
 mekanism/api/annotations/ParametersAreNotNullByDefault.java
 mekanism/api/codec/DependentMapCodec.java
+mekanism/api/container/ContainerInteraction.java
+mekanism/api/container/InContainerGetter.java
 mekanism/api/container/InContainerGetterLong.java
+mekanism/api/container/IntContainerInteraction.java
+mekanism/api/container/LongContainerInteraction.java
 mekanism/api/container/LongToLongContainerInteraction.java
 mekanism/api/energy/IEnergyContainer.java
 mekanism/api/energy/IEnergyConversion.java

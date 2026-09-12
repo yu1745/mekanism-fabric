@@ -18,7 +18,7 @@ The current storage milestone admits the official Mekanism energy-container cont
 - `mekanism.fabric.energy.FabricEnergyStorage`
 - `mekanism.fabric.energy.FabricEnergyLookup`
 
-The current global slice count is API 43 / common 88 / platform 14. The common count includes the seven byte-identical `4646f509` color/effect/spatial foundations documented in `FABRIC_PORT.md`; their exact JAR families and bounded tests do not admit any energy caller, owner, external API, lifecycle, networking, persistence, registry, or thread-safety guarantee. It also admits official
+The current global slice count is API 47 / common 88 / platform 14. The common count includes the seven byte-identical `4646f509` color/effect/spatial foundations documented in `FABRIC_PORT.md`; their exact JAR families and bounded tests do not admit any energy caller, owner, external API, lifecycle, networking, persistence, registry, or thread-safety guarantee. It also admits official
 `mekanism.common.lib.LastEnergyTracker` byte-identically to `4646f509` as a
 platform-neutral per-game-time accounting closure. Same-time calls accumulate a current
 bucket while the visible last bucket remains unchanged; every different timestamp—including
@@ -102,6 +102,12 @@ The official source adds no policy, and this slice adds none. Callers must provi
 - `InContainerGetterLong`/`LongToLongContainerInteraction` results that do not require overflow defense.
 
 Invalid handler returns, mismatched `containerCount`/list size, and overflow remain undefined for callers rather than defended here.
+
+## Task 024 generic container callback contracts
+
+The current API/common/platform allowlist is **47/88/14**. Official `ContainerInteraction`, `InContainerGetter`, `IntContainerInteraction`, and `LongContainerInteraction` are admitted unchanged and remain byte-identical to `4646f509`. Together with the two existing long callbacks, the direct `mekanism/api/container/` production family is exactly six functional interfaces. Exactly four deterministic methods in one Fabric-local same-package test class prove exact generic stack/result identity, arbitrary and negative index, nullable/physical side, exact `SIMULATE`/`EXECUTE`, and unnormalized raw signed `int`/true-`long` boundaries including an odd value above `2^53`. The exact package gate excludes the test class and all other direct/nested/synthetic/test/helper/fixture entries; there is no startup marker.
+
+These are callback contracts only; they add no transfer behavior. `ChemicalUtils`, `ExtendedFluidHandlerUtils`, chemical/fluid handlers, component-backed/recipe-upgrade owners, actual transfer/platform transactions, registries, serialization/networking, and lifecycle/thread ownership remain deferred.
 
 ## Internal energy support subclosures
 
@@ -187,7 +193,9 @@ Required gates:
 scripts/fabric-packaged-smoke.sh
 ```
 
-The packaged smoke verifies the root capability package is exactly `SimpleDynamicHandler.class` and `DynamicHandler.class`, the exact energy implementation package is `BasicEnergyContainer.class` plus `DynamicStrictEnergyHandler.class`, and the exact slot descriptor package is `ISlotInfo.class`, `BaseSlotInfo.class`, `EnergySlotInfo.class`, and `HeatSlotInfo.class`, each once. The energy API family is exactly the current four classes plus `IEnergyConversion.class`; `mekanism/fabric/energy/` is exactly the four Task 023 classes, with no nested/helper/test leakage. The script rejects `team/reborn/**` inside Mekanism, validates and installs external Energy 4.1.0, and requires both mod IDs in the server log before `Done`. Transaction behavior remains JUnit evidence; there is no fabricated startup transfer marker.
+The packaged smoke verifies the root capability package is exactly `SimpleDynamicHandler.class` and `DynamicHandler.class`, the exact energy implementation package is `BasicEnergyContainer.class` plus `DynamicStrictEnergyHandler.class`, the exact container callback package is `ContainerInteraction.class`, `InContainerGetter.class`, `InContainerGetterLong.class`, `IntContainerInteraction.class`, `LongContainerInteraction.class`, and `LongToLongContainerInteraction.class`, and the exact slot descriptor package is `ISlotInfo.class`, `BaseSlotInfo.class`, `EnergySlotInfo.class`, and `HeatSlotInfo.class`, each once. The energy API family is exactly the current four classes plus `IEnergyConversion.class`; `mekanism/fabric/energy/` is exactly the four Task 023 classes, with no nested/helper/test leakage. The script rejects `team/reborn/**` inside Mekanism, validates and installs external Energy 4.1.0, and requires both mod IDs in the server log before `Done`. Transaction behavior remains JUnit evidence; there is no fabricated startup transfer marker.
+
+`fabric/src/test/java/mekanism/api/container/ContainerInteractionTest.java` contains exactly four methods for the unchanged generic getter/interaction callbacks and their exact identity/index/side/action/raw signed-boundary forwarding.
 
 `fabric/src/test/java/mekanism/api/math/LongTransferUtilsTest.java` covers the sequential closure with observable event/order/value assertions:
 

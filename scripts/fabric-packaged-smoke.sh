@@ -376,11 +376,24 @@ if unexpected_lambda_meta_factory:
     raise SystemExit(
         "unexpected packaged LambdaMetaFactoryUtil class: " + ", ".join(unexpected_lambda_meta_factory)
     )
-expected_long_transfer = {
+expected_container_callbacks = {
+    "mekanism/api/container/ContainerInteraction.class",
+    "mekanism/api/container/InContainerGetter.class",
     "mekanism/api/container/InContainerGetterLong.class",
+    "mekanism/api/container/IntContainerInteraction.class",
+    "mekanism/api/container/LongContainerInteraction.class",
     "mekanism/api/container/LongToLongContainerInteraction.class",
-    "mekanism/api/math/LongTransferUtils.class",
 }
+actual_container_callbacks = {
+    entry for entry in entries
+    if entry.startswith("mekanism/api/container/")
+    and "/" not in entry[len("mekanism/api/container/"):]
+    and entry.endswith(".class")
+}
+if (actual_container_callbacks != expected_container_callbacks
+        or any(entries.count(entry) != 1 for entry in expected_container_callbacks)):
+    raise SystemExit(f"unexpected direct container callback class family: {sorted(actual_container_callbacks)!r}")
+expected_long_transfer = {"mekanism/api/math/LongTransferUtils.class"}
 for entry in expected_long_transfer:
     if entries.count(entry) != 1:
         raise SystemExit(f"long-transfer production class must be packaged exactly once: {entry}")
@@ -521,7 +534,11 @@ then
 fi
 for required_entry in \
     mekanism/api/RelativeSide.class \
+    mekanism/api/container/ContainerInteraction.class \
+    mekanism/api/container/InContainerGetter.class \
     mekanism/api/container/InContainerGetterLong.class \
+    mekanism/api/container/IntContainerInteraction.class \
+    mekanism/api/container/LongContainerInteraction.class \
     mekanism/api/container/LongToLongContainerInteraction.class \
     mekanism/api/math/LongTransferUtils.class \
     mekanism/api/energy/IEnergyContainer.class \
