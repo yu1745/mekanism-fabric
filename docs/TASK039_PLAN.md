@@ -1,6 +1,6 @@
 # Task 039 plan — client window configuration and concrete inventory slots
 
-Status: **accepted and integrated; parent final gates pending**
+Status: **complete and final-release verified**
 
 ## Candidate checkpoint
 
@@ -144,8 +144,12 @@ Bounded reruns passed:
 
 Paired/rejection networking, packaged dedicated-server smoke, clean release, push and deployment were intentionally not run.
 
+## Parent final verification
+
+At integrated implementation HEAD `cea268e0`, the parent independently passed focused window/transfer/fixture gates in 24.05s; full `check` in 32.62s with ordinary **70/336**, transfer **3/15**, registry-root **1/1**, data-map **1/1**, aggregate **75/353** and zero failure/error/skip; `fabric-build.sh` in 3.76s; real two-client window smoke in 38.89s; paired matching-network smoke in 69.97s; three-case configuration rejection smoke in 98.31s; and packaged dedicated-server smoke in 39.41s through `Done` without client-owner initialization. Clean implementation release passed in 40.72s with exactly one JAR SHA-256 `ffb87660205c6a70612b589ad8c1315e84ed7c3e2f3b575aeb410b90f9aac7fa` and build-info source `cea268e0`. The clean release was rerun after committing the final evaluation; its build-info source equals the current evaluation HEAD and the one-JAR SHA-256 remains identical. No push or deployment occurred.
+
 ## Review outcome and deferrals
 
-The independent read-only high-risk review examined owner publication/replacement, cross-manager path claims, strict typing/correction, unknown retention, atomic writes, save retry/drain races, thread/lifetime handling, exact SelectedWindowData behavior, equipment substitutions, warnings and artifact isolation, and returned **ACCEPT WITH FIXES** as recorded above. The fresh focused rereview then returned **ACCEPT**, closing both required documentation findings and accepting the fixture honesty cleanup with an unchanged production tree. The corrected candidate is integrated; only parent final gates and final evaluation/release remain.
+The independent read-only high-risk review examined owner publication/replacement, cross-manager path claims, strict typing/correction, unknown retention, atomic writes, save retry/drain races, thread/lifetime handling, exact SelectedWindowData behavior, equipment substitutions, warnings and artifact isolation, and returned **ACCEPT WITH FIXES** as recorded above. The fresh focused rereview then returned **ACCEPT**, closing both required documentation findings and accepting the fixture honesty cleanup with an unchanged production tree. The corrected candidate is integrated, all parent semantic/runtime gates are complete, and the final release is aligned to the documentation HEAD.
 
 Deferred after Task039: full ClientConfig and QIO SCC, external config watching/events/backups/comment-pruning, actual GUI windows, menu networking, ItemStorage provider/cache owner, side configuration/ejector, machine registration, recipes/CachedRecipe, Chemical and Crusher. Task039 immediately removes the concrete input/output slot and menu-slot barriers from that path.
