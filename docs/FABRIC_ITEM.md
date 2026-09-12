@@ -87,6 +87,14 @@ The remapped-JAR static gate requires exactly four direct inventory API interfac
 
 The direct inventory API check does not consume or forbid already-admitted subpackages. Every unexpected item-boundary nested/synthetic/test/helper/fixture class is rejected. Task 035 additionally requires the exact `SerializerHelper.class`, `$1`, `$2`, and `$3` family once each, keeps `IInventorySlot.class` once, and rejects `MekanismAPI.class`, platform leakage, or a serialization startup reference/marker. Task 036 requires `IHashedItem.class` once and explicitly rejects `mekanism.common.lib.inventory.HashedItem*`; the anonymous test implementation is test-only. There is no item startup/provider proof.
 
+## Task 039 planning checkpoint
+
+After Task 038, source review at clean commit `a04faa22` established that the first concrete item-slot path no longer needs a public partial `ConstantPredicates`. All uses in `BasicInventorySlot`, `InputInventorySlot`, and `OutputInventorySlot` are private and non-escaping and can be replaced exactly by stateless predicates preserving null behavior: always true, automation not external, and automation internal only. The now-admitted text/color helpers also make the complete `WarningTracker`/`ISupportsWarning` branch bounded; `InventoryContainerSlot` and `IInsertableSlot` do not intrinsically require a machine menu implementation or QIO owner.
+
+The remaining direct dependency is `SelectedWindowData`, whose official public surface includes ten window types, three crafting-window IDs, stream encoding, and persisted client positions. Its 11 save records contain 28 scalar fields under `window.*` (x/y for every record and pinned for the six pinnable records), not merely four values. A concrete-slot batch must therefore include one real physical-client `client.toml` owner and preserve the official path/default/update/save behavior; it may not substitute fallback positions or a test-only owner.
+
+Per the user-directed large-batch policy recorded in `AGENTS.md`, the next candidate is evaluated as one client-config → `SelectedWindowData` → Basic/Input/Output slot → container/warning vertical, normally 15–40 production files rather than another small prerequisite. A larger full dependency closure is preferred when it avoids truncated public behavior. This checkpoint is planning evidence, not a claim that these classes are already admitted; current shipped item behavior remains Task 033's gateway.
+
 ## Deliberately deferred
 
 The following remain outside Task 033:

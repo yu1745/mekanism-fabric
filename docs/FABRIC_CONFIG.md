@@ -22,6 +22,14 @@ Fabric 侧 `MekanismConfigSpec` 提供当前声明实际需要的 category、tra
 
 当前仍不激活 `GeneralConfig`、会一次构造九份配置的 `MekanismConfig`、cardboard blacklist 或 Oredictionificator filter/item owner；`CachedEnumValue`、其它 define schema、world restart、文件监听、配置同步和客户端 UI 也延期。所有 tier owners/callers、cables/pipes/tubes/transporters/conductors/tanks、machines/blocks/items、capability registration、Fabric fluid/chemical storage/conversion/transactions、external energy、networking/serialization/persistence、config ownership/lifecycle/threading 同样延期。这只是 list schema/cached-value 支持与 tier metadata，并未激活任何新增真实配置或 `tiers.toml`。
 
+## Task 039 client.toml ownership checkpoint
+
+Task 039 前置审计确认 `SelectedWindowData` 需要官方 `<config dir>/Mekanism/client.toml` 中 `window.*` 下的完整 11 个位置记录/28 个 scalar values：全部 x/y 默认为 `Integer.MAX_VALUE`，六个可 pin 记录另有默认 `false`。读取必须返回 fresh position record；更新按 x、y、pinned 顺序比较并修改，只有至少一个适用字段变化时才提交一次异步 save。四个非 pin window 加三组 crafting、side-config、transporter-config、upgrade 的物理路径不得与 `configuration.mekanism.client.last_window_positions.*` 翻译键混淆。
+
+未来实现必须让 `MekanismFabricClientBootstrap` 建立唯一 physical-client-lifetime owner，并保证 common/dedicated-server classloading 不引用客户端类。同一 `client.toml` 不允许两个独立 manager/writer；窗口 schema 必须作为可扩展 fragment 归属一个 owner，保留尚未纳入的 qio/hud/rendering 等未知 sections，使未来完整 ClientConfig 扩展同一 owner 而不丢数据或路径冲突。
+
+本项目不把 NeoForge loader 的全部基础设施细节当作该 fragment 的先决条件。外部文件 watcher、NeoForge 配置事件、五级 `.bak` 轮转、comment-only correction 与 unspecified-key pruning 可以作为明确的 Fabric 平台差异延期；但 owned `window.*` 字段的类型验证、默认值、原子 correction/publication、条件保存、异步写序列化、shutdown/flush 和失败行为必须有可执行证据。该 checkpoint 只是已落盘的规划边界，不表示 client owner、SelectedWindowData 或 concrete slots 已进入当前 slice。
+
 ## Startup 契约
 
 生成文件为 `config/Mekanism/startup.toml`，保留官方 12 个路径、大小写、默认值、范围和
