@@ -265,6 +265,7 @@ dependencies {
     // Keep the official root JUnit pin and its Platform generation aligned with jqwik.
     testImplementation 'org.junit.jupiter:junit-jupiter:5.13.4'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.13.4'
+    testRuntimeOnly "net.fabricmc:fabric-loader-junit:${loader_version}"
     testImplementation 'net.jqwik:jqwik:1.9.3'
 }
 

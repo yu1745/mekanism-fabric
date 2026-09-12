@@ -50,7 +50,7 @@ Kilt 的转换表明 execute/simulate 应在 transfer 边界映射为 transactio
 
 ## Module config value contracts (Task 032)
 
-状态：当前 API/common/platform allowlist 精确为 **53/120/14** unique sources；common、platform 与 18-file official root-test oracle 不变。新增六份官方 API source 中，`ModuleBooleanConfig`、`ModuleColorConfig` 与 `IHasModeIcon` 和 `4646f509` byte-identical；其余三份仅作以下封闭适配：
+状态：Task 032 落地时 API/common/platform allowlist 精确为 **53/120/14** unique sources；common、platform 与 18-file official root-test oracle 不变。新增六份官方 API source 中，`ModuleBooleanConfig`、`ModuleColorConfig` 与 `IHasModeIcon` 和 `4646f509` byte-identical；其余三份仅作以下封闭适配：
 
 - `ModuleConfig` 只删除 `MekanismAPI` import，并以 literal `"mekanism"` 构造三个 canonical key 及 legacy name。`baseCodec` 保留官方行为：decode 时仅把 `minecraft:<path>` 改写为 `mekanism:<path>`，其它 namespace 原样保留；encode 始终写出 config 当前的 exact name。
 - `ModuleEnumConfig` 只以 method-local vanilla `StreamCodec` 替换 NeoForge `enumCodec`。它捕获 declaring enum constants，并通过 `ByteBufCodecs.VAR_INT` 写 `ordinal()`、读 ordinal 后直接数组索引，因此 wire bytes 不变；负数或过高 ordinal 继续抛 `ArrayIndexOutOfBoundsException`，null encode 继续抛 `NullPointerException`。没有 anonymous/new packaged class、platform source 或通用 shim。
@@ -102,7 +102,7 @@ Task 031 的 `SoundEventDeferredRegister` 用既有 `MekanismDeferredRegister<So
 `fabric/src/test/java/mekanism/common/registration/MekanismDeferredRegisterTest.java`、
 `SoundAndDamageRegistrationTest.java` 以及 static packaged-JAR gates。Kilt/Connector 与 NeoForge
 21.1.200 extension source 仅用于核对生命周期、冻结、canonical holder 和 lookup 语义；实现未复制。
-当前 **53/120/14** slice 不把 sound/damage owners 接入 entrypoint。
+当前 **56/122/16** slice 不把 sound/damage owners 接入 entrypoint。
 
 ## Config contract
 
@@ -119,7 +119,7 @@ Task 030 的四个 common source 只替换 config backing types：`CachedResolva
 
 兼容影响：直接依赖 NeoForge config spec/type 或 `IConfigTranslation` 到
 `IHasTranslationKey` 赋值关系的 addon 必须改用 Fabric 侧契约。TOML 文件名、12 个 startup
-路径、默认值、范围、restart 元数据与缓存行为保持。官方 resolvable `set` 仍缓存 caller 的原始 `TYPE`：encoded list backing 是 immutable copy，但 map 在 clear/reload 前仍可与 caller alias；clear/reload 后才按 deterministic sorted strings 重建。当前 **53/120/14** slice 不激活 `GeneralConfig`/`MekanismConfig`、cardboard blacklist、Oredictionificator filters/items、`CachedEnumValue`、UI/watch/sync 或 config ownership/lifecycle/threading。细节和验证见 `docs/FABRIC_CONFIG.md`。
+路径、默认值、范围、restart 元数据与缓存行为保持。官方 resolvable `set` 仍缓存 caller 的原始 `TYPE`：encoded list backing 是 immutable copy，但 map 在 clear/reload 前仍可与 caller alias；clear/reload 后才按 deterministic sorted strings 重建。当前 **56/122/16** slice 不激活 `GeneralConfig`/`MekanismConfig`、cardboard blacklist、Oredictionificator filters/items、`CachedEnumValue`、UI/watch/sync 或 config ownership/lifecycle/threading。细节和验证见 `docs/FABRIC_CONFIG.md`。
 
 ## Registry-aware NBT contract
 
@@ -156,6 +156,26 @@ void deserializeNBT(HolderLookup.Provider provider, T tag)
 - `./gradlew -p fabric verifyApiSliceNoNeoForge`
 - `./fabric-build.sh`
 - `scripts/fabric-packaged-smoke.sh`
+
+## Item inventory contracts (Task 033)
+
+状态：当前 API/common/platform allowlist 精确为 **56/122/16**。三份 inventory API source 中，`IMekanismInventory` 与 `4646f509` byte-identical；另两份只有以下有界平台适配。
+
+### `IInventorySlot`
+
+NeoForge `INBTSerializable<CompoundTag>` nominal parent 换成既有 `mekanism.api.INBTSerializable<CompoundTag>`。两个仅供 Javadoc 的 item/fluid links/imports 换成平台中立文字；所有 public methods、default bodies、listener、amount/limit、oversized stack 与 nullable container-slot behavior 均保留。
+
+未纳入 `SerializerHelper`，因为它的 public surface 暴露延期的 `FluidStack`。唯一 private call site 换成 private interface method，其 method-local lazy codec 精确复现 official `OVERSIZED_ITEM_CODEC`：non-air item holder `id`、positive int `count` default 1、optional `DataComponentPatch` `components` default empty，以及 registry-aware `NbtOps`。empty stack 仍抛 exact `IllegalStateException("Cannot encode empty ItemStack")`。无 public/nested helper type；oversized count 与 components 不丢失。
+
+兼容影响：Fabric implementation 改为实现 Mekanism-owned registry-aware NBT nominal type，而不是 NeoForge nominal type；两个 serialize/deserialize method signatures 不变。依赖 NeoForge parent assignment 的 addon 需迁移。
+
+### `ISidedItemHandler`
+
+删除 NeoForge `IItemHandlerModifiable` import/parent 和因此失效的六个 `@Override`，并只重写 stale Forge/fluid Javadocs。每个既有 unsided compatibility method、每个 sided method、public signature、nullable internal side 和 exact `boolean simulate -> Action.get(!simulate)` body 全部保留，无方法增删。
+
+兼容影响：Mekanism-visible source method surface 保留，但 Fabric 上不再可把对象 nominally 赋给 NeoForge `IItemHandlerModifiable`；不提供伪 NeoForge shim。
+
+`IMekanismInventory` 的 invalid-index defaults、`AutomationType.handler(side)`、side routing、live lists 和 `hasInventory` implementation contract 未改变。行为与 package gates 见 `FABRIC_ITEM.md`、`InventoryApiHolderTest` 和 `FabricItemStorageTest`。
 
 ## Container callback contract admission
 

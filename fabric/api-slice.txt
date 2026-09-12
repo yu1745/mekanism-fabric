@@ -42,6 +42,9 @@ mekanism/api/heat/IHeatCapacitor.java
 mekanism/api/heat/IHeatHandler.java
 mekanism/api/heat/IMekanismHeatHandler.java
 mekanism/api/heat/ISidedHeatHandler.java
+mekanism/api/inventory/IInventorySlot.java
+mekanism/api/inventory/IMekanismInventory.java
+mekanism/api/inventory/ISidedItemHandler.java
 mekanism/api/lasers/ILaserDissipation.java
 mekanism/api/lasers/ILaserReceptor.java
 mekanism/api/math/LongTransferUtils.java

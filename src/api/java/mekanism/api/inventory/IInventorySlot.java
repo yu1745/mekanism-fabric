@@ -1,19 +1,21 @@
 package mekanism.api.inventory;
 
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import mekanism.api.Action;
 import mekanism.api.AutomationType;
 import mekanism.api.IContentsListener;
+import mekanism.api.INBTSerializable;
 import mekanism.api.SerializationConstants;
-import mekanism.api.SerializerHelper;
 import mekanism.api.annotations.NothingNullByDefault;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.nbt.Tag;
+import net.minecraft.util.ExtraCodecs;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.common.util.INBTSerializable;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.items.IItemHandler;
 import org.jetbrains.annotations.Nullable;
 
 @NothingNullByDefault
@@ -54,7 +56,7 @@ public interface IInventorySlot extends INBTSerializable<CompoundTag>, IContents
      * <p>
      * Inserts an {@link ItemStack} into this {@link IInventorySlot} and return the remainder. The {@link ItemStack} <em>should not</em> be modified in this function!
      * </p>
-     * Note: This behaviour is subtly different from {@link IFluidHandler#fill(FluidStack, IFluidHandler.FluidAction)}
+     * Note: This returns the unaccepted remainder rather than the accepted amount used by some transfer APIs.
      *
      * @param stack          {@link ItemStack} to insert. This must not be modified by the slot.
      * @param action         The action to perform, either {@link Action#EXECUTE} or {@link Action#SIMULATE}
@@ -142,8 +144,8 @@ public interface IInventorySlot extends INBTSerializable<CompoundTag>, IContents
     }
 
     /**
-     * Retrieves the maximum stack size allowed to exist in this {@link IInventorySlot}. Unlike {@link IItemHandler#getSlotLimit(int)} this takes a stack that it can use
-     * for checking max stack size, if this {@link IInventorySlot} wants to respect the maximum stack size.
+     * Retrieves the maximum stack size allowed to exist in this {@link IInventorySlot}. Unlike an indexed slot-limit query, this takes a stack that it can use for
+     * checking max stack size, if this {@link IInventorySlot} wants to respect the maximum stack size.
      *
      * @param stack The stack we want to know the limit for in case this {@link IInventorySlot} wants to obey the stack limit. If the empty stack is passed, then it
      *              returns the max amount of any item this slot can store.
@@ -297,8 +299,20 @@ public interface IInventorySlot extends INBTSerializable<CompoundTag>, IContents
     default CompoundTag serializeNBT(HolderLookup.Provider provider) {
         CompoundTag nbt = new CompoundTag();
         if (!isEmpty()) {
-            nbt.put(SerializationConstants.ITEM, SerializerHelper.saveOversized(provider, getStack()));
+            nbt.put(SerializationConstants.ITEM, saveOversized(provider, getStack()));
         }
         return nbt;
+    }
+
+    private static Tag saveOversized(HolderLookup.Provider provider, ItemStack stack) {
+        if (stack.isEmpty()) {
+            throw new IllegalStateException("Cannot encode empty ItemStack");
+        }
+        Codec<ItemStack> oversizedItemCodec = Codec.lazyInitialized(() -> RecordCodecBuilder.create(instance -> instance.group(
+              ItemStack.ITEM_NON_AIR_CODEC.fieldOf(SerializationConstants.ID).forGetter(ItemStack::getItemHolder),
+              ExtraCodecs.POSITIVE_INT.fieldOf(SerializationConstants.COUNT).orElse(1).forGetter(ItemStack::getCount),
+              DataComponentPatch.CODEC.optionalFieldOf(SerializationConstants.COMPONENTS, DataComponentPatch.EMPTY).forGetter(ItemStack::getComponentsPatch)
+        ).apply(instance, ItemStack::new)));
+        return oversizedItemCodec.encodeStart(provider.createSerializationContext(NbtOps.INSTANCE), stack).getOrThrow();
     }
 }

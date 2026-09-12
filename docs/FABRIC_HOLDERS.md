@@ -1,4 +1,4 @@
-# Fabric relative-side energy and heat holders
+# Fabric relative-side energy, heat, and item holders
 
 ## Current slice
 
@@ -12,8 +12,10 @@ This milestone adds the platform-neutral side-routing layer used by Mekanism's i
 - `mekanism.common.capabilities.holder.energy.EnergyContainerHolder`
 - `mekanism.common.capabilities.holder.heat.IHeatCapacitorHolder`
 - `mekanism.common.capabilities.holder.heat.HeatCapacitorHolder`
+- `mekanism.common.capabilities.holder.slot.IInventorySlotHolder`
+- `mekanism.common.capabilities.holder.slot.InventorySlotHolder`
 
-It builds on the internal energy and heat containers. Task 023 adds a side-bound Team Reborn Energy adapter/factory seam, but no block/item/entity provider is registered by this slice. The current audited source counts are API **47** / common **99** / platform **14**.
+It builds on the internal energy and heat containers. Task 023 adds a side-bound Team Reborn Energy adapter/factory seam, and Task 033 adds a physical-side Fabric item view, but no block/item/entity provider is registered by this slice. The current audited source counts are API **56** / common **122** / platform **16**.
 
 ## Relative-side contract
 
@@ -43,7 +45,7 @@ The enum no longer pulls `APILang`, `ILangEntry`, `TextComponentUtil`, or `Mekan
 - duplicate side declarations remain duplicate entries;
 - populated lists remain live mutable lists, while absent mappings return the immutable empty list.
 
-`IHolder`/`IEnergyContainerHolder` retain unrestricted default `canInsert` and `canExtract` behavior. `HeatCapacitorHolder` applies the same official routing model without adding energy-style permission methods. Configurable holders and helpers remain separate.
+`IHolder`/`IEnergyContainerHolder` retain unrestricted default `canInsert` and `canExtract` behavior. `HeatCapacitorHolder` applies the same official routing model without adding energy-style permission methods. `InventorySlotHolder` remains byte-identical and adds independent nullable predicates: physical sides are mapped against the live facing, while null/internal insert and extract are always denied. Its `getInventorySlots` returns the same official internal/directional live lists and exact slot identities. Configurable holders and helpers remain separate.
 
 ## Slot descriptor closure
 
@@ -55,6 +57,10 @@ The adjacent platform-neutral descriptors `ISlotInfo`, `BaseSlotInfo`, `EnergySl
 
 This is a factory seam, not provider registration; owner invalidation and neighbor-notification wiring remain deferred. Null/internal-side access is never exposed. Every backing container must support deterministic `setEnergy` rollback (`FabricStrictEnergyHandler` is rejected because its setter is intentionally a no-op); every set attempt is read back, and setter/read exceptions or mismatches such as capacity clamping propagate after all captured indices are attempted. Any such restore failure makes atomicity unavailable. `ConfigHolder`, `ConfigInfo`, `DataType`, `ISideConfiguration`, configurable holders/helpers, `TileComponentConfig`, and `TileComponentEjector` remain deferred.
 
+## Task 033 item-holder and exposure seam
+
+The two item-holder sources are unchanged from `4646f509`; tests fix live facing rotation, internal versus physical list identity, independent policies and null denial. `FabricItemLookup.expose` optionally composes that live `IHolder` policy with the captured physical-side inventory. It never exposes null/internal access. Unlike the energy adapter, the concrete `FabricItemStorage` has explicit permanent `invalidate()` and also self-invalidates on slot identity/order drift or `hasInventory() == false`. Future ownership must cache one view per side and wire removal/reload/facing/side-config/topology invalidation. Full item transaction and restore semantics are in `FABRIC_ITEM.md`.
+
 ## Deliberately deferred
 
 This slice excludes:
@@ -63,8 +69,8 @@ This slice excludes:
 - `ConfigHolder`, `ConfigEnergyContainerHolder`, and `ConfigHeatCapacitorHolder`;
 - `ConfigInfo`, `DataType`, `TileComponentConfig`, `TileComponentEjector`, and side-configuration execution/ejection;
 - chemical, fluid, inventory, and proxy slot descriptors;
-- actual block/item/entity provider registration, owner caching/invalidation, every tile/machine/block caller, and specialized holders;
-- item/fluid/chemical/heat adapters, persistence, networking/wire serialization, config/registry lifecycle, and thread ownership.
+- actual block/item/entity provider registration, owner caching/invalidation wiring, every tile/machine/block caller, and specialized holders;
+- item reverse adapters plus fluid/chemical/heat adapters, persistence, networking/wire serialization, config/registry lifecycle, and thread ownership.
 
 The energy and heat helpers currently couple their non-config and configurable factories. They must be split or admitted with their real side-configuration closure rather than stubbed.
 
@@ -84,6 +90,9 @@ The energy and heat helpers currently couple their non-config and configurable f
 - `fabric/src/test/java/mekanism/common/capabilities/holder/heat/HeatCapacitorHolderTest.java`
   - exercises representative horizontal and vertical routing for the official heat-holder specialization;
   - verifies internal/all-side identity, filtering, live facing, order, duplicates, and list mutability.
+- `fabric/src/test/java/mekanism/common/capabilities/holder/slot/InventoryApiHolderTest.java`
+  - its holder method covers live facing, internal/physical lists, exact identity and independent null-denying policies;
+  - its other three methods bind the admitted item API without adding a second holder-only suite.
 - `fabric/src/test/java/mekanism/common/tile/component/config/slot/SlotInfoTest.java`
   - five methods cover all four flag combinations/OR enablement, energy varargs order and zero/all-empty behavior, exact source-order short-circuit, live list identity/membership/state, and heat's unconditional non-empty result without capacitor reads.
 

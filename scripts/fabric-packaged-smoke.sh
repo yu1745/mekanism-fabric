@@ -578,6 +578,19 @@ actual_direct_holders = {
 }
 if actual_direct_holders != expected_direct_holders or any(entries.count(entry) != 1 for entry in expected_direct_holders):
     raise SystemExit(f"unexpected direct holder class family: {sorted(actual_direct_holders)!r}")
+expected_inventory_slot_holders = {
+    "mekanism/common/capabilities/holder/slot/IInventorySlotHolder.class",
+    "mekanism/common/capabilities/holder/slot/InventorySlotHolder.class",
+}
+actual_inventory_slot_holders = {
+    entry for entry in entries
+    if entry.startswith("mekanism/common/capabilities/holder/slot/")
+    and "/" not in entry[len("mekanism/common/capabilities/holder/slot/"):]
+    and entry.endswith(".class")
+}
+if (actual_inventory_slot_holders != expected_inventory_slot_holders
+        or any(entries.count(entry) != 1 for entry in expected_inventory_slot_holders)):
+    raise SystemExit(f"unexpected direct inventory-slot holder class family: {sorted(actual_inventory_slot_holders)!r}")
 expected_energy_holders = {
     "mekanism/common/capabilities/holder/energy/EnergyContainerHolder.class",
     "mekanism/common/capabilities/holder/energy/IEnergyContainerHolder.class",
@@ -633,6 +646,20 @@ actual_common_energy = {
 }
 if actual_common_energy != expected_common_energy or any(entries.count(entry) != 1 for entry in expected_common_energy):
     raise SystemExit(f"unexpected common energy class family: {sorted(actual_common_energy)!r}")
+expected_inventory_api = {
+    "mekanism/api/inventory/IInventorySlot.class",
+    "mekanism/api/inventory/IMekanismInventory.class",
+    "mekanism/api/inventory/ISidedItemHandler.class",
+}
+inventory_api_prefix = "mekanism/api/inventory/"
+actual_inventory_api = {
+    entry for entry in entries
+    if entry.startswith(inventory_api_prefix)
+    and "/" not in entry[len(inventory_api_prefix):]
+    and entry.endswith(".class")
+}
+if actual_inventory_api != expected_inventory_api or any(entries.count(entry) != 1 for entry in expected_inventory_api):
+    raise SystemExit(f"unexpected direct inventory API class family: {sorted(actual_inventory_api)!r}")
 expected_energy_handlers = {
     "mekanism/api/energy/IStrictEnergyHandler.class",
     "mekanism/api/energy/ISidedStrictEnergyHandler.class",
@@ -663,9 +690,20 @@ actual_fabric_energy = {
 }
 if actual_fabric_energy != expected_fabric_energy or any(entries.count(entry) != 1 for entry in expected_fabric_energy):
     raise SystemExit(f"unexpected Fabric energy adapter class family: {sorted(actual_fabric_energy)!r}")
+expected_fabric_item = {
+    "mekanism/fabric/item/FabricItemLookup.class",
+    "mekanism/fabric/item/FabricItemStorage.class",
+    "mekanism/fabric/item/FabricItemStorage$SlotView.class",
+}
+actual_fabric_item = {
+    entry for entry in entries
+    if entry.startswith("mekanism/fabric/item/") and entry.endswith(".class")
+}
+if actual_fabric_item != expected_fabric_item or any(entries.count(entry) != 1 for entry in expected_fabric_item):
+    raise SystemExit(f"unexpected Fabric item adapter class family: {sorted(actual_fabric_item)!r}")
 PYEOF
 then
-  echo "fabric-packaged-smoke: block-state-descriptor/inventory-metadata/deferred-registration/tile-interface/slot-info/tier/resource/codec/collection/distribution/ChunkUtils/RegistryUtils/LambdaMetaFactoryUtil/long-transfer/dynamic-strict-energy/proxy/config-listener/common-lib-root production/test packaging contract failed" >&2
+  echo "fabric-packaged-smoke: item-boundary/block-state-descriptor/inventory-metadata/deferred-registration/tile-interface/slot-info/tier/resource/codec/collection/distribution/ChunkUtils/RegistryUtils/LambdaMetaFactoryUtil/long-transfer/dynamic-strict-energy/proxy/config-listener/common-lib-root production/test packaging contract failed" >&2
   exit 1
 fi
 for required_entry in \
@@ -677,6 +715,9 @@ for required_entry in \
     mekanism/api/container/LongContainerInteraction.class \
     mekanism/api/container/LongToLongContainerInteraction.class \
     mekanism/api/math/LongTransferUtils.class \
+    mekanism/api/inventory/IInventorySlot.class \
+    mekanism/api/inventory/IMekanismInventory.class \
+    mekanism/api/inventory/ISidedItemHandler.class \
     mekanism/api/energy/IEnergyContainer.class \
     mekanism/api/energy/IEnergyConversion.class \
     mekanism/api/heat/HeatAPI.class \
@@ -705,6 +746,8 @@ for required_entry in \
     mekanism/common/capabilities/holder/energy/IEnergyContainerHolder.class \
     mekanism/common/capabilities/holder/heat/HeatCapacitorHolder.class \
     mekanism/common/capabilities/holder/heat/IHeatCapacitorHolder.class \
+    mekanism/common/capabilities/holder/slot/IInventorySlotHolder.class \
+    mekanism/common/capabilities/holder/slot/InventorySlotHolder.class \
     mekanism/common/lib/LastEnergyTracker.class \
     mekanism/common/lib/WildcardMatcher.class \
     mekanism/common/util/ChunkUtils.class \
@@ -720,6 +763,9 @@ for required_entry in \
     mekanism/fabric/energy/FabricEnergyLookup.class \
     mekanism/fabric/energy/FabricEnergyStorage.class \
     mekanism/fabric/energy/FabricStrictEnergyHandler.class \
+    mekanism/fabric/item/FabricItemLookup.class \
+    mekanism/fabric/item/FabricItemStorage.class \
+    'mekanism/fabric/item/FabricItemStorage$SlotView.class' \
     mekanism/fabric/network/FabricMekanismNetworking.class \
     mekanism/fabric/network/FabricMekanismClientNetworking.class \
     mekanism.accesswidener \

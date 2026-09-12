@@ -18,7 +18,7 @@ The current storage milestone admits the official Mekanism energy-container cont
 - `mekanism.fabric.energy.FabricEnergyStorage`
 - `mekanism.fabric.energy.FabricEnergyLookup`
 
-The current global slice count is API 47 / common 114 / platform 14. The common count includes the seven byte-identical `4646f509` color/effect/spatial foundations documented in `FABRIC_PORT.md`; their exact JAR families and bounded tests do not admit any energy caller, owner, external API, lifecycle, networking, persistence, registry, or thread-safety guarantee. It also admits official
+Task 033 brings the current global slice count to API 56 / common 122 / platform 16. The common count includes the seven byte-identical `4646f509` color/effect/spatial foundations documented in `FABRIC_PORT.md`; their exact JAR families and bounded tests do not admit any energy caller, owner, external API, lifecycle, networking, persistence, registry, or thread-safety guarantee. It also admits official
 `mekanism.common.lib.LastEnergyTracker` byte-identically to `4646f509` as a
 platform-neutral per-game-time accounting closure. Same-time calls accumulate a current
 bucket while the visible last bucket remains unchanged; every different timestamp—including
@@ -164,7 +164,7 @@ This first external boundary does not yet include:
 - `ConfigHolder`, `ConfigInfo`, `DataType`, `ISideConfiguration`, configurable holders/helpers, or hardcoded FE configuration activation;
 - `TileComponentConfig`, `TileComponentEjector`, Universal Cable, cables/networks/emission, or machines;
 - actual block/item/entity provider registration, owner caching/invalidation, or world/chunk lifecycle;
-- item, fluid, chemical, or heat adapters;
+- the item reverse adapter and actual item provider/cache owner, plus fluid, chemical, or heat adapters (the later Task 033 physical-side item gateway is documented in `FABRIC_ITEM.md`);
 - persistence, packets/client sync, menus, recipes, or thread-safety guarantees;
 - `EnergyContainerHelper` and its static dependency `ConfigEnergyContainerHolder`;
 - all callers including `ComponentBackedEnergyHandler` and `EnergyRecipeData`.

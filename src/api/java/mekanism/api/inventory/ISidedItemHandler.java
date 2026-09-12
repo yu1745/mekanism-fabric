@@ -4,22 +4,18 @@ import mekanism.api.Action;
 import mekanism.api.annotations.NothingNullByDefault;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.items.IItemHandler;
-import net.neoforged.neoforge.items.IItemHandlerModifiable;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A sided variant of {@link IItemHandlerModifiable}
+ * Mekanism's sided item-handler contract, including unsided compatibility methods.
  */
 @NothingNullByDefault
-public interface ISidedItemHandler extends IItemHandlerModifiable {
+public interface ISidedItemHandler {
 
     /**
      * The side this {@link ISidedItemHandler} is for. This defaults to null, which is for internal use.
      *
-     * @return The default side to use for the normal {@link IItemHandler} methods when wrapping them into {@link ISidedItemHandler} methods.
+     * @return The default side to use when the unsided compatibility methods delegate to sided methods.
      */
     @Nullable
     default Direction getInventorySideFor() {
@@ -27,10 +23,10 @@ public interface ISidedItemHandler extends IItemHandlerModifiable {
     }
 
     /**
-     * A sided variant of {@link IItemHandlerModifiable#setStackInSlot(int, ItemStack)}, docs copied for convenience.
+     * A sided variant of {@link #setStackInSlot(int, ItemStack)}, docs copied for convenience.
      * <p>
-     * Overrides the stack in the given slot. This method is used by the standard Forge helper methods and classes. It is not intended for general use by other mods, and
-     * the handler may throw an error if it is called unexpectedly.
+     * Overrides the stack in the given slot. This method is intended for compatibility helpers rather than general use, and the handler may throw an error if it is
+     * called unexpectedly.
      *
      * @param slot  Slot to modify
      * @param stack {@link ItemStack} to set slot to (may be empty).
@@ -40,13 +36,12 @@ public interface ISidedItemHandler extends IItemHandlerModifiable {
      */
     void setStackInSlot(int slot, ItemStack stack, @Nullable Direction side);
 
-    @Override
     default void setStackInSlot(int slot, ItemStack stack) {
         setStackInSlot(slot, stack, getInventorySideFor());
     }
 
     /**
-     * A sided variant of {@link IItemHandler#getSlots()}, docs copied for convenience.
+     * A sided variant of {@link #getSlots()}, docs copied for convenience.
      * <p>
      * Returns the number of slots available
      *
@@ -56,13 +51,12 @@ public interface ISidedItemHandler extends IItemHandlerModifiable {
      */
     int getSlots(@Nullable Direction side);
 
-    @Override
     default int getSlots() {
         return getSlots(getInventorySideFor());
     }
 
     /**
-     * A sided variant of {@link IItemHandler#getStackInSlot(int)}, docs copied for convenience.
+     * A sided variant of {@link #getStackInSlot(int)}, docs copied for convenience.
      * <p>
      * Returns the {@link ItemStack} in a given slot.
      * <p>
@@ -87,18 +81,17 @@ public interface ISidedItemHandler extends IItemHandlerModifiable {
      */
     ItemStack getStackInSlot(int slot, @Nullable Direction side);
 
-    @Override
     default ItemStack getStackInSlot(int slot) {
         return getStackInSlot(slot, getInventorySideFor());
     }
 
     /**
-     * A sided variant of {@link IItemHandler#insertItem(int, ItemStack, boolean)}, docs copied for convenience.
+     * A sided variant of {@link #insertItem(int, ItemStack, boolean)}, docs copied for convenience.
      *
      * <p>
      * Inserts an {@link ItemStack} into the given slot and return the remainder. The {@link ItemStack} <em>should not</em> be modified in this function!
      * </p>
-     * Note: This behaviour is subtly different from {@link IFluidHandler#fill(FluidStack, IFluidHandler.FluidAction)}
+     * Note: This returns the unaccepted remainder rather than an accepted amount.
      *
      * @param slot   Slot to insert into.
      * @param stack  {@link ItemStack} to insert. This must not be modified by the item handler.
@@ -112,13 +105,12 @@ public interface ISidedItemHandler extends IItemHandlerModifiable {
      */
     ItemStack insertItem(int slot, ItemStack stack, @Nullable Direction side, Action action);
 
-    @Override
     default ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
         return insertItem(slot, stack, getInventorySideFor(), Action.get(!simulate));
     }
 
     /**
-     * A sided variant of {@link IItemHandler#extractItem(int, int, boolean)}, docs copied for convenience.
+     * A sided variant of {@link #extractItem(int, int, boolean)}, docs copied for convenience.
      * <p>
      * Extracts an {@link ItemStack} from the given slot.
      * <p>
@@ -138,13 +130,12 @@ public interface ISidedItemHandler extends IItemHandlerModifiable {
      */
     ItemStack extractItem(int slot, int amount, @Nullable Direction side, Action action);
 
-    @Override
     default ItemStack extractItem(int slot, int amount, boolean simulate) {
         return extractItem(slot, amount, getInventorySideFor(), Action.get(!simulate));
     }
 
     /**
-     * A sided variant of {@link IItemHandler#getSlotLimit(int)}, docs copied for convenience.
+     * A sided variant of {@link #getSlotLimit(int)}, docs copied for convenience.
      * <p>
      * Retrieves the maximum stack size allowed to exist in the given slot.
      *
@@ -155,13 +146,12 @@ public interface ISidedItemHandler extends IItemHandlerModifiable {
      */
     int getSlotLimit(int slot, @Nullable Direction side);
 
-    @Override
     default int getSlotLimit(int slot) {
         return getSlotLimit(slot, getInventorySideFor());
     }
 
     /**
-     * A sided variant of {@link IItemHandler#isItemValid(int, ItemStack)}, docs copied for convenience.
+     * A sided variant of {@link #isItemValid(int, ItemStack)}, docs copied for convenience.
      *
      * <p>
      * This function re-implements the vanilla function {@link net.minecraft.world.Container#canPlaceItem(int, ItemStack)}. It should be used instead of simulated
@@ -183,7 +173,6 @@ public interface ISidedItemHandler extends IItemHandlerModifiable {
      */
     boolean isItemValid(int slot, ItemStack stack, @Nullable Direction side);
 
-    @Override
     default boolean isItemValid(int slot, ItemStack stack) {
         return isItemValid(slot, stack, getInventorySideFor());
     }
