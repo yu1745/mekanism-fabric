@@ -47,7 +47,8 @@ For each valid layer, operations occur in this exact order:
 4. the next higher pack layer starts.
 
 Thus writes followed by removals in one layer leave removals effective. A missing/empty tag expands
-to nothing. Unknown direct write targets warn and are skipped; unknown removals are no-ops. A valid
+to nothing. Unknown direct write targets emit `ERROR` on `Mekanism/FabricDataMaps` and are skipped,
+matching the pinned NeoForge `DataMapLoader` diagnostic severity; unknown removals are no-ops. A valid
 higher `replace` clears lower values, while an invalid higher layer has no effect at all.
 
 Accepted value forms are bare `0.75`, bare object `{"absorption":0.75}`, wrapped
@@ -65,7 +66,9 @@ Each reader is closed. Invalid key syntax, malformed structure, I/O failure, cod
 unsupported conditions fails the whole resource layer. No writes from that layer publish; loading
 continues with the remaining valid low/high layers. Every successful owner load publishes the new
 candidate even when some resource layers failed, so the old snapshot is not retained. A failed high
-`replace` consequently cannot clear valid low results. Unknown descriptor files warn and are skipped.
+`replace` consequently cannot clear valid low results. Unknown descriptor files in this owner's map
+namespace warn and are skipped. Files below another namespace's `data_maps` tree are neither counted
+nor diagnosed by this owner-local loader.
 
 ## Lifecycle and ownership
 
@@ -79,6 +82,17 @@ Sessions are stored in an identity map keyed by the actual `MinecraftServer`. Cr
 publish, and close enforce the owner/server thread. Duplicate creation, reentrant loading,
 off-thread access and use after close fail. A fresh server starts at epoch 1. Stop removes the exact
 session, closes it, and clears its snapshot.
+
+The failed-start cleanup is source-traced through vanilla 1.21.1
+`net/minecraft/server/MinecraftServer.java`: `runServer` reaches `stopServer` from its `finally` even
+when startup throws. Fabric API's
+`fabric-lifecycle-events-v1/src/main/java/net/fabricmc/fabric/mixin/event/lifecycle/MinecraftServerMixin.java`
+invokes `SERVER_STARTING` immediately before `initServer()` in `runServer` and invokes
+`SERVER_STOPPED` at the tail of `stopServer`. The owner therefore records the exact failed-start
+server identity before rethrowing. Only the subsequent no-session stop for that same identity is
+tolerated and consumes the marker; never-started and double-stop identities still fail. A successful
+start carries no failed-start identity, and the normal `MEKANISM_FABRIC_DATAMAP_STOP_PROOF` marker is
+emitted only after a real session was removed and closed.
 
 Every load rebuilds this owner's descriptors from empty. Therefore a disappeared file publishes an
 empty map rather than retaining the previous one; this is an explicit Fabric owner-local lifecycle
@@ -108,8 +122,15 @@ close behavior. Current exact totals are ordinary **68 suites / 324 tests**, tra
 entries, resource hashes/counts, and forbidden architecture leakage, and its normal server mode now
 requires the real startup epoch-1/21-entry proof. `scripts/fabric-datamap-reload-smoke.sh` builds an
 isolated remapped fixture JAR outside `fabric/build/libs`; on a disposable packaged server it queries
-epochs 1–4, exercises a valid high replace/remove layer, an invalid high data-map layer with vanilla
-reload success, a real vanilla reload-future failure with no increment, repair, and stop cleanup.
+epochs 1–4. After readiness it creates the high-priority world pack and uses console `reload`, whose
+vanilla `ReloadCommand.discoverNewPacks` rescan discovers and auto-enables the new pack; it does not
+issue a stale-repository `datapack enable`. The gate then exercises an invalid high data-map layer
+with vanilla reload success, a real vanilla reload-future failure with no increment, repair, and stop
+cleanup. Log-line checkpoints reject every `ERROR` during startup, valid high-pack reload, repair, and
+normal stop. The malformed window requires exactly the single `Mekanism/FabricDataMaps` invalid-layer
+message for `mekanism:data_maps/damage_type/mekasuit_absorption.json`; the deliberately broken vanilla
+window permits only `ERROR` lines naming `reload_future_failure` or vanilla `Failed to execute reload`.
+A final total proves that every `ERROR` line was accounted for in one of those two negative windows.
 The fixture supplies no data map and never calls the loader directly.
 
 Deferred without partial compatibility claims: Chemical data maps, synced maps, conditions,

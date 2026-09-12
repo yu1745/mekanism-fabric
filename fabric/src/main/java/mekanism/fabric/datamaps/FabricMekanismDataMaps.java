@@ -1,8 +1,10 @@
 package mekanism.fabric.datamaps;
 
+import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import mekanism.api.datamaps.MekaSuitAbsorption;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.minecraft.core.Holder;
@@ -23,6 +25,7 @@ public final class FabricMekanismDataMaps {
     public static final FabricDataMapType<DamageType, MekaSuitAbsorption> MEKASUIT_ABSORPTION =
           new FabricDataMapType<>(Registries.DAMAGE_TYPE, MekaSuitAbsorption.ID, MekaSuitAbsorption.CODEC);
     private static final Map<MinecraftServer, Session> SESSIONS = new IdentityHashMap<>();
+    private static final Set<MinecraftServer> FAILED_STARTS = Collections.newSetFromMap(new IdentityHashMap<>());
     private static boolean callbacksInitialized;
 
     private FabricMekanismDataMaps() {
@@ -64,15 +67,17 @@ public final class FabricMekanismDataMaps {
 
     private static synchronized void start(MinecraftServer server) {
         requireServerThread(server);
-        if (SESSIONS.containsKey(server)) {
+        if (SESSIONS.containsKey(server) || FAILED_STARTS.contains(server)) {
             throw new IllegalStateException("Duplicate Fabric data-map server initialization");
         }
         Session session = new Session(Thread.currentThread());
         SESSIONS.put(server, session);
         try {
             session.load(server.getResourceManager(), server.reloadableRegistries().get(), "startup");
+            FAILED_STARTS.remove(server);
         } catch (Throwable failure) {
             SESSIONS.remove(server);
+            FAILED_STARTS.add(server);
             session.close();
             throw failure;
         }
@@ -97,6 +102,10 @@ public final class FabricMekanismDataMaps {
         requireServerThread(server);
         Session session = SESSIONS.remove(server);
         if (session == null) {
+            if (FAILED_STARTS.remove(server)) {
+                LOGGER.info("Fabric data-map failed-start cleanup completed for stopped server");
+                return;
+            }
             throw new IllegalStateException("Stopping Fabric data-map server without a session");
         }
         session.close();

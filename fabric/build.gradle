@@ -527,6 +527,9 @@ def verifyDataMapReloadFixtureIsolation = tasks.register('verifyDataMapReloadFix
         }
     }
 }
+tasks.named('check') {
+    dependsOn verifyDataMapReloadFixtureIsolation
+}
 
 java {
     toolchain.languageVersion = JavaLanguageVersion.of(21)

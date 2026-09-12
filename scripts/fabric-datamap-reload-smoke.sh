@@ -12,6 +12,8 @@ SERVER_DIR=
 SERVER_PID=
 CONSOLE_FD_OPEN=0
 RESULT=1
+LOG_CHECKPOINT=0
+ACCOUNTED_ERROR_LINES=0
 
 property() {
   local key=$1 value
@@ -92,6 +94,65 @@ send_command() {
   printf '%s\n' "$1" >&3
 }
 
+log_line_count() {
+  wc -l < "$SERVER_DIR/logs/latest.log"
+}
+
+log_errors_between() {
+  local first=$(( $1 + 1 )) last=$2
+  awk -v first="$first" -v last="$last" 'NR >= first && NR <= last && /\[[^]]*ERROR\]/ { print }' "$SERVER_DIR/logs/latest.log"
+}
+
+assert_no_new_errors() {
+  local phase=$1 end
+  local -a errors=()
+  end=$(log_line_count)
+  mapfile -t errors < <(log_errors_between "$LOG_CHECKPOINT" "$end")
+  if (( ${#errors[@]} != 0 )); then
+    printf 'fabric-datamap-reload-smoke: unexpected ERROR during %s:\n' "$phase" >&2
+    printf '%s\n' "${errors[@]}" >&2
+    fail "unexpected ERROR output during $phase"
+  fi
+  LOG_CHECKPOINT=$end
+}
+
+assert_malformed_map_errors() {
+  local end expected
+  local -a errors=()
+  expected='Skipping invalid data-map layer mekanism:data_maps/damage_type/mekasuit_absorption.json from pack file/datamap-high'
+  end=$(log_line_count)
+  mapfile -t errors < <(log_errors_between "$LOG_CHECKPOINT" "$end")
+  if (( ${#errors[@]} != 1 )) || [[ "${errors[0]:-}" != *"$expected" ]]; then
+    printf 'fabric-datamap-reload-smoke: malformed-map ERROR window was not the exact expected event:\n' >&2
+    printf '%s\n' "${errors[@]:-<none>}" >&2
+    fail 'unexpected ERROR output during malformed-map reload'
+  fi
+  ACCOUNTED_ERROR_LINES=$((ACCOUNTED_ERROR_LINES + 1))
+  LOG_CHECKPOINT=$end
+}
+
+assert_vanilla_failure_errors() {
+  local end line
+  local -a errors=()
+  end=$(log_line_count)
+  mapfile -t errors < <(log_errors_between "$LOG_CHECKPOINT" "$end")
+  (( ${#errors[@]} > 0 )) || fail 'vanilla-failure window contained no ERROR diagnostic'
+  for line in "${errors[@]}"; do
+    if [[ "$line" != *reload_future_failure* && "$line" != *'Failed to execute reload'* ]]; then
+      printf 'fabric-datamap-reload-smoke: unexpected vanilla-failure ERROR:\n%s\n' "$line" >&2
+      fail 'unexpected ERROR output during deliberately broken vanilla reload'
+    fi
+  done
+  ACCOUNTED_ERROR_LINES=$((ACCOUNTED_ERROR_LINES + ${#errors[@]}))
+  LOG_CHECKPOINT=$end
+}
+
+assert_all_errors_accounted() {
+  local total
+  total=$(awk '/\[[^]]*ERROR\]/ { count++ } END { print count + 0 }' "$SERVER_DIR/logs/latest.log")
+  (( total == ACCOUNTED_ERROR_LINES )) || fail "ERROR accounting mismatch: total=$total accounted=$ACCOUNTED_ERROR_LINES"
+}
+
 write_pack_metadata() {
   mkdir -p "$1"
   printf '%s\n' '{"pack":{"pack_format":48,"description":"Mekanism data-map reload smoke"}}' > "$1/pack.mcmeta"
@@ -133,16 +194,18 @@ wait_for 'MEKANISM_FABRIC_DATAMAP_PROOF phase=startup epoch=1 published=21 skipp
 wait_for 'Done (' 'server readiness'
 send_command 'mekanism_datamap_probe'
 wait_for 'MEKANISM_DATAMAP_FIXTURE_PROBE epoch=1 entries=21 ones=20 sonic=0.75 session=true' 'epoch 1 query proof'
+assert_no_new_errors 'startup'
 
 PACK="$SERVER_DIR/world/datapacks/datamap-high"
 write_pack_metadata "$PACK"
 MAP="$PACK/data/mekanism/data_maps/damage_type/mekasuit_absorption.json"
 mkdir -p "$(dirname "$MAP")"
 printf '%s\n' '{"replace":true,"values":{"#mekanism:mekasuit_always_supported":0.5,"minecraft:sonic_boom":{"value":0.25,"replace":true}},"remove":["minecraft:cactus"]}' > "$MAP"
-send_command 'datapack enable "file/datamap-high" last'
+send_command 'reload'
 wait_for 'MEKANISM_FABRIC_DATAMAP_PROOF phase=reload epoch=2 published=20 skipped=0' 'two-layer epoch 2 publication'
 send_command 'mekanism_datamap_probe'
 wait_for 'MEKANISM_DATAMAP_FIXTURE_PROBE epoch=2 entries=20 ones=0 sonic=0.25 session=true' 'epoch 2 query proof'
+assert_no_new_errors 'valid high-pack reload'
 
 printf '%s\n' '{"replace":true,"remove":[]}' > "$MAP"
 send_command 'reload'
@@ -150,6 +213,7 @@ wait_for 'MEKANISM_FABRIC_DATAMAP_PROOF phase=reload epoch=3 published=21 skippe
 wait_for 'Skipping invalid data-map layer mekanism:data_maps/damage_type/mekasuit_absorption.json' 'bounded expected malformed-layer error'
 send_command 'mekanism_datamap_probe'
 wait_for 'MEKANISM_DATAMAP_FIXTURE_PROBE epoch=3 entries=21 ones=20 sonic=0.75 session=true' 'epoch 3 fresh-low query proof'
+assert_malformed_map_errors
 
 BROKEN_REGISTRY="$PACK/data/mekanism/damage_type/reload_future_failure.json"
 mkdir -p "$(dirname "$BROKEN_REGISTRY")"
@@ -158,6 +222,7 @@ send_command 'reload'
 wait_for 'MEKANISM_FABRIC_DATAMAP_RELOAD_REJECTED success=false epoch_unchanged=3' 'vanilla failed-reload callback'
 send_command 'mekanism_datamap_probe'
 wait_for 'MEKANISM_DATAMAP_FIXTURE_PROBE epoch=3 entries=21 ones=20 sonic=0.75 session=true' 'failed reload epoch stability'
+assert_vanilla_failure_errors
 
 rm -f "$BROKEN_REGISTRY"
 printf '%s\n' '{"values":{"#mekanism:mekasuit_always_supported":{"absorption":1.0},"minecraft:sonic_boom":0.75}}' > "$MAP"
@@ -165,6 +230,7 @@ send_command 'reload'
 wait_for 'MEKANISM_FABRIC_DATAMAP_PROOF phase=reload epoch=4 published=21 skipped=0' 'repaired epoch 4 publication'
 send_command 'mekanism_datamap_probe'
 wait_for 'MEKANISM_DATAMAP_FIXTURE_PROBE epoch=4 entries=21 ones=20 sonic=0.75 session=true' 'epoch 4 query proof'
+assert_no_new_errors 'repaired reload'
 
 send_command 'stop'
 wait_for 'MEKANISM_DATAMAP_FIXTURE_STOP session_removed=true' 'owner stop cleanup proof'
@@ -174,5 +240,7 @@ for _ in {1..80}; do kill -0 "$SERVER_PID" 2>/dev/null || break; sleep 0.25; don
 kill -0 "$SERVER_PID" 2>/dev/null && fail 'server did not stop normally'
 wait "$SERVER_PID"
 SERVER_PID=
+assert_no_new_errors 'normal stop'
+assert_all_errors_accounted
 RESULT=0
 printf 'fabric-datamap-reload-smoke: PASS (epochs 1-4, layered failure semantics, vanilla failure stability, and stop cleanup)\n'

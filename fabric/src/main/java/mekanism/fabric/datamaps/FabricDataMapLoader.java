@@ -48,7 +48,7 @@ public final class FabricDataMapLoader {
         HolderLookup.RegistryLookup<R> registry = registries.lookup(descriptor.registryKey())
               .orElseThrow(() -> new IllegalStateException("Missing data-map registry " + descriptor.registryKey().location()));
         ResourceLocation file = fileLocation(descriptor);
-        int skipped = warnUnknownDescriptors(resources, Set.of(file));
+        int skipped = warnUnknownDescriptors(resources, Set.of(file), file.getNamespace());
         Map<ResourceKey<R>, T> accumulated = new LinkedHashMap<>();
         for (Resource resource : resources.getResourceStack(file)) {
             final Layer<T> layer;
@@ -185,18 +185,14 @@ public final class FabricDataMapLoader {
             if (registry.get(key).isPresent()) {
                 attachOrdinary(accumulated, key, entry);
             } else {
-                LOGGER.warn("Skipping unknown data-map value target {} in registry {}", location, registryKey.location());
+                LOGGER.error("Skipping unknown data-map value target {} in registry {}", location, registryKey.location());
             }
         }
     }
 
     private static <R, T> void attachOrdinary(Map<ResourceKey<R>, T> accumulated, ResourceKey<R> key, Entry<T> entry) {
-        if (entry.replace() || !accumulated.containsKey(key)) {
-            accumulated.put(key, entry.value());
-        } else {
-            // Ordinary descriptors have no merger: an existing value is replaced by the incoming value.
-            accumulated.put(key, entry.value());
-        }
+        // Ordinary descriptors have no merger: parsed entry replace remains syntax-only and every write replaces.
+        accumulated.put(key, entry.value());
     }
 
     private static <R, T> void applyRemoval(HolderLookup.RegistryLookup<R> registry, ResourceKey<? extends Registry<R>> registryKey,
@@ -213,9 +209,10 @@ public final class FabricDataMapLoader {
         }
     }
 
-    private static int warnUnknownDescriptors(ResourceManager resources, Set<ResourceLocation> known) {
+    private static int warnUnknownDescriptors(ResourceManager resources, Set<ResourceLocation> known, String namespace) {
         int skipped = 0;
-        for (Map.Entry<ResourceLocation, List<Resource>> entry : resources.listResourceStacks("data_maps", id -> id.getPath().endsWith(".json")).entrySet()) {
+        for (Map.Entry<ResourceLocation, List<Resource>> entry : resources.listResourceStacks("data_maps", id ->
+              id.getNamespace().equals(namespace) && id.getPath().endsWith(".json")).entrySet()) {
             if (!known.contains(entry.getKey())) {
                 skipped += entry.getValue().size();
                 LOGGER.warn("Skipping unknown Fabric data-map descriptor file {} ({} layer(s))", entry.getKey(), entry.getValue().size());

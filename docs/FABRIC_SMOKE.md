@@ -155,10 +155,16 @@ resource/tag installation.
 The dedicated `scripts/fabric-datamap-reload-smoke.sh` is separate from JUnit totals. It builds the
 production remapped JAR and an isolated fixture JAR under `fabric/build/datamap-reload-fixture/remapped`
 (never `fabric/build/libs`), then uses a disposable real server and console commands. Its query probe
-checks startup 21/20×1.0/sonic 0.75, valid high replace/remove epoch 2, malformed high layer with valid
+checks startup 21/20×1.0/sonic 0.75, discovers and auto-enables the newly created high pack through
+console `reload`, verifies its replace/remove epoch 2, then checks a malformed high layer with valid
 low publication epoch 3, real vanilla reload-future failure with no epoch increment, repair epoch 4,
-and exact owner removal on normal stop. Expected ERROR output is bounded to negative phases while
-crash signatures remain fatal. Candidate Task 038 verification builds and shell-checks this gate but
-does not execute either real-server smoke. Full semantics and oracle pins are in `FABRIC_DATA_MAPS.md`.
+and exact owner removal on normal stop. Contiguous log-line checkpoints allow no `ERROR` during
+startup, the valid high-pack reload, repair, or normal stop. The malformed window requires exactly one
+`Mekanism/FabricDataMaps` invalid-layer `ERROR` for
+`mekanism:data_maps/damage_type/mekasuit_absorption.json`; the deliberately broken vanilla window
+allows only `ERROR` lines naming `reload_future_failure` or vanilla `Failed to execute reload`. Final
+line-count accounting proves that no other `ERROR` was hidden, and crash signatures remain fatal.
+Candidate Task 038 verification builds and shell-checks this gate but does not execute either
+real-server smoke. Full semantics and oracle pins are in `FABRIC_DATA_MAPS.md`.
 
 With `FABRIC_SMOKE_STATIC_ONLY=1`, the script exits successfully immediately after metadata, access-widener, dependency-nesting, exact-family, and required-entry checks; it does not fetch a launcher or create/start a server. This gate performs no Docker, deployment queue, or production-server operations.
