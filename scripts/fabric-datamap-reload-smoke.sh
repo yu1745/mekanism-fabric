@@ -75,7 +75,7 @@ fail() {
 
 assert_alive_clean() {
   kill -0 "$SERVER_PID" 2>/dev/null || fail 'server exited unexpectedly'
-  if grep -Eiq '(Exception in thread|Could not execute entrypoint|Failed to start the minecraft server|---- Minecraft Crash Report ----|NoClassDefFoundError|ClassNotFoundException)' "$SERVER_DIR/logs/latest.log"; then
+  if [[ -f "$SERVER_DIR/logs/latest.log" ]] && grep -Eiq '(Exception in thread|Could not execute entrypoint|Failed to start the minecraft server|---- Minecraft Crash Report ----|NoClassDefFoundError|ClassNotFoundException)' "$SERVER_DIR/logs/latest.log"; then
     fail 'crash signature detected'
   fi
 }
