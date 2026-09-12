@@ -22,6 +22,31 @@ Fabric 构建；本地 adapter/entrypoint 同样由 `fabric/platform-slice.txt` 
 `Mekanism.java` 拉入这个最小闭包，`MekanismGameEvents` 暂时直接使用稳定 namespace
 `"mekanism"`；完整 bootstrap 迁入后恢复对统一 MODID 常量的引用。
 
+## Task 028 deferred codec/criterion/loot 边界
+
+Task 028 将 common slice 扩为 103 项。`DeferredMapCodecHolder`、
+`DeferredMapCodecRegister`、`DeferredCriterionTrigger` 与 `LootFunctionDeferredRegister` 四份源码
+保持与 oracle `4646f509` byte-identical；与它们分开记录的唯一既有适配修复，是把
+`MekanismDeferredHolder.value()` 的返回类型从 `R` 收窄为 `T`，方法体仍精确为 `return get();`。
+这是合法的 `Holder<R>` covariant override：类约束 `T extends R` 使 `T` 对 `R` return-type-substitutable；
+两个无界类型变量在 JVM 上都擦除为 `Object`，所以 descriptor 与执行路径不变，本基线编译器也不需
+生成额外 bridge class/method。测试中的 `MapCodec<Subtype> typed = holder.value()` 同时提供源码级
+subtype 契约证据，静态 JAR family gate 则约束实际 class 输出。
+
+唯一新增测试类恰好四个 `@Test`，只经 package-private `MekanismDeferredRegister.Registrar` seam
+提交本地批次，不向 custom 或 built-in registry 增加条目。测试覆盖 function/supplier codec 的 lazy
+factory、key/id、custom holder、duplicate/lifecycle、canonical/subtype identity，最小本地 criterion 的
+exact trigger/instance identity，以及最小本地 loot function 的 basic/explicit-codec lazy/key/codec identity。
+criterion 测试只使用仓库既有的一次性 `SharedConstants.tryDetectVersion(); Bootstrap.bootStrap();`
+vanilla 初始化模式；loot/codec 测试不执行序列化或 datapack codec。这里没有 startup marker。
+
+发布物门禁把 direct registration family 精确限制为 `INamedEntry`、`MekanismDeferredHolder`、
+`MekanismDeferredRegister` 及其 `Registrar`、`DeferredMapCodecHolder`、`DeferredMapCodecRegister`，
+并把 impl family 精确限制为 `GameEventDeferredRegister`、`DeferredCriterionTrigger`、
+`LootFunctionDeferredRegister`，拒绝其它 nested/test/helper。real production declarations、global
+registration/freeze、datapack codec execution、serialization、loot/advancement runtime、owners、
+networking 与 threading 均延期。
+
 ## 对照资料
 
 仅对照生命周期、canonical holder 与冻结 registry 边界，未复制实现：

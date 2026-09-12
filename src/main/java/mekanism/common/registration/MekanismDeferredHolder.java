@@ -67,7 +67,7 @@ public class MekanismDeferredHolder<R, T extends R> implements Holder<R>, Suppli
     }
 
     @Override
-    public R value() {
+    public T value() {
         return get();
     }
 

@@ -96,5 +96,9 @@ mekanism/common/tier/QIODriveTier.java
 mekanism/common/registration/INamedEntry.java
 mekanism/common/registration/MekanismDeferredHolder.java
 mekanism/common/registration/MekanismDeferredRegister.java
+mekanism/common/registration/DeferredMapCodecHolder.java
+mekanism/common/registration/DeferredMapCodecRegister.java
+mekanism/common/registration/impl/DeferredCriterionTrigger.java
 mekanism/common/registration/impl/GameEventDeferredRegister.java
+mekanism/common/registration/impl/LootFunctionDeferredRegister.java
 mekanism/common/registries/MekanismGameEvents.java

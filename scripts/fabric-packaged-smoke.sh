@@ -203,6 +203,39 @@ actual_inventory_slot_metadata = {
 if (actual_inventory_slot_metadata != expected_inventory_slot_metadata
         or any(entries.count(entry) != 1 for entry in expected_inventory_slot_metadata)):
     raise SystemExit(f"unexpected direct inventory-slot class family: {sorted(actual_inventory_slot_metadata)!r}")
+expected_registration = {
+    "mekanism/common/registration/INamedEntry.class",
+    "mekanism/common/registration/MekanismDeferredHolder.class",
+    "mekanism/common/registration/MekanismDeferredRegister.class",
+    "mekanism/common/registration/MekanismDeferredRegister$Registrar.class",
+    "mekanism/common/registration/DeferredMapCodecHolder.class",
+    "mekanism/common/registration/DeferredMapCodecRegister.class",
+}
+registration_prefix = "mekanism/common/registration/"
+actual_registration = {
+    entry for entry in entries
+    if entry.startswith(registration_prefix)
+    and "/" not in entry[len(registration_prefix):]
+    and entry.endswith(".class")
+}
+if (actual_registration != expected_registration
+        or any(entries.count(entry) != 1 for entry in expected_registration)):
+    raise SystemExit(f"unexpected direct deferred-registration class family: {sorted(actual_registration)!r}")
+expected_registration_impl = {
+    "mekanism/common/registration/impl/GameEventDeferredRegister.class",
+    "mekanism/common/registration/impl/DeferredCriterionTrigger.class",
+    "mekanism/common/registration/impl/LootFunctionDeferredRegister.class",
+}
+registration_impl_prefix = "mekanism/common/registration/impl/"
+actual_registration_impl = {
+    entry for entry in entries
+    if entry.startswith(registration_impl_prefix)
+    and "/" not in entry[len(registration_impl_prefix):]
+    and entry.endswith(".class")
+}
+if (actual_registration_impl != expected_registration_impl
+        or any(entries.count(entry) != 1 for entry in expected_registration_impl)):
+    raise SystemExit(f"unexpected deferred-registration impl class family: {sorted(actual_registration_impl)!r}")
 expected_tile_interfaces = {
     "mekanism/common/tile/interfaces/IHasDumpButton.class",
     "mekanism/common/tile/interfaces/IHasGasMode.class",
@@ -573,7 +606,7 @@ if actual_fabric_energy != expected_fabric_energy or any(entries.count(entry) !=
     raise SystemExit(f"unexpected Fabric energy adapter class family: {sorted(actual_fabric_energy)!r}")
 PYEOF
 then
-  echo "fabric-packaged-smoke: block-state-descriptor/inventory-metadata/tile-interface/slot-info/tier/resource/codec/collection/distribution/ChunkUtils/RegistryUtils/LambdaMetaFactoryUtil/long-transfer/dynamic-strict-energy/proxy/config-listener/common-lib-root production/test packaging contract failed" >&2
+  echo "fabric-packaged-smoke: block-state-descriptor/inventory-metadata/deferred-registration/tile-interface/slot-info/tier/resource/codec/collection/distribution/ChunkUtils/RegistryUtils/LambdaMetaFactoryUtil/long-transfer/dynamic-strict-energy/proxy/config-listener/common-lib-root production/test packaging contract failed" >&2
   exit 1
 fi
 for required_entry in \
