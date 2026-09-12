@@ -1,6 +1,12 @@
 # Task 039 plan — client window configuration and concrete inventory slots
 
-Status: **approved for one implementation candidate**
+Status: **candidate implemented; mandatory review pending**
+
+## Candidate checkpoint
+
+SOL5.6 high produced isolated commit `c591ad4df395c33874f32b0a0203c9e3b4adbfad` from exact parent `2921ee0f` after 3997.1s, 505.9k tokens and 326 tool calls (about `$21.52`; run ended at its 240-turn bound). The cumulative candidate is 32 changed files, `+1583/-113`, and reports all candidate gates passing at the planned **75 suites / 353 tests** with candidate remapped JAR SHA-256 `ffb87660205c6a70612b589ad8c1315e84ed7c3e2f3b575aeb410b90f9aac7fa`. It did not run clean release, the parent dedicated-server rerun, deployment or parent review.
+
+This report is not acceptance. Parent source inspection before review identified three explicit questions for adversarial verification: whether a queued save can snapshot x/y/pin between individual config-value updates because the save worker does not acquire the update admission monitor; whether omitting the plan's owner-selected strict atomic-move policy weakens the promised failed-write contract; and whether manually invoking Fabric JOIN/DISCONNECT invokers with null handlers is adequate evidence for the documented real connection-lifetime claim. The fixture also did not exercise Armor/Offhand with the planned real connected player. Integration remains forbidden until an independent high-risk review resolves these and the full source/artifact boundary.
 
 ## Baseline and reason
 
