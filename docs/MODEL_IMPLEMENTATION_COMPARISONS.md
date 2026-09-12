@@ -6,7 +6,7 @@
 
 常规开发默认只使用 **5.6 SOL**（继承/default 模型）作为单一隔离 worktree 实现代理，由主代理审查真实 diff、综合修正并运行最终门禁。不再维持第二个常驻实现模型，也不为常规任务复制完整实现。
 
-只有 NeoForge/Fabric 语义替换、patched Minecraft、registry lifecycle、transaction/rollback、networking、序列化、线程/owner 生命周期等高风险边界，才按风险临时选择 DeepSeek、GLM 或其他模型做只读 adversarial review。该架构决定优先减少重复实现、文档和门禁成本，不等价于形成跨项目永久模型排名。任务 001–015 的原始比较证据完整保留在下文。
+只有 NeoForge/Fabric 语义替换、patched Minecraft、registry lifecycle、transaction/rollback、networking、序列化、线程/owner 生命周期等高风险边界，才按风险临时选择额外模型做只读 adversarial review。DeepSeek 额度于 Task028 前耗尽；按用户决定，Task028 起此类审查默认改用 **GLM 5.3（`thinking=high`）**，直到用户再次调整。该架构决定优先减少重复实现、文档和门禁成本，不等价于形成跨项目永久模型排名。任务 001–015 的原始比较证据完整保留在下文。
 
 ### MiniMax M3 临时观察（已终止）
 
@@ -859,3 +859,13 @@ GLM 在任务 013、014 完成两轮临时复测；任务 015 以受支持的 hi
 - **DeepSeek 只读审查：** 1257.7s、291.1k tokens、119 次调用（通知未提供成本）。用真实 Night Config 3.8.3、独立101断言和21个 mutation 验证 import-only、radix/overflow/fraction/nonfinite、先校验后窄化、`-0.0`、correction-persist-before-publish 与 package/count；未发现 production defect。审查指出 byte listener changed/unchanged 与 loaded-path `getOrDefault` 文档声称但测试不足，以及 byte/short overload 的 Java literal 类型要求。
 - **最终取舍：** 主线集成为 `afe8a089`；`7d3be211` 在原四方法内补齐 byte invalidation、四类型 loaded-path `getOrDefault`，并记录 default/min/max 必须同为 byte/short primitive，否则 Java 会选择 int overload。generic/resolvable/list/map/enum、真实 config activation、sync/UI/watcher/owner 均延期。
 - **主代理独立验证：** 四份 wrapper 均精确 one-import-only；slice47/92/14；focused4 tests 4.10s；clean full gate10.73s，56 suites/258 tests/0 failures/errors/skips；build2.74s；packaged smoke41.36s并到达`Done`；implementation clean release12.10s。JAR config-value family精确9类，无 test/Team API 泄漏；一个 JAR sha256 `e44e057e70418d3baee05ffb369d9e2ee7ee6f5cb6f743664e2af9d75743017b`，build-info source `7d3be211`。最终文档提交后重跑 release 对齐 source commit。
+
+---
+
+## 任务 028：deferred codec/criterion/loot registration（风险触发审查）
+
+- **固定基线与范围：** `68ce7b86`；原样纳入 `DeferredMapCodecHolder`、`DeferredMapCodecRegister`、`DeferredCriterionTrigger`、`LootFunctionDeferredRegister`，并把既有 Fabric `MekanismDeferredHolder.value()` 返回类型从 `R` 修复为 covariant `T`，方法体仍为 `return get();`。最终 slice **47/103/14**，一个本地 suite 恰好四个 tests；production declarations、global registry mutation/freeze、datapack codec execution、serialization、loot/advancement runtime 与 owner/threading 均延期。
+- **SOL 候选：** `10e97682`，9 files、`+325/-9`，933.5s、201.4k tokens、135 次工具调用、约 `$4.77`。四个新增 allowlist source 与 `4646f509` 字节一致；候选证明 function/supplier codec laziness、custom holder、canonical binding、duplicate/lifecycle、criterion trigger/instance identity，以及 loot basic/codec identity；269 tests、build 与静态 package gates 通过。
+- **GLM 5.3 只读审查（`thinking=high`）：** 582.8s、119.5k tokens、77 次调用、约 `$1.02`；结论 **ACCEPT**。独立 `javap` 证明 `R`/`T` 均擦除为 `Object`、descriptor 不变且无额外 `ACC_BRIDGE`；确认 typed-holder invariant 未增加新 unchecked hole；核对 Fabric registrar canonical return、duplicate/late lifecycle、vanilla criterion default method、Bootstrap 幂等且无 custom/built-in entry mutation、loot codec identity、测试非空洞、精确 package family 和文档边界，未发现 required fix。
+- **最终取舍：** 主线 fast-forward 采用 SOL `10e97682`，无需综合修复。该任务也是 DeepSeek 额度耗尽后，按用户要求改用 GLM 5.3 high 做风险审查的首个样本；单任务 ACCEPT 不形成永久模型质量排名。
+- **主代理独立验证：** focused4 tests 8.02s；full gate 9.67s，59 suites/269 tests/0 failures/errors/skips；`fabric-build.sh` 4.33s；packaged smoke 42.54s，Mekanism 与 external `team_reborn_energy 4.1.0` 均加载并到达 `Done`；release contract 0.79s。JAR direct registration 精确6项、impl精确3项，无 test/NeoForge 泄漏；一个 JAR sha256 `42aeadbd68712d478b9e5c923c9a6a9ec5132b20a12e9c26d0fb17165abef815`，build-info source `10e97682`。最终文档提交后须重跑 release 对齐 source commit。
