@@ -13,7 +13,7 @@ NeoForge `ModConfigSpec` / `ModConfig.Type`。它不是 Forge Config API 兼容�
 - `CachedValue`、`CachedBooleanValue`、`CachedByteValue`、`CachedShortValue`、`CachedDoubleValue`、`CachedFloatValue`、`CachedIntValue`、`CachedLongValue`；
 - `EnergyCubeTier`、`InductionCellTier`、`InductionProviderTier` 三份 long-valued tier metadata。
 
-三个 tier 源与 `4646f509` byte-identical；`CachedLongValue` 相对该基线只把 NeoForge `Builder`/`ConfigValue` 两个 import 替换为 `MekanismConfigSpec.Builder`/`.ConfigValue`。新增四个 primitive cached-value 官方源各自相对 `4646f509` **精确只有一个** source-byte 差异：将 NeoForge `ConfigValue` import 替换为 `MekanismConfigSpec.ConfigValue`，其余字节不变。当前 allowlist 为 API/common/platform **47/96/14**。
+三个 tier 源与 `4646f509` byte-identical；`CachedLongValue` 相对该基线只把 NeoForge `Builder`/`ConfigValue` 两个 import 替换为 `MekanismConfigSpec.Builder`/`.ConfigValue`。新增四个 primitive cached-value 官方源各自相对 `4646f509` **精确只有一个** source-byte 差异：将 NeoForge `ConfigValue` import 替换为 `MekanismConfigSpec.ConfigValue`，其余字节不变。当前 allowlist 为 API/common/platform **47/99/14**。
 
 Fabric 侧 `MekanismConfigSpec` 提供当前声明实际需要的 category、translation/comment、
 `gameRestart`、strict boolean、typed byte/short、int/long/double 范围与 value API；`FabricMekanismConfigManager` 只管理

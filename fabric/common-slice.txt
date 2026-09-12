@@ -45,6 +45,9 @@ mekanism/common/config/value/CachedShortValue.java
 mekanism/common/config/value/CachedValue.java
 mekanism/common/content/network/distribution/EnergyAcceptorTarget.java
 mekanism/common/content/network/distribution/EnergySaveTarget.java
+mekanism/common/inventory/GuiComponents.java
+mekanism/common/inventory/container/slot/ContainerSlotType.java
+mekanism/common/inventory/container/slot/SlotOverlay.java
 mekanism/common/lib/Color.java
 mekanism/common/lib/LastEnergyTracker.java
 mekanism/common/lib/WildcardMatcher.java

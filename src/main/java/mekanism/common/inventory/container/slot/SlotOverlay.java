@@ -1,7 +1,5 @@
 package mekanism.common.inventory.container.slot;
 
-import mekanism.common.util.MekanismUtils;
-import mekanism.common.util.MekanismUtils.ResourceType;
 import net.minecraft.resources.ResourceLocation;
 
 public enum SlotOverlay {
@@ -22,7 +20,7 @@ public enum SlotOverlay {
     private final int height;
 
     SlotOverlay(String texture, int width, int height) {
-        this.texture = MekanismUtils.getResource(ResourceType.GUI_SLOT, texture);
+        this.texture = ResourceLocation.fromNamespaceAndPath("mekanism", "gui/slot/" + texture);
         this.width = width;
         this.height = height;
     }

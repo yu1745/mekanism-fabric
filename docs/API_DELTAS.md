@@ -129,7 +129,7 @@ void deserializeNBT(HolderLookup.Provider provider, T tag)
 
 ## Container callback contract admission
 
-状态：当前 API/common/platform allowlist 为 **47/96/14**。`ContainerInteraction`、`InContainerGetter`、`IntContainerInteraction` 与 `LongContainerInteraction` 原样加入，均与官方 oracle `4646f509` byte-identical；连同既有 `InContainerGetterLong`、`LongToLongContainerInteraction`，这六个 functional interfaces 的 FQN、泛型、nullable side、signed amount、`Action` 与 return contracts 都没有 API delta。一个 Fabric-local 同包测试类中的恰好四个 methods 只固定 identity/raw-argument forwarding；发布物 exact-package gate 拒绝其它 direct/nested/synthetic/test/helper/fixture class，不使用 startup marker。
+状态：当前 API/common/platform allowlist 为 **47/99/14**。`ContainerInteraction`、`InContainerGetter`、`IntContainerInteraction` 与 `LongContainerInteraction` 原样加入，均与官方 oracle `4646f509` byte-identical；连同既有 `InContainerGetterLong`、`LongToLongContainerInteraction`，这六个 functional interfaces 的 FQN、泛型、nullable side、signed amount、`Action` 与 return contracts 都没有 API delta。一个 Fabric-local 同包测试类中的恰好四个 methods 只固定 identity/raw-argument forwarding；发布物 exact-package gate 拒绝其它 direct/nested/synthetic/test/helper/fixture class，不使用 startup marker。
 
 这是 callback contracts admission，不是实现迁移。`ChemicalUtils`、`ExtendedFluidHandlerUtils`、chemical/fluid handlers、component-backed/recipe-upgrade owners、actual transfer/platform transactions、registries、serialization/networking 与 lifecycle/thread ownership 均延期。
 

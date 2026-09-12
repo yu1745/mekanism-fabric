@@ -177,6 +177,32 @@ actual_block_state_descriptors = {
 if (actual_block_state_descriptors != expected_block_state_descriptors
         or any(entries.count(entry) != 1 for entry in expected_block_state_descriptors)):
     raise SystemExit(f"unexpected block-state descriptor class family: {sorted(actual_block_state_descriptors)!r}")
+expected_gui_components = {
+    "mekanism/common/inventory/GuiComponents.class",
+    "mekanism/common/inventory/GuiComponents$IDropdownEnum.class",
+    "mekanism/common/inventory/GuiComponents$IToggleEnum.class",
+}
+actual_gui_components = {
+    entry for entry in entries
+    if entry.startswith("mekanism/common/inventory/GuiComponents") and entry.endswith(".class")
+}
+if (actual_gui_components != expected_gui_components
+        or any(entries.count(entry) != 1 for entry in expected_gui_components)):
+    raise SystemExit(f"unexpected GuiComponents class family: {sorted(actual_gui_components)!r}")
+expected_inventory_slot_metadata = {
+    "mekanism/common/inventory/container/slot/ContainerSlotType.class",
+    "mekanism/common/inventory/container/slot/SlotOverlay.class",
+}
+slot_package_prefix = "mekanism/common/inventory/container/slot/"
+actual_inventory_slot_metadata = {
+    entry for entry in entries
+    if entry.startswith(slot_package_prefix)
+    and "/" not in entry[len(slot_package_prefix):]
+    and entry.endswith(".class")
+}
+if (actual_inventory_slot_metadata != expected_inventory_slot_metadata
+        or any(entries.count(entry) != 1 for entry in expected_inventory_slot_metadata)):
+    raise SystemExit(f"unexpected direct inventory-slot class family: {sorted(actual_inventory_slot_metadata)!r}")
 expected_tile_interfaces = {
     "mekanism/common/tile/interfaces/IHasDumpButton.class",
     "mekanism/common/tile/interfaces/IHasGasMode.class",
@@ -547,7 +573,7 @@ if actual_fabric_energy != expected_fabric_energy or any(entries.count(entry) !=
     raise SystemExit(f"unexpected Fabric energy adapter class family: {sorted(actual_fabric_energy)!r}")
 PYEOF
 then
-  echo "fabric-packaged-smoke: block-state-descriptor/tile-interface/slot-info/tier/resource/codec/collection/distribution/ChunkUtils/RegistryUtils/LambdaMetaFactoryUtil/long-transfer/dynamic-strict-energy/proxy/config-listener/common-lib-root production/test packaging contract failed" >&2
+  echo "fabric-packaged-smoke: block-state-descriptor/inventory-metadata/tile-interface/slot-info/tier/resource/codec/collection/distribution/ChunkUtils/RegistryUtils/LambdaMetaFactoryUtil/long-transfer/dynamic-strict-energy/proxy/config-listener/common-lib-root production/test packaging contract failed" >&2
   exit 1
 fi
 for required_entry in \
