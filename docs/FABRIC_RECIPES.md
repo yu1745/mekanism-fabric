@@ -410,9 +410,10 @@ constant chemical saved usage, wrong-cache-index behaviour and energy-delta repo
 
 ### Verification
 
-Seven new ordinary methods in `RecipeCacheLookupMonitorTest` drive the real monitors, real canonical providers, real input caches and a real `OneInputCachedRecipe`,
-reusing the existing `RecipeLevelStub`, chemical-bootstrap and cached-recipe/input/output fixtures rather than rebuilding lower-level matrices. `./build.sh --clean`,
-the packaged server smoke and the recipe-runtime smoke are left to the parent.
+The candidate's seven new ordinary methods in `RecipeCacheLookupMonitorTest` drive the real monitors, real canonical providers, real input caches and a real
+`OneInputCachedRecipe`, reusing existing fixtures rather than rebuilding lower-level matrices. Parent correction adds an eighth method below. Final parent
+443-test/build/static/clean-release/real packaged-server gates all passed on `8d826837`; exact evidence and artifact identity are in `TASK046_PLAN.md`.
+No live publication callback changed, so the plan did not require an additional recipe-runtime smoke for this binding-local batch.
 
 Non-claims: no `CommonWorldTickHandler` closure, no machine/tile/item/block/menu/viewer/codec/recipe-registration or production recipe JSON change, no
 other cached-recipe family, no Nucleosynthesizer monitor, no change to the live publication callbacks, and no fake or no-op production seam.
