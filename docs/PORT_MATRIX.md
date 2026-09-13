@@ -420,3 +420,35 @@ Non-claims：无 `MekanismItems`/item/block/fluid/Chemical registration；无 ma
 `InputRecipeCache` index；无 `MekanismRecipeSerializersInternal`，因而无 `mek_data`/`clear_configuration`/`bin_insert`/`bin_extract`
 crafting special、无 bin 与 recipe-upgrade recipe；artifact 内无 production recipe JSON；无 JEI/EMI 或 client recipe viewer；无
 `getToastSymbol()`-correct items；无 item/fluid/Chemical transaction 或 storage exposure；无 broader Fabric integration。
+
+### Task 044 rotary input-cache ownership closure
+
+Task 044 从 clean commit `8a4c6105` 实现 `TASK044_PLAN.md`，把最后一个未接入的 input-cache 形状移植到既有
+`AbstractInputRecipeCache` per-binding 契约，不改 `MekanismRecipeType` cache owner、registration、provider、monitor、factory、viewer 或其它
+cached recipe family。
+
+`RotaryInputRecipeCache` 改为接收 `RecipeCacheSource<RotaryRecipe>`，并把两个方向的 index（`ChemicalInputCache`/`FluidInputCache`）与两个
+complex fallback set 收进 private `State extends CacheState`，由 `newState()` 创建、`initCache(recipes, state)` 填充；查询统一走基类的
+`resolveState(world)`，因此 context resolution、exact Level-manager mismatch 失败、`clear(current binding)` 与 no-context null 全部由基类提供，
+类自身的 `clear()` override 删除并改为继承。相对 `4646f509` 的真实 delta 只有 Fabric cache re-hosting 与授权的流体类型替换：
+`net.neoforged.neoforge.fluids.FluidStack` → `mekanism.api.fluid.FluidStack`，与 `FluidInputCache` 和已 slice 的 `RotaryRecipe` 一致。
+direction flags、type-only insertion、amount-sensitive processing、empty rejection、indexed-first fallback 保持不变：仅支持 fluid→chemical 的
+recipe 不会进入、也不会由 chemical 方向返回，反之亦然。
+
+slices **199/188/38 → 199/189/38**（426 production sources）。测试 ordinary/transfer/root/data-map/recipe-registry/aggregate
+**77/384 → 78/389**、**5/27**、**1/2**、**2/4**、**1/5**、**86/422 → 87/427**。新增一个 ordinary suite `RotaryInputCacheContextTest`
+恰好五个方法，用真实 `BasicRotaryRecipe` 与真实 `RecipeCacheSource.forType(MekanismRecipeTypes.TYPE_ROTARY.value())` 驱动生产 cache：
+单向方向排除与双向服务及 rebind 后的方向重建；indexed 查询的 amount 敏感 versus type-only insertion；component 流体 ingredient 只经
+complex fallback 命中且不污染另一方向；`clear()` 释放两个方向的 index 与 fallback 而 binding 仍存活；fresh binding 原子隔离两个方向 index。
+通用 binding/thread/epoch 矩阵仍由 `GenericInputCacheContextTest` 拥有，不重复。
+
+Gates：五个 test task 加 `verifyFabricTestContract`；三个 `verify*SliceNoNeoForge` 与 `verifyOfficialRootTestSources`；五个
+`verify*FixtureIsolation`；`scripts/scan-platform-deps.py`；`./fabric-build.sh`；`FABRIC_SMOKE_STATIC_ONLY=1 scripts/fabric-packaged-smoke.sh`。
+static gate 精确允许 `RotaryInputRecipeCache.class` 与 `RotaryInputRecipeCache$State.class` 各一次，并已从 deferred-family 拒绝清单移除该类；
+`common/recipe/MekanismRecipeType*`、`IMekanismRecipeTypeProvider`、`RecipeTypeRegistryObject`、`MekanismRecipeSerializersInternal`、
+upgrade/bin/ClearConfiguration recipe family、`mekanism/client/**`、`MekanismItems*`、`mekanism/api/MekanismAPI.class` 与全部 production
+recipe JSON 仍被拒绝。`./build.sh --clean` 与真实 dedicated-server/client smoke 不在本 worktree 运行，由 parent 独立执行。
+
+Non-claims：无 `MekanismRecipeType` cache owner / `IMekanismRecipeTypeProvider` / `RecipeTypeRegistryObject` / `RecipeTypeDeferredRegister`
+或 owner-registration 变更；无 monitor、factory、recipe-viewer、synthetic smelting、tile 或其它 cached recipe family；无 codec 或 canonical
+recipe identity 变更；无 machine-facing `InputRecipeCache` index；无新的全局可变 cache state 或第二套 context 机制。

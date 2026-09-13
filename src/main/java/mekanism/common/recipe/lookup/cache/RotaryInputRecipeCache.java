@@ -4,37 +4,50 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import mekanism.api.chemical.ChemicalStack;
+import mekanism.api.fluid.FluidStack;
 import mekanism.api.recipes.RotaryRecipe;
-import mekanism.common.recipe.MekanismRecipeType;
 import mekanism.common.recipe.lookup.cache.type.ChemicalInputCache;
 import mekanism.common.recipe.lookup.cache.type.FluidInputCache;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.fluids.FluidStack;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Similar in concept to {@link SingleInputRecipeCache} except specialized to handle Rotary Condensentrator recipes for the purposes of being able to handle both the gas
  * to fluid and fluid to chemical directions.
+ *
+ * @implNote The Fabric port keeps both directional input caches and both complex-recipe sets under the {@link RecipeCacheContext} binding state, so a rebind discards
+ * every indexed candidate atomically and a thread without a bound context serves no recipes. Direction flags are honored at insertion time: a recipe that cannot convert
+ * a given direction is never indexed in, or offered by, that direction's lookup.
  */
 public class RotaryInputRecipeCache extends AbstractInputRecipeCache<RotaryRecipe> {
 
-    private final ChemicalInputCache<RotaryRecipe> chemicalInputCache = new ChemicalInputCache<>();
-    private final FluidInputCache<RotaryRecipe> fluidInputCache = new FluidInputCache<>();
-    private final Set<RotaryRecipe> complexChemicalInputRecipes = new HashSet<>();
-    private final Set<RotaryRecipe> complexFluidInputRecipes = new HashSet<>();
-
-    public RotaryInputRecipeCache(MekanismRecipeType<?, RotaryRecipe, ?> recipeType) {
-        super(recipeType);
+    public RotaryInputRecipeCache(RecipeCacheSource<RotaryRecipe> source) {
+        super(source);
     }
 
     @Override
-    public void clear() {
-        super.clear();
-        chemicalInputCache.clear();
-        fluidInputCache.clear();
-        complexChemicalInputRecipes.clear();
-        complexFluidInputRecipes.clear();
+    protected CacheState newState() {
+        return new State();
+    }
+
+    @Override
+    protected void initCache(List<RecipeHolder<RotaryRecipe>> recipes, CacheState state) {
+        State rotary = (State) state;
+        for (RecipeHolder<RotaryRecipe> recipeHolder : recipes) {
+            RotaryRecipe recipe = recipeHolder.value();
+            if (recipe.hasFluidToChemical() && rotary.fluidInputCache.mapInputs(recipe, recipe.getFluidInput())) {
+                rotary.complexFluidInputRecipes.add(recipe);
+            }
+            if (recipe.hasChemicalToFluid() && rotary.chemicalInputCache.mapInputs(recipe, recipe.getChemicalInput())) {
+                rotary.complexChemicalInputRecipes.add(recipe);
+            }
+        }
+    }
+
+    @Nullable
+    private State state(@Nullable Level world) {
+        return (State) resolveState(world);
     }
 
     /**
@@ -46,7 +59,8 @@ public class RotaryInputRecipeCache extends AbstractInputRecipeCache<RotaryRecip
      * @return {@code true} if there is a match, {@code false} if there isn't.
      */
     public boolean containsInput(@Nullable Level world, FluidStack input) {
-        return containsInput(world, input, RotaryRecipe::getFluidInput, fluidInputCache, complexFluidInputRecipes);
+        State state = state(world);
+        return state != null && containsInput(input, RotaryRecipe::getFluidInput, state.fluidInputCache, state.complexFluidInputRecipes);
     }
 
     /**
@@ -58,7 +72,8 @@ public class RotaryInputRecipeCache extends AbstractInputRecipeCache<RotaryRecip
      * @return {@code true} if there is a match, {@code false} if there isn't.
      */
     public boolean containsInput(@Nullable Level world, ChemicalStack input) {
-        return containsInput(world, input, RotaryRecipe::getChemicalInput, chemicalInputCache, complexChemicalInputRecipes);
+        State state = state(world);
+        return state != null && containsInput(input, RotaryRecipe::getChemicalInput, state.chemicalInputCache, state.complexChemicalInputRecipes);
     }
 
     /**
@@ -71,13 +86,13 @@ public class RotaryInputRecipeCache extends AbstractInputRecipeCache<RotaryRecip
      */
     @Nullable
     public RotaryRecipe findFirstRecipe(@Nullable Level world, FluidStack input) {
-        if (fluidInputCache.isEmpty(input)) {
+        State state = state(world);
+        if (state == null || state.fluidInputCache.isEmpty(input)) {
             //Don't allow empty inputs
             return null;
         }
-        initCacheIfNeeded(world);
-        RotaryRecipe recipe = findFirstRecipe(input, fluidInputCache.getRecipes(input));
-        return recipe == null ? findFirstRecipe(input, complexFluidInputRecipes) : recipe;
+        RotaryRecipe recipe = findFirstRecipe(input, state.fluidInputCache.getRecipes(input));
+        return recipe == null ? findFirstRecipe(input, state.complexFluidInputRecipes) : recipe;
     }
 
     @Nullable
@@ -100,13 +115,13 @@ public class RotaryInputRecipeCache extends AbstractInputRecipeCache<RotaryRecip
      */
     @Nullable
     public RotaryRecipe findFirstRecipe(@Nullable Level world, ChemicalStack input) {
-        if (chemicalInputCache.isEmpty(input)) {
+        State state = state(world);
+        if (state == null || state.chemicalInputCache.isEmpty(input)) {
             //Don't allow empty inputs
             return null;
         }
-        initCacheIfNeeded(world);
-        RotaryRecipe recipe = findFirstRecipe(input, chemicalInputCache.getRecipes(input));
-        return recipe == null ? findFirstRecipe(input, complexChemicalInputRecipes) : recipe;
+        RotaryRecipe recipe = findFirstRecipe(input, state.chemicalInputCache.getRecipes(input));
+        return recipe == null ? findFirstRecipe(input, state.complexChemicalInputRecipes) : recipe;
     }
 
     @Nullable
@@ -119,16 +134,11 @@ public class RotaryInputRecipeCache extends AbstractInputRecipeCache<RotaryRecip
         return null;
     }
 
-    @Override
-    protected void initCache(List<RecipeHolder<RotaryRecipe>> recipes) {
-        for (RecipeHolder<RotaryRecipe> recipeHolder : recipes) {
-            RotaryRecipe recipe = recipeHolder.value();
-            if (recipe.hasFluidToChemical() && fluidInputCache.mapInputs(recipe, recipe.getFluidInput())) {
-                complexFluidInputRecipes.add(recipe);
-            }
-            if (recipe.hasChemicalToFluid() && chemicalInputCache.mapInputs(recipe, recipe.getChemicalInput())) {
-                complexChemicalInputRecipes.add(recipe);
-            }
-        }
+    /** Per-binding mutable state for the bidirectional rotary cache: one index and one fallback set per direction. */
+    private static final class State extends CacheState {
+        private final ChemicalInputCache<RotaryRecipe> chemicalInputCache = new ChemicalInputCache<>();
+        private final FluidInputCache<RotaryRecipe> fluidInputCache = new FluidInputCache<>();
+        private final Set<RotaryRecipe> complexChemicalInputRecipes = new HashSet<>();
+        private final Set<RotaryRecipe> complexFluidInputRecipes = new HashSet<>();
     }
 }

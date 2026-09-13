@@ -236,3 +236,13 @@ The same gate still rejects every deferred family: `common/recipe/MekanismRecipe
 Unlike 042A, the dedicated-server portion of the packaged smoke is **required** for this task, because it introduces real registry lifecycle, and it asserts a new
 `MEKANISM_FABRIC_RECIPE_REGISTRATION_PROOF recipe_types=26 serializers=26 identity_preserved=true` startup line. `FABRIC_SMOKE_STATIC_ONLY=1` was the mode run in the
 implementation worktree; the parent runs the server gate before release.
+
+## Task 044 rotary input-cache static artifact gate
+
+The static release-JAR gate now additionally admits exactly `mekanism/common/recipe/lookup/cache/RotaryInputRecipeCache.class` and
+`.../RotaryInputRecipeCache$State.class` once each in the common recipe class family, and no longer lists `RotaryInputRecipeCache*` among the deferred families it
+rejects. Every other rejection is unchanged: `common/recipe/MekanismRecipeType*`, `common/recipe/IMekanismRecipeTypeProvider*`,
+`common/registration/impl/RecipeTypeRegistryObject*`, `common/registries/MekanismRecipeSerializersInternal*`, `common/recipe/upgrade/**`, `common/recipe/bin/**`,
+`common/recipe/ClearConfigurationRecipe.class`, every `mekanism/client/**` class, `common/registries/MekanismItems*`, `mekanism/api/MekanismAPI.class`, all
+`data/mekanism/recipe/**` production recipe JSON, and every fixture/test class. Only `FABRIC_SMOKE_STATIC_ONLY=1` was run in the implementation worktree; the parent
+runs the dedicated-server gate before release.

@@ -245,3 +245,42 @@ not the instance the keyed holder was built over, so registration cannot bind an
 Coverage is executable, not documentary: for every registered type the isolated worker asserts the official id resolves, the registry value is identity-equal to the
 declared `TYPE_*` value, the canonical holder is that same instance, the holder is bound, `get()`/`value()` agree, and all 26 instances are distinct under an identity
 set. A real `RecipeManager` decode-and-serve case proves the served recipe reports the registered type and serializer.
+
+## Task 044 — rotary input-cache ownership closure
+
+Task 044 implements `TASK044_PLAN.md` from clean commit `8a4c6105`, in an isolated worktree. It ports the last remaining input-cache shape onto the per-binding
+`AbstractInputRecipeCache` contract without touching the `MekanismRecipeType` cache owner, registration, providers, monitors, factories, viewers, or any other cached
+recipe family.
+
+`RotaryInputRecipeCache` now takes a `RecipeCacheSource<RotaryRecipe>` and keeps both directional input caches (`ChemicalInputCache`, `FluidInputCache`) and both
+complex-recipe fallback sets in a private `State extends CacheState`, created by `newState()` and populated by `initCache(recipes, state)`. Lookups call the shared
+`resolveState(world)`, so context resolution, the exact-Level-manager mismatch failure, `clear(current binding)` and the no-context null result all come from the base
+class. The class' own `clear()` override is removed and inherited. The only real delta against `4646f509` is the Fabric recipe-cache re-hosting plus the authorized
+NeoForge-to-project fluid swap: `net.neoforged.neoforge.fluids.FluidStack` → `mekanism.api.fluid.FluidStack`, exactly as `FluidInputCache` and the sliced
+`RotaryRecipe` already use.
+
+Direction flags, type-only insertion predicates, amount-sensitive recipe selection, empty-input rejection and indexed-first fallback are preserved unchanged: a
+fluid-to-chemical only recipe is never indexed in, or offered by, the chemical direction, and vice versa.
+
+### Verification
+
+Five new ordinary methods in one new suite, `RotaryInputCacheContextTest`, drive the real production cache over real `BasicRotaryRecipe` instances and a real
+`RecipeSource.forType(MekanismRecipeTypes.TYPE_ROTARY.value())`: one-way direction exclusion plus bidirectional serving and a directional rebuild after rebind;
+indexed amount sensitivity versus type-only insertion; a component-bearing fluid ingredient served only through the complex fallback while the other direction stays
+clean; `clear()` releasing both directional indices and fallbacks while the binding stays live; and a fresh binding isolating both directional indices atomically.
+The generic binding/thread/epoch matrix stays owned by `GenericInputCacheContextTest` and is not repeated.
+
+Slices move **199/188/38 → 199/189/38** (426 production sources). Ordinary executable totals move **77 suites/384 tests → 78/389**; transfer **5/27**,
+root-registry **1/2**, data-map **2/4**, recipe-registry **1/5** unchanged; five-group aggregate **86/422 → 87/427**.
+
+Gates run: the five test tasks plus `verifyFabricTestContract`; the three `verify*SliceNoNeoForge` tasks and `verifyOfficialRootTestSources`; the five
+`verify*FixtureIsolation` tasks; `scripts/scan-platform-deps.py`; `./fabric-build.sh`; and `FABRIC_SMOKE_STATIC_ONLY=1 scripts/fabric-packaged-smoke.sh`. The static
+gate now admits exactly `RotaryInputRecipeCache.class` and `RotaryInputRecipeCache$State.class` once each in the common recipe class family and no longer lists the
+class in the deferred-family rejections, while still rejecting `MekanismRecipeType*`, `IMekanismRecipeTypeProvider`, `RecipeTypeRegistryObject`,
+`MekanismRecipeSerializersInternal`, the upgrade/bin/ClearConfiguration recipe families, every `mekanism/client/**`, `MekanismItems*`, `mekanism/api/MekanismAPI.class`,
+and all production recipe JSON. `./build.sh --clean` and the real dedicated-server/client smokes are not run in this worktree; the parent runs the runtime smoke and
+clean release independently.
+
+Non-claims: no `MekanismRecipeType` cache owner, `IMekanismRecipeTypeProvider`, `RecipeTypeRegistryObject`, `RecipeTypeDeferredRegister` or owner-registration
+change; no monitors, factories, recipe-viewer integration, synthetic smelting, tiles, or other cached-recipe families; no codec or canonical recipe-identity change; no
+machine-facing `InputRecipeCache` index; no new global mutable cache state or second context mechanism.

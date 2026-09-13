@@ -162,7 +162,7 @@ def platformSlice = loadSlice('platform-slice.txt')
 def apiSliceFiles = apiSlice.collect { file("../src/api/java/${it}") }
 def commonSliceFiles = commonSlice.collect { file("../src/main/java/${it}") }
 def platformSliceFiles = platformSlice.collect { file("src/main/java/${it}") }
-if (apiSlice.size() != 199 || commonSlice.size() != 188 || platformSlice.size() != 38) {
+if (apiSlice.size() != 199 || commonSlice.size() != 189 || platformSlice.size() != 38) {
     throw new GradleException("Unexpected Fabric source slice counts: api=${apiSlice.size()} common=${commonSlice.size()} platform=${platformSlice.size()}")
 }
 
@@ -720,6 +720,7 @@ def chemicalTransferTestSource = layout.projectDirectory.file('src/fabricTransfe
 def ingredientClosureTestSource = layout.projectDirectory.file('src/fabricTransferTest/java/mekanism/api/recipes/ingredients/IngredientServiceCodecClosureTest.java')
 def inputHelperExecutionTestSource = layout.projectDirectory.file('src/test/java/mekanism/api/recipes/inputs/InputHelperExecutionTest.java')
 def genericInputCacheTestSource = layout.projectDirectory.file('src/test/java/mekanism/common/recipe/lookup/cache/GenericInputCacheContextTest.java')
+def rotaryInputCacheTestSource = layout.projectDirectory.file('src/test/java/mekanism/common/recipe/lookup/cache/RotaryInputCacheContextTest.java')
 def distributionPropertySource = layout.projectDirectory.file('../src/test/java/mekanism/common/lib/distribution/DistributionPropertyTest.java')
 def windowConfigTestSource = layout.projectDirectory.file('src/test/java/mekanism/fabric/config/FabricWindowConfigTest.java')
 def windowDomainTestSource = layout.projectDirectory.file('src/test/java/mekanism/fabric/config/WindowDomainTest.java')
@@ -743,7 +744,7 @@ def verifyFabricTestContract = tasks.register('verifyFabricTestContract') {
     inputs.files(registryOrdinaryTestSource, deferredOrdinaryTestSource, registryRootTestSource,
           dataMapOrdinaryTestSource, dataMapKnotTestSource, chemicalDataMapKnotTestSource,
           chemicalDomainTestSource, chemicalServiceTestSource, chemicalSnapshotTestSource, chemicalTransferTestSource,
-          ingredientClosureTestSource, inputHelperExecutionTestSource, genericInputCacheTestSource,
+          ingredientClosureTestSource, inputHelperExecutionTestSource, genericInputCacheTestSource, rotaryInputCacheTestSource,
           distributionPropertySource, windowConfigTestSource, windowDomainTestSource, concreteSlotTestSource, fabricItemStorageTestSource,
           recipeOutputHandlingTestSource, recipeSerializerContractTestSource, recipeRegistryKnotTestSource)
     doLast {
@@ -781,7 +782,7 @@ def verifyFabricTestContract = tasks.register('verifyFabricTestContract') {
               || annotationCount(chemicalDomainTestSource) != 12 || annotationCount(chemicalServiceTestSource) != 5
               || annotationCount(chemicalSnapshotTestSource) != 7 || annotationCount(chemicalTransferTestSource) != 6
               || annotationCount(ingredientClosureTestSource) != 6 || annotationCount(inputHelperExecutionTestSource) != 6
-              || annotationCount(genericInputCacheTestSource) != 6 || annotationCount(windowConfigTestSource) != 6
+              || annotationCount(genericInputCacheTestSource) != 6 || annotationCount(rotaryInputCacheTestSource) != 5 || annotationCount(windowConfigTestSource) != 6
               || annotationCount(windowDomainTestSource) != 6 || annotationCount(concreteSlotTestSource) != 6
               || annotationCount(fabricItemStorageTestSource) != 5 || annotationCount(recipeOutputHandlingTestSource) != 6
               || annotationCount(recipeSerializerContractTestSource) != 6 || annotationCount(recipeRegistryKnotTestSource) != 5) {
@@ -808,13 +809,13 @@ def verifyFabricTestContract = tasks.register('verifyFabricTestContract') {
             }
             [reports.length, tests]
         }
-        def ordinary = readTotals(ordinaryXmlResults, 'ordinary', 77, 384)
+        def ordinary = readTotals(ordinaryXmlResults, 'ordinary', 78, 389)
         def transfer = readTotals(transferXmlResults, 'transfer', 5, 27)
         def registry = readTotals(registryXmlResults, 'root-registry', 1, 2)
         def dataMap = readTotals(dataMapXmlResults, 'data-map', 2, 4)
         def recipeRegistry = readTotals(recipeRegistryXmlResults, 'recipe-registry', 1, 5)
-        if (ordinary[0] + transfer[0] + registry[0] + dataMap[0] + recipeRegistry[0] != 86
-              || ordinary[1] + transfer[1] + registry[1] + dataMap[1] + recipeRegistry[1] != 422) {
+        if (ordinary[0] + transfer[0] + registry[0] + dataMap[0] + recipeRegistry[0] != 87
+              || ordinary[1] + transfer[1] + registry[1] + dataMap[1] + recipeRegistry[1] != 427) {
             throw new GradleException('Unexpected aggregate Fabric test totals')
         }
     }

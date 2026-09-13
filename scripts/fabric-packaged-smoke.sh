@@ -1180,6 +1180,8 @@ expected_common_recipes = {
     "mekanism/common/recipe/lookup/cache/SingleInputRecipeCache.class",
     "mekanism/common/recipe/lookup/cache/SingleInputRecipeCache$State.class",
     "mekanism/common/recipe/lookup/cache/SingleInputRecipeCache$CheckRecipeType.class",
+    "mekanism/common/recipe/lookup/cache/RotaryInputRecipeCache.class",
+    "mekanism/common/recipe/lookup/cache/RotaryInputRecipeCache$State.class",
     "mekanism/common/recipe/lookup/cache/DoubleInputRecipeCache.class",
     "mekanism/common/recipe/lookup/cache/DoubleInputRecipeCache$State.class",
     "mekanism/common/recipe/lookup/cache/DoubleInputRecipeCache$DoubleSameInputRecipeCache.class",
@@ -1273,7 +1275,6 @@ with zipfile.ZipFile(sys.argv[1]) as artifact:
           e.startswith("mekanism/common/recipe/MekanismRecipeType")
           or e.startswith("mekanism/common/recipe/IMekanismRecipeTypeProvider")
           or e.startswith("mekanism/common/registration/impl/RecipeTypeRegistryObject")
-          or e.startswith("mekanism/common/recipe/lookup/cache/RotaryInputRecipeCache")
           or e.startswith("mekanism/common/registries/MekanismRecipeSerializersInternal")
           or e.startswith("mekanism/common/recipe/upgrade/")
           or e.startswith("mekanism/common/recipe/bin/")
