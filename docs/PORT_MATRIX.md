@@ -392,4 +392,3 @@ vanilla `BuiltInRegistries.ITEM` 解析，在 `MekanismItems` 未纳入期间保
 `mekanism/api/recipes/**` outer/nested class 并拒绝 042B families。recipe type/serializer registration、concrete
 recipe family、`MekanismItems` 与 client recipe viewer 仍属单独审批的 042B，且必须复用这些同一 `RecipeType`
 实例以保持 `byType` identity grouping。
-
