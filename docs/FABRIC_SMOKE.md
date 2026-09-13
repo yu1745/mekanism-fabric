@@ -229,7 +229,7 @@ anonymous `$1`, `cache/OneInputCachedRecipe.class`, and `outputs/OutputHelper.cl
 
 The same gate rejects every class family that belongs to the blocked 042B: `mekanism/api/recipes/basic/**`,
 `MekanismRecipeSerializers*`, `common/recipe/MekanismRecipeType*`, `common/recipe/IMekanismRecipeTypeProvider*`,
-`common/registration/impl/RecipeTypeRegistryObject*`, `common/recipe/lookup/RotaryInputRecipeCache*`,
+`common/registration/impl/RecipeTypeRegistryObject*`, `common/recipe/lookup/cache/RotaryInputRecipeCache*`,
 `common/recipe/serializer/**`, every `mekanism/client/**` class (the client recipe viewer), `common/registries/MekanismItems*`,
 and `mekanism/api/MekanismAPI.class`. It also rejects `data/mekanism/recipe/**` production recipe JSON and any
 fixture/test class (`Test*`, `RecipeOutputHandlingTest`, or any `*Fixture`). No server is started in

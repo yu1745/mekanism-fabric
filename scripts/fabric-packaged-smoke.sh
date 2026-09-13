@@ -1226,7 +1226,7 @@ with zipfile.ZipFile(sys.argv[1]) as artifact:
           or e.startswith("mekanism/common/recipe/MekanismRecipeType")
           or e.startswith("mekanism/common/recipe/IMekanismRecipeTypeProvider")
           or e.startswith("mekanism/common/registration/impl/RecipeTypeRegistryObject")
-          or e.startswith("mekanism/common/recipe/lookup/RotaryInputRecipeCache")
+          or e.startswith("mekanism/common/recipe/lookup/cache/RotaryInputRecipeCache")
           or e.startswith("mekanism/common/recipe/serializer/")
           or e.startswith("mekanism/client/")
           or e.startswith("mekanism/common/registries/MekanismItems")

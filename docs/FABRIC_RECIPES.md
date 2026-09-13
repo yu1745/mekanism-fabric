@@ -171,4 +171,6 @@ Non-claims: no recipe-type registration; no recipe serializers; no production re
 `RecipeTypeRegistryObject`; no concrete/basic recipe implementations; no `MekanismItems` and therefore no `getToastSymbol()`-correct items; no datapack-loaded
 Mekanism recipes; no machines or tile entities; no JEI/EMI or client recipe viewer; no item/fluid/Chemical transaction or storage exposure; no machine-facing
 `InputRecipeCache` index; no broader Fabric integration. Recipe-type and serializer registration, the concrete recipe family, and the item-registration boundary
-remain the separately approved 042B, which must reuse these exact `RecipeType` instances so `byType` identity grouping survives.
+remain the separately approved 042B. It must attach the registered holder through `MekanismKeyedHolder.attach(...)` (or rework the field shape) while preserving
+these exact concrete `RecipeType` instances so `byType` identity grouping survives. The current `Holder<RecipeType<X>>` shape is narrower than the oracle's
+`Holder<RecipeType<?>>`; attach behavior and generic compatibility are mandatory executable 042B checkpoints, not 042A claims.

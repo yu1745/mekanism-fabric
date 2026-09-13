@@ -104,8 +104,10 @@ entering any forbidden ownership:
 Vanilla `RecipeType` is a plain interface. `RecipeManager.replaceRecipes` and `byType` group by `recipeholder.value().getType()` — **identity**, not registry
 membership (`RecipeManager.java:64`, `:171`). Concrete non-registered instances therefore make `getType()` fully functional for in-memory recipes,
 `OneInputCachedRecipe`'s factories operational, and the `byType` lookup correct, while writing **nothing** to `BuiltInRegistries.RECIPE_TYPE`. Datapack-decoded
-production recipes still require serializers and real registration, which stays in 042B. Registration must reuse the exact same instances so that identity grouping
-survives; that is a 042B review checkpoint, not a 042A one.
+production recipes still require serializers and real registration, which stays in 042B. Registration must attach the registered holder through
+`MekanismKeyedHolder.attach(...)` (or replace/rework the field types) while preserving the exact concrete `RecipeType` instances so identity grouping survives;
+this is a mandatory 042B executable checkpoint, not a 042A claim. The 042A field shape is `Holder<RecipeType<X>>`, narrower than the oracle's invariant
+`Holder<RecipeType<?>>`, and 042B must explicitly resolve that generic compatibility before admitting upstream consumers.
 
 The ten toast-item keys (`chemical_crystallizer`, `chemical_dissolution_chamber`, `combiner`, `electrolytic_separator`, `thermal_evaporation_controller`,
 `energy_tablet`, `antiprotonic_nucleosynthesizer`, `pressurized_reaction_chamber`, `rotary_condensentrator`, `precision_sawmill`) are resolved by key against the
