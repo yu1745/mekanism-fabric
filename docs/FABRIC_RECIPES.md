@@ -265,9 +265,9 @@ fluid-to-chemical only recipe is never indexed in, or offered by, the chemical d
 ### Verification
 
 Five new ordinary methods in one new suite, `RotaryInputCacheContextTest`, drive the real production cache over real `BasicRotaryRecipe` instances and a real
-`RecipeSource.forType(MekanismRecipeTypes.TYPE_ROTARY.value())`: one-way direction exclusion plus bidirectional serving and a directional rebuild after rebind;
+`RecipeCacheSource.forType(MekanismRecipeTypes.TYPE_ROTARY.value())`: one-way direction exclusion plus bidirectional serving and a directional rebuild after rebind;
 indexed amount sensitivity versus type-only insertion; a component-bearing fluid ingredient served only through the complex fallback while the other direction stays
-clean; `clear()` releasing both directional indices and fallbacks while the binding stays live; and a fresh binding isolating both directional indices atomically.
+clean, including indexed-first precedence and fallback after an indexed amount mismatch; `clear()` releasing both directional indices and the populated fluid fallback while the binding stays live; and a fresh binding isolating both directional indices and the populated fluid fallback. Chemical fallback remains structurally retained but unreachable with the current `ChemicalInputCache.mapInputs()` (always false); no synthetic chemical scenario is claimed.
 The generic binding/thread/epoch matrix stays owned by `GenericInputCacheContextTest` and is not repeated.
 
 Slices move **199/188/38 → 199/189/38** (426 production sources). Ordinary executable totals move **77 suites/384 tests → 78/389**; transfer **5/27**,

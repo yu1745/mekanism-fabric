@@ -1020,3 +1020,11 @@ GLM 在任务 013、014 完成两轮临时复测；任务 015 以受支持的 hi
 - 接受：总体路线未回到重写；当前无完整 Crusher；Task043 anonymous canonical type 与未来 official type/cache owner 必须统一 identity；Task042 blocker 部分过度；Task038 是有后续复用但不直接属于 Crusher 的平台先行试验。
 - 主代理核对后限缩：不能仅凭 Crusher 无 direct Chemical/window import 就认定 Task039/040 可跳过。`IInsertableSlot.exists(SelectedWindowData)`、官方 machine base 的 Chemical handler，以及 OneInputCachedRecipe 的完整 factory 都是真实传递依赖；未证明保持官方公共面的替代闭包前，不采纳整批无用论。
 - 主代理纠正：Task043 final runtime/clean release 实际已在 `2f2740ba` 通过，只是仓库仍只记录候选静态门禁；本次补记 TASK043_PLAN。详细事实、审查取舍和组织建议见 [`DEVELOPMENT_REVIEW_2026-09-13.md`](DEVELOPMENT_REVIEW_2026-09-13.md)。建议不自动修改架构/测试/门禁或正在运行的 Task044。
+
+## 任务 044：rotary input-cache ownership（单实现 + 风险触发只读审查）
+
+- 单实现为 `commandcode/deepseek/deepseek-v4.1-flash` low，隔离基线 `8a4c6105`，候选 `45a5c96a`；895.1s、180,145 tokens、137次工具调用。没有复制完整候选。
+- 独立只读 reviewer（Agent 默认继承模型，未覆盖 model），run `de73ab63-c130-4df`：92.5s、69,017 tokens、23次工具调用，约 `$1.0841`；审查固定 `45a5c96a` 的全部9文件及 base/sibling/index/recipe/fixture/packaging，未修改或重跑构建。结论无确证 production regression，候选可接受。
+- 有效覆盖发现：clear/rebind 原测试只填充普通 indices，不能声称验证 complex fallback 清除；fluid fallback 测试未验证 indexed-first 和 indexed amount 不足后 fallback。主代理在原5方法内补充真实 component fluid recipe 的 clear/rebind，以及两种候选并存下的优先级和 amount fallback；focused 5 tests 通过。修正 `RecipeSource` 文档笔误。Chemical fallback 因当前 `ChemicalInputCache.mapInputs()` 恒返回 false 而不可达，保留官方结构，不创建 synthetic test seam。
+- 非本批回归：通用旧测试未真正构造 mismatched non-null Level，不能把方法名当执行证据；Rotary 四入口实际均委托既有 enforcing base。未扩展到 owner/registry 或改动生产代码。
+- 父级最终门禁与 artifact identity 记录于 `TASK044_PLAN.md`，本记录不以只读意见代替运行证据。

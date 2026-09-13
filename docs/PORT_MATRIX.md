@@ -439,7 +439,7 @@ slices **199/188/38 → 199/189/38**（426 production sources）。测试 ordina
 **77/384 → 78/389**、**5/27**、**1/2**、**2/4**、**1/5**、**86/422 → 87/427**。新增一个 ordinary suite `RotaryInputCacheContextTest`
 恰好五个方法，用真实 `BasicRotaryRecipe` 与真实 `RecipeCacheSource.forType(MekanismRecipeTypes.TYPE_ROTARY.value())` 驱动生产 cache：
 单向方向排除与双向服务及 rebind 后的方向重建；indexed 查询的 amount 敏感 versus type-only insertion；component 流体 ingredient 只经
-complex fallback 命中且不污染另一方向；`clear()` 释放两个方向的 index 与 fallback 而 binding 仍存活；fresh binding 原子隔离两个方向 index。
+complex fallback 命中且不污染另一方向，并验证 indexed-first 与 indexed amount 不足后的 fallback；`clear()` 释放两个方向的 index 与已填充 fluid fallback 而 binding 仍存活；fresh binding 隔离两个方向 index 与 fluid fallback。Chemical fallback 在当前 `ChemicalInputCache.mapInputs()` 恒返回 false 的实现下不可达，不伪造测试。
 通用 binding/thread/epoch 矩阵仍由 `GenericInputCacheContextTest` 拥有，不重复。
 
 Gates：五个 test task 加 `verifyFabricTestContract`；三个 `verify*SliceNoNeoForge` 与 `verifyOfficialRootTestSources`；五个

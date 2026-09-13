@@ -102,9 +102,7 @@ class RotaryInputCacheContextTest {
     void complexIngredientsFallBackThroughTheRecipePredicatePerDirection() {
         RotaryInputRecipeCache cache = newRecipeCache();
         //A component-bearing fluid ingredient has no quick per-fluid key, so it is only reachable through the fluid fallback set.
-        FluidStack named = new FluidStack(Fluids.WATER.builtInRegistryHolder(), 1_000, DataComponentPatch.builder()
-              .set(DataComponents.CUSTOM_NAME, Component.literal("named"))
-              .build());
+        FluidStack named = namedWater(1_000);
         BasicRotaryRecipe complex = new BasicRotaryRecipe(IngredientCreatorAccess.fluid().from(named), new ChemicalStack(MekanismChemicals.HYDROGEN, 10));
         BasicRotaryRecipe plain = chemicalToFluid(20, 2_000);
         replaceRecipes(holder("complex", complex), holder("plain", plain));
@@ -117,15 +115,23 @@ class RotaryInputCacheContextTest {
         //The complex recipe is fluid-only, so it must never leak into the chemical direction.
         assertFalse(cache.containsInput(null, new ChemicalStack(MekanismChemicals.OXYGEN, 10)));
         assertSame(plain, cache.findFirstRecipe(null, hydrogen(20)));
+
+        BasicRotaryRecipe indexed = fluidToChemical(2_000, 10);
+        replaceRecipes(holder("complex", complex), holder("indexed", indexed));
+        RecipeCacheContext.bind(manager, 2);
+        assertSame(indexed, cache.findFirstRecipe(null, namedWater(2_000)), "indexed candidates win even when the fallback also matches");
+        assertSame(complex, cache.findFirstRecipe(null, named), "an undersized indexed candidate must still allow fallback");
     }
 
     @Test
-    void clearReleasesBothDirectionalIndicesAndFallbacks() {
+    void clearReleasesBothDirectionalIndicesAndFluidFallback() {
         RotaryInputRecipeCache cache = newRecipeCache();
-        replaceRecipes(holder("fluid", fluidToChemical(1_000, 10)), holder("chemical", chemicalToFluid(3_000, 2_000)));
+        BasicRotaryRecipe complex = fluidToChemicalNamed();
+        replaceRecipes(holder("fluid", fluidToChemical(1_000, 10)), holder("chemical", chemicalToFluid(3_000, 2_000)), holder("complex", complex));
         RecipeCacheContext.bind(manager, 1);
         assertTrue(cache.containsInput(null, water(1_000)));
         assertTrue(cache.containsInput(null, hydrogen(3_000)));
+        assertSame(complex, cache.findFirstRecipe(null, namedWater(500)));
 
         //Swap the manager's contents without rebinding: the bound context keeps serving both old directional indices.
         replaceRecipes(holder("lava_oxygen", new BasicRotaryRecipe(IngredientCreatorAccess.fluid().fromHolder(Fluids.LAVA.builtInRegistryHolder(), 500),
@@ -134,10 +140,11 @@ class RotaryInputCacheContextTest {
         assertTrue(cache.containsInput(null, water(1_000)), "before clear the bound context still serves the old fluid index");
         assertTrue(cache.containsInput(null, hydrogen(3_000)), "before clear the bound context still serves the old chemical index");
 
-        //clear() drops this cache's state from the binding: both directions are rebuilt, so both old indices and fallbacks are gone.
+        //clear() drops this cache's state: both old indices and the reachable fluid fallback are gone.
         cache.clear();
         assertFalse(cache.containsInput(null, water(1_000)), "the old fluid index is released by clear");
         assertFalse(cache.containsInput(null, hydrogen(3_000)), "the old chemical index is released by clear");
+        assertNull(cache.findFirstRecipe(null, namedWater(500)), "clear also releases the populated fluid fallback");
         assertTrue(cache.containsInput(null, new FluidStack(Fluids.LAVA, 500)), "both directions lazily rebuild from the still-bound manager");
         assertTrue(cache.containsInput(null, new ChemicalStack(MekanismChemicals.OXYGEN, 5)));
     }
@@ -145,10 +152,12 @@ class RotaryInputCacheContextTest {
     @Test
     void bindingReplacementIsolatesBothDirectionalIndices() {
         RotaryInputRecipeCache cache = newRecipeCache();
-        replaceRecipes(holder("water_hydrogen", both(1_000, 10)));
+        BasicRotaryRecipe complex = fluidToChemicalNamed();
+        replaceRecipes(holder("water_hydrogen", both(1_000, 10)), holder("complex", complex));
         RecipeCacheContext.bind(manager, 1);
         assertTrue(cache.containsInput(null, water(1_000)));
         assertTrue(cache.containsInput(null, hydrogen(10)));
+        assertSame(complex, cache.findFirstRecipe(null, namedWater(500)));
 
         //A fresh binding with different recipes discards both old indices atomically.
         replaceRecipes(holder("lava_oxygen", new BasicRotaryRecipe(IngredientCreatorAccess.fluid().fromHolder(Fluids.LAVA.builtInRegistryHolder(), 3_000),
@@ -157,6 +166,7 @@ class RotaryInputCacheContextTest {
         RecipeCacheContext.Binding replacement = RecipeCacheContext.bind(manager, 2);
         assertNull(cache.findFirstRecipe(null, water(1_000)), "the fluid index from the previous binding is gone");
         assertNull(cache.findFirstRecipe(null, hydrogen(10)), "the chemical index from the previous binding is gone");
+        assertNull(cache.findFirstRecipe(null, namedWater(500)), "rebind also releases the populated fluid fallback");
         assertNotNull(cache.findFirstRecipe(null, new FluidStack(Fluids.LAVA, 3_000)));
         assertNotNull(cache.findFirstRecipe(null, new ChemicalStack(MekanismChemicals.OXYGEN, 30)));
 
@@ -173,6 +183,15 @@ class RotaryInputCacheContextTest {
 
     private static FluidStack water(int amount) {
         return new FluidStack(Fluids.WATER, amount);
+    }
+
+    private static FluidStack namedWater(int amount) {
+        return new FluidStack(Fluids.WATER.builtInRegistryHolder(), amount, DataComponentPatch.builder()
+              .set(DataComponents.CUSTOM_NAME, Component.literal("named")).build());
+    }
+
+    private static BasicRotaryRecipe fluidToChemicalNamed() {
+        return new BasicRotaryRecipe(IngredientCreatorAccess.fluid().from(namedWater(500)), hydrogen(10));
     }
 
     private static ChemicalStack hydrogen(int amount) {
