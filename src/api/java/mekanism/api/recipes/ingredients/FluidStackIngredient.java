@@ -46,18 +46,11 @@ public final class FluidStackIngredient implements InputIngredient<@NotNull Flui
      *
      * @since 10.6.0
      */
-    public static final StreamCodec<RegistryFriendlyByteBuf, FluidStackIngredient> STREAM_CODEC = new StreamCodec<>() {
-        @Override
-        public FluidStackIngredient decode(RegistryFriendlyByteBuf buffer) {
-            return FluidStackIngredient.of(FluidIngredient.STREAM_CODEC.decode(buffer), ByteBufCodecs.VAR_INT.decode(buffer));
-        }
-
-        @Override
-        public void encode(RegistryFriendlyByteBuf buffer, FluidStackIngredient value) {
-            FluidIngredient.STREAM_CODEC.encode(buffer, value.ingredient);
-            ByteBufCodecs.VAR_INT.encode(buffer, value.amount);
-        }
-    };
+    public static final StreamCodec<RegistryFriendlyByteBuf, FluidStackIngredient> STREAM_CODEC = StreamCodec.composite(
+          FluidIngredient.STREAM_CODEC, FluidStackIngredient::ingredient,
+          ByteBufCodecs.VAR_INT, FluidStackIngredient::amount,
+          FluidStackIngredient::of
+    );
 
     /**
      * Creates a Fluid Stack Ingredient that matches a given ingredient and amount. Prefer calling via
