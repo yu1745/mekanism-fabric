@@ -1,99 +1,72 @@
 # AGENTS.md — Mekanism Fabric Java 移植约束
 
-## 项目目标
+## 目标与源码边界
 
-本分支将官方 Mekanism `v1.21.1-10.7.19.85` 从 NeoForge 定向移植到 Fabric（Minecraft 1.21.1、Java 21）。保留官方 `mekanism.api.*`、`mekanism.common.*`、`mekanism.client.*` 包名、领域模型、注册 ID、NBT、配方和存档语义；不再做 Kotlin 全量重写。
+将官方 Mekanism `v1.21.1-10.7.19.85` 从 NeoForge 移植到 Fabric（Minecraft 1.21.1、Java 21、Mojang official mappings）。保留官方 `mekanism.api.*`、`mekanism.common.*`、`mekanism.client.*` 包名、公共行为、领域模型、注册 ID、NBT、配方与存档语义。
 
-迁移方案与门禁见：
+- API/common/platform 分别由 `fabric/api-slice.txt`、`fabric/common-slice.txt`、`fabric/platform-slice.txt` 精确纳入。不得复制源码、改包名、加入 Kotlin，或为消除编译错误无审计地扩大清单。
+- 不实现通用 Forge/Fabric 转换层，不伪造 `net.neoforged.*`，不建立 Crusher 专用替代机器框架。
+- 路线/状态见 `docs/FABRIC_PORT.md`、`docs/PORT_MATRIX.md`；平台差异与验收见 `docs/API_DELTAS.md`、`docs/FABRIC_{REGISTRY,CONFIG,SMOKE}.md` 及任务对应专题文档，按需读取。
 
-- `docs/FABRIC_PORT.md`
-- `docs/PORT_MATRIX.md`
-- `docs/API_DELTAS.md`
-- `docs/FABRIC_REGISTRY.md`
-- `docs/FABRIC_CONFIG.md`
-- `docs/FABRIC_SMOKE.md`
+## 安全与参考源码
 
-## 持久记录边界
+仅在任务相关具体目录内用 `rg`/`fd` 搜索；禁止扫描 `~`、`/`、`~/server` 或宽泛父目录。禁止使用 zvec-grep、其搜索工具或建立/更新索引。开发任务不包含生产、镜像服、部署或 push 操作。
 
-- 仓库本地文件与 Git 历史是长期任务的唯一持久记忆。架构决定、用户策略、已完成/阻断状态、依赖证据、验收结果、模型评估、后续边界和恢复步骤，必须写入对应 `AGENTS.md`、`docs/`、测试、脚本或提交记录；不得只存在于会话 Notes、聊天历史或代理输出中。
-- Notes 只允许保存当前 Session 内跨 context window 所需的短期状态，例如正在运行的代理 ID、尚未落盘的临时发现和紧接着要执行的动作。到达规划结论、任务边界、暂停点或 Session 可能结束前，必须先把有长期价值的内容落入仓库文件并提交；落盘后 Notes 只保留路径/commit 指针。
-- 不把 Notes 当 changelog、长期任务数据库或仓库文档副本。新 Session 应只依赖仓库即可恢复完整项目状态；若做不到，视为本次记录工作未完成。
+以下 `.gitignore` 目录只供参考，不是编译/运行依赖；不得修改、生成构建产物或提交其中内容：
 
-## 本地只读参考源码
+| 路径 | 固定身份 | 用途 |
+|---|---|---|
+| `upstream/neoforge-minecraft/` | MC `1.21.1` / NeoForge `21.1.200` / NeoForm `1.21.1-20240808.144430`；patched-source SHA-256 `a2003718973f1b772e1b7a1c8527bd2b19a86aa938104a77515e8140ca865ce1` | 核对 patched Minecraft 新增接口/方法/语义 |
+| `upstream/kilt/` | `KiltMC/Kilt` `version/1.21.1`，commit `9e8f0d67411f10234bf0d864bd151a6dbcef14b4` | NeoForge→Fabric 行为参考；LGPL-2.1 |
+| `upstream/connector/` | `Sinytra/Connector` `1.21.x`，commit `8b27f1ad042aae8037bcc522b321c03fcce1a12a` | Fabric→NeoForge 反向参考；MIT |
 
-以下目录被 `.gitignore` 排除，不进入本仓库提交，也不是运行时依赖：
+patched Minecraft 仅保留 5,363 个 `com/mojang/**/*.java`、`net/minecraft/**/*.java`，来源见该目录 `SOURCE.txt`；禁止复制或修改 Minecraft 源码。参考版本只能显式更新，并同步本表；patched Minecraft 更新还须重建 `SOURCE.txt`、核对文件数。
 
-| 相对路径 | 上游与版本 | 当前参考身份 | 用途 |
-|---|---|---|---|
-| `upstream/neoforge-minecraft/` | Minecraft `1.21.1`，NeoForge `21.1.200`，NeoForm `1.21.1-20240808.144430` | patched-source archive SHA-256 `a2003718973f1b772e1b7a1c8527bd2b19a86aa938104a77515e8140ca865ce1` | 直接查看 NeoForge patch 后的 `com.mojang.*` / `net.minecraft.*` 源码，识别 vanilla 类中新增的接口、方法和语义 |
-| `upstream/kilt/` | `KiltMC/Kilt` `version/1.21.1` | commit `9e8f0d67411f10234bf0d864bd151a6dbcef14b4` | 查看 (Neo)Forge API、对象和生命周期如何在 Fabric 上承接 |
-| `upstream/connector/` | `Sinytra/Connector` `1.21.x` | commit `8b27f1ad042aae8037bcc522b321c03fcce1a12a` | 从反方向查看 Fabric API 到 NeoForge 的对象转换与调用语义 |
+## 平台映射
 
-`upstream/neoforge-minecraft/` 是匹配本项目 NeoForge 基线的 patched-source JAR 直接解压结果，只保留 5,363 个 `com/mojang/**/*.java` 与 `net/minecraft/**/*.java`；本地来源、过滤条件和版本同时记录在该目录的 `SOURCE.txt`。它用于核对 patch 后 Minecraft 表面，禁止作为编译依赖，也不要复制或修改 Minecraft 源码。
+依次判断 vanilla 类型/能力 → Fabric API → patched Minecraft → Kilt → Connector，基于实际行为实现最小 Mekanism 专用 adapter，补平台差异测试。参考项目不是必须照抄的架构，也不默认加入依赖；直接采用代码须记录仓库、commit、文件路径并遵守许可证。
 
-仅在任务相关的具体子目录内使用 `rg`/`fd` 搜索；**本项目禁止使用 `zvec-grep`、`zvec_grep_search` 或建立/更新其索引**。禁止扫描 `~`、`/`、`~/server` 或宽泛父目录。所有参考目录默认只读，不要在其中改代码、生成构建产物或提交。需要更新参考版本时必须显式执行；同时更新本表身份，patched Minecraft 还须重建 `SOURCE.txt` 并核对 Java 文件数量。
+重点核对 EMPTY/null、amount 单位、side/context、simulate/execute/transaction、缓存失效、区块卸载、线程/owner 生命周期、注册冻结和 codec/NBT/packet 顺序。
 
-## 平台 API 映射规则
+## 工作组织与任务定界
 
-遇到 NeoForge/Fabric 无明显一一对应的 API 时：
+- **主代理选路并理解边界，单代理实现。** 派发前给出基线 commit、具体源码入口/调用方、真实 owner、允许的 delta、非目标、可执行验收、已知依赖和未决问题。不得将开放选题、全局路线比较与完整实现一起下放。
+- **不设 production 文件数目标或硬上限。** 按完整模块或 ownership/语义边界纳入直接前置与立即调用方；不凑无关代码，不因数量回避主干，不为拆小而截断公共行为或引入临时 holder、重复 adapter、synthetic seam。只有可独立验证/发布且 ownership 清楚的边界才拆分。
+- 遇到平台/事务/线程等风险先证明该边界，再完成所属纵向闭包；确实无法建立 owner、必须截断行为或依靠 fake/no-op 才能继续时，报告具体 blocker。
+- 规划约 **10–15分钟**设检查点，交出 GO、具体 blocker 或待裁决方案；无结论先交接，不无限换候选，也不为到点而强行接受。实现中发现新语义问题同样回报主代理裁决。
+- 复用已验证的依赖事实、官方 consumer 编译 probe 和失败 fixture。扫描须区分真实类型/调用、字符串/注释、常量与生命周期 owner；递归闭包数字不独立构成阻断依据，不每批重造扫描器。
+- 同时只运行一个实现者，不复制完整候选。主代理可并行准备下一任务或审查固定 commit；不得只采信代理总结。提速靠减少重复规划、返工和手工同步，不未经验证削减门禁。
 
-1. 优先判断是否可直接使用 vanilla Minecraft/Mojang 类型；
-2. 再寻找 Fabric API 的直接能力；
-3. 在 `upstream/neoforge-minecraft/` 查看目标 vanilla 类被 NeoForge patch 后具体增加或改变了什么；
-4. 在 `upstream/kilt/` 查看 NeoForge→Fabric 的实现与边界；
-5. 在 `upstream/connector/` 查看 Fabric→NeoForge 的反向映射；
-6. 基于上述行为实现最小的 Mekanism 专用 adapter，并补语义测试。
+## 模型与监督
 
-Kilt 与 Connector 是参考实现，不是必须照抄的架构。本项目不实现通用 Forge/Fabric 转换层，不批量伪造 `net.neoforged.*`，也不默认把二者加入依赖。若直接采用具体代码，必须在实现或提交中记录来源仓库、commit、文件路径并遵守许可证；Kilt 为 LGPL-2.1，Connector 为 MIT。默认做法是参考行为和测试后独立实现。
+- 实现默认使用 `commandcode/deepseek/deepseek-v4.1-flash`，从 clean commit 在隔离 worktree 工作。thinking 默认 `low`，困难的已定界任务可用 `high`；仅允许这两档，不用 `max`。两档都须明确范围、交付物和检查点，降低 thinking 不保证提速。
+- 不使用 GLM 5.3；未经用户再次明确要求，不用 SOL 实现。研究/架构规划可按难度使用 SOL 或 Astra，但主代理仍负责最终定界。
+- 每个 DeepSeek 子代理启动后开启 **270秒 supervision watch**。只纠正方向、范围、验收漂移或风险操作；不因沉默或一次可恢复错误干预其自修复。
+- DeepSeek 明确报告额度耗尽时，保存进度、暂停实现与新代理派发，告知用户并等待额度恢复；不静默换模型，不用 sleep 或后台等待。
+- 涉及平台语义替换、patched Minecraft、registry、transaction、networking、序列化或线程/owner 生命周期时，对综合后的固定候选按风险进行独立**只读 adversarial review**；审查者默认不改代码、不重复完整文档与发布门禁。实际发生的比较/独立审查记录于 `docs/MODEL_IMPLEMENTATION_COMPARISONS.md`。
 
-特别核对：对象空值/EMPTY 语义、amount 单位、side/context、simulate/execute 与 Fabric transaction、缓存失效、区块卸载、线程切换、注册冻结、codec/NBT/packet 顺序。
+## 测试与验收
 
-## 当前构建入口
+现有测试不得因数量或行数增长而删除；仅在测试错误、失效或明确重复，且用户另行要求清理时删除。
+
+- 有可执行的 byte-identical 官方测试时优先直接纳入精确 oracle；新增 Fabric-local tests 聚焦平台差异、独立风险和层间连接，不随 production 文件数线性增加。
+- 每闭包通常新增 **3–6个 tests**；超过8个前逐项说明超额测试独立捕获的 production mutation，记录于实现评估。高风险边界可有据突破目标；测试源码不设行数限制。
+- 下层负责排列组合，上层 bridge 通常只补 happy path 与平台特有边界。不重复精确输出已蕴含的派生断言，不测试 vanilla/JDK 自身行为。
+- **候选门禁：** source identity/delta、slice/fixture isolation、focused/full local tests、Fabric build、静态 JAR class/leakage contract。默认不重复真实 server/client 或 clean release；高风险网络/注册/启动任务须在验收中明确需要的候选 runtime gate。
+- **主代理最终门禁：** 检查真实 diff、修复遗漏，独立重跑完整测试，对最终实现各执行一次 packaged server smoke 与 clean release，核对 commit、JAR 数量及 SHA-256。门禁自动化/合并须另作明确任务，不暗中改变契约。
 
 ```bash
-./build.sh [--clean] [--out <dir>]      # 当前 Fabric 发布物统一契约
-./fabric-build.sh                       # Fabric allowlist 开发构建
+./build.sh [--clean] [--out <dir>]    # 统一 Fabric 发布契约
+./fabric-build.sh                   # allowlist 开发构建
 ./gradlew -p fabric verifyApiSliceNoNeoForge
-scripts/scan-platform-deps.py
-scripts/fabric-packaged-smoke.sh        # 最终 remapped JAR 的干净服务端门禁
-scripts/fabric-paired-network-smoke.sh  # 隔离 Loom server + 两个顺序新 client JVM 的成功配置握手门禁（需 Linux/systemd user/Xvfb）
-scripts/fabric-configuration-rejection-smoke.sh # 错版/同版本显式拒绝/缺失协议 receiver 客户端的拒绝门禁（同上环境要求）
+scripts/scan-platform-deps.py        # 平台依赖清点
+scripts/fabric-packaged-smoke.sh     # 最终 remapped JAR 干净服务端门禁
+scripts/fabric-paired-network-smoke.sh
+scripts/fabric-configuration-rejection-smoke.sh
 ```
 
-## 测试增长约束
+后两项分别验证两个顺序新 client JVM 的成功握手，以及错版/同版本显式拒绝/缺失 receiver 的拒绝；需 Linux、systemd user、Xvfb。其他风险场景按对应专题文档选择。
 
-现有测试不得仅因数量或行数增长而消融；只有发现测试本身错误、失效或明确重复且用户另行要求清理时才删除。以下约束只适用于后续新增测试：
+## 持久记录
 
-- byte-identical 官方闭包已有可执行官方测试时，优先直接纳入精确官方 oracle；Fabric-local 测试只补官方未覆盖的平台差异、关键边界或新层间连接。
-- 每个新闭包默认新增 **3–6 个 Fabric-local tests**；超过 **8 个 tests** 前必须逐项说明每个超额测试能独立捕获的 production mutation，并将理由写入模型实现评估。无法证明独有价值的测试不得加入。测试源码不设行数限制，避免为压缩行数投入额外设计时间或牺牲可读性。
-- 已完整测试的下层负责排列组合；上层 bridge 通常只保留一个 happy path 和一个平台特有边界，不重复下层全部算术、方向或状态矩阵。
-- 精确输出已经蕴含的长度、唯一性、范围等派生断言不重复添加；不为 Mekanism 测试 vanilla/JDK 自身行为。
-- platform adapter、transaction/simulation、序列化兼容、registry freeze、config 原子发布、network handshake/rejection、true-long/overflow、patched-Minecraft 语义替换与打包隔离可按独立风险突破默认目标，但仍须保持最小并记录理由。
-
-## 任务批次与候选门禁
-
-- 任务批次**不设 production 文件数量目标或硬上限**。文件数只作结果度量，不能作为缩小、扩大、批准或阻断任务的理由。范围必须按完整 package/module、dependency/ownership vertical、注册/配置/事务/序列化/机器/生命周期语义边界确定，并主动纳入同一主路径上的直接前置、真实 owner 与立即调用方。
-- 不为凑数量混合无关代码，也不因闭包文件多就回避主干；同样不得为了满足任意文件数而引入 synthetic seam、临时 holder、重复 adapter 或把自然模块切成高耦合碎片。只有存在可独立发布、独立验证且 ownership/lifecycle 清晰的真实边界时才拆分；复杂度以平台语义差异、owner 数、状态/线程/事务风险及验收面评估，而不是以文件数评估。
-- 遇到 NeoForge/Fabric 语义分歧、registry lifecycle、transaction/rollback、线程或 owner 生命周期边界时，先隔离并证明该风险边界，但默认继续完成其所属纵向闭包。只有无法建立真实 owner、不得不截断 public behavior 或使用 fake/no-op 实现时才阻断整批。
-- 大批次测试按独立风险和层间连接设计，不按 production 文件数线性增加；复用已验证下层的排列组合，上层集中覆盖 owner lifecycle、平台差异和端到端连接。候选实现默认验证 source identity/delta、slice/fixture isolation、focused 与 full local unit tests、Fabric build 及静态 JAR class/leakage contract；不再由每个候选重复启动真实 dedicated server 或执行 clean release contract。
-- 主代理在审查并选定/综合真实 diff 后，独立重跑完整测试，再对最终实现各执行一次 `scripts/fabric-packaged-smoke.sh` 和 `./build.sh --clean`，核对最终 commit、JAR 数量与 sha256。高风险网络/注册/启动任务可在任务验收中显式恢复候选级真实运行门禁。
-
-## 工作组织：主代理定界，单代理实现（2026-09-13 用户批准）
-
-- 主代理负责关键路径与任务边界选择。不得把“寻找下一任务/比较全局路线/反复计算闭包”与完整实现一起下放。实现任务开始前必须给出：基线 commit、具体源码入口与调用方、真实 owner、允许的平台 delta、明确非目标、可执行验收、已知依赖与未决问题。
-- 规划以问题为单位设检查点：约10–15分钟应给出 GO、具体 blocker 或需要主代理裁决的方案；不是到点强行接受，也不是以文件数量截断公共行为。没有结论时先交接，由主代理选择下一项待证明问题，不无限切换候选。
-- 优先复用已验证的依赖事实、官方 consumer 编译 probe 与失败 fixture。依赖扫描必须区分真实类型/调用、字符串/注释、常量与生命周期 owner；import/递归闭包数字不能单独作为阻断依据。不每批重造扫描器。
-- 实现期间主代理可准备下一项明确任务或审查固定 commit；同时只运行一个实现者，不复制完整候选。实现者遇到新的语义 blocker 可以报告并建议修订，不要求它自行重新选择全局路线。
-- 保留现有测试、独立风险审查及最终产物门禁。提速优先减少重复规划、语义返工和文档手工同步；门禁工具的合并/自动化另作明确任务，不能未经验证直接删减。
-
-## 单 DeepSeek 实现与风险审查
-
-按用户调整，后续每个开发任务默认只派一个 **DeepSeek V4.1 Flash**（精确模型 ID `commandcode/deepseek/deepseek-v4.1-flash`）从 clean commit 在隔离 worktree 中实现；thinking 默认 **`low`**，只允许 `low` 或 `high`，禁止使用 `max`。按已定界任务的推理难度选择档位，困难的语义分析可正常使用 `high`，不再设置“high 必须极慎重”的特殊限制。当前 low/high 均出现长耗时，已观察到的主要原因是任务过于开放、反复规划与串行探索，不能把降低 thinking 当作提速保证；无论档位，都必须先明确边界、交付物与规划检查点。不再使用 GLM 5.3，也不复制两个 DeepSeek 候选。Task 041 已发生的双 GLM 候选仅作为调整前历史事实保留；其最终 mandatory review 由一个 DeepSeek 补做。主代理仍必须检查真实 diff、补足遗漏并独立运行最终门禁，不能只采信代理总结。按用户要求，所有 DeepSeek 子代理启动后必须同时启用 **270 秒**间隔的 supervision watch；watch 只用于观察方向、范围与验收漂移，仍须遵守“单次可恢复错误不干预”的监督边界。
-
-默认不再使用 SOL **实现**，除非用户再次明确要求；研究、scouting、架构比较与 implementation plan 仍可按任务难度使用 SOL 或 Astra。真实发生额外模型比较或独立审查时才在 `docs/MODEL_IMPLEMENTATION_COMPARISONS.md` 记录相应证据。
-
-若 DeepSeek 实现子代理明确报告额度耗尽，则暂停实现与新子代理派发，不切换 GLM 5.3 或其他第三种实现模型，也不使用 `sleep` 或后台等待；向用户报告已保存进度并等待额度恢复后再继续。
-
-涉及 NeoForge/Fabric 语义替换、patched Minecraft、registry lifecycle、transaction/rollback、networking、序列化兼容、线程/owner 生命周期等高风险边界时，候选综合完成后仍按风险调用独立模型做**只读 adversarial review**；审查者默认不改代码、不重复完整文档与发布门禁。真实发生的实现比较与独立审查都必须记录证据。
-
-Fabric 主线使用 Mojang official mappings。官方 API、common 与 Fabric adapter 源码分别通过 `fabric/api-slice.txt`、`fabric/common-slice.txt`、`fabric/platform-slice.txt` 逐项纳入；不得复制源码、改包名、加入 Kotlin，或为消除编译错误而无审计地扩大清单。
+仓库文件与 Git 是长期任务的权威：决定、用户策略、状态、依赖证据、验收和恢复步骤必须落入对应文档/测试/脚本并提交，不能只留聊天或代理输出。Notes 只存当前 Session 临时状态（代理ID、未落盘发现、下一动作）；到达任务边界/暂停点前持久化，随后 Notes 仅留必要指针。新 Session 应只依赖仓库恢复项目状态，不把 Notes 当 changelog 或文档副本。
