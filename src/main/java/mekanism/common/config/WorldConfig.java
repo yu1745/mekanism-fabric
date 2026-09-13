@@ -60,7 +60,7 @@ public class WorldConfig extends BaseMekanismConfig {
     }
 
     @Override
-    public Type getConfigType() {
+    public MekanismConfigType getConfigType() {
         return MekanismConfigType.SERVER;
     }
 

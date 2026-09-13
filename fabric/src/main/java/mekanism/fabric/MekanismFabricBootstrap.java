@@ -42,8 +42,16 @@ public final class MekanismFabricBootstrap implements ModInitializer {
         // cleanup in the original Mekanism.serverStopped order before releasing the shared server reference for the same server instance only
         ServerLifecycleEvents.SERVER_STARTING.register(MekanismServerLifecycle::captureStartingServer);
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
-            MekanismServerState.clearServerState();
-            MekanismServerLifecycle.releaseStoppedServer(server);
+            //Guard BOTH the domain cleanup and the release by same-server identity: a stale stop event belonging to a different (older)
+            // server instance must not wipe state owned by the live server. Cleanup still runs before release, and release happens even
+            // when the cleanup throws, so a failed cleanup does not pin a dead server reference.
+            if (MekanismServerLifecycle.getServer() == server) {
+                try {
+                    MekanismServerState.clearServerState();
+                } finally {
+                    MekanismServerLifecycle.releaseStoppedServer(server);
+                }
+            }
         });
         FabricMekanismConfigManager.Registration startup = CONFIG_MANAGER.registerAndLoad(STARTUP_CONFIG);
         verifyStartupConfig(startup);
@@ -77,25 +85,24 @@ public final class MekanismFabricBootstrap implements ModInitializer {
     }
 
     private static void verifyStartupConfig(FabricMekanismConfigManager.Registration registration) {
-        MekanismStartupConfig STARTUP_CONFIG_INSTANCE = STARTUP_CONFIG;
-        boolean valid = STARTUP_CONFIG_INSTANCE.isLoaded() && STARTUP_CONFIG_INSTANCE.getConfigSpec().size() == 12
-              && STARTUP_CONFIG_INSTANCE.armoredFreeRunnerArmor.get() >= 0
-              && STARTUP_CONFIG_INSTANCE.armoredFreeRunnerToughness.get() >= 0
-              && STARTUP_CONFIG_INSTANCE.armoredFreeRunnerKnockbackResistance.get() >= 0
-              && STARTUP_CONFIG_INSTANCE.armoredJetpackArmor.get() >= 0
-              && STARTUP_CONFIG_INSTANCE.armoredJetpackToughness.get() >= 0
-              && STARTUP_CONFIG_INSTANCE.armoredJetpackKnockbackResistance.get() >= 0
-              && STARTUP_CONFIG_INSTANCE.mekaSuitHelmetArmor.get() >= 0
+        boolean valid = STARTUP_CONFIG.isLoaded() && STARTUP_CONFIG.getConfigSpec().size() == 12
+              && STARTUP_CONFIG.armoredFreeRunnerArmor.get() >= 0
+              && STARTUP_CONFIG.armoredFreeRunnerToughness.get() >= 0
+              && STARTUP_CONFIG.armoredFreeRunnerKnockbackResistance.get() >= 0
+              && STARTUP_CONFIG.armoredJetpackArmor.get() >= 0
+              && STARTUP_CONFIG.armoredJetpackToughness.get() >= 0
+              && STARTUP_CONFIG.armoredJetpackKnockbackResistance.get() >= 0
+              && STARTUP_CONFIG.mekaSuitHelmetArmor.get() >= 0
               && STARTUP_CONFIG.mekaSuitBodyArmorArmor.get() >= 0
-              && STARTUP_CONFIG_INSTANCE.mekaSuitPantsArmor.get() >= 0
-              && STARTUP_CONFIG_INSTANCE.mekaSuitBootsArmor.get() >= 0
-              && STARTUP_CONFIG_INSTANCE.mekaSuitToughness.get() >= 0
-              && STARTUP_CONFIG_INSTANCE.mekaSuitKnockbackResistance.get() >= 0;
+              && STARTUP_CONFIG.mekaSuitPantsArmor.get() >= 0
+              && STARTUP_CONFIG.mekaSuitBootsArmor.get() >= 0
+              && STARTUP_CONFIG.mekaSuitToughness.get() >= 0
+              && STARTUP_CONFIG.mekaSuitKnockbackResistance.get() >= 0;
         if (!valid) {
             throw new IllegalStateException("Fabric startup config proof failed for " + registration.file());
         }
-        LOGGER.info("MEKANISM_FABRIC_CONFIG_PROOF file={} values=12 loaded=true created={} corrected={}",
-              registration.file(), registration.loadResult().created(), registration.loadResult().correctedValues());
+        LOGGER.info("MEKANISM_FABRIC_CONFIG_PROOF file=startup.toml values=12 loaded=true created={} corrected={}",
+              registration.loadResult().created(), registration.loadResult().correctedValues());
     }
 
     private static void verifyRecipeRegistration() {

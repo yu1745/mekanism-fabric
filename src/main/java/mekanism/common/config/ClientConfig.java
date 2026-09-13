@@ -175,7 +175,7 @@ public class ClientConfig extends BaseMekanismConfig {
     }
 
     @Override
-    public Type getConfigType() {
+    public MekanismConfigType getConfigType() {
         return MekanismConfigType.CLIENT;
     }
 }

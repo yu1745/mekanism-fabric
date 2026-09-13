@@ -24,6 +24,11 @@ public class MekanismConfig {
     /**
      * Creates and registers every common/server-side Mekanism config through the real Fabric config manager. Fabric port delta: replaces the NeoForge
      * {@code ModContainer.registerConfig} wiring; the client config is registered separately on the physical client by the client config lifecycle.
+     *
+     * @implNote Integration invariant (must hold when this is finally wired in the main closure): there is exactly ONE live common/startup config owner.
+     * The caller must pass the same {@link FabricMekanismConfigManager} instance the bootstrap (and {@code FabricChemicalConfig}) already use - loading these
+     * configs through a freshly allocated manager/file would duplicate the config owner. The bootstrap does not call this yet; final wiring belongs to the
+     * main TileEntityMekanism closure, not to this staged port.
      */
     public static void registerConfigs(FabricMekanismConfigManager manager) {
         MekanismConfigHelper.registerConfig(manager, KNOWN_CONFIGS, common);

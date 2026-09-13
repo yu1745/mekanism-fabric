@@ -42,10 +42,14 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
+import net.minecraft.world.level.material.FlowingFluid;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.tags.FluidTags;
 import net.fabricmc.fabric.api.lookup.v1.block.BlockApiLookup;
-import net.minecraft.sounds.SoundEvents;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariantAttributes;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -671,19 +675,29 @@ public class WorldUtils {
 
     public static boolean tryPlaceContainedLiquid(@Nullable Player player, Level world, BlockPos pos, @NotNull FluidStack fluidStack, @Nullable Direction side) {
         Fluid fluid = fluidStack.getFluid();
-        //Fabric port delta: vanilla fluid-placement semantics replace the NeoForge FluidType checks; a non-empty fluid can be placed, and lava vaporizes in ultrawarm dimensions
-        if (fluidStack.isEmpty()) {
+        //Fabric port delta: vanilla BucketItem emptying semantics replace the NeoForge FluidType hooks. Vanilla refuses to empty any fluid that is not a
+        // FlowingFluid (i.e. has no placeable block form), and only WATER vaporizes in ultrawarm dimensions - lava stays placeable there.
+        if (fluidStack.isEmpty() || !(fluid instanceof FlowingFluid flowingFluid)) {
+            //If there is no fluid, or it cannot be placed in the world, just
             return false;
         }
         BlockState state = world.getBlockState(pos);
         boolean isReplaceable = state.canBeReplaced(fluid);
-        boolean canContainFluid = state.getBlock() instanceof LiquidBlockContainer liquidBlockContainer && liquidBlockContainer.canPlaceLiquid(player, world, pos, state, fluid);
+        //Note: the container local is assigned via ternary (not a pattern variable) because Java flow scoping cannot carry a pattern local through the
+        // stored canContainFluid boolean into the placement branch below
+        LiquidBlockContainer liquidBlockContainer = state.getBlock() instanceof LiquidBlockContainer container ? container : null;
+        boolean canContainFluid = liquidBlockContainer != null && liquidBlockContainer.canPlaceLiquid(player, world, pos, state, fluid);
         if (state.isAir() || isReplaceable || canContainFluid) {
-            if (world.dimensionType().ultraWarm() && fluid.builtInRegistryHolder().is(net.minecraft.tags.FluidTags.LAVA)) {
-                //Vaporize: mirror vanilla BucketItem behavior with block-break particles
-                world.levelEvent(2001, pos, Block.getId(state));
+            if (world.dimensionType().ultraWarm() && fluidStack.is(FluidTags.WATER)) {
+                //Vaporize water exactly like vanilla BucketItem.emptyContents: fire-extinguish hiss plus large smoke particles
+                // (Level#addParticle is a server-side no-op); the placement still reports success
+                world.playSound(player, pos, SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 0.5F,
+                      2.6F + (world.random.nextFloat() - world.random.nextFloat()) * 0.8F);
+                for (int i = 0; i < 8; i++) {
+                    world.addParticle(ParticleTypes.LARGE_SMOKE, pos.getX() + Math.random(), pos.getY() + Math.random(), pos.getZ() + Math.random(), 0.0, 0.0, 0.0);
+                }
             } else if (canContainFluid) {
-                if (!liquidBlockContainer.placeLiquid(world, pos, state, fluid.defaultFluidState())) {
+                if (!liquidBlockContainer.placeLiquid(world, pos, state, flowingFluid.getSource(false))) {
                     //If something went wrong return that we couldn't actually place it
                     return false;
                 }
@@ -701,13 +715,9 @@ public class WorldUtils {
     }
 
     private static void playEmptySound(@Nullable Player player, LevelAccessor world, BlockPos pos, Fluid fluid) {
-        //Fabric port delta: bucket empty sound family per vanilla; other fluids have no vanilla empty sound
-        SoundEvent soundevent = null;
-        if (fluid.builtInRegistryHolder().is(net.minecraft.tags.FluidTags.WATER)) {
-            soundevent = SoundEvents.BUCKET_EMPTY;
-        } else if (fluid.builtInRegistryHolder().is(net.minecraft.tags.FluidTags.LAVA)) {
-            soundevent = SoundEvents.BUCKET_EMPTY_LAVA;
-        }
+        //Fabric port delta: FluidVariantAttributes (Fabric's fluid attribute API) replaces the NeoForge FluidType bucket-empty sound hook;
+        // water/lava have Fabric-registered sounds, other fluids only sound when their mod registered a handler
+        SoundEvent soundevent = FluidVariantAttributes.getEmptySound(FluidVariant.of(fluid));
         if (soundevent != null) {
             world.playSound(player, pos, soundevent, SoundSource.BLOCKS, 1.0F, 1.0F);
         }
@@ -720,6 +730,9 @@ public class WorldUtils {
             //noinspection OptionalIsPresent - Capturing lambdas
             if (pickupSound.isPresent()) {
                 soundEvent = pickupSound.get();
+            } else {
+                //Fabric port delta: FluidVariantAttributes replaces the NeoForge FluidType bucket-fill sound hook fallback
+                soundEvent = FluidVariantAttributes.getFillSound(FluidVariant.of(fluid));
             }
         }
         if (soundEvent != null) {

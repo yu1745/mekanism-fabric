@@ -22,8 +22,12 @@ public final class MekanismServerLifecycle {
     private MekanismServerLifecycle() {
     }
 
+    /**
+     * Written on the server thread by the lifecycle capture/release callbacks, but read through the public {@link #getServer()} getter by other legitimate
+     * callers (network threads, datagen workers), so it is volatile for cross-thread visibility.
+     */
     @Nullable
-    private static MinecraftServer server;
+    private static volatile MinecraftServer server;
 
     /**
      * {@return the currently running server, or {@code null} when no server is running} Dedicated and integrated servers are both tracked; on a client that
