@@ -32,6 +32,7 @@ public final class ChemicalTestBootstrap {
     public static final class TrackingChemical extends Chemical {
         private int invocations;
         private double reentrantBeforeSuper;
+        private double nestedOtherChemical;
         private double reentrantAfterSuper;
 
         private TrackingChemical(ChemicalBuilder builder) {
@@ -42,6 +43,7 @@ public final class ChemicalTestBootstrap {
         public void updateFromDataMap(Holder<Chemical> holder) {
             invocations++;
             reentrantBeforeSuper = getRadioactivity();
+            nestedOtherChemical = MekanismChemicals.HYDROGEN.get().getRadioactivity();
             super.updateFromDataMap(holder);
             reentrantAfterSuper = getRadioactivity();
         }
@@ -49,11 +51,13 @@ public final class ChemicalTestBootstrap {
         public void resetTracking() {
             invocations = 0;
             reentrantBeforeSuper = Double.NaN;
+            nestedOtherChemical = Double.NaN;
             reentrantAfterSuper = Double.NaN;
         }
 
         public int invocations() { return invocations; }
         public double reentrantBeforeSuper() { return reentrantBeforeSuper; }
+        public double nestedOtherChemical() { return nestedOtherChemical; }
         public double reentrantAfterSuper() { return reentrantAfterSuper; }
     }
 }

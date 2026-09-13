@@ -79,7 +79,10 @@ class ChemicalDomainTest {
         assertEquals(0, empty.getRadioactivity());
         assertEquals(1, empty.invocations(), "each top-level query must participate through the virtual override");
         assertEquals(0, empty.reentrantBeforeSuper());
+        assertEquals(0, empty.nestedOtherChemical(), "a nested different-chemical derivation must restore the outer frame");
         assertEquals(0, empty.reentrantAfterSuper());
+        assertEquals(0, empty.getRadioactivity(), "the outer chemical must remain derivable after nested frame restoration");
+        assertEquals(2, empty.invocations());
         assertThrows(IllegalStateException.class,
               () -> MekanismChemicals.HYDROGEN.get().updateFromDataMap(MekanismChemicals.HYDROGEN.get().getAsHolder()),
               "direct external invocation is outside the context-local derivation boundary");
