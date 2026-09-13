@@ -361,3 +361,58 @@ smelting identity, published-access identity and synthetic smelting through the 
 
 Non-claims: no items/tiles/monitors/factories/recipe-viewer/codec or production recipe JSON; no other cached-recipe family; no second recipe type per id; no global
 world fallback, no second context mechanism and no weakening of the generic deferred-registry lifecycle.
+
+## Task 046 — recipe lookup handlers and generic monitor ownership
+
+Task 046 implements `TASK046_PLAN.md` from clean baseline `2db8a184`. It completes the common owner → handler → cached-recipe execution spine by porting the five
+lookup-handler interfaces and the two generic monitors, and replaces the official process-global one-tick flush flag with the existing binding's publication identity
+plus a narrow binding-local invalidation generation.
+
+Slices move **200/193/39 → 201/201/39**. Ordinary executable totals move **79 suites/395 tests → 80/402**; the other four groups are unchanged, so the five-group
+aggregate moves **90/435 → 91/442**.
+
+### Handlers
+
+`IRecipeLookupHandler` and `IEitherSideRecipeLookupHandler` are byte-identical to the admitted official sources. `ISingleRecipeLookupHandler`,
+`IDoubleRecipeLookupHandler` and `ITripleRecipeLookupHandler` change only the two planned platform type swaps (project `mekanism.api.fluid.FluidStack` and project
+`mekanism.api.functions.TriPredicate`), the same audited replacements the corresponding input caches already use. Every default helper keeps its official name,
+direction, input order and return type and forwards through the real canonical provider's input cache, so no index-matching matrix is duplicated.
+
+`mekanism/client/recipe_viewer/type/IRecipeViewerRecipeType.java` is admitted **unchanged** to preserve the `recipeViewerType()` signature. Despite the package it
+has no `net.minecraft.client` dependency: only `List`, `ResourceLocation`, `ItemStack`, `ItemLike` and the already-sliced `IHasTextComponent`. It remains the only
+`mekanism/client/**` class in the artifact; the packaged static contract carves out exactly that one entry rather than whitelisting the client package.
+
+`ItemStackConstantChemicalToObjectCachedRecipe` is admitted in full for the monitor's real `loadSavedData` branch: both factories, `ChemicalUsageMultiplier` and
+true-long saved-usage handling stay intact, and the chemical branch is not removed because Crusher does not use chemicals. Its `TwoInputCachedRecipe` Javadoc link is
+not a type dependency and no closure was expanded for it. `NucleosynthesizerRecipeCacheLookupMonitor` remains deferred with its machine/energy closure.
+
+### Monitor ownership instead of a global flush
+
+`RecipeCacheLookupMonitor` observes the thread-bound `RecipeCacheContext` directly. It retains only the binding's opaque publication identity token and the
+binding-local invalidation generation it last resolved against — never the binding, manager, level or registry access — so it cannot keep an old graph alive. A
+rebind, even to the same manager and epoch, is a fresh identity and invalidates.
+
+`invalidateCache()` is a pure predicate. It compares the acknowledged stamp with the current publication and never acknowledges anything itself, so calling it twice,
+or before `getUpdatedCache`, cannot consume an invalidation. The observation is acknowledged only after a successful resolution, so a failed lookup keeps the old stamp
+stale. With no published context it always reports invalid, and `updateAndProcess` then detaches the cached recipe and delivers the normal changed-to-null
+notification once instead of processing it. A real non-null handler level whose manager is not the exact bound manager throws before any processing, so a
+still-input-valid cached recipe can never bypass recipe lookup.
+
+`MekanismRecipeType.clearCache()` now advances the current binding's invalidation generation exactly once before dropping the owner's lists and indices. The
+publication identity and epoch are deliberately untouched: an explicit clear discards derived state, it is not a successful datapack reload. Individual index or
+list clears do not advance the generation. No second `ThreadLocal`, global flag or global counter was introduced, and neither the server nor the client publisher
+needed a change.
+
+`FactoryRecipeCacheLookupMonitor` keeps its `onChange` sorting callback and its explicit `updateCachedRecipe`, which participates in the same ownership contract,
+acknowledges the same binding so the selection survives the next tick, and neither reloads saved state nor discards the selection. All other official monitor
+semantics are preserved: no-recipe memoization, contents-callback then `onChange`/unpause ordering, change notification before processing, saved operating ticks,
+constant chemical saved usage, wrong-cache-index behaviour and energy-delta reporting.
+
+### Verification
+
+Seven new ordinary methods in `RecipeCacheLookupMonitorTest` drive the real monitors, real canonical providers, real input caches and a real `OneInputCachedRecipe`,
+reusing the existing `RecipeLevelStub`, chemical-bootstrap and cached-recipe/input/output fixtures rather than rebuilding lower-level matrices. `./build.sh --clean`,
+the packaged server smoke and the recipe-runtime smoke are left to the parent.
+
+Non-claims: no `CommonWorldTickHandler` closure, no machine/tile/item/block/menu/viewer/codec/recipe-registration or production recipe JSON change, no
+other cached-recipe family, no Nucleosynthesizer monitor, no change to the live publication callbacks, and no fake or no-op production seam.

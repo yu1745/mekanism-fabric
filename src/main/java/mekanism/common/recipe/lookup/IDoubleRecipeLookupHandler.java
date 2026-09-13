@@ -11,7 +11,7 @@ import mekanism.common.recipe.lookup.cache.InputRecipeCache.FluidChemical;
 import mekanism.common.recipe.lookup.cache.InputRecipeCache.ItemChemical;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.fluids.FluidStack;
+import mekanism.api.fluid.FluidStack;
 import org.jetbrains.annotations.Nullable;
 
 /**
