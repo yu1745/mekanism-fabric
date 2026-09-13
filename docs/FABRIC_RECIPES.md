@@ -284,3 +284,72 @@ clean release independently.
 Non-claims: no `MekanismRecipeType` cache owner, `IMekanismRecipeTypeProvider`, `RecipeTypeRegistryObject`, `RecipeTypeDeferredRegister` or owner-registration
 change; no monitors, factories, recipe-viewer integration, synthetic smelting, tiles, or other cached-recipe families; no codec or canonical recipe-identity change; no
 machine-facing `InputRecipeCache` index; no new global mutable cache state or second context mechanism.
+
+## Task 045 — canonical common recipe-type owner and provider
+
+Task 045 implements `TASK045_PLAN.md` from clean baseline `c6255a4e`. It closes the ownership boundary Task 044 left open: the 26 recipe types are now owned by the
+**common** layer, the API no longer creates anonymous `RecipeType` instances, and the recipe-cache binding carries the registry access that synthetic vanilla
+smelting needs.
+
+Slices move **199/189/38 → 200/193/39** (432 production sources). Ordinary executable totals move **78 suites/389 tests → 79/395**; transfer **5/27**,
+root-registry **1/2**, data-map **2/4**, recipe-registry **1/5 → 3/7**; five-group aggregate **87/427 → 90/435**.
+
+### One canonical object per id, common ownership
+
+`MekanismRecipeType`, `IMekanismRecipeTypeProvider`, `RecipeTypeRegistryObject` and `RecipeTypeDeferredRegister` are ported into the common slice with all 26
+declarations, the complete provider surface, `getRecipeFor`/`byKey` helpers, incomplete-recipe reporting and synthetic vanilla smelting. `RecipeTypeDeferredRegister`
+is the creation point: each concrete type is created exactly once **before** any registry write, installed on the specialized `RecipeTypeRegistryObject` as that
+holder's prebuilt value, and handed to the existing deferred machinery as a supplier returning that same instance. `RecipeTypeRegistryObject` keeps its
+`MekanismDeferredHolder` parent: before binding it reports the prebuilt value, after binding it verifies the canonical registry entry **is** that value and throws
+rather than splitting identity. The generic `MekanismDeferredRegister`/`FabricDeferredRegister` lifecycle is unchanged, so occupied keys, repeats and duplicates still
+fail loudly.
+
+The 26 declaration ids are literal local strings, so common declarations never read an API static field and neither load order can force the other. The API
+`MekanismRecipeTypes` keeps its 26 official `NAME_*` ids and public `MekanismKeyedHolder<RecipeType<?>, RecipeType<X>>` fields, and obtains the canonical instances
+through one new layer-neutral service, `mekanism.api.recipes.IRecipeTypeRegistry`, loaded with `MekanismServices` and registered by exactly one new service descriptor
+implemented by `mekanism.fabric.recipe.FabricRecipeTypeRegistry`. `ensureRegistered()` invokes the common owner's single registry write and then attaches the canonical
+holders back onto the API holders over the identical instances; it performs no duplicate write and stays idempotent. A missing service fails honestly instead of
+falling back to a second identity.
+
+`mekanism/api/recipes/MekanismRecipeTypes$1.class` therefore disappears from the artifact and `IRecipeTypeRegistry.class` plus the two exact common owner classes and
+`FabricRecipeTypeRegistry.class` take their place in the packaged contracts; the old `MekanismRecipeType*` / `IMekanismRecipeTypeProvider` / `RecipeTypeRegistryObject`
+rejections are replaced by exact class-family admissions, not a package whitelist.
+
+### Binding-owned lists and access
+
+`cachedRecipes`, `FMLEnvironment`, `ServerLifecycleHooks`, `MekanismClient` and the monolithic `Mekanism` dependency are gone; incomplete diagnostics use a
+class-local SLF4J logger. `RecipeCacheContext.Binding` now additionally owns an optional `RegistryAccess` and each owner's immutable usable-recipe list (empty results
+cached too), all inside the existing binding — no second `ThreadLocal`. The existing `bind(manager, epoch)` overload is kept and an access-bearing overload added.
+
+Lookups follow the plan contract: a level/no-arg lookup with no bound context serves nothing; a non-null level whose manager is not the exact bound manager fails; a
+null level uses the bound manager and its published access. An explicit manager/access query always answers for the supplied identities, reusing the binding-owned list
+only when both match, otherwise computing an uncached immutable result rather than polluting or rejecting. `getRecipes(manager)` borrows access only from a binding
+serving that exact manager, else serves without synthetic smelting. `clearCache` drops both the recipe list and all input-cache state; a rebind discards both
+atomically; other threads and bindings are unaffected. Input-cache initialization now goes through the owner's own recipe-list method
+(`RecipeCacheSource.recipes(manager, access)`), so ordering, incomplete filtering and synthetic smelting are shared rather than bypassed with `forType`.
+
+Both publishers were updated: the server start/successful-reload events bind `server.registryAccess()`, and the client recipe-packet tail publisher passes the
+connection's own `registryAccess()` (obtained from the packet listener, valid before a `Level` exists) so access is never borrowed from a foreign connection. Failed
+reload, stop/disconnect and late-update contracts are preserved.
+
+Synthetic vanilla smelting keeps own-recipes-first ordering, the official skip conditions, output semantics and the `/mekanism_generated/` prefix on the original id
+(retaining the original namespace), using `ItemStackIngredient.of(ingredients, 1)` and `ResourceLocation.withPrefix` directly.
+
+### Verification
+
+Seven new ordinary methods in `MekanismRecipeTypeOwnerTest` cover: 26 distinct canonical types with official ids, provider behaviour and nominal `RecipeType`
+assignability; binding-owned list caching plus input-cache clearing and rebuild; foreign explicit-manager isolation; a real `Level` mismatch failure and the
+no-context contract; synthetic smelting inclusion/order/id/output/union plus the null-access omission and cache feeding; incomplete reporting and filtering; and
+canonical-instance resolution with foreign-thread isolation. The exact-manager mismatch case drives a real `Level` (`RecipeLevelStub`) through
+`Level#getRecipeManager()` rather than a misleading name. Two further fresh-JVM tests, `CommonFirstInitializationTest` and `ApiFirstInitializationTest`, execute both
+initialization orders in isolated `fabricRecipeRegistryTest` workers and prove all 26 ids converge on one distinct canonical instance and stay registry-identical.
+
+Gates run with raw logs and real Gradle exit codes: `check` (five test groups plus `verifyFabricTestContract`), the three `verify*SliceNoNeoForge` tasks,
+`verifyOfficialRootTestSources`, the five `verify*FixtureIsolation` tasks, `scripts/scan-platform-deps.py`, `./fabric-build.sh`, and
+`FABRIC_SMOKE_STATIC_ONLY=1 scripts/fabric-packaged-smoke.sh`. JUnit XML confirms ordinary 79/395, transfer 5/27, root-registry 1/2, data-map 2/4,
+recipe-registry 3/7, aggregate 90/435, all with zero failures and errors. The recipe-runtime fixture additionally asserts canonical owner/API identity, registered
+smelting identity, published-access identity and synthetic smelting through the owner source; `./build.sh --clean`, the packaged server smoke and
+`scripts/fabric-recipe-runtime-smoke.sh` are left to the parent.
+
+Non-claims: no items/tiles/monitors/factories/recipe-viewer/codec or production recipe JSON; no other cached-recipe family; no second recipe type per id; no global
+world fallback, no second context mechanism and no weakening of the generic deferred-registry lifecycle.
