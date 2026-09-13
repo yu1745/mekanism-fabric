@@ -1,9 +1,9 @@
 package mekanism.api.recipes.vanilla_input;
 
 import mekanism.api.annotations.NothingNullByDefault;
+import mekanism.api.fluid.FluidStack;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeInput;
-import net.neoforged.neoforge.fluids.FluidStack;
 
 /**
  * Represents a recipe input that for fluid inputs.

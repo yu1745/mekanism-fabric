@@ -2,8 +2,8 @@ package mekanism.api.recipes.vanilla_input;
 
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.chemical.ChemicalStack;
+import mekanism.api.fluid.FluidStack;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.fluids.FluidStack;
 
 /**
  * Simple implementation of a recipe input for {@link mekanism.api.recipes.PressurizedReactionRecipe}.

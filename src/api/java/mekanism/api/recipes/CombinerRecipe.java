@@ -2,19 +2,19 @@ package mekanism.api.recipes;
 
 import java.util.List;
 import java.util.function.BiPredicate;
-import mekanism.api.MekanismAPI;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.recipes.ingredients.ItemStackIngredient;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeInput;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.registries.DeferredHolder;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
@@ -30,7 +30,7 @@ import org.jetbrains.annotations.NotNull;
 @NothingNullByDefault
 public abstract class CombinerRecipe extends MekanismRecipe<RecipeInput> implements BiPredicate<@NotNull ItemStack, @NotNull ItemStack> {
 
-    private static final Holder<Item> COMBINER = DeferredHolder.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, "combiner"));
+    private static final Holder<Item> COMBINER = MekanismKeyedHolder.registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "combiner")), () -> BuiltInRegistries.ITEM);
 
     @Override
     public abstract boolean test(ItemStack input, ItemStack extra);

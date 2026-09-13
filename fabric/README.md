@@ -323,6 +323,28 @@ Fabric build and collects only its remapped release JAR. The exact buildable
 NeoForge oracle remains available at baseline commit `4646f509`; current ported
 sources are not expected to compile with the root NeoForge Gradle build.
 
+Task 042A admits the output-handling and one-input cached recipe closure plus the new layer-neutral
+`MekanismKeyedHolder`, moving the slices to **163/184/37** (384 compiled production sources) and the
+contract to ordinary **76/378**, transfer **5/27**, root **1/2**, data-map **2/4**, aggregate **84/411**.
+Against `4646f509` the classification is exactly `U`/`A`/`N` **12/21/1**: twelve byte-identical sources,
+twenty-one bounded adaptations (the fourteen other recipe abstractions including `MekanismRecipeTypes`, the
+five `FluidStack`-bearing `vanilla_input` records, and the two targets `cache/OneInputCachedRecipe` and
+`outputs/OutputHelper`), and the one new holder. Only four delta families are present: the project
+`FluidStack` import, the project `TriPredicate` import, `MekanismAPI.MEKANISM_MODID` replaced by the literal
+`"mekanism"`, and `DeferredHolder.create(Registries.RECIPE_TYPE|ITEM, key)` replaced by `MekanismKeyedHolder`.
+
+`MekanismRecipeTypes.TYPE_*` now hold 26 concrete, non-registered, identity-stable `RecipeType` instances, so
+in-memory recipes, the `OneInputCachedRecipe` factories, and vanilla `byType` identity grouping work while
+`BuiltInRegistries.RECIPE_TYPE` receives no write. The ten toast item holders resolve their key against
+`BuiltInRegistries.ITEM` and stay non-null and key-correct but legitimately unbound while the `MekanismItems`
+family is not admitted; `value()` fails closed. Six ordinary methods in the single new
+`RecipeOutputHandlingTest` bind the chemical/fluid/item/`ChanceOutput`/record-output matrices, the
+one-input empty guards, `getType()` identity stability, non-registration, and the unbound-but-key-correct
+toast holders. The static JAR gate admits exactly the new `mekanism/api/recipes/**` outer and nested classes
+and rejects the 042B families, serializers, production recipe JSON, and fixture classes. Recipe-type and
+serializer registration, the concrete recipe family, `MekanismItems`, the client recipe viewer, and machines
+remain the separately approved 042B. See `../docs/FABRIC_RECIPES.md`.
+
 Task 018 adds four byte-identical `4646f509` internal support sources: the proxied energy holder, acceptor/save distribution bridges, and immutable laser dissipation handler. Six local tests bind exact nullable predicate/list identity, action/true-`long` remainder/order and execution shortfall, fair delayed/repeated saturated/zero saves with clamped/delegate storage, and independent laser bounds/infinity plus raw-comparison NaN behavior. Exact JAR gates reject same-package leakage. This adds no wire protocol or adapter; all owners/callers, transmitter/dynamic-network lifecycle, emission ticks, capability registration/lookup/exposure, Fabric Energy conversion/transactions/rollback, side config/ejection, machine/tile/item integration, laser attachment/damage, networking/serialization/persistence/threading remain deferred.
 
 Dependency versions were checked against Fabric's official Maven metadata:

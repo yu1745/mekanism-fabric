@@ -1044,6 +1044,52 @@ expected_api_recipes = {
     "mekanism/api/recipes/inputs/InputHelper$3.class",
     "mekanism/api/recipes/inputs/InputHelper$ChemicalInputHandler.class",
     "mekanism/api/recipes/outputs/IOutputHandler.class",
+    "mekanism/api/recipes/outputs/OutputHelper.class",
+    "mekanism/api/recipes/outputs/OutputHelper$1.class",
+    "mekanism/api/recipes/outputs/OutputHelper$2.class",
+    "mekanism/api/recipes/outputs/OutputHelper$3.class",
+    "mekanism/api/recipes/outputs/OutputHelper$4.class",
+    "mekanism/api/recipes/outputs/OutputHelper$5.class",
+    "mekanism/api/recipes/outputs/OutputHelper$6.class",
+    "mekanism/api/recipes/outputs/OutputHelper$7.class",
+    "mekanism/api/recipes/cache/OneInputCachedRecipe.class",
+    "mekanism/api/recipes/MekanismKeyedHolder.class",
+    "mekanism/api/recipes/MekanismRecipeTypes.class",
+    "mekanism/api/recipes/MekanismRecipeTypes$1.class",
+    "mekanism/api/recipes/ChemicalChemicalToChemicalRecipe.class",
+    "mekanism/api/recipes/ChemicalCrystallizerRecipe.class",
+    "mekanism/api/recipes/ChemicalDissolutionRecipe.class",
+    "mekanism/api/recipes/ChemicalToChemicalRecipe.class",
+    "mekanism/api/recipes/CombinerRecipe.class",
+    "mekanism/api/recipes/ElectrolysisRecipe.class",
+    "mekanism/api/recipes/ElectrolysisRecipe$ElectrolysisRecipeOutput.class",
+    "mekanism/api/recipes/FluidChemicalToChemicalRecipe.class",
+    "mekanism/api/recipes/FluidToFluidRecipe.class",
+    "mekanism/api/recipes/ItemStackChemicalToItemStackRecipe.class",
+    "mekanism/api/recipes/ItemStackChemicalToObjectRecipe.class",
+    "mekanism/api/recipes/ItemStackToChemicalRecipe.class",
+    "mekanism/api/recipes/ItemStackToEnergyRecipe.class",
+    "mekanism/api/recipes/ItemStackToFluidOptionalItemRecipe.class",
+    "mekanism/api/recipes/ItemStackToFluidOptionalItemRecipe$FluidOptionalItemOutput.class",
+    "mekanism/api/recipes/ItemStackToFluidRecipe.class",
+    "mekanism/api/recipes/ItemStackToItemStackRecipe.class",
+    "mekanism/api/recipes/NucleosynthesizingRecipe.class",
+    "mekanism/api/recipes/PressurizedReactionRecipe.class",
+    "mekanism/api/recipes/PressurizedReactionRecipe$PressurizedReactionRecipeOutput.class",
+    "mekanism/api/recipes/RotaryRecipe.class",
+    "mekanism/api/recipes/SawmillRecipe.class",
+    "mekanism/api/recipes/SawmillRecipe$ChanceOutput.class",
+    "mekanism/api/recipes/vanilla_input/BiChemicalRecipeInput.class",
+    "mekanism/api/recipes/vanilla_input/ChemicalRecipeInput.class",
+    "mekanism/api/recipes/vanilla_input/FluidChemicalRecipeInput.class",
+    "mekanism/api/recipes/vanilla_input/FluidRecipeInput.class",
+    "mekanism/api/recipes/vanilla_input/ItemChemicalRecipeInput.class",
+    "mekanism/api/recipes/vanilla_input/ReactionRecipeInput.class",
+    "mekanism/api/recipes/vanilla_input/RotaryRecipeInput.class",
+    "mekanism/api/recipes/vanilla_input/SingleChemicalRecipeInput.class",
+    "mekanism/api/recipes/vanilla_input/SingleFluidChemicalRecipeInput.class",
+    "mekanism/api/recipes/vanilla_input/SingleFluidRecipeInput.class",
+    "mekanism/api/recipes/vanilla_input/SingleItemChemicalRecipeInput.class",
     "mekanism/api/recipes/ingredients/InputIngredient.class",
     "mekanism/api/recipes/ingredients/IngredientType.class",
     "mekanism/api/recipes/ingredients/ItemStackIngredient.class",
@@ -1174,6 +1220,25 @@ with zipfile.ZipFile(sys.argv[1]) as artifact:
     recipe_data = sorted(e for e in entries if e.startswith("data/mekanism/recipe/"))
     if recipe_data:
         raise SystemExit(f"production recipe data leaked into the artifact: {recipe_data!r}")
+    forbidden_042b = sorted(e for e in entries if e.endswith(".class") and (
+          e.startswith("mekanism/api/recipes/basic/")
+          or e.startswith("mekanism/api/recipes/MekanismRecipeSerializers")
+          or e.startswith("mekanism/common/recipe/MekanismRecipeType")
+          or e.startswith("mekanism/common/recipe/IMekanismRecipeTypeProvider")
+          or e.startswith("mekanism/common/registration/impl/RecipeTypeRegistryObject")
+          or e.startswith("mekanism/common/recipe/lookup/RotaryInputRecipeCache")
+          or e.startswith("mekanism/common/recipe/serializer/")
+          or e.startswith("mekanism/client/")
+          or e.startswith("mekanism/common/registries/MekanismItems")
+          or e == "mekanism/api/MekanismAPI.class"))
+    if forbidden_042b:
+        raise SystemExit(f"Task042B families leaked into 042A artifact: {forbidden_042b!r}")
+    recipe_fixture_entries = sorted(e for e in entries if e.endswith(".class") and (
+          e.startswith("mekanism/api/recipes/Test")
+          or e.startswith("mekanism/api/recipes/RecipeOutputHandlingTest")
+          or "Fixture" in e.split("/")[-1]))
+    if recipe_fixture_entries:
+        raise SystemExit(f"recipe fixture/test classes leaked into the artifact: {recipe_fixture_entries!r}")
 PYEOF
 then
   echo "fabric-packaged-smoke: recipe ingredient/cache/platform class family contract failed" >&2

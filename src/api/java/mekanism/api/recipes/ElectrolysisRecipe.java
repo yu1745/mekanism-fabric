@@ -3,20 +3,20 @@ package mekanism.api.recipes;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Predicate;
-import mekanism.api.MekanismAPI;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.chemical.ChemicalStack;
+import mekanism.api.fluid.FluidStack;
 import mekanism.api.recipes.ingredients.FluidStackIngredient;
 import mekanism.api.recipes.vanilla_input.SingleFluidRecipeInput;
 import net.minecraft.core.Holder;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.registries.DeferredHolder;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
@@ -32,7 +32,7 @@ import org.jetbrains.annotations.NotNull;
 @NothingNullByDefault
 public abstract class ElectrolysisRecipe extends MekanismRecipe<SingleFluidRecipeInput> implements Predicate<@NotNull FluidStack> {
 
-    private static final Holder<Item> ELECTROLYTIC_SEPARATOR = DeferredHolder.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, "electrolytic_separator"));
+    private static final Holder<Item> ELECTROLYTIC_SEPARATOR = MekanismKeyedHolder.registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "electrolytic_separator")), () -> BuiltInRegistries.ITEM);
 
     /**
      * Gets the input ingredient.
