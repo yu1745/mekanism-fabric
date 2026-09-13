@@ -5,7 +5,7 @@
 > **Fabric port branch:** this branch starts from the exact upstream
 > `v1.21.1-10.7.19.85` Java source and is being converted from NeoForge to Fabric.
 > The bounded Fabric artifact now builds and passes clean dedicated-server plus selected real-client
-> gates, including the Task 040 Chemical candidate, but it is not yet a complete playable Mekanism
+> gates, including the integrated Task 040 Chemical vertical, but it is not yet a complete playable Mekanism
 > port. See [`docs/FABRIC_PORT.md`](docs/FABRIC_PORT.md) and
 > [`docs/FABRIC_CHEMICAL.md`](docs/FABRIC_CHEMICAL.md) for scope and evidence.
 

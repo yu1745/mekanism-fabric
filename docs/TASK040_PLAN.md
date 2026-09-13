@@ -1,6 +1,6 @@
 # Task 040 plan — complete Chemical registry, data-map, tank and synchronization vertical
 
-Status: **mandatory GLM review returned ACCEPT WITH FIXES; focused corrective candidate complete and awaiting rereview/integration**
+Status: **integrated at `f24ce94e`; independent review and parent semantic/runtime gates complete; final clean release pending**
 
 ## Decision and baseline
 
@@ -267,9 +267,24 @@ server pre-play cleanup, stable no-revival, then a clean new connection. It uses
 handler. `publishSnapshot` is package-private/test-only. `Chemical.updateFromDataMap` retains virtual
 override participation, documents direct external invocation as an authorized invalid `@Internal`
 Fabric delta, and supports same-Chemical partial-view reentrancy plus nested independent derivations.
-Full implementation and non-claims are recorded in [`FABRIC_CHEMICAL.md`](FABRIC_CHEMICAL.md). This
-status awaits focused rereview and does not claim parent integration, `./build.sh --clean`, deployment,
-production, or mirror execution.
+
+Focused GLM 5.3 high rereview `cd70ccdf-36bc-476` used 888.7s, 142.3k tokens and 82 tool calls
+(about `$1.47`). It confirmed all six original findings closed with no correction regression and
+returned **ACCEPT WITH FIXES** only for one bounded missing assertion: nested different-Chemical
+frame restoration. It explicitly required no further rereview. Parent commit `0e719682` added that
+assertion without changing test counts, then merge commit `f24ce94e` integrated the complete vertical.
+
+## Parent final verification
+
+At integrated implementation HEAD `f24ce94e`, one combined parent gate completed in 6m47s. Full
+`check build` passed in 53s with ordinary **73/355**, transfer **4/21**, registry-root **1/2**,
+data-map **2/4**, aggregate **80/382**, and zero failure/error/skip; `fabric-build.sh` passed in 2s;
+the static packaged gate passed in 10s; packaged dedicated server reached `Done` in 39s. The real
+Chemical gate passed in 55s with configuration abort before play, stable cleanup/no revival, clean
+reconnect, three distinct ACK sessions, two play joins, and final epoch 2. Data-map reload passed in
+47s, paired matching-network in 68s, three-case configuration rejection in 96s, and client-window
+regression in 37s. Final clean release remains intentionally pending until this integration evidence
+is committed. No push, deployment, production, or mirror operation occurred.
 
 ## Explicit deferrals and next boundary
 

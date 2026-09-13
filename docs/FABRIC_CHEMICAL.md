@@ -1,13 +1,13 @@
-# Fabric Chemical vertical (Task 040 candidate)
+# Fabric Chemical vertical (Task 040)
 
 ## Status and boundary
 
-Task 040 is implemented as candidate `dc9c5687` plus one focused corrective commit on top of the
-Task 040 approval line (`5aadf581`, code baseline `1a65b0a8`). It is not yet an integrated release.
-The corrected candidate compiles API/common/platform slices **98/164/33** (295 production sources)
-and fixes the executable test contract at ordinary **73 suites/355 tests**, transfer-Knot **4/21**,
-root-registry **1/2**, and data-map-Knot **2/4**, aggregate **80/382**. The three jqwik properties
-remain at 100,000 tries.
+Task 040 was implemented as candidate `dc9c5687`, hardened by focused corrective `ff7e5f7c`,
+completed by parent assertion commit `0e719682`, and integrated at merge commit `f24ce94e` over the
+Task 040 approval line (`5aadf581`, code baseline `1a65b0a8`). The integrated vertical compiles
+API/common/platform slices **98/164/33** (295 production sources) and fixes the executable test
+contract at ordinary **73 suites/355 tests**, transfer-Knot **4/21**, root-registry **1/2**, and
+data-map-Knot **2/4**, aggregate **80/382**. The three jqwik properties remain at 100,000 tries.
 
 This vertical owns the internal Mekanism Chemical domain needed before recipes and machines:
 
@@ -230,7 +230,7 @@ sources minus the removed platform descriptor.
 
 ## Verification
 
-Candidate verification surfaces are:
+Verification surfaces are:
 
 - `./gradlew -p fabric --no-daemon --console=plain test fabricTransferTest fabricRegistryTest fabricDataMapTest verifyFabricTestContract remapJar`;
 - `./gradlew -p fabric --no-daemon --console=plain check build`;
@@ -260,8 +260,20 @@ suites and returned **ACCEPT WITH FIXES** after 845.8s, 195.3k tokens, 91 tool c
 It identified missing client configuration-disconnect cleanup, leaked server pre-play UUID sessions,
 the snapshot-send/ACK reload race, reflection-only lifecycle evidence, inaccurate prior review
 attribution, an undocumented public snapshot seam, and the unresolved public/overridable
-`Chemical.updateFromDataMap` boundary and per-query cost. The corrective commit closes those findings
+`Chemical.updateFromDataMap` boundary and per-query cost. Corrective `ff7e5f7c` closed those findings
 with the lifecycle/race logic, focused contracts, real abort-before-play regression, narrowed seam,
-precise virtual/reentrant Javadocs and explicit Task041 caching gate described above. This remains a
-corrected candidate awaiting focused rereview; it makes no integration, deployment, production,
-mirror, or parent clean-release claim.
+precise virtual/reentrant Javadocs and explicit Task041 caching gate described above.
+
+Focused GLM 5.3 high rereview `cd70ccdf-36bc-476` used 888.7s, 142.3k tokens and 82 tool calls
+(about `$1.47`). It confirmed every original finding closed with no correction regression; its sole
+bounded required fix was an executable nested different-Chemical frame-restoration assertion, with no
+further rereview required. Parent commit `0e719682` added that assertion without changing test totals,
+and merge commit `f24ce94e` integrated the vertical.
+
+At `f24ce94e`, the parent independently passed one 6m47s combined gate: full `check build` in 53s,
+`fabric-build.sh` in 2s, static packaged checks in 10s, packaged server through `Done` in 39s, real
+Chemical configuration-abort/reconnect in 55s, data-map reload in 47s, paired network in 68s,
+three-case rejection in 96s, and client-window regression in 37s. The Chemical gate proved pre-play
+cleanup with no revival, three distinct ACK sessions, two play joins and final epoch 2. Final clean
+release remains pending until this documentation checkpoint. No push, deployment, production, or
+mirror operation occurred.
