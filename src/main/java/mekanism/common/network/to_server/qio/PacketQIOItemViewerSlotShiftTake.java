@@ -2,23 +2,33 @@ package mekanism.common.network.to_server.qio;
 
 import io.netty.buffer.ByteBuf;
 import java.util.UUID;
-import mekanism.common.Mekanism;
 import mekanism.common.content.qio.QIOFrequency;
 import mekanism.common.content.qio.QIOGlobalItemLookup;
 import mekanism.common.inventory.container.QIOItemViewerContainer;
 import mekanism.common.lib.inventory.HashedItem;
-import mekanism.common.network.IMekanismPacket;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-public record PacketQIOItemViewerSlotShiftTake(UUID typeUUID) implements IMekanismPacket {
+/**
+ * QIO item viewer shift-take payload (client to server).
+ *
+ * <p>Fabric adaptation of the official packet: codec and handling logic unchanged; NeoForge's {@code IMekanismPacket}/{@code IPayloadContext} dispatch is
+ * replaced by the vanilla {@link CustomPacketPayload} contract with handling split into {@link #handle(Player)}. The server receiver lives in the Fabric
+ * networking owner and runs on the server thread, matching the original main-thread semantics.</p>
+ */
+public record PacketQIOItemViewerSlotShiftTake(UUID typeUUID) implements CustomPacketPayload {
 
-    public static final CustomPacketPayload.Type<PacketQIOItemViewerSlotShiftTake> TYPE = new CustomPacketPayload.Type<>(Mekanism.rl("qio_shift_take"));
+    private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism");
+
+    public static final CustomPacketPayload.Type<PacketQIOItemViewerSlotShiftTake> TYPE = new CustomPacketPayload.Type<>(
+          ResourceLocation.fromNamespaceAndPath("mekanism", "qio_shift_take"));
     public static final StreamCodec<ByteBuf, PacketQIOItemViewerSlotShiftTake> STREAM_CODEC = UUIDUtil.STREAM_CODEC.map(
           PacketQIOItemViewerSlotShiftTake::new, PacketQIOItemViewerSlotShiftTake::typeUUID
     );
@@ -29,9 +39,7 @@ public record PacketQIOItemViewerSlotShiftTake(UUID typeUUID) implements IMekani
         return TYPE;
     }
 
-    @Override
-    public void handle(IPayloadContext context) {
-        Player player = context.player();
+    public void handle(Player player) {
         if (player.containerMenu instanceof QIOItemViewerContainer container) {
             QIOFrequency freq = container.getFrequency();
             if (freq != null) {
@@ -51,7 +59,7 @@ public record PacketQIOItemViewerSlotShiftTake(UUID typeUUID) implements IMekani
                             if (!remainder.isEmpty()) {
                                 //Something went wrong, and we couldn't add it back into the frequency after just removing
                                 // log an error and just drop the item on the ground to avoid voiding it
-                                Mekanism.logger.error("QIO shift-click transfer resulted in lost items ({}). This shouldn't happen!", remainder);
+                                LOGGER.error("QIO shift-click transfer resulted in lost items ({}). This shouldn't happen!", remainder);
                                 player.drop(remainder, false);
                             }
                         }

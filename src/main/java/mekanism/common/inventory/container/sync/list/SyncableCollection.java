@@ -8,7 +8,6 @@ import mekanism.common.network.PacketUtils;
 import mekanism.common.network.to_client.container.property.ByteArrayPropertyData;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.neoforged.neoforge.common.util.FriendlyByteBufUtil;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -51,7 +50,7 @@ public abstract class SyncableCollection<TYPE, COLLECTION extends Collection<TYP
     public ByteArrayPropertyData getPropertyData(RegistryAccess registryAccess, short property, DirtyType dirtyType) {
         //Note: We write it to a byte array so that we make sure to effectively copy it (force a serialization and deserialization)
         // whenever we send this as a packet rather than potentially allowing the list to leak from one side to the other in single player
-        byte[] rawData = FriendlyByteBufUtil.writeCustomData(buffer -> buffer.writeCollection(getRaw(), (buf, element) -> serializeListElement(buffer, element)), registryAccess);
+        byte[] rawData = PacketUtils.writeCustomData(buffer -> buffer.writeCollection(getRaw(), (buf, element) -> serializeListElement(buffer, element)), registryAccess);
         return new ByteArrayPropertyData(property, rawData);
     }
 

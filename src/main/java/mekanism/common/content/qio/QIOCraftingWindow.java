@@ -42,13 +42,15 @@ import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.item.crafting.ShapedRecipe;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.common.CommonHooks;
-import net.neoforged.neoforge.common.util.RecipeMatcher;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.jetbrains.annotations.Nullable;
 
 public class QIOCraftingWindow implements IContentsListener {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism");
 
     private static final SelectedWindowData[] WINDOWS = new SelectedWindowData[IQIOCraftingWindowHolder.MAX_CRAFTING_WINDOWS];
 
@@ -237,11 +239,13 @@ public class QIOCraftingWindow implements IContentsListener {
 
     private void craftingStarted(@NotNull Player player) {
         isCrafting = true;
-        CommonHooks.setCraftingPlayer(player);
+        //Fabric port delta: NeoForge's CommonHooks.setCraftingPlayer global thread-local has no Fabric
+        // counterpart; recipes on Fabric receive the player through their vanilla input/handler contexts,
+        // so there is no consumer of such a global here. Behavior difference is limited to third-party
+        // NeoForge-only recipe hooks, which cannot run on Fabric.
     }
 
     private void craftingFinished(@NotNull Level world) {
-        CommonHooks.setCraftingPlayer(null);
         isCrafting = false;
         if (changedWhileCrafting) {
             //If our inputs changed while crafting then update the output slot
@@ -792,7 +796,7 @@ public class QIOCraftingWindow implements IContentsListener {
                         ItemStack stack = slot.insertItem(removed, Action.EXECUTE, AutomationType.INTERNAL);
                         if (!stack.isEmpty()) {
                             //Note: This should never happen as we pre-validate attempting to insert, but in case it does, log it
-                            Mekanism.logger.error("Failed to insert item ({} with components: {}) into crafting window: {}.", removed.getItem(),
+                            LOGGER.error("Failed to insert item ({} with components: {}) into crafting window: {}.", removed.getItem(),
                                   removed.getComponentsPatch(), windowIndex);
                         }
                         //TODO - 1.18: Debate potentially briefly highlighting the slot to make it more evident to the player
@@ -909,7 +913,8 @@ public class QIOCraftingWindow implements IContentsListener {
                     inputs.add(stack);
                 }
             }
-            int[] matches = RecipeMatcher.findMatches(inputs, ingredients);
+            //Fabric port delta: NeoForge's vendored RecipeMatcher (LGPL-2.1, see mekanism.common.util.RecipeMatcher header)
+            int[] matches = mekanism.common.util.RecipeMatcher.findMatches(inputs, ingredients);
             if (matches != null) {
                 for (int ingredientIndex = 0; ingredientIndex < matches.length; ingredientIndex++) {
                     int actualSlot = actualLookup.getOrDefault(matches[ingredientIndex], -1);
