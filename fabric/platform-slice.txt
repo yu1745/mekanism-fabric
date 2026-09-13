@@ -38,3 +38,7 @@ mekanism/fabric/recipe/FabricRecipeCacheClientLifecycle.java
 mekanism/fabric/recipe/FabricRecipeCacheLifecycle.java
 mekanism/fabric/recipe/FabricRecipeRegistration.java
 mekanism/fabric/recipe/FabricRecipeTypeRegistry.java
+mekanism/fabric/network/FabricTileUpdateNetworking.java
+mekanism/fabric/network/FabricTileUpdateHandler.java
+mekanism/fabric/mixin/tile/LevelChunkMixin.java
+mekanism/fabric/mixin/tile/ClientPacketListenerTileMixin.java

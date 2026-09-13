@@ -200,3 +200,6 @@ mekanism/common/recipe/IMekanismRecipeTypeProvider.java
 mekanism/common/recipe/MekanismRecipeType.java
 mekanism/common/registration/impl/RecipeTypeDeferredRegister.java
 mekanism/common/registration/impl/RecipeTypeRegistryObject.java
+mekanism/common/tile/base/TileEntityUpdateable.java
+mekanism/common/tile/interfaces/ITileWrapper.java
+mekanism/common/network/to_client/PacketUpdateTile.java

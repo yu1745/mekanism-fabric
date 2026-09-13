@@ -46,3 +46,56 @@ Run candidate source delta/identity, exact slices, fixture isolation, focused + 
 Do not admit CapabilityTileEntity, TileEntityMekanism, machine configs/capability providers/ejectors, block registration catalog, TileEntityTypeRegistryObject with deleted provider behavior, client model engine, broad gameplay dispatcher, or Crusher. Do not alter existing handshake/recipe/chemical contracts. No tests deleted, production/mirror/deploy/push, zvec/index, broad-root scan, secrets or reference-tree writes.
 
 First implementer checkpoint within about10–15 minutes: a concrete base/dispatch diff with chosen vanilla/Fabric signatures, or a specific incompatible signature/lifecycle and requested scope correction. Do not recompute recursive dependency closure or reopen route selection. Continue ordinary recoverable build/mixin/test fixes autonomously; new ownership/semantic scope changes go to parent. Model quota exhaustion means save progress and pause, never silently change model.
+
+---
+
+## Candidate implementation record (implementer, 5.6 SOL)
+
+Worktree: isolated git worktree of `server-v2/develop/mekanism-fabric`. Branch: detached from clean base `d9aaa36cc5d54b893abbf0246f776e4aeb1b905d`.
+
+### Realized implementation
+
+Production (portable common):
+- `src/main/java/mekanism/common/tile/base/TileEntityUpdateable.java` — complete official class. Explicit platform delta: constructor takes `Holder<? extends BlockEntityType<?>>` and resolves with `value()` (a two-parameter `MekanismDeferredHolder<BlockEntityType<?>, BlockEntityType<BE>>`/future `TileEntityTypeRegistryObject<BE>` satisfies `Holder<BlockEntityType<?>>` unchanged). `Mekanism.logger`/`Mekanism.rl` replaced by a private `LoggerFactory` logger and the literal `mekanism` namespace. `WorldUtils.markChunkDirty` inlined (`getChunk(x,z,FULL,false)` then `setUnsaved(true)` only when present) and `WorldUtils.updateBlock` inlined (`isLoaded` then `sendBlockUpdated(UPDATE_ALL)`). `PacketUtils` tracking replaced by the narrow Fabric adapter. `handleUpdateTag` keeps the non-virtual `super.loadAdditional` plus the exact vanilla `DataComponentMap.CODEC.optionalFieldOf("components", DataComponentMap.EMPTY).codec()` expression (the vanilla `BlockEntity.ComponentHelper` is package-private; inlining was chosen over changing the exact access-widener contract asserted by `fabric-packaged-smoke.sh`). `onDataPacket(Connection, ClientboundBlockEntityDataPacket, HolderLookup.Provider)` retained as a real method without NeoForge's `@Override`. `requestModelDataUpdate()` is **absent**: NeoForge's render-data-manager operation has no vanilla/Fabric equivalent and this base declares no model-data producer, so no fake/no-op was introduced; `updateModelData()` keeps the real loaded-position rerender.
+- `src/main/java/mekanism/common/tile/interfaces/ITileWrapper.java` — byte-identical to baseline (verified with `git diff 4646f509`).
+- `src/main/java/mekanism/common/network/to_client/PacketUpdateTile.java` — record `(BlockPos, CompoundTag)`; same type id `mekanism:update_tile`, field order, `BlockPos.STREAM_CODEC`, `ByteBufCodecs.TRUSTED_COMPOUND_TAG`; plain `CustomPacketPayload` instead of `IMekanismPacket`/`IPayloadContext`; `handle(Level, HolderLookup.Provider)` keeps the loaded-position skip, wrong/missing-tile warning, and current-world resolution with no retained world.
+
+Production (Fabric platform):
+- `fabric/src/main/java/mekanism/fabric/network/FabricTileUpdateNetworking.java` — play S2C registration plus tracking recipients (`PlayerLookup.tracking(ServerLevel, BlockPos)`), so an untracked tile never builds a payload.
+- `fabric/src/main/java/mekanism/fabric/network/FabricTileUpdateHandler.java` — client-only `ClientPlayNetworking` global receiver for the payload; resolves the tile through the current client level/registry access.
+- `fabric/src/main/java/mekanism/fabric/mixin/tile/LevelChunkMixin.java` — client-only `@Redirect` (plain Mixin, no MixinExtras) on the single `loadWithComponents` invoke in `LevelChunk.method_31716`: `TileEntityUpdateable` → `handleUpdateTag`, every other block entity keeps the vanilla call.
+- `fabric/src/main/java/mekanism/fabric/mixin/tile/ClientPacketListenerTileMixin.java` — client-only `@Redirect` on the single `loadWithComponents` invoke in `ClientPacketListener.method_38542`: `TileEntityUpdateable` → `onDataPacket(connection, packet, registries)` (not a direct `handleUpdateTag`), every other block entity keeps the vanilla call.
+- `fabric/src/main/resources/mekanism.client.mixins.json` — package moved to `mekanism.fabric.mixin` with the three client entries; `fabric.mod.json` remains `environment: client` scoped.
+- `FabricMekanismBootstrap` registers the payload type; `MekanismFabricClientBootstrap` registers the client receiver. Common bootstrap resolves no client class.
+
+Slices/gates: `fabric/common-slice.txt` +3 → 204, `fabric/platform-slice.txt` +4 → 43, `fabric/build.gradle` slice assertion and test totals updated; `scripts/fabric-packaged-smoke.sh` gained an exact tile-update class-family/fixture-leak family and the extended client-mixin contract.
+
+### Local tests (6 new methods, ≤8 without extra justification)
+
+`fabric/src/test/java/mekanism/common/registration/TileEntityUpdateableLifecycleTest.java` (+ `fabric/src/test/java/mekanism/test/TileLevelStub.java`, a real `Level` double modelling chunk/tile/dirty state and failing closed otherwise; `RecipeLevelStub` was opened from `final`/`private` to `protected` for reuse).
+
+1. `reducedLoadReadsOnlyBaseStateAndPreservesSaveOnlyField` — full persisted load runs the subclass reader once and restores the save-only sentinel; the reduced path applies reduced state while the full-load counter stays put and the sentinel survives.
+2. `reducedLoadAppliesVanillaComponentsClearsAbsentOnesAndSurvivesMalformedOnes` — component application, absent-field clearing, and malformed input checked against the exact vanilla optional-components codec oracle rather than an invented expectation.
+3. `dirtyCoalescingNeverCreatesChunksAndSeparatesComparatorFromSaveOnly` — coalescing is observed through real non-loading FULL chunk lookups; save-only marking never requests a comparator; an unloaded position resolves no chunk and creates none.
+4. `coordinateCacheTracksLevelAssignmentDimensionChangeAndPersistedLoad` — negative-position section conversion plus cache refresh across level assignment and persisted load.
+5. `payloadCodecAndDispatchStayBoundToTheAddressedOwnersOnly` — its own stream codec round-trip, exact type id, dispatch mutating only the addressed tile, and unloaded-position skip with a fail-closed level.
+6. `deferredHolderConstructorIsCovariantAndResolvesTheBoundType` — a real two-parameter deferred registry object is bound through the production registrar seam and drives the base constructor, proving holder covariance.
+
+### Commands and results (actual)
+
+- `./gradlew -p fabric compileJava` — passed.
+- `./gradlew -p fabric test --tests mekanism.common.registration.TileEntityUpdateableLifecycleTest` — 6/6 passed.
+- `./gradlew -p fabric verifyFabricTestContract` — passed; ordinary 81 suites/409 tests, aggregate 92/449.
+- `./gradlew -p fabric check` — passed (portable slices, fixture isolation, data-map/registry/transfer/ordinary suites).
+- `FABRIC_SMOKE_STATIC_ONLY=1 ./scripts/fabric-packaged-smoke.sh` — passed (exact remapped-JAR class families, mixin contract, fixture leakage).
+- `./build.sh --clean --out <dir>` — passed, 1 JAR, sha256 `a1da610f98fe3c919f74adf112a8dcee389488bd72704c773d78776ab01885c8`.
+- `FABRIC_TILE_RUNTIME_TIMEOUT=420 ./scripts/fabric-tile-runtime-smoke.sh` — **PASS**: initial chunk reduced tag (`reduced=3 full_loads=0 reduced_loads=1`), vanilla `ClientboundBlockEntityDataPacket` (`reduced=11 full_loads=0 on_data_packet=2`, proving dispatch went through `onDataPacket` and not a bypass), custom `mekanism:update_tile` payload (`reduced=22 full_loads=0 on_data_packet` unchanged, proving its own receiver), full persisted restoration separately on a detached instance, a vanilla chest control block entity keeping ordinary handling, and a real disconnect/reconnect (`reduced=22` then post-reconnect payload `reduced=33`, `owner_world_current=true`). New marker `phase=player_joined tracking=1` also proves real chunk tracking drove the custom payload.
+
+### Honest runtime scope
+
+The runtime gate is a fixture-only isolated Loom server + one physical client JVM, not a packaged release. Client-side reduced assertions run on the `Render thread` (the client owner thread the packet listener runs on); the server assertions run on the `Server thread`. The gate does not exercise multiple simultaneous players, save-file reload, or dimension travel. Parent owns the independent fixed-candidate adversarial review, the packaged smoke, and the clean release; those were not run by the implementer beyond the static packaged gate above.
+
+### Notes / boundaries
+
+- One semantic assumption recorded for review: a received custom payload runs on the client packet-listener thread, so `handle` is invoked on the client owner thread; the test asserts this rather than assuming a background thread.
+- `updateModelData()` has no NeoForge render-data-manager equivalent; the absent call is documented in code rather than faked.

@@ -12,6 +12,7 @@ import mekanism.fabric.config.FabricMekanismConfigManager;
 import mekanism.fabric.datamaps.FabricMekanismDataMaps;
 import mekanism.fabric.network.FabricMekanismNetworking;
 import mekanism.fabric.network.FabricChemicalNetworking;
+import mekanism.fabric.network.FabricTileUpdateNetworking;
 import mekanism.fabric.recipe.FabricIngredientCreatorProvider;
 import mekanism.fabric.recipe.FabricRecipeCacheLifecycle;
 import mekanism.fabric.recipe.FabricRecipeRegistration;
@@ -44,6 +45,7 @@ public final class MekanismFabricBootstrap implements ModInitializer {
         verifyRecipeRegistration();
         FabricMekanismNetworking.Registration networking = FabricMekanismNetworking.initialize();
         FabricChemicalNetworking.initialize();
+        FabricTileUpdateNetworking.initialize();
         FabricMekanismDataMaps.initializeCallbacks();
         LOGGER.info("MEKANISM_FABRIC_NETWORK_PROOF protocol={} phase=configuration codecs={} server_receiver={} client_required={}",
               networking.protocolVersion(), networking.codecs(), networking.serverReceiver(), networking.clientRequired());

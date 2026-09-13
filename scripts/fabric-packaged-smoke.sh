@@ -374,6 +374,7 @@ if (actual_registries != expected_registries
         or any(entries.count(entry) != 1 for entry in expected_registries)):
     raise SystemExit(f"unexpected registry declaration class family: {sorted(actual_registries)!r}")
 expected_tile_interfaces = {
+    "mekanism/common/tile/interfaces/ITileWrapper.class",
     "mekanism/common/tile/interfaces/IHasDumpButton.class",
     "mekanism/common/tile/interfaces/IHasGasMode.class",
     "mekanism/common/tile/interfaces/IHasMode.class",
@@ -390,6 +391,38 @@ actual_tile_interfaces = {
 if (actual_tile_interfaces != expected_tile_interfaces
         or any(entries.count(entry) != 1 for entry in expected_tile_interfaces)):
     raise SystemExit(f"unexpected direct tile-interface class family: {sorted(actual_tile_interfaces)!r}")
+
+# Exact reduced-tile-update family: the production base, the payload, the Fabric adapter, and the two client dispatch hooks only.
+expected_tile_update = {
+    "mekanism/common/tile/base/TileEntityUpdateable.class",
+    "mekanism/common/network/to_client/PacketUpdateTile.class",
+    "mekanism/fabric/network/FabricTileUpdateNetworking.class",
+    "mekanism/fabric/network/FabricTileUpdateHandler.class",
+    "mekanism/fabric/mixin/tile/LevelChunkMixin.class",
+    "mekanism/fabric/mixin/tile/ClientPacketListenerTileMixin.class",
+}
+actual_tile_base = {entry for entry in entries if entry.startswith("mekanism/common/tile/base/") and entry.endswith(".class")}
+actual_tile_update_platform = {entry for entry in entries if entry.endswith(".class") and (
+      entry.startswith("mekanism/fabric/mixin/tile/")
+      or entry in {"mekanism/fabric/network/FabricTileUpdateNetworking.class", "mekanism/fabric/network/FabricTileUpdateHandler.class"})}
+if actual_tile_base != {"mekanism/common/tile/base/TileEntityUpdateable.class"}:
+    raise SystemExit(f"unexpected tile base class family: {sorted(actual_tile_base)!r}")
+if actual_tile_update_platform != (expected_tile_update - actual_tile_base - {"mekanism/common/network/to_client/PacketUpdateTile.class"}):
+    raise SystemExit(f"unexpected reduced-tile-update platform class family: {sorted(actual_tile_update_platform)!r}")
+if entries.count("mekanism/common/network/to_client/PacketUpdateTile.class") != 1:
+    raise SystemExit("the reduced-tile-update payload must occur exactly once")
+tile_update_fixtures = sorted(entry for entry in entries if entry.endswith(".class") and (
+      entry.startswith("mekanism/fabric/tile/fixture/") or "TileUpdateRuntimeFixture" in entry
+      or "TileUpdateRuntimeServerFixture" in entry or "TileUpdateRuntimeClientFixture" in entry))
+if tile_update_fixtures:
+    raise SystemExit(f"tile update runtime fixture leaked into the release artifact: {tile_update_fixtures!r}")
+with zipfile.ZipFile(sys.argv[1]) as tile_update_artifact:
+    for entry in actual_tile_base | actual_tile_update_platform | {"mekanism/common/network/to_client/PacketUpdateTile.class"}:
+        bytecode = tile_update_artifact.read(entry)
+        if b"net/neoforged/" in bytecode or b"xyz/bluspring" in bytecode or b"org/sinytra" in bytecode:
+            raise SystemExit(f"unsupported architecture leaked into tile-update bytecode: {entry}")
+        if entry.startswith("mekanism/common/") and b"net/fabricmc/" in bytecode:
+            raise SystemExit(f"Fabric type leaked into portable tile-update bytecode: {entry}")
 expected_slot_info = {
     "mekanism/common/tile/component/config/slot/ISlotInfo.class",
     "mekanism/common/tile/component/config/slot/BaseSlotInfo.class",
@@ -1294,7 +1327,8 @@ with zipfile.ZipFile(sys.argv[1]) as artifact:
           or artifact.read("META-INF/services/mekanism.api.recipes.IRecipeTypeRegistry") != recipe_type_service:
         raise SystemExit("wrong or duplicate recipe type registry service descriptor")
     mixin_config = json.loads(artifact.read("mekanism.client.mixins.json"))
-    if mixin_config.get("package") != "mekanism.fabric.mixin.recipe" or mixin_config.get("client") != ["ClientPacketListenerMixin"] \
+    if mixin_config.get("package") != "mekanism.fabric.mixin" or mixin_config.get("client") != [
+          "recipe.ClientPacketListenerMixin", "tile.LevelChunkMixin", "tile.ClientPacketListenerTileMixin"] \
           or "mixins" in mixin_config or "server" in mixin_config or mixin_config.get("injectors", {}).get("defaultRequire") != 1:
         raise SystemExit(f"client-only mixin contract violated: {mixin_config!r}")
     metadata = json.loads(artifact.read("fabric.mod.json"))
