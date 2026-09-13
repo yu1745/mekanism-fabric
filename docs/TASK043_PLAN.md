@@ -266,3 +266,21 @@ Verified gates: `test fabricTransferTest fabricRegistryTest fabricDataMapTest fa
 `FABRIC_SMOKE_STATIC_ONLY=1 scripts/fabric-packaged-smoke.sh`. The dedicated-server portion of the packaged smoke was **not** run in this worktree; the plan requires
 it as the final release gate for this task because the task introduces real registry lifecycle, so `./build.sh --clean` remains for the parent. No push, deploy,
 production, mirror, or secret operation was performed.
+
+
+## Parent integration verification (recorded by the 24-hour audit)
+
+The parent merged the accepted worktree as `2f2740bad884e9b9764c7ead898913d6f11569c2` and resolved the documentation/static-gate path conflict for
+`common/recipe/lookup/cache/RotaryInputRecipeCache`. On that integrated commit, the parent independently ran:
+
+- `./gradlew -p fabric test fabricRecipeRegistryTest verifyApiSliceNoNeoForge`: PASS;
+- `./fabric-build.sh`: PASS, five-group aggregate **86 suites / 422 tests**;
+- `scripts/fabric-packaged-smoke.sh`: PASS; **26 recipe types / 26 serializers / identity_preserved=true**, real dedicated server reached `Done`;
+- `./build.sh --clean`: PASS, one release JAR, source commit `2f2740ba`, SHA-256
+  `dbe35c043d481fd866c2b9514dba005f23bf51c6db508644ccf185a85dd40ffb`.
+
+Smoke diagnostics were stored at `build/fabric-packaged-smoke/20260913T100328Z-2646506`; the temporary `dist/` was subsequently removed.
+The earlier statement that runtime/release checks were not run applies only to the implementation worktree, not to the final parent verification.
+The original plan above is historical; the outcome uses a **two-parameter holder** and **five** isolated recipe-registry test methods.
+This records executed gates, not a claim that the whole Crusher or every future recipe owner is implemented. The separate route audit is
+[`DEVELOPMENT_REVIEW_2026-09-13.md`](DEVELOPMENT_REVIEW_2026-09-13.md). No production, mirror, deployment or push was performed.
