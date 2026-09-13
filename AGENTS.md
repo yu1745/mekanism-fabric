@@ -84,6 +84,8 @@ scripts/fabric-configuration-rejection-smoke.sh # 错版/同版本显式拒绝/�
 
 三轮后由主代理按一次通过率、范围/语义遵循、独立门禁质量、必要返工量、合并额外复杂度和总成本判断效果；若双候选没有稳定提高质量或降低主代理修复风险，则停止复制实现，后续仍改为每任务只派一个 GLM 5.3 high/max。默认不再使用 SOL **实现**，除非用户再次明确要求；研究、scouting、架构比较与 implementation plan 仍可按任务难度使用 SOL 或 Astra。主代理始终必须检查真实 diff、补足遗漏并独立运行最终门禁，不能只采信代理总结；默认不启用 supervision watch，只有用户显式要求监督或出现已证实的高风险不可逆操作时才临时启用。
 
+若实现子代理明确报告 **5h 额度耗尽**，该候选 fallback 到 `commandcode/deepseek-v4.1-flash`：优先从其已保存的候选提交继续，没有可恢复提交才从本轮 clean approval baseline 重启。若该 fallback 也报告额度耗尽，则暂停实现与新子代理派发，不再切换第三种模型，也不使用 `sleep` 或后台等待；向用户报告已保存进度并等待 5h 冷却后再继续。
+
 涉及 NeoForge/Fabric 语义替换、patched Minecraft、registry lifecycle、transaction/rollback、networking、序列化兼容、线程/owner 生命周期等高风险边界时，候选综合完成后仍按风险调用独立模型做**只读 adversarial review**；审查者默认不改代码、不重复完整文档与发布门禁。真实发生的实现比较与独立审查都必须记录证据。
 
 Fabric 主线使用 Mojang official mappings。官方 API、common 与 Fabric adapter 源码分别通过 `fabric/api-slice.txt`、`fabric/common-slice.txt`、`fabric/platform-slice.txt` 逐项纳入；不得复制源码、改包名、加入 Kotlin，或为消除编译错误而无审计地扩大清单。
