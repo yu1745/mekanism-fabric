@@ -79,3 +79,59 @@ Baseline `47baeecac` + merge `c9211626` (all prior WIP preserved, merge commit `
 ### Verified vs unverified
 
 Verified: `assemble` + 3 slice guards + `test` (existing suites) green at every commit; Fabric networking threading contract verified against the pinned fabric-networking-api (handlers execute on server main thread, matching NeoForge IPayloadContext semantics). NOT verified: any runtime behavior of the staged container/QIO domain (nothing compiled can open a container yet); the `ClientSecurityData`/`UsernameCache`/`ClientPlayerAccess` seams have no runtime population yet (owners for their client/bootstrap installers land with the respective batches).
+
+## Session 4 status (GLM5.3 sole implementer, REVIEW_03 correction pass — FAILING WIP by design)
+
+Baseline `485eeb29` + merge `2468a043` (all prior WIP preserved, merge `e3c40a27`). This session applies the six concrete corrections from
+`docs/TASK052_REVIEW_03.md`. **`gradlew -p fabric compileJava` is RED: the named targets are back in the compile work-list and their unresolved
+machine-owner tail is the recorded blocker surface (exact diagnostics preserved in `docs/TASK052_COMPILE_WIP.log`, javac 100-error cap noted in-file).**
+This is the correction checkpoint REVIEW_03 explicitly authorizes ("the target may remain failing while the machine tail is integrated"); no green
+acceptance is claimed.
+
+### The six REVIEW_03 corrections
+
+1. **Real compile work-list restored.** `MekanismContainer` + `QIOItemViewerContainer` are in `fabric/common-slice.txt` compile input (their own
+   compile errors appear in the log). `UsernameCache`, `RecipeMatcher`, `ClientPlayerAccess` — previously claimed admitted but absent — are now
+   actually in the slice. Slice counts moved 225/242/46 → 232/387/49 (gate updated; every addition is an auditable slice line, no helper script).
+2. **ClientSecurityData owns the real map, alias now.** The excluded `MekanismClient.clientSecurityMap` public field now aliases
+   `ClientSecurityData.securityMap()` (the same adjudicated pattern as `activeVibrators`); `PacketSyncSecurity`, `PacketBatchSecurityUpdate` and
+   `MekanismClient.resetDimensionChange` reach the owner map through their existing references; the "future alias" javadoc promise is removed.
+   **UsernameCache**: all init/mutate/read/save now synchronize on FILE_LOCK with a volatile map (one coherent process-wide instance); real login
+   population wired through new platform owner `mekanism/fabric/MekanismUsernameLifecycle` (ServerPlayConnectionEvents.JOIN, server thread),
+   registered from the common bootstrap. No two independently loaded maps, no false "wiring exists" claims.
+3. **Vein-mining pre-break cancellation restored.** `MekanismUtils.veinMineArea` fires pinned `PlayerBlockBreakEvents.BEFORE` (fabric-events-
+   interaction-v0 0.7.14: listeners in order, first false cancels) with the actual pre-destruction block state and block entity, before any
+   destructive work, plus `CANCELED` dispatch on cancellation; the single fetched `BlockEntity` is reused for `playerDestroy`. The direct vanilla
+   destruction path (playerWillDestroy/onDestroyedByPlayer/playerDestroy, not ServerPlayerGameMode.destroyBlock) means no double dispatch. The
+   false "Fabric has no pre-break cancellation / accepted boundary" statements are removed.
+4. **Fluid semantics corrected.** `getFluidsIn` now keys by the fluid family's source fluid (`FlowingFluid#getSource()` normalization), so source
+   and flowing occurrences aggregate into one entry exactly like the original FluidType grouping. The immediate consumer
+   `ModuleElectrolyticBreathingUnit` is migrated NOW to `Map<Fluid, FluidInDetails>` with the water classification `entry.getKey() == Fluids.WATER`.
+   `lighterThanAirGas` builds its variant with `FluidVariant.of(stack.getFluid(), stack.getComponentsPatch())` — the component-preserving
+   conversion owned by the accepted api `FluidStack` — instead of dropping components.
+5. **Vanilla bundling retained + networking owner written.** `PacketUtils.sendToAllTracking(DynamicBufferedNetwork, ...)` again wraps payloads in a
+   `ClientboundBundlePacket` (via `ServerPlayNetworking.createS2CPacket`), preserving within-one-tick processing. The previously missing network
+   owner now exists in the platform slice and both bootstraps: `FabricContainerNetworking` (codec registration for all three S2C + six C2S
+   container/QIO payloads, server receivers dispatching on the server main thread to the official `handle` methods with their original open-container
+   checks) and `FabricContainerClientNetworking` (physical-client receivers resolving the player's open container per payload type).
+6. **Missing imports/patched methods/provenance fixed.** `IQIODriveHolder`, `QIODriveData`, `FrequencyManagerWrapper` now import slf4j
+   `Logger`/`LoggerFactory`. `MekanismUtils.getModId` reads the registry-key namespace (documented delta: NeoForge's overridable
+   `getCreatorModId` hook has no Fabric equivalent); `getLastKnownUsername` uses `MekanismServerLifecycle.getServer()` instead of
+   `EffectiveSide`/`ServerLifecycleHooks`. `RecipeMatcher` provenance is now immutable: **commit `f741b728f0c63c5b584512447333e37c6741a294`**
+   ("1.21-rc1 Update", 2024-05-25), verified byte-identical body against the upstream file at that commit (also identical to the current 1.21.x tip);
+   LGPL-2.1-only redistribution notice retained. Other fixes en route: adjudicated logging-only `Mekanism.logger` → SLF4J "Mekanism" category in
+   five attachment/filter files; `RobitSkin` javadoc-only NeoForge import removed (documented boundary); access-widener entry added for
+   `BlockEntity$DataComponentInput` (mirrors the NeoForge AT for the implicit-components override signature).
+
+### Exact remaining compiler surface (all in the machine-owner tail; see TASK052_COMPILE_WIP.log)
+
+- `TileEntityMekanism` chain: `TileComponentConfig/Security/Upgrade` + `PacketUtils` helpers + `EnumUtils` (DriveStatus) — the known tile/machine tail.
+- `FrequencyType` → `InventoryFrequency` (entangloporter emit domain — **parent adjudication of the external fluid/item acceptor policy still pending; not touched**) and `TeleporterFrequency`.
+- Transporter tail: `TransitRequest`/`CollectionTransitRequest`/`IAdvancedTransportEjector`/`SidedBlockPos` → `TransporterPathfinder`, `SorterFilter` (NEO originals).
+- `MekanismDataComponents` → whole attachments catalog (`FrequencyAware`, `BlockData`, `AttachedChemicals/Fluids/Energy`, `MekanismAPI` api entry still NeoForge-original).
+- `ContainerTypeRegistryObject` → `inventory/container/type` NEO originals (needs the Fabric container-type registry bridge).
+- `MekanismUtils` → `block/attribute` closure, `InventoryUtils` (NEO, capabilities tail), `StorageUtils`/`Capabilities` token hub.
+- Computer integration tail: `SpecialComputerMethodWrapper`, `MethodRestriction` → `tile/prefab`.
+
+No runtime/full-test/packaged/clean verification performed (compile surface is red by design). No acceptance claim. External acceptor policy left for
+parent adjudication as instructed; no stub, drop or redesign of `InventoryFrequency`/`EmitUtils` was made.

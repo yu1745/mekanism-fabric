@@ -25,6 +25,7 @@ import mekanism.api.MekanismAPI;
 import mekanism.api.MekanismAPITags;
 import mekanism.api.MekanismItemAbilities;
 import mekanism.api.MekanismServerLifecycle;
+import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import mekanism.api.fluid.FluidStack;
 import mekanism.api.Upgrade;
 import mekanism.api.chemical.IChemicalTank;
@@ -82,6 +83,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.level.material.FlowingFluid;
 import net.minecraft.world.level.redstone.Redstone;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
@@ -152,17 +154,19 @@ public final class MekanismUtils {
     /**
      * Gets the creator's modid if it exists, or falls back to the registry name.
      *
-     * @implNote While the default implementation of getCreatorModId falls back to the registry name, it is possible someone is overriding this and not falling back.
+     * @implNote Fabric port delta: the NeoForge patched {@code Item#getCreatorModId} hook (which defaults to the item's registry namespace and can be
+     * overridden by items to report a different origin) has no Fabric equivalent; this port reads the item's registry-key namespace directly, which is
+     * the default behavior of that hook. The override surface is a platform boundary recorded here, not replicated.
      */
     @NotNull
     public static String getModId(@NotNull ItemStack stack) {
         Item item = stack.getItem();
-        String modid = item.getCreatorModId(stack);
-        if (modid == null) {
+        ResourceLocation key = BuiltInRegistries.ITEM.getKey(item);
+        if (key == null) {
             LOGGER.error("Unexpected null registry name for item of class type: {}", item.getClass().getSimpleName());
             return "";
         }
-        return modid;
+        return key.getNamespace();
     }
 
     public static boolean isRightArm(LivingEntity entity, InteractionHand hand) {
@@ -414,9 +418,13 @@ public final class MekanismUtils {
 
     public static boolean lighterThanAirGas(FluidStack stack) {
         //Fabric port delta: NeoForge's Tags.Fluids.GASEOUS membership plus non-positive FluidType density becomes
-        // Fabric's FluidVariantAttributes.isLighterThanAir gas convention (net.fabricmc.fabric.api.transfer.v1.fluid)
+        // Fabric's FluidVariantAttributes.isLighterThanAir gas convention (net.fabricmc.fabric.api.transfer.v1.fluid).
+        //Task052 REVIEW_03 finding 4 correction: the variant is built from the fluid AND the stack's component patch
+        // (FluidStack#getComponentsPatch is the component-preserving conversion owned by the accepted api shim) —
+        // FluidVariantAttributes dispatch is variant-aware, so building the variant from the fluid id alone would drop
+        // components before invoking a component-dependent attribute lookup.
         return net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariantAttributes.isLighterThanAir(
-              net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant.of(stack.getFluid()));
+              net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant.of(stack.getFluid(), stack.getComponentsPatch()));
     }
 
     public static boolean isLiquidBlock(Block block) {
@@ -592,8 +600,10 @@ public final class MekanismUtils {
             return "<???>";
         }
         String ret = UsernameCache.getLastKnownUsername(uuid);
-        if (ret == null && !warnedFails.contains(uuid) && EffectiveSide.get().isServer()) { // see if MC/Yggdrasil knows about it?!
-            Optional<GameProfile> gp = ServerLifecycleHooks.getCurrentServer().getProfileCache().get(uuid);
+        //Fabric port delta: the NeoForge EffectiveSide/ServerLifecycleHooks server lookup becomes the lifecycle-bound MekanismServerLifecycle owner
+        // (null on the client and before server start, so the Yggdrasil profile-cache fallback only runs on a live logical server)
+        if (ret == null && !warnedFails.contains(uuid) && MekanismServerLifecycle.getServer() != null) { // see if MC/Yggdrasil knows about it?!
+            Optional<GameProfile> gp = MekanismServerLifecycle.getServer().getProfileCache().get(uuid);
             if (gp.isPresent()) {
                 ret = gp.get().getName();
             }
@@ -758,8 +768,12 @@ public final class MekanismUtils {
      * Similar in concept to {@link net.minecraft.world.entity.Entity#updateFluidHeightAndDoFluidPushing()} except calculates if a given portion of the player is in the
      * fluids.
      *
-     * @implNote Fabric port delta: the original maps {@code NeoForge FluidType} to details; this port keys the map by the vanilla {@link Fluid} (one-to-one with the
-     * FluidType on the original platform).
+     * @implNote Fabric port delta (Task052 REVIEW_03 finding 4 correction): the original maps {@code NeoForge FluidType} to details. On the original
+     * platform a FluidType groups a fluid family — the source still and the flowing variant are distinct {@link Fluid} objects sharing one FluidType —
+     * so source/flowing occurrences of the same liquid aggregated into one entry. Fabric has no FluidType; the equivalent vanilla grouping key is the
+     * family's source fluid ({@code FlowingFluid#getSource()} normalizes a flowing occurrence to its source sibling, and is the identity for the
+     * non-flowing built-in fluids), so source/flowing aggregation, the water classification used by the immediate consumer
+     * {@code ModuleElectrolyticBreathingUnit} (migrated to compare against {@code Fluids.WATER}) and per-position heights are preserved.
      */
     public static Map<Fluid, FluidInDetails> getFluidsIn(Player player, double data, ModifyPlayerBounding modifyBoundingBox) {
         AABB bb = modifyBoundingBox.modify(player.getBoundingBox().deflate(0.001), data);
@@ -784,7 +798,10 @@ public final class MekanismUtils {
                         double fluidY = y + fluidState.getHeight(player.level(), mutablePos);
                         if (bb.minY <= fluidY) {
                             //The fluid intersects the bounding box
-                            FluidInDetails details = fluidsIn.computeIfAbsent(fluidState.getType(), f -> new FluidInDetails());
+                            //Task052 REVIEW_03 finding 4 correction: normalize a flowing fluid to its family's source fluid so source/flowing
+                            // occurrences of the same liquid aggregate into one entry, matching the original FluidType grouping
+                            Fluid fluidKey = fluidState.getType() instanceof FlowingFluid flowing ? flowing.getSource() : fluidState.getType();
+                            FluidInDetails details = fluidsIn.computeIfAbsent(fluidKey, f -> new FluidInDetails());
                             details.positions.put(mutablePos.immutable(), fluidState);
                             double actualFluidHeight;
                             if (fluidY > bb.maxY) {
@@ -837,15 +854,22 @@ public final class MekanismUtils {
                 // block hardness values in a modded context
                 continue;
             }
-            //Fabric port delta (accepted platform boundary, same class of boundary as WorldUtils#getDrops): NeoForge's
-            // CommonHooks.fireBlockBreak fires a cancellable BreakEvent that lets other mods stop vein mining into
-            // protected land. Fabric has no pre-break cancellation hook, so the vein miner proceeds directly to the
-            // vanilla destruction path; protection mods on this platform must use their own block-break guards.
+            //Fabric port correction (Task052 REVIEW_03 finding 3): preserve the original pre-break protection boundary. The original NeoForge path
+            // calls CommonHooks.fireBlockBreak, which fires the cancellable BreakEvent before any destructive work, letting protection mods stop
+            // vein mining into protected land. Fabric's equivalent pre-break hook is PlayerBlockBreakEvents.BEFORE (pinned
+            // fabric-events-interaction-v0 0.7.14+ba9dae0619: listeners run in order, first false cancels immediately). This vein-mining path invokes the
+            // vanilla destruction methods directly (playerWillDestroy/onDestroyedByPlayer/playerDestroy) rather than ServerPlayerGameMode.destroyBlock,
+            // so the BEFORE hook is not dispatched a second time here. On cancellation we also fire CANCELED so protection mods can revert the client.
+            BlockEntity blockEntity = WorldUtils.getTileEntity(world, foundPos);
+            if (!PlayerBlockBreakEvents.BEFORE.invoker().beforeBlockBreak(world, player, foundPos, targetState, blockEntity)) {
+                PlayerBlockBreakEvents.CANCELED.invoker().onBlockBreakCanceled(world, player, foundPos, targetState, blockEntity);
+                continue;
+            }
 
             //Otherwise, break the block
             FluidState fluidState = targetState.getFluidState();
             //Get the tile now so that we have it for when we try to harvest the block
-            BlockEntity tileEntity = WorldUtils.getTileEntity(world, foundPos);
+            //Note: this is the same blockEntity instance passed to the BEFORE/CANCELED hooks above
             //Update what the state will be if the player is destroying it, so that things like angering piglins, and firing block destroy game events occur
             // This also ensures that things like decorated pots are able to properly update to cracked and drop sherds rather than the pot block itself
             targetState = targetState.getBlock().playerWillDestroy(world, foundPos, targetState, player);
@@ -854,7 +878,7 @@ public final class MekanismUtils {
             if (targetState.onDestroyedByPlayer(world, foundPos, player, true, fluidState)) {
                 block.destroy(world, foundPos, targetState);
                 //Harvest the block allowing it to handle block drops, incrementing block mined count, and adding exhaustion
-                block.playerDestroy(world, player, foundPos, targetState, tileEntity, stack);
+                block.playerDestroy(world, player, foundPos, targetState, blockEntity, stack);
                 player.awardStat(itemStat);
                 //Mark that we used that portion of the energy
                 energyUsed += destroyEnergy;

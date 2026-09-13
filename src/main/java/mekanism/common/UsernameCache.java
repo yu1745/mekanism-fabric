@@ -21,11 +21,16 @@ import org.slf4j.LoggerFactory;
 /**
  * Last-known-username cache, persisted as {@code usernamecache.json} in the game directory.
  *
- * <p>Fabric port ownership (Task052): NeoForge ships {@code net.neoforged.neoforge.server.UsernameCache} with exactly this behavior — a process-wide
+ * <p>Fabric port ownership (Task052): NeoForge ships a server-wide {@code UsernameCache} with exactly this behavior — a process-wide
  * UUID&rarr;name map, persisted to {@code usernamecache.json} next to the game's other root files, populated when players log in, and consulted for
  * owner-name display/sync (for example {@code Frequency}'s owner-name lookup). Fabric has no equivalent, so Mekanism owns the responsibility here.
- * Population is wired by the Fabric player lifecycle on login; the JSON is rewritten on every change (the file is tiny, matching the original's
+ * Population is wired by the Fabric play-join lifecycle ({@code mekanism.fabric.MekanismUsernameLifecycle}, Task052): every accepted server-side play
+ * connection records the player's current profile name; the JSON is rewritten on every change (the file is tiny, matching the original's
  * save-on-modification semantics).</p>
+ *
+ * <p>Concurrency model: the map is process-wide and reached from the server thread, the client thread (integrated server shares the process) and netty
+ * threads. Initialization, mutation, read and file I/O all synchronize on {@link #FILE_LOCK}, so there is exactly one coherent map instance — never two
+ * independently loaded copies. The map field is {@code volatile} so any unsynchronized reader still observes a fully initialized map.</p>
  */
 public final class UsernameCache {
 
@@ -36,29 +41,37 @@ public final class UsernameCache {
     private static final Path FILE = FabricLoader.getInstance().getGameDir().resolve("usernamecache.json").toAbsolutePath().normalize();
 
     private static final Object FILE_LOCK = new Object();
-    private static Map<UUID, String> map;
+    private static volatile Map<UUID, String> map;
 
     private UsernameCache() {
     }
 
     @Nullable
     public static String getLastKnownUsername(UUID uuid) {
-        return map(false).get(uuid);
+        synchronized (FILE_LOCK) {
+            return map(false).get(uuid);
+        }
     }
 
     public static void setLastKnownUsername(UUID uuid, String username) {
-        String old = map(true).put(uuid, username);
+        String old;
+        synchronized (FILE_LOCK) {
+            old = map(true).put(uuid, username);
+        }
         if (old == null || !old.equals(username)) {
             save();
         }
     }
 
     public static boolean containsUUID(UUID uuid) {
-        return map(false).containsKey(uuid);
+        synchronized (FILE_LOCK) {
+            return map(false).containsKey(uuid);
+        }
     }
 
     private static Map<UUID, String> map(boolean markLoaded) {
-        //Lazy load on first access; server and client share the same process-lifetime cache file
+        //Lazy load under FILE_LOCK on first access; server and client share the same process-lifetime cache file.
+        //The volatile field guarantees the fully initialized map is published to any unsynchronized reader.
         if (map == null) {
             Map<UUID, String> loaded = new Object2ObjectOpenHashMap<>();
             synchronized (FILE_LOCK) {

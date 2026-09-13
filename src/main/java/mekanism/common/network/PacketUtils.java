@@ -29,6 +29,8 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientboundBundlePacket;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -53,9 +55,10 @@ import org.slf4j.LoggerFactory;
  * category; {@code PacketDistributor.sendToServer} becomes {@link ClientPlayNetworking#send}, which (like its NeoForge counterpart) is only ever invoked on the
  * physical client and is never linked on a dedicated server; {@code PacketDistributor.sendToPlayersTrackingChunk} becomes {@link PlayerLookup#tracking(ServerLevel,
  * ChunkPos)} with per-player sends; {@code ServerLifecycleHooks.getCurrentServer()} becomes the lifecycle-bound {@link MekanismServerLifecycle} owner; the
- * {@code IPayloadContext} helper parameter becomes the plain {@link Player} that Fabric's play receiver context provides. The multi-payload overload sends each
- * payload individually rather than wrapping them in a {@code ClientboundBundlePacket}: batching is a transport detail, recipient set and ordering are
- * unchanged.</p>
+ * {@code IPayloadContext} helper parameter becomes the plain {@link Player} that Fabric's play receiver context provides. The multi-payload overload keeps
+ * vanilla bundle grouping: each recipient receives a {@link ClientboundBundlePacket} of the payloads (built through {@code ServerPlayNetworking.createS2CPacket}),
+ * preserving the original within-one-tick processing guarantee that per-payload sends could split across client ticks; recipients and payload ordering
+ * are unchanged.</p>
  */
 public class PacketUtils {
 
@@ -233,12 +236,14 @@ public class PacketUtils {
                 }
             }
         }
-        //Fabric port delta: payloads are dispatched individually instead of wrapped in a ClientboundBundlePacket;
-        // recipients and payload ordering are unchanged.
+        //Fabric port correction (Task052 REVIEW_03 finding 5): keep vanilla bundle grouping — a ClientboundBundlePacket preserves the original
+        // within-one-tick processing of the payloads; per-payload sends could split processing across client ticks
+        List<Packet<? super net.minecraft.network.protocol.game.ClientGamePacketListener>> bundled = new ArrayList<>(packets.length);
+        for (CustomPacketPayload payload : packets) {
+            bundled.add((Packet<? super net.minecraft.network.protocol.game.ClientGamePacketListener>) (Packet<?>) ServerPlayNetworking.createS2CPacket(payload));
+        }
         for (ServerPlayer player : players) {
-            for (CustomPacketPayload payload : packets) {
-                ServerPlayNetworking.send(player, payload);
-            }
+            player.connection.send(new ClientboundBundlePacket(bundled));
         }
     }
 }
