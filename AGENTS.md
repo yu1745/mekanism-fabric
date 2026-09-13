@@ -88,7 +88,7 @@ scripts/fabric-configuration-rejection-smoke.sh # 错版/同版本显式拒绝/�
 
 ## 单 DeepSeek 实现与风险审查
 
-按用户调整，后续每个开发任务默认只派一个 **DeepSeek V4.1 Flash**（精确模型 ID `commandcode/deepseek/deepseek-v4.1-flash`）从 clean commit 在隔离 worktree 中实现；thinking 默认 **`low`**，只允许 `low` 或 `high`，禁止使用 `max`。`high` 必须极慎重：仅用于已明确的困难语义问题，启动前说明必要性与耗时风险，不把开放选题到完整交付都交给 high。不再使用 GLM 5.3，也不复制两个 DeepSeek 候选。Task 041 已发生的双 GLM 候选仅作为调整前历史事实保留；其最终 mandatory review 由一个 DeepSeek 补做。主代理仍必须检查真实 diff、补足遗漏并独立运行最终门禁，不能只采信代理总结。按用户要求，所有 DeepSeek 子代理启动后必须同时启用 **270 秒**间隔的 supervision watch；watch 只用于观察方向、范围与验收漂移，仍须遵守“单次可恢复错误不干预”的监督边界。
+按用户调整，后续每个开发任务默认只派一个 **DeepSeek V4.1 Flash**（精确模型 ID `commandcode/deepseek/deepseek-v4.1-flash`）从 clean commit 在隔离 worktree 中实现；thinking 默认 **`low`**，只允许 `low` 或 `high`，禁止使用 `max`。按已定界任务的推理难度选择档位，困难的语义分析可正常使用 `high`，不再设置“high 必须极慎重”的特殊限制。当前 low/high 均出现长耗时，已观察到的主要原因是任务过于开放、反复规划与串行探索，不能把降低 thinking 当作提速保证；无论档位，都必须先明确边界、交付物与规划检查点。不再使用 GLM 5.3，也不复制两个 DeepSeek 候选。Task 041 已发生的双 GLM 候选仅作为调整前历史事实保留；其最终 mandatory review 由一个 DeepSeek 补做。主代理仍必须检查真实 diff、补足遗漏并独立运行最终门禁，不能只采信代理总结。按用户要求，所有 DeepSeek 子代理启动后必须同时启用 **270 秒**间隔的 supervision watch；watch 只用于观察方向、范围与验收漂移，仍须遵守“单次可恢复错误不干预”的监督边界。
 
 默认不再使用 SOL **实现**，除非用户再次明确要求；研究、scouting、架构比较与 implementation plan 仍可按任务难度使用 SOL 或 Astra。真实发生额外模型比较或独立审查时才在 `docs/MODEL_IMPLEMENTATION_COMPARISONS.md` 记录相应证据。
 
