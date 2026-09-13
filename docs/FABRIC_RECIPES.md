@@ -172,3 +172,62 @@ Non-claims: no recipe-type registration; no recipe serializers; no production re
 Mekanism recipes; no machines or tile entities; no JEI/EMI or client recipe viewer; no item/fluid/Chemical transaction or storage exposure; no machine-facing
 `InputRecipeCache` index; no broader Fabric integration. Recipe-type and serializer registration, the concrete recipe family, and the item-registration boundary
 remain the separately approved 042B, which must reuse these exact `RecipeType` instances so `byType` identity grouping survives.
+
+## Task 043 — recipe type and serializer registration with the concrete recipe family
+
+Task 043 implements `TASK043_PLAN.md` from clean commit `87fe68e6`, in an isolated worktree. It closes the boundary Task 042A explicitly left open: the 26 recipe
+types are now **really registered**, and every Mekanism recipe serializer is registered so datapack recipes decode.
+
+Slices move **163/184/37 → 199/188/38** (API +36, common +4, platform +1; 425 production sources). The executable contract moves to ordinary **77 suites/384 tests**,
+transfer **5/27**, root-registry **1/2**, data-map **2/4**, and a new recipe-registry worker **1/4**; ordinary+transfer+root+data-map **85/417**; five-group aggregate
+**86/421**.
+
+### Recipe type registration preserves identity by construction
+
+042A's `MekanismRecipeTypes.TYPE_*` were identity-stable but non-registered. Task 043 keeps that exact design and adds the registry write in the same class:
+`ensureRegistered()` writes each of the 26 concrete instances into `BuiltInRegistries.RECIPE_TYPE` under its official id and attaches the canonical registry holder
+back onto the holder over that same instance. Because there is only ever one creation site, `Recipe#getType()` identity and vanilla `RecipeManager`'s identity-keyed
+`byType` grouping survive registration unchanged; the isolated worker asserts canonical identity explicitly. Static initialization itself performs no registry write,
+and the 042A suite keeps asserting that, so `isRegistered()` remains a real boundary.
+
+Registration runs in the ordinary mod-init window alongside the existing game event registration. The plan's assumption that the write had to precede
+`BuiltInRegistries.bootStrap()` was disproved by a direct probe: the built-in registries stay writable after `BootStrap()` in this environment.
+
+### Serializers and the concrete recipe family
+
+The whole `mekanism.api.recipes.basic` package (26 concrete recipes, 7 abstract bases, 2 output interfaces) is admitted, plus the three common serializers and
+`WrappedShapedRecipe`. All were byte-identical to `4646f509` at baseline; the only deltas are the four authorized families (project `FluidStack`, literal
+`"mekanism"`, `MekanismKeyedHolder` for the 16 toast-item holders and the 26 API serializer fields, and two exact local replacements for the NeoForge
+`NeoForgeStreamCodecs.composite` 7-arity and `NeoForgeExtraCodecs.withAlternative(MapCodec, MapCodec)` helpers).
+
+`mekanism.fabric.recipe.FabricRecipeRegistration` performs the real write with the official ids and factory order. The official `MekanismRecipeSerializersInternal`
+is deliberately not admitted: its four remaining entries belong to the recipe-upgrade and bin crafting-special closure, which measures 1,214 files outside the slice.
+
+The 10 `getToastSymbol()` holders stay key-correct and unbound, and that is now provably unreachable rather than merely asserted: `MekanismRecipe.isSpecial()` is
+`true`, and both `ServerRecipeBook.addRecipes` and `ClientRecipeBook.categorizeAndGroupRecipes` gate on `!isSpecial()`, so the only `getToastSymbol()` caller
+(`RecipeToast`) is never reached for a Mekanism recipe. No `MekanismItems` entry is needed.
+
+### Verification
+
+Codec contracts run in the ordinary JVM: official JSON shapes round-trip for the item, combining, chemical, fluid, electrolysis, reaction, sawmill, energy and
+rotary serializers; the rotary alternative accepts all three official shapes with the distinct-union key set and first-preference encoding; sawmill dependent
+optionality and the energy scalar round-trip; and all 26 holders are key-stable and legitimately unbound. Two plan assertions were corrected to the real contracts:
+an empty chemical output is an omitted optional field, and the no-output reaction and chance-without-output cases are rejected by the recipe constructor's
+precondition rather than by a codec error result.
+
+The isolated `fabricRecipeRegistryTest` worker asserts real registration: all 26 recipe-type ids resolve with canonical identity equal to the declared instances, all
+26 serializer ids resolve through their holders, a real `RecipeManager` decodes a real `mekanism:crushing` document and serves it under the declared type and
+serializer, and duplicate registration fails while repeated `ensureRegistered()` is idempotent.
+
+Gates run: the five test tasks plus `verifyFabricTestContract` and `remapJar`; `check build`; the three `verify*SliceNoNeoForge` tasks; `scripts/scan-platform-deps.py`;
+`./fabric-build.sh`; and `FABRIC_SMOKE_STATIC_ONLY=1 scripts/fabric-packaged-smoke.sh`. The packaged smoke admits exactly the new `basic`, `serializer` and
+`WrappedShapedRecipe` classes plus `FabricRecipeRegistration` and the new access-widener entry, and still rejects `MekanismRecipeType*`,
+`IMekanismRecipeTypeProvider`, `RecipeTypeRegistryObject`, `RotaryInputRecipeCache`, `MekanismRecipeSerializersInternal`, the upgrade/bin/ClearConfiguration
+recipe families, every `mekanism/client/**`, `MekanismItems*`, `mekanism/api/MekanismAPI.class`, and all production recipe JSON. `./build.sh --clean` and the
+dedicated-server/client smokes are not run in this worktree.
+
+Non-claims: no `MekanismItems` or any item/block/fluid/Chemical registration; no machines or tile entities; no `MekanismRecipeType` cache owner,
+`IMekanismRecipeTypeProvider`, `RecipeTypeRegistryObject`, `RecipeTypeDeferredRegister`, `RotaryInputRecipeCache`, or machine-facing `InputRecipeCache` index; no
+`MekanismRecipeSerializersInternal` and therefore no `mek_data`/`clear_configuration`/`bin_insert`/`bin_extract` crafting specials and no bin or recipe-upgrade
+recipes; no production recipe JSON in the artifact; no JEI/EMI or client recipe viewer; no `getToastSymbol()`-correct items; no item/fluid/Chemical transaction or
+storage exposure; no broader Fabric integration.

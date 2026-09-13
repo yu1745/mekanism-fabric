@@ -467,3 +467,35 @@ key-correct but unbound, and `value()` throws. `mekanism/api/MekanismAPI.class` 
 
 Verification: six ordinary methods in the single new `RecipeOutputHandlingTest` (no Knot), the three slice no-NeoForge checks, `scan-platform-deps.py`,
 `fabric-build.sh`, and the exact static packaged class-family/leakage gate. `./build.sh --clean` and real server/client smokes are not run.
+
+## Recipe type/serializer registration and the concrete recipe family (Task 043)
+
+Task 043 admits the whole `mekanism.api.recipes.basic` package (26 concrete recipes, 7 abstract bases, 2 output interfaces), the API serializer holder class, the
+three common recipe serializers, `mekanism.common.recipe.WrappedShapedRecipe`, and one new platform owner. The compiled slices move to **199/188/38**. Against
+`4646f509` the admitted set is 16 `U` (byte-identical: `BasicChemicalChemicalToChemicalRecipe`, `BasicChemicalCrystallizerRecipe`, `BasicChemicalDissolutionRecipe`, `BasicChemicalToChemicalRecipe`, `BasicCombinerRecipe`, `BasicItemStackChemicalToItemStackRecipe`, `BasicItemStackToChemicalRecipe`, `BasicItemStackToEnergyRecipe`, `BasicItemStackToFluidOptionalItemRecipe`, `BasicItemStackToItemStackRecipe`, `BasicNucleosynthesizingRecipe`, `BasicSawmillRecipe`, `IBasicChemicalOutput`, `IBasicItemStackOutput`, `SawmillRecipeSerializer`, `WrappedShapedRecipe`) with the other 24 `A` under exactly the authorized families below, plus one `N`.
+
+Adaptations, all previously authorized or newly justified:
+
+- `net.neoforged.neoforge.fluids.FluidStack` → `mekanism.api.fluid.FluidStack` in the six `FluidStack`-bearing recipe classes and two common serializers;
+- `DeferredHolder.create(Registries.ITEM|RECIPE_SERIALIZER, key)` → `MekanismKeyedHolder` in the 16 toast-item holders and the 26 API serializer fields, with no
+  public field changing its type parameters (a new typed-key `registryKeyed` overload keeps `MekanismKeyedHolder<RecipeSerializer<X>>`);
+- `MekanismAPI.MEKANISM_MODID` → literal `"mekanism"` (Task 032 precedent);
+- `net.neoforged.neoforge.network.codec.NeoForgeStreamCodecs.composite` (7-arity) → a private `composite` in `MekanismRecipeSerializer` implementing the identical
+  sequential decode/encode algorithm;
+- `net.neoforged.neoforge.common.util.NeoForgeExtraCodecs.withAlternative(MapCodec, MapCodec)` → a private `AlternativeMapCodec` in `RotaryRecipeSerializer`
+  reproducing the pinned NeoForge 21.1.200 behaviour exactly: `keys` is the distinct union of both alternatives, `decode` falls through only on error, and `encode`
+  probes the first codec against `ops.empty()` and falls through only on error.
+
+`MekanismRecipeTypes` now registers its 26 concrete instances into `BuiltInRegistries.RECIPE_TYPE` under their official ids from a memoized explicit
+`ensureRegistered()` step, and attaches the canonical registry holder back onto the same instance, so `getType()` identity is preserved by construction. Static
+initialization performs no registry write. `MekanismKeyedHolder` gains `registryKeyed(ResourceKey<? extends Registry<R>>, ResourceLocation, Supplier<...>)` and
+`MekanismRecipeTypes` gains `ensureRegistered()`, `isRegistered()`, and `recipeTypeHolders()`; no existing public signature changes.
+
+One access-widener entry is added: `accessible field net/minecraft/world/item/crafting/ShapedRecipe pattern Lnet/minecraft/world/item/crafting/ShapedRecipePattern;`,
+which `WrappedShapedRecipe` needs to pass the inner pattern to its own super constructor and which the packaged smoke now asserts in its remapped form.
+
+Verification: six ordinary methods in `RecipeSerializerContractTest` (official JSON shape round-trips, the rotary three-shape alternative plus distinct-union keys and
+first-preference encoding, sawmill dependent optionality, energy scalar, and the 26 key-stable holders) and four methods in the isolated `fabricRecipeRegistryTest`
+worker (real registration with canonical identity, holder resolution, a real `RecipeManager` decode-and-serve, and duplicate/idempotence behavior). Two plan
+assertions were corrected to the real contract: an empty chemical output is an omitted optional field, and the no-output reaction and chance-without-output cases are
+rejected by the recipe constructor's precondition rather than as a codec error result.

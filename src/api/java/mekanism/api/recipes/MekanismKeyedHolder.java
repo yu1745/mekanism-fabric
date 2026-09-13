@@ -94,6 +94,25 @@ public class MekanismKeyedHolder<T> implements Holder<T>, Supplier<T> {
     }
 
     /**
+     * Creates a keyed holder that resolves its value by key out of the given registry on first access, deriving the key from the registry and name.
+     *
+     * <p>This mirrors the type relationship of a deferred registry holder: the registry is a {@code Registry<R>} while the value is a more specific {@code T}.
+     *
+     * @param registryKey Registry the key belongs to.
+     * @param name        Name of the key within the registry.
+     * @param registry    Supplier of the registry to resolve against, evaluated lazily so that creating the holder never touches a registry.
+     *
+     * @return Keyed holder that stays unbound while the key is absent from the registry.
+     */
+    @SuppressWarnings("unchecked")
+    public static <R, T extends R> MekanismKeyedHolder<T> registryKeyed(ResourceKey<? extends Registry<R>> registryKey, ResourceLocation name,
+          Supplier<? extends Registry<R>> registry) {
+        Objects.requireNonNull(name, "Holder name cannot be null.");
+        return new MekanismKeyedHolder<>((ResourceKey<T>) ResourceKey.create(registryKey, name),
+              (Supplier<? extends Registry<T>>) (Supplier<?>) Objects.requireNonNull(registry, "Registry supplier cannot be null."), null);
+    }
+
+    /**
      * Attaches the vanilla holder this keyed holder delegates to. Only allowed once and only for a matching key.
      *
      * @param delegate Holder to delegate to.

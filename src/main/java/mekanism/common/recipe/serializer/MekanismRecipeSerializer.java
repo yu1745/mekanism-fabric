@@ -14,6 +14,7 @@ import mekanism.api.SerializationConstants;
 import mekanism.api.SerializerHelper;
 import mekanism.api.chemical.Chemical;
 import mekanism.api.chemical.ChemicalStack;
+import mekanism.api.fluid.FluidStack;
 import mekanism.api.recipes.ChemicalChemicalToChemicalRecipe;
 import mekanism.api.recipes.ChemicalDissolutionRecipe;
 import mekanism.api.recipes.ChemicalToChemicalRecipe;
@@ -53,11 +54,48 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.ShapedRecipe;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.network.codec.NeoForgeStreamCodecs;
 
 public record MekanismRecipeSerializer<RECIPE extends Recipe<?>>(MapCodec<RECIPE> codec, StreamCodec<RegistryFriendlyByteBuf, RECIPE> streamCodec)
       implements RecipeSerializer<RECIPE> {
+
+    /**
+     * Seven element stream codec composition. This is the exact algorithm of the NeoForge helper of the same arity: sequential decode in declaration order and
+     * sequential encode in the same order, with no extra framing. It exists here so the recipe serializers do not depend on a NeoForge-only network helper.
+     */
+    private static <B, C, T1, T2, T3, T4, T5, T6, T7> StreamCodec<B, C> composite(
+          StreamCodec<? super B, T1> codec1, Function<C, T1> getter1,
+          StreamCodec<? super B, T2> codec2, Function<C, T2> getter2,
+          StreamCodec<? super B, T3> codec3, Function<C, T3> getter3,
+          StreamCodec<? super B, T4> codec4, Function<C, T4> getter4,
+          StreamCodec<? super B, T5> codec5, Function<C, T5> getter5,
+          StreamCodec<? super B, T6> codec6, Function<C, T6> getter6,
+          StreamCodec<? super B, T7> codec7, Function<C, T7> getter7,
+          Function7<T1, T2, T3, T4, T5, T6, T7, C> factory) {
+        return new StreamCodec<>() {
+            @Override
+            public C decode(B buffer) {
+                T1 value1 = codec1.decode(buffer);
+                T2 value2 = codec2.decode(buffer);
+                T3 value3 = codec3.decode(buffer);
+                T4 value4 = codec4.decode(buffer);
+                T5 value5 = codec5.decode(buffer);
+                T6 value6 = codec6.decode(buffer);
+                T7 value7 = codec7.decode(buffer);
+                return factory.apply(value1, value2, value3, value4, value5, value6, value7);
+            }
+
+            @Override
+            public void encode(B buffer, C value) {
+                codec1.encode(buffer, getter1.apply(value));
+                codec2.encode(buffer, getter2.apply(value));
+                codec3.encode(buffer, getter3.apply(value));
+                codec4.encode(buffer, getter4.apply(value));
+                codec5.encode(buffer, getter5.apply(value));
+                codec6.encode(buffer, getter6.apply(value));
+                codec7.encode(buffer, getter7.apply(value));
+            }
+        };
+    }
 
     public static <RECIPE extends WrappedShapedRecipe> MekanismRecipeSerializer<RECIPE> wrapped(Function<ShapedRecipe, RECIPE> wrapper) {
         return new MekanismRecipeSerializer<>(
@@ -211,7 +249,7 @@ public record MekanismRecipeSerializer<RECIPE extends Recipe<?>>(MapCodec<RECIPE
                 return DataResult.error(() -> "No output specified, must have at least an Item or Chemical output");
             }
             return DataResult.success(result);
-        }), NeoForgeStreamCodecs.composite(
+        }), composite(
               ItemStackIngredient.STREAM_CODEC, PressurizedReactionRecipe::getInputSolid,
               FluidStackIngredient.STREAM_CODEC, PressurizedReactionRecipe::getInputFluid,
               IngredientCreatorAccess.chemicalStack().streamCodec(), PressurizedReactionRecipe::getInputChemical,

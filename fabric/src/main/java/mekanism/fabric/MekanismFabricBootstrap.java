@@ -14,6 +14,7 @@ import mekanism.fabric.network.FabricMekanismNetworking;
 import mekanism.fabric.network.FabricChemicalNetworking;
 import mekanism.fabric.recipe.FabricIngredientCreatorProvider;
 import mekanism.fabric.recipe.FabricRecipeCacheLifecycle;
+import mekanism.fabric.recipe.FabricRecipeRegistration;
 import mekanism.common.registries.MekanismChemicalIngredientTypes;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -40,6 +41,7 @@ public final class MekanismFabricBootstrap implements ModInitializer {
         MekanismChemicalIngredientTypes.ensureRegistered();
         FabricRecipeCacheLifecycle.initialize();
         verifyIngredientCreatorService();
+        verifyRecipeRegistration();
         FabricMekanismNetworking.Registration networking = FabricMekanismNetworking.initialize();
         FabricChemicalNetworking.initialize();
         FabricMekanismDataMaps.initializeCallbacks();
@@ -80,6 +82,33 @@ public final class MekanismFabricBootstrap implements ModInitializer {
         }
         LOGGER.info("MEKANISM_FABRIC_CONFIG_PROOF file=startup.toml values=12 loaded=true created={} corrected={}",
               registration.loadResult().created(), registration.loadResult().correctedValues());
+    }
+
+    private static void verifyRecipeRegistration() {
+        //Note: Recipe type and serializer registration runs in the same startup window as the game event registration below, before the built-in registries stop accepting writes.
+        FabricRecipeRegistration.register();
+        int recipeTypes = 0;
+        int serializers = 0;
+        for (var holder : mekanism.api.recipes.MekanismRecipeTypes.recipeTypeHolders()) {
+            if (!holder.isBound() || !BuiltInRegistries.RECIPE_TYPE.containsKey(holder.getId())) {
+                throw new IllegalStateException("Mekanism recipe type was not registered: " + holder.getId());
+            }
+            if (BuiltInRegistries.RECIPE_TYPE.getHolderOrThrow(
+                  net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.RECIPE_TYPE, holder.getId())).value() != holder.value()) {
+                throw new IllegalStateException("Mekanism recipe type registration did not reuse the declared instance: " + holder.getId());
+            }
+            recipeTypes++;
+        }
+        for (String entry : java.util.List.of("crushing", "enriching", "smelting", "chemical_infusing", "combining", "separating", "washing", "evaporating",
+              "activating", "centrifuging", "crystallizing", "dissolution", "compressing", "purifying", "injecting", "nucleosynthesizing",
+              "energy_conversion", "chemical_conversion", "oxidizing", "pigment_extracting", "pigment_mixing", "metallurgic_infusing", "painting", "reaction",
+              "rotary", "sawing")) {
+            if (!BuiltInRegistries.RECIPE_SERIALIZER.containsKey(ResourceLocation.fromNamespaceAndPath("mekanism", entry))) {
+                throw new IllegalStateException("Mekanism recipe serializer was not registered: " + entry);
+            }
+            serializers++;
+        }
+        LOGGER.info("MEKANISM_FABRIC_RECIPE_REGISTRATION_PROOF recipe_types={} serializers={} identity_preserved=true", recipeTypes, serializers);
     }
 
     private static void verifyIngredientCreatorService() {

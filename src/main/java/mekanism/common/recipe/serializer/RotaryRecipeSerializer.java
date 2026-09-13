@@ -2,14 +2,19 @@ package mekanism.common.recipe.serializer;
 
 import com.mojang.datafixers.util.Function4;
 import com.mojang.serialization.DataResult;
+import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.MapLike;
+import com.mojang.serialization.RecordBuilder;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.netty.handler.codec.DecoderException;
 import java.util.Optional;
 import java.util.function.BiFunction;
+import java.util.stream.Stream;
 import mekanism.api.SerializationConstants;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.chemical.ChemicalStack;
+import mekanism.api.fluid.FluidStack;
 import mekanism.api.recipes.basic.BasicRotaryRecipe;
 import mekanism.api.recipes.ingredients.ChemicalStackIngredient;
 import mekanism.api.recipes.ingredients.FluidStackIngredient;
@@ -19,8 +24,6 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.crafting.RecipeSerializer;
-import net.neoforged.neoforge.common.util.NeoForgeExtraCodecs;
-import net.neoforged.neoforge.fluids.FluidStack;
 
 @NothingNullByDefault
 public class RotaryRecipeSerializer implements RecipeSerializer<BasicRotaryRecipe> {
@@ -40,14 +43,14 @@ public class RotaryRecipeSerializer implements RecipeSerializer<BasicRotaryRecip
     public RotaryRecipeSerializer(Function4<FluidStackIngredient, ChemicalStackIngredient, ChemicalStack, FluidStack, BasicRotaryRecipe> bothWaysFactory,
           BiFunction<FluidStackIngredient, ChemicalStack, BasicRotaryRecipe> toChemicalFactory,
           BiFunction<ChemicalStackIngredient, FluidStack, BasicRotaryRecipe> toFluidFactory) {
-        this.codec = NeoForgeExtraCodecs.withAlternative(
+        this.codec = withAlternative(
               RecordCodecBuilder.mapCodec(i -> i.group(
                     FLUID_INPUT_FIELD,
                     CHEMICAL_INPUT_FIELD,
                     CHEMICAL_OUTPUT_FIELD,
                     FLUID_OUTPUT_FIELD
               ).apply(i, bothWaysFactory)),
-              NeoForgeExtraCodecs.withAlternative(
+              withAlternative(
                     RecordCodecBuilder.mapCodec(i -> i.group(
                           FLUID_INPUT_FIELD,
                           CHEMICAL_OUTPUT_FIELD
@@ -76,6 +79,50 @@ public class RotaryRecipeSerializer implements RecipeSerializer<BasicRotaryRecip
                   throw new DecoderException("A recipe got sent with no conversion in either direction.");
               }
         );
+    }
+
+    /**
+     * Map codec with two alternatives. Both alternatives are tried for decoding, and encoding falls through to the second only when the first errors.
+     *
+     * <p>This is an exact reimplementation of the NeoForge helper of the same name, kept here so the recipe serializers do not depend on a NeoForge-only util class.
+     * The declared {@code keys} are the distinct union of both alternatives, because either shape may legitimately appear in a serialized recipe.
+     */
+    private static <T> MapCodec<T> withAlternative(MapCodec<T> codec, MapCodec<T> alternative) {
+        return new AlternativeMapCodec<>(codec, alternative);
+    }
+
+    private static class AlternativeMapCodec<T> extends MapCodec<T> {
+
+        private final MapCodec<T> codec;
+        private final MapCodec<T> alternative;
+
+        private AlternativeMapCodec(MapCodec<T> codec, MapCodec<T> alternative) {
+            this.codec = codec;
+            this.alternative = alternative;
+        }
+
+        @Override
+        public <K> Stream<K> keys(DynamicOps<K> ops) {
+            return Stream.concat(codec.keys(ops), alternative.keys(ops)).distinct();
+        }
+
+        @Override
+        public <K> DataResult<T> decode(DynamicOps<K> ops, MapLike<K> input) {
+            DataResult<T> result = codec.decode(ops, input);
+            return result.error().isEmpty() ? result : alternative.decode(ops, input);
+        }
+
+        @Override
+        public <K> RecordBuilder<K> encode(T input, DynamicOps<K> ops, RecordBuilder<K> prefix) {
+            //Note: The first encode is only a probe and its builder is consumed, so the successful codec is encoded a second time to apply it for real
+            DataResult<K> probe = codec.encode(input, ops, prefix).build(ops.empty());
+            return probe.error().isEmpty() ? codec.encode(input, ops, prefix) : alternative.encode(input, ops, prefix);
+        }
+
+        @Override
+        public String toString() {
+            return "AlternativeMapCodec[" + codec + ", " + alternative + "]";
+        }
     }
 
     @Override

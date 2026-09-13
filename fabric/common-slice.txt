@@ -183,3 +183,7 @@ mekanism/common/recipe/lookup/cache/type/FluidInputCache.java
 mekanism/common/recipe/lookup/cache/type/IInputCache.java
 mekanism/common/recipe/lookup/cache/type/ItemInputCache.java
 mekanism/common/registries/MekanismChemicalIngredientTypes.java
+mekanism/common/recipe/WrappedShapedRecipe.java
+mekanism/common/recipe/serializer/MekanismRecipeSerializer.java
+mekanism/common/recipe/serializer/RotaryRecipeSerializer.java
+mekanism/common/recipe/serializer/SawmillRecipeSerializer.java
