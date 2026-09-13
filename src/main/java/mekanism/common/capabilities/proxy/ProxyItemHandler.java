@@ -31,37 +31,37 @@ public class ProxyItemHandler extends ProxyHandler implements ISidedItemHandler 
 
     @Override
     public int getSlots(@Nullable Direction side) {
-        return inventory.getSlots(this.side);
+        return isRevoked() ? 0 : inventory.getSlots(this.side);
     }
 
     @Override
     public ItemStack getStackInSlot(int slot, @Nullable Direction side) {
-        return inventory.getStackInSlot(slot, this.side);
+        return isRevoked() ? ItemStack.EMPTY : inventory.getStackInSlot(slot, this.side);
     }
 
     @Override
     public ItemStack insertItem(int slot, ItemStack stack, @Nullable Direction side, Action action) {
-        return readOnlyInsert() ? stack : inventory.insertItem(slot, stack, this.side, action);
+        return isRevoked() || readOnlyInsert() ? stack : inventory.insertItem(slot, stack, this.side, action);
     }
 
     @Override
     public ItemStack extractItem(int slot, int amount, @Nullable Direction side, Action action) {
-        return readOnlyExtract() ? ItemStack.EMPTY : inventory.extractItem(slot, amount, this.side, action);
+        return isRevoked() || readOnlyExtract() ? ItemStack.EMPTY : inventory.extractItem(slot, amount, this.side, action);
     }
 
     @Override
     public int getSlotLimit(int slot, @Nullable Direction side) {
-        return inventory.getSlotLimit(slot, this.side);
+        return isRevoked() ? 0 : inventory.getSlotLimit(slot, this.side);
     }
 
     @Override
     public boolean isItemValid(int slot, ItemStack stack, @Nullable Direction side) {
-        return !readOnly || inventory.isItemValid(slot, stack, this.side);
+        return !isRevoked() && (!readOnly || inventory.isItemValid(slot, stack, this.side));
     }
 
     @Override
     public void setStackInSlot(int slot, ItemStack stack, @Nullable Direction side) {
-        if (!readOnly) {
+        if (!readOnly && !isRevoked()) {
             inventory.setStackInSlot(slot, stack, this.side);
         }
     }

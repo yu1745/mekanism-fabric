@@ -8,7 +8,9 @@ import java.util.Map;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.energy.IEnergyContainer;
 import mekanism.api.energy.IMekanismStrictEnergyHandler;
+import mekanism.api.energy.IStrictEnergyHandler;
 import mekanism.common.capabilities.holder.energy.IEnergyContainerHolder;
+import mekanism.common.capabilities.proxy.ProxyStrictEnergyHandler;
 import mekanism.common.util.UnitDisplayUtils;
 import mekanism.fabric.energy.FabricEnergyLookup;
 import mekanism.fabric.energy.FabricEnergyStorage;
@@ -24,10 +26,10 @@ import team.reborn.energy.api.EnergyStorage;
  * provider in this port yet, so no strict-energy lookup identity is invented here. The Joules domain remains authoritative in {@link #getContainers(Direction)}
  * and on the internal base handler, and the external view converts through the configured
  * {@link UnitDisplayUtils.EnergyUnit#FORGE_ENERGY FORGE_ENERGY} conversion.</li>
- * <li>The base handler surface is narrowed from the official {@link ISidedStrictEnergyHandler} to {@link IMekanismStrictEnergyHandler}, which the only current
- * consumer ({@code TileEntityMekanism}) implements.</li>
- * <li>The null side is internal and deliberately exposes no external EnergyStorage, so the official null-side read-only cache has no port counterpart; internal
- * Joules access stays on the base handler itself.</li>
+ * <li>The base handler surface is narrowed from the official {@code ISidedStrictEnergyHandler} to {@link IMekanismStrictEnergyHandler}, which the audited deferred
+ * consumers ({@code TileEntityMekanism} and {@code TileEntityUniversalCable} with its {@code DynamicStrictEnergyHandler}) implement.</li>
+ * <li>The null side is internal and deliberately exposes no external EnergyStorage; the official null-side read-only domain access is kept explicit through
+ * {@link #getReadOnlyHandler()} instead of an external null-side cache. Internal mutable Joules access stays on the base handler itself.</li>
  * <li>Cached external views are revoked (permanently fail closed, including the reverse stableHandler unwrap route) before their cache entries are removed;
  * transaction rollback captured before invalidation still restores through the view itself.</li>
  * </ul>
@@ -40,6 +42,8 @@ public class EnergyHandlerManager implements ICapabilityHandlerManager<IEnergyCo
     private final boolean canHandle;
     @Nullable
     private final IEnergyContainerHolder holder;
+    @Nullable
+    private ProxyStrictEnergyHandler readOnlyHandler;
 
     public EnergyHandlerManager(@Nullable IEnergyContainerHolder holder, IMekanismStrictEnergyHandler baseHandler) {
         this.holder = holder;
@@ -104,15 +108,40 @@ public class EnergyHandlerManager implements ICapabilityHandlerManager<IEnergyCo
         return (T) result;
     }
 
+    /**
+     * Lazily gets and caches the internal, read-only Joules-domain view (official null-side semantics: reads live through the base handler in exact Joules, all
+     * writes and transfers denied). This is Mekanism-internal access, deliberately separate from the external null-side rejection, and invents no strict-energy
+     * external lookup identity.
+     *
+     * @implNote The cached view is revoked and dropped by {@link #invalidate} on the null side and by {@link #invalidateAll}; the raw base handler stays live
+     *         for fresh views and rollback.
+     */
+    public IStrictEnergyHandler getReadOnlyHandler() {
+        if (readOnlyHandler == null) {
+            readOnlyHandler = new ProxyStrictEnergyHandler(baseHandler, null, holder);
+        }
+        return readOnlyHandler;
+    }
+
     @Override
     public void invalidate(BlockApiLookup<?, @Nullable Direction> capability, @Nullable Direction side) {
         //Note: We don't invalidate the base handler as it is still valid regardless and is just a wrapper with the holder
         // removing containers when they shouldn't be accessible, so we only revoke the cached exposed views
-        if (side != null) {
-            Map<BlockApiLookup<?, @Nullable Direction>, Object> cachedSide = cachedCapabilities.get(side);
-            if (cachedSide != null) {
-                revokeCached(cachedSide.remove(capability));
+        if (capability != EnergyStorage.SIDED) {
+            //An invalidation for an identity this manager does not support must never revoke unrelated cached views
+            return;
+        }
+        if (side == null) {
+            //The internal read-only domain view shares the null-side owner lifetime
+            if (readOnlyHandler != null) {
+                readOnlyHandler.revoke();
+                readOnlyHandler = null;
             }
+            return;
+        }
+        Map<BlockApiLookup<?, @Nullable Direction>, Object> cachedSide = cachedCapabilities.get(side);
+        if (cachedSide != null) {
+            revokeCached(cachedSide.remove(capability));
         }
     }
 
@@ -120,6 +149,10 @@ public class EnergyHandlerManager implements ICapabilityHandlerManager<IEnergyCo
     public void invalidateAll() {
         //Note: We don't invalidate the base handler as it is still valid regardless and is just a wrapper with the holder
         // removing containers when they shouldn't be accessible, so we only revoke the cached exposed views
+        if (readOnlyHandler != null) {
+            readOnlyHandler.revoke();
+            readOnlyHandler = null;
+        }
         cachedCapabilities.values().forEach(cache -> {
             cache.values().forEach(EnergyHandlerManager::revokeCached);
             cache.clear();

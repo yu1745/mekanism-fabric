@@ -20,48 +20,48 @@ public class ProxyStrictEnergyHandler extends ProxyHandler implements IStrictEne
 
     @Override
     public int getEnergyContainerCount() {
-        return energyHandler.getEnergyContainerCount(side);
+        return isRevoked() ? 0 : energyHandler.getEnergyContainerCount(side);
     }
 
     @Override
     public long getEnergy(int container) {
-        return energyHandler.getEnergy(container, side);
+        return isRevoked() ? 0 : energyHandler.getEnergy(container, side);
     }
 
     @Override
     public void setEnergy(int container, long energy) {
-        if (!readOnly) {
+        if (!readOnly && !isRevoked()) {
             energyHandler.setEnergy(container, energy, side);
         }
     }
 
     @Override
     public long getMaxEnergy(int container) {
-        return energyHandler.getMaxEnergy(container, side);
+        return isRevoked() ? 0 : energyHandler.getMaxEnergy(container, side);
     }
 
     @Override
     public long getNeededEnergy(int container) {
-        return energyHandler.getNeededEnergy(container, side);
+        return isRevoked() ? 0 : energyHandler.getNeededEnergy(container, side);
     }
 
     @Override
     public long insertEnergy(int container, long amount, Action action) {
-        return readOnlyInsert() ? amount : energyHandler.insertEnergy(container, amount, side, action);
+        return isRevoked() || readOnlyInsert() ? amount : energyHandler.insertEnergy(container, amount, side, action);
     }
 
     @Override
     public long extractEnergy(int container, long amount, Action action) {
-        return readOnlyExtract() ? 0L : energyHandler.extractEnergy(container, amount, side, action);
+        return isRevoked() || readOnlyExtract() ? 0L : energyHandler.extractEnergy(container, amount, side, action);
     }
 
     @Override
     public long insertEnergy(long amount, Action action) {
-        return readOnlyInsert() ? amount : energyHandler.insertEnergy(amount, side, action);
+        return isRevoked() || readOnlyInsert() ? amount : energyHandler.insertEnergy(amount, side, action);
     }
 
     @Override
     public long extractEnergy(long amount, Action action) {
-        return readOnlyExtract() ? 0L : energyHandler.extractEnergy(amount, side, action);
+        return isRevoked() || readOnlyExtract() ? 0L : energyHandler.extractEnergy(amount, side, action);
     }
 }

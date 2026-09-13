@@ -19,7 +19,9 @@ import mekanism.api.chemical.ISidedChemicalHandler;
 import mekanism.api.chemical.BasicChemicalTank;
 import mekanism.api.energy.IEnergyContainer;
 import mekanism.api.energy.IMekanismStrictEnergyHandler;
+import mekanism.api.energy.IStrictEnergyHandler;
 import mekanism.api.fluid.FluidStack;
+import mekanism.api.fluid.IExtendedFluidHandler;
 import mekanism.api.fluid.IExtendedFluidTank;
 import mekanism.api.fluid.IMekanismFluidHandler;
 import mekanism.api.fluid.ISidedFluidHandler;
@@ -38,8 +40,12 @@ import mekanism.common.capabilities.holder.fluid.IFluidTankHolder;
 import mekanism.common.capabilities.holder.heat.IHeatCapacitorHolder;
 import mekanism.common.capabilities.holder.slot.IInventorySlotHolder;
 import mekanism.common.capabilities.proxy.ProxyChemicalHandler;
+import mekanism.common.capabilities.proxy.ProxyFluidHandler;
 import mekanism.common.capabilities.proxy.ProxyHeatHandler;
+import mekanism.common.capabilities.proxy.ProxyItemHandler;
+import mekanism.common.capabilities.proxy.ProxyStrictEnergyHandler;
 import mekanism.common.inventory.slot.BasicInventorySlot;
+import mekanism.common.registries.MekanismChemicals;
 import mekanism.common.util.UnitDisplayUtils;
 import mekanism.fabric.energy.FabricEnergyStorage;
 import mekanism.fabric.fluid.FabricFluidStorage;
@@ -54,6 +60,8 @@ import net.minecraft.SharedConstants;
 import net.minecraft.core.Direction;
 import net.minecraft.server.Bootstrap;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.material.Fluids;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -102,6 +110,37 @@ class HandlerManagerTest {
         assertInstanceOf(FabricItemStorage.class, recreated);
         assertNotSame(retained, recreated);
 
+        //Explicit internal read-only domain access, separate from the external null-side rejection
+        ISidedItemHandler readOnlyDomain = manager.getReadOnlyHandler();
+        assertInstanceOf(ProxyItemHandler.class, readOnlyDomain);
+        assertSame(readOnlyDomain, manager.getReadOnlyHandler());
+        //Live reads go through the base handler on the internal null side
+        assertEquals(2, readOnlyDomain.getSlots(null));
+        assertEquals(ItemStack.EMPTY, readOnlyDomain.getStackInSlot(0, null));
+        assertEquals(tile.slots.get(0).getLimit(ItemStack.EMPTY), readOnlyDomain.getSlotLimit(0, null));
+        //Writes and transfers are denied without reaching the base handler
+        ItemStack diamonds = new ItemStack(Items.DIAMOND, 4);
+        assertSame(diamonds, readOnlyDomain.insertItem(0, diamonds, null, Action.EXECUTE));
+        assertEquals(ItemStack.EMPTY, readOnlyDomain.extractItem(0, 4, null, Action.EXECUTE));
+        readOnlyDomain.setStackInSlot(0, diamonds, null);
+        assertEquals(0, tile.setStackInSlotCalls);
+
+        //Relevant invalidation revokes the cached read-only domain view and replaces it with a fresh live view
+        manager.invalidate(ItemStorage.SIDED, null);
+        assertEquals(0, readOnlyDomain.getSlots(null));
+        assertEquals(0, readOnlyDomain.getSlotLimit(0, null));
+        assertSame(diamonds, readOnlyDomain.insertItem(0, diamonds, null, Action.EXECUTE));
+        assertEquals(0, tile.setStackInSlotCalls);
+        ISidedItemHandler recreatedReadOnly = manager.getReadOnlyHandler();
+        assertNotSame(readOnlyDomain, recreatedReadOnly);
+        assertEquals(2, recreatedReadOnly.getSlots(null));
+        //Wrong lookup identity invalidation must not revoke the unrelated read-only domain view
+        manager.invalidate(FluidStorage.SIDED, null);
+        assertEquals(2, recreatedReadOnly.getSlots(null));
+        //invalidateAll revokes the cached read-only domain view alongside everything else
+        manager.invalidateAll();
+        assertEquals(0, recreatedReadOnly.getSlots(null));
+
         ItemHandlerManager holderless = new ItemHandlerManager(null, tile);
         assertFalse(holderless.canHandle());
         assertTrue(holderless.getContainers(Direction.NORTH).isEmpty());
@@ -121,11 +160,34 @@ class HandlerManagerTest {
         assertNull(manager.resolve(ItemStorage.SIDED, Direction.NORTH));
         assertNull(manager.resolve(null, Direction.NORTH));
 
+        //Explicit internal read-only domain access, separate from the external null-side rejection
+        IExtendedFluidHandler readOnlyDomain = manager.getReadOnlyHandler();
+        assertInstanceOf(ProxyFluidHandler.class, readOnlyDomain);
+        assertSame(readOnlyDomain, manager.getReadOnlyHandler());
+        //Live reads go through the base handler on the internal null side
+        assertEquals(1, readOnlyDomain.getTanks());
+        assertEquals(FluidStack.EMPTY, readOnlyDomain.getFluidInTank(0));
+        assertEquals(1_000, readOnlyDomain.getTankCapacity(0));
+        //Writes and transfers are denied without reaching the base handler
+        FluidStack water = new FluidStack(Fluids.WATER, 100);
+        assertSame(water, readOnlyDomain.insertFluid(water, Action.EXECUTE));
+        assertEquals(FluidStack.EMPTY, readOnlyDomain.extractFluid(100, Action.EXECUTE));
+        readOnlyDomain.setFluidInTank(0, water);
+        assertEquals(0, tile.setFluidInTankCalls);
+
         manager.invalidateAll();
         assertFalse(view.supportsInsertion());
         assertFalse(view.supportsExtraction());
+        //The cached read-only domain view was revoked alongside everything else
+        assertEquals(0, readOnlyDomain.getTanks());
+        assertEquals(0, readOnlyDomain.getTankCapacity(0));
+        assertSame(water, readOnlyDomain.insertFluid(water, Action.EXECUTE));
+        assertEquals(0, tile.setFluidInTankCalls);
         Storage<FluidVariant> recreated = manager.resolve(FluidStorage.SIDED, Direction.NORTH);
         assertNotSame(view, recreated);
+        IExtendedFluidHandler recreatedReadOnly = manager.getReadOnlyHandler();
+        assertNotSame(readOnlyDomain, recreatedReadOnly);
+        assertEquals(1, recreatedReadOnly.getTanks());
     }
 
     @Test
@@ -177,6 +239,41 @@ class HandlerManagerTest {
         }
         assertEquals(UnitDisplayUtils.EnergyUnit.FORGE_ENERGY.convertFrom(4), tile.container.getEnergy());
 
+        //Explicit internal read-only Joules-domain access, separate from the external null-side rejection
+        IStrictEnergyHandler readOnlyDomain = manager.getReadOnlyHandler();
+        assertInstanceOf(ProxyStrictEnergyHandler.class, readOnlyDomain);
+        assertSame(readOnlyDomain, manager.getReadOnlyHandler());
+        //Live reads stay in exact Joules with no FE conversion roundtrip
+        assertEquals(1, readOnlyDomain.getEnergyContainerCount());
+        assertEquals(tile.container.getEnergy(), readOnlyDomain.getEnergy(0));
+        assertEquals(tile.container.getMaxEnergy(), readOnlyDomain.getMaxEnergy(0));
+        assertEquals(tile.container.getNeeded(), readOnlyDomain.getNeededEnergy(0));
+        //Writes and transfers are denied without reaching the base handler
+        readOnlyDomain.setEnergy(0, 50);
+        assertEquals(UnitDisplayUtils.EnergyUnit.FORGE_ENERGY.convertFrom(4), tile.container.getEnergy());
+        assertEquals(5, readOnlyDomain.insertEnergy(0, 5, Action.EXECUTE));
+        assertEquals(5, readOnlyDomain.insertEnergy(5, Action.EXECUTE));
+        assertEquals(0, readOnlyDomain.extractEnergy(0, 5, Action.EXECUTE));
+        assertEquals(0, readOnlyDomain.extractEnergy(5, Action.EXECUTE));
+        assertEquals(UnitDisplayUtils.EnergyUnit.FORGE_ENERGY.convertFrom(4), tile.container.getEnergy());
+
+        //Relevant invalidation revokes the cached read-only domain view and replaces it with a fresh live view
+        manager.invalidate(EnergyStorage.SIDED, null);
+        assertEquals(0, readOnlyDomain.getEnergyContainerCount());
+        assertEquals(0, readOnlyDomain.getEnergy(0));
+        assertEquals(5, readOnlyDomain.insertEnergy(0, 5, Action.EXECUTE));
+        assertEquals(UnitDisplayUtils.EnergyUnit.FORGE_ENERGY.convertFrom(4), tile.container.getEnergy());
+        IStrictEnergyHandler recreatedReadOnly = manager.getReadOnlyHandler();
+        assertNotSame(readOnlyDomain, recreatedReadOnly);
+        assertEquals(tile.container.getEnergy(), recreatedReadOnly.getEnergy(0));
+        //Wrong lookup identity invalidation must not revoke the unrelated read-only domain view
+        manager.invalidate(ItemStorage.SIDED, null);
+        assertEquals(tile.container.getEnergy(), recreatedReadOnly.getEnergy(0));
+        //invalidateAll revokes the cached read-only domain view alongside everything else
+        manager.invalidateAll();
+        assertEquals(0, recreatedReadOnly.getEnergy(0));
+        assertEquals(0, recreatedReadOnly.getEnergyContainerCount());
+
         EnergyHandlerManager holderless = new EnergyHandlerManager(null, tile);
         assertFalse(holderless.canHandle());
         assertTrue(holderless.getContainers(Direction.NORTH).isEmpty());
@@ -198,8 +295,54 @@ class HandlerManagerTest {
         assertNull(chemicalManager.resolve(ChemicalHandlerManager.CHEMICAL_HANDLER, Direction.SOUTH));
         assertNull(chemicalManager.resolve(HeatHandlerManager.HEAT_HANDLER, Direction.NORTH));
         assertNull(chemicalManager.resolve(null, Direction.NORTH));
+
+        //Live proxies actually consult the owner for reads and mutations before invalidation
+        assertEquals(1, sideProxy.getChemicalTanks());
+        assertEquals(ChemicalStack.EMPTY, sideProxy.getChemicalInTank(0));
+        assertEquals(1, chemicalTile.getChemicalInTankCalls);
+        sideProxy.setChemicalInTank(0, ChemicalStack.EMPTY);
+        assertEquals(1, chemicalTile.setChemicalInTankCalls);
+        ChemicalStack insertProbe = new ChemicalStack(MekanismChemicals.HYDROGEN.get(), 10);
+        assertEquals(ChemicalStack.EMPTY, sideProxy.insertChemical(0, insertProbe, Action.EXECUTE));
+        assertEquals(1, chemicalTile.insertChemicalCalls);
+        assertEquals(ChemicalStack.EMPTY, sideProxy.extractChemical(0, 10, Action.EXECUTE));
+        assertEquals(1, chemicalTile.extractChemicalCalls);
+
+        //Wrong lookup identity invalidation must not revoke the unrelated cached views
+        chemicalManager.invalidate(HeatHandlerManager.HEAT_HANDLER, Direction.NORTH);
+        chemicalManager.invalidate(ItemStorage.SIDED, null);
+        assertSame(sideProxy, chemicalManager.resolve(ChemicalHandlerManager.CHEMICAL_HANDLER, Direction.NORTH));
+        assertEquals(ChemicalStack.EMPTY, sideProxy.getChemicalInTank(0));
+        assertEquals(2, chemicalTile.getChemicalInTankCalls);
+
+        //A real invalidation revokes the retained side proxy before dropping its cache entry
+        chemicalManager.invalidate(ChemicalHandlerManager.CHEMICAL_HANDLER, Direction.NORTH);
+        assertEquals(0, sideProxy.getChemicalTanks());
+        assertEquals(0, sideProxy.getChemicalTankCapacity(0));
+        assertEquals(ChemicalStack.EMPTY, sideProxy.getChemicalInTank(0));
+        assertEquals(2, chemicalTile.getChemicalInTankCalls);
+        sideProxy.setChemicalInTank(0, ChemicalStack.EMPTY);
+        assertEquals(1, chemicalTile.setChemicalInTankCalls);
+        assertSame(insertProbe, sideProxy.insertChemical(0, insertProbe, Action.EXECUTE));
+        assertEquals(ChemicalStack.EMPTY, sideProxy.extractChemical(0, 10, Action.EXECUTE));
+        assertEquals(1, chemicalTile.insertChemicalCalls);
+        assertEquals(1, chemicalTile.extractChemicalCalls);
+        //The cache entry was dropped and a fresh live proxy replaces the revoked one
+        IChemicalHandler freshSideProxy = chemicalManager.resolve(ChemicalHandlerManager.CHEMICAL_HANDLER, Direction.NORTH);
+        assertNotSame(sideProxy, freshSideProxy);
+        assertEquals(1, freshSideProxy.getChemicalTanks());
+
+        //The null-side read-only proxy is revoked by its own relevant invalidation
+        chemicalManager.invalidate(ChemicalHandlerManager.CHEMICAL_HANDLER, null);
+        assertEquals(0, readOnlyProxy.getChemicalTanks());
+        assertEquals(ChemicalStack.EMPTY, readOnlyProxy.getChemicalInTank(0));
+        assertEquals(2, chemicalTile.getChemicalInTankCalls);
+        readOnlyProxy.setChemicalInTank(0, ChemicalStack.EMPTY);
+        assertEquals(1, chemicalTile.setChemicalInTankCalls);
+        assertNotSame(readOnlyProxy, chemicalManager.resolve(ChemicalHandlerManager.CHEMICAL_HANDLER, null));
+
         chemicalManager.invalidateAll();
-        assertNotSame(sideProxy, chemicalManager.resolve(ChemicalHandlerManager.CHEMICAL_HANDLER, Direction.NORTH));
+        assertEquals(0, freshSideProxy.getChemicalTanks());
 
         HeatTile heatTile = new HeatTile();
         HeatHandlerManager heatManager = new HeatHandlerManager(heatTile, heatTile);
@@ -210,17 +353,42 @@ class HandlerManagerTest {
         IHeatHandler readOnlyHeat = heatManager.resolve(HeatHandlerManager.HEAT_HANDLER, null);
         assertInstanceOf(ProxyHeatHandler.class, readOnlyHeat);
         assertEquals(1, readOnlyHeat.getHeatCapacitorCount());
+        assertEquals(300, readOnlyHeat.getTemperature(0));
         readOnlyHeat.handleHeat(0, 5);
         assertEquals(0, heatTile.handleHeatCalls);
+        //Live side proxy actually consults the owner
+        assertEquals(300, heatProxy.getTemperature(0));
         heatProxy.handleHeat(0, 5);
         assertEquals(1, heatTile.handleHeatCalls);
         assertNull(heatManager.resolve(ChemicalHandlerManager.CHEMICAL_HANDLER, Direction.NORTH));
         assertNull(heatManager.resolve(null, Direction.NORTH));
+
+        //Wrong lookup identity invalidation must not revoke the unrelated cached heat views
+        heatManager.invalidate(ChemicalHandlerManager.CHEMICAL_HANDLER, Direction.NORTH);
+        assertSame(heatProxy, heatManager.resolve(HeatHandlerManager.HEAT_HANDLER, Direction.NORTH));
+        assertEquals(300, heatProxy.getTemperature(0));
+        //A real invalidation revokes the retained heat proxy: no owner reads, no owner mutations
+        heatManager.invalidate(HeatHandlerManager.HEAT_HANDLER, Direction.NORTH);
+        assertEquals(0, heatProxy.getHeatCapacitorCount());
+        assertEquals(0, heatProxy.getTemperature(0));
+        assertEquals(0, heatProxy.getTotalTemperature());
+        heatProxy.handleHeat(0, 5);
+        heatProxy.handleHeat(5);
+        assertEquals(1, heatTile.handleHeatCalls);
+        //The null-side read-only proxy is revoked alongside its own invalidation and invalidateAll
+        heatManager.invalidate(HeatHandlerManager.HEAT_HANDLER, null);
+        assertEquals(0, readOnlyHeat.getHeatCapacitorCount());
+        assertEquals(0, readOnlyHeat.getTemperature(0));
+        heatManager.invalidateAll();
+        IHeatHandler freshHeatProxy = heatManager.resolve(HeatHandlerManager.HEAT_HANDLER, Direction.NORTH);
+        assertNotSame(heatProxy, freshHeatProxy);
+        assertEquals(300, freshHeatProxy.getTemperature(0));
     }
 
     private static final class ItemTile implements IMekanismInventory, IInventorySlotHolder {
         private final List<IInventorySlot> slots = List.of(BasicInventorySlot.at(null, 0, 0), BasicInventorySlot.at(null, 1, 1));
         private final Set<Direction> exposed = EnumSet.of(Direction.NORTH, Direction.UP);
+        private int setStackInSlotCalls;
 
         @Override
         public boolean hasInventory() {
@@ -237,20 +405,20 @@ class HandlerManagerTest {
         public void onContentsChanged() {
         }
 
-        //The remaining ISidedItemHandler surface is never reached through the manager/expose path
+        //The remaining ISidedItemHandler surface backs the internal read-only domain view
         @Override
         public void setStackInSlot(int slot, ItemStack stack, @Nullable Direction side) {
-            throw new UnsupportedOperationException();
+            setStackInSlotCalls++;
         }
 
         @Override
         public int getSlots(@Nullable Direction side) {
-            throw new UnsupportedOperationException();
+            return getInventorySlots(side).size();
         }
 
         @Override
         public ItemStack getStackInSlot(int slot, @Nullable Direction side) {
-            throw new UnsupportedOperationException();
+            return getInventorySlots(side).get(slot).getStack();
         }
 
         @Override
@@ -265,17 +433,18 @@ class HandlerManagerTest {
 
         @Override
         public int getSlotLimit(int slot, @Nullable Direction side) {
-            throw new UnsupportedOperationException();
+            return getInventorySlots(side).get(slot).getLimit(ItemStack.EMPTY);
         }
 
         @Override
         public boolean isItemValid(int slot, ItemStack stack, @Nullable Direction side) {
-            throw new UnsupportedOperationException();
+            return true;
         }
     }
 
     private static final class FluidTile implements IMekanismFluidHandler {
         private final IExtendedFluidTank tank = BasicFluidTank.create(1_000, null);
+        private int setFluidInTankCalls;
 
         @Nullable
         private IFluidTankHolder holder;
@@ -295,7 +464,8 @@ class HandlerManagerTest {
 
         @Override
         public List<IExtendedFluidTank> getFluidTanks(@Nullable Direction side) {
-            return side == Direction.NORTH ? List.of(tank) : List.of();
+            //Internal null-side access sees everything, matching real tile semantics
+            return side == null || side == Direction.NORTH ? List.of(tank) : List.of();
         }
 
         @Override
@@ -309,22 +479,22 @@ class HandlerManagerTest {
 
         @Override
         public FluidStack getFluidInTank(int tank, @Nullable Direction side) {
-            throw new UnsupportedOperationException();
+            return getFluidTanks(side).get(tank).getFluid();
         }
 
         @Override
         public void setFluidInTank(int tank, FluidStack stack, @Nullable Direction side) {
-            throw new UnsupportedOperationException();
+            setFluidInTankCalls++;
         }
 
         @Override
         public int getTankCapacity(int tank, @Nullable Direction side) {
-            throw new UnsupportedOperationException();
+            return getFluidTanks(side).get(tank).getCapacity();
         }
 
         @Override
         public boolean isFluidValid(int tank, FluidStack stack, @Nullable Direction side) {
-            throw new UnsupportedOperationException();
+            return true;
         }
 
         @Override
@@ -360,7 +530,8 @@ class HandlerManagerTest {
 
         @Override
         public List<IEnergyContainer> getEnergyContainers(@Nullable Direction side) {
-            return side == exposedSide ? List.of(container) : List.of();
+            //Internal null-side access sees everything, matching real tile semantics
+            return side == null || side == exposedSide ? List.of(container) : List.of();
         }
 
         @Override
@@ -370,6 +541,10 @@ class HandlerManagerTest {
 
     private static final class ChemicalTile implements ISidedChemicalHandler, IChemicalTankHolder {
         private final IChemicalTank tank = (IChemicalTank) BasicChemicalTank.createAllValid(1_000, null);
+        private int getChemicalInTankCalls;
+        private int setChemicalInTankCalls;
+        private int insertChemicalCalls;
+        private int extractChemicalCalls;
 
         @Override
         public List<IChemicalTank> getTanks(@Nullable Direction side) {
@@ -383,32 +558,35 @@ class HandlerManagerTest {
 
         @Override
         public ChemicalStack getChemicalInTank(int tank, @Nullable Direction side) {
-            throw new UnsupportedOperationException();
+            getChemicalInTankCalls++;
+            return ChemicalStack.EMPTY;
         }
 
         @Override
         public void setChemicalInTank(int tank, ChemicalStack stack, @Nullable Direction side) {
-            throw new UnsupportedOperationException();
+            setChemicalInTankCalls++;
         }
 
         @Override
         public long getChemicalTankCapacity(int tank, @Nullable Direction side) {
-            throw new UnsupportedOperationException();
+            return getTanks(side).get(tank).getCapacity();
         }
 
         @Override
         public boolean isValid(int tank, ChemicalStack stack, @Nullable Direction side) {
-            throw new UnsupportedOperationException();
+            return true;
         }
 
         @Override
         public ChemicalStack insertChemical(int tank, ChemicalStack stack, @Nullable Direction side, Action action) {
-            throw new UnsupportedOperationException();
+            insertChemicalCalls++;
+            return ChemicalStack.EMPTY;
         }
 
         @Override
         public ChemicalStack extractChemical(int tank, long amount, @Nullable Direction side, Action action) {
-            throw new UnsupportedOperationException();
+            extractChemicalCalls++;
+            return ChemicalStack.EMPTY;
         }
     }
 

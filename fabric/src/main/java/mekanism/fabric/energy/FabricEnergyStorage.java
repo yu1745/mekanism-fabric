@@ -26,8 +26,9 @@ import team.reborn.energy.api.EnergyStorage;
  *
  * <p>Permanent lifetime revocation: {@link #invalidate()} makes this view fail closed forever. Retained references
  * can no longer transfer or read their old owner (queries and transfers report defaults and zero), and the reverse
- * stableHandler unwrap route stops returning the internal handler. Transaction rollback captured before
- * invalidation still restores the pre-invalidation energy through this view and is never blocked by the guard.
+ * stableHandler unwrap route stops returning the internal handler. A Joules-domain handler retained from the unwrap
+ * route before invalidation fails closed the same way, while the raw backing handler stays live so transaction
+ * rollback captured before invalidation still restores through this view and is never blocked by the guard.
  */
 public final class FabricEnergyStorage extends SnapshotParticipant<long[]> implements EnergyStorage {
 
@@ -37,6 +38,7 @@ public final class FabricEnergyStorage extends SnapshotParticipant<long[]> imple
     private final BooleanSupplier insertionAllowed;
     private final BooleanSupplier extractionAllowed;
     private final int containerCount;
+    private final StableJoulesHandler stableHandler;
     private volatile boolean invalidated;
 
     FabricEnergyStorage(IStrictEnergyHandler handler, Direction exposureSide, IEnergyConversion conversion) {
@@ -57,6 +59,8 @@ public final class FabricEnergyStorage extends SnapshotParticipant<long[]> imple
         if (containerCount < 0) {
             throw new IllegalArgumentException("Energy container count may not be negative: " + containerCount);
         }
+        //Created eagerly so the reverse unwrap route is one stable object for this storage's whole lifetime
+        this.stableHandler = new StableJoulesHandler(this.handler);
     }
 
     /**
@@ -66,6 +70,8 @@ public final class FabricEnergyStorage extends SnapshotParticipant<long[]> imple
      */
     public void invalidate() {
         invalidated = true;
+        //Close the retained reverse-unwrap facade as well; the raw backing handler stays untouched for readSnapshot rollback
+        stableHandler.revoke();
     }
 
     boolean isInvalidated() {
@@ -282,8 +288,7 @@ public final class FabricEnergyStorage extends SnapshotParticipant<long[]> imple
             //A retained view must never hand out its old owner's live internal handler after invalidation
             return null;
         }
-        checkStableContainerCount();
-        return handler;
+        return stableHandler;
     }
 
     private void checkStableContainerCount() {
@@ -313,5 +318,77 @@ public final class FabricEnergyStorage extends SnapshotParticipant<long[]> imple
             return total;
         }
         return value > Long.MAX_VALUE - total ? Long.MAX_VALUE : total + value;
+    }
+
+    /**
+     * Stable Joules-domain facade handed out through the reverse {@code stableHandler()} unwrap route. Delegation is exact Joules with no conversion roundtrip:
+     * the facade forwards every domain read, setter, and transfer straight to the same raw side proxy this storage itself consults. Revocation (tied to this
+     * storage's lifetime via {@link #invalidate()}) fails the facade closed permanently: reads report empty-handler defaults and setters/transfers are denied
+     * without consulting the old owner. The raw backing handler itself is never revoked here, so transaction snapshots captured before invalidation still
+     * restore through {@code readSnapshot}.
+     */
+    private static final class StableJoulesHandler implements IStrictEnergyHandler {
+
+        private final IStrictEnergyHandler delegate;
+        private volatile boolean revoked;
+
+        private StableJoulesHandler(IStrictEnergyHandler delegate) {
+            this.delegate = delegate;
+        }
+
+        private void revoke() {
+            revoked = true;
+        }
+
+        @Override
+        public int getEnergyContainerCount() {
+            return isRevoked() ? 0 : delegate.getEnergyContainerCount();
+        }
+
+        @Override
+        public long getEnergy(int container) {
+            return isRevoked() ? 0 : delegate.getEnergy(container);
+        }
+
+        @Override
+        public void setEnergy(int container, long energy) {
+            if (!isRevoked()) {
+                delegate.setEnergy(container, energy);
+            }
+        }
+
+        @Override
+        public long getMaxEnergy(int container) {
+            return isRevoked() ? 0 : delegate.getMaxEnergy(container);
+        }
+
+        @Override
+        public long getNeededEnergy(int container) {
+            return isRevoked() ? 0 : delegate.getNeededEnergy(container);
+        }
+
+        @Override
+        public long insertEnergy(int container, long amount, Action action) {
+            return isRevoked() ? amount : delegate.insertEnergy(container, amount, action);
+        }
+
+        @Override
+        public long extractEnergy(int container, long amount, Action action) {
+            return isRevoked() ? 0 : delegate.extractEnergy(container, amount, action);
+        }
+
+        @Override
+        public long insertEnergy(long amount, Action action) {
+            return isRevoked() ? amount : delegate.insertEnergy(amount, action);
+        }
+
+        @Override
+        public long extractEnergy(long amount, Action action) {
+            return isRevoked() ? 0 : delegate.extractEnergy(amount, action);
+        }
+
+        private boolean isRevoked() {
+            return revoked;
+        }
     }
 }

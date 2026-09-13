@@ -89,15 +89,21 @@ public class BasicSidedCapabilityResolver<HANDLER, SIDED_HANDLER> implements ICa
 
     @Override
     public void invalidate(BlockApiLookup<?, @Nullable Direction> capability, @Nullable Direction side) {
+        if (!supportedCapabilities.contains(capability)) {
+            //Fabric port: an invalidation for a lookup identity this resolver does not support must never revoke unrelated cached views
+            return;
+        }
         if (side == null) {
             if (readOnlyHandler != null) {
                 revokeHandler(readOnlyHandler);
                 readOnlyHandler = null;
             }
         } else {
-            HANDLER handler = handlers.remove(side);
+            HANDLER handler = handlers.get(side);
             if (handler != null) {
+                //Revoke before dropping the cache entry so the retained view is permanently closed against its old owner even if it escapes this resolver
                 revokeHandler(handler);
+                handlers.remove(side);
             }
         }
     }
@@ -115,10 +121,9 @@ public class BasicSidedCapabilityResolver<HANDLER, SIDED_HANDLER> implements ICa
     }
 
     /**
-     * Fabric port hook: invoked on each cached view immediately before it is dropped by {@link #invalidate} or {@link #invalidateAll}, so that owned external views
-     * can permanently fail closed instead of keeping access to their old owner. The default implementation does nothing: the retained chemical and heat domain
-     * proxies intentionally remain live delegates over the unchanged base handler (consulting holder policy live), exactly as in the official design, and they hold
-     * no transaction snapshots or reverse-unwrap route that could outlive invalidation.
+     * Fabric port hook: invoked on each cached view immediately before it is dropped by {@link #invalidate} or {@link #invalidateAll}, so that owned views
+     * permanently fail closed instead of keeping access to their old owner. The default implementation does nothing for resolvers whose exposed views have no
+     * owner-revocation obligation; concrete managers revoke their proxy/transaction views here as required by the owner lifetime contract.
      *
      * @param handler Cached view being dropped
      */

@@ -14,8 +14,9 @@ import org.jetbrains.annotations.Nullable;
  * Helper class to make reading instead of having as messy generics
  *
  * <p>Fabric port: the Mekanism-owned chemical lookup identity replaces the official {@code Capabilities.CHEMICAL.block()} NeoForge capability token, keeping the
- * same {@code mekanism:chemical_handler} id and {@link IChemicalHandler} domain API. The official {@link ProxyChemicalHandler} creator, null-side read-only domain
- * proxy and retained-proxy invalidation semantics are unchanged.</p>
+ * same {@code mekanism:chemical_handler} id and {@link IChemicalHandler} domain API. The official {@link ProxyChemicalHandler} creator and null-side read-only
+ * domain proxy are unchanged; the retained-proxy lifetime is closed by revoking every cached proxy when its cache entry is dropped, so retained references can
+ * no longer read or mutate the removed owner.</p>
  */
 public class ChemicalHandlerManager extends CapabilityHandlerManager<IChemicalTankHolder, IChemicalTank, IChemicalHandler, ISidedChemicalHandler> {
 
@@ -28,5 +29,13 @@ public class ChemicalHandlerManager extends CapabilityHandlerManager<IChemicalTa
 
     public ChemicalHandlerManager(@Nullable IChemicalTankHolder holder, ISidedChemicalHandler baseHandler) {
         super(holder, baseHandler, CHEMICAL_HANDLER, ProxyChemicalHandler::new, IChemicalTankHolder::getTanks);
+    }
+
+    @Override
+    protected void revokeHandler(IChemicalHandler handler) {
+        if (handler instanceof ProxyChemicalHandler proxy) {
+            //Permanently fail close the retained domain proxy against its old owner; the base handler stays live for fresh views
+            proxy.revoke();
+        }
     }
 }

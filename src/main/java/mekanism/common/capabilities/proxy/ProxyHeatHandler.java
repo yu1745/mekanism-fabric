@@ -1,6 +1,7 @@
 package mekanism.common.capabilities.proxy;
 
 import mekanism.api.annotations.NothingNullByDefault;
+import mekanism.api.heat.HeatAPI;
 import mekanism.api.heat.IHeatHandler;
 import mekanism.api.heat.ISidedHeatHandler;
 import mekanism.common.capabilities.holder.IHolder;
@@ -19,49 +20,49 @@ public class ProxyHeatHandler extends ProxyHandler implements IHeatHandler {
 
     @Override
     public int getHeatCapacitorCount() {
-        return heatHandler.getHeatCapacitorCount(side);
+        return isRevoked() ? 0 : heatHandler.getHeatCapacitorCount(side);
     }
 
     @Override
     public double getTemperature(int capacitor) {
-        return heatHandler.getTemperature(capacitor, side);
+        return isRevoked() ? 0 : heatHandler.getTemperature(capacitor, side);
     }
 
     @Override
     public double getInverseConduction(int capacitor) {
-        return heatHandler.getInverseConduction(capacitor, side);
+        return isRevoked() ? HeatAPI.DEFAULT_INVERSE_CONDUCTION : heatHandler.getInverseConduction(capacitor, side);
     }
 
     @Override
     public double getHeatCapacity(int capacitor) {
-        return heatHandler.getHeatCapacity(capacitor, side);
+        return isRevoked() ? 0 : heatHandler.getHeatCapacity(capacitor, side);
     }
 
     @Override
     public void handleHeat(int capacitor, double transfer) {
-        if (!readOnly) {
+        if (!readOnly && !isRevoked()) {
             heatHandler.handleHeat(capacitor, transfer, side);
         }
     }
 
     @Override
     public double getTotalTemperature() {
-        return heatHandler.getTotalTemperature(side);
+        return isRevoked() ? 0 : heatHandler.getTotalTemperature(side);
     }
 
     @Override
     public double getTotalInverseConduction() {
-        return heatHandler.getTotalInverseConductionCoefficient(side);
+        return isRevoked() ? HeatAPI.DEFAULT_INVERSE_CONDUCTION : heatHandler.getTotalInverseConductionCoefficient(side);
     }
 
     @Override
     public double getTotalHeatCapacity() {
-        return heatHandler.getTotalHeatCapacity(side);
+        return isRevoked() ? 0 : heatHandler.getTotalHeatCapacity(side);
     }
 
     @Override
     public void handleHeat(double transfer) {
-        if (!readOnly) {
+        if (!readOnly && !isRevoked()) {
             heatHandler.handleHeat(transfer, side);
         }
     }

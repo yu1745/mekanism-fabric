@@ -23,59 +23,64 @@ public class ProxyFluidHandler extends ProxyHandler implements IExtendedFluidHan
         this.fluidHandler = fluidHandler;
     }
 
+    /**
+     * Fabric port lifetime support: a revoked proxy no longer hands out its old owner; consumers unwrapping a below neighbor's proxy must treat
+     * {@code null} as "not a Mekanism neighbor of the expected type".
+     */
+    @Nullable
     public ISidedFluidHandler getInternalHandler() {
-        return fluidHandler;
+        return isRevoked() ? null : fluidHandler;
     }
 
     @Override
     public int getTanks() {
-        return fluidHandler.getTanks(side);
+        return isRevoked() ? 0 : fluidHandler.getTanks(side);
     }
 
     @Override
     public FluidStack getFluidInTank(int tank) {
-        return fluidHandler.getFluidInTank(tank, side);
+        return isRevoked() ? FluidStack.EMPTY : fluidHandler.getFluidInTank(tank, side);
     }
 
     @Override
     public void setFluidInTank(int tank, FluidStack stack) {
-        if (!readOnly) {
+        if (!readOnly && !isRevoked()) {
             fluidHandler.setFluidInTank(tank, stack, side);
         }
     }
 
     @Override
     public int getTankCapacity(int tank) {
-        return fluidHandler.getTankCapacity(tank, side);
+        return isRevoked() ? 0 : fluidHandler.getTankCapacity(tank, side);
     }
 
     @Override
     public boolean isFluidValid(int tank, FluidStack stack) {
-        return !readOnly || fluidHandler.isFluidValid(tank, stack, side);
+        return !isRevoked() && (!readOnly || fluidHandler.isFluidValid(tank, stack, side));
     }
 
     @Override
     public FluidStack insertFluid(int tank, FluidStack stack, Action action) {
-        return readOnlyInsert() ? stack : fluidHandler.insertFluid(tank, stack, side, action);
+        return isRevoked() || readOnlyInsert() ? stack : fluidHandler.insertFluid(tank, stack, side, action);
     }
 
     @Override
     public FluidStack extractFluid(int tank, int amount, Action action) {
-        return readOnlyExtract() ? FluidStack.EMPTY : fluidHandler.extractFluid(tank, amount, side, action);
+        return isRevoked() || readOnlyExtract() ? FluidStack.EMPTY : fluidHandler.extractFluid(tank, amount, side, action);
     }
 
     @Override
     public FluidStack insertFluid(FluidStack stack, Action action) {
-        return readOnlyInsert() ? stack : fluidHandler.insertFluid(stack, side, action);
+        return isRevoked() || readOnlyInsert() ? stack : fluidHandler.insertFluid(stack, side, action);
     }
 
     @Override
     public FluidStack extractFluid(int amount, Action action) {
-        return readOnlyExtract() ? FluidStack.EMPTY : fluidHandler.extractFluid(amount, side, action);
+        return isRevoked() || readOnlyExtract() ? FluidStack.EMPTY : fluidHandler.extractFluid(amount, side, action);
     }
 
     @Override
     public FluidStack extractFluid(FluidStack stack, Action action) {
-        return readOnlyExtract() ? FluidStack.EMPTY : fluidHandler.extractFluid(stack, side, action);
+        return isRevoked() || readOnlyExtract() ? FluidStack.EMPTY : fluidHandler.extractFluid(stack, side, action);
     }
 }

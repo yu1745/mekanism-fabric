@@ -23,8 +23,13 @@ public class ProxyChemicalHandler extends ProxyHandler implements IChemicalHandl
         this.sidedHandler = sidedHandler;
     }
 
+    /**
+     * Fabric port lifetime support: a revoked proxy no longer hands out its old owner; consumers unwrapping a below neighbor's proxy must treat
+     * {@code null} as "not a Mekanism neighbor of the expected type".
+     */
+    @Nullable
     public ISidedChemicalHandler getInternalHandler() {
-        return sidedHandler;
+        return isRevoked() ? null : sidedHandler;
     }
 
     /**
@@ -32,7 +37,7 @@ public class ProxyChemicalHandler extends ProxyHandler implements IChemicalHandl
      * anywhere else. It is also important to not use this to bypass write access the proxy may limit.
      */
     public List<IChemicalTank> getTanksIfMekanism() {
-        if (sidedHandler instanceof IMekanismChemicalHandler mekHandler) {
+        if (!isRevoked() && sidedHandler instanceof IMekanismChemicalHandler mekHandler) {
             return mekHandler.getChemicalTanks(null);
         }
         return Collections.emptyList();
@@ -40,54 +45,54 @@ public class ProxyChemicalHandler extends ProxyHandler implements IChemicalHandl
 
     @Override
     public int getChemicalTanks() {
-        return sidedHandler.getCountChemicalTanks(side);
+        return isRevoked() ? 0 : sidedHandler.getCountChemicalTanks(side);
     }
 
     @Override
     public ChemicalStack getChemicalInTank(int tank) {
-        return sidedHandler.getChemicalInTank(tank, side);
+        return isRevoked() ? ChemicalStack.EMPTY : sidedHandler.getChemicalInTank(tank, side);
     }
 
     @Override
     public void setChemicalInTank(int tank, ChemicalStack stack) {
-        if (!readOnly) {
+        if (!readOnly && !isRevoked()) {
             sidedHandler.setChemicalInTank(tank, stack, side);
         }
     }
 
     @Override
     public long getChemicalTankCapacity(int tank) {
-        return sidedHandler.getChemicalTankCapacity(tank, side);
+        return isRevoked() ? 0 : sidedHandler.getChemicalTankCapacity(tank, side);
     }
 
     @Override
     public boolean isValid(int tank, ChemicalStack stack) {
-        return !readOnly || sidedHandler.isValid(tank, stack, side);
+        return !isRevoked() && (!readOnly || sidedHandler.isValid(tank, stack, side));
     }
 
     @Override
     public ChemicalStack insertChemical(int tank, ChemicalStack stack, Action action) {
-        return readOnlyInsert() ? stack : sidedHandler.insertChemical(tank, stack, side, action);
+        return isRevoked() || readOnlyInsert() ? stack : sidedHandler.insertChemical(tank, stack, side, action);
     }
 
     @Override
     public ChemicalStack extractChemical(int tank, long amount, Action action) {
-        return readOnlyExtract() ? ChemicalStack.EMPTY : sidedHandler.extractChemical(tank, amount, side, action);
+        return isRevoked() || readOnlyExtract() ? ChemicalStack.EMPTY : sidedHandler.extractChemical(tank, amount, side, action);
     }
 
     @Override
     public ChemicalStack insertChemical(ChemicalStack stack, Action action) {
-        return readOnlyInsert() ? stack : sidedHandler.insertChemical(stack, side, action);
+        return isRevoked() || readOnlyInsert() ? stack : sidedHandler.insertChemical(stack, side, action);
     }
 
     @Override
     public ChemicalStack extractChemical(long amount, Action action) {
-        return readOnlyExtract() ? ChemicalStack.EMPTY : sidedHandler.extractChemical(amount, side, action);
+        return isRevoked() || readOnlyExtract() ? ChemicalStack.EMPTY : sidedHandler.extractChemical(amount, side, action);
     }
 
     @Override
     public ChemicalStack extractChemical(ChemicalStack stack, Action action) {
-        return readOnlyExtract() ? ChemicalStack.EMPTY : sidedHandler.extractChemical(stack, side, action);
+        return isRevoked() || readOnlyExtract() ? ChemicalStack.EMPTY : sidedHandler.extractChemical(stack, side, action);
     }
 
 }

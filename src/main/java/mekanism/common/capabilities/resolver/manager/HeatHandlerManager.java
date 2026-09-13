@@ -15,8 +15,9 @@ import org.jetbrains.annotations.Nullable;
  * Helper class to make reading instead of having as messy generics
  *
  * <p>Fabric port: the Mekanism-owned heat lookup identity replaces the official {@code Capabilities.HEAT} NeoForge capability token, keeping the same
- * {@code mekanism:heat_handler} id and {@link IHeatHandler} domain API. The official {@link ProxyHeatHandler} creator, null-side read-only domain proxy and
- * retained-proxy invalidation semantics are unchanged.</p>
+ * {@code mekanism:heat_handler} id and {@link IHeatHandler} domain API. The official {@link ProxyHeatHandler} creator and null-side read-only domain proxy are
+ * unchanged; the retained-proxy lifetime is closed by revoking every cached proxy when its cache entry is dropped, so retained references can no longer read or
+ * mutate the removed owner. No holder insertion policy is invented beyond the official one.</p>
  */
 public class HeatHandlerManager extends CapabilityHandlerManager<IHeatCapacitorHolder, IHeatCapacitor, IHeatHandler, ISidedHeatHandler> {
 
@@ -29,5 +30,13 @@ public class HeatHandlerManager extends CapabilityHandlerManager<IHeatCapacitorH
 
     public HeatHandlerManager(@Nullable IHeatCapacitorHolder holder, @NotNull ISidedHeatHandler baseHandler) {
         super(holder, baseHandler, HEAT_HANDLER, ProxyHeatHandler::new, IHeatCapacitorHolder::getHeatCapacitors);
+    }
+
+    @Override
+    protected void revokeHandler(IHeatHandler handler) {
+        if (handler instanceof ProxyHeatHandler proxy) {
+            //Permanently fail close the retained domain proxy against its old owner; the base handler stays live for fresh views
+            proxy.revoke();
+        }
     }
 }
