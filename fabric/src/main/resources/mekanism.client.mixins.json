@@ -1,10 +1,12 @@
 {
   "required": true,
   "minVersion": "0.8",
-  "package": "mekanism.fabric.mixin.recipe",
+  "package": "mekanism.fabric.mixin",
   "compatibilityLevel": "JAVA_21",
   "client": [
-    "ClientPacketListenerMixin"
+    "recipe.ClientPacketListenerMixin",
+    "tile.LevelChunkMixin",
+    "tile.ClientPacketListenerTileMixin"
   ],
   "injectors": {
     "defaultRequire": 1

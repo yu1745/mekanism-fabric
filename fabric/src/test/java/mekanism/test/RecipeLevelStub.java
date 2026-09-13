@@ -51,12 +51,12 @@ import org.jetbrains.annotations.Nullable;
  * {@link #getRecipeManager()}, {@link #registryAccess()} and {@link #dimensionType()} return values; every other member fails closed, so the double cannot silently
  * stand in for production behavior it does not model.</p>
  */
-public final class RecipeLevelStub extends Level {
+public class RecipeLevelStub extends Level {
 
     private final RecipeManager manager;
     private final Holder<DimensionType> dimensionType;
 
-    private RecipeLevelStub(WritableLevelData data, ResourceKey<Level> dimension, RegistryAccess access, Holder<DimensionType> dimensionType,
+    protected RecipeLevelStub(WritableLevelData data, ResourceKey<Level> dimension, RegistryAccess access, Holder<DimensionType> dimensionType,
           Supplier<ProfilerFiller> profiler, RecipeManager manager) {
         super(data, dimension, access, dimensionType, profiler, false, false, 0L, 0);
         this.manager = manager;
@@ -82,7 +82,7 @@ public final class RecipeLevelStub extends Level {
     /**
      * Builds a registry access holding only a complete vanilla damage-type registry, which is all the {@link Level} constructor needs from a datapack registry.
      */
-    private static RegistryAccess damageTypeAccess() {
+    protected static RegistryAccess damageTypeAccess() {
         net.minecraft.core.MappedRegistry<net.minecraft.world.damagesource.DamageType> registry =
               new net.minecraft.core.MappedRegistry<>(Registries.DAMAGE_TYPE, com.mojang.serialization.Lifecycle.stable());
         net.minecraft.world.damagesource.DamageType dummy = new net.minecraft.world.damagesource.DamageType("generic", 0.0F);
@@ -123,7 +123,7 @@ public final class RecipeLevelStub extends Level {
         return dimensionType.value();
     }
 
-    private static UnsupportedOperationException unsupported() {
+    protected static UnsupportedOperationException unsupported() {
         return new UnsupportedOperationException("RecipeLevelStub models only recipe lookup");
     }
 
