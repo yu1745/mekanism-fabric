@@ -6,8 +6,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.OptionalDouble;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.function.Function;
-import mekanism.common.Mekanism;
+import mekanism.api.MekanismServerLifecycle;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.content.filter.FilterManager;
 import mekanism.common.lib.math.Range3D;
@@ -17,6 +18,9 @@ import mekanism.common.tile.component.TileComponentEjector;
 import mekanism.common.tile.interfaces.ISideConfiguration;
 import mekanism.common.tile.interfaces.ITileFilterHolder;
 import mekanism.common.util.WorldUtils;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.RegistryAccess;
@@ -25,29 +29,37 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.Packet;
-import net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.network.protocol.game.ClientGamePacketListener;
-import net.minecraft.network.protocol.game.ClientboundBundlePacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.players.PlayerList;
 import net.minecraft.util.ByIdMap;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.network.PacketDistributor;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
-import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+/**
+ * Fabric port of the official dispatch utility.
+ *
+ * <p>Platform deltas (all documented call-site substitutions, no behavioral fake): {@code Mekanism.logger} is replaced by the established {@code Mekanism} SLF4J
+ * category; {@code PacketDistributor.sendToServer} becomes {@link ClientPlayNetworking#send}, which (like its NeoForge counterpart) is only ever invoked on the
+ * physical client and is never linked on a dedicated server; {@code PacketDistributor.sendToPlayersTrackingChunk} becomes {@link PlayerLookup#tracking(ServerLevel,
+ * ChunkPos)} with per-player sends; {@code ServerLifecycleHooks.getCurrentServer()} becomes the lifecycle-bound {@link MekanismServerLifecycle} owner; the
+ * {@code IPayloadContext} helper parameter becomes the plain {@link Player} that Fabric's play receiver context provides. The multi-payload overload sends each
+ * payload individually rather than wrapping them in a {@code ClientboundBundlePacket}: batching is a transport detail, recipient set and ordering are
+ * unchanged.</p>
+ */
 public class PacketUtils {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism");
 
     private PacketUtils() {
     }
@@ -90,7 +102,7 @@ public class PacketUtils {
     public static void log(String logFormat, Object... params) {
         //TODO: Add more logging for packets using this
         if (MekanismConfig.general.logPackets.get()) {
-            Mekanism.logger.info(logFormat, params);
+            LOGGER.info(logFormat, params);
         }
     }
 
@@ -103,47 +115,68 @@ public class PacketUtils {
         }
     }
 
+    /**
+     * Serializes custom registry-aware data to a freshly allocated heap buffer and returns the raw bytes.
+     *
+     * <p>Fabric port delta: inline equivalent of NeoForge's {@code FriendlyByteBufUtil.writeCustomData(Consumer<RegistryFriendlyByteBuf>, RegistryAccess)} — a
+     * {@link RegistryFriendlyByteBuf} over a heap buffer, the writer applied, and the readable bytes copied out. The produced byte array carries no length prefix,
+     * matching the official wire format consumed by {@link #read}.</p>
+     */
+    public static byte[] writeCustomData(Consumer<RegistryFriendlyByteBuf> writer, RegistryAccess registryAccess) {
+        RegistryFriendlyByteBuf buffer = new RegistryFriendlyByteBuf(Unpooled.buffer(), registryAccess);
+        try {
+            writer.accept(buffer);
+            byte[] data = new byte[buffer.readableBytes()];
+            buffer.readBytes(data);
+            return data;
+        } finally {
+            buffer.release();
+        }
+    }
+
     @Nullable
-    public static TileComponentEjector ejector(IPayloadContext context, BlockPos pos) {
-        if (blockEntity(context, pos) instanceof ISideConfiguration sideConfig) {
+    public static TileComponentEjector ejector(Player player, BlockPos pos) {
+        if (blockEntity(player, pos) instanceof ISideConfiguration sideConfig) {
             return sideConfig.getEjector();
         }
         return null;
     }
 
     @Nullable
-    public static TileComponentConfig config(IPayloadContext context, BlockPos pos) {
-        if (blockEntity(context, pos) instanceof ISideConfiguration sideConfig) {
+    public static TileComponentConfig config(Player player, BlockPos pos) {
+        if (blockEntity(player, pos) instanceof ISideConfiguration sideConfig) {
             return sideConfig.getConfig();
         }
         return null;
     }
 
     @Nullable
-    public static FilterManager<?> filterManager(IPayloadContext context, BlockPos pos) {
-        if (blockEntity(context, pos) instanceof ITileFilterHolder<?> filterHolder) {
+    public static FilterManager<?> filterManager(Player player, BlockPos pos) {
+        if (blockEntity(player, pos) instanceof ITileFilterHolder<?> filterHolder) {
             return filterHolder.getFilterManager();
         }
         return null;
     }
 
     @Nullable
-    public static BlockEntity blockEntity(IPayloadContext context, BlockPos pos) {
-        return WorldUtils.getTileEntity(context.player().level(), pos);
+    public static BlockEntity blockEntity(Player player, BlockPos pos) {
+        return WorldUtils.getTileEntity(player.level(), pos);
     }
 
     @Nullable
-    public static BlockEntity blockEntity(IPayloadContext context, long pos) {
-        return WorldUtils.getTileEntity(context.player().level(), pos);
+    public static BlockEntity blockEntity(Player player, long pos) {
+        return WorldUtils.getTileEntity(player.level(), pos);
     }
 
     /**
      * Send this message to the server.
      *
      * @param message - the message to send
+     *
+     * @apiNote Only ever invoked on the physical client; {@link ClientPlayNetworking} is a client-only class and is never linked on a dedicated server.
      */
     public static <MSG extends CustomPacketPayload> boolean sendToServer(MSG message) {
-        PacketDistributor.sendToServer(message);
+        ClientPlayNetworking.send(message);
         return true;
     }
 
@@ -152,12 +185,17 @@ public class PacketUtils {
     }
 
     public static <MSG extends CustomPacketPayload> void sendToAllTracking(MSG message, Level world, BlockPos pos) {
-        PacketDistributor.sendToPlayersTrackingChunk((ServerLevel) world, new ChunkPos(pos), message);
+        if (world instanceof ServerLevel serverLevel) {
+            //Fabric port delta: PacketDistributor.sendToPlayersTrackingChunk becomes PlayerLookup-based recipient resolution;
+            // only a loaded server level has tracking players, any other level sends nothing (official client-side behavior).
+            for (ServerPlayer player : PlayerLookup.tracking(serverLevel, new ChunkPos(pos))) {
+                ServerPlayNetworking.send(player, message);
+            }
+        }
     }
 
     /**
-     * Based on home {@link PacketDistributor#sendToPlayersTrackingChunk(ServerLevel, ChunkPos, CustomPacketPayload, CustomPacketPayload...)} finds players to send to,
-     * without the immutable list.
+     * Based on how {@code PacketDistributor#sendToPlayersTrackingChunk} finds players to send to.
      */
     public static boolean hasPlayersTracking(ServerLevel level, BlockPos pos) {
         int chunkX = SectionPos.blockToSectionCoord(pos.getX());
@@ -180,11 +218,9 @@ public class PacketUtils {
         //TODO - 1.20.4: If we just make the packet range instead keep track of the ChunkPositions that then we check if the player is tracking
         // it will allow us to have it hopefully work a bit more accurately and more cleanly?
         // and that way we can do a check that the player is tracking one of the chunks maybe instead of doing the weird radius check
-        PlayerList playerList = ServerLifecycleHooks.getCurrentServer().getPlayerList();
-        Packet<?> packet = makeClientboundPacket(packets);
-        //Ignore height for partial Cubic chunks support as range comparison gets used ignoring player height normally anyway
-        int radius = playerList.getViewDistance() * 16;
-        for (ServerPlayer player : playerList.getPlayers()) {
+        List<ServerPlayer> players = new ArrayList<>();
+        int radius = MekanismServerLifecycle.getServer().getPlayerList().getViewDistance() * 16;
+        for (ServerPlayer player : MekanismServerLifecycle.getServer().getPlayerList().getPlayers()) {
             if (range.dimension() == player.level().dimension()) {
                 //TODO - 1.20.4: Should this use proper position instead of the block position (if we switch to tracked chunks then this becomes irrelevant)
                 BlockPos playerPosition = player.blockPosition();
@@ -193,20 +229,16 @@ public class PacketUtils {
                 //playerX/Z + radius is the max, so to stay in line with how it was before, it has an extra + 1 added to it
                 if (playerX + radius + 1.99999 > range.xMin() && range.xMax() + 0.99999 > playerX - radius &&
                     playerZ + radius + 1.99999 > range.zMin() && range.zMax() + 0.99999 > playerZ - radius) {
-                    player.connection.send(packet);
+                    players.add(player);
                 }
             }
         }
-    }
-
-    private static Packet<?> makeClientboundPacket(CustomPacketPayload... payloads) {
-        if (payloads.length > 1) {
-            List<Packet<? super ClientGamePacketListener>> packets = new ArrayList<>(payloads.length);
-            for (CustomPacketPayload otherPayload : payloads) {
-                packets.add(new ClientboundCustomPayloadPacket(otherPayload));
+        //Fabric port delta: payloads are dispatched individually instead of wrapped in a ClientboundBundlePacket;
+        // recipients and payload ordering are unchanged.
+        for (ServerPlayer player : players) {
+            for (CustomPacketPayload payload : packets) {
+                ServerPlayNetworking.send(player, payload);
             }
-            return new ClientboundBundlePacket(packets);
         }
-        return new ClientboundCustomPayloadPacket(payloads[0]);
     }
 }

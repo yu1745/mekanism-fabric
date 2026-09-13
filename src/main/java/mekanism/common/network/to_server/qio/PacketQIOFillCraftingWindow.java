@@ -10,11 +10,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import mekanism.api.annotations.NothingNullByDefault;
-import mekanism.common.Mekanism;
 import mekanism.common.content.qio.QIOCraftingTransferHelper.SingularHashedItemSource;
 import mekanism.common.content.qio.QIOServerCraftingTransferHandler;
 import mekanism.common.inventory.container.QIOItemViewerContainer;
-import mekanism.common.network.IMekanismPacket;
 import mekanism.common.recipe.MekanismRecipeType;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -25,16 +23,24 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 //Note: While our logic is not dependent on knowing about transferMultiple, we make use of it for encoding and decoding
 // as when it is false we can reduce how many bytes the packet is by a good amount by making assumptions about the sizes of things
+//
+//Fabric adaptation of the official packet: codec and handling logic unchanged; NeoForge's IMekanismPacket/IPayloadContext
+// dispatch is replaced by the vanilla CustomPacketPayload contract with handling split into handle(Player). The server
+// receiver lives in the Fabric networking owner and runs on the server thread, matching the original main-thread semantics.
 @NothingNullByDefault
 public record PacketQIOFillCraftingWindow(ResourceLocation recipeID, boolean transferMultiple, boolean rejectToInventory,
-                                          Byte2ObjectMap<List<SingularHashedItemSource>> sources) implements IMekanismPacket {
+                                          Byte2ObjectMap<List<SingularHashedItemSource>> sources) implements CustomPacketPayload {
 
-    public static final CustomPacketPayload.Type<PacketQIOFillCraftingWindow> TYPE = new CustomPacketPayload.Type<>(Mekanism.rl("fill_qio"));
+    private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism");
+
+    public static final CustomPacketPayload.Type<PacketQIOFillCraftingWindow> TYPE = new CustomPacketPayload.Type<>(
+          ResourceLocation.fromNamespaceAndPath("mekanism", "fill_qio"));
     public static final StreamCodec<ByteBuf, PacketQIOFillCraftingWindow> STREAM_CODEC = StreamCodec.ofMember(PacketQIOFillCraftingWindow::write, PacketQIOFillCraftingWindow::decode);
 
     @NotNull
@@ -43,13 +49,11 @@ public record PacketQIOFillCraftingWindow(ResourceLocation recipeID, boolean tra
         return TYPE;
     }
 
-    @Override
-    public void handle(IPayloadContext context) {
-        Player player = context.player();
+    public void handle(Player player) {
         if (player.containerMenu instanceof QIOItemViewerContainer container) {
             byte selectedCraftingGrid = container.getSelectedCraftingGrid(player.getUUID());
             if (selectedCraftingGrid == -1) {
-                Mekanism.logger.warn("Received transfer request from: {}, but they do not currently have a crafting window open.", player);
+                LOGGER.warn("Received transfer request from: {}, but they do not currently have a crafting window open.", player);
             } else {
                 Optional<RecipeHolder<?>> optionalRecipe = MekanismRecipeType.byKey(player.level(), recipeID);
                 if (optionalRecipe.isPresent()) {
@@ -57,11 +61,11 @@ public record PacketQIOFillCraftingWindow(ResourceLocation recipeID, boolean tra
                     if (recipe instanceof CraftingRecipe craftingRecipe) {
                         QIOServerCraftingTransferHandler.tryTransfer(container, selectedCraftingGrid, rejectToInventory, player, recipeID, craftingRecipe, sources);
                     } else {
-                        Mekanism.logger.warn("Received transfer request from: {}, but the type ({}) of the specified recipe was not a crafting recipe.",
+                        LOGGER.warn("Received transfer request from: {}, but the type ({}) of the specified recipe was not a crafting recipe.",
                               player, recipe.getClass());
                     }
                 } else {
-                    Mekanism.logger.warn("Received transfer request from: {}, but could not find specified recipe.", player);
+                    LOGGER.warn("Received transfer request from: {}, but could not find specified recipe.", player);
                 }
             }
         }

@@ -11,7 +11,7 @@ import java.util.Objects;
 import java.util.UUID;
 import mekanism.api.Action;
 import mekanism.api.chemical.ChemicalStack;
-import mekanism.common.Mekanism;
+import mekanism.api.fluid.FluidStack;
 import mekanism.common.inventory.container.slot.ArmorSlot;
 import mekanism.common.inventory.container.slot.HotBarSlot;
 import mekanism.common.inventory.container.slot.IHasExtraData;
@@ -44,6 +44,7 @@ import mekanism.common.network.to_client.container.property.PropertyData;
 import mekanism.common.network.to_server.PacketWindowSelect;
 import mekanism.common.registration.impl.ContainerTypeRegistryObject;
 import mekanism.common.util.EnumUtils;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.RegistryAccess;
@@ -57,12 +58,14 @@ import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public abstract class MekanismContainer extends AbstractContainerMenu implements ISecurityContainer {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism");
 
     public static final int BASE_Y_OFFSET = 84;
     public static final int TRANSPORTER_CONFIG_WINDOW = 0;
@@ -528,7 +531,7 @@ public abstract class MekanismContainer extends AbstractContainerMenu implements
         if (property >= 0 && property < trackedData.size()) {
             return trackedData.get(property);
         }
-        Mekanism.logger.warn("Received out of bounds window property {} for container {}. There are currently {} tracked properties.", property,
+        LOGGER.warn("Received out of bounds window property {} for container {}. There are currently {} tracked properties.", property,
               Util.getRegisteredName(BuiltInRegistries.MENU, getType()), trackedData.size());
         return null;
     }
@@ -627,7 +630,7 @@ public abstract class MekanismContainer extends AbstractContainerMenu implements
             case SyncableFrequency<?> syncable -> syncable.set(getLevel().registryAccess(), value);
             case SyncableList<?> syncable -> syncable.set(getLevel().registryAccess(), value);
             case SyncableCollection<?, ?> syncable -> syncable.set(getLevel().registryAccess(), value);
-            case null, default -> Mekanism.logger.error("Unknown byte value type: {}, please report", data == null ? null : data.getClass().getName());
+            case null, default -> LOGGER.error("Unknown byte value type: {}, please report", data == null ? null : data.getClass().getName());
         }
     }
 
@@ -649,7 +652,8 @@ public abstract class MekanismContainer extends AbstractContainerMenu implements
                 }
             }
             if (!dirtyData.isEmpty()) {
-                PacketDistributor.sendToPlayer(player, new PacketUpdateContainer((short) containerId, dirtyData));
+                //Fabric port delta: PacketDistributor.sendToPlayer becomes the Fabric play S2C send through the registered payload type
+                ServerPlayNetworking.send(player, new PacketUpdateContainer((short) containerId, dirtyData));
             }
         }
     }
@@ -674,7 +678,8 @@ public abstract class MekanismContainer extends AbstractContainerMenu implements
                 dirtyData.add(data.getPropertyData(registryAccess, propertyIndex.apply(i), DirtyType.DIRTY));
             }
             if (!dirtyData.isEmpty()) {
-                PacketDistributor.sendToPlayer(player, new PacketUpdateContainer((short) containerId, dirtyData));
+                //Fabric port delta: PacketDistributor.sendToPlayer becomes the Fabric play S2C send through the registered payload type
+                ServerPlayNetworking.send(player, new PacketUpdateContainer((short) containerId, dirtyData));
             }
         }
     }

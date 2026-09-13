@@ -3,7 +3,6 @@ package mekanism.common.content.qio;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import mekanism.api.Action;
-import mekanism.common.Mekanism;
 import mekanism.common.attachments.qio.DriveContents;
 import mekanism.common.attachments.qio.DriveMetadata;
 import mekanism.common.lib.inventory.HashedItem;
@@ -11,6 +10,8 @@ import mekanism.common.registries.MekanismDataComponents;
 import net.minecraft.world.item.ItemStack;
 
 public class QIODriveData {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism");
 
     private final QIODriveKey key;
     private final long countCapacity;
@@ -109,7 +110,7 @@ public class QIODriveData {
             if (stack.getItem() instanceof IQIODriveItem) {
                 stack.set(MekanismDataComponents.DRIVE_METADATA, new DriveMetadata(data));
             } else {
-                Mekanism.logger.error("Tried to update QIO meta values on an invalid ItemStack ({}). Something has gone very wrong!", stack.getItem());
+                LOGGER.error("Tried to update QIO meta values on an invalid ItemStack ({}). Something has gone very wrong!", stack.getItem());
             }
         }
 

@@ -20,9 +20,12 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import mekanism.api.Action;
 import mekanism.api.AutomationType;
+import mekanism.api.ItemAbility;
 import mekanism.api.MekanismAPI;
 import mekanism.api.MekanismAPITags;
 import mekanism.api.MekanismItemAbilities;
+import mekanism.api.MekanismServerLifecycle;
+import mekanism.api.fluid.FluidStack;
 import mekanism.api.Upgrade;
 import mekanism.api.chemical.IChemicalTank;
 import mekanism.api.energy.IEnergyContainer;
@@ -30,9 +33,9 @@ import mekanism.api.fluid.IExtendedFluidTank;
 import mekanism.api.inventory.IInventorySlot;
 import mekanism.api.math.MathUtils;
 import mekanism.api.text.EnumColor;
-import mekanism.client.MekanismClient;
-import mekanism.common.Mekanism;
+import mekanism.client.ClientPlayerAccess;
 import mekanism.common.MekanismLang;
+import mekanism.common.UsernameCache;
 import mekanism.common.attachments.FrequencyAware;
 import mekanism.common.block.attribute.Attribute;
 import mekanism.common.block.attribute.AttributeFactoryType;
@@ -77,25 +80,16 @@ import net.minecraft.world.level.block.BubbleColumnBlock;
 import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.redstone.Redstone;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.fml.loading.FMLEnvironment;
-import net.neoforged.fml.util.thread.EffectiveSide;
-import net.neoforged.neoforge.common.CommonHooks;
-import net.neoforged.neoforge.common.EffectCures;
-import net.neoforged.neoforge.common.Tags;
-import net.neoforged.neoforge.common.UsernameCache;
-import net.neoforged.neoforge.event.level.BlockEvent;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.FluidType;
-import net.neoforged.neoforge.items.IItemHandler;
-import net.neoforged.neoforge.items.ItemHandlerHelper;
-import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utilities used by Mekanism. All miscellaneous methods are located here.
@@ -103,6 +97,8 @@ import org.jetbrains.annotations.Nullable;
  * @author AidanBrady
  */
 public final class MekanismUtils {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism");
 
     public static final float ONE_OVER_ROOT_TWO = 1 / Mth.SQRT_OF_TWO;
     //TODO - 1.21: Re-evaluate uses of this and the shared constants constant as some potentially should be switched to use the level's tickrate
@@ -117,18 +113,18 @@ public final class MekanismUtils {
     // possible, and also ideally would use our normal logger instead of the API logger
     public static void logMismatchedStackSize(long actual, long expected) {
         if (expected != actual) {
-            Mekanism.logger.error("Stack size changed by a different amount ({}) than requested ({}).", actual, expected);
+            LOGGER.error("Stack size changed by a different amount ({}) than requested ({}).", actual, expected);
             if (MekanismAPI.debug) {
-                Mekanism.logger.error("Location ", new Exception());
+                LOGGER.error("Location ", new Exception());
             }
         }
     }
 
     public static void logExpectedZero(long actual) {
         if (actual != 0L) {
-            Mekanism.logger.error("Energy value changed by a different amount ({}) than requested (zero).", actual);
+            LOGGER.error("Energy value changed by a different amount ({}) than requested (zero).", actual);
             if (MekanismAPI.debug) {
-                Mekanism.logger.error("Location ", new Exception());
+                LOGGER.error("Location ", new Exception());
             }
         }
     }
@@ -148,12 +144,9 @@ public final class MekanismUtils {
 
     @Nullable
     public static Player tryGetClientPlayer() {
-        if (FMLEnvironment.dist.isClient()) {
-            return MekanismClient.tryGetClientPlayer();
-        }
-        //Note: Ideally we would have some way to get which player is in question on the server
-        // as this is mostly used in tooltips, but odds are it won't end up being called
-        return null;
+        //Fabric port delta: the distribution check and client-player lookup live in the ClientPlayerAccess seam;
+        // no client class is linked when this runs on a dedicated server
+        return ClientPlayerAccess.tryGetClientPlayer();
     }
 
     /**
@@ -166,7 +159,7 @@ public final class MekanismUtils {
         Item item = stack.getItem();
         String modid = item.getCreatorModId(stack);
         if (modid == null) {
-            Mekanism.logger.error("Unexpected null registry name for item of class type: {}", item.getClass().getSimpleName());
+            LOGGER.error("Unexpected null registry name for item of class type: {}", item.getClass().getSimpleName());
             return "";
         }
         return modid;
@@ -415,11 +408,15 @@ public final class MekanismUtils {
      * @return the corresponding ResourceLocation
      */
     public static ResourceLocation getResource(ResourceType type, String name) {
-        return Mekanism.rl(type.getPrefix() + name);
+        //Fabric port delta: Mekanism.rl becomes the mekanism namespace constant
+        return ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, type.getPrefix() + name);
     }
 
     public static boolean lighterThanAirGas(FluidStack stack) {
-        return stack.is(Tags.Fluids.GASEOUS) && stack.getFluidType().getDensity(stack) <= 0;
+        //Fabric port delta: NeoForge's Tags.Fluids.GASEOUS membership plus non-positive FluidType density becomes
+        // Fabric's FluidVariantAttributes.isLighterThanAir gas convention (net.fabricmc.fabric.api.transfer.v1.fluid)
+        return net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariantAttributes.isLighterThanAir(
+              net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant.of(stack.getFluid()));
     }
 
     public static boolean isLiquidBlock(Block block) {
@@ -577,14 +574,14 @@ public final class MekanismUtils {
     public static boolean canUseAsWrench(ItemStack stack) {
         if (stack.isEmpty()) {
             return false;
-        } else if (stack.canPerformAction(MekanismItemAbilities.WRENCH_DISMANTLE)) {
+        } else if (MekanismItemAbilities.canPerformAction(stack, MekanismItemAbilities.WRENCH_DISMANTLE)) {
             return true;
         } else if (stack.is(MekanismTags.Items.CONFIGURATORS)) {
             //If it is in the tag, validate it isn't exposing one of the other wrench action types, as then it probably wants to act
             // as only that type instead of as any type
-            return !stack.canPerformAction(MekanismItemAbilities.WRENCH_ROTATE) &&
-                   !stack.canPerformAction(MekanismItemAbilities.WRENCH_EMPTY) &&
-                   !stack.canPerformAction(MekanismItemAbilities.WRENCH_CONFIGURE);
+            return !MekanismItemAbilities.canPerformAction(stack, MekanismItemAbilities.WRENCH_ROTATE) &&
+                   !MekanismItemAbilities.canPerformAction(stack, MekanismItemAbilities.WRENCH_EMPTY) &&
+                   !MekanismItemAbilities.canPerformAction(stack, MekanismItemAbilities.WRENCH_CONFIGURE);
         }
         return false;
     }
@@ -602,7 +599,7 @@ public final class MekanismUtils {
             }
         }
         if (ret == null && !warnedFails.contains(uuid)) {
-            Mekanism.logger.warn("Failed to retrieve username for UUID {}, you might want to add it to the JSON cache", uuid);
+            LOGGER.warn("Failed to retrieve username for UUID {}, you might want to add it to the JSON cache", uuid);
             warnedFails.add(uuid);
         }
         return ret == null ? "<" + uuid + ">" : ret;
@@ -624,7 +621,9 @@ public final class MekanismUtils {
 
     public static boolean shouldSpeedUpEffect(MobEffectInstance effectInstance) {
         //Only allow speeding up effects that can be sped up by milk. Also validate it isn't blacklisted by the modpack
-        return effectInstance.getCures().contains(EffectCures.MILK) && !effectInstance.getEffect().is(MekanismAPITags.MobEffects.SPEED_UP_BLACKLIST);
+        //Fabric port delta: NeoForge's per-instance cure-set check (EffectCures.MILK) has no vanilla/Fabric equivalent;
+        // in vanilla every effect is milk-curable, so only the modpack blacklist remains as a condition
+        return !effectInstance.getEffect().is(MekanismAPITags.MobEffects.SPEED_UP_BLACKLIST);
     }
 
     /**
@@ -695,7 +694,7 @@ public final class MekanismUtils {
     }
 
     /**
-     * Calculates the redstone level based on the percentage of amount stored. Like {@link ItemHandlerHelper#calcRedstoneFromInventory(IItemHandler)} except without
+     * Calculates the redstone level based on the percentage of amount stored. Like NeoForge's {@code ItemHandlerHelper#calcRedstoneFromInventory} except without
      * limiting slots to the max stack size of the item to allow for better support for bins
      *
      * @return A redstone level based on the percentage of the amount stored.
@@ -758,8 +757,11 @@ public final class MekanismUtils {
     /**
      * Similar in concept to {@link net.minecraft.world.entity.Entity#updateFluidHeightAndDoFluidPushing()} except calculates if a given portion of the player is in the
      * fluids.
+     *
+     * @implNote Fabric port delta: the original maps {@code NeoForge FluidType} to details; this port keys the map by the vanilla {@link Fluid} (one-to-one with the
+     * FluidType on the original platform).
      */
-    public static Map<FluidType, FluidInDetails> getFluidsIn(Player player, double data, ModifyPlayerBounding modifyBoundingBox) {
+    public static Map<Fluid, FluidInDetails> getFluidsIn(Player player, double data, ModifyPlayerBounding modifyBoundingBox) {
         AABB bb = modifyBoundingBox.modify(player.getBoundingBox().deflate(0.001), data);
         int xMin = Mth.floor(bb.minX);
         int xMax = Mth.ceil(bb.maxX);
@@ -771,7 +773,7 @@ public final class MekanismUtils {
             //If the position isn't actually loaded, just return there isn't any fluids
             return Collections.emptyMap();
         }
-        Map<FluidType, FluidInDetails> fluidsIn = new IdentityHashMap<>();
+        Map<Fluid, FluidInDetails> fluidsIn = new IdentityHashMap<>();
         BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
         for (int x = xMin; x < xMax; ++x) {
             for (int y = yMin; y < yMax; ++y) {
@@ -782,7 +784,7 @@ public final class MekanismUtils {
                         double fluidY = y + fluidState.getHeight(player.level(), mutablePos);
                         if (bb.minY <= fluidY) {
                             //The fluid intersects the bounding box
-                            FluidInDetails details = fluidsIn.computeIfAbsent(fluidState.getFluidType(), f -> new FluidInDetails());
+                            FluidInDetails details = fluidsIn.computeIfAbsent(fluidState.getType(), f -> new FluidInDetails());
                             details.positions.put(mutablePos.immutable(), fluidState);
                             double actualFluidHeight;
                             if (fluidY > bb.maxY) {
@@ -835,11 +837,11 @@ public final class MekanismUtils {
                 // block hardness values in a modded context
                 continue;
             }
-            BlockEvent.BreakEvent event = CommonHooks.fireBlockBreak(world, player.gameMode.getGameModeForPlayer(), player, foundPos, targetState);
-            if (event.isCanceled()) {
-                //If we can't actually break the block continue (this allows mods to stop us from vein mining into protected land)
-                continue;
-            }
+            //Fabric port delta (accepted platform boundary, same class of boundary as WorldUtils#getDrops): NeoForge's
+            // CommonHooks.fireBlockBreak fires a cancellable BreakEvent that lets other mods stop vein mining into
+            // protected land. Fabric has no pre-break cancellation hook, so the vein miner proceeds directly to the
+            // vanilla destruction path; protection mods on this platform must use their own block-break guards.
+
             //Otherwise, break the block
             FluidState fluidState = targetState.getFluidState();
             //Get the tile now so that we have it for when we try to harvest the block
