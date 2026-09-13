@@ -41,34 +41,34 @@ public class MekanismRecipeTypes {
     public static final ResourceLocation NAME_ROTARY = ResourceLocation.fromNamespaceAndPath("mekanism", "rotary");
     public static final ResourceLocation NAME_SAWING = ResourceLocation.fromNamespaceAndPath("mekanism", "sawing");
 
-    public static final MekanismKeyedHolder<RecipeType<ItemStackToItemStackRecipe>> TYPE_CRUSHING = newRecipeType(NAME_CRUSHING);
-    public static final MekanismKeyedHolder<RecipeType<ItemStackToItemStackRecipe>> TYPE_ENRICHING = newRecipeType(NAME_ENRICHING);
-    public static final MekanismKeyedHolder<RecipeType<ItemStackToItemStackRecipe>> TYPE_SMELTING = newRecipeType(NAME_SMELTING);
-    public static final MekanismKeyedHolder<RecipeType<ChemicalChemicalToChemicalRecipe>> TYPE_CHEMICAL_INFUSING = newRecipeType(NAME_CHEMICAL_INFUSING);
-    public static final MekanismKeyedHolder<RecipeType<CombinerRecipe>> TYPE_COMBINING = newRecipeType(NAME_COMBINING);
-    public static final MekanismKeyedHolder<RecipeType<ElectrolysisRecipe>> TYPE_SEPARATING = newRecipeType(NAME_SEPARATING);
-    public static final MekanismKeyedHolder<RecipeType<FluidChemicalToChemicalRecipe>> TYPE_WASHING = newRecipeType(NAME_WASHING);
-    public static final MekanismKeyedHolder<RecipeType<FluidToFluidRecipe>> TYPE_EVAPORATING = newRecipeType(NAME_EVAPORATING);
-    public static final MekanismKeyedHolder<RecipeType<ChemicalToChemicalRecipe>> TYPE_ACTIVATING = newRecipeType(NAME_ACTIVATING);
-    public static final MekanismKeyedHolder<RecipeType<ChemicalToChemicalRecipe>> TYPE_CENTRIFUGING = newRecipeType(NAME_CENTRIFUGING);
-    public static final MekanismKeyedHolder<RecipeType<ChemicalCrystallizerRecipe>> TYPE_CRYSTALLIZING = newRecipeType(NAME_CRYSTALLIZING);
-    public static final MekanismKeyedHolder<RecipeType<ChemicalDissolutionRecipe>> TYPE_DISSOLUTION = newRecipeType(NAME_DISSOLUTION);
-    public static final MekanismKeyedHolder<RecipeType<ItemStackChemicalToItemStackRecipe>> TYPE_COMPRESSING = newRecipeType(NAME_COMPRESSING);
-    public static final MekanismKeyedHolder<RecipeType<ItemStackChemicalToItemStackRecipe>> TYPE_PURIFYING = newRecipeType(NAME_PURIFYING);
-    public static final MekanismKeyedHolder<RecipeType<ItemStackChemicalToItemStackRecipe>> TYPE_INJECTING = newRecipeType(NAME_INJECTING);
-    public static final MekanismKeyedHolder<RecipeType<NucleosynthesizingRecipe>> TYPE_NUCLEOSYNTHESIZING = newRecipeType(NAME_NUCLEOSYNTHESIZING);
-    public static final MekanismKeyedHolder<RecipeType<ItemStackToEnergyRecipe>> TYPE_ENERGY_CONVERSION = newRecipeType(NAME_ENERGY_CONVERSION);
-    public static final MekanismKeyedHolder<RecipeType<ItemStackToChemicalRecipe>> TYPE_CHEMICAL_CONVERSION = newRecipeType(NAME_CHEMICAL_CONVERSION);
-    public static final MekanismKeyedHolder<RecipeType<ItemStackToChemicalRecipe>> TYPE_OXIDIZING = newRecipeType(NAME_OXIDIZING);
-    public static final MekanismKeyedHolder<RecipeType<ItemStackToChemicalRecipe>> TYPE_PIGMENT_EXTRACTING = newRecipeType(NAME_PIGMENT_EXTRACTING);
-    public static final MekanismKeyedHolder<RecipeType<ChemicalChemicalToChemicalRecipe>> TYPE_PIGMENT_MIXING = newRecipeType(NAME_PIGMENT_MIXING);
-    public static final MekanismKeyedHolder<RecipeType<ItemStackChemicalToItemStackRecipe>> TYPE_METALLURGIC_INFUSING = newRecipeType(NAME_METALLURGIC_INFUSING);
-    public static final MekanismKeyedHolder<RecipeType<ItemStackChemicalToItemStackRecipe>> TYPE_PAINTING = newRecipeType(NAME_PAINTING);
-    public static final MekanismKeyedHolder<RecipeType<PressurizedReactionRecipe>> TYPE_REACTION = newRecipeType(NAME_REACTION);
-    public static final MekanismKeyedHolder<RecipeType<RotaryRecipe>> TYPE_ROTARY = newRecipeType(NAME_ROTARY);
-    public static final MekanismKeyedHolder<RecipeType<SawmillRecipe>> TYPE_SAWING = newRecipeType(NAME_SAWING);
+    public static final MekanismKeyedHolder<RecipeType<?>, RecipeType<ItemStackToItemStackRecipe>> TYPE_CRUSHING = newRecipeType(NAME_CRUSHING);
+    public static final MekanismKeyedHolder<RecipeType<?>, RecipeType<ItemStackToItemStackRecipe>> TYPE_ENRICHING = newRecipeType(NAME_ENRICHING);
+    public static final MekanismKeyedHolder<RecipeType<?>, RecipeType<ItemStackToItemStackRecipe>> TYPE_SMELTING = newRecipeType(NAME_SMELTING);
+    public static final MekanismKeyedHolder<RecipeType<?>, RecipeType<ChemicalChemicalToChemicalRecipe>> TYPE_CHEMICAL_INFUSING = newRecipeType(NAME_CHEMICAL_INFUSING);
+    public static final MekanismKeyedHolder<RecipeType<?>, RecipeType<CombinerRecipe>> TYPE_COMBINING = newRecipeType(NAME_COMBINING);
+    public static final MekanismKeyedHolder<RecipeType<?>, RecipeType<ElectrolysisRecipe>> TYPE_SEPARATING = newRecipeType(NAME_SEPARATING);
+    public static final MekanismKeyedHolder<RecipeType<?>, RecipeType<FluidChemicalToChemicalRecipe>> TYPE_WASHING = newRecipeType(NAME_WASHING);
+    public static final MekanismKeyedHolder<RecipeType<?>, RecipeType<FluidToFluidRecipe>> TYPE_EVAPORATING = newRecipeType(NAME_EVAPORATING);
+    public static final MekanismKeyedHolder<RecipeType<?>, RecipeType<ChemicalToChemicalRecipe>> TYPE_ACTIVATING = newRecipeType(NAME_ACTIVATING);
+    public static final MekanismKeyedHolder<RecipeType<?>, RecipeType<ChemicalToChemicalRecipe>> TYPE_CENTRIFUGING = newRecipeType(NAME_CENTRIFUGING);
+    public static final MekanismKeyedHolder<RecipeType<?>, RecipeType<ChemicalCrystallizerRecipe>> TYPE_CRYSTALLIZING = newRecipeType(NAME_CRYSTALLIZING);
+    public static final MekanismKeyedHolder<RecipeType<?>, RecipeType<ChemicalDissolutionRecipe>> TYPE_DISSOLUTION = newRecipeType(NAME_DISSOLUTION);
+    public static final MekanismKeyedHolder<RecipeType<?>, RecipeType<ItemStackChemicalToItemStackRecipe>> TYPE_COMPRESSING = newRecipeType(NAME_COMPRESSING);
+    public static final MekanismKeyedHolder<RecipeType<?>, RecipeType<ItemStackChemicalToItemStackRecipe>> TYPE_PURIFYING = newRecipeType(NAME_PURIFYING);
+    public static final MekanismKeyedHolder<RecipeType<?>, RecipeType<ItemStackChemicalToItemStackRecipe>> TYPE_INJECTING = newRecipeType(NAME_INJECTING);
+    public static final MekanismKeyedHolder<RecipeType<?>, RecipeType<NucleosynthesizingRecipe>> TYPE_NUCLEOSYNTHESIZING = newRecipeType(NAME_NUCLEOSYNTHESIZING);
+    public static final MekanismKeyedHolder<RecipeType<?>, RecipeType<ItemStackToEnergyRecipe>> TYPE_ENERGY_CONVERSION = newRecipeType(NAME_ENERGY_CONVERSION);
+    public static final MekanismKeyedHolder<RecipeType<?>, RecipeType<ItemStackToChemicalRecipe>> TYPE_CHEMICAL_CONVERSION = newRecipeType(NAME_CHEMICAL_CONVERSION);
+    public static final MekanismKeyedHolder<RecipeType<?>, RecipeType<ItemStackToChemicalRecipe>> TYPE_OXIDIZING = newRecipeType(NAME_OXIDIZING);
+    public static final MekanismKeyedHolder<RecipeType<?>, RecipeType<ItemStackToChemicalRecipe>> TYPE_PIGMENT_EXTRACTING = newRecipeType(NAME_PIGMENT_EXTRACTING);
+    public static final MekanismKeyedHolder<RecipeType<?>, RecipeType<ChemicalChemicalToChemicalRecipe>> TYPE_PIGMENT_MIXING = newRecipeType(NAME_PIGMENT_MIXING);
+    public static final MekanismKeyedHolder<RecipeType<?>, RecipeType<ItemStackChemicalToItemStackRecipe>> TYPE_METALLURGIC_INFUSING = newRecipeType(NAME_METALLURGIC_INFUSING);
+    public static final MekanismKeyedHolder<RecipeType<?>, RecipeType<ItemStackChemicalToItemStackRecipe>> TYPE_PAINTING = newRecipeType(NAME_PAINTING);
+    public static final MekanismKeyedHolder<RecipeType<?>, RecipeType<PressurizedReactionRecipe>> TYPE_REACTION = newRecipeType(NAME_REACTION);
+    public static final MekanismKeyedHolder<RecipeType<?>, RecipeType<RotaryRecipe>> TYPE_ROTARY = newRecipeType(NAME_ROTARY);
+    public static final MekanismKeyedHolder<RecipeType<?>, RecipeType<SawmillRecipe>> TYPE_SAWING = newRecipeType(NAME_SAWING);
 
-    private static final List<MekanismKeyedHolder<? extends RecipeType<?>>> RECIPE_TYPES = recipeTypes();
+    private static final List<MekanismKeyedHolder<RecipeType<?>, ? extends RecipeType<?>>> RECIPE_TYPES = recipeTypes();
     private static volatile boolean registered;
 
     /**
@@ -89,7 +89,7 @@ public class MekanismRecipeTypes {
             if (registered) {
                 return;
             }
-            for (MekanismKeyedHolder<? extends RecipeType<?>> holder : RECIPE_TYPES) {
+            for (MekanismKeyedHolder<RecipeType<?>, ? extends RecipeType<?>> holder : RECIPE_TYPES) {
                 register(holder);
             }
             registered = true;
@@ -106,21 +106,21 @@ public class MekanismRecipeTypes {
     /**
      * @return The 26 recipe type holders in official declaration order.
      */
-    public static List<MekanismKeyedHolder<? extends RecipeType<?>>> recipeTypeHolders() {
+    public static List<MekanismKeyedHolder<RecipeType<?>, ? extends RecipeType<?>>> recipeTypeHolders() {
         return RECIPE_TYPES;
     }
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    private static void register(MekanismKeyedHolder<? extends RecipeType<?>> holder) {
-        ResourceKey<RecipeType<?>> key = (ResourceKey<RecipeType<?>>) (ResourceKey) holder.getKey();
+    private static void register(MekanismKeyedHolder<RecipeType<?>, ? extends RecipeType<?>> holder) {
         RecipeType<?> type = holder.value();
+        ResourceKey<RecipeType<?>> key = holder.getKey();
+        //Note: registerForHolder returns the canonical reference for exactly this instance; attaching it back is what binds the prebuilt type without recreating it.
         Registry.registerForHolder(BuiltInRegistries.RECIPE_TYPE, key, type);
-        ((MekanismKeyedHolder) holder).attach(BuiltInRegistries.RECIPE_TYPE.getHolderOrThrow(key));
+        holder.attach(BuiltInRegistries.RECIPE_TYPE.getHolderOrThrow(key));
     }
 
-    private static List<MekanismKeyedHolder<? extends RecipeType<?>>> recipeTypes() {
-        List<MekanismKeyedHolder<? extends RecipeType<?>>> types = new ArrayList<>(26);
-        Consumer<MekanismKeyedHolder<? extends RecipeType<?>>> add = types::add;
+    private static List<MekanismKeyedHolder<RecipeType<?>, ? extends RecipeType<?>>> recipeTypes() {
+        List<MekanismKeyedHolder<RecipeType<?>, ? extends RecipeType<?>>> types = new ArrayList<>(26);
+        Consumer<MekanismKeyedHolder<RecipeType<?>, ? extends RecipeType<?>>> add = types::add;
         add.accept(TYPE_CRUSHING);
         add.accept(TYPE_ENRICHING);
         add.accept(TYPE_SMELTING);
@@ -158,7 +158,7 @@ public class MekanismRecipeTypes {
      *
      * @return Keyed holder over a concrete unregistered recipe type.
      */
-    private static <RECIPE extends Recipe<?>> MekanismKeyedHolder<RecipeType<RECIPE>> newRecipeType(ResourceLocation name) {
+    private static <RECIPE extends Recipe<?>> MekanismKeyedHolder<RecipeType<?>, RecipeType<RECIPE>> newRecipeType(ResourceLocation name) {
         RecipeType<RECIPE> type = new RecipeType<RECIPE>() {
             @Override
             public String toString() {

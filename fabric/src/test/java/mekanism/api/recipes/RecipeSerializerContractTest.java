@@ -259,7 +259,7 @@ class RecipeSerializerContractTest {
 
     @Test
     void everySerializerHolderIsKeyStableAndResolvesLazily() {
-        List<MekanismKeyedHolder<?>> holders = List.of(MekanismRecipeSerializers.CRUSHING, MekanismRecipeSerializers.ENRICHING,
+        List<MekanismKeyedHolder<RecipeSerializer<?>, ? extends RecipeSerializer<?>>> holders = List.of(MekanismRecipeSerializers.CRUSHING, MekanismRecipeSerializers.ENRICHING,
               MekanismRecipeSerializers.SMELTING, MekanismRecipeSerializers.CHEMICAL_INFUSING, MekanismRecipeSerializers.COMBINING,
               MekanismRecipeSerializers.SEPARATING, MekanismRecipeSerializers.WASHING, MekanismRecipeSerializers.EVAPORATING,
               MekanismRecipeSerializers.ACTIVATING, MekanismRecipeSerializers.CENTRIFUGING, MekanismRecipeSerializers.CRYSTALLIZING,
@@ -270,7 +270,7 @@ class RecipeSerializerContractTest {
               MekanismRecipeSerializers.REACTION, MekanismRecipeSerializers.ROTARY, MekanismRecipeSerializers.SAWING);
         assertEquals(26, holders.size(), "there must be exactly 26 recipe serializer holders");
         assertEquals(26, holders.stream().map(MekanismKeyedHolder::getId).distinct().count(), "every serializer id must be unique");
-        for (MekanismKeyedHolder<?> holder : holders) {
+        for (MekanismKeyedHolder<?, ?> holder : holders) {
             assertEquals("mekanism", holder.getId().getNamespace(), "every serializer id must be in the mekanism namespace");
             assertSame(holder.getId(), holder.getKey().location(), "the holder key must match its declared id");
             //Note: The ordinary JVM never registers the serializers, so every holder stays legitimately unbound and never dereferences a registry entry.

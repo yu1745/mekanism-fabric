@@ -376,7 +376,7 @@ class RecipeOutputHandlingTest {
         field.setAccessible(true);
         Object raw = field.get(null);
         assertInstanceOf(MekanismKeyedHolder.class, raw, owner.getSimpleName() + "." + fieldName + " must be a keyed holder");
-        MekanismKeyedHolder<?> holder = (MekanismKeyedHolder<?>) raw;
+        MekanismKeyedHolder<?, ?> holder = (MekanismKeyedHolder<?, ?>) raw;
         assertEquals("mekanism", holder.getKey().location().getNamespace());
         assertEquals(path, holder.getKey().location().getPath());
         assertKeyCorrect(holder);
@@ -388,7 +388,7 @@ class RecipeOutputHandlingTest {
     /**
      * A generic (rather than wildcard) receiver is required so the key argument and the receiver share one type variable.
      */
-    private static <T> void assertKeyCorrect(MekanismKeyedHolder<T> holder) {
+    private static <T> void assertKeyCorrect(MekanismKeyedHolder<T, ? extends T> holder) {
         assertEquals(holder.getKey(), holder.unwrapKey().orElseThrow());
         assertTrue(holder.is(holder.getKey()));
     }

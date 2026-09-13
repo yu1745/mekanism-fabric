@@ -18,7 +18,7 @@ import net.minecraft.world.item.crafting.RecipeSerializer;
 @NothingNullByDefault
 public class BasicChemicalOxidizerRecipe extends BasicItemStackToChemicalRecipe {
 
-    private static final Holder<Item> CHEMICAL_OXIDIZER = MekanismKeyedHolder.registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "chemical_oxidizer")), () -> BuiltInRegistries.ITEM);
+    private static final Holder<Item> CHEMICAL_OXIDIZER = MekanismKeyedHolder.<Item, Item>registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "chemical_oxidizer")), () -> BuiltInRegistries.ITEM);
 
     public BasicChemicalOxidizerRecipe(ItemStackIngredient input, ChemicalStack output) {
         super(input, output, MekanismRecipeTypes.TYPE_OXIDIZING.value());

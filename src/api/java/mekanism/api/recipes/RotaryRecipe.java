@@ -33,7 +33,7 @@ import org.jetbrains.annotations.Contract;
 @NothingNullByDefault
 public abstract class RotaryRecipe extends MekanismRecipe<RotaryRecipeInput> {
 
-    private static final Holder<Item> ROTARY_CONDENSENTRATOR = MekanismKeyedHolder.registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "rotary_condensentrator")), () -> BuiltInRegistries.ITEM);
+    private static final Holder<Item> ROTARY_CONDENSENTRATOR = MekanismKeyedHolder.<Item, Item>registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "rotary_condensentrator")), () -> BuiltInRegistries.ITEM);
 
     /**
      * @return {@code true} if this recipe knows how to convert a chemical to a fluid.

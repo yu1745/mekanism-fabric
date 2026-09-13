@@ -403,7 +403,7 @@ Task 043 从 clean commit `87fe68e6` 实现 `TASK043_PLAN.md`，关闭 042A 明�
 `MekanismRecipeType` cache owner，因此 `mekanism.client.*` 不进闭包。
 
 slices **163/184/37 → 199/188/38**（425 production sources），测试 ordinary/transfer/root/data-map/recipe-registry/aggregate
-**76/378 → 77/384**、**5/27**、**1/2**、**2/4**、**1/4**、**84/411 → 86/421**。相对 `4646f509`，16 份 byte-identical
+**76/378 → 77/384**、**5/27**、**1/2**、**2/4**、**1/5**、**84/411 → 86/422**。相对 `4646f509`，16 份 byte-identical
 （`BasicChemicalChemicalToChemicalRecipe`, `BasicChemicalCrystallizerRecipe`, `BasicChemicalDissolutionRecipe`, `BasicChemicalToChemicalRecipe`, `BasicCombinerRecipe`, `BasicItemStackChemicalToItemStackRecipe`, `BasicItemStackToChemicalRecipe`, `BasicItemStackToEnergyRecipe`, `BasicItemStackToFluidOptionalItemRecipe`, `BasicItemStackToItemStackRecipe`, `BasicNucleosynthesizingRecipe`, `BasicSawmillRecipe`, `IBasicChemicalOutput`, `IBasicItemStackOutput`, `SawmillRecipeSerializer`, `WrappedShapedRecipe`），其余 24 份只带授权的 delta family。
 
 计划中关于 registration 顺序的假设被实测推翻：写 built-in registry **不**需要早于 `BuiltInRegistries.bootStrap()`，实测

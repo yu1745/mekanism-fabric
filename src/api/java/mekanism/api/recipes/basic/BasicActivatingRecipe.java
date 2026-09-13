@@ -18,7 +18,7 @@ import net.minecraft.world.item.crafting.RecipeSerializer;
 @NothingNullByDefault
 public class BasicActivatingRecipe extends BasicChemicalToChemicalRecipe {
 
-    private static final Holder<Item> SOLAR_NEUTRON_ACTIVATOR = MekanismKeyedHolder.registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "solar_neutron_activator")), () -> BuiltInRegistries.ITEM);
+    private static final Holder<Item> SOLAR_NEUTRON_ACTIVATOR = MekanismKeyedHolder.<Item, Item>registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "solar_neutron_activator")), () -> BuiltInRegistries.ITEM);
 
     public BasicActivatingRecipe(ChemicalStackIngredient input, ChemicalStack output) {
         super(input, output, MekanismRecipeTypes.TYPE_ACTIVATING.value());

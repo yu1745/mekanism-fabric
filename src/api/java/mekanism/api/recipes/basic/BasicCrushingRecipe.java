@@ -17,7 +17,7 @@ import net.minecraft.world.item.crafting.RecipeSerializer;
 @NothingNullByDefault
 public class BasicCrushingRecipe extends BasicItemStackToItemStackRecipe {
 
-    private static final Holder<Item> CRUSHER = MekanismKeyedHolder.registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "crusher")), () -> BuiltInRegistries.ITEM);
+    private static final Holder<Item> CRUSHER = MekanismKeyedHolder.<Item, Item>registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "crusher")), () -> BuiltInRegistries.ITEM);
 
     public BasicCrushingRecipe(ItemStackIngredient input, ItemStack output) {
         super(input, output, MekanismRecipeTypes.TYPE_CRUSHING.value());

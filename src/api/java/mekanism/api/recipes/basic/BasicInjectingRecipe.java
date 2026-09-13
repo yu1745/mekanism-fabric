@@ -18,7 +18,7 @@ import net.minecraft.world.item.crafting.RecipeSerializer;
 @NothingNullByDefault
 public class BasicInjectingRecipe extends BasicItemStackChemicalToItemStackRecipe {
 
-    private static final Holder<Item> CHEMICAL_INJECTION_CHAMBER = MekanismKeyedHolder.registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "chemical_injection_chamber")), () -> BuiltInRegistries.ITEM);
+    private static final Holder<Item> CHEMICAL_INJECTION_CHAMBER = MekanismKeyedHolder.<Item, Item>registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "chemical_injection_chamber")), () -> BuiltInRegistries.ITEM);
 
     public BasicInjectingRecipe(ItemStackIngredient itemInput, ChemicalStackIngredient chemicalInput, ItemStack output, boolean perTickUsage) {
         super(itemInput, chemicalInput, output, perTickUsage, MekanismRecipeTypes.TYPE_INJECTING.value());

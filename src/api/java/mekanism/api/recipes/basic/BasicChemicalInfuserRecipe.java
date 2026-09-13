@@ -18,7 +18,7 @@ import net.minecraft.world.item.crafting.RecipeSerializer;
 @NothingNullByDefault
 public class BasicChemicalInfuserRecipe extends BasicChemicalChemicalToChemicalRecipe {
 
-    private static final Holder<Item> CHEMICAL_INFUSER = MekanismKeyedHolder.registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "chemical_infuser")), () -> BuiltInRegistries.ITEM);
+    private static final Holder<Item> CHEMICAL_INFUSER = MekanismKeyedHolder.<Item, Item>registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "chemical_infuser")), () -> BuiltInRegistries.ITEM);
 
     /**
      * @param leftInput  Left input.

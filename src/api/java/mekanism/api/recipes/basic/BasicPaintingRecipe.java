@@ -18,7 +18,7 @@ import net.minecraft.world.item.crafting.RecipeSerializer;
 @NothingNullByDefault
 public class BasicPaintingRecipe extends BasicItemStackChemicalToItemStackRecipe {
 
-    private static final Holder<Item> PAINTING_MACHINE = MekanismKeyedHolder.registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "painting_machine")), () -> BuiltInRegistries.ITEM);
+    private static final Holder<Item> PAINTING_MACHINE = MekanismKeyedHolder.<Item, Item>registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "painting_machine")), () -> BuiltInRegistries.ITEM);
 
     /**
      * @param itemInput     Item input.

@@ -35,6 +35,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeManager;
+import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -66,11 +67,26 @@ class FabricRecipeRegistrationIntegrationTest {
     }
 
     @Test
+    void declaredHoldersStayAssignableToTheOfficialWidenedHolderShape() {
+        //Oracle declares DeferredHolder<RecipeType<?>, RecipeType<X>>, so every recipe type holder must be usable as Holder<RecipeType<?>> and Holder<? extends RecipeType<?>>.
+        net.minecraft.core.Holder<RecipeType<?>> widened = MekanismRecipeTypes.TYPE_CRUSHING;
+        net.minecraft.core.Holder<? extends RecipeType<?>> asExtends = MekanismRecipeTypes.TYPE_SAWING;
+        assertNotNull(widened);
+        assertNotNull(asExtends);
+        //The declared value type must remain precise, so a caller keeps the concrete recipe type without a cast.
+        RecipeType<ItemStackToItemStackRecipe> precise = MekanismRecipeTypes.TYPE_CRUSHING.value();
+        assertSame(widened.value(), precise, "the widened and precise views must observe the same instance");
+        //The serializer holders must be usable as Holder<RecipeSerializer<?>> in the same way.
+        net.minecraft.core.Holder<RecipeSerializer<?>> serializer = MekanismRecipeSerializers.CRUSHING;
+        assertNotNull(serializer);
+    }
+
+    @Test
     void recipeTypesRegisterUnderOfficialIdsAndReuseTheDeclaredInstances() {
-        List<MekanismKeyedHolder<? extends RecipeType<?>>> holders = MekanismRecipeTypes.recipeTypeHolders();
+        List<MekanismKeyedHolder<RecipeType<?>, ? extends RecipeType<?>>> holders = MekanismRecipeTypes.recipeTypeHolders();
         //Note: An explicit element type is required because Java forbids a 'var' declaration over the wildcard capture here.
         assertEquals(26, holders.size(), "there must be exactly 26 recipe types");
-        for (MekanismKeyedHolder<? extends RecipeType<?>> holder : holders) {
+        for (MekanismKeyedHolder<?, ? extends RecipeType<?>> holder : holders) {
             ResourceLocation id = holder.getId();
             assertEquals("mekanism", id.getNamespace(), "every recipe type id must be in the mekanism namespace");
             assertTrue(BuiltInRegistries.RECIPE_TYPE.containsKey(id), "recipe type must be registered: " + id);
@@ -83,11 +99,23 @@ class FabricRecipeRegistrationIntegrationTest {
         assertTrue(MekanismRecipeTypes.isRegistered(), "recipe type registration must report complete");
         assertSame(MekanismRecipeTypes.TYPE_CRUSHING.value(), BuiltInRegistries.RECIPE_TYPE.get(
               ResourceLocation.fromNamespaceAndPath("mekanism", "crushing")), "the crushing type must be the declared instance");
+        //Every holder must be bound after registration, and the registry must expose 26 distinct instances, so no two ids can share one type (which would
+        //merge two families in RecipeManager's byType map) and no id can be bound to a freshly created unrelated instance.
+        java.util.Set<RecipeType<?>> registeredInstances = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+        for (MekanismKeyedHolder<?, ? extends RecipeType<?>> holder : holders) {
+            assertTrue(holder.isBound(), "a registered recipe type holder must be bound: " + holder.getId());
+            assertSame(holder.value(), holder.get(), "get() and value() must observe the declared instance: " + holder.getId());
+            assertTrue(registeredInstances.add(holder.value()), "each recipe type must be a distinct instance: " + holder.getId());
+        }
+        assertEquals(26, registeredInstances.size(), "there must be 26 distinct registered recipe type instances");
+        //Every recipe class returns TYPE_X.value() from getType(), so proving the registry holds that exact instance proves recipe-level identity.
+        assertSame(BuiltInRegistries.RECIPE_TYPE.get(MekanismRecipeTypes.NAME_SAWING), MekanismRecipeTypes.TYPE_SAWING.value(),
+              "the sawing registry entry must be the instance SawmillRecipe.getType() returns");
     }
 
     @Test
     void serializersRegisterUnderOfficialIdsAndResolveThroughTheirHolders() {
-        for (MekanismKeyedHolder<?> holder : serializerHolders()) {
+        for (MekanismKeyedHolder<?, ?> holder : serializerHolders()) {
             ResourceLocation id = holder.getId();
             assertEquals("mekanism", id.getNamespace(), "every serializer id must be in the mekanism namespace");
             assertTrue(BuiltInRegistries.RECIPE_SERIALIZER.containsKey(id), "recipe serializer must be registered: " + id);
@@ -138,7 +166,7 @@ class FabricRecipeRegistrationIntegrationTest {
     }
 
     @SuppressWarnings("unchecked")
-    private static List<MekanismKeyedHolder<?>> serializerHolders() {
+    private static List<MekanismKeyedHolder<RecipeSerializer<?>, ? extends RecipeSerializer<?>>> serializerHolders() {
         return List.of(MekanismRecipeSerializers.CRUSHING, MekanismRecipeSerializers.ENRICHING, MekanismRecipeSerializers.SMELTING,
               MekanismRecipeSerializers.CHEMICAL_INFUSING, MekanismRecipeSerializers.COMBINING, MekanismRecipeSerializers.SEPARATING,
               MekanismRecipeSerializers.WASHING, MekanismRecipeSerializers.EVAPORATING, MekanismRecipeSerializers.ACTIVATING,

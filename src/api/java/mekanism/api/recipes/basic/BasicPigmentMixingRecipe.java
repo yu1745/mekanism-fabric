@@ -18,7 +18,7 @@ import net.minecraft.world.item.crafting.RecipeSerializer;
 @NothingNullByDefault
 public class BasicPigmentMixingRecipe extends BasicChemicalChemicalToChemicalRecipe {
 
-    private static final Holder<Item> PIGMENT_MIXER = MekanismKeyedHolder.registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "pigment_mixer")), () -> BuiltInRegistries.ITEM);
+    private static final Holder<Item> PIGMENT_MIXER = MekanismKeyedHolder.<Item, Item>registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "pigment_mixer")), () -> BuiltInRegistries.ITEM);
 
     /**
      * @param leftInput  Left input.

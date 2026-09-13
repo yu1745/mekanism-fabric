@@ -17,7 +17,7 @@ import net.minecraft.world.item.crafting.RecipeSerializer;
 @NothingNullByDefault
 public class BasicSmeltingRecipe extends BasicItemStackToItemStackRecipe implements IBasicItemStackOutput {
 
-    private static final Holder<Item> ENERGIZED_SMELTER = MekanismKeyedHolder.registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "energized_smelter")), () -> BuiltInRegistries.ITEM);
+    private static final Holder<Item> ENERGIZED_SMELTER = MekanismKeyedHolder.<Item, Item>registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "energized_smelter")), () -> BuiltInRegistries.ITEM);
 
     public BasicSmeltingRecipe(ItemStackIngredient input, ItemStack output) {
         super(input, output, MekanismRecipeTypes.TYPE_SMELTING.value());

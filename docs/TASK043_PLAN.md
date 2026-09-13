@@ -156,8 +156,8 @@ Two new suites at two different isolation levels, plus the existing 042A suite c
    non-claim and is now false by design. It becomes an assertion that the type **is** registered under its official id with canonical identity, and the "no registry
    mutation" comment is replaced by the 043 claim. Its other 5 methods are unchanged.
 
-Ordinary **76/378 → 77/384**; the new isolated source set adds **1 suite/4 tests**; ordinary+transfer+root+data-map totals move to **85/417**, and the aggregate
-across all five groups is **86/421** (transfer 5/27, root-registry 1/2, data-map 2/4
+Ordinary **76/378 → 77/384**; the new isolated source set adds **1 suite/5 tests**; ordinary+transfer+root+data-map totals move to **85/417**, and the aggregate
+across all five groups is **86/422** (transfer 5/27, root-registry 1/2, data-map 2/4
 unchanged). `fabric/build.gradle` must be updated in the same change: the slice-count guard `163/184/37 → 199/188/38`, the new source set and its `Test` task and
 `fabric.side=server` worker, the new fixed-source and `@Test`-count guards for `RecipeSerializerContractTest` (6) and the new Knot test (4), the
 `readTotals` expectations, and the aggregate sum.
@@ -203,10 +203,32 @@ Implemented from clean commit `87fe68e6` in an isolated worktree by the single D
 Measured result:
 
 - slices **163/184/37 → 199/188/38** (API +36, common +4, platform +1; 425 compiled production sources);
-- ordinary **76/378 → 77/384**; transfer **5/27**, root-registry **1/2**, data-map **2/4** unchanged; new recipe-registry worker **1/4**;
-  ordinary+transfer+root+data-map **85/417**; five-group aggregate **86/421**;
+- ordinary **76/378 → 77/384**; transfer **5/27**, root-registry **1/2**, data-map **2/4** unchanged; new recipe-registry worker **1/5**;
+  ordinary+transfer+root+data-map **85/417**; five-group aggregate **86/422**;
 - identity against `4646f509`: the 35 `basic` package files, the three common serializers, `WrappedShapedRecipe`, and `MekanismRecipeSerializers` were all
   byte-identical at baseline. After the change, 16 remain byte-identical (`BasicChemicalChemicalToChemicalRecipe`, `BasicChemicalCrystallizerRecipe`, `BasicChemicalDissolutionRecipe`, `BasicChemicalToChemicalRecipe`, `BasicCombinerRecipe`, `BasicItemStackChemicalToItemStackRecipe`, `BasicItemStackToChemicalRecipe`, `BasicItemStackToEnergyRecipe`, `BasicItemStackToFluidOptionalItemRecipe`, `BasicItemStackToItemStackRecipe`, `BasicNucleosynthesizingRecipe`, `BasicSawmillRecipe`, `IBasicChemicalOutput`, `IBasicItemStackOutput`, `SawmillRecipeSerializer`, `WrappedShapedRecipe`) and the other 24 carry only the authorized delta families.
+
+### Generic holder shape correction (independent review finding)
+
+An independent review of Task 042A found that `MekanismKeyedHolder<T> implements Holder<T>` was **not** type-compatible with oracle consumers: the official fields are
+declared `DeferredHolder<RecipeType<?>, RecipeType<X>>`, which *is* a `Holder<RecipeType<?>>` because `DeferredHolder<R, T extends R>` splits the registry element type
+from the declared value type. A single type parameter cannot express that, because `Holder` is invariant in its element type. This was confirmed by compilation, not
+by inspection: assigning `MekanismRecipeTypes.TYPE_CRUSHING` to `Holder<RecipeType<?>>` failed with `incompatible types`. The same defect applied to the 26
+`MekanismRecipeSerializers` fields.
+
+Fix: `MekanismKeyedHolder<R, T extends R>` now mirrors the official shape exactly. Every recipe type field is `MekanismKeyedHolder<RecipeType<?>, RecipeType<X>>` and
+every serializer field is `MekanismKeyedHolder<RecipeSerializer<?>, RecipeSerializer<X>>`, so each is a `Holder<RecipeType<?>>` / `Holder<RecipeSerializer<?>>` while
+still returning the precise declared value type from `get()`/`value()`. The 16 toast-item fields stay declared `Holder<Item>`, matching the oracle, with explicit
+`<Item, Item>` type arguments on the factory. `attach` also gained an exactness guard: attaching a holder whose bound value is not the very instance the keyed holder
+was built over is now rejected, so registration cannot silently bind an unrelated instance. An isolated test constructs the official widened
+`Holder<RecipeType<?>>`/`Holder<RecipeSerializer<?>>` and the precise value type, proving both the compatibility and that they observe one instance.
+
+### Executable identity coverage across the whole registry
+
+The isolated worker asserts, for every one of the 26 registered recipe types rather than a sample: the official id resolves, the registry value is identity-equal to
+the declared `TYPE_*` value, the canonical holder resolves to that same instance, the holder is bound, `get()` and `value()` agree, and all 26 registered instances
+are distinct under an identity set — so no id can share a type with another family and no id can be bound to a freshly created instance. A real `RecipeManager`
+decode-and-serve case then proves the served recipe reports both the registered type and the registered serializer.
 
 Design decisions actually taken:
 

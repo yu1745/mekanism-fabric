@@ -18,7 +18,7 @@ import net.minecraft.world.item.crafting.RecipeSerializer;
 @NothingNullByDefault
 public class BasicChemicalConversionRecipe extends BasicItemStackToChemicalRecipe {
 
-    private static final Holder<Item> CREATIVE_CHEMICAL_TANK = MekanismKeyedHolder.registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "creative_chemical_tank")), () -> BuiltInRegistries.ITEM);
+    private static final Holder<Item> CREATIVE_CHEMICAL_TANK = MekanismKeyedHolder.<Item, Item>registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "creative_chemical_tank")), () -> BuiltInRegistries.ITEM);
 
     public BasicChemicalConversionRecipe(ItemStackIngredient input, ChemicalStack output) {
         super(input, output, MekanismRecipeTypes.TYPE_CHEMICAL_CONVERSION.value());

@@ -26,7 +26,7 @@ import org.jetbrains.annotations.Contract;
 @NothingNullByDefault
 public class BasicWashingRecipe extends FluidChemicalToChemicalRecipe {
 
-    private static final Holder<Item> CHEMICAL_WASHER = MekanismKeyedHolder.registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "chemical_washer")), () -> BuiltInRegistries.ITEM);
+    private static final Holder<Item> CHEMICAL_WASHER = MekanismKeyedHolder.<Item, Item>registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "chemical_washer")), () -> BuiltInRegistries.ITEM);
 
     protected final FluidStackIngredient fluidInput;
     protected final ChemicalStackIngredient chemicalInput;

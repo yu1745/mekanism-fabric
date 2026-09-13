@@ -18,7 +18,7 @@ import net.minecraft.world.item.crafting.RecipeSerializer;
 @NothingNullByDefault
 public class BasicCompressingRecipe extends BasicItemStackChemicalToItemStackRecipe {
 
-    private static final Holder<Item> OSMIUM_COMPRESSOR = MekanismKeyedHolder.registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "osmium_compressor")), () -> BuiltInRegistries.ITEM);
+    private static final Holder<Item> OSMIUM_COMPRESSOR = MekanismKeyedHolder.<Item, Item>registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "osmium_compressor")), () -> BuiltInRegistries.ITEM);
 
     public BasicCompressingRecipe(ItemStackIngredient itemInput, ChemicalStackIngredient chemicalInput, ItemStack output, boolean perTickUsage) {
         super(itemInput, chemicalInput, output, perTickUsage, MekanismRecipeTypes.TYPE_COMPRESSING.value());

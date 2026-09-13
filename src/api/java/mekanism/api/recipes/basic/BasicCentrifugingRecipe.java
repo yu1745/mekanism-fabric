@@ -18,7 +18,7 @@ import net.minecraft.world.item.crafting.RecipeSerializer;
 @NothingNullByDefault
 public class BasicCentrifugingRecipe extends BasicChemicalToChemicalRecipe {
 
-    private static final Holder<Item> ISOTOPIC_CENTRIFUGE = MekanismKeyedHolder.registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "isotopic_centrifuge")), () -> BuiltInRegistries.ITEM);
+    private static final Holder<Item> ISOTOPIC_CENTRIFUGE = MekanismKeyedHolder.<Item, Item>registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "isotopic_centrifuge")), () -> BuiltInRegistries.ITEM);
 
     public BasicCentrifugingRecipe(ChemicalStackIngredient input, ChemicalStack output) {
         super(input, output, MekanismRecipeTypes.TYPE_CENTRIFUGING.value());

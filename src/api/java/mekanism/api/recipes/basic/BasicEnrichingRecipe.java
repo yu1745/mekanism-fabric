@@ -17,7 +17,7 @@ import net.minecraft.world.item.crafting.RecipeSerializer;
 @NothingNullByDefault
 public class BasicEnrichingRecipe extends BasicItemStackToItemStackRecipe implements IBasicItemStackOutput {
 
-    private static final Holder<Item> ENRICHMENT_CHAMBER = MekanismKeyedHolder.registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "enrichment_chamber")), () -> BuiltInRegistries.ITEM);
+    private static final Holder<Item> ENRICHMENT_CHAMBER = MekanismKeyedHolder.<Item, Item>registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "enrichment_chamber")), () -> BuiltInRegistries.ITEM);
 
     public BasicEnrichingRecipe(ItemStackIngredient input, ItemStack output) {
         super(input, output, MekanismRecipeTypes.TYPE_ENRICHING.value());

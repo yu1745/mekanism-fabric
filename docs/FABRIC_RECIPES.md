@@ -179,8 +179,8 @@ Task 043 implements `TASK043_PLAN.md` from clean commit `87fe68e6`, in an isolat
 types are now **really registered**, and every Mekanism recipe serializer is registered so datapack recipes decode.
 
 Slices move **163/184/37 → 199/188/38** (API +36, common +4, platform +1; 425 production sources). The executable contract moves to ordinary **77 suites/384 tests**,
-transfer **5/27**, root-registry **1/2**, data-map **2/4**, and a new recipe-registry worker **1/4**; ordinary+transfer+root+data-map **85/417**; five-group aggregate
-**86/421**.
+transfer **5/27**, root-registry **1/2**, data-map **2/4**, and a new recipe-registry worker **1/5**; ordinary+transfer+root+data-map **85/417**; five-group aggregate
+**86/422**.
 
 ### Recipe type registration preserves identity by construction
 
@@ -231,3 +231,17 @@ Non-claims: no `MekanismItems` or any item/block/fluid/Chemical registration; no
 `MekanismRecipeSerializersInternal` and therefore no `mek_data`/`clear_configuration`/`bin_insert`/`bin_extract` crafting specials and no bin or recipe-upgrade
 recipes; no production recipe JSON in the artifact; no JEI/EMI or client recipe viewer; no `getToastSymbol()`-correct items; no item/fluid/Chemical transaction or
 storage exposure; no broader Fabric integration.
+
+### Generic holder shape (Task 043 correction from independent review)
+
+Task 042A declared `MekanismKeyedHolder<T> implements Holder<T>`, which is not type compatible with the official surface: the oracle fields are
+`DeferredHolder<RecipeType<?>, RecipeType<X>>`, and that two-parameter shape *is* a `Holder<RecipeType<?>>` because the registry element type is split from the
+declared value type. Compilation confirmed the incompatibility. Task 043 therefore re-declares the helper as `MekanismKeyedHolder<R, T extends R>`, so all 26 recipe
+type fields are `MekanismKeyedHolder<RecipeType<?>, RecipeType<X>>` and all 26 serializer fields are
+`MekanismKeyedHolder<RecipeSerializer<?>, RecipeSerializer<X>>`, each assignable to the official widened `Holder<...>` while still returning the precise declared
+value type from `get()`/`value()`. The 16 toast-item fields keep the oracle's declared `Holder<Item>`. `attach` additionally rejects a delegate whose bound value is
+not the instance the keyed holder was built over, so registration cannot bind an unrelated instance.
+
+Coverage is executable, not documentary: for every registered type the isolated worker asserts the official id resolves, the registry value is identity-equal to the
+declared `TYPE_*` value, the canonical holder is that same instance, the holder is bound, `get()`/`value()` agree, and all 26 instances are distinct under an identity
+set. A real `RecipeManager` decode-and-serve case proves the served recipe reports the registered type and serializer.

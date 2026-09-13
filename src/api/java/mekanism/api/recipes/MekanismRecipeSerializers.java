@@ -38,34 +38,34 @@ import net.minecraft.world.item.crafting.RecipeSerializer;
  */
 public class MekanismRecipeSerializers {
 
-    public static MekanismKeyedHolder<RecipeSerializer<BasicCrushingRecipe>> CRUSHING = registryKeyed("crushing");
-    public static MekanismKeyedHolder<RecipeSerializer<BasicEnrichingRecipe>> ENRICHING = registryKeyed("enriching");
-    public static MekanismKeyedHolder<RecipeSerializer<BasicSmeltingRecipe>> SMELTING = registryKeyed("smelting");
-    public static MekanismKeyedHolder<RecipeSerializer<BasicChemicalInfuserRecipe>> CHEMICAL_INFUSING = registryKeyed("chemical_infusing");
-    public static MekanismKeyedHolder<RecipeSerializer<BasicCombinerRecipe>> COMBINING = registryKeyed("combining");
-    public static MekanismKeyedHolder<RecipeSerializer<BasicElectrolysisRecipe>> SEPARATING = registryKeyed("separating");
-    public static MekanismKeyedHolder<RecipeSerializer<BasicWashingRecipe>> WASHING = registryKeyed("washing");
-    public static MekanismKeyedHolder<RecipeSerializer<BasicFluidToFluidRecipe>> EVAPORATING = registryKeyed("evaporating");
-    public static MekanismKeyedHolder<RecipeSerializer<BasicActivatingRecipe>> ACTIVATING = registryKeyed("activating");
-    public static MekanismKeyedHolder<RecipeSerializer<BasicCentrifugingRecipe>> CENTRIFUGING = registryKeyed("centrifuging");
-    public static MekanismKeyedHolder<RecipeSerializer<BasicChemicalCrystallizerRecipe>> CRYSTALLIZING = registryKeyed("crystallizing");
-    public static MekanismKeyedHolder<RecipeSerializer<BasicChemicalDissolutionRecipe>> DISSOLUTION = registryKeyed("dissolution");
-    public static MekanismKeyedHolder<RecipeSerializer<BasicCompressingRecipe>> COMPRESSING = registryKeyed("compressing");
-    public static MekanismKeyedHolder<RecipeSerializer<BasicPurifyingRecipe>> PURIFYING = registryKeyed("purifying");
-    public static MekanismKeyedHolder<RecipeSerializer<BasicInjectingRecipe>> INJECTING = registryKeyed("injecting");
-    public static MekanismKeyedHolder<RecipeSerializer<BasicNucleosynthesizingRecipe>> NUCLEOSYNTHESIZING = registryKeyed("nucleosynthesizing");
-    public static MekanismKeyedHolder<RecipeSerializer<BasicItemStackToEnergyRecipe>> ENERGY_CONVERSION = registryKeyed("energy_conversion");
-    public static MekanismKeyedHolder<RecipeSerializer<BasicChemicalConversionRecipe>> CHEMICAL_CONVERSION = registryKeyed("chemical_conversion");
-    public static MekanismKeyedHolder<RecipeSerializer<BasicChemicalOxidizerRecipe>> OXIDIZING = registryKeyed("oxidizing");
-    public static MekanismKeyedHolder<RecipeSerializer<BasicPigmentExtractingRecipe>> PIGMENT_EXTRACTING = registryKeyed("pigment_extracting");
-    public static MekanismKeyedHolder<RecipeSerializer<BasicPigmentMixingRecipe>> PIGMENT_MIXING = registryKeyed("pigment_mixing");
-    public static MekanismKeyedHolder<RecipeSerializer<BasicMetallurgicInfuserRecipe>> METALLURGIC_INFUSING = registryKeyed("metallurgic_infusing");
-    public static MekanismKeyedHolder<RecipeSerializer<BasicPaintingRecipe>> PAINTING = registryKeyed("painting");
-    public static MekanismKeyedHolder<RecipeSerializer<BasicPressurizedReactionRecipe>> REACTION = registryKeyed("reaction");
-    public static MekanismKeyedHolder<RecipeSerializer<BasicRotaryRecipe>> ROTARY = registryKeyed("rotary");
-    public static MekanismKeyedHolder<RecipeSerializer<BasicSawmillRecipe>> SAWING = registryKeyed("sawing");
+    public static MekanismKeyedHolder<RecipeSerializer<?>, RecipeSerializer<BasicCrushingRecipe>> CRUSHING = registryKeyed("crushing");
+    public static MekanismKeyedHolder<RecipeSerializer<?>, RecipeSerializer<BasicEnrichingRecipe>> ENRICHING = registryKeyed("enriching");
+    public static MekanismKeyedHolder<RecipeSerializer<?>, RecipeSerializer<BasicSmeltingRecipe>> SMELTING = registryKeyed("smelting");
+    public static MekanismKeyedHolder<RecipeSerializer<?>, RecipeSerializer<BasicChemicalInfuserRecipe>> CHEMICAL_INFUSING = registryKeyed("chemical_infusing");
+    public static MekanismKeyedHolder<RecipeSerializer<?>, RecipeSerializer<BasicCombinerRecipe>> COMBINING = registryKeyed("combining");
+    public static MekanismKeyedHolder<RecipeSerializer<?>, RecipeSerializer<BasicElectrolysisRecipe>> SEPARATING = registryKeyed("separating");
+    public static MekanismKeyedHolder<RecipeSerializer<?>, RecipeSerializer<BasicWashingRecipe>> WASHING = registryKeyed("washing");
+    public static MekanismKeyedHolder<RecipeSerializer<?>, RecipeSerializer<BasicFluidToFluidRecipe>> EVAPORATING = registryKeyed("evaporating");
+    public static MekanismKeyedHolder<RecipeSerializer<?>, RecipeSerializer<BasicActivatingRecipe>> ACTIVATING = registryKeyed("activating");
+    public static MekanismKeyedHolder<RecipeSerializer<?>, RecipeSerializer<BasicCentrifugingRecipe>> CENTRIFUGING = registryKeyed("centrifuging");
+    public static MekanismKeyedHolder<RecipeSerializer<?>, RecipeSerializer<BasicChemicalCrystallizerRecipe>> CRYSTALLIZING = registryKeyed("crystallizing");
+    public static MekanismKeyedHolder<RecipeSerializer<?>, RecipeSerializer<BasicChemicalDissolutionRecipe>> DISSOLUTION = registryKeyed("dissolution");
+    public static MekanismKeyedHolder<RecipeSerializer<?>, RecipeSerializer<BasicCompressingRecipe>> COMPRESSING = registryKeyed("compressing");
+    public static MekanismKeyedHolder<RecipeSerializer<?>, RecipeSerializer<BasicPurifyingRecipe>> PURIFYING = registryKeyed("purifying");
+    public static MekanismKeyedHolder<RecipeSerializer<?>, RecipeSerializer<BasicInjectingRecipe>> INJECTING = registryKeyed("injecting");
+    public static MekanismKeyedHolder<RecipeSerializer<?>, RecipeSerializer<BasicNucleosynthesizingRecipe>> NUCLEOSYNTHESIZING = registryKeyed("nucleosynthesizing");
+    public static MekanismKeyedHolder<RecipeSerializer<?>, RecipeSerializer<BasicItemStackToEnergyRecipe>> ENERGY_CONVERSION = registryKeyed("energy_conversion");
+    public static MekanismKeyedHolder<RecipeSerializer<?>, RecipeSerializer<BasicChemicalConversionRecipe>> CHEMICAL_CONVERSION = registryKeyed("chemical_conversion");
+    public static MekanismKeyedHolder<RecipeSerializer<?>, RecipeSerializer<BasicChemicalOxidizerRecipe>> OXIDIZING = registryKeyed("oxidizing");
+    public static MekanismKeyedHolder<RecipeSerializer<?>, RecipeSerializer<BasicPigmentExtractingRecipe>> PIGMENT_EXTRACTING = registryKeyed("pigment_extracting");
+    public static MekanismKeyedHolder<RecipeSerializer<?>, RecipeSerializer<BasicPigmentMixingRecipe>> PIGMENT_MIXING = registryKeyed("pigment_mixing");
+    public static MekanismKeyedHolder<RecipeSerializer<?>, RecipeSerializer<BasicMetallurgicInfuserRecipe>> METALLURGIC_INFUSING = registryKeyed("metallurgic_infusing");
+    public static MekanismKeyedHolder<RecipeSerializer<?>, RecipeSerializer<BasicPaintingRecipe>> PAINTING = registryKeyed("painting");
+    public static MekanismKeyedHolder<RecipeSerializer<?>, RecipeSerializer<BasicPressurizedReactionRecipe>> REACTION = registryKeyed("reaction");
+    public static MekanismKeyedHolder<RecipeSerializer<?>, RecipeSerializer<BasicRotaryRecipe>> ROTARY = registryKeyed("rotary");
+    public static MekanismKeyedHolder<RecipeSerializer<?>, RecipeSerializer<BasicSawmillRecipe>> SAWING = registryKeyed("sawing");
 
-    private static <RECIPE extends net.minecraft.world.item.crafting.Recipe<?>> MekanismKeyedHolder<RecipeSerializer<RECIPE>> registryKeyed(String path) {
+    private static <RECIPE extends net.minecraft.world.item.crafting.Recipe<?>> MekanismKeyedHolder<RecipeSerializer<?>, RecipeSerializer<RECIPE>> registryKeyed(String path) {
         return MekanismKeyedHolder.registryKeyed(Registries.RECIPE_SERIALIZER, ResourceLocation.fromNamespaceAndPath("mekanism", path),
               () -> BuiltInRegistries.RECIPE_SERIALIZER);
     }

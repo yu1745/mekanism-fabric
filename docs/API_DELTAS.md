@@ -499,3 +499,17 @@ first-preference encoding, sawmill dependent optionality, energy scalar, and the
 worker (real registration with canonical identity, holder resolution, a real `RecipeManager` decode-and-serve, and duplicate/idempotence behavior). Two plan
 assertions were corrected to the real contract: an empty chemical output is an omitted optional field, and the no-output reaction and chance-without-output cases are
 rejected by the recipe constructor's precondition rather than as a codec error result.
+
+### Generic holder shape (Task 043 correction from independent review)
+
+Task 042A declared `MekanismKeyedHolder<T> implements Holder<T>`, which is not type compatible with the official surface: the oracle fields are
+`DeferredHolder<RecipeType<?>, RecipeType<X>>`, and that two-parameter shape *is* a `Holder<RecipeType<?>>` because the registry element type is split from the
+declared value type. Compilation confirmed the incompatibility. Task 043 therefore re-declares the helper as `MekanismKeyedHolder<R, T extends R>`, so all 26 recipe
+type fields are `MekanismKeyedHolder<RecipeType<?>, RecipeType<X>>` and all 26 serializer fields are
+`MekanismKeyedHolder<RecipeSerializer<?>, RecipeSerializer<X>>`, each assignable to the official widened `Holder<...>` while still returning the precise declared
+value type from `get()`/`value()`. The 16 toast-item fields keep the oracle's declared `Holder<Item>`. `attach` additionally rejects a delegate whose bound value is
+not the instance the keyed holder was built over, so registration cannot bind an unrelated instance.
+
+Coverage is executable, not documentary: for every registered type the isolated worker asserts the official id resolves, the registry value is identity-equal to the
+declared `TYPE_*` value, the canonical holder is that same instance, the holder is bound, `get()`/`value()` agree, and all 26 instances are distinct under an identity
+set. A real `RecipeManager` decode-and-serve case proves the served recipe reports the registered type and serializer.

@@ -22,7 +22,7 @@ import net.minecraft.world.item.crafting.RecipeType;
 @NothingNullByDefault
 public abstract class NucleosynthesizingRecipe extends ItemStackChemicalToItemStackRecipe {
 
-    private static final Holder<Item> ANTIPROTONIC_NUCLEOSYNTHESIZER = MekanismKeyedHolder.registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "antiprotonic_nucleosynthesizer")), () -> BuiltInRegistries.ITEM);
+    private static final Holder<Item> ANTIPROTONIC_NUCLEOSYNTHESIZER = MekanismKeyedHolder.<Item, Item>registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "antiprotonic_nucleosynthesizer")), () -> BuiltInRegistries.ITEM);
 
     @Override
     public final RecipeType<NucleosynthesizingRecipe> getType() {
