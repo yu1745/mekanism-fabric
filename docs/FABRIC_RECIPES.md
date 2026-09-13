@@ -100,3 +100,75 @@ recipe type/serializer/classes/JSON are absent from the release JAR.
 
 The derive-once amortization itself is proven by the tracking-override unit contracts in `ChemicalDomainTest` (invocation counting through the virtual
 `updateFromDataMap`); the runtime gate proves value stability and exact context-instance retention on the real recipe path.
+
+## Task 042A — output handling and one-input cached recipe execution
+
+Task 042A implements the approved 042A half of `TASK042_PLAN.md` from clean commit `cd263092`, in an isolated worktree. `TASK042_PLAN.md` recorded that the
+originally requested full vertical (output handling plus **registered** one-input recipe types and their decoders) is blocked: `Recipe#getType()` is abstract and the
+vanilla `RecipeManager` calls it on the live reload path, while this repository has no by-key holder mechanism, no recipe-type registration ownership, no
+serializers, and no admitted `MekanismItems` family for the ten `getToastSymbol()` holders.
+
+042A delivers the requested subject matter at the source level without any production registry mutation. Slices move **129/184/37 → 163/184/37** (34 new API sources,
+384 compiled production sources); common and platform are unchanged. Totals move to ordinary **76 suites/378 tests**, transfer **5/27**, root **1/2**, data-map
+**2/4**, aggregate **84/411**.
+
+### Identity classification against `4646f509`
+
+`U` byte-identical (12): `ChemicalChemicalToChemicalRecipe`, `ChemicalToChemicalRecipe`, `ItemStackChemicalToItemStackRecipe`, `ItemStackChemicalToObjectRecipe`,
+`ItemStackToChemicalRecipe`, `ItemStackToItemStackRecipe`, `BiChemicalRecipeInput`, `ChemicalRecipeInput`, `FluidChemicalRecipeInput`, `ItemChemicalRecipeInput`,
+`SingleChemicalRecipeInput`, `SingleItemChemicalRecipeInput`.
+
+`A` bounded adaptation (21): the other 14 recipe abstractions (including `MekanismRecipeTypes`, whose 26 `DeferredHolder.create` sites become concrete
+recipe-type instances in the new holder) plus the 5 `FluidStack`-bearing `vanilla_input` records and the two task targets `cache/OneInputCachedRecipe` and
+`outputs/OutputHelper`.
+
+`N` new source (1): `mekanism/api/recipes/MekanismKeyedHolder`, the layer-neutral keyed holder.
+
+Exactly four authorized delta families are present and no others:
+
+1. `net.neoforged.neoforge.fluids.FluidStack` → project `mekanism.api.fluid.FluidStack` (14 files: the 2 targets, 7 abstractions, 5 `vanilla_input` records);
+2. `net.neoforged.neoforge.common.util.TriPredicate` → project `mekanism.api.functions.TriPredicate` (1 file, `PressurizedReactionRecipe`);
+3. `MekanismAPI.MEKANISM_MODID` → literal `"mekanism"` (the Task 032 precedent), which also removes the whole 15-file module/gear/radial API group from the closure;
+4. `DeferredHolder.create(Registries.RECIPE_TYPE|ITEM, key)` → `MekanismKeyedHolder`.
+
+`OutputHelper` semantics are unchanged apart from the `FluidStack` import: both `operations == 0` early returns, `clampToInt(amountUsed / toAmount)`,
+`INPUT_DOESNT_PRODUCE_OUTPUT` versus not-enough-space chosen from `tank.getNeeded() > 0` and `slot.getLimit(slot.getStack()) - slot.getCount() > 0`, item output count
+multiplication, the secondary-output loop, and `shouldContinueChecking()` ordering. `OneInputCachedRecipe` keeps `SEPARATOR_OUTPUT_EMPTY` and
+`FLUID_OPTIONAL_ITEM_OUTPUT_EMPTY` as distinct predicates, keeps `sawing`'s `ConstantPredicates.alwaysFalse()` output check, and keeps `finishProcessing`'s
+null/empty guard.
+
+### Keyed holders and recipe type identity (the one new mechanism)
+
+`MekanismKeyedHolder<T>` implements `Holder<T>` and `Supplier<T>` over a `ResourceKey<T>` and is dependency free, because the API layer may not reference the common
+layer. Two forms exist: `keyed(...)` over an identity stable, non-registered value, and `registryKeyed(...)` resolving lazily by key out of an existing registry.
+Whenever a vanilla delegate is present all `Holder` queries delegate to it; otherwise the key answers `is`/`unwrapKey`/`unwrap`/`kind` and tag lookups are empty.
+Nothing is written into any registry.
+
+`MekanismRecipeTypes.TYPE_*` therefore hold 26 concrete, **non-registered**, identity stable `RecipeType` instances. Vanilla `RecipeManager` groups by
+`recipeholder.value().getType()` identity, so in-memory recipes, the `OneInputCachedRecipe` factories, and `byType` lookups are fully functional. The ten toast-item
+keys are resolved by key against the vanilla `BuiltInRegistries.ITEM`; while the `MekanismItems` family is not admitted those holders are non-null and key-correct
+but legitimately **unbound**, and `value()` fails closed. That limitation is an explicit non-claim and is asserted as such.
+
+### Verification
+
+Six new ordinary methods, in exactly one new suite, `RecipeOutputHandlingTest` (no Knot, no registry mutation, no network): the chemical tank matrix (execute
+true-`long` growth, `operations == 0`, `INPUT_DOESNT_PRODUCE_OUTPUT` versus not-enough-space); the fluid tank matrix (the `Integer.MAX_VALUE` simulate cap, integer
+truncation, foreign/full/zero-capacity tanks); the item slot matrix (empty-output no-op, count multiplication, simulate/execute split, slot-limit gating);
+`ChanceOutput` ordering and per-iteration refresh through by-hand `OperationTracker` counts; the three record handlers' member ordering and tracker short-circuit;
+and the `OneInputCachedRecipe` empty guards plus `getType()` identity stability, non-registration, and key-correct-but-unbound toast holders.
+
+Gates run for 042A: the four test tasks plus `verifyFabricTestContract` and `remapJar`; `check build`; the three slice no-NeoForge checks; `scan-platform-deps.py`;
+`fabric-build.sh`; and `FABRIC_SMOKE_STATIC_ONLY=1 scripts/fabric-packaged-smoke.sh`. The static packaged gate now admits exactly the new
+`mekanism/api/recipes/**` outer and nested classes (including `vanilla_input` records, `MekanismKeyedHolder`, `OutputHelper$1..$7`, and
+`MekanismRecipeTypes$1`) and rejects the 042B families (`recipes/basic/**`, `MekanismRecipeSerializers`, `common/recipe/MekanismRecipeType*`,
+`IMekanismRecipeTypeProvider`, `RecipeTypeRegistryObject`, `RotaryInputRecipeCache`, `common/recipe/serializer/**`, every `mekanism/client/**`,
+`MekanismItems*`, and `mekanism/api/MekanismAPI.class`), plus serializers, production recipe JSON, and every fixture/test class.
+
+`./build.sh --clean` and the real dedicated-server/client smokes are deliberately not run: 042A introduces no lifecycle, registry-frozen, networking, or runtime
+owner.
+
+Non-claims: no recipe-type registration; no recipe serializers; no production recipe JSON; no `MekanismRecipeType`/`IMekanismRecipeTypeProvider`/
+`RecipeTypeRegistryObject`; no concrete/basic recipe implementations; no `MekanismItems` and therefore no `getToastSymbol()`-correct items; no datapack-loaded
+Mekanism recipes; no machines or tile entities; no JEI/EMI or client recipe viewer; no item/fluid/Chemical transaction or storage exposure; no machine-facing
+`InputRecipeCache` index; no broader Fabric integration. Recipe-type and serializer registration, the concrete recipe family, and the item-registration boundary
+remain the separately approved 042B, which must reuse these exact `RecipeType` instances so `byType` identity grouping survives.

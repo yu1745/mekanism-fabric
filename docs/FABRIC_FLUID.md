@@ -16,8 +16,9 @@ only in `mekanism.fabric.fluid`. Nothing is added under `net.neoforged.*`.
 
 Task 034 itself did **not** replace any existing NeoForge `FluidStack` import. Of
 the complete scout inventory of 197 progressive replacements, Task 035 later changes
-`SerializerHelper` and Task 036 changes only `TextComponentUtil`; 195 remain for
-future bounded closures. Admitting the value does not broadly admit callers.
+`SerializerHelper` and Task 036 changes only `TextComponentUtil`; Task 042A changes the fourteen
+recipe/`vanilla_input` sources, leaving **181** for future bounded closures. Admitting the value does not
+broadly admit callers.
 
 ## Behavioral provenance
 
@@ -236,8 +237,8 @@ Task 034 did not admit `SerializerHelper`; Task 035 admits that shared owner, an
 Task 036 admits only the portable TextComponentUtil closure while retaining local,
 non-escaping predicates instead of full `ConstantPredicates`. The following remain deferred:
 
-- full `ConstantPredicates`, `ChemicalStack`, `TriPredicate`, and all other translation/predicate callers;
-- the remaining 195 progressive NeoForge `FluidStack` import replacements;
+- full `ConstantPredicates`, `ChemicalStack`, and all other translation/predicate callers; Task 042A admits the project `TriPredicate` for `PressurizedReactionRecipe`;
+- the remaining **181** progressive NeoForge `FluidStack` import replacements;
 - fluid types/attributes or custom FluidType description overrides;
 - fluid tanks, handlers, storage adapters, transactions, lookup/provider/cache
   owners, listeners, or lifecycle wiring;

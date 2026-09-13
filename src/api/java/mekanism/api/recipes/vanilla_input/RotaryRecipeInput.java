@@ -3,7 +3,7 @@ package mekanism.api.recipes.vanilla_input;
 import com.mojang.datafixers.util.Either;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.chemical.ChemicalStack;
-import net.neoforged.neoforge.fluids.FluidStack;
+import mekanism.api.fluid.FluidStack;
 
 /**
  * Simple implementation of a recipe input of for {@link mekanism.api.recipes.RotaryRecipe}.

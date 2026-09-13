@@ -218,3 +218,19 @@ that the fixture recipe type, serializer, classes, and any `data/mekanism/recipe
 data are absent from the release JAR. The derive-once amortization of the chemical hot cache is proven by
 the tracking-override unit contracts in `ChemicalDomainTest`; the runtime gate proves stability and exact
 context retention on the real recipe path.
+
+## Task 042A output handling static artifact gate
+
+The static release-JAR gate now admits exactly the Task 042A API recipe family: the 33 admitted recipe/`vanilla_input`
+sources (outer classes plus the `ElectrolysisRecipe$ElectrolysisRecipeOutput`,
+`ItemStackToFluidOptionalItemRecipe$FluidOptionalItemOutput`, `PressurizedReactionRecipe$PressurizedReactionRecipeOutput`,
+and `SawmillRecipe$ChanceOutput` records), `MekanismKeyedHolder.class`, `MekanismRecipeTypes.class` with its single
+anonymous `$1`, `cache/OneInputCachedRecipe.class`, and `outputs/OutputHelper.class` with `$1` through `$7`.
+
+The same gate rejects every class family that belongs to the blocked 042B: `mekanism/api/recipes/basic/**`,
+`MekanismRecipeSerializers*`, `common/recipe/MekanismRecipeType*`, `common/recipe/IMekanismRecipeTypeProvider*`,
+`common/registration/impl/RecipeTypeRegistryObject*`, `common/recipe/lookup/RotaryInputRecipeCache*`,
+`common/recipe/serializer/**`, every `mekanism/client/**` class (the client recipe viewer), `common/registries/MekanismItems*`,
+and `mekanism/api/MekanismAPI.class`. It also rejects `data/mekanism/recipe/**` production recipe JSON and any
+fixture/test class (`Test*`, `RecipeOutputHandlingTest`, or any `*Fixture`). No server is started in
+`FABRIC_SMOKE_STATIC_ONLY=1` mode, and no recipe-type or item registration is claimed.

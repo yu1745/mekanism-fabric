@@ -1,7 +1,7 @@
 package mekanism.api.recipes.vanilla_input;
 
 import mekanism.api.annotations.NothingNullByDefault;
-import net.neoforged.neoforge.fluids.FluidStack;
+import mekanism.api.fluid.FluidStack;
 
 /**
  * Simple implementation of a recipe input of one fluid.

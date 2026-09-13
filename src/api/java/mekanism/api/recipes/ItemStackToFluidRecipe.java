@@ -3,11 +3,11 @@ package mekanism.api.recipes;
 import java.util.List;
 import java.util.function.Predicate;
 import mekanism.api.annotations.NothingNullByDefault;
+import mekanism.api.fluid.FluidStack;
 import mekanism.api.recipes.ingredients.ItemStackIngredient;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.SingleRecipeInput;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.fluids.FluidStack;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 

@@ -4,11 +4,11 @@ import java.util.List;
 import java.util.function.BiPredicate;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.chemical.ChemicalStack;
+import mekanism.api.fluid.FluidStack;
 import mekanism.api.recipes.ingredients.ChemicalStackIngredient;
 import mekanism.api.recipes.ingredients.FluidStackIngredient;
 import mekanism.api.recipes.vanilla_input.SingleFluidChemicalRecipeInput;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.fluids.FluidStack;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 

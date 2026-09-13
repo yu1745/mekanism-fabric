@@ -69,7 +69,7 @@ scripts/scan-platform-deps.py
 | network | payload registrar/handler、`IPayloadContext`、`PacketDistributor`、`IContainerFactory`、NeoForge stream codecs | Fabric configuration 先做 exact 10.7.19 negotiation；Task 040 再以 ordered task发送 bounded descriptor-codec Chemical snapshot并等待 ACK，play S2C只发布 successful reload epoch | P0 | 高：owner-executor resolution、name references、bounds、unknown/duplicate/stale/regressing rejection、same-process reconnect 已门禁；通用 dispatcher 与 withheld-ACK timeout 仍延期 |
 | capability + attachments | `Block/Item/EntityCapability`、provider、register event、`BlockCapabilityCache`、attachments | 使用 Fabric `BlockApiLookup`/`ItemApiLookup`（适用处）和 entity/block hooks；以小型 lookup facade 隔离查询；缓存必须监听失效/区块卸载，数据附件用 Fabric attachment API 或明确的 component/持久化 owner | P1 | 很高：缓存失效、side/context、生命周期和持久化最容易造成复制、泄漏或 stale reference |
 | item | `IItemHandler`、slot view、item capability；菜单/机器/物流的 insert/extract | Task 033 gateway 上已由 Task 039 接入 Basic/Input/Output、真实 container/player/virtual slot、warning 与 InventorySlotInfo；反向 adapter、provider/cache 与 machine owner 延期 | P1 | 很高：real slot commit/rollback 与 menu-slot behavior 已门禁；provider invalidation、side config/ejector 和机器生命周期尚待实现 |
-| fluid | `FluidStack`、`FluidType`、`IFluidHandler`/item、`BaseFlowingFluid`、fluid ingredients/crafting | Task 034 已建立 Mekanism-owned int-mB `FluidStack` 与 exact factor-81 `FluidVariant` value/unit seam；后续 lookup 采用 `Storage<FluidVariant>` 并单独实现 transaction/tank/owner，Task 036 后其余 195 个 import replacements 仍逐闭包迁移 | P1 | 极高：值层只关闭 empty/component/codec/unit/flowing-normalization；温度/属性、事务、桶装、配方、owner lifecycle 仍可能失真 |
+| fluid | `FluidStack`、`FluidType`、`IFluidHandler`/item、`BaseFlowingFluid`、fluid ingredients/crafting | Task 034 已建立 Mekanism-owned int-mB `FluidStack` 与 exact factor-81 `FluidVariant` value/unit seam；后续 lookup 采用 `Storage<FluidVariant>` 并单独实现 transaction/tank/owner，Task 036 后其余 import replacements 仍逐闭包迁移（Task 042A 迁移其中 14 个 recipe 源） | P1 | 极高：值层只关闭 empty/component/codec/unit/flowing-normalization；温度/属性、事务、桶装、配方、owner lifecycle 仍可能失真 |
 | chemical | Mekanism `Chemical`/`ChemicalStack`、tank/handler、side exposure；平台 import 为 0 | Task 040 已接入 internal registry/domain、true-long stack/tank、dynamic/sided/proxy handler、non-config holder、slot info、five-map attributes/tooltips；未来另建 Mekanism-owned lookup/transaction adapter，不假装 Fabric fluid | P1 | 高：canonical EMPTY、amount/NBT/wire、tank admission、name-based sync与owner isolation已门禁；第三方 provider/invalidation/transaction rollback 未承诺 |
 | energy | `IEnergyStorage` 和 energy capability；Mekanism `IEnergyContainer` | 保留 Joule 与 container；首个边界选用外置 Team Reborn Energy 4.1.0，仅在 Fabric adapter 做 caller-supplied 换算、true-long 与 nested transaction；核心/common 不直接依赖第三方 energy API | P1 | 高：Fabric API 本身没有统一能源语义；单位比例、fixed-point 量化、rollback side effect 与 owner 生命周期必须逐项验证 |
 | events | NeoForge event bus、`SubscribeEvent`、priority；block/entity/player/tick/level events、`EventHooks` | 按行为映射到 Fabric lifecycle/player/entity/world/tick callback；缺失事件用窄 mixin 发出 Mekanism 自有 hook；每个订阅记录触发侧、时机、取消和优先级 | P1 | 很高：192 imports；callback 覆盖面与取消/结果语义并非等价，mixin 冲突需最小化 |
@@ -245,7 +245,7 @@ FluidType/capability-only methods 被显式删除；description 使用 default f
 
 九个 ordinary FluidStack tests 与四个 Knot conversion tests 固定 value、component overload parity/absent clearing、golden JSON/NBT/wire、exact errors/adaptations、unit edge 与 deterministic 100,000-case loop。旧 item Knot suite unchanged relocation 后两套共用单一 `fabricTransferTest` startup；预期 ordinary 64/305、transfer 2/8、aggregate 66/313，三项 jqwik property 各100,000。JAR 只允许 FluidStack/FabricFluidConversions outer class 各一次，无 tests/helpers/NeoForge/loader 或 startup marker。
 
-Task 034 落地时严格延期 `SerializerHelper` 与其余 listed boundaries；Task 035 迁移该 shared owner，Task 036 仅迁移 portable `TextComponentUtil` closure，并以两个不逃逸 stateless predicates 避免完整 `ConstantPredicates`。其余 195 个 import replacements、fluid types/attributes、tanks/handlers/storage/transactions、item concrete slots、warning/menu、recipes、provider/cache owner 和 machines/Crusher 仍延期；Task 034 本身不构成 transaction 或 owner integration。
+Task 034 落地时严格延期 `SerializerHelper` 与其余 listed boundaries；Task 035 迁移该 shared owner，Task 036 仅迁移 portable `TextComponentUtil` closure，并以两个不逃逸 stateless predicates 避免完整 `ConstantPredicates`；Task 042A 迁移 14 个 recipe/`vanilla_input` source 的 FluidStack import 并纳入 project `TriPredicate`。其余 import replacements、fluid types/attributes、tanks/handlers/storage/transactions、item concrete slots、warning/menu、recipes、provider/cache owner 和 machines/Crusher 仍延期；Task 034 本身不构成 transaction 或 owner integration。
 
 ### Task 035 shared serialization ownership
 
@@ -367,3 +367,29 @@ server/client runtime gate 见 `scripts/fabric-recipe-runtime-smoke.sh` 与 `FAB
 4. **P3 集成**：每个 optional mod 独立验证“存在/不存在”两种环境；未移植集成必须显式关闭并记录。
 
 更新本表时保留脚本原始输出或同步数字，并用 `rg 'net\.neoforged' src -g '*.java'` 检查 import 扫描未覆盖的全限定引用。计数下降只是趋势指标；真正门禁是编译、干净 Loader 启动、注册对账和交易/存档行为测试。
+
+### Task 042A output handling and one-input cached recipe execution
+
+Task 042A 从 clean commit `cd263092` 在隔离 worktree 实现 `TASK042_PLAN.md` 中获批的 042A 半部。计划已证明
+原请求的完整垂直被阻断：vanilla `Recipe#getType()` 为 abstract 且 `RecipeManager` 在真实 reload 路径上调用它，
+而本仓库既无 by-key holder 机制，也无 recipe type registration ownership、serializer、production recipe JSON，
+且十个 `getToastSymbol()` holder 所需的 `MekanismItems` 家族未纳入。042A 因此在**不写任何 production registry**
+的前提下交付完整源码级主题。
+
+slices **129/184/37 → 163/184/37**（384 compiled production sources，common/platform 不变），测试
+ordinary/transfer/root/data-map/aggregate **75/372 → 76/378**、**5/27**、**1/2**、**2/4**、**83/405 →
+84/411**。相对 `4646f509` 的分类为 U/A/N **12/21/1**（无 M/R）：12 份 byte-identical；21 份有界适配；
+唯一新 source 是 layer-neutral `mekanism/api/recipes/MekanismKeyedHolder`。授权的四个 delta family 恰好为
+NeoForge `FluidStack` → project type（14 files）、NeoForge `TriPredicate` → project type（1 file）、
+`MekanismAPI.MEKANISM_MODID` → literal `"mekanism"`（同时剔除仅因该常量可达的 15 份 module/gear/radial API）、
+以及 `DeferredHolder.create(Registries.RECIPE_TYPE|ITEM, key)` → `MekanismKeyedHolder`。
+
+关键设计决策：`MekanismRecipeTypes.TYPE_*` 持有 26 个 **non-registered、identity-stable** 的 concrete
+`RecipeType` 实例。vanilla 按 `getType()` identity 分组，因此 in-memory recipes、`OneInputCachedRecipe`
+factories 与 `byType` 查询完整可用，而 `BuiltInRegistries.RECIPE_TYPE` 零写入；十个 toast item key 按 key 对
+vanilla `BuiltInRegistries.ITEM` 解析，在 `MekanismItems` 未纳入期间保持 non-null、key-correct 但 unbound，
+`value()` fail closed。该限制是显式 non-claim 并被测试固定，而不是被隐藏。静态 JAR gate 精确允许新的
+`mekanism/api/recipes/**` outer/nested class 并拒绝 042B families。recipe type/serializer registration、concrete
+recipe family、`MekanismItems` 与 client recipe viewer 仍属单独审批的 042B，且必须复用这些同一 `RecipeType`
+实例以保持 `byType` identity grouping。
+

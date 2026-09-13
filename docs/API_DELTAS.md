@@ -438,3 +438,32 @@ Task 041 admits the recipe ingredient/input/generic-cache layer with these bound
   `IdentityHashMap<Chemical,DerivedCacheEntry>`，legacy inputs 折叠为 volatile copy-on-write
   `LegacyState` identity；`addAttribute` 发布新 state 并仅使该 Chemical 的 entry 失效。repeat top-level
   query 在 exact (thread, context, chemical, legacy state) 下零分配零 descriptor lookup。
+
+## Recipe output handling, one-input cached recipes, and keyed holders (Task 042A)
+
+Task 042A admits the 33-source output-handling/one-input closure plus one new layer-neutral source, moving the compiled slices to **163/184/37**. Against
+`4646f509` the closure is exactly 12 `U` (byte-identical) and 21 `A`, plus the new `N` source; there is no `M` or `R`.
+
+The only adaptations are the four families approved by `TASK042_PLAN.md`:
+
+- the NeoForge `FluidStack` import becomes the project-owned `mekanism.api.fluid.FluidStack` in 14 files. `OutputHelper`'s fluid paths keep `Integer.MAX_VALUE` as
+  the simulate cap, `int amountUsed / toOutput.getAmount()` truncation, and the exact `getNeeded() > 0` error split; the chemical path keeps
+  `MathUtils.clampToInt(amountUsed / toOutput.getAmount())` with a true-`long` `copyWithAmount(amount * operations)`.
+- NeoForge `TriPredicate` becomes `mekanism.api.functions.TriPredicate` in `PressurizedReactionRecipe`.
+- `MekanismAPI.MEKANISM_MODID` becomes the literal `"mekanism"`, matching the Task 032 precedent and dropping the entire 15-file module/gear/radial API group,
+  which was reachable only through the single mod-id constant.
+- `DeferredHolder.create(Registries.RECIPE_TYPE|ITEM, key)` becomes `MekanismKeyedHolder`.
+
+`MekanismKeyedHolder<T>` is the one genuinely new mechanism. It is a dependency-free `Holder<T>`/`Supplier<T>` over a `ResourceKey<T>`; the API layer cannot
+reference the common layer's by-key register, so the helper lives in `mekanism.api.recipes`. `keyed(...)` wraps an identity stable, non-registered value;
+`registryKeyed(...)` resolves a key lazily out of an existing registry. With a vanilla delegate present, `unwrap`, `unwrapKey`, `kind`, `canSerializeIn`, `tags`,
+`is(...)`, `get`, `value`, and `isBound` delegate verbatim; with no delegate, key-derived `is`/`unwrapKey`/`unwrap`/`kind` answers and key-based `getKey`/`getName`/
+`getId` remain available while tag and serialize queries fail closed. The helper never writes to a registry.
+
+Consequently `MekanismRecipeTypes.TYPE_*` hold 26 concrete non-registered `RecipeType` instances. Vanilla groups recipes by `getType()` **identity**, so in-memory
+recipes and `OneInputCachedRecipe` factories are usable and `RecipeManager.byType` is correct, while nothing is registered. The ten
+`getToastSymbol()` item holders resolve `mekanism:<path>` against `BuiltInRegistries.ITEM`; because the `MekanismItems` family is not admitted they are non-null and
+key-correct but unbound, and `value()` throws. `mekanism/api/MekanismAPI.class` is still absent from the artifact.
+
+Verification: six ordinary methods in the single new `RecipeOutputHandlingTest` (no Knot), the three slice no-NeoForge checks, `scan-platform-deps.py`,
+`fabric-build.sh`, and the exact static packaged class-family/leakage gate. `./build.sh --clean` and real server/client smokes are not run.

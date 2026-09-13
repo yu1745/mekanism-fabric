@@ -201,3 +201,37 @@ break. Until that approval exists, 042B must not be started.
 This planning task adds only this document. It changes no slice, no gate, no build file, and no production or test source. A later 042A implementation must record:
 exact slice arithmetic **163/184/37**; per-file `U`/`A`/`N` identity against `4646f509`; the four authorized delta families; the six new ordinary tests; and
 updates to `docs/FABRIC_RECIPES.md`, `FABRIC_PORT.md`, `PORT_MATRIX.md`, `API_DELTAS.md`, and `FABRIC_SMOKE.md`.
+
+## 042A implementation outcome (recorded after landing)
+
+042A was implemented from clean commit `cd263092` in an isolated worktree by the single DeepSeek implementation agent, exactly as planned and with no scope
+expansion into the blocked 042B.
+
+Measured result:
+
+- slices **129/184/37 → 163/184/37** (34 new API sources, 384 compiled production sources; common 184 and platform 37 unchanged);
+- classification `U`/`A`/`N` = **12/21/1**, verified per file against `4646f509` (the twelve `U` sources are byte-identical, the twenty-one `A` sources carry
+  only the four authorized delta families, and `MekanismKeyedHolder` is the single new source);
+- exactly four delta families are present and no others: project `FluidStack` import (14 files), project `TriPredicate` import (1 file), literal `"mekanism"` for
+  `MekanismAPI.MEKANISM_MODID` (which also drops the 15-file module/gear/radial group), and `MekanismKeyedHolder` replacing `DeferredHolder.create(...)` at the 26
+  recipe-type sites and the 10 toast-item sites;
+- ordinary **75/372 → 76/378**, transfer **5/27**, root **1/2**, data-map **2/4**, aggregate **83/405 → 84/411**; one new ordinary suite with exactly six methods;
+- `fabric/build.gradle` slice/count guards, the per-source `@Test` list, `readTotals(ordinary...)`, and the aggregate check were updated in the same change;
+- `scripts/fabric-packaged-smoke.sh` admits exactly the new `mekanism/api/recipes/**` outer and nested classes and rejects the 042B families, serializers,
+  production recipe JSON, and fixture/test classes.
+
+Design decisions actually taken:
+
+- `MekanismKeyedHolder` is a dependency-free `Holder<T>`/`Supplier<T>` in the API layer with two factories: `keyed(...)` for identity-stable non-registered values and
+  `registryKeyed(...)` for lazy by-key registry resolution. It mirrors the typed-key shape of `DeferredHolder.create(Registry, ResourceLocation)` via an overload
+  taking `ResourceKey<? extends Registry<R>>` plus the concrete value, which is required so `MekanismRecipeTypes`'s public field types can be `RecipeType<X>` rather
+  than `RecipeType<?>`. `getKey()`, `key()`, `getName()`, `getId()`, and `asOptional()` keep the common-layer named-entry surface callable without a common import.
+- `MekanismRecipeTypes.TYPE_*` are concrete non-registered `RecipeType` instances created by one private factory; `BuiltInRegistries.RECIPE_TYPE` receives no write.
+- The toast holders stay non-null and key-correct but unbound, which is asserted as an explicit non-claim in the new suite.
+- The plan's "cast-compatible with the existing `MekanismDeferredHolder` comparison sites" requirement needed no change to `MekanismDeferredHolder`: no admitted slice
+  consumes the extra `is(R)`/`keyMatches(Holder)` helpers, and `equals`/`hashCode`/`is(...)`/`isBound`/`unwrap*`/`kind`/`tags` are shared `Holder` surface on both
+  types. `MekanismKeyedHolder` therefore adds `getKey`/`key`/`getName`/`getId`/`asOptional` to keep the named-entry surface callable without a common-layer import.
+
+Verified gates: `test fabricTransferTest fabricRegistryTest fabricDataMapTest verifyFabricTestContract remapJar`; `check build`; the three
+`verify*SliceNoNeoForge` tasks; `scripts/scan-platform-deps.py`; `fabric-build.sh`; and `FABRIC_SMOKE_STATIC_ONLY=1 scripts/fabric-packaged-smoke.sh`.
+As planned, `./build.sh --clean` and the real dedicated-server/client smokes were not run, and no push, deploy, production, mirror, or secret operation was performed.
