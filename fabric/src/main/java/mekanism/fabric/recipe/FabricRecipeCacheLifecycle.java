@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Server-side recipe cache lifecycle owner.
  *
- * <p>Binds the actual server {@link net.minecraft.world.item.crafting.RecipeManager} at {@code SERVER_STARTED} epoch 1. A successful
+ * <p>Binds the actual server {@link net.minecraft.world.item.crafting.RecipeManager} and its matching registry access at {@code SERVER_STARTED} epoch 1. A successful
  * {@code END_DATA_PACK_RELOAD} binds a fresh context with an incremented epoch only after vanilla has replaced the recipes, while a failed reload preserves the
  * context identity, epoch, and cache state. {@code SERVER_STOPPED} clears the server-thread binding. Chemical data-map publication alone never advances the recipe
  * epoch.</p>
@@ -30,7 +30,8 @@ public final class FabricRecipeCacheLifecycle {
         ServerLifecycleEvents.SERVER_STARTED.register(server -> {
             requireServerThread(server);
             serverEpoch = 1;
-            RecipeCacheContext.bind(server.getRecipeManager(), serverEpoch);
+            //Note: The server's own registry access is published with the manager so synthetic vanilla smelting never needs a process-global fallback
+            RecipeCacheContext.bind(server.getRecipeManager(), server.registryAccess(), serverEpoch);
             LOGGER.info("MEKANISM_FABRIC_RECIPE_CACHE_PROOF phase=start epoch={}", serverEpoch);
         });
         ServerLifecycleEvents.END_DATA_PACK_RELOAD.register((server, resources, success) -> {
@@ -41,7 +42,7 @@ public final class FabricRecipeCacheLifecycle {
             }
             requireServerThread(server);
             serverEpoch++;
-            RecipeCacheContext.bind(server.getRecipeManager(), serverEpoch);
+            RecipeCacheContext.bind(server.getRecipeManager(), server.registryAccess(), serverEpoch);
             LOGGER.info("MEKANISM_FABRIC_RECIPE_CACHE_PROOF phase=reload epoch={}", serverEpoch);
         });
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> {

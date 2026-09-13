@@ -37,3 +37,4 @@ mekanism/fabric/recipe/FabricIngredientCreatorProvider.java
 mekanism/fabric/recipe/FabricRecipeCacheClientLifecycle.java
 mekanism/fabric/recipe/FabricRecipeCacheLifecycle.java
 mekanism/fabric/recipe/FabricRecipeRegistration.java
+mekanism/fabric/recipe/FabricRecipeTypeRegistry.java

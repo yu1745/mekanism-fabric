@@ -47,7 +47,8 @@ public final class RecipeRuntimeClientFixture implements ClientModInitializer {
             //The lifecycle is stopped at JVM shutdown: any late update must fail rather than publish
             FabricRecipeCacheClientLifecycle.stop();
             try {
-                FabricRecipeCacheClientLifecycle.onRecipesUpdated(new RecipeManager(RegistryAccess.fromRegistryOfRegistries(BuiltInRegistries.REGISTRY)));
+                FabricRecipeCacheClientLifecycle.onRecipesUpdated(new RecipeManager(RegistryAccess.fromRegistryOfRegistries(BuiltInRegistries.REGISTRY)),
+                      RegistryAccess.fromRegistryOfRegistries(BuiltInRegistries.REGISTRY));
                 throw new IllegalStateException("late recipe update after stop must be rejected");
             } catch (IllegalStateException expected) {
                 if (!"Recipe update received after the client recipe cache lifecycle stopped".equals(expected.getMessage())) {

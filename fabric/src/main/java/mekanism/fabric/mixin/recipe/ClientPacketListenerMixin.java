@@ -25,6 +25,7 @@ public abstract class ClientPacketListenerMixin {
 
     @Inject(method = "handleUpdateRecipes", at = @At("TAIL"), require = 1)
     private void mekanism$publishRecipeCacheContext(ClientboundUpdateRecipesPacket packet, CallbackInfo ci) {
-        FabricRecipeCacheClientLifecycle.onRecipesUpdated(this.recipeManager);
+        //Note: The packet listener's own registry access is passed along, so the published context never borrows access from a foreign connection
+        FabricRecipeCacheClientLifecycle.onRecipesUpdated(this.recipeManager, ((ClientPacketListener) (Object) this).registryAccess());
     }
 }

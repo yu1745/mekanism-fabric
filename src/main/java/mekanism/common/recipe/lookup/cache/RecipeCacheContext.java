@@ -1,16 +1,23 @@
 package mekanism.common.recipe.lookup.cache;
 
 import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Objects;
+import java.util.function.Supplier;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.world.item.crafting.Recipe;
+import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeManager;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Thread-bound recipe cache context.
  *
- * <p>Each binding owns the exact {@link RecipeManager} identity it was published for, a positive epoch, a fresh identity token created for every successful
- * publication, and thread-confined identity-keyed mutable state for the {@link AbstractInputRecipeCache} instances. Creating a new binding discards all cached
- * recipe candidates atomically, and {@link #clear()} releases the manager and recipe references.</p>
+ * <p>Each binding owns the exact {@link RecipeManager} identity it was published for, the matching {@link RegistryAccess} when the publisher knew one, a positive
+ * epoch, a fresh identity token created for every successful publication, and thread-confined identity-keyed mutable state for the {@link AbstractInputRecipeCache}
+ * instances plus each recipe owner's immutable usable-recipe list. Creating a new binding discards all cached recipe candidates atomically, and {@link #clear()}
+ * releases the manager, registry access and recipe references.</p>
  *
  * @since 10.7.12
  */
@@ -30,11 +37,27 @@ public final class RecipeCacheContext {
      * @throws IllegalArgumentException if the epoch is not positive.
      */
     public static Binding bind(RecipeManager manager, long epoch) {
+        return bind(manager, null, epoch);
+    }
+
+    /**
+     * Binds a fresh context for the given manager, matching registry access and positive epoch on the calling thread.
+     *
+     * @param manager        The exact recipe manager this context serves.
+     * @param registryAccess The registry access matching that manager, or {@code null} when the publisher has none. Synthetic vanilla smelting needs it.
+     * @param epoch          Positive publication epoch.
+     *
+     * @return the new binding, with a fresh identity token and no cached state.
+     *
+     * @throws NullPointerException     if the manager is null.
+     * @throws IllegalArgumentException if the epoch is not positive.
+     */
+    public static Binding bind(RecipeManager manager, @Nullable RegistryAccess registryAccess, long epoch) {
         Objects.requireNonNull(manager, "manager");
         if (epoch < 1) {
             throw new IllegalArgumentException("Recipe cache epochs must be positive");
         }
-        Binding binding = new Binding(manager, epoch);
+        Binding binding = new Binding(manager, registryAccess, epoch);
         ACTIVE.set(binding);
         return binding;
     }
@@ -48,7 +71,7 @@ public final class RecipeCacheContext {
     }
 
     /**
-     * Clears the calling thread's binding, releasing the manager and any cached recipe references.
+     * Clears the calling thread's binding, releasing the manager, registry access and any cached recipe references.
      */
     public static void clear() {
         ACTIVE.remove();
@@ -59,12 +82,16 @@ public final class RecipeCacheContext {
      */
     public static final class Binding {
         private final RecipeManager manager;
+        @Nullable
+        private final RegistryAccess registryAccess;
         private final long epoch;
         private final Object identityToken = new Object();
         private final IdentityHashMap<AbstractInputRecipeCache<?>, AbstractInputRecipeCache.CacheState> states = new IdentityHashMap<>();
+        private final IdentityHashMap<Object, List<?>> recipeLists = new IdentityHashMap<>();
 
-        private Binding(RecipeManager manager, long epoch) {
+        private Binding(RecipeManager manager, @Nullable RegistryAccess registryAccess, long epoch) {
             this.manager = manager;
+            this.registryAccess = registryAccess;
             this.epoch = epoch;
         }
 
@@ -72,8 +99,52 @@ public final class RecipeCacheContext {
             return manager;
         }
 
+        /**
+         * @return The registry access published with this binding, or {@code null} when the publisher had none. Never borrowed from another connection.
+         */
+        @Nullable
+        public RegistryAccess registryAccess() {
+            return registryAccess;
+        }
+
         public long epoch() {
             return epoch;
+        }
+
+        /**
+         * Gets this binding's immutable usable-recipe list for one owner, computing and caching it on first use.
+         *
+         * <p>The list lives only inside this binding, so a rebind or {@link RecipeCacheContext#clear()} discards it. An empty result is cached like any other, and the
+         * owner is keyed by identity so two recipe types can never share a list.</p>
+         *
+         * @param owner  Identity of the recipe owner (a recipe type) this list belongs to.
+         * @param loader Computes the immutable list; only invoked on a miss.
+         *
+         * @return the immutable list of usable recipes for the owner, possibly empty.
+         */
+        @NotNull
+        @SuppressWarnings("unchecked")
+        public <RECIPE extends Recipe<?>> List<RecipeHolder<RECIPE>> recipes(Object owner, Supplier<List<RecipeHolder<RECIPE>>> loader) {
+            Objects.requireNonNull(owner, "owner");
+            Objects.requireNonNull(loader, "loader");
+            List<?> cached = recipeLists.get(owner);
+            if (cached != null) {
+                return (List<RecipeHolder<RECIPE>>) cached;
+            }
+            List<RecipeHolder<RECIPE>> loaded = Objects.requireNonNull(loader.get(), "recipe loader returned null");
+            recipeLists.put(owner, loaded);
+            return loaded;
+        }
+
+        /**
+         * Drops one owner's cached recipe list from this binding; the input-cache state of the owner is cleared separately.
+         *
+         * @param owner Identity of the recipe owner whose list to drop.
+         *
+         * @return {@code true} if a cached list was present.
+         */
+        public boolean clearRecipes(Object owner) {
+            return recipeLists.remove(owner) != null;
         }
 
         /** A fresh identity token for every successful publication; no two bindings ever share one. */

@@ -188,3 +188,7 @@ mekanism/common/recipe/WrappedShapedRecipe.java
 mekanism/common/recipe/serializer/MekanismRecipeSerializer.java
 mekanism/common/recipe/serializer/RotaryRecipeSerializer.java
 mekanism/common/recipe/serializer/SawmillRecipeSerializer.java
+mekanism/common/recipe/IMekanismRecipeTypeProvider.java
+mekanism/common/recipe/MekanismRecipeType.java
+mekanism/common/registration/impl/RecipeTypeDeferredRegister.java
+mekanism/common/registration/impl/RecipeTypeRegistryObject.java

@@ -162,7 +162,7 @@ def platformSlice = loadSlice('platform-slice.txt')
 def apiSliceFiles = apiSlice.collect { file("../src/api/java/${it}") }
 def commonSliceFiles = commonSlice.collect { file("../src/main/java/${it}") }
 def platformSliceFiles = platformSlice.collect { file("src/main/java/${it}") }
-if (apiSlice.size() != 199 || commonSlice.size() != 189 || platformSlice.size() != 38) {
+if (apiSlice.size() != 200 || commonSlice.size() != 193 || platformSlice.size() != 39) {
     throw new GradleException("Unexpected Fabric source slice counts: api=${apiSlice.size()} common=${commonSlice.size()} platform=${platformSlice.size()}")
 }
 
@@ -370,6 +370,7 @@ def clientWindowFixtureServices = [
       layout.projectDirectory.file('../src/main/resources/META-INF/services/mekanism.api.text.ITooltipHelper'),
       layout.projectDirectory.file('../src/main/resources/META-INF/services/mekanism.api.datamaps.IMekanismDataMapTypes'),
       layout.projectDirectory.file('../src/main/resources/META-INF/services/mekanism.api.recipes.ingredients.creator.IIngredientCreatorProvider'),
+      layout.projectDirectory.file('../src/main/resources/META-INF/services/mekanism.api.recipes.IRecipeTypeRegistry'),
 ]
 def verifyClientWindowFixtureIsolation = tasks.register('verifyClientWindowFixtureIsolation') {
     group = 'verification'
@@ -407,6 +408,7 @@ def verifyClientWindowFixtureIsolation = tasks.register('verifyClientWindowFixtu
               'mekanism.api.text.ITooltipHelper': 'mekanism.common.util.text.TooltipHelper'.bytes,
               'mekanism.api.datamaps.IMekanismDataMapTypes': 'mekanism.fabric.datamaps.FabricChemicalDataMaps\n'.bytes,
               'mekanism.api.recipes.ingredients.creator.IIngredientCreatorProvider': 'mekanism.fabric.recipe.FabricIngredientCreatorProvider\n'.bytes,
+              'mekanism.api.recipes.IRecipeTypeRegistry': 'mekanism.fabric.recipe.FabricRecipeTypeRegistry\n'.bytes,
         ]
         if (actualServices.keySet() != expectedServices.keySet()
               || actualServices.any { name, bytes -> !java.util.Arrays.equals(bytes, expectedServices[name]) }) {
@@ -567,6 +569,7 @@ processResources {
         include 'META-INF/services/mekanism.api.text.ITooltipHelper'
         include 'META-INF/services/mekanism.api.datamaps.IMekanismDataMapTypes'
         include 'META-INF/services/mekanism.api.recipes.ingredients.creator.IIngredientCreatorProvider'
+        include 'META-INF/services/mekanism.api.recipes.IRecipeTypeRegistry'
     }
     from('../src/datagen/generated/mekanism') {
         include 'assets/mekanism/lang/en_us.json'
@@ -616,6 +619,7 @@ tasks.named('processClientWindowFixtureResources') {
         include 'META-INF/services/mekanism.api.text.ITooltipHelper'
         include 'META-INF/services/mekanism.api.datamaps.IMekanismDataMapTypes'
         include 'META-INF/services/mekanism.api.recipes.ingredients.creator.IIngredientCreatorProvider'
+        include 'META-INF/services/mekanism.api.recipes.IRecipeTypeRegistry'
     }
 }
 

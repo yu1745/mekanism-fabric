@@ -16,7 +16,8 @@ import org.jetbrains.annotations.Nullable;
  *
  * @implNote The Fabric port replaces the deferred recipe-type owner with a {@link RecipeCacheSource}: lookups require the calling thread to have a bound context whose
  * exact manager matches any non-null {@link Level} (mismatched managers fail instead of consulting stale global state), null-level calls use the bound manager, and
- * with no bound context no recipes are served. Initialized flags, indices, and complex-recipe sets live in the per-binding state.
+ * with no bound context no recipes are served. The bound context's registry access is forwarded to the source, and the owner's own recipe-list method is used so
+ * ordering, incomplete filtering and synthetic vanilla smelting are shared. Initialized flags, indices, and complex-recipe sets live in the per-binding state.
  */
 public abstract class AbstractInputRecipeCache<RECIPE extends MekanismRecipe<?>> implements IInputRecipeCache {
 
@@ -54,7 +55,8 @@ public abstract class AbstractInputRecipeCache<RECIPE extends MekanismRecipe<?>>
         CacheState state = binding.state(this);
         if (!state.initialized) {
             state.initialized = true;
-            initCache(source.recipes(binding.manager()), state);
+            //Note: The owner's own recipe-list method is used so ordering, incomplete filtering and synthetic smelting are shared instead of bypassed
+            initCache(source.recipes(binding.manager(), binding.registryAccess()), state);
         }
         return state;
     }

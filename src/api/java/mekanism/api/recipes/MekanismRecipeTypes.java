@@ -4,14 +4,23 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
-import net.minecraft.core.Registry;
-import net.minecraft.core.registries.BuiltInRegistries;
+import mekanism.api.MekanismServices;
+import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeType;
 
+/**
+ * Public owner of the official Mekanism recipe type ids and their canonical holders.
+ *
+ * <p>The concrete {@link RecipeType} instances belong to the common declaration owner, which creates each of them exactly once before any registry write. This class
+ * obtains those same instances through the narrow {@link IRecipeTypeRegistry} service, so it never creates a second {@code RecipeType} per id: recipe
+ * {@code getType()} identity and vanilla {@code RecipeManager}'s identity-keyed grouping stay intact across registration.</p>
+ *
+ * <p>Service registration then attaches the canonical registry holder back onto these holders over the identical instance. Both load orders converge on the same
+ * objects, because this class reads no common state at construction time beyond the service handshake, and the common owner reads no API static field.</p>
+ */
 public class MekanismRecipeTypes {
 
     public static final ResourceLocation NAME_CRUSHING = ResourceLocation.fromNamespaceAndPath("mekanism", "crushing");
@@ -40,6 +49,8 @@ public class MekanismRecipeTypes {
     public static final ResourceLocation NAME_REACTION = ResourceLocation.fromNamespaceAndPath("mekanism", "reaction");
     public static final ResourceLocation NAME_ROTARY = ResourceLocation.fromNamespaceAndPath("mekanism", "rotary");
     public static final ResourceLocation NAME_SAWING = ResourceLocation.fromNamespaceAndPath("mekanism", "sawing");
+
+    private static final IRecipeTypeRegistry REGISTRY = MekanismServices.load(IRecipeTypeRegistry.class);
 
     public static final MekanismKeyedHolder<RecipeType<?>, RecipeType<ItemStackToItemStackRecipe>> TYPE_CRUSHING = newRecipeType(NAME_CRUSHING);
     public static final MekanismKeyedHolder<RecipeType<?>, RecipeType<ItemStackToItemStackRecipe>> TYPE_ENRICHING = newRecipeType(NAME_ENRICHING);
@@ -72,14 +83,13 @@ public class MekanismRecipeTypes {
     private static volatile boolean registered;
 
     /**
-     * Registers every recipe type in this class into {@link BuiltInRegistries#RECIPE_TYPE} under its official id.
+     * Registers every recipe type in this class into {@code BuiltInRegistries.RECIPE_TYPE} under its official id.
      *
-     * <p>Each concrete {@link RecipeType} instance is created once in the static initializer and the canonical registry holder is attached back onto the holder over
-     * that exact same instance. Recipe {@code getType()} identity and vanilla {@code RecipeManager}'s identity keyed {@code byType} grouping therefore survive
-     * registration unchanged, because there is only ever one instance per recipe type and no second creation site to diverge from it.
+     * <p>The common declaration owner performs the write, because it owns the 26 canonical instances; this class then attaches each canonical registry holder back
+     * onto the holder over that exact instance. Because there is only ever one instance per recipe type, recipe {@code getType()} identity and vanilla
+     * {@code RecipeManager}'s identity-keyed {@code byType} grouping survive registration unchanged, and no second registry write happens here.</p>
      *
-     * <p>This runs in the same startup window as the existing game event registration, where the Fabric loader has already bootstrapped vanilla but the built-in
-     * registries are still writable. Calling it more than once is a no-op: the registry write is not repeated.
+     * <p>Calling it more than once is a no-op; the registry write is not repeated.</p>
      */
     public static void ensureRegistered() {
         if (registered) {
@@ -89,8 +99,9 @@ public class MekanismRecipeTypes {
             if (registered) {
                 return;
             }
+            REGISTRY.registerAll();
             for (MekanismKeyedHolder<RecipeType<?>, ? extends RecipeType<?>> holder : RECIPE_TYPES) {
-                register(holder);
+                holder.attach(canonicalHolder(holder.getId()));
             }
             registered = true;
         }
@@ -110,12 +121,8 @@ public class MekanismRecipeTypes {
         return RECIPE_TYPES;
     }
 
-    private static void register(MekanismKeyedHolder<RecipeType<?>, ? extends RecipeType<?>> holder) {
-        RecipeType<?> type = holder.value();
-        ResourceKey<RecipeType<?>> key = holder.getKey();
-        //Note: registerForHolder returns the canonical reference for exactly this instance; attaching it back is what binds the prebuilt type without recreating it.
-        Registry.registerForHolder(BuiltInRegistries.RECIPE_TYPE, key, type);
-        holder.attach(BuiltInRegistries.RECIPE_TYPE.getHolderOrThrow(key));
+    private static Holder<RecipeType<?>> canonicalHolder(ResourceLocation id) {
+        return REGISTRY.canonicalHolder(id);
     }
 
     private static List<MekanismKeyedHolder<RecipeType<?>, ? extends RecipeType<?>>> recipeTypes() {
@@ -151,20 +158,17 @@ public class MekanismRecipeTypes {
     }
 
     /**
-     * Creates an identity stable, still unregistered {@link RecipeType} keyed by the given name. Registration is performed by {@link #ensureRegistered()} so that
-     * the exact same instance is preserved.
+     * Obtains the canonical recipe type the common owner declared for the given official id.
      *
-     * @param name Name of the recipe type.
+     * <p>The returned holder is key-correct and identity stable but not yet registry bound; {@link #ensureRegistered()} performs the one write and attaches the
+     * canonical holder back onto this same instance.</p>
      *
-     * @return Keyed holder over a concrete unregistered recipe type.
+     * @param name Official id of the recipe type.
+     *
+     * @return Keyed holder over the canonical recipe type.
      */
+    @SuppressWarnings("unchecked")
     private static <RECIPE extends Recipe<?>> MekanismKeyedHolder<RecipeType<?>, RecipeType<RECIPE>> newRecipeType(ResourceLocation name) {
-        RecipeType<RECIPE> type = new RecipeType<RECIPE>() {
-            @Override
-            public String toString() {
-                return name.toString();
-            }
-        };
-        return MekanismKeyedHolder.keyed(Registries.RECIPE_TYPE, name, type);
+        return MekanismKeyedHolder.keyed(Registries.RECIPE_TYPE, name, (RecipeType<RECIPE>) REGISTRY.canonical(name));
     }
 }
