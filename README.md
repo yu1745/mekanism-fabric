@@ -4,8 +4,10 @@
 
 > **Fabric port branch:** this branch starts from the exact upstream
 > `v1.21.1-10.7.19.85` Java source and is being converted from NeoForge to Fabric.
-> It is not yet a Fabric-runnable build. See [`docs/FABRIC_PORT.md`](docs/FABRIC_PORT.md)
-> for the baseline, archived Kotlin prototype, migration rules, and acceptance gates.
+> The bounded Fabric artifact now builds and passes clean dedicated-server plus selected real-client
+> gates, including the Task 040 Chemical candidate, but it is not yet a complete playable Mekanism
+> port. See [`docs/FABRIC_PORT.md`](docs/FABRIC_PORT.md) and
+> [`docs/FABRIC_CHEMICAL.md`](docs/FABRIC_CHEMICAL.md) for scope and evidence.
 
 Mekanism is an independent Minecraft add-on featuring high-tech machinery that can be used to create powerful tools, 
 armor, and weapons. You can find more detail on the features on the [**Official Wiki**](https://wiki.aidancbrady.com/wiki/Mekanism).

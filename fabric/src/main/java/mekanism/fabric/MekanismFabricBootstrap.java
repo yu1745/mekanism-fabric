@@ -2,11 +2,14 @@ package mekanism.fabric;
 
 import mekanism.api.heat.HeatAPI;
 import mekanism.common.config.MekanismStartupConfig;
+import mekanism.fabric.chemical.FabricChemicalLifecycle;
+import mekanism.fabric.config.FabricChemicalConfig;
 import mekanism.common.registration.MekanismDeferredHolder;
 import mekanism.common.registries.MekanismGameEvents;
 import mekanism.fabric.config.FabricMekanismConfigManager;
 import mekanism.fabric.datamaps.FabricMekanismDataMaps;
 import mekanism.fabric.network.FabricMekanismNetworking;
+import mekanism.fabric.network.FabricChemicalNetworking;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.minecraft.core.BlockPos;
@@ -27,7 +30,10 @@ public final class MekanismFabricBootstrap implements ModInitializer {
     public void onInitialize() {
         FabricMekanismConfigManager.Registration startup = CONFIG_MANAGER.registerAndLoad(STARTUP_CONFIG);
         verifyStartupConfig(startup);
+        FabricChemicalConfig.initializeCommon(CONFIG_MANAGER);
+        FabricChemicalLifecycle.initialize();
         FabricMekanismNetworking.Registration networking = FabricMekanismNetworking.initialize();
+        FabricChemicalNetworking.initialize();
         FabricMekanismDataMaps.initializeCallbacks();
         LOGGER.info("MEKANISM_FABRIC_NETWORK_PROOF protocol={} phase=configuration codecs={} server_receiver={} client_required={}",
               networking.protocolVersion(), networking.codecs(), networking.serverReceiver(), networking.clientRequired());

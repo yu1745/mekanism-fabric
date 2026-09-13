@@ -41,7 +41,8 @@ public final class MekanismConfigSpec {
 
     public enum RestartScope {
         NONE,
-        GAME
+        GAME,
+        WORLD
     }
 
     public record LoadResult(boolean created, boolean malformed, int correctedValues) {
@@ -138,7 +139,7 @@ public final class MekanismConfigSpec {
                 }
             }
             resolved.put(value, accepted);
-            candidate.set(value.path(), accepted);
+            candidate.set(value.path(), value.encodeUntyped(accepted));
         }
         applyComments(candidate);
         if (created || malformed || corrected > 0) {
@@ -160,7 +161,7 @@ public final class MekanismConfigSpec {
             throw new IllegalStateException("Config spec has not been loaded");
         }
         for (ConfigValue<?> value : values.values()) {
-            document.set(value.path(), value.get());
+            document.set(value.path(), value.encodeCurrent());
         }
         applyComments(document);
         saveDocument();
@@ -183,7 +184,7 @@ public final class MekanismConfigSpec {
     private synchronized <T> void update(ConfigValue<T> value, T updated) {
         value.publishLoaded(updated);
         if (loaded && document != null) {
-            document.set(value.path(), updated);
+            document.set(value.path(), value.encode(updated));
         }
     }
 
@@ -363,23 +364,25 @@ public final class MekanismConfigSpec {
         }
     }
 
-    public static final class ConfigValue<T> {
+    public static class ConfigValue<T> {
         private MekanismConfigSpec owner;
         private final List<String> path;
         private final String dottedPath;
         private final T defaultValue;
         private final Function<Object, Optional<T>> normalizer;
+        private final Function<T, Object> encoder;
         private final String translation;
         private final String comment;
         private final RestartScope restartScope;
         private volatile T currentValue;
 
-        private ConfigValue(List<String> path, T defaultValue, Function<Object, Optional<T>> normalizer,
-              String translation, String comment, RestartScope restartScope) {
+        protected ConfigValue(List<String> path, T defaultValue, Function<Object, Optional<T>> normalizer,
+              Function<T, Object> encoder, String translation, String comment, RestartScope restartScope) {
             this.path = List.copyOf(path);
             dottedPath = String.join(".", path);
             this.defaultValue = defaultValue;
             this.normalizer = normalizer;
+            this.encoder = encoder;
             this.translation = translation;
             this.comment = comment;
             this.restartScope = restartScope;
@@ -428,6 +431,19 @@ public final class MekanismConfigSpec {
             return normalizer.apply(raw);
         }
 
+        private Object encode(T value) {
+            return encoder.apply(value);
+        }
+
+        private Object encodeCurrent() {
+            return encode(currentValue);
+        }
+
+        @SuppressWarnings("unchecked")
+        private Object encodeUntyped(Object value) {
+            return encode((T) value);
+        }
+
         @SuppressWarnings("unchecked")
         private void publishLoaded(Object value) {
             currentValue = (T) value;
@@ -443,6 +459,14 @@ public final class MekanismConfigSpec {
 
         private RestartScope restartScope() {
             return restartScope;
+        }
+    }
+
+    /** Distinct backing type preserving the official cached-enum public overload. */
+    public static final class EnumValue<T extends Enum<T>> extends ConfigValue<T> {
+        private EnumValue(List<String> path, T defaultValue, Function<Object, Optional<T>> normalizer,
+              Function<T, Object> encoder, String translation, String comment, RestartScope restartScope) {
+            super(path, defaultValue, normalizer, encoder, translation, comment, restartScope);
         }
     }
 
@@ -470,6 +494,12 @@ public final class MekanismConfigSpec {
         public Builder gameRestart() {
             ensureMutable();
             pendingRestart = RestartScope.GAME;
+            return this;
+        }
+
+        public Builder worldRestart() {
+            ensureMutable();
+            pendingRestart = RestartScope.WORLD;
             return this;
         }
 
@@ -507,6 +537,26 @@ public final class MekanismConfigSpec {
 
         public ConfigValue<Boolean> define(String name, boolean defaultValue) {
             return define(name, defaultValue, Builder::normalizeBoolean);
+        }
+
+        /** Defines a strict enum encoded by its declared Java name. */
+        public <T extends Enum<T>> EnumValue<T> defineEnum(String name, T defaultValue) {
+            Objects.requireNonNull(defaultValue, "defaultValue");
+            Class<T> type = defaultValue.getDeclaringClass();
+            Function<Object, Optional<T>> normalizer = raw -> {
+                if (type.isInstance(raw)) {
+                    return Optional.of(type.cast(raw));
+                }
+                if (raw instanceof String enumName) {
+                    try {
+                        return Optional.of(Enum.valueOf(type, enumName));
+                    } catch (IllegalArgumentException ignored) {
+                        return Optional.empty();
+                    }
+                }
+                return Optional.empty();
+            };
+            return defineEnumValue(name, defaultValue, normalizer, Enum::name);
         }
 
         /** Defines a strict signed-32-bit integer. Floating-point and decimal values are rejected even when integral. */
@@ -580,6 +630,22 @@ public final class MekanismConfigSpec {
         }
 
         private <T> ConfigValue<T> define(String name, T defaultValue, Function<Object, Optional<T>> normalizer) {
+            return define(name, defaultValue, normalizer, value -> value);
+        }
+
+        private <T> ConfigValue<T> define(String name, T defaultValue, Function<Object, Optional<T>> normalizer,
+              Function<T, Object> encoder) {
+            return defineValue(name, defaultValue, normalizer, encoder, false);
+        }
+
+        @SuppressWarnings("unchecked")
+        private <T extends Enum<T>> EnumValue<T> defineEnumValue(String name, T defaultValue,
+              Function<Object, Optional<T>> normalizer, Function<T, Object> encoder) {
+            return (EnumValue<T>) defineValue(name, defaultValue, normalizer, encoder, true);
+        }
+
+        private <T> ConfigValue<T> defineValue(String name, T defaultValue, Function<Object, Optional<T>> normalizer,
+              Function<T, Object> encoder, boolean enumValue) {
             ensureMutable();
             validateSegment(name);
             List<String> valuePath = new ArrayList<>(path);
@@ -595,8 +661,11 @@ public final class MekanismConfigSpec {
                     throw new IllegalArgumentException("Config value " + dottedPath + " collides with category " + categoryPath);
                 }
             }
-            ConfigValue<T> value = new ConfigValue<>(valuePath, defaultValue, normalizer,
-                  pendingTranslation, pendingComment, pendingRestart);
+            ConfigValue<T> value = enumValue
+                  ? new EnumValue(valuePath, (Enum) defaultValue, (Function) normalizer, (Function) encoder,
+                        pendingTranslation, pendingComment, pendingRestart)
+                  : new ConfigValue<>(valuePath, defaultValue, normalizer, encoder,
+                        pendingTranslation, pendingComment, pendingRestart);
             if (definitions.putIfAbsent(dottedPath, value) != null) {
                 throw new IllegalArgumentException("Duplicate config value " + dottedPath);
             }

@@ -6,7 +6,6 @@ mekanism/fabric/config/FabricMekanismConfigManager.java
 mekanism/fabric/config/FabricWindowConfig.java
 mekanism/fabric/config/MekanismConfigSpec.java
 mekanism/fabric/datamaps/FabricDataMapLoader.java
-mekanism/fabric/datamaps/FabricDataMapType.java
 mekanism/fabric/datamaps/FabricMekanismDataMaps.java
 mekanism/fabric/energy/FabricEnergyConversions.java
 mekanism/fabric/energy/FabricEnergyLookup.java
@@ -23,3 +22,13 @@ mekanism/fabric/registry/FabricDefaultedRegistry.java
 mekanism/fabric/registry/FabricDeferredHolder.java
 mekanism/fabric/registry/FabricDeferredRegister.java
 mekanism/fabric/registry/FabricRegistryLifecycle.java
+mekanism/fabric/chemical/FabricChemicalRegistryLifecycle.java
+mekanism/fabric/chemical/FabricChemicalLifecycle.java
+mekanism/fabric/chemical/FabricChemicalClientLifecycle.java
+mekanism/fabric/datamaps/FabricChemicalDataMaps.java
+mekanism/fabric/datamaps/FabricChemicalDataMapSession.java
+mekanism/fabric/config/FabricChemicalConfig.java
+mekanism/fabric/network/ChemicalSnapshotPayload.java
+mekanism/fabric/network/ChemicalSnapshotAckPayload.java
+mekanism/fabric/network/FabricChemicalNetworking.java
+mekanism/fabric/network/FabricChemicalClientNetworking.java

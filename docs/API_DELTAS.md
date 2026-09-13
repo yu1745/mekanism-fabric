@@ -351,16 +351,53 @@ Basic/Input/Output slot 的 public surface 与 domain behavior 不变；仅把 p
 
 ## `mekanism.api.datamaps.MekaSuitAbsorption` (Task 038)
 
-状态：作为唯一直接 `mekanism.api.datamaps` admission 启用。相对官方
+状态：Task 038 落地时作为唯一直接 `mekanism.api.datamaps` admission 启用。相对官方
 `v1.21.1-10.7.19.85`，唯一 executable delta 是 `ID` 的 namespace 来源由
 `MekanismAPI.MEKANISM_MODID` 改成稳定 literal `"mekanism"`，从而不触发尚未纳入的 broad facade。
 record identity、constructor、`absorption()`、ID path、object-first `CODEC`、bare-float alternative、
-`[0,1]` codec 与 constructor rejection、Javadoc/public surface 均保持。未新增 public
-`mekanism.api` descriptor，也未纳入 `IMekanismDataMapTypes`/`MekanismDataMapTypes`/
-`DataMapTypeRegister`。
+`[0,1]` codec 与 constructor rejection、Javadoc/public surface 均保持。Task 038 当时未新增 public
+descriptor；Task 040 后该历史边界由下一节取代。
 
-Fabric 的 descriptor/loader/session 是 `mekanism.fabric.datamaps` 平台实现，不伪造
-`net.neoforged.*`。它只承诺 ordinary、unconditional、server-side、non-synced MekaSuit absorption；
-Chemical、conditions、Advanced merger/remover、sync、holder mixin、radiation/tooltip/tank owner 与
-networking 明确延期。NeoForge 21.1.200 oracle source/binary hash、资源 hash、layer/lifecycle/failure
-truth table、query 规则和验证见 `docs/FABRIC_DATA_MAPS.md`。
+Fabric loader/session 不伪造 `net.neoforged.*`。ordinary、unconditional、server-side、non-synced
+MekaSuit absorption 语义保持；Task 040 在同一 loader 上增加 Chemical descriptor/context/sync，而
+conditions、Advanced merger/remover、holder mixin与 NeoForge facade 仍延期。NeoForge 21.1.200 oracle
+source/binary hash、资源 hash、layer/lifecycle/failure truth table、query 规则和验证见
+`docs/FABRIC_DATA_MAPS.md`。
+
+## Chemical registry, data maps, stack and tank contracts (Task 040)
+
+状态：candidate slices **98/164/33**。Fabric API 以 `ChemicalRegistry` 精确拥有
+`REGISTRY_ID`/`REGISTRY_KEY`/`EMPTY_KEY` 以及安装后 registry/canonical empty value+holder，取代
+`MekanismAPI.CHEMICAL_*` 引用；不提供 partial `MekanismAPI`。`Chemical` 的 public codecs、parse/save、
+constructors、legacy/modern attributes、translation/texture/tint、empty/type methods 保持，private logger
+继续使用官方 category。NeoForge holder-injected data通过 `ChemicalDataContext` 与 selected service
+按 owner thread实时派生；public/virtual `@Internal updateFromDataMap` 和 protected `trackAttribute` 仍参与
+subclass behavior，overrider 必须调用 `super`。同一 Chemical 的重入查询读取已累积的 immutable partial
+view，另一 Chemical 使用独立 nested frame。与 NeoForge cache-refresh lifecycle 不同，direct external
+invocation 明确无效并由 base method 抛出，这是授权 Fabric delta；每个 top-level query 当前重新分配并做
+五次 map lookup，Task041 在 recipe hot path 前必须解决且不得引入 shared mutable Chemical/global cache。
+`trackAttribute` 参数型从 NeoForge `DataMapType` 精确替换为层中 `MekanismDataMapType`。
+
+新 public `MekanismDataMapType<R,T>` 是 immutable identity descriptor，暴露 `registryKey()`、`id()`、
+`codec()`、optional `networkCodec()` 和 `synchronizedToClient()`；不依赖 Fabric。`IMekanismDataMapTypes`
+的六个 descriptor return types从 NeoForge 类型替换为此类型，并新增 current-context
+`getChemicalData(Holder<Chemical>, MekanismDataMapType<Chemical,DATA>)`。`INSTANCE` 与
+`ITooltipHelper.INSTANCE` 改由 `MekanismServices.load` 解析；恰好零个或多个 provider 都显式失败，
+没有 no-op fallback。该 nominal type substitution是 Fabric addon 需要重新编译的明确 delta。
+
+`ChemicalStack`/`BasicChemicalTank`/handler family 保留 true-long amount、canonical EMPTY、positive/
+non-empty codecs、registry-aware optional NBT `{}`、amount-before-holder stream、copy/split/grow/shrink、
+identity/matching、indexed/distributed insertion/extraction、validation、listener 与 deprecated singleton
+predicate identity。`IChemicalTank` 仅删除 NeoForge capability Javadoc/supertype引用，不加入 Fabric
+transaction接口；`IChemicalHandler`/`ISidedChemicalHandler` 同样只移除 fluid-capability documentation。
+Wrapped reference holders按 key canonicalize 到 exact Chemical registry holder，以保证 codec 与 identity。
+
+`ChemicalRadioactivity` 的 public baseline validation从未纳入的 `IRadiationManager.INSTANCE` 改由
+`RadiationValidation.BASELINE == 1e-7` 与 current enabled policy；其 record/codec/tooltip surface保持。
+`RadiationValidation` 不是 environmental radiation API。五个 Chemical data records只以 literal
+namespace和 descriptor type替代 facade/NeoForge references，codec layouts保持。
+`ChemicalBuilder`、`MekanismAPITags`、`IChemicalProvider`、`ConstantPredicates`、`ITooltipHelper` 的其余
+public surface保持；`TriPredicate` 完整保留 test/and/or/negate与 null-check contract。
+
+完整逐源 U/A/N/M/R report、资源/service、wire bounds、runtime evidence与 external provider/
+transaction/ingredient/machine non-claims见 `docs/FABRIC_CHEMICAL.md`。

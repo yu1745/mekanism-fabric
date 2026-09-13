@@ -5,13 +5,12 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.IntSupplier;
 import java.util.function.LongSupplier;
-import mekanism.api.MekanismAPI;
 import mekanism.api.chemical.Chemical;
 import mekanism.api.datamaps.chemical.attribute.ChemicalFuel;
 import mekanism.api.datamaps.chemical.attribute.ChemicalRadioactivity;
 import mekanism.api.math.MathUtils;
 import mekanism.api.providers.IChemicalProvider;
-import mekanism.api.radiation.IRadiationManager;
+import mekanism.api.radiation.RadiationValidation;
 import mekanism.api.text.APILang;
 import mekanism.api.text.EnumColor;
 import mekanism.api.text.ITooltipHelper;
@@ -19,6 +18,8 @@ import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.ApiStatus.Internal;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @since 10.7.0 Previously was GasAttributes
@@ -26,6 +27,8 @@ import org.jetbrains.annotations.Nullable;
 @SuppressWarnings("removal")
 @Deprecated(forRemoval = true, since = "10.7.11")
 public class ChemicalAttributes {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger("mekanism.api.MekanismAPI");
 
     private ChemicalAttributes() {
     }
@@ -53,7 +56,7 @@ public class ChemicalAttributes {
                 throw new IllegalArgumentException("Radiation attribute should only be used when there actually is radiation! Radioactivity: " + radioactivity);
             }
             this.radioactivity = radioactivity;
-            if (radioactivity <= IRadiationManager.INSTANCE.baselineRadiation()) {
+            if (radioactivity <= RadiationValidation.BASELINE) {
                 modernRepresentation = null;
             } else {
                 modernRepresentation = new ChemicalRadioactivity(radioactivity);
@@ -88,7 +91,7 @@ public class ChemicalAttributes {
         @Override
         public boolean needsValidation() {
             //This attribute only actually needs validation if radiation is enabled
-            return IRadiationManager.INSTANCE.isRadiationEnabled();
+            return RadiationValidation.isEnabled();
         }
 
         @Override
@@ -393,7 +396,7 @@ public class ChemicalAttributes {
             int ticks = getBurnTicks();
             //If we have less than one tick, the density is invalid
             if (ticks < 1) {
-                MekanismAPI.logger.warn("Invalid tick count ({}) for Fuel attribute, this number should be at least 1.", ticks);
+                LOGGER.warn("Invalid tick count ({}) for Fuel attribute, this number should be at least 1.", ticks);
                 return 0;
             } else if (ticks == 1) {
                 //Single tick, no division necessary
@@ -419,13 +422,13 @@ public class ChemicalAttributes {
             int ticks = getBurnTicks();
             //If we have less than one tick, the density is invalid
             if (ticks < 1) {
-                MekanismAPI.logger.warn("Invalid tick count ({}) for Fuel attribute, this number should be at least 1.", ticks);
+                LOGGER.warn("Invalid tick count ({}) for Fuel attribute, this number should be at least 1.", ticks);
                 return null;
             }
             long density = energyDensity.getAsLong();
             long energyPerTick = density / ticks;
             if (energyPerTick == 0) {
-                MekanismAPI.logger.warn("Invalid energy density ({}) for Fuel attribute, this number when divided by ticks should be at least 1.", density);
+                LOGGER.warn("Invalid energy density ({}) for Fuel attribute, this number when divided by ticks should be at least 1.", density);
                 return null;
             }
             try {

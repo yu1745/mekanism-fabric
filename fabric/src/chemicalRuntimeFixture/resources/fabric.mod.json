@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "mekanism_chemical_runtime_fixture",
+  "version": "${version}",
+  "name": "Mekanism Chemical Runtime Fixture",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["mekanism.fabric.network.ChemicalRuntimeServerFixture"],
+    "client": ["mekanism.fabric.chemical.fixture.ChemicalRuntimeClientFixture"]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.10",
+    "minecraft": "~1.21.1",
+    "fabric-api": "*",
+    "mekanism": "*"
+  }
+}

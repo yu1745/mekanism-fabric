@@ -4,7 +4,6 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
-import mekanism.api.MekanismAPI;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.chemical.attribute.ChemicalAttribute;
 import mekanism.api.datamaps.chemical.ChemicalSolidTag;
@@ -91,7 +90,7 @@ public class ChemicalBuilder {
      */
     @Deprecated(forRemoval = true, since = "10.7.11")
     public ChemicalBuilder ore(ResourceLocation oreTagLocation) {
-        return ore(ItemTags.create(Objects.requireNonNull(oreTagLocation)));
+        return ore(TagKey.create(net.minecraft.core.registries.Registries.ITEM, Objects.requireNonNull(oreTagLocation)));
     }
 
     /**
@@ -164,7 +163,7 @@ public class ChemicalBuilder {
      * @return A builder for creating a {@link Chemical}.
      */
     public static ChemicalBuilder builder() {
-        return builder(ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, "liquid/liquid"));
+        return builder(ResourceLocation.fromNamespaceAndPath("mekanism", "liquid/liquid"));
     }
 
     /**
@@ -173,7 +172,7 @@ public class ChemicalBuilder {
      * @return A builder for creating a {@link Chemical}.
      */
     public static ChemicalBuilder cleanSlurry() {
-        return builder(ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, "slurry/clean"));
+        return builder(ResourceLocation.fromNamespaceAndPath("mekanism", "slurry/clean"));
     }
 
     /**
@@ -182,7 +181,7 @@ public class ChemicalBuilder {
      * @return A builder for creating a {@link Chemical}.
      */
     public static ChemicalBuilder dirtySlurry() {
-        return builder(ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, "slurry/dirty"));
+        return builder(ResourceLocation.fromNamespaceAndPath("mekanism", "slurry/dirty"));
     }
 
     /**
@@ -191,7 +190,7 @@ public class ChemicalBuilder {
      * @return A builder for creating an {@link Chemical}.
      */
     public static ChemicalBuilder infuseType() {
-        return builder(ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, "infuse_type/base"));
+        return builder(ResourceLocation.fromNamespaceAndPath("mekanism", "infuse_type/base"));
     }
 
     /**
@@ -200,6 +199,6 @@ public class ChemicalBuilder {
      * @return A builder for creating a {@link Chemical}.
      */
     public static ChemicalBuilder pigment() {
-        return builder(ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, "pigment/base"));
+        return builder(ResourceLocation.fromNamespaceAndPath("mekanism", "pigment/base"));
     }
 }

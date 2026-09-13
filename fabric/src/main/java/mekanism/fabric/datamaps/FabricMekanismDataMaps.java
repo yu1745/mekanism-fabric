@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import mekanism.api.datamaps.MekaSuitAbsorption;
+import mekanism.api.datamaps.MekanismDataMapType;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
@@ -22,8 +23,8 @@ import org.slf4j.LoggerFactory;
 /** Server-scoped lifecycle owner for the first ordinary Fabric data map. */
 public final class FabricMekanismDataMaps {
     private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism/FabricDataMaps");
-    public static final FabricDataMapType<DamageType, MekaSuitAbsorption> MEKASUIT_ABSORPTION =
-          new FabricDataMapType<>(Registries.DAMAGE_TYPE, MekaSuitAbsorption.ID, MekaSuitAbsorption.CODEC);
+    public static final MekanismDataMapType<DamageType, MekaSuitAbsorption> MEKASUIT_ABSORPTION =
+          new MekanismDataMapType<>(Registries.DAMAGE_TYPE, MekaSuitAbsorption.ID, MekaSuitAbsorption.CODEC);
     private static final Map<MinecraftServer, Session> SESSIONS = new IdentityHashMap<>();
     private static final Set<MinecraftServer> FAILED_STARTS = Collections.newSetFromMap(new IdentityHashMap<>());
     private static boolean callbacksInitialized;
@@ -48,6 +49,17 @@ public final class FabricMekanismDataMaps {
         Session session = requireSession(server);
         Registry<DamageType> registry = server.reloadableRegistries().get().registryOrThrow(Registries.DAMAGE_TYPE);
         return session.query(registry, damageType);
+    }
+
+    /** Complete service delegation for the current server thread and exact reloadable registry access. */
+    static synchronized @Nullable MekaSuitAbsorption getCurrent(net.minecraft.core.RegistryAccess access, Holder<DamageType> damageType) {
+        for (Map.Entry<MinecraftServer, Session> entry : SESSIONS.entrySet()) {
+            MinecraftServer server = entry.getKey();
+            if (server.isSameThread() && server.reloadableRegistries().get() == access) {
+                return entry.getValue().query(access.registryOrThrow(Registries.DAMAGE_TYPE), damageType);
+            }
+        }
+        throw new IllegalStateException("No current server data-map context for registry access");
     }
 
     public static int epoch(MinecraftServer server) {

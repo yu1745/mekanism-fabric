@@ -80,6 +80,23 @@ class MekanismConfigSpecTest {
         String saved = Files.readString(file);
         assertTrue(saved.contains("count = 9"));
         assertTrue(saved.contains("ratio = 0.75"));
+
+        Path general = temporaryDirectory.resolve("world").resolve("serverconfig/Mekanism/general.toml");
+        Files.createDirectories(general.getParent());
+        Files.writeString(general, "[unowned]\nkeep = \"yes\"\n[radiation]\nenabled = \"invalid\"\n"
+              + "[energy_conversion]\nfeConversionRate = 20000.0\nblacklistForge = true\nfuture = 9\n");
+        try (FabricChemicalConfig.GeneralFragment fragment = new FabricChemicalConfig.GeneralFragment(general)) {
+            fragment.load();
+            assertEquals(new mekanism.common.config.ChemicalConfigAccess.ServerPolicy(true, 2.5, true), fragment.policy());
+            assertEquals(MekanismConfigSpec.RestartScope.WORLD,
+                  fragment.spec.restartScope("energy_conversion.blacklistForge"));
+            String preserving = Files.readString(general);
+            assertTrue(preserving.contains("[unowned]"));
+            assertTrue(preserving.contains("keep = \"yes\""));
+            assertTrue(preserving.contains("future = 9"));
+            assertTrue(preserving.contains("enabled = true"));
+            assertTrue(preserving.contains("feConversionRate = 2.5"));
+        }
     }
 
     @Test

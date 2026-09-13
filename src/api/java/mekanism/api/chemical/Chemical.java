@@ -10,7 +10,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
-import mekanism.api.MekanismAPI;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import mekanism.api.MekanismAPITags;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.chemical.attribute.ChemicalAttribute;
@@ -21,7 +22,7 @@ import mekanism.api.datamaps.chemical.ChemicalSolidTag;
 import mekanism.api.datamaps.chemical.attribute.ChemicalRadioactivity;
 import mekanism.api.datamaps.chemical.attribute.IChemicalAttribute;
 import mekanism.api.providers.IChemicalProvider;
-import mekanism.api.radiation.IRadiationManager;
+import mekanism.api.radiation.RadiationValidation;
 import mekanism.api.text.TextComponentUtil;
 import net.minecraft.Util;
 import net.minecraft.core.Holder;
@@ -42,7 +43,7 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Item.TooltipContext;
 import net.minecraft.world.item.TooltipFlag;
-import net.neoforged.neoforge.registries.datamaps.DataMapType;
+import mekanism.api.datamaps.MekanismDataMapType;
 import org.jetbrains.annotations.ApiStatus.Internal;
 import org.jetbrains.annotations.MustBeInvokedByOverriders;
 import org.jetbrains.annotations.NotNull;
@@ -51,6 +52,8 @@ import org.jetbrains.annotations.Nullable;
 @NothingNullByDefault//TODO - 1.22: Investigate making chemicals a datapack registry
 public class Chemical implements IChemicalProvider, IChemicalAttributeContainer<Chemical> {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger("mekanism.api.MekanismAPI");
+
     /**
      * A codec which can (de)encode chemicals.
      *
@@ -58,13 +61,13 @@ public class Chemical implements IChemicalProvider, IChemicalAttributeContainer<
      * @deprecated Use {@link #HOLDER_CODEC} instead
      */
     @Deprecated(forRemoval = true, since = "!0.7.11")
-    public static final Codec<Chemical> CODEC = MekanismAPI.CHEMICAL_REGISTRY.byNameCodec();
+    public static final Codec<Chemical> CODEC = ChemicalRegistry.registry().byNameCodec();
     /**
      * A codec which can (de)encode chemical holders.
      *
      * @since 10.7.11
      */
-    public static final Codec<Holder<Chemical>> HOLDER_CODEC = MekanismAPI.CHEMICAL_REGISTRY.holderByNameCodec();//TODO - 1.22: Rename this to just CODEC
+    public static final Codec<Holder<Chemical>> HOLDER_CODEC = ChemicalRegistry.registry().holderByNameCodec();//TODO - 1.22: Rename this to just CODEC
     /**
      * A stream codec which can be used to encode and decode chemicals over the network.
      *
@@ -72,13 +75,13 @@ public class Chemical implements IChemicalProvider, IChemicalAttributeContainer<
      * @deprecated Use {@link #HOLDER_STREAM_CODEC} instead
      */
     @Deprecated(forRemoval = true, since = "10.7.11")
-    public static final StreamCodec<RegistryFriendlyByteBuf, Chemical> STREAM_CODEC = ByteBufCodecs.registry(MekanismAPI.CHEMICAL_REGISTRY_NAME);
+    public static final StreamCodec<RegistryFriendlyByteBuf, Chemical> STREAM_CODEC = ByteBufCodecs.registry(ChemicalRegistry.REGISTRY_KEY);
     /**
      * A stream codec which can be used to encode and decode chemical holders over the network.
      *
      * @since 10.7.9
      */
-    public static final StreamCodec<RegistryFriendlyByteBuf, Holder<Chemical>> HOLDER_STREAM_CODEC = ByteBufCodecs.holderRegistry(MekanismAPI.CHEMICAL_REGISTRY_NAME);
+    public static final StreamCodec<RegistryFriendlyByteBuf, Holder<Chemical>> HOLDER_STREAM_CODEC = ByteBufCodecs.holderRegistry(ChemicalRegistry.REGISTRY_KEY);
 
     /**
      * Tries to parse a chemical.
@@ -89,7 +92,7 @@ public class Chemical implements IChemicalProvider, IChemicalAttributeContainer<
     @Deprecated(forRemoval = true, since = "10.7.11")
     public static Optional<Chemical> parse(HolderLookup.Provider lookupProvider, Tag tag) {
         return CODEC.parse(lookupProvider.createSerializationContext(NbtOps.INSTANCE), tag)
-              .resultOrPartial(error -> MekanismAPI.logger.error("Tried to load invalid chemical: '{}'", error));
+              .resultOrPartial(error -> LOGGER.error("Tried to load invalid chemical: '{}'", error));
     }
 
 
@@ -111,7 +114,7 @@ public class Chemical implements IChemicalProvider, IChemicalAttributeContainer<
      */
     public static Optional<Holder<Chemical>> parseHolder(HolderLookup.Provider lookupProvider, Tag tag) {
         return HOLDER_CODEC.parse(lookupProvider.createSerializationContext(NbtOps.INSTANCE), tag)
-              .resultOrPartial(error -> MekanismAPI.logger.error("Tried to load invalid chemical: '{}'", error));
+              .resultOrPartial(error -> LOGGER.error("Tried to load invalid chemical: '{}'", error));
     }
 
     /**
@@ -121,22 +124,22 @@ public class Chemical implements IChemicalProvider, IChemicalAttributeContainer<
      */
     public static Holder<Chemical> parseOptionalHolder(HolderLookup.Provider lookupProvider, String tag) {
         if (tag.isEmpty()) {
-            return MekanismAPI.EMPTY_CHEMICAL_HOLDER;
+            return ChemicalRegistry.emptyHolder();
         }
-        Optional<RegistryLookup<Chemical>> chemicalLookup = lookupProvider.lookup(MekanismAPI.CHEMICAL_REGISTRY_NAME);
+        Optional<RegistryLookup<Chemical>> chemicalLookup = lookupProvider.lookup(ChemicalRegistry.REGISTRY_KEY);
         if (chemicalLookup.isPresent()) {
             ResourceLocation rl = ResourceLocation.tryParse(tag);
             if (rl != null) {
-                Optional<Reference<Chemical>> chemicalReference = chemicalLookup.get().get(ResourceKey.create(MekanismAPI.CHEMICAL_REGISTRY_NAME, rl));
+                Optional<Reference<Chemical>> chemicalReference = chemicalLookup.get().get(ResourceKey.create(ChemicalRegistry.REGISTRY_KEY, rl));
                 if (chemicalReference.isPresent()) {
                     return chemicalReference.get();
                 }
             }
         }
-        return MekanismAPI.EMPTY_CHEMICAL_HOLDER;
+        return ChemicalRegistry.emptyHolder();
     }
 
-    private final Holder.Reference<Chemical> builtInRegistryHolder = MekanismAPI.CHEMICAL_REGISTRY.createIntrusiveHolder(this);
+    private final Holder.Reference<Chemical> builtInRegistryHolder = ChemicalRegistry.registry().createIntrusiveHolder(this);
     //TODO - 1.22: Figure out if we should we keep this cache or remove it?
     private final List<IChemicalAttribute> attributes = new ArrayList<>();
     private final List<IChemicalAttribute> attributesView = Collections.unmodifiableList(attributes);
@@ -198,7 +201,7 @@ public class Chemical implements IChemicalProvider, IChemicalAttributeContainer<
     @Override
     public final String toString() {
         //Note: Similar to vanilla we look up the holder and registered name from teh registry
-        return MekanismAPI.CHEMICAL_REGISTRY.wrapAsHolder(this).getRegisteredName();
+        return ChemicalRegistry.registry().wrapAsHolder(this).getRegisteredName();
     }
 
     @NotNull
@@ -210,7 +213,7 @@ public class Chemical implements IChemicalProvider, IChemicalAttributeContainer<
     @Override
     public String getTranslationKey() {
         if (translationKey == null) {
-            translationKey = Util.makeDescriptionId("chemical", MekanismAPI.CHEMICAL_REGISTRY.getKeyOrNull(this));
+            translationKey = Util.makeDescriptionId("chemical", ChemicalRegistry.registry().getResourceKey(this).map(ResourceKey::location).orElse(null));
         }
         return translationKey;
     }
@@ -218,17 +221,14 @@ public class Chemical implements IChemicalProvider, IChemicalAttributeContainer<
     @SuppressWarnings("removal")
     @Deprecated(forRemoval = true, since = "10.7.11")
     private Map<Class<? extends ChemicalAttribute>, ChemicalAttribute> getAllAttributes() {
-        if (attributes.isEmpty()) {//If we have not attributes attached, just return the legacy attributes
-            return legacyAttributeMap;
+        List<IChemicalAttribute> modern = derived().attributes();
+        if (modern.isEmpty()) return legacyAttributeMap;
+        Map<Class<? extends ChemicalAttribute>, ChemicalAttribute> merged = new HashMap<>(legacyAttributeMap);
+        for (IChemicalAttribute attribute : modern) {
+            ChemicalAttribute legacyAttribute = attribute.toLegacyAttribute();
+            merged.put(legacyAttribute.getClass(), legacyAttribute);
         }
-        if (attributeMap == null) {
-            attributeMap = new HashMap<>(legacyAttributeMap);
-            for (IChemicalAttribute attribute : attributes) {
-                ChemicalAttribute legacyAttribute = attribute.toLegacyAttribute();
-                attributeMap.put(legacyAttribute.getClass(), legacyAttribute);
-            }
-        }
-        return attributeMap;
+        return merged;
     }
 
     @Override
@@ -253,7 +253,7 @@ public class Chemical implements IChemicalProvider, IChemicalAttributeContainer<
      * @since 10.5.15
      */
     public boolean isRadioactive() {
-        return radioactivity > 0;
+        return getRadioactivity() > 0;
     }
 
     /**
@@ -262,7 +262,7 @@ public class Chemical implements IChemicalProvider, IChemicalAttributeContainer<
      * @since 10.7.11
      */
     public double getRadioactivity() {//TODO - 1.22: Do we want this to return the baseline instead of zero if it is missing?
-        return radioactivity;
+        return derived().radioactivity();
     }
 
     /**
@@ -274,7 +274,8 @@ public class Chemical implements IChemicalProvider, IChemicalAttributeContainer<
      */
     public boolean hasAttributesWithValidation() {
         //Note: We only treat radiation as needing validation if the radiation manager is enabled
-        return hasAttributesWithValidation || isRadioactive() && IRadiationManager.INSTANCE.isRadiationEnabled();
+        Derived derived = derived();
+        return derived.needsValidation() || derived.radioactivity() > 0 && RadiationValidation.isEnabled();
     }
 
     @Nullable
@@ -327,7 +328,7 @@ public class Chemical implements IChemicalProvider, IChemicalAttributeContainer<
      */
     public List<IChemicalAttribute> getModernAttributes() {
         //TODO - 1.22: Rename this to getAttributes and maybe move it into IChemicalAttributeContainer? (Also Update/remove implNote)
-        return attributesView;
+        return derived().attributes();
     }
 
     @Override
@@ -429,7 +430,7 @@ public class Chemical implements IChemicalProvider, IChemicalAttributeContainer<
     @SuppressWarnings("removal")
     @Deprecated(forRemoval = true, since = "10.7.11")
     public boolean isEmptyType() {
-        return this == MekanismAPI.EMPTY_CHEMICAL;
+        return this == ChemicalRegistry.empty();
     }
 
     /**
@@ -443,7 +444,7 @@ public class Chemical implements IChemicalProvider, IChemicalAttributeContainer<
     @Nullable
     @Deprecated(forRemoval = true, since = "10.7.11")
     public TagKey<Item> getOreTag() {
-        return oreTag;
+        return derived().oreTag();
     }
 
     /**
@@ -470,15 +471,29 @@ public class Chemical implements IChemicalProvider, IChemicalAttributeContainer<
         return isGaseous;
     }
 
+    /**
+     * Participates in deriving this chemical's modern attributes from the {@link ChemicalDataContext} bound to the
+     * calling thread. Every context-dependent public query invokes this virtual method; overrides therefore remain
+     * observable and must invoke {@code super} so that the standard five-map derivation is retained.
+     *
+     * <p>This is an internal derivation callback, not a public refresh operation. Calling it directly outside a
+     * context-local query is unsupported and the base implementation throws {@link IllegalStateException}. An
+     * override may make reentrant context-dependent queries on this same chemical: those queries observe the
+     * immutable partial view accumulated so far and do not recursively invoke the override. Querying another
+     * chemical derives a nested independent view and restores this derivation afterward.</p>
+     *
+     * @param holder canonical holder for this chemical
+     *
+     * @implNote Fabric deliberately re-derives a context-local view for each top-level query rather than mutating
+     * shared {@code Chemical} state. Direct external invocation being invalid is an authorized Fabric delta from the
+     * upstream cache-refresh lifecycle.
+     */
     @Internal//TODO - 1.22: Evaluate if we want to get rid of this or if caching the state of some of this is useful from a performance standpoint
     @MustBeInvokedByOverriders
     public void updateFromDataMap(Holder<Chemical> holder) {
-        ChemicalSolidTag tag = holder.getData(IMekanismDataMapTypes.INSTANCE.chemicalSolidTag());
-        oreTag = tag == null ? legacyOreTag : tag.solidRepresentation();
-        attributeMap = null;//Clear cached map
-        hasAttributesWithValidation = hasLegacyAttributesWithValidation;
-        radioactivity = legacyRadioactivity;
-        attributes.clear();
+        DerivedBuilder builder = trackingBuilder();
+        ChemicalSolidTag tag = IMekanismDataMapTypes.INSTANCE.getChemicalData(holder, IMekanismDataMapTypes.INSTANCE.chemicalSolidTag());
+        builder.oreTag = tag == null ? legacyOreTag : tag.solidRepresentation();
         trackAttribute(holder, IMekanismDataMapTypes.INSTANCE.chemicalFuel());
         trackAttribute(holder, IMekanismDataMapTypes.INSTANCE.chemicalRadioactivity());
         trackAttribute(holder, IMekanismDataMapTypes.INSTANCE.cooledChemicalCoolant());
@@ -493,16 +508,63 @@ public class Chemical implements IChemicalProvider, IChemicalAttributeContainer<
      *
      * @since 10.7.11
      */
-    protected void trackAttribute(Holder<Chemical> holder, DataMapType<Chemical, ? extends IChemicalAttribute> dataMapType) {
-        IChemicalAttribute attribute = holder.getData(dataMapType);
+    protected void trackAttribute(Holder<Chemical> holder, MekanismDataMapType<Chemical, ? extends IChemicalAttribute> dataMapType) {
+        DerivedBuilder builder = trackingBuilder();
+        IChemicalAttribute attribute = IMekanismDataMapTypes.INSTANCE.getChemicalData(holder, dataMapType);
         if (attribute != null) {
-            attributes.add(attribute);
-            if (attribute instanceof ChemicalRadioactivity(double rads)) {
-                radioactivity = rads;
-            } else {
-                hasAttributesWithValidation |= attribute.needsValidation();
-            }
+            builder.attributes.add(attribute);
+            if (attribute instanceof ChemicalRadioactivity(double rads)) builder.radioactivity = rads;
+            else builder.needsValidation |= attribute.needsValidation();
         }
+    }
+
+    private static final ThreadLocal<DerivationFrame> TRACKING = new ThreadLocal<>();
+
+    private DerivedBuilder trackingBuilder() {
+        DerivationFrame frame = TRACKING.get();
+        if (frame == null || frame.chemical != this) {
+            throw new IllegalStateException("Chemical data-map update requires this chemical's context-local derivation");
+        }
+        return frame.builder;
+    }
+
+    private Derived derived() {
+        DerivationFrame previous = TRACKING.get();
+        if (previous != null && previous.chemical == this) {
+            return previous.builder.snapshot();
+        }
+        DerivedBuilder builder = new DerivedBuilder(legacyOreTag, legacyRadioactivity, hasLegacyAttributesWithValidation);
+        TRACKING.set(new DerivationFrame(this, builder));
+        try {
+            updateFromDataMap(getAsHolder());
+            return builder.snapshot();
+        } finally {
+            if (previous == null) TRACKING.remove();
+            else TRACKING.set(previous);
+        }
+    }
+
+    private record DerivationFrame(Chemical chemical, DerivedBuilder builder) {
+    }
+
+    private static final class DerivedBuilder {
+        private TagKey<Item> oreTag;
+        private final List<IChemicalAttribute> attributes = new ArrayList<>();
+        private double radioactivity;
+        private boolean needsValidation;
+        private DerivedBuilder(TagKey<Item> oreTag, double radioactivity, boolean needsValidation) {
+            this.oreTag = oreTag;
+            this.radioactivity = radioactivity;
+            this.needsValidation = needsValidation;
+        }
+
+        private Derived snapshot() {
+            return new Derived(oreTag, List.copyOf(attributes), radioactivity, needsValidation);
+        }
+    }
+
+    private record Derived(@Nullable TagKey<Item> oreTag, List<IChemicalAttribute> attributes,
+                           double radioactivity, boolean needsValidation) {
     }
 
     /**
@@ -542,7 +604,7 @@ public class Chemical implements IChemicalProvider, IChemicalAttributeContainer<
      */
     @SuppressWarnings("removal")
     protected void appendHoverText(ChemicalStack stack, TooltipContext context, List<Component> tooltips, TooltipFlag tooltipFlag) {
-        for (IChemicalAttribute attribute : attributes) {
+        for (IChemicalAttribute attribute : derived().attributes()) {
             attribute.collectTooltips(context, tooltips, tooltipFlag);
         }
         //TODO - 1.22: Remove this legacy handling

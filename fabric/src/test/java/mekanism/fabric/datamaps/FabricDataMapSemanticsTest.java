@@ -1,5 +1,7 @@
 package mekanism.fabric.datamaps;
 
+import mekanism.api.datamaps.MekanismDataMapType;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -46,20 +48,20 @@ class FabricDataMapSemanticsTest {
     private static final String LOGGER_NAME = "Mekanism/FabricDataMaps";
     private static final String NS = "datamap_test";
     private static final ResourceKey<Registry<String>> REGISTRY = ResourceKey.createRegistryKey(id("values"));
-    private static final FabricDataMapType<String, Float> TYPE = new FabricDataMapType<>(REGISTRY, id("ordinary"), Codec.floatRange(0, 1));
+    private static final MekanismDataMapType<String, Float> TYPE = new MekanismDataMapType<>(REGISTRY, id("ordinary"), Codec.floatRange(0, 1));
 
     @TempDir
     Path temporary;
 
     @Test
     void descriptorIdentityAndCatalogCollisionsUseRegistryAndIdTuple() {
-        FabricDataMapType<String, Float> sameTuple = new FabricDataMapType<>(REGISTRY, TYPE.id(), Codec.FLOAT);
+        MekanismDataMapType<String, Float> sameTuple = new MekanismDataMapType<>(REGISTRY, TYPE.id(), Codec.FLOAT);
         assertNotEquals(TYPE, sameTuple);
         assertEquals(TYPE, TYPE);
         assertThrows(IllegalStateException.class, () -> FabricDataMapLoader.validateCatalog(List.of(TYPE, sameTuple)));
 
         ResourceKey<Registry<String>> otherRegistry = ResourceKey.createRegistryKey(id("other_values"));
-        FabricDataMapType<String, Float> otherTuple = new FabricDataMapType<>(otherRegistry, TYPE.id(), Codec.FLOAT);
+        MekanismDataMapType<String, Float> otherTuple = new MekanismDataMapType<>(otherRegistry, TYPE.id(), Codec.FLOAT);
         FabricDataMapLoader.validateCatalog(List.of(TYPE, otherTuple));
         assertEquals(ResourceLocation.fromNamespaceAndPath(NS, "data_maps/datamap_test/values/ordinary.json"),
               FabricDataMapLoader.fileLocation(TYPE));
@@ -67,7 +69,7 @@ class FabricDataMapSemanticsTest {
 
     @Test
     void valueAlternativesPreserveWrapperReplaceAndObjectFirstCodec() {
-        FabricDataMapType<String, MekaSuitAbsorption> meka = new FabricDataMapType<>(REGISTRY, id("meka"), MekaSuitAbsorption.CODEC);
+        MekanismDataMapType<String, MekaSuitAbsorption> meka = new MekanismDataMapType<>(REGISTRY, id("meka"), MekaSuitAbsorption.CODEC);
         assertEquals(new MekaSuitAbsorption(0.75F), FabricDataMapLoader.decodeEntry(com.google.gson.JsonParser.parseString("0.75"), meka).value());
         assertEquals(new MekaSuitAbsorption(0.75F), FabricDataMapLoader.decodeEntry(com.google.gson.JsonParser.parseString("{\"absorption\":0.75}"), meka).value());
         FabricDataMapLoader.Entry<MekaSuitAbsorption> wrapped = FabricDataMapLoader.decodeEntry(

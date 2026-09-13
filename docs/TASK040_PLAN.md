@@ -1,10 +1,10 @@
 # Task 040 plan — complete Chemical registry, data-map, tank and synchronization vertical
 
-Status: **approved for one isolated implementation candidate**
+Status: **mandatory GLM review returned ACCEPT WITH FIXES; focused corrective candidate complete and awaiting rereview/integration**
 
 ## Decision and baseline
 
-- Baseline: clean `java-port` commit `1a65b0a8e92fdea5cf81fccac1e46e563d461ad5`.
+- Approved code baseline: `1a65b0a8e92fdea5cf81fccac1e46e563d461ad5`; candidate worktree started clean from its docs-only approval child `5aadf581`.
 - Official source oracle: `4646f509` (Mekanism `v1.21.1-10.7.19.85`).
 - Starting slices: API/common/platform **65/145/24**; aggregate **75 suites / 353 tests**.
 - User direction: prefer complete 15–40+ owner/dependency verticals; an indivisible registry/config/reload/network SCC may exceed 40 files rather than being split into fake leaf tasks.
@@ -197,16 +197,19 @@ No checkpoint alone completes Task040. The production roots are the existing two
 
 ## Tests, runtime proof and gates
 
-Add five suites / **26 tests**, justified by six independent mutation surfaces rather than source count:
+Add five suites / **29 tests**, justified by the original six mutation surfaces plus the reviewed
+virtual-derivation and configuration epoch/lifecycle races rather than source count:
 
-- ordinary domain: 6;
+- ordinary domain: 7 (including virtual/reentrant derivation and direct-call boundary);
 - ordinary service/config: 5;
-- ordinary snapshot protocol: 5;
+- ordinary snapshot protocol: 7 (including same-session catch-up and authoritative ACK recheck);
 - transfer-Knot chemical codec/tank connections: 6;
 - data-map-Knot owner integration: 3;
 - registry-root integration: extend the existing suite by 1 method rather than adding a suite.
 
-Expected totals: ordinary **73/352**, transfer **4/21**, registry-root **1/2**, data-map **2/4**, aggregate **80/379**. If practical isolation requires a distinct runtime source set, document the changed suite arithmetic instead of weakening isolation.
+Corrected totals: ordinary **73/355**, transfer **4/21**, registry-root **1/2**, data-map **2/4**,
+aggregate **80/382**. The three extra ordinary tests are real review-driven contract growth; the
+isolated runtime source set remains a process gate and does not masquerade as a JUnit suite.
 
 Required candidate gates:
 
@@ -229,8 +232,47 @@ Mandatory independent read-only review before integration:
 4. configuration/play ordering, bounded decoding, ACK/reload/disconnect races;
 5. public surface, oracle deltas, resource/service and artifact isolation.
 
+## Candidate outcome and evidence
+
+The corrected candidate reaches the planned **98/164/33** slices and exact **80 suites / 382 tests**. Its actual
+unique touched-production-path count is 69 rather than the headline 68: the numbered plan did not
+include its separately described `FabricDataMapLoader` update. The expected config-manager change was
+unnecessary; real packaged startup instead required an idempotent already-frozen path in
+`FabricDefaultedRegistry` because a reload worker creates a registry snapshot. Net compiled growth
+remains exactly 61.
+
+The exact five maps, 13 Chemical tags, and two service descriptors pass the remapped-JAR hash/content
+and leakage gate. Focused/full tests, ordinary build, packaged dedicated-server startup, the new real
+Chemical server/client/reconnect gate, data-map reload, paired network, rejection, and client-window
+regressions form the candidate evidence. The runtime gate observes a 65-entry canonical synchronized
+registry, initial radioactive nuclear waste rejecting a real tank and producing a tooltip, exact
+true-long NBT/stream round trips, authoritative removal at epoch 2, subsequent tank acceptance and
+tooltip removal, two distinct ACK sessions, disconnect cleanup, same-process reconnect, and
+same-JVM server/client context isolation.
+
+Candidate `dc9c5687` did not itself satisfy the mandatory independent review merely by self-hardening.
+GLM 5.3 high review `bf00719f-3d49-48c` independently reran focused and Knot suites and returned
+**ACCEPT WITH FIXES** after 845.8s, 195.3k tokens, 91 tool calls, about `$2.56`. It found: missing
+client configuration-phase disconnect cleanup; server post-ACK/pre-play UUID/session leakage; a
+snapshot-send/ACK epoch race; lifecycle claims lacking a real callback regression; inaccurate review
+attribution and an undocumented public snapshot seam; and an unresolved public/overridable
+`Chemical.updateFromDataMap` invocation, reentrancy, and per-query cost boundary.
+
+The focused corrective commit registers real configuration cleanup on the client executor, makes
+cleanup repeat-safe and generation guarded, removes both server pending and UUID session state,
+rechecks authoritative epoch on ACK and resends a same-session newer snapshot, and adds exact focused
+race contracts. The isolated runtime fixture now ACKs a real initial snapshot and is terminated by a
+later real configuration task before play; real Fabric callbacks prove epoch/session/generation and
+server pre-play cleanup, stable no-revival, then a clean new connection. It uses no synthetic null
+handler. `publishSnapshot` is package-private/test-only. `Chemical.updateFromDataMap` retains virtual
+override participation, documents direct external invocation as an authorized invalid `@Internal`
+Fabric delta, and supports same-Chemical partial-view reentrancy plus nested independent derivations.
+Full implementation and non-claims are recorded in [`FABRIC_CHEMICAL.md`](FABRIC_CHEMICAL.md). This
+status awaits focused rereview and does not claim parent integration, `./build.sh --clean`, deployment,
+production, or mirror execution.
+
 ## Explicit deferrals and next boundary
 
 Deferred: full `MekanismAPI`; modules/Robit registries; chemical ingredients; environmental radiation and `IRadiationManager`; external Chemical storage/provider/transactions; configurable holders/ejector; fluid tanks/handlers; machine/menu/block/item registration; Crusher.
 
-After Task040, Task041 should take the complete recipe ingredient/input-handler/CachedRecipe/reload-cache vertical. It must no longer stop at Chemical registry, canonical EMPTY, data-map attributes, tooltip services or internal chemical tank behavior.
+After Task040, Task041 should take the complete recipe ingredient/input-handler/CachedRecipe/reload-cache vertical. Before adding recipe hot-path traffic it has an explicit gate to replace or amortize the current per-query context-local derivation allocation and five descriptor lookups without shared mutable `Chemical` state or a global cache. It must no longer stop at Chemical registry, canonical EMPTY, data-map attributes, tooltip services or internal chemical tank behavior.

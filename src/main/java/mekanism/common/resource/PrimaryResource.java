@@ -1,21 +1,20 @@
 package mekanism.common.resource;
 
 import java.util.function.Supplier;
-import mekanism.common.resource.ore.OreType;
-import mekanism.common.tags.MekanismTags;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
-import net.neoforged.neoforge.common.Tags;
 import org.jetbrains.annotations.Nullable;
 
 public enum PrimaryResource implements IResource {
-    IRON("iron", 0xFFAF8E77, Tags.Items.ORES_IRON),
-    GOLD("gold", 0xFFF2CD67, Tags.Items.ORES_GOLD),
-    OSMIUM("osmium", 0xFF1E79C3, () -> MekanismTags.Items.ORES.get(OreType.OSMIUM), BlockResourceInfo.OSMIUM, BlockResourceInfo.RAW_OSMIUM),
-    COPPER("copper", 0xFFAA4B19, Tags.Items.ORES_COPPER),
-    TIN("tin", 0xFFCCCCD9, () -> MekanismTags.Items.ORES.get(OreType.TIN), BlockResourceInfo.TIN, BlockResourceInfo.RAW_TIN),
-    LEAD("lead", 0xFF3A404A, () -> MekanismTags.Items.ORES.get(OreType.LEAD), BlockResourceInfo.LEAD, BlockResourceInfo.RAW_LEAD),
-    URANIUM("uranium", 0xFF46664F, () -> MekanismTags.Items.ORES.get(OreType.URANIUM), BlockResourceInfo.URANIUM, BlockResourceInfo.RAW_URANIUM);
+    IRON("iron", 0xFFAF8E77, true, null, null),
+    GOLD("gold", 0xFFF2CD67, true, null, null),
+    OSMIUM("osmium", 0xFF1E79C3, false, BlockResourceInfo.OSMIUM, BlockResourceInfo.RAW_OSMIUM),
+    COPPER("copper", 0xFFAA4B19, true, null, null),
+    TIN("tin", 0xFFCCCCD9, false, BlockResourceInfo.TIN, BlockResourceInfo.RAW_TIN),
+    LEAD("lead", 0xFF3A404A, false, BlockResourceInfo.LEAD, BlockResourceInfo.RAW_LEAD),
+    URANIUM("uranium", 0xFF46664F, false, BlockResourceInfo.URANIUM, BlockResourceInfo.RAW_URANIUM);
 
     private final String name;
     private final int tint;
@@ -25,18 +24,10 @@ public enum PrimaryResource implements IResource {
     private final BlockResourceInfo resourceBlockInfo;
     private final BlockResourceInfo rawResourceBlockInfo;
 
-    PrimaryResource(String name, int tint, TagKey<Item> oreTag) {
-        this(name, tint, () -> oreTag, true, null, null);
-    }
-
-    PrimaryResource(String name, int tint, Supplier<TagKey<Item>> oreTag, BlockResourceInfo resourceBlockInfo, BlockResourceInfo rawResourceBlockInfo) {
-        this(name, tint, oreTag, false, resourceBlockInfo, rawResourceBlockInfo);
-    }
-
-    PrimaryResource(String name, int tint, Supplier<TagKey<Item>> oreTag, boolean isVanilla, BlockResourceInfo resourceBlockInfo, BlockResourceInfo rawResourceBlockInfo) {
+    PrimaryResource(String name, int tint, boolean isVanilla, BlockResourceInfo resourceBlockInfo, BlockResourceInfo rawResourceBlockInfo) {
         this.name = name;
         this.tint = tint;
-        this.oreTag = oreTag;
+        this.oreTag = () -> TagKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("c", "ores/" + name));
         this.isVanilla = isVanilla;
         this.resourceBlockInfo = resourceBlockInfo;
         this.rawResourceBlockInfo = rawResourceBlockInfo;

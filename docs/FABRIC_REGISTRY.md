@@ -1,9 +1,9 @@
 # Fabric registry 最小适配
 
-当前 `mekanism.fabric.registry` 有两个相连但 ownership 分离的层次。既有
-`FabricDeferredRegister`/`FabricDeferredHolder` 继续为 built-in registry 提供同步 deferred
-提交；Task 037 新增的 `FabricDefaultedRegistry`/`FabricCustomRegistryLifecycle` 只建立可复用的
-intrusive + defaulted custom-registry 基础，不拥有任何具体 registry。
+当前 registry closure 有三个 ownership 层次。既有 `FabricDeferredRegister`/`FabricDeferredHolder`
+为 built-in/custom registry 提供同步 deferred 提交；Task 037 的 `FabricDefaultedRegistry`/
+`FabricCustomRegistryLifecycle` 建立 intrusive + defaulted foundation；Task 040 的
+`FabricChemicalRegistryLifecycle` 是首个具体 custom owner。其它 registry 不因这一 owner 自动纳入。
 
 ## Task 037 generic intrusive/defaulted foundation
 
@@ -20,14 +20,14 @@ null `RegistrationInfo`、root key/value identity与 default canonical identity 
 检查；这些纯 precondition failure 不污染 registry。实际注册不补造 intrusive holder，因此遗漏
 `createIntrusiveHolder` 时保留 vanilla `AssertionError` 并进入 `FAILED`。freeze 先要求 exact canonical
 default holder，再交给 vanilla 检出 dangling intrusive holder；vanilla 可能先置 frozen 再抛错，故该
-失败也不可重试。成功 freeze 幂等返回同一实例。`get` 与非法 `byId` 保留 default fallback，而
+失败也不可重试。成功 first freeze 后，任何线程的 already-FROZEN `freeze()` 幂等返回同一实例；
+这只承接 `RegistryAccess` reload snapshot，不放宽 mutation/首次冻结。`get` 与非法 `byId` 保留 default fallback，而
 `getOptional` 不回退。
 
 root path 只使用 `FabricRegistryBuilder.from(this)`：builder 的默认 `MODDED` 必须存在，boolean
 选项为 true 时还必须有 `SYNCED`；返回对象、root 中的 value/key 与 attributes 全部按 identity/值
-复核。production 没有手动 freeze、unfreeze 或 mixin 绕过：Fabric 的 server automatic root-freeze
-路径会调用同一个 vanilla `BuiltInRegistries.bootStrap()`。唯一真实 root mutation 位于专用
-`fabricRegistryTest` 的单方法、server-side Knot worker；该 worker固定
+复核。Task 037 落地时 production 未使用该 foundation；其 generic automatic-freeze proof 位于专用
+`fabricRegistryTest` 的 Task037 单方法、server-side Knot worker；Task040 在同一隔离类中增加第二方法。该 worker固定
 `maxParallelForks=1`/`forkEvery=1`、使用自己的工作目录，并在全局 registry frozen 后立即退出。
 ordinary tests 全部使用 never-rooted fresh registries，runtime 不含 `fabric-loader-junit`。
 
@@ -38,9 +38,9 @@ ordinary tests 全部使用 never-rooted fresh registries，runtime 不含 `fabr
 volatile value；public `canonicalHolder()` 在 registrar seam 或注册前没有 reference 时失败。
 registrar seam 仍可只绑定 value，prefix partial commit 与 batch terminal `FAILED` 语义不变。
 
-测试分区现为 ordinary **67 suites/320 tests**（包含既有五方法与新增五方法 registry suites，三项
-jqwik 各 100,000 tries）、transfer **2/8**、isolated root **1/1**，总计 **70/329**。platform
-allowlist 只新增上述两个 production source，当前 API/common/platform 为 **64/122/19**。remapped
+Task 037 落地测试分区为 ordinary **67 suites/320 tests**、transfer **2/8**、isolated root **1/1**，
+总计 **70/329**。Task 040 candidate 当前为 ordinary/transfer/root/data-map **73/352**、**4/21**、
+**1/2**、**2/4**，aggregate **80/379**；API/common/platform **98/164/33**。remapped
 JAR 的 direct `mekanism/fabric/registry/` family 必须精确七项：holder、register outer + `Entry` +
 `Registrar`、既有 lifecycle、新 defaulted registry 与新 custom lifecycle；enum comparison 不使用
 switch，实际产物无额外 synthetic class。
@@ -61,10 +61,25 @@ actual entry，不走 default fallback；built-in freeze 先 freeze root 再逐 
 使用的 `fabric-loader-junit:0.19.5` binary SHA-256 为
 `d8a34f60d0653d8be60673411f5e29125d709be298f9883bbdaf12412b03ec3c`，并显式设置 server side。
 
-这是 prerequisite，不是 chemical registry owner：本闭包没有 `Chemical`、`mekanism:empty`、
-data map、radiation、`MekanismAPI`/NeoForge facade、reload/client 类、production startup wiring 或
-manual production freeze。两个 Fabric bootstrap 未新增对该 foundation 的引用，现有 GameEvent
-startup proof 原样保留。
+Task 037 本身是 prerequisite；其落地时没有 Chemical owner或 production root wiring。Task 040
+现按下一节接入具体 owner，仍不引入 `MekanismAPI`/NeoForge facade、unfreeze/mixin bypass或通用
+concurrent-read promise。既有 GameEvent startup proof 原样保留。
+
+## Task 040 Chemical custom-registry owner
+
+common bootstrap在其它依赖 Chemical 的 service/data-map初始化前调用
+`FabricChemicalRegistryLifecycle.initialize()`。它创建 key `mekanism:chemical`、default
+`mekanism:empty` 的 exact `FabricDefaultedRegistry<Chemical>`，注册 root并获得 MODDED+SYNCED，随后
+发布 canonical empty value/holder并通过 official deferred declarations注册 32 named chemicals、
+18 pigments、14 dirty/clean slurries。production 在 construction thread 主动完成 first freeze，避免
+异步 reload worker成为首次 freeze owner；worker之后只能命中 already-FROZEN 幂等 path。
+
+验证不依赖 `keySet()` iteration order：empty raw ID必须为0，完整 official declaration list逐项 raw ID
+必须为1..64，每个 resource name/value/deferred holder/canonical reference exact identity一致。raw ID只作
+startup/test assertion；Fabric registry synchronization执行 client remap，Chemical data snapshot使用
+resource name。隔离 root test现第二个方法在 real Fabric root中重复完整 order/canonical/SYNCED/frozen
+assert；packaged server要求 Chemical data-map startup proof，real Chemical gate同时证明server/client
+65-entry names/remap。完整 source/resource/network evidence见 `FABRIC_CHEMICAL.md`。
 
 ## 既有 built-in GameEvent owner
 
