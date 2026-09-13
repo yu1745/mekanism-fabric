@@ -1028,3 +1028,11 @@ GLM 在任务 013、014 完成两轮临时复测；任务 015 以受支持的 hi
 - 有效覆盖发现：clear/rebind 原测试只填充普通 indices，不能声称验证 complex fallback 清除；fluid fallback 测试未验证 indexed-first 和 indexed amount 不足后 fallback。主代理在原5方法内补充真实 component fluid recipe 的 clear/rebind，以及两种候选并存下的优先级和 amount fallback；focused 5 tests 通过。修正 `RecipeSource` 文档笔误。Chemical fallback 因当前 `ChemicalInputCache.mapInputs()` 恒返回 false 而不可达，保留官方结构，不创建 synthetic test seam。
 - 非本批回归：通用旧测试未真正构造 mismatched non-null Level，不能把方法名当执行证据；Rotary 四入口实际均委托既有 enforcing base。未扩展到 owner/registry 或改动生产代码。
 - 父级最终门禁与 artifact identity 记录于 `TASK044_PLAN.md`，本记录不以只读意见代替运行证据。
+
+## 任务 045：canonical common recipe owner（单实现 + 风险触发只读审查）
+
+- 实现：`commandcode/deepseek/deepseek-v4.1-flash` high，基线 `c6255a4e`，候选 `436fb30e`（5 commits）；2728.4s、649,034 tokens、255次工具调用。监督纠正了一次错误 Minecraft 26.1.1 javap 取样，改为实际1.21.1 artifact；并要求过滤输出管道之外的真实 Gradle exit/XML 证据。
+- 固定候选独立 reviewer：`openai-codex/gpt-6-astra`，run `0d19397c-2be5-477`，176.1s、116,060 tokens、45次工具调用，约 `$2.0480`；完整只读审查 production/test/registration/cache/lifecycle/static contracts，未修改或执行门禁。结论 **REJECT**：P1 common holder 注册后递归 `value → super.value → virtual get → value`；P2 Binding 的 `Object` owner key 与 recipe 泛型脱钩。另指出 post-registration common access、不同 non-null RegistryAccess、synthetic skip/multi-Ingredient/helper、client published-access 的执行覆盖缺口。
+- 父代理独立检查同样发现 P1，并在原两种 init-order worker 内增加注册后 all26 common `get/value/getRecipeType` 断言：先红（两者均 StackOverflowError），再改为两个 `super.get()` 后绿。修复 `c1c9aa3f` 还恢复官方 `registerMek(String, Function<...>)` overload，绑定缓存按 `RecipeCacheSource<R>` 约束并 defensively immutable，在原6 ordinary methods内补齐上述独立风险（总方法数仍8），且 client fixture 在 initial/reload/reconnect 的必需 phase marker 前验证真实 connection access 与 canonical/synthetic owner。未添加第二个完整实现候选。
+- 修复版父级 `check compileRecipeRuntimeFixtureJava` 加五个 fixture isolation、`--rerun-tasks`：63s、30 tasks executed，435 tests通过。P1红绿日志 `/tmp/task045-parent-bound-holder-{red,green}.log`；修复全量日志 `/tmp/task045-parent-fixed-check.log`。真实runtime/release及复审结论以 `TASK045_PLAN.md` 父验收记录为准，不用单测通过替代真实运行证据。
+- 针对性复审 run `717a8a96-59c6-4bb`（默认继承模型，未覆盖 model）：59.8s、54,270 tokens、16次工具调用、约 `$0.6808`，固定 `c1c9aa3f` **ACCEPT**。P1/P2关闭；审阅红绿日志及补测，确认 factory overload与客户端真实access断言。仅只读，未执行runtime。父已另行完成真实recipe-runtime、packaged server及clean release，详见TASK045_PLAN。
