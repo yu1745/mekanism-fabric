@@ -40,7 +40,6 @@ patched Minecraft 仅保留 5,363 个 `com/mojang/**/*.java`、`net/minecraft/**
 ## 模型与监督
 
 - 实现默认使用 `commandcode/deepseek/deepseek-v4.1-flash`，从 clean commit 在隔离 worktree 工作。thinking 默认 `low`，困难的已定界任务可用 `high`；仅允许这两档，不用 `max`。两档都须明确范围、交付物和检查点，降低 thinking 不保证提速。
-- 不使用 GLM 5.3；未经用户再次明确要求，不用 SOL 实现。研究/架构规划可按难度使用 SOL 或 Astra，但主代理仍负责最终定界。
 - 每个 DeepSeek 子代理启动后开启 **270秒 supervision watch**。只纠正方向、范围、验收漂移或风险操作；不因沉默或一次可恢复错误干预其自修复。
 - DeepSeek 明确报告额度耗尽时，保存进度、暂停实现与新代理派发，告知用户并等待额度恢复；不静默换模型，不用 sleep 或后台等待。
 - 涉及平台语义替换、patched Minecraft、registry、transaction、networking、序列化或线程/owner 生命周期时，对综合后的固定候选按风险进行独立**只读 adversarial review**；审查者默认不改代码、不重复完整文档与发布门禁。实际发生的比较/独立审查记录于 `docs/MODEL_IMPLEMENTATION_COMPARISONS.md`。
