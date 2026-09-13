@@ -186,7 +186,7 @@ def platformSlice = loadSlice('platform-slice.txt')
 def apiSliceFiles = apiSlice.collect { file("../src/api/java/${it}") }
 def commonSliceFiles = commonSlice.collect { file("../src/main/java/${it}") }
 def platformSliceFiles = platformSlice.collect { file("src/main/java/${it}") }
-if (apiSlice.size() != 205 || commonSlice.size() != 224 || platformSlice.size() != 45) {
+if (apiSlice.size() != 205 || commonSlice.size() != 226 || platformSlice.size() != 46) {
     throw new GradleException("Unexpected Fabric source slice counts: api=${apiSlice.size()} common=${commonSlice.size()} platform=${platformSlice.size()}")
 }
 
@@ -619,6 +619,8 @@ dependencies {
     testImplementation 'net.jqwik:jqwik:1.9.3'
 
     // Only transfer-boundary tests need Knot so Fabric API's item/fluid mixins are active.
+    // The genuine provider-path test reuses the audited tile stubs from the ordinary test sources.
+    fabricTransferTestImplementation sourceSets.test.output
     fabricTransferTestImplementation 'org.junit.jupiter:junit-jupiter:5.13.4'
     fabricTransferTestRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.13.4'
     fabricTransferTestRuntimeOnly "net.fabricmc:fabric-loader-junit:${loader_version}"
@@ -908,13 +910,13 @@ def verifyFabricTestContract = tasks.register('verifyFabricTestContract') {
             }
             [reports.length, tests]
         }
-        def ordinary = readTotals(ordinaryXmlResults, 'ordinary', 83, 415)
-        def transfer = readTotals(transferXmlResults, 'transfer', 6, 33)
+        def ordinary = readTotals(ordinaryXmlResults, 'ordinary', 84, 418)
+        def transfer = readTotals(transferXmlResults, 'transfer', 7, 36)
         def registry = readTotals(registryXmlResults, 'root-registry', 1, 2)
         def dataMap = readTotals(dataMapXmlResults, 'data-map', 2, 4)
         def recipeRegistry = readTotals(recipeRegistryXmlResults, 'recipe-registry', 3, 7)
-        if (ordinary[0] + transfer[0] + registry[0] + dataMap[0] + recipeRegistry[0] != 95
-              || ordinary[1] + transfer[1] + registry[1] + dataMap[1] + recipeRegistry[1] != 461) {
+        if (ordinary[0] + transfer[0] + registry[0] + dataMap[0] + recipeRegistry[0] != 97
+              || ordinary[1] + transfer[1] + registry[1] + dataMap[1] + recipeRegistry[1] != 467) {
             throw new GradleException('Unexpected aggregate Fabric test totals')
         }
     }

@@ -513,3 +513,33 @@ not the instance the keyed holder was built over, so registration cannot bind an
 Coverage is executable, not documentary: for every registered type the isolated worker asserts the official id resolves, the registry value is identity-equal to the
 declared `TYPE_*` value, the canonical holder is that same instance, the holder is bound, `get()`/`value()` agree, and all 26 instances are distinct under an identity
 set. A real `RecipeManager` decode-and-serve case proves the served recipe reports the registered type and serializer.
+
+## Capability cache 与 capability 基类 tile（Task 051）
+
+状态：已移植，Fabric common/platform allowlist 中启用（`mekanism/common/capabilities/CapabilityCache.java`、`mekanism/common/tile/base/CapabilityTileEntity.java`、`mekanism/fabric/tile/FabricCapabilityTileLifecycle.java`）。
+
+### 永久签名差异（Fabric delta）
+
+- `CapabilityCache.addConfigComponent` 的参数由具体 `TileComponentConfig` 收窄为
+  `BiPredicate<BlockApiLookup<?,@Nullable Direction>, @Nullable Direction>`（禁用谓词绑定）。真实组件仍由真实 tile 持有，
+  `TileEntityMekanism.addComponent` 绑定 `config::isCapabilityDisabled`。这是依赖收窄，不是配置状态重实现；完整 `TileComponentConfig` 仍未入 slice。
+- `CapabilityTileEntity` 构造函数接受 vanilla `Holder<? extends BlockEntityType<?>>`（沿用已接受的 `TileEntityUpdateable` 形状），替代 NeoForge
+  `TileEntityTypeRegistryObject`。
+- Provider 常量/工厂改为 Fabric `BlockApiLookup.registerForBlockEntity(BiFunction, BlockEntityType)` 接受的类型化 `BiFunction` 形状：
+  `ITEM_HANDLER_PROVIDER`/`FLUID_HANDLER_PROVIDER` 暴露事务 `Storage` 视图（`ItemStorage.SIDED`/`FluidStorage.SIDED`），
+  `CHEMICAL_HANDLER_PROVIDER`/`HEAT_HANDLER_PROVIDER` 走 Mekanism 自有 lookup 常量暴露域 API，energy 用泛型懒工厂
+  `capabilityProvider(EnergyStorage.SIDED, ...)`。所有 provider（eager 与 lazy）先经 `canExposeCapabilities()`（非 removed 且 exposure 打开）再查策略。
+- 失效方法（`invalidateCapability*`/`invalidateCapabilities*`/`invalidateCapabilitiesFull`）只撤销内部缓存视图：Fabric pinned lookup 只缓存 BE/provider
+  而不缓存返回的 API、每次 find 重新调用 provider，因此无 NeoForge `invalidateCapabilities()` 世界通知等价物；`AttributeHasBounding` 通知遍历仅从该
+  路径移除（bounding 玩法路径不变）。
+- 生命周期：`openCapabilityExposure()`（服务端 load 打开新代）/`closeCapabilityExposure()`（unload/移除关闭并撤销全部视图）；
+  `setRemoved()` 先关闭再走 super；`clearRemoved()` 只撤销缓存、不重开 exposure；`FabricCapabilityTileLifecycle` 注册真实
+  `ServerBlockEntityEvents.BLOCK_ENTITY_LOAD/UNLOAD` 与 `ServerChunkEvents.CHUNK_UNLOAD`（pinned Fabric 版本区块卸载不派发逐 BE unload 事件，
+  故按 chunk 关闭其内全部 capability tile）。回调只消费真实事件，不合成世界事件、不强制加载区块。
+
+### 验证
+
+`CapabilityTileLifecycleTest`（3：identity/lazy/unique-resolver 分发与绑定策略；eager provider 策略门禁 + tile 各失效入口对真实 manager 视图的撤销；
+eager+lazy 的 removed/clearRemoved/load 代际守卫与保留别名 fail-closed）、`CapabilityTileRegistrationTest`（3，Knot 真加载器：真实
+`registerForBlockEntity` 注册后经真实 per-find 分发验证策略/生命周期/逐-find 新鲜解析与 Team Reborn 懒工厂）。`assemble`（remapJar + 三个 slice
+gate）BUILD SUCCESSFUL。未运行（按完成度优先策略）：全量测试、packaged smoke、clean release、真实 server/client fixture。

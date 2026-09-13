@@ -16,6 +16,7 @@ import mekanism.fabric.network.FabricTileUpdateNetworking;
 import mekanism.fabric.recipe.FabricIngredientCreatorProvider;
 import mekanism.fabric.recipe.FabricRecipeCacheLifecycle;
 import mekanism.fabric.recipe.FabricRecipeRegistration;
+import mekanism.fabric.tile.FabricCapabilityTileLifecycle;
 import mekanism.common.registries.MekanismChemicalIngredientTypes;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -47,6 +48,7 @@ public final class MekanismFabricBootstrap implements ModInitializer {
         FabricChemicalNetworking.initialize();
         FabricTileUpdateNetworking.initialize();
         FabricMekanismDataMaps.initializeCallbacks();
+        FabricCapabilityTileLifecycle.initialize();
         LOGGER.info("MEKANISM_FABRIC_NETWORK_PROOF protocol={} phase=configuration codecs={} server_receiver={} client_required={}",
               networking.protocolVersion(), networking.codecs(), networking.serverReceiver(), networking.clientRequired());
         MekanismGameEvents.GAME_EVENTS.registerAll(BuiltInRegistries.GAME_EVENT);

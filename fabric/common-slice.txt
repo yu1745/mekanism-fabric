@@ -36,6 +36,7 @@ mekanism/common/capabilities/resolver/manager/FluidHandlerManager.java
 mekanism/common/capabilities/resolver/manager/EnergyHandlerManager.java
 mekanism/common/capabilities/resolver/manager/ChemicalHandlerManager.java
 mekanism/common/capabilities/resolver/manager/HeatHandlerManager.java
+mekanism/common/capabilities/CapabilityCache.java
 mekanism/common/config/BaseMekanismConfig.java
 mekanism/common/config/IConfigTranslation.java
 mekanism/common/config/IMekanismConfig.java
@@ -217,6 +218,7 @@ mekanism/common/recipe/MekanismRecipeType.java
 mekanism/common/registration/impl/RecipeTypeDeferredRegister.java
 mekanism/common/registration/impl/RecipeTypeRegistryObject.java
 mekanism/common/tile/base/TileEntityUpdateable.java
+mekanism/common/tile/base/CapabilityTileEntity.java
 mekanism/common/tile/interfaces/ITileWrapper.java
 mekanism/common/network/to_client/PacketUpdateTile.java
 mekanism/common/capabilities/fluid/BasicFluidTank.java

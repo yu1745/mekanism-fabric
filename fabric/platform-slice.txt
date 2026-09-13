@@ -44,3 +44,4 @@ mekanism/fabric/mixin/tile/LevelChunkMixin.java
 mekanism/fabric/mixin/tile/ClientPacketListenerTileMixin.java
 mekanism/fabric/fluid/FabricFluidStorage.java
 mekanism/fabric/fluid/FabricFluidLookup.java
+mekanism/fabric/tile/FabricCapabilityTileLifecycle.java

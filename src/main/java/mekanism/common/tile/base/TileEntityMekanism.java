@@ -467,7 +467,8 @@ public abstract class TileEntityMekanism extends CapabilityTileEntity implements
     public void addComponent(ITileComponent component) {
         components.add(component);
         if (component instanceof TileComponentConfig config) {
-            addConfigComponent(config);
+            //Fabric port: bind the real component's capability-disabled predicate instead of handing the concrete component to the cache
+            addConfigComponent(config::isCapabilityDisabled);
         }
     }
 

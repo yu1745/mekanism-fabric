@@ -18,10 +18,10 @@ import mekanism.api.heat.IHeatCapacitor;
 import mekanism.api.inventory.IInventorySlot;
 import mekanism.common.attachments.component.AttachedSideConfig;
 import mekanism.common.attachments.component.AttachedSideConfig.LightConfigInfo;
-import mekanism.common.capabilities.Capabilities;
+import mekanism.common.capabilities.resolver.manager.ChemicalHandlerManager;
+import mekanism.common.capabilities.resolver.manager.HeatHandlerManager;
 import mekanism.common.integration.computer.ComputerException;
 import mekanism.common.integration.computer.annotation.ComputerMethod;
-import mekanism.common.integration.energy.EnergyCompatUtils;
 import mekanism.common.inventory.container.MekanismContainer.ISpecificContainerTracker;
 import mekanism.common.inventory.container.sync.ISyncableData;
 import mekanism.common.inventory.container.sync.SyncableBoolean;
@@ -40,15 +40,18 @@ import mekanism.common.tile.component.config.slot.ISlotInfo;
 import mekanism.common.tile.component.config.slot.InventorySlotInfo;
 import mekanism.common.util.EnumUtils;
 import mekanism.common.util.NBTUtils;
+import net.fabricmc.fabric.api.lookup.v1.block.BlockApiLookup;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidStorage;
+import net.fabricmc.fabric.api.transfer.v1.item.ItemStorage;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.neoforged.neoforge.capabilities.BlockCapability;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import team.reborn.energy.api.EnergyStorage;
 
 public class TileComponentConfig implements ITileComponent, ISpecificContainerTracker {
 
@@ -83,12 +86,14 @@ public class TileComponentConfig implements ITileComponent, ISpecificContainerTr
     }
 
     private void sideChangedBasic(TransmissionType transmissionType, Direction direction) {
+        //Fabric port: invalidate on the five real Fabric lookup identities instead of the NeoForge capability tokens. Energy has exactly one loaded external
+        // identity in this port, so the loaded-energy-capability collection lookup collapses to that single identity.
         switch (transmissionType) {
-            case ENERGY -> tile.invalidateCapabilities(EnergyCompatUtils.getLoadedEnergyCapabilities(), direction);
-            case FLUID -> tile.invalidateCapability(Capabilities.FLUID.block(), direction);
-            case CHEMICAL -> tile.invalidateCapability(Capabilities.CHEMICAL.block(), direction);
-            case ITEM -> tile.invalidateCapability(Capabilities.ITEM.block(), direction);
-            case HEAT -> tile.invalidateCapability(Capabilities.HEAT, direction);
+            case ENERGY -> tile.invalidateCapability(EnergyStorage.SIDED, direction);
+            case FLUID -> tile.invalidateCapability(FluidStorage.SIDED, direction);
+            case CHEMICAL -> tile.invalidateCapability(ChemicalHandlerManager.CHEMICAL_HANDLER, direction);
+            case ITEM -> tile.invalidateCapability(ItemStorage.SIDED, direction);
+            case HEAT -> tile.invalidateCapability(HeatHandlerManager.HEAT_HANDLER, direction);
         }
         tile.markForSave();
         //And invalidate any "listeners" we may have that the side changed for a specific transmission type
@@ -106,17 +111,18 @@ public class TileComponentConfig implements ITileComponent, ISpecificContainerTr
         return transmissionTypes;
     }
 
-    public boolean isCapabilityDisabled(@NotNull BlockCapability<?, @Nullable Direction> capability, @Nullable Direction side) {
+    public boolean isCapabilityDisabled(@NotNull BlockApiLookup<?, @Nullable Direction> capability, @Nullable Direction side) {
+        //Fabric port: identity checks against the five real lookup identities this port exposes
         TransmissionType type = null;
-        if (Capabilities.ITEM.is(capability)) {
+        if (capability == ItemStorage.SIDED) {
             type = TransmissionType.ITEM;
-        } else if (Capabilities.CHEMICAL.is(capability)) {
+        } else if (capability == ChemicalHandlerManager.CHEMICAL_HANDLER) {
             type = TransmissionType.CHEMICAL;
-        } else if (capability == Capabilities.HEAT) {
+        } else if (capability == HeatHandlerManager.HEAT_HANDLER) {
             type = TransmissionType.HEAT;
-        } else if (Capabilities.FLUID.is(capability)) {
+        } else if (capability == FluidStorage.SIDED) {
             type = TransmissionType.FLUID;
-        } else if (EnergyCompatUtils.isEnergyCapability(capability)) {
+        } else if (capability == EnergyStorage.SIDED) {
             type = TransmissionType.ENERGY;
         }
         if (type != null) {
