@@ -5,7 +5,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import mekanism.api.Action;
-import mekanism.api.AutomationType;
 import mekanism.api.fluid.FluidStack;
 import mekanism.api.fluid.IExtendedFluidTank;
 import mekanism.api.fluid.IMekanismFluidHandler;
@@ -129,7 +128,8 @@ public final class FabricFluidStorage extends SnapshotParticipant<List<FluidStac
             IExtendedFluidTank fluidTank = capturedTanks.get(tank);
             FluidStack expected = snapshot.get(tank);
             try {
-                fluidTank.setStack(copyStack(expected));
+                //Restore captured state even if the owner's current validation policy changed.
+                fluidTank.setStackUnchecked(copyStack(expected));
             } catch (Throwable setterFailure) {
                 failure = collectRestoreFailure(failure, setterFailure);
             }
@@ -193,7 +193,6 @@ public final class FabricFluidStorage extends SnapshotParticipant<List<FluidStac
                 if (!canTransfer(insertion)) {
                     return 0;
                 }
-                IExtendedFluidTank fluidTank = capturedTanks.get(tank);
                 FluidStack before = expected.get(tank);
                 FluidStack expectedAfter = insertion
                       ? expectedAfterInsertion(before, typeProbe, planned)
@@ -205,13 +204,13 @@ public final class FabricFluidStorage extends SnapshotParticipant<List<FluidStac
                 int moved;
                 if (insertion) {
                     FluidStack offer = offerStack(typeProbe, planned);
-                    FluidStack remainder = Objects.requireNonNull(fluidTank.insert(
-                          offer, Action.EXECUTE, AutomationType.handler(exposureSide)),
+                    FluidStack remainder = Objects.requireNonNull(handler.insertFluid(
+                          tank, offer, exposureSide, Action.EXECUTE),
                           "Fluid tank returned a null insertion remainder");
                     moved = insertedAmount(offer, remainder);
                 } else {
-                    FluidStack extracted = Objects.requireNonNull(fluidTank.extract(
-                          planned, Action.EXECUTE, AutomationType.handler(exposureSide)),
+                    FluidStack extracted = Objects.requireNonNull(handler.extractFluid(
+                          tank, planned, exposureSide, Action.EXECUTE),
                           "Fluid tank returned a null extracted stack");
                     moved = extractedAmount(typeProbe, planned, extracted);
                 }
@@ -264,17 +263,16 @@ public final class FabricFluidStorage extends SnapshotParticipant<List<FluidStac
                 continue;
             }
             int offered = (int) Math.min((long) Integer.MAX_VALUE, maxMillibuckets - simulated);
-            IExtendedFluidTank fluidTank = capturedTanks.get(tank);
             int moved;
             if (insertion) {
                 FluidStack offer = offerStack(typeProbe, offered);
-                FluidStack remainder = Objects.requireNonNull(fluidTank.insert(
-                      offer, Action.SIMULATE, AutomationType.handler(exposureSide)),
+                FluidStack remainder = Objects.requireNonNull(handler.insertFluid(
+                      tank, offer, exposureSide, Action.SIMULATE),
                       "Fluid tank returned a null insertion remainder");
                 moved = insertedAmount(offer, remainder);
             } else {
-                FluidStack extracted = Objects.requireNonNull(fluidTank.extract(
-                      offered, Action.SIMULATE, AutomationType.handler(exposureSide)),
+                FluidStack extracted = Objects.requireNonNull(handler.extractFluid(
+                      tank, offered, exposureSide, Action.SIMULATE),
                       "Fluid tank returned a null extracted stack");
                 moved = extractedAmount(typeProbe, offered, extracted);
             }
@@ -291,7 +289,7 @@ public final class FabricFluidStorage extends SnapshotParticipant<List<FluidStac
     }
 
     /**
-     * Number of captured tank visits for the given range. Insertion visits every tank once; the two-pass official distribution order is produced by
+     * Number of captured tank visits for the given range. Insertion considers every tank in each of two passes; distribution eligibility is determined alongside
      * {@link #tankIndex(int, int, boolean, int)}.
      */
     private static int visitCount(int firstTank, int lastTank, boolean insertion) {

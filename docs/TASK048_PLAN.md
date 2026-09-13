@@ -27,3 +27,9 @@ Concrete entries: API `IExtendedFluidHandler`, `ISidedFluidHandler`, `IMekanismF
 ## Acceptance / reporting
 
 Inspect actual diff and exact slice additions; compile/remap build plus about3–6 focused tests for the new transaction/unit boundary using existing test source sets. Reuse existing test infrastructure, do not build a new runtime fixture. Do not rerun full suite, packaged smoke or clean release. Record actual verified range and remaining machine-owner integration plainly. Report a checkpoint if a new semantic blocker requires changing this scope; do not silently choose another task. Update this plan and MACHINE_SPINE/FABRIC_PORT succinctly on completion.
+
+## Parent closeout
+
+Reviewed actual candidate a1b8b986 and integrated it. Parent found and fixed a concrete owner-policy bypass: Fabric simulation/execution must call the indexed `IMekanismFluidHandler` methods, not directly invoke tanks; otherwise the newly admitted `DynamicFluidHandler` denies neither insertion nor extraction. Extended the existing policy test with a real denying DynamicFluidHandler (still six tests). Snapshot restoration uses `setStackUnchecked` so changed validation cannot veto restoration of captured state. Existing view-level snapshots follow the item adapter's reverse-participation rollback model; no claim of a new shared global participant registry.
+
+Final parent `./gradlew -p fabric remapJar fabricTransferTest --tests mekanism.fabric.fluid.FabricFluidStorageTest --console=plain` passed, 6 tests / 0 failures / 0 errors (log `/tmp/task048-parent-final.log`). No parent full suite, dedicated runtime, packaged smoke or clean release. Actual machine/config lifecycle and provider registration remain deferred as stated above.

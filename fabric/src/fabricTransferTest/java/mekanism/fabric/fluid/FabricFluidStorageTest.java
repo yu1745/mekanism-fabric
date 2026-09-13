@@ -227,6 +227,20 @@ class FabricFluidStorageTest {
 
     @Test
     void realTanksEnforceAutomationDirectionHolderPolicyAndTopologyDriftFailsClosed() {
+        //The owner can impose stricter rules than its tanks, even without an external holder.
+        BasicFluidTank guardedTank = BasicFluidTank.create(1_000, null);
+        guardedTank.setStack(new FluidStack(Fluids.WATER, 500));
+        var guardedHandler = new mekanism.common.capabilities.fluid.DynamicFluidHandler(
+              side -> List.of(guardedTank), side -> false, side -> false, null);
+        FabricFluidStorage guarded = FabricFluidLookup.expose(guardedHandler, Direction.NORTH, null);
+        assertNotNull(guarded);
+        try (Transaction transaction = Transaction.openOuter()) {
+            assertEquals(0, guarded.insert(water(), 81, transaction));
+            assertEquals(0, guarded.extract(water(), 81, transaction));
+            transaction.commit();
+        }
+        assertEquals(500, guardedTank.getFluidAmount());
+
         BasicFluidTank input = BasicFluidTank.input(1_000, stack -> true, null);
         BasicFluidTank output = BasicFluidTank.output(1_000, null);
         output.setStackUnchecked(new FluidStack(Fluids.LAVA, 500));
