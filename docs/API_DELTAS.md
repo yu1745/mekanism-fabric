@@ -533,9 +533,10 @@ set. A real `RecipeManager` decode-and-serve case proves the served recipe repor
   而不缓存返回的 API、每次 find 重新调用 provider，因此无 NeoForge `invalidateCapabilities()` 世界通知等价物；`AttributeHasBounding` 通知遍历仅从该
   路径移除（bounding 玩法路径不变）。
 - 生命周期：`openCapabilityExposure()`（服务端 load 打开新代）/`closeCapabilityExposure()`（unload/移除关闭并撤销全部视图）；
-  `setRemoved()` 先关闭再走 super；`clearRemoved()` 只撤销缓存、不重开 exposure；`FabricCapabilityTileLifecycle` 注册真实
-  `ServerBlockEntityEvents.BLOCK_ENTITY_LOAD/UNLOAD` 与 `ServerChunkEvents.CHUNK_UNLOAD`（pinned Fabric 版本区块卸载不派发逐 BE unload 事件，
-  故按 chunk 关闭其内全部 capability tile）。回调只消费真实事件，不合成世界事件、不强制加载区块。
+  `setRemoved()` 先关闭再走 super；`clearRemoved()` 只撤销缓存、不重开 exposure；`FabricCapabilityTileLifecycle` 只注册真实
+  `ServerBlockEntityEvents.BLOCK_ENTITY_LOAD/UNLOAD`（pinned Fabric `LifecycleEventsImpl` 本身在区块卸载时向该区块全部 BE 转发 BLOCK_ENTITY_UNLOAD——含
+  传送门边界情形——并在世界卸载时经 `LoadedChunksCache` 对每个已加载区块的全部 BE 同样转发，故区块/世界卸载覆盖由转发保全，无需直接 chunk 回调）。
+  回调只消费真实事件，不合成世界事件、不强制加载区块。
 
 ### 验证
 

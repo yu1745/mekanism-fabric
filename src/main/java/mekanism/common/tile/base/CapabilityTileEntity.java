@@ -130,7 +130,8 @@ public abstract class CapabilityTileEntity extends TileEntityUpdateable {
 
     /**
      * Closes capability exposure and permanently revokes every cached view, so already-retained views fail closed instead of keeping access to their old owner.
-     * Called by the Mekanism server unload lifecycle (block-entity unload and chunk unload) and by {@link #setRemoved()}; idempotent.
+     * Called by the Mekanism server unload lifecycle (block-entity unload, which the pinned Fabric lifecycle also fires for every block entity on chunk and world
+     * unload) and by {@link #setRemoved()}; idempotent.
      */
     public final void closeCapabilityExposure() {
         capabilityExposureOpen = false;

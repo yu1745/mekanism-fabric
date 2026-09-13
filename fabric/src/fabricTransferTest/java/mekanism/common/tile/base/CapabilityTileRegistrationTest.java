@@ -33,7 +33,7 @@ import team.reborn.energy.api.EnergyStorage;
 /**
  * Genuine Fabric registration path for the capability-tile providers, under a real loader: the eager item provider and the lazy generic energy factory are
  * registered through the real {@code BlockApiLookup.registerForBlockEntity} on lookup identities no vanilla adapter occupies, then resolved through the real
- * per-find dispatch of a tile installed in the audited level stub. Vanilla BE type tokens (end gateway, nether portal) are used only as unregistered type
+ * per-find dispatch of a tile installed in the audited level stub. Vanilla BE type tokens (end gateway, piston) are used only as unregistered type
  * carriers; no production machine content is registered.
  */
 class CapabilityTileRegistrationTest {
@@ -133,8 +133,8 @@ class CapabilityTileRegistrationTest {
     }
 
     /**
-     * Lazy-energy instrumentation tile: implements the real energy surfaces and counts how often the lazy factory built its resolver, mirroring how the official
-     * machine tile defers energy resolver creation to the first provider query.
+     * Lazy-energy instrumentation tile: implements the real energy surfaces, mirroring how the official machine tile defers energy resolver creation to the first
+     * provider query.
      */
     private static final class EnergyProbeTile extends CapabilityTileEntity implements IMekanismStrictEnergyHandler, IEnergyContainerHolder {
 
