@@ -54,17 +54,22 @@ mekanism/common/config/BaseMekanismConfig.java
 mekanism/common/config/ChemicalConfigAccess.java
 mekanism/common/config/ClientWindowConfigAccess.java
 mekanism/common/config/CommonConfig.java
+mekanism/common/config/GearConfig.java
+mekanism/common/config/GeneralConfig.java
 mekanism/common/config/IConfigTranslation.java
 mekanism/common/config/IMekanismConfig.java
 mekanism/common/config/listener/ConfigBasedCachedFloatSupplier.java
 mekanism/common/config/listener/ConfigBasedCachedIntSupplier.java
 mekanism/common/config/listener/ConfigBasedCachedLongSupplier.java
 mekanism/common/config/listener/ConfigBasedCachedSupplier.java
+mekanism/common/config/MekanismConfigHelper.java
 mekanism/common/config/MekanismConfigTranslations.java
 mekanism/common/config/MekanismConfigType.java
 mekanism/common/config/MekanismStartupConfig.java
 mekanism/common/config/StartupConfigTranslations.java
+mekanism/common/config/StorageConfig.java
 mekanism/common/config/TranslationPreset.java
+mekanism/common/config/UsageConfig.java
 mekanism/common/config/value/CachedBooleanValue.java
 mekanism/common/config/value/CachedByteValue.java
 mekanism/common/config/value/CachedConfigValue.java
@@ -184,6 +189,9 @@ mekanism/common/registries/MekanismSounds.java
 mekanism/common/resource/BlockResourceInfo.java
 mekanism/common/resource/IResource.java
 mekanism/common/resource/MiscResource.java
+mekanism/common/resource/ore/BaseOreConfig.java
+mekanism/common/resource/ore/OreAnchor.java
+mekanism/common/resource/ore/OreType.java
 mekanism/common/resource/PrimaryResource.java
 mekanism/common/resource/ResourceType.java
 mekanism/common/tier/BinTier.java
@@ -228,4 +236,8 @@ mekanism/common/util/StatUtils.java
 mekanism/common/util/text/TextUtils.java
 mekanism/common/util/text/TooltipHelper.java
 mekanism/common/util/UnitDisplayUtils.java
+mekanism/common/world/height/AnchorType.java
+mekanism/common/world/height/ConfigurableHeightRange.java
+mekanism/common/world/height/ConfigurableVerticalAnchor.java
+mekanism/common/world/height/HeightShape.java
 # Paths are relative to ../src/main/java. Keep one auditable common source per line.

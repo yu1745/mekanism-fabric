@@ -5,12 +5,17 @@ import mekanism.common.config.value.CachedDoubleValue;
 import mekanism.common.config.value.CachedFloatValue;
 import mekanism.common.config.value.CachedIntValue;
 import mekanism.common.config.value.CachedLongValue;
-import mekanism.common.content.gear.mekasuit.ModuleGravitationalModulatingUnit;
 import net.minecraft.SharedConstants;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import mekanism.fabric.config.MekanismConfigSpec;
 
 public class GearConfig extends BaseMekanismConfig {
+
+    /**
+     * Fabric port value-identical narrowing (documented): mirrors {@code ModuleGravitationalModulatingUnit.BOOST_ENERGY_MULTIPLIER} (4) so the gear module domain
+     * can be admitted separately; the module keeps the same constant, and any drift is caught by the gear batch that reunites them.
+     */
+    private static final long BOOST_ENERGY_MULTIPLIER = 4;
 
     public static final String FREE_RUNNER_CATEGORY = "free_runner";
     public static final String JETPACK_CATEGORY = "jetpack";
@@ -268,7 +273,7 @@ public class GearConfig extends BaseMekanismConfig {
         mekaSuitEnergyUsagePotionTick = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_MEKA_SUIT_ENERGY_USAGE_POTION, "energyUsagePotionTick", 40_000L);
         mekaSuitEnergyUsageSprintBoost = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_MEKA_SUIT_ENERGY_USAGE_SPRINT, "sprintBoost", 100L);
         mekaSuitEnergyUsageGravitationalModulation = CachedLongValue.define(this, builder, MekanismConfigTranslations.GEAR_MEKA_SUIT_ENERGY_USAGE_FLIGHT,
-              "gravitationalModulation", 1_000L, 0, Long.MAX_VALUE / ModuleGravitationalModulatingUnit.BOOST_ENERGY_MULTIPLIER);
+              "gravitationalModulation", 1_000L, 0, Long.MAX_VALUE / BOOST_ENERGY_MULTIPLIER);
         mekaSuitEnergyUsageVisionEnhancement = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_MEKA_SUIT_ENERGY_USAGE_VISION, "visionEnhancement", 500L);
         mekaSuitEnergyUsageHydrostaticRepulsion = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_MEKA_SUIT_ENERGY_USAGE_SWIM, "hydrostaticRepulsion", 500L);
         mekaSuitEnergyUsageNutritionalInjection = CachedLongValue.definePositive(this, builder, MekanismConfigTranslations.GEAR_MEKA_SUIT_ENERGY_USAGE_FOOD, "nutritionalInjection", 20_000L);

@@ -5,7 +5,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.BooleanSupplier;
 import mekanism.api.functions.ConstantPredicates;
-import mekanism.common.Mekanism;
 import mekanism.common.config.value.CachedBooleanValue;
 import mekanism.common.config.value.CachedConfigValue;
 import mekanism.common.config.value.CachedDoubleValue;
@@ -23,6 +22,12 @@ import org.jetbrains.annotations.Nullable;
 import mekanism.fabric.config.MekanismConfigSpec;
 
 public class GeneralConfig extends BaseMekanismConfig {
+
+    /**
+     * Fabric port delta (adjudicated MODID narrowing): the mekanism modid constant {@code MekanismAPI.MEKANISM_MODID} is not admitted with the api hub class yet,
+     * so the literal is used here exactly as the accepted bootstrap does.
+     */
+    private static final String MODID = "mekanism";
 
     private final MekanismConfigSpec configSpec;
 
@@ -152,7 +157,7 @@ public class GeneralConfig extends BaseMekanismConfig {
         strictUnboxing = CachedBooleanValue.wrap(this, MekanismConfigTranslations.GENERAL_CARDBOARD_STRICT_UNBOXING.applyToBuilder(builder)
               .define("strictUnboxing", false));
         cardboardModBlacklist = CachedConfigValue.wrap(this, MekanismConfigTranslations.GENERAL_CARDBOARD_MOD_BLACKLIST.applyToBuilder(builder)
-              .defineListAllowEmpty("modBlacklist", ArrayList::new, () -> Mekanism.MODID, e -> e instanceof String modid && ResourceLocation.isValidNamespace(modid)));
+              .defineListAllowEmpty("modBlacklist", ArrayList::new, () -> MODID, e -> e instanceof String modid && ResourceLocation.isValidNamespace(modid)));
         builder.pop();
 
         MekanismConfigTranslations.GENERAL_FILL_RATE.applyToBuilder(builder).push("item_fill_rate");
