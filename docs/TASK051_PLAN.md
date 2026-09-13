@@ -39,3 +39,9 @@ Evidence: `./gradlew -p fabric assemble test --tests mekanism.common.tile.base.C
 Not run per completion-first policy: full test suites, packaged smoke, clean release, real server/client fixtures.
 
 Remaining deferred obligations: provider registration on the five identities with the machine registry owner (`TileEntityTypeDeferredRegister`), actual `TileEntityMekanism` admission, real tile persistence/security/GUI, bounding gameplay paths, and the machine/registry catalog. No machine-completion claim is made by this batch.
+
+## Independent parent acceptance
+
+Accepted implementation `871c84d4` plus correction `2c65edb8`. Parent read the actual cache/base/helper sources, both excluded caller changes, bootstrap/slice/build changes, and all three new test files. Parent independently read the pinned `LifecycleEventsImpl.onInitialize`: chunk and world unload already forward per-BE unload, so the duplicate direct chunk callback was removed rather than accepted on the implementer's source claim.
+
+Independent verification: `./gradlew -p fabric assemble test --tests mekanism.common.tile.base.CapabilityTileLifecycleTest fabricTransferTest --tests mekanism.common.tile.base.CapabilityTileRegistrationTest` passed in 21s on `871c84d4`; both XML reports contain 3 tests, zero failures/errors/skips (`/tmp/task051-parent-final.log`). After reviewing and merging `2c65edb8`, final `./gradlew -p fabric assemble` passed in 5s, including remapJar and all three slice gates (`/tmp/task051-parent-corrected-assemble.log`). The six focused tests were not rerun after the redundant event subscription removal/comment corrections; they exercise owner/provider behavior, not real chunk/world unload dispatch. That dispatch is source-verified only. No full suite, runtime fixture, packaged smoke or clean release was run. Final slices: **205/226/46**.

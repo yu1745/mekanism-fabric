@@ -23,3 +23,16 @@ A permanent, fully behavior-preserving owner-contract extraction could decouple 
 The alternative is to admit the concrete existing ownership closure, including its actual frequency/security/upgrade/persistence/GUI and bounding obligations. No number of files is a reason to reject it, but a compiling module obtained by fake/no-op implementations is not acceptable. A next implementation dispatch must choose and specify this ownership design; do not hand an implementer an open-ended candidate hunt disguised as a machine implementation task.
 
 No production changes, new interfaces, provider registrations, runtime gates or recursive closure scanner were introduced at this checkpoint.
+
+## After Task051 acceptance — remaining concrete owners
+
+The initial boundary discussion above is historical: Task051 accepted `CapabilityCache`/`CapabilityTileEntity` with the permanent actual-component predicate binding and real Fabric BE lifecycle. See `TASK051_PLAN.md` for implementation and correction `2c65edb8` (Fabric already forwards chunk/world unload into BE unload). It does not admit the following owners.
+
+Additional parent source reads: complete `lib/frequency/TileComponentFrequency.java`, `FrequencyType.java`, `FrequencyManager.java`, and `inventory/container/MekanismContainer.java`.
+
+- The actual frequency component owns security plus custom frequency selection, periodic validation and revocation, component/config-card persistence with permissions, real registered `FrequencyAware` components, and container synchronization. Even a machine without custom frequencies still constructs this owner; dropping frequency behavior from the shared tile would not be a complete port.
+- `FrequencyType` statically registers real TELEPORTER/INVENTORY/SECURITY/QIO codecs, constructors and manager wrappers. They are executable domain dependencies, not string constants that can be replaced by inert descriptors.
+- `FrequencyManager` owns global load/tick/reset, overworld `MekanismSavedData`, and trusted-player cross-manager frequency views. Server lifetime and persistence must be real; a test-only server holder or in-memory substitute would not complete this owner.
+- `MekanismContainer` owns the ordered tracked-data list, dynamic tracking offsets, initial/dirty property packets, typed property application (including frequency/list/collection), per-player window selection and shift-click behavior. Most slot prerequisites are already admitted. Removing frequency/list property branches, packets or security semantics to compile this shared container would truncate its public behavior.
+
+These are source-grounded integration obligations, not file-count limits or an authorization for a fake/no-op owner. No Task052 implementation boundary is selected by this checkpoint.
