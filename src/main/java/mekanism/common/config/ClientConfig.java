@@ -12,12 +12,11 @@ import mekanism.common.inventory.container.QIOItemViewerContainer.SortDirection;
 import mekanism.common.inventory.container.SelectedWindowData.CachedWindowPosition;
 import mekanism.common.inventory.container.SelectedWindowData.WindowType;
 import mekanism.common.inventory.container.SelectedWindowData.WindowType.ConfigSaveData;
-import net.neoforged.fml.config.ModConfig.Type;
-import net.neoforged.neoforge.common.ModConfigSpec;
+import mekanism.fabric.config.MekanismConfigSpec;
 
 public class ClientConfig extends BaseMekanismConfig {
 
-    private final ModConfigSpec configSpec;
+    private final MekanismConfigSpec configSpec;
 
     public final CachedBooleanValue whiteRadialText;
     public final CachedIntValue energyColor;
@@ -59,7 +58,7 @@ public class ClientConfig extends BaseMekanismConfig {
     public final Map<String, CachedWindowPosition> lastWindowPositions = new HashMap<>();
 
     ClientConfig() {
-        ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
+        MekanismConfigSpec.Builder builder = new MekanismConfigSpec.Builder();
 
         MekanismConfigTranslations.CLIENT_ACCESSIBILITY.applyToBuilder(builder).push("accessibility");
         whiteRadialText = CachedBooleanValue.wrap(this, MekanismConfigTranslations.CLIENT_WHITE_RADIAL_TEXT.applyToBuilder(builder)
@@ -171,12 +170,12 @@ public class ClientConfig extends BaseMekanismConfig {
     }
 
     @Override
-    public ModConfigSpec getConfigSpec() {
+    public MekanismConfigSpec getConfigSpec() {
         return configSpec;
     }
 
     @Override
     public Type getConfigType() {
-        return Type.CLIENT;
+        return MekanismConfigType.CLIENT;
     }
 }

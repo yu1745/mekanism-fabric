@@ -1,12 +1,11 @@
 package mekanism.common.config;
 
 import mekanism.common.config.value.CachedLongValue;
-import net.neoforged.fml.config.ModConfig.Type;
-import net.neoforged.neoforge.common.ModConfigSpec;
+import mekanism.fabric.config.MekanismConfigSpec;
 
 public class StorageConfig extends BaseMekanismConfig {
 
-    private final ModConfigSpec configSpec;
+    private final MekanismConfigSpec configSpec;
 
     public final CachedLongValue enrichmentChamber;
     public final CachedLongValue osmiumCompressor;
@@ -46,7 +45,7 @@ public class StorageConfig extends BaseMekanismConfig {
     public final CachedLongValue dimensionalStabilizer;
 
     StorageConfig() {
-        ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
+        MekanismConfigSpec.Builder builder = new MekanismConfigSpec.Builder();
 
         enrichmentChamber = CachedLongValue.definedMin(this, builder, MekanismConfigTranslations.ENERGY_STORAGE_ENRICHMENT_CHAMBER, "enrichmentChamber",
               20_000L, 1);
@@ -135,12 +134,12 @@ public class StorageConfig extends BaseMekanismConfig {
     }
 
     @Override
-    public ModConfigSpec getConfigSpec() {
+    public MekanismConfigSpec getConfigSpec() {
         return configSpec;
     }
 
     @Override
     public Type getConfigType() {
-        return Type.SERVER;
+        return MekanismConfigType.SERVER;
     }
 }

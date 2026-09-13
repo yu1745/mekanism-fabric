@@ -18,12 +18,11 @@ import mekanism.common.resource.ore.OreType.OreVeinType;
 import mekanism.common.util.EnumUtils;
 import mekanism.common.world.height.ConfigurableHeightRange;
 import net.minecraft.world.level.dimension.DimensionType;
-import net.neoforged.fml.config.ModConfig.Type;
-import net.neoforged.neoforge.common.ModConfigSpec;
+import mekanism.fabric.config.MekanismConfigSpec;
 
 public class WorldConfig extends BaseMekanismConfig {
 
-    private final ModConfigSpec configSpec;
+    private final MekanismConfigSpec configSpec;
     public final CachedBooleanValue enableRegeneration;
     public final CachedIntValue userGenVersion;
 
@@ -31,7 +30,7 @@ public class WorldConfig extends BaseMekanismConfig {
     public final SaltConfig salt;
 
     WorldConfig() {
-        ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
+        MekanismConfigSpec.Builder builder = new MekanismConfigSpec.Builder();
 
         enableRegeneration = CachedBooleanValue.wrap(this, MekanismConfigTranslations.WORLD_RETROGEN.applyToBuilder(builder)
               .define("enableRegeneration", false));
@@ -56,13 +55,13 @@ public class WorldConfig extends BaseMekanismConfig {
     }
 
     @Override
-    public ModConfigSpec getConfigSpec() {
+    public MekanismConfigSpec getConfigSpec() {
         return configSpec;
     }
 
     @Override
     public Type getConfigType() {
-        return Type.SERVER;
+        return MekanismConfigType.SERVER;
     }
 
     public OreVeinConfig getVeinConfig(OreVeinType oreVeinType) {
@@ -78,7 +77,7 @@ public class WorldConfig extends BaseMekanismConfig {
         private final CachedBooleanValue shouldGenerate;
         private final List<OreVeinConfig> veinConfigs;
 
-        private OreConfig(IMekanismConfig config, ModConfigSpec.Builder builder, OreType oreType) {
+        private OreConfig(IMekanismConfig config, MekanismConfigSpec.Builder builder, OreType oreType) {
             String ore = oreType.getResource().getRegistrySuffix();
             OreConfigTranslations translations = OreConfigTranslations.create(ore);
             translations.topLevel().applyToBuilder(builder).push(ore);
@@ -116,7 +115,7 @@ public class WorldConfig extends BaseMekanismConfig {
         public final CachedIntValue maxRadius;
         public final CachedIntValue halfHeight;
 
-        private SaltConfig(IMekanismConfig config, ModConfigSpec.Builder builder, int perChunk, int baseRadius, int spread, int ySize) {
+        private SaltConfig(IMekanismConfig config, MekanismConfigSpec.Builder builder, int perChunk, int baseRadius, int spread, int ySize) {
             MekanismConfigTranslations.WORLD_SALT.applyToBuilder(builder).push("salt");
             this.shouldGenerate = CachedBooleanValue.wrap(config, MekanismConfigTranslations.WORLD_SALT_SHOULD_GENERATE.applyToBuilder(builder)
                   .define("shouldGenerate", true));

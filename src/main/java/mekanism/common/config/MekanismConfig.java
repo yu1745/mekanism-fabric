@@ -2,19 +2,15 @@ package mekanism.common.config;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import mekanism.common.Mekanism;
-import net.neoforged.fml.ModContainer;
-import net.neoforged.fml.config.IConfigSpec;
-import net.neoforged.fml.event.config.ModConfigEvent;
+import java.util.Set;
+import mekanism.fabric.config.FabricMekanismConfigManager;
 
 public class MekanismConfig {
 
     private MekanismConfig() {
     }
 
-    private static final Map<IConfigSpec, IMekanismConfig> KNOWN_CONFIGS = new HashMap<>();
+    private static final Set<IMekanismConfig> KNOWN_CONFIGS = new java.util.LinkedHashSet<>();
     public static final ClientConfig client = new ClientConfig();
     public static final CommonConfig common = new CommonConfig();
     public static final GeneralConfig general = new GeneralConfig();
@@ -25,23 +21,27 @@ public class MekanismConfig {
     public static final UsageConfig usage = new UsageConfig();
     public static final WorldConfig world = new WorldConfig();
 
-    public static void registerConfigs(ModContainer modContainer) {
-        MekanismConfigHelper.registerConfig(KNOWN_CONFIGS, modContainer, client);
-        MekanismConfigHelper.registerConfig(KNOWN_CONFIGS, modContainer, common);
-        MekanismConfigHelper.registerConfig(KNOWN_CONFIGS, modContainer, general);
-        MekanismConfigHelper.registerConfig(KNOWN_CONFIGS, modContainer, gear);
-        MekanismConfigHelper.registerConfig(KNOWN_CONFIGS, modContainer, startup);
-        MekanismConfigHelper.registerConfig(KNOWN_CONFIGS, modContainer, storage);
-        MekanismConfigHelper.registerConfig(KNOWN_CONFIGS, modContainer, tiers);
-        MekanismConfigHelper.registerConfig(KNOWN_CONFIGS, modContainer, usage);
-        MekanismConfigHelper.registerConfig(KNOWN_CONFIGS, modContainer, world);
+    /**
+     * Creates and registers every common/server-side Mekanism config through the real Fabric config manager. Fabric port delta: replaces the NeoForge
+     * {@code ModContainer.registerConfig} wiring; the client config is registered separately on the physical client by the client config lifecycle.
+     */
+    public static void registerConfigs(FabricMekanismConfigManager manager) {
+        MekanismConfigHelper.registerConfig(manager, KNOWN_CONFIGS, common);
+        MekanismConfigHelper.registerConfig(manager, KNOWN_CONFIGS, general);
+        MekanismConfigHelper.registerConfig(manager, KNOWN_CONFIGS, gear);
+        MekanismConfigHelper.registerConfig(manager, KNOWN_CONFIGS, startup);
+        MekanismConfigHelper.registerConfig(manager, KNOWN_CONFIGS, storage);
+        MekanismConfigHelper.registerConfig(manager, KNOWN_CONFIGS, tiers);
+        MekanismConfigHelper.registerConfig(manager, KNOWN_CONFIGS, usage);
+        MekanismConfigHelper.registerConfig(manager, KNOWN_CONFIGS, world);
     }
 
-    public static void onConfigLoad(ModConfigEvent configEvent) {
-        MekanismConfigHelper.onConfigLoad(configEvent, Mekanism.MODID, KNOWN_CONFIGS);
+    /** Registers the client-only config through the client-owned Fabric config manager. */
+    public static void registerClientConfig(FabricMekanismConfigManager manager) {
+        MekanismConfigHelper.registerConfig(manager, KNOWN_CONFIGS, client);
     }
 
     public static Collection<IMekanismConfig> getConfigs() {
-        return Collections.unmodifiableCollection(KNOWN_CONFIGS.values());
+        return Collections.unmodifiableSet(KNOWN_CONFIGS);
     }
 }

@@ -225,3 +225,5 @@ mekanism/common/capabilities/fluid/BasicFluidTank.java
 mekanism/common/capabilities/fluid/DynamicFluidHandler.java
 mekanism/common/capabilities/holder/fluid/IFluidTankHolder.java
 mekanism/common/capabilities/holder/fluid/FluidTankHolder.java
+mekanism/common/lib/MekanismServerState.java
+mekanism/common/lib/frequency/IColorableFrequency.java
