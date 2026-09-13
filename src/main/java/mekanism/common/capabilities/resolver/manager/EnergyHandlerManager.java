@@ -141,7 +141,8 @@ public class EnergyHandlerManager implements ICapabilityHandlerManager<IEnergyCo
         }
         Map<BlockApiLookup<?, @Nullable Direction>, Object> cachedSide = cachedCapabilities.get(side);
         if (cachedSide != null) {
-            revokeCached(cachedSide.remove(capability));
+            revokeCached(cachedSide.get(capability));
+            cachedSide.remove(capability);
         }
     }
 

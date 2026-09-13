@@ -288,6 +288,7 @@ public final class FabricEnergyStorage extends SnapshotParticipant<long[]> imple
             //A retained view must never hand out its old owner's live internal handler after invalidation
             return null;
         }
+        checkStableContainerCount();
         return stableHandler;
     }
 

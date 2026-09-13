@@ -89,7 +89,7 @@ public class BasicSidedCapabilityResolver<HANDLER, SIDED_HANDLER> implements ICa
 
     @Override
     public void invalidate(BlockApiLookup<?, @Nullable Direction> capability, @Nullable Direction side) {
-        if (!supportedCapabilities.contains(capability)) {
+        if (capability != supportedCapabilities.get(0)) {
             //Fabric port: an invalidation for a lookup identity this resolver does not support must never revoke unrelated cached views
             return;
         }
