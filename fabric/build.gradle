@@ -21,6 +21,7 @@ sourceSets {
     fabricTransferTest
     fabricRegistryTest
     fabricDataMapTest
+    fabricRecipeRegistryTest
     dataMapReloadFixture
     chemicalRuntimeFixture
     recipeRuntimeFixture
@@ -161,12 +162,11 @@ def platformSlice = loadSlice('platform-slice.txt')
 def apiSliceFiles = apiSlice.collect { file("../src/api/java/${it}") }
 def commonSliceFiles = commonSlice.collect { file("../src/main/java/${it}") }
 def platformSliceFiles = platformSlice.collect { file("src/main/java/${it}") }
-if (apiSlice.size() != 163 || commonSlice.size() != 184 || platformSlice.size() != 37) {
+if (apiSlice.size() != 199 || commonSlice.size() != 188 || platformSlice.size() != 38) {
     throw new GradleException("Unexpected Fabric source slice counts: api=${apiSlice.size()} common=${commonSlice.size()} platform=${platformSlice.size()}")
 }
 
 // Compile only the unchanged official root tests that cover admitted common-slice
-// behavior, in place, through this exact allowlist. Do not add ../src/test/java as a
 // source root: unrelated NeoForge tests must remain outside the Fabric test closure.
 def officialRootTestOracle = [
       'mekanism/common/lib/collection/BiLongMultimapTest.java',
@@ -261,6 +261,12 @@ sourceSets {
     fabricDataMapTest {
         // Damage-map ResourceManager and Chemical context/session integration get a fresh server-side Knot worker,
         // isolated from ordinary, transfer, root-registry, and fixture outputs.
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.runtimeClasspath
+    }
+    fabricRecipeRegistryTest {
+        // Real recipe type/serializer registration must precede Bootstrap.bootStrap(), so it needs its own fresh
+        // server-side Knot worker rather than the shared ordinary JVM.
         compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
         runtimeClasspath += sourceSets.main.runtimeClasspath
     }
@@ -545,6 +551,9 @@ dependencies {
     fabricDataMapTestImplementation 'org.junit.jupiter:junit-jupiter:5.13.4'
     fabricDataMapTestRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.13.4'
     fabricDataMapTestRuntimeOnly "net.fabricmc:fabric-loader-junit:${loader_version}"
+    fabricRecipeRegistryTestImplementation 'org.junit.jupiter:junit-jupiter:5.13.4'
+    fabricRecipeRegistryTestRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.13.4'
+    fabricRecipeRegistryTestRuntimeOnly "net.fabricmc:fabric-loader-junit:${loader_version}"
 }
 
 def resolvedModVersion = project.version.toString()
@@ -671,14 +680,33 @@ def fabricDataMapTest = tasks.register('fabricDataMapTest', Test) {
     }
     mustRunAfter tasks.named('test'), fabricTransferTest, fabricRegistryTest
 }
+def fabricRecipeRegistryWorkingDirectory = layout.buildDirectory.dir('fabric-recipe-registry-test-working')
+def fabricRecipeRegistryTest = tasks.register('fabricRecipeRegistryTest', Test) {
+    group = 'verification'
+    description = 'Runs the real recipe type/serializer registration test in a fresh server-side Knot worker.'
+    testClassesDirs = sourceSets.fabricRecipeRegistryTest.output.classesDirs
+    classpath = sourceSets.fabricRecipeRegistryTest.runtimeClasspath
+    maxParallelForks = 1
+    forkEvery = 1
+    systemProperty 'fabric.side', 'server'
+    workingDir fabricRecipeRegistryWorkingDirectory
+    doFirst {
+        fabricRecipeRegistryWorkingDirectory.get().asFile.mkdirs()
+    }
+    mustRunAfter tasks.named('test'), fabricTransferTest, fabricRegistryTest, fabricDataMapTest
+}
 tasks.named('check') {
     dependsOn fabricDataMapTest
+}
+tasks.named('check') {
+    dependsOn fabricRecipeRegistryTest
 }
 
 def ordinaryXmlResults = layout.buildDirectory.dir('test-results/test')
 def transferXmlResults = layout.buildDirectory.dir('test-results/fabricTransferTest')
 def registryXmlResults = layout.buildDirectory.dir('test-results/fabricRegistryTest')
 def dataMapXmlResults = layout.buildDirectory.dir('test-results/fabricDataMapTest')
+def recipeRegistryXmlResults = layout.buildDirectory.dir('test-results/fabricRecipeRegistryTest')
 def registryOrdinaryTestSource = layout.projectDirectory.file('src/test/java/mekanism/fabric/registry/FabricDefaultedRegistryTest.java')
 def deferredOrdinaryTestSource = layout.projectDirectory.file('src/test/java/mekanism/fabric/registry/FabricDeferredRegisterTest.java')
 def registryRootTestSource = layout.projectDirectory.file('src/fabricRegistryTest/java/mekanism/fabric/registry/FabricRegistryRootIntegrationTest.java')
@@ -698,22 +726,26 @@ def windowDomainTestSource = layout.projectDirectory.file('src/test/java/mekanis
 def concreteSlotTestSource = layout.projectDirectory.file('src/fabricTransferTest/java/mekanism/common/inventory/ConcreteInventorySlotTest.java')
 def fabricItemStorageTestSource = layout.projectDirectory.file('src/fabricTransferTest/java/mekanism/fabric/item/FabricItemStorageTest.java')
 def recipeOutputHandlingTestSource = layout.projectDirectory.file('src/test/java/mekanism/api/recipes/RecipeOutputHandlingTest.java')
+def recipeSerializerContractTestSource = layout.projectDirectory.file('src/test/java/mekanism/api/recipes/RecipeSerializerContractTest.java')
+def recipeRegistryKnotTestSource = layout.projectDirectory.file('src/fabricRecipeRegistryTest/java/mekanism/fabric/recipe/FabricRecipeRegistrationIntegrationTest.java')
 def ordinaryTestRuntimeFiles = files(sourceSets.test.runtimeClasspath)
 def transferTestRuntimeFiles = files(sourceSets.fabricTransferTest.runtimeClasspath)
 def registryTestRuntimeFiles = files(sourceSets.fabricRegistryTest.runtimeClasspath)
 def dataMapTestRuntimeFiles = files(sourceSets.fabricDataMapTest.runtimeClasspath)
+def recipeRegistryTestRuntimeFiles = files(sourceSets.fabricRecipeRegistryTest.runtimeClasspath)
 def registryRootTestSources = files(sourceSets.fabricRegistryTest.allJava)
 def dataMapKnotTestSources = files(sourceSets.fabricDataMapTest.allJava)
+def recipeRegistryKnotTestSources = files(sourceSets.fabricRecipeRegistryTest.allJava)
 def verifyFabricTestContract = tasks.register('verifyFabricTestContract') {
     group = 'verification'
     description = 'Checks isolated loader runtimes and exact ordinary/transfer/root/data-map test totals.'
-    dependsOn tasks.named('test'), fabricTransferTest, fabricRegistryTest, fabricDataMapTest
+    dependsOn tasks.named('test'), fabricTransferTest, fabricRegistryTest, fabricDataMapTest, fabricRecipeRegistryTest
     inputs.files(registryOrdinaryTestSource, deferredOrdinaryTestSource, registryRootTestSource,
           dataMapOrdinaryTestSource, dataMapKnotTestSource, chemicalDataMapKnotTestSource,
           chemicalDomainTestSource, chemicalServiceTestSource, chemicalSnapshotTestSource, chemicalTransferTestSource,
           ingredientClosureTestSource, inputHelperExecutionTestSource, genericInputCacheTestSource,
           distributionPropertySource, windowConfigTestSource, windowDomainTestSource, concreteSlotTestSource, fabricItemStorageTestSource,
-          recipeOutputHandlingTestSource)
+          recipeOutputHandlingTestSource, recipeSerializerContractTestSource, recipeRegistryKnotTestSource)
     doLast {
         def loaderJunitFiles = { runtimeFiles ->
             runtimeFiles.files.findAll { it.name.startsWith('fabric-loader-junit-') && it.name.endsWith('.jar') }
@@ -723,8 +755,9 @@ def verifyFabricTestContract = tasks.register('verifyFabricTestContract') {
         }
         if (loaderJunitFiles(transferTestRuntimeFiles).size() != 1
               || loaderJunitFiles(registryTestRuntimeFiles).size() != 1
-              || loaderJunitFiles(dataMapTestRuntimeFiles).size() != 1) {
-            throw new GradleException('Transfer, root-registry, and data-map test runtimes must each contain exactly one pinned fabric-loader-junit')
+              || loaderJunitFiles(dataMapTestRuntimeFiles).size() != 1
+              || loaderJunitFiles(recipeRegistryTestRuntimeFiles).size() != 1) {
+            throw new GradleException('Transfer, root-registry, data-map, and recipe-registry test runtimes must each contain exactly one pinned fabric-loader-junit')
         }
         def rootSources = registryRootTestSources.files
         if (rootSources.size() != 1 || rootSources.first().canonicalFile != registryRootTestSource.asFile.canonicalFile) {
@@ -734,6 +767,10 @@ def verifyFabricTestContract = tasks.register('verifyFabricTestContract') {
         def expectedDataMapSources = [dataMapKnotTestSource.asFile.canonicalFile, chemicalDataMapKnotTestSource.asFile.canonicalFile] as Set
         if (dataMapSources != expectedDataMapSources) {
             throw new GradleException("fabricDataMapTest must contain exactly its two fixed integration sources: ${dataMapSources}")
+        }
+        def recipeRegistrySources = recipeRegistryKnotTestSources.files
+        if (recipeRegistrySources.size() != 1 || recipeRegistrySources.first().canonicalFile != recipeRegistryKnotTestSource.asFile.canonicalFile) {
+            throw new GradleException("fabricRecipeRegistryTest must contain exactly its one fixed integration source: ${recipeRegistrySources}")
         }
         def annotationCount = { regularFile ->
             (regularFile.asFile.text =~ /(?m)^\s*@Test\s*$/).count
@@ -746,7 +783,8 @@ def verifyFabricTestContract = tasks.register('verifyFabricTestContract') {
               || annotationCount(ingredientClosureTestSource) != 6 || annotationCount(inputHelperExecutionTestSource) != 6
               || annotationCount(genericInputCacheTestSource) != 6 || annotationCount(windowConfigTestSource) != 6
               || annotationCount(windowDomainTestSource) != 6 || annotationCount(concreteSlotTestSource) != 6
-              || annotationCount(fabricItemStorageTestSource) != 5 || annotationCount(recipeOutputHandlingTestSource) != 6) {
+              || annotationCount(fabricItemStorageTestSource) != 5 || annotationCount(recipeOutputHandlingTestSource) != 6
+              || annotationCount(recipeSerializerContractTestSource) != 6 || annotationCount(recipeRegistryKnotTestSource) != 5) {
             throw new GradleException('Registry/data-map/window/slot/recipe fixed test method counts changed')
         }
         def propertyText = distributionPropertySource.asFile.text
@@ -770,12 +808,13 @@ def verifyFabricTestContract = tasks.register('verifyFabricTestContract') {
             }
             [reports.length, tests]
         }
-        def ordinary = readTotals(ordinaryXmlResults, 'ordinary', 76, 378)
+        def ordinary = readTotals(ordinaryXmlResults, 'ordinary', 77, 384)
         def transfer = readTotals(transferXmlResults, 'transfer', 5, 27)
         def registry = readTotals(registryXmlResults, 'root-registry', 1, 2)
         def dataMap = readTotals(dataMapXmlResults, 'data-map', 2, 4)
-        if (ordinary[0] + transfer[0] + registry[0] + dataMap[0] != 84
-              || ordinary[1] + transfer[1] + registry[1] + dataMap[1] != 411) {
+        def recipeRegistry = readTotals(recipeRegistryXmlResults, 'recipe-registry', 1, 5)
+        if (ordinary[0] + transfer[0] + registry[0] + dataMap[0] + recipeRegistry[0] != 86
+              || ordinary[1] + transfer[1] + registry[1] + dataMap[1] + recipeRegistry[1] != 422) {
             throw new GradleException('Unexpected aggregate Fabric test totals')
         }
     }

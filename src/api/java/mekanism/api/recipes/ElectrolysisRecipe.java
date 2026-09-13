@@ -32,7 +32,7 @@ import org.jetbrains.annotations.NotNull;
 @NothingNullByDefault
 public abstract class ElectrolysisRecipe extends MekanismRecipe<SingleFluidRecipeInput> implements Predicate<@NotNull FluidStack> {
 
-    private static final Holder<Item> ELECTROLYTIC_SEPARATOR = MekanismKeyedHolder.registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "electrolytic_separator")), () -> BuiltInRegistries.ITEM);
+    private static final Holder<Item> ELECTROLYTIC_SEPARATOR = MekanismKeyedHolder.<Item, Item>registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "electrolytic_separator")), () -> BuiltInRegistries.ITEM);
 
     /**
      * Gets the input ingredient.

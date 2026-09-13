@@ -219,18 +219,20 @@ data are absent from the release JAR. The derive-once amortization of the chemic
 the tracking-override unit contracts in `ChemicalDomainTest`; the runtime gate proves stability and exact
 context retention on the real recipe path.
 
-## Task 042A output handling static artifact gate
+## Task 043 recipe type/serializer registration static artifact gate
 
-The static release-JAR gate now admits exactly the Task 042A API recipe family: the 33 admitted recipe/`vanilla_input`
-sources (outer classes plus the `ElectrolysisRecipe$ElectrolysisRecipeOutput`,
-`ItemStackToFluidOptionalItemRecipe$FluidOptionalItemOutput`, `PressurizedReactionRecipe$PressurizedReactionRecipeOutput`,
-and `SawmillRecipe$ChanceOutput` records), `MekanismKeyedHolder.class`, `MekanismRecipeTypes.class` with its single
-anonymous `$1`, `cache/OneInputCachedRecipe.class`, and `outputs/OutputHelper.class` with `$1` through `$7`.
+The static release-JAR gate now admits exactly the Task 043 families: every `mekanism/api/recipes/basic/**` outer and nested class (26 concrete recipes, 7 abstract
+bases, 2 output interfaces, and `BasicSawmillRecipe$BasicChanceOutput`), `mekanism/api/recipes/MekanismRecipeSerializers.class`, the seven
+`mekanism/common/recipe/serializer/**` classes (including `MekanismRecipeSerializer$1`, `RotaryRecipeSerializer$AlternativeMapCodec`,
+`RotaryRecipeSerializer$FluidToChemical`, and `RotaryRecipeSerializer$ChemicalToFluid`), `mekanism/common/recipe/WrappedShapedRecipe.class`, and
+`mekanism/fabric/recipe/FabricRecipeRegistration.class`. It also asserts the exact remapped access-widener text, which now includes the `ShapedRecipe.pattern`
+entry.
 
-The same gate rejects every class family that belongs to the blocked 042B: `mekanism/api/recipes/basic/**`,
-`MekanismRecipeSerializers*`, `common/recipe/MekanismRecipeType*`, `common/recipe/IMekanismRecipeTypeProvider*`,
-`common/registration/impl/RecipeTypeRegistryObject*`, `common/recipe/lookup/cache/RotaryInputRecipeCache*`,
-`common/recipe/serializer/**`, every `mekanism/client/**` class (the client recipe viewer), `common/registries/MekanismItems*`,
-and `mekanism/api/MekanismAPI.class`. It also rejects `data/mekanism/recipe/**` production recipe JSON and any
-fixture/test class (`Test*`, `RecipeOutputHandlingTest`, or any `*Fixture`). No server is started in
-`FABRIC_SMOKE_STATIC_ONLY=1` mode, and no recipe-type or item registration is claimed.
+The same gate still rejects every deferred family: `common/recipe/MekanismRecipeType*`, `common/recipe/IMekanismRecipeTypeProvider*`,
+`common/registration/impl/RecipeTypeRegistryObject*`, `common/recipe/lookup/cache/RotaryInputRecipeCache*`, `common/registries/MekanismRecipeSerializersInternal*`,
+`common/recipe/upgrade/**`, `common/recipe/bin/**`, `common/recipe/ClearConfigurationRecipe.class`, every `mekanism/client/**` class (the client recipe viewer),
+`common/registries/MekanismItems*`, and `mekanism/api/MekanismAPI.class`. It also rejects `data/mekanism/recipe/**` production recipe JSON and any fixture/test class.
+
+Unlike 042A, the dedicated-server portion of the packaged smoke is **required** for this task, because it introduces real registry lifecycle, and it asserts a new
+`MEKANISM_FABRIC_RECIPE_REGISTRATION_PROOF recipe_types=26 serializers=26 identity_preserved=true` startup line. `FABRIC_SMOKE_STATIC_ONLY=1` was the mode run in the
+implementation worktree; the parent runs the server gate before release.

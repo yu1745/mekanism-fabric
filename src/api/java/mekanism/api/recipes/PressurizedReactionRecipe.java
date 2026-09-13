@@ -39,7 +39,7 @@ import org.jetbrains.annotations.Range;
 @NothingNullByDefault
 public abstract class PressurizedReactionRecipe extends MekanismRecipe<ReactionRecipeInput> implements TriPredicate<@NotNull ItemStack, @NotNull FluidStack, @NotNull ChemicalStack> {
 
-    private static final Holder<Item> PRESSURIZED_REACTION_CHAMBER = MekanismKeyedHolder.registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "pressurized_reaction_chamber")), () -> BuiltInRegistries.ITEM);
+    private static final Holder<Item> PRESSURIZED_REACTION_CHAMBER = MekanismKeyedHolder.<Item, Item>registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "pressurized_reaction_chamber")), () -> BuiltInRegistries.ITEM);
 
     /**
      * Gets the item input ingredient.

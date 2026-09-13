@@ -26,7 +26,7 @@ import org.jetbrains.annotations.Range;
 @NothingNullByDefault
 public abstract class ItemStackToEnergyRecipe extends MekanismRecipe<SingleRecipeInput> implements Predicate<@NotNull ItemStack> {
 
-    private static final Holder<Item> ENERGY_TABLET = MekanismKeyedHolder.registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "energy_tablet")), () -> BuiltInRegistries.ITEM);
+    private static final Holder<Item> ENERGY_TABLET = MekanismKeyedHolder.<Item, Item>registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "energy_tablet")), () -> BuiltInRegistries.ITEM);
 
     @Override
     public abstract boolean test(ItemStack itemStack);

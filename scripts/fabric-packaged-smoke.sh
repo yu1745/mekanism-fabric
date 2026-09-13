@@ -118,6 +118,7 @@ if (metadata.get("id") != "mekanism" or metadata.get("entrypoints") != expected
 expected_access_widener = [
     "accessWidener\tv2\tintermediary",
     "accessible\tmethod\tnet/minecraft/class_1959\tmethod_21740\t(Lnet/minecraft/class_2338;)F",
+    "accessible\tfield\tnet/minecraft/class_1869\tfield_47320\tLnet/minecraft/class_8957;",
 ]
 if access_widener != expected_access_widener:
     raise SystemExit(f"unexpected remapped access widener: {access_widener!r}")
@@ -1054,6 +1055,43 @@ expected_api_recipes = {
     "mekanism/api/recipes/outputs/OutputHelper$7.class",
     "mekanism/api/recipes/cache/OneInputCachedRecipe.class",
     "mekanism/api/recipes/MekanismKeyedHolder.class",
+    "mekanism/api/recipes/basic/BasicActivatingRecipe.class",
+    "mekanism/api/recipes/basic/BasicCentrifugingRecipe.class",
+    "mekanism/api/recipes/basic/BasicChemicalChemicalToChemicalRecipe.class",
+    "mekanism/api/recipes/basic/BasicChemicalConversionRecipe.class",
+    "mekanism/api/recipes/basic/BasicChemicalCrystallizerRecipe.class",
+    "mekanism/api/recipes/basic/BasicChemicalDissolutionRecipe.class",
+    "mekanism/api/recipes/basic/BasicChemicalInfuserRecipe.class",
+    "mekanism/api/recipes/basic/BasicChemicalOxidizerRecipe.class",
+    "mekanism/api/recipes/basic/BasicChemicalToChemicalRecipe.class",
+    "mekanism/api/recipes/basic/BasicCombinerRecipe.class",
+    "mekanism/api/recipes/basic/BasicCompressingRecipe.class",
+    "mekanism/api/recipes/basic/BasicCrushingRecipe.class",
+    "mekanism/api/recipes/basic/BasicElectrolysisRecipe.class",
+    "mekanism/api/recipes/basic/BasicEnrichingRecipe.class",
+    "mekanism/api/recipes/basic/BasicFluidToFluidRecipe.class",
+    "mekanism/api/recipes/basic/BasicInjectingRecipe.class",
+    "mekanism/api/recipes/basic/BasicItemStackChemicalToItemStackRecipe.class",
+    "mekanism/api/recipes/basic/BasicItemStackToChemicalRecipe.class",
+    "mekanism/api/recipes/basic/BasicItemStackToEnergyRecipe.class",
+    "mekanism/api/recipes/basic/BasicItemStackToFluidOptionalItemRecipe.class",
+    "mekanism/api/recipes/basic/BasicItemStackToFluidRecipe.class",
+    "mekanism/api/recipes/basic/BasicItemStackToItemStackRecipe.class",
+    "mekanism/api/recipes/basic/BasicMetallurgicInfuserRecipe.class",
+    "mekanism/api/recipes/basic/BasicNucleosynthesizingRecipe.class",
+    "mekanism/api/recipes/basic/BasicPaintingRecipe.class",
+    "mekanism/api/recipes/basic/BasicPigmentExtractingRecipe.class",
+    "mekanism/api/recipes/basic/BasicPigmentMixingRecipe.class",
+    "mekanism/api/recipes/basic/BasicPressurizedReactionRecipe.class",
+    "mekanism/api/recipes/basic/BasicPurifyingRecipe.class",
+    "mekanism/api/recipes/basic/BasicRotaryRecipe.class",
+    "mekanism/api/recipes/basic/BasicSawmillRecipe$BasicChanceOutput.class",
+    "mekanism/api/recipes/basic/BasicSawmillRecipe.class",
+    "mekanism/api/recipes/basic/BasicSmeltingRecipe.class",
+    "mekanism/api/recipes/basic/BasicWashingRecipe.class",
+    "mekanism/api/recipes/basic/IBasicChemicalOutput.class",
+    "mekanism/api/recipes/basic/IBasicItemStackOutput.class",
+    "mekanism/api/recipes/MekanismRecipeSerializers.class",
     "mekanism/api/recipes/MekanismRecipeTypes.class",
     "mekanism/api/recipes/MekanismRecipeTypes$1.class",
     "mekanism/api/recipes/ChemicalChemicalToChemicalRecipe.class",
@@ -1167,11 +1205,20 @@ expected_common_recipes = {
     "mekanism/common/recipe/lookup/cache/type/FluidInputCache.class",
     "mekanism/common/recipe/lookup/cache/type/FluidInputCache$1.class",
     "mekanism/common/recipe/lookup/cache/type/ChemicalInputCache.class",
+    "mekanism/common/recipe/serializer/MekanismRecipeSerializer$1.class",
+    "mekanism/common/recipe/serializer/MekanismRecipeSerializer.class",
+    "mekanism/common/recipe/serializer/RotaryRecipeSerializer$AlternativeMapCodec.class",
+    "mekanism/common/recipe/serializer/RotaryRecipeSerializer$ChemicalToFluid.class",
+    "mekanism/common/recipe/serializer/RotaryRecipeSerializer$FluidToChemical.class",
+    "mekanism/common/recipe/serializer/RotaryRecipeSerializer.class",
+    "mekanism/common/recipe/serializer/SawmillRecipeSerializer.class",
+    "mekanism/common/recipe/WrappedShapedRecipe.class",
 }
 expected_platform_recipes = {
     "mekanism/fabric/recipe/FabricIngredientCreatorProvider.class",
     "mekanism/fabric/recipe/FabricRecipeCacheLifecycle.class",
     "mekanism/fabric/recipe/FabricRecipeCacheClientLifecycle.class",
+    "mekanism/fabric/recipe/FabricRecipeRegistration.class",
     "mekanism/fabric/mixin/recipe/ClientPacketListenerMixin.class",
 }
 recipe_service = b"mekanism.fabric.recipe.FabricIngredientCreatorProvider\n"
@@ -1182,6 +1229,8 @@ with zipfile.ZipFile(sys.argv[1]) as artifact:
     actual_common_recipes = {e for e in entries if e.endswith(".class") and (
           e.startswith("mekanism/common/recipe/ingredients/")
           or e.startswith("mekanism/common/recipe/lookup/")
+          or e.startswith("mekanism/common/recipe/serializer/")
+          or e == "mekanism/common/recipe/WrappedShapedRecipe.class"
           or e == "mekanism/common/registries/MekanismChemicalIngredientTypes.class")}
     actual_platform_recipes = {e for e in entries if e.endswith(".class") and (
           e.startswith("mekanism/fabric/recipe/") or e.startswith("mekanism/fabric/mixin/recipe/"))}
@@ -1221,18 +1270,19 @@ with zipfile.ZipFile(sys.argv[1]) as artifact:
     if recipe_data:
         raise SystemExit(f"production recipe data leaked into the artifact: {recipe_data!r}")
     forbidden_042b = sorted(e for e in entries if e.endswith(".class") and (
-          e.startswith("mekanism/api/recipes/basic/")
-          or e.startswith("mekanism/api/recipes/MekanismRecipeSerializers")
-          or e.startswith("mekanism/common/recipe/MekanismRecipeType")
+          e.startswith("mekanism/common/recipe/MekanismRecipeType")
           or e.startswith("mekanism/common/recipe/IMekanismRecipeTypeProvider")
           or e.startswith("mekanism/common/registration/impl/RecipeTypeRegistryObject")
           or e.startswith("mekanism/common/recipe/lookup/cache/RotaryInputRecipeCache")
-          or e.startswith("mekanism/common/recipe/serializer/")
+          or e.startswith("mekanism/common/registries/MekanismRecipeSerializersInternal")
+          or e.startswith("mekanism/common/recipe/upgrade/")
+          or e.startswith("mekanism/common/recipe/bin/")
+          or e == "mekanism/common/recipe/ClearConfigurationRecipe.class"
           or e.startswith("mekanism/client/")
           or e.startswith("mekanism/common/registries/MekanismItems")
           or e == "mekanism/api/MekanismAPI.class"))
     if forbidden_042b:
-        raise SystemExit(f"Task042B families leaked into 042A artifact: {forbidden_042b!r}")
+        raise SystemExit(f"deferred recipe families leaked into the artifact: {forbidden_042b!r}")
     recipe_fixture_entries = sorted(e for e in entries if e.endswith(".class") and (
           e.startswith("mekanism/api/recipes/Test")
           or e.startswith("mekanism/api/recipes/RecipeOutputHandlingTest")
@@ -1583,6 +1633,7 @@ registry_proof=0
 heat_proof=0
 data_map_proof=0
 chemical_data_map_proof=0
+recipe_registration_proof=0
 done_loaded=0
 crash_pattern='(Exception in thread|A mod crashed on startup|Could not execute entrypoint|Failed to start the minecraft server|---- Minecraft Crash Report ----|NoClassDefFoundError|ClassNotFoundException|[[:space:]]ERROR[[:space:]])'
 while (( SECONDS < deadline )); do
@@ -1598,13 +1649,14 @@ while (( SECONDS < deadline )); do
   if grep -Fq 'MEKANISM_FABRIC_HEAT_PROOF positional=true ambient_finite=true' "$LOG_FILE"; then heat_proof=1; fi
   if grep -Fq 'MEKANISM_FABRIC_DATAMAP_PROOF phase=startup epoch=1 published=21 skipped=0' "$LOG_FILE"; then data_map_proof=1; fi
   if grep -Fq 'MEKANISM_FABRIC_CHEMICAL_DATAMAP_PROOF phase=startup epoch=1 maps=5' "$LOG_FILE"; then chemical_data_map_proof=1; fi
+  if grep -Fq 'MEKANISM_FABRIC_RECIPE_REGISTRATION_PROOF recipe_types=26 serializers=26 identity_preserved=true' "$LOG_FILE"; then recipe_registration_proof=1; fi
   if grep -Eq 'Done \(' "$LOG_FILE"; then done_loaded=1; fi
   if grep -Eiq "$crash_pattern" "$LOG_FILE"; then
     echo 'fabric-packaged-smoke: crash signature detected' >&2
     grep -Ei "$crash_pattern" "$LOG_FILE" | tail -n 10 >&2 || true
     exit 1
   fi
-  if (( mod_loaded && energy_mod_loaded && config_proof && network_proof && registry_proof && heat_proof && data_map_proof && chemical_data_map_proof && done_loaded )); then
+  if (( mod_loaded && energy_mod_loaded && config_proof && network_proof && registry_proof && heat_proof && data_map_proof && chemical_data_map_proof && recipe_registration_proof && done_loaded )); then
     STARTUP_CONFIG="$SERVER_DIR/config/Mekanism/startup.toml"
     if [[ ! -s "$STARTUP_CONFIG" ]]; then
       echo 'fabric-packaged-smoke: startup config proof logged but startup.toml is missing or empty' >&2
@@ -1633,7 +1685,7 @@ PYEOF
     fi
     RESULT=0
     printf 'fabric-packaged-smoke: PASS (Mekanism and Team Reborn Energy loaded, config/network/registry/heat/data-map/chemical proofs passed, and server reached Done)\n'
-    grep -E '(^|[[:space:]])- (mekanism|team_reborn_energy)([[:space:]]|$)|MEKANISM_FABRIC_(CONFIG|NETWORK|REGISTRY|HEAT|DATAMAP|CHEMICAL_DATAMAP)_PROOF|Done \(' "$LOG_FILE" | tail -n 16
+    grep -E '(^|[[:space:]])- (mekanism|team_reborn_energy)([[:space:]]|$)|MEKANISM_FABRIC_(CONFIG|NETWORK|REGISTRY|HEAT|DATAMAP|CHEMICAL_DATAMAP|RECIPE_REGISTRATION)_PROOF|Done \(' "$LOG_FILE" | tail -n 16
     exit 0
   fi
   if ! kill -0 "$SERVER_PID" 2>/dev/null; then
@@ -1646,6 +1698,6 @@ PYEOF
   sleep 1
 done
 
-echo "fabric-packaged-smoke: timed out after ${TIMEOUT}s (mod_loaded=$mod_loaded energy_mod_loaded=$energy_mod_loaded config_proof=$config_proof network_proof=$network_proof registry_proof=$registry_proof heat_proof=$heat_proof data_map_proof=$data_map_proof chemical_data_map_proof=$chemical_data_map_proof done=$done_loaded)" >&2
+echo "fabric-packaged-smoke: timed out after ${TIMEOUT}s (mod_loaded=$mod_loaded energy_mod_loaded=$energy_mod_loaded config_proof=$config_proof network_proof=$network_proof registry_proof=$registry_proof heat_proof=$heat_proof data_map_proof=$data_map_proof chemical_data_map_proof=$chemical_data_map_proof recipe_registration_proof=$recipe_registration_proof done=$done_loaded)" >&2
 tail -n 80 "$LOG_FILE" >&2
 exit 1

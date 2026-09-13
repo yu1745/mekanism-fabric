@@ -392,3 +392,31 @@ vanilla `BuiltInRegistries.ITEM` 解析，在 `MekanismItems` 未纳入期间保
 `mekanism/api/recipes/**` outer/nested class 并拒绝 042B families。recipe type/serializer registration、concrete
 recipe family、`MekanismItems` 与 client recipe viewer 仍属单独审批的 042B，且必须复用这些同一 `RecipeType`
 实例以保持 `byType` identity grouping。
+
+### Task 043 recipe type/serializer registration and concrete recipe family
+
+Task 043 从 clean commit `87fe68e6` 实现 `TASK043_PLAN.md`，关闭 042A 明确留下的边界。原 042B blocker 的四条理由中三条经测量
+不在本垂直路径上：`MekanismKeyedHolder.attach` 已存在且 `keyed(...)` 允许 attach，因此 registration 可把 canonical holder 绑回
+**同一个** `RecipeType` instance，`byType` identity 分组按构造保持；`MekanismRecipe.isSpecial()` 为 `true`，`ServerRecipeBook.addRecipes`
+与 `ClientRecipeBook.categorizeAndGroupRecipes` 都以 `!isSpecial()` 为门，唯一 `getToastSymbol()` caller（`RecipeToast`）永不触达，
+故 136-item `MekanismItems` 家族不需要；registration/decoding 只需 vanilla `RecipeType` 与 `RecipeSerializer`，不需要
+`MekanismRecipeType` cache owner，因此 `mekanism.client.*` 不进闭包。
+
+slices **163/184/37 → 199/188/38**（425 production sources），测试 ordinary/transfer/root/data-map/recipe-registry/aggregate
+**76/378 → 77/384**、**5/27**、**1/2**、**2/4**、**1/5**、**84/411 → 86/422**。相对 `4646f509`，16 份 byte-identical
+（`BasicChemicalChemicalToChemicalRecipe`, `BasicChemicalCrystallizerRecipe`, `BasicChemicalDissolutionRecipe`, `BasicChemicalToChemicalRecipe`, `BasicCombinerRecipe`, `BasicItemStackChemicalToItemStackRecipe`, `BasicItemStackToChemicalRecipe`, `BasicItemStackToEnergyRecipe`, `BasicItemStackToFluidOptionalItemRecipe`, `BasicItemStackToItemStackRecipe`, `BasicNucleosynthesizingRecipe`, `BasicSawmillRecipe`, `IBasicChemicalOutput`, `IBasicItemStackOutput`, `SawmillRecipeSerializer`, `WrappedShapedRecipe`），其余 24 份只带授权的 delta family。
+
+计划中关于 registration 顺序的假设被实测推翻：写 built-in registry **不**需要早于 `BuiltInRegistries.bootStrap()`，实测
+`BootStrap()` 之后 built-in registries 仍可写，与既有 game event registration 处于同一窗口。另外两处 plan codec 断言也与真实
+contract 不符并已修正：empty chemical output 是省略的可选字段；no-output reaction 与 chance-without-output 由 recipe constructor 的
+precondition 拒绝而非 codec error result。
+
+Gates：五个 test task 加 `verifyFabricTestContract` 与 `remapJar`；`check build`；三个 `verify*SliceNoNeoForge`；
+`scripts/scan-platform-deps.py`；`./fabric-build.sh`；`FABRIC_SMOKE_STATIC_ONLY=1 scripts/fabric-packaged-smoke.sh`。
+`./build.sh --clean` 与真实 dedicated-server/client smoke 不在本 worktree 运行。
+
+Non-claims：无 `MekanismItems`/item/block/fluid/Chemical registration；无 machines/tile entities；无 `MekanismRecipeType` cache owner、
+`IMekanismRecipeTypeProvider`、`RecipeTypeRegistryObject`、`RecipeTypeDeferredRegister`、`RotaryInputRecipeCache` 或 machine-facing
+`InputRecipeCache` index；无 `MekanismRecipeSerializersInternal`，因而无 `mek_data`/`clear_configuration`/`bin_insert`/`bin_extract`
+crafting special、无 bin 与 recipe-upgrade recipe；artifact 内无 production recipe JSON；无 JEI/EMI 或 client recipe viewer；无
+`getToastSymbol()`-correct items；无 item/fluid/Chemical transaction 或 storage exposure；无 broader Fabric integration。

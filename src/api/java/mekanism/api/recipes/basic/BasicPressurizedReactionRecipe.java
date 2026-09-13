@@ -1,11 +1,12 @@
 package mekanism.api.recipes.basic;
 
-import com.google.common.base.Preconditions;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import com.google.common.base.Preconditions;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.chemical.ChemicalStack;
+import mekanism.api.fluid.FluidStack;
 import mekanism.api.recipes.MekanismRecipeSerializers;
 import mekanism.api.recipes.PressurizedReactionRecipe;
 import mekanism.api.recipes.ingredients.ChemicalStackIngredient;
@@ -13,7 +14,6 @@ import mekanism.api.recipes.ingredients.FluidStackIngredient;
 import mekanism.api.recipes.ingredients.ItemStackIngredient;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeSerializer;
-import net.neoforged.neoforge.fluids.FluidStack;
 import org.jetbrains.annotations.Contract;
 
 @NothingNullByDefault

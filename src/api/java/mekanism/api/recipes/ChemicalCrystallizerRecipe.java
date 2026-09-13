@@ -29,7 +29,7 @@ import org.jetbrains.annotations.NotNull;
 @NothingNullByDefault
 public abstract class ChemicalCrystallizerRecipe extends MekanismRecipe<SingleChemicalRecipeInput> implements Predicate<@NotNull ChemicalStack> {
 
-    private static final Holder<Item> CHEMICAL_CRYSTALLIZER = MekanismKeyedHolder.registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "chemical_crystallizer")), () -> BuiltInRegistries.ITEM);
+    private static final Holder<Item> CHEMICAL_CRYSTALLIZER = MekanismKeyedHolder.<Item, Item>registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "chemical_crystallizer")), () -> BuiltInRegistries.ITEM);
 
     /**
      * Gets the output based on the given input.

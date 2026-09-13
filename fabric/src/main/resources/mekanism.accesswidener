@@ -3,3 +3,7 @@ accessWidener v2 named
 # Mirrors Mekanism's NeoForge access transformer so HeatAPI can retain
 # position-adjusted biome ambient-temperature semantics.
 accessible method net/minecraft/world/level/biome/Biome getTemperature (Lnet/minecraft/core/BlockPos;)F
+
+# Mirrors Mekanism's NeoForge access transformer expectation for the wrapped shaped recipe, which passes the inner
+# ShapedRecipe pattern through to its own super constructor.
+accessible field net/minecraft/world/item/crafting/ShapedRecipe pattern Lnet/minecraft/world/item/crafting/ShapedRecipePattern;

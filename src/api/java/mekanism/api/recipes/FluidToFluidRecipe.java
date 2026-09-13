@@ -28,7 +28,7 @@ import org.jetbrains.annotations.NotNull;
 @NothingNullByDefault
 public abstract class FluidToFluidRecipe extends MekanismRecipe<SingleFluidRecipeInput> implements Predicate<@NotNull FluidStack> {
 
-    private static final Holder<Item> THERMAL_EVAPORATION_CONTROLLER = MekanismKeyedHolder.registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "thermal_evaporation_controller")), () -> BuiltInRegistries.ITEM);
+    private static final Holder<Item> THERMAL_EVAPORATION_CONTROLLER = MekanismKeyedHolder.<Item, Item>registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "thermal_evaporation_controller")), () -> BuiltInRegistries.ITEM);
 
     @Override
     public abstract boolean test(FluidStack fluidStack);

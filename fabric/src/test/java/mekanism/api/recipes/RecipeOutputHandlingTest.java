@@ -347,9 +347,12 @@ class RecipeOutputHandlingTest {
         assertSame(MekanismRecipeTypes.TYPE_CRUSHING.value(), MekanismRecipeTypes.TYPE_CRUSHING.value());
         assertNotSame(MekanismRecipeTypes.TYPE_CRUSHING.value(), MekanismRecipeTypes.TYPE_ENRICHING.value(),
               "each recipe family keeps its own identity stable instance");
+        //Note: Merely touching this class must not write to any registry. Registration is an explicit, idempotent step owned by FabricRecipeRegistration, which
+        // runs before the built-in registries are frozen; the isolated fabricRecipeRegistryTest worker asserts the registered outcome.
+        assertFalse(MekanismRecipeTypes.isRegistered(), "class initialization alone must not register recipe types");
         for (RecipeType<?> registered : BuiltInRegistries.RECIPE_TYPE) {
-            assertNotSame(MekanismRecipeTypes.TYPE_CRUSHING.value(), registered, "no recipe type may be registered by this task");
-            assertNotSame(MekanismRecipeTypes.TYPE_SAWING.value(), registered, "no recipe type may be registered by this task");
+            assertNotSame(MekanismRecipeTypes.TYPE_CRUSHING.value(), registered, "class initialization must not register a recipe type");
+            assertNotSame(MekanismRecipeTypes.TYPE_SAWING.value(), registered, "class initialization must not register a recipe type");
         }
 
         assertToastHolder(ChemicalCrystallizerRecipe.class, "CHEMICAL_CRYSTALLIZER", "chemical_crystallizer");
@@ -373,7 +376,7 @@ class RecipeOutputHandlingTest {
         field.setAccessible(true);
         Object raw = field.get(null);
         assertInstanceOf(MekanismKeyedHolder.class, raw, owner.getSimpleName() + "." + fieldName + " must be a keyed holder");
-        MekanismKeyedHolder<?> holder = (MekanismKeyedHolder<?>) raw;
+        MekanismKeyedHolder<?, ?> holder = (MekanismKeyedHolder<?, ?>) raw;
         assertEquals("mekanism", holder.getKey().location().getNamespace());
         assertEquals(path, holder.getKey().location().getPath());
         assertKeyCorrect(holder);
@@ -385,7 +388,7 @@ class RecipeOutputHandlingTest {
     /**
      * A generic (rather than wildcard) receiver is required so the key argument and the receiver share one type variable.
      */
-    private static <T> void assertKeyCorrect(MekanismKeyedHolder<T> holder) {
+    private static <T> void assertKeyCorrect(MekanismKeyedHolder<T, ? extends T> holder) {
         assertEquals(holder.getKey(), holder.unwrapKey().orElseThrow());
         assertTrue(holder.is(holder.getKey()));
     }

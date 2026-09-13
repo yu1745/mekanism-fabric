@@ -14,7 +14,7 @@ import net.minecraft.world.item.crafting.RecipeType;
 @NothingNullByDefault
 public abstract class ChemicalDissolutionRecipe extends ItemStackChemicalToObjectRecipe<ChemicalStack> {
 
-    private static final Holder<Item> CHEMICAL_DISSOLUTION_CHAMBER = MekanismKeyedHolder.registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "chemical_dissolution_chamber")), () -> BuiltInRegistries.ITEM);
+    private static final Holder<Item> CHEMICAL_DISSOLUTION_CHAMBER = MekanismKeyedHolder.<Item, Item>registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "chemical_dissolution_chamber")), () -> BuiltInRegistries.ITEM);
 
     @Override
     public final RecipeType<ChemicalDissolutionRecipe> getType() {

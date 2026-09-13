@@ -30,7 +30,7 @@ import org.jetbrains.annotations.NotNull;
 @NothingNullByDefault
 public abstract class CombinerRecipe extends MekanismRecipe<RecipeInput> implements BiPredicate<@NotNull ItemStack, @NotNull ItemStack> {
 
-    private static final Holder<Item> COMBINER = MekanismKeyedHolder.registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "combiner")), () -> BuiltInRegistries.ITEM);
+    private static final Holder<Item> COMBINER = MekanismKeyedHolder.<Item, Item>registryKeyed(ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("mekanism", "combiner")), () -> BuiltInRegistries.ITEM);
 
     @Override
     public abstract boolean test(ItemStack input, ItemStack extra);
