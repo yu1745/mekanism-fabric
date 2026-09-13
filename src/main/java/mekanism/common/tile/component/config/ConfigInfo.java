@@ -37,9 +37,8 @@ public class ConfigInfo implements IPersistentConfigInfo {
         canEject = true;
         ejecting = false;
         sideConfig = new EnumMap<>(RelativeSide.class);
-        //Fabric port (Task050 audited delta): upstream uses EnumUtils.SIDES, which is
-        // defined as exactly RelativeSide.values() (same array, same order), so the loop
-        // below keeps byte-identical semantics without admitting EnumUtils.
+        //Fabric: EnumUtils.SIDES is initialized from RelativeSide.values(); preserve its
+        // elements and order without depending on the unrelated EnumUtils constants.
         for (RelativeSide side : RelativeSide.values()) {
             sideConfig.put(side, DataType.NONE);
         }

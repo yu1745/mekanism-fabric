@@ -8,7 +8,7 @@ Admit the complete official configuration state module `mekanism.common.tile.com
 
 ## Authorized delta (only production change)
 
-`ConfigInfo` constructor: `EnumUtils.SIDES` → `RelativeSide.values()`. Verified upstream `EnumUtils.java:61` defines `public static final RelativeSide[] SIDES = RelativeSide.values();` — identical array, identical order, so initialization semantics are unchanged. `EnumUtils` itself stays unadmitted. All other admitted files are byte-identical upstream sources.
+`ConfigInfo` constructor: `EnumUtils.SIDES` → `RelativeSide.values()`. Verified upstream `EnumUtils.java:61` defines `public static final RelativeSide[] SIDES = RelativeSide.values();` — identical elements and order, so initialization semantics are unchanged. `EnumUtils` itself stays unadmitted. All other admitted files are byte-identical upstream sources.
 
 Dependency check (all previously admitted): `RelativeSide`, `IIncrementalEnum`, `EnumColor`, `ILangEntry`, `IHasTranslationKey`, `NothingNullByDefault`, `IChemicalTank`, `IExtendedFluidTank`, `IInventorySlot`, `IEnergyContainer`, `IHeatCapacitor` (api-slice); `MekanismLang` (10 `SIDE_DATA_*` entries), `BasicInventorySlot`, `BasicFluidTank` (common-slice).
 
@@ -26,5 +26,7 @@ Immediate source consumers `TileComponentConfig` and `AttachedSideConfig` remain
 Implemented in isolated worktree from clean `97f1e3d6`. Production delta is exactly the authorized `ConfigInfo` constructor change (with an explanatory comment); the other four admitted files are byte-identical upstream sources. Slice gate now 205/224/45 (`fabric/build.gradle` updated, not weakened).
 
 `./gradlew -p fabric assemble test --tests mekanism.common.tile.component.config.ConfigInfoTest --console=plain` → **BUILD SUCCESSFUL** (`assemble` incl. remapJar + slice no-NeoForge gates; ConfigInfoTest: **3 tests, 0 failures, 100%**). Test bootstrap uses the standard `SharedConstants.tryDetectVersion()`/`Bootstrap.bootStrap()` `@BeforeAll` (same as `HandlerManagerTest`) because `BasicInventorySlot`/`BasicFluidTank` class-init touches vanilla registries; no chemical registry fixture needed.
+
+Parent acceptance: reviewed the complete six-file candidate diff `2969e8be`, newly admitted sources, and all three focused tests. Independently reran the same `assemble test --tests mekanism.common.tile.component.config.ConfigInfoTest --console=plain` command in the main checkout: **BUILD SUCCESSFUL in 15s**, XML **3 tests / 0 failures / 0 errors / 0 skipped** (`/tmp/task050-parent-final.log`). Only subsequent production edit clarifies the constructor comment (identical elements/order, not array identity); no executable change. Full/runtime/clean release gates were intentionally not run.
 
 Remaining obligations (unchanged deferrals): `TileComponentConfig` and `AttachedSideConfig` are the immediate source consumers and stay unadmitted; `CapabilityCache`/provider registration/invalidation wiring belongs to the Task049 follow-up chain; no machine tile or GUI functionality is claimed.
