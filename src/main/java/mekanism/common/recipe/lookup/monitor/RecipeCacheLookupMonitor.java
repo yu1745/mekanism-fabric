@@ -82,22 +82,69 @@ public class RecipeCacheLookupMonitor<RECIPE extends MekanismRecipe<?>> implemen
     }
 
     public boolean updateAndProcess() {
-        CachedRecipe<RECIPE> oldCache = cachedRecipe;
-        cachedRecipe = getUpdatedCache(cacheIndex);
-        if (cachedRecipe != oldCache) {
-            handler.onCachedRecipeChanged(cachedRecipe, cacheIndex);
-        }
-        //Note: Only a resolution that actually returned normally may be acknowledged as current, so a failed lookup keeps the previous observation stale
-        acknowledgeResolvedBinding();
-        if (cachedRecipe != null) {
-            if (shouldUnpause) {
+        RecipeCacheContext.Binding binding = validatedBinding();
+        long generation = binding == null ? 0 : binding.invalidationGeneration();
+        try {
+            CachedRecipe<RECIPE> updated = getUpdatedCache(cacheIndex);
+            if (!isBindingCurrent(binding, generation)) {
+                releaseCachedRecipe();
+                return false;
+            }
+            CachedRecipe<RECIPE> oldCache = cachedRecipe;
+            cachedRecipe = updated;
+            if (cachedRecipe != oldCache) {
+                handler.onCachedRecipeChanged(cachedRecipe, cacheIndex);
+            }
+            if (!isBindingCurrent(binding, generation)) {
+                releaseCachedRecipe();
+                return false;
+            }
+            if (cachedRecipe != null && shouldUnpause) {
                 shouldUnpause = false;
                 cachedRecipe.unpauseErrors();
             }
+            //Callbacks may synchronously clear or rebind; never stamp their new context onto a candidate resolved before them.
+            if (!isBindingCurrent(binding, generation)) {
+                releaseCachedRecipe();
+                return false;
+            }
+            acknowledgeResolvedBinding(binding, generation);
+        } catch (RuntimeException | Error failure) {
+            observedIdentity = null;
+            throw failure;
+        }
+        if (cachedRecipe != null) {
             cachedRecipe.process();
             return true;
         }
         return false;
+    }
+
+    @Nullable
+    @Override
+    public CachedRecipe<RECIPE> getUpdatedCache(int cacheIndex) {
+        if (!cachedIndexMatches(cacheIndex)) {
+            return null;
+        }
+        RecipeCacheContext.Binding binding = validatedBinding();
+        if (binding == null) {
+            //The handler is not required to use a canonical cache for lookup, so enforce no-context here rather than relying on it to return null.
+            return null;
+        }
+        long generation = binding.invalidationGeneration();
+        CachedRecipe<RECIPE> updated = ICachedRecipeHolder.super.getUpdatedCache(cacheIndex);
+        //This method returns a candidate, not an installed cache: a direct caller must not acknowledge an old cachedRecipe field by merely querying.
+        return isBindingCurrent(binding, generation) ? updated : null;
+    }
+
+    private void releaseCachedRecipe() {
+        CachedRecipe<RECIPE> oldCache = cachedRecipe;
+        cachedRecipe = null;
+        observedIdentity = null;
+        observedInvalidationGeneration = 0;
+        if (oldCache != null) {
+            handler.onCachedRecipeChanged(null, cacheIndex);
+        }
     }
 
     @Override
@@ -146,34 +193,36 @@ public class RecipeCacheLookupMonitor<RECIPE extends MekanismRecipe<?>> implemen
      */
     @Override
     public boolean invalidateCache() {
-        RecipeCacheContext.Binding binding = RecipeCacheContext.currentBinding();
-        if (binding == null) {
-            //No published recipe context on this thread: never keep processing a candidate resolved against a released binding
-            return true;
-        }
-        Level level = handler.getLevel();
-        if (level != null && level.getRecipeManager() != binding.manager()) {
-            //A real level that is not bound to the active recipe manager must fail rather than let a still-valid cached recipe stand in for recipe lookup
-            throw new IllegalStateException("Recipe lookup monitor level is not bound to the active recipe manager (epoch " + binding.epoch() + ")");
-        }
-        return binding.identityToken() != observedIdentity || binding.invalidationGeneration() != observedInvalidationGeneration;
+        RecipeCacheContext.Binding binding = validatedBinding();
+        return binding == null || binding.identityToken() != observedIdentity || binding.invalidationGeneration() != observedInvalidationGeneration;
     }
 
     /**
-     * Records the currently published binding as the one this monitor's cache was resolved against.
+     * Records the captured, successfully validated resolution stamp. Never reads a later current binding in its place.
      *
      * <p>Only the opaque identity token and the generation number are retained, never the binding itself, so this monitor cannot keep an old manager, registry access,
      * or level graph alive.</p>
      */
-    protected final void acknowledgeResolvedBinding() {
+    protected final void acknowledgeResolvedBinding(RecipeCacheContext.Binding binding, long generation) {
+        observedIdentity = binding.identityToken();
+        observedInvalidationGeneration = generation;
+    }
+
+    @Nullable
+    protected final RecipeCacheContext.Binding validatedBinding() {
         RecipeCacheContext.Binding binding = RecipeCacheContext.currentBinding();
-        if (binding == null) {
-            observedIdentity = null;
-            observedInvalidationGeneration = 0L;
-        } else {
-            observedIdentity = binding.identityToken();
-            observedInvalidationGeneration = binding.invalidationGeneration();
+        if (binding != null) {
+            Level level = handler.getLevel();
+            if (level != null && level.getRecipeManager() != binding.manager()) {
+                throw new IllegalStateException("Recipe lookup monitor level is not bound to the active recipe manager (epoch " + binding.epoch() + ")");
+            }
         }
+        return binding;
+    }
+
+    protected final boolean isBindingCurrent(@Nullable RecipeCacheContext.Binding binding, long generation) {
+        RecipeCacheContext.Binding current = validatedBinding();
+        return binding != null && current == binding && RecipeCacheContext.currentBinding() == binding && binding.invalidationGeneration() == generation;
     }
 
     @Override

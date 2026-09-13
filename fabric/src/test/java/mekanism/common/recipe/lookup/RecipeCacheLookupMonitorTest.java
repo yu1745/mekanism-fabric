@@ -237,6 +237,8 @@ class RecipeCacheLookupMonitorTest {
         assertTrue(cached.isInputValid());
         handler.recipeChanges = 0;
         int processedBeforeRelease = cached.processCalls;
+        //A handler may compute recipes independently of the canonical provider; the monitor itself must enforce release.
+        handler.directRecipe = crushing;
         RecipeCacheContext.clear();
         assertNull(RecipeCacheContext.currentBinding());
         assertTrue(monitor.invalidateCache(), "no published context must always invalidate");
@@ -311,6 +313,19 @@ class RecipeCacheLookupMonitorTest {
         //The energy helper reports the actual consumption and zero when there is no cached recipe
         EnergyContainer energy = new EnergyContainer(1_000);
         assertEquals(0L, monitor.updateAndProcess(energy), "a zero per-tick energy recipe consumes nothing");
+        selected.setEnergyRequirements(() -> 25L, energy);
+        assertEquals(25L, monitor.updateAndProcess(energy), "the monitor measures consumption by the real CachedRecipe energy handler");
+
+        handler.level = RecipeLevelStub.of(new RecipeManager(access));
+        int createdBeforeForeignSelection = handler.recipeCreates;
+        assertThrows(IllegalStateException.class, () -> monitor.updateCachedRecipe(crushing),
+              "the explicit factory writer must validate Level ownership before invoking creation");
+        assertEquals(createdBeforeForeignSelection, handler.recipeCreates);
+        handler.level = RecipeLevelStub.of(manager);
+        RecipeCacheContext.clear();
+        assertThrows(IllegalStateException.class, () -> monitor.updateCachedRecipe(crushing), "explicit selection requires a published context");
+        assertEquals(createdBeforeForeignSelection, handler.recipeCreates);
+        RecipeCacheContext.bind(manager, access, 1);
         handler.slot.stack = ItemStack.EMPTY;
         MekanismRecipeType.clearCache();
         assertEquals(0L, monitor.updateAndProcess(energy), "no cached recipe must report zero energy usage");
@@ -351,6 +366,39 @@ class RecipeCacheLookupMonitorTest {
         assertFalse(eitherSide.containsRecipe(new ChemicalStack(MekanismChemicals.HYDROGEN, 10)));
         assertFalse(triple.containsRecipeABC(new ItemStack(Items.IRON_INGOT), new FluidStack(Fluids.WATER, 1_000),
               new ChemicalStack(MekanismChemicals.STEAM, 5)));
+    }
+
+    @Test
+    void synchronousLookupCreationAndChangeCallbacksCannotAcknowledgeAnUnresolvedPublication() {
+        for (int phase = 0; phase < 3; phase++) {
+            BasicCrushingRecipe recipe = crushing(Items.IRON_INGOT, new ItemStack(Items.IRON_NUGGET, 9));
+            replace(recipe);
+            RecipeCacheContext.bind(manager, access, 1);
+            InstantItemHandler handler = new InstantItemHandler();
+            RecipeCacheLookupMonitor<ItemStackToItemStackRecipe> monitor = new RecipeCacheLookupMonitor<>(handler);
+            if (phase == 0) {
+                handler.onLookupHook = () -> {
+                    handler.onLookupHook = null;
+                    RecipeCacheContext.bind(manager, access, 1);
+                };
+            } else if (phase == 1) {
+                handler.onCreateHook = () -> {
+                    handler.onCreateHook = null;
+                    MekanismRecipeType.clearCache();
+                };
+            } else {
+                handler.onRecipeChangedHook = () -> {
+                    handler.onRecipeChangedHook = null;
+                    MekanismRecipeType.clearCache();
+                };
+            }
+            assertFalse(monitor.updateAndProcess(), "callback phase " + phase + " invalidated the resolution before processing");
+            assertEquals(0, handler.probe.processCalls, "the pre-invalidation candidate must never process");
+            assertNull(monitor.getCachedRecipe(0));
+            assertTrue(monitor.invalidateCache(), "the changed publication has not yet been resolved");
+            assertTrue(monitor.updateAndProcess(), "a later uninterrupted resolution can process normally");
+            assertFalse(monitor.invalidateCache());
+        }
     }
 
     // ── fixtures ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -411,6 +459,7 @@ class RecipeCacheLookupMonitorTest {
         int savedTickReads;
         CachedRecipe<RECIPE> cached;
         Runnable onContentsChangedHook;
+        Runnable onRecipeChangedHook;
 
         @Override
         public void onContentsChanged() {
@@ -450,6 +499,9 @@ class RecipeCacheLookupMonitorTest {
             if (cachedRecipe == null) {
                 clearRecipeErrors(cacheIndex);
             }
+            if (onRecipeChangedHook != null) {
+                onRecipeChangedHook.run();
+            }
         }
     }
 
@@ -458,6 +510,9 @@ class RecipeCacheLookupMonitorTest {
           implements ISingleRecipeLookupHandler.ItemRecipeLookupHandler<ItemStackToItemStackRecipe> {
         final ItemSlot slot = new ItemSlot(new ItemStack(Items.IRON_INGOT, 8));
         private ProbeCachedRecipe probe;
+        private ItemStackToItemStackRecipe directRecipe;
+        private Runnable onLookupHook;
+        private Runnable onCreateHook;
 
         private InstantItemHandler() {
             super(MekanismRecipeType.CRUSHING);
@@ -469,7 +524,11 @@ class RecipeCacheLookupMonitorTest {
         public ItemStackToItemStackRecipe getRecipe(int cacheIndex) {
             recipeLookups++;
             ItemStack input = slot.getStack();
-            return input.isEmpty() ? null : findFirstRecipe(inputHandler);
+            ItemStackToItemStackRecipe recipe = directRecipe != null ? directRecipe : input.isEmpty() ? null : findFirstRecipe(inputHandler);
+            if (onLookupHook != null) {
+                onLookupHook.run();
+            }
+            return recipe;
         }
 
         @Override
@@ -478,6 +537,9 @@ class RecipeCacheLookupMonitorTest {
             cached = probe = new ProbeCachedRecipe(recipe, inputHandler, outputHandler);
             //A multi-tick recipe so the persisted operating tick count is meaningful rather than always below the required ticks
             cached.setRequiredTicks(() -> 10);
+            if (onCreateHook != null) {
+                onCreateHook.run();
+            }
             return cached;
         }
     }

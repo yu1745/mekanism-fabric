@@ -416,3 +416,21 @@ the packaged server smoke and the recipe-runtime smoke are left to the parent.
 
 Non-claims: no `CommonWorldTickHandler` closure, no machine/tile/item/block/menu/viewer/codec/recipe-registration or production recipe JSON change, no
 other cached-recipe family, no Nucleosynthesizer monitor, no change to the live publication callbacks, and no fake or no-op production seam.
+
+### Task046 parent ownership correction
+
+Candidate `7cc8e774` passed 442 tests, but parent adversarial tests exposed three missing enforcement paths: a handler that returns a recipe independently of the
+canonical cache could still process without a context; an explicit Factory selection did not validate Level/context before invoking creation; and a synchronous
+lookup callback could rebind before the monitor acknowledged the **new** current stamp over the old candidate. The initial GLM read-only review accepted the candidate,
+classifying callback rebinding as hypothetical; parent executable evidence supersedes that verdict. Original-parent red log `/tmp/task046-parent-ownership-red.log`
+shows 8 tests /3 failures, not a failure inferred from a method name.
+
+The corrected monitor captures binding/generation before resolving and checks it after lookup/creation/saved-data callbacks, changed-cache notification and unpause,
+then records that exact captured stamp. Interrupted resolutions cannot process and drop the monitor's cache through the ordinary changed-to-null notification. Direct
+`getUpdatedCache` queries enforce no-context/mismatch and discard interrupted candidates but do not acknowledge a cache they have not installed. Factory selection
+requires a matching published binding before creation and rejects an intervening context change instead of installing/stamping an unowned candidate. No global state,
+new context, or live publication callback was added. Parent focused green log `/tmp/task046-parent-ownership-green.log`: 8 tests PASS.
+
+The existing seven tests remain; one eighth test exercises synchronous lookup rebind, creation-time clear and changed-cache callback clear. Existing no-context and
+Factory tests now include independently returning handlers/foreign Level/no-context selection, and measure actual positive energy consumption by a real CachedRecipe
+rather than only zero. Final ordinary totals become80 suites/403 tests, aggregate91/443; no tests were deleted.
