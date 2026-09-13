@@ -186,7 +186,7 @@ def platformSlice = loadSlice('platform-slice.txt')
 def apiSliceFiles = apiSlice.collect { file("../src/api/java/${it}") }
 def commonSliceFiles = commonSlice.collect { file("../src/main/java/${it}") }
 def platformSliceFiles = platformSlice.collect { file("src/main/java/${it}") }
-if (apiSlice.size() != 201 || commonSlice.size() != 204 || platformSlice.size() != 43) {
+if (apiSlice.size() != 205 || commonSlice.size() != 208 || platformSlice.size() != 45) {
     throw new GradleException("Unexpected Fabric source slice counts: api=${apiSlice.size()} common=${commonSlice.size()} platform=${platformSlice.size()}")
 }
 
@@ -909,12 +909,12 @@ def verifyFabricTestContract = tasks.register('verifyFabricTestContract') {
             [reports.length, tests]
         }
         def ordinary = readTotals(ordinaryXmlResults, 'ordinary', 81, 409)
-        def transfer = readTotals(transferXmlResults, 'transfer', 5, 27)
+        def transfer = readTotals(transferXmlResults, 'transfer', 6, 33)
         def registry = readTotals(registryXmlResults, 'root-registry', 1, 2)
         def dataMap = readTotals(dataMapXmlResults, 'data-map', 2, 4)
         def recipeRegistry = readTotals(recipeRegistryXmlResults, 'recipe-registry', 3, 7)
-        if (ordinary[0] + transfer[0] + registry[0] + dataMap[0] + recipeRegistry[0] != 92
-              || ordinary[1] + transfer[1] + registry[1] + dataMap[1] + recipeRegistry[1] != 449) {
+        if (ordinary[0] + transfer[0] + registry[0] + dataMap[0] + recipeRegistry[0] != 93
+              || ordinary[1] + transfer[1] + registry[1] + dataMap[1] + recipeRegistry[1] != 455) {
             throw new GradleException('Unexpected aggregate Fabric test totals')
         }
     }

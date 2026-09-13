@@ -3,8 +3,6 @@ package mekanism.api.fluid;
 import mekanism.api.Action;
 import mekanism.api.annotations.NothingNullByDefault;
 import net.minecraft.core.Direction;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -24,7 +22,7 @@ public interface ISidedFluidHandler extends IExtendedFluidHandler {
     }
 
     /**
-     * A sided variant of {@link IFluidHandler#getTanks()}, docs copied for convenience.
+     * A sided variant of the unsided tank-count query, docs copied for convenience.
      * <p>
      * Returns the number of fluid storage units ("tanks") available
      *
@@ -40,7 +38,7 @@ public interface ISidedFluidHandler extends IExtendedFluidHandler {
     }
 
     /**
-     * A sided variant of {@link IFluidHandler#getFluidInTank(int)}, docs copied for convenience.
+     * A sided variant of {@link IExtendedFluidHandler#getFluidInTank(int)}, docs copied for convenience.
      * <p>
      * Returns the {@link FluidStack} in a given tank.
      *
@@ -101,7 +99,7 @@ public interface ISidedFluidHandler extends IExtendedFluidHandler {
     }
 
     /**
-     * A sided variant of {@link IFluidHandler#isFluidValid(int, FluidStack)}, docs copied for convenience.
+     * A sided variant of {@link IExtendedFluidHandler#isFluidValid(int, FluidStack)}, docs copied for convenience.
      *
      * <p>
      * This function should be used instead of simulated insertions in cases where the contents and state of the tank are irrelevant, mainly for the purpose of automation
@@ -132,7 +130,7 @@ public interface ISidedFluidHandler extends IExtendedFluidHandler {
      * <p>
      * Inserts a {@link FluidStack} into a given tank and return the remainder. The {@link FluidStack} <em>should not</em> be modified in this function!
      * </p>
-     * Note: This behaviour is subtly <strong>different</strong> from {@link IFluidHandler#fill(FluidStack, IFluidHandler.FluidAction)}
+     * Note: This behaviour is subtly <strong>different</strong> from the platform capability's fill method
      *
      * @param tank   Tank to insert to.
      * @param stack  {@link FluidStack} to insert. This must not be modified by the tank.
@@ -179,7 +177,7 @@ public interface ISidedFluidHandler extends IExtendedFluidHandler {
      * Inserts a {@link FluidStack} into this handler, distribution is left <strong>entirely</strong> to this {@link IExtendedFluidHandler}. The {@link FluidStack}
      * <em>should not</em> be modified in this function!
      * </p>
-     * Note: This behaviour is subtly <strong>different</strong> from {@link IFluidHandler#fill(FluidStack, IFluidHandler.FluidAction)}
+     * Note: This behaviour is subtly <strong>different</strong> from the platform capability's fill method
      *
      * @param stack  {@link FluidStack} to insert. This must not be modified by the handler.
      * @param action The action to perform, either {@link Action#EXECUTE} or {@link Action#SIMULATE}

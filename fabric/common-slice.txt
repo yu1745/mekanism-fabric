@@ -203,3 +203,7 @@ mekanism/common/registration/impl/RecipeTypeRegistryObject.java
 mekanism/common/tile/base/TileEntityUpdateable.java
 mekanism/common/tile/interfaces/ITileWrapper.java
 mekanism/common/network/to_client/PacketUpdateTile.java
+mekanism/common/capabilities/fluid/BasicFluidTank.java
+mekanism/common/capabilities/fluid/DynamicFluidHandler.java
+mekanism/common/capabilities/holder/fluid/IFluidTankHolder.java
+mekanism/common/capabilities/holder/fluid/FluidTankHolder.java

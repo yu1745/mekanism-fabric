@@ -84,6 +84,10 @@
 
 已纳入完整 `TileEntityUpdateable`、`ITileWrapper` 与 reduced-update payload/Fabric接入，slice **201/204/43**。父修复空vanilla包漏调子类 `onDataPacket`；最终构建与6项focused tests通过。按用户最新要求，不再每批追加完整测试/真实运行/clean release，最终运行确认留到实际功能里程碑。详情与未验证范围见 `TASK047_PLAN.md`；机器能力/config owner和Crusher尚未完成。
 
+### Task048 最新进度（完成度优先）
+
+GLM5.3 兑现用户一次性实现模型覆盖（非只读审查）。纳入机器流体存储与事务边界：API `IExtendedFluidHandler`/`ISidedFluidHandler`/`IMekanismFluidHandler`/`ExtendedFluidHandlerUtils`（官方同 fluid-before-empty 分配、per-tank 语义与 NBT 完整保留；仅去 NeoForge `IFluidHandler` 继承与 `fill`/`drain` 桥接，改为直接声明平台无关 tank 查询），common `BasicFluidTank`/`DynamicFluidHandler` 与 `holder/fluid/{IFluidTankHolder,FluidTankHolder}`（FluidStack 换为既有 Mekanism 值，其余官方行为不变），以及 `mekanism/fabric/fluid/{FabricFluidStorage,FabricFluidLookup}` 事务视图：物理侧面、真实 tank 快照、abort 后（含 invalidate 后）恢复、同 tank 跨 side view 共享事务参与者、整 mB maxima 向下取整（81 units/mB，返回≤请求的整倍数，无分数累积/取整上升/溢出/组件丢失），复用未改动的 `FabricFluidConversions`。无 provider 注册、无 fake tile/config owner、无反向 adapter。slice **205/208/45**；`fabricTransferTest` 全绿（新增 `FabricFluidStorageTest` 6 tests，总 33），`build`（含 remapJar 与 slice/no-NeoForge/静态合同门禁）通过。未跑全量测试、packaged smoke 与 clean release。`VariableCapacityFluidTank`、`FluidTankHelper`/config/QuantumEntangloporter holder、`TileEntityMekanism`/`FluidHandlerManager` 集成与 provider 注册仍延期；详情见 `TASK048_PLAN.md`。
+
 ## 阶段顺序
 
 1. Java 21 构建系统、Fabric metadata、Mojang official mappings、source sets 与发布物结构；

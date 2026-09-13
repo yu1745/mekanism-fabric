@@ -1,5 +1,13 @@
 # Task048 — machine fluid storage and transaction boundary
 
+## Completion record (GLM5.3, baseline c757cb1f)
+
+Implemented and committed. Exact admissions: API `IExtendedFluidHandler`, `ISidedFluidHandler`, `IMekanismFluidHandler`, `ExtendedFluidHandlerUtils`; common `BasicFluidTank`, `DynamicFluidHandler`, `holder/fluid/IFluidTankHolder`, `holder/fluid/FluidTankHolder`; platform `mekanism/fabric/fluid/FabricFluidStorage`, `FabricFluidLookup`. Slice **205/208/45** (fabric/build.gradle pinned counts and test-contract totals updated).
+
+Deltas: NeoForge `FluidStack` replaced by the admitted Mekanism value in all four API files and both fluid capability classes; `IExtendedFluidHandler` now declares the platform-neutral tank queries directly and drops the `fill`/`drain` `FluidAction` bridges (documented `@implNote`, javadoc links to `IFluidHandler` reworded textually); `FluidTankHolder`/`IFluidTankHolder` needed no source change. Domain distribution (same-fluid-before-empty, first-type extraction), automation predicates, rates, capacities, simulation, listener and NBT behavior retained. `FabricFluidStorage` follows the item adapter plan/execute/verify transaction design: whole-mB flooring of maxima (81 units/mB, return ≤ request in whole multiples, no fraction/round-up/overflow/component loss), official two-pass insertion order, per-tank `AutomationType.handler(side)`, real-tank snapshots restored on abort even after `invalidate()`, independent participants shared across side views of the same tank, fail-closed topology/`canHandleFluid`/holder-policy checks. `FabricFluidConversions` unchanged.
+
+Verified: `gradlew -p fabric build` (remapJar + slice existence/no-NeoForge gates + test contract) PASS; `fabricTransferTest` **33/33** including the new `FabricFluidStorageTest` (6 tests: exposure/boundaries, whole-mB maxima flooring, same-fluid-before-empty distribution + variant-filtered extraction, abort-restore after invalidation, shared side views, real-tank automation/holder policy/topology drift). Full suite, packaged smoke and clean release intentionally not run (completion-first policy). Not claimed: provider registration, `TileEntityMekanism`/`FluidHandlerManager` ownership, `VariableCapacityFluidTank`, `FluidTankHelper`/`ConfigFluidTankHolder`/`QuantumEntangloporterFluidTankHolder`, `FluidTankWrapper`/`FluidTankFluidTank`/`item/FluidTankSpec` — all deferred to the real capability/config owner task.
+
 ## Parent GO / scope
 
 Baseline: bb95d8b0. Implement with **GLM5.3** (fulfills the user's next-implementer override, not a review). Completion-first policy applies: build and a few focused checks, no full-suite/runtime/release cycle.

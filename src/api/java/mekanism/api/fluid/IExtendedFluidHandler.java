@@ -2,14 +2,41 @@ package mekanism.api.fluid;
 
 import mekanism.api.Action;
 import mekanism.api.annotations.NothingNullByDefault;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 
 /**
- * Extended version of {@link IFluidHandler} to make it easier to integrate with Mekanism
+ * Extended fluid handler exposing indexed tank queries and per-tank Mekanism transfers.
+ *
+ * @implNote The Fabric port declares the platform-neutral indexed tank queries formerly inherited from the NeoForge {@code IFluidHandler} parent directly and drops only
+ * the {@code fill}/{@code drain} {@code FluidAction} bridges; indexed queries, per-tank insertion/extraction and the same-fluid-before-empty distribution defaults are
+ * retained. This is an internal handler contract, not a platform storage provider or rollback promise.
  */
 @NothingNullByDefault
-public interface IExtendedFluidHandler extends IFluidHandler {
+public interface IExtendedFluidHandler {
+
+    /**
+     * Returns the number of fluid storage units ("tanks") available
+     *
+     * @return The number of tanks available
+     */
+    int getTanks();
+
+    /**
+     * Returns the {@link FluidStack} in a given tank.
+     *
+     * <p>
+     * <strong>IMPORTANT:</strong> This {@link FluidStack} <em>MUST NOT</em> be modified. This method is not for altering internal contents. Any implementers who are
+     * able to detect modification via this method should throw an exception. It is ENTIRELY reasonable and likely that the stack returned here will be a copy.
+     * </p>
+     *
+     * <p>
+     * <strong><em>SERIOUSLY: DO NOT MODIFY THE RETURNED FLUID STACK</em></strong>
+     * </p>
+     *
+     * @param tank Tank to query.
+     *
+     * @return {@link FluidStack} in a given tank. {@link FluidStack#EMPTY} if the tank is empty.
+     */
+    FluidStack getFluidInTank(int tank);
 
     /**
      * Overrides the stack in the given tank. This method may throw an error if it is called unexpectedly.
@@ -22,10 +49,38 @@ public interface IExtendedFluidHandler extends IFluidHandler {
     void setFluidInTank(int tank, FluidStack stack);
 
     /**
+     * Retrieves the maximum amount of fluid that can be stored in a given tank.
+     *
+     * @param tank Tank to query.
+     *
+     * @return The maximum fluid amount held by the tank.
+     */
+    int getTankCapacity(int tank);
+
+    /**
+     * <p>
+     * This function should be used instead of simulated insertions in cases where the contents and state of the tank are irrelevant, mainly for the purpose of automation
+     * and logic.
+     * </p>
+     * <ul>
+     * <li>isFluidValid is false when insertion of the fluid is never valid.</li>
+     * <li>When isFluidValid is true, no assumptions can be made and insertion must be simulated case-by-case.</li>
+     * <li>The actual fluid in the tank, its fullness, or any other state are <strong>not</strong> considered by isFluidValid.</li>
+     * </ul>
+     *
+     * @param tank  Tank to query.
+     * @param stack Stack to test with for validity
+     *
+     * @return true if the tank can accept the {@link FluidStack}, not considering the current state of the tank. false if the tank can never support the given
+     * {@link FluidStack} in any situation.
+     */
+    boolean isFluidValid(int tank, FluidStack stack);
+
+    /**
      * <p>
      * Inserts a {@link FluidStack} into a given tank and return the remainder. The {@link FluidStack} <em>should not</em> be modified in this function!
      * </p>
-     * Note: This behaviour is subtly <strong>different</strong> from {@link IFluidHandler#fill(FluidStack, FluidAction)}
+     * Note: This behaviour is subtly <strong>different</strong> from the platform capability's fill method
      *
      * @param tank   Tank to insert to.
      * @param stack  {@link FluidStack} to insert. This must not be modified by the tank.
@@ -56,7 +111,7 @@ public interface IExtendedFluidHandler extends IFluidHandler {
      * Inserts a {@link FluidStack} into this handler, distribution is left <strong>entirely</strong> to this {@link IExtendedFluidHandler}. The {@link FluidStack}
      * <em>should not</em> be modified in this function!
      * </p>
-     * Note: This behaviour is subtly <strong>different</strong> from {@link IFluidHandler#fill(FluidStack, FluidAction)}
+     * Note: This behaviour is subtly <strong>different</strong> from the platform capability's fill method
      *
      * @param stack  {@link FluidStack} to insert. This must not be modified by the handler.
      * @param action The action to perform, either {@link Action#EXECUTE} or {@link Action#SIMULATE}
@@ -106,44 +161,11 @@ public interface IExtendedFluidHandler extends IFluidHandler {
      * @return {@link FluidStack} extracted from the tank, must be empty if nothing can be extracted. The returned {@link FluidStack} can be safely modified after, so the
      * tank should return a new or copied stack.
      *
-     * @implNote The default implementation of this method, extracts across all tanks that contents match the type of fluid passed into this method.
+     * @implNote The default implementation of this method, extracts across all tanks to contents match the type of fluid passed into this method.
      * @apiNote It is not guaranteed that the default implementation will be how this {@link IExtendedFluidHandler} ends up distributing the extraction.
      */
     default FluidStack extractFluid(FluidStack stack, Action action) {
         return ExtendedFluidHandlerUtils.extract(stack, null, action, side -> getTanks(), (tank, side) -> getFluidInTank(tank),
               (tank, amount, side, act) -> extractFluid(tank, amount, act));
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * Wrapped to properly use our method declarations
-     */
-    @Override
-    @Deprecated
-    default int fill(FluidStack stack, FluidAction action) {
-        return stack.getAmount() - insertFluid(stack, Action.fromFluidAction(action)).getAmount();
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * Wrapped to properly use our method declarations
-     */
-    @Override
-    @Deprecated
-    default FluidStack drain(FluidStack stack, FluidAction action) {
-        return extractFluid(stack, Action.fromFluidAction(action));
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * Wrapped to properly use our method declarations
-     */
-    @Override
-    @Deprecated
-    default FluidStack drain(int amount, FluidAction action) {
-        return extractFluid(amount, Action.fromFluidAction(action));
     }
 }

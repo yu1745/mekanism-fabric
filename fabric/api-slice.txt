@@ -200,3 +200,7 @@ mekanism/api/recipes/basic/IBasicChemicalOutput.java
 mekanism/api/recipes/basic/IBasicItemStackOutput.java
 mekanism/api/recipes/MekanismRecipeSerializers.java
 mekanism/api/recipes/IRecipeTypeRegistry.java
+mekanism/api/fluid/IExtendedFluidHandler.java
+mekanism/api/fluid/ISidedFluidHandler.java
+mekanism/api/fluid/IMekanismFluidHandler.java
+mekanism/api/fluid/ExtendedFluidHandlerUtils.java
