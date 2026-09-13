@@ -50,3 +50,32 @@ All six parent findings from `docs/TASK052_REVIEW_02.md` applied; no scope expan
 6. This section and the status corrections above.
 
 Validation for this pass: `gradlew -p fabric assemble` (compiles bootstrap/lifecycle/state corrections — in-slice files) plus slice NeoForge gates. `WorldUtils`/config/`Mekanism.java` corrections are excluded-source edits verified by source inspection only; they are NOT compiled by the slice build and are not claimed validated.
+
+
+## Session 3 status (GLM5.3 sole implementer, container/QIO/config hub continuation)
+
+Baseline `47baeecac` + merge `c9211626` (all prior WIP preserved, merge commit `00022d0b`). Slice counts now **225 api / 242 common / 46 platform**; `assemble`, all three slice guards and the existing `test` task green at each commit. Session commits: `a46a5648`/`ec52039c` (leaf + config core admission), `e4655dae` (container/QIO domain ports), `ecaf3d02` (MekanismUtils + username cache + client seam), `15f9b7f9` (config core slice admission).
+
+### Admitted and compiling this session
+
+- Leaves: GLFWMouseButtons, RobitPrideSkinData (Resource/tier/RegistryUtils/UnitDisplayUtils/BiMultimap were already present; dedupe fixed, gate corrected).
+- **Config core**: BaseMekanismConfig, CommonConfig, GeneralConfig, StorageConfig, UsageConfig, GearConfig (adjudicated narrowings applied: literal modid, `BOOST_ENERGY_MULTIPLIER` local 4 with drift note), MekanismConfigHelper, MekanismConfigType, translations (Mekanism/Startup), IConfigTranslation, TranslationPreset, Chemical/ClientWindowConfigAccess, full `config/value` (13) and `config/listener` (4) sets, world/height anchors (spec-adapted: `comment(String...)`, `defineValidated`, `pop(count)` added to MekanismConfigSpec), resource/ore data model, TextUtils.
+- `mekanism.common.UsernameCache` (Mekanism-owned JSON-persisted last-known-name cache, `usernamecache.json` in game dir, FML semantics; login population wiring lands with the fabric player lifecycle when its consumers compile).
+- `mekanism.client.ClientPlayerAccess` (environment-guarded client-player seam; not linked on dedicated servers).
+- `mekanism.common.util.RecipeMatcher` (vendored NeoForge LGPL-2.1 with full provenance header; only package/nullability adapted).
+
+### Ported at source level (staged; compile-blocked by the machine-owner tail — see compiler surface)
+
+`MekanismContainer`, `QIOItemViewerContainer` (both named targets, complete with real adaptations: ServerPlayNetworking S2C sends, SLF4J loggers, api FluidStack shim, `TranslatableEnum` marker dropped keeping `getTranslatedName` behavior, client-only `getSlotsYMax` documented as never linked server-side), full `sync` package, full `property` package, `PacketUpdateContainer`, `PacketWindowSelect`, `PacketUpdateItemViewer`, extracted `PacketQIOItemViewerKill` (was the anonymous `kill_qio` instanced payload), all five QIO C2S packets, `BulkQIOData`, `QIOFrequency` (memoized once-per-update lazy packet, kill-viewer dispatch, `flushTagAndRecipeCaches` read unchanged), `QIOGlobalItemLookup` (**authorized correction applied: `reset()` also clears `mergedIds`**), `QIODriveData`, `QIOCraftingWindow` (CommonHooks crafting-player thread-local documented as platform boundary; RecipeMatcher swap), `QIOCraftingTransferHelper`, `QIOServerCraftingTransferHandler`, `SearchQueryParser`, `IQIODriveHolder`/`IQIODriveItem`/`IQIOFrequencyHolder`/`IQIOCraftingWindowHolder`, `Frequency`, `FrequencyType`/`FrequencyManager`/`MekanismSavedData` (prior staged ports verified), `SecurityFrequency`, `TeleporterFrequency`, `SecurityUtils` (op-list check replacing PermissionAPI default resolver; `ClientSecurityData` ownership move for the client map), `FrequencyManagerWrapper`, `PacketUtils` (full Fabric port: Player-based context helpers, PlayerLookup tracking sends, MekanismServerLifecycle server owner, per-payload sends instead of bundle wrapper, inline `writeCustomData` matching NeoForge FriendlyByteBufUtil wire format), `MekanismUtils` (complete with documented deltas: registry-namespace getModId, MekanismItemAbilities dispatch, Fabric gas check, Fluid-keyed getFluidsIn, vanilla-truth shouldSpeedUpEffect, no-Fabric-break-event vein-mining boundary).
+
+### Exact compiler surface blocking slice admission (all converge on the machine-owner tail)
+
+1. `EnumUtils` &larr; `TileEntityQIODriveArray.DriveStatus` &larr; `TileEntityMekanism` chain. Blocks TierConfig, WorldConfig &rarr; blocks `MekanismConfig` class itself &rarr; blocks bootstrap single-manager config wiring and ClientConfig (which also needs `QIOItemViewerContainer` enums).
+2. `FrequencyType` static catalog requires `InventoryFrequency` &larr; entangloporter emit domain (`FluidHandlerTarget`/`ChemicalHandlerTarget` NeoForge `IFluidHandler` representation, `EmitUtils`, `EnergyNetwork`, `TileEntityQuantumEntangloporter`). **Platform decision needed next batch**: the Fabric representation for external fluid/item acceptors in the emit path (candidates: Mekanism-internal handler interfaces between tiles, Fabric `Storage` adapters at the boundary) — no policy change invented here.
+3. `PacketUtils`/`HashedItem`/`StackUtils`/`InventoryUtils`/`ISlotClickHandler`/`SyncableCollection`/`SyncableFrequency`/`sync` pkg &larr; `StorageUtils` &larr; `Capabilities` (NeoForge `ItemCapability`/`BlockCapability` token hub) + `attachments.ContainerType`. Capability-token owner = its own batch (adjacent to accepted Task049/051 fabric lookups).
+4. `MekanismDataComponents` is a whole-mod attachment catalog (all four frequencies + gear + item modes); QIODriveData/PortableQIODashboardInventory/MekanismUtils-frequency-tooltip wait for it.
+5. The fabric networking owner (play payload registration + server/client receivers for all container/QIO packets, username login wiring, QIO world-load lifecycle) is written against staged payloads only; platform source set is also slice-gated, so it lands with them.
+
+### Verified vs unverified
+
+Verified: `assemble` + 3 slice guards + `test` (existing suites) green at every commit; Fabric networking threading contract verified against the pinned fabric-networking-api (handlers execute on server main thread, matching NeoForge IPayloadContext semantics). NOT verified: any runtime behavior of the staged container/QIO domain (nothing compiled can open a container yet); the `ClientSecurityData`/`UsernameCache`/`ClientPlayerAccess` seams have no runtime population yet (owners for their client/bootstrap installers land with the respective batches).
