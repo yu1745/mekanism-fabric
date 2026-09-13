@@ -24,9 +24,22 @@ public class TileUpdateRuntimeFixture extends TileEntityUpdateable {
     /** Set when the reduced path sees it; a full load must never observe this key. */
     public static final String FULL_ONLY = "fixture_full_only";
 
+    private static Thread clientOwnerThread;
+
+    static void bindClientOwnerThread() {
+        clientOwnerThread = Thread.currentThread();
+    }
+
+    private void requireClientOwnerThread() {
+        if (level != null && level.isClientSide() && Thread.currentThread() != clientOwnerThread) {
+            throw new IllegalStateException("Reduced tile update ran outside the client owner thread");
+        }
+    }
+
     private int fullLoads;
     private int reducedLoads;
     private int dataPacketCalls;
+    private int emptyDataPacketCalls;
     private int saveOnly;
     private int reduced;
 
@@ -66,12 +79,21 @@ public class TileUpdateRuntimeFixture extends TileEntityUpdateable {
     @Override
     public void onDataPacket(net.minecraft.network.Connection net, net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket pkt,
           HolderLookup.Provider provider) {
+        requireClientOwnerThread();
         dataPacketCalls++;
+        int before = reducedLoads;
         super.onDataPacket(net, pkt, provider);
+        if (pkt.getTag().isEmpty()) {
+            emptyDataPacketCalls++;
+            if (reducedLoads != before) {
+                throw new IllegalStateException("Empty vanilla packet must reach onDataPacket without a reduced load");
+            }
+        }
     }
 
     @Override
     public void handleUpdateTag(CompoundTag tag, HolderLookup.Provider provider) {
+        requireClientOwnerThread();
         super.handleUpdateTag(tag, provider);
         reducedLoads++;
         if (tag.contains(REDUCED)) {
@@ -89,6 +111,10 @@ public class TileUpdateRuntimeFixture extends TileEntityUpdateable {
 
     public int dataPacketCalls() {
         return dataPacketCalls;
+    }
+
+    public int emptyDataPacketCalls() {
+        return emptyDataPacketCalls;
     }
 
     public int saveOnly() {

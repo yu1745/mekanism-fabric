@@ -80,6 +80,10 @@
 - [x] tile behavior contract interfaces：`IHasDumpButton`、`IHasGasMode`、`IHasMode`、`IHasVisualization`、`ITileActive`、`IComparatorSupport` 六源均与 `4646f509` 字节一致；四个 Fabric-local tests 只固定 mode/action 精确分派与原样 tank index、visualization default/override/toggle、active default/override/`NO_DELAY`/raw state，以及 comparator default/override/两个 boundary-level observation。JAR direct package 精确为这六个接口且各一次，无 startup marker；所有 tile/machine 实现及 integration 均延期；
 - [ ] distribution/long-transfer 的所有 callers（含 `ComponentBackedEnergyHandler`、`EnergyRecipeData`）、`EnergyContainerHelper`/`ConfigEnergyContainerHolder`、side configuration/ejector、Universal Cable、actual Energy provider registration 与 owner caching/invalidation、machine/network/persistence owners、CachedRecipe、机器基类与 Crusher；不再延期一个 baseline 中不存在的 `EnergyHandler`。
 
+### Task047 最新进度（完成度优先）
+
+已纳入完整 `TileEntityUpdateable`、`ITileWrapper` 与 reduced-update payload/Fabric接入，slice **201/204/43**。父修复空vanilla包漏调子类 `onDataPacket`；最终构建与6项focused tests通过。按用户最新要求，不再每批追加完整测试/真实运行/clean release，最终运行确认留到实际功能里程碑。详情与未验证范围见 `TASK047_PLAN.md`；机器能力/config owner和Crusher尚未完成。
+
 ## 阶段顺序
 
 1. Java 21 构建系统、Fabric metadata、Mojang official mappings、source sets 与发布物结构；

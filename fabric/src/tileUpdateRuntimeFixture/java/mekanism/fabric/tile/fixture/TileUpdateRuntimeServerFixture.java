@@ -116,6 +116,8 @@ public final class TileUpdateRuntimeServerFixture implements ModInitializer {
         if (stage == 1 && Files.isRegularFile(ROOT.resolve("client-chunk.complete"))) {
             //Path two: the vanilla block entity data packet, which carries the same reduced tag through onDataPacket
             require(tile.reduced() == 3, "the initial chunk path must leave the server-side reduced value unchanged");
+            probePlayer.connection.send(ClientboundBlockEntityDataPacket.create(tile,
+                  (blockEntity, registries) -> new net.minecraft.nbt.CompoundTag()));
             probePlayer.connection.send(ClientboundBlockEntityDataPacket.create(tile));
             tile.setReduced(11);
             //A second packet with the new value; the client must observe 11 without running the full reader
@@ -123,7 +125,11 @@ public final class TileUpdateRuntimeServerFixture implements ModInitializer {
             //The plain vanilla control block entity keeps its ordinary handling
             BlockEntity chest = level.getBlockEntity(VANILLA_POS);
             require(chest instanceof net.minecraft.world.level.block.entity.ChestBlockEntity, "the control block entity must be a vanilla chest");
-            probePlayer.connection.send(ClientboundBlockEntityDataPacket.create(chest));
+            net.minecraft.nbt.CompoundTag chestData = new net.minecraft.nbt.CompoundTag();
+            chestData.putString("CustomName", "\"tile-runtime-vanilla-control\"");
+            chest.loadCustomOnly(chestData, level.registryAccess());
+            probePlayer.connection.send(ClientboundBlockEntityDataPacket.create(chest,
+                  (blockEntity, registries) -> blockEntity.saveWithoutMetadata(registries)));
             LOGGER.info("MEKANISM_TILE_RUNTIME_SERVER phase=vanilla_packet_sent reduced=11");
             stage = 2;
             return;

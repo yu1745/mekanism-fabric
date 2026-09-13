@@ -1044,3 +1044,10 @@ GLM 在任务 013、014 完成两轮临时复测；任务 015 以受支持的 hi
 - 父级红证据 `/tmp/task046-parent-ownership-red.log`：8 tests /3 failures，分别为无 context 仍处理、foreign Level 的 Factory creation 未先拒绝、lookup callback rebind 后旧 candidate 被盖上新 stamp。父修复 `8d826837` 使用 captured binding/generation，在 resolution、changed callback、unpause 后验证，direct query 不 acknowledgement 未安装缓存；Factory 在 creation 前后验证，不错误恢复 saved data。保留7个原测试、增加第8个同步 callback 中断测试；新增测试的 creation-clear/changed-callback-clear 子阶段在 green 实跑，不能将三处顶层红失败夸称为所有子阶段均有红证。原 Factory 测试还补真实 CachedRecipe 非零25L耗能，不是单测 JDK 算术。
 - 同一 GLM resumed 复审固定修复，工具报告本次131.5s，累计32次工具调用、252.6k tokens、约 `$0.7638`（后几项为该 agent 累计口径，不另加初审）；明确撤回初审上述判断及“energy test只是Math”的评价，确认红绿证据与 captured-stamp/异常/直接查询/Factory 持久语义，修复版 **ACCEPT**，未发现剩余 blocker。复审自述的调用分组数不取代工具统计。
 - 这是一次实现与独立审查的不同角色观察，**不能据此宣称 GLM 与 DeepSeek 整体实现能力孰强**。初审接受不能替代父级真实 diff 和可执行反例；最终父级443 tests/build/static及真实发布门禁见 `TASK046_PLAN.md`。无第二份完整实现，无测试删除。
+
+
+## Task047 — DeepSeek implementation / GLM5.3 bounded review
+
+DeepSeek V4.1 Flash **high** implemented candidate `cdd50997` from `d9aaa36c` (67m35s,351 tool uses). Its document incorrectly called itself SOL; parent corrected attribution. GLM5.3 read-only review (5m10s,30 tools) returned ACCEPT, correctly noting the weak chest-control assertion, but missed that vanilla's empty-tag guard prevents the candidate redirect from reaching subclass onDataPacket. Parent reproduced that defect with a real-client empty packet and fixed the hook; details and exact evidence are in `TASK047_PLAN.md`. No reviewer runtime validation occurred, and acceptance is not evidence that all candidate claims were true.
+
+During closeout the user explicitly reprioritized completion over exhaustive testing. Parent stopped full-gate/reviewer cycling, kept the already-written regression/fixture improvements, and verified the final build plus six focused tests. No final runtime-green/release claim. The next **implementation** uses GLM5.3 as requested; this review does not consume that requirement.

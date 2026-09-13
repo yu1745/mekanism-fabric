@@ -404,13 +404,16 @@ expected_tile_update = {
 actual_tile_base = {entry for entry in entries if entry.startswith("mekanism/common/tile/base/") and entry.endswith(".class")}
 actual_tile_update_platform = {entry for entry in entries if entry.endswith(".class") and (
       entry.startswith("mekanism/fabric/mixin/tile/")
-      or entry in {"mekanism/fabric/network/FabricTileUpdateNetworking.class", "mekanism/fabric/network/FabricTileUpdateHandler.class"})}
+      or entry.startswith("mekanism/fabric/network/FabricTileUpdate"))}
 if actual_tile_base != {"mekanism/common/tile/base/TileEntityUpdateable.class"}:
     raise SystemExit(f"unexpected tile base class family: {sorted(actual_tile_base)!r}")
 if actual_tile_update_platform != (expected_tile_update - actual_tile_base - {"mekanism/common/network/to_client/PacketUpdateTile.class"}):
     raise SystemExit(f"unexpected reduced-tile-update platform class family: {sorted(actual_tile_update_platform)!r}")
-if entries.count("mekanism/common/network/to_client/PacketUpdateTile.class") != 1:
-    raise SystemExit("the reduced-tile-update payload must occur exactly once")
+actual_tile_payload = {entry for entry in entries if entry.startswith("mekanism/common/network/to_client/") and entry.endswith(".class")}
+if actual_tile_payload != {"mekanism/common/network/to_client/PacketUpdateTile.class"}:
+    raise SystemExit(f"unexpected tile payload class family: {sorted(actual_tile_payload)!r}")
+if any(entries.count(entry) != 1 for entry in expected_tile_update):
+    raise SystemExit("every reduced-tile-update class must occur exactly once")
 tile_update_fixtures = sorted(entry for entry in entries if entry.endswith(".class") and (
       entry.startswith("mekanism/fabric/tile/fixture/") or "TileUpdateRuntimeFixture" in entry
       or "TileUpdateRuntimeServerFixture" in entry or "TileUpdateRuntimeClientFixture" in entry))

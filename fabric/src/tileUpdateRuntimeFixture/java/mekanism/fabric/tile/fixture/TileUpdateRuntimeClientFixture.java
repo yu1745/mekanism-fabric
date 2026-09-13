@@ -39,6 +39,7 @@ public final class TileUpdateRuntimeClientFixture implements ClientModInitialize
 
     @Override
     public void onInitializeClient() {
+        TileUpdateRuntimeFixture.bindClientOwnerThread();
         ClientTickEvents.END_CLIENT_TICK.register(TileUpdateRuntimeClientFixture::tick);
     }
 
@@ -78,18 +79,25 @@ public final class TileUpdateRuntimeClientFixture implements ClientModInitialize
         if (stage == 1) {
             //Path two: the vanilla block entity data packet must dispatch through onDataPacket into the reduced handler. The packet needs a network round trip, so
             //wait for the value under a bounded tick budget instead of asserting on the first observation.
-            if (tile.reduced() != 11 && !expired()) {
+            BlockEntity vanilla = level.getBlockEntity(new BlockPos(3, 100, 0));
+            boolean vanillaUpdated = vanilla instanceof net.minecraft.world.level.block.entity.ChestBlockEntity chest
+                  && chest.getCustomName() != null && chest.getCustomName().getString().equals("tile-runtime-vanilla-control");
+            if ((tile.reduced() != 11 || !vanillaUpdated) && !expired()) {
                 return;
             }
+            require(vanillaUpdated, "the non-Mekanism vanilla packet must apply the chest custom name on the client");
             require(tile.reduced() == 11, "the vanilla block entity packet must apply the reduced value 11 but saw " + tile);
             require(tile.fullLoads() == 0, "the vanilla packet path must not run the fixture full reader, but ran it " + tile.fullLoads() + " times");
             require(tile.saveOnly() == 0, "the vanilla packet path must not clear the save-only sentinel");
             require(tile.reducedLoads() > reducedLoadsAtJoin, "the vanilla packet path must reach the reduced handler");
             require(tile.dataPacketCalls() > dataPacketCallsAtJoin,
                   "the vanilla block-entity packet path must dispatch through onDataPacket rather than bypassing it");
+            require(tile.emptyDataPacketCalls() == 1,
+                  "an empty vanilla packet must reach the subclass onDataPacket override exactly once");
             dataPacketCallsAtJoin = tile.dataPacketCalls();
             LOGGER.info("MEKANISM_TILE_RUNTIME_CLIENT phase=vanilla_packet reduced=11 full_loads={} reduced_loads={} on_data_packet={}",
                   tile.fullLoads(), tile.reducedLoads(), tile.dataPacketCalls());
+            LOGGER.info("MEKANISM_TILE_RUNTIME_CLIENT vanilla_control_name_applied=true owner_thread_checked=true empty_packet_override=true");
             marker("client-vanilla.complete");
             nextStage(2);
             return;

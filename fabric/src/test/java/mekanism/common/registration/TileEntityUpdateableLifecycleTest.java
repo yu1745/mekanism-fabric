@@ -142,7 +142,7 @@ class TileEntityUpdateableLifecycleTest {
 
     /**
      * Applies the exact vanilla {@code BlockEntity.ComponentHelper.COMPONENTS_CODEC} expression to the same tag and requires the base reduced load to agree with it: a
-     * present result replaces the components, an error or absent field leaves them untouched. This documents the real codec behavior instead of asserting a guess.
+     * present result replaces the components (an absent field produces EMPTY), while no result leaves them untouched. Partial results follow the vanilla codec.
      */
     private static void assertCodecOracle(ProbeTile tile, DataComponentMap before, CompoundTag tag, HolderLookup.Provider provider) {
         java.util.Optional<DataComponentMap> oracle = DataComponentMap.CODEC
@@ -271,7 +271,7 @@ class TileEntityUpdateableLifecycleTest {
               "the cached chunk must use the negative-coordinate section conversion");
 
         //A real dimension change must be invalidated through the level assignment
-        TileLevelStub other = TileLevelStub.create();
+        TileLevelStub other = TileLevelStub.create(net.minecraft.world.level.Level.NETHER);
         tile.setLevel(other);
         assertEquals(GlobalPos.of(other.dimension(), pos), tile.getTileGlobalPos(),
               "reassigning the level must refresh the cached coordinate");
@@ -328,7 +328,7 @@ class TileEntityUpdateableLifecycleTest {
         BlockEntityType<ProbeTile> canonical = castFurnace();
         MekanismDeferredRegister<BlockEntityType<?>> register = new MekanismDeferredRegister<>(Registries.BLOCK_ENTITY_TYPE, "mekanism_test");
         //The official base receives exactly this two-parameter deferred registry object shape; the vanilla Holder supertype makes it covariant
-        MekanismDeferredHolder<BlockEntityType<?>, BlockEntityType<?>> holder = register.register("updateable_probe", () -> canonical);
+        MekanismDeferredHolder<BlockEntityType<?>, BlockEntityType<ProbeTile>> holder = register.register("updateable_probe", () -> canonical);
         register.registerAll((registryKey, key, value) -> value);
 
         assertTrue(holder.isBound(), "the deferred holder must be bound after registration");

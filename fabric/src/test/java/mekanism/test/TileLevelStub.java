@@ -51,19 +51,23 @@ public final class TileLevelStub extends RecipeLevelStub {
     private long gameTime;
     private int fullChunkLookups;
 
-    private TileLevelStub(RegistryAccess access, Holder<DimensionType> dimensionType) {
-        super(new StubLevelData(), Level.OVERWORLD, access, dimensionType, () -> null, null);
+    private TileLevelStub(ResourceKey<Level> dimension, RegistryAccess access, Holder<DimensionType> dimensionType) {
+        super(new StubLevelData(), dimension, access, dimensionType, () -> null, null);
     }
 
     /** A level whose registry access carries the damage-type registry the real {@link Level} constructor needs plus a biome registry for real chunks. */
     public static TileLevelStub create() {
+        return create(Level.OVERWORLD);
+    }
+
+    public static TileLevelStub create(ResourceKey<Level> dimension) {
         MappedRegistry<Biome> biomes = new MappedRegistry<>(Registries.BIOME, com.mojang.serialization.Lifecycle.stable());
         biomes.register(Biomes.PLAINS, plains(), RegistrationInfo.BUILT_IN);
         biomes.register(Biomes.THE_VOID, plains(), RegistrationInfo.BUILT_IN);
         RegistryAccess damageTypes = damageTypeAccess();
         RegistryAccess access = new RegistryAccess.ImmutableRegistryAccess(List.of(
               damageTypes.registryOrThrow(Registries.DAMAGE_TYPE), biomes));
-        return new TileLevelStub(access, Holder.direct(new DimensionType(
+        return new TileLevelStub(dimension, access, Holder.direct(new DimensionType(
               java.util.OptionalLong.empty(), true, false, false, true, 1.0D, true, false,
               DimensionType.MIN_Y, DimensionType.Y_SIZE, DimensionType.Y_SIZE,
               net.minecraft.tags.BlockTags.INFINIBURN_OVERWORLD, net.minecraft.world.level.dimension.BuiltinDimensionTypes.OVERWORLD_EFFECTS, 0.0F,

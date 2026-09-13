@@ -171,6 +171,7 @@ wait_log "$SERVER_DIR/logs/latest.log" 'MEKANISM_TILE_RUNTIME_SERVER phase=recon
 wait_log "$CLIENT_DIR/logs/latest.log" 'MEKANISM_TILE_RUNTIME_CLIENT phase=initial_chunk reduced=3 full_loads=0' 'client initial chunk marker'
 wait_log "$CLIENT_DIR/logs/latest.log" 'MEKANISM_TILE_RUNTIME_CLIENT phase=vanilla_packet reduced=11 full_loads=0' 'client vanilla packet marker'
 wait_log "$CLIENT_DIR/logs/latest.log" 'MEKANISM_TILE_RUNTIME_CLIENT phase=custom_payload reduced=22 full_loads=0' 'client custom payload marker'
+wait_log "$CLIENT_DIR/logs/latest.log" 'MEKANISM_TILE_RUNTIME_CLIENT vanilla_control_name_applied=true owner_thread_checked=true' 'vanilla control and handler owner-thread proof'
 wait_log "$CLIENT_DIR/logs/latest.log" 'MEKANISM_TILE_RUNTIME_CLIENT phase=reconnect reduced=22 full_loads=0 owner_world_current=true' 'client reconnect marker'
 wait_log "$CLIENT_DIR/logs/latest.log" 'MEKANISM_TILE_RUNTIME_CLIENT phase=reconnect_payload reduced=33 full_loads=0 owner_world_current=true' 'client post-reconnect payload marker'
 
