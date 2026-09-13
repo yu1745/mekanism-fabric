@@ -78,9 +78,17 @@ scripts/fabric-configuration-rejection-smoke.sh # 错版/同版本显式拒绝/�
 - 大批次测试按独立风险和层间连接设计，不按 production 文件数线性增加；复用已验证下层的排列组合，上层集中覆盖 owner lifecycle、平台差异和端到端连接。候选实现默认验证 source identity/delta、slice/fixture isolation、focused 与 full local unit tests、Fabric build 及静态 JAR class/leakage contract；不再由每个候选重复启动真实 dedicated server 或执行 clean release contract。
 - 主代理在审查并选定/综合真实 diff 后，独立重跑完整测试，再对最终实现各执行一次 `scripts/fabric-packaged-smoke.sh` 和 `./build.sh --clean`，核对最终 commit、JAR 数量与 sha256。高风险网络/注册/启动任务可在任务验收中显式恢复候选级真实运行门禁。
 
+## 工作组织：主代理定界，单代理实现（2026-09-13 用户批准）
+
+- 主代理负责关键路径与任务边界选择。不得把“寻找下一任务/比较全局路线/反复计算闭包”与完整实现一起下放。实现任务开始前必须给出：基线 commit、具体源码入口与调用方、真实 owner、允许的平台 delta、明确非目标、可执行验收、已知依赖与未决问题。
+- 规划以问题为单位设检查点：约10–15分钟应给出 GO、具体 blocker 或需要主代理裁决的方案；不是到点强行接受，也不是以文件数量截断公共行为。没有结论时先交接，由主代理选择下一项待证明问题，不无限切换候选。
+- 优先复用已验证的依赖事实、官方 consumer 编译 probe 与失败 fixture。依赖扫描必须区分真实类型/调用、字符串/注释、常量与生命周期 owner；import/递归闭包数字不能单独作为阻断依据。不每批重造扫描器。
+- 实现期间主代理可准备下一项明确任务或审查固定 commit；同时只运行一个实现者，不复制完整候选。实现者遇到新的语义 blocker 可以报告并建议修订，不要求它自行重新选择全局路线。
+- 保留现有测试、独立风险审查及最终产物门禁。提速优先减少重复规划、语义返工和文档手工同步；门禁工具的合并/自动化另作明确任务，不能未经验证直接删减。
+
 ## 单 DeepSeek 实现与风险审查
 
-按用户调整，后续每个开发任务默认只派一个 **DeepSeek V4.1 Flash** 从 clean commit 在隔离 worktree 中实现；thinking 只允许 `low` 或 `high`，禁止使用 `max`。不再使用 GLM 5.3，也不复制两个 DeepSeek 候选。Task 041 已发生的双 GLM 候选仅作为调整前历史事实保留；其最终 mandatory review 由一个 DeepSeek 补做。主代理仍必须检查真实 diff、补足遗漏并独立运行最终门禁，不能只采信代理总结。按用户要求，所有 DeepSeek 子代理启动后必须同时启用 **270 秒**间隔的 supervision watch；watch 只用于观察方向、范围与验收漂移，仍须遵守“单次可恢复错误不干预”的监督边界。
+按用户调整，后续每个开发任务默认只派一个 **DeepSeek V4.1 Flash**（精确模型 ID `commandcode/deepseek/deepseek-v4.1-flash`）从 clean commit 在隔离 worktree 中实现；thinking 默认 **`low`**，只允许 `low` 或 `high`，禁止使用 `max`。`high` 必须极慎重：仅用于已明确的困难语义问题，启动前说明必要性与耗时风险，不把开放选题到完整交付都交给 high。不再使用 GLM 5.3，也不复制两个 DeepSeek 候选。Task 041 已发生的双 GLM 候选仅作为调整前历史事实保留；其最终 mandatory review 由一个 DeepSeek 补做。主代理仍必须检查真实 diff、补足遗漏并独立运行最终门禁，不能只采信代理总结。按用户要求，所有 DeepSeek 子代理启动后必须同时启用 **270 秒**间隔的 supervision watch；watch 只用于观察方向、范围与验收漂移，仍须遵守“单次可恢复错误不干预”的监督边界。
 
 默认不再使用 SOL **实现**，除非用户再次明确要求；研究、scouting、架构比较与 implementation plan 仍可按任务难度使用 SOL 或 Astra。真实发生额外模型比较或独立审查时才在 `docs/MODEL_IMPLEMENTATION_COMPARISONS.md` 记录相应证据。
 
