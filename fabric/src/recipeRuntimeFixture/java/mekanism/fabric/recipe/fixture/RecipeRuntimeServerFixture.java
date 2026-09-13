@@ -99,6 +99,27 @@ public final class RecipeRuntimeServerFixture implements ModInitializer {
         require(binding != null, "server recipe context must be bound at start");
         require(binding.epoch() == 1, "initial server recipe epoch must be one");
         require(binding.manager() == current.getRecipeManager(), "bound manager must be the actual server recipe manager");
+        //The binding must carry the server's own registry access, which is what synthetic vanilla smelting needs instead of a process-global fallback.
+        require(binding.registryAccess() == current.registryAccess(), "bound registry access must be the server's own registry access");
+
+        //Canonical owner proof: the API resolves the common owner's single instance, and the owner is a nominal vanilla RecipeType.
+        require(mekanism.api.recipes.MekanismRecipeTypes.TYPE_CRUSHING.value()
+              == mekanism.common.recipe.MekanismRecipeType.CRUSHING.getRecipeType(),
+              "the API crushing holder must be the common owner's canonical instance");
+        require(BuiltInRegistries.RECIPE_TYPE.get(ResourceLocation.fromNamespaceAndPath("mekanism", "smelting"))
+              == mekanism.common.recipe.MekanismRecipeType.SMELTING.getRecipeType(),
+              "the registered smelting type must be the canonical owner instance");
+        //The owner's own recipe source feeds its input cache, including synthetic vanilla smelting resolved through the published access.
+        List<RecipeHolder<mekanism.api.recipes.ItemStackToItemStackRecipe>> smelting =
+              mekanism.common.recipe.MekanismRecipeType.SMELTING.getRecipeType().getRecipes(current.getRecipeManager(), current.registryAccess());
+        long synthetic = smelting.stream().filter(holder -> holder.id().getPath().startsWith("/mekanism_generated/")).count();
+        require(synthetic > 0, "a real server must expose synthetic vanilla smelting recipes through the owner's own source");
+        require(smelting.stream().allMatch(holder -> holder.value().getType()
+              == mekanism.common.recipe.MekanismRecipeType.SMELTING.getRecipeType()),
+              "every synthetic smelting recipe must report the canonical smelting type");
+        require(mekanism.common.recipe.MekanismRecipeType.SMELTING.getInputCache()
+              .containsInput(current.overworld(), new ItemStack(Items.RAW_IRON)),
+              "the smelting input cache must be fed by the owner source including synthetic smelting");
 
         RecipeManager manager = current.getRecipeManager();
         List<RecipeHolder<FixtureRecipe>> recipes = manager.getAllRecipesFor(TYPE);
