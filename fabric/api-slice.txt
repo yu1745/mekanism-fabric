@@ -223,3 +223,4 @@ mekanism/api/security/SecurityMode.java
 mekanism/api/IAlloyInteraction.java
 mekanism/api/IConfigurable.java
 mekanism/api/MekanismServerLifecycle.java
+mekanism/api/IFrequency.java
