@@ -343,6 +343,8 @@ expected_registration_impl = {
     "mekanism/common/registration/impl/ChemicalDeferredRegister.class",
     "mekanism/common/registration/impl/DeferredChemical.class",
     "mekanism/common/registration/impl/SlurryRegistryObject.class",
+    "mekanism/common/registration/impl/RecipeTypeDeferredRegister.class",
+    "mekanism/common/registration/impl/RecipeTypeRegistryObject.class",
 }
 registration_impl_prefix = "mekanism/common/registration/impl/"
 actual_registration_impl = {
@@ -1093,7 +1095,7 @@ expected_api_recipes = {
     "mekanism/api/recipes/basic/IBasicItemStackOutput.class",
     "mekanism/api/recipes/MekanismRecipeSerializers.class",
     "mekanism/api/recipes/MekanismRecipeTypes.class",
-    "mekanism/api/recipes/MekanismRecipeTypes$1.class",
+    "mekanism/api/recipes/IRecipeTypeRegistry.class",
     "mekanism/api/recipes/ChemicalChemicalToChemicalRecipe.class",
     "mekanism/api/recipes/ChemicalCrystallizerRecipe.class",
     "mekanism/api/recipes/ChemicalDissolutionRecipe.class",
@@ -1175,6 +1177,8 @@ expected_common_recipes = {
     "mekanism/common/recipe/lookup/cache/RecipeCacheContext.class",
     "mekanism/common/recipe/lookup/cache/RecipeCacheContext$Binding.class",
     "mekanism/common/recipe/lookup/cache/RecipeCacheSource.class",
+    "mekanism/common/recipe/MekanismRecipeType.class",
+    "mekanism/common/recipe/IMekanismRecipeTypeProvider.class",
     "mekanism/common/recipe/lookup/cache/AbstractInputRecipeCache.class",
     "mekanism/common/recipe/lookup/cache/AbstractInputRecipeCache$CacheState.class",
     "mekanism/common/recipe/lookup/cache/SingleInputRecipeCache.class",
@@ -1218,12 +1222,14 @@ expected_common_recipes = {
 }
 expected_platform_recipes = {
     "mekanism/fabric/recipe/FabricIngredientCreatorProvider.class",
+    "mekanism/fabric/recipe/FabricRecipeTypeRegistry.class",
     "mekanism/fabric/recipe/FabricRecipeCacheLifecycle.class",
     "mekanism/fabric/recipe/FabricRecipeCacheClientLifecycle.class",
     "mekanism/fabric/recipe/FabricRecipeRegistration.class",
     "mekanism/fabric/mixin/recipe/ClientPacketListenerMixin.class",
 }
 recipe_service = b"mekanism.fabric.recipe.FabricIngredientCreatorProvider\n"
+recipe_type_service = b"mekanism.fabric.recipe.FabricRecipeTypeRegistry\n"
 with zipfile.ZipFile(sys.argv[1]) as artifact:
     entries = artifact.namelist()
     actual_api_recipes = {e for e in entries if e.endswith(".class") and (
@@ -1232,6 +1238,8 @@ with zipfile.ZipFile(sys.argv[1]) as artifact:
           e.startswith("mekanism/common/recipe/ingredients/")
           or e.startswith("mekanism/common/recipe/lookup/")
           or e.startswith("mekanism/common/recipe/serializer/")
+          or e.startswith("mekanism/common/recipe/MekanismRecipeType")
+          or e == "mekanism/common/recipe/IMekanismRecipeTypeProvider.class"
           or e == "mekanism/common/recipe/WrappedShapedRecipe.class"
           or e == "mekanism/common/registries/MekanismChemicalIngredientTypes.class")}
     actual_platform_recipes = {e for e in entries if e.endswith(".class") and (
@@ -1261,6 +1269,9 @@ with zipfile.ZipFile(sys.argv[1]) as artifact:
     if entries.count("META-INF/services/mekanism.api.recipes.ingredients.creator.IIngredientCreatorProvider") != 1 \
           or artifact.read("META-INF/services/mekanism.api.recipes.ingredients.creator.IIngredientCreatorProvider") != recipe_service:
         raise SystemExit("wrong or duplicate ingredient creator service descriptor")
+    if entries.count("META-INF/services/mekanism.api.recipes.IRecipeTypeRegistry") != 1 \
+          or artifact.read("META-INF/services/mekanism.api.recipes.IRecipeTypeRegistry") != recipe_type_service:
+        raise SystemExit("wrong or duplicate recipe type registry service descriptor")
     mixin_config = json.loads(artifact.read("mekanism.client.mixins.json"))
     if mixin_config.get("package") != "mekanism.fabric.mixin.recipe" or mixin_config.get("client") != ["ClientPacketListenerMixin"] \
           or "mixins" in mixin_config or "server" in mixin_config or mixin_config.get("injectors", {}).get("defaultRequire") != 1:
@@ -1272,10 +1283,7 @@ with zipfile.ZipFile(sys.argv[1]) as artifact:
     if recipe_data:
         raise SystemExit(f"production recipe data leaked into the artifact: {recipe_data!r}")
     forbidden_042b = sorted(e for e in entries if e.endswith(".class") and (
-          e.startswith("mekanism/common/recipe/MekanismRecipeType")
-          or e.startswith("mekanism/common/recipe/IMekanismRecipeTypeProvider")
-          or e.startswith("mekanism/common/registration/impl/RecipeTypeRegistryObject")
-          or e.startswith("mekanism/common/registries/MekanismRecipeSerializersInternal")
+          e.startswith("mekanism/common/registries/MekanismRecipeSerializersInternal")
           or e.startswith("mekanism/common/recipe/upgrade/")
           or e.startswith("mekanism/common/recipe/bin/")
           or e == "mekanism/common/recipe/ClearConfigurationRecipe.class"
