@@ -31,7 +31,7 @@
 
 `upstream/neoforge-minecraft/` 是匹配本项目 NeoForge 基线的 patched-source JAR 直接解压结果，只保留 5,363 个 `com/mojang/**/*.java` 与 `net/minecraft/**/*.java`；本地来源、过滤条件和版本同时记录在该目录的 `SOURCE.txt`。它用于核对 patch 后 Minecraft 表面，禁止作为编译依赖，也不要复制或修改 Minecraft 源码。
 
-仅在任务相关的具体子目录内使用 `rg`/`fd` 搜索；禁止扫描 `~`、`/`、`~/server` 或宽泛父目录。所有参考目录默认只读，不要在其中改代码、生成构建产物或提交。需要更新参考版本时必须显式执行；同时更新本表身份，patched Minecraft 还须重建 `SOURCE.txt` 并核对 Java 文件数量。
+仅在任务相关的具体子目录内使用 `rg`/`fd` 搜索；**本项目禁止使用 `zvec-grep`、`zvec_grep_search` 或建立/更新其索引**。禁止扫描 `~`、`/`、`~/server` 或宽泛父目录。所有参考目录默认只读，不要在其中改代码、生成构建产物或提交。需要更新参考版本时必须显式执行；同时更新本表身份，patched Minecraft 还须重建 `SOURCE.txt` 并核对 Java 文件数量。
 
 ## 平台 API 映射规则
 
