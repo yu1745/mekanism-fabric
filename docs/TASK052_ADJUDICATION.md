@@ -30,6 +30,8 @@ Choose real bounding content and a **permanent registry composition**, not regis
 
 Preserve full BlockBounding gameplay: shape/interaction/main-position redirection, destruction/drops/explosion behavior, neighbor power/comparator, fluid state, master synchronization, provider forwarding, upgrades and naming. TileEntityBoundingBlock's IUpgradeTile return type binds the real TileComponentUpgrade; do not stub it to make this a separate tiny batch. This remains part of the connected machine owner closure.
 
+Clarification confirmed to the implementer at checkpoint `a050e8ab`: the two original catalog files may remain excluded from the slice while their aliases/shared register references are edited now. Only the admitted bounding module and its real content/behavior owners need compile for this composition step; this is not a demand to compile the entire catalogs just to establish the aliases. No standalone API/bounding completion claim substitutes for the Task052 connected owner target.
+
 If a stable shared registry composition cannot retain actual existing holder/registry types, return the precise conflict rather than inventing a new registry facade. Complete original dependent domain classes are allowed irrespective of file count.
 
 ## Q3 — Real optional computer integration
