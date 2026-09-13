@@ -2,13 +2,17 @@ package mekanism.common.capabilities.proxy;
 
 import mekanism.api.Action;
 import mekanism.api.annotations.NothingNullByDefault;
+import mekanism.api.fluid.FluidStack;
 import mekanism.api.fluid.IExtendedFluidHandler;
 import mekanism.api.fluid.ISidedFluidHandler;
 import mekanism.common.capabilities.holder.IHolder;
 import net.minecraft.core.Direction;
-import net.neoforged.neoforge.fluids.FluidStack;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * Fabric port: implements the admitted platform-neutral {@link IExtendedFluidHandler} surface (the former NeoForge {@code IFluidHandler} parent is dropped with
+ * its {@code fill}/{@code drain} bridges). All unsided methods keep delegating to the wrapped sided handler using the proxy's bound side and read-only gating.
+ */
 @NothingNullByDefault
 public class ProxyFluidHandler extends ProxyHandler implements IExtendedFluidHandler {
 

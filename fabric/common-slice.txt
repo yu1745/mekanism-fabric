@@ -25,6 +25,17 @@ mekanism/common/capabilities/laser/item/LaserDissipationHandler.java
 mekanism/common/capabilities/proxy/ProxyHandler.java
 mekanism/common/capabilities/proxy/ProxyHeatHandler.java
 mekanism/common/capabilities/proxy/ProxyStrictEnergyHandler.java
+mekanism/common/capabilities/proxy/ProxyItemHandler.java
+mekanism/common/capabilities/proxy/ProxyFluidHandler.java
+mekanism/common/capabilities/resolver/ICapabilityResolver.java
+mekanism/common/capabilities/resolver/BasicSidedCapabilityResolver.java
+mekanism/common/capabilities/resolver/manager/ICapabilityHandlerManager.java
+mekanism/common/capabilities/resolver/manager/CapabilityHandlerManager.java
+mekanism/common/capabilities/resolver/manager/ItemHandlerManager.java
+mekanism/common/capabilities/resolver/manager/FluidHandlerManager.java
+mekanism/common/capabilities/resolver/manager/EnergyHandlerManager.java
+mekanism/common/capabilities/resolver/manager/ChemicalHandlerManager.java
+mekanism/common/capabilities/resolver/manager/HeatHandlerManager.java
 mekanism/common/config/BaseMekanismConfig.java
 mekanism/common/config/IConfigTranslation.java
 mekanism/common/config/IMekanismConfig.java

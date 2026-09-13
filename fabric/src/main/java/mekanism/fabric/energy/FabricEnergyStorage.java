@@ -10,6 +10,7 @@ import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
 import net.fabricmc.fabric.api.transfer.v1.transaction.TransactionContext;
 import net.fabricmc.fabric.api.transfer.v1.transaction.base.SnapshotParticipant;
 import net.minecraft.core.Direction;
+import org.jetbrains.annotations.Nullable;
 import team.reborn.energy.api.EnergyStorage;
 
 /**
@@ -22,6 +23,11 @@ import team.reborn.energy.api.EnergyStorage;
  * If any index cannot be restored exactly, atomicity is no longer possible and transaction close reports the
  * failure. Listeners, saves, or synchronization triggered immediately by execute/restore cannot be made
  * transactional by this compatibility layer.
+ *
+ * <p>Permanent lifetime revocation: {@link #invalidate()} makes this view fail closed forever. Retained references
+ * can no longer transfer or read their old owner (queries and transfers report defaults and zero), and the reverse
+ * stableHandler unwrap route stops returning the internal handler. Transaction rollback captured before
+ * invalidation still restores the pre-invalidation energy through this view and is never blocked by the guard.
  */
 public final class FabricEnergyStorage extends SnapshotParticipant<long[]> implements EnergyStorage {
 
@@ -31,6 +37,7 @@ public final class FabricEnergyStorage extends SnapshotParticipant<long[]> imple
     private final BooleanSupplier insertionAllowed;
     private final BooleanSupplier extractionAllowed;
     private final int containerCount;
+    private volatile boolean invalidated;
 
     FabricEnergyStorage(IStrictEnergyHandler handler, Direction exposureSide, IEnergyConversion conversion) {
         this(handler, exposureSide, conversion, () -> true, () -> true);
@@ -52,9 +59,22 @@ public final class FabricEnergyStorage extends SnapshotParticipant<long[]> imple
         }
     }
 
+    /**
+     * Permanently invalidates this side view. Retained references stay safe, stable objects but no longer expose
+     * contents or permit transfer, and no longer unwrap to their old owner's internal handler. Snapshots captured
+     * before invalidation still restore on transaction rollback.
+     */
+    public void invalidate() {
+        invalidated = true;
+    }
+
+    boolean isInvalidated() {
+        return invalidated;
+    }
+
     @Override
     public boolean supportsInsertion() {
-        if (!hasStableContainerCount() || !FabricEnergyConversions.isUsable(conversion)) {
+        if (invalidated || !hasStableContainerCount() || !FabricEnergyConversions.isUsable(conversion)) {
             return false;
         }
         boolean allowed = insertionAllowed.getAsBoolean();
@@ -63,9 +83,12 @@ public final class FabricEnergyStorage extends SnapshotParticipant<long[]> imple
 
     @Override
     public long insert(long maxAmount, TransactionContext transaction) {
-        checkStableContainerCount();
         StoragePreconditions.notNegative(maxAmount);
         Objects.requireNonNull(transaction, "transaction");
+        if (invalidated) {
+            return 0;
+        }
+        checkStableContainerCount();
         if (maxAmount == 0 || !FabricEnergyConversions.isUsable(conversion) || !insertionAllowed.getAsBoolean()) {
             return 0;
         }
@@ -104,7 +127,7 @@ public final class FabricEnergyStorage extends SnapshotParticipant<long[]> imple
 
     @Override
     public boolean supportsExtraction() {
-        if (!hasStableContainerCount() || !FabricEnergyConversions.isUsable(conversion)) {
+        if (invalidated || !hasStableContainerCount() || !FabricEnergyConversions.isUsable(conversion)) {
             return false;
         }
         boolean allowed = extractionAllowed.getAsBoolean();
@@ -113,9 +136,12 @@ public final class FabricEnergyStorage extends SnapshotParticipant<long[]> imple
 
     @Override
     public long extract(long maxAmount, TransactionContext transaction) {
-        checkStableContainerCount();
         StoragePreconditions.notNegative(maxAmount);
         Objects.requireNonNull(transaction, "transaction");
+        if (invalidated) {
+            return 0;
+        }
+        checkStableContainerCount();
         if (maxAmount == 0 || !FabricEnergyConversions.isUsable(conversion) || !extractionAllowed.getAsBoolean()) {
             return 0;
         }
@@ -150,7 +176,7 @@ public final class FabricEnergyStorage extends SnapshotParticipant<long[]> imple
 
     @Override
     public long getAmount() {
-        if (!hasStableContainerCount() || !FabricEnergyConversions.isUsable(conversion)) {
+        if (invalidated || !hasStableContainerCount() || !FabricEnergyConversions.isUsable(conversion)) {
             return 0;
         }
         long joules = 0;
@@ -178,7 +204,7 @@ public final class FabricEnergyStorage extends SnapshotParticipant<long[]> imple
 
     @Override
     public long getCapacity() {
-        if (!hasStableContainerCount() || !FabricEnergyConversions.isUsable(conversion)) {
+        if (invalidated || !hasStableContainerCount() || !FabricEnergyConversions.isUsable(conversion)) {
             return 0;
         }
         long joules = 0;
@@ -250,7 +276,12 @@ public final class FabricEnergyStorage extends SnapshotParticipant<long[]> imple
         return exposureSide == side;
     }
 
+    @Nullable
     IStrictEnergyHandler stableHandler() {
+        if (invalidated) {
+            //A retained view must never hand out its old owner's live internal handler after invalidation
+            return null;
+        }
         checkStableContainerCount();
         return handler;
     }

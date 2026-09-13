@@ -45,6 +45,11 @@ public final class FabricEnergyLookup {
             // when another conversion would otherwise cause an additional adapter layer.
             return null;
         }
+        if (storage instanceof FabricEnergyStorage invalidatedStorage && invalidatedStorage.isInvalidated()) {
+            // Never hand out any view over a storage whose owner lifetime was revoked, even through a fresh
+            // conversion wrapper; rollback of previously captured snapshots still restores inside the storage.
+            return null;
+        }
         if (!FabricEnergyConversions.isUsable(conversion)) {
             return null;
         }

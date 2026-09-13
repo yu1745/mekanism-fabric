@@ -6,12 +6,12 @@ import java.util.function.BiFunction;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.common.capabilities.holder.IHolder;
 import mekanism.common.capabilities.resolver.BasicSidedCapabilityResolver;
+import net.fabricmc.fabric.api.lookup.v1.block.BlockApiLookup;
 import net.minecraft.core.Direction;
-import net.neoforged.neoforge.capabilities.BlockCapability;
 import org.jetbrains.annotations.Nullable;
 
 @NothingNullByDefault
-public class CapabilityHandlerManager<HOLDER extends IHolder, CONTAINER, HANDLER, SIDED_HANDLER extends HANDLER> extends BasicSidedCapabilityResolver<HANDLER, SIDED_HANDLER>
+public class CapabilityHandlerManager<HOLDER extends IHolder, CONTAINER, HANDLER, SIDED_HANDLER> extends BasicSidedCapabilityResolver<HANDLER, SIDED_HANDLER>
       implements ICapabilityHandlerManager<CONTAINER> {
 
     private final BiFunction<HOLDER, Direction, List<CONTAINER>> containerGetter;
@@ -19,7 +19,7 @@ public class CapabilityHandlerManager<HOLDER extends IHolder, CONTAINER, HANDLER
     @Nullable
     protected final HOLDER holder;
 
-    protected CapabilityHandlerManager(@Nullable HOLDER holder, SIDED_HANDLER baseHandler, BlockCapability<HANDLER, @Nullable Direction> supportedCapability,
+    protected CapabilityHandlerManager(@Nullable HOLDER holder, SIDED_HANDLER baseHandler, BlockApiLookup<HANDLER, @Nullable Direction> supportedCapability,
           ProxyCreator<HANDLER, SIDED_HANDLER> proxyCreator, BiFunction<HOLDER, Direction, List<CONTAINER>> containerGetter) {
         super(baseHandler, supportedCapability, proxyCreator, holder != null);
         this.holder = holder;
@@ -48,7 +48,7 @@ public class CapabilityHandlerManager<HOLDER extends IHolder, CONTAINER, HANDLER
      */
     @Nullable
     @Override
-    public <T> T resolve(BlockCapability<T, @Nullable Direction> capability, @Nullable Direction side) {
+    public <T> T resolve(BlockApiLookup<T, @Nullable Direction> capability, @Nullable Direction side) {
         if (getContainers(side).isEmpty()) {
             //If we don't have any containers accessible from that side, don't return a handler
             return null;
