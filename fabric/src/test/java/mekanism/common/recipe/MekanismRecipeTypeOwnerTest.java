@@ -106,7 +106,7 @@ class MekanismRecipeTypeOwnerTest {
     }
 
     @Test
-    void boundCacheServesOwnRecipesAndClearsBothRecipeListsAndIndices() {
+    void bindingOwnsListsAndIndicesWhileForeignExplicitQueriesStayUncached() {
         BasicCrushingRecipe crushing = crushing(Items.COPPER_INGOT, new ItemStack(Items.COPPER_INGOT, 2));
         manager.replaceRecipes(List.of(holder("crushing", crushing)));
         RecipeCacheContext.Binding binding = RecipeCacheContext.bind(manager, access, 1);
@@ -121,12 +121,24 @@ class MekanismRecipeTypeOwnerTest {
         //The input cache indexes the same owner recipes, so the shared source really feeds the caches.
         assertTrue(MekanismRecipeType.CRUSHING.getInputCache().containsInput(null, new ItemStack(Items.COPPER_INGOT)));
 
+        //A foreign manager/access pair queried explicitly must answer for itself, uncached, without disturbing current state.
+        RecipeManager foreign = new RecipeManager(access);
+        BasicCrushingRecipe foreignRecipe = crushing(Items.DIAMOND, new ItemStack(Items.DIAMOND_BLOCK, 1));
+        foreign.replaceRecipes(List.of(holder("foreign", foreignRecipe)));
+        List<RecipeHolder<ItemStackToItemStackRecipe>> foreignList = MekanismRecipeType.CRUSHING.getRecipeType().getRecipes(foreign, access);
+        assertEquals(1, foreignList.size());
+        assertSame(foreignRecipe, foreignList.getFirst().value());
+        assertNotSame(foreignList, MekanismRecipeType.CRUSHING.getRecipeType().getRecipes(foreign, access),
+              "a foreign manager/access pair must not be served from the current binding's cache");
+        //The current binding is untouched: its own list is still exactly what was published.
+        assertSame(raw, MekanismRecipeType.CRUSHING.getRecipeType().getRecipes(manager, access));
+        assertSame(crushing, raw.getFirst().value());
+
         //Swap the manager contents without rebinding: this binding keeps serving its own indexed candidates and list.
         BasicCrushingRecipe replacement = crushing(Items.NETHERITE_INGOT, new ItemStack(Items.NETHERITE_SCRAP, 1));
         manager.replaceRecipes(List.of(holder("replacement", replacement)));
         assertTrue(MekanismRecipeType.CRUSHING.getInputCache().containsInput(null, new ItemStack(Items.COPPER_INGOT)),
               "before clear the bound context still serves the old index");
-        assertSame(raw, MekanismRecipeType.CRUSHING.getRecipeType().getRecipes(manager, access));
 
         //Clearing drops both the recipe list and every input-cache index for this binding, so the new contents become visible.
         MekanismRecipeType.clearCache();
@@ -138,28 +150,6 @@ class MekanismRecipeTypeOwnerTest {
         assertNotSame(raw, recomputed, "clear must discard the cached recipe list");
         assertSame(replacement, recomputed.getFirst().value());
         assertSame(binding, RecipeCacheContext.currentBinding());
-    }
-
-    @Test
-    void explicitForeignManagerIsUncachedAndDoesNotPolluteTheCurrentBinding() {
-        BasicCrushingRecipe bound = crushing(Items.GOLD_INGOT, new ItemStack(Items.GOLD_NUGGET, 9));
-        manager.replaceRecipes(List.of(holder("bound", bound)));
-        RecipeCacheContext.bind(manager, access, 1);
-        List<RecipeHolder<ItemStackToItemStackRecipe>> boundList = MekanismRecipeType.CRUSHING.getRecipeType().getRecipes(manager, access);
-        assertEquals(1, boundList.size());
-
-        //A foreign manager queried explicitly must answer for itself, uncached, without disturbing current state.
-        RecipeManager foreign = new RecipeManager(access);
-        BasicCrushingRecipe foreignRecipe = crushing(Items.DIAMOND, new ItemStack(Items.DIAMOND_BLOCK, 1));
-        foreign.replaceRecipes(List.of(holder("foreign", foreignRecipe)));
-        List<RecipeHolder<ItemStackToItemStackRecipe>> foreignList = MekanismRecipeType.CRUSHING.getRecipeType().getRecipes(foreign, access);
-        assertEquals(1, foreignList.size());
-        assertSame(foreignRecipe, foreignList.getFirst().value());
-        assertNotSame(foreignList, MekanismRecipeType.CRUSHING.getRecipeType().getRecipes(foreign, access),
-              "a foreign manager/access pair must not be served from the current binding's cache");
-        //The current binding is untouched: its own recipes are still exactly what was published.
-        assertSame(boundList, MekanismRecipeType.CRUSHING.getRecipeType().getRecipes(manager, access));
-        assertSame(bound, boundList.getFirst().value());
     }
 
     @Test

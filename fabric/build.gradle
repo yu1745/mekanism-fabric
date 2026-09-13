@@ -733,6 +733,8 @@ def fabricItemStorageTestSource = layout.projectDirectory.file('src/fabricTransf
 def recipeOutputHandlingTestSource = layout.projectDirectory.file('src/test/java/mekanism/api/recipes/RecipeOutputHandlingTest.java')
 def recipeSerializerContractTestSource = layout.projectDirectory.file('src/test/java/mekanism/api/recipes/RecipeSerializerContractTest.java')
 def recipeRegistryKnotTestSource = layout.projectDirectory.file('src/fabricRecipeRegistryTest/java/mekanism/fabric/recipe/FabricRecipeRegistrationIntegrationTest.java')
+def apiFirstInitTestSource = layout.projectDirectory.file('src/fabricRecipeRegistryTest/java/mekanism/recipe/init/ApiFirstInitializationTest.java')
+def commonFirstInitTestSource = layout.projectDirectory.file('src/fabricRecipeRegistryTest/java/mekanism/recipe/init/CommonFirstInitializationTest.java')
 def recipeTypeOwnerTestSource = layout.projectDirectory.file('src/test/java/mekanism/common/recipe/MekanismRecipeTypeOwnerTest.java')
 def ordinaryTestRuntimeFiles = files(sourceSets.test.runtimeClasspath)
 def transferTestRuntimeFiles = files(sourceSets.fabricTransferTest.runtimeClasspath)
@@ -751,7 +753,8 @@ def verifyFabricTestContract = tasks.register('verifyFabricTestContract') {
           chemicalDomainTestSource, chemicalServiceTestSource, chemicalSnapshotTestSource, chemicalTransferTestSource,
           ingredientClosureTestSource, inputHelperExecutionTestSource, genericInputCacheTestSource, rotaryInputCacheTestSource,
           distributionPropertySource, windowConfigTestSource, windowDomainTestSource, concreteSlotTestSource, fabricItemStorageTestSource,
-          recipeOutputHandlingTestSource, recipeSerializerContractTestSource, recipeRegistryKnotTestSource, recipeTypeOwnerTestSource)
+          recipeOutputHandlingTestSource, recipeSerializerContractTestSource, recipeRegistryKnotTestSource, recipeTypeOwnerTestSource,
+          apiFirstInitTestSource, commonFirstInitTestSource)
     doLast {
         def loaderJunitFiles = { runtimeFiles ->
             runtimeFiles.files.findAll { it.name.startsWith('fabric-loader-junit-') && it.name.endsWith('.jar') }
@@ -774,9 +777,11 @@ def verifyFabricTestContract = tasks.register('verifyFabricTestContract') {
         if (dataMapSources != expectedDataMapSources) {
             throw new GradleException("fabricDataMapTest must contain exactly its two fixed integration sources: ${dataMapSources}")
         }
-        def recipeRegistrySources = recipeRegistryKnotTestSources.files
-        if (recipeRegistrySources.size() != 1 || recipeRegistrySources.first().canonicalFile != recipeRegistryKnotTestSource.asFile.canonicalFile) {
-            throw new GradleException("fabricRecipeRegistryTest must contain exactly its one fixed integration source: ${recipeRegistrySources}")
+        def recipeRegistrySources = recipeRegistryKnotTestSources.files.collect { it.canonicalFile }.toSet()
+        def expectedRecipeRegistrySources = [recipeRegistryKnotTestSource.asFile.canonicalFile, apiFirstInitTestSource.asFile.canonicalFile,
+              commonFirstInitTestSource.asFile.canonicalFile] as Set
+        if (recipeRegistrySources != expectedRecipeRegistrySources) {
+            throw new GradleException("fabricRecipeRegistryTest must contain exactly its three fixed sources: ${recipeRegistrySources}")
         }
         def annotationCount = { regularFile ->
             (regularFile.asFile.text =~ /(?m)^\s*@Test\s*$/).count
@@ -791,7 +796,8 @@ def verifyFabricTestContract = tasks.register('verifyFabricTestContract') {
               || annotationCount(windowDomainTestSource) != 6 || annotationCount(concreteSlotTestSource) != 6
               || annotationCount(fabricItemStorageTestSource) != 5 || annotationCount(recipeOutputHandlingTestSource) != 6
               || annotationCount(recipeSerializerContractTestSource) != 6 || annotationCount(recipeRegistryKnotTestSource) != 5
-              || annotationCount(recipeTypeOwnerTestSource) != 7) {
+              || annotationCount(recipeTypeOwnerTestSource) != 6
+              || annotationCount(apiFirstInitTestSource) != 1 || annotationCount(commonFirstInitTestSource) != 1) {
             throw new GradleException('Registry/data-map/window/slot/recipe fixed test method counts changed')
         }
         def propertyText = distributionPropertySource.asFile.text
@@ -815,13 +821,13 @@ def verifyFabricTestContract = tasks.register('verifyFabricTestContract') {
             }
             [reports.length, tests]
         }
-        def ordinary = readTotals(ordinaryXmlResults, 'ordinary', 79, 396)
+        def ordinary = readTotals(ordinaryXmlResults, 'ordinary', 79, 395)
         def transfer = readTotals(transferXmlResults, 'transfer', 5, 27)
         def registry = readTotals(registryXmlResults, 'root-registry', 1, 2)
         def dataMap = readTotals(dataMapXmlResults, 'data-map', 2, 4)
-        def recipeRegistry = readTotals(recipeRegistryXmlResults, 'recipe-registry', 1, 5)
-        if (ordinary[0] + transfer[0] + registry[0] + dataMap[0] + recipeRegistry[0] != 88
-              || ordinary[1] + transfer[1] + registry[1] + dataMap[1] + recipeRegistry[1] != 434) {
+        def recipeRegistry = readTotals(recipeRegistryXmlResults, 'recipe-registry', 3, 7)
+        if (ordinary[0] + transfer[0] + registry[0] + dataMap[0] + recipeRegistry[0] != 90
+              || ordinary[1] + transfer[1] + registry[1] + dataMap[1] + recipeRegistry[1] != 435) {
             throw new GradleException('Unexpected aggregate Fabric test totals')
         }
     }
