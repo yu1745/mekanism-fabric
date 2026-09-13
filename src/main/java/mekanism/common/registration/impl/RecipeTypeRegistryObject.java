@@ -48,7 +48,8 @@ public class RecipeTypeRegistryObject<VANILLA_INPUT extends RecipeInput, RECIPE 
     @Override
     public MekanismRecipeType<VANILLA_INPUT, RECIPE, INPUT_CACHE> value() {
         if (super.isBound()) {
-            MekanismRecipeType<VANILLA_INPUT, RECIPE, INPUT_CACHE> bound = super.value();
+            //The parent's value() dispatches back through get(); call its concrete getter to avoid virtual recursion.
+            MekanismRecipeType<VANILLA_INPUT, RECIPE, INPUT_CACHE> bound = super.get();
             MekanismRecipeType<VANILLA_INPUT, RECIPE, INPUT_CACHE> current = prebuilt;
             if (current != null && bound != current) {
                 throw new IllegalStateException("Canonical recipe type " + getKey().location()
@@ -61,7 +62,7 @@ public class RecipeTypeRegistryObject<VANILLA_INPUT extends RecipeInput, RECIPE 
             return current;
         }
         //Note: No prebuilt value and no bound registry entry: fail honestly through the parent contract instead of inventing an instance.
-        return super.value();
+        return super.get();
     }
 
     @Override

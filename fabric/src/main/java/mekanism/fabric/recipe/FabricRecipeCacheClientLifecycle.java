@@ -23,7 +23,6 @@ public final class FabricRecipeCacheClientLifecycle {
 
     private static boolean initialized;
     private static RecipeManager manager;
-    private static RegistryAccess registryAccess;
     private static long epoch;
     private static boolean stopped;
 
@@ -68,7 +67,6 @@ public final class FabricRecipeCacheClientLifecycle {
             epoch++;
         }
         //Note: The access is always taken from this update's own connection, so a stale access can never outlive its manager
-        FabricRecipeCacheClientLifecycle.registryAccess = registryAccess;
         RecipeCacheContext.bind(manager, registryAccess, epoch);
         LOGGER.info("MEKANISM_FABRIC_RECIPE_CACHE_CLIENT_PROOF phase=update epoch={}", epoch);
     }
@@ -76,7 +74,6 @@ public final class FabricRecipeCacheClientLifecycle {
     /** Clears the client binding; repeat-safe. */
     public static synchronized void clear(String reason) {
         manager = null;
-        registryAccess = null;
         epoch = 0;
         RecipeCacheContext.clear();
         LOGGER.info("MEKANISM_FABRIC_RECIPE_CACHE_CLIENT_PROOF phase=clear reason={}", reason);

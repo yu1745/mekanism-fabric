@@ -82,6 +82,17 @@ class MekanismRecipeTypeOwnerTest {
         assertSame(selfTyped, crushing.getType(), "a recipe's getType() must be the canonical recipe type");
         assertSame(MekanismRecipeType.CRUSHING.getRecipeType(), crushing.getType());
 
+        //Compile and execute the official factory-taking registration signature without writing another registry entry.
+        var declarations = new mekanism.common.registration.impl.RecipeTypeDeferredRegister("mekanism");
+        var factoryCalls = new java.util.concurrent.atomic.AtomicInteger();
+        var declared = declarations.registerMek("crushing", id -> {
+            assertEquals(MekanismRecipeTypes.NAME_CRUSHING, id);
+            factoryCalls.incrementAndGet();
+            return MekanismRecipeType.CRUSHING.getRecipeType();
+        });
+        assertSame(selfTyped, declared.getRecipeType());
+        assertEquals(1, factoryCalls.get());
+
         //Provider surface: helper methods all route through the same owner.
         assertSame(crushing, MekanismRecipeType.CRUSHING.findFirst(null, recipe -> true));
         assertTrue(MekanismRecipeType.CRUSHING.contains(null, recipe -> recipe == crushing));
@@ -150,6 +161,17 @@ class MekanismRecipeTypeOwnerTest {
         assertNotSame(raw, recomputed, "clear must discard the cached recipe list");
         assertSame(replacement, recomputed.getFirst().value());
         assertSame(binding, RecipeCacheContext.currentBinding());
+        assertThrows(UnsupportedOperationException.class, () -> recomputed.add(recomputed.getFirst()));
+
+        //A new publication discards both owner lists and indices, and even an empty result belongs to that publication.
+        manager.replaceRecipes(List.of());
+        RecipeCacheContext.bind(manager, access, 2);
+        assertTrue(MekanismRecipeType.CRUSHING.getRecipes().isEmpty());
+        assertFalse(MekanismRecipeType.CRUSHING.getInputCache().containsInput(null, new ItemStack(Items.NETHERITE_INGOT)));
+        manager.replaceRecipes(List.of(holder("later", crushing)));
+        assertTrue(MekanismRecipeType.CRUSHING.getRecipes().isEmpty(), "empty lists must be cached until clear or rebind too");
+        MekanismRecipeType.clearCache();
+        assertSame(crushing, MekanismRecipeType.CRUSHING.getRecipes().getFirst().value());
     }
 
     @Test
@@ -172,17 +194,23 @@ class MekanismRecipeTypeOwnerTest {
 
     @Test
     void syntheticVanillaSmeltingIsIncludedOnlyWithAccessAndKeepsOrderIdAndUnionSemantics() {
-        BasicCrushingRecipe unusedCrushing = crushing(Items.IRON_INGOT, new ItemStack(Items.IRON_NUGGET, 9));
         //The owner's own smelting recipe must be a real smelting-typed recipe, otherwise it is not part of this family.
         mekanism.api.recipes.basic.BasicSmeltingRecipe ownSmelting = new mekanism.api.recipes.basic.BasicSmeltingRecipe(
               IngredientCreatorAccess.item().from(Items.RAW_IRON, 1), new ItemStack(Items.IRON_INGOT, 1));
         //A vanilla smelting recipe whose union has two children exercises the audited compound-union path.
-        SmeltingRecipe vanilla = new SmeltingRecipe("group", CookingBookCategory.MISC, Ingredient.of(Items.RAW_COPPER, Items.RAW_GOLD),
-              new ItemStack(Items.COPPER_INGOT, 1), 0.1F, 200);
+        SmeltingRecipe vanilla = smeltingCase(false, false, new ItemStack(Items.COPPER_INGOT),
+              List.of(Ingredient.of(Items.RAW_COPPER), Ingredient.of(Items.RAW_GOLD)));
         ResourceLocation vanillaId = ResourceLocation.fromNamespaceAndPath("minecraft", "copper_from_smelting");
         manager.replaceRecipes(List.of(
               smeltingHolder("own_smelting", ownSmelting),
-              new RecipeHolder<>(vanillaId, vanilla)
+              new RecipeHolder<>(vanillaId, vanilla),
+              new RecipeHolder<>(vanillaId.withSuffix("/special"), smeltingCase(true, false, new ItemStack(Items.GOLD_INGOT),
+                    List.of(Ingredient.of(Items.RAW_GOLD)))),
+              new RecipeHolder<>(vanillaId.withSuffix("/incomplete"), smeltingCase(false, true, new ItemStack(Items.GOLD_INGOT),
+                    List.of(Ingredient.of(Items.RAW_GOLD)))),
+              new RecipeHolder<>(vanillaId.withSuffix("/empty_output"), smeltingCase(false, false, ItemStack.EMPTY,
+                    List.of(Ingredient.of(Items.RAW_GOLD)))),
+              new RecipeHolder<>(vanillaId.withSuffix("/no_ingredients"), smeltingCase(false, false, new ItemStack(Items.GOLD_INGOT), List.of()))
         ));
 
         //Own recipes come first, then synthetic ones; the synthetic id keeps the original namespace with the generated prefix.
@@ -194,9 +222,7 @@ class MekanismRecipeTypeOwnerTest {
               "the synthetic id must prefix the original path, keeping the original namespace");
         assertTrue(synthetic.value() instanceof mekanism.api.recipes.basic.BasicSmeltingRecipe,
               "the synthetic entry must be the Mekanism smelting recipe");
-        //The vanilla recipe carries a single multi-value ingredient, so the synthetic union must keep both items matchable.
-        assertEquals(1, vanilla.getIngredients().size(), "the vanilla cooking recipe exposes one ingredient entry");
-        assertEquals(2, vanilla.getIngredients().getFirst().getItems().length, "that entry really is the two-item union");
+        //The fixture exposes two separate Ingredient entries, exercising the owner's compound union rather than only vanilla's multi-item Ingredient.
         ItemStackIngredient syntheticInput = ((mekanism.api.recipes.basic.BasicSmeltingRecipe) synthetic.value()).getInput();
         assertTrue(syntheticInput.testType(new ItemStack(Items.RAW_COPPER)) && syntheticInput.testType(new ItemStack(Items.RAW_GOLD)),
               "the union must accept either child");
@@ -219,6 +245,27 @@ class MekanismRecipeTypeOwnerTest {
               "the smelting input cache must see the synthetic union input");
         assertTrue(MekanismRecipeType.SMELTING.getInputCache().containsInput(null, new ItemStack(Items.RAW_IRON)),
               "the smelting input cache must still see the owner's own recipe");
+
+        RegistryAccess otherAccess = new RegistryAccess.ImmutableRegistryAccess(List.of());
+        SmeltingRecipe accessSensitive = new SmeltingRecipe("", CookingBookCategory.MISC, Ingredient.of(Items.RAW_GOLD),
+              new ItemStack(Items.GOLD_INGOT), 0, 200) {
+            @Override
+            public ItemStack getResultItem(net.minecraft.core.HolderLookup.Provider queriedAccess) {
+                return new ItemStack(queriedAccess == access ? Items.GOLD_INGOT : Items.GOLD_NUGGET);
+            }
+        };
+        manager.replaceRecipes(List.of(new RecipeHolder<>(vanillaId, accessSensitive)));
+        RecipeCacheContext.bind(manager, access, 2);
+        var owner = MekanismRecipeType.SMELTING.getRecipeType();
+        var published = owner.getRecipes(manager, access);
+        var foreignAccess = owner.getRecipes(manager, otherAccess);
+        assertEquals(Items.GOLD_INGOT, published.getFirst().value().getResultItem(access).getItem());
+        assertEquals(Items.GOLD_NUGGET, foreignAccess.getFirst().value().getResultItem(otherAccess).getItem(),
+              "the same manager with different explicit access must not reuse the binding's synthetic output");
+        assertSame(published, owner.getRecipes(manager, access), "a foreign access query must not replace the published list");
+        assertTrue(owner.getRecipes(manager, null).isEmpty(), "explicit null access must not reuse a populated synthetic list");
+        RecipeCacheContext.clear();
+        assertTrue(owner.getRecipes(manager).isEmpty(), "manager-only lookup cannot borrow access without a matching binding");
     }
 
     @Test
@@ -243,6 +290,19 @@ class MekanismRecipeTypeOwnerTest {
         //With only complete recipes nothing is reported.
         manager.replaceRecipes(List.of(holder("complete", complete)));
         assertFalse(MekanismRecipeType.checkIncompleteRecipes(manager, access));
+
+        Level level = RecipeLevelStub.of(manager);
+        var input = new net.minecraft.world.item.crafting.SingleRecipeInput(new ItemStack(Items.RAW_GOLD));
+        ResourceLocation helperId = ResourceLocation.fromNamespaceAndPath("mekanism_test", "helper_smelting");
+        for (boolean special : new boolean[]{false, true}) {
+            SmeltingRecipe vanilla = smeltingCase(special, true, new ItemStack(Items.GOLD_INGOT), List.of(Ingredient.of(Items.RAW_GOLD)));
+            var vanillaHolder = new RecipeHolder<>(helperId, vanilla);
+            manager.replaceRecipes(List.of(vanillaHolder));
+            assertEquals(special, MekanismRecipeType.byKey(level, helperId).isPresent(),
+                  "byKey rejects ordinary incomplete recipes but retains special recipes");
+            assertEquals(special, MekanismRecipeType.getRecipeFor(RecipeType.SMELTING, input, level).isPresent(),
+                  "getRecipeFor preserves the same special-recipe exception");
+        }
     }
 
     @Test
@@ -280,6 +340,28 @@ class MekanismRecipeTypeOwnerTest {
         assertTrue(foreign.get().isEmpty(), "a foreign thread without a binding must be served no recipes");
         //This thread's binding and cache remain intact.
         assertEquals(1, MekanismRecipeType.CRUSHING.getRecipeType().getRecipes((Level) null).size());
+    }
+
+    /** Vanilla subtype exposing independent skip flags and ingredient entries to exercise the owner's adaptation, not vanilla's implementation. */
+    private static SmeltingRecipe smeltingCase(boolean special, boolean incomplete, ItemStack output, List<Ingredient> ingredients) {
+        return new SmeltingRecipe("", CookingBookCategory.MISC, Ingredient.of(Items.RAW_GOLD), output, 0, 200) {
+            @Override
+            public boolean isSpecial() {
+                return special;
+            }
+
+            @Override
+            public boolean isIncomplete() {
+                return incomplete;
+            }
+
+            @Override
+            public net.minecraft.core.NonNullList<Ingredient> getIngredients() {
+                var result = net.minecraft.core.NonNullList.<Ingredient>create();
+                result.addAll(ingredients);
+                return result;
+            }
+        };
     }
 
     private static RecipeHolder<BasicCrushingRecipe> holder(String path, BasicCrushingRecipe recipe) {

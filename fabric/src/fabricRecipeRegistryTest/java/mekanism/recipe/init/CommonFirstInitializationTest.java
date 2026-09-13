@@ -75,6 +75,13 @@ class CommonFirstInitializationTest {
                   "the canonical holder must resolve to that same instance: " + id);
             assertTrue(registered.add(value), "every recipe type must be a distinct instance: " + id);
         }
+        for (Object ownerEntry : ownerEntries) {
+            ResourceLocation id = (ResourceLocation) invoke(ownerEntry, "getId");
+            Object canonical = BuiltInRegistries.RECIPE_TYPE.get(id);
+            assertSame(canonical, invoke(ownerEntry, "get"), "registered common Supplier must remain usable: " + id);
+            assertSame(canonical, ((Holder<?>) ownerEntry).value(), "registered common Holder must remain usable: " + id);
+            assertSame(canonical, invoke(ownerEntry, "getRecipeType"), "registered common provider must remain usable: " + id);
+        }
         assertEquals(26, registered.size(), "there must be 26 distinct registered recipe type instances");
     }
 

@@ -4,11 +4,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Function;
 import mekanism.api.recipes.MekanismRecipe;
 import mekanism.common.recipe.MekanismRecipeType;
 import mekanism.common.recipe.lookup.cache.IInputRecipeCache;
 import mekanism.common.registration.MekanismDeferredRegister;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.crafting.RecipeInput;
 import net.minecraft.world.item.crafting.RecipeType;
 
@@ -24,9 +26,19 @@ import net.minecraft.world.item.crafting.RecipeType;
 public class RecipeTypeDeferredRegister extends MekanismDeferredRegister<RecipeType<?>> {
 
     private final List<RecipeTypeRegistryObject<?, ?, ?>> entries = new ArrayList<>();
+    private final String namespace;
 
     public RecipeTypeDeferredRegister(String modid) {
         super(Registries.RECIPE_TYPE, modid, RecipeTypeRegistryObject::new);
+        namespace = modid;
+    }
+
+    /** Retains the official factory-taking registration surface; the Fabric owner resolves the factory exactly once before registration. */
+    public <VANILLA_INPUT extends RecipeInput, RECIPE extends MekanismRecipe<VANILLA_INPUT>, INPUT_CACHE extends IInputRecipeCache>
+    RecipeTypeRegistryObject<VANILLA_INPUT, RECIPE, INPUT_CACHE> registerMek(String name,
+          Function<ResourceLocation, ? extends MekanismRecipeType<VANILLA_INPUT, RECIPE, INPUT_CACHE>> factory) {
+        Objects.requireNonNull(factory, "factory");
+        return registerMek(name, factory.apply(ResourceLocation.fromNamespaceAndPath(namespace, name)));
     }
 
     /**

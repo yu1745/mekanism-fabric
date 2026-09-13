@@ -68,6 +68,7 @@ public final class RecipeRuntimeClientFixture implements ClientModInitializer {
             if (!initialMarked) {
                 require(binding.epoch() == 1, "first manager packet must bind client epoch one");
                 require(binding.manager() == client.level.getRecipeManager(), "bound client manager must be the level's actual recipe manager");
+                provePublishedOwner(client, binding);
                 firstManager = binding.manager();
                 initialMarked = true;
                 LOGGER.info("MEKANISM_RECIPE_RUNTIME_CLIENT phase=initial epoch=1 manager_bound=true");
@@ -79,6 +80,7 @@ public final class RecipeRuntimeClientFixture implements ClientModInitializer {
             }
             if (!reloadMarked && binding.epoch() == 2) {
                 require(binding.manager() == firstManager, "same-connection recipe updates keep the manager identity");
+                provePublishedOwner(client, binding);
                 reloadMarked = true;
                 LOGGER.info("MEKANISM_RECIPE_RUNTIME_CLIENT phase=reload epoch=2 tail_mixin=true");
                 marker("client-reload.complete");
@@ -87,6 +89,7 @@ public final class RecipeRuntimeClientFixture implements ClientModInitializer {
                 reconnectMarked = true;
                 require(binding.epoch() == 1, "a fresh manager starts again at epoch one");
                 require(FabricRecipeCacheClientLifecycle.epoch() == 1, "the client epoch resets with the fresh manager");
+                provePublishedOwner(client, binding);
                 LOGGER.info("MEKANISM_RECIPE_RUNTIME_CLIENT phase=reconnect fresh_manager=true epoch_reset=true prior_candidates_unreachable=true");
                 marker("client-reconnect.complete");
             }
@@ -112,6 +115,17 @@ public final class RecipeRuntimeClientFixture implements ClientModInitializer {
             consumeSignal("reconnect.signal");
             connect(client);
         }
+    }
+
+    private static void provePublishedOwner(Minecraft client, RecipeCacheContext.Binding binding) {
+        require(binding.registryAccess() == client.getConnection().registryAccess(), "client binding must carry this connection's exact registry access");
+        var smelting = mekanism.common.recipe.MekanismRecipeType.SMELTING.getRecipeType();
+        require(smelting == mekanism.api.recipes.MekanismRecipeTypes.TYPE_SMELTING.value(), "client common/API smelting identity must agree after registration");
+        require(smelting.getRecipes().stream().anyMatch(holder -> holder.id().getPath().startsWith("/mekanism_generated/")),
+              "client owner must synthesize smelting through its published access");
+        require(smelting.getInputCache().containsInput(client.level, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.RAW_IRON)),
+              "client input cache must share the owner's synthetic recipes");
+        LOGGER.info("MEKANISM_RECIPE_RUNTIME_CLIENT_OWNER published_access=true canonical=true synthetic_smelting=true epoch={}", binding.epoch());
     }
 
     private static void consumeSignal(String name) {

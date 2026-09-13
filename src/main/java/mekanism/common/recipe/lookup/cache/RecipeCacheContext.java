@@ -87,7 +87,7 @@ public final class RecipeCacheContext {
         private final long epoch;
         private final Object identityToken = new Object();
         private final IdentityHashMap<AbstractInputRecipeCache<?>, AbstractInputRecipeCache.CacheState> states = new IdentityHashMap<>();
-        private final IdentityHashMap<Object, List<?>> recipeLists = new IdentityHashMap<>();
+        private final IdentityHashMap<RecipeCacheSource<?>, List<? extends RecipeHolder<?>>> recipeLists = new IdentityHashMap<>();
 
         private Binding(RecipeManager manager, @Nullable RegistryAccess registryAccess, long epoch) {
             this.manager = manager;
@@ -124,14 +124,14 @@ public final class RecipeCacheContext {
          */
         @NotNull
         @SuppressWarnings("unchecked")
-        public <RECIPE extends Recipe<?>> List<RecipeHolder<RECIPE>> recipes(Object owner, Supplier<List<RecipeHolder<RECIPE>>> loader) {
+        public <RECIPE extends Recipe<?>> List<RecipeHolder<RECIPE>> recipes(RecipeCacheSource<RECIPE> owner, Supplier<List<RecipeHolder<RECIPE>>> loader) {
             Objects.requireNonNull(owner, "owner");
             Objects.requireNonNull(loader, "loader");
             List<?> cached = recipeLists.get(owner);
             if (cached != null) {
                 return (List<RecipeHolder<RECIPE>>) cached;
             }
-            List<RecipeHolder<RECIPE>> loaded = Objects.requireNonNull(loader.get(), "recipe loader returned null");
+            List<RecipeHolder<RECIPE>> loaded = List.copyOf(Objects.requireNonNull(loader.get(), "recipe loader returned null"));
             recipeLists.put(owner, loaded);
             return loaded;
         }
@@ -143,7 +143,7 @@ public final class RecipeCacheContext {
          *
          * @return {@code true} if a cached list was present.
          */
-        public boolean clearRecipes(Object owner) {
+        public boolean clearRecipes(RecipeCacheSource<?> owner) {
             return recipeLists.remove(owner) != null;
         }
 

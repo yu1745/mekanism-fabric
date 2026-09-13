@@ -151,6 +151,14 @@ but legitimately **unbound**, and `value()` fails closed. That limitation is an 
 
 ### Verification
 
+Parent follow-up to candidate `436fb30e`: the existing fresh-JVM tests originally checked only API holders after registration. Adding common `get()` / `value()` /
+`getRecipeType()` checks reproduced a `StackOverflowError` in both load orders: the specialized holder called `super.value()`, which virtually dispatched back through
+its own `get()`. The fix calls the parent's concrete `get()` instead; the same tests then pass. The official factory-taking `registerMek(String, Function<...>)`
+overload is retained alongside the prebuilt overload and exercised without a second registry write. Binding recipe-list keys now carry `RecipeCacheSource<R>`'s type,
+and stored lists are defensively immutable. No additional test methods were added: existing tests now also cover cached empty lists/rebind, different explicit access
+changing synthetic output without contaminating the bound list, all smelting skip conditions, multiple Ingredient entries, and special-recipe helper filtering.
+The real client fixture checks exact connection access and canonical owner/synthetic smelting at initial packet, reload and reconnect, before the required phase markers.
+
 Six new ordinary methods, in exactly one new suite, `RecipeOutputHandlingTest` (no Knot, no registry mutation, no network): the chemical tank matrix (execute
 true-`long` growth, `operations == 0`, `INPUT_DOESNT_PRODUCE_OUTPUT` versus not-enough-space); the fluid tank matrix (the `Integer.MAX_VALUE` simulate cap, integer
 truncation, foreign/full/zero-capacity tanks); the item slot matrix (empty-output no-op, count multiplication, simulate/execute split, slot-limit gating);
@@ -337,7 +345,7 @@ Synthetic vanilla smelting keeps own-recipes-first ordering, the official skip c
 
 ### Verification
 
-Seven new ordinary methods in `MekanismRecipeTypeOwnerTest` cover: 26 distinct canonical types with official ids, provider behaviour and nominal `RecipeType`
+Six new ordinary methods in `MekanismRecipeTypeOwnerTest` cover: 26 distinct canonical types with official ids, provider behaviour and nominal `RecipeType`
 assignability; binding-owned list caching plus input-cache clearing and rebuild; foreign explicit-manager isolation; a real `Level` mismatch failure and the
 no-context contract; synthetic smelting inclusion/order/id/output/union plus the null-access omission and cache feeding; incomplete reporting and filtering; and
 canonical-instance resolution with foreign-thread isolation. The exact-manager mismatch case drives a real `Level` (`RecipeLevelStub`) through
