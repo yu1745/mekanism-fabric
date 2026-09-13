@@ -15,7 +15,6 @@ import mekanism.common.tile.component.config.slot.ChemicalSlotInfo;
 import mekanism.common.tile.component.config.slot.FluidSlotInfo;
 import mekanism.common.tile.component.config.slot.ISlotInfo;
 import mekanism.common.tile.component.config.slot.InventorySlotInfo;
-import mekanism.common.util.EnumUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -38,7 +37,10 @@ public class ConfigInfo implements IPersistentConfigInfo {
         canEject = true;
         ejecting = false;
         sideConfig = new EnumMap<>(RelativeSide.class);
-        for (RelativeSide side : EnumUtils.SIDES) {
+        //Fabric port (Task050 audited delta): upstream uses EnumUtils.SIDES, which is
+        // defined as exactly RelativeSide.values() (same array, same order), so the loop
+        // below keeps byte-identical semantics without admitting EnumUtils.
+        for (RelativeSide side : RelativeSide.values()) {
             sideConfig.put(side, DataType.NONE);
         }
         slotInfo = new EnumMap<>(DataType.class);

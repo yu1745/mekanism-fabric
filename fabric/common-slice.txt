@@ -117,6 +117,11 @@ mekanism/common/tile/component/config/slot/BaseSlotInfo.java
 mekanism/common/tile/component/config/slot/EnergySlotInfo.java
 mekanism/common/tile/component/config/slot/HeatSlotInfo.java
 mekanism/common/tile/component/config/slot/InventorySlotInfo.java
+mekanism/common/tile/component/config/ConfigInfo.java
+mekanism/common/tile/component/config/DataType.java
+mekanism/common/tile/component/config/IPersistentConfigInfo.java
+mekanism/common/tile/component/config/slot/FluidSlotInfo.java
+mekanism/common/tile/component/config/slot/IProxiedSlotInfo.java
 mekanism/common/tile/interfaces/IHasDumpButton.java
 mekanism/common/tile/interfaces/IHasGasMode.java
 mekanism/common/tile/interfaces/IHasMode.java
