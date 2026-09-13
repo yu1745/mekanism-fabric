@@ -1,0 +1,54 @@
+# Task052 implementer checkpoint 2 — correction response (WIP preserved, expansion stopped)
+
+Parent correction received and accepted: the three proposed deltas (second fabric-owned `mekanism.common.Mekanism`, registry-ID fallback for `bounding_block`, hardcoded computer-compat false) are withdrawn. Steps 2–7 of my first checkpoint are stopped pending adjudication. This document records the preserved WIP, the exact source call paths behind each conflict, corrected lifecycle evidence, and concrete real-owner proposals with the exact decisions needed.
+
+## Preserved WIP (compiles, `assemble` passes; NOT accepted closure)
+
+- `./gradlew -p fabric compileJava` and `./gradlew -p fabric assemble`: **BUILD SUCCESSFUL** on this WIP (gate 223/226/46).
+- API-slice +18: `ItemAbility` (new project-owned token + `IItemAbilityProvider` dispatch replacing the NeoForge patched `ItemStack#canPerformAction`), `IConfigCardAccess`, `MekanismItemAbilities` (+static `canPerformAction(ItemStack, ItemAbility)`), `Upgrade`, `IAlloyInteraction`, `IConfigurable`, `IEvaporationSolar`, `lasers/ILaserDissipation|ILaserReceptor`, `radiation/IRadiationManager|IRadiationSource|RadiationValidation`, `radiation/capability/IRadiationEntity|IRadiationShielding`, `security/IBlockSecurityUtils|IEntitySecurityUtils|IItemSecurityUtils|IOwnerObject|ISecurityObject|ISecurityUtils|ITypedSecurityUtils|SecurityMode`.
+- Platform-neutral swaps applied to those API files only: `BlockCapability/EntityCapability/ItemCapability` → Fabric `BlockApiLookup/EntityApiLookup/ItemApiLookup` (`find(level,pos,null)` / `find(entity,null)` / `find(stack,null)`; state/BE params kept in signatures as caller hints); `MekanismAPI.getService` → project-owned `MekanismServices.load` (established convention, cf. `IMekanismDataMapTypes`); `ServerLifecycleHooks.getCurrentServer()` → `FabricLoader.getInstance().getGameInstance()` instanceof `MekanismServer`… `MinecraftServer` (deprecated backcompat helper only); `new ListTag(int)` → `new ListTag()` (vanilla has no capacity ctor); one javadoc rewrite. All deltas are inside the newly admitted API surface; no production common/fabric file changed except the slice list/gate counts.
+- Helper `scripts/sync-slice-gate.sh` (mechanical gate-count sync).
+
+No TileEntityMekanism admission, no components, no frequency/container/registry work started. Raw import BFS from the four named owners = 807 files; I will not expand into it under the withdrawn assumptions.
+
+## Q1 — `mekanism.common.Mekanism` static ownership. Exact paths
+
+- `TileEntityMekanism.setSupportedTypes` (tile/base/TileEntityMekanism.java:268): `supportsComputers = Mekanism.hooks.computerCompatEnabled() && Attribute.has(block, AttributeComputerIntegration.class);`
+- `TileEntityMekanism.getDirection` (:1043) and `parseUpgradeData` (:988): `Mekanism.logger.warn(...)`.
+- Other closure files with the same need: `FrequencyManager$FrequencyDataHandler.load/save` (lib/frequency/FrequencyManager.java:208,224 `Mekanism.logger.warn`), `MekanismSavedData.createSavedData` (lib/MekanismSavedData.java:36 `Mekanism.MODID + "_" + name`), `MekanismDataComponents` (registries/MekanismDataComponents.java:74 `new DataComponentDeferredRegister(Mekanism.MODID)` and :79-82 `Mekanism.rl(...)` aliases), `AttributeHasBounding` (:50,62,75 `Mekanism.logger.warn`).
+- Original owner: `common/Mekanism.java` — `public static final Logger logger` (:137), `public static final MekanismHooks hooks = new MekanismHooks();` (:148), `rl()` (:283), `MODID` (:121). Its constructor/`addRegistrationListeners` wire the NeoForge mod event bus to ~40 registries and the whole content set (:160-262) — not compilable on Fabric until those owners exist.
+
+**Proposed real owner solution (decision needed):** port `common/Mekanism.java` in place (same file, same package, common-slice admission) as the real static-ownership core containing exactly the members this closure executes — `MODID/MOD_NAME/LOG_TAG`, `logger`, `hooks`, `rl()`, plus `instance/versionNumber` bootstrap-owned initialization — with the NeoForge constructor/registration-listener bodies carried by the already-accepted bootstrap-owned registration windows (game events/recipes/chemicals precedent in `MekanismFabricBootstrap`), and every other static member (playerState, multiblock managers, packetHandler, keyMap…) added together with its owning domain in later batches rather than deleted. This is a progressive in-place port of the original class, not a second source. Alternative: defer TileEntityMekanism admission until the full class can be admitted. Parent to choose.
+
+## Q2 — Bounding gameplay ownership. Exact paths
+
+- `AttributeHasBounding.removeBoundingBlocks` (block/attribute/AttributeHasBounding.java:44-48): `if (boundingState.is(MekanismBlocks.BOUNDING_BLOCK)) { level.removeBlockEntity(p); level.removeBlock(p, false); }`
+- `AttributeHasBounding.placeBoundingBlocks` (:55): `BlockStateHelper.getStateForPlacement(MekanismBlocks.BOUNDING_BLOCK.defaultState(), level, boundingLocation, null, Direction.NORTH)`.
+- Callers: `BlockMekanism.onRemove`→`:136`, `BlockMekanism.onPlace`→`:153`; `ItemTierInstaller:136`; `TileEntityMekanism.tickServer:638` → `syncMasterPosition` → `WorldUtils.getTileEntity(TileEntityBoundingBlock.class, ...)`.
+- Catalog edge: `MekanismBlocks.java:918` `public static final BlockRegistryObject<BlockBounding, BlockItem> BOUNDING_BLOCK = BLOCKS.register("bounding_block", BlockBounding::new);` — `MekanismBlocks` is the monolithic whole-mod catalog (193 imports → every block/tile). Admitting it ≈ the 807-file closure; pruning it = deleting catalog entries. Runtime today: `hasBounding` requires a block carrying the attribute; no machine blocks are admitted, so the path is dormant — but the owner must still be real, and the registry fallback I proposed could indeed place AIR.
+
+**Proposed real owner solution (decision needed):** admit the real bounding block as actual registered content now: port `BlockBounding` (+ `BlockRegistryObject`/block deferred-register/`BlockStateHelper` chain) and register the canonical `mekanism:bounding_block` through the accepted `FabricDeferredRegister` bootstrap window, so `AttributeHasBounding` keeps referencing a **real registered block object** (no ID fallback, no AIR risk). Open design point the parent must settle: when the full `MekanismBlocks` is admitted later it must dedupe to this same registration (single canonical `mekanism:bounding_block`), e.g. by having the future catalog reuse the same deferred register entries rather than re-registering. Alternatives: defer the tile admission, or admit the monolith now. Parent to choose.
+
+## Q3 — Computer compat. Exact paths
+
+- `TileEntityMekanism.setSupportedTypes:268` (above) — the only tile call site.
+- `MekanismHooks.computerCompatEnabled()` (integration/MekanismHooks.java:152-154): `return computerCraft.isLoaded() || oc2.isLoaded();` — presence captured eagerly at construction: `IntegrationInfo(modid, loadedCheck)` → `loadedCheck.test(modid)` (:36-39), NeoForge `ModList.get()::isLoaded`; `computerCraft = new IntegrationInfo("computercraft", loadedCheck)` (:81), `oc2 = ... ("oc2", ...)` (:82).
+- Downstream of the flag: `MekanismHooks.hookCommonSetup` (:126-132) — `if (computerCompatEnabled()) { FactoryRegistry.load(); if (computerCraft.isLoaded()) CCCapabilityHelper.registerApis(); }`.
+- Integration sources: `integration/computer/computercraft/CCCapabilityHelper.java` imports `dan200.computercraft.*` (compileOnly on NeoForge; absent from our build), `integration/computer/opencomputers2/OC2CapabilityHelper.java` imports `li.cil.oc2.*` (OC2 has no Fabric edition).
+
+**Proposed real owner solution (decision needed):** port `MekanismHooks` in place with `loadedCheck = FabricLoader.getInstance()::isModLoaded` (real presence, same eager capture), and add **CC:Tweaked (Fabric, 1.21.1) as a compileOnly dependency** so `CCCapabilityHelper` ports and registers for real when CC is present; `oc2.isLoaded()` then stays a real presence test that is factually always false on Fabric. If the parent does not want the CC dependency in this batch, the alternative is a real presence check with the CC binding layer as a named deferred obligation — but then `supportsComputers=true` under a loaded CC would report support the port cannot back, which I flag as unacceptable without explicit parent sign-off. Parent to choose.
+
+## Q4 — Frequency lifecycle ordering (corrected with pinned evidence; prior SERVER_STARTING claim withdrawn)
+
+Original order (source-read): `CommonWorldTickHandler.worldLoadEvent(LevelEvent.Load, !isClientSide)` (:171-176) → `FrequencyManager.load()` → `FrequencyType.init()` + `managers.forEach(createOrLoad)` → `MekanismSavedData.createSavedData` → `ServerLifecycleHooks.getCurrentServer().overworld().getDataStorage()` (lib/MekanismSavedData.java:29-33); `CommonWorldTickHandler.onTick(ServerTickEvent.Post)` (:179-183) → `FrequencyManager.tick(server.tickRateManager().runsNormally())` (lazy `load()` inside, FrequencyManager.java:70-73); `Mekanism.serverStopped(ServerStoppedEvent, after save)` (Mekanism.java:317-337) → `FrequencyType.clear()` … `FrequencyManager.reset()` (in that order, :322/:329).
+
+Proven Fabric mapping (pinned read-only `/tmp/lifecycle`): `ServerWorldEvents.LOAD (server, world)` fires per server level load and its javadoc explicitly names SavedData initialization as the intended use (ServerWorldEvents.java:29-31) — replaces `LevelEvent.Load`, not `SERVER_STARTING`; `ServerTickEvents.END_SERVER_TICK` → `FrequencyManager.tick(server.tickRateManager().runsNormally())`; `ServerLifecycleEvents.SERVER_STOPPED` (fires after `stopServer()` completes, i.e. after saving) → `FrequencyType.clear(); FrequencyManager.reset();`. Levels always load before the first server tick, so load-before-tick holds; `tick()`'s lazy load is the same safety net as the original. Ordering note for later batches: original world-load also calls `MultiblockManager.createOrLoadAll()` and `QIOGlobalItemLookup.INSTANCE.createOrLoad()` (CommonWorldTickHandler.java:174-176) — those owners are not in this closure and must keep their relative order when admitted.
+
+## Exact decisions requested from parent
+
+1. Q1 route: progressive in-place port of `common/Mekanism.java` (member list above, bootstrap-owned initialization) — yes/no, or defer tile.
+2. Q2 route: real registered `mekanism:bounding_block` now (port `BlockBounding` + registration chain, dedupe contract for the future `MekanismBlocks`) — yes/no, or defer tile, or admit monolith.
+3. Q3 route: CC:Tweaked compileOnly + real `CCCapabilityHelper` port now — yes/no; if no, exact gating semantics authorized for `supportsComputers`.
+4. Confirm the Q4 mapping (ServerWorldEvents.LOAD / END_SERVER_TICK / SERVER_STOPPED) as the frequency lifecycle owner wiring from `MekanismFabricBootstrap`.
+
+No further production expansion until these are adjudicated.
