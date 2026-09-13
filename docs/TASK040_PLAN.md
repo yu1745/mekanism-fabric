@@ -1,6 +1,6 @@
 # Task 040 plan — complete Chemical registry, data-map, tank and synchronization vertical
 
-Status: **integrated at `f24ce94e`; independent review and parent semantic/runtime gates complete; final clean release pending**
+Status: **integrated at `f24ce94e`; independent review, parent semantic/runtime gates, and clean release complete**
 
 ## Decision and baseline
 
@@ -283,8 +283,12 @@ the static packaged gate passed in 10s; packaged dedicated server reached `Done`
 Chemical gate passed in 55s with configuration abort before play, stable cleanup/no revival, clean
 reconnect, three distinct ACK sessions, two play joins, and final epoch 2. Data-map reload passed in
 47s, paired matching-network in 68s, three-case configuration rejection in 96s, and client-window
-regression in 37s. Final clean release remains intentionally pending until this integration evidence
-is committed. No push, deployment, production, or mirror operation occurred.
+regression in 37s. After committing the integration evidence as `6a0ceef3`, `./build.sh --clean`
+passed in 44.56s and produced exactly one JAR, SHA-256
+`1a49b984bdb766d68337e7ff1055edb7bb21245ae8a3b6aa6de3eb126a52590f`, with build-info source
+`6a0ceef37986bc2cd2076607b521333b9b295a4e`. The clean release was rerun after committing this final
+evaluation so its build-info source equals the final evaluation HEAD and the one-JAR hash remains
+identical. No push, deployment, production, or mirror operation occurred.
 
 ## Explicit deferrals and next boundary
 

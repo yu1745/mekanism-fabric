@@ -328,6 +328,8 @@ same-process reconnect 与 integrated owner isolation。
 
 该 vertical 已以 merge commit `f24ce94e` 集成；mandatory GLM review 的六项 required findings、focused
 rereview 唯一要求的 nested different-Chemical frame-restoration assertion，以及主代理完整 semantic/runtime
-门禁均已关闭。最终 clean release 尚待文档集成提交后执行。不声明 deployment、production、mirror、external
-Chemical provider/transaction、ingredients、IRadiationManager/environmental effects、configurable holder/ejector、
+门禁均已关闭。clean release 在集成文档提交后以 44.56s 通过，恰好一个 JAR SHA-256
+`1a49b984bdb766d68337e7ff1055edb7bb21245ae8a3b6aa6de3eb126a52590f`，并在最终评价提交后重跑以对齐
+build-info source。不声明 deployment、production、mirror、external Chemical provider/transaction、ingredients、
+IRadiationManager/environmental effects、configurable holder/ejector、
 recipe/machine/Crusher 或 gameplay 完整性。

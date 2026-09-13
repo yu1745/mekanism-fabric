@@ -274,6 +274,9 @@ At `f24ce94e`, the parent independently passed one 6m47s combined gate: full `ch
 `fabric-build.sh` in 2s, static packaged checks in 10s, packaged server through `Done` in 39s, real
 Chemical configuration-abort/reconnect in 55s, data-map reload in 47s, paired network in 68s,
 three-case rejection in 96s, and client-window regression in 37s. The Chemical gate proved pre-play
-cleanup with no revival, three distinct ACK sessions, two play joins and final epoch 2. Final clean
-release remains pending until this documentation checkpoint. No push, deployment, production, or
-mirror operation occurred.
+cleanup with no revival, three distinct ACK sessions, two play joins and final epoch 2. After the
+integration documentation commit `6a0ceef3`, clean release passed in 44.56s with exactly one JAR,
+SHA-256 `1a49b984bdb766d68337e7ff1055edb7bb21245ae8a3b6aa6de3eb126a52590f`, and build-info source
+`6a0ceef37986bc2cd2076607b521333b9b295a4e`. It was rerun after the final evaluation commit so source
+metadata aligns to that HEAD with the same one-JAR hash. No push, deployment, production, or mirror
+operation occurred.
