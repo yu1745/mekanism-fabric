@@ -1,6 +1,6 @@
 # Concrete machine-owner admission checkpoint (after Task050)
 
-Baseline: `c433ace0` (Task050 accepted; 205/224/45). This is source evidence and an unresolved design boundary, **not** Task051 implementation or a compile-success claim.
+Baseline: `c433ace0` (Task050 accepted; 205/224/45). This records the initial source checkpoint, **not** Task051 implementation or a compile-success claim. Subsequent parent decision is in `TASK051_PLAN.md`: verified Fabric per-find provider behavior removes the false need for world/bounding cache-notification coupling; admit the complete real cache/base lifecycle with a permanently bound real-component policy callback, not a cache-only or fake-config batch.
 
 ## What was read
 
