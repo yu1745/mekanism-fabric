@@ -27,6 +27,7 @@ import net.minecraft.core.RegistrationInfo;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -92,11 +93,11 @@ class IngredientServiceCodecClosureTest {
 
         ItemStackIngredient tagForm = IngredientCreatorAccess.item().from(TagKeyOf.itemStorageBlocks());
         JsonElement tagJson = encode(ItemStackIngredient.CODEC, tagForm);
-        assertEquals("{\"tag\":\"minecraft:planks\"}", tagJson.toString());
+        assertEquals("{\"tag\":\"minecraft:planks\",\"count\":1}", tagJson.toString());
         assertEquals(tagForm, decode(ItemStackIngredient.CODEC, tagJson));
         assertTrue(tagForm.testType(new ItemStack(Items.OAK_PLANKS)));
         assertEquals(1, tagForm.getNeededAmount(new ItemStack(Items.OAK_PLANKS)));
-        //Count one is omitted on encode and defaults to one on decode
+        //Count one is always written and still defaults to one when decoding legacy input
         assertEquals(1, decode(ItemStackIngredient.CODEC, parse("{\"tag\":\"minecraft:planks\"}")).count());
 
         ItemStackIngredient streamForm = IngredientCreatorAccess.item().from(Items.DIAMOND, 2);
@@ -127,10 +128,16 @@ class IngredientServiceCodecClosureTest {
         //The documented legacy child-field alias is accepted
         ItemStackIngredient aliased = decode(ItemStackIngredient.CODEC, parse("{\"type\":\"neoforge:compound\",\"ingredients\":[{\"item\":\"minecraft:stick\"},{\"item\":\"minecraft:iron_ingot\"}]}"));
         assertTrue(aliased.testType(new ItemStack(Items.IRON_INGOT)));
-        assertEquals("{\"type\":\"neoforge:compound\",\"children\":[{\"item\":\"minecraft:stick\"},{\"item\":\"minecraft:iron_ingot\"}]}", encode(ItemStackIngredient.CODEC, aliased).toString());
+        assertEquals("{\"type\":\"neoforge:compound\",\"children\":[{\"item\":\"minecraft:stick\"},{\"item\":\"minecraft:iron_ingot\"}],\"count\":1}", encode(ItemStackIngredient.CODEC, aliased).toString());
 
         //Unknown custom ingredient types fail decoding rather than becoming permissive predicates
         assertTrue(ItemStackIngredient.CODEC.decode(JsonOps.INSTANCE, parse("{\"type\":\"neoforge:mystery\"}")).error().isPresent());
+        assertTrue(ItemStackIngredient.CODEC.decode(JsonOps.INSTANCE, parse("{\"type\":5,\"item\":\"minecraft:stick\"}")).error().isPresent(),
+              "a malformed custom type cannot fall through to a permissive vanilla ingredient");
+        String malformedChildrenError = ItemStackIngredient.CODEC.decode(JsonOps.INSTANCE,
+              parse("{\"type\":\"neoforge:compound\",\"children\":{}}")).error().orElseThrow().message();
+        assertFalse(malformedChildrenError.contains("No ingredients field found"),
+              "a malformed canonical children field retains its decode error rather than falling back to the alias");
         assertTrue(ItemStackIngredient.CODEC.decode(JsonOps.INSTANCE, parse("{\"type\":\"neoforge:compound\",\"children\":[]}")).error().isPresent());
         assertTrue(ItemStackIngredient.CODEC.decode(JsonOps.INSTANCE, parse("{\"count\":1}")).error().isPresent(), "an empty vanilla ingredient is rejected");
         assertThrows(IllegalArgumentException.class, () -> ItemStackIngredient.of(Ingredient.EMPTY, 1));
@@ -165,6 +172,12 @@ class IngredientServiceCodecClosureTest {
         assertEquals("[{\"fluid\":\"minecraft:water\"},{\"fluid\":\"minecraft:lava\"}]", encode(FluidIngredient.CODEC, compound).toString());
         assertEquals(compound, decode(FluidIngredient.CODEC, encode(FluidIngredient.CODEC, compound)));
         assertTrue(compound.test(new FluidStack(Fluids.LAVA, 5)));
+        FluidStackIngredient sizedCompound = FluidStackIngredient.of(compound, 500);
+        String typedCompound = "{\"type\":\"neoforge:compound\",\"children\":[{\"fluid\":\"minecraft:water\"},{\"fluid\":\"minecraft:lava\"}],\"amount\":500}";
+        assertEquals(typedCompound, encode(FluidStackIngredient.CODEC, sizedCompound).toString());
+        assertEquals(sizedCompound, decode(FluidStackIngredient.CODEC, parse(typedCompound)));
+        assertEquals(sizedCompound, decode(FluidStackIngredient.CODEC,
+              parse("{\"type\":\"neoforge:compound\",\"ingredients\":[{\"fluid\":\"minecraft:water\"},{\"fluid\":\"minecraft:lava\"}],\"amount\":500}")));
 
         FluidStack tainted = new FluidStack(Fluids.WATER, 1);
         tainted.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, net.minecraft.network.chat.Component.literal("Tainted"));
@@ -173,7 +186,26 @@ class IngredientServiceCodecClosureTest {
         assertTrue(components.test(tainted));
         assertFalse(components.test(new FluidStack(Fluids.WATER, 1)), "a stack missing an expected component does not match");
         assertTrue(FluidIngredient.CODEC.decode(JsonOps.INSTANCE,
-              parse("{\"type\":\"mekanism:fluid_components\",\"fluids\":[\"minecraft:water\"],\"components\":{}}")).error().isEmpty());
+              parse("{\"type\":\"neoforge:components\",\"fluids\":[\"minecraft:water\"],\"components\":{}}")).error().isEmpty());
+        assertEquals(1_000, decode(FluidStackIngredient.CODEC, parse("{\"fluid\":\"minecraft:water\"}")).amount(),
+              "missing amount defaults to one bucket");
+        FluidIngredient empty = FluidIngredient.empty();
+        assertTrue(empty.test(FluidStack.EMPTY));
+        assertFalse(empty.test(new FluidStack(Fluids.WATER, 1)));
+        assertEquals(empty, decode(FluidIngredient.CODEC, encode(FluidIngredient.CODEC, empty)));
+        assertEquals(empty, roundTrip(FluidIngredient.STREAM_CODEC, empty));
+        assertThrows(IllegalArgumentException.class, () -> FluidIngredient.of(Fluids.EMPTY.builtInRegistryHolder()));
+        assertDoesNotThrow(() -> assertTrue(FluidIngredient.CODEC.decode(JsonOps.INSTANCE, parse("{\"fluid\":\"minecraft:empty\"}")).error().isPresent()));
+        assertDoesNotThrow(() -> assertTrue(FluidIngredient.CODEC.decode(JsonOps.INSTANCE,
+              parse("{\"type\":\"neoforge:components\",\"fluids\":[],\"components\":{}}")).error().isEmpty()));
+        var absentTag = net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.FLUID,
+              ResourceLocation.fromNamespaceAndPath("mekanism", "definitely_absent"));
+        assertDoesNotThrow(() -> IngredientCreatorAccess.fluid().from(absentTag, 100),
+              "dynamic empty tags remain constructible and are filtered as incomplete later");
+        RegistryFriendlyByteBuf invalidAmount = new RegistryFriendlyByteBuf(Unpooled.buffer(), registries);
+        FluidIngredient.STREAM_CODEC.encode(invalidAmount, FluidIngredient.of(Fluids.WATER.builtInRegistryHolder()));
+        ByteBufCodecs.VAR_INT.encode(invalidAmount, 0);
+        assertThrows(IllegalArgumentException.class, () -> FluidStackIngredient.STREAM_CODEC.decode(invalidAmount));
         assertTrue(FluidIngredient.MAP_CODEC.decode(JsonOps.INSTANCE, JsonOps.INSTANCE.getMap(parse("{\"type\":\"mekanism:other\"}")).result().orElseThrow()).error().isPresent(),
               "unknown fluid ingredient types fail explicitly");
         assertEquals(single, roundTrip(FluidStackIngredient.STREAM_CODEC, single));
@@ -188,6 +220,9 @@ class IngredientServiceCodecClosureTest {
         ChemicalIngredient single = creator.of(MekanismChemicals.HYDROGEN.get().getAsHolder());
         assertEquals("{\"chemical\":\"mekanism:hydrogen\"}", encode(creator.mapCodecNonEmpty().codec(), single).toString());
         assertEquals(single, decode(creator.mapCodecNonEmpty().codec(), parse("{\"chemical\":\"mekanism:hydrogen\"}")));
+        assertTrue(creator.mapCodecNonEmpty().codec().decode(JsonOps.INSTANCE,
+              parse("{\"chemical\":\"mekanism:hydrogen\",\"tag\":\"mekanism:gaseous\"}")).error().isPresent(),
+              "the single/tag fallback is exclusive-or");
         //Type-less tag form
         ChemicalIngredient tag = creator.tag(TagKeyOf.chemicalGaseous());
         assertEquals("{\"tag\":\"mekanism:gaseous\"}", encode(creator.mapCodecNonEmpty().codec(), tag).toString());

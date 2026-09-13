@@ -36,7 +36,7 @@ public final class FluidStackIngredient implements InputIngredient<@NotNull Flui
      * A codec which can (de)encode fluid stack ingredients.
      *
      * @implNote Flat composition matching the official sized fluid ingredient format: the fluid/tag fields (or a typed component predicate) live inline next to the
-     * required {@code amount} field.
+     * {@code amount} field, which defaults to 1,000 mB when absent and is always written.
      *
      * @since 10.6.0
      */
@@ -46,11 +46,18 @@ public final class FluidStackIngredient implements InputIngredient<@NotNull Flui
      *
      * @since 10.6.0
      */
-    public static final StreamCodec<RegistryFriendlyByteBuf, FluidStackIngredient> STREAM_CODEC = StreamCodec.composite(
-          FluidIngredient.STREAM_CODEC, FluidStackIngredient::ingredient,
-          ByteBufCodecs.VAR_INT, FluidStackIngredient::amount,
-          FluidStackIngredient::new
-    );
+    public static final StreamCodec<RegistryFriendlyByteBuf, FluidStackIngredient> STREAM_CODEC = new StreamCodec<>() {
+        @Override
+        public FluidStackIngredient decode(RegistryFriendlyByteBuf buffer) {
+            return FluidStackIngredient.of(FluidIngredient.STREAM_CODEC.decode(buffer), ByteBufCodecs.VAR_INT.decode(buffer));
+        }
+
+        @Override
+        public void encode(RegistryFriendlyByteBuf buffer, FluidStackIngredient value) {
+            FluidIngredient.STREAM_CODEC.encode(buffer, value.ingredient);
+            ByteBufCodecs.VAR_INT.encode(buffer, value.amount);
+        }
+    };
 
     /**
      * Creates a Fluid Stack Ingredient that matches a given ingredient and amount. Prefer calling via
@@ -66,7 +73,7 @@ public final class FluidStackIngredient implements InputIngredient<@NotNull Flui
      */
     public static FluidStackIngredient of(FluidIngredient ingredient, int amount) {
         Objects.requireNonNull(ingredient, "FluidStackIngredients cannot be created from a null ingredient.");
-        if (ingredient.hasNoFluids()) {
+        if (ingredient.isEmpty()) {
             throw new IllegalArgumentException("FluidStackIngredients cannot be created using the empty ingredient.");
         }
         if (amount < 1) {
@@ -175,7 +182,7 @@ public final class FluidStackIngredient implements InputIngredient<@NotNull Flui
         @Override
         public <T> DataResult<com.mojang.datafixers.util.Pair<FluidStackIngredient, T>> decode(DynamicOps<T> ops, T input) {
             return ops.getMap(input).flatMap(map -> FluidIngredient.MAP_CODEC.decode(ops, map)
-                  .flatMap(ingredient -> Codec.intRange(1, Integer.MAX_VALUE).fieldOf(SerializationConstants.AMOUNT).codec().decode(ops, input)
+                  .flatMap(ingredient -> Codec.intRange(1, Integer.MAX_VALUE).optionalFieldOf(SerializationConstants.AMOUNT, 1_000).codec().decode(ops, input)
                         .map(amount -> new FluidStackIngredient(ingredient, amount.getFirst()))))
                   .map(ingredient -> com.mojang.datafixers.util.Pair.of(ingredient, input));
         }

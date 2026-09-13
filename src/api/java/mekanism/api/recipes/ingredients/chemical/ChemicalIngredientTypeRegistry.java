@@ -73,11 +73,7 @@ public final class ChemicalIngredientTypeRegistry {
         if (frozen) {
             throw new IllegalStateException("Chemical ingredient type registration is frozen: " + id);
         }
-        MapCodec<? extends ChemicalIngredient> existing = TYPES.get(id);
-        if (existing != null) {
-            if (existing == codec) {
-                return;
-            }
+        if (TYPES.containsKey(id)) {
             throw new IllegalStateException("Duplicate chemical ingredient type registration for " + id);
         }
         if (CODEC_IDS.containsKey(codec)) {

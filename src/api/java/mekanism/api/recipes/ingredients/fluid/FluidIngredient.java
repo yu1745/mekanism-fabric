@@ -11,7 +11,6 @@ import com.mojang.serialization.RecordBuilder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.function.Predicate;
 import mekanism.api.SerializationConstants;
 import mekanism.api.annotations.NothingNullByDefault;
@@ -26,6 +25,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.material.Fluid;
+import net.minecraft.world.level.material.Fluids;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -40,12 +40,13 @@ import org.jetbrains.annotations.Nullable;
 @NothingNullByDefault
 public abstract class FluidIngredient implements Predicate<FluidStack> {
 
-    private static final String COMPONENTS_TYPE = "mekanism:fluid_components";
+    private static final String COMPONENTS_TYPE = "neoforge:components";
+    private static final String COMPOUND_TYPE = "neoforge:compound";
     private static final String FLUIDS = "fluids";
 
     /**
      * Map codec representing a {@link FluidIngredient} in map form: a single fluid ({@code {"fluid": id}}), a tag ({@code {"tag": id}}), or an explicitly typed
-     * component predicate ({@code {"type": "mekanism:fluid_components", "fluids": [...], "components": {...}}}).
+     * component predicate ({@code {"type": "neoforge:components", "fluids": [...], "components": {...}}}).
      */
     public static final MapCodec<FluidIngredient> MAP_CODEC = new FluidMapCodec();
     /**
@@ -63,6 +64,8 @@ public abstract class FluidIngredient implements Predicate<FluidStack> {
                         return DataResult.success(Either.right(tagged));
                     } else if (ingredient instanceof ComponentFluidIngredient) {
                         return DataResult.success(Either.right(ingredient));
+                    } else if (ingredient instanceof EmptyFluidIngredient) {
+                        return DataResult.success(Either.left(List.of()));
                     }
                     return DataResult.error(() -> "Unable to serialize fluid ingredient " + ingredient);
                 });
@@ -76,6 +79,9 @@ public abstract class FluidIngredient implements Predicate<FluidStack> {
      */
     public static FluidIngredient of(Holder<Fluid> fluid) {
         Objects.requireNonNull(fluid, "Fluid cannot be null");
+        if (fluid.value() == Fluids.EMPTY) {
+            throw new IllegalArgumentException("Cannot create a single fluid ingredient for the empty fluid");
+        }
         return new SingleFluidIngredient(fluid);
     }
 
@@ -108,9 +114,6 @@ public abstract class FluidIngredient implements Predicate<FluidStack> {
     public static FluidIngredient of(DataComponentPredicate components, List<Holder<Fluid>> fluids) {
         Objects.requireNonNull(components, "Components cannot be null");
         Objects.requireNonNull(fluids, "Fluids cannot be null");
-        if (fluids.isEmpty()) {
-            throw new IllegalArgumentException("Component fluid ingredients require at least one fluid");
-        }
         return new ComponentFluidIngredient(components, List.copyOf(fluids));
     }
 
@@ -139,6 +142,13 @@ public abstract class FluidIngredient implements Predicate<FluidStack> {
      */
     public boolean hasNoFluids() {
         return getStacks().isEmpty();
+    }
+
+    /**
+     * Checks if this is the explicitly empty ingredient. Dynamic tags that currently resolve to no fluids are not explicitly empty.
+     */
+    public boolean isEmpty() {
+        return this == EmptyFluidIngredient.INSTANCE;
     }
 
     /**
@@ -364,7 +374,7 @@ public abstract class FluidIngredient implements Predicate<FluidStack> {
 
         @Override
         public boolean test(FluidStack stack) {
-            return false;
+            return stack.isEmpty();
         }
 
         @Override
@@ -392,22 +402,40 @@ public abstract class FluidIngredient implements Predicate<FluidStack> {
 
         @Override
         public <T> DataResult<FluidIngredient> decode(DynamicOps<T> ops, MapLike<T> input) {
-            Optional<String> type = ops.getStringValue(input.get(SerializationConstants.TYPE)).result();
-            if (type.isPresent()) {
-                if (!COMPONENTS_TYPE.equals(type.get())) {
-                    return DataResult.error(() -> "Unknown fluid ingredient type: '" + type.get() + "' is not supported");
-                }
-                return decodeComponents(ops, input);
+            T typeValue = input.get(SerializationConstants.TYPE);
+            if (typeValue != null) {
+                return ops.getStringValue(typeValue).flatMap(type -> {
+                    if (COMPONENTS_TYPE.equals(type)) {
+                        return decodeComponents(ops, input);
+                    } else if (COMPOUND_TYPE.equals(type)) {
+                        return decodeCompound(ops, input);
+                    }
+                    return DataResult.error(() -> "Unknown fluid ingredient type: '" + type + "' is not supported");
+                });
             }
             if (input.get(SerializationConstants.FLUID) != null) {
                 return BuiltInRegistries.FLUID.holderByNameCodec().decode(ops, Objects.requireNonNull(input.get(SerializationConstants.FLUID)))
-                      .map(Pair::getFirst).map(FluidIngredient::of);
+                      .map(Pair::getFirst).flatMap(fluid -> fluid.value() == Fluids.EMPTY
+                            ? DataResult.error(() -> "Fluid ingredient cannot use the empty fluid") : DataResult.success(FluidIngredient.of(fluid)));
             }
             if (input.get(SerializationConstants.TAG) != null) {
                 return TagKey.codec(Registries.FLUID).decode(ops, Objects.requireNonNull(input.get(SerializationConstants.TAG)))
                       .map(Pair::getFirst).map(FluidIngredient::of);
             }
             return DataResult.error(() -> "Fluid ingredient must specify one of 'fluid' or 'tag'");
+        }
+
+        private <T> DataResult<FluidIngredient> decodeCompound(DynamicOps<T> ops, MapLike<T> input) {
+            T childrenValue = input.get(SerializationConstants.CHILDREN);
+            if (childrenValue == null) {
+                childrenValue = input.get(SerializationConstants.INGREDIENTS);
+            }
+            if (childrenValue == null) {
+                return DataResult.error(() -> "Compound fluid ingredients must specify 'children'");
+            }
+            return CODEC.listOf().decode(ops, childrenValue).map(Pair::getFirst).flatMap(children -> children.isEmpty()
+                  ? DataResult.error(() -> "Compound fluid ingredients must have at least one child")
+                  : DataResult.success(FluidIngredient.ofIngredients(children)));
         }
 
         private <T> DataResult<FluidIngredient> decodeComponents(DynamicOps<T> ops, MapLike<T> input) {
@@ -427,7 +455,8 @@ public abstract class FluidIngredient implements Predicate<FluidStack> {
         @Override
         public <T> java.util.stream.Stream<T> keys(DynamicOps<T> ops) {
             return java.util.stream.Stream.of(ops.createString(SerializationConstants.FLUID), ops.createString(SerializationConstants.TAG),
-                  ops.createString(SerializationConstants.TYPE), ops.createString(FLUIDS), ops.createString(SerializationConstants.COMPONENTS));
+                  ops.createString(SerializationConstants.TYPE), ops.createString(SerializationConstants.CHILDREN),
+                  ops.createString(SerializationConstants.INGREDIENTS), ops.createString(FLUIDS), ops.createString(SerializationConstants.COMPONENTS));
         }
 
         @Override
@@ -440,8 +469,9 @@ public abstract class FluidIngredient implements Predicate<FluidStack> {
                 prefix.add(SerializationConstants.TYPE, ops.createString(COMPONENTS_TYPE));
                 prefix.add(FLUIDS, BuiltInRegistries.FLUID.holderByNameCodec().listOf().encodeStart(ops, component.fluids()));
                 prefix.add(SerializationConstants.COMPONENTS, DataComponentPredicate.CODEC.encodeStart(ops, component.components()));
-            } else if (input instanceof CompoundFluidIngredient) {
-                prefix.withErrorsFrom(DataResult.error(() -> "Compound fluid ingredients must be serialized in array form"));
+            } else if (input instanceof CompoundFluidIngredient compound) {
+                prefix.add(SerializationConstants.TYPE, ops.createString(COMPOUND_TYPE));
+                prefix.add(SerializationConstants.CHILDREN, CODEC.listOf().encodeStart(ops, compound.children()));
             } else {
                 prefix.withErrorsFrom(DataResult.error(() -> "Unable to serialize fluid ingredient " + input));
             }
@@ -460,10 +490,13 @@ public abstract class FluidIngredient implements Predicate<FluidStack> {
 
         private FluidIngredient decodeIngredient(RegistryFriendlyByteBuf buffer) {
             return switch (buffer.readByte()) {
-                case 0 -> new SingleFluidIngredient(HOLDER_STREAM_CODEC.decode(buffer));
+                case 0 -> FluidIngredient.of(HOLDER_STREAM_CODEC.decode(buffer));
                 case 1 -> new TagFluidIngredient(TagKey.create(Registries.FLUID, ResourceLocation.STREAM_CODEC.decode(buffer)));
                 case 2 -> {
                     int size = ByteBufCodecs.VAR_INT.decode(buffer);
+                    if (size < 1) {
+                        throw new IllegalStateException("Compound fluid ingredient wire payload must have at least one child");
+                    }
                     List<FluidIngredient> children = new ArrayList<>(size);
                     for (int i = 0; i < size; i++) {
                         children.add(decodeIngredient(buffer));
@@ -479,6 +512,7 @@ public abstract class FluidIngredient implements Predicate<FluidStack> {
                     }
                     yield new ComponentFluidIngredient(components, List.copyOf(fluids));
                 }
+                case 4 -> EmptyFluidIngredient.INSTANCE;
                 default -> throw new IllegalStateException("Unknown fluid ingredient wire kind");
             };
         }
@@ -508,6 +542,8 @@ public abstract class FluidIngredient implements Predicate<FluidStack> {
                 for (Holder<Fluid> fluid : component.fluids()) {
                     HOLDER_STREAM_CODEC.encode(buffer, fluid);
                 }
+            } else if (value instanceof EmptyFluidIngredient) {
+                buffer.writeByte(4);
             } else {
                 throw new IllegalStateException("Unable to serialize fluid ingredient " + value);
             }

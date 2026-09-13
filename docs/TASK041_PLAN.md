@@ -291,14 +291,14 @@ The candidate updates exact slices and build/static/runtime gates, adds `docs/FA
 No implementation, integration, release, push or deployment is claimed by this approval plan.
 
 
-## Candidate implementation outcome (GLM, branch `task041-recipe-cache-vertical`)
+## Candidate implementation outcome (dual GLM comparison and parent synthesis)
 
-Implemented from clean approval commit `e4d85c3e` in an isolated worktree by the sole GLM implementation
-candidate. Final slice arithmetic matches the plan exactly: API/common/platform **129/184/37** (350
-compiled production sources), **59 unique touched production sources**, **55 net-new compiled sources**,
-tests ordinary/transfer/root/data-map/aggregate **75/372**, **5/27**, **1/2**, **2/4**, **83/405** (23 new
-Fabric-local tests: 5 hot-cache methods added to `ChemicalDomainTest`, 6-method Knot ingredient closure
-suite, 6-method input-handler/generic-execution suite, 6-method generic input-cache context suite).
+Two GLM candidates implemented independently from clean approval commit `e4d85c3e` in isolated worktrees under the user-requested three-task comparison policy.
+Candidate A (`08caacb6`) completed the vertical and was selected; candidate B (`31331c51`) reached its turn bound incomplete and was rejected. The parent integrated A
+as `00e24656`, then repaired and selectively synthesized its Chemical immutable legacy snapshot as `7aeff2ad`. Final slice arithmetic remains API/common/platform
+**129/184/37** (350 compiled production sources), **59 unique touched production sources**, **55 net-new compiled sources**, tests
+ordinary/transfer/root/data-map/aggregate **75/372**, **5/27**, **1/2**, **2/4**, **83/405** (23 new Fabric-local tests: 5 hot-cache methods added to
+`ChemicalDomainTest`, 6-method Knot ingredient closure suite, 6-method input-handler/generic-execution suite, 6-method generic input-cache context suite).
 
 Classification corrections against the plan's letter (counts unchanged): `BaseInputCache` and
 `ComponentSensitiveInputCache` were classified `A` but needed no source delta because the per-binding
@@ -311,9 +311,10 @@ vanilla contents codec, the platform wire behavior; compound union JSON round-tr
 multi-tag value construction. The item/fluid non-strict component predicates match the official semantics
 (stacks missing an expected component do not match).
 
-Candidate gates personally passed (see the candidate report for timings): focused suites, full
-`check build`, all slice/no-NeoForge checks, `scan-platform-deps.py`, `fabric-build.sh`,
-`FABRIC_SMOKE_STATIC_ONLY=1 scripts/fabric-packaged-smoke.sh`, full packaged dedicated-server smoke, and
-the new `scripts/fabric-recipe-runtime-smoke.sh`. The candidate did not run `./build.sh --clean`, did not
-push or deploy, and did not touch production or the mirror. The mandatory independent adversarial review
-has not occurred; integration and the parent clean release remain pending.
+Candidate A passed focused/full build, slice, scan, Fabric build, and static/full packaged gates; its recipe-runtime claim was not accepted because the failed-reload
+trigger did not actually fail, and its Chemical runtime stalled under concurrent load. Candidate B passed full `check` but omitted required docs/runtime/unified build
+work and failed the static packaged gate. The parent replaced the recipe failure trigger with a fixture-only synchronous reload listener and repaired the client
+reconnect/stop proof. An adjustment-before-history GLM review of `7aeff2ad` is retained only as supplemental evidence. The policy-compliant mandatory DeepSeek high review independently
+reproduced aggregate 83/405, runtime/static/slice gates and returned no blocker, while finding dynamic-empty fluid tag rejection, missing sized compound typed maps,
+and hostile wire/malformed decode gaps; the parent repaired all of them and extended existing tests without adding test methods before final gates. No candidate or parent action pushed, deployed, or
+touched production or the mirror. Parent full matrix and clean release evidence are recorded only after they complete.

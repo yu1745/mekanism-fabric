@@ -341,7 +341,7 @@ byte-identical 的更正）见 `FABRIC_RECIPES.md`。
 
 平台决策是：`ItemStackIngredient` 直接拥有 vanilla `Ingredient` + count，兼容面 round-trip vanilla
 item/tag 与官方 `neoforge:compound`（含 legacy `children` alias），未知 custom type 显式失败；fluid 采用
-层中性 `FluidIngredient` 代数（single/tag/compound/components，int mB）；Chemical 六 ingredient 以
+层中性 `FluidIngredient` 代数（single/tag/compound/components，int mB；official typed compound/components、动态空 tag 与显式 empty 分离、positive wire invariant）；Chemical 六 ingredient 以
 `ChemicalRegistry`/本地 logger/vanilla 组合 helper 适配，`ChemicalIngredientTypeRegistry` 拥有六个内建
 ID 与 reverse codec identity，由 `MekanismChemicalIngredientTypes` 在 bootstrap 一次注册并 freeze。generic
 cache 以 `RecipeCacheSource` 取代 deferred `MekanismRecipeType` 构造依赖，`RecipeCacheContext` 以

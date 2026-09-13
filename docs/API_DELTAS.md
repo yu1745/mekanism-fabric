@@ -418,7 +418,8 @@ Task 041 admits the recipe ingredient/input/generic-cache layer with these bound
   与平台行为一致）。
 - 新层中性 `mekanism.api.recipes.ingredients.fluid.FluidIngredient`（single holder/tag/compound/component
   predicate）与 `FluidStackIngredient`（predicate + positive int mB amount）取代 NeoForge
-  `FluidIngredient`/`SizedFluidIngredient`；`IExtendedFluidTank` 声明原继承的平台方法并仅删除
+  `FluidIngredient`/`SizedFluidIngredient`；显式 empty 与当前解析为空的动态 tag 分离，flat codec 支持 official `neoforge:compound`/legacy alias 与
+  `neoforge:components`，wire decode 保持 positive amount/非空 compound invariant；`IExtendedFluidTank` 声明原继承的平台方法并仅删除
   `IFluidTank`/`FluidAction` capability bridges，`IFluidProvider` 使用项目 `FluidStack` 与 fluid-state 命名。
 - Chemical 六 ingredient 的适配限定为：`ChemicalRegistry` registry/empty-key 替换 `MekanismAPI` 访问、
   exact-category logger、以及三个 vanilla codec 组合 helper（xor/dispatch-or-else/aliased children

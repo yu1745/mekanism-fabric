@@ -15,6 +15,7 @@ import mekanism.api.SerializationConstants;
 import mekanism.api.annotations.NothingNullByDefault;
 import net.minecraft.core.component.DataComponentPredicate;
 import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.ItemStack;
@@ -45,7 +46,7 @@ public final class ItemStackIngredient implements InputIngredient<@NotNull ItemS
      * A codec which can (de)encode item stack ingredients.
      *
      * @implNote Flat composition matching the official sized ingredient format: the item/tag fields (or a {@code neoforge:compound} union form) live inline next to the
-     * optional {@code count} field, which defaults to one and is omitted when serializing a count of one.
+     * {@code count} field, which defaults to one when absent and is always written.
      *
      * @since 10.6.0
      */
@@ -212,7 +213,7 @@ public final class ItemStackIngredient implements InputIngredient<@NotNull ItemS
         }
         if (items.length == 1) {
             ItemStack item = items[0];
-            return item.is(Items.BARRIER) && item.getHoverName().getString().startsWith("Empty Tag: ");
+            return item.is(Items.BARRIER) && item.getHoverName() instanceof MutableComponent hoverName && hoverName.getString().startsWith("Empty Tag: ");
         }
         return false;
     }
@@ -326,23 +327,24 @@ public final class ItemStackIngredient implements InputIngredient<@NotNull ItemS
         }
 
         private <T> DataResult<ItemStackIngredient> decodeTyped(DynamicOps<T> ops, T input) {
-            Optional<String> type = ops.getStringValue(ops.get(input, SerializationConstants.TYPE).result().orElse(null)).result();
-            if (type.isPresent()) {
-                if (!COMPOUND_TYPE.equals(type.get())) {
-                    return DataResult.error(() -> "Unknown custom item ingredient type: '" + type.get() + "' is not supported");
-                }
-                return decodeCompound(ops, input);
+            T typeValue = ops.get(input, SerializationConstants.TYPE).result().orElse(null);
+            if (typeValue != null) {
+                return ops.getStringValue(typeValue).flatMap(type -> {
+                    if (!COMPOUND_TYPE.equals(type)) {
+                        return DataResult.error(() -> "Unknown custom item ingredient type: '" + type + "' is not supported");
+                    }
+                    return decodeCompound(ops, input);
+                });
             }
             return Ingredient.CODEC_NONEMPTY.decode(ops, input)
                   .flatMap(ingredient -> decodeCount(ops, input).map(count -> ItemStackIngredient.of(ingredient.getFirst(), count)));
         }
 
         private <T> DataResult<ItemStackIngredient> decodeCompound(DynamicOps<T> ops, T input) {
-            DataResult<List<Ingredient>> children = decodeChildren(ops, input, SerializationConstants.CHILDREN);
-            if (children.result().isEmpty()) {
-                //Note: Accept the documented legacy child-field alias
-                children = decodeChildren(ops, input, SerializationConstants.INGREDIENTS);
-            }
+            boolean hasChildren = ops.get(input, SerializationConstants.CHILDREN).result().isPresent();
+            //Note: Accept the documented legacy child-field alias only when the canonical field is absent; malformed canonical input must retain its real error.
+            DataResult<List<Ingredient>> children = decodeChildren(ops, input,
+                  hasChildren ? SerializationConstants.CHILDREN : SerializationConstants.INGREDIENTS);
             return children.flatMap(list -> {
                 if (list.isEmpty()) {
                     return DataResult.error(() -> "Compound item ingredients must have at least one child");
@@ -370,9 +372,6 @@ public final class ItemStackIngredient implements InputIngredient<@NotNull ItemS
                 return encodeCompound(value, ops, prefix, ingredients);
             }
             return Ingredient.CODEC_NONEMPTY.encodeStart(ops, ingredients.getFirst()).flatMap(serialized -> {
-                if (value.count == 1) {
-                    return DataResult.success(serialized);
-                }
                 Optional<MapLike<T>> map = ops.getMap(serialized).result();
                 if (map.isPresent()) {
                     return ops.mergeToMap(serialized, ops.createString(SerializationConstants.COUNT), ops.createInt(value.count));
@@ -387,9 +386,7 @@ public final class ItemStackIngredient implements InputIngredient<@NotNull ItemS
                 RecordBuilder<T> builder = ops.mapBuilder();
                 builder.add(SerializationConstants.TYPE, ops.createString(COMPOUND_TYPE));
                 builder.add(SerializationConstants.CHILDREN, children);
-                if (value.count != 1) {
-                    builder.add(SerializationConstants.COUNT, ops.createInt(value.count));
-                }
+                builder.add(SerializationConstants.COUNT, ops.createInt(value.count));
                 return builder.build(prefix);
             });
         }
@@ -405,6 +402,9 @@ public final class ItemStackIngredient implements InputIngredient<@NotNull ItemS
             List<Ingredient> children = null;
             if (compound) {
                 int size = ByteBufCodecs.VAR_INT.decode(buffer);
+                if (size < 1) {
+                    throw new IllegalStateException("Compound item ingredient wire payload must have at least one child");
+                }
                 List<Ingredient> decoded = new ArrayList<>(size);
                 for (int i = 0; i < size; i++) {
                     decoded.add(Ingredient.CONTENTS_STREAM_CODEC.decode(buffer));
@@ -416,6 +416,9 @@ public final class ItemStackIngredient implements InputIngredient<@NotNull ItemS
             }
             boolean hasComponents = buffer.readBoolean();
             if (hasComponents) {
+                if (compound) {
+                    throw new IllegalStateException("Item ingredient wire payload cannot be both compound and component-sensitive");
+                }
                 DataComponentPredicate components = DataComponentPredicate.STREAM_CODEC.decode(buffer);
                 return ItemStackIngredient.of(primary, count, components);
             }

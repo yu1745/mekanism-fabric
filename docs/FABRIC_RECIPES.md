@@ -27,13 +27,15 @@ loaded exactly once through `MekanismServices` with the same zero/multiple-provi
 unadmitted.
 
 - **Item**: `ItemStackIngredient` owns a vanilla `Ingredient` plus a positive count, replacing `SizedIngredient`. The flat codec composes the vanilla
-  item/tag map form inline with the optional `count` field (omitted at one), round-trips the official `neoforge:compound` typed union form including the legacy
+  item/tag map form inline with `count` (default one on decode, always written like official `optionalFieldAlwaysWrite`), round-trips the official `neoforge:compound` typed union form including the legacy
   `children` field alias, and fails unknown custom types explicitly. Non-strict data component predicates created from stacks with non-default components are carried
   by the ingredient and mark quick per-item cache mapping invalid. The stream codec syncs concrete-item forms exactly; tag-valued children flatten to their current
   stacks through the vanilla contents codec, the platform wire behavior.
 - **Fluid**: a new layer-neutral immutable `FluidIngredient` algebra (single holder, tag, compound union, component predicate) operates on project
   `mekanism.api.fluid.FluidStack` in integer mB; `FluidStackIngredient` owns the predicate plus a positive amount and preserves the flat JSON
-  (`fluid`/`tag` inline with `amount`), typed component form, matching, representations, equality, and stream behavior. Unknown fluid ingredient types fail
+  (`fluid`/`tag` inline with `amount`, default 1,000 mB on decode and always written), official `neoforge:compound` (including the legacy `ingredients` alias) and
+  `neoforge:components` typed forms, explicit-empty versus dynamically empty-tag behavior, positive wire amount validation, matching, representations, equality,
+  and stream behavior. Malformed or unknown fluid ingredient types fail
   explicitly. `IExtendedFluidTank` declares the platform-neutral methods formerly inherited from the NeoForge tank parent and drops only the
   `IFluidTank`/`FluidAction` capability bridges; `IFluidProvider` uses the project stack and fluid-state-derived naming (no `FluidType` override promise).
 - **Chemical**: the six official ingredient implementations are admitted with the planned adaptations (`ChemicalRegistry` for registry/empty-key access, an exact
@@ -93,7 +95,8 @@ loads a fixture recipe using an item compound, fluid tag, and chemical ingredien
 triple input cache, proves mismatched-manager failure with the real server level, advances the server recipe context exactly once on a successful `/reload`
 (removing old candidates and exposing the replacement), retains the usable context through a deliberately failing reload, publishes the matching client epochs
 through the tail mixin, proves disconnect cleanup and fresh-manager freshness on a same-JVM reconnect, proves same-JVM distinct manager/chemical-context thread
-ownership, and verifies the fixture recipe type/serializer/classes/JSON are absent from the release JAR.
+ownership, explicitly stops the client and requires the late-update rejection marker, refreshes the remapped artifact before inspection, and verifies the fixture
+recipe type/serializer/classes/JSON are absent from the release JAR.
 
 The derive-once amortization itself is proven by the tracking-override unit contracts in `ChemicalDomainTest` (invocation counting through the virtual
 `updateFromDataMap`); the runtime gate proves value stability and exact context-instance retention on the real recipe path.

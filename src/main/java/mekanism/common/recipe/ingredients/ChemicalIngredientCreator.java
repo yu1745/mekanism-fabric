@@ -207,15 +207,22 @@ public class ChemicalIngredientCreator implements IChemicalIngredientCreator {
             public <T> DataResult<Either<A, B>> decode(DynamicOps<T> ops, MapLike<T> input) {
                 DataResult<Either<A, B>> leftResult = left.decode(ops, input).map(Either::left);
                 DataResult<Either<A, B>> rightResult = right.decode(ops, input).map(Either::right);
-                return leftResult.result().map(DataResult::success).orElseGet(() ->
-                      rightResult.result().map(DataResult::success).orElseGet(() ->
-                            DataResult.error(() -> "Neither alternative matched: " + leftResult.error().map(DataResult.Error::message).orElse("unknown")
-                                  + "; " + rightResult.error().map(DataResult.Error::message).orElse("unknown"))));
+                var leftValue = leftResult.result();
+                var rightValue = rightResult.result();
+                if (leftValue.isPresent() && rightValue.isPresent()) {
+                    return DataResult.error(() -> "Both alternatives read successfully, cannot pick the correct one; first: " + leftValue.get()
+                          + " second: " + rightValue.get(), leftValue.get());
+                } else if (leftValue.isPresent()) {
+                    return leftResult;
+                } else if (rightValue.isPresent()) {
+                    return rightResult;
+                }
+                return leftResult.apply2((ignored, value) -> value, rightResult);
             }
 
             @Override
             public <T> java.util.stream.Stream<T> keys(DynamicOps<T> ops) {
-                return java.util.stream.Stream.of(ops.createString(SerializationConstants.TYPE));
+                return java.util.stream.Stream.concat(left.keys(ops), right.keys(ops)).distinct();
             }
 
             @Override
@@ -261,7 +268,9 @@ public class ChemicalIngredientCreator implements IChemicalIngredientCreator {
 
         @Override
         public <T> java.util.stream.Stream<T> keys(DynamicOps<T> ops) {
-            return java.util.stream.Stream.of(ops.createString(SerializationConstants.TYPE));
+            return java.util.stream.Stream.concat(
+                  java.util.stream.Stream.of(ops.createString(SerializationConstants.TYPE)), fallback.keys(ops)
+            ).distinct();
         }
 
         @Override

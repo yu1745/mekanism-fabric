@@ -115,6 +115,7 @@ loom {
             source sourceSets.recipeRuntimeFixture
             runDir = System.getProperty('mekanism.recipe.clientDir', 'run/recipe-runtime-client')
             property 'mekanism.recipe.runtimeRoot', System.getProperty('mekanism.recipe.runtimeRoot', 'run/recipe-runtime')
+            property 'mekanism.recipe.address', System.getProperty('mekanism.recipe.address', '127.0.0.1:25569')
             programArgs '--quickPlayMultiplayer', System.getProperty('mekanism.recipe.address', '127.0.0.1:25569'),
                   '--username', System.getProperty('mekanism.recipe.username', 'MekRecipe')
         }

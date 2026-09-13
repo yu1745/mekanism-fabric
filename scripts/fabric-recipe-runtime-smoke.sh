@@ -32,6 +32,9 @@ mkdir -p "$ROOT/fabric/build" "$SERVER_DIR" "$CLIENT_DIR" "$CONTROL" "$DIAGNOSTI
 exec 9>"$ROOT/fabric/build/fabric-real-client-smoke.lock"
 flock -n 9 || { echo 'fabric-recipe-runtime-smoke: another real-client smoke owns the Loom outputs' >&2; exit 2; }
 
+# Refresh the release artifact before inspecting it; run configurations compile classes but do not remap the JAR.
+"$ROOT/gradlew" -p "$ROOT/fabric" --no-daemon --console=plain remapJar verifyRecipeRuntimeFixtureIsolation
+
 terminate_scope() {
   local scope=${1:-} pid=${2:-}
   if [[ -n "$scope" ]]; then
@@ -184,7 +187,12 @@ wait_log "$SERVER_DIR/logs/latest.log" 'MEKANISM_RECIPE_RUNTIME_SERVER phase=fai
 wait_marker 'client-disconnect.complete' 'client play disconnect cleanup'
 printf 'reconnect\n' > "$CONTROL/reconnect.signal"
 wait_marker 'client-reconnect.complete' 'fresh-manager client reconnect proof'
-wait_log "$SERVER_DIR/logs/latest.log" 'MEKANISM_RECIPE_RUNTIME_CLIENT phase=reconnect fresh_manager=true epoch_reset=true prior_candidates_unreachable=true' 'client reconnect marker'
+wait_log "$CLIENT_DIR/logs/latest.log" 'MEKANISM_RECIPE_RUNTIME_CLIENT phase=reconnect fresh_manager=true epoch_reset=true prior_candidates_unreachable=true' 'client reconnect marker'
+
+# End the real client explicitly and require the shutdown hook to prove stop rejects a late recipe update.
+terminate_scope "$CLIENT_SCOPE" "$CLIENT_PID"
+CLIENT_PID=
+wait_marker 'client-late-rejected.complete' 'client stop and late-update rejection proof'
 
 wait_log "$SERVER_DIR/logs/latest.log" 'MEKANISM_RECIPE_RUNTIME_SERVER phase=initial recipe_epoch=1 chemical_epoch=1 recipe_loaded=true cache_match=true mismatch_rejected=true chemical_stable=true' 'server initial vertical marker'
 

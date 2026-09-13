@@ -204,8 +204,8 @@ With `FABRIC_SMOKE_STATIC_ONLY=1`, the script exits successfully immediately aft
 runtime gate, and additionally stages a fixture datapack whose recipe combines an official
 `neoforge:compound` item ingredient (tag + item children), a fluid tag ingredient, and a chemical single
 ingredient. The gate proves on a real dedicated server that the recipe loads through the actual
-`RecipeManager`, that the generic triple input cache finds it and rejects fluid/chemical type and
-component mismatches, that a deliberately foreign bound manager fails for the real server level instead
+`RecipeManager`, that the generic triple input cache finds it and rejects fluid/chemical type mismatches
+(the component-mismatch negative is covered by the Knot ingredient closure suite), that a deliberately foreign bound manager fails for the real server level instead
 of serving stale candidates, that repeated chemical queries retain the exact epoch-one context instance
 and values, that a successful `/reload` advances the server recipe context exactly once (old candidates
 removed, replacement exposed), and that a deliberately failing reload retains the usable epoch-two
