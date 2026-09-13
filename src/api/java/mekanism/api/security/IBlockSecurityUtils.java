@@ -66,8 +66,8 @@ public interface IBlockSecurityUtils {
      */
     @Nullable
     default IOwnerObject ownerCapability(Level level, BlockPos pos, @Nullable BlockState state, @Nullable BlockEntity blockEntity) {
-        //Fabric port delta: state/blockEntity are caller hints; the lookup resolves the current block entity/provider on each find
-        return ownerCapability().find(level, pos, null);
+        //Fabric port delta: pass the caller-supplied state/block entity hints to the lookup instead of discarding them
+        return ownerCapability().find(level, pos, state, blockEntity, null);
     }
 
     /**
@@ -108,8 +108,8 @@ public interface IBlockSecurityUtils {
      */
     @Nullable
     default ISecurityObject securityCapability(Level level, BlockPos pos, @Nullable BlockState state, @Nullable BlockEntity blockEntity) {
-        //Fabric port delta: state/blockEntity are caller hints; the lookup resolves the current block entity/provider on each find
-        return securityCapability().find(level, pos, null);
+        //Fabric port delta: pass the caller-supplied state/block entity hints to the lookup instead of discarding them
+        return securityCapability().find(level, pos, state, blockEntity, null);
     }
 
     /**
@@ -339,7 +339,7 @@ public interface IBlockSecurityUtils {
      */
     @Nullable
     default UUID getOwnerUUID(Level level, BlockPos pos, @Nullable BlockState state, @Nullable BlockEntity blockEntity) {
-        IOwnerObject ownerObject = ownerCapability().find(level, pos, null);//Fabric port delta: state/blockEntity are caller hints; the lookup resolves the current provider on each find
+        IOwnerObject ownerObject = ownerCapability().find(level, pos, state, blockEntity, null);//Fabric port delta: preserve the caller-supplied state/block entity hints
         return ownerObject == null ? null : ownerObject.getOwnerUUID();
     }
 

@@ -4,6 +4,7 @@ import com.google.common.collect.Table;
 import java.util.Collections;
 import java.util.List;
 import mekanism.api.Chunk3D;
+import mekanism.api.MekanismServerLifecycle;
 import mekanism.api.MekanismServices;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.chemical.ChemicalStack;
@@ -19,7 +20,6 @@ import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
-import net.fabricmc.loader.api.FabricLoader;
 import org.jetbrains.annotations.ApiStatus.Internal;
 import org.jetbrains.annotations.Nullable;
 
@@ -342,9 +342,9 @@ public interface IRadiationManager {
     @Internal
     @Nullable
     private static Level backCompat$getLevel(ResourceKey<Level> dimension) {
-        //Fabric port delta: FabricLoader's game instance is the dedicated server while one is running, and the client otherwise
-        Object gameInstance = FabricLoader.getInstance().getGameInstance();
-        MinecraftServer currentServer = gameInstance instanceof MinecraftServer server ? server : null;
+        //Fabric port delta: consult the real lifecycle-bound server owner instead of NeoForge's ServerLifecycleHooks global;
+        // FabricLoader's game instance is the client while an integrated server runs, so it must never be used here
+        MinecraftServer currentServer = MekanismServerLifecycle.getServer();
         if (currentServer == null) {
             return null;
         }
