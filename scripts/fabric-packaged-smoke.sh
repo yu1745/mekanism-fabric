@@ -1039,6 +1039,8 @@ expected_api_recipes = {
     "mekanism/api/recipes/cache/CachedRecipe$OperationTracker$RecipeError.class",
     "mekanism/api/recipes/cache/CachedRecipeHelper.class",
     "mekanism/api/recipes/cache/ICachedRecipeHolder.class",
+    "mekanism/api/recipes/cache/ItemStackConstantChemicalToObjectCachedRecipe.class",
+    "mekanism/api/recipes/cache/ItemStackConstantChemicalToObjectCachedRecipe$ChemicalUsageMultiplier.class",
     "mekanism/api/recipes/inputs/IInputHandler.class",
     "mekanism/api/recipes/inputs/ILongInputHandler.class",
     "mekanism/api/recipes/inputs/InputHelper.class",
@@ -1173,6 +1175,24 @@ expected_common_recipes = {
     "mekanism/common/recipe/ingredients/creator/ItemStackIngredientCreator.class",
     "mekanism/common/recipe/ingredients/creator/FluidStackIngredientCreator.class",
     "mekanism/common/registries/MekanismChemicalIngredientTypes.class",
+    "mekanism/common/recipe/lookup/IRecipeLookupHandler.class",
+    "mekanism/common/recipe/lookup/IRecipeLookupHandler$IRecipeTypedLookupHandler.class",
+    "mekanism/common/recipe/lookup/IRecipeLookupHandler$ConstantUsageRecipeLookupHandler.class",
+    "mekanism/common/recipe/lookup/ISingleRecipeLookupHandler.class",
+    "mekanism/common/recipe/lookup/ISingleRecipeLookupHandler$ItemRecipeLookupHandler.class",
+    "mekanism/common/recipe/lookup/ISingleRecipeLookupHandler$FluidRecipeLookupHandler.class",
+    "mekanism/common/recipe/lookup/ISingleRecipeLookupHandler$ChemicalRecipeLookupHandler.class",
+    "mekanism/common/recipe/lookup/IDoubleRecipeLookupHandler.class",
+    "mekanism/common/recipe/lookup/IDoubleRecipeLookupHandler$DoubleItemRecipeLookupHandler.class",
+    "mekanism/common/recipe/lookup/IDoubleRecipeLookupHandler$ItemChemicalRecipeLookupHandler.class",
+    "mekanism/common/recipe/lookup/IDoubleRecipeLookupHandler$FluidChemicalRecipeLookupHandler.class",
+    "mekanism/common/recipe/lookup/ITripleRecipeLookupHandler.class",
+    "mekanism/common/recipe/lookup/ITripleRecipeLookupHandler$ItemFluidChemicalRecipeLookupHandler.class",
+    "mekanism/common/recipe/lookup/IEitherSideRecipeLookupHandler.class",
+    "mekanism/common/recipe/lookup/IEitherSideRecipeLookupHandler$EitherSideChemicalRecipeLookupHandler.class",
+    "mekanism/common/recipe/lookup/monitor/RecipeCacheLookupMonitor.class",
+    "mekanism/common/recipe/lookup/monitor/FactoryRecipeCacheLookupMonitor.class",
+    "mekanism/client/recipe_viewer/type/IRecipeViewerRecipeType.class",
     "mekanism/common/recipe/lookup/cache/IInputRecipeCache.class",
     "mekanism/common/recipe/lookup/cache/RecipeCacheContext.class",
     "mekanism/common/recipe/lookup/cache/RecipeCacheContext$Binding.class",
@@ -1241,7 +1261,8 @@ with zipfile.ZipFile(sys.argv[1]) as artifact:
           or e.startswith("mekanism/common/recipe/MekanismRecipeType")
           or e == "mekanism/common/recipe/IMekanismRecipeTypeProvider.class"
           or e == "mekanism/common/recipe/WrappedShapedRecipe.class"
-          or e == "mekanism/common/registries/MekanismChemicalIngredientTypes.class")}
+          or e == "mekanism/common/registries/MekanismChemicalIngredientTypes.class"
+          or e == "mekanism/client/recipe_viewer/type/IRecipeViewerRecipeType.class")}
     actual_platform_recipes = {e for e in entries if e.endswith(".class") and (
           e.startswith("mekanism/fabric/recipe/") or e.startswith("mekanism/fabric/mixin/recipe/"))}
     if actual_api_recipes != expected_api_recipes:
@@ -1287,7 +1308,7 @@ with zipfile.ZipFile(sys.argv[1]) as artifact:
           or e.startswith("mekanism/common/recipe/upgrade/")
           or e.startswith("mekanism/common/recipe/bin/")
           or e == "mekanism/common/recipe/ClearConfigurationRecipe.class"
-          or e.startswith("mekanism/client/")
+          or (e.startswith("mekanism/client/") and e != "mekanism/client/recipe_viewer/type/IRecipeViewerRecipeType.class")
           or e.startswith("mekanism/common/registries/MekanismItems")
           or e == "mekanism/api/MekanismAPI.class"))
     if forbidden_042b:

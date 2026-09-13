@@ -162,7 +162,7 @@ def platformSlice = loadSlice('platform-slice.txt')
 def apiSliceFiles = apiSlice.collect { file("../src/api/java/${it}") }
 def commonSliceFiles = commonSlice.collect { file("../src/main/java/${it}") }
 def platformSliceFiles = platformSlice.collect { file("src/main/java/${it}") }
-if (apiSlice.size() != 200 || commonSlice.size() != 193 || platformSlice.size() != 39) {
+if (apiSlice.size() != 201 || commonSlice.size() != 201 || platformSlice.size() != 39) {
     throw new GradleException("Unexpected Fabric source slice counts: api=${apiSlice.size()} common=${commonSlice.size()} platform=${platformSlice.size()}")
 }
 
@@ -736,6 +736,7 @@ def recipeRegistryKnotTestSource = layout.projectDirectory.file('src/fabricRecip
 def apiFirstInitTestSource = layout.projectDirectory.file('src/fabricRecipeRegistryTest/java/mekanism/recipe/init/ApiFirstInitializationTest.java')
 def commonFirstInitTestSource = layout.projectDirectory.file('src/fabricRecipeRegistryTest/java/mekanism/recipe/init/CommonFirstInitializationTest.java')
 def recipeTypeOwnerTestSource = layout.projectDirectory.file('src/test/java/mekanism/common/recipe/MekanismRecipeTypeOwnerTest.java')
+def recipeCacheLookupMonitorTestSource = layout.projectDirectory.file('src/test/java/mekanism/common/recipe/lookup/RecipeCacheLookupMonitorTest.java')
 def ordinaryTestRuntimeFiles = files(sourceSets.test.runtimeClasspath)
 def transferTestRuntimeFiles = files(sourceSets.fabricTransferTest.runtimeClasspath)
 def registryTestRuntimeFiles = files(sourceSets.fabricRegistryTest.runtimeClasspath)
@@ -754,6 +755,7 @@ def verifyFabricTestContract = tasks.register('verifyFabricTestContract') {
           ingredientClosureTestSource, inputHelperExecutionTestSource, genericInputCacheTestSource, rotaryInputCacheTestSource,
           distributionPropertySource, windowConfigTestSource, windowDomainTestSource, concreteSlotTestSource, fabricItemStorageTestSource,
           recipeOutputHandlingTestSource, recipeSerializerContractTestSource, recipeRegistryKnotTestSource, recipeTypeOwnerTestSource,
+          recipeCacheLookupMonitorTestSource,
           apiFirstInitTestSource, commonFirstInitTestSource)
     doLast {
         def loaderJunitFiles = { runtimeFiles ->
@@ -796,7 +798,7 @@ def verifyFabricTestContract = tasks.register('verifyFabricTestContract') {
               || annotationCount(windowDomainTestSource) != 6 || annotationCount(concreteSlotTestSource) != 6
               || annotationCount(fabricItemStorageTestSource) != 5 || annotationCount(recipeOutputHandlingTestSource) != 6
               || annotationCount(recipeSerializerContractTestSource) != 6 || annotationCount(recipeRegistryKnotTestSource) != 5
-              || annotationCount(recipeTypeOwnerTestSource) != 6
+              || annotationCount(recipeTypeOwnerTestSource) != 6 || annotationCount(recipeCacheLookupMonitorTestSource) != 7
               || annotationCount(apiFirstInitTestSource) != 1 || annotationCount(commonFirstInitTestSource) != 1) {
             throw new GradleException('Registry/data-map/window/slot/recipe fixed test method counts changed')
         }
@@ -821,13 +823,13 @@ def verifyFabricTestContract = tasks.register('verifyFabricTestContract') {
             }
             [reports.length, tests]
         }
-        def ordinary = readTotals(ordinaryXmlResults, 'ordinary', 79, 395)
+        def ordinary = readTotals(ordinaryXmlResults, 'ordinary', 80, 402)
         def transfer = readTotals(transferXmlResults, 'transfer', 5, 27)
         def registry = readTotals(registryXmlResults, 'root-registry', 1, 2)
         def dataMap = readTotals(dataMapXmlResults, 'data-map', 2, 4)
         def recipeRegistry = readTotals(recipeRegistryXmlResults, 'recipe-registry', 3, 7)
-        if (ordinary[0] + transfer[0] + registry[0] + dataMap[0] + recipeRegistry[0] != 90
-              || ordinary[1] + transfer[1] + registry[1] + dataMap[1] + recipeRegistry[1] != 435) {
+        if (ordinary[0] + transfer[0] + registry[0] + dataMap[0] + recipeRegistry[0] != 91
+              || ordinary[1] + transfer[1] + registry[1] + dataMap[1] + recipeRegistry[1] != 442) {
             throw new GradleException('Unexpected aggregate Fabric test totals')
         }
     }

@@ -103,6 +103,7 @@ mekanism/api/recipes/MekanismRecipe.java
 mekanism/api/recipes/cache/CachedRecipe.java
 mekanism/api/recipes/cache/CachedRecipeHelper.java
 mekanism/api/recipes/cache/ICachedRecipeHolder.java
+mekanism/api/recipes/cache/ItemStackConstantChemicalToObjectCachedRecipe.java
 mekanism/api/recipes/ingredients/ChemicalStackIngredient.java
 mekanism/api/recipes/ingredients/FluidStackIngredient.java
 mekanism/api/recipes/ingredients/InputIngredient.java

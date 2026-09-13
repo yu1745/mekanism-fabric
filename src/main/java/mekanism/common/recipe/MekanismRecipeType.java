@@ -150,8 +150,16 @@ public class MekanismRecipeType<VANILLA_INPUT extends RecipeInput, RECIPE extend
 
     /**
      * Clears this owner's cached state from the calling thread's current binding: every recipe list and every input-cache index of all 26 types.
+     *
+     * <p>The current binding additionally advances its cache-invalidation generation exactly once, so monitoring holders stop processing candidates that were resolved
+     * before the clear. The publication identity and epoch are deliberately left alone: an explicit clear discards derived state, it is not a successful datapack
+     * reload.</p>
      */
     public static void clearCache() {
+        RecipeCacheContext.Binding binding = RecipeCacheContext.currentBinding();
+        if (binding != null) {
+            binding.advanceInvalidationGeneration();
+        }
         for (RecipeTypeRegistryObject<?, ?, ?> entry : RECIPE_TYPES.getEntries()) {
             entry.getRecipeType().clearCaches();
         }

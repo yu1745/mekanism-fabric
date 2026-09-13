@@ -183,6 +183,14 @@ mekanism/common/recipe/lookup/cache/type/ComponentSensitiveInputCache.java
 mekanism/common/recipe/lookup/cache/type/FluidInputCache.java
 mekanism/common/recipe/lookup/cache/type/IInputCache.java
 mekanism/common/recipe/lookup/cache/type/ItemInputCache.java
+mekanism/common/recipe/lookup/IRecipeLookupHandler.java
+mekanism/common/recipe/lookup/ISingleRecipeLookupHandler.java
+mekanism/common/recipe/lookup/IDoubleRecipeLookupHandler.java
+mekanism/common/recipe/lookup/ITripleRecipeLookupHandler.java
+mekanism/common/recipe/lookup/IEitherSideRecipeLookupHandler.java
+mekanism/common/recipe/lookup/monitor/RecipeCacheLookupMonitor.java
+mekanism/common/recipe/lookup/monitor/FactoryRecipeCacheLookupMonitor.java
+mekanism/client/recipe_viewer/type/IRecipeViewerRecipeType.java
 mekanism/common/registries/MekanismChemicalIngredientTypes.java
 mekanism/common/recipe/WrappedShapedRecipe.java
 mekanism/common/recipe/serializer/MekanismRecipeSerializer.java

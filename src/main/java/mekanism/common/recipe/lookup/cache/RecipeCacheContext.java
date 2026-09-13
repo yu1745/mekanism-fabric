@@ -86,6 +86,7 @@ public final class RecipeCacheContext {
         private final RegistryAccess registryAccess;
         private final long epoch;
         private final Object identityToken = new Object();
+        private long invalidationGeneration;
         private final IdentityHashMap<AbstractInputRecipeCache<?>, AbstractInputRecipeCache.CacheState> states = new IdentityHashMap<>();
         private final IdentityHashMap<RecipeCacheSource<?>, List<? extends RecipeHolder<?>>> recipeLists = new IdentityHashMap<>();
 
@@ -147,9 +148,32 @@ public final class RecipeCacheContext {
             return recipeLists.remove(owner) != null;
         }
 
-        /** A fresh identity token for every successful publication; no two bindings ever share one. */
-        Object identityToken() {
+        /**
+         * A fresh identity token for every successful publication; no two bindings ever share one.
+         *
+         * <p>The token is a plain object with no reference back to this binding, so a consumer may retain it as an opaque observation stamp without retaining the
+         * manager, registry access, recipe lists, or the binding itself. Rebinding, even to the same manager and epoch, still produces a new token.</p>
+         */
+        public Object identityToken() {
             return identityToken;
+        }
+
+        /**
+         * Gets this binding's cache-invalidation generation. It starts at zero for a fresh binding and is advanced once by every full owner clear of
+         * {@link MekanismRecipeType#clearCache()}, while the publication identity and epoch stay untouched: an explicit clear is not a successful datapack reload.
+         *
+         * <p>Individual index or recipe-list clears do not advance it, because they do not invalidate the whole published dataset.</p>
+         */
+        public long invalidationGeneration() {
+            return invalidationGeneration;
+        }
+
+        /**
+         * Advances this binding's cache-invalidation generation exactly once for one full owner clear. Not a publication: concurrent owner structures remain valid for
+         * the new generation and consumers must re-resolve against the still-bound manager.
+         */
+        public void advanceInvalidationGeneration() {
+            invalidationGeneration++;
         }
 
         AbstractInputRecipeCache.CacheState state(AbstractInputRecipeCache<?> cache) {
