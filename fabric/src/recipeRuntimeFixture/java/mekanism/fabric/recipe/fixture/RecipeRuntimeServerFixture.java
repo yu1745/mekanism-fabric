@@ -22,12 +22,16 @@ import mekanism.common.registries.MekanismChemicals;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
+import net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.packs.PackType;
+import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.RecipeHolder;
@@ -49,6 +53,10 @@ public final class RecipeRuntimeServerFixture implements ModInitializer {
     private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism/RecipeRuntimeServerFixture");
     private static final Path ROOT = Path.of(System.getProperty("mekanism.recipe.runtimeRoot")).toAbsolutePath().normalize();
     public static final ResourceLocation FIXTURE_ID = ResourceLocation.fromNamespaceAndPath("mekanism_recipe_fixture", "fusion");
+    private static final ResourceLocation FAILURE_LISTENER_ID =
+          ResourceLocation.fromNamespaceAndPath("mekanism_recipe_fixture", "failure_listener");
+    private static final ResourceLocation FAILURE_MARKER =
+          ResourceLocation.fromNamespaceAndPath("mekanism_recipe_fixture", "reload_failure.marker");
     public static final RecipeType<FixtureRecipe> TYPE = new RecipeType<>() {
     };
     private static volatile RecipeSerializer<FixtureRecipe> serializer;
@@ -65,6 +73,7 @@ public final class RecipeRuntimeServerFixture implements ModInitializer {
         mekanism.common.registries.MekanismChemicalIngredientTypes.ensureRegistered();
         Registry.register(BuiltInRegistries.RECIPE_TYPE, FIXTURE_ID, TYPE);
         Registry.register(BuiltInRegistries.RECIPE_SERIALIZER, FIXTURE_ID, serializer());
+        ResourceManagerHelper.get(PackType.SERVER_DATA).registerReloadListener(new FailureReloadListener());
         ServerLifecycleEvents.SERVER_STARTED.register(registered -> server = registered);
         ServerTickEvents.END_SERVER_TICK.register(registered -> {
             //Note: SERVER_STARTED handler order across mods is not guaranteed, so the probe runs on the first
@@ -141,15 +150,16 @@ public final class RecipeRuntimeServerFixture implements ModInitializer {
         RecipeManager foreign = new RecipeManager(current.registryAccess());
         RecipeCacheContext.Binding original = RecipeCacheContext.currentBinding();
         RecipeCacheContext.bind(foreign, 1);
+        boolean rejected = false;
         try {
             cache.findFirstRecipe(current.overworld(), new ItemStack(Items.STICK), new FluidStack(Fluids.WATER, 100),
                   new ChemicalStack(MekanismChemicals.HYDROGEN, 10));
-            throw new IllegalStateException("a mismatched manager lookup must fail");
         } catch (IllegalStateException expected) {
-            //Expected: the bound manager is not the level's manager
+            rejected = true;
         } finally {
             RecipeCacheContext.bind(original.manager(), original.epoch());
         }
+        require(rejected, "a mismatched manager lookup must fail");
         //Note: rebinding the original manager identity discards the foreign probe state and re-initializes from the real manager
         FixtureRecipe found = cache.findFirstRecipe(current.overworld(), new ItemStack(Items.STICK), new FluidStack(Fluids.WATER, 100),
               new ChemicalStack(MekanismChemicals.HYDROGEN, 10));
@@ -194,10 +204,8 @@ public final class RecipeRuntimeServerFixture implements ModInitializer {
     private static void startFailingReload(MinecraftServer current) {
         try {
             Files.deleteIfExists(ROOT.resolve("fail-reload.trigger"));
-            //Note: Selecting a repository id that does not exist makes the resource reload fail without depending
-            // on which dynamic-registry files a reload actually validates
+            //The fixture-only reload listener sees the marker resource and fails the real resource reload deterministically.
             List<String> selected = new ArrayList<>(current.getPackRepository().getSelectedIds());
-            selected.add("file/recipe-runtime-does-not-exist");
             current.reloadResources(selected).whenComplete((ignored, failure) -> current.execute(() -> {
                 if (failure == null) throw new IllegalStateException("the deliberately failing reload unexpectedly succeeded");
                 failedReloadProbe(current);
@@ -217,6 +225,21 @@ public final class RecipeRuntimeServerFixture implements ModInitializer {
               new FluidStack(Fluids.WATER, 100), new ChemicalStack(MekanismChemicals.HYDROGEN, 10)) != null,
               "a failed reload must leave the previous usable cache in place");
         LOGGER.info("MEKANISM_RECIPE_RUNTIME_SERVER phase=failed_reload retained_epoch=2 cache_usable=true");
+    }
+
+    private static final class FailureReloadListener implements SimpleSynchronousResourceReloadListener {
+        @Override
+        public ResourceLocation getFabricId() {
+            return FAILURE_LISTENER_ID;
+        }
+
+        @Override
+        public void onResourceManagerReload(ResourceManager resources) {
+            if (resources.getResource(FAILURE_MARKER).isPresent()) {
+                LOGGER.info("MEKANISM_RECIPE_RUNTIME_SERVER phase=failed_reload_trigger marker_present=true");
+                throw new IllegalStateException("Intentional recipe runtime fixture reload failure marker is present");
+            }
+        }
     }
 
     private static RecipeSerializer<FixtureRecipe> serializer() {

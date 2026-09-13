@@ -34,6 +34,7 @@ public final class ChemicalTestBootstrap {
         private double reentrantBeforeSuper;
         private double nestedOtherChemical;
         private double reentrantAfterSuper;
+        private boolean failNextDerivation;
 
         private TrackingChemical(ChemicalBuilder builder) {
             super(builder);
@@ -42,10 +43,18 @@ public final class ChemicalTestBootstrap {
         @Override
         public void updateFromDataMap(Holder<Chemical> holder) {
             invocations++;
+            if (failNextDerivation) {
+                failNextDerivation = false;
+                throw new IllegalStateException("intentional derivation failure");
+            }
             reentrantBeforeSuper = getRadioactivity();
             nestedOtherChemical = MekanismChemicals.HYDROGEN.get().getRadioactivity();
             super.updateFromDataMap(holder);
             reentrantAfterSuper = getRadioactivity();
+        }
+
+        public void armDerivationFailure() {
+            failNextDerivation = true;
         }
 
         public void resetTracking() {
@@ -53,6 +62,7 @@ public final class ChemicalTestBootstrap {
             reentrantBeforeSuper = Double.NaN;
             nestedOtherChemical = Double.NaN;
             reentrantAfterSuper = Double.NaN;
+            failNextDerivation = false;
         }
 
         public int invocations() { return invocations; }

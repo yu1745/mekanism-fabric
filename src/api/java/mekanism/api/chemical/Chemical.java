@@ -140,40 +140,17 @@ public class Chemical implements IChemicalProvider, IChemicalAttributeContainer<
     }
 
     private final Holder.Reference<Chemical> builtInRegistryHolder = ChemicalRegistry.registry().createIntrusiveHolder(this);
-    //TODO - 1.22: Figure out if we should we keep this cache or remove it?
-    private final List<IChemicalAttribute> attributes = new ArrayList<>();
-    private final List<IChemicalAttribute> attributesView = Collections.unmodifiableList(attributes);
     private final ResourceLocation iconLocation;
     private final int tint;
-    private double radioactivity;
-    private boolean hasAttributesWithValidation;
 
     @Nullable
     private String translationKey;
 
-    @SuppressWarnings("removal")
-    @Deprecated(forRemoval = true, since = "10.7.11")
-    private Map<Class<? extends ChemicalAttribute>, ChemicalAttribute> legacyAttributeMap;
-    @Nullable
-    @SuppressWarnings("removal")
-    @Deprecated(forRemoval = true, since = "10.7.11")
-    private Map<Class<? extends ChemicalAttribute>, ChemicalAttribute> attributeMap;
-    @Deprecated(forRemoval = true, since = "10.7.11")
-    private double legacyRadioactivity;
-    @Deprecated(forRemoval = true, since = "10.7.11")
-    private boolean hasLegacyAttributesWithValidation;
-    @Nullable
-    @Deprecated(forRemoval = true, since = "10.7.11")
-    private TagKey<Item> legacyOreTag;
-    @Nullable
-    @Deprecated(forRemoval = true, since = "10.7.11")
-    private TagKey<Item> oreTag;
-    @Deprecated(forRemoval = true, since = "10.7.11")
-    private boolean isGaseous;
     /**
-     * The one volatile immutable copy-on-write snapshot of every legacy input feeding context-local derivation. Data-map derived values are cached per
+     * The one volatile immutable copy-on-write snapshot of every legacy value. Data-map derived values are cached per
      * {@link ChemicalDataContext.Binding} keyed by this snapshot's identity, so {@link #addAttribute(ChemicalAttribute)} publishing a new snapshot invalidates only
-     * this chemical on its next query, and a query racing the publication observes exactly one complete old or new state.
+     * this chemical on its next query. A query racing publication captures one complete old or new snapshot; caller-owned mutable attribute objects are outside this
+     * contract.
      */
     private volatile LegacyState legacyState;
 
@@ -186,23 +163,19 @@ public class Chemical implements IChemicalProvider, IChemicalAttributeContainer<
     @SuppressWarnings("removal")
     @Deprecated(forRemoval = true, since = "10.7.11")
     private void initLegacy(ChemicalBuilder builder) {
-        //Copy the map to support addAttribute
-        this.legacyAttributeMap = new HashMap<>(builder.getAttributeMap());
-        for (ChemicalAttribute legacyAttribute : legacyAttributeMap.values()) {
+        Map<Class<? extends ChemicalAttribute>, ChemicalAttribute> legacyAttributes = new HashMap<>(builder.getAttributeMap());
+        double legacyRadioactivity = 0;
+        boolean hasLegacyAttributesWithValidation = false;
+        for (ChemicalAttribute legacyAttribute : legacyAttributes.values()) {
             if (legacyAttribute instanceof Radiation radiation) {
-                this.legacyRadioactivity = radiation.getRadioactivity();
-                this.radioactivity = this.legacyRadioactivity;
+                legacyRadioactivity = radiation.getRadioactivity();
             } else if (legacyAttribute.needsValidation()) {
                 //Skip radioactive attributes when checking if we have any that need validation, so that we properly return false
                 // when the radiation manager is disabled
-                this.hasLegacyAttributesWithValidation = true;
-                this.hasAttributesWithValidation = true;
+                hasLegacyAttributesWithValidation = true;
             }
         }
-        this.legacyOreTag = builder.getOreTag();
-        this.oreTag = this.legacyOreTag;
-        this.isGaseous = builder.isGaseous();
-        this.legacyState = new LegacyState(legacyOreTag, legacyRadioactivity, hasLegacyAttributesWithValidation);
+        this.legacyState = new LegacyState(legacyAttributes, builder.getOreTag(), legacyRadioactivity, hasLegacyAttributesWithValidation, builder.isGaseous());
     }
 
     @Override
@@ -228,10 +201,16 @@ public class Chemical implements IChemicalProvider, IChemicalAttributeContainer<
     @SuppressWarnings("removal")
     @Deprecated(forRemoval = true, since = "10.7.11")
     private Map<Class<? extends ChemicalAttribute>, ChemicalAttribute> getAllAttributes() {
-        List<IChemicalAttribute> modern = derived().attributes();
-        if (modern.isEmpty()) return legacyAttributeMap;
-        Map<Class<? extends ChemicalAttribute>, ChemicalAttribute> merged = new HashMap<>(legacyAttributeMap);
-        for (IChemicalAttribute attribute : modern) {
+        return getAllAttributes(derived());
+    }
+
+    @SuppressWarnings("removal")
+    @Deprecated(forRemoval = true, since = "10.7.11")
+    private Map<Class<? extends ChemicalAttribute>, ChemicalAttribute> getAllAttributes(Derived derived) {
+        LegacyState legacy = derived.legacy();
+        if (derived.attributes().isEmpty()) return legacy.attributes();
+        Map<Class<? extends ChemicalAttribute>, ChemicalAttribute> merged = new HashMap<>(legacy.attributes());
+        for (IChemicalAttribute attribute : derived.attributes()) {
             ChemicalAttribute legacyAttribute = attribute.toLegacyAttribute();
             merged.put(legacyAttribute.getClass(), legacyAttribute);
         }
@@ -249,7 +228,7 @@ public class Chemical implements IChemicalProvider, IChemicalAttributeContainer<
     @SuppressWarnings("removal")
     @Deprecated(forRemoval = true, since = "10.7.11")
     public boolean hasLegacy(Class<? extends ChemicalAttribute> type) {
-        return legacyAttributeMap.containsKey(type);
+        return legacyState.attributes().containsKey(type);
     }
 
     /**
@@ -298,7 +277,7 @@ public class Chemical implements IChemicalProvider, IChemicalAttributeContainer<
     @SuppressWarnings({"unchecked", "removal"})
     @Deprecated(forRemoval = true, since = "10.7.11")
     public <ATTRIBUTE extends ChemicalAttribute> ATTRIBUTE getLegacy(Class<ATTRIBUTE> type) {
-        return (ATTRIBUTE) legacyAttributeMap.get(type);
+        return (ATTRIBUTE) legacyState.attributes().get(type);
     }
 
     /**
@@ -310,21 +289,9 @@ public class Chemical implements IChemicalProvider, IChemicalAttributeContainer<
      */
     @SuppressWarnings("removal")
     @Deprecated(forRemoval = true, since = "10.7.11")
-    public void addAttribute(ChemicalAttribute attribute) {
-        legacyAttributeMap.put(attribute.getClass(), attribute);
-        //Clear the merged cache if it has already been initialized, and just reinitialize it when needed
-        attributeMap = null;
-        if (attribute instanceof Radiation radiation) {
-            legacyRadioactivity = radiation.getRadioactivity();
-            radioactivity = legacyRadioactivity;
-            //Note: We don't mark radiation as needing validation here, as we handle it separately, so that if the radiation manager is disabled
-            // we return false for if we have any attributes that need validation
-        } else if (attribute.needsValidation()) {
-            this.hasLegacyAttributesWithValidation = true;
-            this.hasAttributesWithValidation = true;
-        }
-        //Note: Publishing a new immutable legacy state invalidates this chemical's hot-cache entry on its next query; other chemicals keep their cached values
-        this.legacyState = new LegacyState(legacyOreTag, legacyRadioactivity, hasLegacyAttributesWithValidation);
+    public synchronized void addAttribute(ChemicalAttribute attribute) {
+        //Publishing a fresh immutable state invalidates only this chemical's hot-cache entry on its next query.
+        legacyState = legacyState.withAttribute(attribute);
     }
 
     /**
@@ -477,7 +444,7 @@ public class Chemical implements IChemicalProvider, IChemicalAttributeContainer<
      */
     @Deprecated(forRemoval = true, since = "10.7.11")
     public boolean isGaseousLegacy() {
-        return isGaseous;
+        return legacyState.gaseous();
     }
 
     /**
@@ -507,7 +474,7 @@ public class Chemical implements IChemicalProvider, IChemicalAttributeContainer<
     public void updateFromDataMap(Holder<Chemical> holder) {
         DerivedBuilder builder = trackingBuilder();
         ChemicalSolidTag tag = IMekanismDataMapTypes.INSTANCE.getChemicalData(holder, IMekanismDataMapTypes.INSTANCE.chemicalSolidTag());
-        builder.oreTag = tag == null ? legacyOreTag : tag.solidRepresentation();
+        builder.oreTag = tag == null ? builder.legacy.oreTag() : tag.solidRepresentation();
         trackAttribute(holder, IMekanismDataMapTypes.INSTANCE.chemicalFuel());
         trackAttribute(holder, IMekanismDataMapTypes.INSTANCE.chemicalRadioactivity());
         trackAttribute(holder, IMekanismDataMapTypes.INSTANCE.cooledChemicalCoolant());
@@ -572,8 +539,27 @@ public class Chemical implements IChemicalProvider, IChemicalAttributeContainer<
     private record DerivationFrame(Chemical chemical, DerivedBuilder builder) {
     }
 
-    /** Immutable copy-on-write snapshot of the legacy inputs feeding context-local derivation; cache validity is compared by identity. */
-    private record LegacyState(@Nullable TagKey<Item> oreTag, double radioactivity, boolean needsValidation) {
+    /** Immutable copy-on-write snapshot of the legacy values; cache validity is compared by identity. */
+    private record LegacyState(Map<Class<? extends ChemicalAttribute>, ChemicalAttribute> attributes, @Nullable TagKey<Item> oreTag,
+                               double radioactivity, boolean needsValidation, boolean gaseous) {
+
+        private LegacyState {
+            attributes = Collections.unmodifiableMap(new HashMap<>(attributes));
+        }
+
+        private LegacyState withAttribute(ChemicalAttribute attribute) {
+            Map<Class<? extends ChemicalAttribute>, ChemicalAttribute> updated = new HashMap<>(attributes);
+            updated.put(attribute.getClass(), attribute);
+            double updatedRadioactivity = radioactivity;
+            boolean updatedNeedsValidation = needsValidation;
+            if (attribute instanceof Radiation radiation) {
+                updatedRadioactivity = radiation.getRadioactivity();
+                //Radiation is validated separately when the radiation manager is enabled.
+            } else if (attribute.needsValidation()) {
+                updatedNeedsValidation = true;
+            }
+            return new LegacyState(updated, oreTag, updatedRadioactivity, updatedNeedsValidation, gaseous);
+        }
     }
 
     /** A completed derivation and the exact legacy state it was derived under. */
@@ -588,22 +574,24 @@ public class Chemical implements IChemicalProvider, IChemicalAttributeContainer<
     }
 
     private static final class DerivedBuilder {
+        private final LegacyState legacy;
         private TagKey<Item> oreTag;
         private final List<IChemicalAttribute> attributes = new ArrayList<>();
         private double radioactivity;
         private boolean needsValidation;
         private DerivedBuilder(LegacyState legacy) {
+            this.legacy = legacy;
             this.oreTag = legacy.oreTag();
             this.radioactivity = legacy.radioactivity();
             this.needsValidation = legacy.needsValidation();
         }
 
         private Derived snapshot() {
-            return new Derived(oreTag, List.copyOf(attributes), radioactivity, needsValidation);
+            return new Derived(legacy, oreTag, List.copyOf(attributes), radioactivity, needsValidation);
         }
     }
 
-    private record Derived(@Nullable TagKey<Item> oreTag, List<IChemicalAttribute> attributes,
+    private record Derived(LegacyState legacy, @Nullable TagKey<Item> oreTag, List<IChemicalAttribute> attributes,
                            double radioactivity, boolean needsValidation) {
     }
 
@@ -644,14 +632,15 @@ public class Chemical implements IChemicalProvider, IChemicalAttributeContainer<
      */
     @SuppressWarnings("removal")
     protected void appendHoverText(ChemicalStack stack, TooltipContext context, List<Component> tooltips, TooltipFlag tooltipFlag) {
-        for (IChemicalAttribute attribute : derived().attributes()) {
+        Derived derived = derived();
+        for (IChemicalAttribute attribute : derived.attributes()) {
             attribute.collectTooltips(context, tooltips, tooltipFlag);
         }
         //TODO - 1.22: Remove this legacy handling
-        if (!legacyAttributeMap.isEmpty()) {
+        if (!derived.legacy().attributes().isEmpty()) {
             //Only loop the legacy attributes if we have any, don't bother looping the attribute map that contains the modern attributes as legacy ones
             Consumer<Component> tooltipAdder = tooltips::add;
-            for (ChemicalAttribute attr : getLegacyAttributes()) {
+            for (ChemicalAttribute attr : getAllAttributes(derived).values()) {
                 attr.collectTooltips(tooltipAdder);
             }
         }

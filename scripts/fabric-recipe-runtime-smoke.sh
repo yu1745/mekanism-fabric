@@ -170,10 +170,13 @@ wait_marker 'server-reload-verified.complete' 'server reload verification'
 wait_marker 'client-reload.complete' 'client tail-mixin reload epoch'
 wait_log "$SERVER_DIR/logs/latest.log" 'MEKANISM_RECIPE_RUNTIME_SERVER phase=reload recipe_epoch=2 old_removed=true replacement_exposed=true' 'server reload marker'
 
-# Failed reload: the fixture selects a nonexistent repository id, which fails the resource reload and must
-# preserve the usable epoch-two context and cache. (Malformed recipe or dynamic-registry files may be skipped
-# or validated differently per reload path, so the failure trigger stays repository-level and deterministic.)
+# Failed reload: a fixture-only synchronous reload listener rejects this marker resource. This exercises a real
+# END_DATA_PACK_RELOAD success=false path without depending on recipe/dynamic-registry parse errors that vanilla may skip.
+FAILURE_MARKER="$REPLACEMENT/data/mekanism_recipe_fixture/reload_failure.marker"
+mkdir -p "$(dirname "$FAILURE_MARKER")"
+printf '%s\n' 'intentional fixture-only recipe reload failure' > "$FAILURE_MARKER"
 printf 'reload\n' > "$CONTROL/fail-reload.trigger"
+wait_log "$SERVER_DIR/logs/latest.log" 'MEKANISM_RECIPE_RUNTIME_SERVER phase=failed_reload_trigger marker_present=true' 'failed reload listener trigger'
 wait_marker 'fail-reload.complete' 'failed recipe reload'
 wait_log "$SERVER_DIR/logs/latest.log" 'MEKANISM_RECIPE_RUNTIME_SERVER phase=failed_reload retained_epoch=2 cache_usable=true' 'failed reload retention marker'
 

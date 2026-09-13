@@ -149,28 +149,47 @@ class ChemicalDomainTest {
         assertEquals(1, empty.invocations());
         assertEquals(0, empty.reentrantBeforeSuper());
         assertEquals(0, empty.reentrantAfterSuper());
+        //A throwing override must not publish a completed entry; the next query retries and then becomes hot.
+        ChemicalDataContext.bind(new ChemicalDataContext(4, Map.of()));
+        empty.armDerivationFailure();
+        assertThrows(IllegalStateException.class, empty::getRadioactivity);
+        assertEquals(2, empty.invocations());
+        assertEquals(0, empty.getRadioactivity());
+        assertEquals(3, empty.invocations());
+        assertEquals(0, empty.getRadioactivity());
+        assertEquals(3, empty.invocations(), "only the successful retry is cached");
     }
 
     @Test
-    void addAttributeInvalidatesOnlyThatChemicalsHotEntry() {
+    void addAttributeInvalidatesOnlyThatChemicalsHotEntry() throws ReflectiveOperationException {
         TrackingChemical empty = (TrackingChemical) ChemicalRegistry.empty();
-        empty.resetTracking();
-        assertEquals(0, empty.getRadioactivity());
-        assertEquals(1, empty.invocations());
-        //A legacy attribute that is neither radiation nor validation-needing only advances the legacy state identity
-        empty.addAttribute(new NoOpLegacyAttribute());
-        assertEquals(0, empty.getRadioactivity());
-        assertEquals(2, empty.invocations(), "publishing a new legacy state invalidates this chemical's entry on its next query");
-        assertEquals(0, empty.getRadioactivity());
-        assertEquals(2, empty.invocations(), "the replacement entry is cached again");
-        //A radiation attribute publishes both the new state and the new derived value
         Chemical chlorine = MekanismChemicals.CHLORINE.get();
-        assertEquals(0, chlorine.getRadioactivity());
-        assertFalse(chlorine.isRadioactive());
-        chlorine.addAttribute(new Radiation(0.5));
-        assertEquals(0.5, chlorine.getRadioactivity(), "the copy-on-write legacy state is visible on the next query");
-        assertTrue(chlorine.isRadioactive());
-        assertEquals(0.5, chlorine.getRadioactivity(), "the derived radiation is stable across further queries");
+        java.lang.reflect.Field legacyState = Chemical.class.getDeclaredField("legacyState");
+        legacyState.setAccessible(true);
+        Object emptyState = legacyState.get(empty);
+        Object chlorineState = legacyState.get(chlorine);
+        try {
+            empty.resetTracking();
+            assertEquals(0, empty.getRadioactivity());
+            assertEquals(1, empty.invocations());
+            //A legacy attribute that is neither radiation nor validation-needing only advances the legacy state identity
+            empty.addAttribute(new NoOpLegacyAttribute());
+            assertEquals(0, empty.getRadioactivity());
+            assertEquals(2, empty.invocations(), "publishing a new legacy state invalidates this chemical's entry on its next query");
+            assertEquals(0, empty.getRadioactivity());
+            assertEquals(2, empty.invocations(), "the replacement entry is cached again");
+            //A radiation attribute publishes both the new state and the new derived value
+            assertEquals(0, chlorine.getRadioactivity());
+            assertFalse(chlorine.isRadioactive());
+            chlorine.addAttribute(new Radiation(0.5));
+            assertEquals(0.5, chlorine.getRadioactivity(), "the copy-on-write legacy state is visible on the next query");
+            assertTrue(chlorine.isRadioactive());
+            assertEquals(0.5, chlorine.getRadioactivity(), "the derived radiation is stable across further queries");
+        } finally {
+            //Canonical test chemicals are shared across methods; restore their exact immutable snapshots.
+            legacyState.set(empty, emptyState);
+            legacyState.set(chlorine, chlorineState);
+        }
     }
 
     @Test
