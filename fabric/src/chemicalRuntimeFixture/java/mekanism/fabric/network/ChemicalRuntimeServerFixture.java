@@ -1,4 +1,4 @@
-package mekanism.fabric.chemical.fixture;
+package mekanism.fabric.network;
 
 import io.netty.buffer.Unpooled;
 import java.io.IOException;
@@ -6,6 +6,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 import mekanism.api.Action;
 import mekanism.api.AutomationType;
 import mekanism.api.chemical.BasicChemicalTank;
@@ -18,16 +20,21 @@ import mekanism.api.datamaps.chemical.attribute.ChemicalRadioactivity;
 import mekanism.common.registries.MekanismChemicals;
 import mekanism.common.resource.PrimaryResource;
 import mekanism.fabric.datamaps.FabricChemicalDataMaps;
-import mekanism.fabric.network.ChemicalSnapshotPayload;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.networking.v1.FabricServerConfigurationNetworkHandler;
+import net.fabricmc.fabric.api.networking.v1.ServerConfigurationConnectionEvents;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.Packet;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.network.ConfigurationTask;
+import net.minecraft.server.network.ServerConfigurationPacketListenerImpl;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.TooltipFlag;
 import org.slf4j.Logger;
@@ -37,20 +44,50 @@ import org.slf4j.LoggerFactory;
 public final class ChemicalRuntimeServerFixture implements ModInitializer {
     private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism/ChemicalRuntimeServerFixture");
     private static final Path ROOT = Path.of(System.getProperty("mekanism.chemical.runtimeRoot")).toAbsolutePath().normalize();
+    private static final ConfigurationTask.Type ABORT_TASK = new ConfigurationTask.Type("mekanism_chemical_runtime_fixture:abort_after_chemical");
+    private static final AtomicBoolean ABORT_FIRST_CONFIGURATION = new AtomicBoolean();
+    private static volatile ServerConfigurationPacketListenerImpl abortAfterAck;
     private static boolean reloadStarted;
 
     @Override
     public void onInitialize() {
+        ServerConfigurationConnectionEvents.CONFIGURE.register((handler, server) -> {
+            if (ABORT_FIRST_CONFIGURATION.compareAndSet(false, true)) {
+                ((FabricServerConfigurationNetworkHandler) handler).addTask(new AbortAfterChemicalTask(handler));
+            }
+        });
         ServerLifecycleEvents.SERVER_STARTED.register(server -> {
             initialProbe(server);
             marker("server-initial.complete");
         });
         ServerTickEvents.END_SERVER_TICK.register(server -> {
+            ServerConfigurationPacketListenerImpl abort = abortAfterAck;
+            if (abort != null && FabricChemicalNetworking.hasPlaySession(abort.getOwner().getId())) {
+                abortAfterAck = null;
+                LOGGER.info("MEKANISM_CHEMICAL_RUNTIME_SERVER phase=configuration_abort after_snapshot_ack=true");
+                marker("server-config-abort.complete");
+                abort.disconnect(Component.literal("Chemical runtime deliberate post-snapshot configuration abort"));
+            }
             if (!reloadStarted && Files.isRegularFile(ROOT.resolve("reload.trigger"))) {
                 reloadStarted = true;
                 startReload(server);
             }
         });
+    }
+
+    private record AbortAfterChemicalTask(ServerConfigurationPacketListenerImpl handler) implements ConfigurationTask {
+        @Override
+        public void start(Consumer<Packet<?>> sender) {
+            if (abortAfterAck != null) throw new IllegalStateException("duplicate pending configuration abort fixture");
+            // Keep this later fixture task open. The server tick terminates it only after production's
+            // exact Chemical ACK has inserted the pre-play UUID/session.
+            abortAfterAck = handler;
+        }
+
+        @Override
+        public Type type() {
+            return ABORT_TASK;
+        }
     }
 
     private static void initialProbe(MinecraftServer server) {

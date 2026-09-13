@@ -2,11 +2,12 @@
 
 ## Status and boundary
 
-Task 040 is implemented as an isolated candidate on top of `5aadf581` (the Task 040 approval commit,
-whose code baseline is `1a65b0a8`). It is not yet an integrated release. The candidate compiles
-API/common/platform slices **98/164/33** (295 production sources) and fixes the executable test
-contract at ordinary **73 suites/352 tests**, transfer-Knot **4/21**, root-registry **1/2**, and
-data-map-Knot **2/4**, aggregate **80/379**. The three jqwik properties remain at 100,000 tries.
+Task 040 is implemented as candidate `dc9c5687` plus one focused corrective commit on top of the
+Task 040 approval line (`5aadf581`, code baseline `1a65b0a8`). It is not yet an integrated release.
+The corrected candidate compiles API/common/platform slices **98/164/33** (295 production sources)
+and fixes the executable test contract at ordinary **73 suites/355 tests**, transfer-Knot **4/21**,
+root-registry **1/2**, and data-map-Knot **2/4**, aggregate **80/382**. The three jqwik properties
+remain at 100,000 tries.
 
 This vertical owns the internal Mekanism Chemical domain needed before recipes and machines:
 
@@ -78,8 +79,19 @@ Disappeared map files produce empty maps on the next successful epoch.
 owners therefore derive attributes for the same canonical `Chemical` objects without mutating shared
 chemical instances. Modern data-map values replace corresponding legacy attributes when present;
 removal falls back to the admitted legacy state. Radiation validation and tooltip/tank queries read
-the current owner context. Server stop and client disconnect clear the binding. An integrated server
-thread and render thread can retain distinct epochs in one JVM.
+the current owner context. Server stop and either configuration- or play-phase client disconnect clear
+the binding. An integrated server thread and render thread can retain distinct epochs in one JVM.
+
+`Chemical.updateFromDataMap` remains public, virtual, `@Internal`, and participates in every top-level
+context-dependent derivation query. Overrides must invoke `super`; a reentrant query on the same
+Chemical sees the immutable partial derivation accumulated so far, while a nested query of another
+Chemical gets an independent frame and restores the outer frame afterward. Direct external invocation
+is intentionally invalid: the base method throws outside the context-local derivation callback. This
+is an explicit authorized Fabric delta from upstream's shared cache-refresh lifecycle. The current
+implementation allocates and performs the five descriptor lookups again for every top-level query;
+Task041 must establish hot-path caching before adding recipe query traffic, without global mutable
+Chemical state. `FabricChemicalDataMapSession.publishSnapshot` is package-private and exists only as
+an isolated same-package test seam, not as a runtime publication API.
 
 `MekanismServices` has one deterministic policy for both selected public services: exactly one
 provider must exist, while zero or multiple providers fail explicitly. The packaged descriptors are
@@ -131,9 +143,13 @@ adds:
 | play S2C | `mekanism:chemical_snapshot` | successful reload epoch |
 
 Each connection receives a fresh opaque session ID. The server's ordered Chemical
-`ConfigurationTask` requires receiver support, snapshots the server owner on the server executor,
-and completes only after an exact positive-epoch ACK. Pending state is per configuration handler;
-play session state is per player UUID and is removed on disconnect/stop.
+`ConfigurationTask` requires receiver support and snapshots the server owner on the server executor.
+ACK processing re-reads that authoritative owner on the same executor. If its epoch advanced after
+the sent snapshot, the task updates its pending epoch, sends a same-session strictly newer snapshot,
+and remains open until a second exact ACK; stale, regressing, wrong-session, or otherwise invalid ACKs
+disconnect. Completion therefore cannot publish a stale join epoch. Pending state is per configuration
+handler; play session state is per player UUID. Configuration disconnect removes both maps, including
+the post-ACK/pre-play interval, while play disconnect and server stop retain their existing cleanup.
 
 The snapshot wire envelope is bounded to a 64-character session, 128-character map-key resource
 names, 65 entries per map, 325 entries total, 256 bytes per value chunk, and 65,536 value bytes total.
@@ -145,12 +161,15 @@ opaque chunks. On the owning client executor, `resolve()` verifies map-key names
 descriptor codecs with registry-aware buffers, rejects trailing bytes/unknown references/duplicates,
 and atomically publishes the context.
 
-Malformed current-session configuration/play snapshots fail closed and disconnect. A queued play
-snapshot captures its generation; if disconnect/reconnect has advanced that generation, resolution or
-publication failure is swallowed as stale work and cannot publish or disconnect the replacement
-connection. Epochs must be positive and strictly increase within one session. A successful server
-reload broadcasts the new epoch; failed local reload/publication retains the prior context. There is
-still no Mekanism-specific timeout for a peer that advertises a receiver and withholds an ACK.
+Malformed current-session configuration/play snapshots fail closed and disconnect. Configuration and
+play disconnect callbacks hand their cleanup to the client executor. Cleanup is idempotent, clears the
+session, epoch and thread-local context, and advances generation once for the live publication; stop is
+likewise repeat-safe. A queued snapshot captures its generation, so dead-connection work cannot publish
+or disconnect a replacement. Initial configuration accepts a same-session strictly newer catch-up
+snapshot without resetting epoch, but rejects duplicate/regressing epochs and a different active
+session. Epochs must be positive and strictly increase within one session. A successful server reload
+broadcasts the new epoch; failed local reload/publication retains the prior context. There is still no
+Mekanism-specific timeout for a peer that advertises a receiver and withholds an ACK.
 
 ## Exact packaged resources
 
@@ -223,16 +242,26 @@ Candidate verification surfaces are:
 - `scripts/fabric-configuration-rejection-smoke.sh`;
 - `scripts/fabric-client-window-smoke.sh`.
 
-The Chemical runtime gate uses one real dedicated server and one physical Xvfb client process. That
-same client disconnects and reconnects without JVM restart. The gate proves exact 65-entry declaration
-order/name remap, distinct session ACKs, initial nuclear-waste radioactivity/tank rejection/tooltip,
-unknown-name rejection on the owner executor, exact `(1L << 60) + 123` tank NBT and stack stream
-round trips, a real datapack removal reload to epoch 2, tank acceptance/tooltip removal, disconnect
-cleanup, reconfiguration on reconnect, and distinct same-JVM owner-thread contexts. Fixture classes
-and metadata are isolated from the release JAR by Gradle and static artifact gates.
+The Chemical runtime gate uses one real dedicated server and one physical Xvfb client process. Its
+first real configuration publishes and ACKs epoch 1, then a later ordered fixture task deliberately
+terminates the connection before play. Real Fabric disconnect callbacks prove client epoch zero,
+generation advance, stable no-revival ticks, and server removal of the pre-play UUID/session; a
+successful new configuration with a distinct session proves the old session was cleared. The same
+client then retains the original play disconnect/reconnect, exact 65-entry declaration order/name
+remap, initial nuclear-waste radioactivity/tank rejection/tooltip, unknown-name rejection, exact
+`(1L << 60) + 123` NBT/stream round trips, datapack removal at epoch 2, tank acceptance/tooltip
+removal, and same-JVM owner isolation. No callback is faked with a null handler. Fixture classes and
+metadata remain isolated from the release JAR by Gradle and static artifact gates. The fixture observes
+pre-play server insertion through a package-private read-only seam; only production callbacks mutate
+or remove networking state.
 
-The required independent read-only review covered registry/EMPTY, attribute context isolation,
-config ownership, networking races/codecs, and public/artifact boundaries. Its concrete findings were
-closed by raw-ID order assertions, descriptor-owned opaque value chunks, name-based coolant codecs,
-and fail-closed generation-aware play handling. The candidate makes no integration, deployment,
-production, mirror, or parent clean-release claim.
+Mandatory independent GLM 5.3 high review `bf00719f-3d49-48c` independently reran the focused and Knot
+suites and returned **ACCEPT WITH FIXES** after 845.8s, 195.3k tokens, 91 tool calls, about `$2.56`.
+It identified missing client configuration-disconnect cleanup, leaked server pre-play UUID sessions,
+the snapshot-send/ACK reload race, reflection-only lifecycle evidence, inaccurate prior review
+attribution, an undocumented public snapshot seam, and the unresolved public/overridable
+`Chemical.updateFromDataMap` boundary and per-query cost. The corrective commit closes those findings
+with the lifecycle/race logic, focused contracts, real abort-before-play regression, narrowed seam,
+precise virtual/reentrant Javadocs and explicit Task041 caching gate described above. This remains a
+corrected candidate awaiting focused rereview; it makes no integration, deployment, production,
+mirror, or parent clean-release claim.

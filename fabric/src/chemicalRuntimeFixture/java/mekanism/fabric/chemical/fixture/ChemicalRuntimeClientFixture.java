@@ -17,10 +17,12 @@ import mekanism.api.chemical.ChemicalStack;
 import mekanism.api.chemical.IChemicalTank;
 import mekanism.api.datamaps.chemical.attribute.ChemicalRadioactivity;
 import mekanism.common.registries.MekanismChemicals;
+import mekanism.fabric.chemical.FabricChemicalClientLifecycle;
 import mekanism.fabric.datamaps.FabricChemicalDataMaps;
 import mekanism.fabric.network.ChemicalSnapshotPayload;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.networking.v1.ClientConfigurationConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.ConnectScreen;
@@ -40,15 +42,28 @@ public final class ChemicalRuntimeClientFixture implements ClientModInitializer 
     private static final Path ROOT = Path.of(System.getProperty("mekanism.chemical.runtimeRoot")).toAbsolutePath().normalize();
     private static final String ADDRESS = System.getProperty("mekanism.chemical.address", "127.0.0.1:25568");
     private static int joins;
+    private static long initialGeneration;
+    private static long configurationCleanupGeneration;
+    private static int configurationStableTicks;
+    private static boolean configurationDisconnectObserved;
+    private static boolean configurationCleanupObserved;
+    private static boolean configurationStabilityProved;
+    private static boolean configurationReconnectStarted;
     private static boolean waitingForCleanup;
     private static boolean cleanupObserved;
     private static boolean reconnectStarted;
 
     @Override
     public void onInitializeClient() {
+        initialGeneration = FabricChemicalClientLifecycle.generation();
+        ClientConfigurationConnectionEvents.DISCONNECT.register((handler, client) -> client.execute(() -> configurationDisconnected()));
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> client.execute(() -> joined(client)));
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> waitingForCleanup = joins == 1);
         ClientTickEvents.END_CLIENT_TICK.register(ChemicalRuntimeClientFixture::tick);
+    }
+
+    private static void configurationDisconnected() {
+        if (joins == 0) configurationDisconnectObserved = true;
     }
 
     private static void joined(Minecraft client) {
@@ -88,7 +103,30 @@ public final class ChemicalRuntimeClientFixture implements ClientModInitializer 
     }
 
     private static void tick(Minecraft client) {
-        if (waitingForCleanup && client.getConnection() == null && ChemicalDataContext.current().epoch() == 0) {
+        if (configurationDisconnectObserved && !configurationCleanupObserved
+              && ChemicalDataContext.current().epoch() == 0
+              && FabricChemicalClientLifecycle.generation() > initialGeneration) {
+            configurationCleanupGeneration = FabricChemicalClientLifecycle.generation();
+            configurationCleanupObserved = true;
+            LOGGER.info("MEKANISM_CHEMICAL_RUNTIME_CLIENT phase=configuration_disconnect context_cleared=true generation_advanced=true");
+            marker("client-config-disconnect.complete");
+        }
+        if (configurationCleanupObserved && !configurationStabilityProved) {
+            require(ChemicalDataContext.current().epoch() == 0, "queued dead-configuration work revived the chemical context");
+            require(FabricChemicalClientLifecycle.generation() == configurationCleanupGeneration,
+                  "dead-configuration cleanup repeated or changed generation");
+            if (++configurationStableTicks == 20) {
+                configurationStabilityProved = true;
+                LOGGER.info("MEKANISM_CHEMICAL_RUNTIME_CLIENT phase=configuration_stable context_epoch=0 stale_revival=false");
+                marker("client-config-stable.complete");
+            }
+        }
+        if (configurationStabilityProved && !configurationReconnectStarted && Files.isRegularFile(ROOT.resolve("config-reconnect.signal"))) {
+            configurationReconnectStarted = true;
+            consumeSignal("config-reconnect.signal");
+            connect(client);
+        }
+        if (waitingForCleanup && ChemicalDataContext.current().epoch() == 0) {
             waitingForCleanup = false;
             cleanupObserved = true;
             LOGGER.info("MEKANISM_CHEMICAL_RUNTIME_CLIENT phase=disconnect context_cleared=true");
@@ -96,14 +134,22 @@ public final class ChemicalRuntimeClientFixture implements ClientModInitializer 
         }
         if (cleanupObserved && !reconnectStarted && Files.isRegularFile(ROOT.resolve("reconnect.signal"))) {
             reconnectStarted = true;
-            try {
-                Files.deleteIfExists(ROOT.resolve("reconnect.signal"));
-            } catch (IOException failure) {
-                throw new IllegalStateException("Unable to consume reconnect signal", failure);
-            }
-            ServerData data = new ServerData("Mekanism chemical runtime", ADDRESS, ServerData.Type.OTHER);
-            ConnectScreen.startConnecting(new TitleScreen(), client, ServerAddress.parseString(ADDRESS), data, true, null);
+            consumeSignal("reconnect.signal");
+            connect(client);
         }
+    }
+
+    private static void consumeSignal(String name) {
+        try {
+            Files.deleteIfExists(ROOT.resolve(name));
+        } catch (IOException failure) {
+            throw new IllegalStateException("Unable to consume reconnect signal " + name, failure);
+        }
+    }
+
+    private static void connect(Minecraft client) {
+        ServerData data = new ServerData("Mekanism chemical runtime", ADDRESS, ServerData.Type.OTHER);
+        ConnectScreen.startConnecting(new TitleScreen(), client, ServerAddress.parseString(ADDRESS), data, true, null);
     }
 
     private static boolean rejects(Chemical chemical) {

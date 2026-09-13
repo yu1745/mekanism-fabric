@@ -137,7 +137,7 @@ SERVER_PID=$!
 wait_log "$SERVER_DIR/logs/latest.log" 'Done (' 'server readiness'
 wait_marker 'server-initial.complete' 'server initial chemical proof'
 
-printf 'fabric-chemical-runtime-smoke: starting physical client JVM\n'
+printf 'fabric-chemical-runtime-smoke: starting physical client JVM (first configuration is deliberately aborted after Chemical ACK)\n'
 systemd-run --user --scope --collect --quiet --unit="$CLIENT_SCOPE" \
   xvfb-run -a "$ROOT/gradlew" -p "$ROOT/fabric" --no-daemon --console=plain \
   -Dmekanism.chemical.clientDir="$RUN_RELATIVE/client" \
@@ -146,8 +146,14 @@ systemd-run --user --scope --collect --quiet --unit="$CLIENT_SCOPE" \
   -Dmekanism.chemical.username="$USERNAME" \
   runChemicalRuntimeClient >"$RUN_ROOT/client-console.log" 2>&1 &
 CLIENT_PID=$!
-wait_marker 'client-initial.complete' 'initial client authoritative snapshot proof'
-wait_marker 'client-disconnect.complete' 'physical-client disconnect cleanup'
+wait_marker 'server-config-abort.complete' 'post-snapshot pre-play server configuration abort'
+wait_marker 'client-config-disconnect.complete' 'configuration-phase client cleanup'
+wait_marker 'client-config-stable.complete' 'dead configuration queued-work stability proof'
+wait_log "$SERVER_DIR/logs/latest.log" "MEKANISM_FABRIC_CHEMICAL_CONFIGURATION_DISCONNECT player=$USERNAME pending_removed=false play_session_removed=true" 'server pre-play Chemical session cleanup'
+[[ $(grep -Fc "$USERNAME joined the game" "$SERVER_DIR/logs/latest.log" || true) -eq 0 ]] || fail 'deliberately aborted configuration reached play'
+printf 'reconnect\n' > "$CONTROL/config-reconnect.signal"
+wait_marker 'client-initial.complete' 'initial client authoritative snapshot proof after clean configuration reconnect'
+wait_marker 'client-disconnect.complete' 'physical-client play disconnect cleanup'
 
 PACK="$SERVER_DIR/world/datapacks/chemical-runtime"
 mkdir -p "$PACK/data/mekanism/data_maps/mekanism/chemical"
@@ -160,14 +166,17 @@ wait_marker 'client-reconnect.complete' 'same-process second configuration snaps
 
 wait_log "$SERVER_DIR/logs/latest.log" 'MEKANISM_CHEMICAL_RUNTIME_SERVER phase=initial epoch=1 entries=65 registration_order=true tank_rejected=true nbt_long=true stream_long=true tooltip=true unknown_snapshot_rejected=true' 'server initial vertical marker'
 wait_log "$SERVER_DIR/logs/latest.log" 'MEKANISM_CHEMICAL_RUNTIME_SERVER phase=reload epoch=2 removal=true tank_accepted=true tooltip_removed=true' 'server reload marker'
+wait_log "$CLIENT_DIR/logs/latest.log" 'MEKANISM_CHEMICAL_RUNTIME_CLIENT phase=configuration_disconnect context_cleared=true generation_advanced=true' 'configuration cleanup marker'
+wait_log "$CLIENT_DIR/logs/latest.log" 'MEKANISM_CHEMICAL_RUNTIME_CLIENT phase=configuration_stable context_epoch=0 stale_revival=false' 'configuration stale-revival marker'
 wait_log "$CLIENT_DIR/logs/latest.log" 'MEKANISM_CHEMICAL_RUNTIME_CLIENT phase=disconnect context_cleared=true' 'client cleanup marker'
 wait_log "$CLIENT_DIR/logs/latest.log" 'MEKANISM_CHEMICAL_RUNTIME_CLIENT phase=reconnect epoch=2 same_process=true cleanup=true tank_accepted=true tooltip_removed=true owner_thread_isolated=true' 'client reconnect marker'
 
 mapfile -t sessions < <(sed -n 's/.*MEKANISM_FABRIC_CHEMICAL_ACK session=\([^ ]*\) epoch=.*/\1/p' "$SERVER_DIR/logs/latest.log")
-[[ ${#sessions[@]} -eq 2 && "${sessions[0]}" != "${sessions[1]}" ]] || fail 'expected two distinct acknowledged chemical sessions in one client JVM'
-[[ $(grep -Fc "$USERNAME joined the game" "$SERVER_DIR/logs/latest.log") -eq 2 ]] || fail 'client did not join twice'
+[[ ${#sessions[@]} -eq 3 && "${sessions[0]}" != "${sessions[1]}" && "${sessions[0]}" != "${sessions[2]}" && "${sessions[1]}" != "${sessions[2]}" ]] \
+  || fail 'expected three distinct acknowledged chemical sessions (aborted configuration plus two play joins) in one client JVM'
+[[ $(grep -Fc "$USERNAME joined the game" "$SERVER_DIR/logs/latest.log") -eq 2 ]] || fail 'client did not join twice after the aborted configuration'
 [[ $(grep -Fc "$USERNAME left the game" "$SERVER_DIR/logs/latest.log") -ge 1 ]] || fail 'first connection did not leave before reconnect'
 
 RESULT=0
-printf 'fabric-chemical-runtime-smoke: PASS (registry order/remap, initial+removed attributes, tank true-long codecs, tooltip sync, unknown rejection, disconnect and same-JVM reconnect passed)\n'
+printf 'fabric-chemical-runtime-smoke: PASS (real post-snapshot configuration abort cleanup, no stale revival, registry/remap, attributes, true-long codecs, disconnect and same-JVM reconnect passed)\n'
 grep -E 'MEKANISM_(FABRIC_CHEMICAL_ACK|CHEMICAL_RUNTIME_)' "$SERVER_DIR/logs/latest.log" "$CLIENT_DIR/logs/latest.log" | tail -n 12

@@ -1123,6 +1123,7 @@ import sys, zipfile
 expected_api_chemical = {
     "mekanism/api/chemical/BasicChemicalTank.class",
     "mekanism/api/chemical/Chemical.class",
+    "mekanism/api/chemical/Chemical$DerivationFrame.class",
     "mekanism/api/chemical/Chemical$Derived.class",
     "mekanism/api/chemical/Chemical$DerivedBuilder.class",
     "mekanism/api/chemical/ChemicalBuilder.class",
@@ -1168,6 +1169,7 @@ expected_network_chemical = {
     "mekanism/fabric/network/ChemicalSnapshotPayload$Solid.class",
     "mekanism/fabric/network/FabricChemicalClientNetworking.class",
     "mekanism/fabric/network/FabricChemicalNetworking.class",
+    "mekanism/fabric/network/FabricChemicalNetworking$AckDecision.class",
     "mekanism/fabric/network/FabricChemicalNetworking$Pending.class",
     "mekanism/fabric/network/FabricChemicalNetworking$SnapshotTask.class",
 }

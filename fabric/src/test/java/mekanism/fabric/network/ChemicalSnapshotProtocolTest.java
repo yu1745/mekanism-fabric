@@ -96,6 +96,47 @@ class ChemicalSnapshotProtocolTest {
     }
 
     @Test
+    void sameSessionNewerInitialSnapshotCatchesUpWithoutResettingEpoch() {
+        long generation = FabricChemicalClientLifecycle.generation();
+        FabricChemicalClientLifecycle.publish("race", context(1), true, generation);
+        FabricChemicalClientLifecycle.publish("race", context(2), true, generation);
+        assertEquals(2, ChemicalDataContext.current().epoch());
+        assertThrows(IllegalArgumentException.class,
+              () -> FabricChemicalClientLifecycle.publish("race", context(2), true, generation));
+        assertThrows(IllegalArgumentException.class,
+              () -> FabricChemicalClientLifecycle.publish("replacement", context(3), true, generation));
+        long beforeCleanup = FabricChemicalClientLifecycle.generation();
+        FabricChemicalClientLifecycle.disconnect();
+        assertEquals(beforeCleanup + 1, FabricChemicalClientLifecycle.generation());
+        FabricChemicalClientLifecycle.disconnect();
+        assertEquals(beforeCleanup + 1, FabricChemicalClientLifecycle.generation(), "repeated cleanup must be idempotent");
+        assertEquals(0, ChemicalDataContext.current().epoch());
+
+        long queuedConfigurationGeneration = FabricChemicalClientLifecycle.beginConfiguration();
+        FabricChemicalClientLifecycle.disconnect();
+        assertThrows(IllegalStateException.class,
+              () -> FabricChemicalClientLifecycle.publish("dead", context(1), true, queuedConfigurationGeneration));
+        assertEquals(0, ChemicalDataContext.current().epoch(), "configuration work queued before disconnect cannot revive context");
+    }
+
+    @Test
+    void configurationAckRechecksAuthoritativeEpochAndRequiresExactCatchUpAck() {
+        ChemicalSnapshotAckPayload first = new ChemicalSnapshotAckPayload("race", 1);
+        assertEquals(FabricChemicalNetworking.AckDecision.COMPLETE,
+              FabricChemicalNetworking.decideAck("race", 1, first, 1));
+        assertEquals(FabricChemicalNetworking.AckDecision.RESEND,
+              FabricChemicalNetworking.decideAck("race", 1, first, 2));
+        assertThrows(IllegalArgumentException.class,
+              () -> FabricChemicalNetworking.decideAck("race", 2, first, 2), "old ACK cannot complete the resent epoch");
+        assertEquals(FabricChemicalNetworking.AckDecision.COMPLETE,
+              FabricChemicalNetworking.decideAck("race", 2, new ChemicalSnapshotAckPayload("race", 2), 2));
+        assertThrows(IllegalArgumentException.class,
+              () -> FabricChemicalNetworking.decideAck("other", 2, new ChemicalSnapshotAckPayload("race", 2), 2));
+        assertThrows(IllegalArgumentException.class,
+              () -> FabricChemicalNetworking.decideAck("race", 2, new ChemicalSnapshotAckPayload("race", 2), 1));
+    }
+
+    @Test
     void staleSessionRegressingEpochAndLateGenerationCannotReviveClient() {
         long generation = FabricChemicalClientLifecycle.generation();
         FabricChemicalClientLifecycle.publish("one", context(1), true, generation);

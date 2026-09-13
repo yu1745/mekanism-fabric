@@ -471,11 +471,27 @@ public class Chemical implements IChemicalProvider, IChemicalAttributeContainer<
         return isGaseous;
     }
 
+    /**
+     * Participates in deriving this chemical's modern attributes from the {@link ChemicalDataContext} bound to the
+     * calling thread. Every context-dependent public query invokes this virtual method; overrides therefore remain
+     * observable and must invoke {@code super} so that the standard five-map derivation is retained.
+     *
+     * <p>This is an internal derivation callback, not a public refresh operation. Calling it directly outside a
+     * context-local query is unsupported and the base implementation throws {@link IllegalStateException}. An
+     * override may make reentrant context-dependent queries on this same chemical: those queries observe the
+     * immutable partial view accumulated so far and do not recursively invoke the override. Querying another
+     * chemical derives a nested independent view and restores this derivation afterward.</p>
+     *
+     * @param holder canonical holder for this chemical
+     *
+     * @implNote Fabric deliberately re-derives a context-local view for each top-level query rather than mutating
+     * shared {@code Chemical} state. Direct external invocation being invalid is an authorized Fabric delta from the
+     * upstream cache-refresh lifecycle.
+     */
     @Internal//TODO - 1.22: Evaluate if we want to get rid of this or if caching the state of some of this is useful from a performance standpoint
     @MustBeInvokedByOverriders
     public void updateFromDataMap(Holder<Chemical> holder) {
-        DerivedBuilder builder = TRACKING.get();
-        if (builder == null) throw new IllegalStateException("Chemical data-map update requires a context-local derivation");
+        DerivedBuilder builder = trackingBuilder();
         ChemicalSolidTag tag = IMekanismDataMapTypes.INSTANCE.getChemicalData(holder, IMekanismDataMapTypes.INSTANCE.chemicalSolidTag());
         builder.oreTag = tag == null ? legacyOreTag : tag.solidRepresentation();
         trackAttribute(holder, IMekanismDataMapTypes.INSTANCE.chemicalFuel());
@@ -493,8 +509,7 @@ public class Chemical implements IChemicalProvider, IChemicalAttributeContainer<
      * @since 10.7.11
      */
     protected void trackAttribute(Holder<Chemical> holder, MekanismDataMapType<Chemical, ? extends IChemicalAttribute> dataMapType) {
-        DerivedBuilder builder = TRACKING.get();
-        if (builder == null) throw new IllegalStateException("Chemical attribute tracking requires updateFromDataMap");
+        DerivedBuilder builder = trackingBuilder();
         IChemicalAttribute attribute = IMekanismDataMapTypes.INSTANCE.getChemicalData(holder, dataMapType);
         if (attribute != null) {
             builder.attributes.add(attribute);
@@ -503,17 +518,33 @@ public class Chemical implements IChemicalProvider, IChemicalAttributeContainer<
         }
     }
 
-    private static final ThreadLocal<DerivedBuilder> TRACKING = new ThreadLocal<>();
+    private static final ThreadLocal<DerivationFrame> TRACKING = new ThreadLocal<>();
+
+    private DerivedBuilder trackingBuilder() {
+        DerivationFrame frame = TRACKING.get();
+        if (frame == null || frame.chemical != this) {
+            throw new IllegalStateException("Chemical data-map update requires this chemical's context-local derivation");
+        }
+        return frame.builder;
+    }
 
     private Derived derived() {
+        DerivationFrame previous = TRACKING.get();
+        if (previous != null && previous.chemical == this) {
+            return previous.builder.snapshot();
+        }
         DerivedBuilder builder = new DerivedBuilder(legacyOreTag, legacyRadioactivity, hasLegacyAttributesWithValidation);
-        TRACKING.set(builder);
+        TRACKING.set(new DerivationFrame(this, builder));
         try {
             updateFromDataMap(getAsHolder());
-            return new Derived(builder.oreTag, List.copyOf(builder.attributes), builder.radioactivity, builder.needsValidation);
+            return builder.snapshot();
         } finally {
-            TRACKING.remove();
+            if (previous == null) TRACKING.remove();
+            else TRACKING.set(previous);
         }
+    }
+
+    private record DerivationFrame(Chemical chemical, DerivedBuilder builder) {
     }
 
     private static final class DerivedBuilder {
@@ -525,6 +556,10 @@ public class Chemical implements IChemicalProvider, IChemicalAttributeContainer<
             this.oreTag = oreTag;
             this.radioactivity = radioactivity;
             this.needsValidation = needsValidation;
+        }
+
+        private Derived snapshot() {
+            return new Derived(oreTag, List.copyOf(attributes), radioactivity, needsValidation);
         }
     }
 

@@ -7,6 +7,7 @@ import mekanism.api.functions.ConstantPredicates;
 import mekanism.api.functions.TriPredicate;
 import mekanism.common.registries.MekanismChemicals;
 import mekanism.test.ChemicalTestBootstrap;
+import mekanism.test.ChemicalTestBootstrap.TrackingChemical;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.nbt.CompoundTag;
 import org.junit.jupiter.api.BeforeAll;
@@ -69,6 +70,19 @@ class ChemicalDomainTest {
         assertSame(stack, tank.insertChemical(4, stack, Action.EXECUTE));
         assertSame(ChemicalStack.EMPTY, tank.extractChemical(-1, 20, Action.EXECUTE));
         assertEquals(0, tank.getChemicalTankCapacity(2));
+    }
+
+    @Test
+    void contextQueriesInvokeVirtualDerivationAndSameChemicalReentrancySeesPartialView() {
+        TrackingChemical empty = (TrackingChemical) ChemicalRegistry.empty();
+        empty.resetTracking();
+        assertEquals(0, empty.getRadioactivity());
+        assertEquals(1, empty.invocations(), "each top-level query must participate through the virtual override");
+        assertEquals(0, empty.reentrantBeforeSuper());
+        assertEquals(0, empty.reentrantAfterSuper());
+        assertThrows(IllegalStateException.class,
+              () -> MekanismChemicals.HYDROGEN.get().updateFromDataMap(MekanismChemicals.HYDROGEN.get().getAsHolder()),
+              "direct external invocation is outside the context-local derivation boundary");
     }
 
     @Test

@@ -5,7 +5,7 @@
   "name": "Mekanism Chemical Runtime Fixture",
   "environment": "*",
   "entrypoints": {
-    "main": ["mekanism.fabric.chemical.fixture.ChemicalRuntimeServerFixture"],
+    "main": ["mekanism.fabric.network.ChemicalRuntimeServerFixture"],
     "client": ["mekanism.fabric.chemical.fixture.ChemicalRuntimeClientFixture"]
   },
   "depends": {

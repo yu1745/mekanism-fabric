@@ -371,8 +371,12 @@ source/binary hash、资源 hash、layer/lifecycle/failure truth table、query �
 `MekanismAPI.CHEMICAL_*` 引用；不提供 partial `MekanismAPI`。`Chemical` 的 public codecs、parse/save、
 constructors、legacy/modern attributes、translation/texture/tint、empty/type methods 保持，private logger
 继续使用官方 category。NeoForge holder-injected data通过 `ChemicalDataContext` 与 selected service
-按 owner thread实时派生；`updateFromDataMap` 和 protected `trackAttribute` 仍参与 subclass behavior，
-后者参数型从 NeoForge `DataMapType` 精确替换为层中 `MekanismDataMapType`。
+按 owner thread实时派生；public/virtual `@Internal updateFromDataMap` 和 protected `trackAttribute` 仍参与
+subclass behavior，overrider 必须调用 `super`。同一 Chemical 的重入查询读取已累积的 immutable partial
+view，另一 Chemical 使用独立 nested frame。与 NeoForge cache-refresh lifecycle 不同，direct external
+invocation 明确无效并由 base method 抛出，这是授权 Fabric delta；每个 top-level query 当前重新分配并做
+五次 map lookup，Task041 在 recipe hot path 前必须解决且不得引入 shared mutable Chemical/global cache。
+`trackAttribute` 参数型从 NeoForge `DataMapType` 精确替换为层中 `MekanismDataMapType`。
 
 新 public `MekanismDataMapType<R,T>` 是 immutable identity descriptor，暴露 `registryKey()`、`id()`、
 `codec()`、optional `networkCodec()` 和 `synchronizedToClient()`；不依赖 Fabric。`IMekanismDataMapTypes`

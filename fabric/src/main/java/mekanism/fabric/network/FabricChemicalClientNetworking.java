@@ -17,7 +17,7 @@ public final class FabricChemicalClientNetworking {
     public static synchronized void initialize() {
         if (initialized) return;
         if (!ClientConfigurationNetworking.registerGlobalReceiver(ChemicalSnapshotPayload.TYPE, (payload, context) -> {
-            long generation = FabricChemicalClientLifecycle.generation();
+            long generation = FabricChemicalClientLifecycle.beginConfiguration();
             context.client().execute(() -> accept(payload, true, generation,
                   () -> context.responseSender().sendPacket(new ChemicalSnapshotAckPayload(payload.sessionId(), payload.epoch())),
                   () -> {

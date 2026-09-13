@@ -67,7 +67,8 @@ public final class FabricChemicalDataMapSession implements AutoCloseable {
         return context;
     }
 
-    public void publishSnapshot(ChemicalDataContext snapshot) {
+    /** Package-private test seam for installing an already decoded client-shaped snapshot on an isolated owner. */
+    void publishSnapshot(ChemicalDataContext snapshot) {
         checkThread();
         checkOpen();
         if (snapshot.epoch() <= context.epoch()) throw new IllegalArgumentException("Chemical snapshot epoch must increase");
