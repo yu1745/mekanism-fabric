@@ -43,17 +43,19 @@ patched Minecraft 仅保留 5,363 个 `com/mojang/**/*.java`、`net/minecraft/**
 - 实现默认使用 `commandcode/deepseek/deepseek-v4.1-flash`，从 clean commit 在隔离 worktree 工作。thinking 默认 `low`，困难的已定界任务可用 `high`；仅允许这两档，不用 `max`。两档都须明确范围、交付物和检查点，降低 thinking 不保证提速。
 - 每个 DeepSeek 子代理启动后开启 **270秒 supervision watch**。只纠正方向、范围、验收漂移或风险操作；不因沉默或一次可恢复错误干预其自修复。
 - DeepSeek 明确报告额度耗尽时，保存进度、暂停实现与新代理派发，告知用户并等待额度恢复；不静默换模型，不用 sleep 或后台等待。
-- 涉及平台语义替换、patched Minecraft、registry、transaction、networking、序列化或线程/owner 生命周期时，对综合后的固定候选按风险进行独立**只读 adversarial review**；审查者默认不改代码、不重复完整文档与发布门禁。实际发生的比较/独立审查记录于 `docs/MODEL_IMPLEMENTATION_COMPARISONS.md`。
+- 独立只读审查不再作为每个高风险批次的强制前置；仅在具体重大语义分歧阻碍实现、存在明确数据损坏风险或用户要求时调用。审查聚焦生产缺陷，不以测试缺口扩张任务。实际发生的审查保留简要证据。
 
 ## 测试与验收
 
-现有测试不得因数量或行数增长而删除；仅在测试错误、失效或明确重复，且用户另行要求清理时删除。
+**用户最新优先级（2026-09-13）：完成度优先，显著降低测试权重。** 优先接通官方机器主干与实际可用功能，不为测试完整性、fixture、模型评审或验收文档反复延长任务。此规则优先于旧任务计划中的强制全套门禁。
+
+现有测试保留，不因本次降权删除。普通批次默认只做编译/构建与直接覆盖本次高风险改动的少量现有 focused tests；不以补齐测试矩阵为交付前提。已发现的具体生产缺陷仍需修复，但不得借机扩展为新一轮全面验错。
 
 - 有可执行的 byte-identical 官方测试时优先直接纳入精确 oracle；新增 Fabric-local tests 聚焦平台差异、独立风险和层间连接，不随 production 文件数线性增加。
 - 每闭包通常新增 **3–6个 tests**；超过8个前逐项说明超额测试独立捕获的 production mutation，记录于实现评估。高风险边界可有据突破目标；测试源码不设行数限制。
 - 下层负责排列组合，上层 bridge 通常只补 happy path 与平台特有边界。不重复精确输出已蕴含的派生断言，不测试 vanilla/JDK 自身行为。
-- **候选门禁：** source identity/delta、slice/fixture isolation、focused/full local tests、Fabric build、静态 JAR class/leakage contract。默认不重复真实 server/client 或 clean release；高风险网络/注册/启动任务须在验收中明确需要的候选 runtime gate。
-- **主代理最终门禁：** 检查真实 diff、修复遗漏，独立重跑完整测试，对最终实现各执行一次 packaged server smoke 与 clean release，核对 commit、JAR 数量及 SHA-256。门禁自动化/合并须另作明确任务，不暗中改变契约。
+- **普通批次门禁：** 主代理检查真实 diff，确认构建与必要 focused checks；不再要求实现者与主代理各跑全套测试，不默认启动专门 server/client fixture、packaged smoke 或 clean release。
+- **功能里程碑门禁：** 完整测试、真实运行和发布物核验集中到机器真正可用、发布等明确里程碑，或用户明确要求时执行。优先一个能证明实际功能的端到端检查，不为了边界完备性持续增建测试基础设施。记录已验证范围与未验证风险即可，不冒充通过。
 
 ```bash
 ./build.sh [--clean] [--out <dir>]    # 统一 Fabric 发布契约
