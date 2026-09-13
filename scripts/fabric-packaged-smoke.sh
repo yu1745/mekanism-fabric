@@ -358,6 +358,7 @@ expected_registries = {
     "mekanism/common/registries/MekanismSounds.class",
     "mekanism/common/registries/MekanismDamageTypes.class",
     "mekanism/common/registries/MekanismChemicals.class",
+    "mekanism/common/registries/MekanismChemicalIngredientTypes.class",
 }
 registries_prefix = "mekanism/common/registries/"
 actual_registries = {
@@ -1026,6 +1027,159 @@ then
   exit 1
 fi
 if ! python3 - "${MOD_JARS[0]}" <<'PYEOF'
+import json, sys, zipfile
+
+expected_api_recipes = {
+    "mekanism/api/recipes/MekanismRecipe.class",
+    "mekanism/api/recipes/cache/CachedRecipe.class",
+    "mekanism/api/recipes/cache/CachedRecipe$OperationTracker.class",
+    "mekanism/api/recipes/cache/CachedRecipe$OperationTracker$RecipeError.class",
+    "mekanism/api/recipes/cache/CachedRecipeHelper.class",
+    "mekanism/api/recipes/cache/ICachedRecipeHolder.class",
+    "mekanism/api/recipes/inputs/IInputHandler.class",
+    "mekanism/api/recipes/inputs/ILongInputHandler.class",
+    "mekanism/api/recipes/inputs/InputHelper.class",
+    "mekanism/api/recipes/inputs/InputHelper$1.class",
+    "mekanism/api/recipes/inputs/InputHelper$2.class",
+    "mekanism/api/recipes/inputs/InputHelper$3.class",
+    "mekanism/api/recipes/inputs/InputHelper$ChemicalInputHandler.class",
+    "mekanism/api/recipes/outputs/IOutputHandler.class",
+    "mekanism/api/recipes/ingredients/InputIngredient.class",
+    "mekanism/api/recipes/ingredients/IngredientType.class",
+    "mekanism/api/recipes/ingredients/ItemStackIngredient.class",
+    "mekanism/api/recipes/ingredients/ItemStackIngredient$FlatCodec.class",
+    "mekanism/api/recipes/ingredients/ItemStackIngredient$NetworkCodec.class",
+    "mekanism/api/recipes/ingredients/FluidStackIngredient.class",
+    "mekanism/api/recipes/ingredients/FluidStackIngredient$FlatCodec.class",
+    "mekanism/api/recipes/ingredients/ChemicalStackIngredient.class",
+    "mekanism/api/recipes/ingredients/fluid/FluidIngredient.class",
+    "mekanism/api/recipes/ingredients/fluid/FluidIngredient$SingleFluidIngredient.class",
+    "mekanism/api/recipes/ingredients/fluid/FluidIngredient$TagFluidIngredient.class",
+    "mekanism/api/recipes/ingredients/fluid/FluidIngredient$CompoundFluidIngredient.class",
+    "mekanism/api/recipes/ingredients/fluid/FluidIngredient$ComponentFluidIngredient.class",
+    "mekanism/api/recipes/ingredients/fluid/FluidIngredient$EmptyFluidIngredient.class",
+    "mekanism/api/recipes/ingredients/fluid/FluidIngredient$FluidMapCodec.class",
+    "mekanism/api/recipes/ingredients/fluid/FluidIngredient$FluidNetworkCodec.class",
+    "mekanism/api/recipes/ingredients/chemical/ChemicalIngredient.class",
+    "mekanism/api/recipes/ingredients/chemical/ChemicalIngredientTypeRegistry.class",
+    "mekanism/api/recipes/ingredients/chemical/CompoundChemicalIngredient.class",
+    "mekanism/api/recipes/ingredients/chemical/CompoundChemicalIngredient$AliasedChildrenCodec.class",
+    "mekanism/api/recipes/ingredients/chemical/DifferenceChemicalIngredient.class",
+    "mekanism/api/recipes/ingredients/chemical/EmptyChemicalIngredient.class",
+    "mekanism/api/recipes/ingredients/chemical/IntersectionChemicalIngredient.class",
+    "mekanism/api/recipes/ingredients/chemical/SingleChemicalIngredient.class",
+    "mekanism/api/recipes/ingredients/chemical/TagChemicalIngredient.class",
+    "mekanism/api/recipes/ingredients/creator/IIngredientCreator.class",
+    "mekanism/api/recipes/ingredients/creator/IItemStackIngredientCreator.class",
+    "mekanism/api/recipes/ingredients/creator/IFluidStackIngredientCreator.class",
+    "mekanism/api/recipes/ingredients/creator/IChemicalIngredientCreator.class",
+    "mekanism/api/recipes/ingredients/creator/IChemicalStackIngredientCreator.class",
+    "mekanism/api/recipes/ingredients/creator/IIngredientCreatorProvider.class",
+    "mekanism/api/recipes/ingredients/creator/IngredientCreatorAccess.class",
+    "mekanism/api/fluid/IExtendedFluidTank.class",
+    "mekanism/api/providers/IFluidProvider.class",
+}
+expected_common_recipes = {
+    "mekanism/common/recipe/ingredients/ChemicalIngredientCreator.class",
+    "mekanism/common/recipe/ingredients/ChemicalIngredientCreator$1.class",
+    "mekanism/common/recipe/ingredients/ChemicalIngredientCreator$DispatchOrElseMapCodec.class",
+    "mekanism/common/recipe/ingredients/creator/ChemicalStackIngredientCreator.class",
+    "mekanism/common/recipe/ingredients/creator/ItemStackIngredientCreator.class",
+    "mekanism/common/recipe/ingredients/creator/FluidStackIngredientCreator.class",
+    "mekanism/common/registries/MekanismChemicalIngredientTypes.class",
+    "mekanism/common/recipe/lookup/cache/IInputRecipeCache.class",
+    "mekanism/common/recipe/lookup/cache/RecipeCacheContext.class",
+    "mekanism/common/recipe/lookup/cache/RecipeCacheContext$Binding.class",
+    "mekanism/common/recipe/lookup/cache/RecipeCacheSource.class",
+    "mekanism/common/recipe/lookup/cache/AbstractInputRecipeCache.class",
+    "mekanism/common/recipe/lookup/cache/AbstractInputRecipeCache$CacheState.class",
+    "mekanism/common/recipe/lookup/cache/SingleInputRecipeCache.class",
+    "mekanism/common/recipe/lookup/cache/SingleInputRecipeCache$State.class",
+    "mekanism/common/recipe/lookup/cache/SingleInputRecipeCache$CheckRecipeType.class",
+    "mekanism/common/recipe/lookup/cache/DoubleInputRecipeCache.class",
+    "mekanism/common/recipe/lookup/cache/DoubleInputRecipeCache$State.class",
+    "mekanism/common/recipe/lookup/cache/DoubleInputRecipeCache$DoubleSameInputRecipeCache.class",
+    "mekanism/common/recipe/lookup/cache/DoubleInputRecipeCache$CheckRecipeType.class",
+    "mekanism/common/recipe/lookup/cache/EitherSideInputRecipeCache.class",
+    "mekanism/common/recipe/lookup/cache/EitherSideInputRecipeCache$State.class",
+    "mekanism/common/recipe/lookup/cache/TripleInputRecipeCache.class",
+    "mekanism/common/recipe/lookup/cache/TripleInputRecipeCache$State.class",
+    "mekanism/common/recipe/lookup/cache/InputRecipeCache.class",
+    "mekanism/common/recipe/lookup/cache/InputRecipeCache$SingleItem.class",
+    "mekanism/common/recipe/lookup/cache/InputRecipeCache$SingleFluid.class",
+    "mekanism/common/recipe/lookup/cache/InputRecipeCache$SingleChemical.class",
+    "mekanism/common/recipe/lookup/cache/InputRecipeCache$DoubleItem.class",
+    "mekanism/common/recipe/lookup/cache/InputRecipeCache$ItemChemical.class",
+    "mekanism/common/recipe/lookup/cache/InputRecipeCache$FluidChemical.class",
+    "mekanism/common/recipe/lookup/cache/InputRecipeCache$EitherSideChemical.class",
+    "mekanism/common/recipe/lookup/cache/InputRecipeCache$ItemFluidChemical.class",
+    "mekanism/common/recipe/lookup/cache/type/IInputCache.class",
+    "mekanism/common/recipe/lookup/cache/type/BaseInputCache.class",
+    "mekanism/common/recipe/lookup/cache/type/ComponentSensitiveInputCache.class",
+    "mekanism/common/recipe/lookup/cache/type/ItemInputCache.class",
+    "mekanism/common/recipe/lookup/cache/type/ItemInputCache$1.class",
+    "mekanism/common/recipe/lookup/cache/type/FluidInputCache.class",
+    "mekanism/common/recipe/lookup/cache/type/FluidInputCache$1.class",
+    "mekanism/common/recipe/lookup/cache/type/ChemicalInputCache.class",
+}
+expected_platform_recipes = {
+    "mekanism/fabric/recipe/FabricIngredientCreatorProvider.class",
+    "mekanism/fabric/recipe/FabricRecipeCacheLifecycle.class",
+    "mekanism/fabric/recipe/FabricRecipeCacheClientLifecycle.class",
+    "mekanism/fabric/mixin/recipe/ClientPacketListenerMixin.class",
+}
+recipe_service = b"mekanism.fabric.recipe.FabricIngredientCreatorProvider\n"
+with zipfile.ZipFile(sys.argv[1]) as artifact:
+    entries = artifact.namelist()
+    actual_api_recipes = {e for e in entries if e.endswith(".class") and (
+          e.startswith("mekanism/api/recipes/") or e == "mekanism/api/fluid/IExtendedFluidTank.class" or e == "mekanism/api/providers/IFluidProvider.class")}
+    actual_common_recipes = {e for e in entries if e.endswith(".class") and (
+          e.startswith("mekanism/common/recipe/ingredients/")
+          or e.startswith("mekanism/common/recipe/lookup/")
+          or e == "mekanism/common/registries/MekanismChemicalIngredientTypes.class")}
+    actual_platform_recipes = {e for e in entries if e.endswith(".class") and (
+          e.startswith("mekanism/fabric/recipe/") or e.startswith("mekanism/fabric/mixin/recipe/"))}
+    if actual_api_recipes != expected_api_recipes:
+        missing = sorted(expected_api_recipes - actual_api_recipes)
+        extra = sorted(actual_api_recipes - expected_api_recipes)
+        raise SystemExit(f"unexpected API recipe class family: missing={missing!r} extra={extra!r}")
+    if actual_common_recipes != expected_common_recipes:
+        missing = sorted(expected_common_recipes - actual_common_recipes)
+        extra = sorted(actual_common_recipes - expected_common_recipes)
+        raise SystemExit(f"unexpected common recipe class family: missing={missing!r} extra={extra!r}")
+    if actual_platform_recipes != expected_platform_recipes:
+        missing = sorted(expected_platform_recipes - actual_platform_recipes)
+        extra = sorted(actual_platform_recipes - expected_platform_recipes)
+        raise SystemExit(f"unexpected platform recipe class family: missing={missing!r} extra={extra!r}")
+    for entry in expected_api_recipes | expected_common_recipes | expected_platform_recipes:
+        if entries.count(entry) != 1:
+            raise SystemExit(f"recipe class must occur exactly once: {entry}")
+        bytecode = artifact.read(entry)
+        if (b"net/neoforged/" in bytecode or b"kilt" in bytecode.lower() or b"connector" in bytecode.lower()
+              or b"xyz/bluspring" in bytecode or b"org/sinytra" in bytecode):
+            raise SystemExit(f"unsupported architecture leaked into recipe bytecode: {entry}")
+        if entry.startswith("mekanism/api/") or entry.startswith("mekanism/common/"):
+            if b"net/fabricmc/" in bytecode:
+                raise SystemExit(f"Fabric type leaked into API/common recipe bytecode: {entry}")
+    if entries.count("META-INF/services/mekanism.api.recipes.ingredients.creator.IIngredientCreatorProvider") != 1 \
+          or artifact.read("META-INF/services/mekanism.api.recipes.ingredients.creator.IIngredientCreatorProvider") != recipe_service:
+        raise SystemExit("wrong or duplicate ingredient creator service descriptor")
+    mixin_config = json.loads(artifact.read("mekanism.client.mixins.json"))
+    if mixin_config.get("package") != "mekanism.fabric.mixin.recipe" or mixin_config.get("client") != ["ClientPacketListenerMixin"] \
+          or "mixins" in mixin_config or "server" in mixin_config or mixin_config.get("injectors", {}).get("defaultRequire") != 1:
+        raise SystemExit(f"client-only mixin contract violated: {mixin_config!r}")
+    metadata = json.loads(artifact.read("fabric.mod.json"))
+    if metadata.get("mixins") != [{"config": "mekanism.client.mixins.json", "environment": "client"}]:
+        raise SystemExit(f"mixin config must be environment-scoped client-only: {metadata.get('mixins')!r}")
+    recipe_data = sorted(e for e in entries if e.startswith("data/mekanism/recipe/"))
+    if recipe_data:
+        raise SystemExit(f"production recipe data leaked into the artifact: {recipe_data!r}")
+PYEOF
+then
+  echo "fabric-packaged-smoke: recipe ingredient/cache/platform class family contract failed" >&2
+  exit 1
+fi
+if ! python3 - "${MOD_JARS[0]}" <<'PYEOF'
 import hashlib, sys, zipfile
 
 expected_api = {
@@ -1126,6 +1280,9 @@ expected_api_chemical = {
     "mekanism/api/chemical/Chemical$DerivationFrame.class",
     "mekanism/api/chemical/Chemical$Derived.class",
     "mekanism/api/chemical/Chemical$DerivedBuilder.class",
+    "mekanism/api/chemical/Chemical$DerivedCacheEntry.class",
+    "mekanism/api/chemical/Chemical$LegacyState.class",
+    "mekanism/api/chemical/ChemicalDataContext$Binding.class",
     "mekanism/api/chemical/ChemicalBuilder.class",
     "mekanism/api/chemical/ChemicalDataContext.class",
     "mekanism/api/chemical/ChemicalRegistry.class",

@@ -19,16 +19,27 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class ChemicalCodecTankConnectionTest {
     private static RegistryAccess access;
-    @BeforeAll static void bootstrap() {
+    @BeforeAll
+    static void bootstrap() {
         net.minecraft.SharedConstants.tryDetectVersion();
         net.minecraft.server.Bootstrap.bootStrap();
-        FabricDefaultedRegistry<Chemical> registry = FabricDefaultedRegistry.create(ChemicalRegistry.REGISTRY_KEY, ChemicalRegistry.EMPTY_KEY, true);
-        ChemicalRegistry.install(registry);
-        Chemical empty = new Chemical(ChemicalBuilder.builder());
-        Holder.Reference<Chemical> holder = registry.register(ChemicalRegistry.EMPTY_KEY, empty, RegistrationInfo.BUILT_IN);
-        ChemicalRegistry.publishEmpty(empty, holder);
-        MekanismChemicals.CHEMICALS.registerAll(registry);
+        FabricDefaultedRegistry<Chemical> registry = installedChemicalRegistry();
         access = new RegistryAccess.ImmutableRegistryAccess(List.of(registry));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static FabricDefaultedRegistry<Chemical> installedChemicalRegistry() {
+        try {
+            return (FabricDefaultedRegistry<Chemical>) ChemicalRegistry.mutable();
+        } catch (IllegalStateException notInstalled) {
+            FabricDefaultedRegistry<Chemical> registry = FabricDefaultedRegistry.create(ChemicalRegistry.REGISTRY_KEY, ChemicalRegistry.EMPTY_KEY, true);
+            ChemicalRegistry.install(registry);
+            Chemical empty = new Chemical(ChemicalBuilder.builder());
+            Holder.Reference<Chemical> holder = registry.register(ChemicalRegistry.EMPTY_KEY, empty, RegistrationInfo.BUILT_IN);
+            ChemicalRegistry.publishEmpty(empty, holder);
+            MekanismChemicals.CHEMICALS.registerAll(registry);
+            return registry;
+        }
     }
 
     @Test

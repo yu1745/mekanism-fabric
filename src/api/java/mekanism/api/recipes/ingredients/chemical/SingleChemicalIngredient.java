@@ -2,13 +2,15 @@ package mekanism.api.recipes.ingredients.chemical;
 
 import com.mojang.serialization.MapCodec;
 import java.util.stream.Stream;
-import mekanism.api.MekanismAPI;
 import mekanism.api.SerializationConstants;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.chemical.Chemical;
+import mekanism.api.chemical.ChemicalRegistry;
 import mekanism.api.chemical.ChemicalStack;
 import net.minecraft.core.Holder;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Base Chemical ingredient implementation that only matches the given chemical.
@@ -21,6 +23,8 @@ import org.jetbrains.annotations.Nullable;
 @NothingNullByDefault
 public non-sealed class SingleChemicalIngredient extends ChemicalIngredient {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger("mekanism.api.MekanismAPI");
+
     public static final MapCodec<SingleChemicalIngredient> CODEC = ChemicalStack.CHEMICAL_NON_EMPTY_HOLDER_CODEC.xmap(SingleChemicalIngredient::new, SingleChemicalIngredient::chemical)
           .fieldOf(SerializationConstants.CHEMICAL);
 
@@ -30,7 +34,7 @@ public non-sealed class SingleChemicalIngredient extends ChemicalIngredient {
      * @param chemical Holder for the chemical to match.
      */
     public SingleChemicalIngredient(Holder<Chemical> chemical) {
-        if (chemical.is(MekanismAPI.EMPTY_CHEMICAL_KEY)) {
+        if (chemical.is(ChemicalRegistry.EMPTY_KEY)) {
             throw new IllegalStateException("SingleChemicalIngredient must not be constructed with mekanism:empty, use IChemicalIngredientCreator.empty() instead!");
         }
         this.chemical = chemical;
@@ -61,7 +65,7 @@ public non-sealed class SingleChemicalIngredient extends ChemicalIngredient {
     @Override
     public void logMissingTags() {
         if (!chemical.isBound()) {
-            MekanismAPI.logger.error("Unbound chemical: {}", chemical.getRegisteredName());
+            LOGGER.error("Unbound chemical: {}", chemical.getRegisteredName());
         }
     }
 

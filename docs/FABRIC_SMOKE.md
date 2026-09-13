@@ -197,3 +197,24 @@ regressions. Exact test totals are **80/379**; full details and non-claims are i
 `FABRIC_CHEMICAL.md`.
 
 With `FABRIC_SMOKE_STATIC_ONLY=1`, the script exits successfully immediately after metadata, access-widener, dependency-nesting, exact-family, and required-entry checks; it does not fetch a launcher or create/start a server. This gate performs no Docker, deployment queue, or production-server operations.
+
+## Task 041 recipe runtime smoke
+
+`scripts/fabric-recipe-runtime-smoke.sh` creates isolated Loom server/client/run roots like the chemical
+runtime gate, and additionally stages a fixture datapack whose recipe combines an official
+`neoforge:compound` item ingredient (tag + item children), a fluid tag ingredient, and a chemical single
+ingredient. The gate proves on a real dedicated server that the recipe loads through the actual
+`RecipeManager`, that the generic triple input cache finds it and rejects fluid/chemical type and
+component mismatches, that a deliberately foreign bound manager fails for the real server level instead
+of serving stale candidates, that repeated chemical queries retain the exact epoch-one context instance
+and values, that a successful `/reload` advances the server recipe context exactly once (old candidates
+removed, replacement exposed), and that a deliberately failing reload retains the usable epoch-two
+context and cache. A physical Xvfb client proves the client-only tail mixin publishes epoch 1 on join and
+epoch 2 after the reload against the level's real recipe manager, that play disconnect clears the client
+binding, that a same-JVM reconnect with a fresh manager resets to epoch 1 with prior candidates
+unreachable, that a second thread in the same JVM keeps distinct manager and chemical-context identities,
+and that a late update after lifecycle stop is rejected at JVM shutdown. The gate finishes by verifying
+that the fixture recipe type, serializer, classes, and any `data/mekanism/recipe/**` production recipe
+data are absent from the release JAR. The derive-once amortization of the chemical hot cache is proven by
+the tracking-override unit contracts in `ChemicalDomainTest`; the runtime gate proves stability and exact
+context retention on the real recipe path.

@@ -32,3 +32,7 @@ mekanism/fabric/network/ChemicalSnapshotPayload.java
 mekanism/fabric/network/ChemicalSnapshotAckPayload.java
 mekanism/fabric/network/FabricChemicalNetworking.java
 mekanism/fabric/network/FabricChemicalClientNetworking.java
+mekanism/fabric/mixin/recipe/ClientPacketListenerMixin.java
+mekanism/fabric/recipe/FabricIngredientCreatorProvider.java
+mekanism/fabric/recipe/FabricRecipeCacheClientLifecycle.java
+mekanism/fabric/recipe/FabricRecipeCacheLifecycle.java

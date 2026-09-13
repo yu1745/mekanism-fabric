@@ -1,6 +1,8 @@
 package mekanism.fabric;
 
+import mekanism.api.MekanismServices;
 import mekanism.api.heat.HeatAPI;
+import mekanism.api.recipes.ingredients.creator.IIngredientCreatorProvider;
 import mekanism.common.config.MekanismStartupConfig;
 import mekanism.fabric.chemical.FabricChemicalLifecycle;
 import mekanism.fabric.config.FabricChemicalConfig;
@@ -10,6 +12,9 @@ import mekanism.fabric.config.FabricMekanismConfigManager;
 import mekanism.fabric.datamaps.FabricMekanismDataMaps;
 import mekanism.fabric.network.FabricMekanismNetworking;
 import mekanism.fabric.network.FabricChemicalNetworking;
+import mekanism.fabric.recipe.FabricIngredientCreatorProvider;
+import mekanism.fabric.recipe.FabricRecipeCacheLifecycle;
+import mekanism.common.registries.MekanismChemicalIngredientTypes;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.minecraft.core.BlockPos;
@@ -32,6 +37,9 @@ public final class MekanismFabricBootstrap implements ModInitializer {
         verifyStartupConfig(startup);
         FabricChemicalConfig.initializeCommon(CONFIG_MANAGER);
         FabricChemicalLifecycle.initialize();
+        MekanismChemicalIngredientTypes.ensureRegistered();
+        FabricRecipeCacheLifecycle.initialize();
+        verifyIngredientCreatorService();
         FabricMekanismNetworking.Registration networking = FabricMekanismNetworking.initialize();
         FabricChemicalNetworking.initialize();
         FabricMekanismDataMaps.initializeCallbacks();
@@ -72,6 +80,16 @@ public final class MekanismFabricBootstrap implements ModInitializer {
         }
         LOGGER.info("MEKANISM_FABRIC_CONFIG_PROOF file=startup.toml values=12 loaded=true created={} corrected={}",
               registration.loadResult().created(), registration.loadResult().correctedValues());
+    }
+
+    private static void verifyIngredientCreatorService() {
+        IIngredientCreatorProvider provider = MekanismServices.load(IIngredientCreatorProvider.class);
+        if (provider.itemStackIngredientCreator() == null || provider.fluidStackIngredientCreator() == null
+              || provider.chemicalStackIngredientCreator() == null || provider.chemicalIngredientCreator() == null) {
+            throw new IllegalStateException("Fabric ingredient creator service proof failed for " + provider.getClass().getName());
+        }
+        LOGGER.info("MEKANISM_FABRIC_INGREDIENT_PROOF service={} chemical_types_frozen={}",
+              provider.getClass().getName(), mekanism.api.recipes.ingredients.chemical.ChemicalIngredientTypeRegistry.isFrozen());
     }
 
     @SuppressWarnings("deprecation")

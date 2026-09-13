@@ -2,10 +2,12 @@ package mekanism.api.recipes.ingredients.chemical;
 
 import com.mojang.serialization.MapCodec;
 import java.util.stream.Stream;
-import mekanism.api.MekanismAPI;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.chemical.Chemical;
+import mekanism.api.chemical.ChemicalRegistry;
 import net.minecraft.core.Holder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Base Chemical ingredient implementation for a singleton that represents an empty chemical ingredient.
@@ -20,6 +22,8 @@ import net.minecraft.core.Holder;
 @NothingNullByDefault
 public final class EmptyChemicalIngredient extends ChemicalIngredient {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger("mekanism.api.MekanismAPI");
+
     public static final EmptyChemicalIngredient INSTANCE = new EmptyChemicalIngredient();
     public static final MapCodec<EmptyChemicalIngredient> CODEC = MapCodec.unit(INSTANCE);
 
@@ -28,7 +32,7 @@ public final class EmptyChemicalIngredient extends ChemicalIngredient {
 
     @Override
     public boolean test(Holder<Chemical> chemical) {
-        return chemical.is(MekanismAPI.EMPTY_CHEMICAL_KEY);
+        return chemical.is(ChemicalRegistry.EMPTY_KEY);
     }
 
     @Override
@@ -43,7 +47,7 @@ public final class EmptyChemicalIngredient extends ChemicalIngredient {
 
     @Override
     public void logMissingTags() {
-        MekanismAPI.logger.warn("Empty chemical ingredient used");
+        LOGGER.warn("Empty chemical ingredient used");
     }
 
     @Override

@@ -5,57 +5,82 @@ import java.util.Set;
 import java.util.function.Function;
 import mekanism.api.recipes.MekanismRecipe;
 import mekanism.api.recipes.ingredients.InputIngredient;
-import mekanism.common.recipe.MekanismRecipeType;
 import mekanism.common.recipe.lookup.cache.type.IInputCache;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Basic helper implementation for {@link IInputRecipeCache} that keeps track of the recipe type and if this cache has been initialized yet or not.
+ * Basic helper implementation for {@link IInputRecipeCache} that resolves the thread-bound recipe context and keeps the mutable cache state under the
+ * {@link RecipeCacheContext} binding rather than on the shared cache object.
+ *
+ * @implNote The Fabric port replaces the deferred recipe-type owner with a {@link RecipeCacheSource}: lookups require the calling thread to have a bound context whose
+ * exact manager matches any non-null {@link Level} (mismatched managers fail instead of consulting stale global state), null-level calls use the bound manager, and
+ * with no bound context no recipes are served. Initialized flags, indices, and complex-recipe sets live in the per-binding state.
  */
 public abstract class AbstractInputRecipeCache<RECIPE extends MekanismRecipe<?>> implements IInputRecipeCache {
 
-    protected final MekanismRecipeType<?, RECIPE, ?> recipeType;
-    protected boolean initialized;
+    protected final RecipeCacheSource<RECIPE> source;
 
-    protected AbstractInputRecipeCache(MekanismRecipeType<?, RECIPE, ?> recipeType) {
-        this.recipeType = recipeType;
+    protected AbstractInputRecipeCache(RecipeCacheSource<RECIPE> source) {
+        this.source = source;
     }
 
     @Override
     public void clear() {
-        //Mark the cache as no longer being initialized
-        initialized = false;
-    }
-
-    /**
-     * Initializes the cache if it hasn't already been initialized.
-     */
-    protected void initCacheIfNeeded(@Nullable Level world) {
-        if (!initialized) {
-            initialized = true;
-            initCache(recipeType.getRecipes(world));
+        //Note: Clearing the shared shell discards this cache's state from the current binding; new bindings already start empty
+        RecipeCacheContext.Binding binding = RecipeCacheContext.currentBinding();
+        if (binding != null) {
+            binding.clearState(this);
         }
     }
 
     /**
-     * Initializes the recipe cache based on the given recipes.
+     * Resolves (and if needed initializes) this cache's state under the thread-bound recipe context.
+     *
+     * @return the state, or {@code null} if the calling thread has no bound context (in which case no recipes are served).
+     *
+     * @throws IllegalStateException if the given non-null level's recipe manager is not the exact bound manager.
+     */
+    @Nullable
+    protected final CacheState resolveState(@Nullable Level world) {
+        RecipeCacheContext.Binding binding = RecipeCacheContext.currentBinding();
+        if (binding == null) {
+            return null;
+        }
+        if (world != null && world.getRecipeManager() != binding.manager()) {
+            throw new IllegalStateException("Recipe cache lookup level is not bound to the active recipe manager (epoch " + binding.epoch() + ")");
+        }
+        CacheState state = binding.state(this);
+        if (!state.initialized) {
+            state.initialized = true;
+            initCache(source.recipes(binding.manager()), state);
+        }
+        return state;
+    }
+
+    /**
+     * Creates a fresh, empty state instance for a new binding.
+     */
+    protected abstract CacheState newState();
+
+    /**
+     * Initializes the recipe cache based on the given recipes into the given state.
      *
      * @param recipes Recipes to build the cache for.
+     * @param state   Mutable per-binding state to populate.
      */
-    protected abstract void initCache(List<RecipeHolder<RECIPE>> recipes);
+    protected abstract void initCache(List<RecipeHolder<RECIPE>> recipes, CacheState state);
 
     /**
      * Helper to check if a cache contains a given input, or if not, if the complex recipe fallback set contains a matching recipe.
      */
     protected <INPUT, INGREDIENT extends InputIngredient<INPUT>, CACHE extends IInputCache<INPUT, INGREDIENT, RECIPE>> boolean containsInput(
-          @Nullable Level world, INPUT input, Function<RECIPE, INGREDIENT> inputExtractor, CACHE cache, Set<RECIPE> complexRecipes) {
+          INPUT input, Function<RECIPE, INGREDIENT> inputExtractor, CACHE cache, Set<RECIPE> complexRecipes) {
         if (cache.isEmpty(input)) {
             //Don't allow empty inputs
             return false;
         }
-        initCacheIfNeeded(world);
         if (cache.contains(input)) {
             return true;
         }
@@ -77,16 +102,15 @@ public abstract class AbstractInputRecipeCache<RECIPE extends MekanismRecipe<?>>
      * </ul>
      */
     protected <INPUT_1, INGREDIENT_1 extends InputIngredient<INPUT_1>, CACHE_1 extends IInputCache<INPUT_1, INGREDIENT_1, RECIPE>, INPUT_2,
-          INGREDIENT_2 extends InputIngredient<INPUT_2>, CACHE_2 extends IInputCache<INPUT_2, INGREDIENT_2, RECIPE>> boolean containsPairing(@Nullable Level world,
+          INGREDIENT_2 extends InputIngredient<INPUT_2>, CACHE_2 extends IInputCache<INPUT_2, INGREDIENT_2, RECIPE>> boolean containsPairing(
           INPUT_1 input1, Function<RECIPE, INGREDIENT_1> input1Extractor, CACHE_1 cache1, Set<RECIPE> complexIngredients1, INPUT_2 input2,
           Function<RECIPE, INGREDIENT_2> input2Extractor, CACHE_2 cache2, Set<RECIPE> complexIngredients2) {
         if (cache1.isEmpty(input1)) {
             //Note: We don't bother checking if 2 is empty here as it will be verified in containsInput
-            return containsInput(world, input2, input2Extractor, cache2, complexIngredients2);
+            return containsInput(input2, input2Extractor, cache2, complexIngredients2);
         } else if (cache2.isEmpty(input2)) {
             return true;
         }
-        initCacheIfNeeded(world);
         //Note: If cache 1 contains input 1 then we only need to test the type of input 2 as we already know input 1 matches
         for (RECIPE recipe : cache1.getRecipes(input1)) {
             if (input2Extractor.apply(recipe).testType(input2)) {
@@ -100,5 +124,10 @@ public abstract class AbstractInputRecipeCache<RECIPE extends MekanismRecipe<?>>
             }
         }
         return false;
+    }
+
+    /** Base of the per-binding mutable state: the initialized flag shared by every cache shape. */
+    protected static abstract class CacheState {
+        private boolean initialized;
     }
 }

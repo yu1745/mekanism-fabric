@@ -5,9 +5,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import mekanism.api.recipes.MekanismRecipe;
 import mekanism.api.recipes.ingredients.InputIngredient;
-import mekanism.common.recipe.MekanismRecipeType;
 import mekanism.common.recipe.lookup.cache.type.IInputCache;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.Level;
@@ -15,28 +15,48 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Similar in concept to {@link DoubleInputRecipeCache} except that it requires both input types to be the same and also allows for them to be in any order.
+ *
+ * @implNote The Fabric port keeps the complex-recipe set and the input cache instance under the {@link RecipeCacheContext} binding state, created fresh per binding
+ * from the constructor-supplied cache factory.
  */
 public abstract class EitherSideInputRecipeCache<INPUT, INGREDIENT extends InputIngredient<INPUT>, RECIPE extends MekanismRecipe<?> & BiPredicate<INPUT, INPUT>,
       CACHE extends IInputCache<INPUT, INGREDIENT, RECIPE>> extends AbstractInputRecipeCache<RECIPE> {
 
-    private final Set<RECIPE> complexRecipes = new HashSet<>();
     private final Function<RECIPE, INGREDIENT> inputAExtractor;
     private final Function<RECIPE, INGREDIENT> inputBExtractor;
-    private final CACHE cache;
+    private final Supplier<CACHE> cacheSupplier;
 
-    protected EitherSideInputRecipeCache(MekanismRecipeType<?, RECIPE, ?> recipeType, Function<RECIPE, INGREDIENT> inputAExtractor,
-          Function<RECIPE, INGREDIENT> inputBExtractor, CACHE cache) {
-        super(recipeType);
+    protected EitherSideInputRecipeCache(RecipeCacheSource<RECIPE> source, Function<RECIPE, INGREDIENT> inputAExtractor,
+          Function<RECIPE, INGREDIENT> inputBExtractor, Supplier<CACHE> cacheSupplier) {
+        super(source);
         this.inputAExtractor = inputAExtractor;
         this.inputBExtractor = inputBExtractor;
-        this.cache = cache;
+        this.cacheSupplier = cacheSupplier;
     }
 
     @Override
-    public void clear() {
-        super.clear();
-        cache.clear();
-        complexRecipes.clear();
+    protected CacheState newState() {
+        return new State<>(new HashSet<>(), cacheSupplier.get());
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    protected void initCache(List<RecipeHolder<RECIPE>> recipes, CacheState state) {
+        State<INPUT, INGREDIENT, RECIPE, CACHE> eitherState = (State<INPUT, INGREDIENT, RECIPE, CACHE>) state;
+        for (RecipeHolder<RECIPE> recipeHolder : recipes) {
+            RECIPE recipe = recipeHolder.value();
+            boolean complexA = eitherState.cache.mapInputs(recipe, inputAExtractor.apply(recipe));
+            boolean complexB = eitherState.cache.mapInputs(recipe, inputBExtractor.apply(recipe));
+            if (complexA || complexB) {
+                eitherState.complexRecipes.add(recipe);
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    @Nullable
+    private State<INPUT, INGREDIENT, RECIPE, CACHE> state(@Nullable Level world) {
+        return (State<INPUT, INGREDIENT, RECIPE, CACHE>) resolveState(world);
     }
 
     /**
@@ -48,15 +68,15 @@ public abstract class EitherSideInputRecipeCache<INPUT, INGREDIENT extends Input
      * @return {@code true} if there is a match, {@code false} if there isn't.
      */
     public boolean containsInput(@Nullable Level world, INPUT input) {
-        if (cache.isEmpty(input)) {
+        State<INPUT, INGREDIENT, RECIPE, CACHE> state = state(world);
+        if (state == null || state.cache.isEmpty(input)) {
             //Don't allow empty inputs
             return false;
         }
-        initCacheIfNeeded(world);
-        if (cache.contains(input)) {
+        if (state.cache.contains(input)) {
             return true;
         }
-        for (RECIPE recipe : complexRecipes) {
+        for (RECIPE recipe : state.complexRecipes) {
             if (inputAExtractor.apply(recipe).testType(input) || inputBExtractor.apply(recipe).testType(input)) {
                 return true;
             }
@@ -79,23 +99,23 @@ public abstract class EitherSideInputRecipeCache<INPUT, INGREDIENT extends Input
      * @apiNote Pass the input you are trying to insert as inputA and the input you already have as inputB.
      */
     public boolean containsInput(@Nullable Level world, INPUT inputA, INPUT inputB) {
-        if (cache.isEmpty(inputA)) {
+        State<INPUT, INGREDIENT, RECIPE, CACHE> state = state(world);
+        if (state == null || state.cache.isEmpty(inputA)) {
             //Note: We don't bother checking if b is empty here as it will be verified in containsInputB
-            return containsInput(world, inputB);
-        } else if (cache.isEmpty(inputB)) {
+            return state != null && containsInput(world, inputB);
+        } else if (state.cache.isEmpty(inputB)) {
             return true;
         }
-        initCacheIfNeeded(world);
         //Note: Even though we know the cache contains input A, we need to check both input A and input B
         // This is because we want to ensure that we allow the inputs being in either order, but in our
         // secondary validation we check inputB first as we know the recipe contains inputA as one of the
         // inputs, but we want to make sure that we only mark it as valid if the same input is on both sides
         // if the recipe combines two of the same type of ingredient
-        if (containsInput(inputA, inputB, cache.getRecipes(inputA))) {
+        if (containsInput(inputA, inputB, state.cache.getRecipes(inputA))) {
             return true;
         }
         //Our quick lookup cache does not contain it, check any recipes where the ingredients are complex
-        return containsInput(inputA, inputB, complexRecipes);
+        return containsInput(inputA, inputB, state.complexRecipes);
     }
 
     private boolean containsInput(INPUT inputA, INPUT inputB, Iterable<RECIPE> recipes) {
@@ -120,15 +140,15 @@ public abstract class EitherSideInputRecipeCache<INPUT, INGREDIENT extends Input
      */
     @Nullable
     public RECIPE findFirstRecipe(@Nullable Level world, INPUT inputA, INPUT inputB) {
-        if (cache.isEmpty(inputA) || cache.isEmpty(inputB)) {
+        State<INPUT, INGREDIENT, RECIPE, CACHE> state = state(world);
+        if (state == null || state.cache.isEmpty(inputA) || state.cache.isEmpty(inputB)) {
             //Don't allow empty inputs
             return null;
         }
-        initCacheIfNeeded(world);
         //Lookup a recipe from the input map
-        RECIPE recipe = findFirstRecipe(inputA, inputB, cache.getRecipes(inputA));
+        RECIPE recipe = findFirstRecipe(inputA, inputB, state.cache.getRecipes(inputA));
         // if there is no recipe, then check if any of our complex recipes match
-        return recipe == null ? findFirstRecipe(inputA, inputB, complexRecipes) : recipe;
+        return recipe == null ? findFirstRecipe(inputA, inputB, state.complexRecipes) : recipe;
     }
 
     @Nullable
@@ -142,15 +162,15 @@ public abstract class EitherSideInputRecipeCache<INPUT, INGREDIENT extends Input
         return null;
     }
 
-    @Override
-    protected void initCache(List<RecipeHolder<RECIPE>> recipes) {
-        for (RecipeHolder<RECIPE> recipeHolder : recipes) {
-            RECIPE recipe = recipeHolder.value();
-            boolean complexA = cache.mapInputs(recipe, inputAExtractor.apply(recipe));
-            boolean complexB = cache.mapInputs(recipe, inputBExtractor.apply(recipe));
-            if (complexA || complexB) {
-                complexRecipes.add(recipe);
-            }
+    /** Per-binding mutable state for either-side caches. */
+    protected static final class State<INPUT, INGREDIENT extends InputIngredient<INPUT>, RECIPE extends MekanismRecipe<?> & BiPredicate<INPUT, INPUT>,
+          CACHE extends IInputCache<INPUT, INGREDIENT, RECIPE>> extends CacheState {
+        private final Set<RECIPE> complexRecipes;
+        private final CACHE cache;
+
+        private State(Set<RECIPE> complexRecipes, CACHE cache) {
+            this.complexRecipes = complexRecipes;
+            this.cache = cache;
         }
     }
 }

@@ -2,7 +2,7 @@ package mekanism.api.recipes.ingredients.creator;
 
 import java.util.Map;
 import java.util.Optional;
-import mekanism.api.IMekanismAccess;
+import mekanism.api.MekanismServices;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.component.DataComponentPredicate;
 import net.minecraft.core.component.DataComponentType;
@@ -13,6 +13,8 @@ import org.jetbrains.annotations.Nullable;
  */
 public class IngredientCreatorAccess {
 
+    private static final IIngredientCreatorProvider PROVIDER = MekanismServices.load(IIngredientCreatorProvider.class);
+
     private IngredientCreatorAccess() {
     }
 
@@ -20,14 +22,14 @@ public class IngredientCreatorAccess {
      * Gets the item stack ingredient creator.
      */
     public static IItemStackIngredientCreator item() {
-        return IMekanismAccess.INSTANCE.itemStackIngredientCreator();
+        return PROVIDER.itemStackIngredientCreator();
     }
 
     /**
      * Gets the fluid stack ingredient creator.
      */
     public static IFluidStackIngredientCreator fluid() {
-        return IMekanismAccess.INSTANCE.fluidStackIngredientCreator();
+        return PROVIDER.fluidStackIngredientCreator();
     }
 
     /**
@@ -37,7 +39,7 @@ public class IngredientCreatorAccess {
      * @since 10.7.0
      */
     public static IChemicalStackIngredientCreator chemicalStack() {
-        return IMekanismAccess.INSTANCE.chemicalStackIngredientCreator();
+        return PROVIDER.chemicalStackIngredientCreator();
     }
 
     /**
@@ -47,7 +49,7 @@ public class IngredientCreatorAccess {
      * @since 10.7.0
      */
     public static IChemicalIngredientCreator chemical() {
-        return IMekanismAccess.INSTANCE.chemicalIngredientCreator();
+        return PROVIDER.chemicalIngredientCreator();
     }
 
     /**

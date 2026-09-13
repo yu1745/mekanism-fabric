@@ -1,54 +1,36 @@
 package mekanism.common.recipe.lookup.cache.type;
 
+import mekanism.api.fluid.FluidStack;
 import mekanism.api.recipes.MekanismRecipe;
 import mekanism.api.recipes.ingredients.FluidStackIngredient;
+import mekanism.api.recipes.ingredients.fluid.FluidIngredient;
 import net.minecraft.world.level.material.Fluid;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.FluidStackLinkedSet;
-import net.neoforged.neoforge.fluids.crafting.CompoundFluidIngredient;
-import net.neoforged.neoforge.fluids.crafting.DataComponentFluidIngredient;
-import net.neoforged.neoforge.fluids.crafting.FluidIngredient;
 
+/**
+ * @implNote The Fabric port introspects the layer-neutral {@link FluidIngredient}: its resolved stacks already flatten compound children, tags resolve to their current
+ * members exactly as the platform ingredient did, and component predicates are marked complex because quick per-fluid lookup is not valid for them.
+ */
 public class FluidInputCache<RECIPE extends MekanismRecipe<?>> extends ComponentSensitiveInputCache<Fluid, FluidStack, FluidStackIngredient, RECIPE> {
 
     public FluidInputCache() {
-        super(FluidStackLinkedSet.TYPE_AND_COMPONENTS);
+        super(FLUID_AND_COMPONENTS);
     }
 
     @Override
     public boolean mapInputs(RECIPE recipe, FluidStackIngredient inputIngredient) {
-        return mapIngredient(recipe, inputIngredient.ingredient().ingredient());
+        return mapIngredient(recipe, inputIngredient.ingredient());
     }
 
     private boolean mapIngredient(RECIPE recipe, FluidIngredient input) {
-        if (input.isSimple()) {
-            //Simple ingredients don't actually check anything related to NBT,
-            // so we can add the items to our base/raw input cache directly
-            for (FluidStack fluid : input.getStacks()) {
-                if (!fluid.isEmpty()) {
-                    //Ignore empty stacks as some mods have ingredients that some stacks are empty
-                    addInputCache(fluid.getFluid(), recipe);
-                }
-            }
-        } else if (input instanceof CompoundFluidIngredient compoundIngredient) {
-            //Special handling for neo's compound ingredient to map all children as best as we can
-            // as maybe some of them are simple
-            boolean result = false;
-            for (FluidIngredient child : compoundIngredient.children()) {
-                result |= mapIngredient(recipe, child);
-            }
-            return result;
-        } else if (input instanceof DataComponentFluidIngredient componentIngredient && componentIngredient.isStrict()) {
-            //Special handling for neo's NBT Ingredient as it requires an exact component match
-            for (FluidStack fluid : input.getStacks()) {
-                //Note: We copy it with a count of one, as we need to copy it anyway to ensure nothing somehow causes our backing map to mutate it,
-                // so while we are at it, we just set the size to one, as we don't care about the size
-                addNbtInputCache(fluid.copyWithAmount(1), recipe);
-            }
-        } else {
-            //Else it is a custom ingredient, so we don't have a great way of handling it using the normal extraction checks
-            // and instead have to just mark it as complex and test as needed
+        if (input.hasComponentPredicate()) {
+            //Special handling for component matching ingredients: there is no valid quick lookup key, so mark it as complex
             return true;
+        }
+        for (FluidStack fluid : input.getStacks()) {
+            if (!fluid.isEmpty()) {
+                //Ignore empty stacks as some mods have ingredients that some stacks are empty
+                addInputCache(fluid.getFluid(), recipe);
+            }
         }
         return false;
     }
@@ -62,4 +44,17 @@ public class FluidInputCache<RECIPE extends MekanismRecipe<?>> extends Component
     public boolean isEmpty(FluidStack input) {
         return input.isEmpty();
     }
+
+    /** Identity-free fluid and components hash strategy matching the official fluid stack linked set semantics. */
+    private static final it.unimi.dsi.fastutil.Hash.Strategy<FluidStack> FLUID_AND_COMPONENTS = new it.unimi.dsi.fastutil.Hash.Strategy<>() {
+        @Override
+        public int hashCode(FluidStack stack) {
+            return stack == null ? 0 : FluidStack.hashFluidAndComponents(stack);
+        }
+
+        @Override
+        public boolean equals(FluidStack first, FluidStack second) {
+            return first == second || first != null && second != null && FluidStack.isSameFluidSameComponents(first, second);
+        }
+    };
 }

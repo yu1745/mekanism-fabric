@@ -15,6 +15,12 @@
   "license": "MIT",
   "environment": "*",
   "accessWidener": "mekanism.accesswidener",
+  "mixins": [
+    {
+      "config": "mekanism.client.mixins.json",
+      "environment": "client"
+    }
+  ],
   "entrypoints": {
     "main": [
       "mekanism.fabric.MekanismFabricBootstrap"

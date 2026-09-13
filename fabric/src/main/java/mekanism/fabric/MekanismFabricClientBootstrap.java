@@ -5,6 +5,7 @@ import mekanism.fabric.config.FabricClientConfigLifecycle;
 import mekanism.fabric.network.FabricChemicalClientNetworking;
 import mekanism.fabric.network.FabricMekanismClientNetworking;
 import mekanism.fabric.network.MekanismNetworkProtocol;
+import mekanism.fabric.recipe.FabricRecipeCacheClientLifecycle;
 import net.fabricmc.api.ClientModInitializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,8 +18,9 @@ public final class MekanismFabricClientBootstrap implements ClientModInitializer
     public void onInitializeClient() {
         FabricClientConfigLifecycle.initialize();
         FabricChemicalClientLifecycle.initialize();
+        FabricRecipeCacheClientLifecycle.initialize();
         FabricMekanismClientNetworking.initialize();
         FabricChemicalClientNetworking.initialize();
-        LOGGER.info("MEKANISM_FABRIC_NETWORK_CLIENT_PROOF protocol={} receiver=true", MekanismNetworkProtocol.CURRENT);
+        LOGGER.info("MEKANISM_FABRIC_NETWORK_CLIENT_PROOF protocol={} receiver=true recipe_mixin_client_only=true", MekanismNetworkProtocol.CURRENT);
     }
 }

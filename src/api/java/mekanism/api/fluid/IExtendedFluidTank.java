@@ -3,19 +3,39 @@ package mekanism.api.fluid;
 import mekanism.api.Action;
 import mekanism.api.AutomationType;
 import mekanism.api.IContentsListener;
+import mekanism.api.INBTSerializable;
 import mekanism.api.SerializationConstants;
 import mekanism.api.annotations.NothingNullByDefault;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
-import net.neoforged.neoforge.common.util.INBTSerializable;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.IFluidTank;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction;
 
+/**
+ * @implNote The Fabric port declares the platform-neutral methods formerly inherited from the NeoForge tank parent directly and drops only the
+ * {@code IFluidTank}/capability {@code FluidAction} bridges; sizing, listener, internal {@link Action}/{@link AutomationType} and registry-aware NBT semantics are
+ * retained. This is an internal tank contract, not a platform storage provider or rollback promise.
+ */
 @NothingNullByDefault
-public interface IExtendedFluidTank extends IFluidTank, INBTSerializable<CompoundTag>, IContentsListener {
+public interface IExtendedFluidTank extends INBTSerializable<CompoundTag>, IContentsListener {
+
+    /**
+     * {@return the fluid stack currently held in this tank}
+     */
+    FluidStack getFluid();
+
+    /**
+     * {@return the capacity of this tank}
+     */
+    int getCapacity();
+
+    /**
+     * Checks if the given stack is valid for this tank, ignoring amount data.
+     *
+     * @param stack Stack to validate.
+     *
+     * @return {@code true} if the stack's fluid is valid for this tank.
+     */
+    boolean isFluidValid(FluidStack stack);
 
     /**
      * Overrides the stack in this {@link IExtendedFluidTank}.
@@ -44,7 +64,7 @@ public interface IExtendedFluidTank extends IFluidTank, INBTSerializable<Compoun
      * Inserts a {@link FluidStack} into this {@link IExtendedFluidTank} and return the remainder. The {@link FluidStack} <em>should not</em> be modified in this
      * function!
      * </p>
-     * Note: This behaviour is subtly <strong>different</strong> from {@link IFluidHandler#fill(FluidStack, FluidAction)}
+     * Note: This behaviour is subtly <strong>different</strong> from the platform capability's fill method
      *
      * @param stack          {@link FluidStack} to insert. This must not be modified by the tank.
      * @param action         The action to perform, either {@link Action#EXECUTE} or {@link Action#SIMULATE}
@@ -237,7 +257,6 @@ public interface IExtendedFluidTank extends IFluidTank, INBTSerializable<Compoun
         return Math.max(0, getCapacity() - getFluidAmount());
     }
 
-    @Override
     default int getFluidAmount() {
         return getFluid().getAmount();
     }
@@ -258,39 +277,4 @@ public interface IExtendedFluidTank extends IFluidTank, INBTSerializable<Compoun
         }
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * Wrapped to properly use our method declarations
-     */
-    @Override
-    @Deprecated
-    default int fill(FluidStack stack, FluidAction action) {
-        return stack.getAmount() - insert(stack, Action.fromFluidAction(action), AutomationType.EXTERNAL).getAmount();
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * Wrapped to properly use our method declarations
-     */
-    @Override
-    @Deprecated
-    default FluidStack drain(FluidStack stack, FluidAction action) {
-        if (!isEmpty() && isFluidEqual(stack)) {
-            return extract(stack.getAmount(), Action.fromFluidAction(action), AutomationType.EXTERNAL);
-        }
-        return FluidStack.EMPTY;
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * Wrapped to properly use our method declarations
-     */
-    @Override
-    @Deprecated
-    default FluidStack drain(int amount, FluidAction action) {
-        return extract(amount, Action.fromFluidAction(action), AutomationType.EXTERNAL);
-    }
 }

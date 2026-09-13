@@ -1,16 +1,19 @@
 package mekanism.api.recipes;
 
-import mekanism.api.MekanismAPI;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeInput;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Base class for helping wrap our recipes into IRecipes.
  */
 public abstract class MekanismRecipe<INPUT extends RecipeInput> implements Recipe<INPUT> {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger("mekanism.api.MekanismAPI");
     //TODO: Should we make implementations override equals and hashcode?
 
     @Override
@@ -26,7 +29,7 @@ public abstract class MekanismRecipe<INPUT extends RecipeInput> implements Recip
 
     //todo 1.21.5 or 1.22: make this abstract
     public void logMissingTags() {
-        MekanismAPI.logger.error("Please implement logMissingTags(): {}", this);
+        LOGGER.error("Please implement logMissingTags(): {}", this);
     }
 
     @NotNull

@@ -3,15 +3,17 @@ package mekanism.api.recipes.ingredients.chemical;
 import com.mojang.serialization.MapCodec;
 import java.util.Optional;
 import java.util.stream.Stream;
-import mekanism.api.MekanismAPI;
 import mekanism.api.SerializationConstants;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.chemical.Chemical;
+import mekanism.api.chemical.ChemicalRegistry;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderSet;
 import net.minecraft.core.HolderSet.Named;
 import net.minecraft.tags.TagKey;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Base Chemical ingredient implementation that matches all chemicals within the given tag.
@@ -24,7 +26,9 @@ import org.jetbrains.annotations.Nullable;
 @NothingNullByDefault
 public non-sealed class TagChemicalIngredient extends ChemicalIngredient {
 
-    public static final MapCodec<TagChemicalIngredient> CODEC = TagKey.codec(MekanismAPI.CHEMICAL_REGISTRY_NAME).xmap(
+    private static final Logger LOGGER = LoggerFactory.getLogger("mekanism.api.MekanismAPI");
+
+    public static final MapCodec<TagChemicalIngredient> CODEC = TagKey.codec(ChemicalRegistry.REGISTRY_KEY).xmap(
           TagChemicalIngredient::new,
           TagChemicalIngredient::tag
     ).fieldOf(SerializationConstants.TAG);
@@ -45,7 +49,7 @@ public non-sealed class TagChemicalIngredient extends ChemicalIngredient {
 
     @Override
     public final Stream<Holder<Chemical>> generateChemicalHolders() {
-        return MekanismAPI.CHEMICAL_REGISTRY.getTag(tag())
+        return ChemicalRegistry.registry().getTag(tag())
               .stream()
               .flatMap(HolderSet::stream)
               .distinct();//Ensure we don't include the same chemical multiple times. Holder overrides #equals at least within same kind of holder
@@ -53,9 +57,9 @@ public non-sealed class TagChemicalIngredient extends ChemicalIngredient {
 
     @Override
     public void logMissingTags() {
-        Optional<Named<Chemical>> registryTag = MekanismAPI.CHEMICAL_REGISTRY.getTag(tag());
+        Optional<Named<Chemical>> registryTag = ChemicalRegistry.registry().getTag(tag());
         if (registryTag.isEmpty() || registryTag.get().size() == 0) {
-            MekanismAPI.logger.error("Empty tag: {}", tag);
+            LOGGER.error("Empty tag: {}", tag);
         }
     }
 

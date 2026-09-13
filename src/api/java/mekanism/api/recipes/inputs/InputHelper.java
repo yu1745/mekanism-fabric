@@ -2,22 +2,25 @@ package mekanism.api.recipes.inputs;
 
 import java.util.Objects;
 import mekanism.api.Action;
-import mekanism.api.MekanismAPI;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.chemical.ChemicalStack;
 import mekanism.api.chemical.IChemicalTank;
 import mekanism.api.fluid.IExtendedFluidTank;
+import mekanism.api.fluid.FluidStack;
 import mekanism.api.inventory.IInventorySlot;
 import mekanism.api.math.MathUtils;
 import mekanism.api.recipes.cache.CachedRecipe.OperationTracker;
 import mekanism.api.recipes.cache.CachedRecipe.OperationTracker.RecipeError;
 import mekanism.api.recipes.ingredients.InputIngredient;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.fluids.FluidStack;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @NothingNullByDefault
 public class InputHelper {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger("mekanism.api.MekanismAPI");
 
     private InputHelper() {
     }
@@ -177,7 +180,7 @@ public class InputHelper {
 
     private static void logMismatchedStackSize(long actual, long expected) {
         if (expected != actual) {
-            MekanismAPI.logger.error("Stack size changed by a different amount ({}) than requested ({}).", actual, expected, new Exception());
+            LOGGER.error("Stack size changed by a different amount ({}) than requested ({}).", actual, expected, new Exception());
         }
     }
 

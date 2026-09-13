@@ -401,3 +401,39 @@ public surface保持；`TriPredicate` 完整保留 test/and/or/negate与 null-ch
 
 完整逐源 U/A/N/M/R report、资源/service、wire bounds、runtime evidence与 external provider/
 transaction/ingredient/machine non-claims见 `docs/FABRIC_CHEMICAL.md`。
+
+## Recipe ingredient, creator, input-handler and cache contracts (Task 041)
+
+Task 041 admits the recipe ingredient/input/generic-cache layer with these bounded API deltas against `4646f509`:
+
+- `IngredientCreatorAccess` 改从 `MekanismServices.load(IIngredientCreatorProvider.class)` 获取四个 creator
+  singleton，不再引用 broad `IMekanismAccess`；新 interface `IIngredientCreatorProvider` 是层中性 service
+  seam，由 `mekanism.fabric.recipe.FabricIngredientCreatorProvider` 实现并以唯一 service descriptor 打包。
+- `ItemStackIngredient` 不再包装 NeoForge `SizedIngredient`：它直接拥有 vanilla `Ingredient` + positive
+  count，可选 non-strict `DataComponentPredicate` 与 compound children list。`of(SizedIngredient)` 等
+  NeoForge 形态 factory 由 `of(Ingredient,int)`、`of(List<Ingredient>,int)`、
+  `of(Ingredient,int,DataComponentPredicate)` 取代；`@Internal ingredient()` 返回 vanilla `Ingredient`，
+  新增 `@Internal ingredients()/hasComponentPredicate()/count()` 供 input cache 使用。flat codec 与
+  stream codec 保持官方 JSON/wire 形态（tag 形态在 wire 上按 vanilla contents codec 展开为当前 stacks，
+  与平台行为一致）。
+- 新层中性 `mekanism.api.recipes.ingredients.fluid.FluidIngredient`（single holder/tag/compound/component
+  predicate）与 `FluidStackIngredient`（predicate + positive int mB amount）取代 NeoForge
+  `FluidIngredient`/`SizedFluidIngredient`；`IExtendedFluidTank` 声明原继承的平台方法并仅删除
+  `IFluidTank`/`FluidAction` capability bridges，`IFluidProvider` 使用项目 `FluidStack` 与 fluid-state 命名。
+- Chemical 六 ingredient 的适配限定为：`ChemicalRegistry` registry/empty-key 替换 `MekanismAPI` 访问、
+  exact-category logger、以及三个 vanilla codec 组合 helper（xor/dispatch-or-else/aliased children
+  field）。`ChemicalIngredientTypeRegistry` 新拥有六个内建 type ID 与 reverse codec identity；
+  `MekanismChemicalIngredientTypes` 在 bootstrap 一次注册并 freeze（duplicate/late/missing 均失败）。
+- `InputHelper` 仅替换项目 `FluidStack` 与 logger；`MekanismRecipe` 仅替换 logger。
+  `CachedRecipe`/`CachedRecipeHelper`/`ICachedRecipeHolder`/`IInputHandler`/`ILongInputHandler`/
+  `IOutputHandler`/`IInputCache`/`BaseInputCache`/`ComponentSensitiveInputCache`/`IInputRecipeCache`
+  与 oracle byte-identical。
+- Generic cache 族的构造依赖从 deferred `MekanismRecipeType` 改为 `RecipeCacheSource`；mutable
+  initialized flags/indices/complex sets 移入 `RecipeCacheContext` 的 per-binding state；
+  `InputRecipeCache.EitherSideChemical` 改为 generic `MekanismRecipe<?> & BiPredicate<ChemicalStack,
+  ChemicalStack>` + 显式 extractors；`ItemInputCache`/`FluidInputCache` introspect 项目 ingredient 类型
+  （compound children 尽力映射，component predicate 标记 complex）。
+- `Chemical`/`ChemicalDataContext` 落地 hot cache：binding 持有 per-thread
+  `IdentityHashMap<Chemical,DerivedCacheEntry>`，legacy inputs 折叠为 volatile copy-on-write
+  `LegacyState` identity；`addAttribute` 发布新 state 并仅使该 Chemical 的 entry 失效。repeat top-level
+  query 在 exact (thread, context, chemical, legacy state) 下零分配零 descriptor lookup。

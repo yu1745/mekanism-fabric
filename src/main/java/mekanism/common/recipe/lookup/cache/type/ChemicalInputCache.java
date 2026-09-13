@@ -1,6 +1,6 @@
 package mekanism.common.recipe.lookup.cache.type;
 
-import mekanism.api.MekanismAPI;
+import mekanism.api.chemical.ChemicalRegistry;
 import mekanism.api.chemical.Chemical;
 import mekanism.api.chemical.ChemicalStack;
 import mekanism.api.recipes.MekanismRecipe;
@@ -12,7 +12,7 @@ public class ChemicalInputCache<RECIPE extends MekanismRecipe<?>> extends BaseIn
     @Override
     public boolean mapInputs(RECIPE recipe, ChemicalStackIngredient inputIngredient) {
         for (Holder<Chemical> chemicalHolder : inputIngredient.ingredient().getChemicalHolders()) {
-            if (!chemicalHolder.is(MekanismAPI.EMPTY_CHEMICAL_KEY)) {
+            if (!chemicalHolder.is(ChemicalRegistry.EMPTY_KEY)) {
                 //Ignore empty stacks as some mods have ingredients that some stacks are empty
                 addInputCache(chemicalHolder, recipe);
             }

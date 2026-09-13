@@ -5,37 +5,49 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import mekanism.api.functions.ConstantPredicates;
+import mekanism.api.functions.TriPredicate;
 import mekanism.api.recipes.MekanismRecipe;
 import mekanism.api.recipes.ingredients.InputIngredient;
-import mekanism.common.recipe.MekanismRecipeType;
 import mekanism.common.recipe.lookup.cache.type.IInputCache;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.common.util.TriPredicate;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Basic implementation for {@link IInputRecipeCache} for handling recipes with a single input.
+ *
+ * @implNote The Fabric port keeps the complex-recipe set and the input cache instance under the {@link RecipeCacheContext} binding state, created fresh per binding
+ * from the constructor-supplied cache factory.
  */
 public abstract class SingleInputRecipeCache<INPUT, INGREDIENT extends InputIngredient<INPUT>, RECIPE extends MekanismRecipe<?> & Predicate<INPUT>,
       CACHE extends IInputCache<INPUT, INGREDIENT, RECIPE>> extends AbstractInputRecipeCache<RECIPE> {
 
-    private final Set<RECIPE> complexRecipes = new HashSet<>();
     private final Function<RECIPE, INGREDIENT> inputExtractor;
-    private final CACHE cache;
+    private final Supplier<CACHE> cacheSupplier;
 
-    protected SingleInputRecipeCache(MekanismRecipeType<?, RECIPE, ?> recipeType, Function<RECIPE, INGREDIENT> inputExtractor, CACHE cache) {
-        super(recipeType);
+    protected SingleInputRecipeCache(RecipeCacheSource<RECIPE> source, Function<RECIPE, INGREDIENT> inputExtractor, Supplier<CACHE> cacheSupplier) {
+        super(source);
         this.inputExtractor = inputExtractor;
-        this.cache = cache;
+        this.cacheSupplier = cacheSupplier;
     }
 
     @Override
-    public void clear() {
-        super.clear();
-        cache.clear();
-        complexRecipes.clear();
+    protected CacheState newState() {
+        return new State<>(new HashSet<>(), cacheSupplier.get());
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    protected void initCache(List<RecipeHolder<RECIPE>> recipes, CacheState state) {
+        State<INPUT, INGREDIENT, RECIPE, CACHE> single = (State<INPUT, INGREDIENT, RECIPE, CACHE>) state;
+        for (RecipeHolder<RECIPE> recipeHolder : recipes) {
+            RECIPE recipe = recipeHolder.value();
+            if (single.cache.mapInputs(recipe, inputExtractor.apply(recipe))) {
+                single.complexRecipes.add(recipe);
+            }
+        }
     }
 
     /**
@@ -47,7 +59,14 @@ public abstract class SingleInputRecipeCache<INPUT, INGREDIENT extends InputIngr
      * @return {@code true} if there is a match, {@code false} if there isn't.
      */
     public boolean containsInput(@Nullable Level world, INPUT input) {
-        return containsInput(world, input, inputExtractor, cache, complexRecipes);
+        State<INPUT, INGREDIENT, RECIPE, CACHE> state = state(world);
+        return state != null && containsInput(input, inputExtractor, state.cache, state.complexRecipes);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Nullable
+    private State<INPUT, INGREDIENT, RECIPE, CACHE> state(@Nullable Level world) {
+        return (State<INPUT, INGREDIENT, RECIPE, CACHE>) resolveState(world);
     }
 
     /**
@@ -60,13 +79,13 @@ public abstract class SingleInputRecipeCache<INPUT, INGREDIENT extends InputIngr
      */
     @Nullable
     public RECIPE findFirstRecipe(@Nullable Level world, INPUT input) {
-        if (cache.isEmpty(input)) {
+        State<INPUT, INGREDIENT, RECIPE, CACHE> state = state(world);
+        if (state == null || state.cache.isEmpty(input)) {
             //Don't allow empty inputs
             return null;
         }
-        initCacheIfNeeded(world);
-        RECIPE recipe = findFirstRecipe(input, cache.getRecipes(input));
-        return recipe == null ? findFirstRecipe(input, complexRecipes) : recipe;
+        RECIPE recipe = findFirstRecipe(input, state.cache.getRecipes(input));
+        return recipe == null ? findFirstRecipe(input, state.complexRecipes) : recipe;
     }
 
     @Nullable
@@ -89,14 +108,14 @@ public abstract class SingleInputRecipeCache<INPUT, INGREDIENT extends InputIngr
      */
     @Nullable
     public RECIPE findTypeBasedRecipe(@Nullable Level world, INPUT input) {
-        if (cache.isEmpty(input)) {
+        State<INPUT, INGREDIENT, RECIPE, CACHE> state = state(world);
+        if (state == null || state.cache.isEmpty(input)) {
             //Don't allow empty inputs
             return null;
         }
-        initCacheIfNeeded(world);
-        RECIPE recipe = cache.findFirstRecipe(input, ConstantPredicates.alwaysTrue());
+        RECIPE recipe = state.cache.findFirstRecipe(input, ConstantPredicates.alwaysTrue());
         if (recipe == null) {
-            for (RECIPE complexRecipe : complexRecipes) {
+            for (RECIPE complexRecipe : state.complexRecipes) {
                 if (inputExtractor.apply(complexRecipe).testType(input)) {
                     return complexRecipe;
                 }
@@ -116,17 +135,17 @@ public abstract class SingleInputRecipeCache<INPUT, INGREDIENT extends InputIngr
      */
     @Nullable
     public <DATA> RECIPE findTypeBasedRecipe(@Nullable Level world, INPUT input, DATA data, TriPredicate<RECIPE, INPUT, DATA> matchCriteria) {
-        if (cache.isEmpty(input)) {
+        State<INPUT, INGREDIENT, RECIPE, CACHE> state = state(world);
+        if (state == null || state.cache.isEmpty(input)) {
             //Don't allow empty inputs
             return null;
         }
-        initCacheIfNeeded(world);
-        for (RECIPE recipe : cache.getRecipes(input)) {
+        for (RECIPE recipe : state.cache.getRecipes(input)) {
             if (matchCriteria.test(recipe, input, data)) {
                 return recipe;
             }
         }
-        for (RECIPE complexRecipe : complexRecipes) {
+        for (RECIPE complexRecipe : state.complexRecipes) {
             if (inputExtractor.apply(complexRecipe).testType(input) && matchCriteria.test(complexRecipe, input, data)) {
                 return complexRecipe;
             }
@@ -145,17 +164,17 @@ public abstract class SingleInputRecipeCache<INPUT, INGREDIENT extends InputIngr
      */
     @Nullable
     public <DATA_1, DATA_2> RECIPE findTypeBasedRecipe(@Nullable Level world, INPUT input, DATA_1 data1, DATA_2 data2, CheckRecipeType<INPUT, RECIPE, DATA_1, DATA_2> matchCriteria) {
-        if (cache.isEmpty(input)) {
+        State<INPUT, INGREDIENT, RECIPE, CACHE> state = state(world);
+        if (state == null || state.cache.isEmpty(input)) {
             //Don't allow empty inputs
             return null;
         }
-        initCacheIfNeeded(world);
-        for (RECIPE recipe : cache.getRecipes(input)) {
+        for (RECIPE recipe : state.cache.getRecipes(input)) {
             if (matchCriteria.testType(recipe, input, data1, data2)) {
                 return recipe;
             }
         }
-        for (RECIPE complexRecipe : complexRecipes) {
+        for (RECIPE complexRecipe : state.complexRecipes) {
             if (inputExtractor.apply(complexRecipe).testType(input) && matchCriteria.testType(complexRecipe, input, data1, data2)) {
                 return complexRecipe;
             }
@@ -163,13 +182,15 @@ public abstract class SingleInputRecipeCache<INPUT, INGREDIENT extends InputIngr
         return null;
     }
 
-    @Override
-    protected void initCache(List<RecipeHolder<RECIPE>> recipes) {
-        for (RecipeHolder<RECIPE> recipeHolder : recipes) {
-            RECIPE recipe = recipeHolder.value();
-            if (cache.mapInputs(recipe, inputExtractor.apply(recipe))) {
-                complexRecipes.add(recipe);
-            }
+    /** Per-binding mutable state for single-input caches. */
+    protected static final class State<INPUT, INGREDIENT extends InputIngredient<INPUT>, RECIPE extends MekanismRecipe<?> & Predicate<INPUT>, CACHE extends IInputCache<INPUT, INGREDIENT, RECIPE>>
+          extends CacheState {
+        private final Set<RECIPE> complexRecipes;
+        private final CACHE cache;
+
+        private State(Set<RECIPE> complexRecipes, CACHE cache) {
+            this.complexRecipes = complexRecipes;
+            this.cache = cache;
         }
     }
 

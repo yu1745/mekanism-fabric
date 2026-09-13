@@ -3,15 +3,19 @@ package mekanism.common.recipe.ingredients;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
+import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.MapLike;
+import com.mojang.serialization.RecordBuilder;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
-import mekanism.api.MekanismAPI;
+import mekanism.api.SerializationConstants;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.chemical.Chemical;
 import mekanism.api.recipes.ingredients.chemical.ChemicalIngredient;
+import mekanism.api.recipes.ingredients.chemical.ChemicalIngredientTypeRegistry;
 import mekanism.api.recipes.ingredients.chemical.CompoundChemicalIngredient;
 import mekanism.api.recipes.ingredients.chemical.DifferenceChemicalIngredient;
 import mekanism.api.recipes.ingredients.chemical.IntersectionChemicalIngredient;
@@ -23,16 +27,20 @@ import net.minecraft.core.NonNullList;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.util.ExtraCodecs;
-import net.neoforged.neoforge.common.util.NeoForgeExtraCodecs;
 
 @NothingNullByDefault
 public class ChemicalIngredientCreator implements IChemicalIngredientCreator {
 
     public static final ChemicalIngredientCreator INSTANCE = new ChemicalIngredientCreator();
 
-    private static final MapCodec<ChemicalIngredient> SINGLE_OR_TAG_CODEC = NeoForgeExtraCodecs.xor(SingleChemicalIngredient.CODEC, TagChemicalIngredient.CODEC).flatXmap(
+    /**
+     * @implNote The Fabric port replaces the platform's {@code xor} map codec helper with an equivalent exclusive-or composition over the two base ingredient
+     * codecs.
+     */
+    private static final MapCodec<ChemicalIngredient> SINGLE_OR_TAG_CODEC = xor(SingleChemicalIngredient.CODEC, TagChemicalIngredient.CODEC).flatXmap(
           either -> DataResult.success(either.map(i -> i, ChemicalIngredient.class::cast)),
           ingredient -> {
               if (ingredient instanceof SingleChemicalIngredient singleIngredient) {
@@ -43,8 +51,11 @@ public class ChemicalIngredientCreator implements IChemicalIngredientCreator {
               return DataResult.error(() -> "Basic chemical ingredient should be either a chemical or a tag!");
           });
 
-    private static final MapCodec<ChemicalIngredient> MAP_CODEC_NONEMPTY = NeoForgeExtraCodecs.dispatchMapOrElse(MekanismAPI.CHEMICAL_INGREDIENT_TYPES.byNameCodec(), ChemicalIngredient::codec,
-          Function.identity(), SINGLE_OR_TAG_CODEC).xmap(
+    /**
+     * @implNote The Fabric port replaces the platform's dispatch-or-else map codec helper with an equivalent composition that dispatches the {@code type} field
+     * through {@link ChemicalIngredientTypeRegistry} and falls back to the type-less single/tag form.
+     */
+    private static final MapCodec<ChemicalIngredient> MAP_CODEC_NONEMPTY = new DispatchOrElseMapCodec(SINGLE_OR_TAG_CODEC).xmap(
           either -> either.map(Function.identity(), Function.identity()),
           ingredient -> {
               // prefer serializing without a type field, if possible
@@ -184,5 +195,88 @@ public class ChemicalIngredientCreator implements IChemicalIngredientCreator {
             return ingredients.getFirst();
         }
         return new IntersectionChemicalIngredient(List.copyOf(ingredients));
+    }
+
+    /**
+     * Exclusive-or composition over two map codecs: decodes with the left codec, falling back to the right codec, combining the errors when both fail; encodes through
+     * whichever side the value belongs to.
+     */
+    private static <A, B> MapCodec<Either<A, B>> xor(MapCodec<A> left, MapCodec<B> right) {
+        return new MapCodec<>() {
+            @Override
+            public <T> DataResult<Either<A, B>> decode(DynamicOps<T> ops, MapLike<T> input) {
+                DataResult<Either<A, B>> leftResult = left.decode(ops, input).map(Either::left);
+                DataResult<Either<A, B>> rightResult = right.decode(ops, input).map(Either::right);
+                return leftResult.result().map(DataResult::success).orElseGet(() ->
+                      rightResult.result().map(DataResult::success).orElseGet(() ->
+                            DataResult.error(() -> "Neither alternative matched: " + leftResult.error().map(DataResult.Error::message).orElse("unknown")
+                                  + "; " + rightResult.error().map(DataResult.Error::message).orElse("unknown"))));
+            }
+
+            @Override
+            public <T> java.util.stream.Stream<T> keys(DynamicOps<T> ops) {
+                return java.util.stream.Stream.of(ops.createString(SerializationConstants.TYPE));
+            }
+
+            @Override
+            public <T> RecordBuilder<T> encode(Either<A, B> input, DynamicOps<T> ops, RecordBuilder<T> prefix) {
+                return input.map(leftValue -> left.encode(leftValue, ops, prefix), rightValue -> right.encode(rightValue, ops, prefix));
+            }
+        };
+    }
+
+    @SuppressWarnings("unchecked")
+    private static MapCodec<ChemicalIngredient> castCodec(MapCodec<? extends ChemicalIngredient> codec) {
+        return (MapCodec<ChemicalIngredient>) codec;
+    }
+
+    /**
+     * Type-dispatching map codec over {@link ChemicalIngredientTypeRegistry}: when a {@code type} field is present the ingredient decodes and encodes through the
+     * registered codec for that ID, and when it is absent the type-less single/tag fallback is used.
+     */
+    private static final class DispatchOrElseMapCodec extends MapCodec<Either<ChemicalIngredient, ChemicalIngredient>> {
+
+        private final MapCodec<ChemicalIngredient> fallback;
+
+        private DispatchOrElseMapCodec(MapCodec<ChemicalIngredient> fallback) {
+            this.fallback = fallback;
+        }
+
+        @Override
+        public <T> DataResult<Either<ChemicalIngredient, ChemicalIngredient>> decode(DynamicOps<T> ops, MapLike<T> input) {
+            T typeValue = input.get(SerializationConstants.TYPE);
+            if (typeValue == null) {
+                return fallback.decode(ops, input).map(Either::right);
+            }
+            return ResourceLocation.CODEC.decode(ops, typeValue).map(com.mojang.datafixers.util.Pair::getFirst).flatMap(id -> {
+                MapCodec<? extends ChemicalIngredient> codec;
+                try {
+                    codec = ChemicalIngredientTypeRegistry.codec(id);
+                } catch (IllegalArgumentException e) {
+                    return DataResult.error(() -> e.getMessage());
+                }
+                return codec.decode(ops, input).<Either<ChemicalIngredient, ChemicalIngredient>>map(ingredient -> Either.left((ChemicalIngredient) ingredient));
+            });
+        }
+
+        @Override
+        public <T> java.util.stream.Stream<T> keys(DynamicOps<T> ops) {
+            return java.util.stream.Stream.of(ops.createString(SerializationConstants.TYPE));
+        }
+
+        @Override
+        public <T> RecordBuilder<T> encode(Either<ChemicalIngredient, ChemicalIngredient> input, DynamicOps<T> ops, RecordBuilder<T> prefix) {
+            return input.map(
+                  typed -> {
+                      MapCodec<? extends ChemicalIngredient> codec = typed.codec();
+                      ResourceLocation id = ChemicalIngredientTypeRegistry.idOf(codec);
+                      if (id == null) {
+                          return prefix.withErrorsFrom(DataResult.error(() -> "Chemical ingredient codec is not registered to a type: " + codec));
+                      }
+                      prefix.add(SerializationConstants.TYPE, ResourceLocation.CODEC.encodeStart(ops, id));
+                      return castCodec(codec).encode(typed, ops, prefix);
+                  },
+                  typeLess -> fallback.encode(typeLess, ops, prefix));
+        }
     }
 }

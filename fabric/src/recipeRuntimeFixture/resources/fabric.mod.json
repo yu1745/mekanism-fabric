@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "mekanism_recipe_runtime_fixture",
+  "version": "${version}",
+  "name": "Mekanism recipe runtime fixture",
+  "description": "Isolated real server/client probes for the recipe ingredient/cache/reload vertical.",
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "mekanism.fabric.recipe.fixture.RecipeRuntimeServerFixture"
+    ],
+    "client": [
+      "mekanism.fabric.recipe.fixture.RecipeRuntimeClientFixture"
+    ]
+  },
+  "depends": {
+    "minecraft": "~1.21.1",
+    "fabricloader": ">=0.19.5",
+    "mekanism": "*"
+  }
+}

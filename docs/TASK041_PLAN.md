@@ -1,6 +1,6 @@
 # Task 041 plan — recipe ingredients, generic execution/cache, and reload ownership
 
-Status: **approved for one isolated SOL implementation candidate; no implementation claim yet**
+Status: **implemented as one isolated SOL/GLM candidate on branch `task041-recipe-cache-vertical`; parent review, integration, and release pending**
 
 ## Decision and baseline
 
@@ -289,3 +289,31 @@ Candidate work must not run `./build.sh --clean`, push, deploy, access productio
 The candidate updates exact slices and build/static/runtime gates, adds `docs/FABRIC_RECIPES.md`, and updates `FABRIC_CHEMICAL.md`, `FABRIC_PORT.md`, `PORT_MATRIX.md`, `API_DELTAS.md`, `FABRIC_SMOKE.md`, and this plan with actual arithmetic/evidence/non-claims. `MODEL_IMPLEMENTATION_COMPARISONS.md` is updated only when the mandatory independent review actually occurs.
 
 No implementation, integration, release, push or deployment is claimed by this approval plan.
+
+
+## Candidate implementation outcome (GLM, branch `task041-recipe-cache-vertical`)
+
+Implemented from clean approval commit `e4d85c3e` in an isolated worktree by the sole GLM implementation
+candidate. Final slice arithmetic matches the plan exactly: API/common/platform **129/184/37** (350
+compiled production sources), **59 unique touched production sources**, **55 net-new compiled sources**,
+tests ordinary/transfer/root/data-map/aggregate **75/372**, **5/27**, **1/2**, **2/4**, **83/405** (23 new
+Fabric-local tests: 5 hot-cache methods added to `ChemicalDomainTest`, 6-method Knot ingredient closure
+suite, 6-method input-handler/generic-execution suite, 6-method generic input-cache context suite).
+
+Classification corrections against the plan's letter (counts unchanged): `BaseInputCache` and
+`ComponentSensitiveInputCache` were classified `A` but needed no source delta because the per-binding
+cache instances already isolate their mutable maps; they compile byte-identical to `4646f509` and are
+reported as `U`-effective. `ItemStackIngredient.logMissingTags` cannot report the exact empty tag value
+(vanilla ingredients are not introspectable into values), so it uses the official non-simple branch
+message. Item wire round-trips flatten tag-valued compound children to their current stacks through the
+vanilla contents codec, the platform wire behavior; compound union JSON round-trips the typed form.
+`from(int, List<TagKey<Item>>)` uses a union of per-tag vanilla ingredients because vanilla has no public
+multi-tag value construction. The item/fluid non-strict component predicates match the official semantics
+(stacks missing an expected component do not match).
+
+Candidate gates personally passed (see the candidate report for timings): focused suites, full
+`check build`, all slice/no-NeoForge checks, `scan-platform-deps.py`, `fabric-build.sh`,
+`FABRIC_SMOKE_STATIC_ONLY=1 scripts/fabric-packaged-smoke.sh`, full packaged dedicated-server smoke, and
+the new `scripts/fabric-recipe-runtime-smoke.sh`. The candidate did not run `./build.sh --clean`, did not
+push or deploy, and did not touch production or the mirror. The mandatory independent adversarial review
+has not occurred; integration and the parent clean release remain pending.

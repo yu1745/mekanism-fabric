@@ -87,10 +87,9 @@ context-dependent derivation query. Overrides must invoke `super`; a reentrant q
 Chemical sees the immutable partial derivation accumulated so far, while a nested query of another
 Chemical gets an independent frame and restores the outer frame afterward. Direct external invocation
 is intentionally invalid: the base method throws outside the context-local derivation callback. This
-is an explicit authorized Fabric delta from upstream's shared cache-refresh lifecycle. The current
-implementation allocates and performs the five descriptor lookups again for every top-level query;
-Task041 must establish hot-path caching before adding recipe query traffic, without global mutable
-Chemical state. `FabricChemicalDataMapSession.publishSnapshot` is package-private and exists only as
+is an explicit authorized Fabric delta from upstream's shared cache-refresh lifecycle. The per-query allocation and
+five descriptor lookups were replaced by Task 041 with the exact-context/thread-local hot cache described in `FABRIC_RECIPES.md`; no global mutable Chemical state
+was introduced. `FabricChemicalDataMapSession.publishSnapshot` is package-private and exists only as
 an isolated same-package test seam, not as a runtime publication API.
 
 `MekanismServices` has one deterministic policy for both selected public services: exactly one

@@ -8,14 +8,13 @@ import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.chemical.Chemical;
 import mekanism.api.recipes.ingredients.creator.IngredientCreatorAccess;
 import net.minecraft.core.Holder;
-import net.neoforged.neoforge.common.crafting.DifferenceIngredient;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Base Chemical ingredient implementation that matches the difference of two provided chemical ingredients, i.e. anything contained in {@code base} that is not in
  * {@code subtracted}.
  *
- * @see DifferenceIngredient DifferenceIngredient, its item equivalent
+ * @see mekanism.api.recipes.ingredients.chemical.DifferenceChemicalIngredient its item equivalent
  * @since 10.6.0
  */
 @NothingNullByDefault

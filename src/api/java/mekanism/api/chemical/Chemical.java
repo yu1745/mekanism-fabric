@@ -170,6 +170,12 @@ public class Chemical implements IChemicalProvider, IChemicalAttributeContainer<
     private TagKey<Item> oreTag;
     @Deprecated(forRemoval = true, since = "10.7.11")
     private boolean isGaseous;
+    /**
+     * The one volatile immutable copy-on-write snapshot of every legacy input feeding context-local derivation. Data-map derived values are cached per
+     * {@link ChemicalDataContext.Binding} keyed by this snapshot's identity, so {@link #addAttribute(ChemicalAttribute)} publishing a new snapshot invalidates only
+     * this chemical on its next query, and a query racing the publication observes exactly one complete old or new state.
+     */
+    private volatile LegacyState legacyState;
 
     public Chemical(ChemicalBuilder builder) {
         this.iconLocation = builder.getTexture();
@@ -196,6 +202,7 @@ public class Chemical implements IChemicalProvider, IChemicalAttributeContainer<
         this.legacyOreTag = builder.getOreTag();
         this.oreTag = this.legacyOreTag;
         this.isGaseous = builder.isGaseous();
+        this.legacyState = new LegacyState(legacyOreTag, legacyRadioactivity, hasLegacyAttributesWithValidation);
     }
 
     @Override
@@ -316,6 +323,8 @@ public class Chemical implements IChemicalProvider, IChemicalAttributeContainer<
             this.hasLegacyAttributesWithValidation = true;
             this.hasAttributesWithValidation = true;
         }
+        //Note: Publishing a new immutable legacy state invalidates this chemical's hot-cache entry on its next query; other chemicals keep their cached values
+        this.legacyState = new LegacyState(legacyOreTag, legacyRadioactivity, hasLegacyAttributesWithValidation);
     }
 
     /**
@@ -482,11 +491,16 @@ public class Chemical implements IChemicalProvider, IChemicalAttributeContainer<
      * immutable partial view accumulated so far and do not recursively invoke the override. Querying another
      * chemical derives a nested independent view and restores this derivation afterward.</p>
      *
+     * <p>Completed derivations are cached per thread, exact context identity, chemical identity, and legacy-state
+     * identity: repeat top-level queries hit the completed immutable value without re-invoking this method, while a
+     * different bound context (even with an equal numeric epoch), {@link ChemicalDataContext#clear()}, or a legacy
+     * state republished by {@link #addAttribute(ChemicalAttribute)} causes exactly one re-derivation per query until
+     * a new entry completes.</p>
+     *
      * @param holder canonical holder for this chemical
      *
-     * @implNote Fabric deliberately re-derives a context-local view for each top-level query rather than mutating
-     * shared {@code Chemical} state. Direct external invocation being invalid is an authorized Fabric delta from the
-     * upstream cache-refresh lifecycle.
+     * @implNote Fabric keeps derived values thread/context-confined rather than mutating shared {@code Chemical} state. Direct external invocation being invalid is an
+     * authorized Fabric delta from the upstream cache-refresh lifecycle.
      */
     @Internal//TODO - 1.22: Evaluate if we want to get rid of this or if caching the state of some of this is useful from a performance standpoint
     @MustBeInvokedByOverriders
@@ -531,13 +545,24 @@ public class Chemical implements IChemicalProvider, IChemicalAttributeContainer<
     private Derived derived() {
         DerivationFrame previous = TRACKING.get();
         if (previous != null && previous.chemical == this) {
+            //Same-chemical reentrancy observes the immutable partial view accumulated so far, without recursion and without consulting the hot cache
             return previous.builder.snapshot();
         }
-        DerivedBuilder builder = new DerivedBuilder(legacyOreTag, legacyRadioactivity, hasLegacyAttributesWithValidation);
+        ChemicalDataContext.Binding binding = ChemicalDataContext.activeBinding();
+        LegacyState state = legacyState;
+        DerivedCacheEntry entry = binding.entry(this);
+        if (entry != null && entry.state == state) {
+            //Hot cache hit: the completed immutable value is returned without allocating a builder or performing any descriptor lookup
+            return entry.derived;
+        }
+        DerivedBuilder builder = new DerivedBuilder(state);
         TRACKING.set(new DerivationFrame(this, builder));
         try {
             updateFromDataMap(getAsHolder());
-            return builder.snapshot();
+            Derived snapshot = builder.snapshot();
+            //Only successful final snapshots are cached; a throwing override leaves no entry behind
+            binding.cache(this, new DerivedCacheEntry(state, snapshot));
+            return snapshot;
         } finally {
             if (previous == null) TRACKING.remove();
             else TRACKING.set(previous);
@@ -547,15 +572,30 @@ public class Chemical implements IChemicalProvider, IChemicalAttributeContainer<
     private record DerivationFrame(Chemical chemical, DerivedBuilder builder) {
     }
 
+    /** Immutable copy-on-write snapshot of the legacy inputs feeding context-local derivation; cache validity is compared by identity. */
+    private record LegacyState(@Nullable TagKey<Item> oreTag, double radioactivity, boolean needsValidation) {
+    }
+
+    /** A completed derivation and the exact legacy state it was derived under. */
+    static final class DerivedCacheEntry {
+        private final LegacyState state;
+        private final Derived derived;
+
+        private DerivedCacheEntry(LegacyState state, Derived derived) {
+            this.state = state;
+            this.derived = derived;
+        }
+    }
+
     private static final class DerivedBuilder {
         private TagKey<Item> oreTag;
         private final List<IChemicalAttribute> attributes = new ArrayList<>();
         private double radioactivity;
         private boolean needsValidation;
-        private DerivedBuilder(TagKey<Item> oreTag, double radioactivity, boolean needsValidation) {
-            this.oreTag = oreTag;
-            this.radioactivity = radioactivity;
-            this.needsValidation = needsValidation;
+        private DerivedBuilder(LegacyState legacy) {
+            this.oreTag = legacy.oreTag();
+            this.radioactivity = legacy.radioactivity();
+            this.needsValidation = legacy.needsValidation();
         }
 
         private Derived snapshot() {

@@ -23,6 +23,7 @@ sourceSets {
     fabricDataMapTest
     dataMapReloadFixture
     chemicalRuntimeFixture
+    recipeRuntimeFixture
 }
 
 loom {
@@ -32,6 +33,7 @@ loom {
     createRemapConfigurations(sourceSets.clientWindowFixture)
     createRemapConfigurations(sourceSets.dataMapReloadFixture)
     createRemapConfigurations(sourceSets.chemicalRuntimeFixture)
+    createRemapConfigurations(sourceSets.recipeRuntimeFixture)
 
     mods {
         mekanism {
@@ -51,6 +53,9 @@ loom {
         }
         chemicalRuntimeFixture {
             sourceSet sourceSets.chemicalRuntimeFixture
+        }
+        recipeRuntimeFixture {
+            sourceSet sourceSets.recipeRuntimeFixture
         }
     }
 
@@ -95,6 +100,24 @@ loom {
             programArgs '--quickPlayMultiplayer', System.getProperty('mekanism.chemical.address', '127.0.0.1:25568'),
                   '--username', System.getProperty('mekanism.chemical.username', 'MekanismChemical')
         }
+        recipeRuntimeServer {
+            server()
+            name = 'Mekanism recipe runtime server'
+            source sourceSets.main
+            source sourceSets.recipeRuntimeFixture
+            runDir = System.getProperty('mekanism.recipe.serverDir', 'run/recipe-runtime-server')
+            property 'mekanism.recipe.runtimeRoot', System.getProperty('mekanism.recipe.runtimeRoot', 'run/recipe-runtime')
+        }
+        recipeRuntimeClient {
+            client()
+            name = 'Mekanism recipe runtime client'
+            source sourceSets.main
+            source sourceSets.recipeRuntimeFixture
+            runDir = System.getProperty('mekanism.recipe.clientDir', 'run/recipe-runtime-client')
+            property 'mekanism.recipe.runtimeRoot', System.getProperty('mekanism.recipe.runtimeRoot', 'run/recipe-runtime')
+            programArgs '--quickPlayMultiplayer', System.getProperty('mekanism.recipe.address', '127.0.0.1:25569'),
+                  '--username', System.getProperty('mekanism.recipe.username', 'MekRecipe')
+        }
         handshakeMismatchClient {
             client()
             name = 'Mekanism mismatched handshake fixture client'
@@ -137,7 +160,7 @@ def platformSlice = loadSlice('platform-slice.txt')
 def apiSliceFiles = apiSlice.collect { file("../src/api/java/${it}") }
 def commonSliceFiles = commonSlice.collect { file("../src/main/java/${it}") }
 def platformSliceFiles = platformSlice.collect { file("src/main/java/${it}") }
-if (apiSlice.size() != 98 || commonSlice.size() != 164 || platformSlice.size() != 33) {
+if (apiSlice.size() != 129 || commonSlice.size() != 184 || platformSlice.size() != 37) {
     throw new GradleException("Unexpected Fabric source slice counts: api=${apiSlice.size()} common=${commonSlice.size()} platform=${platformSlice.size()}")
 }
 
@@ -251,6 +274,11 @@ sourceSets {
         compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
         runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
     }
+    recipeRuntimeFixture {
+        // Real server/client recipe probe sees production but remains an isolated Loom mod root.
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
+    }
     main {
         java {
             srcDirs = ['src/main/java', '../src/api/java', '../src/main/java']
@@ -334,6 +362,7 @@ def clientWindowFixtureResourceOutput = layout.buildDirectory.dir('resources/cli
 def clientWindowFixtureServices = [
       layout.projectDirectory.file('../src/main/resources/META-INF/services/mekanism.api.text.ITooltipHelper'),
       layout.projectDirectory.file('../src/main/resources/META-INF/services/mekanism.api.datamaps.IMekanismDataMapTypes'),
+      layout.projectDirectory.file('../src/main/resources/META-INF/services/mekanism.api.recipes.ingredients.creator.IIngredientCreatorProvider'),
 ]
 def verifyClientWindowFixtureIsolation = tasks.register('verifyClientWindowFixtureIsolation') {
     group = 'verification'
@@ -370,6 +399,7 @@ def verifyClientWindowFixtureIsolation = tasks.register('verifyClientWindowFixtu
         def expectedServices = [
               'mekanism.api.text.ITooltipHelper': 'mekanism.common.util.text.TooltipHelper'.bytes,
               'mekanism.api.datamaps.IMekanismDataMapTypes': 'mekanism.fabric.datamaps.FabricChemicalDataMaps\n'.bytes,
+              'mekanism.api.recipes.ingredients.creator.IIngredientCreatorProvider': 'mekanism.fabric.recipe.FabricIngredientCreatorProvider\n'.bytes,
         ]
         if (actualServices.keySet() != expectedServices.keySet()
               || actualServices.any { name, bytes -> !java.util.Arrays.equals(bytes, expectedServices[name]) }) {
@@ -416,6 +446,47 @@ def verifyChemicalRuntimeFixtureIsolation = tasks.register('verifyChemicalRuntim
         }
     }
 }
+def recipeRuntimeFixtureSources = files(sourceSets.recipeRuntimeFixture.allJava)
+def recipeRuntimeFixtureMetadata = layout.projectDirectory.file('src/recipeRuntimeFixture/resources/fabric.mod.json')
+def verifyRecipeRuntimeFixtureIsolation = tasks.register('verifyRecipeRuntimeFixtureIsolation') {
+    group = 'verification'
+    description = 'Checks the two real recipe runtime probes remain an isolated non-release Loom mod.'
+    inputs.files(recipeRuntimeFixtureSources, recipeRuntimeFixtureMetadata)
+    doLast {
+        def sources = recipeRuntimeFixtureSources.files
+        if (sources.size() != 2 || sources.collect { it.name }.toSet() != [
+              'RecipeRuntimeServerFixture.java', 'RecipeRuntimeClientFixture.java'] as Set) {
+            throw new GradleException("recipeRuntimeFixture must contain exactly its two fixed probes: ${sources}")
+        }
+        def metadata = new JsonSlurper().parse(recipeRuntimeFixtureMetadata.asFile)
+        if (metadata.id != 'mekanism_recipe_runtime_fixture' || metadata.environment != '*'
+              || metadata.entrypoints?.main != ['mekanism.fabric.recipe.fixture.RecipeRuntimeServerFixture']
+              || metadata.entrypoints?.client != ['mekanism.fabric.recipe.fixture.RecipeRuntimeClientFixture']
+              || metadata.depends?.mekanism != '*') {
+            throw new GradleException('Recipe runtime fixture metadata must remain a distinct two-sided mod depending on production Mekanism')
+        }
+        def leaks = sources.findAll { it.text.contains('net.neoforged.') }
+        if (!leaks.isEmpty()) {
+            throw new GradleException("Recipe runtime fixture contains NeoForge references: ${leaks}")
+        }
+        def productionSources = (apiSliceFiles + commonSliceFiles + platformSliceFiles).collect { it.canonicalFile }.toSet()
+        if (!productionSources.intersect(sources.collect { it.canonicalFile }.toSet()).isEmpty()) {
+            throw new GradleException('Recipe runtime fixture source entered the production allowlist')
+        }
+    }
+}
+tasks.named('compileRecipeRuntimeFixtureJava') {
+    dependsOn verifyRecipeRuntimeFixtureIsolation
+}
+tasks.named('runRecipeRuntimeServer') {
+    dependsOn verifyRecipeRuntimeFixtureIsolation
+}
+tasks.named('runRecipeRuntimeClient') {
+    dependsOn verifyRecipeRuntimeFixtureIsolation
+}
+tasks.named('check') {
+    dependsOn verifyRecipeRuntimeFixtureIsolation
+}
 tasks.named('compileChemicalRuntimeFixtureJava') {
     dependsOn verifyChemicalRuntimeFixtureIsolation
 }
@@ -443,6 +514,8 @@ dependencies {
     modClientWindowFixtureImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
     modChemicalRuntimeFixtureImplementation "net.fabricmc:fabric-loader:${loader_version}"
     modChemicalRuntimeFixtureImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
+    modRecipeRuntimeFixtureImplementation "net.fabricmc:fabric-loader:${loader_version}"
+    modRecipeRuntimeFixtureImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
 
     implementation "com.electronwill.night-config:core:${night_config_version}"
     implementation "com.electronwill.night-config:toml:${night_config_version}"
@@ -483,6 +556,7 @@ processResources {
     from('../src/main/resources') {
         include 'META-INF/services/mekanism.api.text.ITooltipHelper'
         include 'META-INF/services/mekanism.api.datamaps.IMekanismDataMapTypes'
+        include 'META-INF/services/mekanism.api.recipes.ingredients.creator.IIngredientCreatorProvider'
     }
     from('../src/datagen/generated/mekanism') {
         include 'assets/mekanism/lang/en_us.json'
@@ -521,10 +595,17 @@ tasks.named('processChemicalRuntimeFixtureResources') {
         expand version: resolvedModVersion
     }
 }
+tasks.named('processRecipeRuntimeFixtureResources') {
+    inputs.property 'version', resolvedModVersion
+    filesMatching('fabric.mod.json') {
+        expand version: resolvedModVersion
+    }
+}
 tasks.named('processClientWindowFixtureResources') {
     from('../src/main/resources') {
         include 'META-INF/services/mekanism.api.text.ITooltipHelper'
         include 'META-INF/services/mekanism.api.datamaps.IMekanismDataMapTypes'
+        include 'META-INF/services/mekanism.api.recipes.ingredients.creator.IIngredientCreatorProvider'
     }
 }
 
@@ -607,6 +688,9 @@ def chemicalDomainTestSource = layout.projectDirectory.file('src/test/java/mekan
 def chemicalServiceTestSource = layout.projectDirectory.file('src/test/java/mekanism/common/config/ChemicalServiceConfigTest.java')
 def chemicalSnapshotTestSource = layout.projectDirectory.file('src/test/java/mekanism/fabric/network/ChemicalSnapshotProtocolTest.java')
 def chemicalTransferTestSource = layout.projectDirectory.file('src/fabricTransferTest/java/mekanism/api/chemical/ChemicalCodecTankConnectionTest.java')
+def ingredientClosureTestSource = layout.projectDirectory.file('src/fabricTransferTest/java/mekanism/api/recipes/ingredients/IngredientServiceCodecClosureTest.java')
+def inputHelperExecutionTestSource = layout.projectDirectory.file('src/test/java/mekanism/api/recipes/inputs/InputHelperExecutionTest.java')
+def genericInputCacheTestSource = layout.projectDirectory.file('src/test/java/mekanism/common/recipe/lookup/cache/GenericInputCacheContextTest.java')
 def distributionPropertySource = layout.projectDirectory.file('../src/test/java/mekanism/common/lib/distribution/DistributionPropertyTest.java')
 def windowConfigTestSource = layout.projectDirectory.file('src/test/java/mekanism/fabric/config/FabricWindowConfigTest.java')
 def windowDomainTestSource = layout.projectDirectory.file('src/test/java/mekanism/fabric/config/WindowDomainTest.java')
@@ -625,6 +709,7 @@ def verifyFabricTestContract = tasks.register('verifyFabricTestContract') {
     inputs.files(registryOrdinaryTestSource, deferredOrdinaryTestSource, registryRootTestSource,
           dataMapOrdinaryTestSource, dataMapKnotTestSource, chemicalDataMapKnotTestSource,
           chemicalDomainTestSource, chemicalServiceTestSource, chemicalSnapshotTestSource, chemicalTransferTestSource,
+          ingredientClosureTestSource, inputHelperExecutionTestSource, genericInputCacheTestSource,
           distributionPropertySource, windowConfigTestSource, windowDomainTestSource, concreteSlotTestSource, fabricItemStorageTestSource)
     doLast {
         def loaderJunitFiles = { runtimeFiles ->
@@ -653,12 +738,13 @@ def verifyFabricTestContract = tasks.register('verifyFabricTestContract') {
         if (annotationCount(registryOrdinaryTestSource) != 5 || annotationCount(deferredOrdinaryTestSource) != 5
               || annotationCount(registryRootTestSource) != 2 || annotationCount(dataMapOrdinaryTestSource) != 4
               || annotationCount(dataMapKnotTestSource) != 1 || annotationCount(chemicalDataMapKnotTestSource) != 3
-              || annotationCount(chemicalDomainTestSource) != 7 || annotationCount(chemicalServiceTestSource) != 5
+              || annotationCount(chemicalDomainTestSource) != 12 || annotationCount(chemicalServiceTestSource) != 5
               || annotationCount(chemicalSnapshotTestSource) != 7 || annotationCount(chemicalTransferTestSource) != 6
-              || annotationCount(windowConfigTestSource) != 6
+              || annotationCount(ingredientClosureTestSource) != 6 || annotationCount(inputHelperExecutionTestSource) != 6
+              || annotationCount(genericInputCacheTestSource) != 6 || annotationCount(windowConfigTestSource) != 6
               || annotationCount(windowDomainTestSource) != 6 || annotationCount(concreteSlotTestSource) != 6
               || annotationCount(fabricItemStorageTestSource) != 5) {
-            throw new GradleException('Registry/data-map/window/slot fixed test method counts changed')
+            throw new GradleException('Registry/data-map/window/slot/recipe fixed test method counts changed')
         }
         def propertyText = distributionPropertySource.asFile.text
         if ((propertyText =~ /@Property\(tries = TRIES\)/).count != 3
@@ -681,12 +767,12 @@ def verifyFabricTestContract = tasks.register('verifyFabricTestContract') {
             }
             [reports.length, tests]
         }
-        def ordinary = readTotals(ordinaryXmlResults, 'ordinary', 73, 355)
-        def transfer = readTotals(transferXmlResults, 'transfer', 4, 21)
+        def ordinary = readTotals(ordinaryXmlResults, 'ordinary', 75, 372)
+        def transfer = readTotals(transferXmlResults, 'transfer', 5, 27)
         def registry = readTotals(registryXmlResults, 'root-registry', 1, 2)
         def dataMap = readTotals(dataMapXmlResults, 'data-map', 2, 4)
-        if (ordinary[0] + transfer[0] + registry[0] + dataMap[0] != 80
-              || ordinary[1] + transfer[1] + registry[1] + dataMap[1] != 382) {
+        if (ordinary[0] + transfer[0] + registry[0] + dataMap[0] != 83
+              || ordinary[1] + transfer[1] + registry[1] + dataMap[1] != 405) {
             throw new GradleException('Unexpected aggregate Fabric test totals')
         }
     }

@@ -1,6 +1,10 @@
 package mekanism.api.recipes.ingredients.chemical;
 
+import com.mojang.serialization.DataResult;
+import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.MapLike;
+import com.mojang.serialization.RecordBuilder;
 import java.util.List;
 import java.util.stream.Stream;
 import mekanism.api.SerializationConstants;
@@ -8,21 +12,23 @@ import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.chemical.Chemical;
 import mekanism.api.recipes.ingredients.creator.IngredientCreatorAccess;
 import net.minecraft.core.Holder;
-import net.neoforged.neoforge.common.crafting.CompoundIngredient;
-import net.neoforged.neoforge.common.util.NeoForgeExtraCodecs;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Base Chemical ingredient implementation that matches if any of the child ingredients match. This type additionally represents the array notation used in
  * {@linkplain mekanism.api.recipes.ingredients.creator.IChemicalIngredientCreator#codec} internally.
  *
- * @see CompoundIngredient CompoundIngredient, its item equivalent
+ * @see mekanism.api.recipes.ingredients.chemical.CompoundChemicalIngredient its item equivalent
  * @since 10.6.0
  */
 @NothingNullByDefault
 public non-sealed class CompoundChemicalIngredient extends ChemicalIngredient {
 
-    public static final MapCodec<CompoundChemicalIngredient> CODEC = NeoForgeExtraCodecs.aliasedFieldOf(
+    /**
+     * @implNote The Fabric port replaces the platform's aliased field helper with an equivalent map codec that accepts both the official {@code children} field and the
+     * documented {@code ingredients} alias, and serializes back to the primary {@code children} field.
+     */
+    public static final MapCodec<CompoundChemicalIngredient> CODEC = new AliasedChildrenCodec(
           IngredientCreatorAccess.chemical().listCodecMultipleElements(), SerializationConstants.CHILDREN, SerializationConstants.INGREDIENTS
     ).xmap(
           CompoundChemicalIngredient::new, CompoundChemicalIngredient::children
@@ -87,5 +93,38 @@ public non-sealed class CompoundChemicalIngredient extends ChemicalIngredient {
             return false;
         }
         return children.equals(((CompoundChemicalIngredient) obj).children);
+    }
+
+    private static final class AliasedChildrenCodec extends MapCodec<List<ChemicalIngredient>> {
+
+        private final com.mojang.serialization.Codec<List<ChemicalIngredient>> childrenCodec;
+        private final String primaryField;
+        private final String aliasField;
+
+        private AliasedChildrenCodec(com.mojang.serialization.Codec<List<ChemicalIngredient>> childrenCodec, String primaryField, String aliasField) {
+            this.childrenCodec = childrenCodec;
+            this.primaryField = primaryField;
+            this.aliasField = aliasField;
+        }
+
+        @Override
+        public <T> DataResult<List<ChemicalIngredient>> decode(DynamicOps<T> ops, MapLike<T> input) {
+            T primary = input.get(primaryField);
+            T value = primary != null ? primary : input.get(aliasField);
+            if (value == null) {
+                return DataResult.error(() -> "No " + primaryField + " or " + aliasField + " field found");
+            }
+            return childrenCodec.decode(ops, value).map(com.mojang.datafixers.util.Pair::getFirst);
+        }
+
+        @Override
+        public <T> java.util.stream.Stream<T> keys(DynamicOps<T> ops) {
+            return java.util.stream.Stream.of(ops.createString(primaryField));
+        }
+
+        @Override
+        public <T> RecordBuilder<T> encode(List<ChemicalIngredient> input, DynamicOps<T> ops, RecordBuilder<T> prefix) {
+            return prefix.add(primaryField, childrenCodec.encodeStart(ops, input));
+        }
     }
 }

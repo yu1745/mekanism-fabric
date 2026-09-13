@@ -85,7 +85,7 @@ scripts/scan-platform-deps.py
 
 当前还原样纳入 `DependentMapCodec`、`SequencedCollectionCodec`、`DroppingUnboundedMapCodec`（均与 `4646f509` 字节一致）。紧凑 Java 21 oracle 仅覆盖 dependency-first 选择及字段错误、sequenced encode/decode 边界/顺序/immutable/partial remainder，以及 dropping map 的 first-wins、保留 partial success/failed input 和重复 partial-value 的早返回；打包精确允许 1 个 API 与 3 个 common codec class，无 startup marker。`ModuleContainer`、`AttachedSideConfig`、recipes、data components、config/network owners 和所有 callers 延期；不声明 persistence、registry、packet、lifecycle-owner 或 serialized-format backward compatibility。
 
-Task 040 集成态当前 allowlist 数量为 API **98**、common **164**、platform **33**。`Color`、`CustomEffect`、`Pos3D`、`Quaternion`、`Range3D`、`MultipartUtils`、`StatUtils` 七个 foundation 源文件均与 `4646f509` 字节一致；12 个本地 Java 21 测试仅界定 color/stat/effect、spatial/range/rotation/quaternion 与 direct raycast，JAR 精确限定 direct common-lib 四项、effect 一项、math 三项、Multipart 三项和 StatUtils 一项。这些 foundation 本身不纳入 renderers/particles/GUI/recipe viewers、transmitters/multipart blocks/gear、machines/block types/entities、packet tracking/network ranges、SPS/multiblock、additions/generators、external energy 或 world/chunk lifecycle。Task 039 的窄 client-window lifecycle/config owner 以本页对应小节为准；完整 ClientConfig/QIO 与其它 config/persistence callers/owners 仍延期。
+Task 041 候选态当前 allowlist 数量为 API **129**、common **184**、platform **37**。Task 040 集成态曾为 API **98**、common **164**、platform **33**。`Color`、`CustomEffect`、`Pos3D`、`Quaternion`、`Range3D`、`MultipartUtils`、`StatUtils` 七个 foundation 源文件均与 `4646f509` 字节一致；12 个本地 Java 21 测试仅界定 color/stat/effect、spatial/range/rotation/quaternion 与 direct raycast，JAR 精确限定 direct common-lib 四项、effect 一项、math 三项、Multipart 三项和 StatUtils 一项。这些 foundation 本身不纳入 renderers/particles/GUI/recipe viewers、transmitters/multipart blocks/gear、machines/block types/entities、packet tracking/network ranges、SPS/multiblock、additions/generators、external energy 或 world/chunk lifecycle。Task 039 的窄 client-window lifecycle/config owner 以本页对应小节为准；完整 ClientConfig/QIO 与其它 config/persistence callers/owners 仍延期。
 
 官方 `WildcardMatcher` 已原样纳入 bounded common slice，保持递归/回溯、`Locale.ROOT` 大小写折叠、`TagKey.location()` 和 UTF-16 `char`/`Character.isDigit(char)` 语义。Fabric 测试与 packaged JAR 门禁覆盖该边界；这不表示 QIO、miner、Finder 或其他未来调用方已经移植。官方 `ChunkUtils` 也原样纳入同一 slice，保留 `rangeClosed` 四方向的 inclusive 行主序遍历（X 最快、其次 Z）、packed `long` 行为与 `packedBlockToChunk` 对负数坐标的 `>> 4` floor-section 语义；返回数组按 inclusive 维度分配，representable/可分配矩形属调用者前置条件。同样保持 baseline 字节不变的 `BiLongMultimap`、`FilterTransformIterator`、`IndexedCuboidMap` 已构成仅内存的索引查找闭包；两份官方测试与 Fabric-local Java 21 边界测试覆盖双向 mutation、null filter/exhaustion、负 chunk 与 inclusive box、同 box replacement 和混合清理。JAR 精确限定六个 collection class entries。Miner/QIO/spatial caller、world/chunk lifecycle/loading、persistence、concurrency 与多线程 mutation 均未移植或声明。
 
@@ -328,6 +328,27 @@ trailing/stale均 fail closed。generation guard使旧 play task既不能 revive
 transaction/storage、configurable holder/ejector、ingredient/recipe、environmental radiation、machine 或
 Crusher。完整 class/resource/service hashes、config ownership与真实 runtime evidence见
 `FABRIC_CHEMICAL.md`。
+
+### Task 041 recipe ingredient/generic-cache/reload vertical
+
+Task 041 从 clean approval commit `e4d85c3e` 在隔离 worktree 实现：完整 item/fluid/Chemical ingredient
+值与 creator service、全部 InputHelper 分支、generic CachedRecipe/input-cache 族与真实 server/client
+recipe reload ownership，并按 Task 040 的 gate 要求落地 Chemical exact-context/thread-local 热缓存。
+候选 slices **129/184/37**（350 compiled production sources），测试 ordinary/transfer/root/data-map/aggregate
+**75/372**、**5/27**、**1/2**、**2/4**、**83/405**。计划 U/A/N/M/R **16/30/9/4/0**、unique touched
+production sources **59**、net-new compiled sources **55**；候选实现的最终分类核对（含两处 A 实际
+byte-identical 的更正）见 `FABRIC_RECIPES.md`。
+
+平台决策是：`ItemStackIngredient` 直接拥有 vanilla `Ingredient` + count，兼容面 round-trip vanilla
+item/tag 与官方 `neoforge:compound`（含 legacy `children` alias），未知 custom type 显式失败；fluid 采用
+层中性 `FluidIngredient` 代数（single/tag/compound/components，int mB）；Chemical 六 ingredient 以
+`ChemicalRegistry`/本地 logger/vanilla 组合 helper 适配，`ChemicalIngredientTypeRegistry` 拥有六个内建
+ID 与 reverse codec identity，由 `MekanismChemicalIngredientTypes` 在 bootstrap 一次注册并 freeze。generic
+cache 以 `RecipeCacheSource` 取代 deferred `MekanismRecipeType` 构造依赖，`RecipeCacheContext` 以
+ThreadLocal 绑定 exact manager identity、positive epoch、fresh identity token 与 thread-confined
+identity-keyed mutable state（initialized flags、indices、complex sets）。client 侧使用 client-only tail
+mixin（`require=1`，`mekanism.client.mixins.json` 仅 `client` 列表且 environment-scoped）。真实
+server/client runtime gate 见 `scripts/fabric-recipe-runtime-smoke.sh` 与 `FABRIC_RECIPES.md`。
 
 ## `other` 桶的处理
 
