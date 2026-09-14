@@ -20,7 +20,8 @@ import org.jetbrains.annotations.NotNull;
  * into the still-open enclosing send transaction and only become permanent when the sender commits after debiting its source.
  *
  * <p>Amounts given to this target are whole millibuckets. Fabric droplet responses are converted back with {@link FabricFluidConversions#TRANSFER_UNITS_PER_MILLIBUCKET};
- * a storage that reports a fractional (non-whole-millibucket) accepted amount never causes a fractional destination commit: the probe transaction is aborted and retried
+ * a storage that reports a fractional (non-whole-millibucket) accepted amount never causes a fractional destination commit: an exact whole-millibucket probe response
+ * (full or partial) is accepted immediately, and otherwise the probe transaction is aborted and retried
  * exactly ONCE at the whole-millibucket floor of the reported amount (fixed bound — initial probe plus one retry, never an amount-dependent loop), accepting any valid
  * whole-millibucket response; otherwise nothing is committed for that handler.
  */
@@ -70,9 +71,8 @@ public class FluidHandlerTarget extends Target<Storage<FluidVariant>, @NotNull F
     /**
      * Inserts exactly {@code millibuckets} (at most) as a nested transaction of {@code enclosing}, committing only a whole-millibucket result.
      *
-     * <p>REVIEW_05 correction: the amount-dependent decreasing retry loop is replaced by the approved FIXED bound — the initial probe plus at most ONE fresh retry at the
-     * whole-millibucket floor of the probe's report. Any valid whole-millibucket response of that retry is accepted (not only the full retried amount); anything else —
-     * including a fractional response — aborts and returns 0, so a storage returning request-1 droplets cannot force repeated probes.
+     * <p>REVIEW_06 correction: a probe response that is already an exact whole-millibucket amount (full OR partial) is accepted immediately; only a fractional (or zero)
+     * report gets the single bounded retry at the whole-millibucket floor of the report.
      *
      * @return the accepted whole millibuckets, or {@code 0} when the storage cannot accept an exact whole-millibucket amount or returned an invalid response.
      */
@@ -90,12 +90,15 @@ public class FluidHandlerTarget extends Target<Storage<FluidVariant>, @NotNull F
                 //Invalid response, reject entirely
                 return 0;
             }
-            if (reported == request) {
-                //Exact whole-millibucket acceptance of the full request
+            if (reported > 0 && reported % FabricFluidConversions.TRANSFER_UNITS_PER_MILLIBUCKET == 0) {
+                //Exact whole-millibucket response (full or partial): accept it immediately, no retry needed
                 probe.commit();
-                return millibuckets;
+                return reported / FabricFluidConversions.TRANSFER_UNITS_PER_MILLIBUCKET;
             }
-            //Fractional or partial: abort the probe and do ONE bounded floor retry
+            //Zero, or fractional: abort the probe and do ONE bounded floor retry
+        }
+        if (reported <= 0) {
+            return 0;
         }
         long floorDroplets = reported / FabricFluidConversions.TRANSFER_UNITS_PER_MILLIBUCKET * FabricFluidConversions.TRANSFER_UNITS_PER_MILLIBUCKET;
         if (floorDroplets <= 0) {

@@ -7,10 +7,12 @@ import java.util.Iterator;
 import java.util.List;
 import mekanism.api.fluid.FluidStack;
 import mekanism.common.capabilities.fluid.BasicFluidTank;
+import mekanism.common.content.network.distribution.FluidHandlerTarget;
 import mekanism.common.content.network.distribution.FluidSendTransaction;
 import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
 import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
 import net.fabricmc.fabric.api.transfer.v1.storage.StorageView;
+import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
 import net.fabricmc.fabric.api.transfer.v1.transaction.TransactionContext;
 import net.fabricmc.fabric.api.transfer.v1.transaction.base.SnapshotParticipant;
 import net.minecraft.SharedConstants;
@@ -291,7 +293,59 @@ class FabricFluidSendTransactionTest {
 
         assertEquals(0, sent, "A fractional retry response must abort, never committing a fractional destination amount");
         assertEquals(100, source.getFluidAmount(), "Nothing sent means nothing debited");
-        //One probe plus (at most) one floor retry — an adversarial storage must not force repeated probes
-        assertTrue(insertCalls[0] <= 2, "Insert probes must be bounded to the initial probe plus one retry, got " + insertCalls[0]);
+        //REVIEW_06 correction of the previous wrong <=2 assumption: a FULL send takes the collectAcceptors simulation plus the Target.sendPossible simulation
+        // BEFORE the target's initial execute probe and its single bounded retry, so this one-destination case performs exactly 4 inserts — the bounded bound
+        // itself (initial probe + one retry) is asserted directly below. Target fairness is unchanged.
+        assertEquals(4, insertCalls[0], "Full send: 2 fair-distribution simulations + initial execute probe + one bounded floor retry");
+    }
+
+    /**
+     * Direct bounded-helper bound: even a hostile request-minus-one storage gets at most the initial probe plus ONE floor retry inside one enclosing transaction,
+     * never an amount-dependent loop, and a fractional response is never committed.
+     */
+    @Test
+    void boundedInsertHelperTerminatesAfterInitialProbePlusOneRetry() {
+        int[] insertCalls = {0};
+        Storage<FluidVariant> hostile = hostileRequestMinusOneStorage(insertCalls);
+        BasicFluidTank source = BasicFluidTank.create(1_000, null);
+        source.setStackUnchecked(new FluidStack(Fluids.WATER, 100));
+
+        long accepted;
+        try (Transaction outer = Transaction.openOuter()) {
+            accepted = FluidHandlerTarget.insertWholeMillibuckets(hostile, new FluidStack(Fluids.WATER, 100), 100, outer);
+        }
+
+        assertEquals(0, accepted, "A fractional retry response must abort, never committing a fractional amount");
+        assertEquals(2, insertCalls[0], "The bounded helper itself must be exactly the initial probe plus one floor retry");
+    }
+
+    private static Storage<FluidVariant> hostileRequestMinusOneStorage(int[] insertCalls) {
+        return new Storage<>() {
+            @Override
+            public boolean supportsInsertion() {
+                return true;
+            }
+
+            @Override
+            public long insert(FluidVariant resource, long maxAmount, TransactionContext transaction) {
+                insertCalls[0]++;
+                return Math.max(0, maxAmount - 1);
+            }
+
+            @Override
+            public boolean supportsExtraction() {
+                return false;
+            }
+
+            @Override
+            public long extract(FluidVariant resource, long maxAmount, TransactionContext transaction) {
+                return 0;
+            }
+
+            @Override
+            public Iterator<StorageView<FluidVariant>> iterator() {
+                return List.<StorageView<FluidVariant>>of().iterator();
+            }
+        };
     }
 }

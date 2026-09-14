@@ -146,8 +146,9 @@ public class MechanicalPipe extends BufferedTransmitter<Storage<FluidVariant>, F
             //A throwing listener must abort both sides; the destination contents are restored by the snapshot on abort
             return false;
         }
-        if (remainder != null && !remainder.isEmpty()) {
-            //Partial internal insertion; abort (the external extraction must not commit)
+        if (remainder == null || !remainder.isEmpty()) {
+            //Null is an invalid response, not an empty remainder; a partial internal insertion must abort either way
+            // (the external extraction must not commit)
             return false;
         }
         if (currentPullDestination() != destination) {
@@ -183,9 +184,8 @@ public class MechanicalPipe extends BufferedTransmitter<Storage<FluidVariant>, F
     /**
      * Extracts up to {@code maxMillibuckets} of {@code variant} from {@code storage} inside {@code transaction}, accepting only a whole-millibucket result.
      *
-     * <p>REVIEW_05 correction: fixed bound — the initial probe plus at most ONE retry at the whole-millibucket floor of the probe's report (never an amount-dependent
-     * loop). Any valid whole-millibucket retry response is accepted; a fractional or invalid one aborts and returns {@code null}. The extraction only stays when the
-     * transaction is committed by the caller.
+     * <p>REVIEW_06 correction: a probe response that is already an exact whole-millibucket amount (full OR partial) is accepted immediately; only a fractional (or zero)
+     * report gets the single bounded retry at the whole-millibucket floor of the report.
      *
      * @return the extracted stack, or {@code null} if the acceptor cannot provide a whole-millibucket amount.
      */
@@ -202,11 +202,15 @@ public class MechanicalPipe extends BufferedTransmitter<Storage<FluidVariant>, F
             if (reported < 0 || reported > request) {
                 return null;
             }
-            if (reported == request) {
+            if (reported > 0 && reported % FabricFluidConversions.TRANSFER_UNITS_PER_MILLIBUCKET == 0) {
+                //Exact whole-millibucket response (full or partial): accept it immediately, no retry needed
                 probe.commit();
                 return FabricFluidConversions.toFluidStack(variant, reported);
             }
-            //Fractional or partial: abort the probe and do ONE bounded floor retry
+            //Zero, or fractional: abort the probe and do ONE bounded floor retry
+        }
+        if (reported <= 0) {
+            return null;
         }
         long floorDroplets = reported / FabricFluidConversions.TRANSFER_UNITS_PER_MILLIBUCKET * FabricFluidConversions.TRANSFER_UNITS_PER_MILLIBUCKET;
         if (floorDroplets <= 0) {
