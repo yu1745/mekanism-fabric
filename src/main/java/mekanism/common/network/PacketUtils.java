@@ -5,7 +5,6 @@ import io.netty.buffer.Unpooled;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.OptionalDouble;
-import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import mekanism.api.MekanismServerLifecycle;
@@ -24,7 +23,6 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.RegistryAccess;
-import net.minecraft.core.SectionPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -201,16 +199,7 @@ public class PacketUtils {
      * Based on how {@code PacketDistributor#sendToPlayersTrackingChunk} finds players to send to.
      */
     public static boolean hasPlayersTracking(ServerLevel level, BlockPos pos) {
-        int chunkX = SectionPos.blockToSectionCoord(pos.getX());
-        int chunkZ = SectionPos.blockToSectionCoord(pos.getZ());
-        Set<ServerPlayer> players = level.getChunkSource().chunkMap.playerMap.getAllPlayers();
-
-        for (ServerPlayer serverplayer : players) {
-            if (level.getChunkSource().chunkMap.isChunkTracked(serverplayer, chunkX, chunkZ)) {
-                return true;
-            }
-        }
-        return false;
+        return !PlayerLookup.tracking(level, new ChunkPos(pos)).isEmpty();
     }
 
     //TODO: Evaluate moving various network related packets over to this (and making it support non buffered networks)

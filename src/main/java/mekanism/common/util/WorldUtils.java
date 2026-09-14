@@ -37,6 +37,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LiquidBlockContainer;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -55,6 +56,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class WorldUtils {
+
+    private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger("Mekanism");
 
     /**
      * Checks if the chunk at the given position is loaded but does not validate the position is in bounds of the world.
@@ -755,8 +758,10 @@ public class WorldUtils {
                 offset.setWithOffset(pos, side);
                 if (isBlockLoaded(world, offset)) {
                     BlockState blockState = world.getBlockState(offset);
-                    boolean weakPower = blockState.getBlock().shouldCheckWeakPower(blockState, world, pos, side);
-                    if (weakPower && isDirectlyGettingPowered(world, offset) || !weakPower && blockState.getSignal(world, offset, side) > 0) {
+                    //Native SignalGetter combines this block's signal with conducted direct neighbor power. Do
+                    //not call world.getSignal here: its unguarded getDirectSignalTo can load neighboring chunks.
+                    if (blockState.getSignal(world, offset, side) > 0 ||
+                        blockState.isRedstoneConductor(world, offset) && isDirectlyGettingPowered(world, offset)) {
                         return true;
                     }
                 }
@@ -777,7 +782,7 @@ public class WorldUtils {
         BlockPos.MutableBlockPos offset = new MutableBlockPos();
         for (Direction side : EnumUtils.DIRECTIONS) {
             offset.setWithOffset(pos, side);
-            if (isBlockLoaded(world, offset) && world.getSignal(pos, side) > 0) {
+            if (isBlockLoaded(world, offset) && world.getBlockState(offset).getDirectSignal(world, offset, side) > 0) {
                 return true;
             }
         }
@@ -843,24 +848,31 @@ public class WorldUtils {
             offset.setWithOffset(pos, dir);
             if (isBlockLoaded(world, offset)) {
                 BlockState offsetState = world.getBlockState(offset);
-                offsetState.onNeighborChange(world, offset, pos);
+                notifyComparatorOfTileChange(world, offset, offsetState, pos);
                 offsetState.handleNeighborChanged(world, offset, state.getBlock(), pos, false);
                 if (offsetState.isRedstoneConductor(world, offset)) {
                     //If redstone can be conducted through it, forward the change along an extra spot
                     offset.move(dir);
                     if (isBlockLoaded(world, offset)) {
                         offsetState = world.getBlockState(offset);
-                        if (offsetState.getWeakChanges(world, offset)) {
-                            offsetState.onNeighborChange(world, offset, pos);
-                        }
+                        notifyComparatorOfTileChange(world, offset, offsetState, pos);
                     }
                 }
             }
         }
     }
 
+    //The original extra BE-neighbor hook is empty for Mekanism blocks; their real tile callback is dispatched by
+    //handleNeighborChanged. The vanilla comparator is its additional consumer, including the one-conductor hop.
+    //Keep the original same-height/server checks and use the real native comparator neighbor/scheduled-tick path.
+    private static void notifyComparatorOfTileChange(Level world, BlockPos pos, BlockState state, BlockPos fromPos) {
+        if (!world.isClientSide && state.is(Blocks.COMPARATOR) && pos.getY() == fromPos.getY()) {
+            state.handleNeighborChanged(world, pos, world.getBlockState(fromPos).getBlock(), fromPos, false);
+        }
+    }
+
     /**
-     * Calls BOTH neighbour changed functions because nobody can decide on which one to implement, assuming that the neighboring position is loaded.
+     * Notifies the native comparator BE-change consumer and the normal neighbor callback, assuming that the neighboring position is loaded.
      *
      * @param world   world the change exists in
      * @param pos     neighbor to notify
@@ -870,7 +882,7 @@ public class WorldUtils {
         Optional<BlockState> blockState = getBlockState(world, pos);
         if (blockState.isPresent() && world != null) {//World can't be null here but double check it
             BlockState state = blockState.get();
-            state.onNeighborChange(world, pos, fromPos);
+            notifyComparatorOfTileChange(world, pos, state, fromPos);
             state.handleNeighborChanged(world, pos, world.getBlockState(fromPos).getBlock(), fromPos, false);
         }
     }

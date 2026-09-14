@@ -1,5 +1,6 @@
 package mekanism.fabric.radiation;
 
+import mekanism.common.lib.radiation.MeltdownLevelData;
 import mekanism.common.lib.radiation.PlayerExposure;
 import mekanism.common.lib.radiation.RadiationManager;
 import mekanism.common.network.to_client.radiation.PacketEnvironmentalRadiationData;
@@ -26,6 +27,8 @@ public final class FabricRadiationLifecycle {
         PayloadTypeRegistry.playS2C().register(PacketPlayerRadiationData.TYPE, PacketPlayerRadiationData.STREAM_CODEC);
         ServerTickEvents.START_SERVER_TICK.register(server -> RadiationManager.get().onTickPre(server));
         ServerTickEvents.END_WORLD_TICK.register(world -> RadiationManager.get().tickServerWorld(world));
+        //Original LevelTickEvent.Post had no runsNormally gate; expiry remains world-tick owned.
+        ServerTickEvents.END_WORLD_TICK.register(MeltdownLevelData::tickWorld);
         ServerEntityWorldChangeEvents.AFTER_PLAYER_CHANGE_WORLD.register((player, origin, destination) -> {
             PlayerExposure.resetPlayer(player.getUUID());
             PlayerExposure.syncPlayer(player);

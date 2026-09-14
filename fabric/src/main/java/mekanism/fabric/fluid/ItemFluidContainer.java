@@ -4,11 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 import mekanism.api.Action;
 import mekanism.api.fluid.FluidStack;
-import net.fabricmc.fabric.api.transfer.v1.context.ContainerItemContext;
+import mekanism.fabric.item.DetachedItemContext;
 import net.fabricmc.fabric.api.transfer.v1.fluid.FluidStorage;
 import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
-import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
-import net.fabricmc.fabric.api.transfer.v1.item.base.SingleItemStorage;
 import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
 import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
 import net.minecraft.world.item.ItemStack;
@@ -23,19 +21,10 @@ public final class ItemFluidContainer {
     public record Tank(FluidStack fluid, long capacity) {
     }
 
-    private final SingleItemStorage slot;
-    private final ContainerItemContext context;
+    private final DetachedItemContext context;
 
     private ItemFluidContainer(ItemStack stack) {
-        slot = new SingleItemStorage() {
-            @Override
-            protected long getCapacity(ItemVariant variant) {
-                return variant.isBlank() ? 64 : variant.toStack().getMaxStackSize();
-            }
-        };
-        slot.variant = ItemVariant.of(stack);
-        slot.amount = stack.getCount();
-        context = ContainerItemContext.ofSingleSlot(slot);
+        context = new DetachedItemContext(stack);
     }
 
     @Nullable
@@ -47,11 +36,11 @@ public final class ItemFluidContainer {
 
     @Nullable
     private Storage<FluidVariant> storage() {
-        return context.find(FluidStorage.ITEM);
+        return context.context().find(FluidStorage.ITEM);
     }
 
     public ItemStack getContainer() {
-        return slot.variant.toStack((int) slot.amount);
+        return context.getStack();
     }
 
     /** Amounts are capped to the domain's int range and floored only for a read-only availability snapshot. */

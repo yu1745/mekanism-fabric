@@ -9,6 +9,8 @@ import java.util.UUID;
 import mekanism.api.SerializationConstants;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.WorldUtils;
+import net.fabricmc.fabric.api.event.Event;
+import net.fabricmc.fabric.api.event.EventFactory;
 import net.minecraft.SharedConstants;
 import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
@@ -20,18 +22,38 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Explosion;
+import net.minecraft.world.level.ExplosionDamageCalculator;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.event.EventHooks;
 import org.jetbrains.annotations.Nullable;
 
 public class Meltdown {
 
     private static final int DURATION = 5 * SharedConstants.TICKS_PER_SECOND;
+    private static final ExplosionDamageCalculator RESISTANCE = new ExplosionDamageCalculator();
+
+    /**
+     * Native Mekanism cancellation boundary for the actual meltdown explosion. Returning false prevents its normal
+     * damage/destruction phase. As in the original, client synchronization and forced reactor-inner destruction still
+     * happen. This is not a global explosion event or a bridge to another loader's event bus.
+     */
+    public static final Event<AllowExplosion> ALLOW_EXPLOSION = EventFactory.createArrayBacked(AllowExplosion.class, listeners -> (world, explosion) -> {
+        for (AllowExplosion listener : listeners) {
+            if (!listener.allowExplosion(world, explosion)) {
+                return false;
+            }
+        }
+        return true;
+    });
+
+    @FunctionalInterface
+    public interface AllowExplosion {
+        boolean allowExplosion(ServerLevel world, MeltdownExplosion explosion);
+    }
 
     private final BlockPos minPos, maxPos;
     private final double magnitude, chance;
@@ -107,7 +129,7 @@ public class Meltdown {
      * Creates an explosion and ensures all blocks that are inside our meltdown radius actually get destroyed
      */
     private void createExplosion(ServerLevel world, double x, double y, double z, float radius, boolean causesFire, Explosion.BlockInteraction mode) {
-        Explosion explosion = new MeltdownExplosion(world, x, y, z, radius, causesFire, mode, multiblockID);
+        MeltdownExplosion explosion = new MeltdownExplosion(world, x, y, z, radius, causesFire, mode, multiblockID);
         //Calculate which block positions should get broken based on the logic that would happen in Explosion#explode
         ObjectArrayList<BlockPos> toBlow = new ObjectArrayList<>();
         for (int j = 0; j < 16; ++j) {
@@ -130,9 +152,11 @@ public class Meltdown {
                             BlockPos pos = BlockPos.containing(d4, d6, d8);
                             BlockState blockstate = world.getBlockState(pos);
                             FluidState fluidstate = blockstate.getFluidState();
-                            if (!blockstate.isAir() || !fluidstate.isEmpty()) {
-                                f -= (Math.max(blockstate.getExplosionResistance(world, pos, explosion),
-                                      fluidstate.getExplosionResistance(world, pos, explosion)) + 0.3F) * 0.3F;
+                            //Use the same native null-source resistance owner as the explosion itself. This also
+                            //reaches the actual bounding-block master-resistance hook before vanilla's fluid max.
+                            Optional<Float> resistance = RESISTANCE.getBlockExplosionResistance(explosion, world, pos, blockstate, fluidstate);
+                            if (resistance.isPresent()) {
+                                f -= (resistance.get() + 0.3F) * 0.3F;
                             }
                             if (f > 0.0F && minPos.getX() <= d4 && minPos.getY() <= d6 && minPos.getZ() <= d8 && d4 <= maxPos.getX() && d6 <= maxPos.getY() &&
                                 d8 <= maxPos.getZ()) {
@@ -148,7 +172,7 @@ public class Meltdown {
             }
         }
         //Try to make the explosion actually happen
-        if (!EventHooks.onExplosionStart(world, explosion)) {
+        if (ALLOW_EXPLOSION.invoker().allowExplosion(world, explosion)) {
             explosion.explode();
             explosion.finalizeExplosion(false);
         }

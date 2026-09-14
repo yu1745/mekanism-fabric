@@ -36,6 +36,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -59,7 +60,6 @@ public abstract class BlockMekanism extends Block {
     }
 
     @Nullable
-    @Override
     public PushReaction getPistonPushReaction(@NotNull BlockState state) {
         if (state.hasBlockEntity()) {
             //Protect against mods like Quark that allow blocks with TEs to be moved
@@ -67,7 +67,8 @@ public abstract class BlockMekanism extends Block {
             // care about the world, but for now it is safer to just block them from being moved
             return PushReaction.BLOCK;
         }
-        return super.getPistonPushReaction(state);
+        //The native state hook falls back to its stored property for non-block-entity states.
+        return null;
     }
 
     @Override
@@ -173,7 +174,6 @@ public abstract class BlockMekanism extends Block {
         }
     }
 
-    @Override
     public void onBlockExploded(@NotNull BlockState state, @NotNull Level world, @NotNull BlockPos pos, @NotNull Explosion explosion) {
         if (!world.isClientSide) {
             AttributeMultiblock multiblockAttribute = Attribute.get(state, AttributeMultiblock.class);
@@ -184,11 +184,13 @@ public abstract class BlockMekanism extends Block {
                 }
             }
         }
-        super.onBlockExploded(state, world, pos, explosion);
+        //Native onExplosionHit has already handled drops before dispatching here. Keep removal after the
+        //meltdown notification so the real multiblock tile is still available when its inventory is dumped.
+        world.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+        wasExploded(world, pos, explosion);
     }
 
     @NotNull
-    @Override
     public BlockState rotate(@NotNull BlockState state, @NotNull LevelAccessor world, @NotNull BlockPos pos, @NotNull Rotation rotation) {
         return AttributeStateFacing.rotate(state, world, pos, rotation);
     }

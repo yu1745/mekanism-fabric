@@ -28,5 +28,8 @@ accessible method net/minecraft/client/gui/Gui getVisibleVehicleHeartRows (I)I
 # Insert the original radiation overlay as the native first layer, retaining native depth separation.
 accessible field net/minecraft/client/gui/LayeredDraw layers Ljava/util/List;
 
+# Original meltdown uses vanilla's real bounded drop merger for forced reactor-inner destruction.
+accessible method net/minecraft/world/level/Explosion addOrAppendStack (Ljava/util/List;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/core/BlockPos;)V
+
 # Security config and play payloads share the actual native connection across listener transitions.
 accessible field net/minecraft/client/multiplayer/ClientCommonPacketListenerImpl connection Lnet/minecraft/network/Connection;

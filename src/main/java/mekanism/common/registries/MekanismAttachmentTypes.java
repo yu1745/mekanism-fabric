@@ -28,7 +28,7 @@ public class MekanismAttachmentTypes {
                 .serialize(FlamethrowerMode.CODEC, mode -> mode != FlamethrowerMode.COMBAT)
                 .build());
 
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<MeltdownLevelData>> MELTDOWN_DATA = ATTACHMENT_TYPES.register("meltdown_data", () -> AttachmentType.serializable(MeltdownLevelData::new).build());
+    public static final net.fabricmc.fabric.api.attachment.v1.AttachmentType<MeltdownLevelData> MELTDOWN_DATA = mekanism.fabric.radiation.FabricRadiationAttachments.MELTDOWN_DATA;
 
     public static final net.fabricmc.fabric.api.attachment.v1.AttachmentType<RadiationLevelData> RADIATION_LEVEL_DATA = mekanism.fabric.radiation.FabricRadiationAttachments.RADIATION_LEVEL_DATA;
 }

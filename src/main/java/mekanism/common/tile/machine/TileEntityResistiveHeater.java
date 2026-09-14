@@ -180,14 +180,14 @@ public class TileEntityResistiveHeater extends TileEntityMekanism {
     @Override
     protected void collectImplicitComponents(@NotNull DataComponentMap.Builder builder) {
         //Note: We copy the energy usage before handling super, in case it is necessary in order to set the proper value on the item
-        builder.set(MekanismDataComponents.ENERGY_USAGE, energyContainer.getEnergyPerTick());
+        builder.set(MekanismDataComponents.ENERGY_USAGE.get(), energyContainer.getEnergyPerTick());
         super.collectImplicitComponents(builder);
     }
 
     @Override
     protected void applyImplicitComponents(@NotNull BlockEntity.DataComponentInput input) {
         //Apply the usage before processing the stored data as it changes the buffer of the energy container
-        energyContainer.updateEnergyUsage(input.getOrDefault(MekanismDataComponents.ENERGY_USAGE, BASE_USAGE));
+        energyContainer.updateEnergyUsage(input.getOrDefault(MekanismDataComponents.ENERGY_USAGE.get(), BASE_USAGE));
         super.applyImplicitComponents(input);
     }
 

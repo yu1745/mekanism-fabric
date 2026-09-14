@@ -3,6 +3,7 @@ package mekanism.fabric.radiation;
 import com.mojang.serialization.Codec;
 import mekanism.api.radiation.IRadiationManager;
 import mekanism.api.radiation.capability.IRadiationEntity;
+import mekanism.common.lib.radiation.MeltdownLevelData;
 import mekanism.common.lib.radiation.RadiationLevelData;
 import mekanism.common.lib.radiation.capability.RadiationEntity;
 import net.fabricmc.fabric.api.attachment.v1.AttachmentRegistry;
@@ -24,6 +25,8 @@ public final class FabricRadiationAttachments {
           .persistent(Codec.doubleRange(IRadiationManager.INSTANCE.baselineRadiation(), Double.MAX_VALUE)));
     public static final AttachmentType<RadiationLevelData> RADIATION_LEVEL_DATA = AttachmentRegistry.create(id("radiation_data"), builder -> builder
           .initializer(RadiationLevelData::new).persistent(RadiationLevelData.CODEC));
+    public static final AttachmentType<MeltdownLevelData> MELTDOWN_DATA = AttachmentRegistry.create(id("meltdown_data"), builder -> builder
+          .initializer(MeltdownLevelData::new).persistent(MeltdownLevelData.CODEC));
     public static final EntityApiLookup<IRadiationEntity, Void> RADIATION_ENTITY = EntityApiLookup.get(id("radiation"), IRadiationEntity.class, Void.class);
     private static boolean initialized;
 
@@ -62,6 +65,16 @@ public final class FabricRadiationAttachments {
         //Retain the empty object after clearing. In the pinned native implementation wasSerialized is fixed at
         //construction: removing the last attachment after a first save could stop dirty writes and revive old data.
         return ((AttachmentTarget) level).getAttachedOrCreate(RADIATION_LEVEL_DATA);
+    }
+
+    @Nullable
+    public static MeltdownLevelData getMeltdownData(Level level) {
+        return ((AttachmentTarget) level).getAttached(MELTDOWN_DATA);
+    }
+
+    public static MeltdownLevelData getOrCreateMeltdownData(Level level) {
+        //Same mutable-world persistence rule as radiation: retain an empty attachment after expiry.
+        return ((AttachmentTarget) level).getAttachedOrCreate(MELTDOWN_DATA);
     }
 
     private static ResourceLocation id(String path) {

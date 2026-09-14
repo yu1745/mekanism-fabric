@@ -707,3 +707,28 @@ mekanism/common/network/to_client/security/PacketBatchSecurityUpdate.java
 mekanism/common/network/to_client/security/PacketSyncSecurity.java
 mekanism/common/capabilities/security/OwnerObject.java
 mekanism/common/capabilities/security/SecurityObject.java
+
+# Task052 original machine destruction and persistent meltdown ownership
+mekanism/common/block/BlockMekanism.java
+mekanism/common/lib/radiation/Meltdown.java
+mekanism/common/lib/radiation/MeltdownLevelData.java
+
+# Actual QIO crafting window input/output ownership and player-aware virtual result slot
+mekanism/common/inventory/slot/CraftingWindowInventorySlot.java
+mekanism/common/inventory/slot/CraftingWindowOutputInventorySlot.java
+mekanism/common/inventory/container/slot/VirtualCraftingOutputSlot.java
+
+# Connected machine item energy slot, real resistive-heater owner and machine-block descriptions
+mekanism/common/inventory/slot/EnergyInventorySlot.java
+mekanism/common/capabilities/energy/ResistiveHeaterEnergyContainer.java
+mekanism/common/tile/machine/TileEntityResistiveHeater.java
+mekanism/common/block/interfaces/IHasDescription.java
+mekanism/common/block/interfaces/IColoredBlock.java
+mekanism/common/capabilities/holder/energy/EnergyContainerHelper.java
+mekanism/common/capabilities/holder/energy/ConfigEnergyContainerHolder.java
+mekanism/common/capabilities/holder/heat/HeatCapacitorHelper.java
+mekanism/common/capabilities/holder/heat/ConfigHeatCapacitorHolder.java
+
+# Original configurable-machine component and its already-ported item/fluid/chemical sender paths
+mekanism/common/tile/component/TileComponentEjector.java
+mekanism/common/tile/prefab/TileEntityConfigurableMachine.java

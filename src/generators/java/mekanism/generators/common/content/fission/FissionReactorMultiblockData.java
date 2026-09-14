@@ -38,7 +38,7 @@ import mekanism.common.lib.multiblock.IValveHandler;
 import mekanism.common.lib.multiblock.MultiblockCache;
 import mekanism.common.lib.multiblock.MultiblockData;
 import mekanism.common.lib.radiation.RadiationManager;
-import mekanism.common.registries.MekanismAttachmentTypes;
+import mekanism.fabric.radiation.FabricRadiationAttachments;
 import mekanism.common.registries.MekanismChemicals;
 import mekanism.common.util.ChemicalUtil;
 import mekanism.common.util.HeatUtils;
@@ -336,7 +336,7 @@ public class FissionReactorMultiblockData extends MultiblockData implements IVal
 
     private void createMeltdown(Level world) {
         float radius = MekanismGeneratorsConfig.generators.fissionMeltdownRadius.get();
-        world.getData(MekanismAttachmentTypes.MELTDOWN_DATA).createMeltdown(getMinPos(), getMaxPos(), heatCapacitor.getHeat(), EXPLOSION_CHANCE, radius, inventoryID);
+        FabricRadiationAttachments.getOrCreateMeltdownData(world).createMeltdown(getMinPos(), getMaxPos(), heatCapacitor.getHeat(), EXPLOSION_CHANCE, radius, inventoryID);
     }
 
     @Override

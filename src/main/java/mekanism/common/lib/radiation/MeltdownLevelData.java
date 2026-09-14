@@ -1,28 +1,37 @@
 package mekanism.common.lib.radiation;
 
+import com.mojang.serialization.Codec;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 import javax.annotation.ParametersAreNonnullByDefault;
-import mekanism.common.Mekanism;
-import mekanism.common.registries.MekanismAttachmentTypes;
+import mekanism.api.INBTSerializable;
+import mekanism.fabric.radiation.FabricRadiationAttachments;
 import net.minecraft.MethodsReturnNonnullByDefault;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.Level;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.common.util.INBTSerializable;
-import net.neoforged.neoforge.event.tick.LevelTickEvent;
 import org.jetbrains.annotations.Nullable;
 
 @MethodsReturnNonnullByDefault
 @ParametersAreNonnullByDefault
-@EventBusSubscriber(modid = Mekanism.MODID)
 public class MeltdownLevelData implements INBTSerializable<ListTag> {
+
+    //Retain the original list of meltdown compounds and invalid-position skip. Native persistence writes an empty
+    //list after the final meltdown expires, so a previously saved meltdown cannot revive on the next world load.
+    public static final Codec<MeltdownLevelData> CODEC = CompoundTag.CODEC.listOf().xmap(tags -> {
+        MeltdownLevelData data = new MeltdownLevelData();
+        for (CompoundTag tag : tags) {
+            Meltdown meltdown = Meltdown.load(tag);
+            if (meltdown != null) {
+                data.meltdowns.add(meltdown);
+            }
+        }
+        return data;
+    }, data -> data.meltdowns.stream().map(Meltdown::write).toList());
 
     private final List<Meltdown> meltdowns = new ArrayList<>();
 
@@ -30,14 +39,10 @@ public class MeltdownLevelData implements INBTSerializable<ListTag> {
         meltdowns.add(new Meltdown(minPos, maxPos, magnitude, chance, radius, multiblockID));
     }
 
-    @SubscribeEvent
-    public static void tickWorld(LevelTickEvent.Post event) {
-        Level level = event.getLevel();
-        if (level instanceof ServerLevel serverLevel) {
-            MeltdownLevelData existingData = level.getExistingDataOrNull(MekanismAttachmentTypes.MELTDOWN_DATA);
-            if (existingData != null) {
-                existingData.tick(serverLevel);
-            }
+    public static void tickWorld(ServerLevel world) {
+        MeltdownLevelData existingData = FabricRadiationAttachments.getMeltdownData(world);
+        if (existingData != null) {
+            existingData.tick(world);
         }
     }
 
@@ -71,7 +76,7 @@ public class MeltdownLevelData implements INBTSerializable<ListTag> {
             return null;
         }
 
-        ListTag list = new ListTag(meltdowns.size());
+        ListTag list = new ListTag();
         for (Meltdown meltdown : meltdowns) {
             list.add(meltdown.write());
         }

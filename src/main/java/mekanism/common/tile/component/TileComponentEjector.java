@@ -69,7 +69,6 @@ import net.fabricmc.fabric.api.transfer.v1.item.ItemStorage;
 import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
 import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
 import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
-import mekanism.common.util.WorldUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -411,7 +410,7 @@ public class TileComponentEjector implements ITileComponent, ISpecificContainerT
 
     @Override
     public void applyImplicitComponents(@NotNull BlockEntity.DataComponentInput input) {
-        AttachedEjector ejector = input.get(MekanismDataComponents.EJECTOR);
+        AttachedEjector ejector = input.get(MekanismDataComponents.EJECTOR.get());
         if (ejector != null) {
             for (int i = 0; i < inputColors.length; i++) {
                 inputColors[i] = ejector.inputColors().get(i).orElse(null);
@@ -423,7 +422,7 @@ public class TileComponentEjector implements ITileComponent, ISpecificContainerT
 
     @Override
     public void collectImplicitComponents(DataComponentMap.Builder builder) {
-        builder.set(MekanismDataComponents.EJECTOR, AttachedEjector.create(inputColors, strictInput, outputColor));
+        builder.set(MekanismDataComponents.EJECTOR.get(), AttachedEjector.create(inputColors, strictInput, outputColor));
     }
 
     @Override

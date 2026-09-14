@@ -79,7 +79,7 @@ public class MekanismDeferredRegister<T> {
     }
 
     /** Canonical declared holders in registration order; never constructs a second holder or evaluates suppliers. */
-    public List<MekanismDeferredHolder<T, ? extends T>> getEntries() {
+    public List<? extends MekanismDeferredHolder<T, ? extends T>> getEntries() {
         return entriesView;
     }
 
