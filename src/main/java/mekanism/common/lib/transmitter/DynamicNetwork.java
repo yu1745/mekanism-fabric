@@ -27,7 +27,7 @@ public abstract class DynamicNetwork<ACCEPTOR, NETWORK extends DynamicNetwork<AC
 
     protected final Long2ObjectMap<TRANSMITTER> positionedTransmitters = new Long2ObjectOpenHashMap<>();
     protected final Set<TRANSMITTER> transmittersToAdd = new ObjectOpenHashSet<>();
-    protected final NetworkAcceptorCache<ACCEPTOR> acceptorCache = new NetworkAcceptorCache<>();
+    protected final NetworkAcceptorCache<ACCEPTOR> acceptorCache;
     @Nullable
     protected Level world;
     private final UUID uuid;
@@ -36,6 +36,16 @@ public abstract class DynamicNetwork<ACCEPTOR, NETWORK extends DynamicNetwork<AC
 
     protected DynamicNetwork(UUID networkID) {
         this.uuid = networkID;
+        this.acceptorCache = createAcceptorCache();
+    }
+
+    /**
+     * Construction seam for the network acceptor cache. The default keeps the base retained-state cache for all
+     * network types; specializations (fluid) override to construct a derived-state cache. Any override must not
+     * evaluate subclass state during superclass construction - defer membership access behind a supplier.
+     */
+    protected NetworkAcceptorCache<ACCEPTOR> createAcceptorCache() {
+        return new NetworkAcceptorCache<>();
     }
 
     public UUID getUUID() {
