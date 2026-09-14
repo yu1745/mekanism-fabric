@@ -60,6 +60,15 @@ public abstract class TransitRequest implements Iterable<ItemData> {
     }
 
     /**
+     * Transaction-aware eject without an explicit outputter position (the tile's own position is used).
+     */
+    @NotNull
+    public TransitResponse eject(BlockEntity outputter, @Nullable Storage<ItemVariant> target, int min,
+          Function<LogisticalTransporterBase, EnumColor> outputColor, Transaction tx) {
+        return eject(outputter, outputter.getBlockPos(), target, min, outputColor, tx);
+    }
+
+    /**
      * Legacy self-contained eject: opens its own caller transaction, stages insertion and exact source debit and
      * commits. Immediate consumers use {@link #eject(BlockEntity, BlockPos, Storage, int, Function, Transaction)}
      * instead so route/source reservations join the caller transaction.

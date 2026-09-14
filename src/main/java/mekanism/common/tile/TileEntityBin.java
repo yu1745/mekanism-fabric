@@ -108,7 +108,9 @@ public class TileEntityBin extends TileEntityMekanism implements IConfigurable {
                 // the real owner of the finite/creative source policy
                 Storage<ItemVariant> capability = ITEM_HANDLER_PROVIDER.apply(this, Direction.DOWN);
                 HandlerTransitRequest request = new HandlerTransitRequest(capability);
-                request.addItem(binSlot.getBottomStack(), 0);
+                //Identity-checked candidate through the actual DOWN sided provider; the bottom-stack cap is honored
+                // by recording exactly the bottom stack amount (Task052 R3/R5)
+                request.addItemFromSelectedSlot(binSlot.getBottomStack(), binSlot);
                 //Fresh real provider for the below/UP target (bottom-stack cap is enforced by the slot itself)
                 Storage<ItemVariant> target = freshTargetStorage();
                 if (target != null) {
