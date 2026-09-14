@@ -1,0 +1,11 @@
+# Task052 review19 — resumed after reload; ingredient review
+
+User resumed work (“好了，可以继续工作了”); previous PAUSE_RELOAD is historical and no longer an active stop. Parent read entire5059aac7..1b273877 diff (816 lines), production owner/API/declarations, test changes and evidence. Canonical MappedRegistry replaces map authority; actual production Fabric root+SYNCED registration is present, no production fallback. WIP still not merged/Task052 unaccepted.
+
+Two concrete corrections before moving on:
+1. FabricChemicalIngredientTypeRegistryLifecycle.verify compares ResourceLocation object references (`candidate.getKey(held) != builtIn.id()` and idOf similarly). ResourceLocation is a value identifier; ResourceKey interning may retain a previous equal-but-distinct location. Compare IDs by equals while retaining registry/codec/holder object identity. Add one small focused regression if practical, not another test matrix.
+2. Packaged-smoke expected_platform_chemical omits generated FabricChemicalIngredientTypeRegistryLifecycle$BuiltIn.class. It checks exact all-class family equality at1535/1547, so the new nested record guarantees rejection. Include the real emitted class (or genuinely remove the redundant record), not weaken the gate.
+
+Evidence doc incorrectly describes IngredientServiceCodecClosureTest as directly installing the registry: actual code calls the real lifecycle; it is in the Knot fabricTransferTest source set, unlike ordinary ChemicalTestBootstrap. Correct this distinction. No claim tests ran: new root method only compiled, full task blocked. Root test uses raw cast MappedRegistry<ChemicalIngredient> for codec registry; correct generic type while touching that existing test, no extra fixture.
+
+Other observations do not justify expanding this repair: official bootstrap initializes chemicals before loading the new owner; production root registration delegates existing Fabric API. Tests' direct native installation is confined to ordinary ChemicalTestBootstrap and does not establish root behavior. Full root/module/robit closure remains later work. Preserve1b273877 ancestry; narrowly repair above then compile changed owners/check actual generated classes. Do not repeat broad registry investigation or whole runtime suites. Next implementation uses normal time rule, not Astra by default.
