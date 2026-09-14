@@ -1,5 +1,7 @@
-// Reproducible focused asset check: filename matches the public class, so it compiles directly:
-// javac -d /tmp/t052c scripts/TransmitterObjGeometryCheck.java fabric/src/main/java/mekanism/fabric/client/render/obj/TransmitterObjGeometry.java && java -cp /tmp/t052 TransmitterObjGeometryCheck <path-to-shipped-assets-dir>
+// Reproducible focused asset check. Run it through the wrapper, which also supplies the pinned classpath:
+//   scripts/task052-transmitter-check.sh
+// or directly:
+//   javac -d /tmp/t052c scripts/TransmitterObjGeometryCheck.java fabric/src/main/java/mekanism/fabric/client/render/obj/TransmitterObjGeometry.java && java -cp /tmp/t052c TransmitterObjGeometryCheck <path-to-shipped-assets-dir>/
 import mekanism.fabric.client.render.obj.TransmitterObjGeometry;
 import java.nio.file.*;
 import java.util.*;
@@ -16,6 +18,7 @@ public class TransmitterObjGeometryCheck {
         failures += check("large", base + "transmitter_large.obj.mek", largeLibs);
         Map<String, String> glassLibs = Map.of("transmitter_large.mtl", Files.readString(Path.of(base + "transmitter_glass_large.mtl"))); // mtl_override replaces the declared mtllib
         failures += checkGlass(base + "transmitter_large.obj.mek", glassLibs);
+        failures += checkFaceImmutability(base);
         if (failures == 0) {
             System.out.println("TRANSMITTER_OBJ_GEOMETRY_CHECK PASS");
         } else {
@@ -68,6 +71,35 @@ public class TransmitterObjGeometryCheck {
         }
         if (tinted == 0) { f++; System.out.println("glass override MTL produced no glass materials"); }
         System.out.println("glass: tinted materials=" + tinted);
+        return f;
+    }
+
+    /** The parser must hand out face corner lists that actually reject mutation (REVIEW16 defect 1). */
+    static int checkFaceImmutability(String base) throws Exception {
+        int f = 0;
+        var g = TransmitterObjGeometry.parse(Files.readString(Path.of(base + "transmitter_small.obj.mek")),
+              Map.of("transmitter_small.mtl", Files.readString(Path.of(base + "transmitter_small.mtl"))), true);
+        for (var e : g.groups().entrySet()) {
+            for (TransmitterObjGeometry.Face face : e.getValue()) {
+                try {
+                    face.vertices().add(face.vertices().get(0));
+                    f++;
+                    System.out.println("face.vertices() accepted mutation for group " + e.getKey());
+                } catch (UnsupportedOperationException expected) {
+                    // correct: the record defensively copied its corner list
+                }
+                try {
+                    e.getValue().add(face);
+                    f++;
+                    System.out.println("group face list accepted mutation for group " + e.getKey());
+                } catch (UnsupportedOperationException expected) {
+                    // correct: group lists are unmodifiable
+                }
+            }
+        }
+        if (f == 0) {
+            System.out.println("immutability: face corner lists and group lists reject mutation");
+        }
         return f;
     }
 

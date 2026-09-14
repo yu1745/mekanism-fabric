@@ -1,0 +1,9 @@
+// Task052 diagnostic-only: full compile error list without changing slice admission.
+//   ./gradlew -p fabric -I "$PWD/scripts/task052-maxerrs.init.gradle" compileJava --no-configuration-cache
+gradle.projectsEvaluated {
+    allprojects {
+        tasks.withType(JavaCompile).configureEach {
+            options.compilerArgs += ['-Xmaxerrs', '3000']
+        }
+    }
+}

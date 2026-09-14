@@ -393,3 +393,5 @@ mekanism/common/world/height/AnchorType.java
 mekanism/common/world/height/ConfigurableHeightRange.java
 mekanism/common/world/height/ConfigurableVerticalAnchor.java
 mekanism/common/world/height/HeightShape.java
+mekanism/client/model/data/TransmitterModelData.java
+mekanism/common/lib/transmitter/ConnectionType.java

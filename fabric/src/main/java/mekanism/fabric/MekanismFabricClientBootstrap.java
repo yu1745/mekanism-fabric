@@ -1,6 +1,8 @@
 package mekanism.fabric;
 
 import mekanism.fabric.chemical.FabricChemicalClientLifecycle;
+import mekanism.fabric.client.render.obj.FabricTransmitterColorProvider;
+import mekanism.fabric.client.render.obj.FabricTransmitterModelPlugin;
 import mekanism.fabric.config.FabricClientConfigLifecycle;
 import mekanism.fabric.network.FabricChemicalClientNetworking;
 import mekanism.fabric.network.FabricMekanismClientNetworking;
@@ -25,6 +27,10 @@ public final class MekanismFabricClientBootstrap implements ClientModInitializer
         FabricChemicalClientNetworking.initialize();
         FabricTileUpdateHandler.initializeClient();
         FabricContainerClientNetworking.initializeClient();
+        //Real model-loading owner for the shipped "mekanism:transmitter" OBJ/MTL models, plus the logistical
+        //transporter tint. Model registration needs no block instance: it keys off the model ids in the resource pack.
+        FabricTransmitterModelPlugin.initialize();
+        FabricTransmitterColorProvider.initialize();
         LOGGER.info("MEKANISM_FABRIC_NETWORK_CLIENT_PROOF protocol={} receiver=true recipe_mixin_client_only=true", MekanismNetworkProtocol.CURRENT);
     }
 }

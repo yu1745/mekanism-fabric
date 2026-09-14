@@ -48,14 +48,21 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.neoforged.neoforge.capabilities.ICapabilityProvider;
+import net.fabricmc.fabric.api.lookup.v1.block.BlockApiLookup;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class TileEntityTransmitter extends CapabilityTileEntity implements ISidedConfigurable, IAlloyInteraction,
       net.fabricmc.fabric.api.rendering.data.v1.RenderAttachmentBlockEntity {
 
-    public static final ICapabilityProvider<TileEntityTransmitter, @Nullable Direction, IConfigurable> CONFIGURABLE_PROVIDER =
+    /**
+     * Fabric migration of the official NeoForge {@code ICapabilityProvider}: the already-established
+     * {@link CapabilityTileEntity#capabilityProvider(BlockApiLookup, java.util.function.BiFunction)} contract is the exact
+     * {@link java.util.function.BiFunction} shape Fabric's
+     * {@link BlockApiLookup#registerForBlockEntity(java.util.function.BiFunction, net.minecraft.world.level.block.entity.BlockEntityType)}
+     * accepts, and exposes the same lazy resolver path with the same fail-closed guards.
+     */
+    public static final java.util.function.BiFunction<TileEntityTransmitter, @Nullable Direction, IConfigurable> CONFIGURABLE_PROVIDER =
           capabilityProvider(Capabilities.CONFIGURABLE, (tile, cap) -> new BasicSidedCapabilityResolver<>(tile, cap, ProxyConfigurable::new));
 
 
@@ -305,7 +312,7 @@ public abstract class TileEntityTransmitter extends CapabilityTileEntity impleme
      * asynchronously.
      */
     @Override
-    public Object getBlockEntityRenderAttachment() {
+    public Object getRenderAttachmentData() {
         return buildRenderAttachment();
     }
 

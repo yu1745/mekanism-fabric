@@ -32,8 +32,16 @@ public final class TransmitterObjGeometry {
     public record Material(String textureAlias, int tintIndex) {
     }
 
-    /** A face belongs to exactly one group and one material at parse time. */
+    /**
+     * A face belongs to exactly one group and one material at parse time. The record defensively copies its corner
+     * list: the parser builds each list as a mutable {@link ArrayList}, and wrapping only the enclosing group list
+     * would still expose that mutable backing list to every caller holding a face reference.
+     */
     public record Face(String material, List<FaceVertex> vertices) {
+
+        public Face {
+            vertices = List.copyOf(vertices);
+        }
     }
 
     private final float[] vertices;

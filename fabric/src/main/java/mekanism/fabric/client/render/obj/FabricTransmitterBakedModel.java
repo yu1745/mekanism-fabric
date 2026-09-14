@@ -69,6 +69,7 @@ public final class FabricTransmitterBakedModel implements BakedModel, FabricBake
     private final boolean opaqueTransmitters;
     private final boolean hasGlass;
     private final TextureAtlasSprite particleIcon;
+    private final ItemTransforms transforms;
 
     private final LoadingCache<SidedConnection, List<BakedQuad>> internalParts;
     @Nullable
@@ -76,12 +77,13 @@ public final class FabricTransmitterBakedModel implements BakedModel, FabricBake
     private final List<BakedQuad> defaultItemQuads;
 
     public FabricTransmitterBakedModel(TransmitterObjGeometry internalGeometry, @Nullable TransmitterObjGeometry glassGeometry,
-          Function<String, TextureAtlasSprite> spriteLookup, boolean opaqueTransmitters) {
+          Function<String, TextureAtlasSprite> spriteLookup, boolean opaqueTransmitters, ItemTransforms transforms) {
         this.internalGeometry = internalGeometry;
         this.glassGeometry = glassGeometry;
         this.spriteLookup = alias -> spriteLookup0(spriteLookup, alias);
         this.opaqueTransmitters = opaqueTransmitters;
         this.hasGlass = glassGeometry != null;
+        this.transforms = transforms;
         TextureAtlasSprite particle = null;
         try {
             particle = this.spriteLookup.apply("particle");
@@ -188,8 +190,9 @@ public final class FabricTransmitterBakedModel implements BakedModel, FabricBake
 
     @Override
     public ItemTransforms getTransforms() {
-        //No model-JSON transforms survive this narrow loader; default identity item transforms
-        return ItemTransforms.NO_TRANSFORMS;
+        //The JSON "display" block is inherited through the real vanilla BlockModel chain by the loader and handed in here, so
+        //gui/ground/fixed/hand transforms keep whatever the shipped model declared (including the parent's copy).
+        return transforms;
     }
 
     @Override

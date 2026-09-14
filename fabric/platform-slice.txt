@@ -47,3 +47,13 @@ mekanism/fabric/registry/FabricDeferredHolder.java
 mekanism/fabric/registry/FabricDeferredRegister.java
 mekanism/fabric/registry/FabricRegistryLifecycle.java
 mekanism/fabric/tile/FabricCapabilityTileLifecycle.java
+mekanism/fabric/client/render/obj/FabricTransmitterAssets.java
+mekanism/fabric/client/render/obj/FabricTransmitterBlocks.java
+mekanism/fabric/client/render/obj/FabricTransmitterColorProvider.java
+mekanism/fabric/client/render/obj/FabricTransmitterBakedModel.java
+mekanism/fabric/client/render/obj/FabricTransmitterBlockModel.java
+mekanism/fabric/client/render/obj/FabricTransmitterModelPlugin.java
+mekanism/fabric/client/render/obj/FabricTransmitterModels.java
+mekanism/fabric/client/render/obj/TransmitterModelConfig.java
+mekanism/fabric/client/render/obj/TransmitterObjGeometry.java
+mekanism/fabric/client/render/obj/TransmitterQuadBaker.java
