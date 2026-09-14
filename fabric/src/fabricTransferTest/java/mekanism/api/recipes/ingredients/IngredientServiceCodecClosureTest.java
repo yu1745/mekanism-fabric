@@ -51,7 +51,6 @@ class IngredientServiceCodecClosureTest {
         BuiltInRegistries.REGISTRY.holders().forEach(registryHolder -> entries.add(registryHolder.value()));
         entries.add(registry);
         registries = new RegistryAccess.ImmutableRegistryAccess(entries);
-        MekanismChemicalIngredientTypes.ensureRegistered();
         //Bind the tags under test the way a real datapack would; plain unit bootstrap leaves them unbound
         BuiltInRegistries.ITEM.bindTags(java.util.Map.of(
               net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.ITEM, ResourceLocation.fromNamespaceAndPath("minecraft", "planks")),
@@ -63,6 +62,8 @@ class IngredientServiceCodecClosureTest {
         registry.bindTags(java.util.Map.of(
               net.minecraft.tags.TagKey.create(ChemicalRegistry.REGISTRY_KEY, ResourceLocation.fromNamespaceAndPath("mekanism", "gaseous")),
               List.of(MekanismChemicals.STEAM.get().getAsHolder())));
+        //The ingredient-type registry is created, root-published (SYNCED) and frozen by its construction owner, exactly as in production.
+        mekanism.fabric.chemical.FabricChemicalIngredientTypeRegistryLifecycle.initialize();
     }
 
     @SuppressWarnings("unchecked")

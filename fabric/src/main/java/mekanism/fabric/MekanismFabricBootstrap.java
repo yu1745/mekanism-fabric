@@ -22,6 +22,7 @@ import mekanism.fabric.recipe.FabricRecipeCacheLifecycle;
 import mekanism.fabric.recipe.FabricRecipeRegistration;
 import mekanism.fabric.tile.FabricCapabilityTileLifecycle;
 import mekanism.common.registries.MekanismChemicalIngredientTypes;
+import mekanism.fabric.chemical.FabricChemicalIngredientTypeRegistryLifecycle;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.minecraft.core.BlockPos;
@@ -59,7 +60,7 @@ public final class MekanismFabricBootstrap implements ModInitializer {
         verifyStartupConfig(startup);
         FabricChemicalConfig.initializeCommon(CONFIG_MANAGER);
         FabricChemicalLifecycle.initialize();
-        MekanismChemicalIngredientTypes.ensureRegistered();
+        FabricChemicalIngredientTypeRegistryLifecycle.initialize();
         FabricRecipeCacheLifecycle.initialize();
         verifyIngredientCreatorService();
         verifyRecipeRegistration();

@@ -2,6 +2,7 @@ mekanism/fabric/MekanismFabricBootstrap.java
 mekanism/fabric/MekanismFabricClientBootstrap.java
 mekanism/fabric/MekanismUsernameLifecycle.java
 mekanism/fabric/chemical/FabricChemicalClientLifecycle.java
+mekanism/fabric/chemical/FabricChemicalIngredientTypeRegistryLifecycle.java
 mekanism/fabric/chemical/FabricChemicalLifecycle.java
 mekanism/fabric/chemical/FabricChemicalRegistryLifecycle.java
 mekanism/fabric/config/FabricChemicalConfig.java

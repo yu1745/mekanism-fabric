@@ -58,7 +58,7 @@ class FabricRecipeRegistrationIntegrationTest {
         // built-in registries stay writable for that window, which is exactly what the existing game event registration already relies on.
         Bootstrap.bootStrap();
         FabricChemicalLifecycle.initialize();
-        MekanismChemicalIngredientTypes.ensureRegistered();
+        mekanism.fabric.chemical.FabricChemicalIngredientTypeRegistryLifecycle.initialize();
         FabricRecipeRegistration.register();
         //Every built-in registry including the custom chemical root, which FabricChemicalLifecycle registers into BuiltInRegistries.REGISTRY.
         List<Registry<?>> entries = new ArrayList<>();

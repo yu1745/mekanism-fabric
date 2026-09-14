@@ -70,7 +70,7 @@ public final class RecipeRuntimeServerFixture implements ModInitializer {
         //Note: Mod load order is not guaranteed across the production and fixture mods, so force the production
         // chemical/ingredient owners to initialize before any ingredient codec is composed
         mekanism.fabric.chemical.FabricChemicalLifecycle.initialize();
-        mekanism.common.registries.MekanismChemicalIngredientTypes.ensureRegistered();
+        mekanism.fabric.chemical.FabricChemicalIngredientTypeRegistryLifecycle.initialize();
         Registry.register(BuiltInRegistries.RECIPE_TYPE, FIXTURE_ID, TYPE);
         Registry.register(BuiltInRegistries.RECIPE_SERIALIZER, FIXTURE_ID, serializer());
         ResourceManagerHelper.get(PackType.SERVER_DATA).registerReloadListener(new FailureReloadListener());
