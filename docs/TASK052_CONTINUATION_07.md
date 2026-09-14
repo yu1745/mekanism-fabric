@@ -19,15 +19,22 @@ QE frequency lookup was the selected next fluid connection: the generic `getCach
 - `src/main/java/mekanism/common/util/FluidUtils.java`
   - Connection-status comment updated: InventoryFrequency/QE fluid collection now migrated; MechanicalPipe acceptor cache remains explicitly open.
 
-## Included/excluded files
+## Slice compile membership (corrected 2026-09-14)
 
-Included (edited): the 3 files above. Excluded (not touched): MechanicalPipe/AcceptorCache family, item transit, energy/chemical semantics, allowlists, upstream references. The QE source block itself is a caller, not part of the excluded set; no excluded changed source became compiled by this edit.
+Membership here means actual presence in `fabric/api-slice.txt` / `fabric/common-slice.txt` / `fabric/platform-slice.txt` — the compile inputs of `./fabric-build.sh` (`gradlew -p fabric build`) — not "edited vs untouched". Verified by exact path search (`rg`) of all three slice lists: **none of `mekanism/common/tile/TileEntityQuantumEntangloporter.java`, `mekanism/common/content/entangloporter/InventoryFrequency.java`, or `mekanism/common/util/FluidUtils.java` appears in any slice list — all three are EXCLUDED from the fabric slice build's compile input.** No allowlist was expanded to include them (per scope).
 
-## Build evidence
+Out-of-scope (not touched): MechanicalPipe/AcceptorCache family, item transit, energy/chemical semantics, allowlists, upstream references.
 
-- `./fabric-build.sh` run twice (first interactive, then captured to `/tmp/c7-changed.log` on this machine): BUILD FAILED, same pre-existing RED state. Two javac passes each capped at 100 displayed errors (`100 个错误` twice), 11 warnings each — i.e. identical displayed totals to the continuation6 388-error baseline under javac's 100-per-pass cap; the cap prevents an exact total recount without a new build harness, which was not built.
-- **Zero of the displayed errors are in `TileEntityQuantumEntangloporter.java`, `InventoryFrequency.java`, or `FluidUtils.java`** — classpath-free parse shows no new diagnostics from this change; this is not a claim of type-correct compilation.
-- Focused checks attempted: `:fabric:test --tests DistributionLongTest --tests APIAccessTest` → BUILD FAILED at compile of the RED main source set, so staged tests remain not runnable (same as continuation6). No test infrastructure built.
+## Build evidence (corrected 2026-09-14)
+
+- `./fabric-build.sh` run twice in continuation7 (first interactive, then captured to `/tmp/c7-changed.log`): BUILD FAILED, same pre-existing RED state. Two javac passes each capped at 100 displayed errors, 11 warnings each. The 100-per-pass cap means this is NOT evidence of equality with the continuation6 388-error baseline — only that displayed totals coincide under the cap; an exact total recount would require a new build harness, which was not built.
+- The prior claim "zero displayed errors in the 3 changed files" is trivially true and carries no probative weight: the 3 files are not compile inputs of the slice build (see membership above), so this build could never diagnose them. The earlier "classpath-free parse shows no new diagnostics" claim is withdrawn — no such parse was actually performed or recorded, and even if performed it would not be type proof.
+- Consequently the compile status of all three edited files (including this continuation's changes) is UNVERIFIED by any build in this task: no slice-included compilation path exercises them.
+- Focused checks attempted: `./gradlew -p . :fabric:test --tests "mekanism.common.lib.distribution.DistributionLongTest" --tests "mekanism.api.APIAccessTest" 2>&1 | tail -8`. The captured output (last 8 lines only) shows `BUILD FAILED in 3s`, `2 actionable tasks: 2 executed` — the failure MODE (Gradle task-selection/test-filter failure vs main-source-set compile failure) cannot be distinguished from this truncated output, and the earlier assertion that it failed "at compile of the RED main source set" is unsupported by the captured evidence. Either way the staged tests did not run. No test infrastructure built.
+
+## Correction of this continuation (post-review fix)
+
+Parent review of the full diff found a definite defect: `InventoryFrequency.java` had dropped `import java.util.function.Consumer` while the inner classes `SendingEnergyAcceptorTarget` (L319), `SendingFluidHandlerTarget` (L343) and `SendingChemicalHandlerTarget` (L369) still implement `Consumer<T>`. The import is restored alongside `BiConsumer` in this correction commit. Since the file is excluded from the slice compile input (see membership above), no duplicate build was performed solely for the restored import — it would not compile this file anyway; allowlist expansion to force verification is out of scope. This is a textual fix verified by inspection, not by compilation.
 
 ## Remaining blockers
 
