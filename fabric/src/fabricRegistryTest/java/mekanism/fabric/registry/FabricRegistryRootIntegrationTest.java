@@ -1,6 +1,7 @@
 package mekanism.fabric.registry;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -130,8 +131,8 @@ class FabricRegistryRootIntegrationTest {
     @Order(3)
     @SuppressWarnings({"unchecked", "rawtypes"})
     void productionChemicalIngredientTypeRegistryIsCanonicalRootedSyncedAndFrozen() {
-        MappedRegistry<ChemicalIngredient> registry =
-              (MappedRegistry) FabricChemicalIngredientTypeRegistryLifecycle.initialize();
+        MappedRegistry<com.mojang.serialization.MapCodec<? extends ChemicalIngredient>> registry =
+              FabricChemicalIngredientTypeRegistryLifecycle.initialize();
         assertSame(registry, FabricChemicalIngredientTypeRegistryLifecycle.registry());
         assertSame(registry, ChemicalIngredientTypeRegistry.registry());
         assertEquals(6, registry.size());
@@ -158,6 +159,13 @@ class FabricRegistryRootIntegrationTest {
             assertSame(codec, registry.get(id), id.toString());
         }
         assertEquals(ids.size(), new java.util.LinkedHashSet<>(ids).size());
+        //Type IDs are value identifiers: a fresh equal-but-distinct ResourceLocation must resolve to the same registered entry, which is exactly why the
+        //construction owner's verify compares IDs by equals while keeping registry/codec/holder identities as reference comparisons.
+        ResourceLocation equalButDistinctEmpty = ResourceLocation.fromNamespaceAndPath("mekanism", "empty");
+        assertNotSame(ChemicalIngredientTypeRegistry.EMPTY, equalButDistinctEmpty);
+        assertEquals(ChemicalIngredientTypeRegistry.EMPTY, equalButDistinctEmpty);
+        assertSame(EmptyChemicalIngredient.CODEC, ChemicalIngredientTypeRegistry.codec(equalButDistinctEmpty));
+        assertEquals(equalButDistinctEmpty, ChemicalIngredientTypeRegistry.idOf(EmptyChemicalIngredient.CODEC));
         //Unknown IDs must not silently default, and duplicate/late registration must fail rather than overwrite the canonical entries.
         assertThrows(IllegalArgumentException.class,
               () -> ChemicalIngredientTypeRegistry.codec(ResourceLocation.fromNamespaceAndPath("mekanism", "unknown")));

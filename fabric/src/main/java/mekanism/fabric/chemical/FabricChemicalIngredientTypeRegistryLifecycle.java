@@ -119,9 +119,11 @@ public final class FabricChemicalIngredientTypeRegistryLifecycle {
             ResourceKey<MapCodec<? extends ChemicalIngredient>> entryKey =
                   ResourceKey.create(ChemicalIngredientTypeRegistry.REGISTRY_KEY, builtIn.id());
             MapCodec<? extends ChemicalIngredient> held = candidate.get(builtIn.id());
-            if (held != builtIn.codec() || candidate.getKey(held) != builtIn.id()
+            //ResourceKey interning may retain a previous equal-but-distinct ResourceLocation, so compare the value identifiers by equals while the
+            //registry, codec and holder identities stay reference comparisons.
+            if (held != builtIn.codec() || !builtIn.id().equals(candidate.getKey(held))
                   || candidate.getHolder(entryKey).orElseThrow().value() != builtIn.codec()
-                  || ChemicalIngredientTypeRegistry.idOf(builtIn.codec()) != builtIn.id()) {
+                  || !builtIn.id().equals(ChemicalIngredientTypeRegistry.idOf(builtIn.codec()))) {
                 throw new IllegalStateException("Chemical ingredient type declaration identity/order failed at " + builtIn.id());
             }
         }

@@ -42,9 +42,12 @@ owner already root-registers successfully. Therefore:
 
 - production keeps the real Fabric lifecycle contract: the construction owner performs the genuine root + `SYNCED` publication;
 - the loader-window integration worker (`fabricRegistryTest`) exercises the real construction owner;
-- ordinary/local bootstraps that cannot publish into the frozen root install the same genuine native registry directly
-  (`ChemicalTestBootstrap`, `IngredientServiceCodecClosureTest`'s tag-binding helper), mirroring how they already install the
-  non-root chemical registry. No second authoritative store is created and no production path skips root publication.
+- `IngredientServiceCodecClosureTest` runs in the Knot `fabricTransferTest` source set, so it also calls the real construction
+  owner (`FabricChemicalIngredientTypeRegistryLifecycle.initialize()`), exactly as production does — it does **not** install a
+  native registry by hand;
+- only the ordinary/local `ChemicalTestBootstrap` bootstrap, which cannot publish into the root that
+  `Bootstrap.bootStrap()` already froze, installs the same genuine native registry directly, mirroring how it already installs
+  the non-root chemical registry. No second authoritative store is created and no production path skips root publication.
 
 Consumers updated to the real owner: `IngredientServiceCodecClosureTest`, `FabricRecipeRegistrationIntegrationTest`,
 `RecipeRuntimeServerFixture`, `MekanismFabricBootstrap`. Ordinary tests that only need the frozen registry keep calling
