@@ -6,13 +6,15 @@ import java.util.List;
 import java.util.Map;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.common.capabilities.Capabilities;
-import mekanism.common.capabilities.item.CursedTransporterItemHandler;
+import mekanism.common.capabilities.item.TransporterItemStorage;
 import mekanism.common.capabilities.resolver.ICapabilityResolver;
 import mekanism.common.content.network.transmitter.LogisticalTransporterBase;
 import mekanism.common.content.transporter.TransporterStack;
 import mekanism.common.lib.transmitter.ConnectionType;
 import mekanism.common.util.TransporterUtils;
 import mekanism.common.util.WorldUtils;
+import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
+import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
@@ -20,7 +22,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.capabilities.BlockCapability;
-import net.neoforged.neoforge.items.IItemHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -83,8 +84,7 @@ public abstract class TileEntityLogisticalTransporterBase extends TileEntityTran
 
         private static final List<BlockCapability<?, @Nullable Direction>> SUPPORTED_CAPABILITY = Collections.singletonList(Capabilities.ITEM.block());
 
-        private final Map<Direction, CursedTransporterItemHandler> cursedHandlers = new EnumMap<>(Direction.class);
-        private final Map<Direction, IItemHandler> handlers = new EnumMap<>(Direction.class);
+        private final Map<Direction, TransporterItemStorage> handlers = new EnumMap<>(Direction.class);
 
         @Override
         public List<BlockCapability<?, @Nullable Direction>> getSupportedCapabilities() {
@@ -92,30 +92,27 @@ public abstract class TileEntityLogisticalTransporterBase extends TileEntityTran
         }
 
         /**
-         * Lazily get and cache a handler instance for the given side, and make it be read only if something else is trying to interact with us using the null side
+         * Lazily get and cache the insert-only real Storage endpoint for the given side. The null side is never
+         * exposed (no endpoint); only sides with an accepting raw connection expose the transporter endpoint.
          */
         @Nullable
         @Override
         public <T> T resolve(BlockCapability<T, @Nullable Direction> capability, @Nullable Direction side) {
             if (side == null) {
-                //We provide no readonly item handler view
+                //We provide no endpoint for the null side
                 return null;
             }
-            IItemHandler cachedCapability = handlers.get(side);
-            if (cachedCapability == null) {
+            TransporterItemStorage cached = handlers.get(side);
+            if (cached == null) {
                 LogisticalTransporterBase transporter = getTransmitter();
-                //Note: We check here whether it exposes the cap rather than in the cap itself as we invalidate the cached cap whenever this changes
+                //Note: We check here whether it exposes the cap rather than in the endpoint itself as we invalidate
+                // the cached endpoint whenever this changes
                 if (transporter.exposesInsertCap(side)) {
-                    CursedTransporterItemHandler cached = cursedHandlers.get(side);
-                    if (cached == null) {
-                        cached = new CursedTransporterItemHandler(transporter, WorldUtils.relativePos(getWorldPositionLong(), side), () -> level == null ? -1 : level.getGameTime());
-                        cursedHandlers.put(side, cached);
-                    }
+                    cached = new TransporterItemStorage(transporter, WorldUtils.relativePos(getWorldPositionLong(), side), () -> level == null ? -1 : level.getGameTime());
                     handlers.put(side, cached);
-                    return (T) cached;
                 }
             }
-            return (T) cachedCapability;
+            return (T) cached;
         }
 
         @Override

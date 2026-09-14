@@ -10,7 +10,6 @@ import java.util.Objects;
 import java.util.UUID;
 import mekanism.api.SerializationConstants;
 import mekanism.api.security.SecurityMode;
-import mekanism.common.Mekanism;
 import mekanism.common.content.entangloporter.InventoryFrequency;
 import mekanism.common.content.qio.QIOFrequency;
 import mekanism.common.content.teleporter.TeleporterFrequency;
@@ -23,18 +22,23 @@ import net.minecraft.nbt.NbtOps;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
-import net.neoforged.neoforge.network.codec.NeoForgeStreamCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class FrequencyType<FREQ extends Frequency> {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism/Frequency");
 
     private static final Map<String, FrequencyType<?>> registryMap = new HashMap<>();
     private static int maxNameLength = 0;
 
     public static final Codec<FrequencyType<?>> CODEC = Codec.stringResolver(FrequencyType::getName, registryMap::get);
     //Note: This is lazy so that we ensure we don't call it until after maxNameLength has been set
-    public static final StreamCodec<ByteBuf, FrequencyType<?>> STREAM_CODEC = NeoForgeStreamCodecs.lazy(() -> ByteBufCodecs.stringUtf8(maxNameLength).map(
+    //Fabric port delta: replaced NeoForgeStreamCodecs.lazy with an inline lazily-delegating codec, as vanilla has no lazy stream-codec helper
+    public static final StreamCodec<ByteBuf, FrequencyType<?>> STREAM_CODEC = lazyCodec(() -> ByteBufCodecs.stringUtf8(maxNameLength).map(
           name -> {
               FrequencyType<?> type = registryMap.get(name);
               if (type == null) {
@@ -43,6 +47,20 @@ public class FrequencyType<FREQ extends Frequency> {
               return type;
           }, FrequencyType::getName
     ));
+
+    private static StreamCodec<ByteBuf, FrequencyType<?>> lazyCodec(java.util.function.Supplier<StreamCodec<ByteBuf, FrequencyType<?>>> delegate) {
+        return new StreamCodec<>() {
+            @Override
+            public FrequencyType<?> decode(ByteBuf buffer) {
+                return delegate.get().decode(buffer);
+            }
+
+            @Override
+            public void encode(ByteBuf buffer, FrequencyType<?> value) {
+                delegate.get().encode(buffer, value);
+            }
+        };
+    }
 
     public static final FrequencyType<TeleporterFrequency> TELEPORTER = register("Teleporter",
           (key, uuid, securityMode) -> new TeleporterFrequency((String) key, uuid, securityMode),
@@ -118,7 +136,7 @@ public class FrequencyType<FREQ extends Frequency> {
             frequency.setValid(false);
             return frequency;
         }
-        parsedIdentity.ifError(error -> Mekanism.logger.warn("Failed to deserialize frequency identity: {}", error.message()));
+        parsedIdentity.ifError(error -> LOGGER.warn("Failed to deserialize frequency identity: {}", error.message()));
         return null;
     }
 

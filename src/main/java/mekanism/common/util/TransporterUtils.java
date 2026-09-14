@@ -2,14 +2,16 @@ package mekanism.common.util;
 
 import mekanism.api.RelativeSide;
 import mekanism.api.text.EnumColor;
-import mekanism.common.capabilities.Capabilities;
-import mekanism.common.content.network.transmitter.LogisticalTransporterBase;
 import mekanism.common.content.transporter.TransporterManager;
 import mekanism.common.content.transporter.TransporterStack;
 import mekanism.common.lib.inventory.IAdvancedTransportEjector;
 import mekanism.common.lib.transmitter.TransmissionType;
 import mekanism.common.tile.interfaces.ISideConfiguration;
 import mekanism.common.tile.transmitter.TileEntityTransmitter;
+import net.fabricmc.fabric.api.transfer.v1.item.ItemStorage;
+import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
+import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
+import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.Mth;
@@ -17,7 +19,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.neoforged.neoforge.items.IItemHandler;
 import org.jetbrains.annotations.Nullable;
 
 public final class TransporterUtils {
@@ -45,7 +46,8 @@ public final class TransporterUtils {
         if (tile instanceof TileEntityTransmitter transmitter && TransmissionType.ITEM.checkTransmissionType(transmitter)) {
             return false;
         }
-        return Capabilities.ITEM.getCapabilityIfLoaded(level, pos, null, tile, side) != null;
+        //Fresh real sided lookup on the acceptor face of a loaded neighbor; no persistent capability cache
+        return ItemStorage.SIDED.find(level, pos, side) != null;
     }
 
     public static EnumColor increment(@Nullable EnumColor color) {
@@ -97,14 +99,17 @@ public final class TransporterUtils {
                 return false;
             }
         }
-        IItemHandler inventory = Capabilities.ITEM.getCapabilityIfLoaded(level, pos, null, tile, side.getOpposite());
-        if (inventory != null) {
-            for (int i = 0, slots = inventory.getSlots(); i < slots; i++) {
-                // Simulate insert, this will handle validating the item is valid for the inventory
-                ItemStack rejects = inventory.insertItem(i, itemStack, true);
-                if (TransporterManager.didEmit(itemStack, rejects)) {
-                    return true;
-                }
+        //Fresh real sided storage lookup on the opposite face; simulate insert abort-only to validate the item
+        Storage<ItemVariant> inventory = ItemStorage.SIDED.find(level, pos, side.getOpposite());
+        if (inventory != null && inventory.supportsInsertion()) {
+            ItemVariant variant = ItemVariant.of(itemStack);
+            if (!variant.isBlank() && !itemStack.isEmpty()) {
+                try (Transaction simulation = Transaction.openCurrent()) {
+                    long accepted = inventory.insert(variant, itemStack.getCount(), simulation);
+                    if (accepted > 0) {
+                        return true;
+                    }
+                }//aborted: no mutation
             }
         }
         return false;
