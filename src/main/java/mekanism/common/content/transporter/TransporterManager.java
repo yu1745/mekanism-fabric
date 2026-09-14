@@ -8,7 +8,6 @@ import mekanism.common.lib.inventory.TransitRequest;
 import mekanism.common.lib.inventory.TransitRequest.ItemData;
 import mekanism.common.lib.inventory.TransitRequest.TransitResponse;
 import mekanism.common.util.StackUtils;
-import mekanism.common.util.TxOps;
 import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
 import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
 import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
@@ -18,6 +17,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Fabric port (Task052 continuation09): the old {@code InventoryInfo} per-slot size guessing is replaced by
@@ -152,7 +152,8 @@ public class TransporterManager {
      * taking into account any stacks that are in transit to it.
      */
     public static TransitResponse getPredictedInsert(Storage<ItemVariant> handler, TransitRequest request) {
-        try (Transaction prediction = TxOps.simulation()) {
+        //Abort-only local prediction; this overload has no caller transaction context (R1: no ambient-current fallback)
+        try (Transaction prediction = Transaction.openOuter()) {
             for (ItemData data : request) {
                 ItemStackHolder stack = ItemStackHolder.of(data.getStack());
                 if (stack.variant.isBlank() || stack.count <= 0) {

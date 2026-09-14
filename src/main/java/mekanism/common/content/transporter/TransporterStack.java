@@ -14,13 +14,13 @@ import mekanism.api.text.EnumColor;
 import mekanism.common.content.network.transmitter.LogisticalTransporterBase;
 import mekanism.common.content.transporter.TransporterPathfinder.Destination;
 import mekanism.common.content.transporter.TransporterPathfinder.IdlePathData;
-import mekanism.common.lib.SidedBlockPos;
 import mekanism.common.lib.inventory.IAdvancedTransportEjector;
 import mekanism.common.lib.inventory.TransitRequest;
 import mekanism.common.lib.inventory.TransitRequest.TransitResponse;
 import mekanism.common.util.NBTUtils;
 import mekanism.common.util.WorldUtils;
 import net.fabricmc.fabric.api.transfer.v1.transaction.TransactionContext;
+import net.fabricmc.fabric.api.transfer.v1.transaction.base.SnapshotParticipant;
 import net.minecraft.core.Direction;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.core.HolderLookup;
@@ -82,6 +82,27 @@ public class TransporterStack {
     @Nullable
     private Path pathType;
     private LongList pathToTarget = new LongArrayList();
+
+    /**
+     * Stable real-owner participant (Task052 R2/R7 correction): the stack's mutable routing state — path type, deep
+     * path list, idle direction, initiation flag, current item stack and its flowing reservation membership — is
+     * transactional. A snapshot is taken before the first mutation at each nesting depth; the real
+     * {@link SnapshotParticipant} nesting promotion makes a committed nested transaction whose enclosing transaction
+     * later aborts roll back correctly, with no per-call callback compensation.
+     */
+    private final StackStateParticipant stackStateTx = new StackStateParticipant();
+
+    /**
+     * Joins this stack's mutable routing state to the given transaction: call before mutating path, idle direction,
+     * initiation flag, item stack contents or flowing reservation membership inside the transaction.
+     */
+    public void updateSnapshots(TransactionContext tx, Level level) {
+        this.snapshotLevel = level;
+        stackStateTx.updateSnapshots(tx);
+    }
+
+    @Nullable
+    private transient Level snapshotLevel;
 
     public static TransporterStack readFromNBT(HolderLookup.Provider provider, CompoundTag nbtTags) {
         TransporterStack stack = new TransporterStack();
@@ -220,14 +241,16 @@ public class TransporterStack {
     }
 
     /**
-     * Transaction-aware path recalculation: snapshots the path/flowing state <b>before</b> mutation and registers an
-     * idempotent undo on the given transaction (both its own abort and a later root abort), so a failed caller
-     * transaction removes provisional reservations and restores counters/RR. Nested operations already see the new
-     * provisional path because the mutation is applied immediately and only rolled back on abort.
+     * Transaction-aware path recalculation: the stack state participant snapshots the path/flowing state
+     * <b>before</b> mutation, so a failed caller transaction at any nesting level removes provisional reservations
+     * and restores the exact prior state. Nested operations already see the new provisional path because the
+     * mutation is applied immediately and only rolled back on abort.
      */
     public TransitResponse recalculatePath(TransitRequest request, LogisticalTransporterBase transporter, int min, boolean updateFlowing,
           Map<GlobalPos, Set<TransporterStack>> additionalFlowingStacks, @Nullable TransactionContext tx) {
-        PathSnapshot snapshot = tx == null ? null : PathSnapshot.take(this, transporter.getLevel());
+        if (tx != null) {
+            updateSnapshots(tx, transporter.getLevel());
+        }
         Destination newPath = TransporterPathfinder.getNewBasePath(transporter, this, request, min, additionalFlowingStacks);
         if (newPath == null) {
             return request.getEmptyResponse();
@@ -235,9 +258,6 @@ public class TransporterStack {
         idleDir = null;
         setPath(transporter.getLevel(), newPath.getPath(), Path.DEST, updateFlowing);
         initiatedPath = true;
-        if (snapshot != null) {
-            snapshot.register(tx, this);
-        }
         return newPath.getResponse();
     }
 
@@ -250,15 +270,18 @@ public class TransporterStack {
     }
 
     /**
-     * Transaction-aware RR path recalculation. The round-robin target belongs to the real
-     * {@link IAdvancedTransportEjector}: its value is snapshotted before the pathfinder assigns the next target and
-     * restored on abort (including a later root abort), so an aborted candidate leaves RR exactly as it was - also in
-     * the one-destination case. The restore goes through the owner's setter only.
+     * Transaction-aware RR path recalculation. The stack state joins the caller transaction as in
+     * {@link #recalculatePath}; the round-robin target belongs to the real {@link IAdvancedTransportEjector} owner,
+     * which joins the same transaction through its own stable RR participant
+     * ({@link IAdvancedTransportEjector#updateRoundRobinSnapshot}), so an aborted candidate at any nesting level
+     * leaves RR exactly as it was - also in the one-destination case.
      */
     public <BE extends BlockEntity & IAdvancedTransportEjector> TransitResponse recalculateRRPath(TransitRequest request, BE outputter, LogisticalTransporterBase transporter, int min,
           boolean updateFlowing, @Nullable TransactionContext tx) {
-        SidedBlockPos oldRR = tx == null ? null : outputter.getRoundRobinTarget();
-        PathSnapshot snapshot = tx == null ? null : PathSnapshot.take(this, transporter.getLevel());
+        if (tx != null) {
+            updateSnapshots(tx, transporter.getLevel());
+            outputter.updateRoundRobinSnapshot(tx);
+        }
         Destination newPath = TransporterPathfinder.getNewRRPath(transporter, this, request, outputter, min);
         if (newPath == null) {
             return request.getEmptyResponse();
@@ -266,54 +289,37 @@ public class TransporterStack {
         idleDir = null;
         setPath(transporter.getLevel(), newPath.getPath(), Path.DEST, updateFlowing);
         initiatedPath = true;
-        if (snapshot != null) {
-            final SidedBlockPos restoreRR = oldRR;
-            snapshot.register(tx, this);
-            tx.onAbort(() -> outputter.setRoundRobinTarget(restoreRR));
-            tx.onRootAbort(() -> {
-                if (outputter.getRoundRobinTarget() != restoreRR) {
-                    outputter.setRoundRobinTarget(restoreRR);
-                }
-            });
-        }
         return newPath.getResponse();
     }
 
     /**
-     * Deep snapshot of the mutable path state (path list, type, idle direction, initiation flag) plus the flowing
-     * reservation membership. Shallow copies are not enough: the path list is mutable. Undo is idempotent so an
-     * own-abort followed by a root-abort rollback is harmless.
+     * Deep snapshot of the stack's mutable routing state (path type, path list copy, idle direction, initiation
+     * flag, current item stack and flowing reservation membership). Shallow copies are not enough: the path list
+     * and the item stack are mutable.
      */
-    private static final class PathSnapshot {
+    private final class StackStateParticipant extends SnapshotParticipant<StackStateSnapshot> {
 
-        private final Path pathType;
-        private final LongList path;
-        private final Direction idleDir;
-        private final boolean initiatedPath;
-        private final boolean hadFlowing;
-        private final Level level;
-
-        private PathSnapshot(Path pathType, LongList path, Direction idleDir, boolean initiatedPath, boolean hadFlowing, Level level) {
-            this.pathType = pathType;
-            this.path = path;
-            this.idleDir = idleDir;
-            this.initiatedPath = initiatedPath;
-            this.hadFlowing = hadFlowing;
-            this.level = level;
+        @Override
+        protected StackStateSnapshot createSnapshot() {
+            return StackStateSnapshot.take(TransporterStack.this);
         }
 
-        static PathSnapshot take(TransporterStack stack, Level level) {
+        @Override
+        protected void readSnapshot(StackStateSnapshot snapshot) {
+            snapshot.restore(TransporterStack.this);
+        }
+    }
+
+    private record StackStateSnapshot(Path pathType, LongList path, Direction idleDir, boolean initiatedPath, boolean hadFlowing, Level level, ItemStack itemStack) {
+
+        static StackStateSnapshot take(TransporterStack stack) {
             boolean hadFlowing = stack.hasPath() && stack.getPathType().hasTarget();
-            return new PathSnapshot(stack.getPathType(), new LongArrayList(stack.getPath()), stack.idleDir, stack.initiatedPath, hadFlowing, level);
+            return new StackStateSnapshot(stack.getPathType(), new LongArrayList(stack.getPath()), stack.idleDir, stack.initiatedPath, hadFlowing, stack.snapshotLevel,
+                  stack.itemStack.copy());
         }
 
-        void register(TransactionContext tx, TransporterStack stack) {
-            tx.onAbort(() -> restore(stack));
-            tx.onRootAbort(() -> restore(stack));
-        }
-
-        private void restore(TransporterStack stack) {
-            //Flowing reservation membership follows the restored path state (idempotent restore)
+        void restore(TransporterStack stack) {
+            //Flowing reservation membership follows the restored path state
             boolean nowFlowing = stack.hasPath() && stack.getPathType().hasTarget();
             if (nowFlowing) {
                 TransporterManager.remove(level, stack);
@@ -322,6 +328,7 @@ public class TransporterStack {
             stack.pathToTarget = new LongArrayList(path);
             stack.idleDir = idleDir;
             stack.initiatedPath = initiatedPath;
+            stack.itemStack = itemStack.copy();
             if (hadFlowing) {
                 TransporterManager.add(level, stack);
             }

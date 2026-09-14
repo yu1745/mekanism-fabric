@@ -104,7 +104,9 @@ public final class TransporterUtils {
         if (inventory != null && inventory.supportsInsertion()) {
             ItemVariant variant = ItemVariant.of(itemStack);
             if (!variant.isBlank() && !itemStack.isEmpty()) {
-                try (Transaction simulation = Transaction.openCurrent()) {
+                //Fresh real sided storage lookup on the opposite face; abort-only local simulation validates the
+                // item (R1: no ambient-current fallback; this validator owns no caller transaction)
+                try (Transaction simulation = Transaction.openOuter()) {
                     long accepted = inventory.insert(variant, itemStack.getCount(), simulation);
                     if (accepted > 0) {
                         return true;

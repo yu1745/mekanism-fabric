@@ -60,6 +60,8 @@ import net.fabricmc.fabric.api.transfer.v1.item.ItemStorage;
 import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
 import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
 import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
+import net.fabricmc.fabric.api.transfer.v1.transaction.TransactionContext;
+import net.fabricmc.fabric.api.transfer.v1.transaction.base.SnapshotParticipant;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -242,6 +244,27 @@ public class TileEntityQIOExporter extends TileEntityQIOFilterHandler implements
     @Override
     public void setRoundRobinTarget(@Nullable SidedBlockPos target) {
         rrTarget = target;
+    }
+
+    /**
+     * Stable owner participant for the exporter's round-robin target (Task052 correction): a committed nested
+     * transaction whose enclosing transaction later aborts still restores the prior RR target exactly.
+     */
+    private final SnapshotParticipant<SidedBlockPos> rrTargetTx = new SnapshotParticipant<>() {
+        @Override
+        protected SidedBlockPos createSnapshot() {
+            return rrTarget;
+        }
+
+        @Override
+        protected void readSnapshot(SidedBlockPos snapshot) {
+            rrTarget = snapshot;
+        }
+    };
+
+    @Override
+    public void updateRoundRobinSnapshot(TransactionContext tx) {
+        rrTargetTx.updateSnapshots(tx);
     }
 
     @Override

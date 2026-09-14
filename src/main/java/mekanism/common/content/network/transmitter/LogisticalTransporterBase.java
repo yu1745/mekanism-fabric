@@ -37,6 +37,7 @@ import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
 import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
 import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
 import net.fabricmc.fabric.api.transfer.v1.transaction.TransactionContext;
+import net.fabricmc.fabric.api.transfer.v1.transaction.base.SnapshotParticipant;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -72,6 +73,64 @@ public abstract class LogisticalTransporterBase extends Transmitter<Storage<Item
     protected LogisticalTransporterBase(TileEntityTransmitter tile, TransporterTier tier) {
         super(tile, TransmissionType.ITEM);
         this.tier = tier;
+    }
+
+    /**
+     * Stable real-owner participant (Task052 R2/R7 correction) for the transporter's shared mutable transit state:
+     * the {@code transit} map, {@code nextId}, {@code needsSync} and the per-reservation commit-only sync/save
+     * notifications. A deep snapshot is taken before the first reservation at each nesting depth; the real
+     * {@link SnapshotParticipant} nesting promotion makes an enclosing abort after a committed nested reservation
+     * roll everything back, and {@code onFinalCommit} publishes packets/save marking only for reservations that
+     * survived every nesting level.
+     */
+    private final TransitReservationParticipant reservationTx = new TransitReservationParticipant();
+
+    /** Reservations staged into a transaction whose outer commit is still pending their sync packet/save. */
+    private final Int2ObjectMap<TransporterStack> pendingCommitSync = new Int2ObjectOpenHashMap<>();
+
+    private final class TransitReservationParticipant extends SnapshotParticipant<ReservationSnapshot> {
+
+        @Override
+        protected ReservationSnapshot createSnapshot() {
+            return new ReservationSnapshot(new Int2ObjectOpenHashMap<>(transit), nextId, new Int2ObjectOpenHashMap<>(needsSync),
+                  new Int2ObjectOpenHashMap<>(pendingCommitSync));
+        }
+
+        @Override
+        protected void readSnapshot(ReservationSnapshot snapshot) {
+            transit.clear();
+            transit.putAll(snapshot.transit);
+            nextId = snapshot.nextId;
+            needsSync.clear();
+            needsSync.putAll(snapshot.needsSync);
+            pendingCommitSync.clear();
+            pendingCommitSync.putAll(snapshot.pendingCommitSync);
+        }
+
+        @Override
+        protected void onFinalCommit() {
+            if (!pendingCommitSync.isEmpty()) {
+                boolean any = false;
+                for (ObjectIterator<Int2ObjectMap.Entry<TransporterStack>> iterator = Int2ObjectMaps.fastIterator(pendingCommitSync); iterator.hasNext(); ) {
+                    Int2ObjectMap.Entry<TransporterStack> entry = iterator.next();
+                    int stackId = entry.getIntKey();
+                    TransporterStack stack = entry.getValue();
+                    if (transit.get(stackId) == stack) {
+                        //The reservation survived every nesting level: publish its initial packet now
+                        PacketUtils.sendToAllTracking(PacketTransporterSync.create(getWorldPositionLong(), stackId, stack), getTransmitterTile());
+                        any = true;
+                    }
+                }
+                pendingCommitSync.clear();
+                if (any) {
+                    getTransmitterTile().markForSave();
+                }
+            }
+        }
+    }
+
+    private record ReservationSnapshot(Int2ObjectMap<TransporterStack> transit, int nextId, Int2ObjectMap<TransporterStack> needsSync,
+          Int2ObjectMap<TransporterStack> pendingCommitSync) {
     }
 
     @Override
@@ -222,36 +281,37 @@ public abstract class LogisticalTransporterBase extends Transmitter<Storage<Item
                                     if (acceptor == null && stack.getPathType().isHome()) {
                                         acceptor = getFallbackStorageForSide(next, side);
                                     }
-                                    //Final in-flight delivery: stage the target insertion plus the exact flowing
-                                    // removal in one transaction; commit before scheduling the local delete. The
-                                    // transit map itself is only mutated through the deferred deletes set
+                                    //Final in-flight delivery: stage the target insertion plus the exact stack
+                                    // remainder (including empty) and the flowing removal in ONE transaction, before
+                                    // the commit; the transit map itself is only mutated through the deferred deletes
+                                    // set. On abort (any nesting level) the stack participant restores the original
+                                    // item stack and flowing reservation membership.
                                     try (Transaction delivery = Transaction.openOuter()) {
                                         TransitResponse response = TransitRequest.simple(stack.itemStack).addToInventory(getLevel(), BlockPos.of(next), acceptor, 0,
                                               stack.getPathType().isHome(), delivery);
                                         if (!response.isEmpty()) {
                                             //We were able to add at least part of the stack to the inventory
                                             ItemStack rejected = response.getRejected();
+                                            //Stage the remainder inside the same transaction, before the commit
+                                            stack.updateSnapshots(delivery, getLevel());
                                             if (rejected.isEmpty()) {
-                                                //Nothing was rejected (it was all accepted); remove the stack from the
-                                                // prediction tracker inside the same transaction (undo re-adds on abort)
-                                                final boolean restoreFlowing = stack.hasPath() && stack.getPathType().hasTarget();
-                                                if (restoreFlowing) {
+                                                //Nothing was rejected (it was all accepted); remove the stack from
+                                                // the prediction tracker inside the same transaction
+                                                if (stack.hasPath() && stack.getPathType().hasTarget()) {
                                                     TransporterManager.remove(getLevel(), stack);
-                                                    delivery.onAbort(() -> TransporterManager.add(getLevel(), stack));
-                                                    delivery.onRootAbort(() -> {
-                                                        //Idempotent: re-add once even if both callbacks fire
-                                                        TransporterManager.add(getLevel(), stack);
-                                                    });
                                                 }
-                                                delivery.commit();
+                                                stack.itemStack = ItemStack.EMPTY;
+                                            } else {
+                                                //Some portion of the stack got rejected; stage the remainder and
+                                                // recalculate below to sort out what to do next
+                                                stack.itemStack = rejected;
+                                            }
+                                            delivery.commit();
+                                            if (rejected.isEmpty()) {
                                                 //Schedule this stack for deletion now that the delivery has committed
                                                 deletes.add(stackId);
                                                 continue;
                                             }
-                                            //Some portion of the stack got rejected; commit what was accepted, save
-                                            // the remainder and recalculate below to sort out what to do next
-                                            delivery.commit();
-                                            stack.itemStack = rejected;
                                         }//else the entire stack got rejected; abort (implicit) - we don't need to update the stack to point to itself
                                         prevSet = next;
                                     }
@@ -560,19 +620,17 @@ public abstract class LogisticalTransporterBase extends Transmitter<Storage<Item
         if (!response.isEmpty()) {
             stack.itemStack = response.getStack();
             if (doEmit) {
+                if (tx != null) {
+                    //Join the shared transit state (transit/nextId/needsSync/commit notifications) to the caller
+                    // transaction BEFORE the reservation mutation (stable owner participant)
+                    reservationTx.updateSnapshots(tx);
+                }
                 int stackId = nextId++;
                 addStack(stackId, stack);
                 if (tx != null) {
-                    //Stage the reservation: applied immediately so nested operations see it; undone on abort (own or
-                    // later root abort) with idempotent undo; initial packet/save are commit-only callbacks
-                    tx.onAbort(() -> undoReservation(stackId, stack));
-                    tx.onRootAbort(() -> undoReservation(stackId, stack));
-                    tx.onRootCommit(() -> {
-                        if (transit.get(stackId) == stack) {
-                            PacketUtils.sendToAllTracking(PacketTransporterSync.create(getWorldPositionLong(), stackId, stack), getTransmitterTile());
-                            getTransmitterTile().markForSave();
-                        }
-                    });
+                    //Initial packet/save are commit-only: published by the participant's onFinalCommit, only if the
+                    // reservation survived every nesting level
+                    pendingCommitSync.put(stackId, stack);
                 } else {
                     //No transaction context: immediate emission with direct packet/save (legacy callers)
                     PacketUtils.sendToAllTracking(PacketTransporterSync.create(getWorldPositionLong(), stackId, stack), getTransmitterTile());
@@ -581,18 +639,6 @@ public abstract class LogisticalTransporterBase extends Transmitter<Storage<Item
             }
         }
         return response;
-    }
-
-    private void undoReservation(int stackId, TransporterStack stack) {
-        //Idempotent: removing twice or restoring a counter that moved on is safe
-        if (transit.get(stackId) == stack) {
-            transit.remove(stackId);
-        }
-        needsSync.remove(stackId);
-        nextId = Math.min(nextId, stackId);
-        if (stack.hasPath() && stack.getPathType().hasTarget()) {
-            TransporterManager.remove(getLevel(), stack);
-        }
     }
 
     @Nullable

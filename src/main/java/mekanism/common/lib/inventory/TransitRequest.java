@@ -154,7 +154,7 @@ public abstract class TransitRequest implements Iterable<ItemData> {
             //If the inventory can't accept anything just exit early
             return getEmptyResponse();
         }
-        try (Transaction candidate = tx.openNested()) {
+        try (Transaction candidate = Transaction.openNested(tx)) {
             TransitResponse response = insertAll(inventory, min, candidate);
             if (min > 1 && (response.isEmpty() || response.getSendingAmount() < min)) {
                 //Abort the candidate: we were not able to actually insert the requested minimum amount
