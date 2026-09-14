@@ -23,6 +23,7 @@ import mekanism.api.gear.config.ModuleConfig;
 import mekanism.common.lib.codec.SequencedCollectionCodec;
 import mekanism.common.lib.collection.EmptySequencedMap;
 import mekanism.common.registries.MekanismDataComponents;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.HolderLookup;
@@ -231,7 +232,7 @@ public record ModuleContainer(SequencedMap<ModuleData<?>, Module<?>> typedModule
     @Nullable
     private ItemEnchantments.Mutable updateEnchantment(HolderLookup.Provider provider, Module<?> module, @Nullable ItemEnchantments.Mutable adjustedEnchantments) {
         if (module.getCustomInstance() instanceof EnchantmentAwareModule<?> enchantmentBased) {
-            Optional<Reference<Enchantment>> enchantment = provider.holder(enchantmentBased.enchantment());
+            Optional<Reference<Enchantment>> enchantment = provider.lookup(Registries.ENCHANTMENT).flatMap(lookup -> lookup.get(enchantmentBased.enchantment()));
             int level = getEnchantmentLevel(module);
             if (enchantment.isPresent() && enchantments.getLevel(enchantment.get()) != level) {
                 if (adjustedEnchantments == null) {
@@ -338,7 +339,7 @@ public record ModuleContainer(SequencedMap<ModuleData<?>, Module<?>> typedModule
                 copiedModules.remove(type);
                 //Remove any corresponding enchantment
                 if (module.getCustomInstance() instanceof EnchantmentAwareModule<?> enchantmentBased) {
-                    Optional<Reference<Enchantment>> enchantment = provider.holder(enchantmentBased.enchantment());
+                    Optional<Reference<Enchantment>> enchantment = provider.lookup(Registries.ENCHANTMENT).flatMap(lookup -> lookup.get(enchantmentBased.enchantment()));
                     if (enchantment.isPresent() && enchantments.getLevel(enchantment.get()) != 0) {
                         adjustedEnchantments = new ItemEnchantments.Mutable(enchantments);
                         adjustedEnchantments.set(enchantment.get(), 0);
@@ -357,7 +358,7 @@ public record ModuleContainer(SequencedMap<ModuleData<?>, Module<?>> typedModule
 
     private ModuleContainer updateContainer(ItemStack stack, SequencedMap<ModuleData<?>, Module<?>> copiedModules, @Nullable ItemEnchantments.Mutable adjustedEnchantments) {
         ModuleContainer replacedContainer = new ModuleContainer(copiedModules, adjustedEnchantments == null ? enchantments : adjustedEnchantments.toImmutable());
-        stack.set(MekanismDataComponents.MODULE_CONTAINER, replacedContainer);
+        stack.set(MekanismDataComponents.MODULE_CONTAINER.get(), replacedContainer);
         return replacedContainer;
     }
 }

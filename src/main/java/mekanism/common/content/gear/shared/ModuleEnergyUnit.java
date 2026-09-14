@@ -10,7 +10,7 @@ import mekanism.api.gear.IModule;
 import mekanism.api.gear.IModuleContainer;
 import mekanism.api.gear.IModuleHelper;
 import mekanism.api.math.MathUtils;
-import mekanism.common.capabilities.Capabilities;
+import mekanism.common.attachments.containers.ContainerType;
 import mekanism.common.registries.MekanismModules;
 import net.minecraft.world.item.ItemStack;
 
@@ -38,7 +38,7 @@ public class ModuleEnergyUnit implements ICustomModule<ModuleEnergyUnit> {
         //Note: While technically we could use IModule#getEnergyContainer as it is just a helper,
         // we choose not to so that the behavior is clearer when the module was the last module
         // and technically is no longer installed in the module container
-        IStrictEnergyHandler energyHandlerItem = Capabilities.STRICT_ENERGY.getCapability(stack);
+        IStrictEnergyHandler energyHandlerItem = ContainerType.ENERGY.getRegisteredHandler(stack);
         if (energyHandlerItem instanceof IMekanismStrictEnergyHandler energyHandler) {
             for (IEnergyContainer energyContainer : energyHandler.getEnergyContainers(null)) {
                 energyContainer.setEnergy(Math.min(energyContainer.getEnergy(), energyContainer.getMaxEnergy()));

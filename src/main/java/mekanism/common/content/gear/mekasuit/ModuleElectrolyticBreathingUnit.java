@@ -10,8 +10,7 @@ import mekanism.api.gear.IModule;
 import mekanism.api.gear.IModuleContainer;
 import mekanism.api.gear.IModuleHelper;
 import mekanism.api.math.MathUtils;
-import mekanism.common.Mekanism;
-import mekanism.common.capabilities.Capabilities;
+import mekanism.fabric.item.FabricComponentItemLookup;
 import mekanism.common.registries.MekanismChemicals;
 import mekanism.common.registries.MekanismItems;
 import mekanism.common.registries.MekanismModules;
@@ -30,7 +29,7 @@ import net.minecraft.world.level.material.Fluids;
 @ParametersAreNotNullByDefault
 public record ModuleElectrolyticBreathingUnit(boolean fillHeld) implements ICustomModule<ModuleElectrolyticBreathingUnit> {
 
-    public static final ResourceLocation FILL_HELD = Mekanism.rl("breathing.held");
+    public static final ResourceLocation FILL_HELD = ResourceLocation.fromNamespaceAndPath("mekanism", "breathing.held");
 
     public ModuleElectrolyticBreathingUnit(IModule<ModuleElectrolyticBreathingUnit> module) {
         this(module.getBooleanConfigOrFalse(FILL_HELD));
@@ -68,7 +67,7 @@ public record ModuleElectrolyticBreathingUnit(boolean fillHeld) implements ICust
             ChemicalStack hydrogenStack = MekanismChemicals.HYDROGEN.asStack(maxRate * 2L);
             ItemStack chestStack = player.getItemBySlot(EquipmentSlot.CHEST);
             if (checkChestPlate(chestStack)) {
-                IChemicalHandler chestCapability = Capabilities.CHEMICAL.getCapability(chestStack);
+                IChemicalHandler chestCapability = FabricComponentItemLookup.CHEMICAL.find(chestStack, null);
                 if (chestCapability != null) {
                     hydrogenUsed = maxRate * 2L - chestCapability.insertChemical(hydrogenStack, Action.EXECUTE).getAmount();
                     hydrogenStack.shrink(hydrogenUsed);
@@ -76,7 +75,7 @@ public record ModuleElectrolyticBreathingUnit(boolean fillHeld) implements ICust
             }
             if (fillHeld) {
                 ItemStack handStack = player.getItemBySlot(EquipmentSlot.MAINHAND);
-                IChemicalHandler handCapability = Capabilities.CHEMICAL.getCapability(handStack);
+                IChemicalHandler handCapability = FabricComponentItemLookup.CHEMICAL.find(handStack, null);
                 if (handCapability != null) {
                     hydrogenUsed = maxRate * 2L - handCapability.insertChemical(hydrogenStack, Action.EXECUTE).getAmount();
                 }

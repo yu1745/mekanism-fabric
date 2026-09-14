@@ -4,6 +4,7 @@
   "package": "mekanism.fabric.mixin",
   "compatibilityLevel": "JAVA_21",
   "client": [
+    "gear.GearBoltRenderMixin",
     "recipe.ClientPacketListenerMixin",
     "tile.LevelChunkMixin",
     "tile.ClientPacketListenerTileMixin"

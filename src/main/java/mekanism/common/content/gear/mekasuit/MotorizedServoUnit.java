@@ -3,7 +3,6 @@ package mekanism.common.content.gear.mekasuit;
 import mekanism.api.annotations.ParametersAreNotNullByDefault;
 import mekanism.api.gear.ICustomModule;
 import mekanism.api.gear.IModule;
-import mekanism.common.Mekanism;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EquipmentSlotGroup;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
@@ -13,7 +12,7 @@ import mekanism.api.gear.GearAttributeContext;
 @ParametersAreNotNullByDefault
 public class MotorizedServoUnit implements ICustomModule<MotorizedServoUnit> {
 
-    private static final ResourceLocation SNEAK_SPEED = Mekanism.rl("motorized_servo");
+    private static final ResourceLocation SNEAK_SPEED = ResourceLocation.fromNamespaceAndPath("mekanism", "motorized_servo");
 
     @Override
     public void adjustAttributes(IModule<MotorizedServoUnit> module, GearAttributeContext event) {

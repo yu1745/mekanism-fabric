@@ -5,7 +5,6 @@ import mekanism.common.Mekanism;
 import mekanism.common.inventory.container.QIOItemViewerContainer;
 import mekanism.common.lib.Version;
 import mekanism.common.network.to_client.PacketHitBlockEffect;
-import mekanism.common.network.to_client.PacketLightningRender;
 import mekanism.common.network.to_client.PacketPortalFX;
 import mekanism.common.network.to_client.PacketSetDeltaMovement;
 import mekanism.common.network.to_client.PacketUpdateTile;
@@ -140,7 +139,7 @@ public class PacketHandler extends BasePacketHandler {
 
         //Play packets
         registrar.play(PacketHitBlockEffect.TYPE, PacketHitBlockEffect.STREAM_CODEC);
-        registrar.play(PacketLightningRender.TYPE, PacketLightningRender.STREAM_CODEC);
+        //PacketLightningRender is registered by the native Fabric gear-effects networking owner.
         registrar.play(PacketPlayerData.TYPE, PacketPlayerData.STREAM_CODEC);
         registrar.play(PacketPortalFX.TYPE, PacketPortalFX.STREAM_CODEC);
         //Radiation payload codecs and receivers are owned by FabricRadiationLifecycle/FabricRadiationClientLifecycle.

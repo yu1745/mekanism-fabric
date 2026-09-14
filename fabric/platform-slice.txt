@@ -96,3 +96,6 @@ mekanism/fabric/mixin/block/MachineExplosionMixin.java
 mekanism/fabric/mixin/block/MachinePistonReactionMixin.java
 mekanism/fabric/item/DetachedItemContext.java
 mekanism/fabric/energy/ItemEnergyContainer.java
+mekanism/fabric/network/FabricGearEffectsNetworking.java
+mekanism/fabric/client/render/FabricBoltRendering.java
+mekanism/fabric/mixin/gear/GearBoltRenderMixin.java

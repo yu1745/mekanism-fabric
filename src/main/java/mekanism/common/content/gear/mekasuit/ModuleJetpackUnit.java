@@ -16,9 +16,8 @@ import mekanism.api.gear.IModuleContainer;
 import mekanism.api.gear.IModuleHelper;
 import mekanism.api.text.IHasTextComponent;
 import mekanism.api.text.TextComponentUtil;
-import mekanism.common.Mekanism;
 import mekanism.common.MekanismLang;
-import mekanism.common.capabilities.Capabilities;
+import mekanism.fabric.item.FabricComponentItemLookup;
 import mekanism.common.item.interfaces.IJetpackItem.JetpackMode;
 import mekanism.common.registries.MekanismChemicals;
 import mekanism.common.util.StorageUtils;
@@ -34,9 +33,9 @@ import net.minecraft.world.item.ItemStack;
 @ParametersAreNotNullByDefault
 public record ModuleJetpackUnit(JetpackMode mode, ThrustMultiplier thrustMultiplier, ThrustMultiplier hoverThrustMultiplier) implements ICustomModule<ModuleJetpackUnit> {
 
-    public static final ResourceLocation JETPACK_MODE = Mekanism.rl("jetpack_mode");
-    public static final ResourceLocation JETPACK_MULT = Mekanism.rl("jetpack_mult");
-    public static final ResourceLocation JETPACK_HOVER_MULT = Mekanism.rl("jetpack_mult.hover");
+    public static final ResourceLocation JETPACK_MODE = ResourceLocation.fromNamespaceAndPath("mekanism", "jetpack_mode");
+    public static final ResourceLocation JETPACK_MULT = ResourceLocation.fromNamespaceAndPath("mekanism", "jetpack_mult");
+    public static final ResourceLocation JETPACK_HOVER_MULT = ResourceLocation.fromNamespaceAndPath("mekanism", "jetpack_mult.hover");
 
     public ModuleJetpackUnit(IModule<ModuleJetpackUnit> module) {
         this(module.<JetpackMode>getConfigOrThrow(JETPACK_MODE).get(), module.<ThrustMultiplier>getConfigOrThrow(JETPACK_MULT).get(), module.<ThrustMultiplier>getConfigOrThrow(JETPACK_HOVER_MULT).get());
@@ -45,7 +44,7 @@ public record ModuleJetpackUnit(JetpackMode mode, ThrustMultiplier thrustMultipl
     @Override
     public void addHUDElements(IModule<ModuleJetpackUnit> module, IModuleContainer moduleContainer, ItemStack stack, Player player, Consumer<IHUDElement> hudElementAdder) {
         if (module.isEnabled()) {
-            IChemicalHandler chemicalHandler = Capabilities.CHEMICAL.getCapability(stack);
+            IChemicalHandler chemicalHandler = FabricComponentItemLookup.CHEMICAL.find(stack, null);
             if (chemicalHandler == null) {
                 hudElementAdder.accept(IModuleHelper.INSTANCE.hudElementPercent(mode.getHUDIcon(), 1));
             } else {
@@ -70,7 +69,7 @@ public record ModuleJetpackUnit(JetpackMode mode, ThrustMultiplier thrustMultipl
     @Override
     public void onRemoved(IModule<ModuleJetpackUnit> module, IModuleContainer moduleContainer, ItemStack stack, boolean last) {
         //Vent the excess hydrogen from the jetpack
-        IChemicalHandler chemicalHandler = Capabilities.CHEMICAL.getCapability(stack);
+        IChemicalHandler chemicalHandler = FabricComponentItemLookup.CHEMICAL.find(stack, null);
         if (chemicalHandler != null) {
             for (int tank = 0, tanks = chemicalHandler.getChemicalTanks(); tank < tanks; tank++) {
                 ChemicalStack stored = chemicalHandler.getChemicalInTank(tank);

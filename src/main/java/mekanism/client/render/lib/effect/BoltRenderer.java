@@ -34,6 +34,14 @@ public class BoltRenderer {
 
     private final Map<Object, BoltOwnerData> boltOwners = new Object2ObjectOpenHashMap<>();
 
+    /** World-relative times and coordinates must not survive a native client world change. */
+    public void clear() {
+        synchronized (boltOwners) {
+            boltOwners.clear();
+            refreshTimestamp = new Timestamp();
+        }
+    }
+
     public boolean hasBoltsToRender() {
         synchronized (boltOwners) {
             return boltOwners.values().stream().anyMatch(data -> !data.bolts.isEmpty());

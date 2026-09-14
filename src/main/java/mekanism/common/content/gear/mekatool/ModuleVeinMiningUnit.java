@@ -32,7 +32,6 @@ import mekanism.api.radial.mode.NestedRadialMode;
 import mekanism.api.text.EnumColor;
 import mekanism.api.text.IHasTextComponent;
 import mekanism.api.text.TextComponentUtil;
-import mekanism.common.Mekanism;
 import mekanism.common.MekanismLang;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.item.gear.ItemAtomicDisassembler.DisassemblerMode;
@@ -61,14 +60,14 @@ import org.jetbrains.annotations.Nullable;
 @ParametersAreNotNullByDefault
 public record ModuleVeinMiningUnit(boolean extended, ExcavationRange excavationRange) implements ICustomModule<ModuleVeinMiningUnit> {
 
-    public static final ResourceLocation EXTENDED_MODE = Mekanism.rl("extended_mode");
-    public static final ResourceLocation EXCAVATION_RANGE = Mekanism.rl("mining_range");
+    public static final ResourceLocation EXTENDED_MODE = ResourceLocation.fromNamespaceAndPath("mekanism", "extended_mode");
+    public static final ResourceLocation EXCAVATION_RANGE = ResourceLocation.fromNamespaceAndPath("mekanism", "mining_range");
 
     private static final BooleanRadialModes RADIAL_MODES = new BooleanRadialModes(
           new BasicRadialMode(MekanismLang.RADIAL_VEIN_NORMAL, DisassemblerMode.VEIN.icon(), EnumColor.AQUA),
           new BasicRadialMode(MekanismLang.RADIAL_VEIN_EXTENDED, MekanismUtils.getResource(MekanismUtils.ResourceType.GUI_RADIAL, "vein_extended.png"), EnumColor.PINK)
     );
-    private static final RadialData<IRadialMode> RADIAL_DATA = IRadialDataHelper.INSTANCE.booleanBasedData(Mekanism.rl("vein_mining_mode"), RADIAL_MODES);
+    private static final RadialData<IRadialMode> RADIAL_DATA = IRadialDataHelper.INSTANCE.booleanBasedData(ResourceLocation.fromNamespaceAndPath("mekanism", "vein_mining_mode"), RADIAL_MODES);
     private static final NestedRadialMode NESTED_RADIAL_MODE = new NestedRadialMode(RADIAL_DATA, MekanismLang.RADIAL_VEIN, DisassemblerMode.VEIN.icon(), EnumColor.AQUA);
 
     public ModuleVeinMiningUnit(IModule<ModuleVeinMiningUnit> module) {

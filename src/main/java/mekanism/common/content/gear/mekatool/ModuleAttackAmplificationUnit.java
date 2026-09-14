@@ -13,7 +13,6 @@ import mekanism.api.gear.IModuleContainer;
 import mekanism.api.text.EnumColor;
 import mekanism.api.text.IHasTextComponent;
 import mekanism.api.text.TextComponentUtil;
-import mekanism.common.Mekanism;
 import mekanism.common.MekanismLang;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -27,7 +26,7 @@ import net.minecraft.world.item.ItemStack;
 @ParametersAreNotNullByDefault
 public record ModuleAttackAmplificationUnit(AttackDamage attackDamage) implements ICustomModule<ModuleAttackAmplificationUnit> {
 
-    public static final ResourceLocation ATTACK_DAMAGE = Mekanism.rl("bonus_attack_damage");
+    public static final ResourceLocation ATTACK_DAMAGE = ResourceLocation.fromNamespaceAndPath("mekanism", "bonus_attack_damage");
 
     public ModuleAttackAmplificationUnit(IModule<ModuleAttackAmplificationUnit> module) {
         this(module.<AttackDamage>getConfigOrThrow(ATTACK_DAMAGE).get());

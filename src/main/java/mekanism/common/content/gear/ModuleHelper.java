@@ -22,7 +22,8 @@ import mekanism.api.gear.ModuleData;
 import mekanism.api.providers.IModuleDataProvider;
 import mekanism.client.model.MekanismModelCache;
 import mekanism.client.render.armor.MekaSuitArmor;
-import mekanism.common.Mekanism;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import mekanism.common.item.ItemModule;
 import mekanism.common.registries.MekanismDataComponents;
 import mekanism.common.util.InventoryUtils;
@@ -46,6 +47,8 @@ import org.jetbrains.annotations.Nullable;
  */
 @NothingNullByDefault
 public class ModuleHelper implements IModuleHelper {//TODO - 1.22: Evaluate moving at least some of this stuff to being defined via datamaps or at least datapack
+
+    private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism");
 
     public static ModuleHelper get() {
         return (ModuleHelper) INSTANCE;
@@ -73,15 +76,15 @@ public class ModuleHelper implements IModuleHelper {//TODO - 1.22: Evaluate movi
         Set<String> imcMethods = new HashSet<>(5);
         registrations.stream().filter(message -> MekanismIMC.ADD_MODULE_CONTAINER.equals(message.method())).forEach(message -> {
             if (message.value().get() instanceof ModuleContainerTarget(Holder<Item> container, String imcMethod)) {
-                Mekanism.logger.debug("Registered module container '{}' with method '{}'.", container.getRegisteredName(), imcMethod);
+                LOGGER.debug("Registered module container '{}' with method '{}'.", container.getRegisteredName(), imcMethod);
                 if (moduleContainers.put(container.value(), imcMethod) != null) {
-                    Mekanism.logger.error("Item '{}' has already been registered as a module container.", container.getRegisteredName());
+                    LOGGER.error("Item '{}' has already been registered as a module container.", container.getRegisteredName());
                 }
                 if (!imcMethods.add(imcMethod)) {
-                    Mekanism.logger.error("Module container '{}' uses already registered method '{}'.", container.getRegisteredName(), imcMethod);
+                    LOGGER.error("Module container '{}' uses already registered method '{}'.", container.getRegisteredName(), imcMethod);
                 }
             } else {
-                Mekanism.logger.warn("Invalid module container registration body.");
+                LOGGER.warn("Invalid module container registration body.");
             }
         });
         return moduleContainers;
@@ -99,7 +102,7 @@ public class ModuleHelper implements IModuleHelper {//TODO - 1.22: Evaluate movi
                     logDebugReceivedIMC(imcMethod, moduleData);
                 } else {
                     //Holder for something other than modules
-                    Mekanism.logger.warn("Invalid module support registration body for '{}'.", imcMethod);
+                    LOGGER.warn("Invalid module support registration body for '{}'.", imcMethod);
                 }
             } else if (body instanceof HolderSet<?> holderSet) {
                 for (Holder<?> holder : holderSet) {
@@ -108,7 +111,7 @@ public class ModuleHelper implements IModuleHelper {//TODO - 1.22: Evaluate movi
                         logDebugReceivedIMC(imcMethod, moduleData);
                     } else {
                         //Holder set for something other than modules
-                        Mekanism.logger.warn("Invalid module support registration body for '{}'.", imcMethod);
+                        LOGGER.warn("Invalid module support registration body for '{}'.", imcMethod);
                         break;
                     }
                 }
@@ -125,7 +128,7 @@ public class ModuleHelper implements IModuleHelper {//TODO - 1.22: Evaluate movi
                     logDebugReceivedIMC(imcMethod, moduleData);
                 }
             } else {
-                Mekanism.logger.warn("Invalid module support registration body for '{}'.", imcMethod);
+                LOGGER.warn("Invalid module support registration body for '{}'.", imcMethod);
             }
         });
         Set<ModuleData<?>> supported = supportedModulesBuilder.build();
@@ -138,7 +141,7 @@ public class ModuleHelper implements IModuleHelper {//TODO - 1.22: Evaluate movi
     }
 
     private void logDebugReceivedIMC(String imcMethod, ModuleData<?> moduleData) {
-        Mekanism.logger.debug("Registered support for module '{}' using method '{}'.", moduleData, imcMethod);
+        LOGGER.debug("Registered support for module '{}' using method '{}'.", moduleData, imcMethod);
     }
 
     @Override
@@ -148,7 +151,7 @@ public class ModuleHelper implements IModuleHelper {//TODO - 1.22: Evaluate movi
 
     @Override
     public Item.Properties applyModuleContainerProperties(Item.Properties properties) {
-        return properties.component(MekanismDataComponents.MODULE_CONTAINER, ModuleContainer.EMPTY);
+        return properties.component(MekanismDataComponents.MODULE_CONTAINER.get(), ModuleContainer.EMPTY);
     }
 
     @Override
@@ -188,7 +191,7 @@ public class ModuleHelper implements IModuleHelper {//TODO - 1.22: Evaluate movi
     @Override
     @Nullable
     public ModuleContainer getModuleContainer(ItemStack stack) {
-        return isModuleContainer(stack) ? stack.getOrDefault(MekanismDataComponents.MODULE_CONTAINER, ModuleContainer.EMPTY) : null;
+        return isModuleContainer(stack) ? stack.getOrDefault(MekanismDataComponents.MODULE_CONTAINER.get(), ModuleContainer.EMPTY) : null;
     }
 
     @Override

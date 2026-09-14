@@ -14,7 +14,6 @@ import mekanism.api.gear.IModuleContainer;
 import mekanism.api.math.MathUtils;
 import mekanism.api.text.IHasTextComponent;
 import mekanism.api.text.TextComponentUtil;
-import mekanism.common.Mekanism;
 import mekanism.common.MekanismLang;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.network.to_client.PacketLightningRender;
@@ -29,12 +28,12 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.network.PacketDistributor;
+import mekanism.fabric.network.FabricGearEffectsNetworking;
 
 @ParametersAreNotNullByDefault
 public record ModuleMagneticAttractionUnit(Range range) implements ICustomModule<ModuleMagneticAttractionUnit> {
 
-    public static final ResourceLocation RANGE = Mekanism.rl("range");
+    public static final ResourceLocation RANGE = ResourceLocation.fromNamespaceAndPath("mekanism", "range");
 
     public ModuleMagneticAttractionUnit(IModule<ModuleMagneticAttractionUnit> module) {
         this(module.<Range>getConfigOrThrow(RANGE).get());
@@ -78,7 +77,7 @@ public record ModuleMagneticAttractionUnit(Range range) implements ICustomModule
         Vec3 motionNeeded = new Vec3(Math.min(diff.x, 1), Math.min(diff.y, 1), Math.min(diff.z, 1));
         Vec3 motionDiff = motionNeeded.subtract(player.getDeltaMovement());
         item.setDeltaMovement(motionDiff.scale(0.2));
-        PacketDistributor.sendToPlayersTrackingEntityAndSelf(player, new PacketLightningRender(LightningPreset.MAGNETIC_ATTRACTION, 31 * player.getUUID().hashCode() + item.hashCode(),
+        FabricGearEffectsNetworking.sendTrackingAndSelf(player, new PacketLightningRender(LightningPreset.MAGNETIC_ATTRACTION, 31 * player.getUUID().hashCode() + item.hashCode(),
               player.position().add(0, 0.2, 0), item.position(), (int) (diff.length() * 4)));
     }
 

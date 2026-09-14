@@ -3,25 +3,23 @@ package mekanism.common.network.to_client;
 import io.netty.buffer.ByteBuf;
 import java.util.function.BooleanSupplier;
 import java.util.function.IntFunction;
-import mekanism.client.render.RenderTickHandler;
-import mekanism.common.Mekanism;
+import mekanism.fabric.client.render.FabricBoltRendering;
+import net.minecraft.resources.ResourceLocation;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.lib.effect.BoltEffect;
 import mekanism.common.lib.effect.BoltEffect.BoltRenderInfo;
 import mekanism.common.lib.effect.BoltEffect.SpawnFunction;
-import mekanism.common.network.IMekanismPacket;
 import mekanism.common.network.PacketUtils;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.util.ByIdMap;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.jetbrains.annotations.NotNull;
 
-public record PacketLightningRender(LightningPreset preset, int renderer, Vec3 start, Vec3 end, int segments) implements IMekanismPacket {
+public record PacketLightningRender(LightningPreset preset, int renderer, Vec3 start, Vec3 end, int segments) implements CustomPacketPayload {
 
-    public static final CustomPacketPayload.Type<PacketLightningRender> TYPE = new CustomPacketPayload.Type<>(Mekanism.rl("render_bolt"));
+    public static final CustomPacketPayload.Type<PacketLightningRender> TYPE = new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("mekanism", "render_bolt"));
     public static final StreamCodec<ByteBuf, PacketLightningRender> STREAM_CODEC = StreamCodec.composite(
           LightningPreset.STREAM_CODEC, PacketLightningRender::preset,
           ByteBufCodecs.VAR_INT, PacketLightningRender::renderer,
@@ -37,10 +35,9 @@ public record PacketLightningRender(LightningPreset preset, int renderer, Vec3 s
         return TYPE;
     }
 
-    @Override
-    public void handle(IPayloadContext context) {
+    public void handle() {
         if (preset.shouldAdd.getAsBoolean()) {
-            RenderTickHandler.renderBolt(renderer, preset.boltCreator.create(start, end, segments));
+            FabricBoltRendering.renderBolt(renderer, preset.boltCreator.create(start, end, segments));
         }
     }
 

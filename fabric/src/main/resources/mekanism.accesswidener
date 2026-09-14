@@ -31,5 +31,8 @@ accessible field net/minecraft/client/gui/LayeredDraw layers Ljava/util/List;
 # Original meltdown uses vanilla's real bounded drop merger for forced reactor-inner destruction.
 accessible method net/minecraft/world/level/Explosion addOrAppendStack (Ljava/util/List;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/core/BlockPos;)V
 
+# Original breathing module distinguishes rain from partial water immersion using vanilla's two-position test.
+accessible method net/minecraft/world/entity/Entity isInRain ()Z
+
 # Security config and play payloads share the actual native connection across listener transitions.
 accessible field net/minecraft/client/multiplayer/ClientCommonPacketListenerImpl connection Lnet/minecraft/network/Connection;

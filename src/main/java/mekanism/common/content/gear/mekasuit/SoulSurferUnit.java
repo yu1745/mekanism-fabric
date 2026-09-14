@@ -3,7 +3,6 @@ package mekanism.common.content.gear.mekasuit;
 import mekanism.api.annotations.ParametersAreNotNullByDefault;
 import mekanism.api.gear.EnchantmentAwareModule;
 import mekanism.api.gear.IModule;
-import mekanism.common.Mekanism;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EquipmentSlotGroup;
@@ -17,7 +16,7 @@ import org.jetbrains.annotations.NotNull;
 @ParametersAreNotNullByDefault
 public class SoulSurferUnit implements EnchantmentAwareModule<SoulSurferUnit> {
 
-    private static final ResourceLocation MOVEMENT_EFFICIENCY = Mekanism.rl("movement_efficiency");
+    private static final ResourceLocation MOVEMENT_EFFICIENCY = ResourceLocation.fromNamespaceAndPath("mekanism", "movement_efficiency");
 
     @Override
     public void adjustAttributes(IModule<SoulSurferUnit> module, GearAttributeContext event) {

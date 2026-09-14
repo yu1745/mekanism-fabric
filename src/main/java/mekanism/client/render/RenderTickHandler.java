@@ -22,7 +22,7 @@ import mekanism.client.render.armor.MekaSuitArmor;
 import mekanism.client.render.hud.RadiationOverlay;
 import mekanism.client.render.lib.Outlines;
 import mekanism.client.render.lib.Outlines.Line;
-import mekanism.client.render.lib.effect.BoltRenderer;
+import mekanism.fabric.client.render.FabricBoltRendering;
 import mekanism.client.render.tileentity.IWireFrameRenderer;
 import mekanism.common.Mekanism;
 import mekanism.common.base.ProfilerConstants;
@@ -105,7 +105,6 @@ public class RenderTickHandler {
     private static final Map<BlockState, List<Line>> cachedWireFrames = new Reference2ObjectOpenHashMap<>();
     private static final Map<Direction, Map<TransmissionType, Model3D>> cachedOverlays = new EnumMap<>(Direction.class);
     private static final List<LazyRender> transparentRenderers = new ArrayList<>();
-    private static final BoltRenderer boltRenderer = new BoltRenderer();
     private static final Map<Class<?>, Boolean> IS_EMI_SCREEN = new HashMap<>();
 
     private boolean outliningArea = false;
@@ -121,7 +120,7 @@ public class RenderTickHandler {
     }
 
     public static void renderBolt(Object renderer, BoltEffect bolt) {
-        boltRenderer.update(renderer, bolt, MekanismRenderer.getPartialTick());
+        FabricBoltRendering.renderBolt(renderer, bolt);
     }
 
     //Note: This listener is only registered if a recipe viewer is loaded
@@ -210,11 +209,8 @@ public class RenderTickHandler {
                 transparentRenderers.clear();
                 profiler.pop();
             }
-        } else if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_PARTICLES && boltRenderer.hasBoltsToRender()) {
-            MultiBufferSource.BufferSource renderer = minecraft.renderBuffers().bufferSource();
-            boltRenderer.render(event.getPartialTick().getGameTimeDeltaPartialTick(false), event.getPoseStack(), renderer, event.getCamera().getPosition());
-            renderer.endBatch(MekanismRenderType.MEK_LIGHTNING);
         }
+        //Original lightning pass is owned by FabricBoltRendering at the native particle-return boundary.
     }
 
     @SubscribeEvent
