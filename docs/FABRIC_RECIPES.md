@@ -40,10 +40,13 @@ unadmitted.
   `IFluidTank`/`FluidAction` capability bridges; `IFluidProvider` uses the project stack and fluid-state-derived naming (no `FluidType` override promise).
 - **Chemical**: the six official ingredient implementations are admitted with the planned adaptations (`ChemicalRegistry` for registry/empty-key access, an exact
   category logger, and vanilla replacements for the three platform codec helpers: exclusive-or, type dispatch with fallback, and the aliased children field).
-  `ChemicalIngredientTypeRegistry` narrowly owns the six built-in `mekanism:compound|difference|empty|intersection|single|tag` IDs and reverse codec identity;
-  `MekanismChemicalIngredientTypes` registers them once in official order and freezes before recipe decoding. Duplicate IDs, duplicate codec identity, late
-  registration, and missing built-ins fail. Type registration is deliberately triggered from the mod bootstrap (and isolated test bootstraps), not from the creator
-  service class, because the ingredient codecs consult the creator service during their own initialization.
+  `ChemicalIngredientTypeRegistry` narrowly owns the six built-in `mekanism:compound|difference|empty|intersection|single|tag` IDs and reverse codec identity, backed
+  by the single canonical vanilla registry `mekanism:chemical_ingredient_type`; the Fabric construction owner
+  `FabricChemicalIngredientTypeRegistryLifecycle` allocates that plain non-intrusive/non-defaulted registry, installs it, publishes the exact instance into the vanilla
+  root with `SYNCED`, and `MekanismChemicalIngredientTypes` registers the six codecs once in official order and freezes before recipe decoding. Duplicate IDs,
+  duplicate codec identity, late registration, and missing built-ins fail, and unknown IDs do not silently default. Type registration is deliberately triggered
+  from the mod bootstrap (and isolated test bootstraps), not from the creator service class, because the ingredient codecs consult the creator service during their
+  own initialization.
 
 ## Generic execution and input caches
 

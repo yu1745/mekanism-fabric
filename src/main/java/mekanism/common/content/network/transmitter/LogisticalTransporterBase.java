@@ -5,18 +5,13 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
-import it.unimi.dsi.fastutil.longs.Long2ReferenceMap;
-import it.unimi.dsi.fastutil.longs.Long2ReferenceRBTreeMap;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.EnumMap;
-import java.util.Map;
 import java.util.PrimitiveIterator.OfInt;
 import java.util.UUID;
 import mekanism.api.SerializationConstants;
 import mekanism.api.text.EnumColor;
-import mekanism.common.capabilities.Capabilities;
 import mekanism.common.content.network.InventoryNetwork;
 import mekanism.common.content.transporter.TransporterManager;
 import mekanism.common.content.transporter.TransporterStack;
@@ -27,7 +22,7 @@ import mekanism.common.lib.inventory.TransitRequest.TransitResponse;
 import mekanism.common.lib.transmitter.ConnectionType;
 import mekanism.common.lib.transmitter.TransmissionType;
 import mekanism.common.lib.transmitter.acceptor.AbstractAcceptorCache;
-import mekanism.common.lib.transmitter.acceptor.AcceptorCache;
+import mekanism.common.lib.transmitter.acceptor.ItemAcceptorCache;
 import mekanism.common.network.PacketUtils;
 import mekanism.common.network.to_client.transmitter.PacketTransporterBatch;
 import mekanism.common.network.to_client.transmitter.PacketTransporterSync;
@@ -37,6 +32,12 @@ import mekanism.common.util.EnumUtils;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.TransporterUtils;
 import mekanism.common.util.WorldUtils;
+import net.fabricmc.fabric.api.transfer.v1.item.ItemStorage;
+import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
+import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
+import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
+import net.fabricmc.fabric.api.transfer.v1.transaction.TransactionContext;
+import net.fabricmc.fabric.api.transfer.v1.transaction.base.SnapshotParticipant;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -47,12 +48,20 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
-import net.neoforged.neoforge.items.IItemHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public abstract class LogisticalTransporterBase extends Transmitter<IItemHandler, InventoryNetwork, LogisticalTransporterBase> {
+/**
+ * Fabric port (Task052 continuation09): the acceptor type is a real sided {@link Storage} resolved through fresh
+ * {@link ItemAcceptorCache} lookups (no retained external Storage aliases, mirroring the reviewed fluid cache design),
+ * and insertion paths are transaction-aware. Initial insertion stages the actual {@code transit} entry, {@code nextId}
+ * increment, selected stack path and {@link TransporterManager#flowingStacks} reservation into the caller transaction:
+ * nested operations immediately see the reservation, while the initial sync packet and save marking are commit-only
+ * callbacks. Aborts (own or later root aborts) remove provisional reservations/flight and restore counters and RR
+ * state. Final in-flight delivery stages target insertion plus exact flowing removal in one transaction and commits
+ * before scheduling local deletes; the transit map is never structurally mutated during its fast iterator.
+ */
+public abstract class LogisticalTransporterBase extends Transmitter<Storage<ItemVariant>, InventoryNetwork, LogisticalTransporterBase> {
 
     protected final Int2ObjectMap<TransporterStack> transit = new Int2ObjectOpenHashMap<>();
     protected final Int2ObjectMap<TransporterStack> needsSync = new Int2ObjectOpenHashMap<>();
@@ -60,45 +69,82 @@ public abstract class LogisticalTransporterBase extends Transmitter<IItemHandler
     protected int nextId = 0;
     protected int delay = 0;
     protected int delayCount = 0;
-    private final Map<Direction, BlockCapabilityCache<IItemHandler, Direction>> capabilityCache = new EnumMap<>(Direction.class);
-    private final Long2ReferenceMap<EnumMap<Direction, BlockCapabilityCache<IItemHandler, Direction>>> fallbackHandlerCache = new Long2ReferenceRBTreeMap<>();
 
     protected LogisticalTransporterBase(TileEntityTransmitter tile, TransporterTier tier) {
         super(tile, TransmissionType.ITEM);
         this.tier = tier;
     }
 
-    @Nullable
-    private IItemHandler getCapForSide(Direction logisticalSide) {
-        BlockCapabilityCache<IItemHandler, Direction> cache = capabilityCache.get(logisticalSide);
-        if (cache == null) {
-            cache = Capabilities.ITEM.createCache((ServerLevel) getLevel(), getBlockPos().relative(logisticalSide), logisticalSide.getOpposite(), this::isValid);
-            capabilityCache.put(logisticalSide, cache);
+    /**
+     * Stable real-owner participant (Task052 R2/R7 correction) for the transporter's shared mutable transit state:
+     * the {@code transit} map, {@code nextId}, {@code needsSync} and the per-reservation commit-only sync/save
+     * notifications. An identity/map snapshot is taken before the first reservation at each nesting depth;
+     * mutable stack contents/path/flowing state are separately deep-snapshotted by each stack's stable participant. The real
+     * {@link SnapshotParticipant} nesting promotion makes an enclosing abort after a committed nested reservation
+     * roll everything back, and {@code onFinalCommit} publishes packets/save marking only for reservations that
+     * survived every nesting level.
+     */
+    private final TransitReservationParticipant reservationTx = new TransitReservationParticipant();
+
+    /** Reservations staged into a transaction whose outer commit is still pending their sync packet/save. */
+    private final Int2ObjectMap<TransporterStack> pendingCommitSync = new Int2ObjectOpenHashMap<>();
+
+    private final class TransitReservationParticipant extends SnapshotParticipant<ReservationSnapshot> {
+
+        @Override
+        protected ReservationSnapshot createSnapshot() {
+            return new ReservationSnapshot(new Int2ObjectOpenHashMap<>(transit), nextId, new Int2ObjectOpenHashMap<>(needsSync),
+                  new Int2ObjectOpenHashMap<>(pendingCommitSync));
         }
-        return cache.getCapability();
+
+        @Override
+        protected void readSnapshot(ReservationSnapshot snapshot) {
+            transit.clear();
+            transit.putAll(snapshot.transit);
+            nextId = snapshot.nextId;
+            needsSync.clear();
+            needsSync.putAll(snapshot.needsSync);
+            pendingCommitSync.clear();
+            pendingCommitSync.putAll(snapshot.pendingCommitSync);
+        }
+
+        @Override
+        protected void onFinalCommit() {
+            if (!pendingCommitSync.isEmpty()) {
+                boolean any = false;
+                for (ObjectIterator<Int2ObjectMap.Entry<TransporterStack>> iterator = Int2ObjectMaps.fastIterator(pendingCommitSync); iterator.hasNext(); ) {
+                    Int2ObjectMap.Entry<TransporterStack> entry = iterator.next();
+                    int stackId = entry.getIntKey();
+                    TransporterStack stack = entry.getValue();
+                    if (transit.get(stackId) == stack) {
+                        //The reservation survived every nesting level: publish its initial packet now
+                        PacketUtils.sendToAllTracking(PacketTransporterSync.create(getWorldPositionLong(), stackId, stack), getTransmitterTile());
+                        any = true;
+                    }
+                }
+                pendingCommitSync.clear();
+                if (any) {
+                    getTransmitterTile().markForSave();
+                }
+            }
+        }
     }
 
-    @Nullable
-    private IItemHandler getFallbackCapForSide(long pos, Direction handlerSide) {
-        EnumMap<Direction, BlockCapabilityCache<IItemHandler, Direction>> sideCache = fallbackHandlerCache.computeIfAbsent(pos, k -> new EnumMap<>(Direction.class));
-        BlockCapabilityCache<IItemHandler, Direction> cache = sideCache.get(handlerSide);
-        if (cache == null) {
-            cache = Capabilities.ITEM.createCache((ServerLevel) getLevel(), BlockPos.of(pos), handlerSide, this::isValid);
-            sideCache.put(handlerSide, cache);
-        }
-        return cache.getCapability();
+    private record ReservationSnapshot(Int2ObjectMap<TransporterStack> transit, int nextId, Int2ObjectMap<TransporterStack> needsSync,
+          Int2ObjectMap<TransporterStack> pendingCommitSync) {
     }
-
 
     @Override
-    protected AbstractAcceptorCache<IItemHandler, ?> createAcceptorCache() {
-        return new AcceptorCache<>(getTransmitterTile(), Capabilities.ITEM.block());
+    protected AbstractAcceptorCache<Storage<ItemVariant>, ?> createAcceptorCache() {
+        //Fresh per-transmitter item lookup cache: no returned Storage is retained; each resolution is a fresh
+        // ItemStorage.SIDED.find on the opposite face, guarded by the loaded neighbor check (continuation09)
+        return new ItemAcceptorCache(getTransmitterTile());
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public AcceptorCache<IItemHandler> getAcceptorCache() {
-        return (AcceptorCache<IItemHandler>) super.getAcceptorCache();
+    public ItemAcceptorCache getAcceptorCache() {
+        return (ItemAcceptorCache) super.getAcceptorCache();
     }
 
     @Override
@@ -150,24 +196,39 @@ public abstract class LogisticalTransporterBase extends Transmitter<IItemHandler
                 delay = 3;
                 //Attempt to pull
                 for (Direction side : EnumUtils.DIRECTIONS) {
+                    //Raw configured PULL sides first, then refresh this side's acceptor-connection validity (bitmap
+                    // policy, packet on change) before the effective check, so null->valid providers are rediscovered
+                    if (getConnectionTypeRaw(side) != ConnectionType.PULL) {
+                        continue;
+                    }
+                    refreshAcceptorConnections(side);
                     if (!isConnectionType(side, ConnectionType.PULL)) {
                         continue;
                     }
-                    IItemHandler inventory = getCapForSide(side);
+                    Storage<ItemVariant> inventory = getAcceptorCache().getCachedAcceptor(side);
                     if (inventory != null) {
                         TransitRequest request = TransitRequest.anyItem(inventory, tier.getPullAmount());
                         //There's a stack available to insert into the network...
                         if (!request.isEmpty()) {
-                            TransitResponse response = insert(null, getBlockPos().relative(side), request, getColor(), true, 0);
-                            if (response.isEmpty()) {
-                                //Insert failed; increment the backoff and calculate delay. Note that we cap retries
-                                // at a max of 40 ticks (2 seconds), which would be 4 consecutive retries
+                            //Sender-owned transaction: the route reservation and the exact source debit commit
+                            // together or not at all
+                            try (Transaction tx = Transaction.openOuter()) {
+                                TransitResponse response = insert(null, getBlockPos().relative(side), request, getColor(), true, 0, tx);
+                                if (response.isEmpty()) {
+                                    //Insert failed; increment the backoff and calculate delay. Note that we cap retries
+                                    // at a max of 40 ticks (2 seconds), which would be 4 consecutive retries
+                                    delayCount++;
+                                    delay = Math.min(2 * SharedConstants.TICKS_PER_SECOND, (int) Math.exp(delayCount));
+                                } else {
+                                    response.useAll(tx);
+                                    tx.commit();
+                                    //If the insert succeeded, try again for another 10 ticks
+                                    delay = MekanismUtils.TICKS_PER_HALF_SECOND;
+                                }
+                            } catch (RuntimeException ignored) {
+                                //Exact debit or route failure aborted the whole pull; back off like a failed insert
                                 delayCount++;
                                 delay = Math.min(2 * SharedConstants.TICKS_PER_SECOND, (int) Math.exp(delayCount));
-                            } else {
-                                //If the insert succeeded, remove the inserted count and try again for another 10 ticks
-                                response.useAll();
-                                delay = MekanismUtils.TICKS_PER_HALF_SECOND;
                             }
                         }
                     }
@@ -215,29 +276,50 @@ public abstract class LogisticalTransporterBase extends Transmitter<IItemHandler
                                     prevSet = next;
                                 } else if (stack.getPathType().hasTarget()) {
                                     //Otherwise, try to insert it into the destination inventory
-                                    //Get the handler we are trying to insert into from the network's acceptor cache
+                                    //Get the real sided storage we are trying to insert into from the network's fresh acceptor cache
                                     Direction side = stack.getSide(this).getOpposite();
-                                    IItemHandler acceptor = network.getCachedAcceptor(next, side);
+                                    Storage<ItemVariant> acceptor = network.getCachedAcceptor(next, side);
                                     if (acceptor == null && stack.getPathType().isHome()) {
-                                        acceptor = getFallbackCapForSide(next, side);
+                                        acceptor = getFallbackStorageForSide(next, side);
                                     }
-                                    TransitResponse response = TransitRequest.simple(stack.itemStack).addToInventory(getLevel(), BlockPos.of(next), acceptor, 0,
-                                          stack.getPathType().isHome());
-                                    if (!response.isEmpty()) {
-                                        //We were able to add at least part of the stack to the inventory
-                                        ItemStack rejected = response.getRejected();
-                                        if (rejected.isEmpty()) {
-                                            //Nothing was rejected (it was all accepted); remove the stack from the prediction
-                                            // tracker and schedule this stack for deletion. Continue the loop thereafter
-                                            TransporterManager.remove(getLevel(), stack);
-                                            deletes.add(stackId);
-                                            continue;
-                                        }
-                                        //Some portion of the stack got rejected; save the remainder and
-                                        // recalculate below to sort out what to do next
-                                        stack.itemStack = rejected;
-                                    }//else the entire stack got rejected (Note: we don't need to update the stack to point to itself)
-                                    prevSet = next;
+                                    //Final in-flight delivery: stage the target insertion plus the exact stack
+                                    // remainder (including empty) and the flowing removal in ONE transaction, before
+                                    // the commit; the transit map itself is only mutated through the deferred deletes
+                                    // set. On abort (any nesting level) the stack participant restores the original
+                                    // item stack and flowing reservation membership.
+                                    boolean deliveryAllowed = getConnectionType(side.getOpposite()).canSendTo() &&
+                                          TransporterUtils.canInsert(getLevel(), BlockPos.of(next), stack.color, stack.itemStack,
+                                                side.getOpposite(), stack.getPathType().isHome());
+                                    try (Transaction delivery = Transaction.openOuter()) {
+                                        TransitRequest request = TransitRequest.simple(stack.itemStack);
+                                        TransitResponse response = !deliveryAllowed ? request.getEmptyResponse() :
+                                              request.addToInventory(getLevel(), BlockPos.of(next), acceptor, 0, stack.getPathType().isHome(), delivery);
+                                        if (!response.isEmpty()) {
+                                            //We were able to add at least part of the stack to the inventory
+                                            ItemStack rejected = response.getRejected();
+                                            //Stage the remainder inside the same transaction, before the commit
+                                            stack.updateSnapshots(delivery, getLevel());
+                                            if (rejected.isEmpty()) {
+                                                //Nothing was rejected (it was all accepted); remove the stack from
+                                                // the prediction tracker inside the same transaction
+                                                if (stack.hasPath() && stack.getPathType().hasTarget()) {
+                                                    TransporterManager.remove(getLevel(), stack);
+                                                }
+                                                stack.itemStack = ItemStack.EMPTY;
+                                            } else {
+                                                //Some portion of the stack got rejected; stage the remainder and
+                                                // recalculate below to sort out what to do next
+                                                stack.itemStack = rejected;
+                                            }
+                                            delivery.commit();
+                                            if (rejected.isEmpty()) {
+                                                //Schedule this stack for deletion now that the delivery has committed
+                                                deletes.add(stackId);
+                                                continue;
+                                            }
+                                        }//else the entire stack got rejected; abort (implicit) - we don't need to update the stack to point to itself
+                                        prevSet = next;
+                                    }
                                 }
                             }
                         }
@@ -270,7 +352,7 @@ public abstract class LogisticalTransporterBase extends Transmitter<IItemHandler
                                 LogisticalTransporterBase nextTransmitter = network.getTransmitter(nextPos);
                                 if (nextTransmitter == null && stack.getPathType().noTarget() && stack.getPath().size() == 2) {
                                     //If there is no next transmitter, and it was an idle path, assume that we are idling
-                                    // in a single length transmitter, in which case we only recalculate it at 50 if it won't
+                                    // in a single length transporter, in which case we only recalculate it at 50 if it won't
                                     // be able to go into that connection type
                                     tryRecalculate = !getConnectionType(nextSide).canSendTo();
                                 } else {
@@ -307,7 +389,6 @@ public abstract class LogisticalTransporterBase extends Transmitter<IItemHandler
     @Override
     public void remove() {
         super.remove();
-        clearCapabilityCaches();
         if (!isRemote()) {
             for (TransporterStack stack : getTransit()) {
                 TransporterManager.remove(getLevel(), stack);
@@ -318,17 +399,11 @@ public abstract class LogisticalTransporterBase extends Transmitter<IItemHandler
     @Override
     public void onWorldSeparate(boolean stillPresent) {
         super.onWorldSeparate(stillPresent);
-        clearCapabilityCaches();//may still be "loaded" but caches will likely be invalidated
-    }
-
-    private void clearCapabilityCaches() {
-        capabilityCache.clear();
-        fallbackHandlerCache.clear();
+        //No retained external endpoint state exists to clear: fresh lookups are re-resolved on next use
     }
 
     @Override
     public void refreshConnections() {
-        clearCapabilityCaches();
         super.refreshConnections();
     }
 
@@ -448,36 +523,135 @@ public abstract class LogisticalTransporterBase extends Transmitter<IItemHandler
     }
 
     public <BE extends BlockEntity & IAdvancedTransportEjector> TransitResponse insertMaybeRR(@Nullable BE outputter, BlockPos outputterPos, TransitRequest request, @Nullable EnumColor color, boolean doEmit, int min) {
-        if (outputter != null && outputter.getRoundRobin()) {
-            return insert(outputter, outputterPos, request, color, min, doEmit, mekanism.common.content.transporter.TransporterStack::recalculateRRPath);
+        //Legacy self-contained variant: no caller transaction; stages and commits immediately. The caller remains
+        // responsible for the exact source debit via response.useAll()
+        try (Transaction own = Transaction.openOuter()) {
+            TransitResponse response = insertMaybeRR(outputter, outputterPos, request, color, doEmit, min, own);
+            if (doEmit) {
+                own.commit();
+            }
+            return response;
         }
-        return insert(outputter, outputterPos, request, color, doEmit, min);
+    }
+
+    public <BE extends BlockEntity & IAdvancedTransportEjector> TransitResponse insertMaybeRR(@Nullable BE outputter, BlockPos outputterPos, TransitRequest request, @Nullable EnumColor color, boolean doEmit, int min, Transaction tx) {
+        if (outputter != null && outputter.getRoundRobin()) {
+            return insert(outputter, outputterPos, request, color, min, doEmit,
+                  (TxPathCalculator<BE>) (stack, req, out, transporter, minAmount, emit, txCtx) -> txCtx == null
+                        ? stack.recalculateRRPath(req, out, transporter, minAmount, emit)
+                        : stack.recalculateRRPath(req, out, transporter, minAmount, emit, txCtx), tx);
+        }
+        return insert(outputter, outputterPos, request, color, doEmit, min, tx);
     }
 
     public TransitResponse insert(@Nullable BlockEntity outputter, BlockPos outputterPos, TransitRequest request, @Nullable EnumColor color, boolean doEmit, int min) {
-        return insert(outputter, outputterPos, request, color, min, doEmit, mekanism.common.content.transporter.TransporterStack::recalculatePath);
+        return insert(outputter, outputterPos, request, color, doEmit, min, (Transaction) null);
     }
 
-    private <BE extends BlockEntity> TransitResponse insert(@Nullable BE outputter, BlockPos outputterPos, TransitRequest request, @Nullable EnumColor color,
-          int min, boolean doEmit, PathCalculator<BE> pathCalculator) {
+    /**
+     * Legacy self-contained insert: opens its own caller transaction and commits it (no internal source debit; the
+     * caller remains responsible for response.useAll()).
+     */
+    public TransitResponse insert(@Nullable BlockEntity outputter, BlockPos outputterPos, TransitRequest request, @Nullable EnumColor color, boolean doEmit, int min, @Nullable Transaction tx) {
+        if (tx != null) {
+            return insert(outputter, outputterPos, request, color, doEmit, min, (TransactionContext) tx);
+        }
+        try (Transaction own = Transaction.openOuter()) {
+            TransitResponse response = insert(outputter, outputterPos, request, color, doEmit, min, (TransactionContext) own);
+            if (doEmit) {
+                own.commit();
+            }
+            return response;
+        }
+    }
+
+    public TransitResponse insert(@Nullable BlockEntity outputter, BlockPos outputterPos, TransitRequest request, @Nullable EnumColor color,
+          boolean doEmit, int min, @Nullable TransactionContext tx) {
+        if (!isValid() || isRemote() || !WorldUtils.isChunkLoaded(getLevel(), getBlockPos()) ||
+              getLevel().getBlockEntity(getBlockPos()) != getTransmitterTile()) {
+            return request.getEmptyResponse();
+        }
         Direction from = WorldUtils.sideDifference(getBlockPos(), outputterPos);
         if (from != null && canReceiveFrom(from.getOpposite())) {
             TransporterStack stack = createInsertStack(outputterPos.asLong(), color);
             if (stack.canInsertToTransporterNN(this, from, outputter)) {
-                return updateTransit(doEmit, stack, pathCalculator.calculate(stack, request, outputter, this, min, doEmit));
+                if (tx != null) {
+                    if (!doEmit) {
+                        try (Transaction prediction = tx.openNested()) {
+                            return stack.recalculatePath(request, this, min, false, Collections.emptyMap(), prediction);
+                        }
+                    }
+                    return updateTransit(true, stack, stack.recalculatePath(request, this, min, true, Collections.emptyMap(), tx), tx);
+                }
+                return updateTransit(doEmit, stack, stack.recalculatePath(request, this, min, doEmit), null);
             }
         }
         return request.getEmptyResponse();
     }
 
+    private <BE extends BlockEntity> TransitResponse insert(@Nullable BE outputter, BlockPos outputterPos, TransitRequest request, @Nullable EnumColor color,
+          int min, boolean doEmit, TxPathCalculator<BE> pathCalculator, @Nullable TransactionContext tx) {
+        if (!isValid() || isRemote() || !WorldUtils.isChunkLoaded(getLevel(), getBlockPos()) ||
+              getLevel().getBlockEntity(getBlockPos()) != getTransmitterTile()) {
+            return request.getEmptyResponse();
+        }
+        Direction from = WorldUtils.sideDifference(getBlockPos(), outputterPos);
+        if (from == null || !canReceiveFrom(from.getOpposite())) {
+            return request.getEmptyResponse();
+        }
+        TransporterStack stack = createInsertStack(outputterPos.asLong(), color);
+        if (!stack.canInsertToTransporterNN(this, from, outputter)) {
+            return request.getEmptyResponse();
+        }
+        if (!doEmit) {
+            try (Transaction prediction = Transaction.openNested(tx)) {
+                return pathCalculator.calculate(stack, request, outputter, this, min, false, prediction);
+            }
+        }
+        return updateTransit(doEmit, stack, pathCalculator.calculate(stack, request, outputter, this, min, doEmit, tx), tx);
+    }
+
     public TransitResponse insertUnchecked(long outputterPos, TransitRequest request, @Nullable EnumColor color, boolean doEmit, int min) {
+        return insertUnchecked(outputterPos, request, color, doEmit, min, null);
+    }
+
+    public TransitResponse insertUnchecked(long outputterPos, TransitRequest request, @Nullable EnumColor color, boolean doEmit, int min, @Nullable TransactionContext tx) {
         TransporterStack stack = createInsertStack(outputterPos, color);
-        return updateTransit(doEmit, stack, stack.recalculatePath(request, this, min, doEmit));
+        if (tx != null) {
+            if (!doEmit) {
+                try (Transaction prediction = tx.openNested()) {
+                    return stack.recalculatePath(request, this, min, false, Collections.emptyMap(), prediction);
+                }
+            }
+            return updateTransit(true, stack, stack.recalculatePath(request, this, min, true, Collections.emptyMap(), tx), tx);
+        }
+        return updateTransit(doEmit, stack, stack.recalculatePath(request, this, min, doEmit), null);
     }
 
     public <BE extends BlockEntity> TransitResponse insertUnchecked(BE outputter, TransitRequest request, @Nullable EnumColor color, boolean doEmit, int min, PathCalculator<BE> pathCalculator) {
+        return insertUnchecked(outputter, request, color, doEmit, min, pathCalculator, null);
+    }
+
+    public <BE extends BlockEntity> TransitResponse insertUnchecked(BE outputter, TransitRequest request, @Nullable EnumColor color, boolean doEmit, int min, PathCalculator<BE> pathCalculator, @Nullable TransactionContext tx) {
+        if (tx != null) {
+            throw new IllegalArgumentException("A transactional insertion requires a TxPathCalculator");
+        }
         TransporterStack stack = createInsertStack(outputter.getBlockPos().asLong(), color);
-        return updateTransit(doEmit, stack, pathCalculator.calculate(stack, request, outputter, this, min, doEmit));
+        return updateTransit(doEmit, stack, pathCalculator.calculate(stack, request, outputter, this, min, doEmit), null);
+    }
+
+    /**
+     * Transaction-aware calculator variant: the RR/base path recalculation receives the caller transaction so its
+     * path/RR snapshots join it.
+     */
+    public <BE extends BlockEntity> TransitResponse insertUnchecked(BE outputter, TransitRequest request, @Nullable EnumColor color, boolean doEmit, int min, TxPathCalculator<BE> pathCalculator, @Nullable TransactionContext tx) {
+        TransporterStack stack = createInsertStack(outputter.getBlockPos().asLong(), color);
+        if (!doEmit) {
+            try (Transaction prediction = Transaction.openNested(tx)) {
+                return pathCalculator.calculate(stack, request, outputter, this, min, false, prediction);
+            }
+        }
+        return updateTransit(doEmit, stack, pathCalculator.calculate(stack, request, outputter, this, min, doEmit, tx), tx);
     }
 
     public TransporterStack createInsertStack(long outputterCoord, @Nullable EnumColor color) {
@@ -489,17 +663,38 @@ public abstract class LogisticalTransporterBase extends Transmitter<IItemHandler
     }
 
     @NotNull
-    private TransitResponse updateTransit(boolean doEmit, TransporterStack stack, TransitResponse response) {
+    private TransitResponse updateTransit(boolean doEmit, TransporterStack stack, TransitResponse response, @Nullable TransactionContext tx) {
         if (!response.isEmpty()) {
             stack.itemStack = response.getStack();
             if (doEmit) {
+                if (tx != null) {
+                    //Join the shared transit state (transit/nextId/needsSync/commit notifications) to the caller
+                    // transaction BEFORE the reservation mutation (stable owner participant)
+                    reservationTx.updateSnapshots(tx);
+                }
                 int stackId = nextId++;
                 addStack(stackId, stack);
-                PacketUtils.sendToAllTracking(PacketTransporterSync.create(getWorldPositionLong(), stackId, stack), getTransmitterTile());
-                getTransmitterTile().markForSave();
+                if (tx != null) {
+                    //Initial packet/save are commit-only: published by the participant's onFinalCommit, only if the
+                    // reservation survived every nesting level
+                    pendingCommitSync.put(stackId, stack);
+                } else {
+                    //No transaction context: immediate emission with direct packet/save (legacy callers)
+                    PacketUtils.sendToAllTracking(PacketTransporterSync.create(getWorldPositionLong(), stackId, stack), getTransmitterTile());
+                    getTransmitterTile().markForSave();
+                }
             }
         }
         return response;
+    }
+
+    @Nullable
+    private Storage<ItemVariant> getFallbackStorageForSide(long pos, Direction handlerSide) {
+        //Fresh real provider for a home fallback: validate the neighbor is loaded, no persistent capability cache
+        if (!(getLevel() instanceof ServerLevel level) || !WorldUtils.isChunkLoaded(level, BlockPos.of(pos))) {
+            return null;
+        }
+        return ItemStorage.SIDED.find(level, BlockPos.of(pos), handlerSide);
     }
 
     private void entityEntering(TransporterStack stack, int progress) {
@@ -524,5 +719,16 @@ public abstract class LogisticalTransporterBase extends Transmitter<IItemHandler
     public interface PathCalculator<BE extends BlockEntity> {
 
         TransitResponse calculate(TransporterStack stack, TransitRequest request, BE outputter, LogisticalTransporterBase transporter, int min, boolean doEmit);
+    }
+
+    /**
+     * Transaction-aware path calculator used by the tx-aware insert paths; {@code tx} is {@code null} for legacy
+     * immediate callers.
+     */
+    @FunctionalInterface
+    public interface TxPathCalculator<BE extends BlockEntity> {
+
+        TransitResponse calculate(TransporterStack stack, TransitRequest request, BE outputter, LogisticalTransporterBase transporter, int min, boolean doEmit,
+              @Nullable TransactionContext tx);
     }
 }
