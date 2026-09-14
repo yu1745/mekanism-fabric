@@ -1,5 +1,6 @@
 package mekanism.client.model.data;
 
+import java.util.Collections;
 import java.util.EnumMap;
 import java.util.Map;
 import mekanism.client.model.data.TransmitterModelData.Diversion;
@@ -10,14 +11,35 @@ import net.minecraft.core.Direction;
 public sealed class TransmitterModelData permits Diversion {
 
     private final Map<Direction, ConnectionType> connections = new EnumMap<>(Direction.class);
+    private Map<Direction, ConnectionType> connectionView = connections;
     private boolean hasColor;
+    private boolean frozen;
 
     public void setConnectionData(Direction direction, ConnectionType connectionType) {
+        ensureMutable();
         connections.put(direction, connectionType);
     }
 
+    /** Unmodifiable view; safe to publish as a render-attachment cache key. */
     public Map<Direction, ConnectionType> getConnectionsMap() {
-        return connections;
+        return connectionView;
+    }
+
+    /**
+     * Locks this snapshot against further mutation and returns it. Producers call this before publishing (render
+     * attachment / model data) so async chunk meshing can never observe a mutating connections map through a cache
+     * key. Subsequent {@link #setConnectionData} calls fail loudly instead of silently corrupting a published key.
+     */
+    public TransmitterModelData freeze() {
+        frozen = true;
+        connectionView = Collections.unmodifiableMap(connections);
+        return this;
+    }
+
+    private void ensureMutable() {
+        if (frozen) {
+            throw new IllegalStateException("TransmitterModelData snapshot is frozen; build a new snapshot instead of mutating a published one");
+        }
     }
 
     public ConnectionType getConnectionType(Direction side) {
@@ -25,6 +47,7 @@ public sealed class TransmitterModelData permits Diversion {
     }
 
     public void setHasColor(boolean hasColor) {
+        ensureMutable();
         this.hasColor = hasColor;
     }
 

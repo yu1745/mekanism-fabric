@@ -7,7 +7,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import mekanism.api.SerializationConstants;
-import mekanism.common.Mekanism;
 import mekanism.common.lib.MekanismSavedData;
 import mekanism.common.lib.inventory.HashedItem;
 import net.minecraft.core.HolderLookup;
@@ -16,11 +15,15 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 //TODO - 1.19: Keep track of UUIDs synced to a given player, and clear when they disconnect. How quickly does the memory impact grow for the user to cache them??
 // Maybe have the client send a thing like: No I can't cache them for if it only has a certain amount of ram?
 // In theory that should drastically cut down the network packet sizes
 public class QIOGlobalItemLookup {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism");
 
     public static final QIOGlobalItemLookup INSTANCE = new QIOGlobalItemLookup();
     private static final String DATA_HANDLER_NAME = "qio_type_cache";
@@ -101,6 +104,10 @@ public class QIOGlobalItemLookup {
         //Reset instance as we may have massively different sizes for different worlds,
         // so we want to free up as much memory as we can
         itemCache = HashBiMap.create();
+        //Fabric port correction (parent-authorized): clear mergedIds with the same server-lifetime reset so that
+        // world A's UUID aliases cannot influence world B; the current world's persisted aliases are reloaded from
+        // its own SavedData on the next createOrLoad, so nothing of the current world is lost by clearing here
+        mergedIds = Collections.emptyMap();
         dataHandler = null;
     }
 
@@ -126,13 +133,13 @@ public class QIOGlobalItemLookup {
                 try {
                     uuid = UUID.fromString(key);
                 } catch (IllegalArgumentException e) {
-                    Mekanism.logger.warn("Invalid UUID ({}) stored in {} saved data.", key, DATA_HANDLER_NAME);
+                    LOGGER.warn("Invalid UUID ({}) stored in {} saved data.", key, DATA_HANDLER_NAME);
                     continue;
                 }
                 ItemStack stack = ItemStack.parseOptional(provider, nbt.getCompound(key));
                 //Only add the item if the item could be read. If it can't that means the mod adding the item was probably removed
                 if (stack.isEmpty()) {
-                    Mekanism.logger.debug("Failed to read corresponding item for UUID ({}) stored in {} saved data. "
+                    LOGGER.debug("Failed to read corresponding item for UUID ({}) stored in {} saved data. "
                                           + "This most likely means the mod adding the item was removed.", uuid, DATA_HANDLER_NAME);
                 } else {
                     //Note: We can't cache the nbt we read from as something might have changed related to caps just from loading it, and we
@@ -144,10 +151,10 @@ public class QIOGlobalItemLookup {
                     } catch (IllegalArgumentException e) {
                         UUID winningId = INSTANCE.itemCache.inverse().get(item);
                         if (winningId == null) {
-                            Mekanism.logger.error("Failed to resolve conflict for UUID ({}) for item {} with components: {}. Skipping", uuid, stack.getItem(),
+                            LOGGER.error("Failed to resolve conflict for UUID ({}) for item {} with components: {}. Skipping", uuid, stack.getItem(),
                                   stack.getComponentsPatch());
                         } else {
-                            Mekanism.logger.warn("Adding alias between UUID ({}) to ({}) for item {} with components: {}", uuid, winningId, stack.getItem(),
+                            LOGGER.warn("Adding alias between UUID ({}) to ({}) for item {} with components: {}", uuid, winningId, stack.getItem(),
                                   stack.getComponentsPatch());
                             //Try to add it as an alias
                             if (INSTANCE.mergedIds.isEmpty()) {
@@ -171,7 +178,7 @@ public class QIOGlobalItemLookup {
                     UUID winningId = tag.getUUID(key);
                     INSTANCE.mergedIds.put(uuid, winningId);
                 } catch (IllegalArgumentException e) {
-                    Mekanism.logger.warn("Invalid alias UUID ({}) or winningId UUID stored in {} saved data.", key, DATA_HANDLER_NAME);
+                    LOGGER.warn("Invalid alias UUID ({}) or winningId UUID stored in {} saved data.", key, DATA_HANDLER_NAME);
                 }
             }
         }

@@ -6,7 +6,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import mekanism.common.Mekanism;
+import mekanism.api.fluid.FluidStack;
+import mekanism.common.lib.MekanismServerState;
 import mekanism.common.lib.multiblock.IInternalMultiblock;
 import mekanism.common.lib.multiblock.IMultiblock;
 import mekanism.common.lib.multiblock.IStructuralMultiblock;
@@ -41,14 +42,14 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
+import net.minecraft.world.level.material.FlowingFluid;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
-import net.neoforged.neoforge.capabilities.BlockCapability;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.common.SoundActions;
-import net.neoforged.neoforge.event.level.BlockDropsEvent;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.FluidType;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.tags.FluidTags;
+import net.fabricmc.fabric.api.lookup.v1.block.BlockApiLookup;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariantAttributes;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -408,7 +409,7 @@ public class WorldUtils {
      */
     @Nullable
     @Contract("null, _, _, _ -> null")
-    public static <CAP, CONTEXT> CAP getCapability(@Nullable Level level, BlockCapability<CAP, CONTEXT> cap, BlockPos pos, CONTEXT context) {
+    public static <CAP, CONTEXT> CAP getCapability(@Nullable Level level, BlockApiLookup<CAP, CONTEXT> cap, BlockPos pos, CONTEXT context) {
         return getCapability(level, cap, pos, null, null, context);
     }
 
@@ -426,13 +427,14 @@ public class WorldUtils {
      */
     @Nullable
     @Contract("null, _, _, _, _, _ -> null")
-    public static <CAP, CONTEXT> CAP getCapability(@Nullable Level level, BlockCapability<CAP, CONTEXT> cap, BlockPos pos, @Nullable BlockState state,
+    public static <CAP, CONTEXT> CAP getCapability(@Nullable Level level, BlockApiLookup<CAP, CONTEXT> cap, BlockPos pos, @Nullable BlockState state,
           @Nullable BlockEntity tile, CONTEXT context) {
         if (!isBlockLoaded(level, pos)) {
             //If the world is null, or it is a world reader and the block is not loaded, return null
             return null;
         }
-        return level.getCapability(cap, pos, state, tile, context);
+        //Fabric port delta: Fabric lookup with the caller-supplied state/tile hints replaces the NeoForge BlockCapability level dispatch
+        return cap.find(level, pos, state, tile, context);
     }
 
     /**
@@ -470,7 +472,7 @@ public class WorldUtils {
         if (clazz.isInstance(tile)) {
             return clazz.cast(tile);
         } else if (logWrongType) {
-            Mekanism.logger.warn("Unexpected BlockEntity class at {}, expected {}, but found: {}", pos, clazz, tile.getClass());
+            LOGGER.warn("Unexpected BlockEntity class at {}, expected {}, but found: {}", pos, clazz, tile.getClass());
         }
         return null;
     }
@@ -528,7 +530,10 @@ public class WorldUtils {
     }
 
     /**
-     * Gets the drops from breaking the block at a given spot, including any drops added via the BlockDropsEvent
+     * Gets the drops from breaking the block at a given spot.
+     *
+     * @implNote Fabric port delta: NeoForge's {@code BlockDropsEvent} (which let other mods observe or cancel block drops before they spawn) has no Fabric equivalent, so
+     * the vanilla-computed drops are returned directly; drop cancellation/modification by third-party mods is a documented platform boundary.
      */
     public static List<ItemEntity> getDrops(BlockState state, ServerLevel level, BlockPos pos, @Nullable BlockEntity tile, @Nullable Entity entity, ItemStack tool,
           boolean applyMomentum) {
@@ -553,12 +558,7 @@ public class WorldUtils {
                 }
             }
         }
-        BlockDropsEvent event = new BlockDropsEvent(level, pos, state, tile, initialDrops, entity, tool);
-        NeoForge.EVENT_BUS.post(event);
-        if (event.isCanceled()) {
-            return Collections.emptyList();
-        }
-        return event.getDrops();
+        return initialDrops;
     }
 
     /**
@@ -664,7 +664,7 @@ public class WorldUtils {
      * @return if the chunk is being vibrated
      */
     public static boolean isChunkVibrated(ChunkPos chunk, Level world) {
-        for (GlobalPos coord : Mekanism.activeVibrators) {
+        for (GlobalPos coord : MekanismServerState.activeVibrators()) {
             if (coord.dimension() == world.dimension() && SectionPos.blockToSectionCoord(coord.pos().getX()) == chunk.x &&
                 SectionPos.blockToSectionCoord(coord.pos().getZ()) == chunk.z) {
                 return true;
@@ -675,28 +675,38 @@ public class WorldUtils {
 
     public static boolean tryPlaceContainedLiquid(@Nullable Player player, Level world, BlockPos pos, @NotNull FluidStack fluidStack, @Nullable Direction side) {
         Fluid fluid = fluidStack.getFluid();
-        FluidType fluidType = fluid.getFluidType();
-        if (!fluidType.canBePlacedInLevel(world, pos, fluidStack)) {
-            //If there is no fluid, or it cannot be placed in the world just
+        //Fabric port delta: vanilla BucketItem emptying semantics replace the NeoForge FluidType hooks. Vanilla refuses to empty any fluid that is not a
+        // FlowingFluid (i.e. has no placeable block form), and only WATER vaporizes in ultrawarm dimensions - lava stays placeable there.
+        if (fluidStack.isEmpty() || !(fluid instanceof FlowingFluid flowingFluid)) {
+            //If there is no fluid, or it cannot be placed in the world, just
             return false;
         }
         BlockState state = world.getBlockState(pos);
         boolean isReplaceable = state.canBeReplaced(fluid);
-        boolean canContainFluid = state.getBlock() instanceof LiquidBlockContainer liquidBlockContainer && liquidBlockContainer.canPlaceLiquid(player, world, pos, state, fluid);
+        //Note: the container local is assigned via ternary (not a pattern variable) because Java flow scoping cannot carry a pattern local through the
+        // stored canContainFluid boolean into the placement branch below
+        LiquidBlockContainer liquidBlockContainer = state.getBlock() instanceof LiquidBlockContainer container ? container : null;
+        boolean canContainFluid = liquidBlockContainer != null && liquidBlockContainer.canPlaceLiquid(player, world, pos, state, fluid);
         if (state.isAir() || isReplaceable || canContainFluid) {
-            if (fluidType.isVaporizedOnPlacement(world, pos, fluidStack)) {
-                fluidType.onVaporize(player, world, pos, fluidStack);
+            if (world.dimensionType().ultraWarm() && fluidStack.is(FluidTags.WATER)) {
+                //Vaporize water exactly like vanilla BucketItem.emptyContents: fire-extinguish hiss plus large smoke particles
+                // (Level#addParticle is a server-side no-op); the placement still reports success
+                world.playSound(player, pos, SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 0.5F,
+                      2.6F + (world.random.nextFloat() - world.random.nextFloat()) * 0.8F);
+                for (int i = 0; i < 8; i++) {
+                    world.addParticle(ParticleTypes.LARGE_SMOKE, pos.getX() + Math.random(), pos.getY() + Math.random(), pos.getZ() + Math.random(), 0.0, 0.0, 0.0);
+                }
             } else if (canContainFluid) {
-                if (!((LiquidBlockContainer) state.getBlock()).placeLiquid(world, pos, state, fluidType.getStateForPlacement(world, pos, fluidStack))) {
+                if (!liquidBlockContainer.placeLiquid(world, pos, state, flowingFluid.getSource(false))) {
                     //If something went wrong return that we couldn't actually place it
                     return false;
                 }
-                playEmptySound(player, world, pos, fluidType);
+                playEmptySound(player, world, pos, fluid);
             } else {
                 if (!world.isClientSide() && isReplaceable && !state.liquid()) {
                     world.destroyBlock(pos, true);
                 }
-                playEmptySound(player, world, pos, fluidType);
+                playEmptySound(player, world, pos, fluid);
                 world.setBlock(pos, fluid.defaultFluidState().createLegacyBlock(), Block.UPDATE_ALL_IMMEDIATE);
             }
             return true;
@@ -704,8 +714,10 @@ public class WorldUtils {
         return side != null && tryPlaceContainedLiquid(player, world, pos.relative(side), fluidStack, null);
     }
 
-    private static void playEmptySound(@Nullable Player player, LevelAccessor world, BlockPos pos, FluidType fluidType) {
-        SoundEvent soundevent = fluidType.getSound(player, world, pos, SoundActions.BUCKET_EMPTY);
+    private static void playEmptySound(@Nullable Player player, LevelAccessor world, BlockPos pos, Fluid fluid) {
+        //Fabric port delta: FluidVariantAttributes (Fabric's fluid attribute API) replaces the NeoForge FluidType bucket-empty sound hook;
+        // water/lava have Fabric-registered sounds, other fluids only sound when their mod registered a handler
+        SoundEvent soundevent = FluidVariantAttributes.getEmptySound(FluidVariant.of(fluid));
         if (soundevent != null) {
             world.playSound(player, pos, soundevent, SoundSource.BLOCKS, 1.0F, 1.0F);
         }
@@ -719,7 +731,8 @@ public class WorldUtils {
             if (pickupSound.isPresent()) {
                 soundEvent = pickupSound.get();
             } else {
-                soundEvent = fluid.getFluidType().getSound(player, world, pos, SoundActions.BUCKET_FILL);
+                //Fabric port delta: FluidVariantAttributes replaces the NeoForge FluidType bucket-fill sound hook fallback
+                soundEvent = FluidVariantAttributes.getFillSound(FluidVariant.of(fluid));
             }
         }
         if (soundEvent != null) {

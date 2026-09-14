@@ -20,7 +20,6 @@ import mekanism.api.inventory.IInventorySlot;
 import mekanism.api.math.MathUtils;
 import mekanism.api.text.IHasTranslationKey.IHasEnumNameTranslationKey;
 import mekanism.api.text.ILangEntry;
-import mekanism.common.Mekanism;
 import mekanism.common.MekanismLang;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.content.qio.IQIOCraftingWindowHolder;
@@ -59,18 +58,25 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.common.TranslatableEnum;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Range;
 import org.lwjgl.glfw.GLFW;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public abstract class QIOItemViewerContainer extends MekanismContainer implements ISlotClickHandler {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism");
 
     public static final int SLOTS_X_MIN = 8, SLOTS_X_MAX = 16, SLOTS_Y_MIN = 2, SLOTS_Y_MAX = 48;
     public static final int SLOTS_START_Y = 43;
     private static final int DOUBLE_CLICK_TRANSFER_DURATION = SharedConstants.TICKS_PER_SECOND;
 
+    /**
+     * @apiNote Only ever invoked from physical-client call paths (the client-only constructor branch and the GUI); the {@link Minecraft} window reference is never
+     * linked on a dedicated server, matching the original client-only initialization contract.
+     */
     public static int getSlotsYMax() {
         int maxY = Mth.ceil(Minecraft.getInstance().getWindow().getGuiScaledHeight() * 0.05 - 8) + 1;
         return Mth.clamp(maxY, SLOTS_Y_MIN, SLOTS_Y_MAX);
@@ -119,7 +125,7 @@ public abstract class QIOItemViewerContainer extends MekanismContainer implement
         this.queuedForRemoval = remote ? new HashSet<>() : Collections.emptySet();
         if (this.craftingWindowHolder == null) {
             //Should never happen, but in case there was an error getting the tile it may have
-            Mekanism.logger.error("Error getting crafting window holder, closing.");
+            LOGGER.error("Error getting crafting window holder, closing.");
             closeInventory(inv.player);
             return;
         }
@@ -806,7 +812,9 @@ public abstract class QIOItemViewerContainer extends MekanismContainer implement
         }
     }
 
-    public enum ListSortType implements IDropdownEnum<ListSortType>, TranslatableEnum {
+    //Fabric port delta: NeoForge's TranslatableEnum marker interface is dropped; the enum keeps implementing
+    // getTranslatedName() itself so the translated-name behavior is unchanged
+    public enum ListSortType implements IDropdownEnum<ListSortType> {
         NAME(MekanismLang.LIST_SORT_NAME, MekanismLang.LIST_SORT_NAME_DESC, false, Comparator.comparing(IScrollableSlot::getDisplayName)),
         SIZE(MekanismLang.LIST_SORT_COUNT, MekanismLang.LIST_SORT_COUNT_DESC, true,
               Comparator.comparingLong(IScrollableSlot::count).thenComparing(IScrollableSlot::getDisplayName),
