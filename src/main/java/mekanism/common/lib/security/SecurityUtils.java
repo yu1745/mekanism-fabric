@@ -10,15 +10,12 @@ import mekanism.api.security.ISecurityObject;
 import mekanism.api.security.ISecurityUtils;
 import mekanism.api.security.SecurityMode;
 import mekanism.api.text.EnumColor;
-import mekanism.client.MekanismClient;
 import mekanism.common.MekanismLang;
-import mekanism.common.base.MekanismPermissions;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.lib.frequency.FrequencyType;
 import mekanism.common.util.MekanismUtils;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
-import net.neoforged.neoforge.server.permission.PermissionAPI;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -40,8 +37,12 @@ public final class SecurityUtils implements ISecurityUtils {
      */
     private boolean isOp(Player p) {
         Objects.requireNonNull(p, "Player may not be null.");
+        //Fabric port delta: NeoForge's PermissionAPI consults registered permission overrides and falls back to
+        // MekanismPermissions.BYPASS_SECURITY's default resolver (player.server.getPlayerList().isOp(gameProfile)).
+        // Fabric has no such permission API; the default resolver's op-list check is evaluated directly. Third-party
+        // permission-API overrides are a NeoForge-only extension point and are not available on this platform.
         return MekanismConfig.general.opsBypassRestrictions.get() && p instanceof ServerPlayer player &&
-               PermissionAPI.getPermission(player, MekanismPermissions.BYPASS_SECURITY);
+               player.server.getPlayerList().isOp(player.getGameProfile());
     }
 
     @Override
@@ -169,7 +170,8 @@ public final class SecurityUtils implements ISecurityUtils {
         if (uuid == null) {
             return SecurityData.DUMMY;
         } else if (isClient) {
-            return MekanismClient.clientSecurityMap.getOrDefault(uuid, SecurityData.DUMMY);
+            //Fabric port ownership move: the client map lives in ClientSecurityData (aliased by the future MekanismClient admission)
+            return ClientSecurityData.getOrDefault(uuid, SecurityData.DUMMY);
         }
         SecurityFrequency frequency = FrequencyType.SECURITY.getManager(null, SecurityMode.PUBLIC).getFrequency(uuid);
         return frequency == null ? SecurityData.DUMMY : new SecurityData(frequency);

@@ -61,9 +61,14 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.items.IItemHandler;
+import mekanism.common.util.WorldUtils;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidStorage;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
+import net.fabricmc.fabric.api.transfer.v1.item.ItemStorage;
+import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
+import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
+import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
+import mekanism.common.util.WorldUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -227,8 +232,24 @@ public class TileComponentEjector implements ITileComponent, ISpecificContainerT
                         ChemicalUtil.emit(caches, tank, chemicalEjectRate.getAsLong());
                     }
                     case FLUID -> {
-                        List<BlockCapabilityCache<IFluidHandler, @Nullable Direction>> caches = getCapabilityCaches(level, pos, typeCapabilityCaches, sides, Capabilities.FLUID);
-                        FluidUtils.emit(caches, (IExtendedFluidTank) entry.getKey(), fluidEjectRate.getAsInt());
+                        //Direct per-operation external lookup (parent adjudication): query each physical neighbor through Fabric's FluidStorage.SIDED.find
+                        // on the opposite face at operation time. No BlockCapabilityCache is retained (it would bypass the per-find invalidation policy),
+                        // unloaded neighbors are skipped without loading chunks, and a null lookup simply means there is no target on that side.
+                        List<Storage<FluidVariant>> storages = new ArrayList<>(sides.size());
+                        for (Direction side : sides) {
+                            BlockPos neighbor = pos.relative(side);
+                            if (!WorldUtils.isChunkLoaded(level, neighbor)) {
+                                continue;
+                            }
+                            Storage<FluidVariant> storage = FluidStorage.SIDED.find(level, neighbor, side.getOpposite());
+                            if (storage != null) {
+                                storages.add(storage);
+                            }
+                        }
+                        if (!storages.isEmpty()) {
+                            //Sender-owned transactional send: fair distribution and exact source debit stay inside FluidUtils.emit
+                            FluidUtils.emit(storages, (IExtendedFluidTank) entry.getKey(), fluidEjectRate.getAsInt());
+                        }
                     }
                     case ENERGY -> {
                         IEnergyContainer container = (IEnergyContainer) entry.getKey();
@@ -268,7 +289,6 @@ public class TileComponentEjector implements ITileComponent, ISpecificContainerT
      */
     private void outputItems(Direction facing, ConfigInfo info) {
         ServerLevel level = (ServerLevel) tile.getLevel();
-        Map<Direction, BlockCapabilityCache<?, @Nullable Direction>> typeCapabilityCaches = null;
         for (DataType dataType : info.getSupportedDataTypes()) {
             if (!dataType.canOutput()) {
                 continue;
@@ -281,45 +301,37 @@ public class TileComponentEjector implements ITileComponent, ISpecificContainerT
                 //Validate the slot info is of the correct type
                 Set<Direction> outputs = getSidesForData(info, facing, dataType);
                 if (!outputs.isEmpty()) {
-                    EjectTransitRequest ejectMap = null;
-                    if (typeCapabilityCaches == null) {
-                        typeCapabilityCaches = capabilityCaches.computeIfAbsent(TransmissionType.ITEM, t -> new EnumMap<>(Direction.class));
-                    }
                     for (Direction side : outputs) {
-                        BlockCapabilityCache<IItemHandler, @Nullable Direction> cache = (BlockCapabilityCache<IItemHandler, @Nullable Direction>) typeCapabilityCaches.get(side);
-                        if (cache == null) {
-                            cache = Capabilities.ITEM.createCache(level, tile.getBlockPos().relative(side), side.getOpposite());
-                            typeCapabilityCaches.put(side, cache);
+                        //Direct per-operation external lookup (mirrors the reviewed fluid ejector policy): query each
+                        // physical neighbor through ItemStorage.SIDED.find on the opposite face at operation time; no
+                        // capability cache is retained, unloaded neighbors are skipped, null means no target there
+                        BlockPos neighbor = tile.getBlockPos().relative(side);
+                        if (!WorldUtils.isChunkLoaded(level, neighbor)) {
+                            continue;
                         }
-                        IItemHandler capability = cache.getCapability();
+                        Storage<ItemVariant> capability = ItemStorage.SIDED.find(level, neighbor, side.getOpposite());
                         if (capability == null) {
                             //Skip sides where there isn't a target
                             continue;
                         }
-                        IItemHandler handler = getHandler(side);
-                        if (ejectMap == null) {
-                            //NOTE: The below logic and the entire concept of EjectTransitRequest relies on the implementation detail that
-                            // per DataType all exposed slots are the same regardless of the actual side. If this ever changes or there are
-                            // cases discovered where this is not the case we will instead need to calculate the eject map for each output side
-                            // instead of only having to do it once per DataType
-                            ejectMap = InventoryUtils.getEjectItemMap(new EjectTransitRequest(handler), inventorySlotInfo.getSlots());
-                            //No items to eject, exit
-                            if (ejectMap.isEmpty()) {
-                                break;
-                            }
-                        } else {
-                            //Update the handler so that if/when the response uses it, it makes sure it is using the correct side's restrictions
-                            ejectMap.handler = handler;
+                        Storage<ItemVariant> handler = getHandler(side);
+                        //Rebuild from current physical slots through this side's actual provider. Retained views
+                        // from another side must never survive a provider rebind and bypass its restrictions.
+                        HandlerTransitRequest ejectMap = new HandlerTransitRequest(handler);
+                        InventoryUtils.getEjectItemMap(ejectMap, inventorySlotInfo.getSlots());
+                        if (ejectMap.isEmpty()) {
+                            continue;
                         }
-                        //If the spot is not loaded just skip trying to eject to it
-                        TransitResponse response = ejectMap.eject(tile, capability, 0, this.outputColorFunction);
-                        if (!response.isEmpty()) {
-                            // use the items returned by the TransitResponse; will be visible next loop
-                            response.useAll();
-                            if (ejectMap.isEmpty()) {
-                                //If we are out of items to eject, break
-                                break;
+                        //Sender-owned transaction: the target insertion (or transporter route) and the exact source
+                        // debit commit together or not at all
+                        try (Transaction tx = Transaction.openOuter()) {
+                            TransitResponse response = ejectMap.eject(tile, capability, 0, this.outputColorFunction, tx);
+                            if (!response.isEmpty()) {
+                                response.useAll(tx);
+                                tx.commit();
                             }
+                        } catch (RuntimeException ignored) {
+                            //Exact debit failure aborted the whole ejection to this side; try the next side
                         }
                     }
                 }
@@ -344,10 +356,12 @@ public class TileComponentEjector implements ITileComponent, ISpecificContainerT
         return directions == null ? Collections.emptySet() : directions;
     }
 
-    private IItemHandler getHandler(Direction side) {
+    private Storage<ItemVariant> getHandler(Direction side) {
         //Note: We can't just pass "tile" and have to instead look up the capability to make sure we respect any sidedness
-        // we short circuit looking it up from the world though, and just query the provider we add to the tile directly
-        return CapabilityTileEntity.ITEM_HANDLER_PROVIDER.getCapability(tile, side);
+        // we short circuit looking it up from the world though, and just query the provider we add to the tile directly.
+        // The provider resolves the actual sided Storage view (the real sided provider), whose captured slot identities
+        // the exact debit validates.
+        return CapabilityTileEntity.ITEM_HANDLER_PROVIDER.apply(tile, side);
     }
 
     @ComputerMethod
@@ -540,18 +554,4 @@ public class TileComponentEjector implements ITileComponent, ISpecificContainerT
     }
     //End computer related methods
 
-    private static class EjectTransitRequest extends HandlerTransitRequest {
-
-        public IItemHandler handler;
-
-        public EjectTransitRequest(IItemHandler handler) {
-            super(handler);
-            this.handler = handler;
-        }
-
-        @Override
-        protected IItemHandler getHandler() {
-            return handler;
-        }
-    }
 }

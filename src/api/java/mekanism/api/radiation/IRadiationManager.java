@@ -4,7 +4,8 @@ import com.google.common.collect.Table;
 import java.util.Collections;
 import java.util.List;
 import mekanism.api.Chunk3D;
-import mekanism.api.MekanismAPI;
+import mekanism.api.MekanismServerLifecycle;
+import mekanism.api.MekanismServices;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.chemical.ChemicalStack;
 import mekanism.api.chemical.IChemicalHandler;
@@ -19,7 +20,6 @@ import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import org.jetbrains.annotations.ApiStatus.Internal;
 import org.jetbrains.annotations.Nullable;
 
@@ -57,7 +57,7 @@ public interface IRadiationManager {
      *
      * @since 10.4.0
      */
-    IRadiationManager INSTANCE = MekanismAPI.getService(IRadiationManager.class);
+    IRadiationManager INSTANCE = MekanismServices.load(IRadiationManager.class);
 
     /**
      * Helper to expose the ability to check if Mekanism's radiation system is enabled in the config.
@@ -342,7 +342,9 @@ public interface IRadiationManager {
     @Internal
     @Nullable
     private static Level backCompat$getLevel(ResourceKey<Level> dimension) {
-        MinecraftServer currentServer = ServerLifecycleHooks.getCurrentServer();
+        //Fabric port delta: consult the real lifecycle-bound server owner instead of NeoForge's ServerLifecycleHooks global;
+        // FabricLoader's game instance is the client while an integrated server runs, so it must never be used here
+        MinecraftServer currentServer = MekanismServerLifecycle.getServer();
         if (currentServer == null) {
             return null;
         }

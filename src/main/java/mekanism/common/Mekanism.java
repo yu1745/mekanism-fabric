@@ -2,7 +2,6 @@ package mekanism.common;
 
 import com.mojang.authlib.GameProfile;
 import com.mojang.logging.LogUtils;
-import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -58,6 +57,7 @@ import mekanism.common.item.interfaces.IHasConditionalAttributes;
 import mekanism.common.item.loot.MekanismLootFunctions;
 import mekanism.common.item.predicate.MekanismItemPredicates;
 import mekanism.common.lib.MekAnnotationScanner;
+import mekanism.common.lib.MekanismServerState;
 import mekanism.common.lib.Version;
 import mekanism.common.lib.frequency.FrequencyManager;
 import mekanism.common.lib.frequency.FrequencyType;
@@ -181,7 +181,10 @@ public class Mekanism {
      */
     public static final GameProfile gameProfile = new GameProfile(UUID.nameUUIDFromBytes("mekanism.common".getBytes(StandardCharsets.UTF_8)), LOG_TAG);
     public static final KeySync keyMap = new KeySync();
-    public static final Set<GlobalPos> activeVibrators = new ObjectOpenHashSet<>();
+    //Fabric port delta: aliases the exact set owned by MekanismServerState (the server-lifetime state owner) so that the original
+    // mutators - TileEntitySeismicVibrator add/remove, this serverStopped clear, MekanismClient.resetDimensionChange - all reach the
+    // same live set that WorldUtils#isChunkVibrated reads. No second unpopulated set exists.
+    public static final Set<GlobalPos> activeVibrators = MekanismServerState.activeVibrators();
 
     private ReloadListener recipeCacheManager;
 
