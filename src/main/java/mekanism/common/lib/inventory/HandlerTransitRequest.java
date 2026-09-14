@@ -105,11 +105,14 @@ public class HandlerTransitRequest extends CollectionTransitRequest {
         //Cumulative provisional extraction: later candidates see earlier ones inside this transaction, so
         // overlapping resources are never counted twice; the transaction is aborted below
         long extracted = view.extract(resource, toUse, discovery);
-        if (extracted != toUse) {
-            //The view did not actually give back the amount it reported; skip this candidate entirely
+        if (extracted <= 0) {
+            //The view did not actually give back anything; skip this candidate entirely
             return;
         }
-        ret.itemMap(hashed).addCandidate(new SourceCandidate(slot, retainedView, toUse));
+        //Record the actual accepted positive amount (R2): a partial positive extraction is still a real candidate
+        // for exactly the amount the view actually provided, never discarded and never assumed to be `toUse`
+        int accepted = extracted > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) extracted;
+        ret.itemMap(hashed).addCandidate(new SourceCandidate(slot, retainedView, accepted));
     }
 
     /**
@@ -190,19 +193,22 @@ public class HandlerTransitRequest extends CollectionTransitRequest {
 
         void addCandidate(SourceCandidate candidate) {
             //Real slotted positions and retained real views are recorded as distinct ordered candidates (R2); a
-            // repeated real position accumulates instead of overwriting
+            // repeated real position accumulates instead of overwriting. Only the newly contributed amount joins
+            // totalCount: the merged candidate replaces the old one, so adding the merged count again would
+            // double-count the previous contribution (existing 5 + new 3 must total 8, not 13)
+            int contributed = candidate.count();
             if (candidate.view() == null && candidate.slot() >= 0) {
                 for (Iterator<SourceCandidate> iter = candidates.iterator(); iter.hasNext(); ) {
                     SourceCandidate existing = iter.next();
                     if (existing.view() == null && existing.slot() == candidate.slot()) {
                         iter.remove();
-                        candidate = new SourceCandidate(candidate.slot(), null, existing.count() + candidate.count());
+                        candidate = new SourceCandidate(candidate.slot(), null, existing.count() + contributed);
                         break;
                     }
                 }
             }
             candidates.add(candidate);
-            totalCount += candidate.count();
+            totalCount += contributed;
         }
 
         /**
@@ -231,7 +237,12 @@ public class HandlerTransitRequest extends CollectionTransitRequest {
         @Override
         public ItemStack use(int amount, Transaction tx) {
             Storage<ItemVariant> handler = getHandler();
-            if (handler != null && amount > 0) {
+            if (amount > 0) {
+                if (handler == null) {
+                    //No real source behind this plan: an attempted debit is a hard failure, never a silent success
+                    Mekanism.logger.error("HandlerTransitRequest debit requested without a real source storage.");
+                    throw new IllegalStateException("HandlerTransitRequest debit with null source storage");
+                }
                 HashedItem itemType = getItemType();
                 ItemStack itemStack = itemType.getInternalStack();
                 ItemVariant variant = ItemVariant.of(itemStack);
@@ -279,6 +290,13 @@ public class HandlerTransitRequest extends CollectionTransitRequest {
                         iterator.remove();
                     }
                 }
+                if (amount > 0) {
+                    //Candidates exhausted before the requested debit was covered: never report success with an
+                    // uncovered remainder; abort the caller transaction (which also restores the plan snapshot)
+                    Mekanism.logger.warn("HandlerTransitRequest ran out of source candidates with {} still to debit.", amount);
+                    Mekanism.logger.warn("HandlerTransitRequest item: {}, Storage: {}", itemType.getInternalStack(), handler.getClass().getName());
+                    throw new IllegalStateException("HandlerTransitRequest source candidates exhausted before covering debit");
+                }
             }
             return getStack();
         }
@@ -319,36 +337,42 @@ public class HandlerTransitRequest extends CollectionTransitRequest {
     }
 
     /**
-     * Deep snapshot of the request plan: ordered itemMap membership and, per type, totalCount plus copies of every
-     * ordered candidate (real slot index or retained view reference with its planned count).
+     * Identity-preserving snapshot of the request plan: the original ordered {@link HandlerItemData} objects with
+     * their totalCount plus copies of every ordered candidate (real slot index or retained view reference with its
+     * planned count). Restore reinstates those same objects into the map, so a previously captured
+     * {@link TransitResponse} (or any held {@link HandlerItemData} reference) observes the restoration after a full
+     * debit and enclosing abort instead of retaining a detached consumed object.
      */
     private static final class PlanSnapshot {
 
         private final Map<HashedItem, List<SourceCandidate>> candidates;
+        private final Map<HashedItem, HandlerItemData> identities;
 
-        private PlanSnapshot(Map<HashedItem, List<SourceCandidate>> candidates) {
+        private PlanSnapshot(Map<HashedItem, List<SourceCandidate>> candidates, Map<HashedItem, HandlerItemData> identities) {
             this.candidates = candidates;
+            this.identities = identities;
         }
 
         static PlanSnapshot take(HandlerTransitRequest request) {
             Map<HashedItem, List<SourceCandidate>> copy = new LinkedHashMap<>();
+            Map<HashedItem, HandlerItemData> identityCopy = new LinkedHashMap<>();
             request.itemMap.forEach((hashed, data) -> {
                 List<SourceCandidate> list = new ArrayList<>(data.candidates.size());
                 for (SourceCandidate candidate : data.candidates) {
                     list.add(new SourceCandidate(candidate.slot(), candidate.view(), candidate.count()));
                 }
                 copy.put(hashed, list);
+                identityCopy.put(hashed, data);
             });
-            return new PlanSnapshot(copy);
+            return new PlanSnapshot(copy, identityCopy);
         }
 
         void restore(HandlerTransitRequest request) {
-            Map<HashedItem, HandlerItemData> rebuilt = new LinkedHashMap<>();
-            candidates.forEach((hashed, list) -> {
-                HandlerItemData data = request.itemMap.get(hashed);
-                if (data == null) {
-                    data = new HandlerItemData(hashed);
-                }
+            Map<HashedItem, HandlerItemData> restored = new LinkedHashMap<>();
+            identities.forEach((hashed, data) -> {
+                //Reinstate the exact original object identity: entries fully consumed (and removed from the live
+                // map) reappear as the same object a captured response may still reference
+                List<SourceCandidate> list = candidates.get(hashed);
                 data.candidates.clear();
                 int total = 0;
                 for (SourceCandidate candidate : list) {
@@ -356,9 +380,9 @@ public class HandlerTransitRequest extends CollectionTransitRequest {
                     total += candidate.count();
                 }
                 data.totalCount = total;
-                rebuilt.put(hashed, data);
+                restored.put(hashed, data);
             });
-            request.itemMap = rebuilt;
+            request.itemMap = restored;
         }
     }
 

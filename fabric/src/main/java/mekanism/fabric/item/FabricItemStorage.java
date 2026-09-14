@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Objects;
 import mekanism.api.Action;
 import mekanism.api.AutomationType;
+import mekanism.api.inventory.ICreativeInventorySlot;
 import mekanism.api.inventory.IInventorySlot;
 import mekanism.api.inventory.IMekanismInventory;
 import mekanism.common.capabilities.holder.IHolder;
@@ -251,6 +252,15 @@ public final class FabricItemStorage extends SnapshotParticipant<List<ItemStack>
             nested.commit();
             return executed;
         }
+    }
+
+    /**
+     * Actual current creative state of the backing slot (per operation): true only when the slot implements
+     * {@link ICreativeInventorySlot} and reports being creative right now, so creative extraction-without-depletion
+     * and insertion-voids semantics apply to exactly this execution and finite strict read-back applies otherwise.
+     */
+    private static boolean isCreativeNow(IInventorySlot inventorySlot) {
+        return inventorySlot instanceof ICreativeInventorySlot creativeSlot && creativeSlot.isCreative();
     }
 
     private long simulatePlan(ItemVariant resource, long maxAmount, boolean insertion, int firstSlot, int lastSlot,
