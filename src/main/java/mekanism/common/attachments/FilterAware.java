@@ -8,7 +8,6 @@ import java.util.function.Predicate;
 import java.util.stream.Stream;
 import mekanism.api.SerializationConstants;
 import mekanism.api.annotations.NothingNullByDefault;
-import mekanism.common.Mekanism;
 import mekanism.common.content.filter.BaseFilter;
 import mekanism.common.content.filter.IFilter;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -18,10 +17,14 @@ import net.minecraft.network.codec.StreamCodec;
 @NothingNullByDefault
 public record FilterAware(List<IFilter<?>> filters) {
 
+    //Task052 call-site narrowing (adjudicated): logging-only Mekanism dependency becomes the established Mekanism SLF4J category
+    private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger("Mekanism");
+
+
     public static final FilterAware EMPTY = new FilterAware(Collections.emptyList());
 
     public static final Codec<FilterAware> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-          BaseFilter.GENERIC_CODEC.listOf().promotePartial(error -> Mekanism.logger.error("Failed to load filters: {}", error))
+          BaseFilter.GENERIC_CODEC.listOf().promotePartial(error -> LOGGER.error("Failed to load filters: {}", error))
                 .fieldOf(SerializationConstants.FILTERS).forGetter(FilterAware::filters)
     ).apply(instance, FilterAware::new));
     public static final StreamCodec<RegistryFriendlyByteBuf, FilterAware> STREAM_CODEC = BaseFilter.GENERIC_STREAM_CODEC.apply(ByteBufCodecs.list())

@@ -8,16 +8,16 @@ import mekanism.common.config.MekanismConfigTranslations.OreVeinConfigTranslatio
 import mekanism.common.config.value.CachedEnumValue;
 import mekanism.common.config.value.CachedIntValue;
 import mekanism.common.resource.ore.BaseOreConfig;
-import net.neoforged.neoforge.common.ModConfigSpec;
+import mekanism.fabric.config.MekanismConfigSpec;
 
 public record ConfigurableHeightRange(Supplier<HeightShape> shape, ConfigurableVerticalAnchor minInclusive, ConfigurableVerticalAnchor maxInclusive,
                                       IntSupplier plateau) {
 
-    public static ConfigurableHeightRange create(IMekanismConfig config, ModConfigSpec.Builder builder, OreVeinConfigTranslations translations, BaseOreConfig baseConfig) {
+    public static ConfigurableHeightRange create(IMekanismConfig config, MekanismConfigSpec.Builder builder, OreVeinConfigTranslations translations, BaseOreConfig baseConfig) {
         CachedEnumValue<HeightShape> shape = CachedEnumValue.wrap(config, translations.distributionShape().applyToBuilder(builder)
               .defineEnum("shape", baseConfig.shape()));
         CachedIntValue plateau = CachedIntValue.wrap(config, MekanismConfigTranslations.WORLD_HEIGHT_RANGE_PLATEAU.applyToBuilder(builder)
-              .define("plateau", baseConfig.plateau(), o -> {
+              .defineValidated("plateau", baseConfig.plateau(), o -> {
                   if (o instanceof Integer value) {
                       if (value == 0) {
                           return true;

@@ -8,11 +8,15 @@ import mekanism.fabric.chemical.FabricChemicalLifecycle;
 import mekanism.fabric.config.FabricChemicalConfig;
 import mekanism.common.registration.MekanismDeferredHolder;
 import mekanism.common.registries.MekanismGameEvents;
+import mekanism.api.MekanismServerLifecycle;
+import mekanism.common.lib.MekanismServerState;
 import mekanism.fabric.config.FabricMekanismConfigManager;
 import mekanism.fabric.datamaps.FabricMekanismDataMaps;
 import mekanism.fabric.network.FabricMekanismNetworking;
 import mekanism.fabric.network.FabricChemicalNetworking;
+import mekanism.fabric.network.FabricContainerNetworking;
 import mekanism.fabric.network.FabricTileUpdateNetworking;
+import mekanism.fabric.MekanismUsernameLifecycle;
 import mekanism.fabric.recipe.FabricIngredientCreatorProvider;
 import mekanism.fabric.recipe.FabricRecipeCacheLifecycle;
 import mekanism.fabric.recipe.FabricRecipeRegistration;
@@ -36,6 +40,21 @@ public final class MekanismFabricBootstrap implements ModInitializer {
 
     @Override
     public void onInitialize() {
+        //Task052 Q4 lifecycle owner: capture the starting server (no overworld access here), and on the post-save SERVER_STOPPED tail run the domain
+        // cleanup in the original Mekanism.serverStopped order before releasing the shared server reference for the same server instance only
+        ServerLifecycleEvents.SERVER_STARTING.register(MekanismServerLifecycle::captureStartingServer);
+        ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
+            //Guard BOTH the domain cleanup and the release by same-server identity: a stale stop event belonging to a different (older)
+            // server instance must not wipe state owned by the live server. Cleanup still runs before release, and release happens even
+            // when the cleanup throws, so a failed cleanup does not pin a dead server reference.
+            if (MekanismServerLifecycle.getServer() == server) {
+                try {
+                    MekanismServerState.clearServerState();
+                } finally {
+                    MekanismServerLifecycle.releaseStoppedServer(server);
+                }
+            }
+        });
         FabricMekanismConfigManager.Registration startup = CONFIG_MANAGER.registerAndLoad(STARTUP_CONFIG);
         verifyStartupConfig(startup);
         FabricChemicalConfig.initializeCommon(CONFIG_MANAGER);
@@ -47,8 +66,10 @@ public final class MekanismFabricBootstrap implements ModInitializer {
         FabricMekanismNetworking.Registration networking = FabricMekanismNetworking.initialize();
         FabricChemicalNetworking.initialize();
         FabricTileUpdateNetworking.initialize();
+        FabricContainerNetworking.initialize();
         FabricMekanismDataMaps.initializeCallbacks();
         FabricCapabilityTileLifecycle.initialize();
+        MekanismUsernameLifecycle.initialize();
         LOGGER.info("MEKANISM_FABRIC_NETWORK_PROOF protocol={} phase=configuration codecs={} server_receiver={} client_required={}",
               networking.protocolVersion(), networking.codecs(), networking.serverReceiver(), networking.clientRequired());
         MekanismGameEvents.GAME_EVENTS.registerAll(BuiltInRegistries.GAME_EVENT);

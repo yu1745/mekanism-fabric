@@ -491,6 +491,21 @@ public final class MekanismConfigSpec {
             return this;
         }
 
+        /**
+         * Multi-line comment, mirroring NeoForge's {@code ModConfigSpec.Builder#comment(String...)} which joins the lines with newlines.
+         */
+        public Builder comment(String... comments) {
+            ensureMutable();
+            if (comments.length == 0) {
+                throw new IllegalArgumentException("At least one comment line is required");
+            }
+            for (String line : comments) {
+                Objects.requireNonNull(line, "comment line");
+            }
+            pendingComment = String.join("\n", comments);
+            return this;
+        }
+
         public Builder gameRestart() {
             ensureMutable();
             pendingRestart = RestartScope.GAME;
@@ -535,6 +550,19 @@ public final class MekanismConfigSpec {
             return this;
         }
 
+        /**
+         * Pops the given number of categories, mirroring NeoForge's {@code ModConfigSpec.Builder#pop(int)}.
+         */
+        public Builder pop(int count) {
+            if (count < 1) {
+                throw new IllegalArgumentException("At least one category must be popped");
+            }
+            for (int i = 0; i < count; i++) {
+                pop();
+            }
+            return this;
+        }
+
         public ConfigValue<Boolean> define(String name, boolean defaultValue) {
             return define(name, defaultValue, Builder::normalizeBoolean);
         }
@@ -562,6 +590,16 @@ public final class MekanismConfigSpec {
         /** Defines a strict signed-32-bit integer. Floating-point and decimal values are rejected even when integral. */
         public ConfigValue<Integer> define(String name, int defaultValue) {
             return define(name, defaultValue, Builder::normalizeStrictInteger);
+        }
+
+        /**
+         * Integer definition with a raw-value validator, mirroring NeoForge's {@code define(String, T, Predicate)}. The raw stored value must be an integer
+         * accepted by the validator. Named distinctly from {@code define} so lambda call sites stay unambiguous against the Function-based overload.
+         */
+        public ConfigValue<Integer> defineValidated(String name, int defaultValue, Predicate<Object> validator) {
+            Objects.requireNonNull(validator, "validator");
+            return define(name, defaultValue, raw -> raw instanceof Integer value && validator.test(raw)
+                  ? Optional.of(value) : Optional.empty());
         }
 
         /**
