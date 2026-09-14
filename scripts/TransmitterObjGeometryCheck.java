@@ -1,3 +1,5 @@
+// Reproducible focused asset check: filename matches the public class, so it compiles directly:
+// javac -d /tmp/t052c scripts/TransmitterObjGeometryCheck.java fabric/src/main/java/mekanism/fabric/client/render/obj/TransmitterObjGeometry.java && java -cp /tmp/t052 TransmitterObjGeometryCheck <path-to-shipped-assets-dir>
 import mekanism.fabric.client.render.obj.TransmitterObjGeometry;
 import java.nio.file.*;
 import java.util.*;

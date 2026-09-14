@@ -46,7 +46,13 @@ public final class TransmitterObjGeometry {
         this.vertices = vertices;
         this.texCoords = texCoords;
         this.normals = normals;
-        this.groups = Collections.unmodifiableMap(new LinkedHashMap<>(groups));
+        //Deep immutability: both maps and every group's face list are unmodifiable, and FaceVertex/Face records
+        //carry no mutable state, so published geometry can never be mutated after parse.
+        Map<String, List<Face>> groupView = new LinkedHashMap<>();
+        for (Map.Entry<String, List<Face>> e : groups.entrySet()) {
+            groupView.put(e.getKey(), Collections.unmodifiableList(new ArrayList<>(e.getValue())));
+        }
+        this.groups = Collections.unmodifiableMap(groupView);
         this.materials = Collections.unmodifiableMap(new LinkedHashMap<>(materials));
     }
 

@@ -100,7 +100,9 @@ public class TransmitterBakedModel extends BakedModelWrapper<BakedModel> {
         if (side != null) {
             return Collections.emptyList();
         }
-        TransmitterModelData data = extraData.get(TileEntityTransmitter.TRANSMITTER_PROPERTY);
+        //Fabric port: TRANSMITTER_PROPERTY/ModelData path removed; the attachment-aware consumer is
+        //mekanism.fabric.client.render.obj.FabricTransmitterBakedModel (RenderAttachmentBlockView snapshot)
+        TransmitterModelData data = null;
         if (data != null) {
             boolean renderGlass = renderType == RenderType.translucent();
             if (renderGlass && (glassPartsCache == null || !data.getHasColor())) {

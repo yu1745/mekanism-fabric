@@ -11,36 +11,56 @@ import java.util.function.Function;
 import mekanism.client.model.data.TransmitterModelData;
 import mekanism.client.model.data.TransmitterModelData.Diversion;
 import mekanism.common.lib.transmitter.ConnectionType;
+import net.fabricmc.fabric.api.renderer.v1.Renderer;
+import net.fabricmc.fabric.api.renderer.v1.material.BlendMode;
+import net.fabricmc.fabric.api.renderer.v1.material.MaterialFinder;
+import net.fabricmc.fabric.api.renderer.v1.material.RenderMaterial;
+import net.fabricmc.fabric.api.renderer.v1.mesh.QuadEmitter;
 import net.fabricmc.fabric.api.renderer.v1.model.FabricBakedModel;
 import net.fabricmc.fabric.api.renderer.v1.render.RenderContext;
 import net.fabricmc.fabric.api.rendering.data.v1.RenderAttachedBlockView;
-import net.minecraft.util.Mth;
 import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.renderer.block.model.ItemOverrides;
+import net.minecraft.client.renderer.block.model.ItemTransforms;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 /**
- * Fabric consumer for the transmitter block model. Replaces the NeoForge {@code TransmitterBakedModel} wrapper:
- * the block view is a Fabric {@link net.fabricmc.fabric.api.client.rendering.v1.RenderAttachedBlockView} during
- * chunk meshing, and the attachment (the immutable {@link TransmitterModelData} snapshot published by
- * {@code TileEntityTransmitter}) is the only data source consulted — never the live tile.
+ * Fabric consumer for the transmitter block model: a real vanilla {@link BakedModel} (so it is the actual result of
+ * the model loader) that additionally implements {@link FabricBakedModel} for chunk meshing. During meshing the block
+ * view is a Fabric {@link RenderAttachedBlockView}, and the attachment (the immutable {@link TransmitterModelData}
+ * snapshot published by {@code TileEntityTransmitter}) is the only data source consulted — never the live tile.
  *
- * <p>Six-part selection, end-icon rotation, opaque texture remapping, glass/cutout split and material tint are
- * preserved from the official implementation; the geometry comes from {@link TransmitterObjGeometry} parsed off the
- * shipped assets, and quads are produced by {@link TransmitterQuadBaker}.</p>
+ * <p>Six-part selection, end-icon rotation, opaque texture remapping, glass/cutout split (internal parts emit with a
+ * CUTOUT material, glass with TRANSLUCENT) and material tint index 1 are preserved from the official implementation;
+ * the geometry comes from {@link TransmitterObjGeometry} parsed off the shipped assets, and quads are produced by
+ * {@link TransmitterQuadBaker}. Texture aliases are compared/stripped consistently without the JSON {@code '#'}
+ * prefix: the parser already strips it from MTL {@code map_Kd} references.</p>
  */
-public final class FabricTransmitterBakedModel implements FabricBakedModel {
+public final class FabricTransmitterBakedModel implements BakedModel, FabricBakedModel {
 
     /** Alias fragment set by the JSON model's child tier texture resolution; kept here as the contract constant. */
     public static final String GLASS_ALIAS_MARKER = "glass";
 
+    private static final RenderMaterial CUTOUT_MATERIAL = material(BlendMode.CUTOUT);
+    private static final RenderMaterial TRANSLUCENT_MATERIAL = material(BlendMode.TRANSLUCENT);
+
+    private static RenderMaterial material(BlendMode blendMode) {
+        MaterialFinder finder = Renderer.get().materialFinder();
+        RenderMaterial material = finder.blendMode(blendMode).find();
+        finder.clear();
+        return material;
+    }
 
     private final TransmitterObjGeometry internalGeometry;
     @Nullable
@@ -48,6 +68,7 @@ public final class FabricTransmitterBakedModel implements FabricBakedModel {
     private final Function<String, TextureAtlasSprite> spriteLookup;
     private final boolean opaqueTransmitters;
     private final boolean hasGlass;
+    private final TextureAtlasSprite particleIcon;
 
     private final LoadingCache<SidedConnection, List<BakedQuad>> internalParts;
     @Nullable
@@ -61,6 +82,15 @@ public final class FabricTransmitterBakedModel implements FabricBakedModel {
         this.spriteLookup = alias -> spriteLookup0(spriteLookup, alias);
         this.opaqueTransmitters = opaqueTransmitters;
         this.hasGlass = glassGeometry != null;
+        TextureAtlasSprite particle = null;
+        try {
+            particle = this.spriteLookup.apply("particle");
+        } catch (RuntimeException ignored) {
+        }
+        if (particle == null) {
+            particle = this.spriteLookup.apply("side");
+        }
+        this.particleIcon = particle;
         this.internalParts = CacheBuilder.newBuilder().build(createPartCacheLoader(internalGeometry, false));
         this.glassParts = glassGeometry == null ? null : CacheBuilder.newBuilder().build(createPartCacheLoader(glassGeometry, true));
         //Default arrangement = every side NONE, used for items and missing attachments
@@ -92,7 +122,7 @@ public final class FabricTransmitterBakedModel implements FabricBakedModel {
             //The producer is required to publish immutable snapshots; this consumer only reads them
             emit(data, context);
         } else {
-            emitQuads(defaultItemQuads, context);
+            emitQuads(defaultItemQuads, CUTOUT_MATERIAL, context);
         }
     }
 
@@ -100,23 +130,71 @@ public final class FabricTransmitterBakedModel implements FabricBakedModel {
         for (Direction side : Direction.values()) {
             ConnectionType connectionType = data.getConnectionType(side);
             IconStatus iconStatus = getIconStatus(data, side, connectionType);
-            emitQuads(internalParts.getUnchecked(new SidedConnection(side, connectionType, iconStatus)), context);
+            emitQuads(internalParts.getUnchecked(new SidedConnection(side, connectionType, iconStatus)), CUTOUT_MATERIAL, context);
             if (hasGlass && data.getHasColor()) {
                 //Glass pass is only meaningful when there is a color to tint it with; internal (cutout) parts always render
-                emitQuads(Objects.requireNonNull(glassParts).getUnchecked(new SidedConnection(side, connectionType, iconStatus)), context);
+                emitQuads(Objects.requireNonNull(glassParts).getUnchecked(new SidedConnection(side, connectionType, iconStatus)), TRANSLUCENT_MATERIAL, context);
             }
         }
     }
 
     @Override
-    public void emitItemQuads(net.minecraft.world.item.ItemStack stack, java.util.function.Supplier<RandomSource> randomSupplier, RenderContext context) {
-        emitQuads(defaultItemQuads, context);
+    public void emitItemQuads(ItemStack stack, java.util.function.Supplier<RandomSource> randomSupplier, RenderContext context) {
+        emitQuads(defaultItemQuads, CUTOUT_MATERIAL, context);
     }
 
-    private static void emitQuads(List<BakedQuad> quads, RenderContext context) {
+    /** Copies each baked quad (vertex data, tint index) onto the emitter with the given material and actually emits it. */
+    private static void emitQuads(List<BakedQuad> quads, RenderMaterial material, RenderContext context) {
+        QuadEmitter emitter = context.getEmitter();
         for (BakedQuad quad : quads) {
-            context.getEmitter().fromVanilla(quad.getVertices(), quad.getTintIndex());
+            //Cull face null: emitter quads are never culled by vanilla face culling; tint index travels in the vertex data
+            emitter.fromVanilla(quad, material, null);
+            emitter.emit();
         }
+    }
+
+    // ---- vanilla BakedModel: the block/item render fallbacks that do not have a render attachment ----
+
+    @Override
+    public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side, RandomSource random) {
+        //Unculled geometry only; the attachment-aware block path goes through emitBlockQuads above
+        return side == null ? defaultItemQuads : Collections.emptyList();
+    }
+
+    @Override
+    public boolean useAmbientOcclusion() {
+        return true;
+    }
+
+    @Override
+    public boolean isGui3d() {
+        return true;
+    }
+
+    @Override
+    public boolean usesBlockLight() {
+        return true;
+    }
+
+    @Override
+    public boolean isCustomRenderer() {
+        return false;
+    }
+
+    @Override
+    public TextureAtlasSprite getParticleIcon() {
+        return particleIcon;
+    }
+
+    @Override
+    public ItemTransforms getTransforms() {
+        //No model-JSON transforms survive this narrow loader; default identity item transforms
+        return ItemTransforms.NO_TRANSFORMS;
+    }
+
+    @Override
+    public ItemOverrides getOverrides() {
+        return ItemOverrides.EMPTY;
     }
 
     private CacheLoader<SidedConnection, List<BakedQuad>> createPartCacheLoader(TransmitterObjGeometry geometry, boolean glass) {
@@ -145,22 +223,24 @@ public final class FabricTransmitterBakedModel implements FabricBakedModel {
     /**
      * Port of the official {@code TransmitterModelConfiguration.adjustTextureName}: per-part side textures collapse to
      * the shared side texture while an icon shows, and opaque transmitter config remaps to the opaque variants.
+     * Aliases are normalized WITHOUT the JSON {@code '#'} prefix (the MTL parser strips it), and the sprite lookup
+     * receives the same normalized form.
      */
     private String adjustAlias(String alias, String part, Direction side, IconStatus iconStatus, boolean glass) {
         String name = alias;
         if (directionForPiece(part) != null) {
             if (iconStatus != IconStatus.NO_SHOW) {
-                name = name.contains(GLASS_ALIAS_MARKER) ? "#side_glass" : "#side";
+                name = name.contains(GLASS_ALIAS_MARKER) ? "side_glass" : "side";
             }
             if (opaqueTransmitters) {
-                if (name.startsWith("#side")) {
+                if (name.startsWith("side")) {
                     return name + "_opaque";
-                } else if (name.startsWith("#center")) {
-                    return name.contains(GLASS_ALIAS_MARKER) ? "#center_glass_opaque" : "#center_opaque";
+                } else if (name.startsWith("center")) {
+                    return name.contains(GLASS_ALIAS_MARKER) ? "center_glass_opaque" : "center_opaque";
                 }
             }
             return name;
-        } else if (opaqueTransmitters && name.startsWith("#side")) {
+        } else if (opaqueTransmitters && name.startsWith("side")) {
             return name + "_opaque";
         }
         return name;

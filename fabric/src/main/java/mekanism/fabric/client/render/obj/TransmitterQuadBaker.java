@@ -58,6 +58,10 @@ public final class TransmitterQuadBaker {
         float[][] pos = new float[n][3];
         float[][] uv = new float[n][2];
         Vector3f normal = faceNormal(corners);
+        if (rotation != null) {
+            // Rotate the face normal with the geometry so shading/direction stay consistent with the rotated part
+            rotation.transform(normal);
+        }
         for (int i = 0; i < n; i++) {
             TransmitterObjGeometry.FaceVertex c = corners.get(i);
             Vector3f v = new Vector3f(geometry.vertexX(c.vertex()), geometry.vertexY(c.vertex()), geometry.vertexZ(c.vertex()));
@@ -72,8 +76,9 @@ public final class TransmitterQuadBaker {
             pos[i][2] = v.z;
             float u = c.texCoord() >= 0 ? geometry.texU(c.texCoord()) : 0F;
             float w = c.texCoord() >= 0 ? geometry.texV(c.texCoord()) : 0F;
-            uv[i][0] = sprite.getU(u * 16F);
-            uv[i][1] = sprite.getV(w * 16F);
+            // Pinned 1.21.1 TextureAtlasSprite#getU/getV interpolate the normalized 0..1 input directly
+            uv[i][0] = sprite.getU(u);
+            uv[i][1] = sprite.getV(w);
         }
         Direction direction = approxDirection(normal);
         int[] data = new int[FLOATS_PER_QUAD_DATA];

@@ -5,13 +5,16 @@ import java.util.EnumMap;
 import java.util.Map;
 import mekanism.client.model.data.TransmitterModelData.Diversion;
 import mekanism.common.lib.transmitter.ConnectionType;
-import mekanism.common.util.EnumUtils;
 import net.minecraft.core.Direction;
 
 public sealed class TransmitterModelData permits Diversion {
 
+    private static final Direction[] DIRECTIONS = Direction.values();
+
     private final Map<Direction, ConnectionType> connections = new EnumMap<>(Direction.class);
-    private Map<Direction, ConnectionType> connectionView = connections;
+    //Always an unmodifiable view, even before freeze: a caller must never be able to mutate the map through
+    //getConnectionsMap() while the builder is still assembling the snapshot
+    private final Map<Direction, ConnectionType> connectionView = Collections.unmodifiableMap(connections);
     private boolean hasColor;
     private boolean frozen;
 
@@ -32,7 +35,6 @@ public sealed class TransmitterModelData permits Diversion {
      */
     public TransmitterModelData freeze() {
         frozen = true;
-        connectionView = Collections.unmodifiableMap(connections);
         return this;
     }
 
@@ -56,11 +58,12 @@ public sealed class TransmitterModelData permits Diversion {
     }
 
     public boolean check(ConnectionType... types) {
-        if (types.length != EnumUtils.DIRECTIONS.length) {
+        //Cached Direction.values() (same declaration order EnumUtils.DIRECTIONS used) avoids the EnumUtils slice drag
+        if (types.length != DIRECTIONS.length) {
             return false;
         }
         for (int i = 0; i < types.length; i++) {
-            if (connections.get(EnumUtils.DIRECTIONS[i]) != types[i]) {
+            if (connections.get(DIRECTIONS[i]) != types[i]) {
                 return false;
             }
         }
