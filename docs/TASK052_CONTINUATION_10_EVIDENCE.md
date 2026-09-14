@@ -54,3 +54,31 @@ Narrow Mekanism transmitter OBJ/MTL owner in `fabric/src/main/java/mekanism/fabr
 
 Model transition at 14:00 UTC+8 reached mid-batch; no runtime/packaged/full-suite claims. No production,
 mirror, deploy, push, reference writes, or broad scans.
+
+## Addendum (13:45 UTC+8, same batch): consumer delivered, compile blocker proven
+
+- **`FabricTransmitterBakedModel`** added (fabric obj package): real `FabricBakedModel` consumer for pinned
+  fabric-renderer-api-v1 3.2.2 (`emitBlockQuads(BlockAndTintGetter, BlockState, BlockPos, Supplier<Random>,
+  RenderContext)` — signature verified via javap) reading the attachment from
+  `net.fabricmc.fabric.api.rendering.data.v1.RenderAttachedBlockView` (fabric-rendering-data-attachment-v1 0.3.39,
+  package verified). Uses the **canonical** `TransmitterModelData`/`ConnectionType` (per parent supervision: no
+  ordinal/parallel domain model). Ports of official semantics: six-part `getPartName` selection, `getIconStatus`/
+  `getStatus` end-icon logic incl. Diversion NO_SHOW, `adjustTextureName` opaque/`_opaque` + `#side`/`#side_glass`
+  collapse remap, glass quads only when `hasColor`, immutable per-SidedConnection part caches (internal + glass),
+  item/default fallback = all-NONE arrangement, per-part rotation quaternion about block center,
+  `fromVanilla(quad.getVertices(), quad.getTintIndex())` preserves material tint (glass `forge_TintIndex 1`).
+- **Exact subset-compile blocker (proven by javac -sourcepath over src/main+src/api with pinned MC+fabric jars)**:
+  `FabricTransmitterBakedModel → TransmitterModelData → mekanism.common.util.EnumUtils` (its `check()` uses
+  `EnumUtils.DIRECTIONS`) → EnumUtils field/closure includes `TileEntityQIODriveArray.DriveStatus`,
+  tier/resource classes → `net.neoforged.neoforge.client.model.data.ModelData` / `neoforge.capabilities`
+  (unported). Also needs classpath jsr305 + datafixerupper for api slice files. So compiling the consumer requires
+  either admitting `TransmitterModelData`+`ConnectionType`+`EnumUtils` to `fabric/common-slice.txt` **with the
+  EnumUtils slice-dependency resolution** (parent slice-admission decision, same class as checkpoint13's excluded
+  surfaces) — or trimming `TransmitterModelData.check()`'s EnumUtils usage. Not bypassed with a synthetic seam.
+  `TransmitterObjGeometry` + `TransmitterQuadBaker` subset-compile PASS (re-verified 13:43).
+- Remaining next (unchanged): producer `RenderAttachmentBlockEntity` snapshot via `initModelData`/`updateModelData`
+  hooks + published-snapshot immutability; `ModelLoadingPlugin` registration (3 loader JSONs identified:
+  `transmitter/small/small.json`, `transmitter/large/large.json`,
+  `transmitter/large/logistical_transporter/transporter.json` — each `loader: mekanism:transmitter`, `model`
+  points at the obj.mek, optional `glass.mtl_override`, child-tier texture aliases incl. `center_glass_*`);
+  ColorProviderRegistry.BLOCK tint wiring; reload/opaque-config cache invalidation.
