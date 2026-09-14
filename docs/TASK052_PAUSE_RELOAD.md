@@ -1,6 +1,6 @@
 # Task052 — user-requested reload pause
 
-User latest instruction: “这个子代理结束之后暂停，我需要reload一下”。Current implementer has finished; PAUSE. Do not continue the prior continuous-work instruction or dispatch another agent until user resumes.
+Historical pause checkpoint. **Superseded: user resumed with “好了，可以继续工作了”; continuous work is active.** See REVIEW19/REVIEW20 for subsequent review. Original pause request: “这个子代理结束之后暂停，我需要reload一下”。
 
 - Parent baseline before this handoff:5e0a9c34, java-port; Task051 last accepted.
 - Preserved current implementation:1b273877 on `pi-agent-be680cb1-c5bd-437`; prior renderer5059aac7 is an ancestor (parent verified with git merge-base --is-ancestor). Not merged into parent.
