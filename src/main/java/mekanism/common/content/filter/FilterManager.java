@@ -166,7 +166,7 @@ public class FilterManager<FILTER extends IFilter<?>> {
 
     public void writeToNBT(HolderLookup.Provider provider, CompoundTag nbt) {
         if (!filters.isEmpty()) {
-            ListTag filterTags = new ListTag(filters.size());
+            ListTag filterTags = new ListTag();
             RegistryOps<Tag> serializationContext = provider.createSerializationContext(NbtOps.INSTANCE);
             for (FILTER filter : filters) {
                 DataResult<Tag> encoded = BaseFilter.GENERIC_CODEC.encodeStart(serializationContext, filter);

@@ -1,6 +1,7 @@
 package mekanism.fabric.tile;
 
 import mekanism.common.tile.base.CapabilityTileEntity;
+import mekanism.common.tile.machine.TileEntityOredictionificator;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerBlockEntityEvents;
 
 /**
@@ -26,10 +27,16 @@ public final class FabricCapabilityTileLifecycle {
                 //A block entity actually entering a server world opens a fresh exposure generation; component data may not be loaded yet, which the guard never reads
                 tile.openCapabilityExposure();
             }
+            if (blockEntity instanceof TileEntityOredictionificator tile) {
+                tile.onLoad();
+            }
         });
         ServerBlockEntityEvents.BLOCK_ENTITY_UNLOAD.register((blockEntity, world) -> {
             if (blockEntity instanceof CapabilityTileEntity tile) {
                 tile.closeCapabilityExposure();
+            }
+            if (blockEntity instanceof TileEntityOredictionificator tile) {
+                tile.onUnload();
             }
         });
     }

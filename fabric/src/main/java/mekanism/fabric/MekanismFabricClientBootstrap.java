@@ -21,6 +21,16 @@ public final class MekanismFabricClientBootstrap implements ClientModInitializer
     @Override
     public void onInitializeClient() {
         FabricClientConfigLifecycle.initialize();
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientBlockEntityEvents.BLOCK_ENTITY_LOAD.register((blockEntity, world) -> {
+            if (blockEntity instanceof mekanism.common.tile.machine.TileEntityOredictionificator tile) {
+                tile.onLoad();
+            }
+        });
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientBlockEntityEvents.BLOCK_ENTITY_UNLOAD.register((blockEntity, world) -> {
+            if (blockEntity instanceof mekanism.common.tile.machine.TileEntityOredictionificator tile) {
+                tile.onUnload();
+            }
+        });
         FabricChemicalClientLifecycle.initialize();
         FabricRecipeCacheClientLifecycle.initialize();
         FabricMekanismClientNetworking.initialize();

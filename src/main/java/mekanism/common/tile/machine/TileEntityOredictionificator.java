@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import mekanism.api.Action;
 import mekanism.api.IContentsListener;
 import mekanism.api.RelativeSide;
@@ -51,6 +52,8 @@ public class TileEntityOredictionificator extends TileEntityConfigurableMachine 
     @WrappingComputerMethod(wrapper = ComputerIInventorySlotWrapper.class, methodNames = "getOutputItem", docPlaceholder = "output slot")
     OutputInventorySlot outputSlot;
     private final IConfigValueInvalidationListener validFiltersListener = new ODConfigValueInvalidationListener();
+    private final AtomicBoolean filtersNeedValidation = new AtomicBoolean();
+    private boolean listeningForFilterChanges;
 
     public TileEntityOredictionificator(BlockPos pos, BlockState state) {
         super(MekanismBlocks.OREDICTIONIFICATOR, pos, state);
@@ -71,7 +74,14 @@ public class TileEntityOredictionificator extends TileEntityConfigurableMachine 
     }
 
     @Override
+    protected void onUpdateClient() {
+        validateChangedFilters();
+        super.onUpdateClient();
+    }
+
+    @Override
     protected boolean onUpdateServer() {
+        validateChangedFilters();
         boolean sendUpdatePacket = super.onUpdateServer();
         if (RecipeCacheContext.isInvalidationPending()) {
             for (OredictionificatorFilter<?, ?, ?> filter : filterManager.getFilters()) {
@@ -97,16 +107,36 @@ public class TileEntityOredictionificator extends TileEntityConfigurableMachine 
         return sendUpdatePacket;
     }
 
-    @Override
+    /** Called by the native block-entity LOAD events on both logical sides, including disk loads. */
     public void onLoad() {
-        super.onLoad();
-        MekanismConfig.general.validOredictionificatorFilters.addInvalidationListener(validFiltersListener);
+        if (!listeningForFilterChanges) {
+            MekanismConfig.general.validOredictionificatorFilters.addInvalidationListener(validFiltersListener);
+            listeningForFilterChanges = true;
+        }
+        //Fabric can publish LOAD before component data is installed. Validate on the actual tile tick instead.
+        filtersNeedValidation.set(true);
+    }
+
+    /** Server chunk/world unload does not call vanilla setRemoved. Both unload and removal close this listener. */
+    public void onUnload() {
+        if (listeningForFilterChanges) {
+            MekanismConfig.general.validOredictionificatorFilters.removeInvalidationListener(validFiltersListener);
+            listeningForFilterChanges = false;
+        }
     }
 
     @Override
     public void setRemoved() {
         super.setRemoved();
-        MekanismConfig.general.validOredictionificatorFilters.removeInvalidationListener(validFiltersListener);
+        onUnload();
+    }
+
+    private void validateChangedFilters() {
+        if (filtersNeedValidation.getAndSet(false)) {
+            for (OredictionificatorItemFilter filter : filterManager.getFilters()) {
+                filter.checkValidity();
+            }
+        }
     }
 
     private static List<ResourceLocation> getFilterableTags(ItemStack stack) {
@@ -218,10 +248,9 @@ public class TileEntityOredictionificator extends TileEntityConfigurableMachine 
 
         @Override
         public void run() {
-            for (OredictionificatorItemFilter filter : filterManager.getFilters()) {
-                //Check each filter for validity
-                filter.checkValidity();
-            }
+            //The process-wide config can notify client and integrated-server listeners from one thread.
+            //Only the owning tile tick may mutate its actual filter collection/cache.
+            filtersNeedValidation.set(true);
         }
 
         public boolean isIn(Level level) {

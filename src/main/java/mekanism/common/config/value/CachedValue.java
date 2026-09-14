@@ -2,6 +2,7 @@ package mekanism.common.config.value;
 
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 import java.util.function.BiPredicate;
 import mekanism.common.config.IMekanismConfig;
@@ -22,11 +23,11 @@ public abstract class CachedValue<T> {
         this.config.addCachedValue(this);
     }
 
-    public boolean hasInvalidationListeners() {
+    public synchronized boolean hasInvalidationListeners() {
         return invalidationListeners != null && !invalidationListeners.isEmpty();
     }
 
-    public void addInvalidationListener(IConfigValueInvalidationListener listener) {
+    public synchronized void addInvalidationListener(IConfigValueInvalidationListener listener) {
         if (invalidationListeners == null) {
             invalidationListeners = new HashSet<>();
         }
@@ -35,7 +36,7 @@ public abstract class CachedValue<T> {
         }
     }
 
-    public void removeInvalidationListener(IConfigValueInvalidationListener listener) {
+    public synchronized void removeInvalidationListener(IConfigValueInvalidationListener listener) {
         if (invalidationListeners == null) {
             LOGGER.warn("Unable to remove specified invalidation listener, no invalidation listeners have been added.");
         } else if (!invalidationListeners.remove(listener)) {
@@ -43,7 +44,7 @@ public abstract class CachedValue<T> {
         }
     }
 
-    public <DATA> void removeInvalidationListenersMatching(DATA data, BiPredicate<IConfigValueInvalidationListener, DATA> checker) {
+    public synchronized <DATA> void removeInvalidationListenersMatching(DATA data, BiPredicate<IConfigValueInvalidationListener, DATA> checker) {
         if (invalidationListeners != null && !invalidationListeners.isEmpty()) {
             //noinspection Java8CollectionRemoveIf - Capturing lambda
             for (Iterator<IConfigValueInvalidationListener> iter = invalidationListeners.iterator(); iter.hasNext(); ) {
@@ -64,7 +65,13 @@ public abstract class CachedValue<T> {
             // slightly extra memory, and invalid values shouldn't matter as the config should only be used if it is loaded
             // so once the config is loaded there should be another clearCache call that then causes these values to get updated
             if (!unloading && isLoaded() && clearCachedValue(true)) {
-                invalidationListeners.forEach(IConfigValueInvalidationListener::run);
+                //Integrated logical sides register/unregister concurrently. Never iterate a mutable set or
+                //hold its monitor while invoking callbacks (which may themselves change registrations).
+                List<IConfigValueInvalidationListener> listeners;
+                synchronized (this) {
+                    listeners = List.copyOf(invalidationListeners);
+                }
+                listeners.forEach(IConfigValueInvalidationListener::run);
             }
         } else {
             clearCachedValue(false);

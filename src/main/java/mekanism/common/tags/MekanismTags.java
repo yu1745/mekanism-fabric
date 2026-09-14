@@ -7,7 +7,6 @@ import java.util.HashMap;
 import java.util.Map;
 import mekanism.api.MekanismAPI;
 import mekanism.api.chemical.Chemical;
-import mekanism.common.Mekanism;
 import mekanism.common.resource.BlockResourceInfo;
 import mekanism.common.resource.IResource;
 import mekanism.common.resource.PrimaryResource;
@@ -17,9 +16,6 @@ import mekanism.common.util.EnumUtils;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.tags.BlockTags;
-import net.minecraft.tags.FluidTags;
-import net.minecraft.tags.ItemTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
@@ -160,11 +156,11 @@ public class MekanismTags {
         public static final TagKey<Item> COLORABLE_BANNERS = tag("colorable/banners");
 
         private static TagKey<Item> commonTag(String name) {
-            return ItemTags.create(ResourceLocation.fromNamespaceAndPath("c", name));
+            return TagKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("c", name));
         }
 
         private static TagKey<Item> tag(String name) {
-            return ItemTags.create(Mekanism.rl(name));
+            return TagKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, name));
         }
     }
 
@@ -214,11 +210,11 @@ public class MekanismTags {
         public static final TagKey<Block> STORAGE_BLOCKS_FLUORITE = commonTag("storage_blocks/fluorite");
 
         private static TagKey<Block> commonTag(String name) {
-            return BlockTags.create(ResourceLocation.fromNamespaceAndPath("c", name));
+            return TagKey.create(Registries.BLOCK, ResourceLocation.fromNamespaceAndPath("c", name));
         }
 
         private static TagKey<Block> tag(String name) {
-            return BlockTags.create(Mekanism.rl(name));
+            return TagKey.create(Registries.BLOCK, ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, name));
         }
     }
 
@@ -230,7 +226,7 @@ public class MekanismTags {
         public static final TagKey<Biome> SPAWN_ORES = tag("spawn_ores");
 
         private static TagKey<Biome> tag(String name) {
-            return TagKey.create(Registries.BIOME, Mekanism.rl(name));
+            return TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, name));
         }
     }
 
@@ -247,7 +243,7 @@ public class MekanismTags {
         }
 
         private static TagKey<EntityType<?>> tag(String name) {
-            return tag(Mekanism.rl(name));
+            return tag(ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, name));
         }
 
         private static TagKey<EntityType<?>> tag(ResourceLocation tag) {
@@ -280,7 +276,7 @@ public class MekanismTags {
         public static final TagKey<Fluid> NUTRITIONAL_PASTE = commonTag("nutritional_paste");
 
         private static TagKey<Fluid> commonTag(String name) {
-            return FluidTags.create(ResourceLocation.fromNamespaceAndPath("c", name));
+            return TagKey.create(Registries.FLUID, ResourceLocation.fromNamespaceAndPath("c", name));
         }
     }
 
@@ -292,7 +288,7 @@ public class MekanismTags {
         public static final TagKey<Chemical> WATER_VAPOR = tag("water_vapor");
 
         private static TagKey<Chemical> tag(String name) {
-            return TagKey.create(MekanismAPI.CHEMICAL_REGISTRY_NAME, Mekanism.rl(name));
+            return TagKey.create(MekanismAPI.CHEMICAL_REGISTRY_NAME, ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, name));
         }
     }
 
@@ -304,7 +300,7 @@ public class MekanismTags {
         public static final TagKey<DataComponentType<?>> CLEARABLE_CONFIG = tag("config/clearable");
 
         private static TagKey<DataComponentType<?>> tag(String name) {
-            return TagKey.create(Registries.DATA_COMPONENT_TYPE, Mekanism.rl(name));
+            return TagKey.create(Registries.DATA_COMPONENT_TYPE, ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, name));
         }
     }
 }

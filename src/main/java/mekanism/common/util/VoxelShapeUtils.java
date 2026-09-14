@@ -5,7 +5,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.UnaryOperator;
-import mekanism.common.Mekanism;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.phys.AABB;
@@ -16,13 +17,15 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 
 public final class VoxelShapeUtils {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism");
+
     private static final Vec3 fromOrigin = new Vec3(-0.5, -0.5, -0.5);
 
     /**
      * Prints out an easy to copy-paste string representing the cuboid of a shape
      */
     public static void print(double x1, double y1, double z1, double x2, double y2, double z2) {
-        Mekanism.logger.info("box({}, {}, {}, {}, {}, {}),", Math.min(x1, x2), Math.min(y1, y2), Math.min(z1, z2),
+        LOGGER.info("box({}, {}, {}, {}, {}, {}),", Math.min(x1, x2), Math.min(y1, y2), Math.min(z1, z2),
               Math.max(x1, x2), Math.max(y1, y2), Math.max(z1, z2));
     }
 
@@ -30,7 +33,7 @@ public final class VoxelShapeUtils {
      * Prints out a set of strings that make copy-pasting easier, for simplifying a voxel shape
      */
     public static void printSimplified(String name, VoxelShape shape) {
-        Mekanism.logger.info("Simplified: {}", name);
+        LOGGER.info("Simplified: {}", name);
         for (AABB box : shape.optimize().toAabbs()) {
             print(box.minX * 16, box.minY * 16, box.minZ * 16, box.maxX * 16, box.maxY * 16, box.maxZ * 16);
         }

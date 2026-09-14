@@ -692,6 +692,8 @@ mekanism/common/item/block/ItemBlockBin.java
 mekanism/common/block/prefab/BlockTile.java
 mekanism/common/block/transmitter/BlockTransmitter.java
 mekanism/common/block/transmitter/BlockSmallTransmitter.java
+# Direct native geometry prerequisite of the three admitted transmitter block owners (no content factory)
+mekanism/common/util/VoxelShapeUtils.java
 mekanism/common/block/transmitter/BlockLargeTransmitter.java
 mekanism/common/tile/transmitter/TileEntityLogisticalTransporterBase.java
 mekanism/common/capabilities/proxy/ProxyConfigurable.java
