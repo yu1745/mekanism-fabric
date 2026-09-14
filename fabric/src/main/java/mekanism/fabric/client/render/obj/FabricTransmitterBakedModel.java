@@ -11,7 +11,7 @@ import java.util.function.Function;
 import mekanism.client.model.data.TransmitterModelData;
 import mekanism.client.model.data.TransmitterModelData.Diversion;
 import mekanism.common.lib.transmitter.ConnectionType;
-import net.fabricmc.fabric.api.renderer.v1.Renderer;
+import net.fabricmc.fabric.api.renderer.v1.RendererAccess;
 import net.fabricmc.fabric.api.renderer.v1.material.BlendMode;
 import net.fabricmc.fabric.api.renderer.v1.material.MaterialFinder;
 import net.fabricmc.fabric.api.renderer.v1.material.RenderMaterial;
@@ -56,7 +56,7 @@ public final class FabricTransmitterBakedModel implements BakedModel, FabricBake
     private static final RenderMaterial TRANSLUCENT_MATERIAL = material(BlendMode.TRANSLUCENT);
 
     private static RenderMaterial material(BlendMode blendMode) {
-        MaterialFinder finder = Renderer.get().materialFinder();
+        MaterialFinder finder = RendererAccess.INSTANCE.getRenderer().materialFinder();
         RenderMaterial material = finder.blendMode(blendMode).find();
         finder.clear();
         return material;
