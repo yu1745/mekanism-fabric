@@ -1,6 +1,6 @@
 package mekanism.api;
 
-import net.neoforged.neoforge.common.ItemAbility;
+import net.minecraft.world.item.ItemStack;
 
 /**
  * Common placeholder of all the Item Abilities we create in Mekanism. It is still possible to just recreate the item abilities yourself to avoid referencing this class
@@ -55,4 +55,19 @@ public final class MekanismItemAbilities {
      * Exposed by wrenches that can currently rotate blocks.
      */
     public static final ItemAbility WRENCH_ROTATE = ItemAbility.get("wrench_rotate");
+
+    /**
+     * Fabric port delta: dispatch helper replacing the NeoForge patched {@code ItemStack#canPerformAction} method. Asks the item for declared abilities through the
+     * Mekanism-owned {@link ItemAbility.IItemAbilityProvider} surface.
+     *
+     * @param stack   Stack to check.
+     * @param ability Ability the stack should be able to perform.
+     *
+     * @return {@code true} if the stack's item declares support for the given ability.
+     *
+     * @since 10.7.0 (Fabric port)
+     */
+    public static boolean canPerformAction(ItemStack stack, ItemAbility ability) {
+        return stack.getItem() instanceof ItemAbility.IItemAbilityProvider provider && provider.canPerformAction(stack, ability);
+    }
 }

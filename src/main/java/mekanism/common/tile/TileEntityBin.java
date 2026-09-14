@@ -1,6 +1,5 @@
 package mekanism.common.tile;
 
-import mekanism.api.Action;
 import mekanism.api.IConfigurable;
 import mekanism.api.IContentsListener;
 import mekanism.api.SerializationConstants;
@@ -25,6 +24,11 @@ import mekanism.common.upgrade.BinUpgradeData;
 import mekanism.common.upgrade.IUpgradeData;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.NBTUtils;
+import mekanism.common.util.WorldUtils;
+import net.fabricmc.fabric.api.transfer.v1.item.ItemStorage;
+import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
+import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
+import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
@@ -41,15 +45,11 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
-import net.neoforged.neoforge.items.IItemHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class TileEntityBin extends TileEntityMekanism implements IConfigurable {
 
-    @Nullable
-    private BlockCapabilityCache<IItemHandler, @Nullable Direction> targetInventory;
     public int addTicks = 0;
     public int removeTicks = 0;
     private int delayTicks;
@@ -78,6 +78,14 @@ public class TileEntityBin extends TileEntityMekanism implements IConfigurable {
         return builder.build();
     }
 
+    @Nullable
+    private Storage<ItemVariant> freshTargetStorage() {
+        if (level instanceof ServerLevel serverLevel && WorldUtils.isChunkLoaded(serverLevel, getBlockPos().below())) {
+            return ItemStorage.SIDED.find(serverLevel, getBlockPos().below(), Direction.UP);
+        }
+        return null;
+    }
+
     public BinTier getTier() {
         return tier;
     }
@@ -95,17 +103,28 @@ public class TileEntityBin extends TileEntityMekanism implements IConfigurable {
         if (delayTicks == 0) {
             if (getActive()) {
                 //Note: We can't just pass "this" and have to instead look up the capability to make sure we respect any sidedness
-                // we short circuit looking it up from the world though, and just query the provider we add to the tile directly
-                IItemHandler capability = ITEM_HANDLER_PROVIDER.getCapability(this, Direction.DOWN);
+                // we short circuit looking it up from the world though, and just query the provider we add to the tile directly.
+                // This is the bin's actual DOWN sided Storage; the exact debit routes through it into BinInventorySlot,
+                // the real owner of the finite/creative source policy
+                Storage<ItemVariant> capability = ITEM_HANDLER_PROVIDER.apply(this, Direction.DOWN);
                 HandlerTransitRequest request = new HandlerTransitRequest(capability);
-                request.addItem(binSlot.getBottomStack(), 0);
-                if (targetInventory == null) {
-                    targetInventory = Capabilities.ITEM.createCache((ServerLevel) level, getBlockPos().below(), Direction.UP);
-                }
-                TransitResponse response = request.eject(this, targetInventory.getCapability(), 0, LogisticalTransporterBase::getColor);
-                if (!response.isEmpty() && tier != BinTier.CREATIVE) {
-                    int sendingAmount = response.getSendingAmount();
-                    MekanismUtils.logMismatchedStackSize(binSlot.shrinkStack(sendingAmount, Action.EXECUTE), sendingAmount);
+                //Identity-checked candidate through the actual DOWN sided provider; the bottom-stack cap is honored
+                // by recording exactly the bottom stack amount (Task052 R3/R5)
+                request.addItemFromSelectedSlot(binSlot.getBottomStack(), binSlot);
+                //Fresh real provider for the below/UP target (bottom-stack cap is enforced by the slot itself)
+                Storage<ItemVariant> target = freshTargetStorage();
+                if (target != null) {
+                    try (Transaction tx = Transaction.openOuter()) {
+                        TransitResponse response = request.eject(this, target, 0, LogisticalTransporterBase::getColor, tx);
+                        if (!response.isEmpty()) {
+                            //Validate the real DOWN source for every tier. Creative extraction is deliberately
+                            // non-depleting at BinInventorySlot/FabricItemStorage, not an unchecked tick bypass.
+                            response.useAll(tx);
+                            tx.commit();
+                        }
+                    } catch (RuntimeException ignored) {
+                        //Exact debit failure aborted the whole ejection; retry next round
+                    }
                 }
                 delayTicks = MekanismUtils.TICKS_PER_HALF_SECOND;
             }

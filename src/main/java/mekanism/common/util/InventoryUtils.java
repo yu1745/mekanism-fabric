@@ -14,11 +14,12 @@ import mekanism.api.math.MathUtils;
 import mekanism.api.security.IItemSecurityUtils;
 import mekanism.common.attachments.component.UpgradeAware;
 import mekanism.common.attachments.containers.ContainerType;
-import mekanism.common.capabilities.Capabilities;
-import mekanism.common.inventory.container.SelectedWindowData;
 import mekanism.common.item.interfaces.IDroppableContents;
 import mekanism.common.lib.inventory.HandlerTransitRequest;
 import mekanism.common.registries.MekanismDataComponents;
+import net.fabricmc.fabric.api.transfer.v1.item.ItemStorage;
+import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
+import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.damagesource.DamageSource;
@@ -26,8 +27,6 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.items.IItemHandler;
-import net.neoforged.neoforge.items.ItemHandlerHelper;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
@@ -153,10 +152,10 @@ public final class InventoryUtils {
     }
 
     public static boolean isItemHandler(Level level, BlockPos pos, Direction side) {
-        return Capabilities.ITEM.getCapabilityIfLoaded(level, pos, side) != null;
+        return ItemStorage.SIDED.find(level, pos, side) != null;
     }
 
-    public static HandlerTransitRequest getEjectItemMap(IItemHandler handler, List<IInventorySlot> slots) {
+    public static HandlerTransitRequest getEjectItemMap(Storage<ItemVariant> handler, List<IInventorySlot> slots) {
         return getEjectItemMap(new HandlerTransitRequest(handler), slots);
     }
 
@@ -169,7 +168,9 @@ public final class InventoryUtils {
             //Note: We are using EXTERNAL as that is what we actually end up using when performing the extraction in the end
             ItemStack simulatedExtraction = slot.extractItem(slot.getCount(), Action.SIMULATE, AutomationType.EXTERNAL);
             if (!simulatedExtraction.isEmpty()) {
-                request.addItem(simulatedExtraction, slots.indexOf(slot));
+                //Identity-checked candidate: the selected physical slot is connected to its real exposed position in
+                // the request's sided provider (Task052 R3); no inferred generic indices
+                request.addItemFromSelectedSlot(simulatedExtraction, slot);
             }
         }
         return request;

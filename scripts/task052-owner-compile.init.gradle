@@ -1,0 +1,32 @@
+// Task052 diagnostic-only actual-owner compilation. Not a production slice admission or test fixture.
+// ./gradlew -p fabric -I "$PWD/scripts/task052-owner-compile.init.gradle" compileJava --no-configuration-cache
+// The included sources below are the connected request/route/caller owners; dependencies remain authoritative slices.
+gradle.projectsEvaluated {
+    allprojects {
+        def java = extensions.findByName('sourceSets')
+        if (java != null) {
+            [
+                'mekanism/common/content/network/InventoryNetwork.java',
+                'mekanism/common/content/network/transmitter/LogisticalTransporterBase.java',
+                'mekanism/common/content/network/transmitter/Transmitter.java',
+                'mekanism/common/content/transporter/TransporterManager.java',
+                'mekanism/common/content/transporter/TransporterPathfinder.java',
+                'mekanism/common/content/transporter/TransporterStack.java',
+                'mekanism/common/content/transporter/PathfinderCache.java',
+                'mekanism/common/lib/inventory/HandlerTransitRequest.java',
+                'mekanism/common/lib/inventory/TransitRequest.java',
+                'mekanism/common/lib/transmitter/acceptor/ItemAcceptorCache.java',
+                'mekanism/common/lib/transmitter/acceptor/ItemNetworkAcceptorCache.java',
+                'mekanism/common/capabilities/item/TransporterItemStorage.java',
+                'mekanism/common/tile/component/TileComponentEjector.java',
+                'mekanism/common/tile/machine/TileEntityDigitalMiner.java',
+                'mekanism/common/tile/qio/TileEntityQIOExporter.java',
+                'mekanism/common/tile/TileEntityBin.java',
+                'mekanism/common/tile/TileEntityLogisticalSorter.java',
+                'mekanism/common/util/InventoryUtils.java',
+                'mekanism/common/util/TransporterUtils.java'
+            ].each { java.main.java.include(it) }
+            tasks.withType(JavaCompile).configureEach { options.compilerArgs += ['-Xmaxerrs', '2000'] }
+        }
+    }
+}

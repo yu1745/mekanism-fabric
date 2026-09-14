@@ -8,10 +8,9 @@ import mekanism.api.SerializationConstants;
 import mekanism.api.text.EnumColor;
 import mekanism.client.sound.SoundHandler;
 import mekanism.common.attachments.containers.ContainerType;
-import mekanism.common.capabilities.Capabilities;
 import mekanism.common.capabilities.holder.slot.IInventorySlotHolder;
 import mekanism.common.capabilities.holder.slot.InventorySlotHelper;
-import mekanism.common.capabilities.item.CursedTransporterItemHandler;
+import mekanism.common.capabilities.item.TransporterItemStorage;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.content.filter.SortableFilterManager;
 import mekanism.common.content.transporter.SorterFilter;
@@ -37,6 +36,13 @@ import mekanism.common.util.InventoryUtils;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.NBTUtils;
 import mekanism.common.util.TransporterUtils;
+import mekanism.common.util.WorldUtils;
+import net.fabricmc.fabric.api.transfer.v1.item.ItemStorage;
+import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
+import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
+import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
+import net.fabricmc.fabric.api.transfer.v1.transaction.TransactionContext;
+import net.fabricmc.fabric.api.transfer.v1.transaction.base.SnapshotParticipant;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -52,8 +58,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.redstone.Redstone;
-import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
-import net.neoforged.neoforge.items.IItemHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -69,11 +73,6 @@ public class TileEntityLogisticalSorter extends TileEntityMekanism implements IT
         }
         return true;
     };
-
-    @Nullable
-    private BlockCapabilityCache<IItemHandler, @Nullable Direction> homeInventory;
-    @Nullable
-    private BlockCapabilityCache<IItemHandler, @Nullable Direction> targetInventory;
 
     @SyntheticComputerMethod(getter = "getDefaultColor")
     public EnumColor color;
@@ -114,15 +113,11 @@ public class TileEntityLogisticalSorter extends TileEntityMekanism implements IT
         }
 
         if (canFunction() && delayTicks == 0) {
-            IItemHandler back = getHomeInventory();
+            Storage<ItemVariant> back = getHomeInventory();
             //If there is no tile to pull from or the push to, skip doing any checks
             if (back != null) {
                 Direction direction = getDirection();
-                if (targetInventory == null) {
-                    targetInventory = Capabilities.ITEM.createCache((ServerLevel) level, worldPosition.relative(direction), direction.getOpposite());
-                }
-                IItemHandler frontCap = targetInventory.getCapability();
-                if (frontCap != null) {
+                Storage<ItemVariant> frontCap = getTargetInventory(direction);                if (frontCap != null) {
                     boolean sentItems = false;
                     for (SorterFilter<?> filter : filterManager.getEnabledFilters()) {
                         TransitRequest request = filter.mapInventory(back, singleItem);
@@ -130,11 +125,20 @@ public class TileEntityLogisticalSorter extends TileEntityMekanism implements IT
                             continue;
                         }
                         int min = singleItem ? 1 : filter.sizeMode ? filter.min : 0;
-                        TransitResponse response = emitItemToTransporter(frontCap, request, filter.color, min);
-                        if (!response.isEmpty()) {
-                            response.useAll();
-                            setActive(true);
-                            sentItems = true;
+                        //Caller-owned transaction: route reservation + exact source debit commit together; the
+                        // activity flag is only set on the committed send
+                        try (Transaction tx = Transaction.openOuter()) {
+                            TransitResponse response = emitItemToTransporter(frontCap, request, filter.color, min, tx);
+                            if (!response.isEmpty()) {
+                                response.useAll(tx);
+                                tx.commit();
+                                setActive(true);
+                                sentItems = true;
+                            }
+                        } catch (RuntimeException ignored) {
+                            //Exact debit failure aborted the whole send; try no further filters this round
+                        }
+                        if (sentItems) {
                             break;
                         }
                     }
@@ -142,10 +146,15 @@ public class TileEntityLogisticalSorter extends TileEntityMekanism implements IT
                     if (!sentItems && autoEject) {
                         //TODO - 1.21: Evaluate if this (and SorterFilter#mapInventory) should use a stack's max stack size or the absolute stack size
                         TransitRequest request = TransitRequest.definedItem(back, singleItem ? 1 : Item.ABSOLUTE_MAX_STACK_SIZE, strictFinder);
-                        TransitResponse response = emitItemToTransporter(frontCap, request, color, 0);
-                        if (!response.isEmpty()) {
-                            response.useAll();
-                            setActive(true);
+                        try (Transaction tx = Transaction.openOuter()) {
+                            TransitResponse response = emitItemToTransporter(frontCap, request, color, 0, tx);
+                            if (!response.isEmpty()) {
+                                response.useAll(tx);
+                                tx.commit();
+                                setActive(true);
+                            }
+                        } catch (RuntimeException ignored) {
+                            //Exact debit failure aborted the whole default send
                         }
                     }
                 }
@@ -155,13 +164,14 @@ public class TileEntityLogisticalSorter extends TileEntityMekanism implements IT
         return sendUpdatePacket;
     }
 
-    private TransitResponse emitItemToTransporter(IItemHandler target, TransitRequest request, EnumColor filterColor, int min) {
+    private TransitResponse emitItemToTransporter(Storage<ItemVariant> target, TransitRequest request, EnumColor filterColor, int min, Transaction tx) {
         if (request.isEmpty()) {
             return request.getEmptyResponse();
-        } else if (target instanceof CursedTransporterItemHandler cursed) {
-            return cursed.getTransporter().insertMaybeRR(this, getBlockPos(), request, filterColor, true, min);
+        } else if (target instanceof TransporterItemStorage endpoint) {
+            return endpoint.isValid() ? endpoint.getTransporter().insertMaybeRR(this, getBlockPos(), request, filterColor, true, min, tx)
+                  : request.getEmptyResponse();
         }
-        return request.addToInventoryUnchecked(target, min);
+        return request.addToInventoryUnchecked(target, min, tx);
     }
 
     @Override
@@ -243,20 +253,31 @@ public class TileEntityLogisticalSorter extends TileEntityMekanism implements IT
     }
 
     @Nullable
-    private IItemHandler getHomeInventory() {
-        if (homeInventory == null) {
-            Direction direction = getDirection();
-            BlockPos pos = worldPosition.relative(direction.getOpposite());
-            homeInventory = Capabilities.ITEM.createCache((ServerLevel) level, pos, direction);
+    private Storage<ItemVariant> getHomeInventory() {
+        Direction direction = getDirection();
+        BlockPos pos = worldPosition.relative(direction.getOpposite());
+        //Fresh real provider for the back inventory (no persistent capability cache; rebinds resolve fresh)
+        return freshSidedStorage(pos, direction);
+    }
+
+    @Nullable
+    private Storage<ItemVariant> getTargetInventory(Direction direction) {
+        //Fresh per-operation resolution (reviewed fluid ejector policy): no retained provider across ticks
+        return freshSidedStorage(worldPosition.relative(direction), direction.getOpposite());
+    }
+
+    @Nullable
+    private Storage<ItemVariant> freshSidedStorage(BlockPos pos, Direction side) {
+        if (level instanceof ServerLevel serverLevel && WorldUtils.isChunkLoaded(serverLevel, pos)) {
+            return ItemStorage.SIDED.find(serverLevel, pos, side);
         }
-        return homeInventory.getCapability();
+        return null;
     }
 
     @Override
     protected void invalidateDirectionCaches(Direction newDirection) {
         super.invalidateDirectionCaches(newDirection);
-        homeInventory = null;
-        targetInventory = null;
+        //No retained item providers: fresh lookups re-resolve per operation after rotation
     }
 
     @Override
@@ -277,20 +298,51 @@ public class TileEntityLogisticalSorter extends TileEntityMekanism implements IT
         rrTarget = target;
     }
 
+    /**
+     * Stable owner participant for the sorter's round-robin target (Task052 correction): a committed nested
+     * transaction whose enclosing transaction later aborts still restores the prior RR target exactly.
+     */
+    private final SnapshotParticipant<SidedBlockPos> rrTargetTx = new SnapshotParticipant<>() {
+        @Override
+        protected SidedBlockPos createSnapshot() {
+            return rrTarget;
+        }
+
+        @Override
+        protected void readSnapshot(SidedBlockPos snapshot) {
+            rrTarget = snapshot;
+        }
+    };
+
+    @Override
+    public void updateRoundRobinSnapshot(TransactionContext tx) {
+        rrTargetTx.updateSnapshots(tx);
+    }
+
     @Override
     public boolean canSendHome(@NotNull ItemStack stack) {
         Direction oppositeDirection = getOppositeDirection();
-        return TransporterUtils.canInsert(level, worldPosition.relative(oppositeDirection), null, stack, oppositeDirection, true);
+        return TransporterUtils.canInsert(level, worldPosition.relative(oppositeDirection), null, stack, oppositeDirection, false);
     }
 
     @NotNull
     @Override
     public TransitResponse sendHome(@NotNull TransitRequest request) {
+        try (Transaction tx = Transaction.openOuter()) {
+            TransitResponse response = sendHome(request, tx);
+            tx.commit();
+            return response;
+        }
+    }
+
+    @NotNull
+    @Override
+    public TransitResponse sendHome(@NotNull TransitRequest request, @NotNull Transaction tx) {
         Direction direction = getDirection();
         BlockPos pos = worldPosition.relative(direction.getOpposite());
         //Note: We pass false as we have no reason to allow daisy-chaining sorters given a sorter can't send from a sorter to another
         // and the only case would be if an inventory was replaced with another sorter connected to an inventory to proxy it back an extra spot
-        return request.addToInventory(getLevel(), pos, getHomeInventory(), 0, false);
+        return request.addToInventory(getLevel(), pos, getHomeInventory(), 0, false, tx);
     }
 
     @Override

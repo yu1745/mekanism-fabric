@@ -2,24 +2,31 @@ package mekanism.common.network.to_server.qio;
 
 import io.netty.buffer.ByteBuf;
 import java.util.UUID;
-import mekanism.common.Mekanism;
 import mekanism.common.content.qio.QIOFrequency;
 import mekanism.common.content.qio.QIOGlobalItemLookup;
 import mekanism.common.inventory.container.QIOItemViewerContainer;
 import mekanism.common.lib.inventory.HashedItem;
-import mekanism.common.network.IMekanismPacket;
 import mekanism.common.util.InventoryUtils;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.jetbrains.annotations.NotNull;
 
-public record PacketQIOItemViewerSlotTake(UUID typeUUID, int count) implements IMekanismPacket {
+/**
+ * QIO item viewer take payload (client to server).
+ *
+ * <p>Fabric adaptation of the official packet: codec and handling logic unchanged; NeoForge's {@code IMekanismPacket}/{@code IPayloadContext} dispatch is
+ * replaced by the vanilla {@link CustomPacketPayload} contract with handling split into {@link #handle(Player)}. The server receiver lives in the Fabric
+ * networking owner and runs on the server thread, matching the original main-thread semantics.</p>
+ */
+public record PacketQIOItemViewerSlotTake(UUID typeUUID, int count) implements CustomPacketPayload {
 
-    public static final CustomPacketPayload.Type<PacketQIOItemViewerSlotTake> TYPE = new CustomPacketPayload.Type<>(Mekanism.rl("qio_take"));
+    public static final CustomPacketPayload.Type<PacketQIOItemViewerSlotTake> TYPE = new CustomPacketPayload.Type<>(
+          ResourceLocation.fromNamespaceAndPath("mekanism", "qio_take"));
     public static final StreamCodec<ByteBuf, PacketQIOItemViewerSlotTake> STREAM_CODEC = StreamCodec.composite(
           UUIDUtil.STREAM_CODEC, PacketQIOItemViewerSlotTake::typeUUID,
           ByteBufCodecs.VAR_INT, PacketQIOItemViewerSlotTake::count,
@@ -32,9 +39,8 @@ public record PacketQIOItemViewerSlotTake(UUID typeUUID, int count) implements I
         return TYPE;
     }
 
-    @Override
-    public void handle(IPayloadContext context) {
-        if (context.player().containerMenu instanceof QIOItemViewerContainer container) {
+    public void handle(Player player) {
+        if (player.containerMenu instanceof QIOItemViewerContainer container) {
             QIOFrequency freq = container.getFrequency();
             if (freq != null) {
                 HashedItem itemType = QIOGlobalItemLookup.INSTANCE.getTypeByUUID(typeUUID);
