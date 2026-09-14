@@ -118,7 +118,7 @@ public final class FabricDeferredHolder<T> implements Holder<T>, Supplier<T> {
             throw new IllegalStateException("Registry value " + key.location() + " is already bound");
         }
         T nonNullValue = Objects.requireNonNull(canonicalValue, "registrar returned null for " + key.location());
-        if (registryHolder != null && (registryHolder.key() != key || registryHolder.value() != nonNullValue)) {
+        if (registryHolder != null && (registryHolder.key() != key || registryHolder.isBound() && registryHolder.value() != nonNullValue)) {
             throw new IllegalArgumentException("Registry holder does not match canonical value " + key.location());
         }
         canonicalHolder = registryHolder;

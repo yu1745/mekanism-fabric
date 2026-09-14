@@ -77,7 +77,13 @@ public final class FabricDeferredRegister<T> {
                         throw new IllegalStateException("Registry value is already registered by identity: " + created);
                     }
                     Holder.Reference<T> canonical = Registry.registerForHolder(registry, key, created);
-                    pending.getValue().holder().bind(canonical.value(), canonical);
+                    // Vanilla non-intrusive MappedRegistry binds reference values at freeze, not register. Validate through
+                    // its authoritative value/holder maps now; retain that same reference for later tags and serialization.
+                    if (registry.getResourceKey(created).orElse(null) != key || registry.getHolder(key).orElse(null) != canonical
+                          || registry.getId(created) < 0) {
+                        throw new IllegalStateException("Registry did not retain canonical value/holder for " + key.location());
+                    }
+                    pending.getValue().holder().bind(created, canonical);
                 }
             }
             lifecycle = FabricRegistryLifecycle.REGISTERED;

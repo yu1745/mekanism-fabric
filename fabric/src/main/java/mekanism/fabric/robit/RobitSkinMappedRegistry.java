@@ -14,7 +14,9 @@ public final class RobitSkinMappedRegistry extends DefaultedMappedRegistry<Robit
 
     @Override
     public Registry<RobitSkin> freeze() {
-        if (getOptional(RobitSkinRegistry.BASE.location()).isEmpty()) {
+        // Nonintrusive vanilla references bind their values inside super.freeze(). Check actual registration metadata,
+        // not getOptional (which dereferences an as-yet-unbound BASE) or containsKey (which may be only a forward reference).
+        if (registrationInfo(RobitSkinRegistry.BASE).isEmpty()) {
             throw new IllegalStateException("Missing default robit skin " + RobitSkinRegistry.BASE.location());
         }
         return super.freeze();
