@@ -15,6 +15,7 @@ import mekanism.common.block.attribute.Attribute;
 import mekanism.common.capabilities.Capabilities;
 import mekanism.common.capabilities.fluid.BasicFluidTank;
 import mekanism.common.content.network.FluidNetwork;
+import mekanism.common.content.network.distribution.FluidSendTransaction;
 import mekanism.common.lib.transmitter.CompatibleTransmitterValidator;
 import mekanism.common.lib.transmitter.CompatibleTransmitterValidator.CompatibleFluidTransmitterValidator;
 import mekanism.common.lib.transmitter.ConnectionType;
@@ -91,7 +92,16 @@ public class MechanicalPipe extends BufferedTransmitter<Storage<FluidVariant>, F
                 // and our buffer changed and is no longer empty
                 FluidStack bufferWithFallback = getBufferWithFallback();
                 int availablePull = getAvailablePull();
+                //REVIEW_05 correction: snapshot the ACTUAL captured destination tank (network tank when attached, otherwise our own buffer) BEFORE any
+                // external operation, and perform the internal insertion against that exact captured identity inside the transaction. The old code called
+                // takeFluid, which re-resolves the destination at call time (an owner can switch between simulation and execute) and ignored the returned
+                // remainder and resulting contents, so a listener exception or partial execute could abort the external extraction while the internal
+                // insertion stayed, or commit the extraction despite an incomplete insertion.
+                IExtendedFluidTank destination = hasTransmitterNetwork() ? getTransmitterNetwork().fluidTank : buffer;
+                FluidStack destinationBefore = copyOfTank(destination);
                 try (Transaction pull = Transaction.openOuter()) {
+                    FluidSendTransaction.SourceTankSnapshot destinationSnapshot = new FluidSendTransaction.SourceTankSnapshot(destination);
+                    destinationSnapshot.updateSnapshots(pull);
                     FluidStack received = null;
                     if (bufferWithFallback.isEmpty()) {
                         //If we don't have a fluid stored try pulling whatever resource the acceptor exposes
@@ -108,31 +118,84 @@ public class MechanicalPipe extends BufferedTransmitter<Storage<FluidVariant>, F
                         FluidVariant stored = FabricFluidConversions.toFabricVariant(bufferWithFallback);
                         received = extractWholeMillibuckets(connectedAcceptor, stored, availablePull, pull);
                     }
-                    if (received != null && takeFluid(received, Action.SIMULATE).isEmpty()) {
-                        //If we received some fluid and are able to insert it all, then actually take it into our buffer and commit the
-                        // external extraction. The extraction is still inside the open transaction, so a failed simulation here aborts
-                        // it and nothing is removed from the acceptor (no dupe window).
-                        takeFluid(received, Action.EXECUTE);
+                    if (received != null && tryInsertIntoCapturedDestination(destination, destinationBefore, received)) {
+                        //Exact internal insertion into the still-captured destination verified inside the open transaction; commit both sides atomically.
+                        //Any mismatch or exception leaves the acceptor untouched (aborted extraction) and the destination restored by the snapshot
                         pull.commit();
                     }
-                    //Otherwise: abort, leaving the acceptor untouched
+                    //Otherwise: abort, leaving the acceptor untouched and the destination rolled back
                 }
             }
         }
     }
 
     /**
-     * Extracts up to {@code maxMillibuckets} of {@code variant} from {@code storage} inside {@code transaction}, accepting only an exact whole-millibucket result. A
-     * fractional probe result is aborted and retried at its whole-millibucket floor (bounded); the extraction only stays when the transaction is committed by the caller.
+     * Performs and verifies the INTERNAL insertion of {@code received} into the exact destination tank captured before any external operation. Validates stable owner
+     * identity before and after the execute, an empty remainder, and an exact expected read-back; any mismatch or exception returns false so the caller aborts the whole
+     * transaction (external extraction + internal insertion together).
+     */
+    private boolean tryInsertIntoCapturedDestination(IExtendedFluidTank destination, FluidStack destinationBefore, @NotNull FluidStack received) {
+        if (currentPullDestination() != destination) {
+            //Owner identity changed (network topology switch) between extraction and insertion; abort
+            return false;
+        }
+        FluidStack remainder;
+        try {
+            remainder = destination.insert(received, Action.EXECUTE, AutomationType.INTERNAL);
+        } catch (RuntimeException e) {
+            //A throwing listener must abort both sides; the destination contents are restored by the snapshot on abort
+            return false;
+        }
+        if (remainder != null && !remainder.isEmpty()) {
+            //Partial internal insertion; abort (the external extraction must not commit)
+            return false;
+        }
+        if (currentPullDestination() != destination) {
+            //Owner identity changed during the insertion; abort
+            return false;
+        }
+        FluidStack expectedAfter;
+        if (destinationBefore.isEmpty()) {
+            expectedAfter = received;
+        } else {
+            if (!FluidStack.isSameFluidSameComponents(destinationBefore, received)) {
+                //Cannot normally happen: we only pull the stored fluid when the buffer is non-empty, but verify anyway
+                return false;
+            }
+            expectedAfter = destinationBefore.copyWithAmount(destinationBefore.getAmount() + received.getAmount());
+        }
+        return FluidStack.matches(expectedAfter, copyOfTank(destination));
+    }
+
+    /**
+     * Re-resolves the destination tank exactly the way the pre-correction takeFluid did, so identity comparisons detect a real owner switch rather than
+     * pinning a stale object by construction.
+     */
+    private IExtendedFluidTank currentPullDestination() {
+        return hasTransmitterNetwork() ? getTransmitterNetwork().fluidTank : buffer;
+    }
+
+    private static FluidStack copyOfTank(IExtendedFluidTank tank) {
+        FluidStack stack = tank.getFluid();
+        return stack == null || stack.isEmpty() ? FluidStack.EMPTY : stack.copy();
+    }
+
+    /**
+     * Extracts up to {@code maxMillibuckets} of {@code variant} from {@code storage} inside {@code transaction}, accepting only a whole-millibucket result.
      *
-     * @return the extracted stack, or {@code null} if the acceptor cannot provide an exact whole-millibucket amount.
+     * <p>REVIEW_05 correction: fixed bound — the initial probe plus at most ONE retry at the whole-millibucket floor of the probe's report (never an amount-dependent
+     * loop). Any valid whole-millibucket retry response is accepted; a fractional or invalid one aborts and returns {@code null}. The extraction only stays when the
+     * transaction is committed by the caller.
+     *
+     * @return the extracted stack, or {@code null} if the acceptor cannot provide a whole-millibucket amount.
      */
     @Nullable
     private static FluidStack extractWholeMillibuckets(Storage<FluidVariant> storage, FluidVariant variant, int maxMillibuckets, Transaction transaction) {
-        long request = (long) maxMillibuckets * FabricFluidConversions.TRANSFER_UNITS_PER_MILLIBUCKET;
-        if (request <= 0 || request > FabricFluidConversions.MAX_EXACT_TRANSFER_UNITS) {
+        //Range guard BEFORE multiplying so a long request cannot overflow past MAX_EXACT_TRANSFER_UNITS
+        if (maxMillibuckets <= 0 || maxMillibuckets > FabricFluidConversions.MAX_EXACT_TRANSFER_UNITS / FabricFluidConversions.TRANSFER_UNITS_PER_MILLIBUCKET) {
             return null;
         }
+        long request = (long) maxMillibuckets * FabricFluidConversions.TRANSFER_UNITS_PER_MILLIBUCKET;
         long reported;
         try (Transaction probe = Transaction.openNested(transaction)) {
             reported = storage.extract(variant, request, probe);
@@ -143,25 +206,18 @@ public class MechanicalPipe extends BufferedTransmitter<Storage<FluidVariant>, F
                 probe.commit();
                 return FabricFluidConversions.toFluidStack(variant, reported);
             }
-            //Fractional or partial: abort the probe and fall through to the bounded floor retry
+            //Fractional or partial: abort the probe and do ONE bounded floor retry
         }
-        long floorMillibuckets = reported / FabricFluidConversions.TRANSFER_UNITS_PER_MILLIBUCKET;
-        while (floorMillibuckets >= 1) {
-            long retryRequest = floorMillibuckets * FabricFluidConversions.TRANSFER_UNITS_PER_MILLIBUCKET;
-            try (Transaction nested = Transaction.openNested(transaction)) {
-                long extracted = storage.extract(variant, retryRequest, nested);
-                if (extracted < 0 || extracted > retryRequest) {
-                    return null;
-                }
-                if (extracted == retryRequest) {
-                    nested.commit();
-                    return FabricFluidConversions.toFluidStack(variant, extracted);
-                }
-                long nextFloor = extracted / FabricFluidConversions.TRANSFER_UNITS_PER_MILLIBUCKET;
-                if (nextFloor >= floorMillibuckets) {
-                    return null;
-                }
-                floorMillibuckets = nextFloor;
+        long floorDroplets = reported / FabricFluidConversions.TRANSFER_UNITS_PER_MILLIBUCKET * FabricFluidConversions.TRANSFER_UNITS_PER_MILLIBUCKET;
+        if (floorDroplets <= 0) {
+            return null;
+        }
+        try (Transaction nested = Transaction.openNested(transaction)) {
+            long extracted = storage.extract(variant, floorDroplets, nested);
+            //Accept any valid whole-millibucket response; abort (never commit) a fractional or invalid one
+            if (extracted > 0 && extracted <= floorDroplets && extracted % FabricFluidConversions.TRANSFER_UNITS_PER_MILLIBUCKET == 0) {
+                nested.commit();
+                return FabricFluidConversions.toFluidStack(variant, extracted);
             }
         }
         return null;

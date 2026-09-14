@@ -26,6 +26,13 @@ import org.jetbrains.annotations.Nullable;
 
 public final class FluidUtils {
 
+    //REVIEW_05 connection status (accurate, do not overstate): the sender-owned FluidSendTransaction overloads exist and the real-tank
+    // emit(targets, tank, maxOutput) overload routes through them, but the immediate cache-owning callers of the LOOKUP side are NOT yet
+    // migrated to the accepted Fabric lookup/cache identities: TileComponentEjector, TileEntityFluidTank and ElectricPump still build
+    // their target collections from the old caches, InventoryFrequency gets external handlers from QE's old capability lookup, and
+    // MechanicalPipe.createAcceptorCache still registers Capabilities.FLUID.block(). Connecting those needs accepted Fabric lookup
+    // identities and physical side lifecycle — not casts or reverse NeoForge facades — and remains open WIP, not a completed migration.
+
     private FluidUtils() {
     }
 

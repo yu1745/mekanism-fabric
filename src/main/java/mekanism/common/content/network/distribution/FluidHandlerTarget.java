@@ -20,8 +20,9 @@ import org.jetbrains.annotations.NotNull;
  * into the still-open enclosing send transaction and only become permanent when the sender commits after debiting its source.
  *
  * <p>Amounts given to this target are whole millibuckets. Fabric droplet responses are converted back with {@link FabricFluidConversions#TRANSFER_UNITS_PER_MILLIBUCKET};
- * a storage that reports a fractional (non-whole-millibucket) accepted amount never causes a fractional destination commit: the probe transaction is aborted and retried at
- * the whole-millibucket floor of the reported amount, accepting only an exact whole-millibucket response (bounded retry; otherwise nothing is committed for that handler).
+ * a storage that reports a fractional (non-whole-millibucket) accepted amount never causes a fractional destination commit: the probe transaction is aborted and retried
+ * exactly ONCE at the whole-millibucket floor of the reported amount (fixed bound — initial probe plus one retry, never an amount-dependent loop), accepting any valid
+ * whole-millibucket response; otherwise nothing is committed for that handler.
  */
 public class FluidHandlerTarget extends Target<Storage<FluidVariant>, @NotNull FluidStack> {
 
@@ -67,7 +68,11 @@ public class FluidHandlerTarget extends Target<Storage<FluidVariant>, @NotNull F
     }
 
     /**
-     * Inserts exactly {@code millibuckets} (at most) as a nested transaction of {@code enclosing}, committing only an exact whole-millibucket result.
+     * Inserts exactly {@code millibuckets} (at most) as a nested transaction of {@code enclosing}, committing only a whole-millibucket result.
+     *
+     * <p>REVIEW_05 correction: the amount-dependent decreasing retry loop is replaced by the approved FIXED bound — the initial probe plus at most ONE fresh retry at the
+     * whole-millibucket floor of the probe's report. Any valid whole-millibucket response of that retry is accepted (not only the full retried amount); anything else —
+     * including a fractional response — aborts and returns 0, so a storage returning request-1 droplets cannot force repeated probes.
      *
      * @return the accepted whole millibuckets, or {@code 0} when the storage cannot accept an exact whole-millibucket amount or returned an invalid response.
      */
@@ -90,37 +95,28 @@ public class FluidHandlerTarget extends Target<Storage<FluidVariant>, @NotNull F
                 probe.commit();
                 return millibuckets;
             }
-            //Fractional or partial: abort the probe and fall through to the bounded floor retry
+            //Fractional or partial: abort the probe and do ONE bounded floor retry
         }
-        long floorMillibuckets = reported / FabricFluidConversions.TRANSFER_UNITS_PER_MILLIBUCKET;
-        while (floorMillibuckets >= 1) {
-            long retryRequest = floorMillibuckets * FabricFluidConversions.TRANSFER_UNITS_PER_MILLIBUCKET;
-            try (Transaction nested = Transaction.openNested(enclosing)) {
-                long accepted = handler.insert(variant, retryRequest, nested);
-                if (accepted < 0 || accepted > retryRequest) {
-                    return 0;
-                }
-                if (accepted == retryRequest) {
-                    //Exact whole-millibucket acceptance; commit into the enclosing send transaction
-                    nested.commit();
-                    return floorMillibuckets;
-                }
-                long nextFloor = accepted / FabricFluidConversions.TRANSFER_UNITS_PER_MILLIBUCKET;
-                if (nextFloor >= floorMillibuckets) {
-                    //No progress toward an exact whole-millibucket amount; stop instead of retrying unboundedly
-                    return 0;
-                }
-                floorMillibuckets = nextFloor;
+        long floorDroplets = reported / FabricFluidConversions.TRANSFER_UNITS_PER_MILLIBUCKET * FabricFluidConversions.TRANSFER_UNITS_PER_MILLIBUCKET;
+        if (floorDroplets <= 0) {
+            return 0;
+        }
+        try (Transaction nested = Transaction.openNested(enclosing)) {
+            long accepted = handler.insert(variant, floorDroplets, nested);
+            //Accept any valid whole-millibucket response; abort (never commit) a fractional or invalid one
+            if (accepted > 0 && accepted <= floorDroplets && accepted % FabricFluidConversions.TRANSFER_UNITS_PER_MILLIBUCKET == 0) {
+                nested.commit();
+                return accepted / FabricFluidConversions.TRANSFER_UNITS_PER_MILLIBUCKET;
             }
         }
         return 0;
     }
 
     private static long dropletRequest(long millibuckets) {
-        if (millibuckets <= 0) {
+        //Range guard BEFORE multiplying so a public long millibucket request cannot overflow past MAX_EXACT_TRANSFER_UNITS
+        if (millibuckets <= 0 || millibuckets > FabricFluidConversions.MAX_EXACT_TRANSFER_UNITS / FabricFluidConversions.TRANSFER_UNITS_PER_MILLIBUCKET) {
             return 0;
         }
-        long request = millibuckets * FabricFluidConversions.TRANSFER_UNITS_PER_MILLIBUCKET;
-        return request > FabricFluidConversions.MAX_EXACT_TRANSFER_UNITS ? 0 : request;
+        return millibuckets * FabricFluidConversions.TRANSFER_UNITS_PER_MILLIBUCKET;
     }
 }

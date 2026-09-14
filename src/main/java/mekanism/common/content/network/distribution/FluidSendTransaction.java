@@ -91,20 +91,27 @@ public final class FluidSendTransaction {
      * Caller-owned offered-stack send: distributes {@code toSend} fairly among {@code handlers} inside one committed transaction and returns the millibuckets accepted.
      *
      * <p>Explicit ownership distinction: a caller-owned offered stack has no tank this class could snapshot or debit; the caller remains responsible for consuming the
-     * returned amount from its actual source. There is deliberately no source snapshot or reentrancy verification here.
+     * returned amount from its actual source. There is deliberately no source snapshot or reentrancy verification here; committing the distribution makes NO
+     * source-atomicity claim for this overload.
      */
     public static int send(Collection<Storage<FluidVariant>> handlers, @NotNull FluidStack toSend) {
         Objects.requireNonNull(toSend, "toSend");
         if (handlers.isEmpty() || toSend.isEmpty()) {
             return 0;
         }
+        int accepted = 0;
         try (Transaction outer = Transaction.openOuter()) {
             FluidHandlerTarget target = collectAcceptors(handlers, toSend, outer);
-            if (target == null) {
-                return 0;
+            if (target != null) {
+                accepted = EmitUtils.sendToAcceptors(target, toSend.getAmount(), toSend);
             }
-            return EmitUtils.sendToAcceptors(target, toSend.getAmount(), toSend);
+            if (accepted > 0) {
+                //REVIEW_05 correction: destinations only become durable when the enclosing transaction commits; previously a positive
+                // count was returned while every target write aborted on close, losing fluid if the caller debited the returned amount
+                outer.commit();
+            }
         }
+        return accepted;
     }
 
     @Nullable
@@ -127,16 +134,16 @@ public final class FluidSendTransaction {
     }
 
     /**
-     * Mekanism-specific single-tank snapshot participant: rollback restores defensive content with {@code setStackUnchecked}, exactly as the accepted
-     * {@link mekanism.fabric.fluid.FabricFluidStorage} restores captured tanks. It deliberately does not duplicate the side-view exposure/lifecycle machinery; it only
-     * snapshots one concrete source tank inside the send transaction.
+     * Shared (permanent, non-duplicated) Mekanism single-tank snapshot participant: rollback restores defensive content with {@code setStackUnchecked}, exactly as the
+     * accepted {@link mekanism.fabric.fluid.FabricFluidStorage} restores captured tanks. It deliberately does not duplicate the side-view exposure/lifecycle machinery;
+     * it only snapshots one concrete tank inside a transaction. Used by the source-owned {@link #send} overloads here and by the sender-owned MechanicalPipe pull.
      */
-    private static final class SourceTankSnapshot extends SnapshotParticipant<FluidStack> {
+    public static final class SourceTankSnapshot extends SnapshotParticipant<FluidStack> {
 
         private final IExtendedFluidTank source;
         private FluidStack snapshot = FluidStack.EMPTY;
 
-        private SourceTankSnapshot(IExtendedFluidTank source) {
+        public SourceTankSnapshot(IExtendedFluidTank source) {
             this.source = source;
         }
 

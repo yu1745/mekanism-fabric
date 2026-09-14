@@ -870,7 +870,7 @@ public final class MekanismUtils {
             }
 
             //Otherwise, break the block
-            FluidState fluidState = targetState.getFluidState();
+            //Note: Level.removeBlock re-reads the fluid state at removal time, exactly as vanilla does, so no pre-captured fluidState is needed here
             //Get the tile now so that we have it for when we try to harvest the block
             //Note: this is the same blockEntity instance passed to the BEFORE/CANCELED/AFTER hooks
             //Keep the original pre-break state for the successful AFTER dispatch below
@@ -879,8 +879,14 @@ public final class MekanismUtils {
             // This also ensures that things like decorated pots are able to properly update to cracked and drop sherds rather than the pot block itself
             targetState = targetState.getBlock().playerWillDestroy(world, foundPos, targetState, player);
             Block block = targetState.getBlock();
-            //Remove the block, preserving vanilla destruction semantics (onDestroyedByPlayer then block.destroy)
-            if (targetState.onDestroyedByPlayer(world, foundPos, player, true, fluidState)) {
+            //Fabric port correction (Task052 REVIEW_05 finding 3): use ACTUAL vanilla block-removal semantics. Vanilla ServerPlayerGameMode.destroyBlock
+            // (survival branch) removes the block through Level.removeBlock(pos, false) — pinned upstream/neoforge-minecraft
+            // net/minecraft/world/level/Level.java:311: removeBlock reads the CURRENT fluid state and setBlock(pos, fluidstate.createLegacyBlock(), 3)
+            // (triggering the vanilla onRemove/BE-removal event chain through setBlock flags 3, plus its own BLOCK_DESTROY path when used via destroyBlock).
+            // The previously-called BlockState.onDestroyedByPlayer is a PATCHED (NeoForge-added) method, not vanilla API, and re-implementing its behavior by
+            // hand duplicated only part of the semantics. Calling Level.removeBlock here keeps the real vanilla ordering: playerWillDestroy (which itself fires
+            // the destroy game event) -> setBlock to the fluid's legacy block (vanilla onRemove + BlockEntity teardown) -> block.destroy -> playerDestroy.
+            if (world.removeBlock(foundPos, false)) {
                 block.destroy(world, foundPos, targetState);
                 //Harvest the block allowing it to handle block drops, incrementing block mined count, and adding exhaustion
                 block.playerDestroy(world, player, foundPos, targetState, blockEntity, stack);

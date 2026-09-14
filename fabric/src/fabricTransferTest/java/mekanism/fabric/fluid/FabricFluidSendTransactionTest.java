@@ -236,4 +236,62 @@ class FabricFluidSendTransactionTest {
         assertEquals(0, sent, "A source mutated during distribution must abort the whole send");
         assertEquals(100, source.getFluidAmount(), "The snapshot rollback must restore the mutated source to its pre-send contents");
     }
+
+    @Test
+    void offeredStackOverloadActuallyCommitsTheDistribution() {
+        //REVIEW_05 finding 1: the caller-owned offered-stack overload previously returned a positive count while every target write aborted on close,
+        // losing fluid if the caller debited the returned amount. It must commit the distribution.
+        FakeFluidStorage destination = new FakeFluidStorage(10 * FabricFluidConversions.TRANSFER_UNITS_PER_MILLIBUCKET);
+        FluidStack offered = new FluidStack(Fluids.WATER, 5);
+
+        int sent = FluidSendTransaction.send(List.of(destination), offered);
+
+        assertEquals(5, sent);
+        assertEquals(5 * FabricFluidConversions.TRANSFER_UNITS_PER_MILLIBUCKET, destination.amount(), "The destination must durably hold the reported amount");
+    }
+
+    /**
+     * A hostile storage that always reports request-minus-one droplet: under the old amount-dependent decreasing loop this caused unbounded probes. The approved fixed
+     * bound allows the initial probe plus at most ONE floor retry, and never commits a fractional response.
+     */
+    @Test
+    void requestMinusOneStorageTerminatesAfterFixedRetryAndNeverCommitsFractional() {
+        int[] insertCalls = {0};
+        Storage<FluidVariant> hostile = new Storage<>() {
+            @Override
+            public boolean supportsInsertion() {
+                return true;
+            }
+
+            @Override
+            public long insert(FluidVariant resource, long maxAmount, TransactionContext transaction) {
+                insertCalls[0]++;
+                return Math.max(0, maxAmount - 1);
+            }
+
+            @Override
+            public boolean supportsExtraction() {
+                return false;
+            }
+
+            @Override
+            public long extract(FluidVariant resource, long maxAmount, TransactionContext transaction) {
+                return 0;
+            }
+
+            @Override
+            public Iterator<StorageView<FluidVariant>> iterator() {
+                return List.<StorageView<FluidVariant>>of().iterator();
+            }
+        };
+        BasicFluidTank source = BasicFluidTank.create(1_000, null);
+        source.setStackUnchecked(new FluidStack(Fluids.WATER, 100));
+
+        int sent = FluidSendTransaction.send(List.of(hostile), source, 100);
+
+        assertEquals(0, sent, "A fractional retry response must abort, never committing a fractional destination amount");
+        assertEquals(100, source.getFluidAmount(), "Nothing sent means nothing debited");
+        //One probe plus (at most) one floor retry — an adversarial storage must not force repeated probes
+        assertTrue(insertCalls[0] <= 2, "Insert probes must be bounded to the initial probe plus one retry, got " + insertCalls[0]);
+    }
 }
