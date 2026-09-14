@@ -36,7 +36,9 @@ public class TileEntityLogisticalTransporter extends TileEntityLogisticalTranspo
     @Override
     protected void updateModelData(TransmitterModelData modelData) {
         super.updateModelData(modelData);
-        modelData.setHasColor(getTransmitter().getColor() != null);
+        var color = getTransmitter().getColor();
+        modelData.setHasColor(color != null);
+        modelData.setPackedColor(color == null ? -1 : color.getPackedColor());
     }
 
     @NotNull

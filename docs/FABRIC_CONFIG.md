@@ -1,7 +1,7 @@
 # Fabric config 最小适配
 
 当前 config 垂直切片包含 official selected startup、Task 039 physical-client-lifetime
-`client.toml` window fragment，以及 Task 040 `common.toml` + world `general.toml` Chemical policy fragment；
+`client.toml` window fragment（Task052 review17 在同一 owner 增加 transmitter accessibility 值），以及 Task 040 `common.toml` + world `general.toml` Chemical policy fragment；
 Mekanism 自有窄接口替代 NeoForge `ModConfigSpec` / `ModConfig.Type`。它不是 Forge Config API 兼容层，
 也不提供事件总线或完整九配置 facade。
 
@@ -24,7 +24,9 @@ Fabric 侧 `MekanismConfigSpec` 提供当前声明实际需要的 category、tra
 
 当前仍不激活完整 `GeneralConfig`、会一次构造九份配置的 `MekanismConfig`、cardboard blacklist 或 Oredictionificator filter/item owner；Task 040 只为三个 world policy 值实现 world-restart metadata。其它 define schema、文件监听、通用配置同步和客户端 UI 仍延期。这些 cached-value/tier metadata 本身不激活对应 tier owners/callers、cables/pipes/tubes/transporters/conductors、machines/blocks/items 或 `tiers.toml`；窄 owner 生命周期仅以下两节为准。
 
-## Task 039 `client.toml` window owner
+## Task 039 `client.toml` window owner（Task052 扩展同一 spec）
+
+Task052 review17 继续使用 `FabricWindowConfig` 作为唯一 manager-loaded `client.toml` spec，不创建第二 writer；除原 28 个 window scalar 外，增加官方 `accessibility.opaqueTransmitters=false`，strict boolean / `gameRestart`。`FabricClientConfigLifecycle` 同步 load 后将真实值 pin 在本 physical-client lifetime 的 `TransmitterModelConfig` publication，早于 model plugin 初始化；shutdown 在 window save drain 后移除 publication。未初始化/关闭后访问报错，不再有 unbound false fallback。资源 reload 重建 sprite-bearing models，读取同一 process-pinned 值；没有 live toggle/watcher 承诺。未知 accessibility/window/其它 TOML key 与原异步 saver 保留。下文 Task039 的 11/28 是窗口子集的历史验收，不代表扩展后整个 spec 仍只有 28 值；旧 runtime fixture 本批未重跑。
 
 Task 039 已把 API/common/platform slice 扩为 **65/145/24**，并启用 `<config dir>/Mekanism/client.toml` 的唯一窗口 fragment owner。`FabricWindowConfig` 精确拥有 `window.*` 下 11 份记录/28 个 scalar：22 个 strict signed-int x/y 默认 `Integer.MAX_VALUE`，crafting0/1/2、side_config、transporter_config、upgrade 六项另有 strict boolean `pinned=false`。`MekanismConfigSpec.Builder#define(String,int)` 是刻意新增的 strict generic-int surface：TOML integer primitive/`BigInteger` 可在 signed-32-bit 范围内接受，integral float/double/decimal 仍拒绝；boolean string 同样拒绝。
 

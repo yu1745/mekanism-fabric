@@ -22,7 +22,6 @@ import mekanism.api.Action;
 import mekanism.api.AutomationType;
 import mekanism.api.inventory.IInventorySlot;
 import mekanism.api.math.MathUtils;
-import mekanism.common.Mekanism;
 import mekanism.common.content.qio.QIOCraftingTransferHelper.BaseSimulatedInventory;
 import mekanism.common.content.qio.QIOCraftingTransferHelper.SingularHashedItemSource;
 import mekanism.common.inventory.container.MekanismContainer;
@@ -41,12 +40,16 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.CraftingRecipe;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Used for the server side transfer handling by the {@link PacketQIOFillCraftingWindow}
  */
 public class QIOServerCraftingTransferHandler {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism");
 
     private final QIOCraftingWindow craftingWindow;
     private final ResourceLocation recipeID;
@@ -88,7 +91,7 @@ public class QIOServerCraftingTransferHandler {
                     //TODO: Eventually it would be nice if we added in some support so that if an item is staying put in its crafting slot
                     // we don't actually need to do any validation of if it can be extracted from when it will just end up in the same spot anyways
                     // but for now this isn't that major of a concern as our slots don't actually have any restrictions on them in regards to extracting
-                    Mekanism.logger.warn("Received transfer request from: {}, for: {}, and was unable to extract all items from crafting input slot: {}.",
+                    LOGGER.warn("Received transfer request from: {}, for: {}, and was unable to extract all items from crafting input slot: {}.",
                           player, recipeID, slot);
                     return;
                 }
@@ -99,7 +102,7 @@ public class QIOServerCraftingTransferHandler {
             Byte2ObjectMap.Entry<List<SingularHashedItemSource>> entry = iterator.next();
             byte targetSlot = entry.getByteKey();
             if (targetSlot < 0 || targetSlot >= 9) {
-                Mekanism.logger.warn("Received transfer request from: {}, for: {}, with an invalid target slot id: {}.", player, recipeID, targetSlot);
+                LOGGER.warn("Received transfer request from: {}, for: {}, with an invalid target slot id: {}.", player, recipeID, targetSlot);
                 return;
             }
             int stackSize = 0;
@@ -132,23 +135,23 @@ public class QIOServerCraftingTransferHandler {
             if (singleSources.isEmpty()) {
                 //There should always be at least one (the first source) that didn't get removed, but in case something went wrong,
                 // and it got removed anyway, then we catch it here and fail
-                Mekanism.logger.warn("Received transfer request from: {}, for: {}, that had no valid sources, this should not be possible.", player, recipeID);
+                LOGGER.warn("Received transfer request from: {}, for: {}, that had no valid sources, this should not be possible.", player, recipeID);
                 return;
             }
             ItemStack resultItem = recipeToTest.get(targetSlot);
             if (!resultItem.isEmpty() && resultItem.getMaxStackSize() < stackSize) {
                 //Note: This should never happen as if it would happen it should be caught in the above simulation and have the amount used reduced to not happen
-                Mekanism.logger.warn("Received transfer request from: {}, for: {}, that tried to transfer more items into: {} than can stack ({}) in one slot.",
+                LOGGER.warn("Received transfer request from: {}, for: {}, that tried to transfer more items into: {} than can stack ({}) in one slot.",
                       player, recipeID, targetSlot, resultItem.getMaxStackSize());
                 return;
             }
         }
         CraftingInput dummy = MekanismUtils.getCraftingInput(3, 3, recipeToTest, true).input();
         if (!recipe.matches(dummy, player.level())) {
-            Mekanism.logger.warn("Received transfer request from: {}, but source items aren't valid for the requested recipe: {}.", player, recipeID);
+            LOGGER.warn("Received transfer request from: {}, but source items aren't valid for the requested recipe: {}.", player, recipeID);
         } else if (!hasRoomToShuffle()) {
             //Note: Uses debug logging level as there are a couple cases this might not be 100% accurate on the client side
-            Mekanism.logger.debug("Received transfer request from: {}, but there is not enough room to shuffle items around for the requested recipe: {}.",
+            LOGGER.debug("Received transfer request from: {}, but there is not enough room to shuffle items around for the requested recipe: {}.",
                   player, recipeID);
         } else {
             transferItems(sources);
@@ -242,10 +245,10 @@ public class QIOServerCraftingTransferHandler {
             return fail("Received transfer request from: {}, for: {}, for an empty slot: {}.", player, recipeID, sourceSlot);
         } else if (slotData.getAvailable() < used) {
             if (sourceSlot == -1) {
-                Mekanism.logger.warn("Received transfer request from: {}, for: {}, but the QIO frequency only had {} remaining items instead of the expected: {}. "
+                LOGGER.warn("Received transfer request from: {}, for: {}, but the QIO frequency only had {} remaining items instead of the expected: {}. "
                                      + "Attempting to continue by only using the available number of items.", player, recipeID, slotData.getAvailable(), used);
             } else {
-                Mekanism.logger.warn("Received transfer request from: {}, for: {}, but slot: {} only had {} remaining items instead of the expected: {}. "
+                LOGGER.warn("Received transfer request from: {}, for: {}, but slot: {} only had {} remaining items instead of the expected: {}. "
                                      + "Attempting to continue by only using the available number of items.", player, recipeID, sourceSlot, slotData.getAvailable(), used);
             }
             used = slotData.getAvailable();
@@ -256,7 +259,7 @@ public class QIOServerCraftingTransferHandler {
             int max = slotStack.getMaxStackSize();
             if (used > max) {
                 //This should never happen unless the player has an oversized stack in their inventory
-                Mekanism.logger.warn("Received transfer request from: {}, for: {}, but the item being moved can only stack to: {} but a stack of size: {} was "
+                LOGGER.warn("Received transfer request from: {}, for: {}, but the item being moved can only stack to: {} but a stack of size: {} was "
                                      + "being moved. Attempting to continue by only using as many items as can be stacked.", player, recipeID, max, used);
                 used = max;
             }
@@ -265,14 +268,14 @@ public class QIOServerCraftingTransferHandler {
         } else if (!ItemStack.isSameItemSameComponents(currentRecipeTarget, slotStack)) {
             //If our stack can't stack with the item we already are going to put in the slot, fail "gracefully"
             //Note: debug level because this may happen due to not knowing all NBT
-            Mekanism.logger.debug("Received transfer request from: {}, for: {}, but found items for target slot: {} cannot stack. "
+            LOGGER.debug("Received transfer request from: {}, for: {}, but found items for target slot: {} cannot stack. "
                                   + "Attempting to continue by skipping the additional stack.", player, recipeID, targetSlot);
             return 0;
         } else {
             int max = currentRecipeTarget.getMaxStackSize();
             int needed = max - currentStackSize;
             if (used > needed) {
-                Mekanism.logger.warn("Received transfer request from: {}, for: {}, but moving the requested amount of: {} would cause the output stack to past "
+                LOGGER.warn("Received transfer request from: {}, for: {}, but moving the requested amount of: {} would cause the output stack to past "
                                      + "its max stack size ({}). Attempting to continue by only using as many items as can be stacked.", player, recipeID, used, max);
                 used = needed;
             }
@@ -439,7 +442,7 @@ public class QIOServerCraftingTransferHandler {
                               player, recipeID, storedItem);
                         return;
                     } else if (stack.getCount() < source.getUsed()) {
-                        Mekanism.logger.warn("Received transfer request from: {}, for: {}, but was unable to extract the expected amount: {} of item: {} from the QIO. "
+                        LOGGER.warn("Received transfer request from: {}, for: {}, but was unable to extract the expected amount: {} of item: {} from the QIO. "
                                              + "This should not be possible as it should have been caught during simulation. Attempting to continue anyways with the actual "
                                              + "extracted amount of {}.", player, recipeID, source.getUsed(), storedItem, stack.getCount());
                     }
@@ -464,7 +467,7 @@ public class QIOServerCraftingTransferHandler {
                                              + "This likely means that more of it was requested than is stored.", player, recipeID, slotType, actualSlot);
                         return;
                     } else if (stack.getCount() < source.getUsed()) {
-                        Mekanism.logger.warn("Received transfer request from: {}, for: {}, but was unable to extract the expected amount: {} from {} slot: {}. "
+                        LOGGER.warn("Received transfer request from: {}, for: {}, but was unable to extract the expected amount: {} from {} slot: {}. "
                                              + "This should not be possible as it should have been caught during simulation. Attempting to continue anyways with the "
                                              + "actual extracted amount of {}.", player, recipeID, source.getUsed(), slotType, actualSlot, stack.getCount());
                     }
@@ -480,12 +483,12 @@ public class QIOServerCraftingTransferHandler {
                             existing.grow(needed);
                             //Note: We can safely modify the stack as all our ways of extracting return a new stack
                             stack.shrink(needed);
-                            Mekanism.logger.warn("Received transfer request from: {}, for: {}, but contents could not fully fit into target slot: {}. "
+                            LOGGER.warn("Received transfer request from: {}, for: {}, but contents could not fully fit into target slot: {}. "
                                                  + "This should not be able to happen, returning excess stack, and attempting to continue.", player, recipeID, targetSlot);
                             returnItem(stack, windowData);
                         }
                     } else {
-                        Mekanism.logger.warn("Received transfer request from: {}, for: {}, but contents could not stack into target slot: {}. "
+                        LOGGER.warn("Received transfer request from: {}, for: {}, but contents could not stack into target slot: {}. "
                                              + "This should not be able to happen, returning extra stack, and attempting to continue.", player, recipeID, targetSlot);
                         returnItem(stack, windowData);
                     }
@@ -525,7 +528,7 @@ public class QIOServerCraftingTransferHandler {
                 // as we then will handle any remaining contents at the end (though we shouldn't have any)
                 // Note: We need to use put, as entry#setValue is not supported in fastutil maps
                 targetContents.put(targetSlot, remainder);
-                Mekanism.logger.warn("Received transfer request from: {}, for: {}, but was unable to fully insert it into the {} crafting input slot. "
+                LOGGER.warn("Received transfer request from: {}, for: {}, but was unable to fully insert it into the {} crafting input slot. "
                                      + "This should not be possible as it should have been caught during simulation. Attempting to continue anyways.",
                       player, recipeID, targetSlot);
             }
@@ -560,7 +563,7 @@ public class QIOServerCraftingTransferHandler {
                         // point as our simulation should have marked it as invalid
                         // Note: In theory we should never get to this point due to having accurate simulations ahead of time
                         player.drop(stack, false);
-                        Mekanism.logger.warn("Received transfer request from: {}, for: {}, initially targeting the player's inventory: {}, and was unable to fit "
+                        LOGGER.warn("Received transfer request from: {}, for: {}, initially targeting the player's inventory: {}, and was unable to fit "
                                              + "all contents that were in the crafting window into the player's inventory/QIO system; dropping items by player.",
                               player, recipeID, rejectToInventory);
                     }
@@ -587,7 +590,7 @@ public class QIOServerCraftingTransferHandler {
      * Bails out if something went horribly wrong and didn't get caught by simulations, and send the various items back to the inventory.
      */
     private void bail(Byte2ObjectMap<ItemStack> targetContents, Byte2ObjectMap<ItemStack> remainingCraftingGridContents, String format, Object... args) {
-        Mekanism.logger.warn(format, args);
+        LOGGER.warn(format, args);
         SelectedWindowData windowData = craftingWindow.getWindowData();
         for (ItemStack stack : targetContents.values()) {
             //We don't attempt to try and return the contents being moved to the crafting inventory to their original slots
@@ -651,7 +654,7 @@ public class QIOServerCraftingTransferHandler {
      * @return {@code -1}
      */
     private int fail(String format, Object... args) {
-        Mekanism.logger.warn(format, args);
+        LOGGER.warn(format, args);
         return -1;
     }
 

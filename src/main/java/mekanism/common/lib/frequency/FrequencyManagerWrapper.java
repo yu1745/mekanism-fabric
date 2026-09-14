@@ -1,13 +1,16 @@
 package mekanism.common.lib.frequency;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
 import mekanism.api.security.SecurityMode;
-import mekanism.common.Mekanism;
 
 public class FrequencyManagerWrapper<FREQ extends Frequency> {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism/Frequency");
 
     private final Type type;
     private final FrequencyType<FREQ> frequencyType;
@@ -36,7 +39,7 @@ public class FrequencyManagerWrapper<FREQ extends Frequency> {
 
     public FrequencyManager<FREQ> getPublicManager() {
         if (!type.supportsPublic()) {
-            Mekanism.logger.error("Attempted to access public frequency manager of type {}. This shouldn't happen!", frequencyType.getName());
+            LOGGER.error("Attempted to access public frequency manager of type {}. This shouldn't happen!", frequencyType.getName());
             return null;
         }
 
@@ -45,10 +48,10 @@ public class FrequencyManagerWrapper<FREQ extends Frequency> {
 
     public FrequencyManager<FREQ> getPrivateManager(UUID ownerUUID) {
         if (!type.supportsPrivate()) {
-            Mekanism.logger.error("Attempted to access private frequency manager of type {}. This shouldn't happen!", frequencyType.getName());
+            LOGGER.error("Attempted to access private frequency manager of type {}. This shouldn't happen!", frequencyType.getName());
             return null;
         } else if (ownerUUID == null) {
-            Mekanism.logger.error("Attempted to access private frequency manager of type {} with no owner. This shouldn't happen!", frequencyType.getName());
+            LOGGER.error("Attempted to access private frequency manager of type {} with no owner. This shouldn't happen!", frequencyType.getName());
             return null;
         }
 
@@ -63,10 +66,10 @@ public class FrequencyManagerWrapper<FREQ extends Frequency> {
 
     public FrequencyManager<FREQ> getTrustedManager(UUID ownerUUID) {
         if (!type.supportsTrusted()) {
-            Mekanism.logger.error("Attempted to access trusted frequency manager of type {}. This shouldn't happen!", frequencyType.getName());
+            LOGGER.error("Attempted to access trusted frequency manager of type {}. This shouldn't happen!", frequencyType.getName());
             return null;
         } else if (ownerUUID == null) {
-            Mekanism.logger.error("Attempted to access trusted frequency manager of type {} with no owner. This shouldn't happen!", frequencyType.getName());
+            LOGGER.error("Attempted to access trusted frequency manager of type {} with no owner. This shouldn't happen!", frequencyType.getName());
             return null;
         }
         FrequencyManager<FREQ> manager = trustedManagers.get(ownerUUID);

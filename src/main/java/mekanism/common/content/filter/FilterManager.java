@@ -8,7 +8,6 @@ import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import mekanism.api.SerializationConstants;
-import mekanism.common.Mekanism;
 import mekanism.common.inventory.container.MekanismContainer;
 import mekanism.common.inventory.container.sync.list.SyncableFilterList;
 import mekanism.common.lib.collection.HashList;
@@ -22,6 +21,10 @@ import net.minecraft.resources.RegistryOps;
 import org.jetbrains.annotations.Nullable;
 
 public class FilterManager<FILTER extends IFilter<?>> {
+
+    //Task052 call-site narrowing (adjudicated): logging-only Mekanism dependency becomes the established Mekanism SLF4J category
+    private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger("Mekanism");
+
 
     private final Class<? extends FILTER> filterClass;
     protected final Runnable markForSave;
@@ -168,7 +171,7 @@ public class FilterManager<FILTER extends IFilter<?>> {
             for (FILTER filter : filters) {
                 DataResult<Tag> encoded = BaseFilter.GENERIC_CODEC.encodeStart(serializationContext, filter);
                 encoded.ifSuccess(filterTags::add);
-                encoded.ifError(error -> Mekanism.logger.warn("Failed to serialize filter: {}", error.message()));
+                encoded.ifError(error -> LOGGER.warn("Failed to serialize filter: {}", error.message()));
             }
             if (!filterTags.isEmpty()) {
                 nbt.put(SerializationConstants.FILTERS, filterTags);
@@ -188,7 +191,7 @@ public class FilterManager<FILTER extends IFilter<?>> {
                 if (decoded.isSuccess()) {
                     tryAddFilter(decoded.getOrThrow(), false);
                 } else {
-                    decoded.ifError(error -> Mekanism.logger.warn("Failed to deserialize stored filter: {}", error.message()));
+                    decoded.ifError(error -> LOGGER.warn("Failed to deserialize stored filter: {}", error.message()));
                 }
             }
         });
