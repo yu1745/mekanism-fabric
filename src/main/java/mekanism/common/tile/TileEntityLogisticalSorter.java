@@ -72,11 +72,6 @@ public class TileEntityLogisticalSorter extends TileEntityMekanism implements IT
         return true;
     };
 
-    @Nullable
-    private Storage<ItemVariant> homeInventory;
-    @Nullable
-    private Storage<ItemVariant> targetInventory;
-
     @SyntheticComputerMethod(getter = "getDefaultColor")
     public EnumColor color;
     private boolean autoEject;
@@ -120,8 +115,7 @@ public class TileEntityLogisticalSorter extends TileEntityMekanism implements IT
             //If there is no tile to pull from or the push to, skip doing any checks
             if (back != null) {
                 Direction direction = getDirection();
-                Storage<ItemVariant> frontCap = getTargetInventory(direction);
-                if (frontCap != null) {
+                Storage<ItemVariant> frontCap = getTargetInventory(direction);                if (frontCap != null) {
                     boolean sentItems = false;
                     for (SorterFilter<?> filter : filterManager.getEnabledFilters()) {
                         TransitRequest request = filter.mapInventory(back, singleItem);
@@ -265,11 +259,8 @@ public class TileEntityLogisticalSorter extends TileEntityMekanism implements IT
 
     @Nullable
     private Storage<ItemVariant> getTargetInventory(Direction direction) {
-        if (targetInventory == null) {
-            //Cached only as the last resolved fresh provider; re-resolved fresh whenever the direction changes
-            targetInventory = freshSidedStorage(worldPosition.relative(direction), direction.getOpposite());
-        }
-        return targetInventory;
+        //Fresh per-operation resolution (reviewed fluid ejector policy): no retained provider across ticks
+        return freshSidedStorage(worldPosition.relative(direction), direction.getOpposite());
     }
 
     @Nullable
@@ -283,8 +274,7 @@ public class TileEntityLogisticalSorter extends TileEntityMekanism implements IT
     @Override
     protected void invalidateDirectionCaches(Direction newDirection) {
         super.invalidateDirectionCaches(newDirection);
-        homeInventory = null;
-        targetInventory = null;
+        //No retained item providers: fresh lookups re-resolve per operation after rotation
     }
 
     @Override

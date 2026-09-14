@@ -535,6 +535,15 @@ public abstract class LogisticalTransporterBase extends Transmitter<Storage<Item
 
     public <BE extends BlockEntity> TransitResponse insertUnchecked(BE outputter, TransitRequest request, @Nullable EnumColor color, boolean doEmit, int min, PathCalculator<BE> pathCalculator, @Nullable TransactionContext tx) {
         TransporterStack stack = createInsertStack(outputter.getBlockPos().asLong(), color);
+        return updateTransit(doEmit, stack, pathCalculator.calculate(stack, request, outputter, this, min, doEmit), tx);
+    }
+
+    /**
+     * Transaction-aware calculator variant: the RR/base path recalculation receives the caller transaction so its
+     * path/RR snapshots join it.
+     */
+    public <BE extends BlockEntity> TransitResponse insertUnchecked(BE outputter, TransitRequest request, @Nullable EnumColor color, boolean doEmit, int min, TxPathCalculator<BE> pathCalculator, @Nullable TransactionContext tx) {
+        TransporterStack stack = createInsertStack(outputter.getBlockPos().asLong(), color);
         return updateTransit(doEmit, stack, pathCalculator.calculate(stack, request, outputter, this, min, doEmit, tx), tx);
     }
 
