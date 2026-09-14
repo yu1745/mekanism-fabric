@@ -83,14 +83,24 @@ public class MechanicalPipe extends BufferedTransmitter<Storage<FluidVariant>, F
         }
         FluidAcceptorCache acceptorCache = getAcceptorCache();
         for (Direction side : EnumUtils.DIRECTIONS) {
-            if (!isConnectionType(side, ConnectionType.PULL)) {
+            //REVIEW_09 correction: select the RAW configured PULL sides first. Checking the effective (bitmap-based)
+            // connection type before refresh would skip a formerly null provider (bitmap bit still clear) and never
+            // rediscover it, so the raw configuration is the candidate set.
+            if (getConnectionTypeRaw(side) != ConnectionType.PULL) {
                 continue;
             }
             //Refresh this PULL side's acceptor-connection validity (official bitmap policy: redstone/mutual/
-            // exclusion checks, packet only on bit change) before the fresh per-pipe lookup; never bypass policy by
-            // querying storage directly (continuation08)
+            // exclusion checks, packet only on bit change) BEFORE the effective check, so null->valid rediscovery
+            // updates the bitmap (continuation08)
             refreshAcceptorConnections(side);
-            Storage<FluidVariant> connectedAcceptor = acceptorCache.getConnectedAcceptor(side);
+            //Effective PULL check now reflects the refreshed bitmap: a side that just became invalid (redstone,
+            // mutual transmission, exclusion) is rejected here instead of being queried
+            if (!isConnectionType(side, ConnectionType.PULL)) {
+                continue;
+            }
+            //Bitmap-gated lookup (getCachedAcceptor checks currentAcceptorConnections before resolving); the
+            // ungated getConnectedAcceptor is deliberately NOT used (continuation08 REVIEW_09)
+            Storage<FluidVariant> connectedAcceptor = acceptorCache.getCachedAcceptor(side);
             if (connectedAcceptor != null && connectedAcceptor.iterator().hasNext()) {
                 //Note: We recheck the buffer each time in case we ended up accepting fluid somewhere
                 // and our buffer changed and is no longer empty
