@@ -14,6 +14,7 @@ import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.GlobalPos;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
 /**
@@ -48,6 +49,14 @@ public class TransporterManager {
                 flowingStacks.remove(pos);
             }
         }
+    }
+
+    public static boolean didEmit(ItemStack stack, ItemStack returned) {
+        return returned.isEmpty() || returned.getCount() < stack.getCount();
+    }
+
+    public static ItemStack getToUse(ItemStack stack, ItemStack returned) {
+        return returned.isEmpty() ? stack : StackUtils.size(stack, stack.getCount() - returned.getCount());
     }
 
     /**
