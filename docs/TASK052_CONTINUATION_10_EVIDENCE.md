@@ -82,3 +82,22 @@ mirror, deploy, push, reference writes, or broad scans.
   `transmitter/large/logistical_transporter/transporter.json` — each `loader: mekanism:transmitter`, `model`
   points at the obj.mek, optional `glass.mtl_override`, child-tier texture aliases incl. `center_glass_*`);
   ColorProviderRegistry.BLOCK tint wiring; reload/opaque-config cache invalidation.
+
+## Addendum 2 (13:46 UTC+8): producer snapshot hooks delivered
+
+- `TileEntityTransmitter` now implements
+  `net.fabricmc.fabric.api.rendering.data.v1.RenderAttachmentBlockEntity`; `getBlockEntityRenderAttachment()`
+  returns a fresh frozen snapshot built through the existing `initModelData()`/`updateModelData(data)` hooks
+  (single construction path shared with the retained `getModelData()` NeoForge path, which now also publishes the
+  frozen snapshot via `buildRenderAttachment()`). Diversion override preserved (its `initModelData` returns the
+  Diversion subtype; `Diversion.setHasColor` still refuses color).
+- `TransmitterModelData` gained `freeze()`: unmodifiable `connections` view + loud failure on post-freeze
+  mutation (`setConnectionData`/`setHasColor` throw). Fixes the mutable-cache-key hazard: published snapshots can
+  no longer expose a mutating EnumMap during async meshing.
+- Honest compile status: not subset-compiled — same proven blocker chain
+  (`TransmitterModelData → ConnectionType/EnumUtils → NeoForge ModelData/capabilities`) applies; the producer diff
+  is small and self-reviewed against the real file. No runtime claims.
+- Remaining for continuation: ModelLoadingPlugin registration for the three `mekanism:transmitter` JSONs +
+  alias→sprite resolution (child-tier textures incl. `center_glass_*`, opaque variants), ColorProviderRegistry.BLOCK
+  tint, reload/opaque-config cache invalidation, and the EnumUtils slice-admission decision unlocking compilation
+  of consumer + producer in the fabric slice build.

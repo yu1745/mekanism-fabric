@@ -54,7 +54,8 @@ import net.neoforged.neoforge.client.model.data.ModelProperty;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public abstract class TileEntityTransmitter extends CapabilityTileEntity implements ISidedConfigurable, IAlloyInteraction {
+public abstract class TileEntityTransmitter extends CapabilityTileEntity implements ISidedConfigurable, IAlloyInteraction,
+      net.fabricmc.fabric.api.rendering.data.v1.RenderAttachmentBlockEntity {
 
     public static final ICapabilityProvider<TileEntityTransmitter, @Nullable Direction, IConfigurable> CONFIGURABLE_PROVIDER =
           capabilityProvider(Capabilities.CONFIGURABLE, (tile, cap) -> new BasicSidedCapabilityResolver<>(tile, cap, ProxyConfigurable::new));
@@ -302,9 +303,24 @@ public abstract class TileEntityTransmitter extends CapabilityTileEntity impleme
     @NotNull
     @Override
     public ModelData getModelData() {
+        return ModelData.of(TRANSMITTER_PROPERTY, buildRenderAttachment());
+    }
+
+    /**
+     * Fabric render-attachment snapshot: fresh immutable {@link TransmitterModelData} built through the existing
+     * {@link #initModelData()}/{@link #updateModelData(TransmitterModelData)} hooks. Consulted by chunk meshing via
+     * {@link net.fabricmc.fabric.api.rendering.data.v1.RenderAttachedBlockView}; never reads live transmitter state
+     * asynchronously.
+     */
+    @Override
+    public Object getBlockEntityRenderAttachment() {
+        return buildRenderAttachment();
+    }
+
+    private TransmitterModelData buildRenderAttachment() {
         TransmitterModelData data = initModelData();
         updateModelData(data);
-        return ModelData.of(TRANSMITTER_PROPERTY, data);
+        return data.freeze();
     }
 
     protected void updateModelData(TransmitterModelData modelData) {
