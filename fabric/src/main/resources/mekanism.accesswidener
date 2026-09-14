@@ -7,3 +7,8 @@ accessible method net/minecraft/world/level/biome/Biome getTemperature (Lnet/min
 # Mirrors Mekanism's NeoForge access transformer expectation for the wrapped shaped recipe, which passes the inner
 # ShapedRecipe pattern through to its own super constructor.
 accessible field net/minecraft/world/item/crafting/ShapedRecipe pattern Lnet/minecraft/world/item/crafting/ShapedRecipePattern;
+
+# Mirrors Mekanism's NeoForge access transformer for the implicit-components hook signature:
+# tile components (TileComponentUpgrade/Config/Security via ITileComponent) override
+# applyImplicitComponents(BlockEntity.DataComponentInput), whose type is protected in vanilla.
+accessible class net/minecraft/world/level/block/entity/BlockEntity$DataComponentInput

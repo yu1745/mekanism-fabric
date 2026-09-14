@@ -62,8 +62,11 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import net.neoforged.neoforge.items.IItemHandler;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidStorage;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
+import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
+import mekanism.common.util.WorldUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -227,8 +230,24 @@ public class TileComponentEjector implements ITileComponent, ISpecificContainerT
                         ChemicalUtil.emit(caches, tank, chemicalEjectRate.getAsLong());
                     }
                     case FLUID -> {
-                        List<BlockCapabilityCache<IFluidHandler, @Nullable Direction>> caches = getCapabilityCaches(level, pos, typeCapabilityCaches, sides, Capabilities.FLUID);
-                        FluidUtils.emit(caches, (IExtendedFluidTank) entry.getKey(), fluidEjectRate.getAsInt());
+                        //Direct per-operation external lookup (parent adjudication): query each physical neighbor through Fabric's FluidStorage.SIDED.find
+                        // on the opposite face at operation time. No BlockCapabilityCache is retained (it would bypass the per-find invalidation policy),
+                        // unloaded neighbors are skipped without loading chunks, and a null lookup simply means there is no target on that side.
+                        List<Storage<FluidVariant>> storages = new ArrayList<>(sides.size());
+                        for (Direction side : sides) {
+                            BlockPos neighbor = pos.relative(side);
+                            if (!WorldUtils.isChunkLoaded(level, neighbor)) {
+                                continue;
+                            }
+                            Storage<FluidVariant> storage = FluidStorage.SIDED.find(level, neighbor, side.getOpposite());
+                            if (storage != null) {
+                                storages.add(storage);
+                            }
+                        }
+                        if (!storages.isEmpty()) {
+                            //Sender-owned transactional send: fair distribution and exact source debit stay inside FluidUtils.emit
+                            FluidUtils.emit(storages, (IExtendedFluidTank) entry.getKey(), fluidEjectRate.getAsInt());
+                        }
                     }
                     case ENERGY -> {
                         IEnergyContainer container = (IEnergyContainer) entry.getKey();

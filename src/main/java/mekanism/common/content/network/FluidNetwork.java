@@ -1,5 +1,6 @@
 package mekanism.common.content.network;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -13,23 +14,22 @@ import mekanism.api.math.MathUtils;
 import mekanism.common.Mekanism;
 import mekanism.common.MekanismLang;
 import mekanism.common.capabilities.fluid.VariableCapacityFluidTank;
-import mekanism.common.content.network.distribution.FluidHandlerTarget;
 import mekanism.common.content.network.distribution.FluidTransmitterSaveTarget;
 import mekanism.common.content.network.transmitter.MechanicalPipe;
 import mekanism.common.lib.transmitter.DynamicBufferedNetwork;
 import mekanism.common.util.EmitUtils;
-import mekanism.common.util.FluidUtils;
 import mekanism.common.util.MekanismUtils;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
+import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.FluidType;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import mekanism.api.fluid.FluidStack;
+import mekanism.common.content.network.distribution.FluidSendTransaction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class FluidNetwork extends DynamicBufferedNetwork<IFluidHandler, FluidNetwork, FluidStack, MechanicalPipe> implements IMekanismFluidHandler {
+public class FluidNetwork extends DynamicBufferedNetwork<Storage<FluidVariant>, FluidNetwork, FluidStack, MechanicalPipe> implements IMekanismFluidHandler {
 
     private final List<IExtendedFluidTank> fluidTanks;
     public final VariableCapacityFluidTank fluidTank;
@@ -150,20 +150,20 @@ public class FluidNetwork extends DynamicBufferedNetwork<IFluidHandler, FluidNet
     }
 
     private int tickEmit(@NotNull FluidStack fluidToSend) {
-        Collection<Map<Direction, IFluidHandler>> acceptorValues = acceptorCache.getAcceptorValues();
-        FluidHandlerTarget target = null;
-        for (Map<Direction, IFluidHandler> acceptors : acceptorValues) {
-            for (IFluidHandler acceptor : acceptors.values()) {
-                if (FluidUtils.canFill(acceptor, fluidToSend)) {
-                    if (target == null) {
-                        //Lazily initialize the target, which allows us to also skip attempting to start emitting
-                        target = new FluidHandlerTarget(acceptorValues.size() * 2);
-                    }
-                    target.addHandler(acceptor);
+        Collection<Map<Direction, Storage<FluidVariant>>> acceptorValues = acceptorCache.getAcceptorValues();
+        List<Storage<FluidVariant>> acceptors = null;
+        for (Map<Direction, Storage<FluidVariant>> acceptorsOnSide : acceptorValues) {
+            for (Storage<FluidVariant> acceptor : acceptorsOnSide.values()) {
+                if (acceptors == null) {
+                    //Lazily initialize the list, which allows us to also skip attempting to start emitting
+                    acceptors = new ArrayList<>(acceptorValues.size() * 2);
                 }
+                acceptors.add(acceptor);
             }
         }
-        return EmitUtils.sendToAcceptors(target, fluidToSend.getAmount(), fluidToSend);
+        //Sender-owned transaction: snapshot the network tank, distribute fairly over real Fabric storages,
+        // debit exactly what was sent, then commit. Returns the millibuckets sent and debited.
+        return acceptors == null ? 0 : FluidSendTransaction.send(acceptors, fluidTank, fluidToSend.getAmount());
     }
 
     @Override
@@ -176,8 +176,8 @@ public class FluidNetwork extends DynamicBufferedNetwork<IFluidHandler, FluidNet
         if (fluidTank.isEmpty()) {
             prevTransferAmount = 0;
         } else {
+            //tickEmit already debits the network tank inside its sender-owned transaction
             prevTransferAmount = tickEmit(fluidTank.getFluid());
-            MekanismUtils.logMismatchedStackSize(fluidTank.shrinkStack(prevTransferAmount, Action.EXECUTE), prevTransferAmount);
         }
     }
 
