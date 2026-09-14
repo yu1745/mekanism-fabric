@@ -1,25 +1,32 @@
 package mekanism.common.lib.inventory;
 
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.function.Function;
 import mekanism.api.text.EnumColor;
-import mekanism.common.Mekanism;
-import mekanism.common.capabilities.item.CursedTransporterItemHandler;
+import mekanism.common.capabilities.item.TransporterItemStorage;
 import mekanism.common.content.network.transmitter.LogisticalTransporterBase;
 import mekanism.common.content.transporter.TransporterManager;
 import mekanism.common.lib.inventory.TransitRequest.ItemData;
 import mekanism.common.util.StackUtils;
 import mekanism.common.util.WorldUtils;
+import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
+import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
+import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.neoforged.neoforge.items.IItemHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * Fabric port (Task052 continuation09): requests operate on real sided {@link Storage} endpoints instead of NeoForge
+ * {@code IItemHandler} integer slots. Target insertion and source debit are caller-owned Fabric transactions: the
+ * transaction-context overloads stage insertion into the given transaction and capture the accepted amount in the
+ * returned {@link TransitResponse} before any debit happens; the caller then executes the exact debit
+ * ({@link #TransitResponse#useAll(Transaction)}) and commits. A response never carries an open transaction.
+ */
 public abstract class TransitRequest implements Iterable<ItemData> {
 
     private final TransitResponse EMPTY = new TransitResponse(ItemStack.EMPTY, null);
@@ -28,105 +35,164 @@ public abstract class TransitRequest implements Iterable<ItemData> {
         return new SimpleTransitRequest(stack);
     }
 
-    public static TransitRequest anyItem(IItemHandler inventory, int amount) {
+    public static HandlerTransitRequest anyItem(Storage<ItemVariant> inventory, int amount) {
         return definedItem(inventory, amount, Finder.ANY);
     }
 
-    public static TransitRequest definedItem(IItemHandler inventory, int amount, Finder finder) {
+    public static HandlerTransitRequest definedItem(Storage<ItemVariant> inventory, int amount, Finder finder) {
         return definedItem(inventory, 1, amount, finder);
     }
 
-    public static TransitRequest definedItem(IItemHandler inventory, int min, int max, Finder finder) {
-        HandlerTransitRequest ret = new HandlerTransitRequest(inventory);
-        if (inventory == null) {
-            return ret;
-        }
-        // count backwards- we start from the bottom of the inventory and go back for consistency
-        for (int i = inventory.getSlots() - 1; i >= 0; i--) {
-            ItemStack stack = inventory.extractItem(i, max, true);
-
-            if (!stack.isEmpty() && finder.test(stack)) {
-                HashedItem hashed = HashedItem.raw(stack);
-                int toUse = Math.min(stack.getCount(), max - ret.getCount(hashed));
-                if (toUse == 0) {
-                    continue; // continue if we don't need any more of this item type
-                }
-                ret.addItem(StackUtils.size(stack, toUse), i);
-            }
-        }
-        // remove items that we don't have enough of
-        for (Iterator<ItemData> iterator = ret.iterator(); iterator.hasNext(); ) {
-            if (iterator.next().getTotalCount() < min) {
-                iterator.remove();
-            }
-        }
-        return ret;
+    /**
+     * Discovers the real available contents of the given sided {@link Storage} up to {@code max} of each matching item
+     * type (at least {@code min}, or the type is dropped), counting backwards over real slotted positions where the
+     * storage is slotted. Discovery simulation is cumulative and abort-only: it performs its provisional extractions
+     * inside one transaction that is always aborted, so overlapping resources are never counted twice and no state
+     * survives discovery.
+     */
+    public static HandlerTransitRequest definedItem(Storage<ItemVariant> inventory, int min, int max, Finder finder) {
+        return HandlerTransitRequest.discover(inventory, min, max, finder);
     }
 
     @NotNull
-    public TransitResponse eject(BlockEntity outputter, @Nullable IItemHandler target, int min, Function<LogisticalTransporterBase, EnumColor> outputColor) {
+    public TransitResponse eject(BlockEntity outputter, @Nullable Storage<ItemVariant> target, int min, Function<LogisticalTransporterBase, EnumColor> outputColor) {
         return eject(outputter, outputter.getBlockPos(), target, min, outputColor);
     }
 
+    /**
+     * Transaction-aware eject without an explicit outputter position (the tile's own position is used).
+     */
     @NotNull
-    public TransitResponse eject(BlockEntity outputter, BlockPos outputterPos, @Nullable IItemHandler target, int min,
+    public TransitResponse eject(BlockEntity outputter, @Nullable Storage<ItemVariant> target, int min,
+          Function<LogisticalTransporterBase, EnumColor> outputColor, Transaction tx) {
+        return eject(outputter, outputter.getBlockPos(), target, min, outputColor, tx);
+    }
+
+    /**
+     * Legacy self-contained eject: opens its own caller transaction, stages insertion and exact source debit and
+     * commits. Immediate consumers use {@link #eject(BlockEntity, BlockPos, Storage, int, Function, Transaction)}
+     * instead so route/source reservations join the caller transaction.
+     */
+    @NotNull
+    public TransitResponse eject(BlockEntity outputter, BlockPos outputterPos, @Nullable Storage<ItemVariant> target, int min,
           Function<LogisticalTransporterBase, EnumColor> outputColor) {
+        try (Transaction tx = Transaction.openOuter()) {
+            try {
+                TransitResponse response = eject(outputter, outputterPos, target, min, outputColor, tx);
+                if (!response.isEmpty()) {
+                    response.useAll(tx);
+                }
+                tx.commit();
+                return response;
+            } catch (RuntimeException e) {
+                //Abort is implicit; surface the failure as "nothing was ejected"
+                return getEmptyResponse();
+            }
+        }
+    }
+
+    /**
+     * Transaction-aware eject: stages the route/target insertion into {@code tx} and returns the response with the
+     * stable accepted amount captured before any debit. The caller performs the exact source debit
+     * ({@code response.useAll(tx)}) and commits {@code tx}; a failed debit must abort the whole transaction.
+     */
+    @NotNull
+    public TransitResponse eject(BlockEntity outputter, BlockPos outputterPos, @Nullable Storage<ItemVariant> target, int min,
+          Function<LogisticalTransporterBase, EnumColor> outputColor, Transaction tx) {
         if (isEmpty()) {//Short circuit if our request is empty
             return getEmptyResponse();
-        } else if (target instanceof CursedTransporterItemHandler cursed) {
-            LogisticalTransporterBase transporter = cursed.getTransporter();
-            return transporter.insert(outputter, outputterPos, this, outputColor.apply(transporter), true, min);
+        } else if (target instanceof TransporterItemStorage endpoint) {
+            if (!endpoint.isValid()) {
+                return getEmptyResponse();
+            }
+            LogisticalTransporterBase transporter = endpoint.getTransporter();
+            return transporter.insert(outputter, outputterPos, this, outputColor.apply(transporter), true, min, tx);
         }
-        return addToInventoryUnchecked(target, min);
+        return addToInventoryUnchecked(target, min, tx);
+    }
+
+    /**
+     * Legacy self-contained insertion (used where the caller owns no source debit, e.g. final in-flight delivery that
+     * only needs the target half staged; transporter delivery passes its own transaction).
+     */
+    @NotNull
+    public TransitResponse addToInventory(Level level, BlockPos pos, @Nullable Storage<ItemVariant> inventory, int min, boolean force) {
+        try (Transaction tx = Transaction.openOuter()) {
+            try {
+                TransitResponse response = addToInventory(level, pos, inventory, min, force, tx);
+                tx.commit();
+                return response;
+            } catch (RuntimeException e) {
+                return getEmptyResponse();
+            }
+        }
     }
 
     @NotNull
-    public TransitResponse addToInventory(Level level, BlockPos pos, @Nullable IItemHandler inventory, int min, boolean force) {
+    public TransitResponse addToInventory(Level level, BlockPos pos, @Nullable Storage<ItemVariant> inventory, int min, boolean force, Transaction tx) {
         if (isEmpty()) {//Short circuit if our request is empty
             return getEmptyResponse();
         } else if (force && WorldUtils.getTileEntity(level, pos) instanceof IAdvancedTransportEjector sorter) {
-            return sorter.sendHome(this);
+            return sorter.sendHome(this, tx);
         }
-        return addToInventoryUnchecked(inventory, min);
+        return addToInventoryUnchecked(inventory, min, tx);
     }
 
     //Note: We are unchecked because we don't validate if we are empty or not
     @NotNull
-    public TransitResponse addToInventoryUnchecked(@Nullable IItemHandler inventory, int min) {
+    public TransitResponse addToInventoryUnchecked(@Nullable Storage<ItemVariant> inventory, int min) {
+        try (Transaction tx = Transaction.openOuter()) {
+            try {
+                TransitResponse response = addToInventoryUnchecked(inventory, min, tx);
+                tx.commit();
+                return response;
+            } catch (RuntimeException e) {
+                return getEmptyResponse();
+            }
+        }
+    }
+
+    /**
+     * Transaction-aware insertion. When {@code min > 1}, the minimum is enforced against the <b>actual</b> accepted
+     * amount inside a nested candidate transaction that aborts under-min, instead of an unrelated simulate/execute
+     * sequence. Accepted candidates merge into {@code tx}; nothing is committed by this method.
+     */
+    @NotNull
+    public TransitResponse addToInventoryUnchecked(@Nullable Storage<ItemVariant> inventory, int min, Transaction tx) {
         if (inventory == null) {
             return getEmptyResponse();
         }
-        int slots = inventory.getSlots();
-        if (slots == 0) {
-            //If the inventory has no slots just exit early with the result that we can't send any items
+        if (!inventory.supportsInsertion()) {
+            //If the inventory can't accept anything just exit early
             return getEmptyResponse();
         }
-        if (min > 1) {
-            //If we have a minimum amount of items we are trying to send, we need to start by simulating
-            // to see if we actually have enough room to send the minimum amount of our item. We can
-            // skip this step if we don't have a minimum amount being sent, as then whatever we are
-            // able to insert will be "good enough"
-            TransitResponse response = TransporterManager.getPredictedInsert(inventory, this);
-            if (response.isEmpty() || response.getSendingAmount() < min) {
-                //If we aren't able to send any items or are only able to send less than we have room for
-                // return that we aren't able to insert the requested amount
-                return getEmptyResponse();
+        try (Transaction candidate = Transaction.openNested(tx)) {
+            TransitResponse response = insertAll(inventory, min, candidate);
+            if (min > 1 && (response.isEmpty() || response.getSendingAmount() < min)) {
+                //Abort the candidate: we were not able to actually insert the requested minimum amount
+                return getEmptyResponse();//abort is implicit
             }
-            // otherwise, continue on to actually sending items to the inventory
+            candidate.commit();
+            return response;
         }
+    }
+
+    //Note: Unchecked: caller validates empty/inventory
+    @NotNull
+    private TransitResponse insertAll(Storage<ItemVariant> inventory, int min, Transaction tx) {
         for (ItemData data : this) {
-            ItemStack origInsert = StackUtils.size(data.getStack(), data.getTotalCount());
-            ItemStack toInsert = origInsert.copy();
-            for (int i = 0; i < slots; i++) {
-                // Do insert, this will handle validating the item is valid for the inventory
-                toInsert = inventory.insertItem(i, toInsert, false);
-                // If empty, end
-                if (toInsert.isEmpty()) {
-                    return createResponse(origInsert, data);
-                }
+            ItemVariant variant = ItemVariant.of(data.getStack());
+            int count = data.getTotalCount();
+            if (variant.isBlank() || count <= 0) {
+                continue;
             }
-            if (TransporterManager.didEmit(origInsert, toInsert)) {
-                return createResponse(TransporterManager.getToUse(origInsert, toInsert), data);
+            long accepted = inventory.insert(variant, count, tx);
+            if (accepted > 0) {
+                if (accepted > Integer.MAX_VALUE) {
+                    accepted = Integer.MAX_VALUE;
+                }
+                //Capture the stable accepted amount before any debit happens
+                return createResponse(StackUtils.size(data.getStack(), (int) accepted), data);
             }
         }
         return getEmptyResponse();
@@ -191,8 +257,20 @@ public abstract class TransitRequest implements Iterable<ItemData> {
             return slotData.use(amount);
         }
 
+        public ItemStack use(Transaction tx) {
+            return slotData.use(tx);
+        }
+
         public ItemStack useAll() {
             return use(getSendingAmount());
+        }
+
+        public ItemStack useAll(Transaction tx) {
+            return use(getSendingAmount(), tx);
+        }
+
+        public ItemStack use(int amount, Transaction tx) {
+            return slotData.use(amount, tx);
         }
 
         @Override
@@ -237,8 +315,21 @@ public abstract class TransitRequest implements Iterable<ItemData> {
         }
 
         public ItemStack use(int amount) {
-            Mekanism.logger.error("Can't 'use' with this type of TransitResponse: {}", getClass().getName());
+            MekanismEmptyUse();
             return ItemStack.EMPTY;
+        }
+
+        public ItemStack use(Transaction tx) {
+            return use(getTotalCount(), tx);
+        }
+
+        public ItemStack use(int amount, Transaction tx) {
+            MekanismEmptyUse();
+            return ItemStack.EMPTY;
+        }
+
+        private static void MekanismEmptyUse() {
+            mekanism.common.Mekanism.logger.error("Can't 'use' with this type of TransitResponse: {}", ItemData.class.getName());
         }
 
         @Override

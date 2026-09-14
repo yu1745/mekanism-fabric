@@ -1,12 +1,9 @@
 package mekanism.common.tile.qio;
 
-import it.unimi.dsi.fastutil.objects.Object2IntMap;
-import it.unimi.dsi.fastutil.objects.Object2IntMaps;
-import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
-import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.BiFunction;
@@ -22,16 +19,14 @@ import mekanism.common.attachments.containers.ContainerType;
 import mekanism.common.capabilities.Capabilities;
 import mekanism.common.capabilities.holder.slot.IInventorySlotHolder;
 import mekanism.common.capabilities.holder.slot.InventorySlotHelper;
-import mekanism.common.capabilities.item.CursedTransporterItemHandler;
+import mekanism.common.capabilities.item.TransporterItemStorage;
 import mekanism.common.content.network.transmitter.LogisticalTransporterBase;
-import mekanism.common.content.network.transmitter.LogisticalTransporterBase.PathCalculator;
 import mekanism.common.content.qio.QIOFrequency;
 import mekanism.common.content.qio.QIOFrequency.QIOItemTypeData;
 import mekanism.common.content.qio.filter.QIOFilter;
 import mekanism.common.content.qio.filter.QIOItemStackFilter;
 import mekanism.common.content.qio.filter.QIOModIDFilter;
 import mekanism.common.content.qio.filter.QIOTagFilter;
-import mekanism.common.content.transporter.TransporterManager;
 import mekanism.common.content.transporter.TransporterStack;
 import mekanism.common.integration.computer.ComputerException;
 import mekanism.common.integration.computer.annotation.ComputerMethod;
@@ -49,6 +44,7 @@ import mekanism.common.registries.MekanismDataComponents;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.NBTUtils;
 import mekanism.common.util.StackUtils;
+import mekanism.common.util.WorldUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
@@ -60,8 +56,12 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
-import net.neoforged.neoforge.items.IItemHandler;
+import net.fabricmc.fabric.api.transfer.v1.item.ItemStorage;
+import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
+import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
+import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
+import net.fabricmc.fabric.api.transfer.v1.transaction.TransactionContext;
+import net.fabricmc.fabric.api.transfer.v1.transaction.base.SnapshotParticipant;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -74,7 +74,7 @@ public class TileEntityQIOExporter extends TileEntityQIOFilterHandler implements
     private static final int MAX_DELAY = MekanismUtils.TICKS_PER_HALF_SECOND;
 
     @Nullable
-    private BlockCapabilityCache<IItemHandler, @Nullable Direction> backInventory;
+    //No retained item provider cache: the back inventory is resolved fresh per operation (continuation09)
     private int delay = 0;
     private boolean exportWithoutFilter;
     private boolean roundRobin;
@@ -118,15 +118,19 @@ public class TileEntityQIOExporter extends TileEntityQIOFilterHandler implements
     @Override
     protected void invalidateDirectionCaches(Direction newDirection) {
         super.invalidateDirectionCaches(newDirection);
-        backInventory = null;
+        //Fresh lookups re-resolve per operation after rotation
     }
 
     private void tryEject(QIOFrequency freq) {
-        if (backInventory == null) {
-            Direction direction = getDirection();
-            backInventory = Capabilities.ITEM.createCache((ServerLevel) level, worldPosition.relative(direction.getOpposite()), direction);
+        //Fresh real provider for the back inventory (no retained capability cache; direction changes re-resolve)
+        Direction direction = getDirection();
+        Storage<ItemVariant> backHandler;
+        BlockPos backPos = worldPosition.relative(direction.getOpposite());
+        if (level instanceof ServerLevel serverLevel && WorldUtils.isChunkLoaded(serverLevel, backPos)) {
+            backHandler = ItemStorage.SIDED.find(serverLevel, backPos, direction);
+        } else {
+            backHandler = null;
         }
-        IItemHandler backHandler = backInventory.getCapability();
         if (backHandler == null) {
             return;
         }
@@ -242,6 +246,27 @@ public class TileEntityQIOExporter extends TileEntityQIOFilterHandler implements
         rrTarget = target;
     }
 
+    /**
+     * Stable owner participant for the exporter's round-robin target (Task052 correction): a committed nested
+     * transaction whose enclosing transaction later aborts still restores the prior RR target exactly.
+     */
+    private final SnapshotParticipant<SidedBlockPos> rrTargetTx = new SnapshotParticipant<>() {
+        @Override
+        protected SidedBlockPos createSnapshot() {
+            return rrTarget;
+        }
+
+        @Override
+        protected void readSnapshot(SidedBlockPos snapshot) {
+            rrTarget = snapshot;
+        }
+    };
+
+    @Override
+    public void updateRoundRobinSnapshot(TransactionContext tx) {
+        rrTargetTx.updateSnapshots(tx);
+    }
+
     @Override
     @ComputerMethod(nameOverride = "isRoundRobin")
     public boolean getRoundRobin() {
@@ -264,6 +289,16 @@ public class TileEntityQIOExporter extends TileEntityQIOFilterHandler implements
     @NotNull
     @Override
     public TransitRequest.TransitResponse sendHome(@NotNull TransitRequest request) {
+        try (Transaction tx = Transaction.openOuter()) {
+            TransitResponse response = sendHome(request, tx);
+            tx.commit();
+            return response;
+        }
+    }
+
+    @NotNull
+    @Override
+    public TransitRequest.TransitResponse sendHome(@NotNull TransitRequest request, @NotNull Transaction tx) {
         if (request.isEmpty()) {//Short circuit if our request is empty
             return request.getEmptyResponse();
         }
@@ -272,8 +307,9 @@ public class TileEntityQIOExporter extends TileEntityQIOFilterHandler implements
             for (ItemData data : request) {
                 ItemStack origInsert = StackUtils.size(data.getStack(), data.getTotalCount());
                 ItemStack remainder = frequency.addItem(origInsert);
-                if (TransporterManager.didEmit(origInsert, remainder)) {
-                    return request.createResponse(TransporterManager.getToUse(origInsert, remainder), data);
+                if (remainder.getCount() < origInsert.getCount()) {
+                    //Stable accepted amount captured before any debit
+                    return request.createResponse(StackUtils.size(origInsert, origInsert.getCount() - remainder.getCount()), data);
                 }
             }
         }
@@ -315,20 +351,24 @@ public class TileEntityQIOExporter extends TileEntityQIOFilterHandler implements
 
         private static final double MAX_EJECT_ATTEMPTS = 100;
 
-        private void eject(TileEntityQIOExporter exporter, QIOFrequency freq, IItemHandler inventory) {
-            int slots = inventory.getSlots();
-            if (slots == 0) {
-                //If the inventory has no slots just exit early and don't even bother calculating the eject map
+        private void eject(TileEntityQIOExporter exporter, QIOFrequency freq, Storage<ItemVariant> inventory) {
+            if (!inventory.supportsInsertion()) {
+                //If the inventory can't accept anything just exit early and don't even bother calculating the eject map
                 return;
             }
             Collection<T> ejectMap = ejectMapCalculator.apply(exporter, freq);
             if (ejectMap.isEmpty()) {
                 return;
             }
+            //Snapshot the iteration list: the map may be backed by the live itemDataMap and per-candidate commits
+            // remove entries, which would otherwise cause a concurrent modification
+            List<T> candidates = ejectMap instanceof List<T> list ? List.copyOf(list) : List.copyOf(ejectMap);
             LogisticalTransporterBase transporter = null;
-            PathCalculator<TileEntityQIOExporter> pathCalculator = null;
-            if (inventory instanceof CursedTransporterItemHandler cursed) {
-                transporter = cursed.getTransporter();
+            if (inventory instanceof TransporterItemStorage endpoint) {
+                if (!endpoint.isValid()) {
+                    return;
+                }
+                transporter = endpoint.getTransporter();
                 if (!transporter.hasTransmitterNetwork()) {//Probably will never happen, but if we don't have a network just skip doing anything
                     return;
                 }
@@ -337,17 +377,18 @@ public class TileEntityQIOExporter extends TileEntityQIOFilterHandler implements
                     //Skip if the transporter can't receive from this position or connect to it
                     return;
                 }
-                pathCalculator = exporter.getRoundRobin() ? TransporterStack::recalculateRRPath : TransporterStack::recalculatePath;
             }
             RandomSource random = exporter.getLevel().getRandom();
-            double ejectChance = Math.min(1, MAX_EJECT_ATTEMPTS / ejectMap.size());
+            double ejectChance = Math.min(1, MAX_EJECT_ATTEMPTS / candidates.size());
             boolean randomizeEject = ejectChance < 1;
             int maxTypes = exporter.getMaxTransitTypes(), maxCount = exporter.getMaxTransitCount();
-            Object2IntMap<HashedItem> removed = new Object2IntOpenHashMap<>();
-            int amountRemoved = 0;
-            for (T obj : ejectMap) {
+            int typesUsed = 0, amountRemoved = 0;
+            for (T obj : candidates) {
+                if (inventory instanceof TransporterItemStorage endpoint && !endpoint.isValid()) {
+                    break;
+                }
                 // break if we've reached our quota
-                if (amountRemoved == maxCount || removed.size() == maxTypes) {
+                if (amountRemoved == maxCount || typesUsed == maxTypes) {
                     break;
                 }
                 // skip randomly based on our eject chance
@@ -357,45 +398,40 @@ public class TileEntityQIOExporter extends TileEntityQIOFilterHandler implements
                 HashedItem type = typeSupplier.apply(obj);
                 int amountToInsert = Math.min(maxCount - amountRemoved, countSupplier.applyAsInt(obj));
                 ItemStack origInsert = type.createStack(amountToInsert);
+                //Per-candidate atomic commit: the destination insertion (transporter route or direct target) and the
+                // exact transactional QIO removal stage into one transaction and commit together; a debit mismatch
+                // aborts everything for this candidate type
                 int toUse;
-                if (transporter == null) {
-                    ItemStack toInsert = origInsert.copy();
-                    for (int i = 0; i < slots; i++) {
-                        // Do insert, this will handle validating the item is valid for the inventory
-                        toInsert = inventory.insertItem(i, toInsert, false);
-                        // If empty, end
-                        if (toInsert.isEmpty()) {
-                            break;
-                        }
+                try (Transaction tx = Transaction.openOuter()) {
+                    if (transporter == null) {
+                        //Note: We just simplify the logic that we would have when sending to a transporter via the handler
+                        long accepted = inventory.insert(ItemVariant.of(origInsert), amountToInsert, tx);
+                        toUse = (int) Math.min(Integer.MAX_VALUE, accepted);
+                    } else {
+                        TransitRequest request = TransitRequest.simple(origInsert);
+                        //TODO: Technically if we still have more of the same item input, we want to allow trying to insert it into different transport
+                        // destinations, which this doesn't do as it only checks once, rather than trying to check again if we still have some that we
+                        // are able to insert
+                        TransitResponse response = transporter.insertMaybeRR(exporter, exporter.getBlockPos(), request, transporter.getColor(), true, 1, tx);
+                        toUse = response.getSendingAmount();
                     }
-                    toUse = TransporterManager.getToUse(origInsert, toInsert).getCount();
-                } else {
-                    //Note: We just simplify the logic that we would have when sending to a transporter via the handler
-                    // and add support for also performing round-robin distribution. We don't just use a custom transit request
-                    // as we want to be able to send multiple types at once, which is not that straightforward to do when trying
-                    // to re-use where we currently are in the iteration. Without that extra handling we can easily do a custom
-                    // transit request similar to https://gist.github.com/pupnewfster/d0dac2098a2755dc60220f89873ff461,
-                    // but it means we may not properly respect the maxTypes and maxCount
-                    TransitRequest request = TransitRequest.simple(origInsert);
-                    //TODO: Technically if we still have more of the same item input, we want to allow trying to insert it into different transport
-                    // destinations, which this doesn't do as it only checks once, rather than trying to check again if we still have some that we
-                    // are able to insert
-                    //Note: We don't use transporter#insertMaybeRR so that we only have to validate the transporter once
-                    TransitResponse response = transporter.insertUnchecked(exporter, request, transporter.getColor(), true, 1, pathCalculator);
-                    toUse = response.getSendingAmount();
-                }
-                if (toUse > 0) {
-                    amountRemoved += toUse;
-                    removed.mergeInt(type, toUse, Integer::sum);
-                }
-            }
-            // actually remove the items from the QIO frequency
-            for (ObjectIterator<Object2IntMap.Entry<HashedItem>> iterator = Object2IntMaps.fastIterator(removed); iterator.hasNext(); ) {
-                Object2IntMap.Entry<HashedItem> entry = iterator.next();
-                int amount = entry.getIntValue();
-                ItemStack ret = freq.removeByType(entry.getKey(), amount);
-                if (ret.getCount() != amount) {
-                    Mekanism.logger.error("QIO ejection item removal didn't line up with prediction: removed {}, expected {}", ret.getCount(), amount);
+                    if (toUse < 0 || toUse > amountToInsert) {
+                        throw new IllegalStateException("QIO target accepted an invalid amount");
+                    }
+                    if (toUse > 0) {
+                        //Exact transactional removal from the QIO frequency inside the same transaction; a shortfall
+                        // aborts the destination insertion instead of being logged after the destination committed
+                        ItemStack ret = freq.removeByType(type, toUse, tx);
+                        if (ret.getCount() != toUse) {
+                            Mekanism.logger.error("QIO ejection item removal didn't line up with prediction: removed {}, expected {}", ret.getCount(), toUse);
+                            throw new IllegalStateException("QIO export exact debit mismatch");
+                        }
+                        tx.commit();
+                        amountRemoved += toUse;
+                        typesUsed++;
+                    }
+                } catch (RuntimeException e) {
+                    //Aborted candidate: no destination change, no QIO debit; continue with the next type
                 }
             }
         }

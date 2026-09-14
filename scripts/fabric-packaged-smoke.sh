@@ -1492,6 +1492,8 @@ expected_api_chemical = {
 }
 expected_platform_chemical = {
     "mekanism/fabric/chemical/FabricChemicalClientLifecycle.class",
+    "mekanism/fabric/chemical/FabricChemicalIngredientTypeRegistryLifecycle.class",
+    "mekanism/fabric/chemical/FabricChemicalIngredientTypeRegistryLifecycle$BuiltIn.class",
     "mekanism/fabric/chemical/FabricChemicalLifecycle.class",
     "mekanism/fabric/chemical/FabricChemicalRegistryLifecycle.class",
 }

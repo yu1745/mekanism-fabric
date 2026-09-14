@@ -16,7 +16,6 @@ import mekanism.api.Upgrade;
 import mekanism.common.Mekanism;
 import mekanism.common.MekanismLang;
 import mekanism.common.attachments.containers.ContainerType;
-import mekanism.common.capabilities.Capabilities;
 import mekanism.common.capabilities.energy.MachineEnergyContainer;
 import mekanism.common.capabilities.fluid.BasicFluidTank;
 import mekanism.common.capabilities.holder.energy.EnergyContainerHelper;
@@ -51,7 +50,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BucketItem;
@@ -65,10 +63,11 @@ import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
-import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.FluidType;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidStorage;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
+import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -103,7 +102,6 @@ public class TileEntityElectricPump extends TileEntityMekanism implements IConfi
      * The nodes that have full sources near them or in them
      */
     private final Set<BlockPos> recurringNodes = new ObjectOpenHashSet<>();
-    private List<BlockCapabilityCache<IFluidHandler, @Nullable Direction>> fluidHandlerAbove = Collections.emptyList();
 
     private MachineEnergyContainer<TileEntityElectricPump> energyContainer;
     @WrappingComputerMethod(wrapper = ComputerIInventorySlotWrapper.class, methodNames = "getInputItem", docPlaceholder = "input slot")
@@ -174,10 +172,16 @@ public class TileEntityElectricPump extends TileEntityMekanism implements IConfi
         }
         usedEnergy = clientEnergyUsed > 0L;
         if (!fluidTank.isEmpty()) {
-            if (fluidHandlerAbove.isEmpty()) {
-                fluidHandlerAbove = List.of(Capabilities.FLUID.createCache((ServerLevel) level, worldPosition.above(), Direction.DOWN));
+            //Direct per-operation external lookup (parent adjudication): find the UP neighbor's DOWN-facing Storage fresh each tick through Fabric's
+            // FluidStorage.SIDED.find. Unloaded neighbors are skipped without loading chunks, a null lookup means there is no target, and nothing is
+            // retained across ticks (the old BlockCapabilityCache is removed).
+            BlockPos abovePos = worldPosition.above();
+            if (WorldUtils.isChunkLoaded(level, abovePos)) {
+                Storage<FluidVariant> above = FluidStorage.SIDED.find(level, abovePos, Direction.DOWN);
+                if (above != null) {
+                    FluidUtils.emit(List.of(above), fluidTank, outputRate);
+                }
             }
-            FluidUtils.emit(fluidHandlerAbove, fluidTank, outputRate);
         }
         return sendUpdatePacket;
     }

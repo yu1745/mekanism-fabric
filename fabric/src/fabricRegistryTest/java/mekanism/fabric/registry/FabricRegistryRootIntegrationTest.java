@@ -1,6 +1,7 @@
 package mekanism.fabric.registry;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -13,10 +14,20 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.fabric.api.event.registry.RegistryAttribute;
 import net.fabricmc.fabric.api.event.registry.RegistryAttributeHolder;
 import mekanism.api.chemical.ChemicalRegistry;
+import mekanism.api.recipes.ingredients.chemical.ChemicalIngredient;
+import mekanism.api.recipes.ingredients.chemical.ChemicalIngredientTypeRegistry;
+import mekanism.api.recipes.ingredients.chemical.CompoundChemicalIngredient;
+import mekanism.api.recipes.ingredients.chemical.DifferenceChemicalIngredient;
+import mekanism.api.recipes.ingredients.chemical.EmptyChemicalIngredient;
+import mekanism.api.recipes.ingredients.chemical.IntersectionChemicalIngredient;
+import mekanism.api.recipes.ingredients.chemical.SingleChemicalIngredient;
+import mekanism.api.recipes.ingredients.chemical.TagChemicalIngredient;
+import mekanism.fabric.chemical.FabricChemicalIngredientTypeRegistryLifecycle;
 import mekanism.fabric.chemical.FabricChemicalRegistryLifecycle;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.Holder;
+import net.minecraft.core.MappedRegistry;
 import net.minecraft.core.RegistrationInfo;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -42,6 +53,9 @@ class FabricRegistryRootIntegrationTest {
         SharedConstants.tryDetectVersion();
         Bootstrap.bootStrap();
         FabricChemicalRegistryLifecycle.initialize();
+        //The root is still writable in this Fabric loader window; the real construction owner root-publishes the synchronized ingredient-type registry here.
+        //The ordinary JVM freezes the root at Bootstrap.bootStrap, so this genuine root publication is observable only under the loader window proven above.
+        FabricChemicalIngredientTypeRegistryLifecycle.initialize();
 
         FabricDefaultedRegistry<String> registry = FabricDefaultedRegistry.create(REGISTRY_KEY, DEFAULT_KEY, true);
         assertSame(registry, registry.registerRoot());
@@ -111,5 +125,55 @@ class FabricRegistryRootIntegrationTest {
 
     private static ResourceLocation id(String path) {
         return ResourceLocation.fromNamespaceAndPath(NAMESPACE, path);
+    }
+
+    @Test
+    @Order(3)
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    void productionChemicalIngredientTypeRegistryIsCanonicalRootedSyncedAndFrozen() {
+        MappedRegistry<com.mojang.serialization.MapCodec<? extends ChemicalIngredient>> registry =
+              FabricChemicalIngredientTypeRegistryLifecycle.initialize();
+        assertSame(registry, FabricChemicalIngredientTypeRegistryLifecycle.registry());
+        assertSame(registry, ChemicalIngredientTypeRegistry.registry());
+        assertEquals(6, registry.size());
+        assertTrue(ChemicalIngredientTypeRegistry.isFrozen());
+        //The genuine registry identity is root-published and synchronized, not a private store hidden from root/network access.
+        Registry<Registry<?>> root = (Registry) BuiltInRegistries.REGISTRY;
+        assertSame(registry, root.get(ChemicalIngredientTypeRegistry.REGISTRY_ID));
+        assertSame(ChemicalIngredientTypeRegistry.REGISTRY_KEY, root.getResourceKey(registry).orElseThrow());
+        RegistryAttributeHolder attributes = RegistryAttributeHolder.get(registry);
+        assertTrue(attributes.hasAttribute(RegistryAttribute.MODDED));
+        assertTrue(attributes.hasAttribute(RegistryAttribute.SYNCED));
+        //Six built-in codecs in official order, with exact codec identity and ID round trip through the native identity/id maps.
+        List<ResourceLocation> ids = List.of(ChemicalIngredientTypeRegistry.COMPOUND, ChemicalIngredientTypeRegistry.DIFFERENCE,
+              ChemicalIngredientTypeRegistry.EMPTY, ChemicalIngredientTypeRegistry.INTERSECTION, ChemicalIngredientTypeRegistry.SINGLE,
+              ChemicalIngredientTypeRegistry.TAG);
+        List<com.mojang.serialization.MapCodec<? extends ChemicalIngredient>> codecs = List.of(CompoundChemicalIngredient.CODEC,
+              DifferenceChemicalIngredient.CODEC, EmptyChemicalIngredient.CODEC, IntersectionChemicalIngredient.CODEC,
+              SingleChemicalIngredient.CODEC, TagChemicalIngredient.CODEC);
+        for (int index = 0; index < ids.size(); index++) {
+            ResourceLocation id = ids.get(index);
+            com.mojang.serialization.MapCodec<? extends ChemicalIngredient> codec = codecs.get(index);
+            assertSame(codec, ChemicalIngredientTypeRegistry.codec(id), id.toString());
+            assertEquals(id, ChemicalIngredientTypeRegistry.idOf(codec), id.toString());
+            assertSame(codec, registry.get(id), id.toString());
+        }
+        assertEquals(ids.size(), new java.util.LinkedHashSet<>(ids).size());
+        //Type IDs are value identifiers: a fresh equal-but-distinct ResourceLocation must resolve to the same registered entry, which is exactly why the
+        //construction owner's verify compares IDs by equals while keeping registry/codec/holder identities as reference comparisons.
+        ResourceLocation equalButDistinctEmpty = ResourceLocation.fromNamespaceAndPath("mekanism", "empty");
+        assertNotSame(ChemicalIngredientTypeRegistry.EMPTY, equalButDistinctEmpty);
+        assertEquals(ChemicalIngredientTypeRegistry.EMPTY, equalButDistinctEmpty);
+        assertSame(EmptyChemicalIngredient.CODEC, ChemicalIngredientTypeRegistry.codec(equalButDistinctEmpty));
+        assertEquals(equalButDistinctEmpty, ChemicalIngredientTypeRegistry.idOf(EmptyChemicalIngredient.CODEC));
+        //Unknown IDs must not silently default, and duplicate/late registration must fail rather than overwrite the canonical entries.
+        assertThrows(IllegalArgumentException.class,
+              () -> ChemicalIngredientTypeRegistry.codec(ResourceLocation.fromNamespaceAndPath("mekanism", "unknown")));
+        assertThrows(IllegalStateException.class,
+              () -> ChemicalIngredientTypeRegistry.register(ChemicalIngredientTypeRegistry.COMPOUND, CompoundChemicalIngredient.CODEC));
+        assertThrows(IllegalStateException.class, () -> ChemicalIngredientTypeRegistry.install(
+              new MappedRegistry<>(ChemicalIngredientTypeRegistry.REGISTRY_KEY, com.mojang.serialization.Lifecycle.stable(), false)));
+        //already-frozen construction owner calls are idempotent and return the one canonical registry.
+        assertSame(registry, FabricChemicalIngredientTypeRegistryLifecycle.initialize());
     }
 }
