@@ -284,6 +284,7 @@ mekanism/common/inventory/container/sync/list/SyncableFrequencyList.java
 mekanism/common/inventory/container/sync/list/SyncableList.java
 mekanism/common/inventory/container/sync/list/SyncableResourceKeyList.java
 mekanism/common/inventory/slot/BasicInventorySlot.java
+mekanism/common/inventory/slot/SecurityInventorySlot.java
 mekanism/common/inventory/slot/FluidInventorySlot.java
 mekanism/common/inventory/slot/IFluidHandlerSlot.java
 mekanism/common/inventory/slot/InputInventorySlot.java
@@ -492,6 +493,7 @@ mekanism/common/util/StackUtils.java
 mekanism/common/util/StatUtils.java
 mekanism/common/util/UnitDisplayUtils.java
 mekanism/common/util/WorldUtils.java
+mekanism/common/util/text/InputValidator.java
 mekanism/common/util/text/TextUtils.java
 mekanism/common/util/text/TooltipHelper.java
 mekanism/common/world/height/AnchorType.java
