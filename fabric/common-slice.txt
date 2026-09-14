@@ -395,3 +395,6 @@ mekanism/common/world/height/ConfigurableVerticalAnchor.java
 mekanism/common/world/height/HeightShape.java
 mekanism/client/model/data/TransmitterModelData.java
 mekanism/common/lib/transmitter/ConnectionType.java
+
+# Task052 canonical robit serializer and native dynamic load owner
+mekanism/common/registries/MekanismRobitSkins.java

@@ -1,0 +1,8 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "mekanism.fabric.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": ["robit.RegistryDataMixin"],
+  "injectors": {"defaultRequire": 1}
+}

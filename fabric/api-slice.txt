@@ -231,3 +231,6 @@ mekanism/api/tier/AlloyTier.java
 mekanism/api/tier/BaseTier.java
 mekanism/api/tier/IAlloyTier.java
 mekanism/api/tier/ITier.java
+
+# Task052 canonical robit serializer and native dynamic load owner
+mekanism/api/robit/RobitSkinRegistry.java

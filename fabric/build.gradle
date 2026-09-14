@@ -186,7 +186,7 @@ def platformSlice = loadSlice('platform-slice.txt')
 def apiSliceFiles = apiSlice.collect { file("../src/api/java/${it}") }
 def commonSliceFiles = commonSlice.collect { file("../src/main/java/${it}") }
 def platformSliceFiles = platformSlice.collect { file("src/main/java/${it}") }
-if (apiSlice.size() != 233 || commonSlice.size() != 397 || platformSlice.size() != 60) {
+if (apiSlice.size() != 234 || commonSlice.size() != 398 || platformSlice.size() != 63) {
     throw new GradleException("Unexpected Fabric source slice counts: api=${apiSlice.size()} common=${commonSlice.size()} platform=${platformSlice.size()}")
 }
 
@@ -652,6 +652,7 @@ processResources {
         include 'META-INF/services/mekanism.api.recipes.IRecipeTypeRegistry'
     }
     from('../src/datagen/generated/mekanism') {
+        include 'data/mekanism/mekanism/robit_skin/*.json'
         include 'assets/mekanism/lang/en_us.json'
         include 'data/mekanism/data_maps/damage_type/mekasuit_absorption.json'
         include 'data/mekanism/tags/damage_type/mekasuit_always_supported.json'

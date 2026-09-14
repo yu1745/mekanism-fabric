@@ -61,6 +61,7 @@ public final class MekanismFabricBootstrap implements ModInitializer {
         FabricChemicalConfig.initializeCommon(CONFIG_MANAGER);
         FabricChemicalLifecycle.initialize();
         FabricChemicalIngredientTypeRegistryLifecycle.initialize();
+        mekanism.fabric.robit.FabricRobitRegistries.initialize();
         FabricRecipeCacheLifecycle.initialize();
         verifyIngredientCreatorService();
         verifyRecipeRegistration();

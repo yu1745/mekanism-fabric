@@ -16,6 +16,7 @@
   "environment": "*",
   "accessWidener": "mekanism.accesswidener",
   "mixins": [
+    "mekanism.mixins.json",
     {
       "config": "mekanism.client.mixins.json",
       "environment": "client"

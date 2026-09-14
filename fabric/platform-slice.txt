@@ -58,3 +58,8 @@ mekanism/fabric/client/render/obj/FabricTransmitterModels.java
 mekanism/fabric/client/render/obj/TransmitterModelConfig.java
 mekanism/fabric/client/render/obj/TransmitterObjGeometry.java
 mekanism/fabric/client/render/obj/TransmitterQuadBaker.java
+
+# Task052 canonical robit serializer and native dynamic load owner
+mekanism/fabric/robit/FabricRobitRegistries.java
+mekanism/fabric/robit/RobitSkinMappedRegistry.java
+mekanism/fabric/mixin/robit/RegistryDataMixin.java
