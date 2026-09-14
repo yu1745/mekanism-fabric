@@ -9,7 +9,6 @@ import java.util.stream.Stream;
 import mekanism.api.SerializationConstants;
 import mekanism.api.SerializerHelper;
 import mekanism.api.annotations.NothingNullByDefault;
-import mekanism.common.Mekanism;
 import mekanism.common.content.assemblicator.RecipeFormula;
 import net.minecraft.core.NonNullList;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -20,13 +19,17 @@ import net.minecraft.world.item.ItemStack;
 @NothingNullByDefault
 public record FormulaAttachment(List<ItemStack> inventory, boolean invalid) {
 
+    //Task052 call-site narrowing (adjudicated): logging-only Mekanism dependency becomes the established Mekanism SLF4J category
+    private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger("Mekanism");
+
+
     public static final FormulaAttachment EMPTY = new FormulaAttachment(NonNullList.withSize(9, ItemStack.EMPTY), false);
 
     public static final Codec<FormulaAttachment> CODEC = RecordCodecBuilder.<FormulaAttachment>create(instance -> instance.group(
           SerializerHelper.OPTIONAL_SINGLE_ITEM_CODEC.listOf(9, 9).fieldOf(SerializationConstants.ITEMS).forGetter(FormulaAttachment::inventory),
           Codec.BOOL.optionalFieldOf(SerializationConstants.INVALID, false).forGetter(FormulaAttachment::invalid)
     ).apply(instance, FormulaAttachment::new)).orElse(
-          (Consumer<String>) error -> Mekanism.logger.error("Failed to load stored formula: {}", error),
+          (Consumer<String>) error -> LOGGER.error("Failed to load stored formula: {}", error),
           EMPTY
     );
     public static final StreamCodec<RegistryFriendlyByteBuf, FormulaAttachment> STREAM_CODEC = StreamCodec.composite(

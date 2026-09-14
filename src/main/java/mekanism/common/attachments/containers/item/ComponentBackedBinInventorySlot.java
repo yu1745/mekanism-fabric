@@ -6,6 +6,7 @@ import mekanism.api.AutomationType;
 import mekanism.api.SerializationConstants;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.functions.ConstantPredicates;
+import mekanism.api.inventory.ICreativeInventorySlot;
 import mekanism.common.attachments.LockData;
 import mekanism.common.attachments.containers.ContainerType;
 import mekanism.common.inventory.slot.BinInventorySlot;
@@ -19,7 +20,7 @@ import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
 @NothingNullByDefault
-public class ComponentBackedBinInventorySlot extends ComponentBackedInventorySlot {
+public class ComponentBackedBinInventorySlot extends ComponentBackedInventorySlot implements ICreativeInventorySlot {
 
     private final boolean isCreative;
 
@@ -33,6 +34,11 @@ public class ComponentBackedBinInventorySlot extends ComponentBackedInventorySlo
     private ComponentBackedBinInventorySlot(ItemStack attachedTo, int slotIndex, BinTier tier) {
         super(attachedTo, slotIndex, ConstantPredicates.alwaysTrueBi(), ConstantPredicates.alwaysTrueBi(), BinInventorySlot.validator, false, tier.getStorage());
         isCreative = tier == BinTier.CREATIVE;
+    }
+
+    @Override
+    public boolean isCreative() {
+        return isCreative;
     }
 
     @Override
