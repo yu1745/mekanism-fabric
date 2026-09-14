@@ -44,6 +44,20 @@ The registry is pre-frozen before publication. Vanilla `RegistryAccess` creation
 `freeze()` again from a reload worker; only the already-`FROZEN` idempotent path is cross-thread. Every
 population/root/first-freeze operation remains owner-thread-only and late mutation fails.
 
+## Chemical ingredient type registry ownership (Task052 continuation12)
+
+The six built-in `ChemicalIngredient` codecs are stored in the single canonical vanilla registry
+`mekanism:chemical_ingredient_type`, owned by `ChemicalIngredientTypeRegistry` (API seam) and constructed by
+`FabricChemicalIngredientTypeRegistryLifecycle`. The construction owner allocates the plain, non-intrusive, non-defaulted
+`MappedRegistry`, installs that exact instance into the API seam, publishes it into the vanilla root with Fabric `MODDED`+`SYNCED`
+through the existing `FabricRegistryBuilder`, then drives `MekanismChemicalIngredientTypes` (six codecs in official order) and
+freezes before recipe decoding. The native identity value map provides exact codec identity and `idOf`, the native id map rejects
+duplicate IDs, an unknown ID throws `IllegalArgumentException` instead of silently defaulting, and duplicate codec identity, late
+registration, and missing built-ins all fail. This is not a private registry: the same object registered in the root is what the
+ingredient codecs consult. The plain (non-root) JVM frozen by `Bootstrap.bootStrap` cannot publish into the root, so ordinary/local
+bootstraps install the same genuine native registry directly, while production and the loader-window integration worker go through
+the construction owner.
+
 `ChemicalStack` canonicalizes serializable reference wrappers by resource key to the exact registry
 holder. It retains canonical `EMPTY`, required/fixed/optional/lenient codecs, registry-aware NBT,
 amount-before-holder stream order, positive/non-empty validation, and true-`long` amounts. There is no

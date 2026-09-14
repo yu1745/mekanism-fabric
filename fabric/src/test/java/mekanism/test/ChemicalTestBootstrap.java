@@ -4,9 +4,12 @@ import java.util.List;
 import mekanism.api.chemical.Chemical;
 import mekanism.api.chemical.ChemicalBuilder;
 import mekanism.api.chemical.ChemicalRegistry;
+import mekanism.api.recipes.ingredients.chemical.ChemicalIngredientTypeRegistry;
+import mekanism.common.registries.MekanismChemicalIngredientTypes;
 import mekanism.common.registries.MekanismChemicals;
 import mekanism.fabric.registry.FabricDefaultedRegistry;
 import net.minecraft.core.Holder;
+import net.minecraft.core.MappedRegistry;
 import net.minecraft.core.RegistrationInfo;
 import net.minecraft.core.RegistryAccess;
 
@@ -24,6 +27,12 @@ public final class ChemicalTestBootstrap {
         Holder.Reference<Chemical> holder = registry.register(ChemicalRegistry.EMPTY_KEY, empty, RegistrationInfo.BUILT_IN);
         ChemicalRegistry.publishEmpty(empty, holder);
         MekanismChemicals.CHEMICALS.registerAll(registry);
+        //The ordinary JVM cannot publish into the vanilla root (it is frozen by Bootstrap.bootStrap), so this worker installs the same genuine native
+        //chemical-ingredient-type registry directly, mirroring how it already installs the non-root chemical registry above. Production instead publishes
+        //through FabricChemicalIngredientTypeRegistryLifecycle.
+        ChemicalIngredientTypeRegistry.install(new MappedRegistry<>(ChemicalIngredientTypeRegistry.REGISTRY_KEY,
+              com.mojang.serialization.Lifecycle.stable(), false));
+        MekanismChemicalIngredientTypes.ensureRegistered();
         access = new RegistryAccess.ImmutableRegistryAccess(List.of(registry));
         return access;
     }

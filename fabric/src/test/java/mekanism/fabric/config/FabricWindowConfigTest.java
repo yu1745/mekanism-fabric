@@ -13,6 +13,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import mekanism.common.config.ClientWindowConfigAccess;
+import mekanism.fabric.client.render.obj.TransmitterModelConfig;
 import mekanism.common.inventory.container.SelectedWindowData;
 import mekanism.common.inventory.container.SelectedWindowData.WindowType;
 import org.junit.jupiter.api.Test;
@@ -23,7 +24,7 @@ class FabricWindowConfigTest {
     Path temporaryDirectory;
 
     @Test
-    void schemaOwnsExactElevenRecordsAndTwentyEightStrictNoRestartScalars() {
+    void schemaOwnsWindowRecordsAndRestartScopedTransmitterSetting() {
         FabricWindowConfig config = new FabricWindowConfig();
         MekanismConfigSpec spec = config.getConfigSpec();
         Set<String> expected = new LinkedHashSet<>();
@@ -38,7 +39,11 @@ class FabricWindowConfigTest {
         }
         assertEquals(11, expected.stream().filter(path -> path.endsWith(".x")).count());
         assertEquals(28, expected.size());
-        assertEquals(expected, spec.paths());
+        Set<String> allExpected = new LinkedHashSet<>(expected);
+        allExpected.add("accessibility.opaqueTransmitters");
+        assertEquals(allExpected, spec.paths());
+        assertEquals(MekanismConfigSpec.RestartScope.GAME, spec.restartScope("accessibility.opaqueTransmitters"));
+        assertFalse(config.opaqueTransmitters());
         for (String path : expected) {
             assertEquals(MekanismConfigSpec.RestartScope.NONE, spec.restartScope(path));
             if (path.endsWith(".pinned")) {
@@ -60,13 +65,18 @@ class FabricWindowConfigTest {
         Files.createDirectories(file.getParent());
         Files.writeString(file, "[window.color]\nx = 1.0\ny = -17\nfuture = 'retained'\n"
               + "[window.side_config]\nx = 4\ny = 5\npinned = 'true'\n"
-              + "[future_section]\nanswer = 42\n");
+              + "[future_section]\nanswer = 42\n[accessibility]\nopaqueTransmitters = true\nwhiteRadialText = true\n");
         try (FabricClientConfigLifecycle lifecycle = FabricClientConfigLifecycle.create(temporaryDirectory)) {
+            assertTrue(TransmitterModelConfig.opaqueTransmitters());
+            assertTrue(lifecycle.windowConfig().opaqueTransmitters());
             assertEquals(Integer.MAX_VALUE, new SelectedWindowData(WindowType.COLOR).getLastPosition().x());
             assertEquals(-17, new SelectedWindowData(WindowType.COLOR).getLastPosition().y());
             assertFalse(new SelectedWindowData(WindowType.SIDE_CONFIG).wasPinned());
         }
+        assertThrows(IllegalStateException.class, TransmitterModelConfig::opaqueTransmitters);
         String corrected = Files.readString(file);
+        assertTrue(corrected.contains("opaqueTransmitters = true"));
+        assertTrue(corrected.contains("whiteRadialText = true"));
         assertTrue(corrected.contains("future = \"retained\""));
         assertTrue(corrected.contains("[future_section]"));
         assertTrue(corrected.contains("answer = 42"));

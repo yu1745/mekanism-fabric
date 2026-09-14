@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Objects;
 import mekanism.api.Action;
 import mekanism.api.AutomationType;
+import mekanism.api.inventory.ICreativeInventorySlot;
 import mekanism.api.inventory.IInventorySlot;
 import mekanism.api.inventory.IMekanismInventory;
 import mekanism.common.capabilities.holder.IHolder;
@@ -75,6 +76,25 @@ public final class FabricItemStorage extends SnapshotParticipant<List<ItemStack>
      */
     public void invalidate() {
         invalidated = true;
+    }
+
+    /**
+     * Identity-checked real-slot selection facility (Task052 R3): returns the exposed single-slot view whose backing
+     * slot <b>is</b> the given slot object identity, or {@code null} if this view does not expose that slot. Callers
+     * use this to connect a selected physical {@link IInventorySlot} identity to its real position in this provider
+     * instead of inferring identity from generic indices.
+     */
+    @Nullable
+    public SingleSlotStorage<ItemVariant> viewOf(IInventorySlot slot) {
+        if (!hasStableTopology()) {
+            return null;
+        }
+        for (int slotIndex = 0; slotIndex < capturedSlots.size(); slotIndex++) {
+            if (capturedSlots.get(slotIndex) == slot) {
+                return views.get(slotIndex);
+            }
+        }
+        return null;
     }
 
     @Override
@@ -190,9 +210,16 @@ public final class FabricItemStorage extends SnapshotParticipant<List<ItemStack>
                 }
                 IInventorySlot inventorySlot = capturedSlots.get(slot);
                 ItemStack before = expected.get(slot);
-                ItemStack expectedAfter = insertion
-                      ? expectedAfterInsertion(before, resource, planned)
-                      : expectedAfterExtraction(before, resource, planned);
+                ItemStack expectedAfter;
+                if (isCreativeNow(inventorySlot)) {
+                    //Creative policy (operation-specific, actual creative state only): extraction does not deplete
+                    // and external insertion voids, so the expected state of this slot is unchanged
+                    expectedAfter = before;
+                } else if (insertion) {
+                    expectedAfter = expectedAfterInsertion(before, resource, planned);
+                } else {
+                    expectedAfter = expectedAfterExtraction(before, resource, planned);
+                }
                 if (expectedAfter == null) {
                     return 0;
                 }
@@ -225,6 +252,15 @@ public final class FabricItemStorage extends SnapshotParticipant<List<ItemStack>
             nested.commit();
             return executed;
         }
+    }
+
+    /**
+     * Actual current creative state of the backing slot (per operation): true only when the slot implements
+     * {@link ICreativeInventorySlot} and reports being creative right now, so creative extraction-without-depletion
+     * and insertion-voids semantics apply to exactly this execution and finite strict read-back applies otherwise.
+     */
+    private static boolean isCreativeNow(IInventorySlot inventorySlot) {
+        return inventorySlot instanceof ICreativeInventorySlot creativeSlot && creativeSlot.isCreative();
     }
 
     private long simulatePlan(ItemVariant resource, long maxAmount, boolean insertion, int firstSlot, int lastSlot,

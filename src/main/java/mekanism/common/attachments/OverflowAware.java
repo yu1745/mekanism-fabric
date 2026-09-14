@@ -13,7 +13,6 @@ import java.util.ArrayList;
 import java.util.List;
 import mekanism.api.SerializationConstants;
 import mekanism.api.annotations.NothingNullByDefault;
-import mekanism.common.Mekanism;
 import mekanism.common.lib.inventory.HashedItem;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -26,10 +25,14 @@ import net.minecraft.util.ExtraCodecs;
 @NothingNullByDefault
 public record OverflowAware(Object2IntSortedMap<HashedItem> overflow) {
 
+    //Task052 call-site narrowing (adjudicated): logging-only Mekanism dependency becomes the established Mekanism SLF4J category
+    private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger("Mekanism");
+
+
     public static final OverflowAware EMPTY = new OverflowAware(Object2IntSortedMaps.emptyMap());
 
     public static final Codec<OverflowAware> CODEC = ItemCount.CODEC.listOf()
-          .promotePartial(error -> Mekanism.logger.error("Failed to load overflown items: {}", error)).xmap(
+          .promotePartial(error -> LOGGER.error("Failed to load overflown items: {}", error)).xmap(
                 counts -> {
                     Object2IntSortedMap<HashedItem> overflow = new Object2IntLinkedOpenHashMap<>(counts.size());
                     for (ItemCount itemCount : counts) {

@@ -48,18 +48,23 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.neoforged.neoforge.capabilities.ICapabilityProvider;
-import net.neoforged.neoforge.client.model.data.ModelData;
-import net.neoforged.neoforge.client.model.data.ModelProperty;
+import net.fabricmc.fabric.api.lookup.v1.block.BlockApiLookup;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public abstract class TileEntityTransmitter extends CapabilityTileEntity implements ISidedConfigurable, IAlloyInteraction {
+public abstract class TileEntityTransmitter extends CapabilityTileEntity implements ISidedConfigurable, IAlloyInteraction,
+      net.fabricmc.fabric.api.rendering.data.v1.RenderAttachmentBlockEntity {
 
-    public static final ICapabilityProvider<TileEntityTransmitter, @Nullable Direction, IConfigurable> CONFIGURABLE_PROVIDER =
+    /**
+     * Fabric migration of the official NeoForge {@code ICapabilityProvider}: the already-established
+     * {@link CapabilityTileEntity#capabilityProvider(BlockApiLookup, java.util.function.BiFunction)} contract is the exact
+     * {@link java.util.function.BiFunction} shape Fabric's
+     * {@link BlockApiLookup#registerForBlockEntity(java.util.function.BiFunction, net.minecraft.world.level.block.entity.BlockEntityType)}
+     * accepts, and exposes the same lazy resolver path with the same fail-closed guards.
+     */
+    public static final java.util.function.BiFunction<TileEntityTransmitter, @Nullable Direction, IConfigurable> CONFIGURABLE_PROVIDER =
           capabilityProvider(Capabilities.CONFIGURABLE, (tile, cap) -> new BasicSidedCapabilityResolver<>(tile, cap, ProxyConfigurable::new));
 
-    public static final ModelProperty<TransmitterModelData> TRANSMITTER_PROPERTY = new ModelProperty<>();
 
     private final Transmitter<?, ?, ?> transmitter;
     private boolean forceUpdate = true;
@@ -299,12 +304,22 @@ public abstract class TileEntityTransmitter extends CapabilityTileEntity impleme
         return list;
     }
 
-    @NotNull
+    /**
+     * Fabric render-attachment snapshot (replaces the former NeoForge ModelData/TRANSMITTER_PROPERTY path): fresh
+     * immutable {@link TransmitterModelData} built through the existing
+     * {@link #initModelData()}/{@link #updateModelData(TransmitterModelData)} hooks. Consulted by chunk meshing via
+     * {@link net.fabricmc.fabric.api.rendering.data.v1.RenderAttachedBlockView}; never reads live transmitter state
+     * asynchronously.
+     */
     @Override
-    public ModelData getModelData() {
+    public Object getRenderAttachmentData() {
+        return buildRenderAttachment();
+    }
+
+    private TransmitterModelData buildRenderAttachment() {
         TransmitterModelData data = initModelData();
         updateModelData(data);
-        return ModelData.of(TRANSMITTER_PROPERTY, data);
+        return data.freeze();
     }
 
     protected void updateModelData(TransmitterModelData modelData) {

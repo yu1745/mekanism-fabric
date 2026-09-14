@@ -21,18 +21,20 @@ import mekanism.common.content.transporter.TransporterStack;
 import mekanism.common.lib.inventory.TransitRequest;
 import mekanism.common.lib.inventory.TransitRequest.TransitResponse;
 import mekanism.common.lib.transmitter.DynamicNetwork;
+import mekanism.common.lib.transmitter.acceptor.ItemNetworkAcceptorCache;
 import mekanism.common.tile.interfaces.ISideConfiguration;
 import mekanism.common.util.WorldUtils;
+import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
+import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.chunk.ChunkAccess;
-import net.neoforged.neoforge.items.IItemHandler;
 import org.jetbrains.annotations.NotNull;
 
-public class InventoryNetwork extends DynamicNetwork<IItemHandler, InventoryNetwork, LogisticalTransporterBase> {
+public class InventoryNetwork extends DynamicNetwork<Storage<ItemVariant>, InventoryNetwork, LogisticalTransporterBase> {
 
     public InventoryNetwork(UUID networkID) {
         super(networkID);
@@ -43,19 +45,32 @@ public class InventoryNetwork extends DynamicNetwork<IItemHandler, InventoryNetw
         adoptAllAndRegister(networks);
     }
 
+    @Override
+    protected mekanism.common.lib.transmitter.acceptor.NetworkAcceptorCache<Storage<ItemVariant>> createAcceptorCache() {
+        //Fresh ephemeral snapshot cache (continuation09): no external Storage is retained across ticks or copied on
+        // adopt; every reader re-derives from current valid, loaded member transporters
+        return new ItemNetworkAcceptorCache(this::getTransmitters);
+    }
+
     public List<AcceptorData> calculateAcceptors(TransitRequest request, TransporterStack stack, Long2ObjectMap<ChunkAccess> chunkMap,
           Map<GlobalPos, Set<TransporterStack>> additionalFlowingStacks, LogisticalTransporterBase start) {
+        return calculateAcceptors(request, stack, chunkMap, additionalFlowingStacks, start, null);
+    }
+
+    public List<AcceptorData> calculateAcceptors(TransitRequest request, TransporterStack stack, Long2ObjectMap<ChunkAccess> chunkMap,
+          Map<GlobalPos, Set<TransporterStack>> additionalFlowingStacks, LogisticalTransporterBase start,
+          @org.jetbrains.annotations.Nullable net.fabricmc.fabric.api.transfer.v1.transaction.TransactionContext tx) {
         List<AcceptorData> toReturn = new ArrayList<>();
-        for (ObjectIterator<Long2ObjectMap.Entry<Map<Direction, IItemHandler>>> iterator = acceptorCache.getAcceptorFastIterator(); iterator.hasNext(); ) {
-            Long2ObjectMap.Entry<Map<Direction, IItemHandler>> entry = iterator.next();
+        for (ObjectIterator<Long2ObjectMap.Entry<Map<Direction, Storage<ItemVariant>>>> iterator = acceptorCache.getAcceptorFastIterator(); iterator.hasNext(); ) {
+            Long2ObjectMap.Entry<Map<Direction, Storage<ItemVariant>>> entry = iterator.next();
             long pos = entry.getLongKey();
             if (pos != stack.homeLocation) {
                 BlockPos blockPos = BlockPos.of(pos);
                 BlockEntity acceptor = WorldUtils.getTileEntity(getWorld(), chunkMap, blockPos);
                 Map<TransitResponse, AcceptorData> dataMap = new HashMap<>();
                 GlobalPos position = GlobalPos.of(getWorld().dimension(), blockPos);
-                for (Map.Entry<Direction, IItemHandler> acceptorEntry : entry.getValue().entrySet()) {
-                    IItemHandler handler = acceptorEntry.getValue();
+                for (Map.Entry<Direction, Storage<ItemVariant>> acceptorEntry : entry.getValue().entrySet()) {
+                    Storage<ItemVariant> handler = acceptorEntry.getValue();
                     Direction side = acceptorEntry.getKey();
                     PathfinderCache.CachedPath cachedPath = PathfinderCache.getSingleCache(start, blockPos, side);
                     if (cachedPath != null && !TransporterPathfinder.checkPath(this, cachedPath.path(), stack)) {
@@ -72,7 +87,7 @@ public class InventoryNetwork extends DynamicNetwork<IItemHandler, InventoryNetw
                             }
                         }
                     }
-                    TransitResponse response = TransporterManager.getPredictedInsert(position, side, handler, request, additionalFlowingStacks);
+                    TransitResponse response = TransporterManager.getPredictedInsert(position, side, handler, request, additionalFlowingStacks, tx);
                     if (!response.isEmpty()) {
                         Direction opposite = side.getOpposite();
                         //If the response isn't empty, check if we already have acceptor data for

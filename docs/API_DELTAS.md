@@ -423,8 +423,11 @@ Task 041 admits the recipe ingredient/input/generic-cache layer with these bound
   `IFluidTank`/`FluidAction` capability bridges，`IFluidProvider` 使用项目 `FluidStack` 与 fluid-state 命名。
 - Chemical 六 ingredient 的适配限定为：`ChemicalRegistry` registry/empty-key 替换 `MekanismAPI` 访问、
   exact-category logger、以及三个 vanilla codec 组合 helper（xor/dispatch-or-else/aliased children
-  field）。`ChemicalIngredientTypeRegistry` 新拥有六个内建 type ID 与 reverse codec identity；
-  `MekanismChemicalIngredientTypes` 在 bootstrap 一次注册并 freeze（duplicate/late/missing 均失败）。
+  field）。`ChemicalIngredientTypeRegistry` 新拥有六个内建 type ID 与 reverse codec identity，权威存储改为单一
+  vanilla registry `mekanism:chemical_ingredient_type`；Fabric construction owner
+  `FabricChemicalIngredientTypeRegistryLifecycle` 分配 plain（非 intrusive/defaulted）registry、安装、以 `SYNCED`
+  发布到 vanilla root，`MekanismChemicalIngredientTypes` 在 bootstrap 一次按官方顺序注册并 freeze（duplicate/late/missing
+  均失败，unknown ID 不静默 default）。
 - `InputHelper` 仅替换项目 `FluidStack` 与 logger；`MekanismRecipe` 仅替换 logger。
   `CachedRecipe`/`CachedRecipeHelper`/`ICachedRecipeHolder`/`IInputHandler`/`ILongInputHandler`/
   `IOutputHandler`/`IInputCache`/`BaseInputCache`/`ComponentSensitiveInputCache`/`IInputRecipeCache`

@@ -2,14 +2,14 @@ package mekanism.api.security;
 
 import java.util.UUID;
 import java.util.function.Supplier;
-import mekanism.api.MekanismAPI;
+import mekanism.api.MekanismServices;
 import mekanism.api.annotations.NothingNullByDefault;
+import net.fabricmc.fabric.api.lookup.v1.block.BlockApiLookup;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.capabilities.BlockCapability;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -26,12 +26,12 @@ public interface IBlockSecurityUtils {
      *
      * @since 10.5.0
      */
-    IBlockSecurityUtils INSTANCE = MekanismAPI.getService(IBlockSecurityUtils.class);
+    IBlockSecurityUtils INSTANCE = MekanismServices.load(IBlockSecurityUtils.class);
 
     /**
      * {@return the block capability representing owner objects}
      */
-    BlockCapability<IOwnerObject, Void> ownerCapability();
+    BlockApiLookup<IOwnerObject, Void> ownerCapability();
 
     /**
      * {@return the owner capability for the block at the given location or null if the block doesn't expose an owner capability}
@@ -66,13 +66,14 @@ public interface IBlockSecurityUtils {
      */
     @Nullable
     default IOwnerObject ownerCapability(Level level, BlockPos pos, @Nullable BlockState state, @Nullable BlockEntity blockEntity) {
-        return level.getCapability(ownerCapability(), pos, state, blockEntity, null);
+        //Fabric port delta: pass the caller-supplied state/block entity hints to the lookup instead of discarding them
+        return ownerCapability().find(level, pos, state, blockEntity, null);
     }
 
     /**
      * {@return the block capability representing security objects}
      */
-    BlockCapability<ISecurityObject, Void> securityCapability();
+    BlockApiLookup<ISecurityObject, Void> securityCapability();
 
     /**
      * {@return the security capability for the block at the given location or null if the block doesn't expose a security capability}
@@ -107,7 +108,8 @@ public interface IBlockSecurityUtils {
      */
     @Nullable
     default ISecurityObject securityCapability(Level level, BlockPos pos, @Nullable BlockState state, @Nullable BlockEntity blockEntity) {
-        return level.getCapability(securityCapability(), pos, state, blockEntity, null);
+        //Fabric port delta: pass the caller-supplied state/block entity hints to the lookup instead of discarding them
+        return securityCapability().find(level, pos, state, blockEntity, null);
     }
 
     /**
@@ -337,7 +339,7 @@ public interface IBlockSecurityUtils {
      */
     @Nullable
     default UUID getOwnerUUID(Level level, BlockPos pos, @Nullable BlockState state, @Nullable BlockEntity blockEntity) {
-        IOwnerObject ownerObject = level.getCapability(ownerCapability(), pos, state, blockEntity, null);
+        IOwnerObject ownerObject = ownerCapability().find(level, pos, state, blockEntity, null);//Fabric port delta: preserve the caller-supplied state/block entity hints
         return ownerObject == null ? null : ownerObject.getOwnerUUID();
     }
 
