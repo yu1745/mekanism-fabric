@@ -12,15 +12,15 @@ import mekanism.api.fluid.IMekanismFluidHandler;
 import mekanism.api.functions.ConstantPredicates;
 import mekanism.api.math.MathUtils;
 import mekanism.common.block.attribute.Attribute;
-import mekanism.common.capabilities.Capabilities;
 import mekanism.common.capabilities.fluid.BasicFluidTank;
 import mekanism.common.content.network.FluidNetwork;
+import mekanism.common.content.network.distribution.FluidSendTransaction;
 import mekanism.common.lib.transmitter.CompatibleTransmitterValidator;
 import mekanism.common.lib.transmitter.CompatibleTransmitterValidator.CompatibleFluidTransmitterValidator;
 import mekanism.common.lib.transmitter.ConnectionType;
 import mekanism.common.lib.transmitter.TransmissionType;
 import mekanism.common.lib.transmitter.acceptor.AbstractAcceptorCache;
-import mekanism.common.lib.transmitter.acceptor.AcceptorCache;
+import mekanism.common.lib.transmitter.acceptor.FluidAcceptorCache;
 import mekanism.common.tier.PipeTier;
 import mekanism.common.tile.transmitter.TileEntityTransmitter;
 import mekanism.common.upgrade.transmitter.MechanicalPipeUpgradeData;
@@ -28,17 +28,21 @@ import mekanism.common.upgrade.transmitter.TransmitterUpgradeData;
 import mekanism.common.util.EnumUtils;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.NBTUtils;
+import mekanism.api.fluid.FluidStack;
+import mekanism.fabric.fluid.FabricFluidConversions;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
+import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
+import net.fabricmc.fabric.api.transfer.v1.storage.StorageView;
+import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.block.Block;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class MechanicalPipe extends BufferedTransmitter<IFluidHandler, FluidNetwork, FluidStack, MechanicalPipe> implements IMekanismFluidHandler,
+public class MechanicalPipe extends BufferedTransmitter<Storage<FluidVariant>, FluidNetwork, FluidStack, MechanicalPipe> implements IMekanismFluidHandler,
       IUpgradeableTransmitter<MechanicalPipeUpgradeData> {
 
     public final PipeTier tier;
@@ -56,14 +60,15 @@ public class MechanicalPipe extends BufferedTransmitter<IFluidHandler, FluidNetw
     }
 
     @Override
-    protected AbstractAcceptorCache<IFluidHandler, ?> createAcceptorCache() {
-        return new AcceptorCache<>(getTransmitterTile(), Capabilities.FLUID.block());
+    protected AbstractAcceptorCache<Storage<FluidVariant>, ?> createAcceptorCache() {
+        //Fresh per-pipe fluid lookup cache: no returned Storage is retained; each resolution is a fresh
+        // FluidStorage.SIDED.find on the opposite face, guarded by the loaded neighbor check (continuation08)
+        return new FluidAcceptorCache(getTransmitterTile());
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    public AcceptorCache<IFluidHandler> getAcceptorCache() {
-        return (AcceptorCache<IFluidHandler>) super.getAcceptorCache();
+    public FluidAcceptorCache getAcceptorCache() {
+        return (FluidAcceptorCache) super.getAcceptorCache();
     }
 
     @Override
@@ -76,34 +81,154 @@ public class MechanicalPipe extends BufferedTransmitter<IFluidHandler, FluidNetw
         if (!hasPullSide || getAvailablePull() <= 0) {
             return;
         }
-        AcceptorCache<IFluidHandler> acceptorCache = getAcceptorCache();
+        FluidAcceptorCache acceptorCache = getAcceptorCache();
         for (Direction side : EnumUtils.DIRECTIONS) {
             if (!isConnectionType(side, ConnectionType.PULL)) {
                 continue;
             }
-            IFluidHandler connectedAcceptor = acceptorCache.getConnectedAcceptor(side);
-            if (connectedAcceptor != null) {
-                FluidStack received;
+            //Refresh this PULL side's acceptor-connection validity (official bitmap policy: redstone/mutual/
+            // exclusion checks, packet only on bit change) before the fresh per-pipe lookup; never bypass policy by
+            // querying storage directly (continuation08)
+            refreshAcceptorConnections(side);
+            Storage<FluidVariant> connectedAcceptor = acceptorCache.getConnectedAcceptor(side);
+            if (connectedAcceptor != null && connectedAcceptor.iterator().hasNext()) {
                 //Note: We recheck the buffer each time in case we ended up accepting fluid somewhere
                 // and our buffer changed and is no longer empty
                 FluidStack bufferWithFallback = getBufferWithFallback();
-                if (bufferWithFallback.isEmpty()) {
-                    //If we don't have a fluid stored try pulling as much as we are able to
-                    received = connectedAcceptor.drain(getAvailablePull(), FluidAction.SIMULATE);
-                } else {
-                    //Otherwise, try draining the same type of fluid we have stored requesting up to as much as we are able to pull
-                    // We do this to better support multiple tanks in case the fluid we have stored we could pull out of a block's
-                    // second tank but just asking to drain a specific amount
-                    received = connectedAcceptor.drain(bufferWithFallback.copyWithAmount(getAvailablePull()), FluidAction.SIMULATE);
-                }
-                if (!received.isEmpty() && takeFluid(received, Action.SIMULATE).isEmpty()) {
-                    //If we received some fluid and are able to insert it all, then actually extract it and insert it into our thing.
-                    // Note: We extract first after simulating ourselves because if the target gave a faulty simulation value, we want to handle it properly
-                    // and not accidentally dupe anything, and we know our simulation we just performed on taking it is valid
-                    takeFluid(connectedAcceptor.drain(received.copy(), FluidAction.EXECUTE), Action.EXECUTE);
+                int availablePull = getAvailablePull();
+                //REVIEW_05 correction: snapshot the ACTUAL captured destination tank (network tank when attached, otherwise our own buffer) BEFORE any
+                // external operation, and perform the internal insertion against that exact captured identity inside the transaction. The old code called
+                // takeFluid, which re-resolves the destination at call time (an owner can switch between simulation and execute) and ignored the returned
+                // remainder and resulting contents, so a listener exception or partial execute could abort the external extraction while the internal
+                // insertion stayed, or commit the extraction despite an incomplete insertion.
+                IExtendedFluidTank destination = hasTransmitterNetwork() ? getTransmitterNetwork().fluidTank : buffer;
+                FluidStack destinationBefore = copyOfTank(destination);
+                try (Transaction pull = Transaction.openOuter()) {
+                    FluidSendTransaction.SourceTankSnapshot destinationSnapshot = new FluidSendTransaction.SourceTankSnapshot(destination);
+                    destinationSnapshot.updateSnapshots(pull);
+                    FluidStack received = null;
+                    if (bufferWithFallback.isEmpty()) {
+                        //If we don't have a fluid stored try pulling whatever resource the acceptor exposes
+                        for (StorageView<FluidVariant> view : connectedAcceptor) {
+                            if (!view.isResourceBlank()) {
+                                received = extractWholeMillibuckets(connectedAcceptor, view.getResource(), availablePull, pull);
+                                if (received != null) {
+                                    break;
+                                }
+                            }
+                        }
+                    } else {
+                        //Otherwise, try pulling the same type of fluid we have stored requesting up to as much as we are able to pull
+                        FluidVariant stored = FabricFluidConversions.toFabricVariant(bufferWithFallback);
+                        received = extractWholeMillibuckets(connectedAcceptor, stored, availablePull, pull);
+                    }
+                    if (received != null && tryInsertIntoCapturedDestination(destination, destinationBefore, received)) {
+                        //Exact internal insertion into the still-captured destination verified inside the open transaction; commit both sides atomically.
+                        //Any mismatch or exception leaves the acceptor untouched (aborted extraction) and the destination restored by the snapshot
+                        pull.commit();
+                    }
+                    //Otherwise: abort, leaving the acceptor untouched and the destination rolled back
                 }
             }
         }
+    }
+
+    /**
+     * Performs and verifies the INTERNAL insertion of {@code received} into the exact destination tank captured before any external operation. Validates stable owner
+     * identity before and after the execute, an empty remainder, and an exact expected read-back; any mismatch or exception returns false so the caller aborts the whole
+     * transaction (external extraction + internal insertion together).
+     */
+    private boolean tryInsertIntoCapturedDestination(IExtendedFluidTank destination, FluidStack destinationBefore, @NotNull FluidStack received) {
+        if (currentPullDestination() != destination) {
+            //Owner identity changed (network topology switch) between extraction and insertion; abort
+            return false;
+        }
+        FluidStack remainder;
+        try {
+            remainder = destination.insert(received, Action.EXECUTE, AutomationType.INTERNAL);
+        } catch (RuntimeException e) {
+            //A throwing listener must abort both sides; the destination contents are restored by the snapshot on abort
+            return false;
+        }
+        if (remainder == null || !remainder.isEmpty()) {
+            //Null is an invalid response, not an empty remainder; a partial internal insertion must abort either way
+            // (the external extraction must not commit)
+            return false;
+        }
+        if (currentPullDestination() != destination) {
+            //Owner identity changed during the insertion; abort
+            return false;
+        }
+        FluidStack expectedAfter;
+        if (destinationBefore.isEmpty()) {
+            expectedAfter = received;
+        } else {
+            if (!FluidStack.isSameFluidSameComponents(destinationBefore, received)) {
+                //Cannot normally happen: we only pull the stored fluid when the buffer is non-empty, but verify anyway
+                return false;
+            }
+            expectedAfter = destinationBefore.copyWithAmount(destinationBefore.getAmount() + received.getAmount());
+        }
+        return FluidStack.matches(expectedAfter, copyOfTank(destination));
+    }
+
+    /**
+     * Re-resolves the destination tank exactly the way the pre-correction takeFluid did, so identity comparisons detect a real owner switch rather than
+     * pinning a stale object by construction.
+     */
+    private IExtendedFluidTank currentPullDestination() {
+        return hasTransmitterNetwork() ? getTransmitterNetwork().fluidTank : buffer;
+    }
+
+    private static FluidStack copyOfTank(IExtendedFluidTank tank) {
+        FluidStack stack = tank.getFluid();
+        return stack == null || stack.isEmpty() ? FluidStack.EMPTY : stack.copy();
+    }
+
+    /**
+     * Extracts up to {@code maxMillibuckets} of {@code variant} from {@code storage} inside {@code transaction}, accepting only a whole-millibucket result.
+     *
+     * <p>REVIEW_06 correction: a probe response that is already an exact whole-millibucket amount (full OR partial) is accepted immediately; only a fractional (or zero)
+     * report gets the single bounded retry at the whole-millibucket floor of the report.
+     *
+     * @return the extracted stack, or {@code null} if the acceptor cannot provide a whole-millibucket amount.
+     */
+    @Nullable
+    private static FluidStack extractWholeMillibuckets(Storage<FluidVariant> storage, FluidVariant variant, int maxMillibuckets, Transaction transaction) {
+        //Range guard BEFORE multiplying so a long request cannot overflow past MAX_EXACT_TRANSFER_UNITS
+        if (maxMillibuckets <= 0 || maxMillibuckets > FabricFluidConversions.MAX_EXACT_TRANSFER_UNITS / FabricFluidConversions.TRANSFER_UNITS_PER_MILLIBUCKET) {
+            return null;
+        }
+        long request = (long) maxMillibuckets * FabricFluidConversions.TRANSFER_UNITS_PER_MILLIBUCKET;
+        long reported;
+        try (Transaction probe = Transaction.openNested(transaction)) {
+            reported = storage.extract(variant, request, probe);
+            if (reported < 0 || reported > request) {
+                return null;
+            }
+            if (reported > 0 && reported % FabricFluidConversions.TRANSFER_UNITS_PER_MILLIBUCKET == 0) {
+                //Exact whole-millibucket response (full or partial): accept it immediately, no retry needed
+                probe.commit();
+                return FabricFluidConversions.toFluidStack(variant, reported);
+            }
+            //Zero, or fractional: abort the probe and do ONE bounded floor retry
+        }
+        if (reported <= 0) {
+            return null;
+        }
+        long floorDroplets = reported / FabricFluidConversions.TRANSFER_UNITS_PER_MILLIBUCKET * FabricFluidConversions.TRANSFER_UNITS_PER_MILLIBUCKET;
+        if (floorDroplets <= 0) {
+            return null;
+        }
+        try (Transaction nested = Transaction.openNested(transaction)) {
+            long extracted = storage.extract(variant, floorDroplets, nested);
+            //Accept any valid whole-millibucket response; abort (never commit) a fractional or invalid one
+            if (extracted > 0 && extracted <= floorDroplets && extracted % FabricFluidConversions.TRANSFER_UNITS_PER_MILLIBUCKET == 0) {
+                nested.commit();
+                return FabricFluidConversions.toFluidStack(variant, extracted);
+            }
+        }
+        return null;
     }
 
     private int getAvailablePull() {
@@ -154,7 +279,7 @@ public class MechanicalPipe extends BufferedTransmitter<IFluidHandler, FluidNetw
     }
 
     @Override
-    public CompatibleTransmitterValidator<IFluidHandler, FluidNetwork, MechanicalPipe> getNewOrphanValidator() {
+    public CompatibleTransmitterValidator<Storage<FluidVariant>, FluidNetwork, MechanicalPipe> getNewOrphanValidator() {
         return new CompatibleFluidTransmitterValidator(this);
     }
 

@@ -4,6 +4,7 @@ import mekanism.fabric.chemical.FabricChemicalClientLifecycle;
 import mekanism.fabric.config.FabricClientConfigLifecycle;
 import mekanism.fabric.network.FabricChemicalClientNetworking;
 import mekanism.fabric.network.FabricMekanismClientNetworking;
+import mekanism.fabric.network.FabricContainerClientNetworking;
 import mekanism.fabric.network.FabricTileUpdateHandler;
 import mekanism.fabric.network.MekanismNetworkProtocol;
 import mekanism.fabric.recipe.FabricRecipeCacheClientLifecycle;
@@ -23,6 +24,7 @@ public final class MekanismFabricClientBootstrap implements ClientModInitializer
         FabricMekanismClientNetworking.initialize();
         FabricChemicalClientNetworking.initialize();
         FabricTileUpdateHandler.initializeClient();
+        FabricContainerClientNetworking.initializeClient();
         LOGGER.info("MEKANISM_FABRIC_NETWORK_CLIENT_PROOF protocol={} receiver=true recipe_mixin_client_only=true", MekanismNetworkProtocol.CURRENT);
     }
 }
