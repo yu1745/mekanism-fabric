@@ -34,7 +34,6 @@ import mekanism.api.math.MathUtils;
 import mekanism.api.security.SecurityMode;
 import mekanism.api.text.EnumColor;
 import mekanism.common.CommonWorldTickHandler;
-import mekanism.common.Mekanism;
 import mekanism.common.base.TagCache;
 import mekanism.common.content.qio.QIODriveData.QIODriveKey;
 import mekanism.common.inventory.container.QIOItemViewerContainer;
@@ -46,8 +45,10 @@ import mekanism.common.lib.frequency.IColorableFrequency;
 import mekanism.common.lib.inventory.HashedItem;
 import mekanism.common.lib.inventory.HashedItem.UUIDAwareHashedItem;
 import mekanism.common.lib.security.SecurityFrequency;
+import mekanism.common.network.to_client.qio.PacketQIOItemViewerKill;
 import mekanism.common.network.to_client.qio.PacketUpdateItemViewer;
 import mekanism.common.util.MekanismUtils;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.SharedConstants;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -56,8 +57,6 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.neoforged.neoforge.common.util.Lazy;
-import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
 public class QIOFrequency extends Frequency implements IColorableFrequency, IQIOFrequency {
@@ -493,7 +492,9 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
         if (!updatedItems.isEmpty() || needsUpdate) {
             //Only calculate the packet and the update map if there are actually players viewing this frequency,
             // otherwise we can just skip looking up UUIDs and counts
-            Lazy<PacketUpdateItemViewer> lazyPacket = Lazy.of(() -> {
+            //Fabric port delta: NeoForge's Lazy.of memoization is replaced by a memoizing supplier with identical
+            // once-per-needed-update semantics (the packet is not reconstructed per recipient)
+            java.util.function.Supplier<PacketUpdateItemViewer> lazyPacket = memoize(() -> {
                 Object2LongMap<UUIDAwareHashedItem> map = new Object2LongOpenHashMap<>(updatedItems.size());
                 for (UUID uuid : updatedItems) {
                     HashedItem type = QIOGlobalItemLookup.INSTANCE.getTypeByUUID(uuid);
@@ -507,7 +508,8 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
             for (Iterator<ServerPlayer> viewingIterator = playersViewingItems.iterator(); viewingIterator.hasNext(); ) {
                 ServerPlayer player = viewingIterator.next();
                 if (player.containerMenu instanceof QIOItemViewerContainer) {
-                    PacketDistributor.sendToPlayer(player, lazyPacket.get());
+                    //Fabric port delta: PacketDistributor.sendToPlayer becomes the Fabric play S2C send
+                    ServerPlayNetworking.send(player, lazyPacket.get());
                 } else {
                     //flush players that somehow didn't send a container close packet
                     viewingIterator.remove();
@@ -573,7 +575,9 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
         }
         driveMap.clear();
         for (ServerPlayer player : playersViewingItems) {
-            Mekanism.packetHandler().killItemViewer(player);
+            //Fabric port delta: Mekanism.packetHandler().killItemViewer becomes a direct send of the extracted
+            // no-data kill payload through the Fabric play S2C channel
+            ServerPlayNetworking.send(player, PacketQIOItemViewerKill.INSTANCE);
         }
     }
 
@@ -675,6 +679,22 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
 
     private void setNeedsUpdate() {
         setNeedsUpdate(null);
+    }
+
+    private static <T> java.util.function.Supplier<T> memoize(java.util.function.Supplier<T> delegate) {
+        return new java.util.function.Supplier<>() {
+            private T value;
+            private boolean resolved;
+
+            @Override
+            public synchronized T get() {
+                if (!resolved) {
+                    value = delegate.get();
+                    resolved = true;
+                }
+                return value;
+            }
+        };
     }
 
     public class QIOItemTypeData {

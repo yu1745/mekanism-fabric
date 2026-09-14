@@ -2,20 +2,26 @@ package mekanism.common.network.to_client.qio;
 
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
-import mekanism.common.Mekanism;
 import mekanism.common.inventory.container.QIOItemViewerContainer;
 import mekanism.common.lib.inventory.HashedItem.UUIDAwareHashedItem;
-import mekanism.common.network.IMekanismPacket;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
 
-public class PacketUpdateItemViewer implements IMekanismPacket {
+/**
+ * Incremental QIO item viewer update payload (server to client).
+ *
+ * <p>Fabric adaptation of the official packet: codec unchanged; NeoForge's {@code IMekanismPacket}/{@code IPayloadContext} dispatch is replaced by the vanilla
+ * {@link CustomPacketPayload} contract with handling split into {@link #handle(QIOItemViewerContainer)}. The physical-client receiver lives in the Fabric
+ * networking owner and resolves the player's open container on the client thread.</p>
+ */
+public class PacketUpdateItemViewer implements CustomPacketPayload {
 
-    public static final CustomPacketPayload.Type<PacketUpdateItemViewer> TYPE = new CustomPacketPayload.Type<>(Mekanism.rl("update_qio"));
+    public static final CustomPacketPayload.Type<PacketUpdateItemViewer> TYPE = new CustomPacketPayload.Type<>(
+          ResourceLocation.fromNamespaceAndPath("mekanism", "update_qio"));
     private static final StreamCodec<RegistryFriendlyByteBuf, Object2LongMap<UUIDAwareHashedItem>> ITEM_MAP_CODEC = ByteBufCodecs.map(Object2LongOpenHashMap::new,
           UUIDAwareHashedItem.STREAM_CODEC, ByteBufCodecs.VAR_LONG
     );
@@ -42,10 +48,7 @@ public class PacketUpdateItemViewer implements IMekanismPacket {
         return TYPE;
     }
 
-    @Override
-    public void handle(IPayloadContext context) {
-        if (context.player().containerMenu instanceof QIOItemViewerContainer container) {
-            container.handleUpdate(itemMap, countCapacity, typeCapacity);
-        }
+    public void handle(QIOItemViewerContainer container) {
+        container.handleUpdate(itemMap, countCapacity, typeCapacity);
     }
 }

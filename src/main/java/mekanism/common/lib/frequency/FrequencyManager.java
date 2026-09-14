@@ -12,7 +12,6 @@ import java.util.Set;
 import java.util.UUID;
 import mekanism.api.SerializationConstants;
 import mekanism.api.security.SecurityMode;
-import mekanism.common.Mekanism;
 import mekanism.common.lib.MekanismSavedData;
 import mekanism.common.lib.collection.HashList;
 import mekanism.common.lib.frequency.Frequency.FrequencyIdentity;
@@ -27,8 +26,12 @@ import net.minecraft.resources.RegistryOps;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class FrequencyManager<FREQ extends Frequency> {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism/Frequency");
 
     public static final int MAX_FREQ_LENGTH = 16;
 
@@ -225,7 +228,7 @@ public class FrequencyManager<FREQ extends Frequency> {
             for (int i = 0; i < list.size(); i++) {
                 DataResult<FREQ> parsed = codec.parse(registryOps, list.getCompound(i));
                 parsed.ifSuccess(loadedFrequencies::add);
-                parsed.ifError(error -> Mekanism.logger.warn("Failed to deserialize frequency: {}", error.message()));
+                parsed.ifError(error -> LOGGER.warn("Failed to deserialize frequency: {}", error.message()));
             }
         }
 
@@ -237,11 +240,11 @@ public class FrequencyManager<FREQ extends Frequency> {
             }
             Codec<FREQ> codec = frequencyType.codec();
             RegistryOps<Tag> registryOps = provider.createSerializationContext(NbtOps.INSTANCE);
-            ListTag list = new ListTag(frequencies.size());
+            ListTag list = new ListTag();//Fabric port delta: vanilla 1.21.1 ListTag has no capacity constructor
             for (FREQ freq : frequencies.values()) {
                 DataResult<Tag> encoded = codec.encodeStart(registryOps, freq);
                 encoded.ifSuccess(list::add);
-                encoded.ifError(error -> Mekanism.logger.warn("Failed to serialize frequency: {}", error.message()));
+                encoded.ifError(error -> LOGGER.warn("Failed to serialize frequency: {}", error.message()));
             }
             nbtTags.put(SerializationConstants.FREQUENCY_LIST, list);
             return nbtTags;

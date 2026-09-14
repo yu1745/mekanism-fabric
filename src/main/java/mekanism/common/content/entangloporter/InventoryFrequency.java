@@ -43,7 +43,7 @@ import mekanism.common.config.MekanismConfig;
 import mekanism.common.content.network.EnergyNetwork;
 import mekanism.common.content.network.distribution.ChemicalHandlerTarget;
 import mekanism.common.content.network.distribution.EnergyAcceptorTarget;
-import mekanism.common.content.network.distribution.FluidHandlerTarget;
+import mekanism.common.content.network.distribution.FluidSendTransaction;
 import mekanism.common.inventory.slot.BasicInventorySlot;
 import mekanism.common.inventory.slot.EntangloporterInventorySlot;
 import mekanism.common.lib.frequency.Frequency;
@@ -55,7 +55,6 @@ import mekanism.common.tile.component.config.DataType;
 import mekanism.common.util.ChemicalUtil;
 import mekanism.common.util.EmitUtils;
 import mekanism.common.util.EnumUtils;
-import mekanism.common.util.FluidUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.UUIDUtil;
@@ -69,8 +68,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import mekanism.api.fluid.FluidStack;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
+import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -289,7 +289,7 @@ public class InventoryFrequency extends Frequency implements IMekanismInventory,
     private void addFluidTransferHandler(Map<TransmissionType, Consumer<?>> typesToEject, List<Runnable> transferHandlers, int expected) {
         FluidStack fluidToSend = storedFluid.extract(storedFluid.getCapacity(), Action.SIMULATE, AutomationType.INTERNAL);
         if (!fluidToSend.isEmpty()) {
-            SendingFluidHandlerTarget target = new SendingFluidHandlerTarget(fluidToSend, expected, storedFluid);
+            SendingFluidHandlerTarget target = new SendingFluidHandlerTarget(expected, fluidToSend, storedFluid);
             typesToEject.put(TransmissionType.FLUID, target);
             transferHandlers.add(target);
         }
@@ -328,29 +328,29 @@ public class InventoryFrequency extends Frequency implements IMekanismInventory,
         }
     }
 
-    private static class SendingFluidHandlerTarget extends FluidHandlerTarget implements Runnable, Consumer<IFluidHandler> {
+    private static class SendingFluidHandlerTarget implements Runnable, Consumer<Storage<FluidVariant>> {
 
         private final FluidStack toSend;
         private final IExtendedFluidTank storedFluid;
+        private final List<Storage<FluidVariant>> handlers;
 
-        public SendingFluidHandlerTarget(@NotNull FluidStack toSend, int expectedSize, IExtendedFluidTank storedFluid) {
-            super(expectedSize);
+        public SendingFluidHandlerTarget(int expectedSize, @NotNull FluidStack toSend, IExtendedFluidTank storedFluid) {
+            this.handlers = new ArrayList<>(expectedSize);
             this.toSend = toSend;
             this.storedFluid = storedFluid;
         }
 
         @Override
         public void run() {
-            if (getHandlerCount() > 0) {
-                storedFluid.extract(EmitUtils.sendToAcceptors(this, toSend.getAmount(), toSend), Action.EXECUTE, AutomationType.INTERNAL);
+            if (!handlers.isEmpty()) {
+                //Sender-owned transaction: snapshot source, distribute fairly over real Fabric storages, debit exactly, then commit
+                FluidSendTransaction.send(handlers, storedFluid, toSend.getAmount());
             }
         }
 
         @Override
-        public void accept(IFluidHandler handler) {
-            if (FluidUtils.canFill(handler, toSend)) {
-                addHandler(handler);
-            }
+        public void accept(Storage<FluidVariant> handler) {
+            handlers.add(handler);
         }
     }
 
