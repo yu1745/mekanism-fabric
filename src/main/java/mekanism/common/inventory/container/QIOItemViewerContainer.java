@@ -823,8 +823,8 @@ public abstract class QIOItemViewerContainer extends MekanismContainer implement
               Comparator.comparing(IScrollableSlot::getModID).thenComparing(IScrollableSlot::getDisplayName),
               Comparator.comparing(IScrollableSlot::getModID).reversed().thenComparing(IScrollableSlot::getDisplayName)),
         REGISTRY_NAME(MekanismLang.LIST_SORT_REGISTRY_NAME, MekanismLang.LIST_SORT_REGISTRY_NAME_DESC, true,
-              Comparator.comparing(IScrollableSlot::getRegistryName, ResourceLocation::compareNamespaced).thenComparingLong(IScrollableSlot::count),
-              Comparator.comparing(IScrollableSlot::getRegistryName, ResourceLocation::compareNamespaced).reversed().thenComparingLong(IScrollableSlot::count));
+              Comparator.comparing(IScrollableSlot::getRegistryName, Comparator.comparing(ResourceLocation::getNamespace).thenComparing(ResourceLocation::getPath)).thenComparingLong(IScrollableSlot::count),
+              Comparator.comparing(IScrollableSlot::getRegistryName, Comparator.comparing(ResourceLocation::getNamespace).thenComparing(ResourceLocation::getPath)).reversed().thenComparingLong(IScrollableSlot::count));
 
         private final ILangEntry name;
         private final ILangEntry tooltip;
@@ -869,7 +869,6 @@ public abstract class QIOItemViewerContainer extends MekanismContainer implement
         }
 
         @NotNull
-        @Override
         public Component getTranslatedName() {
             return getShortName();
         }

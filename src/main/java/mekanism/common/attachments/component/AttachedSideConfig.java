@@ -194,7 +194,7 @@ public record AttachedSideConfig(Map<TransmissionType, LightConfigInfo> configIn
     }
 
     public static IPersistentConfigInfo getStoredConfigInfo(ItemStack stack, AttachedSideConfig fallback, TransmissionType transmissionType) {
-        AttachedSideConfig existingData = stack.getOrDefault(MekanismDataComponents.SIDE_CONFIG, fallback);
+        AttachedSideConfig existingData = stack.getOrDefault(MekanismDataComponents.SIDE_CONFIG.get(), fallback);
         LightConfigInfo config = existingData.configInfo.get(transmissionType);
         if (config.sideConfig.isEmpty()) {
             if (existingData == fallback) {

@@ -160,13 +160,13 @@ public class TileEntityQIODashboard extends TileEntityQIOComponent implements IQ
     @Override
     protected void collectImplicitComponents(@NotNull DataComponentMap.Builder builder) {
         super.collectImplicitComponents(builder);
-        builder.set(MekanismDataComponents.INSERT_INTO_FREQUENCY, insertIntoFrequency);
+        builder.set(MekanismDataComponents.INSERT_INTO_FREQUENCY.get(), insertIntoFrequency);
     }
 
     @Override
     protected void applyImplicitComponents(@NotNull BlockEntity.DataComponentInput input) {
         super.applyImplicitComponents(input);
-        insertIntoFrequency = input.getOrDefault(MekanismDataComponents.INSERT_INTO_FREQUENCY, insertIntoFrequency);
+        insertIntoFrequency = input.getOrDefault(MekanismDataComponents.INSERT_INTO_FREQUENCY.get(), insertIntoFrequency);
     }
 
     public boolean shiftClickIntoFrequency() {

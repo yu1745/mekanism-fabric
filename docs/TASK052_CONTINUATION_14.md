@@ -1,5 +1,7 @@
 # Task052 continuation14 — Astra whole-owner completion
 
+**Latest scope policy (2026-09-14):** read `TASK052_CONVERGENCE_14.md` first. User explicitly stopped unlimited dependency-driven expansion. Preserve all WIP and original behavior, prioritize convergence of already-admitted tile/components/registry/container/provider owners to a real build, and obtain parent adjudication before materially widening into another module. The older broad-route language below is historical context, not permission to bypass that freeze.
+
 Latest user authorization supersedes earlier model and tiny batch limits: all remaining Task052 uses Astra. One implementer retains the whole connected machine-owner context and continues through related prerequisites rather than returning after one registry patch. Parent baseline 5a235144; first merge preserved WIP 57e7d94f0659655c07d048fa58a2fa39264abefd (includes d34dcb15). Former implementer stopped cleanly with merge only, no robit source edits and no new build evidence.
 
 ## Outcome and concrete route

@@ -85,8 +85,8 @@ public class TileComponentSecurity implements ITileComponent {
 
     @Override
     public void applyImplicitComponents(@NotNull BlockEntity.DataComponentInput input) {
-        securityMode = input.getOrDefault(MekanismDataComponents.SECURITY, securityMode);
-        setOwnerUUID(input.getOrDefault(MekanismDataComponents.OWNER, ownerUUID));
+        securityMode = input.getOrDefault(MekanismDataComponents.SECURITY.get(), securityMode);
+        setOwnerUUID(input.getOrDefault(MekanismDataComponents.OWNER.get(), ownerUUID));
     }
 
     @Override
@@ -98,9 +98,9 @@ public class TileComponentSecurity implements ITileComponent {
 
     @Override
     public void collectImplicitComponents(DataComponentMap.Builder builder) {
-        builder.set(MekanismDataComponents.SECURITY, securityMode);
+        builder.set(MekanismDataComponents.SECURITY.get(), securityMode);
         if (ownerUUID != null) {
-            builder.set(MekanismDataComponents.OWNER, ownerUUID);
+            builder.set(MekanismDataComponents.OWNER.get(), ownerUUID);
         }
     }
 

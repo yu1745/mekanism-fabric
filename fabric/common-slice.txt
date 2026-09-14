@@ -758,3 +758,7 @@ mekanism/common/capabilities/holder/heat/ConfigHeatCapacitorHolder.java
 # Original configurable-machine component and its already-ported item/fluid/chemical sender paths
 mekanism/common/tile/component/TileComponentEjector.java
 mekanism/common/tile/prefab/TileEntityConfigurableMachine.java
+mekanism/common/tile/machine/TileEntityOredictionificator.java
+mekanism/common/tile/qio/TileEntityQIOComponent.java
+mekanism/common/tile/qio/TileEntityQIODashboard.java
+mekanism/common/inventory/container/tile/QIODashboardContainer.java

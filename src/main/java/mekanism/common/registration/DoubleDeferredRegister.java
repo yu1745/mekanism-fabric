@@ -1,6 +1,7 @@
 package mekanism.common.registration;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -53,10 +54,10 @@ public class DoubleDeferredRegister<PRIMARY, SECONDARY> {
     }
 
     public Collection<MekanismDeferredHolder<PRIMARY, ? extends PRIMARY>> getPrimaryEntries() {
-        return primaryRegister.getEntries();
+        return List.copyOf(primaryRegister.getEntries());
     }
 
     public Collection<MekanismDeferredHolder<SECONDARY, ? extends SECONDARY>> getSecondaryEntries() {
-        return secondaryRegister.getEntries();
+        return List.copyOf(secondaryRegister.getEntries());
     }
 }

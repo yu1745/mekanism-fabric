@@ -24,7 +24,7 @@ public class PortableQIODashboardInventory implements IQIOCraftingWindowHolder {
         this.level = level;
         List<IInventorySlot> slots = new ArrayList<>();
         craftingWindows = new QIOCraftingWindow[MAX_CRAFTING_WINDOWS];
-        List<ItemStack> contents = stack.getOrDefault(MekanismDataComponents.QIO_DASHBOARD, PortableDashboardContents.EMPTY).contents();
+        List<ItemStack> contents = stack.getOrDefault(MekanismDataComponents.QIO_DASHBOARD.get(), PortableDashboardContents.EMPTY).contents();
         initializing = true;
         for (int tableIndex = 0; tableIndex < craftingWindows.length; tableIndex++) {
             int finalTableIndex = tableIndex;
@@ -32,8 +32,8 @@ public class PortableQIODashboardInventory implements IQIOCraftingWindowHolder {
                 //Skip contents change handling until we actually have our crafting window updated
                 if (!initializing) {
                     ItemStack stored = craftingWindows[finalTableIndex].getInputSlot(slot).getStack().copy();
-                    PortableDashboardContents content = stack.getOrDefault(MekanismDataComponents.QIO_DASHBOARD, PortableDashboardContents.EMPTY);
-                    stack.set(MekanismDataComponents.QIO_DASHBOARD, content.with(finalTableIndex, slot, stored));
+                    PortableDashboardContents content = stack.getOrDefault(MekanismDataComponents.QIO_DASHBOARD.get(), PortableDashboardContents.EMPTY);
+                    stack.set(MekanismDataComponents.QIO_DASHBOARD.get(), content.with(finalTableIndex, slot, stored));
                 }
             });
             craftingWindows[tableIndex] = craftingWindow;
@@ -68,7 +68,7 @@ public class PortableQIODashboardInventory implements IQIOCraftingWindowHolder {
     @Override
     public QIOFrequency getFrequency() {
         if (level != null && !level.isClientSide() && !stack.isEmpty()) {//Note: This shouldn't be empty, but we validate it just in case
-            FrequencyAware<QIOFrequency> frequencyAware = stack.get(MekanismDataComponents.QIO_FREQUENCY);
+            FrequencyAware<QIOFrequency> frequencyAware = stack.get(MekanismDataComponents.QIO_FREQUENCY.get());
             if (frequencyAware != null) {
                 return frequencyAware.getFrequency(stack, MekanismDataComponents.QIO_FREQUENCY.value());
             }

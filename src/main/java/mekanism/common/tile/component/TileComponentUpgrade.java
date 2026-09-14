@@ -194,7 +194,7 @@ public class TileComponentUpgrade implements ITileComponent, ISpecificContainerT
 
     @Override
     public void applyImplicitComponents(@NotNull BlockEntity.DataComponentInput input) {
-        UpgradeAware upgradeAware = input.get(MekanismDataComponents.UPGRADES);
+        UpgradeAware upgradeAware = input.get(MekanismDataComponents.UPGRADES.get());
         if (upgradeAware != null) {
             upgrades.clear();
             upgrades.putAll(upgradeAware.upgrades());
@@ -206,7 +206,7 @@ public class TileComponentUpgrade implements ITileComponent, ISpecificContainerT
     @Override
     public void collectImplicitComponents(DataComponentMap.Builder builder) {
         //Note: UpgradeAware will copy the stacks
-        builder.set(MekanismDataComponents.UPGRADES, new UpgradeAware(new EnumMap<>(upgrades), upgradeSlot.getStack(), upgradeOutputSlot.getStack()));
+        builder.set(MekanismDataComponents.UPGRADES.get(), new UpgradeAware(new EnumMap<>(upgrades), upgradeSlot.getStack(), upgradeOutputSlot.getStack()));
     }
 
     @Override
