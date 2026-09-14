@@ -117,12 +117,9 @@ public class TileEntityBin extends TileEntityMekanism implements IConfigurable {
                     try (Transaction tx = Transaction.openOuter()) {
                         TransitResponse response = request.eject(this, target, 0, LogisticalTransporterBase::getColor, tx);
                         if (!response.isEmpty()) {
-                            if (tier != BinTier.CREATIVE) {
-                                //Normal source: exact transactional debit through the actual DOWN sided provider
-                                response.useAll(tx);
-                            }
-                            //Creative source deliberately is not depleted (infinite source owner policy); the target
-                            // insertion itself still commits
+                            //Validate the real DOWN source for every tier. Creative extraction is deliberately
+                            // non-depleting at BinInventorySlot/FabricItemStorage, not an unchecked tick bypass.
+                            response.useAll(tx);
                             tx.commit();
                         }
                     } catch (RuntimeException ignored) {

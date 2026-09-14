@@ -54,6 +54,12 @@ public class InventoryNetwork extends DynamicNetwork<Storage<ItemVariant>, Inven
 
     public List<AcceptorData> calculateAcceptors(TransitRequest request, TransporterStack stack, Long2ObjectMap<ChunkAccess> chunkMap,
           Map<GlobalPos, Set<TransporterStack>> additionalFlowingStacks, LogisticalTransporterBase start) {
+        return calculateAcceptors(request, stack, chunkMap, additionalFlowingStacks, start, null);
+    }
+
+    public List<AcceptorData> calculateAcceptors(TransitRequest request, TransporterStack stack, Long2ObjectMap<ChunkAccess> chunkMap,
+          Map<GlobalPos, Set<TransporterStack>> additionalFlowingStacks, LogisticalTransporterBase start,
+          @org.jetbrains.annotations.Nullable net.fabricmc.fabric.api.transfer.v1.transaction.TransactionContext tx) {
         List<AcceptorData> toReturn = new ArrayList<>();
         for (ObjectIterator<Long2ObjectMap.Entry<Map<Direction, Storage<ItemVariant>>>> iterator = acceptorCache.getAcceptorFastIterator(); iterator.hasNext(); ) {
             Long2ObjectMap.Entry<Map<Direction, Storage<ItemVariant>>> entry = iterator.next();
@@ -81,7 +87,7 @@ public class InventoryNetwork extends DynamicNetwork<Storage<ItemVariant>, Inven
                             }
                         }
                     }
-                    TransitResponse response = TransporterManager.getPredictedInsert(position, side, handler, request, additionalFlowingStacks);
+                    TransitResponse response = TransporterManager.getPredictedInsert(position, side, handler, request, additionalFlowingStacks, tx);
                     if (!response.isEmpty()) {
                         Direction opposite = side.getOpposite();
                         //If the response isn't empty, check if we already have acceptor data for

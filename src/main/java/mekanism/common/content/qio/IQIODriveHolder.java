@@ -19,7 +19,7 @@ public interface IQIODriveHolder extends IQIOFrequencyHolder {
     default void save(int slot, QIODriveData data) {
         ItemStack stack = getDriveSlots().get(slot).getStack();
         if (stack.getItem() instanceof IQIODriveItem) {
-            stack.set(MekanismDataComponents.DRIVE_CONTENTS, DriveContents.create(data));
+            stack.set(MekanismDataComponents.DRIVE_CONTENTS.get(), DriveContents.create(data));
         } else {
             LOGGER.error("Tried to save data map to an invalid item ({}). Something has gone very wrong!", stack.getItem());
         }

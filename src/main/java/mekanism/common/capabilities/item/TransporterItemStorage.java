@@ -31,10 +31,19 @@ public final class TransporterItemStorage implements Storage<ItemVariant> {
 
     private final LogisticalTransporterBase transporter;
     private final BlockPos fromPos;
+    private boolean valid = true;
 
     public TransporterItemStorage(LogisticalTransporterBase transporter, BlockPos fromPos) {
         this.transporter = transporter;
         this.fromPos = fromPos;
+    }
+
+    public void invalidate() {
+        valid = false;
+    }
+
+    public boolean isValid() {
+        return valid;
     }
 
     public LogisticalTransporterBase getTransporter() {
@@ -43,12 +52,12 @@ public final class TransporterItemStorage implements Storage<ItemVariant> {
 
     @Override
     public boolean supportsInsertion() {
-        return true;
+        return valid;
     }
 
     @Override
     public long insert(ItemVariant resource, long maxAmount, TransactionContext transaction) {
-        if (resource.isBlank() || maxAmount <= 0 || !transporter.hasTransmitterNetwork()) {
+        if (!valid || resource.isBlank() || maxAmount <= 0 || !transporter.hasTransmitterNetwork()) {
             return 0;
         }
         TransitRequest request = TransitRequest.simple(resource.toStack((int) Math.min(Integer.MAX_VALUE, maxAmount)));

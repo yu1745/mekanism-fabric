@@ -45,6 +45,14 @@ public class TransporterManager {
         flowingStacks.computeIfAbsent(GlobalPos.of(world.dimension(), BlockPos.of(stack.getDest())), k -> new HashSet<>()).add(stack);
     }
 
+    public static boolean contains(Level world, TransporterStack stack) {
+        if (!stack.hasPath() || !stack.getPathType().hasTarget()) {
+            return false;
+        }
+        Set<TransporterStack> stacks = flowingStacks.get(GlobalPos.of(world.dimension(), BlockPos.of(stack.getDest())));
+        return stacks != null && stacks.contains(stack);
+    }
+
     public static void remove(Level world, TransporterStack stack) {
         if (stack.hasPath() && stack.getPathType().hasTarget()) {
             GlobalPos pos = GlobalPos.of(world.dimension(), BlockPos.of(stack.getDest()));

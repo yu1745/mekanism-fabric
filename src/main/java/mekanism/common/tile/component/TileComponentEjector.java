@@ -301,7 +301,6 @@ public class TileComponentEjector implements ITileComponent, ISpecificContainerT
                 //Validate the slot info is of the correct type
                 Set<Direction> outputs = getSidesForData(info, facing, dataType);
                 if (!outputs.isEmpty()) {
-                    EjectTransitRequest ejectMap = null;
                     for (Direction side : outputs) {
                         //Direct per-operation external lookup (mirrors the reviewed fluid ejector policy): query each
                         // physical neighbor through ItemStorage.SIDED.find on the opposite face at operation time; no
@@ -316,21 +315,12 @@ public class TileComponentEjector implements ITileComponent, ISpecificContainerT
                             continue;
                         }
                         Storage<ItemVariant> handler = getHandler(side);
-                        if (ejectMap == null) {
-                            //NOTE: The below logic and the entire concept of EjectTransitRequest relies on the implementation detail that
-                            // per DataType all exposed slots are the same regardless of the actual side. If this ever changes or there are
-                            // cases discovered where this is not the case we will instead need to calculate the eject map for each output side
-                            // instead of only having to do it once per DataType. The debit later validates the selected physical slots through
-                            // the actual sided provider and aborts on any topology mismatch.
-                            ejectMap = new EjectTransitRequest(handler);
-                            InventoryUtils.getEjectItemMap(ejectMap, inventorySlotInfo.getSlots());
-                            //No items to eject, exit
-                            if (ejectMap.isEmpty()) {
-                                break;
-                            }
-                        } else {
-                            //Update the handler so that when the response uses it, it makes sure it is using the correct side's restrictions
-                            ejectMap.handler = handler;
+                        //Rebuild from current physical slots through this side's actual provider. Retained views
+                        // from another side must never survive a provider rebind and bypass its restrictions.
+                        HandlerTransitRequest ejectMap = new HandlerTransitRequest(handler);
+                        InventoryUtils.getEjectItemMap(ejectMap, inventorySlotInfo.getSlots());
+                        if (ejectMap.isEmpty()) {
+                            continue;
                         }
                         //Sender-owned transaction: the target insertion (or transporter route) and the exact source
                         // debit commit together or not at all
@@ -339,10 +329,6 @@ public class TileComponentEjector implements ITileComponent, ISpecificContainerT
                             if (!response.isEmpty()) {
                                 response.useAll(tx);
                                 tx.commit();
-                                if (ejectMap.isEmpty()) {
-                                    //If we are out of items to eject, break
-                                    break;
-                                }
                             }
                         } catch (RuntimeException ignored) {
                             //Exact debit failure aborted the whole ejection to this side; try the next side
@@ -568,18 +554,4 @@ public class TileComponentEjector implements ITileComponent, ISpecificContainerT
     }
     //End computer related methods
 
-    private static class EjectTransitRequest extends HandlerTransitRequest {
-
-        public Storage<ItemVariant> handler;
-
-        public EjectTransitRequest(Storage<ItemVariant> handler) {
-            super(handler);
-            this.handler = handler;
-        }
-
-        @Override
-        protected Storage<ItemVariant> getHandler() {
-            return handler;
-        }
-    }
 }

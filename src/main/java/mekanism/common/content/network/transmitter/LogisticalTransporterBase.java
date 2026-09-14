@@ -78,7 +78,8 @@ public abstract class LogisticalTransporterBase extends Transmitter<Storage<Item
     /**
      * Stable real-owner participant (Task052 R2/R7 correction) for the transporter's shared mutable transit state:
      * the {@code transit} map, {@code nextId}, {@code needsSync} and the per-reservation commit-only sync/save
-     * notifications. A deep snapshot is taken before the first reservation at each nesting depth; the real
+     * notifications. An identity/map snapshot is taken before the first reservation at each nesting depth;
+     * mutable stack contents/path/flowing state are separately deep-snapshotted by each stack's stable participant. The real
      * {@link SnapshotParticipant} nesting promotion makes an enclosing abort after a committed nested reservation
      * roll everything back, and {@code onFinalCommit} publishes packets/save marking only for reservations that
      * survived every nesting level.
@@ -286,9 +287,13 @@ public abstract class LogisticalTransporterBase extends Transmitter<Storage<Item
                                     // the commit; the transit map itself is only mutated through the deferred deletes
                                     // set. On abort (any nesting level) the stack participant restores the original
                                     // item stack and flowing reservation membership.
+                                    boolean deliveryAllowed = getConnectionType(side.getOpposite()).canSendTo() &&
+                                          TransporterUtils.canInsert(getLevel(), BlockPos.of(next), stack.color, stack.itemStack,
+                                                side.getOpposite(), stack.getPathType().isHome());
                                     try (Transaction delivery = Transaction.openOuter()) {
-                                        TransitResponse response = TransitRequest.simple(stack.itemStack).addToInventory(getLevel(), BlockPos.of(next), acceptor, 0,
-                                              stack.getPathType().isHome(), delivery);
+                                        TransitRequest request = TransitRequest.simple(stack.itemStack);
+                                        TransitResponse response = !deliveryAllowed ? request.getEmptyResponse() :
+                                              request.addToInventory(getLevel(), BlockPos.of(next), acceptor, 0, stack.getPathType().isHome(), delivery);
                                         if (!response.isEmpty()) {
                                             //We were able to add at least part of the stack to the inventory
                                             ItemStack rejected = response.getRejected();
@@ -522,7 +527,9 @@ public abstract class LogisticalTransporterBase extends Transmitter<Storage<Item
         // responsible for the exact source debit via response.useAll()
         try (Transaction own = Transaction.openOuter()) {
             TransitResponse response = insertMaybeRR(outputter, outputterPos, request, color, doEmit, min, own);
-            own.commit();
+            if (doEmit) {
+                own.commit();
+            }
             return response;
         }
     }
@@ -551,21 +558,32 @@ public abstract class LogisticalTransporterBase extends Transmitter<Storage<Item
         }
         try (Transaction own = Transaction.openOuter()) {
             TransitResponse response = insert(outputter, outputterPos, request, color, doEmit, min, (TransactionContext) own);
-            own.commit();
+            if (doEmit) {
+                own.commit();
+            }
             return response;
         }
     }
 
-    private TransitResponse insert(@Nullable BlockEntity outputter, BlockPos outputterPos, TransitRequest request, @Nullable EnumColor color,
+    public TransitResponse insert(@Nullable BlockEntity outputter, BlockPos outputterPos, TransitRequest request, @Nullable EnumColor color,
           boolean doEmit, int min, @Nullable TransactionContext tx) {
+        if (!isValid() || isRemote() || !WorldUtils.isChunkLoaded(getLevel(), getBlockPos()) ||
+              getLevel().getBlockEntity(getBlockPos()) != getTransmitterTile()) {
+            return request.getEmptyResponse();
+        }
         Direction from = WorldUtils.sideDifference(getBlockPos(), outputterPos);
         if (from != null && canReceiveFrom(from.getOpposite())) {
             TransporterStack stack = createInsertStack(outputterPos.asLong(), color);
             if (stack.canInsertToTransporterNN(this, from, outputter)) {
-                if (tx instanceof Transaction realTx) {
-                    return updateTransit(doEmit, stack, stack.recalculatePath(request, this, min, true, Collections.emptyMap(), realTx), realTx);
+                if (tx != null) {
+                    if (!doEmit) {
+                        try (Transaction prediction = tx.openNested()) {
+                            return stack.recalculatePath(request, this, min, false, Collections.emptyMap(), prediction);
+                        }
+                    }
+                    return updateTransit(true, stack, stack.recalculatePath(request, this, min, true, Collections.emptyMap(), tx), tx);
                 }
-                return updateTransit(doEmit, stack, stack.recalculatePath(request, this, min), null);
+                return updateTransit(doEmit, stack, stack.recalculatePath(request, this, min, doEmit), null);
             }
         }
         return request.getEmptyResponse();
@@ -573,7 +591,23 @@ public abstract class LogisticalTransporterBase extends Transmitter<Storage<Item
 
     private <BE extends BlockEntity> TransitResponse insert(@Nullable BE outputter, BlockPos outputterPos, TransitRequest request, @Nullable EnumColor color,
           int min, boolean doEmit, TxPathCalculator<BE> pathCalculator, @Nullable TransactionContext tx) {
+        if (!isValid() || isRemote() || !WorldUtils.isChunkLoaded(getLevel(), getBlockPos()) ||
+              getLevel().getBlockEntity(getBlockPos()) != getTransmitterTile()) {
+            return request.getEmptyResponse();
+        }
+        Direction from = WorldUtils.sideDifference(getBlockPos(), outputterPos);
+        if (from == null || !canReceiveFrom(from.getOpposite())) {
+            return request.getEmptyResponse();
+        }
         TransporterStack stack = createInsertStack(outputterPos.asLong(), color);
+        if (!stack.canInsertToTransporterNN(this, from, outputter)) {
+            return request.getEmptyResponse();
+        }
+        if (!doEmit) {
+            try (Transaction prediction = Transaction.openNested(tx)) {
+                return pathCalculator.calculate(stack, request, outputter, this, min, false, prediction);
+            }
+        }
         return updateTransit(doEmit, stack, pathCalculator.calculate(stack, request, outputter, this, min, doEmit, tx), tx);
     }
 
@@ -583,8 +617,13 @@ public abstract class LogisticalTransporterBase extends Transmitter<Storage<Item
 
     public TransitResponse insertUnchecked(long outputterPos, TransitRequest request, @Nullable EnumColor color, boolean doEmit, int min, @Nullable TransactionContext tx) {
         TransporterStack stack = createInsertStack(outputterPos, color);
-        if (tx instanceof Transaction realTx) {
-            return updateTransit(doEmit, stack, stack.recalculatePath(request, this, min, true, Collections.emptyMap(), realTx), realTx);
+        if (tx != null) {
+            if (!doEmit) {
+                try (Transaction prediction = tx.openNested()) {
+                    return stack.recalculatePath(request, this, min, false, Collections.emptyMap(), prediction);
+                }
+            }
+            return updateTransit(true, stack, stack.recalculatePath(request, this, min, true, Collections.emptyMap(), tx), tx);
         }
         return updateTransit(doEmit, stack, stack.recalculatePath(request, this, min, doEmit), null);
     }
@@ -594,8 +633,11 @@ public abstract class LogisticalTransporterBase extends Transmitter<Storage<Item
     }
 
     public <BE extends BlockEntity> TransitResponse insertUnchecked(BE outputter, TransitRequest request, @Nullable EnumColor color, boolean doEmit, int min, PathCalculator<BE> pathCalculator, @Nullable TransactionContext tx) {
+        if (tx != null) {
+            throw new IllegalArgumentException("A transactional insertion requires a TxPathCalculator");
+        }
         TransporterStack stack = createInsertStack(outputter.getBlockPos().asLong(), color);
-        return updateTransit(doEmit, stack, pathCalculator.calculate(stack, request, outputter, this, min, doEmit), tx);
+        return updateTransit(doEmit, stack, pathCalculator.calculate(stack, request, outputter, this, min, doEmit), null);
     }
 
     /**
@@ -604,6 +646,11 @@ public abstract class LogisticalTransporterBase extends Transmitter<Storage<Item
      */
     public <BE extends BlockEntity> TransitResponse insertUnchecked(BE outputter, TransitRequest request, @Nullable EnumColor color, boolean doEmit, int min, TxPathCalculator<BE> pathCalculator, @Nullable TransactionContext tx) {
         TransporterStack stack = createInsertStack(outputter.getBlockPos().asLong(), color);
+        if (!doEmit) {
+            try (Transaction prediction = Transaction.openNested(tx)) {
+                return pathCalculator.calculate(stack, request, outputter, this, min, false, prediction);
+            }
+        }
         return updateTransit(doEmit, stack, pathCalculator.calculate(stack, request, outputter, this, min, doEmit, tx), tx);
     }
 

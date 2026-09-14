@@ -89,6 +89,11 @@ public final class TransporterUtils {
     }
 
     public static boolean canInsert(Level level, BlockPos pos, @Nullable BlockEntity tile, EnumColor color, ItemStack itemStack, Direction side, boolean force) {
+        return canInsert(level, pos, tile, color, itemStack, side, force, null);
+    }
+
+    public static boolean canInsert(Level level, BlockPos pos, @Nullable BlockEntity tile, EnumColor color, ItemStack itemStack, Direction side, boolean force,
+          @Nullable net.fabricmc.fabric.api.transfer.v1.transaction.TransactionContext tx) {
         if (force && tile instanceof IAdvancedTransportEjector sorter) {
             return sorter.canSendHome(itemStack);
         }
@@ -104,9 +109,8 @@ public final class TransporterUtils {
         if (inventory != null && inventory.supportsInsertion()) {
             ItemVariant variant = ItemVariant.of(itemStack);
             if (!variant.isBlank() && !itemStack.isEmpty()) {
-                //Fresh real sided storage lookup on the opposite face; abort-only local simulation validates the
-                // item (R1: no ambient-current fallback; this validator owns no caller transaction)
-                try (Transaction simulation = Transaction.openOuter()) {
+                //Nested abort-only validation sees provisional target state from the real route caller.
+                try (Transaction simulation = Transaction.openNested(tx)) {
                     long accepted = inventory.insert(variant, itemStack.getCount(), simulation);
                     if (accepted > 0) {
                         return true;

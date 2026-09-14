@@ -55,7 +55,7 @@ public class ItemNetworkAcceptorCache extends NetworkAcceptorCache<Storage<ItemV
             for (Direction side : EnumUtils.DIRECTIONS) {
                 //Official bitmap policy: refresh this side's acceptor-connection validity (and packet on change)
                 transporter.refreshAcceptorConnections(side);
-                if (!transporter.canConnectToAcceptor(side)) {
+                if (!transporter.canConnectToAcceptor(side) || !transporter.canEmitTo(side)) {
                     continue;
                 }
                 Storage<ItemVariant> acceptor = transporter.getAcceptor(side);

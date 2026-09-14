@@ -29,6 +29,7 @@ public class QIODriveData {
     private final DriveStateParticipant driveStateTx = new DriveStateParticipant();
 
     private final QIODriveKey key;
+    private final ItemStack boundDriveStack;
     private final long countCapacity;
     private final int typeCapacity;
     private final Object2LongMap<HashedItem> itemMap = new Object2LongOpenHashMap<>();
@@ -37,12 +38,13 @@ public class QIODriveData {
     public QIODriveData(QIODriveKey key) {
         this.key = key;
         ItemStack driveStack = key.getDriveStack();
+        boundDriveStack = driveStack;
         IQIODriveItem driveItem = (IQIODriveItem) driveStack.getItem();
         // load capacity values
         countCapacity = driveItem.getCountCapacity(driveStack);
         typeCapacity = driveItem.getTypeCapacity(driveStack);
         // load item map from drive stack
-        driveStack.getOrDefault(MekanismDataComponents.DRIVE_CONTENTS, DriveContents.EMPTY).loadItemMap(this);
+        driveStack.getOrDefault(MekanismDataComponents.DRIVE_CONTENTS.get(), DriveContents.EMPTY).loadItemMap(this);
         // update cached item count value
         itemCount = itemMap.values().longStream().sum();
 
@@ -83,6 +85,9 @@ public class QIODriveData {
         long removed = Math.min(amount, stored);
         if (action.execute()) {
             if (tx != null) {
+                if (key.getDriveStack() != boundDriveStack) {
+                    throw new IllegalStateException("QIO drive owner no longer matches its physical stack");
+                }
                 //Join the drive's state to the caller transaction BEFORE any mutation, capturing the actual holder
                 // slot stack identity and its metadata component at snapshot time (R4)
                 driveStateTx.updateSnapshots(tx);
@@ -106,8 +111,8 @@ public class QIODriveData {
 
         @Override
         protected DriveStateSnapshot createSnapshot() {
-            return new DriveStateSnapshot(new Object2LongOpenHashMap<>(itemMap), itemCount, key.getDriveStack(),
-                  key.getDriveStack().get(MekanismDataComponents.DRIVE_METADATA));
+            return new DriveStateSnapshot(new Object2LongOpenHashMap<>(itemMap), itemCount, boundDriveStack,
+                  boundDriveStack.get(MekanismDataComponents.DRIVE_METADATA.get()));
         }
 
         @Override
@@ -122,9 +127,9 @@ public class QIODriveData {
             itemMap.putAll(snapshot.itemMap);
             itemCount = snapshot.itemCount;
             if (snapshot.capturedMetadata != null) {
-                snapshot.capturedStack.set(MekanismDataComponents.DRIVE_METADATA, snapshot.capturedMetadata);
+                snapshot.capturedStack.set(MekanismDataComponents.DRIVE_METADATA.get(), snapshot.capturedMetadata);
             } else {
-                snapshot.capturedStack.remove(MekanismDataComponents.DRIVE_METADATA);
+                snapshot.capturedStack.remove(MekanismDataComponents.DRIVE_METADATA.get());
             }
         }
 
@@ -180,7 +185,7 @@ public class QIODriveData {
         public void updateMetadata(QIODriveData data) {
             ItemStack stack = getDriveStack();
             if (stack.getItem() instanceof IQIODriveItem) {
-                stack.set(MekanismDataComponents.DRIVE_METADATA, new DriveMetadata(data));
+                stack.set(MekanismDataComponents.DRIVE_METADATA.get(), new DriveMetadata(data));
             } else {
                 LOGGER.error("Tried to update QIO meta values on an invalid ItemStack ({}). Something has gone very wrong!", stack.getItem());
             }

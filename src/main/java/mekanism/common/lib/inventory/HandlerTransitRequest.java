@@ -105,7 +105,10 @@ public class HandlerTransitRequest extends CollectionTransitRequest {
         //Cumulative provisional extraction: later candidates see earlier ones inside this transaction, so
         // overlapping resources are never counted twice; the transaction is aborted below
         long extracted = view.extract(resource, toUse, discovery);
-        if (extracted <= 0) {
+        if (extracted < 0 || extracted > toUse) {
+            throw new IllegalStateException("Source view returned an invalid extraction amount");
+        }
+        if (extracted == 0) {
             //The view did not actually give back anything; skip this candidate entirely
             return;
         }
@@ -120,6 +123,9 @@ public class HandlerTransitRequest extends CollectionTransitRequest {
      * order of the slotted sided storage used at debit time.
      */
     public void addItem(ItemStack stack, int slot) {
+        if (stack.isEmpty()) {
+            return;
+        }
         itemMap(HashedItem.create(stack)).addCandidate(new SourceCandidate(slot, null, stack.getCount()));
     }
 
@@ -131,6 +137,9 @@ public class HandlerTransitRequest extends CollectionTransitRequest {
      * an unrelated position.
      */
     public void addItemFromSelectedSlot(ItemStack stack, IInventorySlot slot) {
+        if (stack.isEmpty()) {
+            return;
+        }
         if (handler instanceof FabricItemStorage fabricStorage) {
             SingleSlotStorage<ItemVariant> view = fabricStorage.viewOf(slot);
             if (view != null) {
@@ -236,6 +245,9 @@ public class HandlerTransitRequest extends CollectionTransitRequest {
          */
         @Override
         public ItemStack use(int amount, Transaction tx) {
+            if (amount < 0 || amount > totalCount) {
+                throw new IllegalArgumentException("Debit amount is outside the request plan");
+            }
             Storage<ItemVariant> handler = getHandler();
             if (amount > 0) {
                 if (handler == null) {
@@ -347,15 +359,19 @@ public class HandlerTransitRequest extends CollectionTransitRequest {
 
         private final Map<HashedItem, List<SourceCandidate>> candidates;
         private final Map<HashedItem, HandlerItemData> identities;
+        private final Map<HashedItem, Integer> totals;
 
-        private PlanSnapshot(Map<HashedItem, List<SourceCandidate>> candidates, Map<HashedItem, HandlerItemData> identities) {
+        private PlanSnapshot(Map<HashedItem, List<SourceCandidate>> candidates, Map<HashedItem, HandlerItemData> identities,
+              Map<HashedItem, Integer> totals) {
             this.candidates = candidates;
             this.identities = identities;
+            this.totals = totals;
         }
 
         static PlanSnapshot take(HandlerTransitRequest request) {
             Map<HashedItem, List<SourceCandidate>> copy = new LinkedHashMap<>();
             Map<HashedItem, HandlerItemData> identityCopy = new LinkedHashMap<>();
+            Map<HashedItem, Integer> totals = new LinkedHashMap<>();
             request.itemMap.forEach((hashed, data) -> {
                 List<SourceCandidate> list = new ArrayList<>(data.candidates.size());
                 for (SourceCandidate candidate : data.candidates) {
@@ -363,8 +379,9 @@ public class HandlerTransitRequest extends CollectionTransitRequest {
                 }
                 copy.put(hashed, list);
                 identityCopy.put(hashed, data);
+                totals.put(hashed, data.totalCount);
             });
-            return new PlanSnapshot(copy, identityCopy);
+            return new PlanSnapshot(copy, identityCopy, totals);
         }
 
         void restore(HandlerTransitRequest request) {
@@ -374,12 +391,10 @@ public class HandlerTransitRequest extends CollectionTransitRequest {
                 // map) reappear as the same object a captured response may still reference
                 List<SourceCandidate> list = candidates.get(hashed);
                 data.candidates.clear();
-                int total = 0;
                 for (SourceCandidate candidate : list) {
                     data.candidates.add(new SourceCandidate(candidate.slot(), candidate.view(), candidate.count()));
-                    total += candidate.count();
                 }
-                data.totalCount = total;
+                data.totalCount = totals.get(hashed);
                 restored.put(hashed, data);
             });
             request.itemMap = restored;

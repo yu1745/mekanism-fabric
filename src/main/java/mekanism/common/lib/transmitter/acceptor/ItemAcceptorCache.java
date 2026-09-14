@@ -69,7 +69,9 @@ public class ItemAcceptorCache extends AbstractAcceptorCache<Storage<ItemVariant
             if (transmitterTile.getLevel() != initializedLevel) {
                 return null;
             }
-            if (!WorldUtils.isChunkLoaded(initializedLevel, pos)) {
+            if (!WorldUtils.isChunkLoaded(initializedLevel, transmitterTile.getBlockPos()) ||
+                  initializedLevel.getBlockEntity(transmitterTile.getBlockPos()) != transmitterTile ||
+                  !WorldUtils.isChunkLoaded(initializedLevel, pos)) {
                 return null;
             }
             return ItemStorage.SIDED.find(initializedLevel, pos, opposite);

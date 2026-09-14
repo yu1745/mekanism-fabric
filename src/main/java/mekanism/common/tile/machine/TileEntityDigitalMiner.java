@@ -633,11 +633,12 @@ public class TileEntityDigitalMiner extends TileEntityMekanism implements IChunk
                 if (!request.isEmpty()) {
                     try (Transaction tx = Transaction.openOuter()) {
                         TransitResponse response = request.createSimpleResponse();
+                        ItemStack accepted = response.getStack().copy();
                         ItemStack remaining = response.useAll(tx);
                         if (remaining.isEmpty()) {
                             //If the request isn't empty, and we were able to successfully use it all
                             tx.commit();
-                            return response.getStack().copyWithCount(1);
+                            return accepted.copyWithCount(1);
                         }
                     } catch (RuntimeException ignored) {
                         //Exact debit failure: no replacement item

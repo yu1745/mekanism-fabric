@@ -102,6 +102,10 @@ public abstract class TileEntityLogisticalTransporterBase extends TileEntityTran
                 //We provide no endpoint for the null side
                 return null;
             }
+            if (!getTransmitter().exposesInsertCap(side)) {
+                invalidate(capability, side);
+                return null;
+            }
             TransporterItemStorage cached = handlers.get(side);
             if (cached == null) {
                 LogisticalTransporterBase transporter = getTransmitter();
@@ -118,12 +122,16 @@ public abstract class TileEntityLogisticalTransporterBase extends TileEntityTran
         @Override
         public void invalidate(BlockApiLookup<?, @Nullable Direction> capability, @Nullable Direction side) {
             if (side != null) {
-                handlers.remove(side);
+                TransporterItemStorage previous = handlers.remove(side);
+                if (previous != null) {
+                    previous.invalidate();
+                }
             }
         }
 
         @Override
         public void invalidateAll() {
+            handlers.values().forEach(TransporterItemStorage::invalidate);
             handlers.clear();
         }
     }

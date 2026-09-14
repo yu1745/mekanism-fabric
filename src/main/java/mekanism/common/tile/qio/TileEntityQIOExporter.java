@@ -364,8 +364,10 @@ public class TileEntityQIOExporter extends TileEntityQIOFilterHandler implements
             // remove entries, which would otherwise cause a concurrent modification
             List<T> candidates = ejectMap instanceof List<T> list ? List.copyOf(list) : List.copyOf(ejectMap);
             LogisticalTransporterBase transporter = null;
-            LogisticalTransporterBase.TxPathCalculator<TileEntityQIOExporter> pathCalculator = null;
             if (inventory instanceof TransporterItemStorage endpoint) {
+                if (!endpoint.isValid()) {
+                    return;
+                }
                 transporter = endpoint.getTransporter();
                 if (!transporter.hasTransmitterNetwork()) {//Probably will never happen, but if we don't have a network just skip doing anything
                     return;
@@ -375,13 +377,6 @@ public class TileEntityQIOExporter extends TileEntityQIOFilterHandler implements
                     //Skip if the transporter can't receive from this position or connect to it
                     return;
                 }
-                pathCalculator = exporter.getRoundRobin()
-                      ? (stack, request, outputter, t, min, doEmit, tx) -> tx == null
-                            ? stack.recalculateRRPath(request, outputter, t, min, doEmit)
-                            : stack.recalculateRRPath(request, outputter, t, min, doEmit, tx)
-                      : (stack, request, outputter, t, min, doEmit, tx) -> tx == null
-                            ? stack.recalculatePath(request, t, min, doEmit)
-                            : stack.recalculatePath(request, t, min, doEmit, true, java.util.Collections.emptyMap(), tx);
             }
             RandomSource random = exporter.getLevel().getRandom();
             double ejectChance = Math.min(1, MAX_EJECT_ATTEMPTS / candidates.size());
@@ -389,6 +384,9 @@ public class TileEntityQIOExporter extends TileEntityQIOFilterHandler implements
             int maxTypes = exporter.getMaxTransitTypes(), maxCount = exporter.getMaxTransitCount();
             int typesUsed = 0, amountRemoved = 0;
             for (T obj : candidates) {
+                if (inventory instanceof TransporterItemStorage endpoint && !endpoint.isValid()) {
+                    break;
+                }
                 // break if we've reached our quota
                 if (amountRemoved == maxCount || typesUsed == maxTypes) {
                     break;
@@ -414,8 +412,11 @@ public class TileEntityQIOExporter extends TileEntityQIOFilterHandler implements
                         //TODO: Technically if we still have more of the same item input, we want to allow trying to insert it into different transport
                         // destinations, which this doesn't do as it only checks once, rather than trying to check again if we still have some that we
                         // are able to insert
-                        TransitResponse response = transporter.insertUnchecked(exporter, request, transporter.getColor(), true, 1, pathCalculator, tx);
+                        TransitResponse response = transporter.insertMaybeRR(exporter, exporter.getBlockPos(), request, transporter.getColor(), true, 1, tx);
                         toUse = response.getSendingAmount();
+                    }
+                    if (toUse < 0 || toUse > amountToInsert) {
+                        throw new IllegalStateException("QIO target accepted an invalid amount");
                     }
                     if (toUse > 0) {
                         //Exact transactional removal from the QIO frequency inside the same transaction; a shortfall

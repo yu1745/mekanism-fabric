@@ -96,9 +96,8 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
      * Stable frequency-level participant (Task052 R4 correction) for transaction-aware removal: snapshots the
      * ordered {@code itemDataMap} membership and the tag/mod/fuzzy lookup memberships that a removal can touch.
      * Nested propagation is the real {@link SnapshotParticipant} promotion, so an enclosing abort after a committed
-     * nested removal restores the exact ordered identity/membership. Wildcard caches are left cleared after a
-     * rollback (derivable, conservative); failed-wildcard sets are never touched by removal. isDirty/needsUpdate/
-     * updatedItems are deliberately not restored (an aborted removal must not erase earlier changes).
+     * nested removal restores the exact ordered identity/membership and shared totals/publication state.
+     * Failed-wildcard sets are never touched by removal.
      */
     private final FrequencyRemoveParticipant frequencyRemoveTx = new FrequencyRemoveParticipant();
 
@@ -108,8 +107,8 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
         protected FrequencyRemoveSnapshot createSnapshot() {
             Map<HashedItem, QIOItemTypeData> items = new LinkedHashMap<>(itemDataMap);
             Map<String, Set<HashedItem>> tags = new LinkedHashMap<>();
-            for (String tag : tagLookupMap.keySet()) {
-                tags.put(tag, new HashSet<>(tagLookupMap.get(tag)));
+            for (String tag : tagLookupMap.getAllKeys()) {
+                tags.put(tag, new HashSet<>(tagLookupMap.getValues(tag)));
             }
             Map<String, Set<HashedItem>> mods = new LinkedHashMap<>();
             for (Map.Entry<String, Set<HashedItem>> entry : modIDLookupMap.entrySet()) {
@@ -119,7 +118,8 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
             for (Map.Entry<Item, Set<HashedItem>> entry : fuzzyItemLookupMap.entrySet()) {
                 fuzzy.put(entry.getKey(), new HashSet<>(entry.getValue()));
             }
-            return new FrequencyRemoveSnapshot(items, tags, mods, fuzzy);
+            return new FrequencyRemoveSnapshot(items, tags, mods, fuzzy, totalCount, isDirty, needsUpdate,
+                  new HashSet<>(updatedItems), HashMultimap.create(tagWildcardCache), HashMultimap.create(modIDWildcardCache));
         }
 
         @Override
@@ -132,12 +132,22 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
             snapshot.mods.forEach((mod, items) -> modIDLookupMap.put(mod, new HashSet<>(items)));
             fuzzyItemLookupMap.clear();
             snapshot.fuzzy.forEach((item, items) -> fuzzyItemLookupMap.put(item, new HashSet<>(items)));
-            //Wildcard caches stay cleared (derivable, conservative)
+            totalCount = snapshot.totalCount;
+            isDirty = snapshot.isDirty;
+            needsUpdate = snapshot.needsUpdate;
+            updatedItems.clear();
+            updatedItems.addAll(snapshot.updatedItems);
+            tagWildcardCache.clear();
+            tagWildcardCache.putAll(snapshot.tagWildcards);
+            modIDWildcardCache.clear();
+            modIDWildcardCache.putAll(snapshot.modWildcards);
         }
     }
 
     private record FrequencyRemoveSnapshot(Map<HashedItem, QIOItemTypeData> items, Map<String, Set<HashedItem>> tags,
-          Map<String, Set<HashedItem>> mods, Map<Item, Set<HashedItem>> fuzzy) {
+          Map<String, Set<HashedItem>> mods, Map<Item, Set<HashedItem>> fuzzy, long totalCount, boolean isDirty,
+          boolean needsUpdate, Set<UUID> updatedItems, SetMultimap<String, String> tagWildcards,
+          SetMultimap<String, String> modWildcards) {
     }
 
     private final Set<IQIODriveHolder> driveHolders = new HashSet<>();
@@ -324,7 +334,7 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
      * and ordered itemDataMap membership, type count/containingDrives, per-drive itemMap/count, totalCount, the
      * tag/mod/fuzzy index memberships and the physical metadata on the captured actual drive stacks. The holder
      * {@code dataUpdate} notifications are deferred to successful outer commit by the per-drive journals. Wildcard
-     * caches are left cleared after a rollback (conservative, derivable state); failed-wildcard sets are never touched
+     * caches are restored to their prior state on rollback; failed-wildcard sets are never touched
      * by removal. There is no remove-then-add compensation: rollback restores the exact prior state.
      */
     public ItemStack removeByType(@Nullable HashedItem itemType, int amount, @Nullable TransactionContext tx) {
@@ -848,12 +858,15 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
         private long remove(long amount, Action action, @Nullable TransactionContext tx) {
             long removed = 0;
             if (tx != null) {
-                //Join this type's count/containingDrives and the shared frequency totalCount to the caller
-                // transaction BEFORE the first per-drive mutation (stable owner participant; R4)
+                frequencyRemoveTx.updateSnapshots(tx);
                 typeRemoveTx.updateSnapshots(tx);
             }
             for (Iterator<QIODriveKey> iter = containingDrives.iterator(); iter.hasNext(); ) {
-                QIODriveData data = driveMap.get(iter.next());
+                QIODriveKey key = iter.next();
+                QIODriveData data = driveMap.get(key);
+                if (tx != null && (data == null || !data.getKey().equals(key))) {
+                    throw new IllegalStateException("QIO type membership no longer matches its drive owner");
+                }
                 removed += data.remove(itemType, amount - removed, action, tx);
                 // remove this drive from containingDrives if it doesn't have this item anymore
                 if (action.execute() && data.getStored(itemType) == 0) {
@@ -874,10 +887,8 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
 
         /**
          * Stable per-type participant for transaction-aware removal: snapshots this type's count and
-         * containingDrives plus the shared frequency totalCount. Close callbacks run LIFO, so with two types'
-         * removals in one transaction the earliest snapshot wins and the shared totalCount restores exactly to the
-         * pre-transaction value. The needsUpdate marking is never erased on rollback (an aborted removal must not
-         * wipe earlier changes); per-drive state rolls back through the drive participants.
+         * containingDrives only. Shared state belongs exclusively to frequencyRemoveTx; rollback does not
+         * depend on the ordering of distinct type participants.
          */
         private final TypeRemoveParticipant typeRemoveTx = new TypeRemoveParticipant();
 
@@ -885,19 +896,18 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
 
             @Override
             protected TypeRemoveSnapshot createSnapshot() {
-                return new TypeRemoveSnapshot(count, totalCount, new HashSet<>(containingDrives));
+                return new TypeRemoveSnapshot(count, new HashSet<>(containingDrives));
             }
 
             @Override
             protected void readSnapshot(TypeRemoveSnapshot snapshot) {
                 count = snapshot.count;
-                totalCount = snapshot.totalCount;
                 containingDrives.clear();
                 containingDrives.addAll(snapshot.containingDrives);
             }
         }
 
-        private record TypeRemoveSnapshot(long count, long totalCount, Set<QIODriveKey> containingDrives) {
+        private record TypeRemoveSnapshot(long count, Set<QIODriveKey> containingDrives) {
         }
 
         private ItemStack remove(int amount) {

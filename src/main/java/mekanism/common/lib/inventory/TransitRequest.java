@@ -102,6 +102,9 @@ public abstract class TransitRequest implements Iterable<ItemData> {
         if (isEmpty()) {//Short circuit if our request is empty
             return getEmptyResponse();
         } else if (target instanceof TransporterItemStorage endpoint) {
+            if (!endpoint.isValid()) {
+                return getEmptyResponse();
+            }
             LogisticalTransporterBase transporter = endpoint.getTransporter();
             return transporter.insert(outputter, outputterPos, this, outputColor.apply(transporter), true, min, tx);
         }

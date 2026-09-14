@@ -168,7 +168,8 @@ public class TileEntityLogisticalSorter extends TileEntityMekanism implements IT
         if (request.isEmpty()) {
             return request.getEmptyResponse();
         } else if (target instanceof TransporterItemStorage endpoint) {
-            return endpoint.getTransporter().insertMaybeRR(this, getBlockPos(), request, filterColor, true, min, tx);
+            return endpoint.isValid() ? endpoint.getTransporter().insertMaybeRR(this, getBlockPos(), request, filterColor, true, min, tx)
+                  : request.getEmptyResponse();
         }
         return request.addToInventoryUnchecked(target, min, tx);
     }
@@ -321,7 +322,7 @@ public class TileEntityLogisticalSorter extends TileEntityMekanism implements IT
     @Override
     public boolean canSendHome(@NotNull ItemStack stack) {
         Direction oppositeDirection = getOppositeDirection();
-        return TransporterUtils.canInsert(level, worldPosition.relative(oppositeDirection), null, stack, oppositeDirection, true);
+        return TransporterUtils.canInsert(level, worldPosition.relative(oppositeDirection), null, stack, oppositeDirection, false);
     }
 
     @NotNull

@@ -33,7 +33,6 @@ import net.minecraft.util.ByIdMap;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.neoforged.neoforge.network.codec.NeoForgeStreamCodecs;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -41,26 +40,29 @@ import org.jetbrains.annotations.Nullable;
 public class TransporterStack {
 
     //Make sure to call updateForPos before calling this method
-    public static StreamCodec<RegistryFriendlyByteBuf, TransporterStack> STREAM_CODEC = NeoForgeStreamCodecs.composite(
-          EnumColor.OPTIONAL_STREAM_CODEC, stack -> Optional.ofNullable(stack.color),
-          ByteBufCodecs.VAR_INT, stack -> stack.progress,
-          ByteBufCodecs.VAR_LONG, stack -> stack.originalLocation,
-          Path.STREAM_CODEC, TransporterStack::getPathType,
-          ByteBufCodecs.optional(ByteBufCodecs.VAR_LONG), stack -> stack.clientNext == Long.MAX_VALUE ? Optional.empty() : Optional.of(stack.clientNext),
-          ByteBufCodecs.optional(ByteBufCodecs.VAR_LONG), stack -> stack.clientPrev == Long.MAX_VALUE ? Optional.empty() : Optional.of(stack.clientPrev),
-          ItemStack.OPTIONAL_STREAM_CODEC, stack -> stack.itemStack,
-          (color, progress, originalLocation, pathType, clientNext, clientPrev, itemStack) -> {
+    public static StreamCodec<RegistryFriendlyByteBuf, TransporterStack> STREAM_CODEC = StreamCodec.of(
+          (buffer, stack) -> {
+              EnumColor.OPTIONAL_STREAM_CODEC.encode(buffer, Optional.ofNullable(stack.color));
+              ByteBufCodecs.VAR_INT.encode(buffer, stack.progress);
+              ByteBufCodecs.VAR_LONG.encode(buffer, stack.originalLocation);
+              Path.STREAM_CODEC.encode(buffer, stack.getPathType());
+              ByteBufCodecs.optional(ByteBufCodecs.VAR_LONG).encode(buffer,
+                    stack.clientNext == Long.MAX_VALUE ? Optional.empty() : Optional.of(stack.clientNext));
+              ByteBufCodecs.optional(ByteBufCodecs.VAR_LONG).encode(buffer,
+                    stack.clientPrev == Long.MAX_VALUE ? Optional.empty() : Optional.of(stack.clientPrev));
+              ItemStack.OPTIONAL_STREAM_CODEC.encode(buffer, stack.itemStack);
+          }, buffer -> {
               TransporterStack stack = new TransporterStack();
-              stack.color = color.orElse(null);
+              stack.color = EnumColor.OPTIONAL_STREAM_CODEC.decode(buffer).orElse(null);
+              int progress = ByteBufCodecs.VAR_INT.decode(buffer);
               stack.progress = progress == 0 ? 5 : progress;
-              stack.originalLocation = originalLocation;
-              stack.pathType = pathType;
-              stack.clientNext = clientNext.orElse(Long.MAX_VALUE);
-              stack.clientPrev = clientPrev.orElse(Long.MAX_VALUE);
-              stack.itemStack = itemStack;
+              stack.originalLocation = ByteBufCodecs.VAR_LONG.decode(buffer);
+              stack.pathType = Path.STREAM_CODEC.decode(buffer);
+              stack.clientNext = ByteBufCodecs.optional(ByteBufCodecs.VAR_LONG).decode(buffer).orElse(Long.MAX_VALUE);
+              stack.clientPrev = ByteBufCodecs.optional(ByteBufCodecs.VAR_LONG).decode(buffer).orElse(Long.MAX_VALUE);
+              stack.itemStack = ItemStack.OPTIONAL_STREAM_CODEC.decode(buffer);
               return stack;
-          }
-    );
+          });
 
     public ItemStack itemStack = ItemStack.EMPTY;
 
@@ -251,7 +253,7 @@ public class TransporterStack {
         if (tx != null) {
             updateSnapshots(tx, transporter.getLevel());
         }
-        Destination newPath = TransporterPathfinder.getNewBasePath(transporter, this, request, min, additionalFlowingStacks);
+        Destination newPath = TransporterPathfinder.getNewBasePath(transporter, this, request, min, additionalFlowingStacks, tx);
         if (newPath == null) {
             return request.getEmptyResponse();
         }
@@ -282,7 +284,7 @@ public class TransporterStack {
             updateSnapshots(tx, transporter.getLevel());
             outputter.updateRoundRobinSnapshot(tx);
         }
-        Destination newPath = TransporterPathfinder.getNewRRPath(transporter, this, request, outputter, min);
+        Destination newPath = TransporterPathfinder.getNewRRPath(transporter, this, request, outputter, min, tx);
         if (newPath == null) {
             return request.getEmptyResponse();
         }
@@ -313,7 +315,7 @@ public class TransporterStack {
     private record StackStateSnapshot(Path pathType, LongList path, Direction idleDir, boolean initiatedPath, boolean hadFlowing, Level level, ItemStack itemStack) {
 
         static StackStateSnapshot take(TransporterStack stack) {
-            boolean hadFlowing = stack.hasPath() && stack.getPathType().hasTarget();
+            boolean hadFlowing = TransporterManager.contains(stack.snapshotLevel, stack);
             return new StackStateSnapshot(stack.getPathType(), new LongArrayList(stack.getPath()), stack.idleDir, stack.initiatedPath, hadFlowing, stack.snapshotLevel,
                   stack.itemStack.copy());
         }
