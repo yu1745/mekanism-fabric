@@ -49,7 +49,7 @@ public record PacketEntityButtonPress(ClickedEntityButton buttonClicked, int ent
         Entity entity = player.level().getEntity(entityID);
         MenuProvider provider = buttonClicked.getProvider(entity);
         if (provider != null) {
-            player.openMenu(provider, buf -> {
+            mekanism.common.inventory.container.ContainerProvider.open(player, provider, buf -> {
                 buf.writeVarInt(entityID);
                 buttonClicked.encodeExtraData(buf, entity);
             });

@@ -11,7 +11,8 @@ public class DoubleWrappedRegistryObject<PRIMARY_REGISTRY, PRIMARY extends PRIMA
     protected final MekanismDeferredHolder<SECONDARY_REGISTRY, SECONDARY> secondaryRO;
 
     public DoubleWrappedRegistryObject(MekanismDeferredHolder<PRIMARY_REGISTRY, PRIMARY> primaryKey, MekanismDeferredHolder<SECONDARY_REGISTRY, SECONDARY> secondaryRO) {
-        this(primaryKey.getKey(), secondaryRO);
+        super(primaryKey);
+        this.secondaryRO = secondaryRO;
     }
 
     public DoubleWrappedRegistryObject(ResourceKey<PRIMARY_REGISTRY> primaryKey, MekanismDeferredHolder<SECONDARY_REGISTRY, SECONDARY> secondaryRO) {

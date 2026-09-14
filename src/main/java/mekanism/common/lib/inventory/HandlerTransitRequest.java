@@ -7,7 +7,8 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import mekanism.common.Mekanism;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import mekanism.api.inventory.IInventorySlot;
 import mekanism.fabric.item.FabricItemStorage;
 import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
@@ -28,6 +29,8 @@ import org.jetbrains.annotations.Nullable;
  * transaction and verifies the exact debited amount; a mismatch is logged loudly and aborts the caller transaction.
  */
 public class HandlerTransitRequest extends CollectionTransitRequest {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism");
 
     /**
      * Stable real-owner participant (R2): the request plan (per-type totalCount, slotted positions, retained view
@@ -146,14 +149,14 @@ public class HandlerTransitRequest extends CollectionTransitRequest {
                 itemMap(HashedItem.create(stack)).addCandidate(new SourceCandidate(-1, view, stack.getCount()));
                 return;
             }
-            Mekanism.logger.warn("Selected inventory slot identity is not exposed by the sided provider; not ejecting from it.");
-            Mekanism.logger.warn("Slot: {}, Provider: {}", slot.getClass().getName(), handler.getClass().getName());
+            LOGGER.warn("Selected inventory slot identity is not exposed by the sided provider; not ejecting from it.");
+            LOGGER.warn("Slot: {}, Provider: {}", slot.getClass().getName(), handler.getClass().getName());
             return;
         }
         //Not the slotted view of these very slots (for example a foreign provider occupying the bounding
         // position): reject loudly rather than debiting through an unrelated storage (Task052 R3)
-        Mekanism.logger.warn("Selected-slot ejection provider is not the provider of the selected slots; not ejecting.");
-        Mekanism.logger.warn("Provider: {}", handler == null ? "null" : handler.getClass().getName());
+        LOGGER.warn("Selected-slot ejection provider is not the provider of the selected slots; not ejecting.");
+        LOGGER.warn("Provider: {}", handler == null ? "null" : handler.getClass().getName());
     }
 
     /**
@@ -252,7 +255,7 @@ public class HandlerTransitRequest extends CollectionTransitRequest {
             if (amount > 0) {
                 if (handler == null) {
                     //No real source behind this plan: an attempted debit is a hard failure, never a silent success
-                    Mekanism.logger.error("HandlerTransitRequest debit requested without a real source storage.");
+                    LOGGER.error("HandlerTransitRequest debit requested without a real source storage.");
                     throw new IllegalStateException("HandlerTransitRequest debit with null source storage");
                 }
                 HashedItem itemType = getItemType();
@@ -285,9 +288,9 @@ public class HandlerTransitRequest extends CollectionTransitRequest {
                         throw new IllegalStateException("HandlerTransitRequest candidate has neither a retained view nor a slotted source plan");
                     }
                     if (ret != toUse) {// be loud if a prediction doesn't line up, and abort the caller transaction
-                        Mekanism.logger.warn("An inventory's returned content does not line up with HandlerTransitRequest's prediction.");
-                        Mekanism.logger.warn("HandlerTransitRequest item: {}, toUse: {}, ret: {}, candidate: {}", itemStack, toUse, ret, candidate);
-                        Mekanism.logger.warn("ItemStorage: {}", handler.getClass().getName());
+                        LOGGER.warn("An inventory's returned content does not line up with HandlerTransitRequest's prediction.");
+                        LOGGER.warn("HandlerTransitRequest item: {}, toUse: {}, ret: {}, candidate: {}", itemStack, toUse, ret, candidate);
+                        LOGGER.warn("ItemStorage: {}", handler.getClass().getName());
                         throw new IllegalStateException("HandlerTransitRequest exact source debit mismatch");
                     }
                     amount -= toUse;
@@ -305,8 +308,8 @@ public class HandlerTransitRequest extends CollectionTransitRequest {
                 if (amount > 0) {
                     //Candidates exhausted before the requested debit was covered: never report success with an
                     // uncovered remainder; abort the caller transaction (which also restores the plan snapshot)
-                    Mekanism.logger.warn("HandlerTransitRequest ran out of source candidates with {} still to debit.", amount);
-                    Mekanism.logger.warn("HandlerTransitRequest item: {}, Storage: {}", itemType.getInternalStack(), handler.getClass().getName());
+                    LOGGER.warn("HandlerTransitRequest ran out of source candidates with {} still to debit.", amount);
+                    LOGGER.warn("HandlerTransitRequest item: {}, Storage: {}", itemType.getInternalStack(), handler.getClass().getName());
                     throw new IllegalStateException("HandlerTransitRequest source candidates exhausted before covering debit");
                 }
             }

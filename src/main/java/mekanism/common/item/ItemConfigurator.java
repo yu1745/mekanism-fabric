@@ -21,11 +21,14 @@ import mekanism.api.text.EnumColor;
 import mekanism.api.text.IHasTextComponent.IHasEnumNameTextComponent;
 import mekanism.api.text.ILangEntry;
 import mekanism.api.text.TextComponentUtil;
-import mekanism.common.Mekanism;
+import mekanism.api.ItemAbility;
+import mekanism.api.ItemAbility.IItemAbilityProvider;
+import com.google.common.base.Suppliers;
+import java.util.function.Supplier;
 import mekanism.common.MekanismLang;
 import mekanism.common.block.attribute.Attribute;
 import mekanism.common.block.attribute.AttributeStateFacing;
-import mekanism.common.capabilities.Capabilities;
+import mekanism.fabric.tile.MekanismBlockLookups;
 import mekanism.common.item.ItemConfigurator.ConfiguratorMode;
 import mekanism.common.item.interfaces.IItemHUDProvider;
 import mekanism.common.lib.radial.IRadialModeItem;
@@ -62,19 +65,17 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.neoforged.neoforge.common.ItemAbility;
-import net.neoforged.neoforge.common.util.Lazy;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class ItemConfigurator extends Item implements IRadialModeItem<ConfiguratorMode>, IItemHUDProvider {
+public class ItemConfigurator extends Item implements IRadialModeItem<ConfiguratorMode>, IItemHUDProvider, IItemAbilityProvider {
 
-    private static final Lazy<RadialData<ConfiguratorMode>> LAZY_RADIAL_DATA = Lazy.of(() ->
-          IRadialDataHelper.INSTANCE.dataForEnum(Mekanism.rl("configurator_mode"), ConfiguratorMode.class));
+    private static final Supplier<RadialData<ConfiguratorMode>> LAZY_RADIAL_DATA = Suppliers.memoize(() ->
+          IRadialDataHelper.INSTANCE.dataForEnum(ResourceLocation.fromNamespaceAndPath("mekanism", "configurator_mode"), ConfiguratorMode.class));
 
     public ItemConfigurator(Properties properties) {
         super(properties.rarity(Rarity.UNCOMMON).stacksTo(1)
-              .component(MekanismDataComponents.CONFIGURATOR_MODE, ConfiguratorMode.CONFIGURATE_ITEMS)
+              .component(MekanismDataComponents.CONFIGURATOR_MODE.get(), ConfiguratorMode.CONFIGURATE_ITEMS)
         );
     }
 
@@ -111,7 +112,7 @@ public class ItemConfigurator extends Item implements IRadialModeItem<Configurat
         } else if (action == MekanismItemAbilities.WRENCH_ROTATE) {
             return getMode(stack) == ConfiguratorMode.ROTATE;
         }
-        return super.canPerformAction(stack, action);
+        return false;
     }
 
     @NotNull
@@ -152,7 +153,7 @@ public class ItemConfigurator extends Item implements IRadialModeItem<Configurat
                 if (!IBlockSecurityUtils.INSTANCE.canAccessOrDisplayError(player, world, pos, tile)) {
                     return InteractionResult.FAIL;
                 }
-                IConfigurable config = WorldUtils.getCapability(world, Capabilities.CONFIGURABLE, pos, null, tile, side);
+                IConfigurable config = MekanismBlockLookups.CONFIGURABLE.find(world, pos, null, tile, side);
                 if (config != null) {
                     if (player.isShiftKeyDown()) {
                         return config.onSneakRightClick(player);
@@ -201,9 +202,18 @@ public class ItemConfigurator extends Item implements IRadialModeItem<Configurat
         return InteractionResult.PASS;
     }
 
-    @Override
+    //Invoked at the real native server/client use-block decision by Mekanism's configurator mixins.
     public boolean doesSneakBypassUse(ItemStack stack, LevelReader world, BlockPos pos, Player player) {
         return getMode(stack) == ConfiguratorMode.WRENCH;
+    }
+
+    /** Both hands must permit block use, matching the original interaction decision; unrelated held items still suppress it. */
+    public static boolean doesSneakBypassUse(Player player, BlockPos pos) {
+        return doesSneakBypassUse(player.getMainHandItem(), player, pos) && doesSneakBypassUse(player.getOffhandItem(), player, pos);
+    }
+
+    private static boolean doesSneakBypassUse(ItemStack stack, Player player, BlockPos pos) {
+        return stack.isEmpty() || stack.getItem() instanceof ItemConfigurator configurator && configurator.doesSneakBypassUse(stack, player.level(), pos, player);
     }
 
     @Override

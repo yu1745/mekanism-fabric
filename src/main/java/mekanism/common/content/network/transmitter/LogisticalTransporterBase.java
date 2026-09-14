@@ -422,7 +422,7 @@ public abstract class LogisticalTransporterBase extends Transmitter<Storage<Item
     public CompoundTag getReducedUpdateTag(@NotNull HolderLookup.Provider provider, CompoundTag updateTag) {
         updateTag = super.getReducedUpdateTag(provider, updateTag);
         if (!transit.isEmpty()) {
-            ListTag stacks = new ListTag(transit.size());
+            ListTag stacks = new ListTag();
             for (ObjectIterator<Int2ObjectMap.Entry<TransporterStack>> iterator = Int2ObjectMaps.fastIterator(transit); iterator.hasNext(); ) {
                 Int2ObjectMap.Entry<TransporterStack> entry = iterator.next();
                 CompoundTag tagCompound = new CompoundTag();
@@ -476,7 +476,7 @@ public abstract class LogisticalTransporterBase extends Transmitter<Storage<Item
     public void writeToNBT(HolderLookup.Provider provider, CompoundTag nbtTags) {
         Collection<TransporterStack> transit = getTransit();
         if (!transit.isEmpty()) {
-            ListTag stacks = new ListTag(transit.size());
+            ListTag stacks = new ListTag();
             for (TransporterStack stack : transit) {
                 CompoundTag tagCompound = new CompoundTag();
                 stack.write(provider, tagCompound);

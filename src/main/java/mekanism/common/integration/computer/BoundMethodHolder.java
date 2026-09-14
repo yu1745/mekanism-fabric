@@ -15,7 +15,8 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import mekanism.common.integration.computer.ComputerMethodFactory.ComputerFunctionCaller;
-import net.neoforged.neoforge.common.util.Lazy;
+import com.google.common.base.Suppliers;
+import java.util.function.Supplier;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class BoundMethodHolder {
@@ -38,7 +39,7 @@ public abstract class BoundMethodHolder {
      */
     private final Set<ObjectIntPair<String>> methodsKnown = new HashSet<>();
 
-    protected Lazy<String[]> methodNames = Lazy.of(() -> this.methods.keys().toArray(new String[0]));
+    protected Supplier<String[]> methodNames = Suppliers.memoize(() -> this.methods.keys().toArray(new String[0]));
 
     protected BoundMethodHolder() {
         register(HELP_METHOD, new WeakReference<>(this.methods), true);

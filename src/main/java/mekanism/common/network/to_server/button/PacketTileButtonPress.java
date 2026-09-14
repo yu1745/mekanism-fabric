@@ -56,7 +56,7 @@ public record PacketTileButtonPress(ClickedTileButton buttonClicked, BlockPos po
         TileEntityMekanism tile = WorldUtils.getTileEntity(TileEntityMekanism.class, player.level(), pos);
         MenuProvider provider = buttonClicked.getProvider(tile);
         if (provider != null) {
-            player.openMenu(provider, buf -> {
+            mekanism.common.inventory.container.ContainerProvider.open(player, provider, buf -> {
                 buf.writeBlockPos(pos);
                 buttonClicked.encodeExtraData(buf, tile);
             });

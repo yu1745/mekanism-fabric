@@ -312,10 +312,10 @@ public class ClientRegistration {
     @SubscribeEvent
     public static void registerOverlays(RegisterGuiLayersEvent event) {
         //Note: We don't need to include our modid in the id as the active context is grabbed for making an RL inside the event
-        event.registerBelowAll(Mekanism.rl("radiation_overlay"), RadiationOverlay.INSTANCE);
+        //Native RadiationOverlayMixin inserts the original radiation overlay below all layers.
         event.registerAbove(VanillaGuiLayers.ARMOR_LEVEL, Mekanism.rl("energy_level"), MekaSuitEnergyLevel.INSTANCE);
         //Render status overlay after item name rather than action bar (record_overlay) so that things like the sleep fade will render in front of our overlay
-        event.registerAbove(VanillaGuiLayers.SELECTED_ITEM_NAME, Mekanism.rl("status_overlay"), MekanismStatusOverlay.INSTANCE);
+        //The original status overlay is registered at the native selected-item-name call by ModeStatusOverlayMixin.
         event.registerAbove(VanillaGuiLayers.SUBTITLE_OVERLAY, Mekanism.rl("hud"), MekanismHUD.INSTANCE);
     }
 
@@ -501,7 +501,7 @@ public class ClientRegistration {
         event.registerSpriteSet(MekanismParticleTypes.JETPACK_FLAME.get(), JetpackFlameParticle.Factory::new);
         event.registerSpriteSet(MekanismParticleTypes.JETPACK_SMOKE.get(), JetpackSmokeParticle.Factory::new);
         event.registerSpriteSet(MekanismParticleTypes.SCUBA_BUBBLE.get(), ScubaBubbleParticle.Factory::new);
-        event.registerSpriteSet(MekanismParticleTypes.RADIATION.get(), RadiationParticle.Factory::new);
+        //The native radiation particle factory is registered by FabricRadiationClientLifecycle.
     }
 
     @SubscribeEvent

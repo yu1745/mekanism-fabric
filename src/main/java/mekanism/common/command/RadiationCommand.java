@@ -9,7 +9,7 @@ import mekanism.api.radiation.capability.IRadiationEntity;
 import mekanism.api.text.EnumColor;
 import mekanism.common.MekanismLang;
 import mekanism.common.base.MekanismPermissions;
-import mekanism.common.capabilities.Capabilities;
+import mekanism.fabric.radiation.FabricRadiationAttachments;
 import mekanism.common.lib.radiation.RadiationManager;
 import mekanism.common.lib.radiation.RadiationScale;
 import mekanism.common.util.UnitDisplayUtils;
@@ -80,7 +80,7 @@ public class RadiationCommand {
                     .executes(ctx -> {
                         CommandSourceStack source = ctx.getSource();
                         double magnitude = DoubleArgumentType.getDouble(ctx, "magnitude");
-                        IRadiationEntity cap = source.getPlayerOrException().getCapability(Capabilities.RADIATION_ENTITY);
+                        IRadiationEntity cap = FabricRadiationAttachments.RADIATION_ENTITY.find(source.getPlayerOrException(), null);
                         if (cap != null) {
                             cap.radiate(magnitude);
                             source.sendSuccess(() -> MekanismLang.COMMAND_RADIATION_ADD_ENTITY.translateColored(EnumColor.GRAY, RadiationScale.getSeverityColor(magnitude),
@@ -98,7 +98,7 @@ public class RadiationCommand {
                               int addedTo = 0;
                               for (Entity entity : EntityArgument.getEntities(ctx, "targets")) {
                                   if (entity instanceof LivingEntity) {
-                                      IRadiationEntity cap = entity.getCapability(Capabilities.RADIATION_ENTITY);
+                                      IRadiationEntity cap = FabricRadiationAttachments.RADIATION_ENTITY.find(entity, null);
                                       if (cap != null) {
                                           cap.radiate(magnitude);
                                           source.sendSuccess(() -> MekanismLang.COMMAND_RADIATION_ADD_ENTITY_TARGET.translateColored(EnumColor.GRAY,
@@ -141,7 +141,7 @@ public class RadiationCommand {
               .requires(MekanismPermissions.COMMAND_RADIATION_HEAL)
               .executes(ctx -> {
                   CommandSourceStack source = ctx.getSource();
-                  IRadiationEntity cap = source.getPlayerOrException().getCapability(Capabilities.RADIATION_ENTITY);
+                  IRadiationEntity cap = FabricRadiationAttachments.RADIATION_ENTITY.find(source.getPlayerOrException(), null);
                   if (cap != null) {
                       cap.set(IRadiationManager.INSTANCE.baselineRadiation());
                       source.sendSuccess(() -> MekanismLang.COMMAND_RADIATION_CLEAR.translateColored(EnumColor.GRAY), true);
@@ -154,7 +154,7 @@ public class RadiationCommand {
                         int healed = 0;
                         for (Entity entity : EntityArgument.getEntities(ctx, "targets")) {
                             if (entity instanceof LivingEntity) {
-                                IRadiationEntity cap = entity.getCapability(Capabilities.RADIATION_ENTITY);
+                                IRadiationEntity cap = FabricRadiationAttachments.RADIATION_ENTITY.find(entity, null);
                                 if (cap != null) {
                                     cap.set(IRadiationManager.INSTANCE.baselineRadiation());
                                     source.sendSuccess(() -> MekanismLang.COMMAND_RADIATION_CLEAR_ENTITY.translateColored(EnumColor.GRAY, EnumColor.INDIGO,
@@ -175,7 +175,7 @@ public class RadiationCommand {
                     .executes(ctx -> {
                         CommandSourceStack source = ctx.getSource();
                         double magnitude = DoubleArgumentType.getDouble(ctx, "magnitude");
-                        IRadiationEntity cap = source.getPlayerOrException().getCapability(Capabilities.RADIATION_ENTITY);
+                        IRadiationEntity cap = FabricRadiationAttachments.RADIATION_ENTITY.find(source.getPlayerOrException(), null);
                         if (cap != null) {
                             double radiation = cap.getRadiation();
                             double newValue = Math.max(IRadiationManager.INSTANCE.baselineRadiation(), radiation - magnitude);
@@ -196,7 +196,7 @@ public class RadiationCommand {
                               int reducedFrom = 0;
                               for (Entity entity : EntityArgument.getEntities(ctx, "targets")) {
                                   if (entity instanceof LivingEntity) {
-                                      IRadiationEntity cap = entity.getCapability(Capabilities.RADIATION_ENTITY);
+                                      IRadiationEntity cap = FabricRadiationAttachments.RADIATION_ENTITY.find(entity, null);
                                       if (cap != null) {
                                           double radiation = cap.getRadiation();
                                           double newValue = Math.max(IRadiationManager.INSTANCE.baselineRadiation(), radiation - magnitude);

@@ -1,7 +1,6 @@
 package mekanism.common.registration.impl;
 
 import mekanism.api.text.ILangEntry;
-import mekanism.common.Mekanism;
 import mekanism.common.inventory.container.ContainerProvider;
 import mekanism.common.inventory.container.type.MekanismContainerType;
 import mekanism.common.inventory.container.type.MekanismItemContainerType;
@@ -47,7 +46,7 @@ public class ContainerTypeRegistryObject<CONTAINER extends AbstractContainerMenu
             constructor = mekanismContainerType.create(object);
         }
         if (constructor == null) {
-            Mekanism.logger.info("Unable to create container for type: {}", getId());
+            org.slf4j.LoggerFactory.getLogger("Mekanism").info("Unable to create container for type: {}", getId());
         }
         return constructor == null ? null : new ContainerProvider(name, constructor, resetMousePosition);
     }
@@ -69,7 +68,7 @@ public class ContainerTypeRegistryObject<CONTAINER extends AbstractContainerMenu
             constructor = mekanismItemContainerType.create(hand, stack);
         }
         if (constructor == null) {
-            Mekanism.logger.info("Unable to create container for type: {}", getId());
+            org.slf4j.LoggerFactory.getLogger("Mekanism").info("Unable to create container for type: {}", getId());
         }
         return constructor == null ? null : new ContainerProvider(name, constructor, resetMousePosition);
     }
@@ -78,7 +77,7 @@ public class ContainerTypeRegistryObject<CONTAINER extends AbstractContainerMenu
         MenuProvider provider = getProvider(stack.getHoverName(), hand, stack, true);
         if (provider != null) {
             //Validate the provider isn't null, it shouldn't be but just in case
-            player.openMenu(provider, buf -> {
+            ContainerProvider.open(player, provider, buf -> {
                 buf.writeEnum(hand);
                 ItemStack.STREAM_CODEC.encode(buf, stack);
                 if (stack.getItem() instanceof IGuiItem guiItem) {//Should always be the case

@@ -5,7 +5,7 @@ import mekanism.api.radiation.capability.IRadiationEntity;
 import mekanism.common.advancements.MekanismCriteriaTriggers;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.lib.radiation.RadiationScale;
-import mekanism.common.registries.MekanismAttachmentTypes;
+import mekanism.fabric.radiation.FabricRadiationAttachments;
 import mekanism.common.registries.MekanismDamageTypes;
 import mekanism.common.util.MekanismUtils;
 import net.minecraft.server.MinecraftServer;
@@ -26,13 +26,13 @@ public class RadiationEntity implements IRadiationEntity {
 
     @Override
     public double getRadiation() {
-        return entity.getData(MekanismAttachmentTypes.RADIATION);
+        return FabricRadiationAttachments.getRadiation(entity);
     }
 
     @Override
     public void radiate(double magnitude) {
         if (magnitude > 0) {
-            entity.setData(MekanismAttachmentTypes.RADIATION, getRadiation() + magnitude);
+            FabricRadiationAttachments.setRadiation(entity, getRadiation() + magnitude);
         }
     }
 
@@ -80,7 +80,7 @@ public class RadiationEntity implements IRadiationEntity {
 
     @Override
     public void set(double magnitude) {
-        entity.setData(MekanismAttachmentTypes.RADIATION, Math.max(IRadiationManager.INSTANCE.baselineRadiation(), magnitude));
+        FabricRadiationAttachments.setRadiation(entity, Math.max(IRadiationManager.INSTANCE.baselineRadiation(), magnitude));
     }
 
     @Override

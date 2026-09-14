@@ -1,6 +1,6 @@
 package mekanism.common.item.gear;
 
-import mekanism.common.capabilities.Capabilities;
+import mekanism.fabric.gear.GearItemLookups;
 import mekanism.common.capabilities.ICapabilityAware;
 import mekanism.common.capabilities.radiation.item.RadiationShieldingHandler;
 import mekanism.common.registries.MekanismArmorMaterials;
@@ -9,7 +9,6 @@ import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.enchantment.Enchantment;
-import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import org.jetbrains.annotations.NotNull;
 
 public class ItemHazmatSuitArmor extends ArmorItem implements ICapabilityAware {
@@ -29,8 +28,8 @@ public class ItemHazmatSuitArmor extends ArmorItem implements ICapabilityAware {
     }
 
     @Override
-    public void attachCapabilities(RegisterCapabilitiesEvent event) {
-        event.registerItem(Capabilities.RADIATION_SHIELDING, (stack, ctx) -> RadiationShieldingHandler.create(getShieldingByArmor(getType())), this);
+    public void attachCapabilities() {
+        GearItemLookups.RADIATION_SHIELDING.registerForItems( (stack, ctx) -> RadiationShieldingHandler.create(getShieldingByArmor(getType())), this);
     }
 
     @Override

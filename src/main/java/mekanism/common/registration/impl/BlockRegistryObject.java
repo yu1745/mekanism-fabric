@@ -9,13 +9,13 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.registries.DeferredHolder;
+import mekanism.common.registration.MekanismDeferredHolder;
 import org.jetbrains.annotations.NotNull;
 
 public class BlockRegistryObject<BLOCK extends Block, ITEM extends Item> extends DoubleWrappedRegistryObject<Block, BLOCK, Item, ITEM> implements ItemLike,
       IHasTextComponent, IHasTranslationKey {
 
-    public BlockRegistryObject(DeferredHolder<Block, BLOCK> blockRegistryObject, DeferredHolder<Item, ITEM> itemRegistryObject) {
+    public BlockRegistryObject(MekanismDeferredHolder<Block, BLOCK> blockRegistryObject, MekanismDeferredHolder<Item, ITEM> itemRegistryObject) {
         super(blockRegistryObject, itemRegistryObject);
     }
 
@@ -39,7 +39,7 @@ public class BlockRegistryObject<BLOCK extends Block, ITEM extends Item> extends
     }
 
     @NotNull
-    public DeferredHolder<Item, ITEM> getItemHolder() {
+    public MekanismDeferredHolder<Item, ITEM> getItemHolder() {
         return secondaryRO;
     }
 

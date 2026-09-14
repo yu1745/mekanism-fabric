@@ -4,6 +4,11 @@ gradle.projectsEvaluated {
     allprojects {
         tasks.withType(JavaCompile).configureEach {
             options.compilerArgs += ['-Xmaxerrs', '3000']
+            //Optional diagnosis only: missing type declarations can stop annotation processing before javac checks method bodies.
+            //Normal builds retain the real method-factory processors; this flag is never acceptance evidence for generated bindings.
+            if (project == rootProject && project.hasProperty('task052DiagnosticNoProcessing')) {
+                options.compilerArgs += ['-proc:none']
+            }
         }
     }
 }

@@ -5,7 +5,6 @@ import mekanism.api.IContentsListener;
 import mekanism.api.SerializationConstants;
 import mekanism.common.attachments.LockData;
 import mekanism.common.block.attribute.Attribute;
-import mekanism.common.capabilities.Capabilities;
 import mekanism.common.capabilities.holder.slot.IInventorySlotHolder;
 import mekanism.common.capabilities.holder.slot.InventorySlotHelper;
 import mekanism.common.content.network.transmitter.LogisticalTransporterBase;
@@ -18,7 +17,6 @@ import mekanism.common.lib.inventory.HandlerTransitRequest;
 import mekanism.common.lib.inventory.TransitRequest.TransitResponse;
 import mekanism.common.registries.MekanismDataComponents;
 import mekanism.common.tier.BinTier;
-import mekanism.common.tile.base.CapabilityTileEntity;
 import mekanism.common.tile.base.TileEntityMekanism;
 import mekanism.common.upgrade.BinUpgradeData;
 import mekanism.common.upgrade.IUpgradeData;
@@ -212,14 +210,14 @@ public class TileEntityBin extends TileEntityMekanism implements IConfigurable {
     protected void collectImplicitComponents(@NotNull DataComponentMap.Builder builder) {
         //Note: In theory doing this before super doesn't matter, but we want to make sure that the lock is set before
         // setting the data on the item just for good measure
-        builder.set(MekanismDataComponents.LOCK, LockData.create(binSlot.getLockStack()));
+        builder.set(MekanismDataComponents.LOCK.get(), LockData.create(binSlot.getLockStack()));
         super.collectImplicitComponents(builder);
     }
 
     @Override
     protected void applyImplicitComponents(@NotNull BlockEntity.DataComponentInput input) {
         //Apply the lock before processing the stored data
-        binSlot.setLockStack(input.getOrDefault(MekanismDataComponents.LOCK, LockData.EMPTY).lock());
+        binSlot.setLockStack(input.getOrDefault(MekanismDataComponents.LOCK.get(), LockData.EMPTY).lock());
         super.applyImplicitComponents(input);
     }
 
@@ -254,7 +252,7 @@ public class TileEntityBin extends TileEntityMekanism implements IConfigurable {
     void unlock() throws ComputerException {
         if (getTier() == BinTier.CREATIVE) {
             throw new ComputerException("Creative bins cannot be unlocked!");
-        } else if (!setLocked(true)) {
+        } else if (!setLocked(false)) {
             throw new ComputerException("This bin is not locked!");
         }
     }

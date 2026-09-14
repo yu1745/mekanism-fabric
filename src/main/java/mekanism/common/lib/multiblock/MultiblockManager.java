@@ -10,21 +10,15 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
 import mekanism.api.SerializationConstants;
-import mekanism.common.Mekanism;
 import mekanism.common.lib.MekanismSavedData;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.neoforged.bus.api.EventPriority;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-@EventBusSubscriber(modid = Mekanism.MODID)
 public class MultiblockManager<T extends MultiblockData> {
 
     private static final Set<MultiblockManager<?>> managers = new HashSet<>();
@@ -103,6 +97,7 @@ public class MultiblockManager<T extends MultiblockData> {
     public static void reset() {
         for (MultiblockManager<?> manager : managers) {
             manager.caches.clear();
+            manager.multiblocksTicked.clear();
             manager.dataHandler = null;
         }
     }
@@ -177,8 +172,7 @@ public class MultiblockManager<T extends MultiblockData> {
      * <p></p>
      * Causes any multiblocks that became dirty after the master ticked to have their contents synced and thus saved (if one occurs after this tick)
      */
-    @SubscribeEvent(priority = EventPriority.LOWEST)
-    static void endOfTickEvent(ServerTickEvent.Post event) {
+    public static void endOfTickAll() {
         for (MultiblockManager<?> manager : managers) {
             manager.endOfTick();
         }
@@ -215,7 +209,7 @@ public class MultiblockManager<T extends MultiblockData> {
         @NotNull
         @Override
         public CompoundTag save(@NotNull CompoundTag nbt, @NotNull HolderLookup.Provider provider) {
-            ListTag cachesNbt = new ListTag(caches.size());
+            ListTag cachesNbt = new ListTag();
             for (Map.Entry<UUID, MultiblockCache<T>> entry : caches.entrySet()) {
                 CompoundTag cacheTags = new CompoundTag();
                 //Note: We can just store the inventory id in the same compound tag as the rest of the cache data

@@ -10,7 +10,9 @@ import mekanism.api.chemical.IChemicalHandler;
 import mekanism.api.text.EnumColor;
 import mekanism.common.MekanismLang;
 import mekanism.common.attachments.containers.ContainerType;
-import mekanism.common.capabilities.Capabilities;
+import mekanism.common.capabilities.resolver.manager.ChemicalHandlerManager;
+import java.util.function.Supplier;
+import net.fabricmc.fabric.api.lookup.v1.block.BlockApiCache;
 import mekanism.common.capabilities.energy.MachineEnergyContainer;
 import mekanism.common.capabilities.holder.chemical.IChemicalTankHolder;
 import mekanism.common.capabilities.holder.energy.EnergyContainerHelper;
@@ -26,13 +28,12 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class TileEntitySPSPort extends TileEntitySPSCasing {
 
-    private final Map<Direction, BlockCapabilityCache<IChemicalHandler, @Nullable Direction>> chemicalCapabilityCaches = new EnumMap<>(Direction.class);
+    private final Map<Direction, Supplier<@Nullable IChemicalHandler>> chemicalCapabilityCaches = new EnumMap<>(Direction.class);
     private MachineEnergyContainer<TileEntitySPSPort> energyContainer;
 
     public TileEntitySPSPort(BlockPos pos, BlockState state) {
@@ -75,11 +76,10 @@ public class TileEntitySPSPort extends TileEntitySPSCasing {
     }
 
     public void addChemicalTargetCapability(List<CapabilityOutputTarget<IChemicalHandler>> outputTargets, Direction side) {
-        BlockCapabilityCache<IChemicalHandler, @Nullable Direction> cache = chemicalCapabilityCaches.get(side);
-        if (cache == null) {
-            cache = Capabilities.CHEMICAL.createCache((ServerLevel) level, worldPosition.relative(side), side.getOpposite());
-            chemicalCapabilityCaches.put(side, cache);
-        }
+        Supplier<@Nullable IChemicalHandler> cache = chemicalCapabilityCaches.computeIfAbsent(side, direction -> {
+            var nativeCache = BlockApiCache.create(ChemicalHandlerManager.CHEMICAL_HANDLER, (ServerLevel) level, worldPosition.relative(direction));
+            return () -> nativeCache.find(direction.getOpposite());
+        });
         outputTargets.add(new CapabilityOutputTarget<>(cache, this::getActive));
     }
 

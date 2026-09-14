@@ -4,7 +4,7 @@ import mekanism.api.radiation.IRadiationSource;
 import mekanism.api.radiation.capability.IRadiationEntity;
 import mekanism.api.radiation.capability.IRadiationShielding;
 import mekanism.common.Mekanism;
-import mekanism.common.capabilities.Capabilities;
+import mekanism.fabric.gear.GearItemLookups;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.integration.curios.CuriosIntegration;
 import mekanism.common.util.EnumUtils;
@@ -39,7 +39,7 @@ public class RadiationUtil {
         for (EquipmentSlot type : EnumUtils.ARMOR_SLOTS) {
             ItemStack stack = entity.getItemBySlot(type);
             if (!stack.isEmpty()) {
-                IRadiationShielding shielding = stack.getCapability(Capabilities.RADIATION_SHIELDING);
+                IRadiationShielding shielding = GearItemLookups.RADIATION_SHIELDING.find(stack, null);
                 if (shielding != null) {
                     resistance += shielding.getRadiationShielding();
                 }
@@ -50,7 +50,7 @@ public class RadiationUtil {
             if (handler != null) {
                 for (int i = 0, slots = handler.getSlots(); i < slots; i++) {
                     ItemStack stack = handler.getStackInSlot(i);
-                    IRadiationShielding shielding = stack.getCapability(Capabilities.RADIATION_SHIELDING);
+                    IRadiationShielding shielding = GearItemLookups.RADIATION_SHIELDING.find(stack, null);
                     if (shielding != null) {
                         resistance += shielding.getRadiationShielding();
                         if (resistance >= 1) {

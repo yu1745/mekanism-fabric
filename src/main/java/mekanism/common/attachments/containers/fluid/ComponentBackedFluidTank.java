@@ -13,8 +13,7 @@ import mekanism.common.attachments.containers.ContainerType;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction;
+import mekanism.api.fluid.FluidStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -206,14 +205,13 @@ public class ComponentBackedFluidTank extends ComponentBackedContainer<FluidStac
         return nbt;
     }
 
-    @Override
-    @Deprecated
-    public FluidStack drain(FluidStack stack, FluidAction action) {
+    /** Typed domain extraction; platform item transfers are owned by their Fabric container transaction. */
+    public FluidStack drain(FluidStack stack, Action action) {
         //Override to only look up the stack once
         AttachedFluids attachedFluids = getAttached();
         FluidStack stored = getContents(attachedFluids);
         if (!stored.isEmpty() && FluidStack.isSameFluidSameComponents(stored, stack)) {
-            return extract(attachedFluids, stored, stack.getAmount(), Action.fromFluidAction(action), AutomationType.EXTERNAL);
+            return extract(attachedFluids, stored, stack.getAmount(), action, AutomationType.EXTERNAL);
         }
         return FluidStack.EMPTY;
     }

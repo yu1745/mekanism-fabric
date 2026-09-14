@@ -71,6 +71,16 @@ public final class RecipeCacheContext {
     }
 
     /**
+     * Original tag/recipe consumers that must refresh on the next server tick share this binding-owned signal.
+     * Successful publication and explicit full-cache clearing raise it; the native end-server-tick owner clears it
+     * only after every dimension, frequency and portable crafting window has had a chance to observe it.
+     */
+    public static boolean isInvalidationPending() {
+        Binding binding = ACTIVE.get();
+        return binding != null && binding.consumerInvalidationPending;
+    }
+
+    /**
      * Clears the calling thread's binding, releasing the manager, registry access and any cached recipe references.
      */
     public static void clear() {
@@ -87,6 +97,7 @@ public final class RecipeCacheContext {
         private final long epoch;
         private final Object identityToken = new Object();
         private long invalidationGeneration;
+        private boolean consumerInvalidationPending = true;
         private final IdentityHashMap<AbstractInputRecipeCache<?>, AbstractInputRecipeCache.CacheState> states = new IdentityHashMap<>();
         private final IdentityHashMap<RecipeCacheSource<?>, List<? extends RecipeHolder<?>>> recipeLists = new IdentityHashMap<>();
 
@@ -174,6 +185,12 @@ public final class RecipeCacheContext {
          */
         public void advanceInvalidationGeneration() {
             invalidationGeneration++;
+            consumerInvalidationPending = true;
+        }
+
+        /** Native lifecycle calls after processing the actual server's pending consumer refresh, not per-world. */
+        public void completeConsumerInvalidation() {
+            consumerInvalidationPending = false;
         }
 
         AbstractInputRecipeCache.CacheState state(AbstractInputRecipeCache<?> cache) {

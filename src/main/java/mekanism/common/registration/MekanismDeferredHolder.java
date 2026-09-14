@@ -32,6 +32,12 @@ public class MekanismDeferredHolder<R, T extends R> implements Holder<R>, Suppli
         this.key = Objects.requireNonNull(key);
     }
 
+    /** A wrapper shares its declared holder's native binding, never a second registry lookup or allocation. */
+    protected MekanismDeferredHolder(MekanismDeferredHolder<R, ? extends T> source) {
+        this(source.getKey());
+        attach(source.requireDelegate());
+    }
+
     void attach(FabricDeferredHolder<R> delegate) {
         if (this.delegate != null) {
             throw new IllegalStateException("Registry holder " + key.location() + " is already attached");

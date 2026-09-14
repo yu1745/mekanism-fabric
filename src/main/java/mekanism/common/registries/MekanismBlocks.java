@@ -199,7 +199,7 @@ public class MekanismBlocks {
     private MekanismBlocks() {
     }
 
-    public static final BlockDeferredRegister BLOCKS = new BlockDeferredRegister(Mekanism.MODID);
+    public static final BlockDeferredRegister BLOCKS = mekanism.fabric.registry.FabricMekanismBlockRegistries.BLOCKS;
 
     public static final Map<IResource, BlockRegistryObject<?, ?>> PROCESSED_RESOURCE_BLOCKS = new LinkedHashMap<>();
     public static final Map<OreType, OreBlockType> ORES = new LinkedHashMap<>();
@@ -915,7 +915,7 @@ public class MekanismBlocks {
     public static final BlockRegistryObject<BlockSmallTransmitter<TileEntityThermodynamicConductor>, ItemBlockThermodynamicConductor> ULTIMATE_THERMODYNAMIC_CONDUCTOR = registerThermodynamicConductor(MekanismBlockTypes.ULTIMATE_THERMODYNAMIC_CONDUCTOR);
 
     //TODO - 1.22: Evaluate not having an item form of the bounding block?
-    public static final BlockRegistryObject<BlockBounding, BlockItem> BOUNDING_BLOCK = BLOCKS.register("bounding_block", BlockBounding::new);
+    public static final BlockRegistryObject<BlockBounding, BlockItem> BOUNDING_BLOCK = mekanism.fabric.registry.FabricMekanismBlockRegistries.BOUNDING_BLOCK;
 
     public static final BlockRegistryObject<BlockTileModel<TileEntityChemicalTank, Machine<TileEntityChemicalTank>>, ItemBlockChemicalTank> BASIC_CHEMICAL_TANK = registerChemicalTank(MekanismBlockTypes.BASIC_CHEMICAL_TANK);
     public static final BlockRegistryObject<BlockTileModel<TileEntityChemicalTank, Machine<TileEntityChemicalTank>>, ItemBlockChemicalTank> ADVANCED_CHEMICAL_TANK = registerChemicalTank(MekanismBlockTypes.ADVANCED_CHEMICAL_TANK);

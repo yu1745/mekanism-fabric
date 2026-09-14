@@ -6,7 +6,6 @@ import java.util.function.Function;
 import mekanism.api.text.EnumColor;
 import mekanism.common.capabilities.item.TransporterItemStorage;
 import mekanism.common.content.network.transmitter.LogisticalTransporterBase;
-import mekanism.common.content.transporter.TransporterManager;
 import mekanism.common.lib.inventory.TransitRequest.ItemData;
 import mekanism.common.util.StackUtils;
 import mekanism.common.util.WorldUtils;
@@ -329,7 +328,7 @@ public abstract class TransitRequest implements Iterable<ItemData> {
         }
 
         private static void MekanismEmptyUse() {
-            mekanism.common.Mekanism.logger.error("Can't 'use' with this type of TransitResponse: {}", ItemData.class.getName());
+            org.slf4j.LoggerFactory.getLogger("Mekanism").error("Can't 'use' with this type of TransitResponse: {}", ItemData.class.getName());
         }
 
         @Override

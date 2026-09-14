@@ -1,18 +1,26 @@
 package mekanism.common.inventory.container.type;
 
-import net.minecraft.world.flag.FeatureFlags;
+import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerType;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.MenuType;
-import net.neoforged.neoforge.network.IContainerFactory;
 
-public abstract class BaseMekanismContainerType<T, CONTAINER extends AbstractContainerMenu, FACTORY> extends MenuType<CONTAINER> {
+public abstract class BaseMekanismContainerType<T, CONTAINER extends AbstractContainerMenu, FACTORY> extends ExtendedScreenHandlerType<CONTAINER, Object> {
 
     protected final FACTORY mekanismConstructor;
     protected final Class<T> type;
 
-    protected BaseMekanismContainerType(Class<T> type, FACTORY mekanismConstructor, IContainerFactory<CONTAINER> constructor) {
-        super(constructor, FeatureFlags.VANILLA_SET);
+    protected BaseMekanismContainerType(Class<T> type, FACTORY mekanismConstructor, OpeningFactory<CONTAINER> constructor) {
+        //Object preserves the original create(id, inventory, Object domainOwner) overload in MekanismContainerType.
+        //Only MenuOpeningData is ever encoded by Fabric; that subclass dispatches native opening data to this implementation.
+        super((id, inventory, data) -> ((MenuOpeningData) data).create(constructor, id, inventory),
+              MenuOpeningData.STREAM_CODEC.map(data -> (Object) data, data -> (MenuOpeningData) data));
         this.type = type;
         this.mekanismConstructor = mekanismConstructor;
+    }
+
+    @FunctionalInterface
+    public interface OpeningFactory<MENU extends AbstractContainerMenu> {
+        MENU create(int id, Inventory inventory, RegistryFriendlyByteBuf data);
     }
 }

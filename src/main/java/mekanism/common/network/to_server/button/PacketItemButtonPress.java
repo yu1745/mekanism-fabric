@@ -48,7 +48,7 @@ public record PacketItemButtonPress(ClickedItemButton buttonClicked, Interaction
         if (stack.getItem() instanceof IGuiItem) {
             MenuProvider provider = buttonClicked.getProvider(stack, hand);
             if (provider != null) {
-                player.openMenu(provider, buf -> {
+                mekanism.common.inventory.container.ContainerProvider.open(player, provider, buf -> {
                     buf.writeEnum(hand);
                     ItemStack.STREAM_CODEC.encode(buf, stack);
                     buttonClicked.encodeExtraData(buf, stack);

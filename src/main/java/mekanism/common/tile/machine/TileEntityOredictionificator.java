@@ -7,7 +7,7 @@ import java.util.Map;
 import mekanism.api.Action;
 import mekanism.api.IContentsListener;
 import mekanism.api.RelativeSide;
-import mekanism.common.CommonWorldTickHandler;
+import mekanism.common.recipe.lookup.cache.RecipeCacheContext;
 import mekanism.common.capabilities.holder.slot.IInventorySlotHolder;
 import mekanism.common.capabilities.holder.slot.InventorySlotHelper;
 import mekanism.common.config.MekanismConfig;
@@ -73,7 +73,7 @@ public class TileEntityOredictionificator extends TileEntityConfigurableMachine 
     @Override
     protected boolean onUpdateServer() {
         boolean sendUpdatePacket = super.onUpdateServer();
-        if (CommonWorldTickHandler.flushTagAndRecipeCaches) {
+        if (RecipeCacheContext.isInvalidationPending()) {
             for (OredictionificatorFilter<?, ?, ?> filter : filterManager.getFilters()) {
                 filter.flushCachedTag();
             }

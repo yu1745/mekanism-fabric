@@ -22,7 +22,8 @@ import mekanism.common.attachments.containers.chemical.AttachedChemicals;
 import mekanism.common.attachments.containers.creator.BaseContainerCreator;
 import mekanism.common.attachments.containers.creator.IBasicContainerCreator;
 import mekanism.common.attachments.containers.fluid.AttachedFluids;
-import mekanism.common.capabilities.Capabilities;
+import mekanism.fabric.item.FabricComponentItemLookup;
+import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
 import mekanism.common.content.oredictionificator.OredictionificatorItemFilter;
 import mekanism.common.content.qio.IQIOCraftingWindowHolder;
 import mekanism.common.integration.energy.EnergyCompatUtils;
@@ -39,10 +40,8 @@ import mekanism.common.tile.machine.TileEntityFormulaicAssemblicator;
 import mekanism.common.tile.machine.TileEntityOredictionificator;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeInput;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.FluidType;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction;
-import net.neoforged.neoforge.fluids.capability.IFluidHandlerItem;
+import mekanism.api.fluid.FluidStack;
+import mekanism.fabric.fluid.ItemFluidContainer;
 import org.jetbrains.annotations.NotNull;
 
 public class ItemSlotsBuilder {
@@ -56,8 +55,8 @@ public class ItemSlotsBuilder {
           containerIndex, ConstantPredicates.alwaysTrueBi(), ConstantPredicates.internalOnly(), ConstantPredicates.alwaysTrue());
 
     //Copy of predicates from FuelInventorySlot
-    private static final BiPredicate<@NotNull ItemStack, @NotNull AutomationType> FUEL_CAN_EXTRACT = (stack, automationType) -> automationType == AutomationType.MANUAL || stack.getBurnTime(null) == 0;
-    private static final BiPredicate<@NotNull ItemStack, @NotNull AutomationType> FUEL_CAN_INSERT = (stack, automationType) -> stack.getBurnTime(null) != 0;
+    private static final BiPredicate<@NotNull ItemStack, @NotNull AutomationType> FUEL_CAN_EXTRACT = (stack, automationType) -> automationType == AutomationType.MANUAL || !AbstractFurnaceBlockEntity.isFuel(stack);
+    private static final BiPredicate<@NotNull ItemStack, @NotNull AutomationType> FUEL_CAN_INSERT = (stack, automationType) -> AbstractFurnaceBlockEntity.isFuel(stack);
     private static final IBasicContainerCreator<ComponentBackedInventorySlot> FUEL_SLOT_CREATOR = (type, attachedTo, containerIndex) -> new ComponentBackedInventorySlot(attachedTo,
           containerIndex, FUEL_CAN_EXTRACT, FUEL_CAN_INSERT, ConstantPredicates.alwaysTrue());
 
@@ -186,7 +185,7 @@ public class ItemSlotsBuilder {
 
     public ItemSlotsBuilder addFormulaCraftingSlot(int count) {
         return addSlots(count, (type, attachedTo, containerIndex) -> new ComponentBackedInventorySlot(attachedTo, containerIndex, ConstantPredicates.alwaysTrueBi(),
-              (stack, automationType) -> automationType == AutomationType.INTERNAL || !attachedTo.getOrDefault(MekanismDataComponents.AUTO, false), ConstantPredicates.alwaysFalse()));
+              (stack, automationType) -> automationType == AutomationType.INTERNAL || !attachedTo.getOrDefault(MekanismDataComponents.AUTO.get(), false), ConstantPredicates.alwaysFalse()));
     }
 
     public ItemSlotsBuilder addLockSlot() {
@@ -211,7 +210,7 @@ public class ItemSlotsBuilder {
 
     public ItemSlotsBuilder addOredictionificatorInput() {
         return addSlot((type, attachedTo, containerIndex) -> new ComponentBackedInventorySlot(attachedTo, containerIndex, ConstantPredicates.notExternal(), ConstantPredicates.alwaysTrueBi(),
-              stack -> TileEntityOredictionificator.hasResult(attachedTo.getOrDefault(MekanismDataComponents.FILTER_AWARE, FilterAware.EMPTY).getEnabled(OredictionificatorItemFilter.class), stack)));
+              stack -> TileEntityOredictionificator.hasResult(attachedTo.getOrDefault(MekanismDataComponents.FILTER_AWARE.get(), FilterAware.EMPTY).getEnabled(OredictionificatorItemFilter.class), stack)));
     }
 
     public ItemSlotsBuilder addOutput() {
@@ -249,11 +248,11 @@ public class ItemSlotsBuilder {
 
     private boolean canFluidFill(ItemStack attachedTo, int tankIndex, ItemStack stack) {
         //Copy of FluidInventorySlot#getFillPredicate
-        IFluidHandlerItem fluidHandlerItem = Capabilities.FLUID.getCapability(stack);
+        ItemFluidContainer fluidHandlerItem = ItemFluidContainer.find(stack);
         if (fluidHandlerItem != null) {
             IExtendedFluidTank fluidTank = ContainerType.FLUID.createContainer(attachedTo, tankIndex);
-            for (int tank = 0, tanks = fluidHandlerItem.getTanks(); tank < tanks; tank++) {
-                FluidStack fluidInTank = fluidHandlerItem.getFluidInTank(tank);
+            for (var tank : fluidHandlerItem.tanks()) {
+                FluidStack fluidInTank = tank.fluid();
                 if (!fluidInTank.isEmpty() && fluidTank.insert(fluidInTank, Action.SIMULATE, AutomationType.INTERNAL).getAmount() < fluidInTank.getAmount()) {
                     //True if we can fill the tank with any of our contents
                     // Note: We need to recheck the fact the fluid is not empty and that it is valid,
@@ -273,16 +272,16 @@ public class ItemSlotsBuilder {
     public ItemSlotsBuilder addFluidDrainSlot(int tankIndex) {
         return addSlot(((type, attachedTo, containerIndex) -> new ComponentBackedInventorySlot(attachedTo, containerIndex, ConstantPredicates.manualOnly(), (stack, automationType) -> {
             //Copy of FluidInventorySlot's drain insert predicate
-            IFluidHandlerItem itemFluidHandler = FluidInventorySlot.tryGetFluidHandlerUnstacked(stack);
+            ItemFluidContainer itemFluidHandler = FluidInventorySlot.tryGetFluidHandlerUnstacked(stack);
             if (itemFluidHandler != null) {
                 //Note: We don't need to create a fake tank using the container type, as we only care about the stored type
-                AttachedFluids attachedFluids = attachedTo.getOrDefault(MekanismDataComponents.ATTACHED_FLUIDS, AttachedFluids.EMPTY);
+                AttachedFluids attachedFluids = attachedTo.getOrDefault(MekanismDataComponents.ATTACHED_FLUIDS.get(), AttachedFluids.EMPTY);
                 FluidStack fluidInTank = attachedFluids.getOrDefault(tankIndex);
                 //True if the tanks contents are valid, and we can fill the item with any of the contents
                 if (fluidInTank.isEmpty()) {
                     return FluidInventorySlot.isNonFullFluidContainer(itemFluidHandler);
                 }
-                return itemFluidHandler.fill(fluidInTank.copy(), FluidAction.SIMULATE) > 0;
+                return itemFluidHandler.insert(fluidInTank, Action.SIMULATE) > 0;
             }
             return false;
         }, ConstantPredicates.alwaysTrue())));
@@ -291,12 +290,12 @@ public class ItemSlotsBuilder {
     public ItemSlotsBuilder addFluidInputSlot(int tankIndex) {
         return addSlot(((type, attachedTo, containerIndex) -> new ComponentBackedInventorySlot(attachedTo, containerIndex, ConstantPredicates.manualOnly(), (stack, automationType) -> {
             //Copy of FluidInventorySlot#getInputPredicate
-            IFluidHandlerItem fluidHandlerItem = FluidInventorySlot.tryGetFluidHandlerUnstacked(stack);
+            ItemFluidContainer fluidHandlerItem = FluidInventorySlot.tryGetFluidHandlerUnstacked(stack);
             if (fluidHandlerItem != null) {
                 IExtendedFluidTank fluidTank = ContainerType.FLUID.createContainer(attachedTo, tankIndex);
                 boolean hasEmpty = false;
-                for (int tank = 0, tanks = fluidHandlerItem.getTanks(); tank < tanks; tank++) {
-                    FluidStack fluidInTank = fluidHandlerItem.getFluidInTank(tank);
+                for (var tank : fluidHandlerItem.tanks()) {
+                    FluidStack fluidInTank = tank.fluid();
                     if (fluidInTank.isEmpty()) {
                         hasEmpty = true;
                     } else if (fluidTank.insert(fluidInTank, Action.SIMULATE, AutomationType.INTERNAL).getAmount() < fluidInTank.getAmount()) {
@@ -310,13 +309,13 @@ public class ItemSlotsBuilder {
                     return hasEmpty;
                 }
                 FluidStack fluid = fluidTank.getFluid();
-                if (fluid.getAmount() < FluidType.BUCKET_VOLUME) {
+                if (fluid.getAmount() < 1_000) {
                     //Workaround for buckets not being able to be filled until we have enough of our volume
-                    fluid = fluid.copyWithAmount(FluidType.BUCKET_VOLUME);
+                    fluid = fluid.copyWithAmount(1_000);
                 } else {
                     fluid = fluid.copy();//avoid handler modifying
                 }
-                return fluidHandlerItem.fill(fluid, FluidAction.SIMULATE) > 0;
+                return fluidHandlerItem.insert(fluid, Action.SIMULATE) > 0;
             }
             return false;
         }, ConstantPredicates.alwaysTrue())));
@@ -325,14 +324,14 @@ public class ItemSlotsBuilder {
     public ItemSlotsBuilder addFluidRotarySlot(int tankIndex) {
         return addSlot(((type, attachedTo, containerIndex) -> new ComponentBackedInventorySlot(attachedTo, containerIndex, ConstantPredicates.manualOnly(), (stack, automationType) -> {
             //Copy of FluidInventorySlot's rotary insert predicate
-            IFluidHandlerItem fluidHandlerItem = Capabilities.FLUID.getCapability(stack);
+            ItemFluidContainer fluidHandlerItem = ItemFluidContainer.find(stack);
             if (fluidHandlerItem != null) {
-                boolean mode = attachedTo.getOrDefault(MekanismDataComponents.ROTARY_MODE, false);
+                boolean mode = attachedTo.getOrDefault(MekanismDataComponents.ROTARY_MODE.get(), false);
                 //Mode == true if fluid to chemical
                 boolean allEmpty = true;
                 IExtendedFluidTank fluidTank = null;
-                for (int tank = 0, tanks = fluidHandlerItem.getTanks(); tank < tanks; tank++) {
-                    FluidStack fluidInTank = fluidHandlerItem.getFluidInTank(tank);
+                for (var tank : fluidHandlerItem.tanks()) {
+                    FluidStack fluidInTank = tank.fluid();
                     if (!fluidInTank.isEmpty()) {
                         if (fluidTank == null) {
                             //Lazily initialize the tank
@@ -355,13 +354,13 @@ public class ItemSlotsBuilder {
     public ItemSlotsBuilder addFluidFuelSlot(int tankIndex, Predicate<@NotNull ItemStack> hasFuelValue) {
         //Copy of FluidFuelInventorySlot's forFuel insert and extract predicates
         return addSlot(((type, attachedTo, containerIndex) -> new ComponentBackedInventorySlot(attachedTo, containerIndex, (stack, automationType) -> {
-            IFluidHandlerItem fluidHandlerItem = Capabilities.FLUID.getCapability(stack);
+            ItemFluidContainer fluidHandlerItem = ItemFluidContainer.find(stack);
             if (fluidHandlerItem != null) {
-                int tanks = fluidHandlerItem.getTanks();
-                if (tanks > 0) {
+                var tanks = fluidHandlerItem.tanks();
+                if (!tanks.isEmpty()) {
                     IExtendedFluidTank fluidTank = ContainerType.FLUID.createContainer(attachedTo, tankIndex);
-                    for (int tank = 0; tank < tanks; tank++) {
-                        if (fluidTank.isFluidValid(fluidHandlerItem.getFluidInTank(tank))) {
+                    for (var tank : tanks) {
+                        if (fluidTank.isFluidValid(tank.fluid())) {
                             //False if the items contents are still valid
                             return false;
                         }
@@ -377,7 +376,7 @@ public class ItemSlotsBuilder {
 
     private boolean canChemicalDrainInsert(ItemStack attachedTo, int tankIndex, ItemStack stack) {
         //Copy of logic from ChemicalInventorySlot#getDrainInsertPredicate
-        IChemicalHandler handler = Capabilities.CHEMICAL.getCapability(stack);
+        IChemicalHandler handler = FabricComponentItemLookup.CHEMICAL.find(stack, null);
         if (handler != null) {
             //Note: We don't need to create a fake tank using the container type, as we only care about the stored type
             AttachedChemicals containers = ContainerType.CHEMICAL.getOrEmpty(attachedTo);
@@ -400,7 +399,7 @@ public class ItemSlotsBuilder {
 
     private boolean canChemicalFillExtract(ItemStack attachedTo, int tankIndex, ItemStack stack) {
         //Copy of logic from ChemicalInventorySlot#getFillExtractPredicate
-        IChemicalHandler handler = Capabilities.CHEMICAL.getCapability(stack);
+        IChemicalHandler handler = FabricComponentItemLookup.CHEMICAL.find(stack, null);
         if (handler != null) {
             IChemicalTank chemicalTank = null;
             for (int tank = 0; tank < handler.getChemicalTanks(); tank++) {
@@ -423,7 +422,7 @@ public class ItemSlotsBuilder {
 
     private boolean canChemicalFillInsert(ItemStack attachedTo, int tankIndex, ItemStack stack) {
         //Copy of logic from ChemicalInventorySlot#fillInsertCheck
-        IChemicalHandler handler = Capabilities.CHEMICAL.getCapability(stack);
+        IChemicalHandler handler = FabricComponentItemLookup.CHEMICAL.find(stack, null);
         if (handler != null) {
             IChemicalTank chemicalTank = null;
             for (int tank = 0; tank < handler.getChemicalTanks(); tank++) {
@@ -445,7 +444,7 @@ public class ItemSlotsBuilder {
 
     private boolean canChemicalFillOrConvertExtract(ItemStack attachedTo, int tankIndex, ItemStack stack) {
         //Copy of logic from ChemicalInventorySlot#getFillOrConvertExtractPredicate
-        IChemicalHandler handler = Capabilities.CHEMICAL.getCapability(stack);
+        IChemicalHandler handler = FabricComponentItemLookup.CHEMICAL.find(stack, null);
         IChemicalTank chemicalTank = null;
         if (handler != null) {
             int tanks = handler.getChemicalTanks();
@@ -476,7 +475,7 @@ public class ItemSlotsBuilder {
         //Copy of logic from ChemicalInventorySlot#getFillOrConvertInsertPredicate
         IChemicalTank chemicalTank = null;
         {//Fill insert check logic, we want to avoid resolving the tank as long as possible
-            IChemicalHandler handler = Capabilities.CHEMICAL.getCapability(stack);
+            IChemicalHandler handler = FabricComponentItemLookup.CHEMICAL.find(stack, null);
             if (handler != null) {
                 for (int tank = 0; tank < handler.getChemicalTanks(); tank++) {
                     ChemicalStack chemicalInTank = handler.getChemicalInTank(tank);
@@ -536,10 +535,10 @@ public class ItemSlotsBuilder {
                       return true;
                   }
                   //Copy of the insert check but inverted
-                  return !attachedTo.getOrDefault(MekanismDataComponents.ROTARY_MODE, false) ||
+                  return !attachedTo.getOrDefault(MekanismDataComponents.ROTARY_MODE.get(), false) ||
                          !canChemicalDrainInsert(attachedTo, tankIndex, stack);
               },
-              (stack, automationType) -> attachedTo.getOrDefault(MekanismDataComponents.ROTARY_MODE, false) &&
+              (stack, automationType) -> attachedTo.getOrDefault(MekanismDataComponents.ROTARY_MODE.get(), false) &&
                                          canChemicalDrainInsert(attachedTo, tankIndex, stack),
               ConstantPredicates.alwaysTrue())));
     }
@@ -548,7 +547,7 @@ public class ItemSlotsBuilder {
         //Copy of logic from ChemicalInventorySlot#rotaryFill
         return addSlot(((type, attachedTo, containerIndex) -> new ComponentBackedInventorySlot(attachedTo, containerIndex,
               (stack, automationType) -> automationType == AutomationType.MANUAL || canChemicalFillExtract(attachedTo, tankIndex, stack),
-              (stack, automationType) -> !attachedTo.getOrDefault(MekanismDataComponents.ROTARY_MODE, false) &&
+              (stack, automationType) -> !attachedTo.getOrDefault(MekanismDataComponents.ROTARY_MODE.get(), false) &&
                                          canChemicalFillInsert(attachedTo, tankIndex, stack),
               ConstantPredicates.alwaysTrue())));
     }

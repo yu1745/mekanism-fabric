@@ -30,14 +30,16 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.capabilities.BlockCapability;
-import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
+import mekanism.common.capabilities.resolver.manager.ChemicalHandlerManager;
+import java.util.function.Supplier;
+import net.fabricmc.fabric.api.lookup.v1.block.BlockApiCache;
 import net.neoforged.neoforge.fluids.FluidStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class TileEntityFissionReactorPort extends TileEntityFissionReactorCasing {
 
-    private final Map<Direction, BlockCapabilityCache<IChemicalHandler, @Nullable Direction>> capabilityCaches = new EnumMap<>(Direction.class);
+    private final Map<Direction, Supplier<@Nullable IChemicalHandler>> capabilityCaches = new EnumMap<>(Direction.class);
     private final List<BlockCapability<?, @Nullable Direction>> portCapabilities = List.of(
           Capabilities.CHEMICAL.block(),
           Capabilities.FLUID.block()
@@ -89,11 +91,10 @@ public class TileEntityFissionReactorPort extends TileEntityFissionReactorCasing
     }
 
     public void addChemicalTargetCapability(List<AdvancedCapabilityOutputTarget<IChemicalHandler, FissionPortMode>> outputTargets, Direction side) {
-        BlockCapabilityCache<IChemicalHandler, @Nullable Direction> cache = capabilityCaches.get(side);
-        if (cache == null) {
-            cache = Capabilities.CHEMICAL.createCache((ServerLevel) level, worldPosition.relative(side), side.getOpposite());
-            capabilityCaches.put(side, cache);
-        }
+        Supplier<@Nullable IChemicalHandler> cache = capabilityCaches.computeIfAbsent(side, direction -> {
+            var nativeCache = BlockApiCache.create(ChemicalHandlerManager.CHEMICAL_HANDLER, (ServerLevel) level, worldPosition.relative(direction));
+            return () -> nativeCache.find(direction.getOpposite());
+        });
         outputTargets.add(new AdvancedCapabilityOutputTarget<>(cache, MODE_MATCHES));
     }
 

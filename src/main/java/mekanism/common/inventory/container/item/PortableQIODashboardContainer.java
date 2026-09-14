@@ -150,7 +150,7 @@ public class PortableQIODashboardContainer extends QIOItemViewerContainer {
     @Override
     public boolean shiftClickIntoFrequency() {
         //Shouldn't be empty but validate it
-        return !this.stack.isEmpty() && stack.getOrDefault(MekanismDataComponents.INSERT_INTO_FREQUENCY, true);
+        return !this.stack.isEmpty() && stack.getOrDefault(MekanismDataComponents.INSERT_INTO_FREQUENCY.get(), true);
     }
 
     @Override

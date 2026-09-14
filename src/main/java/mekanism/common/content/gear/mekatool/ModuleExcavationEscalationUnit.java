@@ -21,7 +21,6 @@ import mekanism.api.text.EnumColor;
 import mekanism.api.text.IHasTextComponent;
 import mekanism.api.text.ILangEntry;
 import mekanism.api.text.TextComponentUtil;
-import mekanism.common.Mekanism;
 import mekanism.common.MekanismLang;
 import mekanism.common.util.MekanismUtils;
 import net.minecraft.Util;
@@ -33,23 +32,23 @@ import net.minecraft.util.ByIdMap;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.common.TranslatableEnum;
-import net.neoforged.neoforge.common.util.Lazy;
+import com.google.common.base.Suppliers;
+import java.util.function.Supplier;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @ParametersAreNotNullByDefault
 public record ModuleExcavationEscalationUnit(ExcavationMode excavationMode) implements ICustomModule<ModuleExcavationEscalationUnit> {
 
-    public static final ResourceLocation EXCAVATION_MODE = Mekanism.rl("efficiency");
+    public static final ResourceLocation EXCAVATION_MODE = ResourceLocation.fromNamespaceAndPath("mekanism", "efficiency");
 
-    private static final ResourceLocation RADIAL_ID = Mekanism.rl("excavation_mode");
-    private static final Int2ObjectMap<Lazy<NestedRadialMode>> RADIAL_DATAS = Util.make(() -> {
+    private static final ResourceLocation RADIAL_ID = ResourceLocation.fromNamespaceAndPath("mekanism", "excavation_mode");
+    private static final Int2ObjectMap<Supplier<NestedRadialMode>> RADIAL_DATAS = Util.make(() -> {
         int types = ExcavationMode.values().length - 2;
-        Int2ObjectMap<Lazy<NestedRadialMode>> map = new Int2ObjectArrayMap<>(types);
+        Int2ObjectMap<Supplier<NestedRadialMode>> map = new Int2ObjectArrayMap<>(types);
         for (int type = 1; type <= types; type++) {
             int accessibleValues = type + 2;
-            map.put(type, Lazy.of(() -> new NestedRadialMode(IRadialDataHelper.INSTANCE.dataForTruncated(RADIAL_ID, accessibleValues, ExcavationMode.NORMAL),
+            map.put(type, Suppliers.memoize(() -> new NestedRadialMode(IRadialDataHelper.INSTANCE.dataForTruncated(RADIAL_ID, accessibleValues, ExcavationMode.NORMAL),
                   MekanismLang.RADIAL_EXCAVATION_SPEED, ExcavationMode.NORMAL.icon(), EnumColor.YELLOW)));
         }
         return map;
@@ -120,7 +119,7 @@ public record ModuleExcavationEscalationUnit(ExcavationMode excavationMode) impl
     }
 
     @NothingNullByDefault
-    public enum ExcavationMode implements IIncrementalEnum<ExcavationMode>, IHasTextComponent, TranslatableEnum, IRadialMode, StringRepresentable {
+    public enum ExcavationMode implements IIncrementalEnum<ExcavationMode>, IHasTextComponent, IRadialMode, StringRepresentable {
         OFF(MekanismLang.RADIAL_EXCAVATION_SPEED_OFF, 0, EnumColor.WHITE, "speed_off"),
         SLOW(MekanismLang.RADIAL_EXCAVATION_SPEED_SLOW, 4, EnumColor.PINK, "speed_slow"),
         NORMAL(MekanismLang.RADIAL_EXCAVATION_SPEED_NORMAL, 16, EnumColor.BRIGHT_GREEN, "speed_normal"),
@@ -158,7 +157,6 @@ public record ModuleExcavationEscalationUnit(ExcavationMode excavationMode) impl
             return label;
         }
 
-        @Override
         public Component getTranslatedName() {
             return sliceName();
         }

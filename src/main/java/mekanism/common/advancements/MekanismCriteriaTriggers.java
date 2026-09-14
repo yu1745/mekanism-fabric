@@ -1,7 +1,7 @@
 package mekanism.common.advancements;
 
 import java.util.function.Supplier;
-import mekanism.common.Mekanism;
+import mekanism.api.MekanismAPI;
 import mekanism.common.advancements.triggers.AlloyUpgradeTrigger;
 import mekanism.common.advancements.triggers.BlockLaserTrigger;
 import mekanism.common.advancements.triggers.ChangeRobitSkinTrigger;
@@ -24,7 +24,7 @@ public class MekanismCriteriaTriggers {
     private MekanismCriteriaTriggers() {
     }
 
-    public static final MekanismDeferredRegister<CriterionTrigger<?>> CRITERIA_TRIGGERS = new MekanismDeferredRegister<>(Registries.TRIGGER_TYPE, Mekanism.MODID, DeferredCriterionTrigger::new);
+    public static final MekanismDeferredRegister<CriterionTrigger<?>> CRITERIA_TRIGGERS = new MekanismDeferredRegister<>(Registries.TRIGGER_TYPE, MekanismAPI.MEKANISM_MODID, DeferredCriterionTrigger::new);
 
     private static <INSTANCE extends CriterionTriggerInstance, TRIGGER extends CriterionTrigger<INSTANCE>> DeferredCriterionTrigger<INSTANCE, TRIGGER> register(String name, Supplier<TRIGGER> sup) {
         return (DeferredCriterionTrigger<INSTANCE, TRIGGER>) CRITERIA_TRIGGERS.register(name, sup);

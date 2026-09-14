@@ -33,5 +33,13 @@ public final class MekanismServerState {
     /** Clears server-scoped game state. Called from the post-save server-stopped domain cleanup only for the server instance that is stopping (same-server identity guarded by the bootstrap). */
     public static void clearServerState() {
         activeVibrators.clear();
+        mekanism.common.lib.frequency.FrequencyType.clear();
+        mekanism.common.content.qio.QIOGlobalItemLookup.INSTANCE.reset();
+        mekanism.common.lib.radiation.PlayerExposure.clear();
+        mekanism.common.lib.multiblock.MultiblockManager.reset();
+        mekanism.common.lib.frequency.FrequencyManager.reset();
+        mekanism.common.content.transporter.TransporterManager.reset();
+        mekanism.common.content.transporter.PathfinderCache.reset();
+        mekanism.common.lib.transmitter.TransmitterNetworkRegistry.reset();
     }
 }

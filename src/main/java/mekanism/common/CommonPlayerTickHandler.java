@@ -98,9 +98,7 @@ public class CommonPlayerTickHandler {
 
     private void tickEnd(Player player) {
         Mekanism.playerState.updateStepAssist(player);
-        if (player instanceof ServerPlayer serverPlayer) {
-            PlayerExposure.tickServer(serverPlayer);
-        }
+        //Radiation is now owned by RadiationPlayerTickMixin at the actual native Player.tick tail.
 
         ItemStack jetpack = IJetpackItem.getActiveJetpack(player);
         if (!jetpack.isEmpty()) {

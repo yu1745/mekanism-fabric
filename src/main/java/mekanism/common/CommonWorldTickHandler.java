@@ -50,7 +50,6 @@ public class CommonWorldTickHandler {
     // but there is a chance this is not the case in which case we should adjust how this is done
     private Map<ResourceLocation, Object2IntMap<ChunkPos>> chunkVersions;
     private Map<ResourceLocation, Queue<ChunkPos>> chunkRegenMap;
-    public static boolean flushTagAndRecipeCaches;
     public static boolean monitoringCardboardBox;
     @Nullable
     public static Predicate<ItemStack> fallbackItemCollector;
@@ -188,17 +187,8 @@ public class CommonWorldTickHandler {
         if (event.getLevel() instanceof ServerLevel world) {
             RadiationManager.get().tickServerWorld(world);
             //Note: We flush the tag and recipe cache, and also perform retrogen, regardless of if the ticks are frozen or not
-            if (flushTagAndRecipeCaches) {
-                //Loop all open containers and if it is a portable qio dashboard force refresh the window's recipes
-                for (ServerPlayer player : world.players()) {
-                    if (player.containerMenu instanceof PortableQIODashboardContainer qioDashboard) {
-                        for (byte index = 0; index < IQIOCraftingWindowHolder.MAX_CRAFTING_WINDOWS; index++) {
-                            qioDashboard.getCraftingWindow(index).invalidateRecipe();
-                        }
-                    }
-                }
-                flushTagAndRecipeCaches = false;
-            }
+            //The original portable QIO recipe refresh is owned by FabricRecipeCacheLifecycle after all worlds/frequencies tick.
+            //Its signal is part of RecipeCacheContext.Binding, not a process-global flag cleared by the first world.
 
             if (chunkRegenMap == null || !MekanismConfig.world.enableRegeneration.get()) {
                 return;

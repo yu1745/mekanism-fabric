@@ -40,7 +40,6 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.gameevent.GameEvent;
-import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.NotNull;
 
@@ -124,9 +123,9 @@ public class ItemRobit extends ItemEnergized implements ICapabilityAware {
     }
 
     @Override
-    public void attachCapabilities(RegisterCapabilitiesEvent event) {
-        event.registerItem(IItemSecurityUtils.INSTANCE.ownerCapability(), (stack, ctx) -> new SecurityObject(stack), this);
-        event.registerItem(IItemSecurityUtils.INSTANCE.securityCapability(), (stack, ctx) -> new SecurityObject(stack), this);
+    public void attachCapabilities() {
+        IItemSecurityUtils.INSTANCE.ownerCapability().registerForItems((stack, ctx) -> new SecurityObject(stack), this);
+        IItemSecurityUtils.INSTANCE.securityCapability().registerForItems((stack, ctx) -> new SecurityObject(stack), this);
     }
 
     @Override

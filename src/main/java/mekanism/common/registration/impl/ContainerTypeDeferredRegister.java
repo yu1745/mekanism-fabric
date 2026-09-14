@@ -1,6 +1,10 @@
 package mekanism.common.registration.impl;
 
 import java.util.function.Supplier;
+import java.util.function.Function;
+import mekanism.common.inventory.container.type.BaseMekanismContainerType.OpeningFactory;
+import mekanism.common.inventory.container.type.MenuOpeningData;
+import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerType;
 import mekanism.common.entity.EntityRobit;
 import mekanism.common.inventory.container.entity.IEntityContainer;
 import mekanism.common.inventory.container.entity.robit.RobitContainer;
@@ -14,7 +18,6 @@ import mekanism.common.registration.INamedEntry;
 import mekanism.common.registration.MekanismDeferredRegister;
 import mekanism.common.tile.base.TileEntityMekanism;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.flag.FeatureFlags;
@@ -22,7 +25,6 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.MenuType.MenuSupplier;
 import net.minecraft.world.item.Item;
-import net.neoforged.neoforge.network.IContainerFactory;
 import org.jetbrains.annotations.NotNull;
 
 public class ContainerTypeDeferredRegister extends MekanismDeferredRegister<MenuType<?>> {
@@ -31,8 +33,9 @@ public class ContainerTypeDeferredRegister extends MekanismDeferredRegister<Menu
         super(Registries.MENU, modid, ContainerTypeRegistryObject::new);
     }
 
-    private <CONTAINER extends AbstractContainerMenu> ContainerTypeRegistryObject<CONTAINER> createHolder(String name) {
-        return new ContainerTypeRegistryObject<>(ResourceLocation.fromNamespaceAndPath(getNamespace(), name));
+    private <CONTAINER extends AbstractContainerMenu> ContainerTypeRegistryObject<CONTAINER> registerSelfMenu(String name,
+          Function<ContainerTypeRegistryObject<CONTAINER>, MenuType<CONTAINER>> factory) {
+        return registerWithHolder(name, factory);
     }
 
     public <TILE extends TileEntityMekanism> ContainerTypeRegistryObject<MekanismTileContainer<TILE>> register(INamedEntry nameProvider, Class<TILE> tileClass) {
@@ -40,10 +43,8 @@ public class ContainerTypeDeferredRegister extends MekanismDeferredRegister<Menu
     }
 
     public <TILE extends TileEntityMekanism> ContainerTypeRegistryObject<MekanismTileContainer<TILE>> register(String name, Class<TILE> tileClass) {
-        ContainerTypeRegistryObject<MekanismTileContainer<TILE>> registryObject = createHolder(name);
-        IMekanismContainerFactory<TILE, MekanismTileContainer<TILE>> factory = (id, inv, data) -> new MekanismTileContainer<>(registryObject, id, inv, data);
-        register(name, () -> MekanismContainerType.tile(tileClass, factory));
-        return registryObject;
+        return registerSelfMenu(name, registryObject -> MekanismContainerType.tile(tileClass,
+              (id, inv, data) -> new MekanismTileContainer<>(registryObject, id, inv, data)));
     }
 
     public <TILE extends TileEntityMekanism> ContainerTypeRegistryObject<EmptyTileContainer<TILE>> registerEmpty(INamedEntry nameProvider, Class<TILE> tileClass) {
@@ -51,10 +52,8 @@ public class ContainerTypeDeferredRegister extends MekanismDeferredRegister<Menu
     }
 
     public <TILE extends TileEntityMekanism> ContainerTypeRegistryObject<EmptyTileContainer<TILE>> registerEmpty(String name, Class<TILE> tileClass) {
-        ContainerTypeRegistryObject<EmptyTileContainer<TILE>> registryObject = createHolder(name);
-        IMekanismContainerFactory<TILE, EmptyTileContainer<TILE>> factory = (id, inv, data) -> new EmptyTileContainer<>(registryObject, id, inv, data);
-        register(name, () -> MekanismContainerType.tile(tileClass, factory));
-        return registryObject;
+        return registerSelfMenu(name, registryObject -> MekanismContainerType.tile(tileClass,
+              (id, inv, data) -> new EmptyTileContainer<>(registryObject, id, inv, data)));
     }
 
     public <TILE extends TileEntityMekanism, CONTAINER extends MekanismTileContainer<TILE>> ContainerTypeRegistryObject<CONTAINER> register(INamedEntry nameProvider,
@@ -73,10 +72,8 @@ public class ContainerTypeDeferredRegister extends MekanismDeferredRegister<Menu
     }
 
     public ContainerTypeRegistryObject<RobitContainer> register(String name) {
-        ContainerTypeRegistryObject<RobitContainer> registryObject = createHolder(name);
-        IMekanismContainerFactory<EntityRobit, RobitContainer> factory = (id, inv, data) -> new RobitContainer(registryObject, id, inv, data);
-        register(name, () -> MekanismContainerType.entity(EntityRobit.class, factory));
-        return registryObject;
+        return registerSelfMenu(name, registryObject -> MekanismContainerType.entity(EntityRobit.class,
+              (id, inv, data) -> new RobitContainer(registryObject, id, inv, data)));
     }
 
     public <ITEM extends Item, CONTAINER extends AbstractContainerMenu> ContainerTypeRegistryObject<CONTAINER> register(INamedEntry nameProvider, Class<ITEM> itemClass,
@@ -93,8 +90,8 @@ public class ContainerTypeDeferredRegister extends MekanismDeferredRegister<Menu
         return registerMenu(name, () -> new MenuType<>(factory, FeatureFlags.VANILLA_SET));
     }
 
-    public <CONTAINER extends AbstractContainerMenu> ContainerTypeRegistryObject<CONTAINER> register(String name, IContainerFactory<CONTAINER> factory) {
-        return register(name, (MenuSupplier<CONTAINER>) factory);
+    public <CONTAINER extends AbstractContainerMenu> ContainerTypeRegistryObject<CONTAINER> register(String name, OpeningFactory<CONTAINER> factory) {
+        return registerMenu(name, () -> new ExtendedScreenHandlerType<>((id, inv, data) -> data.create(factory, id, inv), MenuOpeningData.STREAM_CODEC));
     }
 
     public <CONTAINER extends AbstractContainerMenu> ContainerTypeRegistryObject<CONTAINER> register(INamedEntry nameProvider, Supplier<MenuType<CONTAINER>> supplier) {
@@ -147,8 +144,8 @@ public class ContainerTypeDeferredRegister extends MekanismDeferredRegister<Menu
         }
 
         public ContainerTypeRegistryObject<MekanismTileContainer<TILE>> build() {
-            ContainerTypeRegistryObject<MekanismTileContainer<TILE>> registryObject = createHolder(name);
-            IMekanismContainerFactory<TILE, MekanismTileContainer<TILE>> factory = (id, inv, data) -> new MekanismTileContainer<>(registryObject, id, inv, data) {
+            return registerSelfMenu(name, registryObject -> MekanismContainerType.tile(tileClass,
+                  (id, inv, data) -> new MekanismTileContainer<>(registryObject, id, inv, data) {
                 @Override
                 protected int getInventoryXOffset() {
                     return super.getInventoryXOffset() + offsetX;
@@ -166,9 +163,7 @@ public class ContainerTypeDeferredRegister extends MekanismDeferredRegister<Menu
                         addArmorSlots(inv, armorSlotsX, armorSlotsY, offhandOffset);
                     }
                 }
-            };
-            register(name, () -> MekanismContainerType.tile(tileClass, factory));
-            return registryObject;
+            }));
         }
     }
 }

@@ -12,7 +12,7 @@ import net.minecraft.core.NonNullList;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
-import net.neoforged.neoforge.fluids.FluidStack;
+import mekanism.api.fluid.FluidStack;
 
 @NothingNullByDefault
 public record AttachedFluids(List<FluidStack> containers) implements IAttachedContainers<FluidStack, AttachedFluids> {

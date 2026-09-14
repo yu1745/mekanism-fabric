@@ -9,7 +9,7 @@ public class ReloadListener implements ResourceManagerReloadListener {
 
     @Override
     public void onResourceManagerReload(@NotNull ResourceManager resourceManager) {
-        CommonWorldTickHandler.flushTagAndRecipeCaches = true;
+        //The real recipe binding's full clear also raises its consumer-invalidation signal.
         MekanismRecipeType.clearCache();
     }
 }

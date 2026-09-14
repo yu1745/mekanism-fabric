@@ -60,8 +60,7 @@ public class CommonPlayerTracker {
     public void onPlayerDimChangedEvent(PlayerChangedDimensionEvent event) {
         ServerPlayer player = (ServerPlayer) event.getEntity();
         Mekanism.playerState.clearPlayer(player.getUUID(), false);
-        PacketDistributor.sendToPlayer(player, new PacketPlayerRadiationData(player));
-        PlayerExposure.updateClientRadiation(player);
+        //Radiation dimension synchronization is owned by FabricRadiationLifecycle.
     }
 
     @SubscribeEvent
@@ -74,8 +73,7 @@ public class CommonPlayerTracker {
     @SubscribeEvent
     public void respawnEvent(PlayerEvent.PlayerRespawnEvent event) {
         ServerPlayer player = (ServerPlayer) event.getEntity();
-        PacketDistributor.sendToPlayer(player, new PacketPlayerRadiationData(player));
-        PlayerExposure.updateClientRadiation(player);
+        //Radiation respawn synchronization is owned by FabricRadiationLifecycle.
         PacketDistributor.sendToAllPlayers(new PacketResetPlayerClient(player.getUUID()));
     }
 

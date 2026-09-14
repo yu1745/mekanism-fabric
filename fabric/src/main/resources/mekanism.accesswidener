@@ -12,3 +12,18 @@ accessible field net/minecraft/world/item/crafting/ShapedRecipe pattern Lnet/min
 # tile components (TileComponentUpgrade/Config/Security via ITileComponent) override
 # applyImplicitComponents(BlockEntity.DataComponentInput), whose type is protected in vanilla.
 accessible class net/minecraft/world/level/block/entity/BlockEntity$DataComponentInput
+
+# Original BlockStateHelper composes the existing light-emission function rather than replacing it.
+accessible field net/minecraft/world/level/block/state/BlockBehaviour$Properties lightEmission Ljava/util/function/ToIntFunction;
+
+# Preserve original common tile calls to the real virtual server/local player close implementation.
+accessible method net/minecraft/world/entity/player/Player closeContainer ()V
+
+# Native status HUD placement reads actual blink health/message state and reuses vanilla mount-heart row decisions.
+accessible field net/minecraft/client/gui/Gui displayHealth I
+accessible field net/minecraft/client/gui/Gui overlayMessageTime I
+accessible method net/minecraft/client/gui/Gui getVehicleMaxHearts (Lnet/minecraft/world/entity/LivingEntity;)I
+accessible method net/minecraft/client/gui/Gui getVisibleVehicleHeartRows (I)I
+
+# Insert the original radiation overlay as the native first layer, retaining native depth separation.
+accessible field net/minecraft/client/gui/LayeredDraw layers Ljava/util/List;

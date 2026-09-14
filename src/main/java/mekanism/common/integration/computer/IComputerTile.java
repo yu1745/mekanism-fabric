@@ -1,11 +1,9 @@
 package mekanism.common.integration.computer;
 
-import mekanism.common.Mekanism;
-
 public interface IComputerTile {
 
     default boolean hasComputerSupport() {
-        return Mekanism.hooks.computerCompatEnabled();
+        return ComputerCapabilityHelper.isEnabled();
     }
 
     /**

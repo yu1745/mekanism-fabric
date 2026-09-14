@@ -44,13 +44,13 @@ public class BlockDeferredRegister extends DoubleDeferredRegister<Block, Item> {
         return registerAdvanced(name, blockSupplier, block -> {
             Item.Properties properties = new Item.Properties();
             if (Attribute.has(block, AttributeSecurity.class)) {
-                properties.component(MekanismDataComponents.SECURITY, SecurityMode.PUBLIC);
+                properties.component(MekanismDataComponents.SECURITY.get(), SecurityMode.PUBLIC);
             }
             if (Attribute.has(block, AttributeRedstone.class)) {
-                properties.component(MekanismDataComponents.REDSTONE_CONTROL, RedstoneControl.DISABLED);
+                properties.component(MekanismDataComponents.REDSTONE_CONTROL.get(), RedstoneControl.DISABLED);
             }
             if (Attribute.has(block, AttributeUpgradeSupport.class)) {
-                properties.component(MekanismDataComponents.UPGRADES, UpgradeAware.EMPTY);
+                properties.component(MekanismDataComponents.UPGRADES.get(), UpgradeAware.EMPTY);
             }
             return itemCreator.apply(block.get(), properties);
         }, BlockRegistryObject::new);

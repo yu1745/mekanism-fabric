@@ -13,7 +13,7 @@ import mekanism.api.SerializationConstants;
 import mekanism.api.chemical.ChemicalStack;
 import mekanism.api.security.SecurityMode;
 import mekanism.api.text.EnumColor;
-import mekanism.common.Mekanism;
+import mekanism.api.MekanismAPI;
 import mekanism.common.content.filter.FilterType;
 import mekanism.common.content.filter.IFilter;
 import mekanism.common.content.filter.IItemStackFilter;
@@ -50,9 +50,10 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.block.state.properties.Property;
-import net.neoforged.neoforge.common.Tags;
-import net.neoforged.neoforge.common.util.Lazy;
-import net.neoforged.neoforge.fluids.FluidStack;
+import net.fabricmc.fabric.api.tag.convention.v2.ConventionalItemTags;
+import com.google.common.base.Suppliers;
+import java.util.function.Supplier;
+import mekanism.api.fluid.FluidStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -65,7 +66,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public abstract class BaseComputerHelper {
 
-    public static final Lazy<Map<Class<?>, TableType>> BUILTIN_TABLES = Lazy.of(BaseComputerHelper::getBuiltInTables);
+    public static final Supplier<Map<Class<?>, TableType>> BUILTIN_TABLES = Suppliers.memoize(BaseComputerHelper::getBuiltInTables);
 
     @NotNull
     private <T> T requireNonNull(int param, @Nullable T value) throws ComputerException {
@@ -552,12 +553,12 @@ public abstract class BaseComputerHelper {
 
         TableType.builder(modIDFilterClass, deviceName + " filter with Mod Id filter properties")
               .extendedFrom(deviceFilterType)
-              .addField(SerializationConstants.MODID, String.class, "The mod id to filter. e.g. " + Mekanism.MODID)
+              .addField(SerializationConstants.MODID, String.class, "The mod id to filter. e.g. " + MekanismAPI.MEKANISM_MODID)
               .build(types);
 
         TableType.builder(tagFilterClass, deviceName + " filter with Tag filter properties")
               .extendedFrom(deviceFilterType)
-              .addField(SerializationConstants.TAG, String.class, "The tag to filter. e.g. " + Tags.Items.ORES.location())
+              .addField(SerializationConstants.TAG, String.class, "The tag to filter. e.g. " + ConventionalItemTags.ORES.location())
               .build(types);
     }
 }

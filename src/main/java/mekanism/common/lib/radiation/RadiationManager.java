@@ -14,9 +14,9 @@ import mekanism.api.chemical.IChemicalTank;
 import mekanism.api.radiation.IRadiationManager;
 import mekanism.api.radiation.IRadiationSource;
 import mekanism.api.radiation.capability.IRadiationEntity;
-import mekanism.common.capabilities.Capabilities;
+import mekanism.fabric.radiation.FabricRadiationAttachments;
+import mekanism.api.MekanismServerLifecycle;
 import mekanism.common.config.MekanismConfig;
-import mekanism.common.registries.MekanismAttachmentTypes;
 import mekanism.common.registries.MekanismDamageTypes;
 import mekanism.common.util.MekanismUtils;
 import net.minecraft.SharedConstants;
@@ -33,9 +33,6 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.event.tick.ServerTickEvent;
-import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -89,11 +86,11 @@ public final class RadiationManager implements IRadiationManager {
 
     @Nullable
     private static RadiationLevelData getData(Level level) {
-        return level.getExistingDataOrNull(MekanismAttachmentTypes.RADIATION_LEVEL_DATA);
+        return FabricRadiationAttachments.getData(level);
     }
 
     private static RadiationLevelData getOrCreateData(Level level) {
-        return level.getData(MekanismAttachmentTypes.RADIATION_LEVEL_DATA);
+        return FabricRadiationAttachments.getOrCreateData(level);
     }
 
     @Override
@@ -127,7 +124,7 @@ public final class RadiationManager implements IRadiationManager {
     public Table<Chunk3D, GlobalPos, IRadiationSource> getRadiationSources() {
         HashBasedTable<Chunk3D, GlobalPos, IRadiationSource> table = HashBasedTable.create();
 
-        MinecraftServer currentServer = ServerLifecycleHooks.getCurrentServer();
+        MinecraftServer currentServer = MekanismServerLifecycle.getServer();
         if (currentServer == null) {
             return table;
         }
@@ -224,7 +221,7 @@ public final class RadiationManager implements IRadiationManager {
             return;
         }
         if (!(entity instanceof Player player) || MekanismUtils.isPlayingMode(player)) {
-            IRadiationEntity radiationEntity = entity.getCapability(Capabilities.RADIATION_ENTITY);
+            IRadiationEntity radiationEntity = FabricRadiationAttachments.RADIATION_ENTITY.find(entity, null);
             if (radiationEntity != null) {
                 radiationEntity.radiate(magnitude * (1 - Math.min(1, RadiationUtil.getRadiationResistance(entity))));
             }
@@ -264,7 +261,7 @@ public final class RadiationManager implements IRadiationManager {
     }
 
     public void clearSources() {
-        MinecraftServer currentServer = ServerLifecycleHooks.getCurrentServer();
+        MinecraftServer currentServer = MekanismServerLifecycle.getServer();
         if (currentServer == null) {
             return;
         }
@@ -283,11 +280,10 @@ public final class RadiationManager implements IRadiationManager {
         }
     }
 
-    @SubscribeEvent
-    public void onTickPre(ServerTickEvent.Pre event) {
+    public void onTickPre(MinecraftServer server) {
         // each tick, there's a 1/20 chance we'll decay radiation sources (averages to 1 decay operation per second)
         shouldDecayThisTick = isGlobalRadiationEnabled() &&
-                              event.getServer().tickRateManager().runsNormally() &&
+                              server.tickRateManager().runsNormally() &&
                               RAND.nextInt(SharedConstants.TICKS_PER_SECOND) == 0;
     }
 

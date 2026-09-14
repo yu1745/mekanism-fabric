@@ -45,8 +45,6 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.fluids.FluidStack;
 import org.jetbrains.annotations.NotNull;
 
@@ -178,19 +176,18 @@ public class ItemBlockTooltip<BLOCK extends Block & IHasDescription> extends Ite
     }
 
     @Override
-    public void attachCapabilities(RegisterCapabilitiesEvent event) {
+    public void attachCapabilities() {
         if (Attribute.has(getBlock(), AttributeSecurity.class)) {
-            event.registerItem(IItemSecurityUtils.INSTANCE.ownerCapability(), (stack, ctx) -> new SecurityObject(stack), this);
-            event.registerItem(IItemSecurityUtils.INSTANCE.securityCapability(), (stack, ctx) -> new SecurityObject(stack), this);
+            IItemSecurityUtils.INSTANCE.ownerCapability().registerForItems((stack, ctx) -> new SecurityObject(stack), this);
+            IItemSecurityUtils.INSTANCE.securityCapability().registerForItems((stack, ctx) -> new SecurityObject(stack), this);
         }
     }
 
     @Override
-    public void attachAttachments(IEventBus eventBus) {
+    public void attachAttachments() {
         if (Attribute.has(getBlock(), AttributeEnergy.class)) {
-            //Only expose the capability the required configs are loaded and the item wants to
-            IEventBus energyEventBus = exposesEnergyCap() ? eventBus : null;
-            ContainerType.ENERGY.addDefaultCreators(energyEventBus, this, () -> addDefaultEnergyContainers(EnergyContainersBuilder.builder()).build(),
+            //Only expose the capability when the required configs are loaded and the item wants to
+            ContainerType.ENERGY.addDefaultCreators(exposesEnergyCap(), this, () -> addDefaultEnergyContainers(EnergyContainersBuilder.builder()).build(),
                   MekanismConfig.storage, MekanismConfig.usage);
         }
     }

@@ -7,7 +7,6 @@ import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.robit.RobitSkin;
 import mekanism.api.security.SecurityMode;
 import mekanism.api.text.EnumColor;
-import mekanism.common.Mekanism;
 import mekanism.common.attachments.BlockData;
 import mekanism.common.attachments.FilterAware;
 import mekanism.common.attachments.FormulaAttachment;
@@ -61,7 +60,7 @@ public class MekanismDataComponents {
     private MekanismDataComponents() {
     }
 
-    public static final DataComponentDeferredRegister DATA_COMPONENTS = new DataComponentDeferredRegister(Mekanism.MODID);
+    public static final DataComponentDeferredRegister DATA_COMPONENTS = new DataComponentDeferredRegister("mekanism");
 
     public static final MekanismDeferredHolder<DataComponentType<?>, DataComponentType<ModuleContainer>> MODULE_CONTAINER = DATA_COMPONENTS.simple("module_container",
           builder -> builder.persistent(ModuleContainer.CODEC)
@@ -92,10 +91,10 @@ public class MekanismDataComponents {
     );
 
     static {//TODO - 1.22: remove backcompat
-        DATA_COMPONENTS.addAlias(Mekanism.rl("gases"), Mekanism.rl(ATTACHED_CHEMICALS.getName()));
-        DATA_COMPONENTS.addAlias(Mekanism.rl("infuse_types"), Mekanism.rl(ATTACHED_CHEMICALS.getName()));
-        DATA_COMPONENTS.addAlias(Mekanism.rl("pigments"), Mekanism.rl(ATTACHED_CHEMICALS.getName()));
-        DATA_COMPONENTS.addAlias(Mekanism.rl("slurries"), Mekanism.rl(ATTACHED_CHEMICALS.getName()));
+        DATA_COMPONENTS.addAlias(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("mekanism", "gases"), ATTACHED_CHEMICALS.getId());
+        DATA_COMPONENTS.addAlias(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("mekanism", "infuse_types"), ATTACHED_CHEMICALS.getId());
+        DATA_COMPONENTS.addAlias(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("mekanism", "pigments"), ATTACHED_CHEMICALS.getId());
+        DATA_COMPONENTS.addAlias(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("mekanism", "slurries"), ATTACHED_CHEMICALS.getId());
     }
 
     public static final MekanismDeferredHolder<DataComponentType<?>, DataComponentType<AttachedHeat>> ATTACHED_HEAT = DATA_COMPONENTS.simple("heat_data",
@@ -188,7 +187,7 @@ public class MekanismDataComponents {
     // We don't add this by default to the redstone adapter, so that the default state is there is no target set
     public static final MekanismDeferredHolder<DataComponentType<?>, DataComponentType<Optional<HashedItem>>> ITEM_TARGET = DATA_COMPONENTS.simple("item_target",
           builder -> builder.persistent(ExtraCodecs.optionalEmptyMap(HashedItem.CODEC)
-                .promotePartial(error -> Mekanism.logger.error("Failed to load item target: {}", error))
+                .promotePartial(error -> org.slf4j.LoggerFactory.getLogger("Mekanism").error("Failed to load item target: {}", error))
                 .orElse(Optional.empty())
           ).networkSynchronized(ByteBufCodecs.optional(HashedItem.STREAM_CODEC))
     );

@@ -101,7 +101,7 @@ public class Attributes {
                 return false;
             }
             //Super implementation
-            return state.isFaceSturdy(reader, pos, Direction.UP) && state.getLightEmission(reader, pos) < 14;
+            return state.isFaceSturdy(reader, pos, Direction.UP) && state.getLightEmission() < 14;
         });
 
         private final StateArgumentPredicate<EntityType<?>> spawningPredicate;

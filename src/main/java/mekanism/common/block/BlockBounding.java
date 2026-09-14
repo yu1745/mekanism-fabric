@@ -7,7 +7,7 @@ import mekanism.common.block.interfaces.IHasTileEntity;
 import mekanism.common.block.states.BlockStateHelper;
 import mekanism.common.block.states.IStateFluidLoggable;
 import mekanism.common.registration.impl.TileEntityTypeRegistryObject;
-import mekanism.common.registries.MekanismTileEntityTypes;
+import mekanism.fabric.registry.FabricMekanismBlockRegistries;
 import mekanism.common.resource.BlockResourceInfo;
 import mekanism.common.tile.TileEntityBoundingBlock;
 import mekanism.common.util.WorldUtils;
@@ -145,21 +145,24 @@ public class BlockBounding extends Block implements IHasTileEntity<TileEntityBou
         }
     }
 
-    /**
-     * {@inheritDoc} Delegate to main {@link Block#getCloneItemStack(BlockState, HitResult, LevelReader, BlockPos, Player)}.
-     */
+    /** Retained public contextual overload; the native clone hook carries the same actual block-data semantics. */
+    @NotNull
+    public ItemStack getCloneItemStack(@NotNull BlockState state, @NotNull HitResult target, @NotNull LevelReader world, @NotNull BlockPos pos, @NotNull Player player) {
+        return getCloneItemStack(world, pos, state);
+    }
+
     @NotNull
     @Override
-    public ItemStack getCloneItemStack(@NotNull BlockState state, @NotNull HitResult target, @NotNull LevelReader world, @NotNull BlockPos pos, @NotNull Player player) {
+    public ItemStack getCloneItemStack(@NotNull LevelReader world, @NotNull BlockPos pos, @NotNull BlockState state) {
         BlockPos mainPos = getMainBlockPos(world, pos);
         if (mainPos == null) {
             return ItemStack.EMPTY;
         }
         BlockState mainState = world.getBlockState(mainPos);
-        return mainState.getBlock().getCloneItemStack(mainState, target, world, mainPos, player);
+        return mainState.getBlock().getCloneItemStack(world, mainPos, mainState);
     }
 
-    @Override
+    //Called at the native server destruction removal point. Harvesting must retain the master until playerDestroy.
     public boolean onDestroyedByPlayer(@NotNull BlockState state, @NotNull Level world, @NotNull BlockPos pos, @NotNull Player player, boolean willHarvest,
           @NotNull FluidState fluidState) {
         if (willHarvest) {
@@ -170,10 +173,10 @@ public class BlockBounding extends Block implements IHasTileEntity<TileEntityBou
             BlockState mainState = world.getBlockState(mainPos);
             if (!mainState.isAir()) {
                 //Set the main block to air, which will invalidate the rest of the bounding blocks
-                mainState.onDestroyedByPlayer(world, mainPos, player, false, mainState.getFluidState());
+                world.setBlock(mainPos, mainState.getFluidState().createLegacyBlock(), world.isClientSide ? 11 : Block.UPDATE_ALL);
             }
         }
-        return super.onDestroyedByPlayer(state, world, pos, player, false, fluidState);
+        return world.setBlock(pos, fluidState.createLegacyBlock(), world.isClientSide ? 11 : Block.UPDATE_ALL);
     }
 
     @NotNull
@@ -273,13 +276,13 @@ public class BlockBounding extends Block implements IHasTileEntity<TileEntityBou
         return world.getBlockState(mainPos).getDestroyProgress(player, world, mainPos);
     }
 
-    @Override
+    //Native ExplosionDamageCalculator routes only bounding blocks to this positional query.
     public float getExplosionResistance(@NotNull BlockState state, @NotNull BlockGetter world, @NotNull BlockPos pos, @NotNull Explosion explosion) {
         BlockPos mainPos = getMainBlockPos(world, pos);
         if (mainPos == null) {
-            return super.getExplosionResistance(state, world, pos, explosion);
+            return super.getExplosionResistance();
         }
-        return world.getBlockState(mainPos).getExplosionResistance(world, mainPos, explosion);
+        return world.getBlockState(mainPos).getBlock().getExplosionResistance();
     }
 
     @NotNull
@@ -296,7 +299,7 @@ public class BlockBounding extends Block implements IHasTileEntity<TileEntityBou
 
     @Override
     public TileEntityTypeRegistryObject<TileEntityBoundingBlock> getTileType() {
-        return MekanismTileEntityTypes.BOUNDING_BLOCK;
+        return FabricMekanismBlockRegistries.BOUNDING_BLOCK_ENTITY;
     }
 
     @NotNull

@@ -32,6 +32,9 @@ public class StructureHelper {
         VoxelCuboid prev = null;
         for (Axis axis : Axis.AXES) {
             ObjectSortedSet<Int2ObjectMap.Entry<VoxelPlane>> majorAxisMap = structure.getMajorAxisMap(axis).int2ObjectEntrySet();
+            if (majorAxisMap.isEmpty()) {
+                return null;
+            }
             Int2ObjectMap.Entry<VoxelPlane> firstMajor = majorAxisMap.first(), lastMajor = majorAxisMap.last();
             if (firstMajor == null || !firstMajor.getValue().equals(lastMajor.getValue()) || !firstMajor.getValue().isFull()) {
                 //If there is no major plane, or the two parallel planes are mismatched in size,
@@ -81,6 +84,9 @@ public class StructureHelper {
         for (CuboidSide side : sides) {
             Axis axis = side.getAxis(), horizontal = axis.horizontal(), vertical = axis.vertical();
             ObjectSortedSet<Int2ObjectMap.Entry<VoxelPlane>> majorAxisMap = structure.getMajorAxisMap(axis).int2ObjectEntrySet();
+            if (majorAxisMap.isEmpty()) {
+                return null;
+            }
             Int2ObjectMap.Entry<VoxelPlane> majorEntry = side.getFace().isPositive() ? majorAxisMap.last() : majorAxisMap.first();
             // fail fast if the plane doesn't exist
             if (majorEntry == null) {

@@ -11,12 +11,11 @@ import mekanism.common.attachments.containers.ComponentBackedHandler;
 import mekanism.common.attachments.containers.ContainerType;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandlerItem;
+import mekanism.api.fluid.FluidStack;
 import org.jetbrains.annotations.Nullable;
 
 @NothingNullByDefault
-public class ComponentBackedFluidHandler extends ComponentBackedHandler<FluidStack, IExtendedFluidTank, AttachedFluids> implements IMekanismFluidHandler, IFluidHandlerItem {
+public class ComponentBackedFluidHandler extends ComponentBackedHandler<FluidStack, IExtendedFluidTank, AttachedFluids> implements IMekanismFluidHandler {
 
     public ComponentBackedFluidHandler(ItemStack attachedTo, int totalTanks) {
         super(attachedTo, totalTanks);
@@ -63,7 +62,6 @@ public class ComponentBackedFluidHandler extends ComponentBackedHandler<FluidSta
         return ExtendedFluidHandlerUtils.extract(stack, action, AutomationType.handler(side), size(), this);
     }
 
-    @Override
     public ItemStack getContainer() {
         return attachedTo;
     }

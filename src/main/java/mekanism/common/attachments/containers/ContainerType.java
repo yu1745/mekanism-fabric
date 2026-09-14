@@ -8,6 +8,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
+import com.google.common.base.Suppliers;
+import mekanism.api.INBTSerializable;
+import mekanism.common.registration.MekanismDeferredHolder;
+import mekanism.fabric.item.FabricComponentItemLookup;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import mekanism.api.DataHandlerUtils;
@@ -15,11 +21,9 @@ import mekanism.api.SerializationConstants;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.chemical.IChemicalTank;
 import mekanism.api.energy.IEnergyContainer;
-import mekanism.api.energy.IStrictEnergyHandler;
 import mekanism.api.fluid.IExtendedFluidTank;
 import mekanism.api.heat.IHeatCapacitor;
 import mekanism.api.inventory.IInventorySlot;
-import mekanism.common.Mekanism;
 import mekanism.common.attachments.containers.chemical.AttachedChemicals;
 import mekanism.common.attachments.containers.chemical.ComponentBackedChemicalHandler;
 import mekanism.common.attachments.containers.creator.IContainerCreator;
@@ -31,10 +35,7 @@ import mekanism.common.attachments.containers.heat.AttachedHeat;
 import mekanism.common.attachments.containers.heat.ComponentBackedHeatHandler;
 import mekanism.common.attachments.containers.item.AttachedItems;
 import mekanism.common.attachments.containers.item.ComponentBackedItemHandler;
-import mekanism.common.capabilities.Capabilities;
-import mekanism.common.capabilities.IMultiTypeCapability;
 import mekanism.common.config.IMekanismConfig;
-import mekanism.common.integration.energy.EnergyCompatUtils;
 import mekanism.common.registries.MekanismDataComponents;
 import mekanism.common.tile.base.TileEntityMekanism;
 import net.minecraft.Util;
@@ -52,40 +53,28 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.capabilities.ICapabilityProvider;
-import net.neoforged.neoforge.capabilities.ItemCapability;
-import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
-import net.neoforged.neoforge.common.util.INBTSerializable;
-import net.neoforged.neoforge.common.util.Lazy;
-import net.neoforged.neoforge.registries.DeferredHolder;
 import org.jetbrains.annotations.Nullable;
 
 @NothingNullByDefault
 public class ContainerType<CONTAINER extends INBTSerializable<CompoundTag>, ATTACHED extends IAttachedContainers<?, ATTACHED>,
       HANDLER extends ComponentBackedHandler<?, CONTAINER, ATTACHED>> {
 
+    private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger("Mekanism");
     private static final List<ContainerType<?, ?, ?>> TYPES_INTERNAL = new ArrayList<>();
     public static final List<ContainerType<?, ?, ?>> TYPES = Collections.unmodifiableList(TYPES_INTERNAL);
 
     public static final ContainerType<IEnergyContainer, AttachedEnergy, ComponentBackedEnergyHandler> ENERGY = new ContainerType<>(MekanismDataComponents.ATTACHED_ENERGY,
-          SerializationConstants.ENERGY_CONTAINERS, SerializationConstants.CONTAINER, ComponentBackedEnergyHandler::new, Capabilities.STRICT_ENERGY, AttachedEnergy.EMPTY,
-          TileEntityMekanism::getEnergyContainers, TileEntityMekanism::collectEnergyContainers, TileEntityMekanism::applyEnergyContainers, TileEntityMekanism::canHandleEnergy) {
-        @Override
-        @SuppressWarnings("unchecked")
-        public void registerItemCapabilities(RegisterCapabilitiesEvent event, Item item, boolean exposeWhenStacked, IMekanismConfig... requiredConfigs) {
-            EnergyCompatUtils.registerItemCapabilities(event, item, (ICapabilityProvider<ItemStack, Void, IStrictEnergyHandler>) getCapabilityProvider(exposeWhenStacked, requiredConfigs));
-        }
-    };
+          SerializationConstants.ENERGY_CONTAINERS, SerializationConstants.CONTAINER, ComponentBackedEnergyHandler::new, FabricComponentItemLookup::registerEnergy, AttachedEnergy.EMPTY,
+          TileEntityMekanism::getEnergyContainers, TileEntityMekanism::collectEnergyContainers, TileEntityMekanism::applyEnergyContainers, TileEntityMekanism::canHandleEnergy);
     public static final ContainerType<IInventorySlot, AttachedItems, ComponentBackedItemHandler> ITEM = new ContainerType<>(MekanismDataComponents.ATTACHED_ITEMS,
-          SerializationConstants.ITEMS, SerializationConstants.SLOT, ComponentBackedItemHandler::new, Capabilities.ITEM, AttachedItems.EMPTY,
+          SerializationConstants.ITEMS, SerializationConstants.SLOT, ComponentBackedItemHandler::new, FabricComponentItemLookup::registerItems, AttachedItems.EMPTY,
           TileEntityMekanism::getInventorySlots, TileEntityMekanism::collectInventorySlots, TileEntityMekanism::applyInventorySlots, TileEntityMekanism::hasInventory);
     public static final ContainerType<IExtendedFluidTank, AttachedFluids, ComponentBackedFluidHandler> FLUID = new ContainerType<>(MekanismDataComponents.ATTACHED_FLUIDS,
-          SerializationConstants.FLUID_TANKS, SerializationConstants.TANK, ComponentBackedFluidHandler::new, Capabilities.FLUID, AttachedFluids.EMPTY,
+          SerializationConstants.FLUID_TANKS, SerializationConstants.TANK, ComponentBackedFluidHandler::new, FabricComponentItemLookup::registerFluid, AttachedFluids.EMPTY,
           TileEntityMekanism::getFluidTanks, TileEntityMekanism::collectFluidTanks, TileEntityMekanism::applyFluidTanks, TileEntityMekanism::canHandleFluid);
 
     public static final ContainerType<IChemicalTank, AttachedChemicals, ComponentBackedChemicalHandler> CHEMICAL = new ContainerType<>(MekanismDataComponents.ATTACHED_CHEMICALS,
-          SerializationConstants.CHEMICAL_TANKS, SerializationConstants.TANK, ComponentBackedChemicalHandler::new, Capabilities.CHEMICAL, AttachedChemicals.EMPTY,
+          SerializationConstants.CHEMICAL_TANKS, SerializationConstants.TANK, ComponentBackedChemicalHandler::new, FabricComponentItemLookup::registerChemical, AttachedChemicals.EMPTY,
           TileEntityMekanism::getChemicalTanks, TileEntityMekanism::collectChemicalTanks, TileEntityMekanism::applyChemicalTanks, TileEntityMekanism::canHandleChemicals) {
         @SuppressWarnings("removal")
         @Override//TODO - 1.22: remove backcompat, incl getLegacyX methods
@@ -132,29 +121,31 @@ public class ContainerType<CONTAINER extends INBTSerializable<CompoundTag>, ATTA
     //TODO - 1.20.5: Re-evaluate this codec implementation
     public static final Codec<ContainerType<?, ?, ?>> CODEC = BuiltInRegistries.DATA_COMPONENT_TYPE.byNameCodec().comapFlatMap(componentType -> {
         for (ContainerType<?, ?, ?> type : TYPES) {
-            if (type.component.value() == componentType) {
+            if (type.component.get() == componentType) {
                 return DataResult.success(type);
             }
         }
-        return DataResult.error(() -> "Data Component type " + Util.getRegisteredName(BuiltInRegistries.DATA_COMPONENT_TYPE, componentType) +
+        return DataResult.error(() -> "Data Component type " + BuiltInRegistries.DATA_COMPONENT_TYPE.wrapAsHolder(componentType).getRegisteredName() +
                                       " does not have a corresponding container type");
     }, containerType -> containerType.component.get());
 
-    private final Map<Item, Lazy<? extends IContainerCreator<? extends CONTAINER, ATTACHED>>> knownDefaultCreators = new Reference2ObjectOpenHashMap<>();
+    private final Map<Item, Supplier<? extends IContainerCreator<? extends CONTAINER, ATTACHED>>> knownDefaultCreators = new Reference2ObjectOpenHashMap<>();
+    //Same guarded provider used for Fabric exposure and Mekanism's internal item-owned operations (gear spending, HUD).
+    private final Map<Item, Function<ItemStack, HANDLER>> registeredProviders = new Reference2ObjectOpenHashMap<>();
     private final HandlerConstructor<HANDLER> handlerConstructor;
     private final BiFunction<TileEntityMekanism, @Nullable Direction, List<CONTAINER>> containersFromTile;
     private final CopyFromTile<CONTAINER, ATTACHED> copyFromTile;
     private final CopyToTile<CONTAINER, ATTACHED> copyToTile;
-    private final DeferredHolder<DataComponentType<?>, DataComponentType<ATTACHED>> component;
+    private final MekanismDeferredHolder<DataComponentType<?>, DataComponentType<ATTACHED>> component;
     @Nullable
-    private final IMultiTypeCapability<? super HANDLER, ?> capability;
+    private final BiConsumer<Item, Function<ItemStack, HANDLER>> capability;
     private final Predicate<TileEntityMekanism> canHandle;
     private final ATTACHED emptyAttachment;
     private final String containerTag;
     protected final String containerKey;
 
-    private ContainerType(DeferredHolder<DataComponentType<?>, DataComponentType<ATTACHED>> component, String containerTag, String containerKey,
-          HandlerConstructor<HANDLER> handlerConstructor, @Nullable IMultiTypeCapability<? super HANDLER, ?> capability, ATTACHED emptyAttachment,
+    private ContainerType(MekanismDeferredHolder<DataComponentType<?>, DataComponentType<ATTACHED>> component, String containerTag, String containerKey,
+          HandlerConstructor<HANDLER> handlerConstructor, @Nullable BiConsumer<Item, Function<ItemStack, HANDLER>> capability, ATTACHED emptyAttachment,
           BiFunction<TileEntityMekanism, @Nullable Direction, List<CONTAINER>> containersFromTile, CopyFromTile<CONTAINER, ATTACHED> copyFromTile,
           CopyToTile<CONTAINER, ATTACHED> copyToTile, Predicate<TileEntityMekanism> canHandle) {
         TYPES_INTERNAL.add(this);
@@ -170,7 +161,7 @@ public class ContainerType<CONTAINER extends INBTSerializable<CompoundTag>, ATTA
         this.canHandle = canHandle;
     }
 
-    public DeferredHolder<DataComponentType<?>, DataComponentType<ATTACHED>> getComponentType() {
+    public MekanismDeferredHolder<DataComponentType<?>, DataComponentType<ATTACHED>> getComponentType() {
         return component;
     }
 
@@ -183,20 +174,32 @@ public class ContainerType<CONTAINER extends INBTSerializable<CompoundTag>, ATTA
     }
 
     /**
-     * Adds some containers as default and exposes it as a capability that requires the given configs if the specified bus is present.
+     * Adds default containers, optionally registering their Fabric item exposure guarded by the given live configs.
      */
-    public void addDefaultCreators(@Nullable IEventBus eventBus, Item item, Supplier<? extends IContainerCreator<? extends CONTAINER, ATTACHED>> defaultCreator,
+    public void addDefaultCreators(boolean exposeCapability, Item item, Supplier<? extends IContainerCreator<? extends CONTAINER, ATTACHED>> defaultCreator,
           IMekanismConfig... requiredConfigs) {
-        knownDefaultCreators.put(item, Lazy.of(defaultCreator));
-        if (eventBus != null && capability != null) {
-            eventBus.addListener(RegisterCapabilitiesEvent.class, event -> registerItemCapabilities(event, item, false, requiredConfigs));
+        knownDefaultCreators.put(item, Suppliers.memoize(defaultCreator::get));
+        if (exposeCapability) registerItemCapabilities(item, false, requiredConfigs);
+    }
+
+    public void registerItemCapabilities(Item item, boolean exposeWhenStacked, IMekanismConfig... requiredConfigs) {
+        if (capability != null) {
+            Function<ItemStack, HANDLER> provider = getCapabilityProvider(exposeWhenStacked, requiredConfigs);
+            if (registeredProviders.containsKey(item)) {
+                throw new IllegalStateException("Duplicate " + containerTag + " item provider: " + item);
+            }
+            capability.accept(item, provider);
+            registeredProviders.put(item, provider);
         }
     }
 
-    public void registerItemCapabilities(RegisterCapabilitiesEvent event, Item item, boolean exposeWhenStacked, IMekanismConfig... requiredConfigs) {
-        if (capability != null) {
-            event.registerItem((ItemCapability) capability.item(), getCapabilityProvider(exposeWhenStacked, requiredConfigs), item);
-        }
+    /** Internal domain access for the owner of this stack, retaining the actual registration/count/live-config guard.
+     * External transfers must use Fabric's transactional item context, never mutate this live handler.
+     */
+    @Nullable
+    public HANDLER getRegisteredHandler(ItemStack stack) {
+        Function<ItemStack, HANDLER> provider = registeredProviders.get(stack.getItem());
+        return stack.isEmpty() || provider == null ? null : provider.apply(stack);
     }
 
     //TODO - 1.21: Do we want to have create in the name instead of get
@@ -208,7 +211,7 @@ public class ContainerType<CONTAINER extends INBTSerializable<CompoundTag>, ATTA
     public int getContainerCount(ItemStack stack) {
         ATTACHED attached = getOrEmpty(stack);
         if (attached.isEmpty()) {
-            Lazy<? extends IContainerCreator<? extends CONTAINER, ATTACHED>> containerCreator = knownDefaultCreators.get(stack.getItem());
+            Supplier<? extends IContainerCreator<? extends CONTAINER, ATTACHED>> containerCreator = knownDefaultCreators.get(stack.getItem());
             return containerCreator == null ? 0 : containerCreator.get().totalContainers();
         }
         //TODO - 1.21: Do we need to look it up in case the max size changed since we were last saved?
@@ -236,7 +239,7 @@ public class ContainerType<CONTAINER extends INBTSerializable<CompoundTag>, ATTA
     public ATTACHED createNewAttachment(ItemStack stack) {
         //TODO - 1.1: Do we want local callers to just directly access the handler constructor as we wouldn't be exposing the cap
         // if we didn't have any creators?
-        Lazy<? extends IContainerCreator<? extends CONTAINER, ATTACHED>> lazy = knownDefaultCreators.get(stack.getItem());
+        Supplier<? extends IContainerCreator<? extends CONTAINER, ATTACHED>> lazy = knownDefaultCreators.get(stack.getItem());
         if (lazy == null) {
             return emptyAttachment;
         }
@@ -249,34 +252,26 @@ public class ContainerType<CONTAINER extends INBTSerializable<CompoundTag>, ATTA
     }
 
     public ATTACHED getOrEmpty(ItemStack stack) {
-        return stack.getOrDefault(component, emptyAttachment);
+        return stack.getOrDefault(component.get(), emptyAttachment);
     }
 
     //TODO - 1.21: Re-evaluate usages and see if they should be going via capability instead?
     public CONTAINER createContainer(ItemStack attachedTo, int containerIndex) {
-        Lazy<? extends IContainerCreator<? extends CONTAINER, ATTACHED>> creator = knownDefaultCreators.get(attachedTo.getItem());
+        Supplier<? extends IContainerCreator<? extends CONTAINER, ATTACHED>> creator = knownDefaultCreators.get(attachedTo.getItem());
         if (creator != null) {
             return creator.get().create(this, attachedTo, containerIndex);
         }
         throw new IllegalArgumentException("No known containers for item " + attachedTo.getItem());
     }
 
-    protected ICapabilityProvider<ItemStack, Void, ? super HANDLER> getCapabilityProvider(boolean exposeWhenStacked, IMekanismConfig... requiredConfigs) {
-        if (exposeWhenStacked) {
-            return getCapabilityProvider(requiredConfigs);
-        } else if (requiredConfigs.length == 0) {
-            return (stack, context) -> stack.getCount() == 1 ? createHandler(stack) : null;
-        }
-        //Only expose the capabilities if the required configs are loaded
-        return (stack, context) -> stack.getCount() == 1 && hasRequiredConfigs(requiredConfigs) ? createHandler(stack) : null;
+    protected Function<ItemStack, HANDLER> getCapabilityProvider(boolean exposeWhenStacked, IMekanismConfig... requiredConfigs) {
+        if (exposeWhenStacked) return getCapabilityProvider(requiredConfigs);
+        return stack -> stack.getCount() == 1 && hasRequiredConfigs(requiredConfigs) ? createHandler(stack) : null;
     }
 
-    protected ICapabilityProvider<ItemStack, Void, ? super HANDLER> getCapabilityProvider(IMekanismConfig... requiredConfigs) {
-        if (requiredConfigs.length == 0) {
-            return (stack, context) -> createHandler(stack);
-        }
-        //Only expose the capabilities if the required configs are loaded
-        return (stack, context) -> hasRequiredConfigs(requiredConfigs) ? createHandler(stack) : null;
+    protected Function<ItemStack, HANDLER> getCapabilityProvider(IMekanismConfig... requiredConfigs) {
+        // Applied on every lookup and every item-context query/transfer, not captured as a startup boolean.
+        return stack -> hasRequiredConfigs(requiredConfigs) ? createHandler(stack) : null;
     }
 
     private static boolean hasRequiredConfigs(IMekanismConfig... requiredConfigs) {
@@ -289,17 +284,25 @@ public class ContainerType<CONTAINER extends INBTSerializable<CompoundTag>, ATTA
     }
 
     public boolean supports(ItemStack stack) {
-        return stack.has(component) || knownDefaultCreators.containsKey(stack.getItem());
+        return stack.has(component.get()) || knownDefaultCreators.containsKey(stack.getItem());
     }
 
     public void addDefault(Holder<Item> item, DataComponentPatch.Builder builder) {
-        Lazy<? extends IContainerCreator<? extends CONTAINER, ATTACHED>> lazy = knownDefaultCreators.get(item.value());
+        addDefault(item, builder::set);
+    }
+
+    public void addDefault(Holder<Item> item, DataComponentMap.Builder builder) {
+        addDefault(item, builder::set);
+    }
+
+    private void addDefault(Holder<Item> item, BiConsumer<DataComponentType<ATTACHED>, ATTACHED> setter) {
+        Supplier<? extends IContainerCreator<? extends CONTAINER, ATTACHED>> lazy = knownDefaultCreators.get(item.value());
         if (lazy != null) {
             //Supports the type
             IContainerCreator<? extends CONTAINER, ATTACHED> containerCreator = lazy.get();
             int count = containerCreator.totalContainers();
             if (count > 0) {
-                builder.set(component.get(), containerCreator.initStorage(count));
+                setter.accept(component.get(), containerCreator.initStorage(count));
             }
         }
     }
@@ -347,15 +350,15 @@ public class ContainerType<CONTAINER extends INBTSerializable<CompoundTag>, ATTA
         if (handler != null) {
             read(provider, handler.getContainers(), save(provider, containers));
             //TODO - 1.21: FIX the getattached here?
-            stack.set(component, handler.getAttached());
+            stack.set(component.get(), handler.getAttached());
             if (stack.getCount() > 1) {
-                Mekanism.logger.error("Copied {} to a stack ({}). This might lead to duplication of data.", getComponentName(), stack);
+                LOGGER.error("Copied {} to a stack ({}). This might lead to duplication of data.", getComponentName(), stack);
             }
         }
     }
 
     public void copyToTile(TileEntityMekanism tile, BlockEntity.DataComponentInput input) {
-        ATTACHED attachedData = input.get(component);
+        ATTACHED attachedData = input.get(component.get());
         if (attachedData != null) {
             copyToTile.copy(tile, input, getContainers(tile), attachedData);
         }
@@ -373,7 +376,7 @@ public class ContainerType<CONTAINER extends INBTSerializable<CompoundTag>, ATTA
         if (!containers.isEmpty()) {
             ATTACHED attachedData = copyFromTile.copy(tile, builder, containers);
             if (attachedData != null) {
-                builder.set(component, attachedData);
+                builder.set(component.get(), attachedData);
             }
         }
     }

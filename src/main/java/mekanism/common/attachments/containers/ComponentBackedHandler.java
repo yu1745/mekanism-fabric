@@ -8,7 +8,7 @@ import mekanism.api.IContentsListener;
 import mekanism.api.annotations.NothingNullByDefault;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.common.util.INBTSerializable;
+import mekanism.api.INBTSerializable;
 import org.jetbrains.annotations.Nullable;
 
 @NothingNullByDefault

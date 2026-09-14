@@ -10,6 +10,11 @@ import mekanism.common.registration.MekanismDeferredHolder;
 import mekanism.common.registries.MekanismGameEvents;
 import mekanism.api.MekanismServerLifecycle;
 import mekanism.common.lib.MekanismServerState;
+import mekanism.common.lib.frequency.FrequencyManager;
+import mekanism.common.lib.multiblock.MultiblockManager;
+import mekanism.common.content.qio.QIOGlobalItemLookup;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import mekanism.fabric.config.FabricMekanismConfigManager;
 import mekanism.fabric.datamaps.FabricMekanismDataMaps;
 import mekanism.fabric.network.FabricMekanismNetworking;
@@ -56,6 +61,18 @@ public final class MekanismFabricBootstrap implements ModInitializer {
                 }
             }
         });
+        //World LOAD is after the world is installed in the server's level map. Never load SavedData at SERVER_STARTING.
+        ServerWorldEvents.LOAD.register((server, world) -> {
+            FrequencyManager.load();
+            MultiblockManager.createOrLoadAll();
+            QIOGlobalItemLookup.INSTANCE.createOrLoad();
+        });
+        ServerTickEvents.END_SERVER_TICK.register(server -> {
+            FrequencyManager.tick(server.tickRateManager().runsNormally());
+            mekanism.common.lib.transmitter.TransmitterNetworkRegistry.onTick(server);
+            //Original LOWEST post-tick pass: flush masters dirtied by later valves even while normal ticking is frozen.
+            MultiblockManager.endOfTickAll();
+        });
         FabricMekanismConfigManager.Registration startup = CONFIG_MANAGER.registerAndLoad(STARTUP_CONFIG);
         verifyStartupConfig(startup);
         FabricChemicalConfig.initializeCommon(CONFIG_MANAGER);
@@ -69,12 +86,16 @@ public final class MekanismFabricBootstrap implements ModInitializer {
         FabricChemicalNetworking.initialize();
         FabricTileUpdateNetworking.initialize();
         FabricContainerNetworking.initialize();
+        mekanism.fabric.radiation.FabricRadiationLifecycle.initialize();
         FabricMekanismDataMaps.initializeCallbacks();
         FabricCapabilityTileLifecycle.initialize();
+        mekanism.fabric.registry.FabricMekanismBlockRegistries.initialize();
         MekanismUsernameLifecycle.initialize();
         LOGGER.info("MEKANISM_FABRIC_NETWORK_PROOF protocol={} phase=configuration codecs={} server_receiver={} client_required={}",
               networking.protocolVersion(), networking.codecs(), networking.serverReceiver(), networking.clientRequired());
         MekanismGameEvents.GAME_EVENTS.registerAll(BuiltInRegistries.GAME_EVENT);
+        mekanism.common.registries.MekanismParticleTypes.PARTICLE_TYPES.registerAll(BuiltInRegistries.PARTICLE_TYPE);
+        mekanism.common.advancements.MekanismCriteriaTriggers.CRITERIA_TRIGGERS.registerAll(BuiltInRegistries.TRIGGER_TYPES);
 
         verifyGameEvent(MekanismGameEvents.SEISMIC_VIBRATION, "seismic_vibration", 64);
         verifyGameEvent(MekanismGameEvents.JETPACK_BURN, "jetpack_burn", 16);

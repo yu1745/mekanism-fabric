@@ -9,13 +9,13 @@ import mekanism.api.security.IOwnerObject;
 import mekanism.api.security.ISecurityObject;
 import mekanism.api.security.ISecurityUtils;
 import mekanism.api.security.SecurityMode;
-import mekanism.common.capabilities.Capabilities;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.capabilities.BlockCapability;
+import net.fabricmc.fabric.api.lookup.v1.block.BlockApiLookup;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -24,20 +24,20 @@ import org.jetbrains.annotations.Nullable;
 @NothingNullByDefault
 public class BlockSecurityUtils implements IBlockSecurityUtils {
 
-    private static final BlockCapability<IOwnerObject, Void> OWNER_CAPABILITY = BlockCapability.createVoid(Capabilities.OWNER_OBJECT_NAME, IOwnerObject.class);
-    private static final BlockCapability<ISecurityObject, Void> SECURITY_CAPABILITY = BlockCapability.createVoid(Capabilities.SECURITY_OBJECT_NAME, ISecurityObject.class);
+    private static final BlockApiLookup<IOwnerObject, Void> OWNER_CAPABILITY = BlockApiLookup.get(ResourceLocation.fromNamespaceAndPath("mekanism", "owner_object"), IOwnerObject.class, Void.class);
+    private static final BlockApiLookup<ISecurityObject, Void> SECURITY_CAPABILITY = BlockApiLookup.get(ResourceLocation.fromNamespaceAndPath("mekanism", "security_object"), ISecurityObject.class, Void.class);
 
     public static BlockSecurityUtils get() {
         return (BlockSecurityUtils) INSTANCE;
     }
 
     @Override
-    public BlockCapability<IOwnerObject, Void> ownerCapability() {
+    public BlockApiLookup<IOwnerObject, Void> ownerCapability() {
         return OWNER_CAPABILITY;
     }
 
     @Override
-    public BlockCapability<ISecurityObject, Void> securityCapability() {
+    public BlockApiLookup<ISecurityObject, Void> securityCapability() {
         return SECURITY_CAPABILITY;
     }
 
@@ -112,7 +112,7 @@ public class BlockSecurityUtils implements IBlockSecurityUtils {
                 // Get block state and block entity if they were not provided
                 BlockState state = knownState;
                 BlockEntity blockEntity = knownBlockEntity;
-                //Note: We use the same logic as BlockCapability uses for minimizing level queries here
+                //Match the native BlockApiLookup hint resolution, retaining one target for this security decision.
                 if (blockEntity == null) {
                     if (state == null) {
                         state = level.getBlockState(pos);

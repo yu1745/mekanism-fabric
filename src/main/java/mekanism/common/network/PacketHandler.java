@@ -69,7 +69,6 @@ public class PacketHandler extends BasePacketHandler {
     //Client to server instanced packets
 
     //Server to client instanced packets
-    private SimplePacketPayLoad showModeChange;
     private SimplePacketPayLoad killItemViewer;
 
     public PacketHandler(IEventBus modEventBus, Version version) {
@@ -81,7 +80,7 @@ public class PacketHandler extends BasePacketHandler {
     }
 
     public void showModeChange(ServerPlayer player) {
-        PacketDistributor.sendToPlayer(player, showModeChange);
+        net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(player, mekanism.common.network.to_client.PacketShowModeChange.INSTANCE);
     }
 
     public void killItemViewer(ServerPlayer player) {
@@ -95,7 +94,7 @@ public class PacketHandler extends BasePacketHandler {
         registrar.play(PacketEditFilter.TYPE, PacketEditFilter.STREAM_CODEC);
         registrar.play(PacketGearStateUpdate.TYPE, PacketGearStateUpdate.STREAM_CODEC);
         registrar.play(PacketGuiInteract.TYPE, PacketGuiInteract.STREAM_CODEC);
-        registrar.play(PacketItemGuiInteract.TYPE, PacketItemGuiInteract.STREAM_CODEC);
+        //The original item GUI interaction payload is registered by FabricContainerNetworking.
         registrar.play(PacketGuiSetEnergy.TYPE, PacketGuiSetEnergy.STREAM_CODEC);
         registrar.play(PacketKey.TYPE, PacketKey.STREAM_CODEC);
         registrar.play(PacketModeChange.TYPE, PacketModeChange.STREAM_CODEC);
@@ -147,11 +146,9 @@ public class PacketHandler extends BasePacketHandler {
         registrar.play(PacketLightningRender.TYPE, PacketLightningRender.STREAM_CODEC);
         registrar.play(PacketPlayerData.TYPE, PacketPlayerData.STREAM_CODEC);
         registrar.play(PacketPortalFX.TYPE, PacketPortalFX.STREAM_CODEC);
-        registrar.play(PacketEnvironmentalRadiationData.TYPE, PacketEnvironmentalRadiationData.STREAM_CODEC);
-        registrar.play(PacketPlayerRadiationData.TYPE, PacketPlayerRadiationData.STREAM_CODEC);
+        //Radiation payload codecs and receivers are owned by FabricRadiationLifecycle/FabricRadiationClientLifecycle.
         registrar.play(PacketResetPlayerClient.TYPE, PacketResetPlayerClient.STREAM_CODEC);
         registrar.play(PacketSyncSecurity.TYPE, PacketSyncSecurity.STREAM_CODEC);
-        showModeChange = registrar.playInstanced(Mekanism.rl("show_mode_change"), (ignored, context) -> MekanismStatusOverlay.INSTANCE.setTimer());
         registrar.play(PacketUpdateContainer.TYPE, PacketUpdateContainer.STREAM_CODEC);
         registrar.play(PacketUpdateTile.TYPE, PacketUpdateTile.STREAM_CODEC);
         registrar.play(PacketSetDeltaMovement.TYPE, PacketSetDeltaMovement.STREAM_CODEC);

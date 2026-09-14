@@ -2,9 +2,8 @@ package mekanism.common.tile;
 
 import mekanism.api.SerializationConstants;
 import mekanism.api.Upgrade;
-import mekanism.common.Mekanism;
-import mekanism.common.registries.MekanismBlocks;
-import mekanism.common.registries.MekanismTileEntityTypes;
+import mekanism.api.MekanismAPI;
+import mekanism.fabric.registry.FabricMekanismBlockRegistries;
 import mekanism.common.tile.base.TileEntityUpdateable;
 import mekanism.common.tile.component.TileComponentUpgrade;
 import mekanism.common.tile.interfaces.IBoundingBlock;
@@ -23,8 +22,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.redstone.Redstone;
-import net.neoforged.neoforge.capabilities.BlockCapability;
-import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
+import net.fabricmc.fabric.api.lookup.v1.block.BlockApiLookup;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -38,7 +36,7 @@ public class TileEntityBoundingBlock extends TileEntityUpdateable implements IUp
     private int currentRedstoneLevel;
 
     public TileEntityBoundingBlock(BlockPos pos, BlockState state) {
-        super(MekanismTileEntityTypes.BOUNDING_BLOCK, pos, state);
+        super(FabricMekanismBlockRegistries.BOUNDING_BLOCK_ENTITY, pos, state);
     }
 
     public void setMainLocation(@Nullable BlockPos pos, boolean sync) {
@@ -71,7 +69,7 @@ public class TileEntityBoundingBlock extends TileEntityUpdateable implements IUp
         BlockEntity tile = getMainTile(worldPosition);
         if (tile != null && !(tile instanceof IBoundingBlock)) {
             // On the off chance that another block got placed there (which seems only likely with corruption, go ahead and log what we found.)
-            Mekanism.logger.error("Found tile {} instead of an IBoundingBlock, at {} in {}. Multiblock cannot function", tile, getMainPos(),
+            MekanismAPI.logger.error("Found tile {} instead of an IBoundingBlock, at {} in {}. Multiblock cannot function", tile, getMainPos(),
                   level == null ? "null" : level.dimension().location());
             return null;
         }
@@ -175,13 +173,13 @@ public class TileEntityBoundingBlock extends TileEntityUpdateable implements IUp
         if (getMainTile(worldPosition) instanceof Nameable mainTile && mainTile.hasCustomName()) {
             return mainTile.getCustomName();
         }
-        return MekanismBlocks.BOUNDING_BLOCK.getTextComponent();
+        return FabricMekanismBlockRegistries.BOUNDING_BLOCK.getTextComponent();
     }
 
     @NotNull
     @Override
     public Component getDisplayName() {
-        return getMainTile(worldPosition) instanceof Nameable mainTile ? mainTile.getDisplayName() : MekanismBlocks.BOUNDING_BLOCK.getTextComponent();
+        return getMainTile(worldPosition) instanceof Nameable mainTile ? mainTile.getDisplayName() : FabricMekanismBlockRegistries.BOUNDING_BLOCK.getTextComponent();
     }
 
     @Nullable
@@ -190,24 +188,24 @@ public class TileEntityBoundingBlock extends TileEntityUpdateable implements IUp
         return getMainTile(worldPosition) instanceof Nameable mainTile ? mainTile.getCustomName() : null;
     }
 
-    public static <CAP> void proxyCapability(RegisterCapabilitiesEvent event, BlockCapability<CAP, @Nullable Direction> capability) {
-        event.registerBlock(capability, (level, pos, state, blockEntity, context) -> {
-            if (blockEntity instanceof TileEntityBoundingBlock bounding) {
+    public static <CAP> void proxyCapability(BlockApiLookup<CAP, @Nullable Direction> capability) {
+        capability.registerForBlocks((level, pos, state, blockEntity, context) -> {
+            if (blockEntity instanceof TileEntityBoundingBlock bounding && !bounding.isRemoved()) {
                 IBoundingBlock main = bounding.getMain();
                 if (main != null) {
                     return main.getOffsetCapability(capability, context, pos.subtract(bounding.getMainPos()));
                 }
             }
             return null;
-        }, MekanismBlocks.BOUNDING_BLOCK.value());
+        }, FabricMekanismBlockRegistries.BOUNDING_BLOCK.value());
     }
 
-    public static <CAP, CONTEXT> void alwaysProxyCapability(RegisterCapabilitiesEvent event, BlockCapability<CAP, CONTEXT> capability) {
-        event.registerBlock(capability, (level, pos, state, boundingBlock, context) -> {
-            if (boundingBlock instanceof TileEntityBoundingBlock bounding && bounding.canRedirectFrom(pos)) {
+    public static <CAP, CONTEXT> void alwaysProxyCapability(BlockApiLookup<CAP, CONTEXT> capability) {
+        capability.registerForBlocks((level, pos, state, boundingBlock, context) -> {
+            if (boundingBlock instanceof TileEntityBoundingBlock bounding && !bounding.isRemoved() && bounding.canRedirectFrom(pos)) {
                 return WorldUtils.getCapability(level, capability, bounding.getMainPos(), context);
             }
             return null;
-        }, MekanismBlocks.BOUNDING_BLOCK.value());
+        }, FabricMekanismBlockRegistries.BOUNDING_BLOCK.value());
     }
 }

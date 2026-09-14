@@ -50,11 +50,11 @@ public class ComponentBackedResistiveEnergyContainer extends ComponentBackedEner
     }
 
     private long getEnergyPerTick() {
-        return attachedTo.getOrDefault(MekanismDataComponents.ENERGY_USAGE, TileEntityResistiveHeater.BASE_USAGE);
+        return attachedTo.getOrDefault(MekanismDataComponents.ENERGY_USAGE.get(), TileEntityResistiveHeater.BASE_USAGE);
     }
 
     private void updateEnergyUsage(long energyUsage) {
-        attachedTo.set(MekanismDataComponents.ENERGY_USAGE, energyUsage);
+        attachedTo.set(MekanismDataComponents.ENERGY_USAGE.get(), energyUsage);
         //Clamp the energy
         setEnergy(getEnergy());
     }

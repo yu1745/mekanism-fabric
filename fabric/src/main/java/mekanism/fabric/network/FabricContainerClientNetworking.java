@@ -1,6 +1,8 @@
 package mekanism.fabric.network;
 
 import mekanism.common.inventory.container.QIOItemViewerContainer;
+import mekanism.common.network.to_client.PacketShowModeChange;
+import mekanism.client.render.hud.MekanismStatusOverlay;
 import mekanism.common.network.to_client.container.PacketUpdateContainer;
 import mekanism.common.network.to_client.qio.PacketQIOItemViewerKill;
 import mekanism.common.network.to_client.qio.PacketUpdateItemViewer;
@@ -37,6 +39,9 @@ public final class FabricContainerClientNetworking {
         }
         if (!ClientPlayNetworking.registerGlobalReceiver(PacketQIOItemViewerKill.TYPE, FabricContainerClientNetworking::handleKillItemViewer)) {
             throw new IllegalStateException("A client receiver is already registered for " + PacketQIOItemViewerKill.TYPE.id());
+        }
+        if (!ClientPlayNetworking.registerGlobalReceiver(PacketShowModeChange.TYPE, (payload, context) -> MekanismStatusOverlay.INSTANCE.setTimer())) {
+            throw new IllegalStateException("A client receiver is already registered for " + PacketShowModeChange.TYPE.id());
         }
         initialized = true;
     }

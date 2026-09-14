@@ -20,13 +20,9 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Rarity;
-import net.neoforged.bus.api.EventPriority;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.loading.FMLEnvironment;
-import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
-import net.neoforged.neoforge.common.DeferredSpawnEggItem;
-import net.neoforged.neoforge.event.ModifyDefaultComponentsEvent;
-import net.neoforged.neoforge.registries.RegisterEvent;
+import net.fabricmc.fabric.api.item.v1.DefaultItemComponentEvents;
+import net.minecraft.core.Registry;
+import net.minecraft.world.item.SpawnEggItem;
 import org.jetbrains.annotations.NotNull;
 
 @NothingNullByDefault
@@ -37,23 +33,16 @@ public class ItemDeferredRegister extends MekanismDeferredRegister<Item> {
     }
 
     @Override
-    public void register(@NotNull IEventBus bus) {
-        super.register(bus);
-        bus.addListener(RegisterCapabilitiesEvent.class, event -> forEntries(registryObject -> registryObject.registerCapabilities(event)));
-        //Listen at the lowest priority so that it happens after our elements have been registered
-        // and then see if any need to apply attachments
-        bus.addListener(EventPriority.LOWEST, RegisterEvent.class, event -> {
-            if (event.getRegistryKey().equals(Registries.ITEM)) {
-                forEntries(registryObject -> registryObject.attachDefaultContainers(bus));
-            }
-        });
-
-        bus.addListener(EventPriority.LOWEST, ModifyDefaultComponentsEvent.class, event -> forEntries(registryObject -> {
+    public void registerAll(Registry<Item> registry) {
+        super.registerAll(registry);
+        // Resolve every item's actual default creator after item construction, before exposing item handlers.
+        forEntries(ItemRegistryObject::attachDefaultContainers);
+        forEntries(ItemRegistryObject::registerCapabilities);
+        // Fabric's native callback runs after mod initialization against the actual item default component map.
+        DefaultItemComponentEvents.MODIFY.register(context -> forEntries(registryObject -> {
             if (ContainerType.anySupports(registryObject)) {
-                event.modify(registryObject, builder -> {
-                    for (ContainerType<?, ?, ?> type : ContainerType.TYPES) {
-                        type.addDefault(registryObject, builder);
-                    }
+                context.modify(registryObject.get(), builder -> {
+                    for (ContainerType<?, ?, ?> type : ContainerType.TYPES) type.addDefault(registryObject, builder);
                 });
             }
         }));
@@ -64,7 +53,7 @@ public class ItemDeferredRegister extends MekanismDeferredRegister<Item> {
             //Note: All entries should be of this type
             if (entry instanceof ItemRegistryObject<?> registryObject) {
                 consumer.accept(registryObject);
-            } else if (!FMLEnvironment.production) {
+            } else {
                 throw new IllegalStateException("Expected entry to be an ItemRegistryObject");
             }
         }
@@ -115,9 +104,9 @@ public class ItemDeferredRegister extends MekanismDeferredRegister<Item> {
         return (ItemRegistryObject<ITEM>) super.register(name, sup);
     }
 
-    public ItemRegistryObject<DeferredSpawnEggItem> registerSpawnEgg(MekanismDeferredHolder<EntityType<?>, ? extends EntityType<? extends Mob>> entityTypeProvider,
+    public ItemRegistryObject<SpawnEggItem> registerSpawnEgg(MekanismDeferredHolder<EntityType<?>, ? extends EntityType<? extends Mob>> entityTypeProvider,
           int primaryColor, int secondaryColor) {
-        return registerItem(entityTypeProvider.getName() + "_spawn_egg", props -> new DeferredSpawnEggItem(entityTypeProvider, primaryColor, secondaryColor, props));
+        return registerItem(entityTypeProvider.getName() + "_spawn_egg", props -> new SpawnEggItem(entityTypeProvider.get(), primaryColor, secondaryColor, props));
     }
 
     public static class StrictProperties extends Item.Properties {

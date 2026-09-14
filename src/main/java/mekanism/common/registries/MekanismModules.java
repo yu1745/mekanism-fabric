@@ -9,7 +9,6 @@ import mekanism.api.gear.ModuleData.ModuleDataBuilder;
 import mekanism.api.gear.config.ModuleBooleanConfig;
 import mekanism.api.gear.config.ModuleColorConfig;
 import mekanism.api.gear.config.ModuleEnumConfig;
-import mekanism.common.Mekanism;
 import mekanism.common.content.gear.mekasuit.GyroscopicStabilizationUnit;
 import mekanism.common.content.gear.mekasuit.ModuleChargeDistributionUnit;
 import mekanism.common.content.gear.mekasuit.ModuleDosimeterUnit;
@@ -77,7 +76,7 @@ public class MekanismModules {
         MekanismIMC.addMekaSuitBootsModules(HYDRAULIC_PROPULSION_UNIT, MAGNETIC_ATTRACTION_UNIT, FROST_WALKER_UNIT, SOUL_SURFER_UNIT);
     }
 
-    public static final ModuleDeferredRegister MODULES = new ModuleDeferredRegister(Mekanism.MODID);
+    public static final ModuleDeferredRegister MODULES = new ModuleDeferredRegister("mekanism");
 
     //Shared
     public static final ModuleRegistryObject<ModuleEnergyUnit> ENERGY_UNIT = MODULES.registerInstanced("energy_unit", ModuleEnergyUnit::new,

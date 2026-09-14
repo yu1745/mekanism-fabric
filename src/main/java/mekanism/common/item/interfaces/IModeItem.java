@@ -2,7 +2,8 @@ package mekanism.common.item.interfaces;
 
 import java.util.function.Function;
 import mekanism.client.render.hud.MekanismStatusOverlay;
-import mekanism.common.Mekanism;
+import mekanism.common.network.to_client.PacketShowModeChange;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import mekanism.common.lib.radial.IGenericRadialModeItem;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.network.chat.Component;
@@ -55,7 +56,7 @@ public interface IModeItem {
 
     static void displayModeChange(Player player) {
         if (player instanceof ServerPlayer serverPlayer) {
-            Mekanism.packetHandler().showModeChange(serverPlayer);
+            ServerPlayNetworking.send(serverPlayer, PacketShowModeChange.INSTANCE);
         } else {
             MekanismStatusOverlay.INSTANCE.setTimer();
         }

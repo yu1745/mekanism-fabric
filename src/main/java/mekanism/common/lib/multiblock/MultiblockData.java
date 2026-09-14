@@ -49,7 +49,6 @@ import net.minecraft.nbt.NbtUtils;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.redstone.Redstone;
-import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -509,7 +508,7 @@ public class MultiblockData implements IMekanismInventory, IMekanismFluidHandler
         }
     }
 
-    public record CapabilityOutputTarget<TYPE>(BlockCapabilityCache<TYPE, @Nullable Direction> cache, BooleanSupplier isActive) implements OutputTarget<BlockCapabilityCache<TYPE, @Nullable Direction>, Void> {
+    public record CapabilityOutputTarget<TYPE>(Supplier<@Nullable TYPE> cache, BooleanSupplier isActive) implements OutputTarget<Supplier<@Nullable TYPE>, Void> {
 
         @Override
         public boolean canOutput(Void unused) {
@@ -517,7 +516,7 @@ public class MultiblockData implements IMekanismInventory, IMekanismFluidHandler
         }
     }
 
-    public record AdvancedCapabilityOutputTarget<TYPE, DATA>(BlockCapabilityCache<TYPE, @Nullable Direction> cache, Predicate<DATA> isActive) implements OutputTarget<BlockCapabilityCache<TYPE, @Nullable Direction>, DATA> {
+    public record AdvancedCapabilityOutputTarget<TYPE, DATA>(Supplier<@Nullable TYPE> cache, Predicate<DATA> isActive) implements OutputTarget<Supplier<@Nullable TYPE>, DATA> {
 
         @Override
         public boolean canOutput(DATA data) {

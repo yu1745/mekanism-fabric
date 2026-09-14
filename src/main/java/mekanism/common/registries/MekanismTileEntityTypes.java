@@ -123,7 +123,7 @@ public class MekanismTileEntityTypes {
     private MekanismTileEntityTypes() {
     }
 
-    public static final TileEntityTypeDeferredRegister TILE_ENTITY_TYPES = new TileEntityTypeDeferredRegister(Mekanism.MODID);
+    public static final TileEntityTypeDeferredRegister TILE_ENTITY_TYPES = mekanism.fabric.registry.FabricMekanismBlockRegistries.TILE_ENTITY_TYPES;
 
     private static final Table<FactoryTier, FactoryType, TileEntityTypeRegistryObject<? extends TileEntityFactory<?>>> FACTORIES = HashBasedTable.create();
 
@@ -151,7 +151,7 @@ public class MekanismTileEntityTypes {
         FACTORIES.put(tier, type, tileRO);
     }
 
-    public static final TileEntityTypeRegistryObject<TileEntityBoundingBlock> BOUNDING_BLOCK = TILE_ENTITY_TYPES.builder(MekanismBlocks.BOUNDING_BLOCK, TileEntityBoundingBlock::new).build();
+    public static final TileEntityTypeRegistryObject<TileEntityBoundingBlock> BOUNDING_BLOCK = mekanism.fabric.registry.FabricMekanismBlockRegistries.BOUNDING_BLOCK_ENTITY;
 
     //Regular Tiles
     public static final TileEntityTypeRegistryObject<TileEntityBoilerCasing> BOILER_CASING = TILE_ENTITY_TYPES

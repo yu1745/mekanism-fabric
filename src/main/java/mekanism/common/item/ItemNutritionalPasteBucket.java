@@ -1,6 +1,5 @@
 package mekanism.common.item;
 
-import mekanism.common.capabilities.Capabilities;
 import mekanism.common.capabilities.ICapabilityAware;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.util.MekanismUtils;
@@ -18,15 +17,19 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.UseAnim;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.material.Fluid;
-import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
-import net.neoforged.neoforge.fluids.FluidType;
-import net.neoforged.neoforge.fluids.capability.wrappers.FluidBucketWrapper;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidConstants;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidStorage;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
+import net.fabricmc.fabric.api.transfer.v1.fluid.base.FullItemFluidStorage;
 import org.jetbrains.annotations.NotNull;
 
 public class ItemNutritionalPasteBucket extends BucketItem implements ICapabilityAware {
 
+    private final Fluid containedFluid;
+
     public ItemNutritionalPasteBucket(Fluid fluid, Properties builder) {
         super(fluid, builder);
+        this.containedFluid = fluid;
     }
 
     @Override
@@ -44,7 +47,7 @@ public class ItemNutritionalPasteBucket extends BucketItem implements ICapabilit
     @Override
     public InteractionResultHolder<ItemStack> use(@NotNull Level level, @NotNull Player player, @NotNull InteractionHand hand) {
         if (MekanismUtils.isPlayingMode(player)) {
-            int needed = Math.min(20 - player.getFoodData().getFoodLevel(), FluidType.BUCKET_VOLUME / MekanismConfig.general.nutritionalPasteMBPerFood.get());
+            int needed = Math.min(20 - player.getFoodData().getFoodLevel(), 1_000 / MekanismConfig.general.nutritionalPasteMBPerFood.get());
             if (needed > 0) {
                 return ItemUtils.startUsingInstantly(level, player, hand);
             }
@@ -56,7 +59,7 @@ public class ItemNutritionalPasteBucket extends BucketItem implements ICapabilit
     @Override
     public ItemStack finishUsingItem(@NotNull ItemStack stack, @NotNull Level level, @NotNull LivingEntity entity) {
         if (entity instanceof Player player && MekanismUtils.isPlayingMode(player)) {
-            int needed = Math.min(20 - player.getFoodData().getFoodLevel(), FluidType.BUCKET_VOLUME / MekanismConfig.general.nutritionalPasteMBPerFood.get());
+            int needed = Math.min(20 - player.getFoodData().getFoodLevel(), 1_000 / MekanismConfig.general.nutritionalPasteMBPerFood.get());
             if (needed > 0) {
                 if (entity instanceof ServerPlayer serverPlayer) {
                     CriteriaTriggers.CONSUME_ITEM.trigger(serverPlayer, stack);
@@ -73,7 +76,8 @@ public class ItemNutritionalPasteBucket extends BucketItem implements ICapabilit
     }
 
     @Override
-    public void attachCapabilities(RegisterCapabilitiesEvent event) {
-        event.registerItem(Capabilities.FLUID.item(), (stack, ctx) -> new FluidBucketWrapper(stack), this);
+    public void attachCapabilities() {
+        FluidStorage.ITEM.registerForItems((stack, context) -> new FullItemFluidStorage(context, Items.BUCKET,
+              FluidVariant.of(containedFluid), FluidConstants.BUCKET), this);
     }
 }

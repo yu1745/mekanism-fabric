@@ -96,14 +96,14 @@ public class ComponentBackedBinInventorySlot extends ComponentBackedInventorySlo
      */
     public void setLockStack(@NotNull ItemStack stack) {
         if (stack.isEmpty()) {
-            attachedTo.remove(MekanismDataComponents.LOCK);
+            attachedTo.remove(MekanismDataComponents.LOCK.get());
         } else {
-            attachedTo.set(MekanismDataComponents.LOCK, LockData.create(stack));
+            attachedTo.set(MekanismDataComponents.LOCK.get(), LockData.create(stack));
         }
     }
 
     public ItemStack getLockStack() {
-        return attachedTo.getOrDefault(MekanismDataComponents.LOCK, LockData.EMPTY).lock();
+        return attachedTo.getOrDefault(MekanismDataComponents.LOCK.get(), LockData.EMPTY).lock();
     }
 
     @Override

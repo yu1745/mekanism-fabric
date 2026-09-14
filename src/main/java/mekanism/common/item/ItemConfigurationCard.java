@@ -8,7 +8,7 @@ import mekanism.api.text.EnumColor;
 import mekanism.api.text.TextComponentUtil;
 import mekanism.common.MekanismLang;
 import mekanism.common.advancements.MekanismCriteriaTriggers;
-import mekanism.common.capabilities.Capabilities;
+import mekanism.fabric.tile.MekanismBlockLookups;
 import mekanism.common.registries.MekanismDataComponents;
 import mekanism.common.util.NBTUtils;
 import mekanism.common.util.WorldUtils;
@@ -56,7 +56,7 @@ public class ItemConfigurationCard extends Item {
         Level world = context.getLevel();
         BlockPos pos = context.getClickedPos();
         Direction side = context.getClickedFace();
-        IConfigCardAccess configCardAccess = WorldUtils.getCapability(world, Capabilities.CONFIG_CARD, pos, side);
+        IConfigCardAccess configCardAccess = MekanismBlockLookups.CONFIG_CARD.find(world, pos, side);
         if (configCardAccess != null) {
             if (!IBlockSecurityUtils.INSTANCE.canAccessOrDisplayError(player, world, pos)) {
                 return InteractionResult.FAIL;
@@ -68,7 +68,7 @@ public class ItemConfigurationCard extends Item {
                     CompoundTag data = configCardAccess.getConfigurationData(world.registryAccess(), player);
                     data.putString(SerializationConstants.DATA_NAME, translationKey);
                     NBTUtils.writeRegistryEntry(data, SerializationConstants.DATA_TYPE, BuiltInRegistries.BLOCK, configCardAccess.getConfigurationDataType());
-                    stack.set(MekanismDataComponents.CONFIGURATION_DATA, data);
+                    stack.set(MekanismDataComponents.CONFIGURATION_DATA.get(), data);
                     player.displayClientMessage(MekanismLang.CONFIG_CARD_GOT.translate(EnumColor.INDIGO, TextComponentUtil.translate(translationKey)), true);
                     MekanismCriteriaTriggers.CONFIGURATION_CARD.value().trigger((ServerPlayer) player, true);
                 }
@@ -101,7 +101,7 @@ public class ItemConfigurationCard extends Item {
         if (player.isShiftKeyDown()) {
             ItemStack configCard = player.getItemInHand(usedHand);
             if (!level.isClientSide) {
-                configCard.remove(MekanismDataComponents.CONFIGURATION_DATA);
+                configCard.remove(MekanismDataComponents.CONFIGURATION_DATA.get());
                 player.displayClientMessage(MekanismLang.CONFIG_CARD_CLEARED.translate(), true);
             }
             return InteractionResultHolder.sidedSuccess(configCard, level.isClientSide);
@@ -111,7 +111,7 @@ public class ItemConfigurationCard extends Item {
 
     @Nullable
     private CompoundTag getData(ItemStack stack) {
-        CompoundTag data = stack.get(MekanismDataComponents.CONFIGURATION_DATA);
+        CompoundTag data = stack.get(MekanismDataComponents.CONFIGURATION_DATA.get());
         if (data == null || data.isEmpty()) {
             return null;
         }

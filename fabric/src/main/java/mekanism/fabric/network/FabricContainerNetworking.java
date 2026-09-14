@@ -1,9 +1,11 @@
 package mekanism.fabric.network;
 
 import mekanism.common.network.to_client.container.PacketUpdateContainer;
+import mekanism.common.network.to_client.PacketShowModeChange;
 import mekanism.common.network.to_client.qio.PacketQIOItemViewerKill;
 import mekanism.common.network.to_client.qio.PacketUpdateItemViewer;
 import mekanism.common.network.to_server.PacketWindowSelect;
+import mekanism.common.network.to_server.PacketItemGuiInteract;
 import mekanism.common.network.to_server.qio.PacketQIOClearCraftingWindow;
 import mekanism.common.network.to_server.qio.PacketQIOFillCraftingWindow;
 import mekanism.common.network.to_server.qio.PacketQIOItemViewerSlotPlace;
@@ -40,14 +42,17 @@ public final class FabricContainerNetworking {
         PayloadTypeRegistry.playS2C().register(PacketUpdateContainer.TYPE, PacketUpdateContainer.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(PacketUpdateItemViewer.TYPE, PacketUpdateItemViewer.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(PacketQIOItemViewerKill.TYPE, PacketQIOItemViewerKill.STREAM_CODEC);
+        PayloadTypeRegistry.playS2C().register(PacketShowModeChange.TYPE, PacketShowModeChange.STREAM_CODEC);
         //C2S container/QIO interaction payloads (server receivers below)
         PayloadTypeRegistry.playC2S().register(PacketWindowSelect.TYPE, PacketWindowSelect.STREAM_CODEC);
+        PayloadTypeRegistry.playC2S().register(PacketItemGuiInteract.TYPE, PacketItemGuiInteract.STREAM_CODEC);
         PayloadTypeRegistry.playC2S().register(PacketQIOClearCraftingWindow.TYPE, PacketQIOClearCraftingWindow.STREAM_CODEC);
         PayloadTypeRegistry.playC2S().register(PacketQIOFillCraftingWindow.TYPE, PacketQIOFillCraftingWindow.STREAM_CODEC);
         PayloadTypeRegistry.playC2S().register(PacketQIOItemViewerSlotPlace.TYPE, PacketQIOItemViewerSlotPlace.STREAM_CODEC);
         PayloadTypeRegistry.playC2S().register(PacketQIOItemViewerSlotShiftTake.TYPE, PacketQIOItemViewerSlotShiftTake.STREAM_CODEC);
         PayloadTypeRegistry.playC2S().register(PacketQIOItemViewerSlotTake.TYPE, PacketQIOItemViewerSlotTake.STREAM_CODEC);
         dispatch(PacketWindowSelect.TYPE, PacketWindowSelect::handle);
+        dispatch(PacketItemGuiInteract.TYPE, PacketItemGuiInteract::handle);
         dispatch(PacketQIOClearCraftingWindow.TYPE, PacketQIOClearCraftingWindow::handle);
         dispatch(PacketQIOFillCraftingWindow.TYPE, PacketQIOFillCraftingWindow::handle);
         dispatch(PacketQIOItemViewerSlotPlace.TYPE, PacketQIOItemViewerSlotPlace::handle);

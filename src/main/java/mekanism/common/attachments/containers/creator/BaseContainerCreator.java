@@ -6,7 +6,7 @@ import mekanism.common.attachments.containers.ContainerType;
 import mekanism.common.attachments.containers.IAttachedContainers;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.common.util.INBTSerializable;
+import mekanism.api.INBTSerializable;
 
 @NothingNullByDefault
 public abstract class BaseContainerCreator<ATTACHED extends IAttachedContainers<?, ATTACHED>, CONTAINER extends INBTSerializable<CompoundTag>> implements IContainerCreator<CONTAINER, ATTACHED> {

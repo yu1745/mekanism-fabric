@@ -20,9 +20,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ItemLike;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
-import net.neoforged.neoforge.common.util.INBTSerializable;
+import mekanism.api.INBTSerializable;
 import org.jetbrains.annotations.ApiStatus.Internal;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -32,7 +30,7 @@ public class ItemRegistryObject<ITEM extends Item> extends MekanismDeferredHolde
     @Nullable
     private Map<ContainerType<?, ?, ?>, Supplier<? extends IContainerCreator<?, ?>>> defaultCreators;
     @Nullable
-    private List<Consumer<RegisterCapabilitiesEvent>> containerCapabilities;
+    private List<Runnable> containerCapabilities;
 
     public ItemRegistryObject(ResourceKey<Item> key) {
         super(key);
@@ -90,18 +88,18 @@ public class ItemRegistryObject<ITEM extends Item> extends MekanismDeferredHolde
         if (containerCapabilities == null) {
             containerCapabilities = new ArrayList<>();
         }
-        containerCapabilities.add(event -> containerType.registerItemCapabilities(event, get(), false, requiredConfigs));
+        containerCapabilities.add(() -> containerType.registerItemCapabilities(get(), false, requiredConfigs));
         return this;
     }
 
     @Internal
-    void registerCapabilities(RegisterCapabilitiesEvent event) {
+    void registerCapabilities() {
         if (get() instanceof ICapabilityAware capabilityAware) {
-            capabilityAware.attachCapabilities(event);
+            capabilityAware.attachCapabilities();
         }
         if (containerCapabilities != null) {
-            for (Consumer<RegisterCapabilitiesEvent> consumer : containerCapabilities) {
-                consumer.accept(event);
+            for (Runnable registration : containerCapabilities) {
+                registration.run();
             }
             //We only allow registering once, and then we allow the memory to be freed up
             containerCapabilities = null;
@@ -110,15 +108,15 @@ public class ItemRegistryObject<ITEM extends Item> extends MekanismDeferredHolde
 
     @Internal
     @SuppressWarnings({"unchecked", "rawtypes"})
-    void attachDefaultContainers(IEventBus eventBus) {
+    void attachDefaultContainers() {
         ITEM item = get();
         if (item instanceof IAttachmentAware attachmentAware) {
-            attachmentAware.attachAttachments(eventBus);
+            attachmentAware.attachAttachments();
         }
         if (defaultCreators != null) {
             for (Map.Entry<ContainerType<?, ?, ?>, Supplier<? extends IContainerCreator<?, ?>>> entry : defaultCreators.entrySet()) {
-                //Note: We pass null for the event bus to not expose this attachment as a capability
-                entry.getKey().addDefaultCreators(null, item, (Supplier) entry.getValue());
+                // Attachment-only declarations do not expose a transfer lookup.
+                entry.getKey().addDefaultCreators(false, item, (Supplier) entry.getValue());
             }
             //We only allow them being attached once
             defaultCreators = null;

@@ -18,7 +18,7 @@ import mekanism.api.inventory.IInventorySlot;
 import mekanism.api.recipes.MekanismRecipe;
 import mekanism.api.recipes.cache.CachedRecipe;
 import mekanism.api.recipes.cache.CachedRecipe.OperationTracker.RecipeError;
-import mekanism.common.CommonWorldTickHandler;
+import mekanism.common.recipe.lookup.cache.RecipeCacheContext;
 import mekanism.common.block.attribute.Attribute;
 import mekanism.common.block.attribute.AttributeFactoryType;
 import mekanism.common.capabilities.energy.MachineEnergyContainer;
@@ -232,7 +232,7 @@ public abstract class TileEntityFactory<RECIPE extends MekanismRecipe<?>> extend
             // being required), we want to make sure we are able to fill those slots
             // with other items.
             sortInventory();
-        } else if (!sortingNeeded && CommonWorldTickHandler.flushTagAndRecipeCaches) {
+        } else if (!sortingNeeded && RecipeCacheContext.isInvalidationPending()) {
             //Otherwise, if sorting isn't currently needed and the recipe cache is invalid
             // Mark sorting as being needed again for the next check as recipes may
             // have changed so our current sort may be incorrect
@@ -285,7 +285,7 @@ public abstract class TileEntityFactory<RECIPE extends MekanismRecipe<?>> extend
     @Nullable
     protected RECIPE getRecipeForInput(int process, @NotNull ItemStack fallbackInput, @NotNull IInventorySlot outputSlot, @Nullable IInventorySlot secondaryOutputSlot,
           boolean updateCache) {
-        if (!CommonWorldTickHandler.flushTagAndRecipeCaches) {
+        if (!RecipeCacheContext.isInvalidationPending()) {
             //If our recipe caches are valid, grab our cached recipe and see if it is still valid
             CachedRecipe<RECIPE> cached = getCachedRecipe(process);
             if (isCachedRecipeValid(cached, fallbackInput)) {
@@ -535,7 +535,7 @@ public abstract class TileEntityFactory<RECIPE extends MekanismRecipe<?>> extend
                 RecipeProcessInfo<RECIPE> recipeProcessInfo = processes.computeIfAbsent(inputStack, i -> new RecipeProcessInfo<>());
                 recipeProcessInfo.processes.add(processInfo);
                 recipeProcessInfo.totalCount += inputStack.getCount();
-                if (recipeProcessInfo.lazyMinPerSlot == null && !CommonWorldTickHandler.flushTagAndRecipeCaches) {
+                if (recipeProcessInfo.lazyMinPerSlot == null && !RecipeCacheContext.isInvalidationPending()) {
                     //If we don't have a lazily initialized min per slot calculation set for it yet
                     // and our cache is not invalid/out of date due to a reload
                     CachedRecipe<RECIPE> cachedRecipe = getCachedRecipe(processInfo.process());

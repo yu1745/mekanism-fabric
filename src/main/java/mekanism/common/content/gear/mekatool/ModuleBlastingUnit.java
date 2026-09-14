@@ -19,7 +19,6 @@ import mekanism.api.radial.mode.NestedRadialMode;
 import mekanism.api.text.EnumColor;
 import mekanism.api.text.IHasTextComponent;
 import mekanism.api.text.ILangEntry;
-import mekanism.common.Mekanism;
 import mekanism.common.MekanismLang;
 import mekanism.common.util.MekanismUtils;
 import net.minecraft.Util;
@@ -31,23 +30,23 @@ import net.minecraft.util.ByIdMap;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.common.TranslatableEnum;
-import net.neoforged.neoforge.common.util.Lazy;
+import com.google.common.base.Suppliers;
+import java.util.function.Supplier;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @ParametersAreNotNullByDefault
 public record ModuleBlastingUnit(BlastRadius blastRadius) implements ICustomModule<ModuleBlastingUnit> {
 
-    public static final ResourceLocation BLAST_RADIUS = Mekanism.rl("blast_radius");
+    public static final ResourceLocation BLAST_RADIUS = ResourceLocation.fromNamespaceAndPath("mekanism", "blast_radius");
 
-    private static final ResourceLocation RADIAL_ID = Mekanism.rl("blasting_mode");
-    private static final Int2ObjectMap<Lazy<NestedRadialMode>> RADIAL_DATAS = Util.make(() -> {
+    private static final ResourceLocation RADIAL_ID = ResourceLocation.fromNamespaceAndPath("mekanism", "blasting_mode");
+    private static final Int2ObjectMap<Supplier<NestedRadialMode>> RADIAL_DATAS = Util.make(() -> {
         int types = BlastRadius.values().length - 1;
-        Int2ObjectMap<Lazy<NestedRadialMode>> map = new Int2ObjectArrayMap<>(types);
+        Int2ObjectMap<Supplier<NestedRadialMode>> map = new Int2ObjectArrayMap<>(types);
         for (int type = 1; type <= types; type++) {
             int accessibleValues = type + 1;
-            map.put(type, Lazy.of(() -> new NestedRadialMode(IRadialDataHelper.INSTANCE.dataForTruncated(RADIAL_ID, accessibleValues, BlastRadius.LOW),
+            map.put(type, Suppliers.memoize(() -> new NestedRadialMode(IRadialDataHelper.INSTANCE.dataForTruncated(RADIAL_ID, accessibleValues, BlastRadius.LOW),
                   MekanismLang.RADIAL_BLASTING_POWER, BlastRadius.LOW.icon(), EnumColor.DARK_BLUE)));
         }
         return map;
@@ -103,7 +102,7 @@ public record ModuleBlastingUnit(BlastRadius blastRadius) implements ICustomModu
     }
 
     @NothingNullByDefault
-    public enum BlastRadius implements IHasTextComponent, TranslatableEnum, IRadialMode, StringRepresentable {
+    public enum BlastRadius implements IHasTextComponent, IRadialMode, StringRepresentable {
         OFF(0, MekanismLang.RADIAL_BLASTING_POWER_OFF, EnumColor.WHITE, "blasting_off"),
         LOW(1, MekanismLang.RADIAL_BLASTING_POWER_LOW, EnumColor.BRIGHT_GREEN, "blasting_low"),
         MED(2, MekanismLang.RADIAL_BLASTING_POWER_MED, EnumColor.YELLOW, "blasting_med"),
@@ -145,7 +144,6 @@ public record ModuleBlastingUnit(BlastRadius blastRadius) implements ICustomModu
             return langEntry.translateColored(color);
         }
 
-        @Override
         public Component getTranslatedName() {
             return sliceName();
         }

@@ -2,8 +2,6 @@ package mekanism.common.inventory.container.sync.dynamic;
 
 import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.Multimap;
-import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
-import java.lang.annotation.ElementType;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -11,8 +9,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -22,29 +19,24 @@ import mekanism.api.chemical.IChemicalTank;
 import mekanism.api.energy.IEnergyContainer;
 import mekanism.api.fluid.IExtendedFluidTank;
 import mekanism.api.heat.IHeatCapacitor;
-import mekanism.common.Mekanism;
+import mekanism.api.MekanismAPI;
 import mekanism.common.capabilities.heat.BasicHeatCapacitor;
 import mekanism.common.capabilities.merged.MergedTank;
 import mekanism.common.inventory.container.MekanismContainer;
 import mekanism.common.inventory.container.sync.ISyncableData;
 import mekanism.common.inventory.container.sync.SyncableEnum;
-import mekanism.common.lib.MekAnnotationScanner.BaseAnnotationScanner;
 import mekanism.common.lib.math.voxel.VoxelCuboid;
 import mekanism.common.network.to_client.container.property.PropertyType;
 import mekanism.common.util.LambdaMetaFactoryUtil;
 import net.minecraft.core.BlockPos;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.IFluidTank;
-import net.neoforged.neoforgespi.language.IModFileInfo;
-import net.neoforged.neoforgespi.language.ModFileScanData.AnnotationData;
-import org.objectweb.asm.Type;
+import mekanism.api.fluid.FluidStack;
 
-public class SyncMapper extends BaseAnnotationScanner {
+public class SyncMapper {
 
     public static final SyncMapper INSTANCE = new SyncMapper();
     public static final String DEFAULT_TAG = "default";
     private final List<SpecialPropertyHandler<?>> specialProperties = new ArrayList<>();
-    private final Map<Class<?>, PropertyDataClassCache> syncablePropertyMap = new Object2ObjectOpenHashMap<>();
+    private final Map<Class<?>, PropertyDataClassCache> syncablePropertyMap = new ConcurrentHashMap<>();
 
     private SyncMapper() {
         //Note: We use unchecked setters here as there is no good way to determine if we are on the server or the client
@@ -53,7 +45,7 @@ public class SyncMapper extends BaseAnnotationScanner {
         // longer is valid, we want to ensure that the client is able to properly render it instead of printing an error due
         // to the client thinking that it is invalid
         specialProperties.add(new SpecialPropertyHandler<>(IExtendedFluidTank.class,
-              SpecialPropertyData.create(FluidStack.class, IFluidTank::getFluid, IExtendedFluidTank::setStackUnchecked)
+              SpecialPropertyData.create(FluidStack.class, IExtendedFluidTank::getFluid, IExtendedFluidTank::setStackUnchecked)
         ));
         specialProperties.add(new SpecialPropertyHandler<>(IChemicalTank.class,
               SpecialPropertyData.create(ChemicalStack.class, IChemicalTank::getStack, IChemicalTank::setStackUnchecked)
@@ -75,27 +67,21 @@ public class SyncMapper extends BaseAnnotationScanner {
         ));
     }
 
-    @Override
-    protected Map<ElementType, Type[]> getSupportedTypes() {
-        return Collections.singletonMap(ElementType.FIELD, new Type[]{Type.getType(ContainerSync.class)});
-    }
-
-    @Override
-    protected void collectScanData(Map<String, Class<?>> classNameCache, Map<Class<?>, List<AnnotationData>> knownClasses, Set<IModFileInfo> modFileData) {
-        Map<Class<?>, List<PropertyFieldInfo>> rawPropertyMap = new Object2ObjectOpenHashMap<>();
-        //Only create the list once for the default fallback
-        List<String> fallbackTagsList = Collections.singletonList(DEFAULT_TAG);
-        for (Entry<Class<?>, List<AnnotationData>> entry : knownClasses.entrySet()) {
-            Class<?> annotatedClass = entry.getKey();
-            List<PropertyFieldInfo> propertyInfo = new ArrayList<>();
-            rawPropertyMap.put(annotatedClass, propertyInfo);
-            for (AnnotationData data : entry.getValue()) {
-                String fieldName = data.memberName();
-                Field field = getField(annotatedClass, fieldName);
-                if (field == null) {
+    /**
+     * Collect only the real menu holder's hierarchy. ContainerSync is runtime-retained, so native reflection
+     * provides the same field metadata without loading every class in every installed mod at startup.
+     * Both logical sides publish the complete immutable cache through ConcurrentHashMap.
+     */
+    private PropertyDataClassCache collectScanData(Class<?> holderClass) {
+        List<PropertyFieldInfo> propertyInfo = new ArrayList<>();
+        for (Class<?> annotatedClass = holderClass; annotatedClass != null; annotatedClass = annotatedClass.getSuperclass()) {
+            for (Field field : annotatedClass.getDeclaredFields()) {
+                ContainerSync data = field.getDeclaredAnnotation(ContainerSync.class);
+                if (data == null) {
                     continue;
                 }
-                String getterName = getAnnotationValue(data, "getter", "");
+                String fieldName = field.getName();
+                String getterName = data.getter();
                 PropertyField newField;
                 Class<?> fieldType = field.getType();
                 SpecialPropertyHandler<?> handler = null;
@@ -106,9 +92,10 @@ public class SyncMapper extends BaseAnnotationScanner {
                     }
                 }
                 try {
+                    field.setAccessible(true);
                     if (handler == null) {
                         PropertyType type = PropertyType.getFromType(fieldType);
-                        String setterName = getAnnotationValue(data, "setter", "");
+                        String setterName = data.setter();
                         if (type != null) {
                             newField = new PropertyField(new TrackedFieldData(LambdaMetaFactoryUtil.createGetter(field, annotatedClass, getterName),
                                   LambdaMetaFactoryUtil.createSetter(field, annotatedClass, setterName), type));
@@ -121,36 +108,34 @@ public class SyncMapper extends BaseAnnotationScanner {
                             if (arrayType != null) {
                                 newField = new PropertyField(new ArrayFieldData(LambdaMetaFactoryUtil.createGetter(field, annotatedClass, getterName), arrayType));
                             } else {
-                                Mekanism.logger.error("Attempted to sync an invalid array field '{}' in class '{}'.", fieldName, annotatedClass.getSimpleName());
+                                MekanismAPI.logger.error("Attempted to sync an invalid array field '{}' in class '{}'.", fieldName, annotatedClass.getSimpleName());
                                 continue;
                             }
                         } else {
-                            Mekanism.logger.error("Attempted to sync an invalid field '{}' in class '{}'.", fieldName, annotatedClass.getSimpleName());
+                            MekanismAPI.logger.error("Attempted to sync an invalid field '{}' in class '{}'.", fieldName, annotatedClass.getSimpleName());
                             continue;
                         }
                     } else {
                         newField = createSpecialProperty(handler, field, annotatedClass, getterName);
                     }
                 } catch (Throwable throwable) {
-                    Mekanism.logger.error("Failed to create sync data for field '{}' in class '{}'.", fieldName, annotatedClass.getSimpleName(), throwable);
+                    MekanismAPI.logger.error("Failed to create sync data for field '{}' in class '{}'.", fieldName, annotatedClass.getSimpleName(), throwable);
                     continue;
                 }
                 String fullPath = annotatedClass.getName() + "#" + fieldName;
-                //If the annotation data has tags add them, and otherwise fallback to the default tag
-                for (String tag : getAnnotationValue(data, "tags", fallbackTagsList)) {
+                //Runtime annotation defaults retain the original default tag, including an explicitly empty tag list.
+                for (String tag : data.tags()) {
                     propertyInfo.add(new PropertyFieldInfo(fullPath, tag, newField));
                 }
             }
         }
-        List<ClassBasedInfo<PropertyFieldInfo>> propertyMap = combineWithParents(rawPropertyMap);
-        for (ClassBasedInfo<PropertyFieldInfo> classPropertyInfo : propertyMap) {
-            PropertyDataClassCache cache = new PropertyDataClassCache();
-            classPropertyInfo.infoList().sort(Comparator.comparing(info -> info.fieldPath() + "|" + info.tag()));
-            for (PropertyFieldInfo field : classPropertyInfo.infoList()) {
-                cache.propertyFieldMap.put(field.tag, field.field);
-            }
-            syncablePropertyMap.put(classPropertyInfo.clazz(), cache);
+        PropertyDataClassCache cache = new PropertyDataClassCache();
+        //Packet property indexes depend on this full-path/tag ordering, not reflection's unspecified field order.
+        propertyInfo.sort(Comparator.comparing(info -> info.fieldPath() + "|" + info.tag()));
+        for (PropertyFieldInfo field : propertyInfo) {
+            cache.propertyFieldMap.put(field.tag, field.field);
         }
+        return cache;
     }
 
     public void setup(MekanismContainer container, Class<?> holderClass, Supplier<Object> holderSupplier) {
@@ -158,11 +143,7 @@ public class SyncMapper extends BaseAnnotationScanner {
     }
 
     public void setup(MekanismContainer container, Class<?> holderClass, Supplier<Object> holderSupplier, String tag) {
-        PropertyDataClassCache cache = syncablePropertyMap.get(holderClass);
-        if (cache == null) {
-            cache = getData(syncablePropertyMap, holderClass, PropertyDataClassCache.EMPTY);
-            syncablePropertyMap.put(holderClass, cache);
-        }
+        PropertyDataClassCache cache = syncablePropertyMap.computeIfAbsent(holderClass, this::collectScanData);
         for (PropertyField field : cache.propertyFieldMap.get(tag)) {
             for (TrackedFieldData data : field.trackedData) {
                 data.track(container, holderSupplier);
@@ -185,8 +166,6 @@ public class SyncMapper extends BaseAnnotationScanner {
     }
 
     private static class PropertyDataClassCache {
-
-        private static final PropertyDataClassCache EMPTY = new PropertyDataClassCache();
 
         //Note: This needs to be a linked map to ensure that the order is preserved
         private final Multimap<String, PropertyField> propertyFieldMap = LinkedHashMultimap.create();
@@ -261,14 +240,14 @@ public class SyncMapper extends BaseAnnotationScanner {
                 //Note: We don't support arrays of arrays
                 PropertyType type = PropertyType.getFromType(arrayType);
                 if (type == null) {
-                    Mekanism.logger.error("Tried to create property data for invalid array type '{}'.", arrayType.getName());
+                    MekanismAPI.logger.error("Tried to create property data for invalid array type '{}'.", arrayType.getName());
                     return null;
                 }
                 return new ArrayFieldData(getter, type);
             }
             PropertyType type = PropertyType.getFromType(propertyType);
             if (type == null) {
-                Mekanism.logger.error("Tried to create property data for invalid type '{}'.", propertyType.getName());
+                MekanismAPI.logger.error("Tried to create property data for invalid type '{}'.", propertyType.getName());
                 return null;
             }
             return new TrackedFieldData(getter, setter, type);
@@ -329,10 +308,10 @@ public class SyncMapper extends BaseAnnotationScanner {
                         }));
                     }
                 } else {
-                    Mekanism.logger.error("Unexpected field type '{}' is not an array.", field.getClass());
+                    MekanismAPI.logger.error("Unexpected field type '{}' is not an array.", field.getClass());
                 }
             } else {
-                Mekanism.logger.error("Unable to get holder object to add array tracker to.");
+                MekanismAPI.logger.error("Unable to get holder object to add array tracker to.");
             }
         }
 

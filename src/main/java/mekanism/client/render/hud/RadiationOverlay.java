@@ -1,10 +1,10 @@
 package mekanism.client.render.hud;
 
 import mekanism.api.radiation.IRadiationManager;
-import mekanism.client.render.MekanismRenderer;
+import net.minecraft.client.renderer.RenderType;
 import mekanism.common.lib.radiation.RadiationManager;
 import mekanism.common.lib.radiation.RadiationScale;
-import mekanism.common.registries.MekanismAttachmentTypes;
+import mekanism.fabric.radiation.FabricRadiationAttachments;
 import mekanism.common.util.MekanismUtils;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -32,7 +32,7 @@ public class RadiationOverlay implements LayeredDraw.Layer {
         Minecraft minecraft = Minecraft.getInstance();
         Player player = minecraft.player;
         if (player != null && RadiationManager.isGlobalRadiationEnabled() && MekanismUtils.isPlayingMode(player)) {
-            double radiation = player.getData(MekanismAttachmentTypes.RADIATION);
+            double radiation = FabricRadiationAttachments.getRadiation(player);
             double severity = RadiationScale.getScaledDoseSeverity(radiation) * 0.8;
             //Only update the previous radiation level at most once a tick
             if (lastTick != minecraft.gui.getGuiTicks()) {
@@ -47,7 +47,7 @@ public class RadiationOverlay implements LayeredDraw.Layer {
             if (severity > IRadiationManager.INSTANCE.baselineRadiation()) {
                 int effect = (int) (prevRadiation * 255);
                 int color = (0x701E1E << 8) + effect;
-                MekanismRenderer.renderColorOverlay(graphics, 0, 0, color);
+                graphics.fill(RenderType.guiOverlay(), 0, 0, graphics.guiWidth(), graphics.guiHeight(), color);
             }
         }
     }

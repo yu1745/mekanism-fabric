@@ -34,7 +34,7 @@ import mekanism.api.security.IBlockSecurityUtils;
 import mekanism.api.security.SecurityMode;
 import mekanism.api.text.TextComponentUtil;
 import mekanism.client.sound.SoundHandler;
-import mekanism.common.Mekanism;
+import mekanism.common.integration.computer.ComputerCapabilityHelper;
 import mekanism.common.attachments.FilterAware;
 import mekanism.common.attachments.containers.ContainerType;
 import mekanism.common.attachments.containers.chemical.AttachedChemicals;
@@ -56,7 +56,7 @@ import mekanism.common.block.attribute.Attributes.AttributeComputerIntegration;
 import mekanism.common.block.attribute.Attributes.AttributeRedstone;
 import mekanism.common.block.attribute.Attributes.AttributeSecurity;
 import mekanism.common.block.interfaces.IHasTileEntity;
-import mekanism.common.capabilities.Capabilities;
+import mekanism.fabric.tile.MekanismBlockLookups;
 import mekanism.common.capabilities.energy.MachineEnergyContainer;
 import mekanism.common.capabilities.heat.BasicHeatCapacitor;
 import mekanism.common.capabilities.heat.CachedAmbientTemperature;
@@ -146,8 +146,8 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.redstone.Redstone;
-import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
-import net.neoforged.neoforge.fluids.FluidStack;
+import net.fabricmc.fabric.api.lookup.v1.block.BlockApiCache;
+import mekanism.api.fluid.FluidStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -246,7 +246,7 @@ public abstract class TileEntityMekanism extends CapabilityTileEntity implements
     //End variables IMekanismStrictEnergyHandler
 
     //Variables for handling IMekanismHeatHandler
-    protected final Map<Direction, BlockCapabilityCache<IHeatHandler, @Nullable Direction>> adjacentHeatCaps;
+    protected final Map<Direction, BlockApiCache<IHeatHandler, @Nullable Direction>> adjacentHeatCaps;
     protected final CachedAmbientTemperature ambientTemperature;
     @Nullable
     protected final HeatHandlerManager heatHandlerManager;
@@ -351,7 +351,7 @@ public abstract class TileEntityMekanism extends CapabilityTileEntity implements
         activeAttribute = Attribute.get(block, AttributeStateActive.class);
         isActivatable = hasSound || activeAttribute != null;
         supportsComparator = Attribute.has(block, AttributeComparator.class);
-        supportsComputers = Mekanism.hooks.computerCompatEnabled() && Attribute.has(block, AttributeComputerIntegration.class);
+        supportsComputers = ComputerCapabilityHelper.isEnabled() && Attribute.has(block, AttributeComputerIntegration.class);
         hasChunkloader = this instanceof IChunkLoader;
         nameable = hasGui() && !Attribute.getOrThrow(getBlockHolder(), AttributeGui.class).hasCustomName();
     }
@@ -562,10 +562,10 @@ public abstract class TileEntityMekanism extends CapabilityTileEntity implements
             return WrenchResult.PASS;
         }
         WrenchResult result = WrenchResult.PASS;
-        boolean canRotate = stack.canPerformAction(MekanismItemAbilities.WRENCH_ROTATE);
-        boolean canDismantle = stack.canPerformAction(MekanismItemAbilities.WRENCH_DISMANTLE);
+        boolean canRotate = MekanismItemAbilities.canPerformAction(stack, MekanismItemAbilities.WRENCH_ROTATE);
+        boolean canDismantle = MekanismItemAbilities.canPerformAction(stack, MekanismItemAbilities.WRENCH_DISMANTLE);
         if (!canRotate && !canDismantle) {
-            if (stack.canPerformAction(MekanismItemAbilities.WRENCH_EMPTY) || stack.canPerformAction(MekanismItemAbilities.WRENCH_CONFIGURE)) {
+            if (MekanismItemAbilities.canPerformAction(stack, MekanismItemAbilities.WRENCH_EMPTY) || MekanismItemAbilities.canPerformAction(stack, MekanismItemAbilities.WRENCH_CONFIGURE)) {
                 //The stack provides some wrench actions, it is likely intentional that it can't rotate or dismantle blocks
                 return result;
             }
@@ -601,14 +601,16 @@ public abstract class TileEntityMekanism extends CapabilityTileEntity implements
             }
             //Pass on this activation if the player is using a configuration card (and this tile supports the capability)
             if (!stack.isEmpty() && stack.getItem() instanceof ItemConfigurationCard &&
-                WorldUtils.getCapability(level, Capabilities.CONFIG_CARD, worldPosition, null, this, null) != null) {
+                WorldUtils.getCapability(level, MekanismBlockLookups.CONFIG_CARD, worldPosition, null, this, null) != null) {
                 return InteractionResult.PASS;
             }
 
-            player.openMenu(Attribute.getOrThrow(getBlockHolder(), AttributeGui.class).getProvider(this, true), buffer -> {
-                buffer.writeBlockPos(worldPosition);
-                encodeExtraContainerData(buffer);
-            });
+            if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
+                mekanism.common.inventory.container.ContainerProvider.open(serverPlayer, Attribute.getOrThrow(getBlockHolder(), AttributeGui.class).getProvider(this, true), buffer -> {
+                    buffer.writeBlockPos(worldPosition);
+                    encodeExtraContainerData(buffer);
+                });
+            }
             return InteractionResult.CONSUME;
         }
         return InteractionResult.PASS;
@@ -845,14 +847,14 @@ public abstract class TileEntityMekanism extends CapabilityTileEntity implements
             }
         }
         if (this instanceof ITileFilterHolder<?> filterHolder) {
-            FilterAware filterAware = input.get(MekanismDataComponents.FILTER_AWARE);
+            FilterAware filterAware = input.get(MekanismDataComponents.FILTER_AWARE.get());
             if (filterAware != null) {
                 //TODO - 1.20.4: Do we need to copy these or can we just pass the raw instance?
                 filterHolder.getFilterManager().trySetFilters(filterAware.filters());
             }
         }
         if (supportsRedstone()) {
-            setControlType(input.getOrDefault(MekanismDataComponents.REDSTONE_CONTROL, getControlType()));
+            setControlType(input.getOrDefault(MekanismDataComponents.REDSTONE_CONTROL.get(), getControlType()));
         }
     }
 
@@ -910,11 +912,11 @@ public abstract class TileEntityMekanism extends CapabilityTileEntity implements
         if (this instanceof ITileFilterHolder<?> filterHolder) {
             FilterManager<?> filterManager = filterHolder.getFilterManager();
             if (!filterManager.getFilters().isEmpty()) {
-                builder.set(MekanismDataComponents.FILTER_AWARE, new FilterAware(List.copyOf(filterManager.getFilters())));
+                builder.set(MekanismDataComponents.FILTER_AWARE.get(), new FilterAware(List.copyOf(filterManager.getFilters())));
             }
         }
         if (supportsRedstone()) {
-            builder.set(MekanismDataComponents.REDSTONE_CONTROL, controlType);
+            builder.set(MekanismDataComponents.REDSTONE_CONTROL.get(), controlType);
         }
     }
 
@@ -1015,7 +1017,7 @@ public abstract class TileEntityMekanism extends CapabilityTileEntity implements
 
     //Methods pertaining to IUpgradeableTile
     public void parseUpgradeData(HolderLookup.Provider provider, @NotNull IUpgradeData data) {
-        Mekanism.logger.warn("Unhandled upgrade data.", new Throwable());
+        org.slf4j.LoggerFactory.getLogger("Mekanism").warn("Unhandled upgrade data.", new Throwable());
     }
     //End methods IUpgradeableTile
 
@@ -1035,7 +1037,7 @@ public abstract class TileEntityMekanism extends CapabilityTileEntity implements
             } else if (!getType().isValid(state)) {
                 //This is probably always true if we couldn't get the direction it is facing
                 // but double check just in case before logging
-                Mekanism.logger.warn("Error invalid block for tile {} at {} in {}. Unable to get direction, falling back to north, "
+                org.slf4j.LoggerFactory.getLogger("Mekanism").warn("Error invalid block for tile {} at {} in {}. Unable to get direction, falling back to north, "
                                      + "things will probably not work correctly. This is almost certainly due to another mod incorrectly "
                                      + "trying to move this tile and not properly updating the position.",
                       Util.getRegisteredName(BuiltInRegistries.BLOCK_ENTITY_TYPE, getType()), worldPosition, level);
@@ -1456,12 +1458,13 @@ public abstract class TileEntityMekanism extends CapabilityTileEntity implements
 
     @Nullable
     protected IHeatHandler getAdjacentUnchecked(@NotNull Direction side) {
-        BlockCapabilityCache<IHeatHandler, @Nullable Direction> cache = adjacentHeatCaps.get(side);
+        BlockApiCache<IHeatHandler, @Nullable Direction> cache = adjacentHeatCaps.get(side);
         if (cache == null) {
-            cache = BlockCapabilityCache.create(Capabilities.HEAT, (ServerLevel) level, worldPosition.relative(side), side.getOpposite());
+            cache = BlockApiCache.create(HeatHandlerManager.HEAT_HANDLER, (ServerLevel) level, worldPosition.relative(side));
             adjacentHeatCaps.put(side, cache);
         }
-        return cache.getCapability();
+        //Fabric caches the position/provider, not the returned handler: each find observes current side policy and owner generation.
+        return cache.find(side.getOpposite());
     }
 
     @NotNull

@@ -1,7 +1,7 @@
 package mekanism.common.integration.computer;
 
 import mekanism.api.chemical.ChemicalStack;
-import net.neoforged.neoforge.fluids.FluidStack;
+import mekanism.api.fluid.FluidStack;
 
 import java.util.function.BiFunction;
 

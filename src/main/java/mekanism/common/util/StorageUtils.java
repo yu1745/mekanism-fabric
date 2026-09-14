@@ -18,7 +18,8 @@ import mekanism.api.text.ILangEntry;
 import mekanism.api.text.TextComponentUtil;
 import mekanism.common.MekanismLang;
 import mekanism.common.attachments.containers.ContainerType;
-import mekanism.common.capabilities.Capabilities;
+import mekanism.fabric.item.FabricComponentItemLookup;
+import mekanism.fabric.fluid.ItemFluidContainer;
 import mekanism.common.capabilities.heat.BasicHeatCapacitor;
 import mekanism.common.util.text.EnergyDisplay;
 import mekanism.common.util.text.TextUtils;
@@ -26,9 +27,8 @@ import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.capabilities.ItemCapability;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandlerItem;
+import mekanism.api.fluid.FluidStack;
+import mekanism.api.fluid.IExtendedFluidHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -42,7 +42,7 @@ public class StorageUtils {
     }
 
     public static void addStoredEnergy(@NotNull ItemStack stack, @NotNull List<Component> tooltip, boolean showMissingCap, ILangEntry langEntry) {
-        IStrictEnergyHandler energyHandlerItem = Capabilities.STRICT_ENERGY.getCapability(stack);
+        IStrictEnergyHandler energyHandlerItem = ContainerType.ENERGY.getRegisteredHandler(stack);
         if (energyHandlerItem == null) {
             //Fall back to trying to look up the stored energy by the container type if the stack doesn't expose it
             energyHandlerItem = ContainerType.ENERGY.createHandlerIfData(stack);
@@ -59,7 +59,7 @@ public class StorageUtils {
     }
 
     public static void addStoredChemical(@NotNull ItemStack stack, @NotNull List<Component> tooltip) {
-        IChemicalHandler handler = Capabilities.CHEMICAL.getCapability(stack);
+        IChemicalHandler handler = FabricComponentItemLookup.CHEMICAL.find(stack, null);
         if (handler == null) {
             //Fall back to trying to look up the stored chemical by the container type if the stack doesn't expose it
             handler = ContainerType.CHEMICAL.createHandlerIfData(stack);
@@ -96,17 +96,21 @@ public class StorageUtils {
 
     public static void addStoredFluid(@NotNull ItemStack stack, @NotNull List<Component> tooltip, ILangEntry emptyLangEntry,
           BiFunction<FluidStack, ILangEntry, Component> storedFunction) {
-        IFluidHandlerItem handler = Capabilities.FLUID.getCapability(stack);
-        if (handler == null) {
-            //Fall back to trying to look up the stored fluid by the container type if the stack doesn't expose it
-            handler = ContainerType.FLUID.createHandlerIfData(stack);
-        }
+        ItemFluidContainer handler = ItemFluidContainer.find(stack);
         if (handler != null) {
-            for (int tank = 0, tanks = handler.getTanks(); tank < tanks; tank++) {
-                tooltip.add(storedFunction.apply(handler.getFluidInTank(tank), emptyLangEntry));
+            for (ItemFluidContainer.Tank tank : handler.tanks()) {
+                tooltip.add(storedFunction.apply(tank.fluid(), emptyLangEntry));
             }
         } else {
-            tooltip.add(emptyLangEntry.translate());
+            //Stored components remain visible even if the item does not currently expose a native fluid provider.
+            IExtendedFluidHandler attached = ContainerType.FLUID.createHandlerIfData(stack);
+            if (attached != null) {
+                for (int tank = 0; tank < attached.getTanks(); tank++) {
+                    tooltip.add(storedFunction.apply(attached.getFluidInTank(tank), emptyLangEntry));
+                }
+            } else {
+                tooltip.add(emptyLangEntry.translate());
+            }
         }
     }
 
@@ -141,7 +145,7 @@ public class StorageUtils {
 
     @NotNull
     public static ChemicalStack getContainedChemical(ItemStack stack, Holder<Chemical> type) {
-        return getContainedChemical(Capabilities.CHEMICAL.getCapability(stack), type);
+        return getContainedChemical(FabricComponentItemLookup.CHEMICAL.find(stack, null), type);
     }
 
     @NotNull
@@ -155,7 +159,7 @@ public class StorageUtils {
         return ChemicalStack.EMPTY;
     }
 
-    public static FluidStack getContainedFluid(@NotNull IFluidHandlerItem fluidHandlerItem, FluidStack type) {
+    public static FluidStack getContainedFluid(@NotNull IExtendedFluidHandler fluidHandlerItem, FluidStack type) {
         for (int i = 0, tanks = fluidHandlerItem.getTanks(); i < tanks; i++) {
             FluidStack fluidInTank = fluidHandlerItem.getFluidInTank(i);
             if (FluidStack.isSameFluidSameComponents(fluidInTank, type)) {
@@ -311,7 +315,7 @@ public class StorageUtils {
             //While getCapability will return null for an empty stack, we just short circuit here
             return null;
         }
-        IStrictEnergyHandler energyHandlerItem = Capabilities.STRICT_ENERGY.getCapability(stack);
+        IStrictEnergyHandler energyHandlerItem = ContainerType.ENERGY.getRegisteredHandler(stack);
         if (energyHandlerItem instanceof IMekanismStrictEnergyHandler energyHandler) {
             return energyHandler.getEnergyContainer(container, null);
         }
@@ -358,16 +362,16 @@ public class StorageUtils {
 
     private static double getDurabilityForDisplay(ItemStack stack) {
         double bestRatio = 0;
-        IChemicalHandler handler = stack.getCapability((ItemCapability<? extends IChemicalHandler, Void>) Capabilities.CHEMICAL.item());
+        IChemicalHandler handler = FabricComponentItemLookup.CHEMICAL.find(stack, null);
         if (handler != null) {
             for (int chemTack = 0, chemTanks = handler.getChemicalTanks(); chemTack < chemTanks; chemTack++) {
                 bestRatio = Math.max(bestRatio, getRatio(handler.getChemicalInTank(chemTack).getAmount(), handler.getChemicalTankCapacity(chemTack)));
             }
         }
-        IFluidHandlerItem fluidHandlerItem = Capabilities.FLUID.getCapability(stack);
+        ItemFluidContainer fluidHandlerItem = ItemFluidContainer.find(stack);
         if (fluidHandlerItem != null) {
-            for (int tank = 0, tanks = fluidHandlerItem.getTanks(); tank < tanks; tank++) {
-                bestRatio = Math.max(bestRatio, getRatio(fluidHandlerItem.getFluidInTank(tank).getAmount(), fluidHandlerItem.getTankCapacity(tank)));
+            for (ItemFluidContainer.Tank tank : fluidHandlerItem.tanks()) {
+                bestRatio = Math.max(bestRatio, getRatio(tank.fluid().getAmount(), tank.capacity()));
             }
         }
         return 1 - bestRatio;
@@ -384,7 +388,7 @@ public class StorageUtils {
 
     private static double getEnergyDurabilityForDisplay(ItemStack stack) {
         double bestRatio = 0;
-        IStrictEnergyHandler energyHandlerItem = Capabilities.STRICT_ENERGY.getCapability(stack);
+        IStrictEnergyHandler energyHandlerItem = ContainerType.ENERGY.getRegisteredHandler(stack);
         if (energyHandlerItem != null) {
             int containers = energyHandlerItem.getEnergyContainerCount();
             for (int container = 0; container < containers; container++) {

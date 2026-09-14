@@ -66,7 +66,7 @@ public final class InventoryUtils {
             } else if (ContainerType.ITEM.supports(stack)) {
                 dropItemContents(level, blockPos, ContainerType.ITEM.getAttachmentContainersIfPresent(stack), scalar, dropper);
             }
-            UpgradeAware upgradeAware = stack.get(MekanismDataComponents.UPGRADES);
+            UpgradeAware upgradeAware = stack.get(MekanismDataComponents.UPGRADES.get());
             if (upgradeAware != null) {
                 dropItemContents(level, blockPos, List.of(upgradeAware.inputSlot(), upgradeAware.outputSlot()), scalar, dropper, ItemStack::copy);
                 dropItemContents(level, blockPos, upgradeAware.upgrades().entrySet(), scalar, dropper, entry -> UpgradeUtils.getStack(entry.getKey(), entry.getValue()));
@@ -186,7 +186,7 @@ public final class InventoryUtils {
      *
      * @return Remainder
      *
-     * @see ItemHandlerHelper#insertItemStacked(IItemHandler, ItemStack, boolean)
+     * @see IInventorySlot#insertItem(ItemStack, Action, AutomationType)
      */
     public static ItemStack insertItem(List<? extends IInventorySlot> slots, @NotNull ItemStack stack, Action action, AutomationType automationType) {
         stack = insertItem(slots, stack, true, false, action, automationType);

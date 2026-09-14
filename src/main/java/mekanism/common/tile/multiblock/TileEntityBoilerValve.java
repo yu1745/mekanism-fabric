@@ -13,7 +13,11 @@ import mekanism.common.MekanismLang;
 import mekanism.common.attachments.containers.ContainerType;
 import mekanism.common.block.attribute.AttributeStateBoilerValveMode;
 import mekanism.common.block.attribute.AttributeStateBoilerValveMode.BoilerValveMode;
-import mekanism.common.capabilities.Capabilities;
+import mekanism.common.capabilities.resolver.manager.ChemicalHandlerManager;
+import java.util.function.Supplier;
+import net.fabricmc.fabric.api.lookup.v1.block.BlockApiCache;
+import net.fabricmc.fabric.api.lookup.v1.block.BlockApiLookup;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidStorage;
 import mekanism.common.capabilities.holder.chemical.IChemicalTankHolder;
 import mekanism.common.capabilities.holder.fluid.IFluidTankHolder;
 import mekanism.common.integration.computer.annotation.ComputerMethod;
@@ -25,18 +29,16 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.capabilities.BlockCapability;
-import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
-import net.neoforged.neoforge.fluids.FluidStack;
+import mekanism.api.fluid.FluidStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class TileEntityBoilerValve extends TileEntityBoilerCasing {
 
-    private final Map<Direction, BlockCapabilityCache<IChemicalHandler, @Nullable Direction>> capabilityCaches = new EnumMap<>(Direction.class);
-    private final List<BlockCapability<?, @Nullable Direction>> portCapabilities = List.of(
-          Capabilities.CHEMICAL.block(),
-          Capabilities.FLUID.block()
+    private final Map<Direction, Supplier<@Nullable IChemicalHandler>> capabilityCaches = new EnumMap<>(Direction.class);
+    private final List<BlockApiLookup<?, @Nullable Direction>> portCapabilities = List.of(
+          ChemicalHandlerManager.CHEMICAL_HANDLER,
+          FluidStorage.SIDED
     );
     private final Predicate<BoilerValveMode> MODE_MATCHES = mode -> mode == getMode();
 
@@ -67,11 +69,10 @@ public class TileEntityBoilerValve extends TileEntityBoilerCasing {
     }
 
     public void addChemicalTargetCapability(List<AdvancedCapabilityOutputTarget<IChemicalHandler, BoilerValveMode>> outputTargets, Direction side) {
-        BlockCapabilityCache<IChemicalHandler, @Nullable Direction> cache = capabilityCaches.get(side);
-        if (cache == null) {
-            cache = Capabilities.CHEMICAL.createCache((ServerLevel) level, worldPosition.relative(side), side.getOpposite());
-            capabilityCaches.put(side, cache);
-        }
+        Supplier<@Nullable IChemicalHandler> cache = capabilityCaches.computeIfAbsent(side, direction -> {
+            var nativeCache = BlockApiCache.create(ChemicalHandlerManager.CHEMICAL_HANDLER, (ServerLevel) level, worldPosition.relative(direction));
+            return () -> nativeCache.find(direction.getOpposite());
+        });
         outputTargets.add(new AdvancedCapabilityOutputTarget<>(cache, MODE_MATCHES));
     }
 

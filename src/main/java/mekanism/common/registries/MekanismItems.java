@@ -9,7 +9,6 @@ import mekanism.api.text.EnumColor;
 import mekanism.api.text.TextComponentUtil;
 import mekanism.api.tier.AlloyTier;
 import mekanism.api.tier.BaseTier;
-import mekanism.common.Mekanism;
 import mekanism.common.attachments.containers.ContainerType;
 import mekanism.common.attachments.containers.chemical.ChemicalTanksBuilder;
 import mekanism.common.attachments.containers.energy.ComponentBackedNoClampEnergyContainer;
@@ -77,7 +76,7 @@ public class MekanismItems {
     private MekanismItems() {
     }
 
-    public static final ItemDeferredRegister ITEMS = new ItemDeferredRegister(Mekanism.MODID);
+    public static final ItemDeferredRegister ITEMS = new ItemDeferredRegister("mekanism");
     public static final Table<ResourceType, PrimaryResource, ItemRegistryObject<Item>> PROCESSED_RESOURCES = HashBasedTable.create();
 
     public static final ItemRegistryObject<ItemRobit> ROBIT = ITEMS.registerItem("robit", ItemRobit::new)
@@ -238,7 +237,7 @@ public class MekanismItems {
     public static final ItemRegistryObject<ItemUpgrade> CHEMICAL_UPGRADE = registerUpgrade(Upgrade.CHEMICAL);
 
     static {//TODO - 1.22: remove backcompat
-        ITEMS.addAlias(Mekanism.rl("upgrade_gas"), CHEMICAL_UPGRADE.getId());
+        ITEMS.addAlias(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("mekanism", "upgrade_gas"), CHEMICAL_UPGRADE.getId());
     }
 
     public static final ItemRegistryObject<ItemUpgrade> ANCHOR_UPGRADE = registerUpgrade(Upgrade.ANCHOR);

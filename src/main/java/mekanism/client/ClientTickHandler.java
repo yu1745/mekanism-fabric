@@ -177,9 +177,7 @@ public class ClientTickHandler {
         //Reboot player sounds if needed
         SoundHandler.restartSounds();
 
-        if (tickingNormally) {
-            ClientRadiation.tickClient(minecraft.player);
-        }
+        //Radiation pre-tick particles are owned by FabricRadiationClientLifecycle.
 
         UUID playerUUID = minecraft.player.getUUID();
         // Update player's state for various items; this also automatically notifies server if something changed and

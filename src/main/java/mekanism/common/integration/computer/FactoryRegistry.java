@@ -11,8 +11,7 @@ import java.util.ServiceLoader;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import mekanism.common.Mekanism;
-import net.neoforged.neoforge.common.util.Lazy;
+import com.google.common.base.Suppliers;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -26,9 +25,9 @@ import java.util.function.Supplier;
 public class FactoryRegistry {
 
     /** subject to Factory registration map */
-    private static final Map<Class<?>, Lazy<? extends ComputerMethodFactory<?>>> factories = new HashMap<>();
+    private static final Map<Class<?>, Supplier<? extends ComputerMethodFactory<?>>> factories = new HashMap<>();
     /** interface to factory registration map, must be iterated */
-    public static final Map<Class<?>, Lazy<? extends ComputerMethodFactory<?>>> interfaceFactories = new HashMap<>();
+    public static final Map<Class<?>, Supplier<? extends ComputerMethodFactory<?>>> interfaceFactories = new HashMap<>();
     /** map of (relevant) superclasses for a subject's class. Added to at runtime to cache lookups for subclasses */
     private static final Map<Class<?>, List<Class<?>>> superClasses = new HashMap<>();
     /** cached list of factories for a subject class */
@@ -41,7 +40,7 @@ public class FactoryRegistry {
             hasRegistry = true;
         }
         if (!hasRegistry) {
-            Mekanism.logger.error("Expected to find at least one IComputerMethodRegistry, but didn't find any");
+            throw new IllegalStateException("Expected generated IComputerMethodRegistry services before advertising computer support");
         }
     }
 
@@ -53,14 +52,14 @@ public class FactoryRegistry {
      * @param parents         Classes of the supertypes which will be checked for handlers (calculated at compile time)
      */
     public static <T> void register(Class<T> subject, Supplier<ComputerMethodFactory<T>> factorySupplier, Class<?>... parents) {
-        factories.put(subject, Lazy.of(factorySupplier));
+        factories.put(subject, Suppliers.memoize(factorySupplier::get));
         if (parents != null && parents.length > 0) {
             superClasses.put(subject, Arrays.asList(parents));
         }
     }
 
     public static <T> void registerInterface(Class<T> subject, Supplier<ComputerMethodFactory<T>> factorySupplier) {
-        interfaceFactories.put(subject, Lazy.of(factorySupplier));
+        interfaceFactories.put(subject, Suppliers.memoize(factorySupplier::get));
     }
 
     /**
@@ -86,7 +85,7 @@ public class FactoryRegistry {
         for (ComputerMethodFactory computerMethodFactory : factoriesToBind) {
             computerMethodFactory.bindTo(subject, holder);
         }
-        for (Map.Entry<Class<?>, Lazy<? extends ComputerMethodFactory<?>>> interfaceEntry : interfaceFactories.entrySet()) {
+        for (Map.Entry<Class<?>, Supplier<? extends ComputerMethodFactory<?>>> interfaceEntry : interfaceFactories.entrySet()) {
             if (interfaceEntry.getKey().isAssignableFrom(subjectClass)) {
                 ComputerMethodFactory computerMethodFactory = interfaceEntry.getValue().get();
                 computerMethodFactory.bindTo(subject, holder);
@@ -143,7 +142,7 @@ public class FactoryRegistry {
             //found one we handle, all supers will be present (if required)
             List<ComputerMethodFactory<?>> outList = new ArrayList<>();
             for (Class<?> aClass : superClasses.getOrDefault(target, Collections.emptyList())) {
-                Lazy<? extends ComputerMethodFactory<?>> computerMethodFactoryLazy = factories.get(aClass);
+                Supplier<? extends ComputerMethodFactory<?>> computerMethodFactoryLazy = factories.get(aClass);
                 if (computerMethodFactoryLazy != null) {
                     outList.add(computerMethodFactoryLazy.get());
                 }

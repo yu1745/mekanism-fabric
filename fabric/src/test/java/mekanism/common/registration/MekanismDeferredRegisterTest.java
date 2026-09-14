@@ -71,6 +71,48 @@ class MekanismDeferredRegisterTest {
     }
 
     @Test
+    void selfReferentialFactoriesCaptureTheRegisteredHolderNotAnUnattachedAlias() {
+        SharedConstants.tryDetectVersion();
+        Bootstrap.bootStrap();
+        ResourceKey<Registry<LinkedValue>> key = ResourceKey.createRegistryKey(ResourceLocation.fromNamespaceAndPath("test", "linked_values"));
+        MekanismDeferredRegister<LinkedValue> register = new MekanismDeferredRegister<>(key, "test");
+        MekanismDeferredHolder<LinkedValue, LinkedValue> holder = register.registerWithHolder("menu", LinkedValue::new);
+        assertSame(holder, register.getEntries().getFirst());
+        assertFalse(holder.isBound());
+        var registry = new net.minecraft.core.MappedRegistry<>(key, com.mojang.serialization.Lifecycle.stable(), false);
+        register.registerAll(registry);
+        registry.freeze();
+        assertSame(holder, holder.get().type());
+        assertSame(registry.get(holder.getId()), holder.get());
+        assertSame(holder.get(), holder.get().type().get());
+    }
+
+    private record LinkedValue(MekanismDeferredHolder<LinkedValue, LinkedValue> type) {
+    }
+
+    @Test
+    void pairedWrapperSharesThePrimaryBindingBeforeTheSecondaryFactoryRuns() {
+        SharedConstants.tryDetectVersion();
+        Bootstrap.bootStrap();
+        ResourceKey<Registry<String>> secondaryKey = ResourceKey.createRegistryKey(ResourceLocation.fromNamespaceAndPath("test", "secondary"));
+        DoubleDeferredRegister<String, String> register = new DoubleDeferredRegister<>("test", TEST_REGISTRY, secondaryKey);
+        DoubleWrappedRegistryObject<String, String, String, String> holder = register.register("paired",
+              () -> new String("block"), primary -> primary + " item", DoubleWrappedRegistryObject::new);
+        assertFalse(holder.isBound());
+        var primary = new net.minecraft.core.MappedRegistry<>(TEST_REGISTRY, com.mojang.serialization.Lifecycle.stable(), false);
+        var secondary = new net.minecraft.core.MappedRegistry<>(secondaryKey, com.mojang.serialization.Lifecycle.stable(), false);
+        register.registerAll(primary, secondary);
+        primary.freeze();
+        secondary.freeze();
+        assertSame(register.getPrimaryEntries().iterator().next().get(), holder.get());
+        assertSame(primary.get(holder.getId()), holder.get());
+        assertTrue(holder.is(primary.getHolderOrThrow(holder.getKey())));
+        assertTrue(holder.canSerializeIn(primary));
+        assertEquals("block item", holder.getSecondary());
+        assertSame(secondary.get(holder.getId()), holder.getSecondary());
+    }
+
+    @Test
     void gameEventRegisterPreservesDefaultAndExplicitRadii() {
         SharedConstants.tryDetectVersion();
         Bootstrap.bootStrap();

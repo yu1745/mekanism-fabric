@@ -58,25 +58,25 @@ public class Capabilities {
 
     public static final MultiTypeCapability<IChemicalHandler> CHEMICAL = new MultiTypeCapability<>(Mekanism.rl("chemical_handler"), IChemicalHandler.class);
 
-    public static final BlockCapability<IHeatHandler, @Nullable Direction> HEAT = BlockCapability.createSided(Mekanism.rl("heat_handler"), IHeatHandler.class);
+    public static final net.fabricmc.fabric.api.lookup.v1.block.BlockApiLookup<IHeatHandler, Direction> HEAT = mekanism.common.capabilities.resolver.manager.HeatHandlerManager.HEAT_HANDLER;
 
     public static final MultiTypeCapability<IStrictEnergyHandler> STRICT_ENERGY = new MultiTypeCapability<>(Mekanism.rl("strict_energy_handler"), IStrictEnergyHandler.class);
 
-    public static final BlockCapability<IConfigurable, @Nullable Direction> CONFIGURABLE = BlockCapability.createSided(Mekanism.rl("configurable"), IConfigurable.class);
+    public static final net.fabricmc.fabric.api.lookup.v1.block.BlockApiLookup<IConfigurable, Direction> CONFIGURABLE = mekanism.fabric.tile.MekanismBlockLookups.CONFIGURABLE;
 
     public static final BlockCapability<IAlloyInteraction, @Nullable Direction> ALLOY_INTERACTION = BlockCapability.createSided(Mekanism.rl("alloy_interaction"), IAlloyInteraction.class);
 
-    public static final BlockCapability<IConfigCardAccess, @Nullable Direction> CONFIG_CARD = BlockCapability.createSided(Mekanism.rl("config_card"), IConfigCardAccess.class);
+    public static final net.fabricmc.fabric.api.lookup.v1.block.BlockApiLookup<IConfigCardAccess, Direction> CONFIG_CARD = mekanism.fabric.tile.MekanismBlockLookups.CONFIG_CARD;
 
     public static final BlockCapability<IEvaporationSolar, Void> EVAPORATION_SOLAR = BlockCapability.createVoid(Mekanism.rl("evaporation_solar"), IEvaporationSolar.class);
 
     public static final BlockCapability<ILaserReceptor, @Nullable Direction> LASER_RECEPTOR = BlockCapability.createSided(Mekanism.rl("laser_receptor"), ILaserReceptor.class);
 
-    public static final ItemCapability<ILaserDissipation, Void> LASER_DISSIPATION = ItemCapability.createVoid(Mekanism.rl("laser_dissipation"), ILaserDissipation.class);
+    public static final net.fabricmc.fabric.api.lookup.v1.item.ItemApiLookup<ILaserDissipation, Void> LASER_DISSIPATION = mekanism.fabric.gear.GearItemLookups.LASER_DISSIPATION;
 
-    public static final ItemCapability<IRadiationShielding, Void> RADIATION_SHIELDING = ItemCapability.createVoid(Mekanism.rl("radiation_shielding"), IRadiationShielding.class);
+    public static final net.fabricmc.fabric.api.lookup.v1.item.ItemApiLookup<IRadiationShielding, Void> RADIATION_SHIELDING = mekanism.fabric.gear.GearItemLookups.RADIATION_SHIELDING;
 
-    public static final EntityCapability<IRadiationEntity, Void> RADIATION_ENTITY = EntityCapability.createVoid(Mekanism.rl("radiation"), IRadiationEntity.class);
+    public static final net.fabricmc.fabric.api.lookup.v1.entity.EntityApiLookup<IRadiationEntity, Void> RADIATION_ENTITY = mekanism.fabric.radiation.FabricRadiationAttachments.RADIATION_ENTITY;
 
     public static final ResourceLocation OWNER_OBJECT_NAME = Mekanism.rl("owner_object");
     public static final ResourceLocation SECURITY_OBJECT_NAME = Mekanism.rl("security_object");
@@ -94,24 +94,9 @@ public class Capabilities {
         event.registerEntity(IEntitySecurityUtils.INSTANCE.securityCapability(), robitEntityType, (robit, ctx) -> robit);
         EnergyCompatUtils.registerEntityCapabilities(event, robitEntityType, (robit, ctx) -> robit);
 
-        for (EntityType<?> entityType : BuiltInRegistries.ENTITY_TYPE) {
-            //Note: The jvm will reuse the lambda between types
-            event.registerEntity(RADIATION_ENTITY, entityType, (entity, ctx) -> entity instanceof LivingEntity living ? new RadiationEntity(living) : null);
-        }
+        mekanism.fabric.radiation.FabricRadiationAttachments.initialize();
 
-        //Register bounding block proxies
-        TileEntityBoundingBlock.alwaysProxyCapability(event, CONFIG_CARD);
-        TileEntityBoundingBlock.alwaysProxyCapability(event, IBlockSecurityUtils.INSTANCE.ownerCapability());
-        TileEntityBoundingBlock.alwaysProxyCapability(event, IBlockSecurityUtils.INSTANCE.securityCapability());
-        //Capabilities we need to proxy because some sub implementations use them
-        ComputerCapabilityHelper.addBoundingComputerCapabilities(event);
-        TileEntityBoundingBlock.proxyCapability(event, ITEM.block());
-        for (BlockCapability<?, @Nullable Direction> capability : EnergyCompatUtils.getLoadedEnergyCapabilities()) {
-            TileEntityBoundingBlock.proxyCapability(event, capability);
-        }
-        //Note: Common caps we may eventually want to proxy but currently have no use for doing so
-        TileEntityBoundingBlock.proxyCapability(event, FluidHandler.BLOCK);
-        TileEntityBoundingBlock.proxyCapability(event, CHEMICAL.block());
-        TileEntityBoundingBlock.proxyCapability(event, HEAT);
+        //The original public catalog forwards to the canonical native bounding provider owner.
+        mekanism.fabric.registry.FabricMekanismBlockRegistries.registerBoundingCapabilities();
     }
 }

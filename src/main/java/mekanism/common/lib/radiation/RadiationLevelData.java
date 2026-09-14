@@ -1,5 +1,6 @@
 package mekanism.common.lib.radiation;
 
+import com.mojang.serialization.Codec;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -12,12 +13,24 @@ import mekanism.common.lib.collection.IndexedCuboidMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.nbt.ListTag;
-import net.minecraft.util.Mth;
-import net.neoforged.neoforge.common.util.INBTSerializable;
+import net.minecraft.nbt.CompoundTag;
+import mekanism.api.INBTSerializable;
 import org.jetbrains.annotations.Nullable;
 
 @NothingNullByDefault
 public class RadiationLevelData implements INBTSerializable<ListTag> {
+    /** Native attachment codec retains the original list of source compounds, including invalid-position skipping. */
+    public static final Codec<RadiationLevelData> CODEC = CompoundTag.CODEC.listOf().xmap(tags -> {
+        RadiationLevelData data = new RadiationLevelData();
+        for (CompoundTag tag : tags) {
+            RadiationSource source = RadiationSource.deserializeNBT(tag);
+            if (source != null) {
+                data.addNew(source);
+            }
+        }
+        return data;
+    }, data -> data.sources.values().stream().map(RadiationSource::serializeNBT).toList());
+
     private static final IntSupplier MAX_BLOCK_RANGE = new ConfigBasedCachedIntSupplier(() -> {
         int chunkRadius = MekanismConfig.general.radiationChunkCheckRadius.get();
         // we only compute exposure when within the MAX_RANGE bounds
@@ -107,7 +120,7 @@ public class RadiationLevelData implements INBTSerializable<ListTag> {
         if (isEmpty()) {
             return null;
         }
-        ListTag tag = new ListTag(sources.values().size());
+        ListTag tag = new ListTag();
         for (RadiationSource value : sources.values()) {
             tag.add(value.serializeNBT());
         }

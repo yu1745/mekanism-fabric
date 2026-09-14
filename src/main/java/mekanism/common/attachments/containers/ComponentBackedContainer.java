@@ -41,7 +41,7 @@ public abstract class ComponentBackedContainer<TYPE, ATTACHED extends IAttachedC
             }
         }
         if (shouldUpdate(attached, value)) {
-            attachedTo.set(containerType().getComponentType(), attached.with(containerIndex, copy(value)));
+            attachedTo.set(containerType().getComponentType().get(), attached.with(containerIndex, copy(value)));
             onContentsChanged();
         }
     }

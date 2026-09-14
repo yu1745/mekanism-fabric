@@ -16,7 +16,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import mekanism.api.SerializationConstants;
 import mekanism.api.security.SecurityMode;
-import mekanism.common.Mekanism;
+import mekanism.api.MekanismAPI;
 import mekanism.common.attachments.FrequencyAware;
 import mekanism.common.inventory.container.MekanismContainer;
 import mekanism.common.inventory.container.sync.SyncableFrequency;
@@ -306,7 +306,7 @@ public class TileComponentFrequency implements ITileComponent {
                 // Currently we only really need the QIO to support it, as the other colorable frequency (teleporters)
                 // don't need the item to be aware of the color
                 if (type == FrequencyType.QIO && frequencyData.selectedFrequency instanceof IColorableFrequency colorableFrequency) {
-                    builder.set(MekanismDataComponents.COLOR, colorableFrequency.getColor());
+                    builder.set(MekanismDataComponents.COLOR.get(), colorableFrequency.getColor());
                 }
             }
         }
@@ -352,7 +352,7 @@ public class TileComponentFrequency implements ITileComponent {
                 // from the frequency manager
                 frequencyNBT.put(frequency.getType().getName(), encodedIdentity.getOrThrow());
             } else {
-                encodedIdentity.ifError(error -> Mekanism.logger.warn("Failed to serialize frequency identity: {}", error.message()));
+                encodedIdentity.ifError(error -> MekanismAPI.logger.warn("Failed to serialize frequency identity: {}", error.message()));
             }
         }
     }
@@ -380,7 +380,7 @@ public class TileComponentFrequency implements ITileComponent {
                             continue;
                         }
                     } else {
-                        decodedIdentity.ifError(error -> Mekanism.logger.warn("Failed to deserialize frequency identity: {}", error.message()));
+                        decodedIdentity.ifError(error -> MekanismAPI.logger.warn("Failed to deserialize frequency identity: {}", error.message()));
                     }
                 }
                 //If our stored data doesn't have a frequency for the specific type or there was some issue parsing the data, unset the frequency
@@ -401,7 +401,7 @@ public class TileComponentFrequency implements ITileComponent {
                 if (encoded.isSuccess()) {
                     frequencyNBT.put(type.getName(), encoded.getOrThrow());
                 } else {
-                    encoded.ifError(error -> Mekanism.logger.warn("Failed to encode frequency identity: {}", error.message()));
+                    encoded.ifError(error -> MekanismAPI.logger.warn("Failed to encode frequency identity: {}", error.message()));
                 }
             }
         }

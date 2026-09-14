@@ -33,7 +33,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.neoforged.neoforge.server.ServerLifecycleHooks;
+import mekanism.api.MekanismServerLifecycle;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -248,7 +248,7 @@ public class SpecialConverters {
 
     private static DynamicOps<Tag> getRegistryNbtOps() {
         //TODO: Can we pass the registry access in from the tiles rather than having to look it up from the current server?
-        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        MinecraftServer server = MekanismServerLifecycle.getServer();
         if (server != null) {
             return server.registryAccess().createSerializationContext(NbtOps.INSTANCE);
         }

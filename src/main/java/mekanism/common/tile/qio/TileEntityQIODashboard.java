@@ -5,7 +5,7 @@ import java.util.List;
 import mekanism.api.IContentsListener;
 import mekanism.api.SerializationConstants;
 import mekanism.api.inventory.IInventorySlot;
-import mekanism.common.CommonWorldTickHandler;
+import mekanism.common.recipe.lookup.cache.RecipeCacheContext;
 import mekanism.common.attachments.containers.item.AttachedItems;
 import mekanism.common.capabilities.holder.slot.IInventorySlotHolder;
 import mekanism.common.capabilities.holder.slot.InventorySlotHelper;
@@ -117,7 +117,7 @@ public class TileEntityQIODashboard extends TileEntityQIOComponent implements IQ
     @Override
     protected boolean onUpdateServer(@Nullable QIOFrequency frequency) {
         boolean needsUpdate = super.onUpdateServer(frequency);
-        if (CommonWorldTickHandler.flushTagAndRecipeCaches || !recipesChecked) {
+        if (RecipeCacheContext.isInvalidationPending() || !recipesChecked) {
             //If we need to update the recipes because of a reload or if we just haven't checked the recipes yet
             // after loading, as there was no world set yet, refresh the recipes
             recipesChecked = true;

@@ -125,12 +125,7 @@ public final class MekanismHooks {
     }
 
     public void hookCommonSetup() {
-        if (computerCompatEnabled()) {
-            FactoryRegistry.load();
-            if (computerCraft.isLoaded()) {
-                CCCapabilityHelper.registerApis();
-            }
-        }
+        mekanism.common.integration.computer.ComputerCapabilityHelper.initialize();
 
         //TODO - 1.20: Move this out of here and back to always being registered whenever it gets fixed in Neo.
         // Modifying the result doesn't apply properly when "quick crafting"
@@ -151,7 +146,7 @@ public final class MekanismHooks {
     }
 
     public boolean computerCompatEnabled() {
-        return computerCraft.isLoaded() || oc2.isLoaded();
+        return mekanism.common.integration.computer.ComputerCapabilityHelper.isEnabled();
     }
 
     public boolean recipeViewerCompatEnabled() {

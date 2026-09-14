@@ -10,9 +10,10 @@ import mekanism.api.RelativeSide;
 import mekanism.api.SerializationConstants;
 import mekanism.api.chemical.IChemicalHandler;
 import mekanism.api.chemical.IChemicalTank;
-import mekanism.api.functions.ConstantPredicates;
 import mekanism.common.attachments.containers.ContainerType;
-import mekanism.common.capabilities.Capabilities;
+import mekanism.common.capabilities.resolver.manager.ChemicalHandlerManager;
+import java.util.function.Supplier;
+import net.fabricmc.fabric.api.lookup.v1.block.BlockApiCache;
 import mekanism.common.capabilities.chemical.StackedWasteBarrel;
 import mekanism.common.capabilities.holder.chemical.ChemicalTankHelper;
 import mekanism.common.capabilities.holder.chemical.IChemicalTankHolder;
@@ -36,7 +37,6 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -47,12 +47,8 @@ public class TileEntityRadioactiveWasteBarrel extends TileEntityMekanism impleme
                                                                                         "getFilledPercentage"}, docPlaceholder = "barrel")
     StackedWasteBarrel chemicalTank;
 
-    @Nullable
-    private IChemicalTank belowTank;
-    private boolean resolvedBelowTank;
-
     private int processTicks;
-    private List<BlockCapabilityCache<IChemicalHandler, @Nullable Direction>> chemicalHandlerBelow = Collections.emptyList();
+    private List<Supplier<@Nullable IChemicalHandler>> chemicalHandlerBelow = Collections.emptyList();
 
     public TileEntityRadioactiveWasteBarrel(BlockPos pos, BlockState state) {
         super(MekanismBlocks.RADIOACTIVE_WASTE_BARREL, pos, state);
@@ -81,12 +77,8 @@ public class TileEntityRadioactiveWasteBarrel extends TileEntityMekanism impleme
             }
             if (getActive()) {
                 if (chemicalHandlerBelow.isEmpty()) {
-                    //Note: We just pass true for this always being valid, and allow GC to handle figuring out when it no longer is valid
-                    chemicalHandlerBelow = List.of(Capabilities.CHEMICAL.createCache((ServerLevel) level, worldPosition.below(), Direction.UP, ConstantPredicates.ALWAYS_TRUE, () -> {
-                        //Reset the tank that we know is below this
-                        resolvedBelowTank = false;
-                        belowTank = null;
-                    }));
+                    var cache = BlockApiCache.create(ChemicalHandlerManager.CHEMICAL_HANDLER, (ServerLevel) level, worldPosition.below());
+                    chemicalHandlerBelow = List.of(() -> cache.find(Direction.UP));
                 }
                 IChemicalTank below = getBelowTank();
                 if (below == null) {
@@ -107,15 +99,12 @@ public class TileEntityRadioactiveWasteBarrel extends TileEntityMekanism impleme
 
     @Nullable
     private IChemicalTank getBelowTank() {
-        if (!resolvedBelowTank) {
-            resolvedBelowTank = true;
-            IChemicalHandler belowHandler = chemicalHandlerBelow.getFirst().getCapability();
-            if (belowHandler instanceof ProxyChemicalHandler chemicalHandler && chemicalHandler.getInternalHandler() instanceof TileEntityRadioactiveWasteBarrel barrel) {
-                //Note: We don't need to bother with weak references as these are vertical so will always be in the same chunk
-                belowTank = barrel.chemicalTank;
-            }
+        //Fabric caches the block/provider, never the returned handler. Re-query on every operation rather than retaining a tank past a native invalidation.
+        IChemicalHandler belowHandler = chemicalHandlerBelow.getFirst().get();
+        if (belowHandler instanceof ProxyChemicalHandler chemicalHandler && chemicalHandler.getInternalHandler() instanceof TileEntityRadioactiveWasteBarrel barrel) {
+            return barrel.chemicalTank;
         }
-        return belowTank;
+        return null;
     }
 
     public StackedWasteBarrel getChemicalTank() {

@@ -111,7 +111,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.level.redstone.Redstone;
-import net.neoforged.neoforge.capabilities.BlockCapability;
+import net.fabricmc.fabric.api.lookup.v1.block.BlockApiLookup;
 import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.level.BlockEvent;
@@ -1138,8 +1138,8 @@ public class TileEntityDigitalMiner extends TileEntityMekanism implements IChunk
 
     @Nullable
     @Override
-    public <T> T getOffsetCapabilityIfEnabled(@NotNull BlockCapability<T, @Nullable Direction> capability, Direction side, @NotNull Vec3i offset) {
-        if (capability == Capabilities.ITEM.block()) {
+    public <T> T getOffsetCapabilityIfEnabled(@NotNull BlockApiLookup<T, @Nullable Direction> capability, Direction side, @NotNull Vec3i offset) {
+        if (capability == ItemStorage.SIDED) {
             //Get item handler cap directly from here as we disable it entirely for the main block as we only have it enabled from ports
             return Objects.requireNonNull(itemHandlerManager, "Expected to have item handler").resolve(capability, side);
         }
@@ -1148,10 +1148,10 @@ public class TileEntityDigitalMiner extends TileEntityMekanism implements IChunk
     }
 
     @Override
-    public boolean isOffsetCapabilityDisabled(@NotNull BlockCapability<?, @Nullable Direction> capability, Direction side, @NotNull Vec3i offset) {
-        if (capability == Capabilities.ITEM.block()) {
+    public boolean isOffsetCapabilityDisabled(@NotNull BlockApiLookup<?, @Nullable Direction> capability, Direction side, @NotNull Vec3i offset) {
+        if (capability == ItemStorage.SIDED) {
             return notItemPort(side, offset);
-        } else if (EnergyCompatUtils.isEnergyCapability(capability)) {
+        } else if (capability == team.reborn.energy.api.EnergyStorage.SIDED) {
             return notEnergyPort(side, offset);
         }
         //If we are not an item handler or energy capability, and it is a capability that we can support,

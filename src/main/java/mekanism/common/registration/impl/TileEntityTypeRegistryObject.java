@@ -2,14 +2,13 @@ package mekanism.common.registration.impl;
 
 import java.util.List;
 import java.util.function.BooleanSupplier;
+import java.util.function.BiFunction;
 import mekanism.common.registration.MekanismDeferredHolder;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.neoforged.neoforge.capabilities.BlockCapability;
-import net.neoforged.neoforge.capabilities.ICapabilityProvider;
-import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
+import net.fabricmc.fabric.api.lookup.v1.block.BlockApiLookup;
 import org.jetbrains.annotations.ApiStatus.Internal;
 import org.jetbrains.annotations.Nullable;
 
@@ -43,20 +42,20 @@ public class TileEntityTypeRegistryObject<BE extends BlockEntity> extends Mekani
     }
 
     @Internal
-    void registerCapabilityProviders(RegisterCapabilitiesEvent event) {
+    void registerCapabilityProviders() {
         if (capabilityProviders != null) {
             for (CapabilityData<BE, ?, ?> capabilityProvider : capabilityProviders) {
-                capabilityProvider.registerProvider(event, value());
+                capabilityProvider.registerProvider(value());
             }
         }
     }
 
-    record CapabilityData<BE extends BlockEntity, CAP, CONTEXT>(BlockCapability<CAP, CONTEXT> capability, ICapabilityProvider<? super BE, CONTEXT, CAP> provider,
+    record CapabilityData<BE extends BlockEntity, CAP, CONTEXT>(BlockApiLookup<CAP, CONTEXT> capability, BiFunction<? super BE, CONTEXT, CAP> provider,
                                                                         BooleanSupplier shouldApply) {
 
-        private void registerProvider(RegisterCapabilitiesEvent event, BlockEntityType<BE> type) {
+        private void registerProvider(BlockEntityType<BE> type) {
             if (shouldApply.getAsBoolean()) {
-                event.registerBlockEntity(capability, type, provider);
+                capability.registerForBlockEntity(provider, type);
             }
         }
     }

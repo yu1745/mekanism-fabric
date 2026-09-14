@@ -27,10 +27,15 @@ public final class MekanismFabricClientBootstrap implements ClientModInitializer
         FabricChemicalClientNetworking.initialize();
         FabricTileUpdateHandler.initializeClient();
         FabricContainerClientNetworking.initializeClient();
+        mekanism.fabric.radiation.FabricRadiationClientLifecycle.initialize();
         //Real model-loading owner for the shipped "mekanism:transmitter" OBJ/MTL models, plus the logistical
         //transporter tint. Model registration needs no block instance: it keys off the model ids in the resource pack.
         FabricTransmitterModelPlugin.initialize();
         FabricTransmitterColorProvider.initialize();
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientWorldEvents.AFTER_CLIENT_WORLD_CHANGE.register((client, world) ->
+              mekanism.common.lib.transmitter.TransmitterNetworkRegistry.clearClientNetworks());
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((handler, client) ->
+              mekanism.common.lib.transmitter.TransmitterNetworkRegistry.clearClientNetworks());
         LOGGER.info("MEKANISM_FABRIC_NETWORK_CLIENT_PROOF protocol={} receiver=true recipe_mixin_client_only=true", MekanismNetworkProtocol.CURRENT);
     }
 }

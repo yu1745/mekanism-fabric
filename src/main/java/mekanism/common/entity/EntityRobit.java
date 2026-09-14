@@ -442,7 +442,7 @@ public class EntityRobit extends PathfinderMob implements IRobit, IMekanismInven
             if (provider != null) {
                 gameEvent(GameEvent.ENTITY_INTERACT, player);
                 //Validate the provider isn't null, it shouldn't be but just in case
-                player.openMenu(provider, buf -> buf.writeVarInt(getId()));
+                mekanism.common.inventory.container.ContainerProvider.open(player, provider, buf -> buf.writeVarInt(getId()));
             }
         }
         return InteractionResult.sidedSuccess(level().isClientSide);

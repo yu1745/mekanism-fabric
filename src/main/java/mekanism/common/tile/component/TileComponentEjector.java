@@ -21,8 +21,9 @@ import mekanism.api.energy.IEnergyContainer;
 import mekanism.api.fluid.IExtendedFluidTank;
 import mekanism.api.text.EnumColor;
 import mekanism.common.attachments.component.AttachedEjector;
-import mekanism.common.capabilities.Capabilities;
-import mekanism.common.capabilities.IMultiTypeCapability;
+import mekanism.common.capabilities.resolver.manager.ChemicalHandlerManager;
+import java.util.function.Supplier;
+import net.fabricmc.fabric.api.lookup.v1.block.BlockApiCache;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.content.network.transmitter.LogisticalTransporterBase;
 import mekanism.common.integration.computer.ComputerException;
@@ -77,7 +78,7 @@ public class TileComponentEjector implements ITileComponent, ISpecificContainerT
     private final TileEntityMekanism tile;
     private final Map<TransmissionType, ConfigInfo> configInfo = new EnumMap<>(TransmissionType.class);
 
-    private final Map<TransmissionType, Map<Direction, BlockCapabilityCache<?, @Nullable Direction>>> capabilityCaches = new EnumMap<>(TransmissionType.class);
+    private final Map<Direction, Supplier<@Nullable IChemicalHandler>> chemicalCapabilityCaches = new EnumMap<>(Direction.class);
     private final Map<Direction, BlockEnergyCapabilityCache> energyCapabilityCache = new EnumMap<>(Direction.class);
 
     private final Function<LogisticalTransporterBase, EnumColor> outputColorFunction;
@@ -222,13 +223,12 @@ public class TileComponentEjector implements ITileComponent, ISpecificContainerT
         if (outputData != null && !outputData.isEmpty()) {
             ServerLevel level = (ServerLevel) tile.getLevel();
             BlockPos pos = tile.getBlockPos();
-            Map<Direction, BlockCapabilityCache<?, @Nullable Direction>> typeCapabilityCaches = capabilityCaches.computeIfAbsent(type, t -> new EnumMap<>(Direction.class));
             for (Map.Entry<Object, Set<Direction>> entry : outputData.entrySet()) {
                 Set<Direction> sides = entry.getValue();
                 switch (type) {
                     case CHEMICAL -> {
                         IChemicalTank tank = (IChemicalTank) entry.getKey();
-                        List<BlockCapabilityCache<IChemicalHandler, @Nullable Direction>> caches = getCapabilityCaches(level, pos, typeCapabilityCaches, sides, Capabilities.CHEMICAL);
+                        List<Supplier<@Nullable IChemicalHandler>> caches = getChemicalCapabilityCaches(level, pos, sides);
                         ChemicalUtil.emit(caches, tank, chemicalEjectRate.getAsLong());
                     }
                     case FLUID -> {
@@ -269,17 +269,13 @@ public class TileComponentEjector implements ITileComponent, ISpecificContainerT
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private static <HANDLER> List<BlockCapabilityCache<HANDLER, @Nullable Direction>> getCapabilityCaches(ServerLevel level, BlockPos pos,
-          Map<Direction, BlockCapabilityCache<?, @Nullable Direction>> typeCapabilityCaches, Set<Direction> sides, IMultiTypeCapability<HANDLER, ?> capability) {
-        List<BlockCapabilityCache<HANDLER, @Nullable Direction>> caches = new ArrayList<>(sides.size());
+    private List<Supplier<@Nullable IChemicalHandler>> getChemicalCapabilityCaches(ServerLevel level, BlockPos pos, Set<Direction> sides) {
+        List<Supplier<@Nullable IChemicalHandler>> caches = new ArrayList<>(sides.size());
         for (Direction side : sides) {
-            BlockCapabilityCache<HANDLER, @Nullable Direction> cache = (BlockCapabilityCache<HANDLER, @Nullable Direction>) typeCapabilityCaches.get(side);
-            if (cache == null) {
-                cache = capability.createCache(level, pos.relative(side), side.getOpposite());
-                typeCapabilityCaches.put(side, cache);
-            }
-            caches.add(cache);
+            caches.add(chemicalCapabilityCaches.computeIfAbsent(side, direction -> {
+                var cache = BlockApiCache.create(ChemicalHandlerManager.CHEMICAL_HANDLER, level, pos.relative(direction));
+                return () -> cache.find(direction.getOpposite());
+            }));
         }
         return caches;
     }

@@ -6,3 +6,7 @@ pluginManagement {
 }
 
 rootProject.name = 'mekanism-fabric-bootstrap'
+
+//Reuse the actual Mekanism method-factory processors, without configuring the NeoForge root build.
+include ':annotation-processor'
+project(':annotation-processor').projectDir = file('../annotation-processor')

@@ -45,6 +45,22 @@ class GenericInputCacheContextTest {
     }
 
     @Test
+    void consumerRefreshIsOwnedByPublicationAndRaisedAgainByFullClear() {
+        assertFalse(RecipeCacheContext.isInvalidationPending());
+        RecipeCacheContext.Binding first = RecipeCacheContext.bind(manager, access, 1);
+        assertTrue(RecipeCacheContext.isInvalidationPending());
+        first.completeConsumerInvalidation();
+        assertFalse(RecipeCacheContext.isInvalidationPending());
+        first.advanceInvalidationGeneration();
+        assertTrue(RecipeCacheContext.isInvalidationPending());
+        RecipeCacheContext.bind(manager, access, 2);
+        first.completeConsumerInvalidation();
+        assertTrue(RecipeCacheContext.isInvalidationPending(), "finishing an obsolete publication cannot consume the new reload");
+        RecipeCacheContext.clear();
+        assertFalse(RecipeCacheContext.isInvalidationPending());
+    }
+
+    @Test
     void singleDoubleEitherAndTripleLookupsFindRecipes() {
         SingleItemRecipe single = new SingleItemRecipe(IngredientCreatorAccess.item().from(Items.IRON_INGOT, 2));
         DoubleItemChemicalRecipe doubleRecipe = new DoubleItemChemicalRecipe(IngredientCreatorAccess.item().from(Items.GOLD_INGOT, 1),

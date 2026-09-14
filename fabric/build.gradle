@@ -169,6 +169,14 @@ repositories {
     // from the NeoForge repositories in the root build.
     maven { url = 'https://maven.fabricmc.net/' }
     mavenCentral()
+    maven {
+        url = 'https://maven.squiddev.cc'
+        content { includeGroup 'cc.tweaked' }
+    }
+    maven {
+        url = 'https://maven.blamejared.com'
+        content { includeGroup 'org.openzen.zencode' }
+    }
 }
 
 def loadSlice = { String listName ->
@@ -186,7 +194,7 @@ def platformSlice = loadSlice('platform-slice.txt')
 def apiSliceFiles = apiSlice.collect { file("../src/api/java/${it}") }
 def commonSliceFiles = commonSlice.collect { file("../src/main/java/${it}") }
 def platformSliceFiles = platformSlice.collect { file("src/main/java/${it}") }
-if (apiSlice.size() != 234 || commonSlice.size() != 398 || platformSlice.size() != 63) {
+if (apiSlice.size() != 255 || commonSlice.size() != 630 || platformSlice.size() != 86) {
     throw new GradleException("Unexpected Fabric source slice counts: api=${apiSlice.size()} common=${commonSlice.size()} platform=${platformSlice.size()}")
 }
 
@@ -591,6 +599,9 @@ dependencies {
     modImplementation "net.fabricmc:fabric-loader:${loader_version}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
     modImplementation "teamreborn:energy:${team_reborn_energy_version}"
+    // Optional native computer binding; verified fabric.mod.json targets exactly MC 1.21.1.
+    modCompileOnly('cc.tweaked:cc-tweaked-1.21.1-fabric:1.113.1') { transitive = false }
+    annotationProcessor project(':annotation-processor')
     modHandshakeMismatchFixtureImplementation "net.fabricmc:fabric-loader:${loader_version}"
     modHandshakeMismatchFixtureImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
     modHandshakeMissingReceiverFixtureImplementation "net.fabricmc:fabric-loader:${loader_version}"
@@ -650,9 +661,17 @@ processResources {
         include 'META-INF/services/mekanism.api.datamaps.IMekanismDataMapTypes'
         include 'META-INF/services/mekanism.api.recipes.ingredients.creator.IIngredientCreatorProvider'
         include 'META-INF/services/mekanism.api.recipes.IRecipeTypeRegistry'
+        include 'META-INF/services/mekanism.api.gear.IModuleHelper'
+        include 'META-INF/services/mekanism.api.radial.IRadialDataHelper'
+        include 'META-INF/services/mekanism.api.security.IBlockSecurityUtils'
+        include 'META-INF/services/mekanism.api.security.ISecurityUtils'
+        include 'META-INF/services/mekanism.api.radiation.IRadiationManager'
+        include 'assets/mekanism/particles/radiation.json'
     }
     from('../src/datagen/generated/mekanism') {
         include 'data/mekanism/mekanism/robit_skin/*.json'
+        include 'data/mekanism/damage_type/*.json'
+        include 'data/minecraft/tags/damage_type/*.json'
         include 'assets/mekanism/lang/en_us.json'
         include 'data/mekanism/data_maps/damage_type/mekasuit_absorption.json'
         include 'data/mekanism/tags/damage_type/mekasuit_always_supported.json'
@@ -708,6 +727,10 @@ tasks.named('processClientWindowFixtureResources') {
         include 'META-INF/services/mekanism.api.recipes.ingredients.creator.IIngredientCreatorProvider'
         include 'META-INF/services/mekanism.api.recipes.IRecipeTypeRegistry'
     }
+}
+
+tasks.named('compileJava', JavaCompile) {
+    options.compilerArgs += ['-AmekanismModule=mekanism']
 }
 
 tasks.withType(JavaCompile).configureEach {

@@ -8,7 +8,7 @@ import mekanism.common.attachments.containers.ContainerType;
 import mekanism.common.item.block.machine.ItemBlockFluidTank;
 import mekanism.common.tier.FluidTankTier;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.fluids.FluidStack;
+import mekanism.api.fluid.FluidStack;
 
 @NothingNullByDefault
 public class ComponentBackedFluidTankFluidTank extends ComponentBackedFluidTank {

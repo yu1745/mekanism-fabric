@@ -18,7 +18,8 @@ import java.util.Set;
 import java.util.UUID;
 import mekanism.api.Chunk3D;
 import mekanism.api.MekanismAPI;
-import mekanism.common.Mekanism;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import mekanism.common.content.network.transmitter.Transmitter;
 import mekanism.common.tile.transmitter.TileEntityTransmitter;
 import mekanism.common.util.EnumUtils;
@@ -28,16 +29,15 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ChunkMap;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.chunk.ChunkAccess;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.level.ChunkTicketLevelUpdatedEvent;
-import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.jetbrains.annotations.Nullable;
 
-@EventBusSubscriber(modid = Mekanism.MODID)
 public class TransmitterNetworkRegistry {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism");
 
     private static final Multimap<Chunk3D, Transmitter<?, ?, ?>> transmitters = HashMultimap.create();
     private static Object2BooleanMap<Chunk3D> changedTicketChunks = new Object2BooleanOpenHashMap<>();
@@ -88,7 +88,7 @@ public class TransmitterNetworkRegistry {
         GlobalPos coord = transmitter.getTileGlobalPos();
         Transmitter<?, ?, ?> removed = newOrphanTransmitters.remove(coord);
         if (removed != null && removed != transmitter) {
-            Mekanism.logger.error("Different orphan transmitter was registered at location during removal! {}", coord);
+            LOGGER.error("Different orphan transmitter was registered at location during removal! {}", coord);
             newOrphanTransmitters.put(coord, transmitter);//put it back?
         }
     }
@@ -101,7 +101,7 @@ public class TransmitterNetworkRegistry {
             GlobalPos pos = transmitter.getTileGlobalPos();
             Transmitter<?, ?, ?> previous = newOrphanTransmitters.put(pos, transmitter);
             if (previous != null && previous != transmitter && previous.isValid()) {
-                Mekanism.logger.error("Different orphan transmitter was already registered at location! {}", pos);
+                LOGGER.error("Different orphan transmitter was already registered at location! {}", pos);
             }
         }
     }
@@ -119,23 +119,19 @@ public class TransmitterNetworkRegistry {
         networksToChange.remove(network);
     }
 
-    @SubscribeEvent
-    public static void onTick(ServerTickEvent.Post event) {
+    public static void onTick(MinecraftServer server) {
         handleChangedChunks();
         removeInvalidTransmitters();
         assignOrphans();
         commitChanges();
-        if (event.getServer().tickRateManager().runsNormally()) {
+        if (server.tickRateManager().runsNormally()) {
             for (DynamicNetwork<?, ?, ?> net : networks) {
                 net.onUpdate();
             }
         }
     }
 
-    @SubscribeEvent
-    public static void onTicketLevelChange(ChunkTicketLevelUpdatedEvent event) {
-        int newTicketLevel = event.getNewTicketLevel();
-        int oldTicketLevel = event.getOldTicketLevel();
+    public static void onTicketLevelChange(ServerLevel level, long chunkPos, int oldTicketLevel, int newTicketLevel) {
         boolean loaded;
         if (oldTicketLevel > ChunkMap.MAX_VIEW_DISTANCE && newTicketLevel <= ChunkMap.MAX_VIEW_DISTANCE) {
             //Went from "unloaded" to loaded
@@ -147,7 +143,7 @@ public class TransmitterNetworkRegistry {
             //Load type stayed the same, just exit
             return;
         }
-        Chunk3D chunk = new Chunk3D(event.getLevel().dimension(), event.getChunkPos());
+        Chunk3D chunk = new Chunk3D(level.dimension(), chunkPos);
         if (transmitters.containsKey(chunk)) {
             //Only track it if we have any transmitters in that chunk
             if (changedTicketChunks.getOrDefault(chunk, loaded) != loaded) {
@@ -168,7 +164,7 @@ public class TransmitterNetworkRegistry {
             Object2BooleanMap<Chunk3D> changed = changedTicketChunks;
             changedTicketChunks = new Object2BooleanOpenHashMap<>();
             if (MekanismAPI.debug) {
-                Mekanism.logger.info("Dealing with {} changed chunks", changed.size());
+                LOGGER.info("Dealing with {} changed chunks", changed.size());
             }
             for (ObjectIterator<Object2BooleanMap.Entry<Chunk3D>> iterator = Object2BooleanMaps.fastIterator(changed); iterator.hasNext(); ) {
                 Object2BooleanMap.Entry<Chunk3D> entry = iterator.next();
@@ -179,7 +175,7 @@ public class TransmitterNetworkRegistry {
                     transmitter.getTransmitterTile().chunkAccessibilityChange(loaded);
                 }
                 if (MekanismAPI.debug) {
-                    Mekanism.logger.info("{} {} transmitters in chunk: {}, {}", loaded ? "Loaded" : "Unloaded", chunkTransmitters.size(), chunk.x, chunk.z);
+                    LOGGER.info("{} {} transmitters in chunk: {}, {}", loaded ? "Loaded" : "Unloaded", chunkTransmitters.size(), chunk.x, chunk.z);
                 }
             }
         }
@@ -193,7 +189,7 @@ public class TransmitterNetworkRegistry {
             Set<Transmitter<?, ?, ?>> toInvalidate = invalidTransmitters;
             invalidTransmitters = new ObjectOpenHashSet<>();
             if (MekanismAPI.debug) {
-                Mekanism.logger.info("Dealing with {} invalid Transmitters", toInvalidate.size());
+                LOGGER.info("Dealing with {} invalid Transmitters", toInvalidate.size());
             }
             for (Transmitter<?, ?, ?> invalid : toInvalidate) {
                 removeInvalidTransmitter(invalid);
@@ -222,7 +218,7 @@ public class TransmitterNetworkRegistry {
             Map<GlobalPos, Transmitter<?, ?, ?>> orphanTransmitters = newOrphanTransmitters;
             newOrphanTransmitters = new Object2ObjectOpenHashMap<>();
             if (MekanismAPI.debug) {
-                Mekanism.logger.info("Dealing with {} orphan Transmitters", orphanTransmitters.size());
+                LOGGER.info("Dealing with {} orphan Transmitters", orphanTransmitters.size());
             }
 
             for (Transmitter<?, ?, ?> orphanTransmitter : orphanTransmitters.values()) {
@@ -279,7 +275,7 @@ public class TransmitterNetworkRegistry {
         NETWORK getNetworkFromOrphan(Map<GlobalPos, Transmitter<?, ?, ?>> orphanTransmitters) {
             //Calculate the network
             if (queue.peek() != null) {
-                Mekanism.logger.error("OrphanPathFinder queue was not empty?!");
+                LOGGER.error("OrphanPathFinder queue was not empty?!");
                 queue.clear();
             }
             queue.push(startPoint.getBlockPos());
@@ -290,15 +286,15 @@ public class TransmitterNetworkRegistry {
             NETWORK network;
             if (networksFound.size() == 1) {
                 if (MekanismAPI.debug) {
-                    Mekanism.logger.info("Adding {} transmitters to single found network", connectedTransmitters.size());
+                    LOGGER.info("Adding {} transmitters to single found network", connectedTransmitters.size());
                 }
                 network = networksFound.iterator().next();
             } else {
                 if (MekanismAPI.debug) {
                     if (networksFound.isEmpty()) {
-                        Mekanism.logger.info("No networks found. Creating new network for {} transmitters", connectedTransmitters.size());
+                        LOGGER.info("No networks found. Creating new network for {} transmitters", connectedTransmitters.size());
                     } else {
-                        Mekanism.logger.info("Merging {} networks with {} new transmitters", networksFound.size(), connectedTransmitters.size());
+                        LOGGER.info("Merging {} networks with {} new transmitters", networksFound.size(), connectedTransmitters.size());
                     }
                 }
                 //TODO: Should we take one of the existing network's uuids if there is one?

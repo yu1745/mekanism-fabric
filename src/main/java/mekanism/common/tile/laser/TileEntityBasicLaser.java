@@ -161,7 +161,7 @@ public abstract class TileEntityBasicLaser extends TileEntityMekanism {
                         double refractionPercent = 0;
                         for (ItemStack armor : livingEntity.getArmorSlots()) {
                             if (!armor.isEmpty()) {
-                                ILaserDissipation laserDissipation = armor.getCapability(Capabilities.LASER_DISSIPATION);
+                                ILaserDissipation laserDissipation = mekanism.fabric.gear.GearItemLookups.LASER_DISSIPATION.find(armor, null);
                                 if (laserDissipation != null) {
                                     dissipationPercent += laserDissipation.getDissipationPercent();
                                     refractionPercent += laserDissipation.getRefractionPercent();

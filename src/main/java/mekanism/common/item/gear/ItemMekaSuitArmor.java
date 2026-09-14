@@ -31,7 +31,7 @@ import mekanism.common.attachments.containers.chemical.ChemicalTanksBuilder;
 import mekanism.common.attachments.containers.chemical.ComponentBackedChemicalTank;
 import mekanism.common.attachments.containers.fluid.ComponentBackedFluidTank;
 import mekanism.common.attachments.containers.fluid.FluidTanksBuilder;
-import mekanism.common.capabilities.Capabilities;
+import mekanism.fabric.gear.GearItemLookups;
 import mekanism.common.capabilities.ICapabilityAware;
 import mekanism.common.capabilities.chemical.item.ChemicalTankSpec;
 import mekanism.common.capabilities.fluid.item.FluidTankSpec;
@@ -76,8 +76,6 @@ import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.ItemEnchantments;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.gameevent.GameEvent;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.common.Tags;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -241,9 +239,9 @@ public class ItemMekaSuitArmor extends ItemSpecialArmor implements IModuleContai
     }
 
     @Override
-    public void attachAttachments(IEventBus eventBus) {
+    public void attachAttachments() {
         if (!chemicalTankSpecs.isEmpty()) {
-            ContainerType.CHEMICAL.addDefaultCreators(eventBus, this, () -> {
+            ContainerType.CHEMICAL.addDefaultCreators(true, this, () -> {
                 ChemicalTanksBuilder builder = ChemicalTanksBuilder.builder();
                 for (ChemicalTankSpec spec : chemicalTankSpecs) {
                     spec.addTank(builder, ComponentBackedChemicalTank::new);
@@ -252,7 +250,7 @@ public class ItemMekaSuitArmor extends ItemSpecialArmor implements IModuleContai
             }, MekanismConfig.gear);
         }
         if (!fluidTankSpecs.isEmpty()) {
-            ContainerType.FLUID.addDefaultCreators(eventBus, this, () -> {
+            ContainerType.FLUID.addDefaultCreators(true, this, () -> {
                 FluidTanksBuilder builder = FluidTanksBuilder.builder();
                 for (FluidTankSpec spec : fluidTankSpecs) {
                     spec.addTank(builder, ComponentBackedFluidTank::new);
@@ -263,16 +261,16 @@ public class ItemMekaSuitArmor extends ItemSpecialArmor implements IModuleContai
     }
 
     @Override
-    public void attachCapabilities(RegisterCapabilitiesEvent event) {
+    public void attachCapabilities() {
         //Note: The all our providers only expose the capabilities (both those via attachments and those here) if the required configs for initializing that capability are loaded
-        event.registerItem(Capabilities.RADIATION_SHIELDING, (stack, ctx) -> {
+        GearItemLookups.RADIATION_SHIELDING.registerForItems( (stack, ctx) -> {
             if (!MekanismConfig.gear.isLoaded() || !isModuleEnabled(stack, MekanismModules.RADIATION_SHIELDING_UNIT)) {
                 return null;
             }
             return RadiationShieldingHandler.create(ItemHazmatSuitArmor.getShieldingByArmor(getType()));
         }, this);
 
-        event.registerItem(Capabilities.LASER_DISSIPATION, (stack, ctx) -> {
+        GearItemLookups.LASER_DISSIPATION.registerForItems( (stack, ctx) -> {
             //Note: This doesn't rely on configs, so we can skip the gear loaded check
             return isModuleEnabled(stack, MekanismModules.LASER_DISSIPATION_UNIT) ? LaserDissipationHandler.create(laserDissipation, laserRefraction) : null;
         }, this);
@@ -375,7 +373,7 @@ public class ItemMekaSuitArmor extends ItemSpecialArmor implements IModuleContai
     public void useJetpackFuel(ItemStack stack) {
         IModule<ModuleJetpackUnit> module = getEnabledModule(stack, MekanismModules.JETPACK_UNIT);
         if (module != null) {
-            IChemicalHandler gasHandlerItem = Capabilities.CHEMICAL.getCapability(stack);
+            IChemicalHandler gasHandlerItem = mekanism.fabric.item.FabricComponentItemLookup.CHEMICAL.find(stack, null);
             if (gasHandlerItem != null) {
                 int amount = Mth.ceil(module.getCustomInstance().getThrustMultiplier());
                 gasHandlerItem.extractChemical(MekanismChemicals.HYDROGEN.asStack(amount), Action.EXECUTE);

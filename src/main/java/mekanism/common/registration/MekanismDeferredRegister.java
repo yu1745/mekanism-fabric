@@ -1,6 +1,9 @@
 package mekanism.common.registration;
 
 import java.util.Objects;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import mekanism.api.annotations.NothingNullByDefault;
@@ -22,6 +25,8 @@ public class MekanismDeferredRegister<T> {
     private final String namespace;
     private final Function<ResourceKey<T>, ? extends MekanismDeferredHolder<T, ?>> holderCreator;
     private final FabricDeferredRegister<T> delegate;
+    private final List<MekanismDeferredHolder<T, ? extends T>> entries = new ArrayList<>();
+    private final List<MekanismDeferredHolder<T, ? extends T>> entriesView = Collections.unmodifiableList(entries);
 
     public MekanismDeferredRegister(ResourceKey<? extends Registry<T>> registryKey, String namespace) {
         this(registryKey, namespace, MekanismDeferredHolder::new);
@@ -51,7 +56,39 @@ public class MekanismDeferredRegister<T> {
         }
         FabricDeferredHolder<T> fabricHolder = delegate.register(name, supplier);
         holder.attach(fabricHolder);
+        entries.add(holder);
         return holder;
+    }
+
+    /**
+     * Declares one canonical holder before its deferred value factory is evaluated. Menu factories that pass their own
+     * registered type into constructed menus must capture this holder, not manufacture an unattached alias.
+     */
+    @SuppressWarnings("unchecked")
+    protected <I extends T, H extends MekanismDeferredHolder<T, I>> H registerWithHolder(String name, Function<H, ? extends I> factory) {
+        Objects.requireNonNull(factory);
+        ResourceKey<T> key = ResourceKey.create(registryKey, ResourceLocation.fromNamespaceAndPath(namespace, name));
+        H holder = (H) holderCreator.apply(key);
+        if (!key.equals(holder.getKey())) {
+            throw new IllegalArgumentException("Holder creator returned the wrong key for " + key.location());
+        }
+        FabricDeferredHolder<T> fabricHolder = delegate.register(name, () -> factory.apply(holder));
+        holder.attach(fabricHolder);
+        entries.add(holder);
+        return holder;
+    }
+
+    /** Canonical declared holders in registration order; never constructs a second holder or evaluates suppliers. */
+    public List<MekanismDeferredHolder<T, ? extends T>> getEntries() {
+        return entriesView;
+    }
+
+    public String getNamespace() {
+        return namespace;
+    }
+
+    public ResourceKey<? extends Registry<T>> getRegistryKey() {
+        return registryKey;
     }
 
     /** Commits this batch through the normal vanilla registry lifecycle. */
