@@ -5,7 +5,6 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.function.Consumer;
 import mekanism.api.SerializationConstants;
 import mekanism.api.annotations.NothingNullByDefault;
-import mekanism.common.Mekanism;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.ItemStack;
@@ -13,12 +12,16 @@ import net.minecraft.world.item.ItemStack;
 @NothingNullByDefault
 public record LockData(ItemStack lock) {
 
+    //Task052 call-site narrowing (adjudicated): logging-only Mekanism dependency becomes the established Mekanism SLF4J category
+    private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger("Mekanism");
+
+
     public static final LockData EMPTY = new LockData(ItemStack.EMPTY);
 
     public static final Codec<LockData> CODEC = RecordCodecBuilder.<LockData>create(instance -> instance.group(
           ItemStack.SINGLE_ITEM_CODEC.fieldOf(SerializationConstants.OUTPUT).forGetter(LockData::lock)
     ).apply(instance, LockData::new)).orElse(
-          (Consumer<String>) error -> Mekanism.logger.error("Failed to load stored lock data: {}", error),
+          (Consumer<String>) error -> LOGGER.error("Failed to load stored lock data: {}", error),
           EMPTY
     );
     public static final StreamCodec<RegistryFriendlyByteBuf, LockData> STREAM_CODEC = ItemStack.STREAM_CODEC.map(LockData::new, LockData::lock);

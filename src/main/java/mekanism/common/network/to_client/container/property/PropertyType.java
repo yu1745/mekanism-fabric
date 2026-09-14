@@ -6,6 +6,7 @@ import java.util.function.Consumer;
 import java.util.function.IntFunction;
 import java.util.function.Supplier;
 import mekanism.api.chemical.ChemicalStack;
+import mekanism.api.fluid.FluidStack;
 import mekanism.common.inventory.container.sync.ISyncableData;
 import mekanism.common.inventory.container.sync.SyncableBlockPos;
 import mekanism.common.inventory.container.sync.SyncableBoolean;
@@ -28,7 +29,6 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.util.ByIdMap;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.fluids.FluidStack;
 import org.jetbrains.annotations.Nullable;
 
 public enum PropertyType {

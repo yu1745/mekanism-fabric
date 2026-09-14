@@ -9,6 +9,7 @@ import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongMaps;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -34,7 +35,6 @@ import mekanism.api.math.MathUtils;
 import mekanism.api.security.SecurityMode;
 import mekanism.api.text.EnumColor;
 import mekanism.common.CommonWorldTickHandler;
-import mekanism.common.Mekanism;
 import mekanism.common.base.TagCache;
 import mekanism.common.content.qio.QIODriveData.QIODriveKey;
 import mekanism.common.inventory.container.QIOItemViewerContainer;
@@ -46,8 +46,11 @@ import mekanism.common.lib.frequency.IColorableFrequency;
 import mekanism.common.lib.inventory.HashedItem;
 import mekanism.common.lib.inventory.HashedItem.UUIDAwareHashedItem;
 import mekanism.common.lib.security.SecurityFrequency;
+import mekanism.common.network.to_client.qio.PacketQIOItemViewerKill;
 import mekanism.common.network.to_client.qio.PacketUpdateItemViewer;
 import mekanism.common.util.MekanismUtils;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.fabricmc.fabric.api.transfer.v1.transaction.TransactionContext;
 import net.minecraft.SharedConstants;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -56,8 +59,6 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.neoforged.neoforge.common.util.Lazy;
-import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
 public class QIOFrequency extends Frequency implements IColorableFrequency, IQIOFrequency {
@@ -264,6 +265,19 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
     }
 
     public ItemStack removeByType(@Nullable HashedItem itemType, int amount) {
+        return removeByType(itemType, amount, (TransactionContext) null);
+    }
+
+    /**
+     * Transaction-aware removal (Task052 continuation09). Snapshots are taken defensively before any mutation and
+     * all touched state is restored on abort (own or later root abort): the original {@link QIOItemTypeData} identity
+     * and ordered itemDataMap membership, type count/containingDrives, per-drive itemMap/count, totalCount, the
+     * tag/mod/fuzzy index memberships and the physical metadata on the captured actual drive stacks. The holder
+     * {@code dataUpdate} notifications are deferred to successful outer commit by the per-drive journals. Wildcard
+     * caches are left cleared after a rollback (conservative, derivable state); failed-wildcard sets are never touched
+     * by removal. There is no remove-then-add compensation: rollback restores the exact prior state.
+     */
+    public ItemStack removeByType(@Nullable HashedItem itemType, int amount, @Nullable TransactionContext tx) {
         if (itemDataMap.isEmpty() || amount <= 0) {
             return ItemStack.EMPTY;
         }
@@ -280,10 +294,63 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
             }
         }
 
-        ItemStack removed = data.remove(amount);
+        if (tx == null) {
+            //Legacy immediate path for unrelated callers
+            ItemStack removed = data.remove(amount);
+            // remove this item type if it's now empty
+            if (data.count == 0) {
+                removeItemData(data.itemType);
+            }
+            return removed;
+        }
+
+        final HashedItem type = itemType;
+        final boolean willRemoveType = data.count <= amount;
+        //Defensive pre-state snapshots for the frequency-level state this removal can touch; the ordered itemDataMap
+        // key sequence is captured so a rollback restores the exact ordered membership, not an appended entry
+        final List<HashedItem> oldItemOrder = willRemoveType ? new ArrayList<>(itemDataMap.keySet()) : null;
+        final Set<String> oldTags = new HashSet<>(tagLookupMap.getKeys(type));
+        final ItemStack internalStack = type.getInternalStack();
+        final String modID = MekanismUtils.getModId(internalStack);
+        final Set<HashedItem> oldItemsForMod = modIDLookupMap.containsKey(modID) ? new HashSet<>(modIDLookupMap.get(modID)) : null;
+        final Item item = internalStack.getItem();
+        final Set<HashedItem> oldItemsByFuzzy = fuzzyItemLookupMap.containsKey(item) ? new HashSet<>(fuzzyItemLookupMap.get(item)) : null;
+
+        ItemStack removed = data.remove(amount, Action.EXECUTE, tx);
         // remove this item type if it's now empty
         if (data.count == 0) {
             removeItemData(data.itemType);
+        }
+        if (willRemoveType) {
+            final QIOItemTypeData removedData = data;
+            Runnable restore = () -> {
+                //Restore the original data identity and its exact ordered itemDataMap membership
+                if (itemDataMap.get(type) == null) {
+                    LinkedHashMap<HashedItem, QIOItemTypeData> rebuilt = new LinkedHashMap<>();
+                    for (HashedItem key : oldItemOrder) {
+                        QIOItemTypeData existing = key.equals(type) ? removedData : itemDataMap.get(key);
+                        if (existing != null) {
+                            rebuilt.put(key, existing);
+                        }
+                    }
+                    itemDataMap.clear();
+                    itemDataMap.putAll(rebuilt);
+                }
+                //Restore the lookup index memberships; wildcard caches stay cleared (derivable, conservative)
+                if (!oldTags.isEmpty()) {
+                    for (String tag : oldTags) {
+                        tagLookupMap.put(tag, type);
+                    }
+                }
+                if (oldItemsForMod != null) {
+                    modIDLookupMap.computeIfAbsent(modID, k -> new HashSet<>()).addAll(oldItemsForMod);
+                }
+                if (oldItemsByFuzzy != null) {
+                    fuzzyItemLookupMap.computeIfAbsent(item, k -> new HashSet<>()).addAll(oldItemsByFuzzy);
+                }
+            };
+            tx.onAbort(restore);
+            tx.onRootAbort(restore);
         }
         return removed;
     }
@@ -493,7 +560,9 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
         if (!updatedItems.isEmpty() || needsUpdate) {
             //Only calculate the packet and the update map if there are actually players viewing this frequency,
             // otherwise we can just skip looking up UUIDs and counts
-            Lazy<PacketUpdateItemViewer> lazyPacket = Lazy.of(() -> {
+            //Fabric port delta: NeoForge's Lazy.of memoization is replaced by a memoizing supplier with identical
+            // once-per-needed-update semantics (the packet is not reconstructed per recipient)
+            java.util.function.Supplier<PacketUpdateItemViewer> lazyPacket = memoize(() -> {
                 Object2LongMap<UUIDAwareHashedItem> map = new Object2LongOpenHashMap<>(updatedItems.size());
                 for (UUID uuid : updatedItems) {
                     HashedItem type = QIOGlobalItemLookup.INSTANCE.getTypeByUUID(uuid);
@@ -507,7 +576,8 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
             for (Iterator<ServerPlayer> viewingIterator = playersViewingItems.iterator(); viewingIterator.hasNext(); ) {
                 ServerPlayer player = viewingIterator.next();
                 if (player.containerMenu instanceof QIOItemViewerContainer) {
-                    PacketDistributor.sendToPlayer(player, lazyPacket.get());
+                    //Fabric port delta: PacketDistributor.sendToPlayer becomes the Fabric play S2C send
+                    ServerPlayNetworking.send(player, lazyPacket.get());
                 } else {
                     //flush players that somehow didn't send a container close packet
                     viewingIterator.remove();
@@ -573,7 +643,9 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
         }
         driveMap.clear();
         for (ServerPlayer player : playersViewingItems) {
-            Mekanism.packetHandler().killItemViewer(player);
+            //Fabric port delta: Mekanism.packetHandler().killItemViewer becomes a direct send of the extracted
+            // no-data kill payload through the Fabric play S2C channel
+            ServerPlayNetworking.send(player, PacketQIOItemViewerKill.INSTANCE);
         }
     }
 
@@ -677,6 +749,22 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
         setNeedsUpdate(null);
     }
 
+    private static <T> java.util.function.Supplier<T> memoize(java.util.function.Supplier<T> delegate) {
+        return new java.util.function.Supplier<>() {
+            private T value;
+            private boolean resolved;
+
+            @Override
+            public synchronized T get() {
+                if (!resolved) {
+                    value = delegate.get();
+                    resolved = true;
+                }
+                return value;
+            }
+        };
+    }
+
     public class QIOItemTypeData {
 
         private final Set<QIODriveKey> containingDrives = new HashSet<>();
@@ -735,10 +823,22 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
         }
 
         private long remove(long amount, Action action) {
+            return remove(amount, action, null);
+        }
+
+        /**
+         * Transaction-aware removal (Task052 continuation09): journals count, totalCount, containingDrives and the
+         * per-drive removals (which carry their own metadata/dataUpdate journals). Exact per-drive iteration order is
+         * unchanged; the needsUpdate marking is never erased on rollback (it only marks an update, and an aborted
+         * removal must not wipe earlier changes).
+         */
+        private long remove(long amount, Action action, @Nullable TransactionContext tx) {
             long removed = 0;
+            final long oldCount = count;
+            final java.util.Set<QIODriveKey> oldContaining = tx == null ? null : new HashSet<>(containingDrives);
             for (Iterator<QIODriveKey> iter = containingDrives.iterator(); iter.hasNext(); ) {
                 QIODriveData data = driveMap.get(iter.next());
-                removed += data.remove(itemType, amount - removed, action);
+                removed += data.remove(itemType, amount - removed, action, tx);
                 // remove this drive from containingDrives if it doesn't have this item anymore
                 if (action.execute() && data.getStored(itemType) == 0) {
                     iter.remove();
@@ -752,6 +852,17 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
                 count -= removed;
                 totalCount -= removed;
                 setNeedsUpdate(itemType);
+                if (tx != null) {
+                    final long removedAmount = removed;
+                    Runnable restore = () -> {
+                        count = oldCount;
+                        totalCount += removedAmount;
+                        containingDrives.clear();
+                        containingDrives.addAll(oldContaining);
+                    };
+                    tx.onAbort(restore);
+                    tx.onRootAbort(restore);
+                }
             }
             return removed;
         }
