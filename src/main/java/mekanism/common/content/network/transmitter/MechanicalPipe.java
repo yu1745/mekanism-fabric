@@ -12,7 +12,6 @@ import mekanism.api.fluid.IMekanismFluidHandler;
 import mekanism.api.functions.ConstantPredicates;
 import mekanism.api.math.MathUtils;
 import mekanism.common.block.attribute.Attribute;
-import mekanism.common.capabilities.Capabilities;
 import mekanism.common.capabilities.fluid.BasicFluidTank;
 import mekanism.common.content.network.FluidNetwork;
 import mekanism.common.content.network.distribution.FluidSendTransaction;
@@ -21,7 +20,7 @@ import mekanism.common.lib.transmitter.CompatibleTransmitterValidator.Compatible
 import mekanism.common.lib.transmitter.ConnectionType;
 import mekanism.common.lib.transmitter.TransmissionType;
 import mekanism.common.lib.transmitter.acceptor.AbstractAcceptorCache;
-import mekanism.common.lib.transmitter.acceptor.AcceptorCache;
+import mekanism.common.lib.transmitter.acceptor.FluidAcceptorCache;
 import mekanism.common.tier.PipeTier;
 import mekanism.common.tile.transmitter.TileEntityTransmitter;
 import mekanism.common.upgrade.transmitter.MechanicalPipeUpgradeData;
@@ -62,13 +61,14 @@ public class MechanicalPipe extends BufferedTransmitter<Storage<FluidVariant>, F
 
     @Override
     protected AbstractAcceptorCache<Storage<FluidVariant>, ?> createAcceptorCache() {
-        return new AcceptorCache<>(getTransmitterTile(), Capabilities.FLUID.block());
+        //Fresh per-pipe fluid lookup cache: no returned Storage is retained; each resolution is a fresh
+        // FluidStorage.SIDED.find on the opposite face, guarded by the loaded neighbor check (continuation08)
+        return new FluidAcceptorCache(getTransmitterTile());
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    public AcceptorCache<Storage<FluidVariant>> getAcceptorCache() {
-        return (AcceptorCache<Storage<FluidVariant>>) super.getAcceptorCache();
+    public FluidAcceptorCache getAcceptorCache() {
+        return (FluidAcceptorCache) super.getAcceptorCache();
     }
 
     @Override
@@ -81,11 +81,15 @@ public class MechanicalPipe extends BufferedTransmitter<Storage<FluidVariant>, F
         if (!hasPullSide || getAvailablePull() <= 0) {
             return;
         }
-        AcceptorCache<Storage<FluidVariant>> acceptorCache = getAcceptorCache();
+        FluidAcceptorCache acceptorCache = getAcceptorCache();
         for (Direction side : EnumUtils.DIRECTIONS) {
             if (!isConnectionType(side, ConnectionType.PULL)) {
                 continue;
             }
+            //Refresh this PULL side's acceptor-connection validity (official bitmap policy: redstone/mutual/
+            // exclusion checks, packet only on bit change) before the fresh per-pipe lookup; never bypass policy by
+            // querying storage directly (continuation08)
+            refreshAcceptorConnections(side);
             Storage<FluidVariant> connectedAcceptor = acceptorCache.getConnectedAcceptor(side);
             if (connectedAcceptor != null && connectedAcceptor.iterator().hasNext()) {
                 //Note: We recheck the buffer each time in case we ended up accepting fluid somewhere

@@ -29,9 +29,10 @@ public final class FluidUtils {
     //Connection status (accurate, do not overstate): TileComponentEjector (FLUID branch), TileEntityFluidTank (DOWN output) and TileEntityElectricPump (UP output)
     // now perform direct per-operation FluidStorage.SIDED.find lookups on the physical opposite face and route their real-tank sends through the sender-owned
     // FluidSendTransaction overloads below; unloaded neighbors are skipped and no Storage is retained across ticks.
-    // Still on the OLD lookups (explicitly open, NOT migrated): MechanicalPipe.createAcceptorCache still registers Capabilities.FLUID.block() (though its pipe pull already
-    // uses the sender-owned snapshot path). QE/InventoryFrequency now collects fluid through QE's typed getFluidStorage getter (fresh FluidStorage.SIDED.find, continuation7).
-    // Migrating the pipe acceptor cache needs accepted Fabric lookup/cache identities and physical side lifecycle - not casts or reverse NeoForge facades - and remains open WIP.
+    // Still on the OLD lookups (explicitly open, NOT migrated): none for fluid pipes - MechanicalPipe now uses FluidAcceptorCache (fresh per-pipe
+    // FluidStorage.SIDED.find, continuation08) and FluidNetwork uses the derived FluidNetworkAcceptorCache snapshot; pipe pulls and network sends both run
+    // through the sender-owned FluidSendTransaction path. QE/InventoryFrequency collects fluid through QE's typed getFluidStorage getter (continuation7).
+    // Energy/chemical acceptor caches and item routing remain on the OLD lookups (not approved in this substep).
 
     private FluidUtils() {
     }

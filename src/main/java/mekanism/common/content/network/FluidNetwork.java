@@ -17,6 +17,8 @@ import mekanism.common.capabilities.fluid.VariableCapacityFluidTank;
 import mekanism.common.content.network.distribution.FluidTransmitterSaveTarget;
 import mekanism.common.content.network.transmitter.MechanicalPipe;
 import mekanism.common.lib.transmitter.DynamicBufferedNetwork;
+import mekanism.common.lib.transmitter.acceptor.FluidNetworkAcceptorCache;
+import mekanism.common.lib.transmitter.acceptor.NetworkAcceptorCache;
 import mekanism.common.util.EmitUtils;
 import mekanism.common.util.MekanismUtils;
 import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
@@ -44,6 +46,16 @@ public class FluidNetwork extends DynamicBufferedNetwork<Storage<FluidVariant>, 
         super(networkID);
         fluidTank = VariableCapacityFluidTank.create(this::getCapacityAsInt, ConstantPredicates.alwaysTrueBi(), ConstantPredicates.alwaysTrueBi(), ConstantPredicates.alwaysTrue(), this);
         fluidTanks = Collections.singletonList(fluidTank);
+    }
+
+    /**
+     * Fluid-only derived acceptor cache: public readers build a fresh ephemeral position-&gt;face-&gt;Storage snapshot from
+     * the authoritative membership on each read; nothing is retained, adopted or copied. The membership supplier is
+     * deferred, so no subclass state is evaluated during DynamicNetwork construction (continuation08).
+     */
+    @Override
+    protected NetworkAcceptorCache<Storage<FluidVariant>> createAcceptorCache() {
+        return new FluidNetworkAcceptorCache(this::getTransmitters);
     }
 
     public FluidNetwork(Collection<FluidNetwork> networks) {
