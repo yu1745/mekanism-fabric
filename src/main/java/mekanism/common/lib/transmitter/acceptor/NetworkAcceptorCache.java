@@ -42,6 +42,15 @@ public class NetworkAcceptorCache<ACCEPTOR> {
     }
 
     public void adoptAcceptors(NetworkAcceptorCache<ACCEPTOR> other) {
+        adoptRetainedAcceptors(other);
+        adoptPendingDirty(other);
+    }
+
+    /**
+     * Copies the other cache's retained acceptor map into this one. Base retained-state behavior; derived-state
+     * specializations (fluid) override this out because they retain no endpoint objects.
+     */
+    protected void adoptRetainedAcceptors(NetworkAcceptorCache<ACCEPTOR> other) {
         for (ObjectIterator<Long2ObjectMap.Entry<Map<Direction, ACCEPTOR>>> iterator = other.getAcceptorFastIterator(); iterator.hasNext(); ) {
             Long2ObjectMap.Entry<Map<Direction, ACCEPTOR>> entry = iterator.next();
             long pos = entry.getLongKey();
@@ -51,6 +60,13 @@ public class NetworkAcceptorCache<ACCEPTOR> {
                 cachedAcceptors.put(pos, entry.getValue());
             }
         }
+    }
+
+    /**
+     * Propagates the other cache's pending dirty sides so post-merge commit still refreshes connection bitmaps.
+     * Real for all specializations, including derived-state ones.
+     */
+    protected void adoptPendingDirty(NetworkAcceptorCache<ACCEPTOR> other) {
         for (Entry<Transmitter<ACCEPTOR, ?, ?>, Set<Direction>> entry : other.changedAcceptors.entrySet()) {
             Transmitter<ACCEPTOR, ?, ?> transmitter = entry.getKey();
             if (changedAcceptors.containsKey(transmitter)) {

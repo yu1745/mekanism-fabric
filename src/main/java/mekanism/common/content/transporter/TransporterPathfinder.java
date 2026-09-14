@@ -30,6 +30,7 @@ import mekanism.common.lib.transmitter.ConnectionType;
 import mekanism.common.util.EnumUtils;
 import mekanism.common.util.TransporterUtils;
 import mekanism.common.util.WorldUtils;
+import net.fabricmc.fabric.api.transfer.v1.transaction.TransactionContext;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.GlobalPos;
@@ -46,16 +47,16 @@ public final class TransporterPathfinder {
     }
 
     private static List<Destination> getPaths(LogisticalTransporterBase start, TransporterStack stack, TransitRequest request, int min,
-          Map<GlobalPos, Set<TransporterStack>> additionalFlowingStacks) {
+          Map<GlobalPos, Set<TransporterStack>> additionalFlowingStacks, @Nullable TransactionContext tx) {
         InventoryNetwork network = start.getTransmitterNetwork();
         if (network == null) {
             return Collections.emptyList();
         }
         Long2ObjectMap<ChunkAccess> chunkMap = new Long2ObjectOpenHashMap<>();
-        List<AcceptorData> acceptors = network.calculateAcceptors(request, stack, chunkMap, additionalFlowingStacks, start);
+        List<AcceptorData> acceptors = network.calculateAcceptors(request, stack, chunkMap, additionalFlowingStacks, start, tx);
         List<Destination> paths = new ArrayList<>();
         for (AcceptorData data : acceptors) {
-            Destination path = getPath(network, data, start, stack, min, chunkMap);
+            Destination path = getPath(network, data, start, stack, min, chunkMap, tx);
             if (path != null) {
                 paths.add(path);
             }
@@ -67,12 +68,23 @@ public final class TransporterPathfinder {
     public static boolean checkPath(InventoryNetwork network, LongList path, TransporterStack stack) {
         for (int i = path.size() - 1; i > 0; i--) {
             LogisticalTransporterBase transmitter = network.getTransmitter(path.getLong(i));
-            if (transmitter == null) {
+            if (transmitter == null || !transmitter.isValid()) {
                 return false;
             }
             EnumColor color = transmitter.getColor();
             if (color != null && color != stack.color) {
                 return false;
+            }
+            Direction direction = WorldUtils.sideDifference(path.getLong(i - 1), path.getLong(i));
+            if (direction == null || !transmitter.canEmitTo(direction)) {
+                return false;
+            }
+            if (i > 1) {
+                LogisticalTransporterBase next = network.getTransmitter(path.getLong(i - 1));
+                if (next == null || !next.canReceiveFrom(direction.getOpposite()) ||
+                      !stack.canInsertToTransporterNN(next, direction, transmitter)) {
+                    return false;
+                }
             }
         }
         return true;
@@ -80,7 +92,7 @@ public final class TransporterPathfinder {
 
     @Nullable
     private static Destination getPath(InventoryNetwork network, AcceptorData data, LogisticalTransporterBase start, TransporterStack stack, int min,
-          Long2ObjectMap<ChunkAccess> chunkMap) {
+          Long2ObjectMap<ChunkAccess> chunkMap, @Nullable TransactionContext tx) {
         TransitResponse response = data.getResponse();
         if (response.getSendingAmount() >= min) {
             BlockPos dest = data.getLocation();
@@ -89,7 +101,7 @@ public final class TransporterPathfinder {
                 return new Destination(test, response);
             }
             Pathfinder p = new Pathfinder(network, start.getLevel(), dest, start.getBlockPos(), stack, response.getStack(),
-                  (level, pos, tile, s, resp, side) -> TransporterUtils.canInsert(level, pos, tile, s.color, resp, side, false));
+                  (level, pos, tile, s, resp, side) -> TransporterUtils.canInsert(level, pos, tile, s.color, resp, side, false, tx));
             p.find(chunkMap);
             if (p.hasPath()) {
                 return new Destination(PathfinderCache.addCachedPath(start, dest, p), response);
@@ -106,7 +118,13 @@ public final class TransporterPathfinder {
     @Nullable
     public static Destination getNewBasePath(LogisticalTransporterBase start, TransporterStack stack, TransitRequest request, int min,
           Map<GlobalPos, Set<TransporterStack>> additionalFlowingStacks) {
-        List<Destination> paths = getPaths(start, stack, request, min, additionalFlowingStacks);
+        return getNewBasePath(start, stack, request, min, additionalFlowingStacks, null);
+    }
+
+    @Nullable
+    public static Destination getNewBasePath(LogisticalTransporterBase start, TransporterStack stack, TransitRequest request, int min,
+          Map<GlobalPos, Set<TransporterStack>> additionalFlowingStacks, @Nullable TransactionContext tx) {
+        List<Destination> paths = getPaths(start, stack, request, min, additionalFlowingStacks, tx);
         if (paths.isEmpty()) {
             return null;
         }
@@ -116,7 +134,13 @@ public final class TransporterPathfinder {
     @Nullable
     public static Destination getNewRRPath(LogisticalTransporterBase start, TransporterStack stack, TransitRequest request, IAdvancedTransportEjector outputter,
           int min) {
-        List<Destination> destinations = getPaths(start, stack, request, min, Collections.emptyMap());
+        return getNewRRPath(start, stack, request, outputter, min, null);
+    }
+
+    @Nullable
+    public static Destination getNewRRPath(LogisticalTransporterBase start, TransporterStack stack, TransitRequest request, IAdvancedTransportEjector outputter,
+          int min, @Nullable TransactionContext tx) {
+        List<Destination> destinations = getPaths(start, stack, request, min, Collections.emptyMap(), tx);
         int destinationCount = destinations.size();
         if (destinationCount == 0) {
             return null;
