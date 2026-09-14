@@ -21,7 +21,9 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.world.item.Item;
-import net.neoforged.neoforge.items.IItemHandler;
+import mekanism.common.lib.inventory.TransitRequest;
+import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
+import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class SorterFilter<FILTER extends SorterFilter<FILTER>> extends BaseFilter<FILTER> {
@@ -92,7 +94,7 @@ public abstract class SorterFilter<FILTER extends SorterFilter<FILTER>> extends 
 
     public abstract Finder getFinder();
 
-    public TransitRequest mapInventory(IItemHandler itemHandler, boolean singleItem) {
+    public TransitRequest mapInventory(Storage<ItemVariant> itemHandler, boolean singleItem) {
         if (sizeMode && !singleItem) {
             return TransitRequest.definedItem(itemHandler, min, max, getFinder());
         }
