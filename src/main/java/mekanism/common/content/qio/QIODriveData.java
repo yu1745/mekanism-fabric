@@ -10,12 +10,23 @@ import mekanism.common.attachments.qio.DriveMetadata;
 import mekanism.common.lib.inventory.HashedItem;
 import mekanism.common.registries.MekanismDataComponents;
 import net.fabricmc.fabric.api.transfer.v1.transaction.TransactionContext;
+import net.fabricmc.fabric.api.transfer.v1.transaction.base.SnapshotParticipant;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 public class QIODriveData {
 
     private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism");
+
+    /**
+     * Stable real-owner participant (Task052 R4 correction): the drive's itemMap/itemCount and the physical DRIVE_METADATA
+     * component on the <b>captured actual drive stack</b> are transactional. A snapshot is taken before the first
+     * mutation at each nesting depth; the real {@link SnapshotParticipant} nesting promotion makes an enclosing abort
+     * after a committed nested removal roll the drive data back exactly. The holder {@code dataUpdate}
+     * (DriveArray markForSave) notification is commit-only ({@code onFinalCommit}) and only fires for removals that
+     * survived every nesting level.
+     */
+    private final DriveStateParticipant driveStateTx = new DriveStateParticipant();
 
     private final QIODriveKey key;
     private final long countCapacity;
@@ -61,21 +72,20 @@ public class QIODriveData {
     /**
      * Transaction-aware removal (Task052 continuation09): the itemMap/itemCount mutation and the physical metadata
      * component update on the <b>captured actual drive stack</b> happen immediately (provisional state), while the
-     * holder {@code dataUpdate}/save notification is deferred to the successful outer commit. Aborts (own or later
-     * root abort) restore the captured stack's metadata component and the per-drive itemMap entry/itemCount. A
-     * replacement drive at the same numeric slot is never overwritten through a stale snapshot: the restore validates
-     * the current stack identity first.
+     * holder {@code dataUpdate}/save notification is deferred to the successful outer commit through the stable
+     * drive participant. Any enclosing abort restores the captured stack's metadata component and the per-drive
+     * itemMap entry/itemCount. A replacement drive at the same numeric slot is never silently overwritten: if the
+     * identity no longer matches at restore time the violation is surfaced as a loud failure instead of a claimed
+     * rollback.
      */
     public long remove(HashedItem type, long amount, Action action, @Nullable TransactionContext tx) {
         long stored = getStored(type);
         long removed = Math.min(amount, stored);
         if (action.execute()) {
-            ItemStack capturedStack = null;
-            DriveMetadata oldMetadata = null;
             if (tx != null) {
-                //Establish the actual holder slot stack identity before mutating; snapshot its metadata component
-                capturedStack = key.getDriveStack();
-                oldMetadata = capturedStack.get(MekanismDataComponents.DRIVE_METADATA);
+                //Join the drive's state to the caller transaction BEFORE any mutation, capturing the actual holder
+                // slot stack identity and its metadata component at snapshot time (R4)
+                driveStateTx.updateSnapshots(tx);
             }
             long remaining = stored - removed;
             if (remaining > 0) {
@@ -85,33 +95,48 @@ public class QIODriveData {
             }
             itemCount -= removed;
             key.updateMetadata(this);
-            if (tx != null) {
-                final ItemStack stack = capturedStack;
-                final DriveMetadata metadata = oldMetadata;
-                final long oldStored = stored;
-                final long oldItemCount = itemCount + removed;
-                //Defer the holder dataUpdate (DriveArray markForSave) until successful outer commit
-                tx.onRootCommit(key::dataUpdate);
-                Runnable restore = () -> {
-                    if (key.getDriveStack() != stack) {
-                        LOGGER.error("Not restoring QIO drive data through a stale slot: the drive at slot {} was replaced.", key.driveSlot());
-                        return;
-                    }
-                    if (oldStored > 0) {
-                        itemMap.put(type, oldStored);
-                    } else {
-                        itemMap.removeLong(type);
-                    }
-                    itemCount = oldItemCount;
-                    stack.set(MekanismDataComponents.DRIVE_METADATA, metadata);
-                };
-                tx.onAbort(restore);
-                tx.onRootAbort(restore);
-            } else {
+            if (tx == null) {
                 key.dataUpdate();
             }
         }
         return removed;
+    }
+
+    private final class DriveStateParticipant extends SnapshotParticipant<DriveStateSnapshot> {
+
+        @Override
+        protected DriveStateSnapshot createSnapshot() {
+            return new DriveStateSnapshot(new Object2LongOpenHashMap<>(itemMap), itemCount, key.getDriveStack(),
+                  key.getDriveStack().get(MekanismDataComponents.DRIVE_METADATA));
+        }
+
+        @Override
+        protected void readSnapshot(DriveStateSnapshot snapshot) {
+            if (key.getDriveStack() != snapshot.capturedStack) {
+                //The drive in this holder slot was replaced during the transaction; restoring through it would
+                // corrupt a replacement drive. Surface the unrecoverable identity violation loudly.
+                LOGGER.error("QIO drive identity violation during transaction rollback: the drive at slot {} was replaced; in-memory data and the metadata of the current stack may be inconsistent.", key.driveSlot());
+                throw new IllegalStateException("QIO drive replaced during transaction; cannot roll back drive data");
+            }
+            itemMap.clear();
+            itemMap.putAll(snapshot.itemMap);
+            itemCount = snapshot.itemCount;
+            if (snapshot.capturedMetadata != null) {
+                snapshot.capturedStack.set(MekanismDataComponents.DRIVE_METADATA, snapshot.capturedMetadata);
+            } else {
+                snapshot.capturedStack.remove(MekanismDataComponents.DRIVE_METADATA);
+            }
+        }
+
+        @Override
+        protected void onFinalCommit() {
+            //Commit-only holder notification: the removal survived every nesting level
+            key.dataUpdate();
+        }
+    }
+
+    private record DriveStateSnapshot(Object2LongMap<HashedItem> itemMap, long itemCount, ItemStack capturedStack,
+          @Nullable DriveMetadata capturedMetadata) {
     }
 
     public long getStored(HashedItem type) {
