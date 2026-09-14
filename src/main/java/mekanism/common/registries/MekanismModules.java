@@ -1,6 +1,9 @@
 package mekanism.common.registries;
 
 import java.util.function.UnaryOperator;
+import mekanism.api.MekanismIMC;
+import net.minecraft.core.Holder;
+import net.minecraft.world.item.Item;
 import mekanism.api.gear.ModuleData.ExclusiveFlag;
 import mekanism.api.gear.ModuleData.ModuleDataBuilder;
 import mekanism.api.gear.config.ModuleBooleanConfig;
@@ -53,6 +56,25 @@ import net.minecraft.world.item.enchantment.Enchantments;
 public class MekanismModules {
 
     private MekanismModules() {
+    }
+
+    /** The official built-in support table, moved from the loader IMC callback to its actual module owner. */
+    public static void registerSupport() {
+        MekanismIMC.addModuleContainer((Holder<Item>) MekanismItems.MEKA_TOOL, MekanismIMC.ADD_MEKA_TOOL_MODULES);
+        MekanismIMC.addModuleContainer((Holder<Item>) MekanismItems.MEKASUIT_HELMET, MekanismIMC.ADD_MEKA_SUIT_HELMET_MODULES);
+        MekanismIMC.addModuleContainer((Holder<Item>) MekanismItems.MEKASUIT_BODYARMOR, MekanismIMC.ADD_MEKA_SUIT_BODYARMOR_MODULES);
+        MekanismIMC.addModuleContainer((Holder<Item>) MekanismItems.MEKASUIT_PANTS, MekanismIMC.ADD_MEKA_SUIT_PANTS_MODULES);
+        MekanismIMC.addModuleContainer((Holder<Item>) MekanismItems.MEKASUIT_BOOTS, MekanismIMC.ADD_MEKA_SUIT_BOOTS_MODULES);
+        MekanismIMC.addModulesToAll(ENERGY_UNIT);
+        MekanismIMC.addMekaSuitModules(COLOR_MODULATION_UNIT, LASER_DISSIPATION_UNIT, RADIATION_SHIELDING_UNIT);
+        MekanismIMC.addMekaToolModules(ATTACK_AMPLIFICATION_UNIT, SILK_TOUCH_UNIT, FORTUNE_UNIT, BLASTING_UNIT, VEIN_MINING_UNIT,
+              FARMING_UNIT, SHEARING_UNIT, TELEPORTATION_UNIT, EXCAVATION_ESCALATION_UNIT);
+        MekanismIMC.addMekaSuitHelmetModules(ELECTROLYTIC_BREATHING_UNIT, INHALATION_PURIFICATION_UNIT,
+              VISION_ENHANCEMENT_UNIT, NUTRITIONAL_INJECTION_UNIT);
+        MekanismIMC.addMekaSuitBodyarmorModules(JETPACK_UNIT, GRAVITATIONAL_MODULATING_UNIT, CHARGE_DISTRIBUTION_UNIT,
+              DOSIMETER_UNIT, GEIGER_UNIT, ELYTRA_UNIT);
+        MekanismIMC.addMekaSuitPantsModules(LOCOMOTIVE_BOOSTING_UNIT, GYROSCOPIC_STABILIZATION_UNIT, HYDROSTATIC_REPULSOR_UNIT, MOTORIZED_SERVO_UNIT);
+        MekanismIMC.addMekaSuitBootsModules(HYDRAULIC_PROPULSION_UNIT, MAGNETIC_ATTRACTION_UNIT, FROST_WALKER_UNIT, SOUL_SURFER_UNIT);
     }
 
     public static final ModuleDeferredRegister MODULES = new ModuleDeferredRegister(Mekanism.MODID);

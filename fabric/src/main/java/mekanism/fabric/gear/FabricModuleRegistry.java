@@ -4,6 +4,9 @@ import com.mojang.serialization.Lifecycle;
 import mekanism.api.gear.ModuleData;
 import mekanism.api.gear.ModuleRegistry;
 import mekanism.common.registries.MekanismModules;
+import mekanism.common.content.gear.ModuleHelper;
+import mekanism.api.MekanismIMC;
+import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.fabric.api.event.registry.FabricRegistryBuilder;
 import net.fabricmc.fabric.api.event.registry.RegistryAttribute;
 import net.minecraft.core.MappedRegistry;
@@ -31,6 +34,9 @@ public final class FabricModuleRegistry {
         MappedRegistry<ModuleData<?>> candidate = allocate();
         MekanismModules.MODULES.registerAll(candidate);
         candidate.freeze();
+        MekanismModules.registerSupport();
+        FabricLoader.getInstance().getEntrypoints("mekanism:module_support", Runnable.class).forEach(Runnable::run);
+        ModuleHelper.get().processIMC(MekanismIMC.finishModuleRegistration());
         initialized = true;
     }
 }

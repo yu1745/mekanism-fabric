@@ -1,14 +1,16 @@
 package mekanism.api;
 
 import java.util.Objects;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Supplier;
 import mekanism.api.gear.ModuleData;
 import mekanism.api.providers.IModuleDataProvider;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderSet;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.ItemLike;
-import net.neoforged.fml.InterModComms;
-import net.neoforged.fml.event.lifecycle.InterModEnqueueEvent;
+import org.jetbrains.annotations.ApiStatus.Internal;
 
 /**
  * Class containing various helpers for sending IMC messages to Mekanism.
@@ -16,6 +18,32 @@ import net.neoforged.fml.event.lifecycle.InterModEnqueueEvent;
 public class MekanismIMC {
 
     private MekanismIMC() {
+    }
+
+    // Mekanism module support only. This is not an inter-mod message bus or a platform event replacement.
+    private static final List<ModuleRegistration> MODULE_REGISTRATIONS = new ArrayList<>();
+    private static boolean moduleRegistrationClosed;
+
+    public record ModuleRegistration(String method, Supplier<?> value) {
+        public ModuleRegistration {
+            Objects.requireNonNull(method);
+            Objects.requireNonNull(value);
+        }
+    }
+
+    private static synchronized void enqueueModuleRegistration(String method, Supplier<?> value) {
+        if (moduleRegistrationClosed) throw new IllegalStateException("Module support registration is closed: " + method);
+        MODULE_REGISTRATIONS.add(new ModuleRegistration(method, value));
+    }
+
+    /** Called once by the Fabric module construction owner, after all module-support entrypoints have run. */
+    @Internal
+    public static synchronized List<ModuleRegistration> finishModuleRegistration() {
+        if (moduleRegistrationClosed) throw new IllegalStateException("Module support registration already closed");
+        moduleRegistrationClosed = true;
+        List<ModuleRegistration> registrations = List.copyOf(MODULE_REGISTRATIONS);
+        MODULE_REGISTRATIONS.clear();
+        return registrations;
     }
 
     /**
@@ -93,7 +121,7 @@ public class MekanismIMC {
      */
     public static void addModuleContainer(ModuleContainerTarget moduleContainer) {
         Objects.requireNonNull(moduleContainer, "Module container cannot be null");
-        InterModComms.sendTo(MekanismAPI.MEKANISM_MODID, ADD_MODULE_CONTAINER, () -> moduleContainer);
+        enqueueModuleRegistration(ADD_MODULE_CONTAINER, () -> moduleContainer);
     }
 
     /**
@@ -311,7 +339,7 @@ public class MekanismIMC {
         if (moduleDataProviders == null || moduleDataProviders.length == 0) {
             throw new IllegalArgumentException("No module data providers given.");
         }
-        InterModComms.sendTo(MekanismAPI.MEKANISM_MODID, imcMethod, () -> moduleDataProviders);
+        enqueueModuleRegistration(imcMethod, () -> moduleDataProviders);
     }
 
     /**
@@ -329,10 +357,10 @@ public class MekanismIMC {
         if (moduleDataProviders == null || moduleDataProviders.length == 0) {
             throw new IllegalArgumentException("No module data providers given.");
         } else if (moduleDataProviders.length == 1) {
-            InterModComms.sendTo(MekanismAPI.MEKANISM_MODID, imcMethod, () -> moduleDataProviders[0]);
+            enqueueModuleRegistration(imcMethod, () -> moduleDataProviders[0]);
         } else {
             HolderSet<ModuleData<?>> holderSet = HolderSet.direct(moduleDataProviders);
-            InterModComms.sendTo(MekanismAPI.MEKANISM_MODID, imcMethod, () -> holderSet);
+            enqueueModuleRegistration(imcMethod, () -> holderSet);
         }
     }
 

@@ -7,6 +7,8 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Map;
+import java.util.List;
+import mekanism.api.MekanismIMC.ModuleRegistration;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -37,7 +39,6 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Item.Properties;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.fml.event.lifecycle.InterModProcessEvent;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -55,62 +56,59 @@ public class ModuleHelper implements IModuleHelper {//TODO - 1.22: Evaluate movi
     private final Map<ModuleData<?>, Set<Item>> supportedContainers = new IdentityHashMap<>();
     private final Map<ModuleData<?>, Set<ModuleData<?>>> conflictingModules = new IdentityHashMap<>();
 
-    public void processIMC(InterModProcessEvent event) {
-        Map<Item, String> moduleContainers = addModuleContainers(event);
+    public void processIMC(List<ModuleRegistration> registrations) {
+        Map<Item, String> moduleContainers = addModuleContainers(registrations);
         this.moduleContainers.addAll(moduleContainers.keySet());
         Map<ModuleData<?>, ImmutableSet.Builder<Item>> supportedContainersBuilderMap = new IdentityHashMap<>();
         for (Map.Entry<Item, String> entry : moduleContainers.entrySet()) {
-            mapSupportedModules(event, entry.getValue(), entry.getKey(), supportedContainersBuilderMap);
+            mapSupportedModules(registrations, entry.getValue(), entry.getKey(), supportedContainersBuilderMap);
         }
         for (Map.Entry<ModuleData<?>, ImmutableSet.Builder<Item>> entry : supportedContainersBuilderMap.entrySet()) {
             supportedContainers.put(entry.getKey(), entry.getValue().build());
         }
     }
 
-    private Map<Item, String> addModuleContainers(InterModProcessEvent event) {
+    private Map<Item, String> addModuleContainers(List<ModuleRegistration> registrations) {
         Map<Item, String> moduleContainers = new Reference2ObjectArrayMap<>(5);
         Set<String> imcMethods = new HashSet<>(5);
-        event.getIMCStream(MekanismIMC.ADD_MODULE_CONTAINER::equals).forEach(message -> {
-            if (message.messageSupplier().get() instanceof ModuleContainerTarget(Holder<Item> container, String imcMethod)) {
-                Mekanism.logger.debug("Received IMC message '{}' from '{}' for new module container '{}' with an imcMethod '{}'.", MekanismIMC.ADD_MODULE_CONTAINER,
-                      message.senderModId(), container.getRegisteredName(), imcMethod);
+        registrations.stream().filter(message -> MekanismIMC.ADD_MODULE_CONTAINER.equals(message.method())).forEach(message -> {
+            if (message.value().get() instanceof ModuleContainerTarget(Holder<Item> container, String imcMethod)) {
+                Mekanism.logger.debug("Registered module container '{}' with method '{}'.", container.getRegisteredName(), imcMethod);
                 if (moduleContainers.put(container.value(), imcMethod) != null) {
-                    Mekanism.logger.error("Received IMC message for '{}' from mod '{}' for an item '{}' that has already been registered as a container.",
-                          MekanismIMC.ADD_MODULE_CONTAINER, message.senderModId(), container.getRegisteredName());
+                    Mekanism.logger.error("Item '{}' has already been registered as a module container.", container.getRegisteredName());
                 }
                 if (!imcMethods.add(imcMethod)) {
-                    Mekanism.logger.error("Received IMC message for '{}' from mod '{}' for an item '{}' with an imcMethod '{}' that that has already been registered.",
-                          MekanismIMC.ADD_MODULE_CONTAINER, message.senderModId(), container.getRegisteredName(), imcMethod);
+                    Mekanism.logger.error("Module container '{}' uses already registered method '{}'.", container.getRegisteredName(), imcMethod);
                 }
             } else {
-                Mekanism.logger.warn("Received IMC message for '{}' from mod '{}' with an invalid body.", MekanismIMC.ADD_MODULE_CONTAINER, message.senderModId());
+                Mekanism.logger.warn("Invalid module container registration body.");
             }
         });
         return moduleContainers;
     }
 
     @SuppressWarnings("removal")
-    private void mapSupportedModules(InterModProcessEvent event, String imcMethod, Item moduleContainer,
+    private void mapSupportedModules(List<ModuleRegistration> registrations, String imcMethod, Item moduleContainer,
           Map<ModuleData<?>, ImmutableSet.Builder<Item>> supportedContainersBuilderMap) {
         ImmutableSet.Builder<ModuleData<?>> supportedModulesBuilder = ImmutableSet.builder();
-        event.getIMCStream(imcMethod::equals).forEach(message -> {
-            Object body = message.messageSupplier().get();
+        registrations.stream().filter(message -> imcMethod.equals(message.method())).forEach(message -> {
+            Object body = message.value().get();
             if (body instanceof Holder<?> holder) {
                 if (holder.value() instanceof ModuleData<?> moduleData) {
                     supportedModulesBuilder.add(moduleData);
-                    logDebugReceivedIMC(imcMethod, message.senderModId(), moduleData);
+                    logDebugReceivedIMC(imcMethod, moduleData);
                 } else {
                     //Holder for something other than modules
-                    Mekanism.logger.warn("Received IMC message for '{}' from mod '{}' with an invalid body.", imcMethod, message.senderModId());
+                    Mekanism.logger.warn("Invalid module support registration body for '{}'.", imcMethod);
                 }
             } else if (body instanceof HolderSet<?> holderSet) {
                 for (Holder<?> holder : holderSet) {
                     if (holder.value() instanceof ModuleData<?> moduleData) {
                         supportedModulesBuilder.add(moduleData);
-                        logDebugReceivedIMC(imcMethod, message.senderModId(), moduleData);
+                        logDebugReceivedIMC(imcMethod, moduleData);
                     } else {
                         //Holder set for something other than modules
-                        Mekanism.logger.warn("Received IMC message for '{}' from mod '{}' with an invalid body.", imcMethod, message.senderModId());
+                        Mekanism.logger.warn("Invalid module support registration body for '{}'.", imcMethod);
                         break;
                     }
                 }
@@ -119,15 +117,15 @@ public class ModuleHelper implements IModuleHelper {//TODO - 1.22: Evaluate movi
             else if (body instanceof IModuleDataProvider<?> moduleDataProvider) {
                 ModuleData<?> moduleData = moduleDataProvider.getModuleData();
                 supportedModulesBuilder.add(moduleData);
-                logDebugReceivedIMC(imcMethod, message.senderModId(), moduleData);
+                logDebugReceivedIMC(imcMethod, moduleData);
             } else if (body instanceof IModuleDataProvider<?>[] providers) {
                 for (IModuleDataProvider<?> moduleDataProvider : providers) {
                     ModuleData<?> moduleData = moduleDataProvider.getModuleData();
                     supportedModulesBuilder.add(moduleData);
-                    logDebugReceivedIMC(imcMethod, message.senderModId(), moduleData);
+                    logDebugReceivedIMC(imcMethod, moduleData);
                 }
             } else {
-                Mekanism.logger.warn("Received IMC message for '{}' from mod '{}' with an invalid body.", imcMethod, message.senderModId());
+                Mekanism.logger.warn("Invalid module support registration body for '{}'.", imcMethod);
             }
         });
         Set<ModuleData<?>> supported = supportedModulesBuilder.build();
@@ -139,8 +137,8 @@ public class ModuleHelper implements IModuleHelper {//TODO - 1.22: Evaluate movi
         }
     }
 
-    private void logDebugReceivedIMC(String imcMethod, String senderModId, ModuleData<?> moduleData) {
-        Mekanism.logger.debug("Received IMC message '{}' from '{}' for module '{}'.", imcMethod, senderModId, moduleData);
+    private void logDebugReceivedIMC(String imcMethod, ModuleData<?> moduleData) {
+        Mekanism.logger.debug("Registered support for module '{}' using method '{}'.", moduleData, imcMethod);
     }
 
     @Override
