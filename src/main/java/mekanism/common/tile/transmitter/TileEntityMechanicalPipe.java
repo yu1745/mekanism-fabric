@@ -7,7 +7,7 @@ import mekanism.api.fluid.IExtendedFluidTank;
 import mekanism.api.tier.BaseTier;
 import mekanism.common.block.states.BlockStateHelper;
 import mekanism.common.block.states.TransmitterType;
-import mekanism.common.capabilities.Capabilities;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidStorage;
 import mekanism.common.capabilities.fluid.DynamicFluidHandler;
 import mekanism.common.capabilities.resolver.manager.FluidHandlerManager;
 import mekanism.common.content.network.FluidNetwork;
@@ -23,7 +23,7 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.fluids.FluidStack;
+import mekanism.api.fluid.FluidStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -97,29 +97,17 @@ public class TileEntityMechanicalPipe extends TileEntityTransmitter implements I
     @Override
     public void sideChanged(@NotNull Direction side, @NotNull ConnectionType old, @NotNull ConnectionType type) {
         super.sideChanged(side, old, type);
-        if (type == ConnectionType.NONE) {
-            //We no longer have a capability, invalidate it, which will also notify the level
-            invalidateCapability(Capabilities.FLUID.block(), side);
-        } else if (old == ConnectionType.NONE) {
-            //Notify any listeners to our position that we now do have a capability
-            //Note: We don't invalidate our impls because we know they are already invalid, so we can short circuit setting them to null from null
-            invalidateCapabilities();
+        if (type == ConnectionType.NONE || old == ConnectionType.NONE) {
+            //Revoke the old view on disable/re-enable; native callers re-query providers rather than receive notifications.
+            invalidateCapability(FluidStorage.SIDED, side);
         }
     }
 
     @Override
     public void redstoneChanged(boolean powered) {
         super.redstoneChanged(powered);
-        if (powered) {
-            //The transmitter now is powered by redstone and previously was not
-            //Note: While at first glance the below invalidation may seem over aggressive, it is not actually that aggressive as
-            // if a cap has not been initialized yet on a side then invalidating it will just NO-OP
-            invalidateCapabilityAll(Capabilities.FLUID.block());
-        } else {
-            //Notify any listeners to our position that we now do have a capability
-            //Note: We don't invalidate our impls because we know they are already invalid, so we can short circuit setting them to null from null
-            invalidateCapabilities();
-        }
+        //Native providers are resolved afresh after either transition; old transaction views stay revoked.
+        invalidateCapabilityAll(FluidStorage.SIDED);
     }
 
     //Methods relating to IComputerTile

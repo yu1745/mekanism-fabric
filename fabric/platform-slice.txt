@@ -86,3 +86,9 @@ mekanism/fabric/mixin/radiation/RadiationEntityTickMixin.java
 mekanism/fabric/mixin/radiation/RadiationPlayerTickMixin.java
 mekanism/fabric/mixin/radiation/RadiationOverlayMixin.java
 mekanism/fabric/mixin/transmitter/TransmitterTicketLevelMixin.java
+mekanism/fabric/network/FabricTransmitterNetworking.java
+mekanism/fabric/network/FabricTransmitterClientNetworking.java
+mekanism/fabric/mixin/block/MachineRedstoneConnectionMixin.java
+mekanism/fabric/mixin/block/MachinePathTypeMixin.java
+mekanism/fabric/network/FabricSecurityNetworking.java
+mekanism/fabric/network/FabricSecurityClientNetworking.java

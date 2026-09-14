@@ -6,22 +6,21 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
-import mekanism.common.Mekanism;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Player;
 import mekanism.common.content.network.transmitter.LogisticalTransporterBase;
 import mekanism.common.content.transporter.TransporterStack;
-import mekanism.common.network.IMekanismPacket;
 import mekanism.common.network.PacketUtils;
 import mekanism.common.tile.transmitter.TileEntityLogisticalTransporterBase;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.jetbrains.annotations.NotNull;
 
-public record PacketTransporterBatch(long pos, IntSet deletes, Int2ObjectMap<TransporterStack> updates) implements IMekanismPacket {
+public record PacketTransporterBatch(long pos, IntSet deletes, Int2ObjectMap<TransporterStack> updates) implements CustomPacketPayload {
 
-    public static final CustomPacketPayload.Type<PacketTransporterBatch> TYPE = new CustomPacketPayload.Type<>(Mekanism.rl("transporter_batch"));
+    public static final CustomPacketPayload.Type<PacketTransporterBatch> TYPE = new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("mekanism", "transporter_batch"));
     public static final StreamCodec<RegistryFriendlyByteBuf, PacketTransporterBatch> STREAM_CODEC = StreamCodec.composite(
           ByteBufCodecs.VAR_LONG, PacketTransporterBatch::pos,
           ByteBufCodecs.VAR_INT.apply(ByteBufCodecs.collection(IntOpenHashSet::new)), PacketTransporterBatch::deletes,
@@ -42,9 +41,8 @@ public record PacketTransporterBatch(long pos, IntSet deletes, Int2ObjectMap<Tra
         return TYPE;
     }
 
-    @Override
-    public void handle(IPayloadContext context) {
-        if (PacketUtils.blockEntity(context, pos) instanceof TileEntityLogisticalTransporterBase tile) {
+    public void handle(Player player) {
+        if (PacketUtils.blockEntity(player, pos) instanceof TileEntityLogisticalTransporterBase tile) {
             LogisticalTransporterBase transporter = tile.getTransmitter();
             for (ObjectIterator<Int2ObjectMap.Entry<TransporterStack>> iterator = Int2ObjectMaps.fastIterator(updates); iterator.hasNext(); ) {
                 Int2ObjectMap.Entry<TransporterStack> entry = iterator.next();

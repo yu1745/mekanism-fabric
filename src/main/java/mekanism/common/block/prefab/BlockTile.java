@@ -117,9 +117,9 @@ public class BlockTile<TILE extends TileEntityMekanism, TYPE extends BlockTypeTi
         return type.has(AttributeRedstoneEmitter.class);
     }
 
-    @Override
+    //Native RedStoneWireBlock consumers call this Mekanism-specific hook, including the above/below null-side query.
     public boolean canConnectRedstone(@NotNull BlockState state, @NotNull BlockGetter world, @NotNull BlockPos pos, @Nullable Direction side) {
-        return type.has(AttributeRedstoneEmitter.class) || super.canConnectRedstone(state, world, pos, side);
+        return type.has(AttributeRedstoneEmitter.class) || state.isSignalSource() && side != null;
     }
 
     @Override

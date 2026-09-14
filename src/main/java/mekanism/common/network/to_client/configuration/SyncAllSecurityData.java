@@ -1,23 +1,35 @@
 package mekanism.common.network.to_client.configuration;
 
 import java.util.function.Consumer;
-import mekanism.common.Mekanism;
 import mekanism.common.network.to_client.security.PacketBatchSecurityUpdate;
+import net.fabricmc.fabric.api.networking.v1.FabricServerConfigurationNetworkHandler;
+import net.fabricmc.fabric.api.networking.v1.ServerConfigurationNetworking;
+import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.network.protocol.configuration.ServerConfigurationPacketListener;
-import net.minecraft.resources.ResourceLocation;
-import net.neoforged.neoforge.network.configuration.ICustomConfigurationTask;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.network.ConfigurationTask;
+import net.minecraft.server.network.ServerConfigurationPacketListenerImpl;
 import org.jetbrains.annotations.NotNull;
 
-public record SyncAllSecurityData(ServerConfigurationPacketListener listener) implements ICustomConfigurationTask {
+/** Original complete security snapshot task, sent during native configuration before the player enters play. */
+public record SyncAllSecurityData(ServerConfigurationPacketListenerImpl listener, MinecraftServer server) implements ConfigurationTask {
 
-    private static final ResourceLocation ID = Mekanism.rl("sync_security");
-    private static final Type TYPE = new Type(ID);
+    private static final Type TYPE = new Type("mekanism:sync_security");
+
+    public void run(Consumer<CustomPacketPayload> sender) {
+        //FrequencyManager is server-owned; a configuration task can be started from the connection thread.
+        server.execute(() -> {
+            if (!listener.isAcceptingMessages()) {
+                return;
+            }
+            sender.accept(new PacketBatchSecurityUpdate());
+            ((FabricServerConfigurationNetworkHandler) listener).completeTask(type());
+        });
+    }
 
     @Override
-    public void run(Consumer<CustomPacketPayload> sender) {
-        sender.accept(new PacketBatchSecurityUpdate());
-        listener().finishCurrentTask(type());
+    public void start(Consumer<Packet<?>> sender) {
+        run(payload -> sender.accept(ServerConfigurationNetworking.createS2CPacket(payload)));
     }
 
     @NotNull

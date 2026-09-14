@@ -86,6 +86,8 @@ public final class MekanismFabricBootstrap implements ModInitializer {
         FabricChemicalNetworking.initialize();
         FabricTileUpdateNetworking.initialize();
         FabricContainerNetworking.initialize();
+        mekanism.fabric.network.FabricTransmitterNetworking.initialize();
+        mekanism.fabric.network.FabricSecurityNetworking.initialize();
         mekanism.fabric.radiation.FabricRadiationLifecycle.initialize();
         FabricMekanismDataMaps.initializeCallbacks();
         FabricCapabilityTileLifecycle.initialize();

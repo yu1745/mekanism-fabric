@@ -9,8 +9,9 @@ import mekanism.common.content.network.transmitter.MechanicalPipe;
 import mekanism.common.content.network.transmitter.PressurizedTube;
 import mekanism.common.content.network.transmitter.Transmitter;
 import net.minecraft.core.Holder;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import mekanism.api.fluid.FluidStack;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
+import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
 
 public class CompatibleTransmitterValidator<ACCEPTOR, NETWORK extends DynamicNetwork<ACCEPTOR, NETWORK, TRANSMITTER>,
       TRANSMITTER extends Transmitter<ACCEPTOR, NETWORK, TRANSMITTER>> {
@@ -66,7 +67,7 @@ public class CompatibleTransmitterValidator<ACCEPTOR, NETWORK extends DynamicNet
         }
     }
 
-    public static class CompatibleFluidTransmitterValidator extends CompatibleTransmitterValidator<IFluidHandler, FluidNetwork, MechanicalPipe> {
+    public static class CompatibleFluidTransmitterValidator extends CompatibleTransmitterValidator<Storage<FluidVariant>, FluidNetwork, MechanicalPipe> {
 
         private FluidStack buffer;
 

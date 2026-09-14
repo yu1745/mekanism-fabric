@@ -8,23 +8,21 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import mekanism.api.security.SecurityMode;
-import mekanism.client.MekanismClient;
-import mekanism.common.Mekanism;
+import mekanism.common.lib.security.ClientSecurityData;
+import net.minecraft.resources.ResourceLocation;
 import mekanism.common.lib.frequency.FrequencyType;
 import mekanism.common.lib.security.SecurityData;
 import mekanism.common.lib.security.SecurityFrequency;
-import mekanism.common.network.IMekanismPacket;
 import mekanism.common.network.PacketUtils;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.jetbrains.annotations.NotNull;
 
-public record PacketBatchSecurityUpdate(Map<UUID, SecurityData> securityMap, Map<UUID, String> uuidMap) implements IMekanismPacket {
+public record PacketBatchSecurityUpdate(Map<UUID, SecurityData> securityMap, Map<UUID, String> uuidMap) implements CustomPacketPayload {
 
-    public static final CustomPacketPayload.Type<PacketBatchSecurityUpdate> TYPE = new CustomPacketPayload.Type<>(Mekanism.rl("batch_security"));
+    public static final CustomPacketPayload.Type<PacketBatchSecurityUpdate> TYPE = new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("mekanism", "batch_security"));
     public static final StreamCodec<ByteBuf, PacketBatchSecurityUpdate> STREAM_CODEC = StreamCodec.composite(
           ByteBufCodecs.map(HashMap::new, UUIDUtil.STREAM_CODEC, SecurityData.STREAM_CODEC), PacketBatchSecurityUpdate::securityMap,
           ByteBufCodecs.map(HashMap::new, UUIDUtil.STREAM_CODEC, ByteBufCodecs.stringUtf8(PacketUtils.LAST_USERNAME_LENGTH)), PacketBatchSecurityUpdate::uuidMap,
@@ -50,10 +48,9 @@ public record PacketBatchSecurityUpdate(Map<UUID, SecurityData> securityMap, Map
         return TYPE;
     }
 
-    @Override
-    public void handle(IPayloadContext context) {
-        MekanismClient.clientSecurityMap.clear();
-        MekanismClient.clientSecurityMap.putAll(securityMap);
-        MekanismClient.clientUUIDMap.putAll(uuidMap);
+    public void handle() {
+        ClientSecurityData.securityMap().clear();
+        ClientSecurityData.securityMap().putAll(securityMap);
+        ClientSecurityData.usernameMap().putAll(uuidMap);
     }
 }

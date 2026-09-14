@@ -8,6 +8,8 @@ import mekanism.api.heat.IHeatHandler;
 import mekanism.common.MekanismLang;
 import mekanism.common.content.network.transmitter.ThermodynamicConductor;
 import mekanism.common.lib.transmitter.DynamicNetwork;
+import mekanism.common.lib.transmitter.acceptor.FreshNetworkAcceptorCache;
+import mekanism.common.lib.transmitter.acceptor.NetworkAcceptorCache;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.UnitDisplayUtils.TemperatureUnit;
 import net.minecraft.network.chat.Component;
@@ -26,6 +28,11 @@ public class HeatNetwork extends DynamicNetwork<IHeatHandler, HeatNetwork, Therm
     public HeatNetwork(Collection<HeatNetwork> networks) {
         this(UUID.randomUUID());
         adoptAllAndRegister(networks);
+    }
+
+    @Override
+    protected NetworkAcceptorCache<IHeatHandler> createAcceptorCache() {
+        return new FreshNetworkAcceptorCache<>(this::getTransmitters);
     }
 
     @Override

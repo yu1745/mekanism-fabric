@@ -16,7 +16,7 @@ public class SecurityObject extends OwnerObject implements ISecurityObject {
 
     @Override
     public SecurityMode getSecurityMode() {
-        return stack.getOrDefault(MekanismDataComponents.SECURITY, SecurityMode.PUBLIC);
+        return stack.getOrDefault(MekanismDataComponents.SECURITY.get(), SecurityMode.PUBLIC);
     }
 
     @Override
@@ -24,9 +24,9 @@ public class SecurityObject extends OwnerObject implements ISecurityObject {
         SecurityMode securityMode = getSecurityMode();
         if (securityMode != mode) {
             if (mode == SecurityMode.PUBLIC) {
-                stack.remove(MekanismDataComponents.SECURITY);
+                stack.remove(MekanismDataComponents.SECURITY.get());
             } else {
-                stack.set(MekanismDataComponents.SECURITY, mode);
+                stack.set(MekanismDataComponents.SECURITY.get(), mode);
             }
             onSecurityChanged(securityMode, mode);
         }

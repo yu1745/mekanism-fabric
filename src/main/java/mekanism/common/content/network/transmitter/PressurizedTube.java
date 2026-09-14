@@ -14,7 +14,7 @@ import mekanism.api.chemical.ChemicalStack;
 import mekanism.api.chemical.IChemicalHandler;
 import mekanism.api.chemical.IChemicalTank;
 import mekanism.common.block.attribute.Attribute;
-import mekanism.common.capabilities.Capabilities;
+import mekanism.common.capabilities.resolver.manager.ChemicalHandlerManager;
 import mekanism.common.capabilities.chemical.IChemicalTracker;
 import mekanism.common.content.network.ChemicalNetwork;
 import mekanism.common.lib.transmitter.CompatibleTransmitterValidator;
@@ -57,7 +57,7 @@ public class PressurizedTube extends BufferedTransmitter<IChemicalHandler, Chemi
 
     @Override
     protected AbstractAcceptorCache<IChemicalHandler, ?> createAcceptorCache() {
-        return new AcceptorCache<>(getTransmitterTile(), Capabilities.CHEMICAL.block());
+        return new AcceptorCache<>(getTransmitterTile(), ChemicalHandlerManager.CHEMICAL_HANDLER);
     }
 
     @Override
@@ -78,10 +78,15 @@ public class PressurizedTube extends BufferedTransmitter<IChemicalHandler, Chemi
         }
         AcceptorCache<IChemicalHandler> acceptorCache = getAcceptorCache();
         for (Direction side : EnumUtils.DIRECTIONS) {
+            if (getConnectionTypeRaw(side) != ConnectionType.PULL) {
+                continue;
+            }
+            //Native lookups have no invalidation callback: rediscover a formerly null provider before bitmap gating.
+            refreshAcceptorConnections(side);
             if (!isConnectionType(side, ConnectionType.PULL)) {
                 continue;
             }
-            IChemicalHandler connectedAcceptor = acceptorCache.getConnectedAcceptor(side);
+            IChemicalHandler connectedAcceptor = acceptorCache.getCachedAcceptor(side);
             if (connectedAcceptor != null) {
                 //Note: We recheck the buffer each time in case we ended up accepting chemical somewhere
                 // and our buffer changed and is no longer empty

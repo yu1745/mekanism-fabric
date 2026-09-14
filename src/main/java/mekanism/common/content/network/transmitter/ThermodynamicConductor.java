@@ -9,7 +9,7 @@ import mekanism.api.heat.IHeatCapacitor;
 import mekanism.api.heat.IHeatHandler;
 import mekanism.common.attachments.containers.ContainerType;
 import mekanism.common.block.attribute.Attribute;
-import mekanism.common.capabilities.Capabilities;
+import mekanism.common.capabilities.resolver.manager.HeatHandlerManager;
 import mekanism.common.capabilities.heat.CachedAmbientTemperature;
 import mekanism.common.capabilities.heat.ITileHeatHandler;
 import mekanism.common.capabilities.heat.VariableHeatCapacitor;
@@ -51,7 +51,7 @@ public class ThermodynamicConductor extends Transmitter<IHeatHandler, HeatNetwor
 
     @Override
     protected AbstractAcceptorCache<IHeatHandler, ?> createAcceptorCache() {
-        return new AcceptorCache<>(getTransmitterTile(), Capabilities.HEAT);
+        return new AcceptorCache<>(getTransmitterTile(), HeatHandlerManager.HEAT_HANDLER);
     }
 
     @Override
@@ -164,6 +164,8 @@ public class ThermodynamicConductor extends Transmitter<IHeatHandler, HeatNetwor
     @Nullable
     @Override
     public IHeatHandler getAdjacent(@NotNull Direction side) {
+        //Heat transfer bypasses the network endpoint map, so refresh even a formerly disconnected provider here.
+        refreshAcceptorConnections(side);
         if (connectionMapContainsSide(getAllCurrentConnections(), side)) {
             //Note: We use the acceptor cache as the heat network is different and the transmitters count the other transmitters in the
             // network as valid acceptors, which means we don't have to differentiate between acceptors and other transmitters here

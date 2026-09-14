@@ -47,7 +47,7 @@ import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.PushReaction;
 import net.minecraft.world.level.redstone.Redstone;
 import net.minecraft.world.phys.HitResult;
-import net.neoforged.neoforge.network.PacketDistributor;
+import mekanism.fabric.network.FabricSecurityNetworking;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -167,7 +167,7 @@ public abstract class BlockMekanism extends Block {
                 securityTile.setOwnerUUID(placer.getUUID());
                 if (!world.isClientSide) {
                     //If the machine doesn't already have an owner, make sure we portray this
-                    PacketDistributor.sendToAllPlayers(new PacketSyncSecurity(placer.getUUID()));
+                    FabricSecurityNetworking.broadcast(new PacketSyncSecurity(placer.getUUID()));
                 }
             }
         }

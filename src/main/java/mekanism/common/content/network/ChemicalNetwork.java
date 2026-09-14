@@ -13,7 +13,7 @@ import mekanism.api.chemical.IChemicalHandler;
 import mekanism.api.chemical.IChemicalTank;
 import mekanism.api.radiation.IRadiationManager;
 import mekanism.api.text.TextComponentUtil;
-import mekanism.common.Mekanism;
+import org.slf4j.LoggerFactory;
 import mekanism.common.MekanismLang;
 import mekanism.common.capabilities.chemical.IChemicalTracker;
 import mekanism.common.capabilities.chemical.VariableCapacityChemicalTank;
@@ -21,13 +21,17 @@ import mekanism.common.content.network.distribution.ChemicalHandlerTarget;
 import mekanism.common.content.network.distribution.ChemicalTransmitterSaveTarget;
 import mekanism.common.content.network.transmitter.PressurizedTube;
 import mekanism.common.lib.transmitter.DynamicBufferedNetwork;
+import mekanism.common.lib.transmitter.acceptor.FreshNetworkAcceptorCache;
+import mekanism.common.lib.transmitter.acceptor.NetworkAcceptorCache;
 import mekanism.common.util.ChemicalUtil;
 import mekanism.common.util.EmitUtils;
 import mekanism.common.util.MekanismUtils;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
-import net.neoforged.neoforge.common.NeoForge;
+import net.fabricmc.fabric.api.event.Event;
+import net.fabricmc.fabric.api.event.EventFactory;
+import java.util.function.Consumer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -50,6 +54,11 @@ public class ChemicalNetwork extends DynamicBufferedNetwork<IChemicalHandler, Ch
     public ChemicalNetwork(Collection<ChemicalNetwork> networks) {
         this(UUID.randomUUID());
         adoptAllAndRegister(networks);
+    }
+
+    @Override
+    protected NetworkAcceptorCache<IChemicalHandler> createAcceptorCache() {
+        return new FreshNetworkAcceptorCache<>(this::getTransmitters);
     }
 
     public IChemicalTank getChemicalTank() {
@@ -87,7 +96,7 @@ public class ChemicalNetwork extends DynamicBufferedNetwork<IChemicalHandler, Ch
                         long amount = net.chemicalTank.getStored();
                         MekanismUtils.logMismatchedStackSize(this.chemicalTank.growStack(amount, Action.EXECUTE), amount);
                     } else {
-                        Mekanism.logger.error("Incompatible chemical networks merged: {}, {}.", this.chemicalTank.getStack(), net.chemicalTank.getStack());
+                        LoggerFactory.getLogger("Mekanism").error("Incompatible chemical networks merged: {}, {}.", this.chemicalTank.getStack(), net.chemicalTank.getStack());
                     }
                     net.chemicalTank.setEmpty();
                 }
@@ -185,7 +194,7 @@ public class ChemicalNetwork extends DynamicBufferedNetwork<IChemicalHandler, Ch
     public void onUpdate() {
         super.onUpdate();
         if (needsUpdate) {
-            NeoForge.EVENT_BUS.post(new ChemicalTransferEvent(this, lastChemical));
+            ChemicalTransferEvent.EVENT.invoker().accept(new ChemicalTransferEvent(this, lastChemical));
             needsUpdate = false;
         }
         if (chemicalTank.isEmpty()) {
@@ -282,6 +291,13 @@ public class ChemicalNetwork extends DynamicBufferedNetwork<IChemicalHandler, Ch
     }
 
     public static class ChemicalTransferEvent extends TransferEvent<ChemicalNetwork> {
+
+        public static final Event<Consumer<ChemicalTransferEvent>> EVENT = EventFactory.createArrayBacked(Consumer.class,
+              listeners -> event -> {
+                  for (Consumer<ChemicalTransferEvent> listener : listeners) {
+                      listener.accept(event);
+                  }
+              });
 
         public final Holder<Chemical> transferType;
 

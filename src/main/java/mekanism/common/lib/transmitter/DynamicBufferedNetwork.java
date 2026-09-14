@@ -11,7 +11,6 @@ import mekanism.common.lib.math.Range3D;
 import mekanism.common.util.WorldUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.ChunkPos;
-import net.neoforged.bus.api.Event;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -130,8 +129,8 @@ public abstract class DynamicBufferedNetwork<ACCEPTOR, NETWORK extends DynamicBu
         long sum = 0;
         for (TRANSMITTER transmitter : getTransmitters()) {
             long transmitterCapacity = transmitter.getCapacity();
-            if (transmitterCapacity > Long.MAX_VALUE - capacity) {
-                //Ensure we don't overflow
+            if (transmitterCapacity > Long.MAX_VALUE - sum) {
+                //Check the running sum, not the previous network capacity.
                 sum = Long.MAX_VALUE;
                 break;
             } else {
@@ -218,7 +217,7 @@ public abstract class DynamicBufferedNetwork<ACCEPTOR, NETWORK extends DynamicBu
         return new Range3D(minX, minZ, maxX, maxZ, world.dimension());
     }
 
-    public static class TransferEvent<NETWORK extends DynamicBufferedNetwork<?, NETWORK, ?, ?>> extends Event {
+    public static class TransferEvent<NETWORK extends DynamicBufferedNetwork<?, NETWORK, ?, ?>> {
 
         public final NETWORK network;
 

@@ -9,7 +9,7 @@ import mekanism.api.security.IOwnerObject;
 import mekanism.api.security.ISecurityObject;
 import mekanism.api.text.EnumColor;
 import mekanism.common.MekanismLang;
-import mekanism.common.capabilities.Capabilities;
+import net.minecraft.resources.ResourceLocation;
 import mekanism.common.network.to_client.security.PacketSyncSecurity;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.text.OwnerDisplay;
@@ -20,8 +20,8 @@ import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.capabilities.ItemCapability;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.fabricmc.fabric.api.lookup.v1.item.ItemApiLookup;
+import mekanism.fabric.network.FabricSecurityNetworking;
 
 /**
  * @apiNote Do not instantiate this class directly as it will be done via the service loader. Instead, access instances of this via {@link IItemSecurityUtils#INSTANCE}
@@ -29,20 +29,20 @@ import net.neoforged.neoforge.network.PacketDistributor;
 @NothingNullByDefault
 public class ItemSecurityUtils implements IItemSecurityUtils {
 
-    private static final ItemCapability<IOwnerObject, Void> OWNER_CAPABILITY = ItemCapability.createVoid(Capabilities.OWNER_OBJECT_NAME, IOwnerObject.class);
-    private static final ItemCapability<ISecurityObject, Void> SECURITY_CAPABILITY = ItemCapability.createVoid(Capabilities.SECURITY_OBJECT_NAME, ISecurityObject.class);
+    private static final ItemApiLookup<IOwnerObject, Void> OWNER_CAPABILITY = ItemApiLookup.get(ResourceLocation.fromNamespaceAndPath("mekanism", "owner_object"), IOwnerObject.class, Void.class);
+    private static final ItemApiLookup<ISecurityObject, Void> SECURITY_CAPABILITY = ItemApiLookup.get(ResourceLocation.fromNamespaceAndPath("mekanism", "security_object"), ISecurityObject.class, Void.class);
 
     public static ItemSecurityUtils get() {
         return (ItemSecurityUtils) INSTANCE;
     }
 
     @Override
-    public ItemCapability<IOwnerObject, Void> ownerCapability() {
+    public ItemApiLookup<IOwnerObject, Void> ownerCapability() {
         return OWNER_CAPABILITY;
     }
 
     @Override
-    public ItemCapability<ISecurityObject, Void> securityCapability() {
+    public ItemApiLookup<ISecurityObject, Void> securityCapability() {
         return SECURITY_CAPABILITY;
     }
 
@@ -89,7 +89,7 @@ public class ItemSecurityUtils implements IItemSecurityUtils {
         if (ownerObject != null && ownerObject.getOwnerUUID() == null) {
             if (!level.isClientSide) {
                 ownerObject.setOwnerUUID(player.getUUID());
-                PacketDistributor.sendToAllPlayers(new PacketSyncSecurity(player.getUUID()));
+                FabricSecurityNetworking.broadcast(new PacketSyncSecurity(player.getUUID()));
                 player.sendSystemMessage(MekanismUtils.logFormat(MekanismLang.NOW_OWN));
             }
             return true;

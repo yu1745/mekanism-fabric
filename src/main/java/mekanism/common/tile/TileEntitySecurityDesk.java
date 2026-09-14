@@ -22,7 +22,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.GameProfileCache;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.network.PacketDistributor;
+import mekanism.fabric.network.FabricSecurityNetworking;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -65,7 +65,7 @@ public class TileEntitySecurityDesk extends TileEntityMekanism implements IBound
             frequency.setOverridden(!frequency.isOverridden());
             markForSave();
             // send the security update to other players; this change will be visible on machine security tabs
-            PacketDistributor.sendToAllPlayers(new PacketSyncSecurity(frequency));
+            FabricSecurityNetworking.broadcast(new PacketSyncSecurity(frequency));
             validateAccess();
         }
     }
@@ -114,7 +114,7 @@ public class TileEntitySecurityDesk extends TileEntityMekanism implements IBound
                 frequency.setSecurityMode(mode);
                 markForSave();
                 // send the security update to other players; this change will be visible on machine security tabs
-                PacketDistributor.sendToAllPlayers(new PacketSyncSecurity(frequency));
+                FabricSecurityNetworking.broadcast(new PacketSyncSecurity(frequency));
                 if (ISecurityUtils.INSTANCE.moreRestrictive(old, mode)) {
                     validateAccess();
                 }

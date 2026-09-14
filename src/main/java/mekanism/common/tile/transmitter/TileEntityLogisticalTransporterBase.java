@@ -68,12 +68,11 @@ public abstract class TileEntityLogisticalTransporterBase extends TileEntityTran
         //Note: We don't expose a cap for when the connection type is none or push and this method only gets called if type != old,
         // so we can check to ensure that if we are one of the two that the other isn't the other one we don't have a cap for
         if (type == ConnectionType.NONE && old != ConnectionType.PUSH || type == ConnectionType.PUSH && old != ConnectionType.NONE) {
-            //We no longer have a capability, invalidate it, which will also notify the level
+            //Permanently revoke the insert-only native endpoint that no longer accepts on this side.
             invalidateCapability(ItemStorage.SIDED, side);
         } else if (old == ConnectionType.NONE && type != ConnectionType.PUSH || old == ConnectionType.PUSH && type != ConnectionType.NONE) {
-            //Notify any listeners to our position that we now do have a capability
-            //Note: We don't invalidate our impls because we know they are already invalid, so we can short circuit setting them to null from null
-            invalidateCapabilities();
+            //Native consumers re-query rather than receive notifications. A re-enabled side gets a fresh endpoint.
+            invalidateCapability(ItemStorage.SIDED, side);
         }
     }
 

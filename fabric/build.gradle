@@ -194,7 +194,7 @@ def platformSlice = loadSlice('platform-slice.txt')
 def apiSliceFiles = apiSlice.collect { file("../src/api/java/${it}") }
 def commonSliceFiles = commonSlice.collect { file("../src/main/java/${it}") }
 def platformSliceFiles = platformSlice.collect { file("src/main/java/${it}") }
-if (apiSlice.size() != 255 || commonSlice.size() != 630 || platformSlice.size() != 86) {
+if (apiSlice.size() != 255 || commonSlice.size() != 689 || platformSlice.size() != 92) {
     throw new GradleException("Unexpected Fabric source slice counts: api=${apiSlice.size()} common=${commonSlice.size()} platform=${platformSlice.size()}")
 }
 
@@ -664,6 +664,7 @@ processResources {
         include 'META-INF/services/mekanism.api.gear.IModuleHelper'
         include 'META-INF/services/mekanism.api.radial.IRadialDataHelper'
         include 'META-INF/services/mekanism.api.security.IBlockSecurityUtils'
+        include 'META-INF/services/mekanism.api.security.IItemSecurityUtils'
         include 'META-INF/services/mekanism.api.security.ISecurityUtils'
         include 'META-INF/services/mekanism.api.radiation.IRadiationManager'
         include 'assets/mekanism/particles/radiation.json'

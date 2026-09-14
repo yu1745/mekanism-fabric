@@ -73,10 +73,7 @@ public class PacketHandler extends BasePacketHandler {
 
     public PacketHandler(IEventBus modEventBus, Version version) {
         super(modEventBus, version);
-        modEventBus.addListener(RegisterConfigurationTasksEvent.class, event -> {
-            ServerConfigurationPacketListener listener = event.getListener();
-            event.register(new SyncAllSecurityData(listener));
-        });
+        //Security configuration task and payload registration are owned by FabricSecurityNetworking.
     }
 
     public void showModeChange(ServerPlayer player) {
@@ -139,7 +136,7 @@ public class PacketHandler extends BasePacketHandler {
     @Override
     protected void registerServerToClient(PacketRegistrar registrar) {
         //Configuration packets
-        registrar.configuration(PacketBatchSecurityUpdate.TYPE, PacketBatchSecurityUpdate.STREAM_CODEC);
+        //PacketBatchSecurityUpdate is registered by FabricSecurityNetworking.
 
         //Play packets
         registrar.play(PacketHitBlockEffect.TYPE, PacketHitBlockEffect.STREAM_CODEC);
@@ -148,7 +145,7 @@ public class PacketHandler extends BasePacketHandler {
         registrar.play(PacketPortalFX.TYPE, PacketPortalFX.STREAM_CODEC);
         //Radiation payload codecs and receivers are owned by FabricRadiationLifecycle/FabricRadiationClientLifecycle.
         registrar.play(PacketResetPlayerClient.TYPE, PacketResetPlayerClient.STREAM_CODEC);
-        registrar.play(PacketSyncSecurity.TYPE, PacketSyncSecurity.STREAM_CODEC);
+        //PacketSyncSecurity is registered by FabricSecurityNetworking.
         registrar.play(PacketUpdateContainer.TYPE, PacketUpdateContainer.STREAM_CODEC);
         registrar.play(PacketUpdateTile.TYPE, PacketUpdateTile.STREAM_CODEC);
         registrar.play(PacketSetDeltaMovement.TYPE, PacketSetDeltaMovement.STREAM_CODEC);
@@ -161,11 +158,6 @@ public class PacketHandler extends BasePacketHandler {
             }
         });
 
-        //Transmitters
-        registrar.play(PacketNetworkScale.TYPE, PacketNetworkScale.STREAM_CODEC);
-        registrar.play(PacketChemicalNetworkContents.TYPE, PacketChemicalNetworkContents.STREAM_CODEC);
-        registrar.play(PacketFluidNetworkContents.TYPE, PacketFluidNetworkContents.STREAM_CODEC);
-        registrar.play(PacketTransporterBatch.TYPE, PacketTransporterBatch.STREAM_CODEC);
-        registrar.play(PacketTransporterSync.TYPE, PacketTransporterSync.STREAM_CODEC);
+        //Transmitters are registered by FabricTransmitterNetworking (native S2C codecs and receivers).
     }
 }

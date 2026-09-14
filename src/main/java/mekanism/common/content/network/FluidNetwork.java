@@ -11,7 +11,7 @@ import mekanism.api.fluid.IExtendedFluidTank;
 import mekanism.api.fluid.IMekanismFluidHandler;
 import mekanism.api.functions.ConstantPredicates;
 import mekanism.api.math.MathUtils;
-import mekanism.common.Mekanism;
+import org.slf4j.LoggerFactory;
 import mekanism.common.MekanismLang;
 import mekanism.common.capabilities.fluid.VariableCapacityFluidTank;
 import mekanism.common.content.network.distribution.FluidTransmitterSaveTarget;
@@ -25,7 +25,9 @@ import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
 import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
-import net.neoforged.neoforge.common.NeoForge;
+import net.fabricmc.fabric.api.event.Event;
+import net.fabricmc.fabric.api.event.EventFactory;
+import java.util.function.Consumer;
 import mekanism.api.fluid.FluidStack;
 import mekanism.common.content.network.distribution.FluidSendTransaction;
 import org.jetbrains.annotations.NotNull;
@@ -93,7 +95,7 @@ public class FluidNetwork extends DynamicBufferedNetwork<Storage<FluidVariant>, 
                     int amount = net.fluidTank.getFluidAmount();
                     MekanismUtils.logMismatchedStackSize(fluidTank.growStack(amount, Action.EXECUTE), amount);
                 } else {
-                    Mekanism.logger.error("Incompatible fluid networks merged.");
+                    LoggerFactory.getLogger("Mekanism").error("Incompatible fluid networks merged.");
                 }
                 net.fluidTank.setEmpty();
             }
@@ -182,7 +184,7 @@ public class FluidNetwork extends DynamicBufferedNetwork<Storage<FluidVariant>, 
     public void onUpdate() {
         super.onUpdate();
         if (needsUpdate) {
-            NeoForge.EVENT_BUS.post(new FluidTransferEvent(this, lastFluid));
+            FluidTransferEvent.EVENT.invoker().accept(new FluidTransferEvent(this, lastFluid));
             needsUpdate = false;
         }
         if (fluidTank.isEmpty()) {
@@ -216,7 +218,7 @@ public class FluidNetwork extends DynamicBufferedNetwork<Storage<FluidVariant>, 
 
     @Override
     public Component getNeededInfo() {
-        return MekanismLang.FLUID_NETWORK_NEEDED.translate(fluidTank.getNeeded() / (float) FluidType.BUCKET_VOLUME);
+        return MekanismLang.FLUID_NETWORK_NEEDED.translate(fluidTank.getNeeded() / 1_000F);
     }
 
     @Override
@@ -272,6 +274,13 @@ public class FluidNetwork extends DynamicBufferedNetwork<Storage<FluidVariant>, 
     }
 
     public static class FluidTransferEvent extends TransferEvent<FluidNetwork> {
+
+        public static final Event<Consumer<FluidTransferEvent>> EVENT = EventFactory.createArrayBacked(Consumer.class,
+              listeners -> event -> {
+                  for (Consumer<FluidTransferEvent> listener : listeners) {
+                      listener.accept(event);
+                  }
+              });
 
         public final FluidStack fluidType;
 

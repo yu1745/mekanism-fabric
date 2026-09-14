@@ -22,7 +22,9 @@ import mekanism.common.util.EmitUtils;
 import mekanism.common.util.text.EnergyDisplay;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
-import net.neoforged.neoforge.common.NeoForge;
+import net.fabricmc.fabric.api.event.Event;
+import net.fabricmc.fabric.api.event.EventFactory;
+import java.util.function.Consumer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -132,7 +134,7 @@ public class EnergyNetwork extends DynamicBufferedNetwork<IStrictEnergyHandler, 
     public void onUpdate() {
         super.onUpdate();
         if (needsUpdate) {
-            NeoForge.EVENT_BUS.post(new EnergyTransferEvent(this));
+            EnergyTransferEvent.EVENT.invoker().accept(new EnergyTransferEvent(this));
             needsUpdate = false;
         }
         if (energyContainer.isEmpty()) {
@@ -188,6 +190,13 @@ public class EnergyNetwork extends DynamicBufferedNetwork<IStrictEnergyHandler, 
     }
 
     public static class EnergyTransferEvent extends TransferEvent<EnergyNetwork> {
+
+        public static final Event<Consumer<EnergyTransferEvent>> EVENT = EventFactory.createArrayBacked(Consumer.class,
+              listeners -> event -> {
+                  for (Consumer<EnergyTransferEvent> listener : listeners) {
+                      listener.accept(event);
+                  }
+              });
 
         public EnergyTransferEvent(EnergyNetwork network) {
             super(network);

@@ -2,6 +2,7 @@ package mekanism.common.util;
 
 import mekanism.api.RelativeSide;
 import mekanism.api.text.EnumColor;
+import mekanism.common.content.network.transmitter.LogisticalTransporterBase;
 import mekanism.common.content.transporter.TransporterManager;
 import mekanism.common.content.transporter.TransporterStack;
 import mekanism.common.lib.inventory.IAdvancedTransportEjector;

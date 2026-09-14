@@ -27,6 +27,8 @@ public final class MekanismFabricClientBootstrap implements ClientModInitializer
         FabricChemicalClientNetworking.initialize();
         FabricTileUpdateHandler.initializeClient();
         FabricContainerClientNetworking.initializeClient();
+        mekanism.fabric.network.FabricTransmitterClientNetworking.initialize();
+        mekanism.fabric.network.FabricSecurityClientNetworking.initialize();
         mekanism.fabric.radiation.FabricRadiationClientLifecycle.initialize();
         //Real model-loading owner for the shipped "mekanism:transmitter" OBJ/MTL models, plus the logistical
         //transporter tint. Model registration needs no block instance: it keys off the model ids in the resource pack.

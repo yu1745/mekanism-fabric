@@ -40,7 +40,7 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.gameevent.GameEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
+import mekanism.fabric.network.FabricSecurityNetworking;
 import org.jetbrains.annotations.NotNull;
 
 public class ItemRobit extends ItemEnergized implements ICapabilityAware {
@@ -97,7 +97,7 @@ public class ItemRobit extends ItemEnergized implements ICapabilityAware {
                 if (ownerUUID == null) {
                     robit.setOwnerUUID(player.getUUID());
                     //If the robit doesn't already have an owner, make sure we portray this
-                    PacketDistributor.sendToAllPlayers(new PacketSyncSecurity(player.getUUID()));
+                    FabricSecurityNetworking.broadcast(new PacketSyncSecurity(player.getUUID()));
                 } else {
                     robit.setOwnerUUID(ownerUUID);
                 }

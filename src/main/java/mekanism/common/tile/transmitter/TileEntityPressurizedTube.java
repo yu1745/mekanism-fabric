@@ -11,10 +11,9 @@ import mekanism.api.chemical.ChemicalStack;
 import mekanism.api.chemical.IChemicalTank;
 import mekanism.api.math.MathUtils;
 import mekanism.api.tier.BaseTier;
-import mekanism.common.Mekanism;
+import org.slf4j.LoggerFactory;
 import mekanism.common.block.states.BlockStateHelper;
 import mekanism.common.block.states.TransmitterType;
-import mekanism.common.capabilities.Capabilities;
 import mekanism.common.capabilities.chemical.DynamicChemicalHandler;
 import mekanism.common.capabilities.resolver.manager.ChemicalHandlerManager;
 import mekanism.common.content.network.ChemicalNetwork;
@@ -101,7 +100,7 @@ public class TileEntityPressurizedTube extends TileEntityTransmitter implements 
                 if (encoded.isSuccess()) {
                     updateTag.put(SerializationConstants.CHEMICAL, encoded.getOrThrow());
                 } else {
-                    encoded.ifError(error -> Mekanism.logger.warn("Failed to encode last chemical: {}", error.message()));
+                    encoded.ifError(error -> LoggerFactory.getLogger("Mekanism").warn("Failed to encode last chemical: {}", error.message()));
                 }
             }
             updateTag.putFloat(SerializationConstants.SCALE, network.currentScale);
@@ -145,29 +144,17 @@ public class TileEntityPressurizedTube extends TileEntityTransmitter implements 
     @Override
     public void sideChanged(@NotNull Direction side, @NotNull ConnectionType old, @NotNull ConnectionType type) {
         super.sideChanged(side, old, type);
-        if (type == ConnectionType.NONE) {
-            //We no longer have a capability, invalidate it, which will also notify the level
-            invalidateCapability(Capabilities.CHEMICAL.block(), side);
-        } else if (old == ConnectionType.NONE) {
-            //Notify any listeners to our position that we now do have a capability
-            //Note: We don't invalidate our impls because we know they are already invalid, so we can short circuit setting them to null from null
-            invalidateCapabilities();
+        if (type == ConnectionType.NONE || old == ConnectionType.NONE) {
+            //Native callers re-query; revoke old domain proxies rather than sending a platform invalidation notification.
+            invalidateCapability(ChemicalHandlerManager.CHEMICAL_HANDLER, side);
         }
     }
 
     @Override
     public void redstoneChanged(boolean powered) {
         super.redstoneChanged(powered);
-        if (powered) {
-            //The transmitter now is powered by redstone and previously was not
-            //Note: While at first glance the below invalidation may seem over aggressive, it is not actually that aggressive as
-            // if a cap has not been initialized yet on a side then invalidating it will just NO-OP
-            invalidateCapabilityAll(Capabilities.CHEMICAL.block());
-        } else {
-            //Notify any listeners to our position that we now do have a capability
-            //Note: We don't invalidate our impls because we know they are already invalid, so we can short circuit setting them to null from null
-            invalidateCapabilities();
-        }
+        //Re-enabling exposes fresh providers, never revives a previously revoked proxy.
+        invalidateCapabilityAll(ChemicalHandlerManager.CHEMICAL_HANDLER);
     }
 
     //Methods relating to IComputerTile

@@ -1,6 +1,5 @@
 package mekanism.client;
 
-import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import java.util.Map;
 import java.util.UUID;
 import mekanism.client.render.RenderTickHandler;
@@ -38,9 +37,9 @@ public class MekanismClient {
 
     //Task052 alias (same pattern as Mekanism.activeVibrators → MekanismServerState): the excluded client entrypoint's public field
     // now aliases the exact same domain map owned by mekanism.common.lib.security.ClientSecurityData, so every original writer/reset
-    // (PacketSyncSecurity.put, PacketBatchSecurityUpdate.replaceAll, MekanismClient.resetDimensionChange clear) reaches the real owner map.
+    // (PacketSyncSecurity.put, PacketBatchSecurityUpdate.replaceAll, MekanismClient.reset clear) reaches the real owner map.
     public static final Map<UUID, SecurityData> clientSecurityMap = ClientSecurityData.securityMap();
-    public static final Map<UUID, String> clientUUIDMap = new Object2ObjectOpenHashMap<>();
+    public static final Map<UUID, String> clientUUIDMap = ClientSecurityData.usernameMap();
 
     public static void updateKey(KeyMapping key, int type) {
         updateKey(key.isDown(), type);
@@ -74,8 +73,7 @@ public class MekanismClient {
     }
 
     public static void reset() {
-        clientSecurityMap.clear();
-        clientUUIDMap.clear();
+        ClientSecurityData.clear();
 
         ClientTickHandler.reset();
         SoundHandler.radiationSoundMap.clear();

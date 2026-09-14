@@ -9,7 +9,8 @@ import mekanism.api.text.EnumColor;
 import mekanism.api.tier.BaseTier;
 import mekanism.api.tier.IAlloyTier;
 import mekanism.client.model.data.TransmitterModelData;
-import mekanism.common.Mekanism;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import mekanism.common.MekanismLang;
 import mekanism.common.advancements.MekanismCriteriaTriggers;
 import mekanism.common.block.interfaces.IHasTileEntity;
@@ -17,7 +18,7 @@ import mekanism.common.block.states.TransmitterType;
 import mekanism.common.block.states.TransmitterType.Size;
 import mekanism.common.block.transmitter.BlockLargeTransmitter;
 import mekanism.common.block.transmitter.BlockSmallTransmitter;
-import mekanism.common.capabilities.Capabilities;
+import mekanism.fabric.tile.MekanismBlockLookups;
 import mekanism.common.capabilities.proxy.ProxyConfigurable;
 import mekanism.common.capabilities.proxy.ProxyConfigurable.ISidedConfigurable;
 import mekanism.common.capabilities.resolver.BasicSidedCapabilityResolver;
@@ -63,9 +64,10 @@ public abstract class TileEntityTransmitter extends CapabilityTileEntity impleme
      * accepts, and exposes the same lazy resolver path with the same fail-closed guards.
      */
     public static final java.util.function.BiFunction<TileEntityTransmitter, @Nullable Direction, IConfigurable> CONFIGURABLE_PROVIDER =
-          capabilityProvider(Capabilities.CONFIGURABLE, (tile, cap) -> new BasicSidedCapabilityResolver<>(tile, cap, ProxyConfigurable::new));
+          capabilityProvider(MekanismBlockLookups.CONFIGURABLE, (tile, cap) -> new BasicSidedCapabilityResolver<>(tile, cap, ProxyConfigurable::new));
 
 
+    private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism");
     private final Transmitter<?, ?, ?> transmitter;
     private boolean forceUpdate = true;
     private boolean loaded = false;
@@ -368,19 +370,19 @@ public abstract class TileEntityTransmitter extends CapabilityTileEntity impleme
                     BlockPos transmitterPos = transmitter.getBlockPos();
                     Level transmitterWorld = transmitter.getLevel();
                     if (upgradeData == null) {
-                        Mekanism.logger.warn("Got no upgrade data for transmitter at position: {} in {} but it said it would be able to provide some.",
+                        LOGGER.warn("Got no upgrade data for transmitter at position: {} in {} but it said it would be able to provide some.",
                               transmitterPos, transmitterWorld);
                     } else {
                         transmitterWorld.setBlockAndUpdate(transmitterPos, upgradeState);
                         TileEntityTransmitter upgradedTile = WorldUtils.getTileEntity(TileEntityTransmitter.class, transmitterWorld, transmitterPos);
                         if (upgradedTile == null) {
-                            Mekanism.logger.warn("Error upgrading transmitter at position: {} in {}.", transmitterPos, transmitterWorld);
+                            LOGGER.warn("Error upgrading transmitter at position: {} in {}.", transmitterPos, transmitterWorld);
                         } else {
                             Transmitter<?, ?, ?> upgradedTransmitter = upgradedTile.getTransmitter();
                             if (upgradedTransmitter instanceof IUpgradeableTransmitter) {
                                 transferUpgradeData((IUpgradeableTransmitter<?>) upgradedTransmitter, upgradeData);
                             } else {
-                                Mekanism.logger.warn("Unhandled upgrade data.", new IllegalStateException());
+                                LOGGER.warn("Unhandled upgrade data.", new IllegalStateException());
                             }
                             upgraded++;
                             if (upgraded == 8) {
@@ -407,7 +409,7 @@ public abstract class TileEntityTransmitter extends CapabilityTileEntity impleme
         if (upgradeableTransmitter.dataTypeMatches(data)) {
             upgradeableTransmitter.parseUpgradeData((DATA) data);
         } else {
-            Mekanism.logger.warn("Unhandled upgrade data.", new IllegalStateException());
+            LOGGER.warn("Unhandled upgrade data.", new IllegalStateException());
         }
     }
 

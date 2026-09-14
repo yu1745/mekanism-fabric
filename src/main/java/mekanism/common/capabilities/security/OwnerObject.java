@@ -22,7 +22,7 @@ public class OwnerObject implements IOwnerObject {
     @Nullable
     @Override
     public UUID getOwnerUUID() {
-        return stack.get(MekanismDataComponents.OWNER);
+        return stack.get(MekanismDataComponents.OWNER.get());
     }
 
     @Nullable
@@ -42,11 +42,11 @@ public class OwnerObject implements IOwnerObject {
         if (!Objects.equals(ownerUUID, owner)) {
             if (ownerUUID != null) {
                 //If the object happens to be a frequency aware object reset the frequency when the owner changes
-                stack.remove(MekanismDataComponents.INVENTORY_FREQUENCY);
-                stack.remove(MekanismDataComponents.TELEPORTER_FREQUENCY);
-                stack.remove(MekanismDataComponents.QIO_FREQUENCY);
+                stack.remove(MekanismDataComponents.INVENTORY_FREQUENCY.get());
+                stack.remove(MekanismDataComponents.TELEPORTER_FREQUENCY.get());
+                stack.remove(MekanismDataComponents.QIO_FREQUENCY.get());
             }
-            stack.set(MekanismDataComponents.OWNER, owner);
+            stack.set(MekanismDataComponents.OWNER.get(), owner);
         }
     }
 }
