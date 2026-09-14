@@ -71,7 +71,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.common.ItemAbilities;
 import net.neoforged.neoforge.common.ItemAbility;
 import net.neoforged.neoforge.common.util.Lazy;
-import net.neoforged.neoforge.event.ItemAttributeModifierEvent;
+import mekanism.api.gear.GearAttributeContext;
 import net.neoforged.neoforge.registries.holdersets.AnyHolderSet;
 import org.jetbrains.annotations.NotNull;
 
@@ -204,7 +204,7 @@ public class ItemAtomicDisassembler extends ItemEnergized implements IItemHUDPro
     }
 
     @Override
-    public void adjustAttributes(ItemAttributeModifierEvent event) {
+    public void adjustAttributes(GearAttributeContext event) {
         ItemStack stack = event.getItemStack();
         IEnergyContainer energyContainer = StorageUtils.getEnergyContainer(stack, 0);
         long energy = energyContainer == null ? 0L : energyContainer.getEnergy();

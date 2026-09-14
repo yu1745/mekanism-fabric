@@ -78,7 +78,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.neoforged.neoforge.common.ItemAbility;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.ItemAttributeModifierEvent;
+import mekanism.api.gear.GearAttributeContext;
 import net.neoforged.neoforge.registries.holdersets.AnyHolderSet;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -343,7 +343,7 @@ public class ItemMekaTool extends ItemEnergized implements IRadialModuleContaine
     }
 
     @Override
-    public void adjustAttributes(ItemAttributeModifierEvent event) {
+    public void adjustAttributes(GearAttributeContext event) {
         ItemStack stack = event.getItemStack();
         double damage = MekanismConfig.gear.mekaToolBaseDamage.get();
         double attackSpeed = MekanismConfig.gear.mekaToolAttackSpeed.get();

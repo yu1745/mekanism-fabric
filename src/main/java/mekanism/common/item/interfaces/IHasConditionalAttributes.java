@@ -1,11 +1,11 @@
 package mekanism.common.item.interfaces;
 
-import net.neoforged.neoforge.event.ItemAttributeModifierEvent;
+import mekanism.api.gear.GearAttributeContext;
 
 public interface IHasConditionalAttributes {
 
     /**
-     * Called on any items that implement this interface when the event is fired for an item of that type.
+     * Called for each vanilla attribute query on an item implementing this interface.
      */
-    void adjustAttributes(ItemAttributeModifierEvent event);
+    void adjustAttributes(GearAttributeContext event);
 }

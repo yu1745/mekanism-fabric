@@ -7,7 +7,7 @@ import mekanism.common.Mekanism;
 import net.minecraft.world.entity.EquipmentSlotGroup;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.neoforged.neoforge.event.ItemAttributeModifierEvent;
+import mekanism.api.gear.GearAttributeContext;
 
 @ParametersAreNotNullByDefault
 public class GyroscopicStabilizationUnit implements ICustomModule<GyroscopicStabilizationUnit> {
@@ -15,7 +15,7 @@ public class GyroscopicStabilizationUnit implements ICustomModule<GyroscopicStab
     private static final AttributeModifier UNDER_WATER_SPEED = new AttributeModifier(Mekanism.rl("submerged_mining_speed"), 1, AttributeModifier.Operation.ADD_VALUE);
 
     @Override
-    public void adjustAttributes(IModule<GyroscopicStabilizationUnit> module, ItemAttributeModifierEvent event) {
+    public void adjustAttributes(IModule<GyroscopicStabilizationUnit> module, GearAttributeContext event) {
         event.addModifier(Attributes.SUBMERGED_MINING_SPEED, UNDER_WATER_SPEED, EquipmentSlotGroup.LEGS);
     }
 }

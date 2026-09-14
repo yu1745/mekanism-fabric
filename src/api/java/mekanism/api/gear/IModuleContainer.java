@@ -4,7 +4,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import mekanism.api.MekanismAPI;
 import mekanism.api.MekanismIMC.ModuleContainerTarget;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.gear.config.ModuleConfig;
@@ -17,7 +16,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.ItemEnchantments;
-import net.neoforged.neoforge.registries.DeferredHolder;
+import mekanism.common.registration.MekanismDeferredHolder;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -133,7 +132,7 @@ public interface IModuleContainer {
      *
      * @param typeProvider Module type.
      *
-     * @deprecated Use {@link #get(DeferredHolder)}, {@link #get(Holder)}, or {@link #getUnchecked(Holder)} instead
+     * @deprecated Use {@link #get(MekanismDeferredHolder)}, {@link #get(Holder)}, or {@link #getUnchecked(Holder)} instead
      */
     @Nullable
     @SuppressWarnings("removal")
@@ -150,7 +149,7 @@ public interface IModuleContainer {
      * @since 10.7.11
      */
     @Nullable
-    default <MODULE extends ICustomModule<MODULE>> IModule<MODULE> get(DeferredHolder<ModuleData<?>, ModuleData<MODULE>> type) {
+    default <MODULE extends ICustomModule<MODULE>> IModule<MODULE> get(MekanismDeferredHolder<ModuleData<?>, ModuleData<MODULE>> type) {
         return getUnchecked(type);
     }
 
@@ -179,7 +178,7 @@ public interface IModuleContainer {
      *
      * @param typeProvider Module type.
      *
-     * @deprecated Use {@link #getIfEnabled(DeferredHolder)} or {@link #getIfEnabled(Holder)} instead
+     * @deprecated Use {@link #getIfEnabled(MekanismDeferredHolder)} or {@link #getIfEnabled(Holder)} instead
      */
     @Nullable
     @SuppressWarnings("removal")
@@ -197,7 +196,7 @@ public interface IModuleContainer {
      * @since 10.7.11
      */
     @Nullable
-    default <MODULE extends ICustomModule<MODULE>> IModule<MODULE> getIfEnabled(DeferredHolder<ModuleData<?>, ModuleData<MODULE>> type) {
+    default <MODULE extends ICustomModule<MODULE>> IModule<MODULE> getIfEnabled(MekanismDeferredHolder<ModuleData<?>, ModuleData<MODULE>> type) {
         IModule<MODULE> module = get(type);
         return module != null && module.isEnabled() ? module : null;
     }
@@ -284,6 +283,6 @@ public interface IModuleContainer {
     @SuppressWarnings("removal")
     @Deprecated(forRemoval = true, since = "10.7.11")
     private Holder<ModuleData<?>> asHolder(IModuleDataProvider<?> moduleDataProvider) {
-        return MekanismAPI.MODULE_REGISTRY.wrapAsHolder(moduleDataProvider.getModuleData());
+        return ModuleRegistry.registry().wrapAsHolder(moduleDataProvider.getModuleData());
     }
 }

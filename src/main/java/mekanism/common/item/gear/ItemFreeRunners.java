@@ -32,7 +32,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.TooltipFlag;
-import net.neoforged.neoforge.event.ItemAttributeModifierEvent;
+import mekanism.api.gear.GearAttributeContext;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -127,7 +127,7 @@ public class ItemFreeRunners extends ItemSpecialArmor implements IItemHUDProvide
     }
 
     @Override
-    public void adjustAttributes(ItemAttributeModifierEvent event) {
+    public void adjustAttributes(GearAttributeContext event) {
         if (getMode(event.getItemStack()) == FreeRunnerMode.NORMAL) {
             event.addModifier(Attributes.MOVEMENT_EFFICIENCY, MOVEMENT_EFFICIENCY, EquipmentSlotGroup.FEET);
         }

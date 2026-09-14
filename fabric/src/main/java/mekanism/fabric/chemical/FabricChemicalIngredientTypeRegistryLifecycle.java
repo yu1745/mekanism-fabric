@@ -35,13 +35,15 @@ public final class FabricChemicalIngredientTypeRegistryLifecycle {
     private record BuiltIn(ResourceLocation id, MapCodec<? extends ChemicalIngredient> codec) {
     }
 
-    private static final List<BuiltIn> BUILT_INS = List.of(
+    private static List<BuiltIn> builtIns() {
+        return List.of(
           new BuiltIn(ChemicalIngredientTypeRegistry.COMPOUND, CompoundChemicalIngredient.CODEC),
           new BuiltIn(ChemicalIngredientTypeRegistry.DIFFERENCE, DifferenceChemicalIngredient.CODEC),
           new BuiltIn(ChemicalIngredientTypeRegistry.EMPTY, EmptyChemicalIngredient.CODEC),
           new BuiltIn(ChemicalIngredientTypeRegistry.INTERSECTION, IntersectionChemicalIngredient.CODEC),
           new BuiltIn(ChemicalIngredientTypeRegistry.SINGLE, SingleChemicalIngredient.CODEC),
           new BuiltIn(ChemicalIngredientTypeRegistry.TAG, TagChemicalIngredient.CODEC));
+    }
 
     private static MappedRegistry<MapCodec<? extends ChemicalIngredient>> registry;
     private static FabricCustomRegistryLifecycle lifecycle = FabricCustomRegistryLifecycle.CREATED;
@@ -50,10 +52,9 @@ public final class FabricChemicalIngredientTypeRegistryLifecycle {
     private FabricChemicalIngredientTypeRegistryLifecycle() {
     }
 
-    public static synchronized MappedRegistry<MapCodec<? extends ChemicalIngredient>> initialize() {
-        if (lifecycle == FabricCustomRegistryLifecycle.FROZEN) {
-            return registry;
-        }
+    /** Install/root-publish without touching any ingredient codecs or API service consumers. */
+    public static synchronized MappedRegistry<MapCodec<? extends ChemicalIngredient>> allocate() {
+        if (registry != null) return registry;
         if (lifecycle != FabricCustomRegistryLifecycle.CREATED) {
             throw new IllegalStateException("Chemical ingredient type registry lifecycle is " + lifecycle);
         }
@@ -63,6 +64,22 @@ public final class FabricChemicalIngredientTypeRegistryLifecycle {
         ChemicalIngredientTypeRegistry.install(candidate);
         try {
             registerRoot(candidate);
+            registry = candidate;
+            return candidate;
+        } catch (RuntimeException | Error failure) {
+            lifecycle = FabricCustomRegistryLifecycle.FAILED;
+            throw failure;
+        }
+    }
+
+    public static synchronized MappedRegistry<MapCodec<? extends ChemicalIngredient>> initialize() {
+        MappedRegistry<MapCodec<? extends ChemicalIngredient>> candidate = allocate();
+        if (lifecycle == FabricCustomRegistryLifecycle.FROZEN) return candidate;
+        requireOwnerThread("populate codecs");
+        if (lifecycle != FabricCustomRegistryLifecycle.ROOT_REGISTERED) {
+            throw new IllegalStateException("Chemical ingredient type registry lifecycle is " + lifecycle);
+        }
+        try {
             MekanismChemicalIngredientTypes.ensureRegistered();
             verify(candidate);
             lifecycle = FabricCustomRegistryLifecycle.FROZEN;
@@ -111,11 +128,11 @@ public final class FabricChemicalIngredientTypeRegistryLifecycle {
     }
 
     private static void verify(MappedRegistry<MapCodec<? extends ChemicalIngredient>> candidate) {
-        if (!ChemicalIngredientTypeRegistry.isFrozen() || candidate.size() != BUILT_INS.size()
+        if (!ChemicalIngredientTypeRegistry.isFrozen() || candidate.size() != builtIns().size()
               || candidate.get(ChemicalIngredientTypeRegistry.EMPTY) != EmptyChemicalIngredient.CODEC) {
             throw new IllegalStateException("Chemical ingredient type registry canonical/count invariant failed");
         }
-        for (BuiltIn builtIn : BUILT_INS) {
+        for (BuiltIn builtIn : builtIns()) {
             ResourceKey<MapCodec<? extends ChemicalIngredient>> entryKey =
                   ResourceKey.create(ChemicalIngredientTypeRegistry.REGISTRY_KEY, builtIn.id());
             MapCodec<? extends ChemicalIngredient> held = candidate.get(builtIn.id());

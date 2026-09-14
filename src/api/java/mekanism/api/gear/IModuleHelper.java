@@ -22,9 +22,8 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Item.Properties;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
-import net.neoforged.neoforge.registries.DeferredHolder;
-import net.neoforged.neoforge.registries.DeferredRegister;
+import mekanism.common.registration.MekanismDeferredHolder;
+import mekanism.common.registration.MekanismDeferredRegister;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -52,7 +51,7 @@ public interface IModuleHelper {
      * @return A new item that should be registered during item registration.
      *
      * @apiNote This method specifically uses {@link IModuleDataProvider} rather than {@link java.util.function.Supplier<ModuleData>} to make it harder to accidentally
-     * have a {@code null} reference when using {@link DeferredRegister}s where both the {@link ModuleData} and the {@link Item} need references of each other.
+     * have a {@code null} reference when using {@link MekanismDeferredRegister}s where both the {@link ModuleData} and the {@link Item} need references of each other.
      * @deprecated Use {@link #createModuleItem(Supplier, Properties)} instead
      */
     @SuppressWarnings("removal")
@@ -236,7 +235,7 @@ public interface IModuleHelper {
      *
      * @return Module, or {@code null} if no module of the given type is installed.
      *
-     * @deprecated Use {@link #getModule(ItemStack, DeferredHolder)} instead
+     * @deprecated Use {@link #getModule(ItemStack, MekanismDeferredHolder)} instead
      */
     @Nullable
     @SuppressWarnings("removal")
@@ -257,7 +256,7 @@ public interface IModuleHelper {
      * @since 10.7.11
      */
     @Nullable
-    default <MODULE extends ICustomModule<MODULE>> IModule<MODULE> getModule(ItemStack stack, DeferredHolder<ModuleData<?>, ModuleData<MODULE>> type) {
+    default <MODULE extends ICustomModule<MODULE>> IModule<MODULE> getModule(ItemStack stack, MekanismDeferredHolder<ModuleData<?>, ModuleData<MODULE>> type) {
         IModuleContainer container = getModuleContainer(stack);
         return container == null ? null : container.get(type);
     }
@@ -269,7 +268,7 @@ public interface IModuleHelper {
      * @param typeProvider Module type.
      *
      * @since 10.5.15
-     * @deprecated Use {@link #getIfEnabled(ItemStack, DeferredHolder)} instead
+     * @deprecated Use {@link #getIfEnabled(ItemStack, MekanismDeferredHolder)} instead
      */
     @Nullable
     @SuppressWarnings("removal")
@@ -288,7 +287,7 @@ public interface IModuleHelper {
      * @since 10.7.11
      */
     @Nullable
-    default <MODULE extends ICustomModule<MODULE>> IModule<MODULE> getIfEnabled(ItemStack stack, DeferredHolder<ModuleData<?>, ModuleData<MODULE>> type) {
+    default <MODULE extends ICustomModule<MODULE>> IModule<MODULE> getIfEnabled(ItemStack stack, MekanismDeferredHolder<ModuleData<?>, ModuleData<MODULE>> type) {
         IModuleContainer container = getModuleContainer(stack);
         return container == null ? null : container.getIfEnabled(type);
     }
@@ -301,7 +300,7 @@ public interface IModuleHelper {
      * @param typeProvider Module type.
      *
      * @since 10.5.15
-     * @deprecated Use {@link #getIfEnabled(LivingEntity, EquipmentSlot, DeferredHolder)} instead
+     * @deprecated Use {@link #getIfEnabled(LivingEntity, EquipmentSlot, MekanismDeferredHolder)} instead
      */
     @Nullable
     @SuppressWarnings("removal")
@@ -323,7 +322,7 @@ public interface IModuleHelper {
      */
     @Nullable
     default <MODULE extends ICustomModule<MODULE>> IModule<MODULE> getIfEnabled(@Nullable LivingEntity entity, @Nullable EquipmentSlot slot,
-          DeferredHolder<ModuleData<?>, ModuleData<MODULE>> type) {
+          MekanismDeferredHolder<ModuleData<?>, ModuleData<MODULE>> type) {
         IModuleContainer container = getModuleContainer(entity, slot);
         return container == null ? null : container.getIfEnabled(type);
     }
@@ -541,6 +540,6 @@ public interface IModuleHelper {
     @SuppressWarnings("removal")
     @Deprecated(forRemoval = true, since = "10.7.11")
     private Holder<ModuleData<?>> asHolder(IModuleDataProvider<?> moduleDataProvider) {
-        return MekanismAPI.MODULE_REGISTRY.wrapAsHolder(moduleDataProvider.getModuleData());
+        return ModuleRegistry.registry().wrapAsHolder(moduleDataProvider.getModuleData());
     }
 }

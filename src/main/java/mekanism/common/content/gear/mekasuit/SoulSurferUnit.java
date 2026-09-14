@@ -11,7 +11,7 @@ import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.Enchantments;
-import net.neoforged.neoforge.event.ItemAttributeModifierEvent;
+import mekanism.api.gear.GearAttributeContext;
 import org.jetbrains.annotations.NotNull;
 
 @ParametersAreNotNullByDefault
@@ -20,7 +20,7 @@ public class SoulSurferUnit implements EnchantmentAwareModule<SoulSurferUnit> {
     private static final ResourceLocation MOVEMENT_EFFICIENCY = Mekanism.rl("movement_efficiency");
 
     @Override
-    public void adjustAttributes(IModule<SoulSurferUnit> module, ItemAttributeModifierEvent event) {
+    public void adjustAttributes(IModule<SoulSurferUnit> module, GearAttributeContext event) {
         AttributeModifier modifier = new AttributeModifier(MOVEMENT_EFFICIENCY, Math.min(1, 0.33333334F * module.getInstalledCount()), AttributeModifier.Operation.ADD_VALUE);
         event.addModifier(Attributes.MOVEMENT_EFFICIENCY, modifier, EquipmentSlotGroup.FEET);
     }

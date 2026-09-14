@@ -17,11 +17,13 @@ import net.minecraft.resources.ResourceLocation;
 /** Construction-thread owner of Mekanism's synchronized intrusive/defaulted chemical registry. */
 public final class FabricChemicalRegistryLifecycle {
     private static FabricDefaultedRegistry<Chemical> registry;
+    private static boolean initialized;
 
     private FabricChemicalRegistryLifecycle() {
     }
 
-    public static synchronized FabricDefaultedRegistry<Chemical> initialize() {
+    /** Allocation and EMPTY publication only: safe before the API service loader and content catalog initialize. */
+    public static synchronized FabricDefaultedRegistry<Chemical> allocate() {
         if (registry != null) return registry;
         FabricDefaultedRegistry<Chemical> candidate = FabricDefaultedRegistry.create(
               ChemicalRegistry.REGISTRY_KEY, ChemicalRegistry.EMPTY_KEY, true);
@@ -30,12 +32,21 @@ public final class FabricChemicalRegistryLifecycle {
         Chemical empty = new Chemical(ChemicalBuilder.builder());
         Holder.Reference<Chemical> emptyHolder = candidate.register(ChemicalRegistry.EMPTY_KEY, empty, RegistrationInfo.BUILT_IN);
         ChemicalRegistry.publishEmpty(empty, emptyHolder);
+        registry = candidate;
+        return candidate;
+    }
+
+    public static synchronized FabricDefaultedRegistry<Chemical> initialize() {
+        FabricDefaultedRegistry<Chemical> candidate = allocate();
+        if (initialized) return candidate;
+        Chemical empty = ChemicalRegistry.empty();
+        Holder.Reference<Chemical> emptyHolder = ChemicalRegistry.emptyHolder();
         MekanismChemicals.CHEMICALS.registerAll(candidate);
         verify(candidate, empty, emptyHolder);
         // Freeze on the construction thread. Later RegistryAccess snapshots may call freeze
         // idempotently from reload workers, but no population is permitted after publication.
         candidate.freeze();
-        registry = candidate;
+        initialized = true;
         return candidate;
     }
 

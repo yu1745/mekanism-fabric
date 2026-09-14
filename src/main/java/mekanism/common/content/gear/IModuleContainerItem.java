@@ -18,8 +18,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.event.ItemAttributeModifierEvent;
-import net.neoforged.neoforge.registries.DeferredHolder;
+import mekanism.api.gear.GearAttributeContext;
+import mekanism.common.registration.MekanismDeferredHolder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -35,7 +35,7 @@ public interface IModuleContainerItem extends IModeItem, IItemHUDProvider, IHasC
     }
 
     @Override
-    default void adjustAttributes(ItemAttributeModifierEvent event) {
+    default void adjustAttributes(GearAttributeContext event) {
         for (IModule<?> module : getModules(event.getItemStack())) {
             if (module.isEnabled()) {
                 adjustAttributes(module, event);
@@ -43,7 +43,7 @@ public interface IModuleContainerItem extends IModeItem, IItemHUDProvider, IHasC
         }
     }
 
-    private <MODULE extends ICustomModule<MODULE>> void adjustAttributes(IModule<MODULE> module, ItemAttributeModifierEvent event) {
+    private <MODULE extends ICustomModule<MODULE>> void adjustAttributes(IModule<MODULE> module, GearAttributeContext event) {
         module.getCustomInstance().adjustAttributes(module, event);
     }
 
@@ -53,7 +53,7 @@ public interface IModuleContainerItem extends IModeItem, IItemHUDProvider, IHasC
     }
 
     @Nullable
-    default <MODULE extends ICustomModule<MODULE>> IModule<MODULE> getEnabledModule(ItemStack stack, DeferredHolder<ModuleData<?>, ModuleData<MODULE>> type) {
+    default <MODULE extends ICustomModule<MODULE>> IModule<MODULE> getEnabledModule(ItemStack stack, MekanismDeferredHolder<ModuleData<?>, ModuleData<MODULE>> type) {
         return IModuleHelper.INSTANCE.getIfEnabled(stack, type);
     }
 

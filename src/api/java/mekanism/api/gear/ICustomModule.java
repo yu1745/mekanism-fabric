@@ -18,8 +18,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.UseOnContext;
-import net.neoforged.neoforge.common.ItemAbility;
-import net.neoforged.neoforge.event.ItemAttributeModifierEvent;
+import mekanism.api.ItemAbility;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -202,7 +201,7 @@ public interface ICustomModule<MODULE extends ICustomModule<MODULE>> {
      *
      * @since 10.6.3
      */
-    default void adjustAttributes(IModule<MODULE> module, ItemAttributeModifierEvent event) {
+    default void adjustAttributes(IModule<MODULE> module, GearAttributeContext event) {
     }
 
     /**
@@ -285,7 +284,7 @@ public interface ICustomModule<MODULE extends ICustomModule<MODULE>> {
     }
 
     /**
-     * Called to check if this module allows the Meka-Tool to perform a specific {@link net.neoforged.neoforge.common.ItemAbility}.
+     * Called to check if this module allows the Meka-Tool to perform a specific {@link ItemAbility}.
      *
      * @param module          Module instance.
      * @param moduleContainer The container this module is part of.

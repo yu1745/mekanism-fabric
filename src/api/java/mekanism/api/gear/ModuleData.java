@@ -17,7 +17,6 @@ import java.util.function.Function;
 import java.util.function.IntFunction;
 import java.util.function.IntPredicate;
 import java.util.function.Supplier;
-import mekanism.api.MekanismAPI;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.gear.config.ModuleBooleanConfig;
 import mekanism.api.gear.config.ModuleConfig;
@@ -229,7 +228,7 @@ public class ModuleData<MODULE extends ICustomModule<MODULE>> implements mekanis
     @Override
     public String getTranslationKey() {
         if (translationKey == null) {
-            translationKey = Util.makeDescriptionId("module", MekanismAPI.MODULE_REGISTRY.getKeyOrNull(this));
+            translationKey = Util.makeDescriptionId("module", ModuleRegistry.registry().getKey(this));
         }
         return translationKey;
     }
@@ -239,14 +238,14 @@ public class ModuleData<MODULE extends ICustomModule<MODULE>> implements mekanis
      */
     public String getDescriptionTranslationKey() {
         if (descriptionTranslationKey == null) {
-            descriptionTranslationKey = Util.makeDescriptionId("description", MekanismAPI.MODULE_REGISTRY.getKeyOrNull(this));
+            descriptionTranslationKey = Util.makeDescriptionId("description", ModuleRegistry.registry().getKey(this));
         }
         return descriptionTranslationKey;
     }
 
     @Override
     public final String toString() {
-        return Util.getRegisteredName(MekanismAPI.MODULE_REGISTRY, this);
+        return ModuleRegistry.registry().wrapAsHolder(this).getRegisteredName();
     }
 
     private record ConstructedConfigData(List<ModuleConfig<?>> configs, Codec<List<ModuleConfig<?>>> codec,

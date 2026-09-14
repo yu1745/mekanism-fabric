@@ -13,7 +13,7 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.common.NeoForgeMod;
-import net.neoforged.neoforge.event.ItemAttributeModifierEvent;
+import mekanism.api.gear.GearAttributeContext;
 
 @ParametersAreNotNullByDefault
 public record ModuleHydrostaticRepulsorUnit(boolean swimBoost) implements ICustomModule<ModuleHydrostaticRepulsorUnit> {
@@ -28,7 +28,7 @@ public record ModuleHydrostaticRepulsorUnit(boolean swimBoost) implements ICusto
     }
 
     @Override
-    public void adjustAttributes(IModule<ModuleHydrostaticRepulsorUnit> module, ItemAttributeModifierEvent event) {
+    public void adjustAttributes(IModule<ModuleHydrostaticRepulsorUnit> module, GearAttributeContext event) {
         //Clamp out at a max efficiency of one (at three installed units)
         //Note: Value copied from default for depth strider
         AttributeModifier modifier = new AttributeModifier(WATER_MOVEMENT, Math.min(1, 0.33333334F * module.getInstalledCount()), AttributeModifier.Operation.ADD_VALUE);
