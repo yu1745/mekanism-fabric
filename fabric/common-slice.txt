@@ -119,6 +119,8 @@ mekanism/common/content/miner/MinerModIDFilter.java
 mekanism/common/content/miner/MinerTagFilter.java
 mekanism/common/content/network/distribution/EnergyAcceptorTarget.java
 mekanism/common/content/network/distribution/EnergySaveTarget.java
+mekanism/common/content/network/distribution/FluidHandlerTarget.java
+mekanism/common/content/network/distribution/FluidSendTransaction.java
 mekanism/common/content/oredictionificator/OredictionificatorFilter.java
 mekanism/common/content/oredictionificator/OredictionificatorItemFilter.java
 mekanism/common/content/qio/IQIOCraftingWindowHolder.java

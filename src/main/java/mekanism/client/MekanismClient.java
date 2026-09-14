@@ -1,5 +1,6 @@
 package mekanism.client;
 
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import java.util.Map;
 import java.util.UUID;
 import mekanism.client.render.RenderTickHandler;

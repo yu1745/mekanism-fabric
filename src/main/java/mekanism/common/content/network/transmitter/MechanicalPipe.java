@@ -28,17 +28,21 @@ import mekanism.common.upgrade.transmitter.TransmitterUpgradeData;
 import mekanism.common.util.EnumUtils;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.NBTUtils;
+import mekanism.api.fluid.FluidStack;
+import mekanism.fabric.fluid.FabricFluidConversions;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
+import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
+import net.fabricmc.fabric.api.transfer.v1.storage.StorageView;
+import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.block.Block;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class MechanicalPipe extends BufferedTransmitter<IFluidHandler, FluidNetwork, FluidStack, MechanicalPipe> implements IMekanismFluidHandler,
+public class MechanicalPipe extends BufferedTransmitter<Storage<FluidVariant>, FluidNetwork, FluidStack, MechanicalPipe> implements IMekanismFluidHandler,
       IUpgradeableTransmitter<MechanicalPipeUpgradeData> {
 
     public final PipeTier tier;
@@ -56,14 +60,14 @@ public class MechanicalPipe extends BufferedTransmitter<IFluidHandler, FluidNetw
     }
 
     @Override
-    protected AbstractAcceptorCache<IFluidHandler, ?> createAcceptorCache() {
+    protected AbstractAcceptorCache<Storage<FluidVariant>, ?> createAcceptorCache() {
         return new AcceptorCache<>(getTransmitterTile(), Capabilities.FLUID.block());
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public AcceptorCache<IFluidHandler> getAcceptorCache() {
-        return (AcceptorCache<IFluidHandler>) super.getAcceptorCache();
+    public AcceptorCache<Storage<FluidVariant>> getAcceptorCache() {
+        return (AcceptorCache<Storage<FluidVariant>>) super.getAcceptorCache();
     }
 
     @Override
@@ -76,34 +80,91 @@ public class MechanicalPipe extends BufferedTransmitter<IFluidHandler, FluidNetw
         if (!hasPullSide || getAvailablePull() <= 0) {
             return;
         }
-        AcceptorCache<IFluidHandler> acceptorCache = getAcceptorCache();
+        AcceptorCache<Storage<FluidVariant>> acceptorCache = getAcceptorCache();
         for (Direction side : EnumUtils.DIRECTIONS) {
             if (!isConnectionType(side, ConnectionType.PULL)) {
                 continue;
             }
-            IFluidHandler connectedAcceptor = acceptorCache.getConnectedAcceptor(side);
-            if (connectedAcceptor != null) {
-                FluidStack received;
+            Storage<FluidVariant> connectedAcceptor = acceptorCache.getConnectedAcceptor(side);
+            if (connectedAcceptor != null && connectedAcceptor.iterator().hasNext()) {
                 //Note: We recheck the buffer each time in case we ended up accepting fluid somewhere
                 // and our buffer changed and is no longer empty
                 FluidStack bufferWithFallback = getBufferWithFallback();
-                if (bufferWithFallback.isEmpty()) {
-                    //If we don't have a fluid stored try pulling as much as we are able to
-                    received = connectedAcceptor.drain(getAvailablePull(), FluidAction.SIMULATE);
-                } else {
-                    //Otherwise, try draining the same type of fluid we have stored requesting up to as much as we are able to pull
-                    // We do this to better support multiple tanks in case the fluid we have stored we could pull out of a block's
-                    // second tank but just asking to drain a specific amount
-                    received = connectedAcceptor.drain(bufferWithFallback.copyWithAmount(getAvailablePull()), FluidAction.SIMULATE);
-                }
-                if (!received.isEmpty() && takeFluid(received, Action.SIMULATE).isEmpty()) {
-                    //If we received some fluid and are able to insert it all, then actually extract it and insert it into our thing.
-                    // Note: We extract first after simulating ourselves because if the target gave a faulty simulation value, we want to handle it properly
-                    // and not accidentally dupe anything, and we know our simulation we just performed on taking it is valid
-                    takeFluid(connectedAcceptor.drain(received.copy(), FluidAction.EXECUTE), Action.EXECUTE);
+                int availablePull = getAvailablePull();
+                try (Transaction pull = Transaction.openOuter()) {
+                    FluidStack received = null;
+                    if (bufferWithFallback.isEmpty()) {
+                        //If we don't have a fluid stored try pulling whatever resource the acceptor exposes
+                        for (StorageView<FluidVariant> view : connectedAcceptor) {
+                            if (!view.isResourceBlank()) {
+                                received = extractWholeMillibuckets(connectedAcceptor, view.getResource(), availablePull, pull);
+                                if (received != null) {
+                                    break;
+                                }
+                            }
+                        }
+                    } else {
+                        //Otherwise, try pulling the same type of fluid we have stored requesting up to as much as we are able to pull
+                        FluidVariant stored = FabricFluidConversions.toFabricVariant(bufferWithFallback);
+                        received = extractWholeMillibuckets(connectedAcceptor, stored, availablePull, pull);
+                    }
+                    if (received != null && takeFluid(received, Action.SIMULATE).isEmpty()) {
+                        //If we received some fluid and are able to insert it all, then actually take it into our buffer and commit the
+                        // external extraction. The extraction is still inside the open transaction, so a failed simulation here aborts
+                        // it and nothing is removed from the acceptor (no dupe window).
+                        takeFluid(received, Action.EXECUTE);
+                        pull.commit();
+                    }
+                    //Otherwise: abort, leaving the acceptor untouched
                 }
             }
         }
+    }
+
+    /**
+     * Extracts up to {@code maxMillibuckets} of {@code variant} from {@code storage} inside {@code transaction}, accepting only an exact whole-millibucket result. A
+     * fractional probe result is aborted and retried at its whole-millibucket floor (bounded); the extraction only stays when the transaction is committed by the caller.
+     *
+     * @return the extracted stack, or {@code null} if the acceptor cannot provide an exact whole-millibucket amount.
+     */
+    @Nullable
+    private static FluidStack extractWholeMillibuckets(Storage<FluidVariant> storage, FluidVariant variant, int maxMillibuckets, Transaction transaction) {
+        long request = (long) maxMillibuckets * FabricFluidConversions.TRANSFER_UNITS_PER_MILLIBUCKET;
+        if (request <= 0 || request > FabricFluidConversions.MAX_EXACT_TRANSFER_UNITS) {
+            return null;
+        }
+        long reported;
+        try (Transaction probe = Transaction.openNested(transaction)) {
+            reported = storage.extract(variant, request, probe);
+            if (reported < 0 || reported > request) {
+                return null;
+            }
+            if (reported == request) {
+                probe.commit();
+                return FabricFluidConversions.toFluidStack(variant, reported);
+            }
+            //Fractional or partial: abort the probe and fall through to the bounded floor retry
+        }
+        long floorMillibuckets = reported / FabricFluidConversions.TRANSFER_UNITS_PER_MILLIBUCKET;
+        while (floorMillibuckets >= 1) {
+            long retryRequest = floorMillibuckets * FabricFluidConversions.TRANSFER_UNITS_PER_MILLIBUCKET;
+            try (Transaction nested = Transaction.openNested(transaction)) {
+                long extracted = storage.extract(variant, retryRequest, nested);
+                if (extracted < 0 || extracted > retryRequest) {
+                    return null;
+                }
+                if (extracted == retryRequest) {
+                    nested.commit();
+                    return FabricFluidConversions.toFluidStack(variant, extracted);
+                }
+                long nextFloor = extracted / FabricFluidConversions.TRANSFER_UNITS_PER_MILLIBUCKET;
+                if (nextFloor >= floorMillibuckets) {
+                    return null;
+                }
+                floorMillibuckets = nextFloor;
+            }
+        }
+        return null;
     }
 
     private int getAvailablePull() {
@@ -154,7 +215,7 @@ public class MechanicalPipe extends BufferedTransmitter<IFluidHandler, FluidNetw
     }
 
     @Override
-    public CompatibleTransmitterValidator<IFluidHandler, FluidNetwork, MechanicalPipe> getNewOrphanValidator() {
+    public CompatibleTransmitterValidator<Storage<FluidVariant>, FluidNetwork, MechanicalPipe> getNewOrphanValidator() {
         return new CompatibleFluidTransmitterValidator(this);
     }
 

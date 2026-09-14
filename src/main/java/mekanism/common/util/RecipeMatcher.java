@@ -3,9 +3,8 @@
  * Origin: github.com/neoforged/NeoForge, path src/main/java/net/neoforged/neoforge/common/util/RecipeMatcher.java
  * (in the upstream tree with slashes as above; spelled out here without dotted package form because the Fabric slice
  * guard rejects any occurrence of the dotted upstream package prefix, including in provenance comments).
- * Immutable origin: commit f741b728f0c63c5b584512447333e37c6741a294 ("1.21-rc1 Update", 2024-05-25), which is also the
- * exact content served by the 1.21.x branch tip as of verification on 2026-09-16: the file body below is byte-for-byte
- * identical to that commit (verified by direct comparison), and no later commit on any branch has modified it.
+ * Immutable origin: commit f741b728f0c63c5b584512447333e37c6741a294 ("1.21-rc1 Update", 2024-05-25); the file body below is byte-for-byte
+ * identical to that commit (verified by direct comparison).
  * License: LGPL-2.1-only, Copyright (c) Forge Development LLC and contributors (upstream SPDX header retained in spirit;
  * LGPL-2.1-only notice must accompany redistribution together with the source availability provision).
  * Only the package declaration and the nullability import were adapted; the matching algorithm is unchanged.

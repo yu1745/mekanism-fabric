@@ -24,6 +24,7 @@ import mekanism.api.ItemAbility;
 import mekanism.api.MekanismAPI;
 import mekanism.api.MekanismAPITags;
 import mekanism.api.MekanismItemAbilities;
+import net.minecraft.server.MinecraftServer;
 import mekanism.api.MekanismServerLifecycle;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import mekanism.api.fluid.FluidStack;
@@ -600,10 +601,12 @@ public final class MekanismUtils {
             return "<???>";
         }
         String ret = UsernameCache.getLastKnownUsername(uuid);
-        //Fabric port delta: the NeoForge EffectiveSide/ServerLifecycleHooks server lookup becomes the lifecycle-bound MekanismServerLifecycle owner
-        // (null on the client and before server start, so the Yggdrasil profile-cache fallback only runs on a live logical server)
-        if (ret == null && !warnedFails.contains(uuid) && MekanismServerLifecycle.getServer() != null) { // see if MC/Yggdrasil knows about it?!
-            Optional<GameProfile> gp = MekanismServerLifecycle.getServer().getProfileCache().get(uuid);
+        //Fabric port delta: the NeoForge EffectiveSide check is replaced by logical-server/thread-affinity: the fallback profile-cache
+        // lookup only runs on the logical server (dedicated or integrated) and only on the actual server thread. Username-cache reads stay
+        // available on the client; the Yggdrasil profile cache is simply not queried from render/client threads
+        MinecraftServer server = MekanismServerLifecycle.getServer();
+        if (ret == null && !warnedFails.contains(uuid) && server != null && server.isSameThread()) { // see if MC/Yggdrasil knows about it?!
+            Optional<GameProfile> gp = server.getProfileCache().get(uuid);
             if (gp.isPresent()) {
                 ret = gp.get().getName();
             }
@@ -869,12 +872,14 @@ public final class MekanismUtils {
             //Otherwise, break the block
             FluidState fluidState = targetState.getFluidState();
             //Get the tile now so that we have it for when we try to harvest the block
-            //Note: this is the same blockEntity instance passed to the BEFORE/CANCELED hooks above
+            //Note: this is the same blockEntity instance passed to the BEFORE/CANCELED/AFTER hooks
+            //Keep the original pre-break state for the successful AFTER dispatch below
+            BlockState originalState = targetState;
             //Update what the state will be if the player is destroying it, so that things like angering piglins, and firing block destroy game events occur
             // This also ensures that things like decorated pots are able to properly update to cracked and drop sherds rather than the pot block itself
             targetState = targetState.getBlock().playerWillDestroy(world, foundPos, targetState, player);
             Block block = targetState.getBlock();
-            //Remove the block
+            //Remove the block, preserving vanilla destruction semantics (onDestroyedByPlayer then block.destroy)
             if (targetState.onDestroyedByPlayer(world, foundPos, player, true, fluidState)) {
                 block.destroy(world, foundPos, targetState);
                 //Harvest the block allowing it to handle block drops, incrementing block mined count, and adding exhaustion
@@ -882,6 +887,9 @@ public final class MekanismUtils {
                 player.awardStat(itemStat);
                 //Mark that we used that portion of the energy
                 energyUsed += destroyEnergy;
+                //Successful AFTER callback with the original pre-break state and block entity, matching what a vanilla
+                // ServerPlayerGameMode destroy dispatches through the Fabric break-event chain
+                PlayerBlockBreakEvents.AFTER.invoker().afterBlockBreak(world, player, foundPos, originalState, blockEntity);
             }
         }
         energyContainer.extract(energyUsed, Action.EXECUTE, AutomationType.MANUAL);

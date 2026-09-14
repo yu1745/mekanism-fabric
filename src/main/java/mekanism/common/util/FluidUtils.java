@@ -7,8 +7,9 @@ import mekanism.api.fluid.IExtendedFluidTank;
 import mekanism.api.fluid.IMekanismFluidHandler;
 import mekanism.common.attachments.containers.ContainerType;
 import mekanism.common.capabilities.Capabilities;
-import mekanism.common.content.network.distribution.FluidHandlerTarget;
-import net.minecraft.core.Direction;
+import mekanism.common.content.network.distribution.FluidSendTransaction;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
+import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
 import net.minecraft.core.Holder;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
@@ -17,11 +18,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
 import net.neoforged.fml.loading.FMLEnvironment;
-import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
 import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction;
+import mekanism.api.fluid.FluidStack;
 import net.neoforged.neoforge.fluids.capability.IFluidHandlerItem;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -67,67 +65,25 @@ public final class FluidUtils {
         return 0xFFFFFFFF;
     }
 
-    public static void emit(Collection<BlockCapabilityCache<IFluidHandler, @Nullable Direction>> targets, IExtendedFluidTank tank) {
+    public static void emit(Collection<Storage<FluidVariant>> targets, IExtendedFluidTank tank) {
         emit(targets, tank, tank.getCapacity());
     }
 
-    public static void emit(Collection<BlockCapabilityCache<IFluidHandler, @Nullable Direction>> targets, IExtendedFluidTank tank, int maxOutput) {
-        if (!tank.isEmpty() && maxOutput > 0 && !targets.isEmpty()) {
-            tank.extract(emit(targets, FluidStack.EMPTY, tank, maxOutput), Action.EXECUTE, AutomationType.INTERNAL);
-        }
+    public static void emit(Collection<Storage<FluidVariant>> targets, IExtendedFluidTank tank, int maxOutput) {
+        //Sender-owned transaction: snapshot tank, distribute fairly over real Fabric storages, debit exactly, commit atomically
+        FluidSendTransaction.send(targets, tank, maxOutput);
     }
 
     /**
-     * Emits fluid from a central block by splitting the received stack among the sides given.
+     * Emits a caller-owned offered stack from a central block by splitting it among the sides given.
      *
-     * @param targets - the list of capabilities to output to
-     * @param stack   - the stack to output
+     * @param targets - the storages to output to
+     * @param stack   - the stack to output; caller-owned, so it is NOT snapshotted or debited here
      *
-     * @return the amount of fluid emitted
+     * @return the amount of fluid emitted; the caller must consume exactly this amount from its actual source
      */
-    public static int emit(Collection<BlockCapabilityCache<IFluidHandler, @Nullable Direction>> targets, @NotNull FluidStack stack) {
-        return emit(targets, stack, null, Integer.MAX_VALUE);
-    }
-
-    private static int emit(Collection<BlockCapabilityCache<IFluidHandler, @Nullable Direction>> targets, @NotNull FluidStack stack, IExtendedFluidTank tank,
-          int maxOutput) {
-        if (stack.isEmpty() && tank == null) {
-            //Something went wrong in calling this method
-            return 0;
-        } else if (targets.isEmpty()) {
-            return 0;
-        }
-        FluidStack toSend = stack.copy();
-        FluidHandlerTarget target = null;
-        for (BlockCapabilityCache<IFluidHandler, Direction> capability : targets) {
-            //Insert to access side and collect the cap if it is present, and we can insert the type of the stack into it
-            IFluidHandler handler = capability.getCapability();
-            if (handler != null) {
-                //If we weren't given a stack by the caller, then we want to lazily try to extract from the tank to see how much we are trying to emit
-                // so that we don't have to attempt an extraction if all our targets are actually not currently fluid handlers
-                if (stack.isEmpty()) {
-                    stack = tank.extract(maxOutput, Action.SIMULATE, AutomationType.INTERNAL);
-                    if (stack.isEmpty()) {
-                        //If we failed to extract from it, just exit early
-                        return 0;
-                    }
-                    //Note: We need to copy and use toSend instead of just passing stack to canFill, as the docs for IFluidHandler don't specify
-                    // whether it is safe to modify the passed in stack
-                    toSend = stack.copy();
-                }
-                if (canFill(handler, toSend)) {
-                    if (target == null) {
-                        target = new FluidHandlerTarget(targets.size());
-                    }
-                    target.addHandler(handler);
-                }
-            }
-        }
-        return EmitUtils.sendToAcceptors(target, stack.getAmount(), toSend);
-    }
-
-    public static boolean canFill(IFluidHandler handler, @NotNull FluidStack stack) {
-        return handler.fill(stack.copy(), FluidAction.SIMULATE) > 0;
+    public static int emit(Collection<Storage<FluidVariant>> targets, @NotNull FluidStack stack) {
+        return FluidSendTransaction.send(targets, stack);
     }
 
     public static boolean handleTankInteraction(Player player, InteractionHand hand, ItemStack itemStack, IExtendedFluidTank fluidTank) {

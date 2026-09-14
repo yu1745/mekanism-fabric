@@ -1,7 +1,9 @@
 package mekanism.fabric;
 
 import mekanism.common.UsernameCache;
+import net.fabricmc.fabric.api.networking.v1.PacketSender;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 
 /**
@@ -19,9 +21,8 @@ public final class MekanismUsernameLifecycle {
         ServerPlayConnectionEvents.JOIN.register(MekanismUsernameLifecycle::recordLogin);
     }
 
-    private static void recordLogin(ServerGamePacketListenerImpl handler, net.minecraft.server.MinecraftServer server,
-          net.minecraft.world.entity.player.Player player) {
-        //JOIN fires on the server thread once the player is in the world; the game profile name is the authoritative current name
-        UsernameCache.setLastKnownUsername(player.getUUID(), player.getGameProfile().getName());
+    private static void recordLogin(ServerGamePacketListenerImpl handler, PacketSender sender, MinecraftServer server) {
+        //JOIN is (handler, sender, server): the actual player comes from the handler
+        UsernameCache.setLastKnownUsername(handler.player.getUUID(), handler.player.getGameProfile().getName());
     }
 }
