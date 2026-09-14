@@ -152,10 +152,10 @@ public final class InventoryUtils {
     }
 
     public static boolean isItemHandler(Level level, BlockPos pos, Direction side) {
-        return Capabilities.ITEM.getCapabilityIfLoaded(level, pos, side) != null;
+        return ItemStorage.SIDED.find(level, pos, side) != null;
     }
 
-    public static HandlerTransitRequest getEjectItemMap(IItemHandler handler, List<IInventorySlot> slots) {
+    public static HandlerTransitRequest getEjectItemMap(Storage<ItemVariant> handler, List<IInventorySlot> slots) {
         return getEjectItemMap(new HandlerTransitRequest(handler), slots);
     }
 
@@ -168,7 +168,9 @@ public final class InventoryUtils {
             //Note: We are using EXTERNAL as that is what we actually end up using when performing the extraction in the end
             ItemStack simulatedExtraction = slot.extractItem(slot.getCount(), Action.SIMULATE, AutomationType.EXTERNAL);
             if (!simulatedExtraction.isEmpty()) {
-                request.addItem(simulatedExtraction, slots.indexOf(slot));
+                //Identity-checked candidate: the selected physical slot is connected to its real exposed position in
+                // the request's sided provider (Task052 R3); no inferred generic indices
+                request.addItemFromSelectedSlot(simulatedExtraction, slot);
             }
         }
         return request;

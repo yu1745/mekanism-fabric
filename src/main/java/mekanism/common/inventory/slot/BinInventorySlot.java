@@ -9,6 +9,7 @@ import mekanism.api.IContentsListener;
 import mekanism.api.SerializationConstants;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.functions.ConstantPredicates;
+import mekanism.api.inventory.ICreativeInventorySlot;
 import mekanism.api.inventory.IInventorySlot;
 import mekanism.api.inventory.IMekanismInventory;
 import mekanism.common.attachments.containers.ContainerType;
@@ -24,7 +25,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @NothingNullByDefault
-public class BinInventorySlot extends BasicInventorySlot {
+public class BinInventorySlot extends BasicInventorySlot implements ICreativeInventorySlot {
 
     public static final Predicate<@NotNull ItemStack> validator = stack -> !(stack.getItem() instanceof ItemBlockBin);
 
@@ -57,6 +58,11 @@ public class BinInventorySlot extends BasicInventorySlot {
         super(tier.getStorage(), ConstantPredicates.alwaysTrueBi(), ConstantPredicates.alwaysTrueBi(), validator, listener, 0, 0);
         isCreative = tier == BinTier.CREATIVE;
         obeyStackLimit = false;
+    }
+
+    @Override
+    public boolean isCreative() {
+        return isCreative;
     }
 
     @Override

@@ -87,6 +87,7 @@ mekanism/api/heat/IHeatCapacitor.java
 mekanism/api/heat/IHeatHandler.java
 mekanism/api/heat/IMekanismHeatHandler.java
 mekanism/api/heat/ISidedHeatHandler.java
+mekanism/api/inventory/ICreativeInventorySlot.java
 mekanism/api/inventory/IHashedItem.java
 mekanism/api/inventory/IInventorySlot.java
 mekanism/api/inventory/IMekanismInventory.java

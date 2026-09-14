@@ -8,6 +8,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import mekanism.common.Mekanism;
+import mekanism.api.inventory.IInventorySlot;
+import mekanism.fabric.item.FabricItemStorage;
 import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
 import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
 import net.fabricmc.fabric.api.transfer.v1.storage.StorageView;
@@ -116,6 +118,30 @@ public class HandlerTransitRequest extends CollectionTransitRequest {
      */
     public void addItem(ItemStack stack, int slot) {
         itemMap(HashedItem.create(stack)).addCandidate(new SourceCandidate(slot, null, stack.getCount()));
+    }
+
+    /**
+     * Identity-checked selected-slot candidate (Task052 R3): connects the selected physical {@link IInventorySlot}
+     * identity to its real exposed position in this request's sided provider. If the provider is the slotted view of
+     * those very slots (a {@link FabricItemStorage}), the candidate debits through that exact real slot view; if the
+     * provider does not expose the selected identity, the candidate is rejected loudly instead of debiting through
+     * an unrelated position.
+     */
+    public void addItemFromSelectedSlot(ItemStack stack, IInventorySlot slot) {
+        if (handler instanceof FabricItemStorage fabricStorage) {
+            SingleSlotStorage<ItemVariant> view = fabricStorage.viewOf(slot);
+            if (view != null) {
+                itemMap(HashedItem.create(stack)).addCandidate(new SourceCandidate(-1, view, stack.getCount()));
+                return;
+            }
+            Mekanism.logger.warn("Selected inventory slot identity is not exposed by the sided provider; not ejecting from it.");
+            Mekanism.logger.warn("Slot: {}, Provider: {}", slot.getClass().getName(), handler.getClass().getName());
+            return;
+        }
+        //Not the slotted view of these very slots (for example a foreign provider occupying the bounding
+        // position): reject loudly rather than debiting through an unrelated storage (Task052 R3)
+        Mekanism.logger.warn("Selected-slot ejection provider is not the provider of the selected slots; not ejecting.");
+        Mekanism.logger.warn("Provider: {}", handler == null ? "null" : handler.getClass().getName());
     }
 
     /**

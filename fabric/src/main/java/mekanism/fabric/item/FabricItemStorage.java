@@ -77,6 +77,25 @@ public final class FabricItemStorage extends SnapshotParticipant<List<ItemStack>
         invalidated = true;
     }
 
+    /**
+     * Identity-checked real-slot selection facility (Task052 R3): returns the exposed single-slot view whose backing
+     * slot <b>is</b> the given slot object identity, or {@code null} if this view does not expose that slot. Callers
+     * use this to connect a selected physical {@link IInventorySlot} identity to its real position in this provider
+     * instead of inferring identity from generic indices.
+     */
+    @Nullable
+    public SingleSlotStorage<ItemVariant> viewOf(IInventorySlot slot) {
+        if (!hasStableTopology()) {
+            return null;
+        }
+        for (int slotIndex = 0; slotIndex < capturedSlots.size(); slotIndex++) {
+            if (capturedSlots.get(slotIndex) == slot) {
+                return views.get(slotIndex);
+            }
+        }
+        return null;
+    }
+
     @Override
     public boolean supportsInsertion() {
         return canTransfer(true);
@@ -190,9 +209,16 @@ public final class FabricItemStorage extends SnapshotParticipant<List<ItemStack>
                 }
                 IInventorySlot inventorySlot = capturedSlots.get(slot);
                 ItemStack before = expected.get(slot);
-                ItemStack expectedAfter = insertion
-                      ? expectedAfterInsertion(before, resource, planned)
-                      : expectedAfterExtraction(before, resource, planned);
+                ItemStack expectedAfter;
+                if (isCreativeNow(inventorySlot)) {
+                    //Creative policy (operation-specific, actual creative state only): extraction does not deplete
+                    // and external insertion voids, so the expected state of this slot is unchanged
+                    expectedAfter = before;
+                } else if (insertion) {
+                    expectedAfter = expectedAfterInsertion(before, resource, planned);
+                } else {
+                    expectedAfter = expectedAfterExtraction(before, resource, planned);
+                }
                 if (expectedAfter == null) {
                     return 0;
                 }
