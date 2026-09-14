@@ -124,7 +124,7 @@ public class WorldConfig extends BaseMekanismConfig {
                   .defineInRange("perChunk", perChunk, 1, 256));
             this.minRadius = CachedIntValue.wrap(config, MekanismConfigTranslations.WORLD_SALT_RADIUS_MIN.applyToBuilder(builder)
                   .defineInRange("minRadius", baseRadius, 1, 4));
-            this.maxRadius = CachedIntValue.wrap(config, MekanismConfigTranslations.WORLD_SALT_RADIUS_MAX.applyToBuilder(builder).define("maxRadius", spread, o -> {
+            this.maxRadius = CachedIntValue.wrap(config, MekanismConfigTranslations.WORLD_SALT_RADIUS_MAX.applyToBuilder(builder).defineValidated("maxRadius", spread, o -> {
                 if (o instanceof Integer value && value >= 1 && value <= 4) {
                     return value >= this.minRadius.getOrDefault();
                 }

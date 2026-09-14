@@ -111,6 +111,10 @@ mekanism/common/capabilities/resolver/manager/ItemHandlerManager.java
 mekanism/common/config/BaseMekanismConfig.java
 mekanism/common/config/ChemicalConfigAccess.java
 mekanism/common/config/ClientWindowConfigAccess.java
+# Direct existing MekanismConfig fields: all window/tier/height dependencies are already admitted
+mekanism/common/config/ClientConfig.java
+mekanism/common/config/TierConfig.java
+mekanism/common/config/WorldConfig.java
 mekanism/common/config/CommonConfig.java
 mekanism/common/config/GearConfig.java
 mekanism/common/config/GeneralConfig.java
