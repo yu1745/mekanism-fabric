@@ -8,9 +8,11 @@ import mekanism.common.lib.inventory.TransitRequest;
 import mekanism.common.lib.inventory.TransitRequest.ItemData;
 import mekanism.common.lib.inventory.TransitRequest.TransitResponse;
 import mekanism.common.util.StackUtils;
+import mekanism.common.util.TxOps;
 import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
 import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
 import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
+import net.fabricmc.fabric.api.transfer.v1.transaction.TransactionContext;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.GlobalPos;
@@ -22,8 +24,10 @@ import net.minecraft.world.level.Level;
  * cumulative real inserts inside one abort-only Fabric transaction. All already-flowing reservations (and any
  * additional flowing stacks, e.g. in-flight predictions from the same tick) are inserted first so later candidates
  * see the reserved state; then the request's own candidate is inserted and the actually accepted amount is measured.
- * The prediction transaction is never committed, so no target mutation survives; using
- * {@link Transaction#openCurrent()} makes nested predictions compose with any active caller transaction.
+ * The prediction transaction is never committed, so no target mutation survives; callers pass their
+ * {@link TransactionContext} explicitly so nested predictions compose with any active caller transaction (R1
+ * correction: the real API has no {@code openCurrent}; {@link Transaction#openNested(TransactionContext)} opens an
+ * outer transaction when the context is null).
  */
 public class TransporterManager {
 
@@ -73,7 +77,16 @@ public class TransporterManager {
      */
     public static TransitResponse getPredictedInsert(GlobalPos position, Direction side, Storage<ItemVariant> handler, TransitRequest request,
           Map<GlobalPos, Set<TransporterStack>> additionalFlowingStacks) {
-        try (Transaction prediction = Transaction.openCurrent()) {
+        return getPredictedInsert(position, side, handler, request, additionalFlowingStacks, null);
+    }
+
+    /**
+     * Transaction-aware prediction: the abort-only simulation is nested in the caller's transaction when one is
+     * active, so provisional inserts compose with (and never survive past) the caller's abort semantics.
+     */
+    public static TransitResponse getPredictedInsert(GlobalPos position, Direction side, Storage<ItemVariant> handler, TransitRequest request,
+          Map<GlobalPos, Set<TransporterStack>> additionalFlowingStacks, @Nullable TransactionContext enclosing) {
+        try (Transaction prediction = Transaction.openNested(enclosing)) {
             //Before we see if our candidate can fit in the destination, we must first insert the stacks that are
             // en-route. If any in-flight stack is rejected per the destination-face rules, then we can fail fast.
             if (!predictFlowing(position, side, handler, prediction, flowingStacks)
@@ -139,7 +152,7 @@ public class TransporterManager {
      * taking into account any stacks that are in transit to it.
      */
     public static TransitResponse getPredictedInsert(Storage<ItemVariant> handler, TransitRequest request) {
-        try (Transaction prediction = Transaction.openCurrent()) {
+        try (Transaction prediction = TxOps.simulation()) {
             for (ItemData data : request) {
                 ItemStackHolder stack = ItemStackHolder.of(data.getStack());
                 if (stack.variant.isBlank() || stack.count <= 0) {
