@@ -35,7 +35,7 @@ public final class FabricTransmitterAssets {
      * @param json      the raw loader JSON, used to build the vanilla {@code BlockModel} delegate
      * @param obj       the parsed internal geometry assets (the {@code model} key)
      * @param glass     the parsed glass geometry assets, or {@code null} when the JSON declares no glass pass
-     * @param resources the exact resource ids that were read, reported as real model dependencies
+     * @param resources the exact raw resource ids read by preparation, NOT model dependencies
      */
     public record Assets(String json, ObjAssets obj, @Nullable ObjAssets glass, Set<ResourceLocation> resources) {
     }
@@ -59,6 +59,9 @@ public final class FabricTransmitterAssets {
     public static Assets read(ResourceManager resources, ResourceLocation modelId) throws IOException {
         ResourceLocation jsonId = jsonId(modelId);
         JsonObject root = readJson(resources, jsonId);
+        if (!FabricTransmitterModels.isTransmitterLoader(root.toString())) {
+            throw new JsonParseException("Transmitter model " + modelId + " must declare loader mekanism:transmitter");
+        }
         Set<ResourceLocation> dependencies = new LinkedHashSet<>();
         dependencies.add(jsonId);
         ObjAssets internal = readObj(resources, requireId(root, "model", modelId), bool(root, "flip_v", false), null, dependencies);

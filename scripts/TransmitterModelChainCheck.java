@@ -11,8 +11,8 @@
 //   * the dependency set the loader will schedule;
 //   * geometry + tint material selection from the shipped MTLs.
 //
-// Baking a FabricTransmitterBakedModel requires sprites, so quad production is verified by check 1 (real assets) plus
-// the compiled owner; it is NOT claimed as runtime-verified here.
+// Baking a FabricTransmitterBakedModel requires sprites. These checks parse geometry and compile its baker;
+// they do NOT execute quad production or claim visual/runtime verification.
 package mekanism.fabric.client.render.obj;
 
 import java.io.IOException;
@@ -44,7 +44,6 @@ public final class TransmitterModelChainCheck {
     public static void main(String[] args) throws Exception {
         Path assets = Path.of("src/main/resources/assets");
         DirResourceManager resources = new DirResourceManager(assets);
-        TransmitterModelConfig.install(() -> false);
 
         ResourceLocation base = id("block/transmitter/large/large");
         ResourceLocation tier = id("block/transmitter/large/logistical_transporter/basic");
@@ -53,6 +52,36 @@ public final class TransmitterModelChainCheck {
         // The glass pass is declared by the logistical transporter base, not by large.json, so its assets are a second
         // real loader JSON with its own OBJ/MTL reads.
         ResourceLocation glassBase = id("block/transmitter/large/logistical_transporter/transporter");
+
+        // Actual tint callback over immutable attachments; proxy rejects any attempted live-tile lookup.
+        var attachment = new java.util.concurrent.atomic.AtomicReference<Object>();
+        var view = (net.minecraft.world.level.BlockAndTintGetter) java.lang.reflect.Proxy.newProxyInstance(
+              TransmitterModelChainCheck.class.getClassLoader(), new Class<?>[]{net.minecraft.world.level.BlockAndTintGetter.class,
+                    net.fabricmc.fabric.api.rendering.data.v1.RenderAttachedBlockView.class}, (proxy, method, arguments) -> {
+                  if (method.getName().equals("getBlockEntityRenderAttachment")) {
+                      return attachment.get();
+                  }
+                  throw new AssertionError("Unexpected world access: " + method.getName());
+              });
+        for (var color : List.of(mekanism.api.text.EnumColor.RED, mekanism.api.text.EnumColor.DARK_BLUE)) {
+            var data = new mekanism.client.model.data.TransmitterModelData();
+            data.setHasColor(true);
+            data.setPackedColor(color.getPackedColor());
+            attachment.set(data.freeze());
+            check("snapshot tint " + color, FabricTransmitterColorProvider.COLOR.getColor(null, view, net.minecraft.core.BlockPos.ZERO, 1) == color.getPackedColor());
+            try {
+                data.setPackedColor(-1);
+                check("published color immutable", false);
+            } catch (IllegalStateException expected) {
+                check("published color immutable", true);
+            }
+        }
+        attachment.set(new mekanism.client.model.data.TransmitterModelData().freeze());
+        check("uncolored snapshot leaves tint unchanged", FabricTransmitterColorProvider.COLOR.getColor(null, view, net.minecraft.core.BlockPos.ZERO, 1) == -1);
+        attachment.set(new mekanism.client.model.data.TransmitterModelData.Diversion().freeze());
+        check("diversion snapshot has no tint", FabricTransmitterColorProvider.COLOR.getColor(null, view, net.minecraft.core.BlockPos.ZERO, 1) == -1);
+        check("null item view has no tint", FabricTransmitterColorProvider.COLOR.getColor(null, null, null, 1) == -1);
+        check("other tint index never queries world", FabricTransmitterColorProvider.COLOR.getColor(null, view, net.minecraft.core.BlockPos.ZERO, 0) == -1);
 
         // --- discovery from the pack alone -------------------------------------------------
         Map<ResourceLocation, ResourceLocation> discovered = FabricTransmitterModels.discover(resources);
@@ -82,6 +111,8 @@ public final class TransmitterModelChainCheck {
         TransmitterObjGeometry internal = TransmitterObjGeometry.parse(assetsForBase.obj().objSource(), assetsForBase.obj().mtlSources(), assetsForBase.obj().flipV());
         check("internal geometry has the 24 transmitter parts", internal.groups().size() == 24);
         check("internal materials carry tint -1 (no tint)", internal.materials().values().stream().allMatch(m -> m.tintIndex() == -1));
+        check("shipped Kd/d and Ka retained for baking", internal.materials().values().stream()
+              .allMatch(m -> m.diffuseColor() == 0xFFCCCCCC && m.ambientLight() == 0));
         TransmitterObjGeometry glass = TransmitterObjGeometry.parse(assetsForGlass.glass().objSource(), assetsForGlass.glass().mtlSources(), assetsForGlass.glass().flipV());
         check("glass materials carry tint index 1", glass.materials().values().stream().allMatch(m -> m.tintIndex() == 1));
         check("glass materials reference glass aliases",
@@ -102,9 +133,29 @@ public final class TransmitterModelChainCheck {
         check("tier alias 'center_down' resolves to a real texture", real(tierModel.getMaterial("center_down")));
         check("tier alias 'center_opaque' resolves through the tier file", real(tierModel.getMaterial("center_opaque")));
         check("item model inherits the tier alias chain", real(itemModel.getMaterial("side")));
-        check("inherited display transforms are real, not the identity placeholder",
-              itemModel.getTransforms() != ItemTransforms.NO_TRANSFORMS);
-        check("item model declares real geometry dependencies", !itemModel.getDependencies().isEmpty());
+        var display = itemModel.getTransforms();
+        check("item inherits actual transporter GUI rotation", display.gui.rotation.equals(new org.joml.Vector3f(30, 225, 0)));
+        check("item inherits actual transporter ground translation", display.ground.translation.equals(new org.joml.Vector3f(0, 3F / 16, 0)));
+        check("item inherits actual transporter first person scale", display.firstPersonRightHand.scale.equals(new org.joml.Vector3f(0.4F)));
+        // Resolve the real pinned vanilla parent, then verify values not overridden by a child.
+        BlockModel vanilla = (BlockModel) resolver(assets, byId).apply(ResourceLocation.withDefaultNamespace("block/block"));
+        check("pinned vanilla block parent has actual GUI scale", vanilla.getTransforms().gui.scale.equals(new org.joml.Vector3f(0.625F)));
+        FabricTransmitterBlockModel inheriting = new FabricTransmitterBlockModel("vanilla-inheritance",
+              "{\"parent\":\"block/block\",\"ambientocclusion\":false,\"gui_light\":\"front\"}", assetsForBase.obj(), null, () -> false);
+        inheriting.resolveParents(resolver(assets, byId));
+        check("unspecified display inherits actual vanilla GUI values", inheriting.getTransforms().gui.scale.equals(new org.joml.Vector3f(0.625F))
+              && inheriting.getTransforms().gui.rotation.equals(new org.joml.Vector3f(30, 225, 0)));
+        check("vanilla AO and GUI-light flags survive constructor", !inheriting.hasAmbientOcclusion() && !inheriting.getGuiLight().lightLikeBlock());
+        check("item dependencies are model ids only", Set.copyOf(itemModel.getDependencies()).equals(Set.of(tier)));
+        check("base dependencies contain only vanilla parent", Set.copyOf(baseModel.getDependencies()).equals(Set.of(ResourceLocation.withDefaultNamespace("block/block"))));
+        check("loader match is exact field, not a string elsewhere", !FabricTransmitterModels.isTransmitterLoader("{\"parent\":\"mekanism:transmitter\"}"));
+        check("loader suffix does not match", !FabricTransmitterModels.isTransmitterLoader("{\"loader\":\"mekanism:transmitter_extra\"}"));
+        try {
+            FabricTransmitterModels.isTransmitterLoader("{\"loader\":42}");
+            check("malformed loader rejected", false);
+        } catch (com.google.gson.JsonParseException expected) {
+            check("malformed loader rejected", true);
+        }
 
         // A transmitting model must expose its own alias map, not the vanilla missing texture, for every shipped alias.
         for (String alias : List.of("side", "side_opaque", "center_down", "center_opaque")) {
@@ -126,7 +177,7 @@ public final class TransmitterModelChainCheck {
 
     private static FabricTransmitterBlockModel model(ResourceManager resources, ResourceLocation modelId, Assets assets) throws IOException {
         String json = FabricTransmitterAssets.tryReadJsonText(resources, modelId);
-        return new FabricTransmitterBlockModel(modelId.toString(), json, assets.obj(), assets.glass(), assets.resources(),
+        return new FabricTransmitterBlockModel(modelId.toString(), json, assets.obj(), assets.glass(),
               () -> false);
     }
 
@@ -147,8 +198,16 @@ public final class TransmitterModelChainCheck {
                         throw new IllegalStateException(e);
                     }
                 }
-                //An absent parent (e.g. block/block is shipped) still needs a BlockModel so the vanilla chain runs.
-                return new BlockModel(null, List.of(), Map.of(), null, null, ItemTransforms.NO_TRANSFORMS, List.of());
+                // Actual pinned Loom Minecraft JAR resource. Missing parents fail rather than becoming empty models.
+                String resource = "/assets/" + id.getNamespace() + "/models/" + id.getPath() + ".json";
+                try (var stream = BlockModel.class.getResourceAsStream(resource)) {
+                    if (stream == null) {
+                        throw new IllegalStateException("Missing real parent resource " + resource);
+                    }
+                    return BlockModel.fromStream(new java.io.InputStreamReader(stream, java.nio.charset.StandardCharsets.UTF_8));
+                } catch (IOException e) {
+                    throw new IllegalStateException(e);
+                }
             }
         };
     }

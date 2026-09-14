@@ -46,7 +46,7 @@ public final class FabricTransmitterModelPlugin {
                       return null;
                   }
                   return new FabricTransmitterBlockModel(resolver.id().toString(), model.json(), model.assets().obj(),
-                        model.assets().glass(), model.assets().resources(), TransmitterModelConfig::opaqueTransmitters);
+                        model.assets().glass(), TransmitterModelConfig::opaqueTransmitters);
               }));
     }
 

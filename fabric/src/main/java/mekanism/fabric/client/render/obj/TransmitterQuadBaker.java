@@ -1,122 +1,117 @@
 package mekanism.fabric.client.render.obj;
 
+import com.mojang.math.Transformation;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.resources.model.ModelState;
 import net.minecraft.core.Direction;
-import net.minecraft.util.Mth;
+import org.joml.Matrix3f;
+import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
-/**
- * Narrow baker turning {@link TransmitterObjGeometry} groups into vanilla {@link BakedQuad}s for the transmitter
- * renderer. UVs are mapped through {@link TextureAtlasSprite#getU}/{@code getV} so alias textures resolve against the
- * block atlas; the material's {@code forge_TintIndex} is preserved on the quad (index 1 = logistical color), and
- * per-part rotation (end-icon status rotation about the connection axis) is applied on the CPU before packing.
+/** Narrow shipped-transmitter OBJ baker. BLOCK vertices contain position, diffuse ABGR, atlas UV,
+ * packed light, and three signed normal bytes (not padding).
  *
- * <p>Vertex data layout follows the vanilla 1.21.1 BLOCK format: position(3f), color(4ub), uv0(2f), light(2s), pad.</p>
+ * ModelState rotation composes with the end-icon rotation in official order and pivots about block center.
+ * Like pinned NeoForge 21.1.200 ObjModel.ModelMesh.addQuads, OBJ UVs remain authored even when
+ * ModelState.isUvLocked() is true: that owner only consumes getRotation(), unlike vanilla cuboid FaceBakery.
  */
 public final class TransmitterQuadBaker {
 
     private static final int INTS_PER_VERTEX = 8;
-    private static final int FLOATS_PER_QUAD_DATA = 4 * INTS_PER_VERTEX;
-
     private final TransmitterObjGeometry geometry;
     private final Function<String, TextureAtlasSprite> spriteLookup;
+    private final ModelState modelState;
 
-    public TransmitterQuadBaker(TransmitterObjGeometry geometry, Function<String, TextureAtlasSprite> spriteLookup) {
+    public TransmitterQuadBaker(TransmitterObjGeometry geometry, Function<String, TextureAtlasSprite> spriteLookup, ModelState modelState) {
         this.geometry = geometry;
         this.spriteLookup = spriteLookup;
+        this.modelState = modelState;
     }
 
-    /** Bake every face of one group; rotation may be null. */
+    /** Bake one group's faces, composing optional end-icon rotation after the incoming model rotation. */
     public List<BakedQuad> bakeGroup(String group, Quaternionf rotation) {
         List<TransmitterObjGeometry.Face> faces = geometry.groups().get(group);
         if (faces == null) {
             throw new IllegalArgumentException("TransmitterQuadBaker: unknown group '" + group + "'");
         }
+        Transformation transform = modelState.getRotation();
+        if (rotation != null) {
+            transform = transform.compose(new Transformation(null, rotation, null, null));
+        }
+        Matrix4f positions = new Matrix4f().translation(0.5F, 0.5F, 0.5F)
+              .mul(transform.getMatrix()).translate(-0.5F, -0.5F, -0.5F);
+        Matrix3f normals = positions.normal(new Matrix3f());
         List<BakedQuad> quads = new ArrayList<>(faces.size());
         for (TransmitterObjGeometry.Face face : faces) {
             TransmitterObjGeometry.Material material = geometry.material(face.material());
             if (material == null) {
-                throw new IllegalArgumentException("TransmitterQuadBaker: face references unknown material '" + face.material() + "'");
+                throw new IllegalArgumentException("TransmitterQuadBaker: unknown material '" + face.material() + "'");
             }
             TextureAtlasSprite sprite = spriteLookup.apply(material.textureAlias());
             if (sprite == null) {
-                throw new IllegalStateException("TransmitterQuadBaker: no sprite for texture alias '" + material.textureAlias() + "'");
+                throw new IllegalStateException("TransmitterQuadBaker: no sprite for alias '" + material.textureAlias() + "'");
             }
-            quads.add(bakeFace(face, sprite, material.tintIndex(), rotation));
+            quads.add(bakeFace(face, sprite, material, positions, normals));
         }
         return quads;
     }
 
-    private BakedQuad bakeFace(TransmitterObjGeometry.Face face, TextureAtlasSprite sprite, int tintIndex, Quaternionf rotation) {
+    private BakedQuad bakeFace(TransmitterObjGeometry.Face face, TextureAtlasSprite sprite,
+          TransmitterObjGeometry.Material material, Matrix4f positions, Matrix3f normals) {
         List<TransmitterObjGeometry.FaceVertex> corners = face.vertices();
-        int n = corners.size();
-        float[][] pos = new float[n][3];
-        float[][] uv = new float[n][2];
-        Vector3f normal = faceNormal(corners);
-        if (rotation != null) {
-            // Rotate the face normal with the geometry so shading/direction stay consistent with the rotated part
-            rotation.transform(normal);
+        if (corners.size() < 3 || corners.size() > 4) {
+            throw new IllegalArgumentException("TransmitterQuadBaker: expected triangle or quad, got " + corners.size());
         }
-        for (int i = 0; i < n; i++) {
-            TransmitterObjGeometry.FaceVertex c = corners.get(i);
-            Vector3f v = new Vector3f(geometry.vertexX(c.vertex()), geometry.vertexY(c.vertex()), geometry.vertexZ(c.vertex()));
-            if (rotation != null) {
-                // Mekanism end-icon rotation pivots around the block center
-                v.sub(0.5F, 0.5F, 0.5F);
-                rotation.transform(v);
-                v.add(0.5F, 0.5F, 0.5F);
+        boolean recalculateNormals = corners.stream().anyMatch(c -> c.normal() < 0);
+        Vector3f faceNormal = recalculateNormals ? faceNormal(corners) : null;
+        int[] data = new int[4 * INTS_PER_VERTEX];
+        Direction direction = null;
+        for (int i = 0; i < 4; i++) {
+            // Official OBJ triangle representation duplicates its final corner in the fourth quad vertex.
+            var corner = corners.get(Math.min(i, corners.size() - 1));
+            Vector3f position = vertex(corner.vertex());
+            positions.transformPosition(position);
+            Vector3f normal = recalculateNormals ? new Vector3f(faceNormal)
+                  : new Vector3f(geometry.normalX(corner.normal()), geometry.normalY(corner.normal()), geometry.normalZ(corner.normal()));
+            normals.transform(normal).normalize();
+            if (!normal.isFinite()) {
+                throw new IllegalArgumentException("TransmitterQuadBaker: degenerate normal in " + face.material());
             }
-            pos[i][0] = v.x;
-            pos[i][1] = v.y;
-            pos[i][2] = v.z;
-            float u = c.texCoord() >= 0 ? geometry.texU(c.texCoord()) : 0F;
-            float w = c.texCoord() >= 0 ? geometry.texV(c.texCoord()) : 0F;
-            // Pinned 1.21.1 TextureAtlasSprite#getU/getV interpolate the normalized 0..1 input directly
-            uv[i][0] = sprite.getU(u);
-            uv[i][1] = sprite.getV(w);
+            if (i == 0) {
+                direction = Direction.getNearest(normal.x, normal.y, normal.z);
+            }
+            // OBJ loader's default UV quad, used only for a face without texture coordinates.
+            float u = corner.texCoord() < 0 ? (i < 2 ? 0 : 1) : geometry.texU(corner.texCoord());
+            float v = corner.texCoord() < 0 ? (i == 0 || i == 3 ? 0 : 1) : geometry.texV(corner.texCoord());
+            int offset = i * INTS_PER_VERTEX;
+            data[offset] = Float.floatToRawIntBits(position.x);
+            data[offset + 1] = Float.floatToRawIntBits(position.y);
+            data[offset + 2] = Float.floatToRawIntBits(position.z);
+            data[offset + 3] = material.diffuseColor();
+            data[offset + 4] = Float.floatToRawIntBits(sprite.getU(u));
+            data[offset + 5] = Float.floatToRawIntBits(sprite.getV(v));
+            data[offset + 6] = material.ambientLight() << 4 | material.ambientLight() << 20;
+            data[offset + 7] = normalByte(normal.x) | normalByte(normal.y) << 8 | normalByte(normal.z) << 16;
         }
-        Direction direction = approxDirection(normal);
-        int[] data = new int[FLOATS_PER_QUAD_DATA];
-        int o = 0;
-        for (int i = 0; i < n; i++) {
-            data[o++] = Float.floatToRawIntBits(pos[i][0]);
-            data[o++] = Float.floatToRawIntBits(pos[i][1]);
-            data[o++] = Float.floatToRawIntBits(pos[i][2]);
-            data[o++] = 0xFFFFFFFF; // color; tint applied by the renderer through tintIndex
-            data[o++] = Float.floatToRawIntBits(uv[i][0]);
-            data[o++] = Float.floatToRawIntBits(uv[i][1]);
-            data[o++] = 0; // light (packed short pair) — block model shading fills this
-            data[o++] = 0; // padding
-        }
-        // Triangulate anything that is not a quad through the same packed data via a sub-array is not possible in
-        // vanilla BakedQuad, so non-quad faces must be split by the parser contract; enforce it here.
-        if (n != 4) {
-            throw new IllegalStateException("TransmitterQuadBaker: expected quad, got " + n + " corners");
-        }
-        return new BakedQuad(data, tintIndex, direction, sprite, false);
+        // Shipped loader defaults shade_quads=true/emissive_ambient=true; all shipped Ka values are zero.
+        return new BakedQuad(data, material.tintIndex(), direction, sprite, material.ambientLight() == 0);
+    }
+
+    private static int normalByte(float component) {
+        return (byte) (Math.clamp(component, -1F, 1F) * 127F) & 255;
+    }
+
+    private Vector3f vertex(int index) {
+        return new Vector3f(geometry.vertexX(index), geometry.vertexY(index), geometry.vertexZ(index));
     }
 
     private Vector3f faceNormal(List<TransmitterObjGeometry.FaceVertex> corners) {
-        // Prefer declared normals (all shipped faces reference one normal per quad); fall back to geometric normal.
-        int first = corners.get(0).normal();
-        if (first >= 0) {
-            return new Vector3f(geometry.normalX(first), geometry.normalY(first), geometry.normalZ(first));
-        }
-        Vector3f a = new Vector3f(geometry.vertexX(corners.get(0).vertex()), geometry.vertexY(corners.get(0).vertex()), geometry.vertexZ(corners.get(0).vertex()));
-        Vector3f b = new Vector3f(geometry.vertexX(corners.get(1).vertex()), geometry.vertexY(corners.get(1).vertex()), geometry.vertexZ(corners.get(1).vertex()));
-        Vector3f c = new Vector3f(geometry.vertexX(corners.get(2).vertex()), geometry.vertexY(corners.get(2).vertex()), geometry.vertexZ(corners.get(2).vertex()));
-        return b.sub(a).cross(c.sub(a)).normalize();
-    }
-
-    private static Direction approxDirection(Vector3f normal) {
-        if (!Mth.equal(normal.length(), 1F)) {
-            normal.normalize();
-        }
-        return Direction.getNearest(Mth.floor(normal.x * 1000F), Mth.floor(normal.y * 1000F), Mth.floor(normal.z * 1000F));
+        Vector3f origin = vertex(corners.get(0).vertex());
+        return vertex(corners.get(1).vertex()).sub(origin).cross(vertex(corners.get(2).vertex()).sub(origin)).normalize();
     }
 }

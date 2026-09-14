@@ -5,7 +5,6 @@ import com.google.gson.JsonParser;
 import com.mojang.datafixers.util.Either;
 import java.util.Collection;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BooleanSupplier;
@@ -43,15 +42,14 @@ public final class FabricTransmitterBlockModel extends BlockModel {
 
     private final ObjAssets internal;
     private final ObjAssets glass;
-    private final Collection<ResourceLocation> extraDependencies;
     private final BooleanSupplier opaqueTransmitters;
 
     FabricTransmitterBlockModel(String name, String json, ObjAssets internal, ObjAssets glass,
-          Collection<ResourceLocation> extraDependencies, BooleanSupplier opaqueTransmitters) {
-        super(parentId(json), List.<BlockElement>of(), parseTextures(json), null, null, parseTransforms(json), List.<ItemOverride>of());
+          BooleanSupplier opaqueTransmitters) {
+        super(parentId(json), List.<BlockElement>of(), parseTextures(json), ambientOcclusion(json), guiLight(json),
+              parseTransforms(json), BlockModel.fromString(json).getOverrides());
         this.internal = internal;
         this.glass = glass;
-        this.extraDependencies = extraDependencies;
         this.opaqueTransmitters = opaqueTransmitters;
         //Keep the vanilla debug name populated the way the vanilla loader does.
         this.name = name;
@@ -80,9 +78,9 @@ public final class FabricTransmitterBlockModel extends BlockModel {
 
     @Override
     public Collection<ResourceLocation> getDependencies() {
-        LinkedHashSet<ResourceLocation> dependencies = new LinkedHashSet<>(super.getDependencies());
-        dependencies.addAll(extraDependencies);
-        return List.copyOf(dependencies);
+        // ModelBakery schedules MODEL identifiers here, never raw OBJ/MTL/JSON resource identifiers.
+        // The preparable asset owner has already read those resources.
+        return super.getDependencies();
     }
 
     @Override
@@ -100,7 +98,20 @@ public final class FabricTransmitterBlockModel extends BlockModel {
         //Alias resolution runs through this model's real material chain, so it sees this model's own aliases plus
         //everything inherited from its transmitter base and block/block, exactly like the official configuration.
         return new FabricTransmitterBakedModel(internalGeometry, glassGeometry, alias -> spriteGetter.apply(getMaterial(alias)),
-              opaqueTransmitters.getAsBoolean(), getTransforms());
+              opaqueTransmitters.getAsBoolean(), getTransforms(), state, hasAmbientOcclusion(), getGuiLight().lightLikeBlock(),
+              new net.minecraft.client.renderer.block.model.ItemOverrides(baker, this, getOverrides()));
+    }
+
+    @Nullable
+    private static Boolean ambientOcclusion(String json) {
+        JsonObject root = JsonParser.parseString(json).getAsJsonObject();
+        return root.has("ambientocclusion") ? BlockModel.fromString(json).hasAmbientOcclusion() : null;
+    }
+
+    @Nullable
+    private static GuiLight guiLight(String json) {
+        JsonObject root = JsonParser.parseString(json).getAsJsonObject();
+        return root.has("gui_light") ? BlockModel.fromString(json).getGuiLight() : null;
     }
 
     @Nullable

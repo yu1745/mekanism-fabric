@@ -1,32 +1,48 @@
 package mekanism.fabric.config;
 
 import java.nio.file.Path;
+import java.util.function.BooleanSupplier;
+import mekanism.fabric.client.render.obj.TransmitterModelConfig;
 import mekanism.common.config.ClientWindowConfigAccess;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** Owns the window config for exactly one physical Fabric client lifetime. */
+/** Owns the single admitted client.toml spec for exactly one physical Fabric client lifetime. */
 public final class FabricClientConfigLifecycle implements AutoCloseable {
     private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism/FabricClientConfig");
     private static FabricClientConfigLifecycle active;
 
     private final FabricMekanismConfigManager manager;
     private final FabricWindowConfig windowConfig;
+    private final BooleanSupplier transmitterConfig;
     private boolean closed;
 
     private FabricClientConfigLifecycle(FabricMekanismConfigManager manager) {
         this.manager = manager;
         windowConfig = new FabricWindowConfig();
-        manager.registerAndLoad(windowConfig);
+        boolean loaded = false;
+        boolean windowInstalled = false;
         boolean installed = false;
         try {
+            manager.registerAndLoad(windowConfig);
+            loaded = true;
+            // Official gameRestart semantics: pin the actual loaded value for this process lifetime.
+            boolean opaque = windowConfig.opaqueTransmitters();
+            transmitterConfig = () -> opaque;
             ClientWindowConfigAccess.install(windowConfig, Thread.currentThread());
+            windowInstalled = true;
+            TransmitterModelConfig.install(transmitterConfig);
             installed = true;
         } finally {
             if (!installed) {
                 windowConfig.stopAndDrain();
-                manager.unregister(windowConfig);
+                if (windowInstalled) {
+                    ClientWindowConfigAccess.remove(windowConfig);
+                }
+                if (loaded) {
+                    manager.unregister(windowConfig);
+                }
             }
         }
     }
@@ -79,7 +95,11 @@ public final class FabricClientConfigLifecycle implements AutoCloseable {
         } catch (RuntimeException failure) {
             unloadFailure = failure;
         } finally {
-            ClientWindowConfigAccess.remove(windowConfig);
+            try {
+                TransmitterModelConfig.remove(transmitterConfig);
+            } finally {
+                ClientWindowConfigAccess.remove(windowConfig);
+            }
         }
         if (unloadFailure != null) {
             throw unloadFailure;

@@ -8,8 +8,8 @@
 #   1. Pure-Java OBJ/MTL parse of the shipped transmitter_small/large assets (groups/materials/flip_v/glass override).
 #   2. Face immutability: the parser's own face corner lists must reject mutation.
 #   3. Real model chain against the shipped resource pack: discovers transmitter models, reads the OBJ/MTL through a
-#      real ResourceManager, resolves the tier texture-alias chain, and bakes quads whose tint index/direction/UV come
-#      from the shipped assets.
+#      resource manager, resolves tier textures and actual pinned vanilla parent display values, and checks
+#      model-vs-resource dependencies. Sprite-free: parses geometry and compiles the baker, but DOES NOT bake quads.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

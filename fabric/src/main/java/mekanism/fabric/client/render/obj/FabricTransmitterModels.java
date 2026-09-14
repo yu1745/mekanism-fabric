@@ -43,7 +43,7 @@ final class FabricTransmitterModels {
         for (Map.Entry<ResourceLocation, Resource> entry : candidateJsons(resources).entrySet()) {
             ResourceLocation id = modelId(entry.getKey());
             String json = read(entry.getValue());
-            if (json.contains(FabricTransmitterModelPlugin.LOADER_ID)) {
+            if (isTransmitterLoader(json)) {
                 bases.add(id);
             }
             parents.put(id, parentPath(json));
@@ -56,6 +56,18 @@ final class FabricTransmitterModels {
             }
         }
         return result;
+    }
+
+    static boolean isTransmitterLoader(String json) {
+        JsonObject root = JsonParser.parseString(json).getAsJsonObject();
+        JsonElement loader = root.get("loader");
+        if (loader == null) {
+            return false;
+        }
+        if (!loader.isJsonPrimitive() || !loader.getAsJsonPrimitive().isString()) {
+            throw new com.google.gson.JsonParseException("Model loader must be a string");
+        }
+        return FabricTransmitterModelPlugin.LOADER_ID.equals(loader.getAsString());
     }
 
     @Nullable

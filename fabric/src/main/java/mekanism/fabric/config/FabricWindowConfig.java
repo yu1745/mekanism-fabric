@@ -17,7 +17,8 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** Sole, forward-compatible owner of the {@code window.*} fragment in {@code Mekanism/client.toml}. */
+/** Sole manager-loaded client.toml owner: window persistence and the admitted transmitter accessibility setting.
+ * Unrelated client keys remain forward-compatible; this is not the full official ClientConfig closure. */
 public final class FabricWindowConfig implements IMekanismConfig, ClientWindowConfigAccess.Owner {
     @FunctionalInterface
     interface SaveOperation {
@@ -35,6 +36,7 @@ public final class FabricWindowConfig implements IMekanismConfig, ClientWindowCo
     private final Object admissionMonitor = new Object();
     private final Map<String, WindowValues> windows = new LinkedHashMap<>();
     private final MekanismConfigSpec spec;
+    private final MekanismConfigSpec.ConfigValue<Boolean> opaqueTransmitters;
     private final SaveOperation saveOperation;
     private final ExecutorService saveExecutor;
     private final AtomicInteger admittedJobs = new AtomicInteger();
@@ -48,6 +50,10 @@ public final class FabricWindowConfig implements IMekanismConfig, ClientWindowCo
     FabricWindowConfig(SaveOperation saveOperation) {
         this.saveOperation = Objects.requireNonNull(saveOperation, "saveOperation");
         MekanismConfigSpec.Builder builder = new MekanismConfigSpec.Builder();
+        MekanismConfigTranslations.CLIENT_ACCESSIBILITY.applyToBuilder(builder).push("accessibility");
+        opaqueTransmitters = MekanismConfigTranslations.CLIENT_OPAQUE_TRANSMITTERS.applyToBuilder(builder)
+              .gameRestart().define("opaqueTransmitters", false);
+        builder.pop();
         MekanismConfigTranslations.CLIENT_LAST_WINDOW_POSITIONS.applyToBuilder(builder).push("window");
         for (WindowType type : WindowType.values()) {
             for (WindowType.ConfigSaveData saveData : type.getSavePaths()) {
@@ -70,6 +76,10 @@ public final class FabricWindowConfig implements IMekanismConfig, ClientWindowCo
             thread.setDaemon(true);
             return thread;
         });
+    }
+
+    public boolean opaqueTransmitters() {
+        return opaqueTransmitters.get();
     }
 
     @Override

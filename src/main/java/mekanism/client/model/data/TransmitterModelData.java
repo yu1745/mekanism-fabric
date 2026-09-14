@@ -16,6 +16,7 @@ public sealed class TransmitterModelData permits Diversion {
     //getConnectionsMap() while the builder is still assembling the snapshot
     private final Map<Direction, ConnectionType> connectionView = Collections.unmodifiableMap(connections);
     private boolean hasColor;
+    private int packedColor = -1;
     private boolean frozen;
 
     public void setConnectionData(Direction direction, ConnectionType connectionType) {
@@ -53,6 +54,16 @@ public sealed class TransmitterModelData permits Diversion {
         this.hasColor = hasColor;
     }
 
+    /** Packed ARGB captured by the tile on its update thread; never query a live tile from chunk workers. */
+    public void setPackedColor(int packedColor) {
+        ensureMutable();
+        this.packedColor = packedColor;
+    }
+
+    public int getPackedColor() {
+        return packedColor;
+    }
+
     public boolean getHasColor() {
         return hasColor;
     }
@@ -75,14 +86,14 @@ public sealed class TransmitterModelData permits Diversion {
         if (o == this) {
             return true;
         }
-        return o instanceof TransmitterModelData other && hasColor == other.hasColor && connections.equals(other.connections);
+        return o instanceof TransmitterModelData other && hasColor == other.hasColor && packedColor == other.packedColor && connections.equals(other.connections);
     }
 
     @Override
     public int hashCode() {
         int result = connections.hashCode();
         result = 31 * result + Boolean.hashCode(hasColor);
-        return result;
+        return 31 * result + packedColor;
     }
 
     public static final class Diversion extends TransmitterModelData {

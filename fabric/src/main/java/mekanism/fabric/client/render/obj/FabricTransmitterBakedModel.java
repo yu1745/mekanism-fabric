@@ -24,6 +24,7 @@ import net.minecraft.client.renderer.block.model.ItemOverrides;
 import net.minecraft.client.renderer.block.model.ItemTransforms;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.model.BakedModel;
+import net.minecraft.client.resources.model.ModelState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.Mth;
@@ -70,6 +71,10 @@ public final class FabricTransmitterBakedModel implements BakedModel, FabricBake
     private final boolean hasGlass;
     private final TextureAtlasSprite particleIcon;
     private final ItemTransforms transforms;
+    private final ModelState modelState;
+    private final boolean ambientOcclusion;
+    private final boolean blockLight;
+    private final ItemOverrides overrides;
 
     private final LoadingCache<SidedConnection, List<BakedQuad>> internalParts;
     @Nullable
@@ -77,28 +82,27 @@ public final class FabricTransmitterBakedModel implements BakedModel, FabricBake
     private final List<BakedQuad> defaultItemQuads;
 
     public FabricTransmitterBakedModel(TransmitterObjGeometry internalGeometry, @Nullable TransmitterObjGeometry glassGeometry,
-          Function<String, TextureAtlasSprite> spriteLookup, boolean opaqueTransmitters, ItemTransforms transforms) {
+          Function<String, TextureAtlasSprite> spriteLookup, boolean opaqueTransmitters, ItemTransforms transforms,
+          ModelState modelState, boolean ambientOcclusion, boolean blockLight, ItemOverrides overrides) {
         this.internalGeometry = internalGeometry;
         this.glassGeometry = glassGeometry;
         this.spriteLookup = alias -> spriteLookup0(spriteLookup, alias);
         this.opaqueTransmitters = opaqueTransmitters;
         this.hasGlass = glassGeometry != null;
         this.transforms = transforms;
-        TextureAtlasSprite particle = null;
-        try {
-            particle = this.spriteLookup.apply("particle");
-        } catch (RuntimeException ignored) {
-        }
-        if (particle == null) {
-            particle = this.spriteLookup.apply("side");
-        }
-        this.particleIcon = particle;
+        this.modelState = modelState;
+        this.ambientOcclusion = ambientOcclusion;
+        this.blockLight = blockLight;
+        this.overrides = overrides;
+        this.particleIcon = this.spriteLookup.apply("particle");
         this.internalParts = CacheBuilder.newBuilder().build(createPartCacheLoader(internalGeometry, false));
         this.glassParts = glassGeometry == null ? null : CacheBuilder.newBuilder().build(createPartCacheLoader(glassGeometry, true));
         //Default arrangement = every side NONE, used for items and missing attachments
         List<BakedQuad> quads = new ArrayList<>();
+        TransmitterQuadBaker itemBaker = new TransmitterQuadBaker(internalGeometry, this.spriteLookup, modelState);
         for (Direction side : Direction.values()) {
-            quads.addAll(this.internalParts.getUnchecked(new SidedConnection(side, ConnectionType.NONE, IconStatus.NO_SHOW)));
+            // Official default item uses VisibleModelConfiguration, not the block-only opaque/icon remapper.
+            quads.addAll(itemBaker.bakeGroup(getPartName(side, ConnectionType.NONE), null));
         }
         this.defaultItemQuads = Collections.unmodifiableList(quads);
     }
@@ -165,7 +169,7 @@ public final class FabricTransmitterBakedModel implements BakedModel, FabricBake
 
     @Override
     public boolean useAmbientOcclusion() {
-        return true;
+        return ambientOcclusion;
     }
 
     @Override
@@ -175,7 +179,7 @@ public final class FabricTransmitterBakedModel implements BakedModel, FabricBake
 
     @Override
     public boolean usesBlockLight() {
-        return true;
+        return blockLight;
     }
 
     @Override
@@ -197,7 +201,7 @@ public final class FabricTransmitterBakedModel implements BakedModel, FabricBake
 
     @Override
     public ItemOverrides getOverrides() {
-        return ItemOverrides.EMPTY;
+        return overrides;
     }
 
     private CacheLoader<SidedConnection, List<BakedQuad>> createPartCacheLoader(TransmitterObjGeometry geometry, boolean glass) {
@@ -217,7 +221,7 @@ public final class FabricTransmitterBakedModel implements BakedModel, FabricBake
                     Vector3f axis = new Vector3f(-side.getNormal().getX(), -side.getNormal().getY(), -side.getNormal().getZ());
                     rotation = new Quaternionf().setAngleAxis(iconStatus.getAngle(), axis.x, axis.y, axis.z);
                 }
-                TransmitterQuadBaker baker = new TransmitterQuadBaker(geometry, alias -> spriteLookup.apply(adjustAlias(alias, part, side, iconStatus, glass)));
+                TransmitterQuadBaker baker = new TransmitterQuadBaker(geometry, alias -> spriteLookup.apply(adjustAlias(alias, part, side, iconStatus, glass)), modelState);
                 return baker.bakeGroup(part, rotation);
             }
         };
@@ -231,7 +235,7 @@ public final class FabricTransmitterBakedModel implements BakedModel, FabricBake
      */
     private String adjustAlias(String alias, String part, Direction side, IconStatus iconStatus, boolean glass) {
         String name = alias;
-        if (directionForPiece(part) != null) {
+        if (directionForPiece(alias) != null) {
             if (iconStatus != IconStatus.NO_SHOW) {
                 name = name.contains(GLASS_ALIAS_MARKER) ? "side_glass" : "side";
             }
@@ -251,7 +255,7 @@ public final class FabricTransmitterBakedModel implements BakedModel, FabricBake
 
     private static Direction directionForPiece(String piece) {
         for (Direction side : Direction.values()) {
-            if (piece.startsWith(side.getSerializedName())) {
+            if (piece.endsWith(side.getSerializedName())) {
                 return side;
             }
         }

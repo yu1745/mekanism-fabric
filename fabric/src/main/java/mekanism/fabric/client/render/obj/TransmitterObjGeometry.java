@@ -28,8 +28,8 @@ public final class TransmitterObjGeometry {
     public record FaceVertex(int vertex, int texCoord, int normal) {
     }
 
-    /** MTL material: diffuse texture alias reference ({@code map_Kd #center_up}) plus optional {@code forge_TintIndex}. */
-    public record Material(String textureAlias, int tintIndex) {
+    /** Shipped MTL alias, tint index, diffuse ABGR (Kd/d), and emissive ambient level (Ka). */
+    public record Material(String textureAlias, int tintIndex, int diffuseColor, int ambientLight) {
     }
 
     /**
@@ -270,6 +270,8 @@ public final class TransmitterObjGeometry {
             String name = null;
             String alias = null;
             int tint = -1;
+            float red = 1, green = 1, blue = 1, alpha = 1;
+            int ambientLight = 0;
             int lineNo = 0;
             for (String raw : source.split("\n", -1)) {
                 lineNo++;
@@ -281,7 +283,7 @@ public final class TransmitterObjGeometry {
                 switch (parts[0]) {
                     case "newmtl" -> {
                         if (name != null) {
-                            materials.put(name, buildMaterial(name, alias, tint, libraryName));
+                            materials.put(name, buildMaterial(name, alias, tint, libraryName, red, green, blue, alpha, ambientLight));
                         }
                         if (parts.length != 2) {
                             throw new IllegalArgumentException("TransmitterObjGeometry: malformed newmtl in " + libraryName + " line " + lineNo);
@@ -289,6 +291,23 @@ public final class TransmitterObjGeometry {
                         name = parts[1];
                         alias = null;
                         tint = -1;
+                        red = green = blue = alpha = 1;
+                        ambientLight = 0;
+                    }
+                    case "Kd" -> {
+                        if (parts.length != 4) {
+                            throw new IllegalArgumentException("Malformed Kd in " + libraryName + " line " + lineNo);
+                        }
+                        red = Float.parseFloat(parts[1]);
+                        green = Float.parseFloat(parts[2]);
+                        blue = Float.parseFloat(parts[3]);
+                    }
+                    case "d" -> alpha = Float.parseFloat(parts[1]);
+                    case "Ka" -> {
+                        if (parts.length != 4) {
+                            throw new IllegalArgumentException("Malformed Ka in " + libraryName + " line " + lineNo);
+                        }
+                        ambientLight = (int) ((Float.parseFloat(parts[1]) + Float.parseFloat(parts[2]) + Float.parseFloat(parts[3])) * 15 / 3F);
                     }
                     case "map_Kd" -> {
                         if (parts.length != 2 || !parts[1].startsWith("#")) {
@@ -304,20 +323,26 @@ public final class TransmitterObjGeometry {
                         tint = Integer.parseInt(parts[1]);
                     }
                     default -> {
-                        // Ka/Kd/etc. and any other MTL metadata ignored, as in the OBJ case
+                        // Specular/illumination metadata has no baked-block equivalent in the shipped OBJ owner.
                     }
                 }
             }
             if (name != null) {
-                materials.put(name, buildMaterial(name, alias, tint, libraryName));
+                materials.put(name, buildMaterial(name, alias, tint, libraryName, red, green, blue, alpha, ambientLight));
             }
         }
 
-        private Material buildMaterial(String name, @Nullable String alias, int tint, String libraryName) {
+        private Material buildMaterial(String name, @Nullable String alias, int tint, String libraryName,
+              float red, float green, float blue, float alpha, int ambientLight) {
             if (alias == null) {
                 throw new IllegalArgumentException("TransmitterObjGeometry: material '" + name + "' in " + libraryName + " has no map_Kd #alias");
             }
-            return new Material(alias, tint);
+            int rgba = channel(red) | channel(green) << 8 | channel(blue) << 16 | channel(alpha) << 24;
+            return new Material(alias, tint, rgba, ambientLight);
+        }
+
+        private static int channel(float value) {
+            return (int) (Math.clamp(value, 0F, 1F) * 255F);
         }
 
         private CheckedDirective expect(int lineNo, String[] parts, int min, String syntax) {

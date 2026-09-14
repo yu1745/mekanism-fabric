@@ -10,6 +10,8 @@ gradle.projectsEvaluated {
             def out = new File(target.layout.buildDirectory.get().asFile, 'task052-main-compile-classpath.txt')
             out.parentFile.mkdirs()
             out.text = cp
+            new File(out.parentFile, 'task052-test-runtime-classpath.txt').text =
+                  target.extensions.getByName('sourceSets').getByName('test').runtimeClasspath.asPath
             println "TASK052_MAIN_COMPILE_CLASSPATH_WRITTEN " + out
         }
     }
