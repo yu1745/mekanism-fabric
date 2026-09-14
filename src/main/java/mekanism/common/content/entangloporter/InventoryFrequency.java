@@ -13,7 +13,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
 import java.util.UUID;
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 import mekanism.api.Action;
 import mekanism.api.AutomationType;
@@ -226,7 +226,7 @@ public class InventoryFrequency extends Frequency implements IMekanismInventory,
     public void handleEject(long gameTime) {
         if (isValid() && !activeQEs.isEmpty() && lastEject != gameTime) {
             lastEject = gameTime;
-            Map<TransmissionType, Consumer<?>> typesToEject = new EnumMap<>(TransmissionType.class);
+            Map<TransmissionType, BiConsumer<TileEntityQuantumEntangloporter, Direction>> typesToEject = new EnumMap<>(TransmissionType.class);
             //All but heat and item
             List<Runnable> transferHandlers = new ArrayList<>(EnumUtils.TRANSMISSION_TYPES.length - 2);
             int expected = 6 * activeQEs.size();
@@ -247,7 +247,7 @@ public class InventoryFrequency extends Frequency implements IMekanismInventory,
                         continue;
                     }
                     Direction facing = qe.getDirection();
-                    for (Map.Entry<TransmissionType, Consumer<?>> entry : typesToEject.entrySet()) {
+                    for (Map.Entry<TransmissionType, BiConsumer<TileEntityQuantumEntangloporter, Direction>> entry : typesToEject.entrySet()) {
                         TransmissionType transmissionType = entry.getKey();
                         ConfigInfo config = qe.getConfig().getConfig(transmissionType);
                         //Validate the ejector for the config allows ejecting this transmission type. In theory, we already check all
@@ -256,7 +256,8 @@ public class InventoryFrequency extends Frequency implements IMekanismInventory,
                             for (Map.Entry<RelativeSide, DataType> sideEntry : config.getSideConfig()) {
                                 if (sideEntry.getValue().canOutput()) {
                                     Direction side = sideEntry.getKey().getDirection(facing);
-                                    accept(entry.getValue(), qe, side, transmissionType);
+                                    //Typed collection: each closure resolves the real handler identity for this QE/side itself
+                                    entry.getValue().accept(qe, side);
                                 }
                             }
                         }
@@ -270,36 +271,47 @@ public class InventoryFrequency extends Frequency implements IMekanismInventory,
         }
     }
 
-    private static <TYPE> void accept(Consumer<TYPE> consumer, TileEntityQuantumEntangloporter qe, Direction side, TransmissionType transmissionType) {
-        TYPE cachedCapability = qe.getCachedCapability(side, transmissionType);
-        if (cachedCapability != null) {
-            consumer.accept(cachedCapability);
-        }
-    }
-
-    private void addEnergyTransferHandler(Map<TransmissionType, Consumer<?>> typesToEject, List<Runnable> transferHandlers, int expected) {
+    private void addEnergyTransferHandler(Map<TransmissionType, BiConsumer<TileEntityQuantumEntangloporter, Direction>> typesToEject, List<Runnable> transferHandlers, int expected) {
         long toSend = storedEnergy.extract(storedEnergy.getMaxEnergy(), Action.SIMULATE, AutomationType.INTERNAL);
         if (toSend > 0L) {
             SendingEnergyAcceptorTarget target = new SendingEnergyAcceptorTarget(expected, storedEnergy, toSend);
-            typesToEject.put(TransmissionType.ENERGY, target);
+            //Energy keeps its existing cached NeoForge lookup semantics via the generic helper
+            typesToEject.put(TransmissionType.ENERGY, (qe, side) -> {
+                IStrictEnergyHandler handler = qe.getCachedCapability(side, TransmissionType.ENERGY);
+                if (handler != null) {
+                    target.accept(handler);
+                }
+            });
             transferHandlers.add(target);
         }
     }
 
-    private void addFluidTransferHandler(Map<TransmissionType, Consumer<?>> typesToEject, List<Runnable> transferHandlers, int expected) {
+    private void addFluidTransferHandler(Map<TransmissionType, BiConsumer<TileEntityQuantumEntangloporter, Direction>> typesToEject, List<Runnable> transferHandlers, int expected) {
         FluidStack fluidToSend = storedFluid.extract(storedFluid.getCapacity(), Action.SIMULATE, AutomationType.INTERNAL);
         if (!fluidToSend.isEmpty()) {
             SendingFluidHandlerTarget target = new SendingFluidHandlerTarget(expected, fluidToSend, storedFluid);
-            typesToEject.put(TransmissionType.FLUID, target);
+            //Typed fluid collection: fresh Fabric Storage<FluidVariant> from the QE's typed getter, no generic/unchecked cast
+            typesToEject.put(TransmissionType.FLUID, (qe, side) -> {
+                Storage<FluidVariant> storage = qe.getFluidStorage(side);
+                if (storage != null) {
+                    target.accept(storage);
+                }
+            });
             transferHandlers.add(target);
         }
     }
 
-    private void addChemicalTransferHandler(Map<TransmissionType, Consumer<?>> typesToEject, List<Runnable> transferHandlers, int expected) {
+    private void addChemicalTransferHandler(Map<TransmissionType, BiConsumer<TileEntityQuantumEntangloporter, Direction>> typesToEject, List<Runnable> transferHandlers, int expected) {
         ChemicalStack toSend = storedChemical.extract(storedChemical.getCapacity(), Action.SIMULATE, AutomationType.INTERNAL);
         if (!toSend.isEmpty()) {
             SendingChemicalHandlerTarget target = new SendingChemicalHandlerTarget(toSend, expected, storedChemical);
-            typesToEject.put(TransmissionType.CHEMICAL, target);
+            //Chemical keeps its existing cached NeoForge lookup semantics via the generic helper
+            typesToEject.put(TransmissionType.CHEMICAL, (qe, side) -> {
+                IChemicalHandler handler = qe.getCachedCapability(side, TransmissionType.CHEMICAL);
+                if (handler != null) {
+                    target.accept(handler);
+                }
+            });
             transferHandlers.add(target);
         }
     }
