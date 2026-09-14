@@ -63,6 +63,10 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.state.BlockState;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidStorage;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
+import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
+import mekanism.common.util.WorldUtils;
 import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -208,7 +212,8 @@ public class TileEntityQuantumEntangloporter extends TileEntityConfigurableMachi
         BlockCapabilityCache<?, @Nullable Direction> cache = caches.get(side);
         if (cache == null) {
             IMultiTypeCapability<HANDLER, ?> capability = (IMultiTypeCapability<HANDLER, ?>) switch (transmissionType) {
-                case FLUID -> Capabilities.FLUID;
+                //Note: FLUID is deliberately NOT handled here; the generic NeoForge capability path would return the old
+                // fluid handler identity while callers now consume Fabric's Storage<FluidVariant>. Use getFluidStorage instead.
                 case CHEMICAL -> Capabilities.CHEMICAL;
                 default -> null;
             };
@@ -218,6 +223,21 @@ public class TileEntityQuantumEntangloporter extends TileEntityConfigurableMachi
             }
         }
         return cache == null ? null : (HANDLER) cache.getCapability();
+    }
+
+    /**
+     * Typed nullable Fabric fluid lookup for the physical neighbor on {@code side}. Performs a fresh
+     * {@code FluidStorage.SIDED.find} on the opposite face each operation (same established continuation6 callers);
+     * the returned Storage is never cached or retained across ticks, and unloaded neighbors are skipped without
+     * loading chunks. Null means there is no fluid target on that side.
+     */
+    @Nullable
+    public Storage<FluidVariant> getFluidStorage(@NotNull Direction side) {
+        BlockPos neighbor = worldPosition.relative(side);
+        if (level == null || !WorldUtils.isChunkLoaded(level, neighbor)) {
+            return null;
+        }
+        return FluidStorage.SIDED.find(level, neighbor, side.getOpposite());
     }
 
     @Override

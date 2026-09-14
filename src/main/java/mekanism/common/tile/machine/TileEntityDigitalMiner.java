@@ -115,7 +115,10 @@ import net.neoforged.neoforge.capabilities.BlockCapability;
 import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.level.BlockEvent;
-import net.neoforged.neoforge.items.IItemHandler;
+import net.fabricmc.fabric.api.transfer.v1.item.ItemStorage;
+import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
+import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
+import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -129,12 +132,7 @@ public class TileEntityDigitalMiner extends TileEntityMekanism implements IChunk
     private Long2ObjectMap<BitSet> oresToMine = Long2ObjectMaps.emptyMap();
     public ThreadMinerSearch searcher = new ThreadMinerSearch(this);
 
-    @Nullable
-    private BlockCapabilityCache<IItemHandler, @Nullable Direction> pullInventory;
-    @Nullable
-    private BlockCapabilityCache<IItemHandler, @Nullable Direction> selfEjectInventory;
-    @Nullable
-    private BlockCapabilityCache<IItemHandler, @Nullable Direction> ejectInventory;
+    //Item transfer state removed: all item pull/eject providers are resolved fresh per operation (continuation09)
 
     private int radius;
     private boolean inverse;
@@ -278,20 +276,21 @@ public class TileEntityDigitalMiner extends TileEntityMekanism implements IChunk
             Direction direction = getDirection();
             Direction oppositeDirection = direction.getOpposite();
             BlockPos ejectPos = getBlockPos().above().relative(oppositeDirection);
-            if (selfEjectInventory == null) {
-                selfEjectInventory = Capabilities.ITEM.createCache((ServerLevel) level, ejectPos, oppositeDirection);
-            }
-            IItemHandler ejectHandler = selfEjectInventory.getCapability();
-            if (ejectInventory == null) {
-                ejectInventory = Capabilities.ITEM.createCache((ServerLevel) level, ejectPos.relative(oppositeDirection), direction);
-            }
-            IItemHandler targetHandler = ejectInventory.getCapability();
+            //Fresh real sided providers for the actual bounding source position and output position (no retained
+            // capability cache)
+            Storage<ItemVariant> ejectHandler = freshSidedStorage(ejectPos, oppositeDirection);
+            Storage<ItemVariant> targetHandler = freshSidedStorage(ejectPos.relative(oppositeDirection), direction);
             if (ejectHandler != null && targetHandler != null) {
                 TransitRequest ejectMap = InventoryUtils.getEjectItemMap(ejectHandler, mainSlots);
                 if (!ejectMap.isEmpty()) {
-                    TransitResponse response = ejectMap.eject(this, ejectPos, targetHandler, 0, LogisticalTransporterBase::getColor);
-                    if (!response.isEmpty()) {
-                        response.useAll();
+                    try (Transaction tx = Transaction.openOuter()) {
+                        TransitResponse response = ejectMap.eject(this, ejectPos, targetHandler, 0, LogisticalTransporterBase::getColor, tx);
+                        if (!response.isEmpty()) {
+                            response.useAll(tx);
+                            tx.commit();
+                        }
+                    } catch (RuntimeException ignored) {
+                        //Exact source debit failure aborted the whole ejection
                     }
                 }
             }
@@ -627,17 +626,21 @@ public class TileEntityDigitalMiner extends TileEntityMekanism implements IChunk
         }
         //And finally source from the inventory on top if auto pull is enabled
         if (doPull) {
-            if (pullInventory == null) {
-                pullInventory = Capabilities.ITEM.createCache((ServerLevel) level, getBlockPos().above(2), Direction.DOWN);
-            }
-            IItemHandler pullInv = pullInventory.getCapability();
+            //Source-only exact transactional extraction: return one item only after the successful debit/commit
+            Storage<ItemVariant> pullInv = freshSidedStorage(getBlockPos().above(2), Direction.DOWN);
             if (pullInv != null) {
                 TransitRequest request = TransitRequest.definedItem(pullInv, 1, Finder.item(replaceTarget));
                 if (!request.isEmpty()) {
-                    TransitResponse response = request.createSimpleResponse();
-                    if (response.useAll().isEmpty()) {
-                        //If the request isn't empty, and we were able to successfully use it all
-                        return response.getStack().copyWithCount(1);
+                    try (Transaction tx = Transaction.openOuter()) {
+                        TransitResponse response = request.createSimpleResponse();
+                        ItemStack remaining = response.useAll(tx);
+                        if (remaining.isEmpty()) {
+                            //If the request isn't empty, and we were able to successfully use it all
+                            tx.commit();
+                            return response.getStack().copyWithCount(1);
+                        }
+                    } catch (RuntimeException ignored) {
+                        //Exact debit failure: no replacement item
                     }
                 }
             }
@@ -645,12 +648,18 @@ public class TileEntityDigitalMiner extends TileEntityMekanism implements IChunk
         return ItemStack.EMPTY;
     }
 
+    @Nullable
+    private Storage<ItemVariant> freshSidedStorage(BlockPos pos, Direction side) {
+        if (level instanceof ServerLevel serverLevel && WorldUtils.isChunkLoaded(serverLevel, pos)) {
+            return ItemStorage.SIDED.find(serverLevel, pos, side);
+        }
+        return null;
+    }
+
     @Override
     protected void invalidateDirectionCaches(Direction newDirection) {
         super.invalidateDirectionCaches(newDirection);
-        //Note: We only need to invalidate the eject inventory on rotation as the center block stays in the same position
-        ejectInventory = null;
-        selfEjectInventory = null;
+        //No retained item provider caches to invalidate: fresh lookups re-resolve per operation after rotation
     }
 
     public boolean canInsert(List<ItemStack> toInsert) {

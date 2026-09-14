@@ -7,13 +7,13 @@ import mekanism.common.config.value.CachedEnumValue;
 import mekanism.common.config.value.CachedIntValue;
 import mekanism.common.resource.ore.OreAnchor;
 import net.minecraft.world.level.levelgen.WorldGenerationContext;
-import net.neoforged.neoforge.common.ModConfigSpec;
-import net.neoforged.neoforge.common.ModConfigSpec.ConfigValue;
+import mekanism.fabric.config.MekanismConfigSpec;
+import mekanism.fabric.config.MekanismConfigSpec.ConfigValue;
 import org.jetbrains.annotations.Nullable;
 
 public record ConfigurableVerticalAnchor(CachedEnumValue<AnchorType> anchorType, CachedIntValue value) {
 
-    public static ConfigurableVerticalAnchor create(IMekanismConfig config, ModConfigSpec.Builder builder, String path, IConfigTranslation translation, OreAnchor defaultAnchor,
+    public static ConfigurableVerticalAnchor create(IMekanismConfig config, MekanismConfigSpec.Builder builder, String path, IConfigTranslation translation, OreAnchor defaultAnchor,
           @Nullable ConfigurableVerticalAnchor minAnchor) {
         translation.applyToBuilder(builder).push(path);
         CachedEnumValue<AnchorType> type = CachedEnumValue.wrap(config, MekanismConfigTranslations.WORLD_ANCHOR_TYPE.applyToBuilder(builder)
@@ -27,7 +27,7 @@ public record ConfigurableVerticalAnchor(CachedEnumValue<AnchorType> anchorType,
         if (minAnchor == null) {
             value = MekanismConfigTranslations.WORLD_ANCHOR_VALUE.applyToBuilder(builder).define("value", defaultAnchor.value());
         } else {
-            value = MekanismConfigTranslations.WORLD_ANCHOR_VALUE.applyToBuilder(builder).define("value", defaultAnchor.value(), o -> {
+            value = MekanismConfigTranslations.WORLD_ANCHOR_VALUE.applyToBuilder(builder).defineValidated("value", defaultAnchor.value(), o -> {
                 if (o instanceof Integer v) {
                     return minAnchor.anchorType.getOrDefault() != type.getOrDefault() || v >= minAnchor.value.getOrDefault();
                 }
