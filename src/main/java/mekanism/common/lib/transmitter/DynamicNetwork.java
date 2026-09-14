@@ -11,7 +11,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import mekanism.api.text.IHasTextComponent;
-import mekanism.common.Mekanism;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import mekanism.common.content.network.transmitter.Transmitter;
 import mekanism.common.lib.transmitter.acceptor.NetworkAcceptorCache;
 import mekanism.common.util.EnumUtils;
@@ -24,6 +25,8 @@ import org.jetbrains.annotations.Nullable;
 
 public abstract class DynamicNetwork<ACCEPTOR, NETWORK extends DynamicNetwork<ACCEPTOR, NETWORK, TRANSMITTER>,
       TRANSMITTER extends Transmitter<ACCEPTOR, NETWORK, TRANSMITTER>> implements INetworkDataHandler, IHasTextComponent {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism");
 
     protected final Long2ObjectMap<TRANSMITTER> positionedTransmitters = new Long2ObjectOpenHashMap<>();
     protected final Set<TRANSMITTER> transmittersToAdd = new ObjectOpenHashSet<>();
@@ -255,7 +258,7 @@ public abstract class DynamicNetwork<ACCEPTOR, NETWORK extends DynamicNetwork<AC
                     // - The old one unloads which causes this removedPositionedTransmitter call to take place
                     return;
                 }
-                Mekanism.logger.warn("Removed transmitter at position: {} in {} was different than expected.", pos, world == null ? null : world.dimension().location());
+                LOGGER.warn("Removed transmitter at position: {} in {} was different than expected.", pos, world == null ? null : world.dimension().location());
             }
             positionedTransmitters.remove(pos.asLong());
         }
