@@ -16,11 +16,21 @@
 
 | 路径 | 固定身份 | 用途 |
 |---|---|---|
-| `upstream/neoforge-minecraft/` | MC `1.21.1` / NeoForge `21.1.200` / NeoForm `1.21.1-20240808.144430`；patched-source SHA-256 `a2003718973f1b772e1b7a1c8527bd2b19a86aa938104a77515e8140ca865ce1` | 核对 patched Minecraft 新增接口/方法/语义 |
+| `upstream/neoforge-minecraft/` | MC `1.21.1` / NeoForge `21.1.200` / NeoForm `1.21.1-20240808.144430`；patched-source SHA-256 `a2003718973f1b772e1b7a1c8527bd2b19a86aa938104a77515e8140ca865ce1` | 核对 patched Minecraft 新增接口/方法/语义（NeoForge 视角） |
+| `upstream/fabric-minecraft/` | MC `1.21.1` / Fabric（Loom `1.13.6` + Vineflower）；5363 个 `*.java`；来源见该目录 `SOURCE.txt` | 同上，Fabric 视角；移植时与 `neoforge-minecraft/` 互相对照 |
 | `upstream/kilt/` | `KiltMC/Kilt` `version/1.21.1`，commit `9e8f0d67411f10234bf0d864bd151a6dbcef14b4` | NeoForge→Fabric 行为参考；LGPL-2.1 |
 | `upstream/connector/` | `Sinytra/Connector` `1.21.x`，commit `8b27f1ad042aae8037bcc522b321c03fcce1a12a` | Fabric→NeoForge 反向参考；MIT |
 
 patched Minecraft 仅保留 5,363 个 `com/mojang/**/*.java`、`net/minecraft/**/*.java`，来源见该目录 `SOURCE.txt`；禁止复制或修改 Minecraft 源码。参考版本只能显式更新，并同步本表；patched Minecraft 更新还须重建 `SOURCE.txt`、核对文件数。
+
+两份 patched Minecraft 的对照须知（**它们是参考存档，不是 diff 对象**）：
+
+- 两棵树的目录结构已对齐（均为扁平 `com/` + `net/`），同一类在两边路径相同，可逐文件翻查。
+- 排版风格不同，因为产出工具链不同：NeoForm 用 4 空格缩进且剥离 javadoc，Vineflower 用 tab 且保留 javadoc。
+- 局部变量命名不同：NeoForm 保留混淆名（`pos`、`level`、`s`），Vineflower 重命名为 `blockPos`、`serverLevel`、`blockState`。
+- 客户端注解形式不同：`@OnlyIn(Dist.CLIENT)` vs `@Environment(EnvType.CLIENT)`；`@Nullable` 来源也不同。
+- **两份都已烘入本项目的访问放宽**：Fabric 那份含 `fabric/src/main/resources/mekanism.accesswidener`，NeoForge 那份含 `src/main/resources/META-INF/accesstransformer.cfg`。两者互为镜像，故两棵树可见性一致，但与 vanilla 不同（例：`ShapedRecipe.pattern` 在两棵树里均为 `public`，vanilla 实为 package-private）。翻查时勿据此推断 vanilla 语义。
+- `upstream/neoforge-minecraft/` 只含 MC 自身包，**不含** NeoForge API（`net.neoforged.neoforge.**`）源码；NeoForge 仅以 import 与注入到 MC 类上的接口（如 `Registry extends IRegistryExtension`、`Holder extends IHolderExtension`）形式出现。查 NeoForge API 本体需另找来源。
 
 ## 平台映射
 
