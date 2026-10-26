@@ -6,6 +6,14 @@ mekanism/fabric/chemical/FabricChemicalRegistryLifecycle.java
 mekanism/fabric/client/FabricFluidColors.java
 mekanism/fabric/client/FabricScreenRegistration.java
 mekanism/fabric/client/render/FabricBoltRendering.java
+mekanism/fabric/client/model/FabricModelJson.java
+mekanism/fabric/client/model/FabricDeferredLoaderModel.java
+mekanism/fabric/client/model/FabricCompositeModel.java
+mekanism/fabric/client/model/FabricItemLayersModel.java
+mekanism/fabric/client/model/FabricMekanismModelPlugin.java
+mekanism/fabric/client/model/FabricMergedQuadsModel.java
+mekanism/fabric/client/model/FabricObjModel.java
+mekanism/fabric/client/render/obj/FabricObjGeometryReader.java
 mekanism/fabric/client/render/obj/FabricTransmitterAssets.java
 mekanism/fabric/client/render/obj/FabricTransmitterBakedModel.java
 mekanism/fabric/client/render/obj/FabricTransmitterBlockModel.java

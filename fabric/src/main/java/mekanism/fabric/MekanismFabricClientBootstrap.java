@@ -49,6 +49,9 @@ public final class MekanismFabricClientBootstrap implements ClientModInitializer
         //transporter tint. Model registration needs no block instance: it keys off the model ids in the resource pack.
         FabricTransmitterModelPlugin.initialize();
         FabricTransmitterColorProvider.initialize();
+        //Loader-closure owner for the shipped NeoForge-loader models (composite factories, the Meka-Tool OBJs, the
+        //QIO dashboard layers); the energy-cube geometry loader stays deferred to the BE-aware render seam.
+        mekanism.fabric.client.model.FabricMekanismModelPlugin.initialize();
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientWorldEvents.AFTER_CLIENT_WORLD_CHANGE.register((client, world) ->
               mekanism.common.lib.transmitter.TransmitterNetworkRegistry.clearClientNetworks());
         net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((handler, client) ->

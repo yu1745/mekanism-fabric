@@ -16,7 +16,7 @@ import org.jetbrains.annotations.Nullable;
  * <p>This is not a general-purpose OBJ implementation: it supports exactly the constructs the shipped assets use
  * ({@code v}/{@code vt}/{@code vn}, {@code o} groups (24 = 6 sides x 4 connection types), {@code usemtl},
  * {@code mtllib}, quads/triangles in {@code v}, {@code v/vt}, {@code v/vt/vn}, {@code v//vn} forms, negative
- * indices, {@code newmtl}, {@code map_Kd #alias}, {@code forge_TintIndex}) and fails loudly on anything else so
+ * indices, {@code newmtl}, {@code map_Kd #alias} or {@code map_Kd <namespace:textures/id>}, {@code forge_TintIndex}) and fails loudly on anything else so
  * malformed input can never silently drop geometry.</p>
  *
  * <p>Pure Java, no Minecraft dependencies, so it can be checked directly against the real assets without a client
@@ -310,11 +310,16 @@ public final class TransmitterObjGeometry {
                         ambientLight = (int) ((Float.parseFloat(parts[1]) + Float.parseFloat(parts[2]) + Float.parseFloat(parts[3])) * 15 / 3F);
                     }
                     case "map_Kd" -> {
-                        if (parts.length != 2 || !parts[1].startsWith("#")) {
+                        //Two shipped conventions: the transmitter MTLs reference the model JSON's texture map via
+                        //'#alias', while the official NeoForge entity OBJs (Meka-Tool/Meka-Suit) carry the texture
+                        //id directly. Both land in Material.textureAlias; the caller's sprite lookup decides how
+                        //the name resolves.
+                        if (parts.length != 2 || parts[1].isBlank()
+                              || (!parts[1].startsWith("#") && !parts[1].contains(":"))) {
                             throw new IllegalArgumentException("TransmitterObjGeometry: map_Kd in " + libraryName + " line " + lineNo
-                                  + " must reference a texture alias via '#name' (got '" + (parts.length > 1 ? parts[1] : "") + "')");
+                                  + " must reference a texture alias via '#name' or a namespaced texture id (got '" + (parts.length > 1 ? parts[1] : "") + "')");
                         }
-                        alias = parts[1].substring(1);
+                        alias = parts[1].startsWith("#") ? parts[1].substring(1) : parts[1];
                     }
                     case "forge_TintIndex" -> {
                         if (parts.length != 2) {
@@ -328,15 +333,18 @@ public final class TransmitterObjGeometry {
                 }
             }
             if (name != null) {
+                //Blockbench-style entity MTLs may declare textureless placeholder materials (e.g. 'none0') that no
+                //face references. They are skipped here; if a face did use one, the baker's unknown-material check
+                //fails loudly instead of baking an untextured quad silently.
+                if (alias == null) {
+                    return;
+                }
                 materials.put(name, buildMaterial(name, alias, tint, libraryName, red, green, blue, alpha, ambientLight));
             }
         }
 
-        private Material buildMaterial(String name, @Nullable String alias, int tint, String libraryName,
+        private Material buildMaterial(String name, String alias, int tint, String libraryName,
               float red, float green, float blue, float alpha, int ambientLight) {
-            if (alias == null) {
-                throw new IllegalArgumentException("TransmitterObjGeometry: material '" + name + "' in " + libraryName + " has no map_Kd #alias");
-            }
             int rgba = channel(red) | channel(green) << 8 | channel(blue) << 16 | channel(alpha) << 24;
             return new Material(alias, tint, rgba, ambientLight);
         }
