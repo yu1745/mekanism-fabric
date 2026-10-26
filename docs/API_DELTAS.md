@@ -685,3 +685,11 @@ gate）BUILD SUCCESSFUL。未运行（按完成度优先策略）：全量测试
 - `mekanism:data_based`(qio_redstone_adapter 点亮切换)重构:NeoForge ModelData 驱动的双模型切换→静态烘焙(no_data=unlit)+ 移植侧 BER `RenderQIORedstoneAdapter` 按方块实体 render data(`getRenderData()` 返回 isEmitting)叠绘 lit 模型四元组(能量方块先例的分层)。
 - 插件 `LOADER_DATA_BASED` 落地:依赖解析 no_data/emitting 两模型、各自烘焙;lit 半按模型 id 注册进 `FabricDataBasedModels`(家族仅一件,lit id 常量化)。
 - 验收:模型 smoke 第 13 检查 `MEKANISM_FABRIC_DATA_BASED_PROOF baked=1`,BER proof `tile_types=31 renderers=16`;两次连续 13/13。视觉(点亮态)留 mcdebug/观察。
+
+### MekaSuit OBJ 半(Task052,2026-10-26)
+
+- `BaseModelCache.OBJModelData` 移植落地:obj/mtl 懒解析(四个 shipped OBJ 指令集完全在移植 OBJ 读取器子集内) + 按组可见性重烘焙(`getQuads(parts, random)`,替代官方 `ObjModel.bake(IGeometryBakingContext)` 管线重烘焙);精灵经 blocks 图集即时解析;`clearCached` 供资源重载。
+- `MekanismModelCache` 扩 MEKASUIT/MEKATOOL_LEFT/RIGHT + MEKASUIT_MODULES + `registerMekaSuitModuleModel` + `reloadCallback`;模块模型/规格经前轮预备的 `MekaSuitModuleRenderRegistry` 缝回放(install Handler),共享 mekasuit_modules.obj 注册镜像 ClientRegistration 原行。
+- `MekaSuitArmor`(691 行)三锚重塑:BakingCompleted→懒解析+classifySpecs 惰性化;ModelData→parts 集直查;IGeometryBakingContext→删除(配置 record 被 parts 集替代);`ISpecialGear`/`gearModel()` 移植侧无调用方(注册表持 ICustomArmor),drop 有记录;泛型 MekanismModelData→OBJModelData 收窄。
+- FabricGearModels 四件注册(MEKASUIT_HELMET/BODYARMOR/PANTS/BOOTS)+ 实体穿戴走第 16 轮 armor 层路径;物品栏渲染(ISBER/RenderMekaSuit 物件)留 gear 物件渲染车道。
+- 验收:smoke 第 14 检查 `MEKANISM_FABRIC_MEKASUIT_PROOF handler=installed`;两次连续 14/14。穿着视觉留 mcdebug/观察(与其它渲染车道同)。

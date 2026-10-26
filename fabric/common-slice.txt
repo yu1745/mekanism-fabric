@@ -274,6 +274,7 @@ mekanism/client/render/RenderTickHandler.java
 mekanism/client/render/armor/FreeRunnerArmor.java
 mekanism/client/render/armor/ICustomArmor.java
 mekanism/client/render/armor/JetpackArmor.java
+mekanism/client/render/armor/MekaSuitArmor.java
 mekanism/client/render/armor/ScubaMaskArmor.java
 mekanism/client/render/armor/ScubaTankArmor.java
 mekanism/client/render/data/ChemicalRenderData.java
@@ -302,6 +303,7 @@ mekanism/client/render/lib/Outlines.java
 mekanism/client/render/lib/Quad.java
 mekanism/client/render/lib/QuadTransformation.java
 mekanism/client/render/lib/QuadUtils.java
+mekanism/client/render/lib/QuickHash.java
 mekanism/client/render/lib/ScrollIncrementer.java
 mekanism/client/render/lib/Vertex.java
 mekanism/client/render/lib/effect/BillboardingEffectRenderer.java

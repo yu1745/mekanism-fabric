@@ -35,6 +35,9 @@ public final class FabricModelCachePlugin implements ModelLoadingPlugin {
             }
         }
         context.addModels(byId.keySet());
+        //The OBJ half of the cache re-parses lazily on next use; clearing here mirrors the official BakingCompleted
+        //reload (the model-cache class documents the seam).
+        mekanism.client.model.MekanismModelCache.INSTANCE.onReload();
         context.modifyModelAfterBake().register((model, bakeContext) -> {
             JSONModelData json = byId.get(bakeContext.resourceId());
             if (json != null) {

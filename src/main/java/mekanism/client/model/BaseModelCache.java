@@ -4,7 +4,14 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import mekanism.fabric.client.render.obj.TransmitterObjGeometry;
+import mekanism.fabric.client.render.obj.TransmitterQuadBaker;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.resources.model.BlockModelRotation;
+import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.server.packs.resources.ResourceManager;
+import java.util.Set;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.resources.model.BakedModel;
 import net.fabricmc.fabric.api.client.model.loading.v1.FabricBakedModelManager;
@@ -27,9 +34,9 @@ public class BaseModelCache {
 
     private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger("Mekanism/FabricModelCache");
 
-    private final Map<ResourceLocation, MekanismModelData> modelMap = new Object2ObjectOpenHashMap<>();
+    protected final Map<ResourceLocation, MekanismModelData> modelMap = new Object2ObjectOpenHashMap<>();
 
-    private final String modid;
+    protected final String modid;
 
     protected BaseModelCache(String modid) {
         this.modid = modid;
@@ -122,6 +129,84 @@ public class BaseModelCache {
 
         public BakedModel getBakedModel() {
             return bakedModel;
+        }
+    }
+
+    /**
+     * Fabric port of the official OBJ cache entry: the geometry parses directly from the obj/mtl resources (the
+     * shipped files use exactly the grammar subset the port's OBJ reader supports) and re-bakes per part-visibility
+     * set, replacing the official {@code ObjModel.bake(IGeometryBakingContext)} re-bake that rode the NeoForge
+     * baking pipeline. Sprite resolution goes through the blocks atlas at render time.
+     */
+    public static class OBJModelData extends MekanismModelData {
+
+        private static final BlockModelRotation IDENTITY = BlockModelRotation.X0_Y0;
+
+        private TransmitterObjGeometry geometry;
+        private TransmitterQuadBaker quadBaker;
+        private final Map<Set<String>, List<BakedQuad>> bakedParts = new Object2ObjectOpenHashMap<>();
+
+        protected OBJModelData(ResourceLocation rl) {
+            super(rl);
+        }
+
+        /** Parses the obj and its material libraries lazily through the client resource manager. */
+        private void ensureGeometry() {
+            if (quadBaker != null) {
+                return;
+            }
+            ResourceManager resources = Minecraft.getInstance().getResourceManager();
+            String objSource;
+            try (java.io.InputStream stream = resources.getResource(rl).orElseThrow().open()) {
+                objSource = new String(stream.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+            } catch (java.io.IOException e) {
+                throw new IllegalStateException("Failed to read OBJ model: " + rl, e);
+            }
+            Map<String, String> mtlSources = new java.util.LinkedHashMap<>();
+            String directory = rl.getPath().contains("/") ? rl.getPath().substring(0, rl.getPath().lastIndexOf('/') + 1) : "";
+            for (String line : objSource.split("\n")) {
+                String[] parts = line.trim().split("\\s+");
+                if (parts.length >= 2 && parts[0].equals("mtllib")) {
+                    ResourceLocation mtlId = ResourceLocation.fromNamespaceAndPath(rl.getNamespace(), directory + parts[1]);
+                    try (java.io.InputStream stream = resources.getResource(mtlId).orElseThrow().open()) {
+                        mtlSources.put(parts[1], new String(stream.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
+                    } catch (java.io.IOException e) {
+                        throw new IllegalStateException("Failed to read OBJ material library: " + mtlId, e);
+                    }
+                }
+            }
+            geometry = TransmitterObjGeometry.parse(objSource, mtlSources, false);
+            //The obj texture aliases resolve on the blocks atlas (the official ObjModel baked them the same way).
+            TextureAtlas atlas = Minecraft.getInstance().getModelManager().getAtlas(TextureAtlas.LOCATION_BLOCKS);
+            Function<String, TextureAtlasSprite> sprites = alias -> atlas.getSprite(ResourceLocation.parse(alias));
+            quadBaker = new TransmitterQuadBaker(geometry, sprites, IDENTITY);
+        }
+
+        /** The obj group names, which the armor classes tag-process into part sets. */
+        public java.util.Set<String> getRootComponentNames() {
+            ensureGeometry();
+            return geometry.groups().keySet();
+        }
+
+        /** Clears the parsed geometry and part bakes (resource reload - the geometry re-parses lazily). */
+        public void clearCached() {
+            geometry = null;
+            quadBaker = null;
+            bakedParts.clear();
+        }
+
+        /** Re-bakes the visible parts' quads (the official per-configuration OBJ bake). */
+        public List<BakedQuad> getQuads(java.util.Set<String> parts, RandomSource random) {
+            ensureGeometry();
+            return bakedParts.computeIfAbsent(parts, visible -> {
+                List<BakedQuad> quads = new java.util.ArrayList<>();
+                for (String group : geometry.groups().keySet()) {
+                    if (visible.contains(group)) {
+                        quads.addAll(quadBaker.bakeGroup(group, null));
+                    }
+                }
+                return List.copyOf(quads);
+            });
         }
     }
 }

@@ -5,6 +5,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import mekanism.client.render.armor.FreeRunnerArmor;
 import mekanism.client.render.armor.JetpackArmor;
 import mekanism.client.render.armor.ScubaMaskArmor;
+import mekanism.client.render.armor.MekaSuitArmor;
 import mekanism.client.render.armor.ScubaTankArmor;
 import mekanism.client.render.layer.MekanismArmorLayer;
 import mekanism.client.render.layer.MekanismElytraLayer;
@@ -59,6 +60,17 @@ public final class FabricArmorLayerRegistration {
         FabricGearModels.register(MekanismItems.FREE_RUNNERS.asItem(), FreeRunnerArmor.FREE_RUNNERS);
         FabricGearModels.register(MekanismItems.SCUBA_MASK.asItem(), ScubaMaskArmor.SCUBA_MASK);
         FabricGearModels.register(MekanismItems.SCUBA_TANK.asItem(), ScubaTankArmor.SCUBA_TANK);
+        //The MekaSuit half rides the OBJ model-cache lane: the gear models render through the reshaped
+        //MekaSuitArmor (ICustomArmor) with the port's per-part OBJ re-bake.
+        FabricGearModels.register(MekanismItems.MEKASUIT_HELMET.asItem(), MekaSuitArmor.HELMET);
+        FabricGearModels.register(MekanismItems.MEKASUIT_BODYARMOR.asItem(), MekaSuitArmor.BODYARMOR);
+        FabricGearModels.register(MekanismItems.MEKASUIT_PANTS.asItem(), MekaSuitArmor.PANTS);
+        FabricGearModels.register(MekanismItems.MEKASUIT_BOOTS.asItem(), MekaSuitArmor.BOOTS);
+        //The official registration rode ClientRegistration (the NeoForge hub): the shared module model registers
+        //here, mirroring that line, before the retained specs replay into the cache and renderer.
+        mekanism.common.content.gear.MekaSuitModuleRenderRegistry.addModuleModel(
+              net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(mekanism.api.MekanismAPI.MEKANISM_MODID, "models/entity/mekasuit_modules.obj"));
+        mekanism.client.model.MekanismModelCache.INSTANCE.installMekaSuitModuleModelHandler();
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
