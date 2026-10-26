@@ -35,6 +35,7 @@
     "server.ChunkLoaderTickMixin",
     "entity.RobitDamageMixin",
     "server.ChunkGenVersionMixin",
+    "server.HopperTransferMixin",
     "player.PlayerFlightSaveMixin"
   ],
   "client": [

@@ -43,6 +43,7 @@ mekanism/fabric/item/DetachedItemContext.java
 mekanism/fabric/item/FabricComponentItemLookup.java
 mekanism/fabric/item/FabricComponentItemStorage.java
 mekanism/fabric/item/FabricCreativeTabContents.java
+mekanism/fabric/item/FabricHopperTransfer.java
 mekanism/fabric/item/FabricItemLookup.java
 mekanism/fabric/item/FabricItemStorage.java
 mekanism/fabric/MekanismFabricBootstrap.java
@@ -126,6 +127,7 @@ mekanism/fabric/worldgen/FabricWorldGenConfig.java
 
 # Review: real chunk ticket ticking and Robit damage boundaries
 mekanism/fabric/mixin/server/ChunkLoaderTickMixin.java
+mekanism/fabric/mixin/server/HopperTransferMixin.java
 mekanism/fabric/mixin/entity/RobitDamageMixin.java
 mekanism/fabric/mixin/server/ChunkGenVersionMixin.java
 mekanism/fabric/mixin/player/PlayerFlightSaveMixin.java

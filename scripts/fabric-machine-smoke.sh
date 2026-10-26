@@ -152,6 +152,14 @@ cd "$SERVER_DIR"
   #its chemical config only exposes OUTPUT_1/OUTPUT_2 (left=hydrogen, right=oxygen), so the plain OUTPUT ordinal (4)
   #would silently eject nothing.
   echo 'data merge block 38 101 0 {component_config:{config2:[I;1,1,1,1,1,1]}}'
+  #Hopper automation scenario: the facing hopper pushes ore into the chamber's LEFT item side (facing north: east->LEFT);
+  #the chamber's BOTTOM item side is OUTPUT so the hopper below can pull the dust back out. The bridge only claims
+  #Mekanism storage views, so vanilla hopper behavior elsewhere is untouched.
+  echo "setblock 41 100 0 mekanism:enrichment_chamber"
+  echo "setblock 42 100 0 minecraft:hopper[facing=west]"
+  echo "setblock 41 99 0 minecraft:hopper[facing=down]"
+  echo 'data merge block 41 100 0 {component_config:{config3:[I;1,1,1,1,1,4]}, energy_containers:[{container:0b,stored:40000L}]}'
+  echo 'item replace block 42 100 0 container.0 with minecraft:iron_ore 4'
   sleep 3
   echo "setblock 13 100 0 mekanism:basic_universal_cable"
   echo "setblock 21 100 0 mekanism:basic_logistical_transporter"
@@ -165,8 +173,8 @@ cd "$SERVER_DIR"
   echo 'data merge block 29 100 0 {connection:[I;3,3,3,3,2,1]}'
   echo 'data merge block 33 100 0 {connection:[I;3,3,3,3,2,1]}'
   echo 'data merge block 37 100 0 {connection:[I;3,3,3,3,2,1]}'
-  #30 s covers two full machine operations plus network latency under startup chunk-load load.
-  sleep 30
+  #45 s covers four hopper-fed operations (hopper cadence is one item per 8 game ticks) plus extraction and latency.
+  sleep 45
   echo "data get block 0 100 0"
   echo "data get block 3 100 0"
   echo "data get block 9 100 0"
@@ -186,6 +194,9 @@ cd "$SERVER_DIR"
   echo "data get block 33 100 0"
   echo "data get block 37 100 0"
   echo "data get block 21 100 0"
+  echo "data get block 41 100 0"
+  echo "data get block 42 100 0"
+  echo "data get block 41 99 0"
   sleep 3
   echo "stop"
   sleep 5
@@ -226,6 +237,8 @@ check "pressurized tube moved the chemical" '30, 100, 0 has the following block 
 check "transporter fed the machine input" '34, 100, 0 has the following block data.*mekanism:dust_iron'
 check "pipe fed the machine fluid input" '38, 100, 0 has the following block data.*chemical_tanks.*mekanism:hydrogen'
 check "separator auto-ejected oxygen to the adjacent tank" '38, 101, 0 has the following block data.*chemical_tanks.*mekanism:oxygen'
+check "hopper pushed ore into the machine" '42, 100, 0 has the following block data.*Items: \[\]'
+check "machine output was pulled into the hopper" '41, 99, 0 has the following block data.*mekanism:dust_iron'
 if grep -Eq '28, 100, 0 has the following block data.*stored: ' "$LOG_FILE"; then
   printf 'FAIL chemical source tank was emptied\n'
   failures=$((failures + 1))
