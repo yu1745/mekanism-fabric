@@ -645,3 +645,10 @@ gate）BUILD SUCCESSFUL。未运行（按完成度优先策略）：全量测试
 - 官方 320 个使用 `neoforge:compound`/`neoforge:difference`/`neoforge:intersection` 类型化配料的配方（染色/绘画/颜料提取/生物燃料/碳转化等核心目录）此前整批排除；`ItemStackIngredient` 编解码在既有 compound 支持上补齐 difference（base−subtracted）与 intersection（children AND）两类官方形状：JSON 编解码对称、网络流编解码以 mode byte 扩展（0 simple/1 compound/2 difference/3 intersection）、匹配语义（并/差/交）、配方输入缓存映射（intersection 缓存面=全部 children）与空匹配判定（intersection 任一成员为空即空）齐全。
 - 打包面解除 320 个排除项（`recipe-neoforge-only.txt` 删除），release JAR 配方 1476→1816；真实服务端 "Loaded 2868 recipes"、零配方解析错误、machine smoke 20/20。637 个 `compat/**` 配方仍延后：其 `neoforge:conditions`（mod_loaded 门）包装键在 Fabric 条件系统（固定 `fabric:load_conditions` 键）无对应物，需打包期 JSON 变换或裁决——作为 datagen 车道剩余切片记录。
 - 验收：新增 `NeoForgeTypedIngredientTest` 4 例（三种官方形状的精确 JSON 解码、并/差/交匹配语义、重编码对称、缓存面）。
+
+### compat 配方条件包装变换（Task052 datagen 车道第二段，2026-10-27）
+
+- 637 个官方 `compat/**` 配方以 NeoForge `neoforge:conditions` 包装门控其他模组,该包装键在 Fabric 条件系统（固定 `fabric:load_conditions`）无对应物。采用**打包期变换**（`transformCompatRecipes`，groovy JsonSlurper）:官方源文件 byte 不变,仅打包形态转换——wrapper→`fabric:load_conditions`、`mod_loaded`→`fabric:all_mods_loaded`（注意复数 s,首版误写单数被真实服务端 455 条解析错误暴露）、`not`→`fabric:not`、`tag_empty`→`fabric:tags_populated` 包 `fabric:not`。
+- `mekanism:mod_version_loaded`（118 个）为 Mekanism 自定义条件,Fabric 无内建版本区间条件→移植 `FabricModVersionLoadedCondition` 注册同 id 的 fabric ResourceConditionType,语义对齐官方 `ModVersionLoadedCondition`（mod 存在且版本≥下限）。**比较器 delta（记录）**:官方用 Maven `ComparableVersion`,Fabric loader `Version` 为 semver 形;现有 compat 下限均为简单三元版本,两种序一致。
+- **tag 存在性 delta（记录）**:NeoForge `tag_empty` 检查空,Fabric `tags_populated` 只检查存在——仅对"存在但为空"的标签可见,此时配方会加载但匹配不到任何物品（惰性配方）。
+- 验收:jar 内 637 个 compat 配方全部为变换形态;真实服务端条件注册 proof + 零解析错误 + "Loaded 2868 recipes"(与无 compat 时相同——ae2/BSWG 缺席时 637 全部被条件正确跳过,即门控生效的直接证据)。
