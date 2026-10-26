@@ -775,3 +775,11 @@ mekanism/common/lib/transmitter/DynamicNetwork.java
 mekanism/common/lib/transmitter/INetworkDataHandler.java
 mekanism/common/attachments/FrequencyAware.java
 mekanism/common/util/text/OwnerDisplay.java
+mekanism/common/integration/energy/IEnergyCompat.java
+mekanism/common/integration/energy/EnergyCompatUtils.java
+mekanism/common/integration/energy/forgeenergy/ForgeEnergyCompat.java
+mekanism/common/integration/energy/BlockEnergyCapabilityCache.java
+mekanism/common/lib/transmitter/acceptor/EnergyAcceptorCache.java
+mekanism/common/content/network/transmitter/UniversalCable.java
+mekanism/common/content/network/distribution/EnergyTransmitterSaveTarget.java
+mekanism/common/upgrade/transmitter/UniversalCableUpgradeData.java

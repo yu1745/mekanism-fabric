@@ -6,12 +6,12 @@ import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.energy.IStrictEnergyHandler;
 import mekanism.common.integration.energy.EnergyCompatUtils;
 import mekanism.common.integration.energy.IEnergyCompat;
+import mekanism.common.integration.energy.BlockEnergyCapabilityCache;
 import mekanism.common.lib.transmitter.acceptor.EnergyAcceptorCache.EnergyAcceptorInfo;
 import mekanism.common.tile.transmitter.TileEntityTransmitter;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
-import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
 import org.jetbrains.annotations.Nullable;
 
 @NothingNullByDefault
@@ -34,7 +34,7 @@ public class EnergyAcceptorCache extends AbstractAcceptorCache<IStrictEnergyHand
 
     public static class EnergyAcceptorInfo implements AcceptorInfo<IStrictEnergyHandler> {
 
-        private record CacheInfo(IEnergyCompat energyCompat, BlockCapabilityCache<?, @Nullable Direction> cache) {
+        private record CacheInfo(IEnergyCompat energyCompat, BlockEnergyCapabilityCache cache) {
         }
 
         private final List<CacheInfo> capabilities = new ArrayList<>();
@@ -43,7 +43,7 @@ public class EnergyAcceptorCache extends AbstractAcceptorCache<IStrictEnergyHand
         }
 
         void addCapability(IEnergyCompat energyCompat, ServerLevel level, BlockPos pos, Direction opposite, RefreshListener refreshListener) {
-            capabilities.add(new CacheInfo(energyCompat, energyCompat.getCapability().createCache(level, pos, opposite, refreshListener, refreshListener)));
+            capabilities.add(new CacheInfo(energyCompat, BlockEnergyCapabilityCache.create(level, pos, opposite, refreshListener, refreshListener)));
         }
 
         @Nullable

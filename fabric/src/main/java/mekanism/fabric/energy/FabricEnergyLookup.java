@@ -5,8 +5,10 @@ import mekanism.api.energy.IMekanismStrictEnergyHandler;
 import mekanism.api.energy.IStrictEnergyHandler;
 import mekanism.common.capabilities.holder.IHolder;
 import mekanism.common.capabilities.proxy.ProxyStrictEnergyHandler;
+import net.fabricmc.fabric.api.lookup.v1.entity.EntityApiLookup;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 import team.reborn.energy.api.EnergyStorage;
@@ -15,6 +17,14 @@ import team.reborn.energy.api.EnergyStorage;
  * The sole lookup and exposure seam for the Fabric energy boundary.
  */
 public final class FabricEnergyLookup {
+
+    /**
+     * Mekanism-owned entity energy dispatch identity. Fabric has no ecosystem-wide entity energy API, so this lookup preserves the official entity-energy
+     * query path (chargepad, robit) with a real registered identity instead of pretending a standard external one exists; providers register on it when
+     * those owners are admitted.
+     */
+    public static final EntityApiLookup<EnergyStorage, Void> ENTITY_ENERGY = EntityApiLookup.get(
+          ResourceLocation.fromNamespaceAndPath("mekanism", "energy_storage_entity"), EnergyStorage.class, Void.class);
 
     private FabricEnergyLookup() {
     }
@@ -56,6 +66,14 @@ public final class FabricEnergyLookup {
         if (storage instanceof FabricEnergyStorage fabricStorage && fabricStorage.hasConversion(conversion)) {
             return fabricStorage.stableHandler();
         }
+        return new FabricStrictEnergyHandler(storage, conversion);
+    }
+
+    /**
+     * Wraps an arbitrary (external) Team Reborn storage as a Joules-domain Mekanism handler through the given conversion. No exposure side is bound;
+     * such a handler must never back {@link FabricEnergyStorage} rollback (that constructor rejects it).
+     */
+    public static IStrictEnergyHandler wrapAsStrictEnergyHandler(EnergyStorage storage, IEnergyConversion conversion) {
         return new FabricStrictEnergyHandler(storage, conversion);
     }
 

@@ -2,7 +2,10 @@ package mekanism.common.integration.energy;
 
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.energy.IStrictEnergyHandler;
-import mekanism.common.capabilities.MultiTypeCapability;
+import mekanism.common.util.WorldUtils;
+import net.fabricmc.fabric.api.lookup.v1.block.BlockApiLookup;
+import net.fabricmc.fabric.api.lookup.v1.entity.EntityApiLookup;
+import net.fabricmc.fabric.api.lookup.v1.item.ItemApiLookup;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.entity.Entity;
@@ -10,9 +13,15 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.capabilities.ICapabilityProvider;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * Fabric port delta: the official interface exposed the NeoForge block/item/entity {@code MultiTypeCapability} triple plus the NeoForge
+ * {@code ICapabilityProvider} registration bridge. On Fabric the three legs are the real lookup identities ({@link BlockApiLookup},
+ * {@link ItemApiLookup}, {@link EntityApiLookup}), and provider registration is owned by the platform exposure seam
+ * ({@code FabricEnergyLookup.expose}), so the provider-wrapping members ({@code getProviderAs}, {@code wrapStrictEnergyHandler}) have no
+ * equivalent and are removed rather than stubbed.
+ */
 @NothingNullByDefault
 public interface IEnergyCompat {
 
@@ -31,27 +40,21 @@ public interface IEnergyCompat {
     }
 
     /**
-     * Gets the capability this compat integrates with.
+     * Gets the block lookup this compat integrates with.
      *
-     * @return The capability this compat is integrating with.
+     * @return The block lookup this compat is integrating with.
      */
-    MultiTypeCapability<?> getCapability();
+    BlockApiLookup<?, @Nullable Direction> getCapability();
 
     /**
-     * Wraps a capability provider that provides an {@link IStrictEnergyHandler} as a one that provides the capability this energy compat is for.
-     *
-     * @param provider The capability provider to wrap
-     *
-     * @return A capability provider that provides this energy compat's capability.
+     * Gets the item lookup this compat integrates with.
      */
-    <OBJECT, CONTEXT> ICapabilityProvider<OBJECT, CONTEXT, ?> getProviderAs(ICapabilityProvider<OBJECT, CONTEXT, IStrictEnergyHandler> provider);
+    ItemApiLookup<?, Void> getItemCapability();
 
     /**
-     * Wraps a strict energy handler in a wrapper that matches this compat's capability.
-     *
-     * @param handler Handler to wrap.
+     * Gets the entity lookup this compat integrates with.
      */
-    Object wrapStrictEnergyHandler(IStrictEnergyHandler handler);
+    EntityApiLookup<?, Void> getEntityCapability();
 
     /**
      * Wraps this compat's capability in a strict energy handler.
@@ -62,7 +65,7 @@ public interface IEnergyCompat {
     IStrictEnergyHandler wrapAsStrictEnergyHandler(Object handler);
 
     /**
-     * Wraps the capability implemented in the provider into a lazy optional {@link IStrictEnergyHandler}, or returns {@code LazyOptional.empty()} if the capability is
+     * Wraps the capability implemented in the provider into a lazy {@link IStrictEnergyHandler}, or returns {@code null} if the capability is
      * not implemented.
      *
      * @param level   Level to query.
@@ -75,7 +78,7 @@ public interface IEnergyCompat {
      */
     @Nullable
     default IStrictEnergyHandler getAsStrictEnergyHandler(Level level, BlockPos pos, @Nullable BlockState state, @Nullable BlockEntity tile, @Nullable Direction context) {
-        Object capability = getCapability().getCapabilityIfLoaded(level, pos, state, tile, context);
+        Object capability = WorldUtils.getCapability(level, getCapability(), pos, state, tile, context);
         return capability == null ? null : wrapAsStrictEnergyHandler(capability);
     }
 
@@ -86,7 +89,7 @@ public interface IEnergyCompat {
      */
     @Nullable
     default IStrictEnergyHandler getStrictEnergyHandler(ItemStack stack) {
-        Object capability = getCapability().getCapability(stack);
+        Object capability = getCapability(stack);
         return capability == null ? null : wrapAsStrictEnergyHandler(capability);
     }
 
@@ -97,7 +100,18 @@ public interface IEnergyCompat {
      */
     @Nullable
     default IStrictEnergyHandler getStrictEnergyHandler(Entity entity) {
-        Object capability = getCapability().getCapability(entity);
+        Object capability = getCapability(entity);
         return capability == null ? null : wrapAsStrictEnergyHandler(capability);
+    }
+
+    @Nullable
+    private Object getCapability(ItemStack stack) {
+        //Note: Safety handling of empty stack is done when looking up the provider inside find's implementation
+        return getItemCapability().find(stack, null);
+    }
+
+    @Nullable
+    private Object getCapability(@Nullable Entity entity) {
+        return entity == null ? null : getEntityCapability().find(entity, null);
     }
 }
