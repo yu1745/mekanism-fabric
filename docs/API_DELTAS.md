@@ -573,3 +573,10 @@ gate）BUILD SUCCESSFUL。未运行（按完成度优先策略）：全量测试
 - 通用线缆的能量能力：官方 `EnergyCompatUtils.addBlockCapabilities(builder)` 由 Fabric exposure seam 取代后，`registerCable` 必须显式 `.with(EnergyStorage.SIDED, CapabilityTileEntity::basicCapabilityProvider)`；否则线缆不暴露能量，任何存储/发电机都无法输入。
 - 机器默认侧面配置来自物品组件的 `AttachedSideConfig`（放置时由原版应用）；`/setblock` 不应用物品组件，测试需用 `data merge block` 写入 `component_config`（ENERGY ordinal 0 的 `config0` 数组、`eject0`）。
 - 验证：`scripts/fabric-machine-smoke.sh` 9/9（含 cube→cable→chamber）。
+
+### 物品/流体/化学传输边界（Task052，2026-10-26）
+
+- 三类传输器的 acceptor 都是“每次解析重新查询”的语义：物品/流体走 Fabric `ItemStorage.SIDED`/`FluidStorage.SIDED`，化学走 Mekanism 自有 lookup；不缓存返回的 `Storage`，因此端点重新暴露时无需失效回调。
+- 运行时放置的端点只有在 `CapabilityTileEntity#setLevel` 开启 exposure 后才可被发现（与能量网络同一条修复）；否则传输器看到的邻居能力为 null。
+- 传输器侧面连接类型由 `connection` int 数组持久化（Direction 序：down/up/north/south/west/east；ConnectionType：normal=0, push=1, pull=2, none=3）。真实玩家通过 GUI/配置器设置，测试用 `data merge block` 写入。
+- `scripts/fabric-machine-smoke.sh` 覆盖 storage→storage 与 transmitter→machine 两条链，且必须显式 forceload 场景跨的三个区块（仅靠出生点区块覆盖会造成偶发失败）。
