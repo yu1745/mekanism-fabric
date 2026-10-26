@@ -3,6 +3,7 @@ package mekanism.fabric.mixin.server;
 import mekanism.fabric.item.FabricHopperTransfer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.Container;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.HopperBlock;
 import net.minecraft.world.level.block.entity.Hopper;
@@ -34,11 +35,12 @@ abstract class HopperTransferMixin {
     @Inject(method = "suckInItems", at = @At("HEAD"), cancellable = true)
     private static void mekanism$suckFromMachine(Level level, Hopper hopper, CallbackInfoReturnable<Boolean> cir) {
         //The source container is the block above the hopper's pickup position; the machine sees the DOWN side.
-        //Non-container hoppers and non-Mekanism sources fall through to the vanilla path, including ground items.
-        if (hopper instanceof HopperBlockEntity hopperBlockEntity
+        //Vanilla hopper blocks and minecart hoppers both reach this entry point; anything that is not a Container
+        //and non-Mekanism sources fall through to the vanilla path, including ground items.
+        if (hopper instanceof Container hopperInventory
               && FabricHopperTransfer.moveOneItem(level,
               BlockPos.containing(hopper.getLevelX(), hopper.getLevelY() + 1.0, hopper.getLevelZ()),
-              Direction.DOWN, hopperBlockEntity, false)) {
+              Direction.DOWN, hopperInventory, false)) {
             cir.setReturnValue(true);
         }
     }

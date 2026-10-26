@@ -604,3 +604,10 @@ gate）BUILD SUCCESSFUL。未运行（按完成度优先策略）：全量测试
 - 官方世界配置 `MekanismConfig.world`（`serverconfig/Mekanism/world.toml`，SERVER 型）由 `FabricWorldGenConfig` 按 `FabricChemicalConfig` 的世界片段模式接管：SERVER_STARTING 在 server 线程以 `<world>/serverconfig` 为根注册加载，SERVER_STOPPED 卸载，每世界路径一个 claim。feature codec 的解码只绑定 cached value supplier（惰性），真正的 config 读取发生在世界生成/区块事件时，此时 owner 已加载。未来完整配置闭包不得再把 world config 注册进全局 `config/` manager（会与真实 owner 冲突）。
 - `ConfigurableHeightProvider` 的官方 `Mekanism.logger` 改为同类别私有 SLF4J logger（与 `SerializerHelper` 先例一致），警告文本不变；四个 registry 类的 `DeferredHolder/DeferredRegister` 换成本项目注册件、`Mekanism.MODID` 换字面 mod id（与 `MekanismItems` 同型）。
 - 验收：`scripts/fabric-worldgen-smoke.sh`（固定 seed 世界 + 512 chunk forceload + 停服后扫描真实 region 文件调色板）5/5：注册 proof、`modifiers=6 features=11` proof、datapack 零错误、`world.toml` 落盘、六类目标（五种矿石 stone/deepslate 形态 + 盐盘）均在真实生成区块中命中。retrogen（`enableRegeneration` 默认 false）由既有 `CommonWorldTickHandler`/`ChunkGenVersionMixin` owner 承接，本轮未变。
+
+### 漏斗自动化边界（Task052，2026-10-26）
+
+- 官方 NeoForge 让漏斗经物品 capability 看见机器；vanilla 漏斗只认识 `Container`/`WorldlyContainerHolder`，而 Container 的原地可变 stack 协议（`getItem` 后被 `grow`/`shrink` 直接改写）无法在 Mekanism 槽位 API 上忠实实现——返回副本会让合并路径静默丢物，返回内部 live stack 又绕过槽位校验与变更通知。因此桥接走传输器同一条真实事务面：`HopperTransferMixin` 在 `ejectItems`/`suckInItems` HEAD 处解析目标位置的 `ItemStorage.SIDED`，且仅当返回 `FabricItemStorage` 时才接管，一次移动一件、外层事务 simulate-decide-commit。
+- 侧面语义：eject 的机器侧面 = 漏斗朝向的反面（vanilla `getAttachedContainer` 的目标块）；suck 的机器侧面 = DOWN（漏斗吸取上方）。漏斗朝向读 blockstate `HopperBlock.FACING`（原 `facing` 字段为私有实例字段，静态注入不能 shadow）。
+- 守卫精确性：vanilla 容器（箱子、漏斗互传、实体容器、地面物品拾取）与第三方 storage 一律回退 vanilla 路径；目标不可收/已满时 abort 回滚，无物品损失。每次尝试重新查询（与传输器 acceptor"每次解析重新查询"语义一致），不引入结果缓存。
+- 验收：`scripts/fabric-machine-smoke.sh` 现为 20 项：朝向漏斗把 4 个铁矿推入腔体 LEFT 物品侧（`config3` FRONT..TOP=INPUT、BOTTOM=OUTPUT），下方漏斗从 BOTTOM OUTPUT 拉出 `mekanism:dust_iron`，两项各以漏斗 `Items` 断言，一次连续通过。
