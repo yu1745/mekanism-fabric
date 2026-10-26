@@ -770,3 +770,8 @@ mekanism/common/tile/machine/TileEntityOredictionificator.java
 mekanism/common/tile/qio/TileEntityQIOComponent.java
 mekanism/common/tile/qio/TileEntityQIODashboard.java
 mekanism/common/inventory/container/tile/QIODashboardContainer.java
+mekanism/common/util/EffectiveSide.java
+mekanism/common/lib/transmitter/DynamicNetwork.java
+mekanism/common/lib/transmitter/INetworkDataHandler.java
+mekanism/common/attachments/FrequencyAware.java
+mekanism/common/util/text/OwnerDisplay.java

@@ -602,14 +602,15 @@ public final class MekanismUtils {
             return "<???>";
         }
         String ret = UsernameCache.getLastKnownUsername(uuid);
-        //Fabric port delta: the NeoForge EffectiveSide check is replaced by logical-server/thread-affinity: the fallback profile-cache
-        // lookup only runs on the logical server (dedicated or integrated) and only on the actual server thread. Username-cache reads stay
-        // available on the client; the Yggdrasil profile cache is simply not queried from render/client threads
-        MinecraftServer server = MekanismServerLifecycle.getServer();
-        if (ret == null && !warnedFails.contains(uuid) && server != null && server.isSameThread()) { // see if MC/Yggdrasil knows about it?!
-            Optional<GameProfile> gp = server.getProfileCache().get(uuid);
-            if (gp.isPresent()) {
-                ret = gp.get().getName();
+        //Fabric port delta: the NeoForge FML EffectiveSide check is replaced by the Mekanism thread-group query (docs/TASK052_ADJUDICATION_EFFECTIVE_SIDE.md):
+        //the profile-cache fallback runs on the logical server's thread group — the server thread and worker threads inheriting it — never on client threads
+        if (ret == null && !warnedFails.contains(uuid) && EffectiveSide.isServer()) { // see if MC/Yggdrasil knows about it?!
+            MinecraftServer server = MekanismServerLifecycle.getServer();
+            if (server != null) {
+                Optional<GameProfile> gp = server.getProfileCache().get(uuid);
+                if (gp.isPresent()) {
+                    ret = gp.get().getName();
+                }
             }
         }
         if (ret == null && !warnedFails.contains(uuid)) {

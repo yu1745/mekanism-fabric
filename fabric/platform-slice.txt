@@ -99,3 +99,4 @@ mekanism/fabric/energy/ItemEnergyContainer.java
 mekanism/fabric/network/FabricGearEffectsNetworking.java
 mekanism/fabric/client/render/FabricBoltRendering.java
 mekanism/fabric/mixin/gear/GearBoltRenderMixin.java
+mekanism/fabric/mixin/server/MinecraftServerMixin.java

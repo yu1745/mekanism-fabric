@@ -9,7 +9,7 @@ import mekanism.common.MekanismLang;
 import mekanism.common.util.MekanismUtils;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
-import net.neoforged.fml.util.thread.EffectiveSide;
+import mekanism.common.util.EffectiveSide;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -74,7 +74,7 @@ public class OwnerDisplay implements IHasTextComponent {
         //Allows for the name to be overridden by a passed value
         if (ownerName != null) {
             return ownerName;
-        } else if (player != null && !player.level().isClientSide || player == null && EffectiveSide.get().isServer()) {
+        } else if (player != null && !player.level().isClientSide || player == null && EffectiveSide.isServer()) {
             return MekanismUtils.getLastKnownUsername(ownerUUID);
         }
         String name = ClientSecurityData.usernameMap().get(ownerUUID);
