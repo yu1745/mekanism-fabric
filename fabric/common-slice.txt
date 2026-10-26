@@ -256,6 +256,7 @@ mekanism/client/recipe_viewer/type/RecipeViewerRecipeType.java
 mekanism/client/recipe_viewer/type/RotaryRVRecipeType.java
 mekanism/client/recipe_viewer/type/SimpleRVRecipeType.java
 mekanism/client/recipe_viewer/type/VanillaRVRecipeType.java
+mekanism/client/render/HUDRenderer.java
 mekanism/client/render/IFancyFontRenderer.java
 mekanism/client/render/MekanismRenderType.java
 mekanism/client/render/MekanismRenderer.java
@@ -268,6 +269,8 @@ mekanism/client/render/data/ChemicalRenderData.java
 mekanism/client/render/data/FluidRenderData.java
 mekanism/client/render/data/RenderData.java
 mekanism/client/render/data/ValveRenderData.java
+mekanism/client/render/hud/MekaSuitEnergyLevel.java
+mekanism/client/render/hud/MekanismHUD.java
 mekanism/client/render/hud/MekanismStatusOverlay.java
 mekanism/client/render/hud/RadiationOverlay.java
 mekanism/client/render/item/MekanismISTER.java

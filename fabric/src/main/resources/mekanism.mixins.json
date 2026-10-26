@@ -40,6 +40,7 @@
   ],
   "client": [
     "client.TextureAtlasMixin",
+    "client.FabricHudLayersMixin",
     "item.ClientConfiguratorUseMixin",
     "item.ClientElytraStartMixin",
     "item.ModeStatusOverlayMixin",

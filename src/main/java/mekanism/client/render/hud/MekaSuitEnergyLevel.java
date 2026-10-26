@@ -9,6 +9,7 @@ import mekanism.common.item.gear.ItemMekaSuitArmor;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.MekanismUtils.ResourceType;
 import mekanism.common.util.StorageUtils;
+import mekanism.fabric.client.hud.FabricHudHeights;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -43,12 +44,15 @@ public class MekaSuitEnergyLevel implements LayeredDraw.Layer {
             }
         }
         if (capacity != 0L) {
+            //Fabric port: vanilla has no NeoForge leftHeight stack, so the bar positions against the replicated
+            //left-column height (FabricHudHeights). The official `leftHeight += 8` mutation has no downstream
+            //in-family consumer here - MekanismStatusOverlay computes its own native height - which can cost an
+            //8px overlap between this bar and the mode text while both show (recorded delta).
             int x = graphics.guiWidth() / 2 - 91;
-            int y = graphics.guiHeight() - minecraft.gui.leftHeight + 2;
+            int y = graphics.guiHeight() - FabricHudHeights.leftColumnHeight(minecraft) + 2;
             int length = (int) Math.round(((double) stored / capacity) * 79);
             GuiUtils.renderExtendedTexture(graphics, GuiBar.BAR, 2, 2, x, y, 81, 6);
             graphics.blit(POWER_BAR, x + 1, y + 1, length, 4, 0, 0, length, 4, 79, 4);
-            minecraft.gui.leftHeight += 8;
         }
     }
 }

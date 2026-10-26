@@ -652,3 +652,9 @@ gate）BUILD SUCCESSFUL。未运行（按完成度优先策略）：全量测试
 - `mekanism:mod_version_loaded`（118 个）为 Mekanism 自定义条件,Fabric 无内建版本区间条件→移植 `FabricModVersionLoadedCondition` 注册同 id 的 fabric ResourceConditionType,语义对齐官方 `ModVersionLoadedCondition`（mod 存在且版本≥下限）。**比较器 delta（记录）**:官方用 Maven `ComparableVersion`,Fabric loader `Version` 为 semver 形;现有 compat 下限均为简单三元版本,两种序一致。
 - **tag 存在性 delta（记录）**:NeoForge `tag_empty` 检查空,Fabric `tags_populated` 只检查存在——仅对"存在但为空"的标签可见,此时配方会加载但匹配不到任何物品（惰性配方）。
 - 验收:jar 内 637 个 compat 配方全部为变换形态;真实服务端条件注册 proof + 零解析错误 + "Loaded 2868 recipes"(与无 compat 时相同——ae2/BSWG 缺席时 637 全部被条件正确跳过,即门控生效的直接证据)。
+
+### HUD 车道（Task052 client 渲染弧 (d) 段,2026-10-27）
+
+- 四个官方 HUD 层（`LayeredDraw.Layer` 原生接口）全部接通:MekaSuitEnergyLevel（ARMOR_LEVEL 之上）、MekanismHUD（SUBTITLE_OVERLAY 之上）、MekanismStatusOverlay（原生 selected-item-name 位,ModeStatusOverlayMixin 早前已建）、RadiationOverlay（全层之下,RadiationOverlayMixin 早前已建）。1.21.1 fabric API 无分层 HUD 插入（仅尾部 HudRenderCallback）,故前两者经 `FabricHudLayersMixin` 包裹 vanilla `Gui` 构造器的两个 `LayeredDraw.add` 位点（ordinal 2/13）,与 NeoForge 插槽逐位对齐。
+- 平台适配:`FabricHudHeights.leftColumnHeight` 复刻 NeoForge `Gui.leftHeight`（vanilla 1.21.1 无此字段,renderPlayerHealth 局部变量算行）——沿 RadiationOverlay→FabricRadiationAttachments 先例;`+=8` 下游消费者缺失致最坏情形模式文本与本条 8px 重叠（记录）。MekanismHUD 的 curios 块随 curios 车道延后（装备槽主路径完整）。访问放宽镜像上游 AT 三项:Gui.subtitleOverlay、SubtitleOverlay.audibleSubtitles、SubtitleOverlay$Subtitle（HUDRenderer 字幕宽度测量用）。
+- 验收:模型 smoke 第 9 检查 `MEKANISM_FABRIC_HUD_PROOF layers=2`（新 mixin）+ 既有状态/辐射 mixin 真机运行;9/9 零缺失模型。切片 api 262 / common 1452 / platform 143。

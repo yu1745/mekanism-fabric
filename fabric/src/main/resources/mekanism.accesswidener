@@ -130,3 +130,8 @@ accessible field net/minecraft/client/model/geom/ModelPart cubes Ljava/util/List
 accessible field net/minecraft/client/model/geom/ModelPart children Ljava/util/Map;
 accessible field net/minecraft/client/model/geom/ModelPart$Cube polygons [Lnet/minecraft/client/model/geom/ModelPart$Polygon;
 accessible field net/minecraft/client/Minecraft itemColors Lnet/minecraft/client/color/item/ItemColors;
+#HUD lane (mirrors upstream accesstransformer.cfg subtitle entries): HUDRenderer reads the active
+#subtitles to measure its directional-audio HUD width.
+accessible field net/minecraft/client/gui/Gui subtitleOverlay Lnet/minecraft/client/gui/components/SubtitleOverlay;
+accessible field net/minecraft/client/gui/components/SubtitleOverlay audibleSubtitles Ljava/util/List;
+accessible class net/minecraft/client/gui/components/SubtitleOverlay$Subtitle
