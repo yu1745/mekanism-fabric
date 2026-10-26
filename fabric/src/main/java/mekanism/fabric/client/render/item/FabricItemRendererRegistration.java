@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 import mekanism.common.registries.MekanismBlocks;
+import mekanism.common.registries.MekanismItems;
 import net.fabricmc.fabric.api.client.model.loading.v1.ModelLoadingPlugin;
 import net.fabricmc.fabric.api.client.rendering.v1.BuiltinItemRendererRegistry;
 import net.minecraft.client.renderer.block.model.BakedQuad;
@@ -67,13 +68,33 @@ public final class FabricItemRendererRegistration implements ModelLoadingPlugin 
               mekanism.client.render.item.block.RenderFluidTankItem.RENDERER.renderByItem(stack, context, matrices, vertexConsumers, light, overlay));
         BuiltinItemRendererRegistry.INSTANCE.register(MekanismBlocks.CREATIVE_FLUID_TANK.asItem(), (stack, context, matrices, vertexConsumers, light, overlay) ->
               mekanism.client.render.item.block.RenderFluidTankItem.RENDERER.renderByItem(stack, context, matrices, vertexConsumers, light, overlay));
+        //Gear items: the official item JSONs already parent onto minecraft:builtin/entity, so the vanilla builtin
+        //model produces no quads and no suppression is needed - only the renderer wiring (the official
+        //registerItem(MekRenderProperties/MekCustomArmorRenderProperties) item half; the armor-layer half stays
+        //deferred with the armor lane).
+        BuiltinItemRendererRegistry.INSTANCE.register(MekanismItems.JETPACK.asItem(), (stack, context, matrices, vertexConsumers, light, overlay) ->
+              mekanism.client.render.item.gear.RenderJetpack.RENDERER.renderByItem(stack, context, matrices, vertexConsumers, light, overlay));
+        BuiltinItemRendererRegistry.INSTANCE.register(MekanismItems.ARMORED_JETPACK.asItem(), (stack, context, matrices, vertexConsumers, light, overlay) ->
+              mekanism.client.render.item.gear.RenderJetpack.ARMORED_RENDERER.renderByItem(stack, context, matrices, vertexConsumers, light, overlay));
+        BuiltinItemRendererRegistry.INSTANCE.register(MekanismItems.FREE_RUNNERS.asItem(), (stack, context, matrices, vertexConsumers, light, overlay) ->
+              mekanism.client.render.item.gear.RenderFreeRunners.RENDERER.renderByItem(stack, context, matrices, vertexConsumers, light, overlay));
+        BuiltinItemRendererRegistry.INSTANCE.register(MekanismItems.ARMORED_FREE_RUNNERS.asItem(), (stack, context, matrices, vertexConsumers, light, overlay) ->
+              mekanism.client.render.item.gear.RenderFreeRunners.ARMORED_RENDERER.renderByItem(stack, context, matrices, vertexConsumers, light, overlay));
+        BuiltinItemRendererRegistry.INSTANCE.register(MekanismItems.SCUBA_MASK.asItem(), (stack, context, matrices, vertexConsumers, light, overlay) ->
+              mekanism.client.render.item.gear.RenderScubaMask.RENDERER.renderByItem(stack, context, matrices, vertexConsumers, light, overlay));
+        BuiltinItemRendererRegistry.INSTANCE.register(MekanismItems.SCUBA_TANK.asItem(), (stack, context, matrices, vertexConsumers, light, overlay) ->
+              mekanism.client.render.item.gear.RenderScubaTank.RENDERER.renderByItem(stack, context, matrices, vertexConsumers, light, overlay));
+        BuiltinItemRendererRegistry.INSTANCE.register(MekanismItems.ATOMIC_DISASSEMBLER.asItem(), (stack, context, matrices, vertexConsumers, light, overlay) ->
+              mekanism.client.render.item.gear.RenderAtomicDisassembler.RENDERER.renderByItem(stack, context, matrices, vertexConsumers, light, overlay));
+        BuiltinItemRendererRegistry.INSTANCE.register(MekanismItems.FLAMETHROWER.asItem(), (stack, context, matrices, vertexConsumers, light, overlay) ->
+              mekanism.client.render.item.gear.RenderFlameThrower.RENDERER.renderByItem(stack, context, matrices, vertexConsumers, light, overlay));
     }
 
     @Override
     public void onInitializeModelLoader(Context context) {
         Set<ResourceLocation> suppressed = suppressedItemModels();
         context.resolveModel().register(ctx -> suppressed.contains(ctx.id()) ? new QuadsEmptyModel(ctx.getOrLoadModel(ctx.id())) : null);
-        LOGGER.info("MEKANISM_FABRIC_ITEM_RENDERER_PROOF suppressed_models={} builtin_renderers=10", suppressed.size());
+        LOGGER.info("MEKANISM_FABRIC_ITEM_RENDERER_PROOF suppressed_models={} builtin_renderers=18", suppressed.size());
     }
 
     /** Keeps the official unbaked model for dependencies/parents; the bake only suppresses the quads. */

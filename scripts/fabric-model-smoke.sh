@@ -61,8 +61,8 @@ check "client bootstrap reached the title screen" 'Sound engine started'
 check "client entrypoint completed networking init" 'MEKANISM_FABRIC_NETWORK_CLIENT_PROOF'
 check "loader closure parsed the shipped loader families" 'MEKANISM_FABRIC_MODELS_PROOF composite=82 separate_transforms=1 item_layers=1 obj=1 energy_cube_deferred=1 data_based_deferred=1 robit_deferred=2 fluid_container_deferred=18 transmitter_owned=3'
 check "tile renderer offline model cache registered" 'MEKANISM_FABRIC_MODEL_CACHE_PROOF json_models=7'
-check "tile entity renderers registered" 'MEKANISM_FABRIC_BER_PROOF tile_types=30 renderers=15 layers=2'
-check "block-item ISBERs wired" 'MEKANISM_FABRIC_ITEM_RENDERER_PROOF suppressed_models=10 builtin_renderers=10'
+check "tile entity renderers registered" 'MEKANISM_FABRIC_BER_PROOF tile_types=30 renderers=15 layers=10'
+check "block-item ISBERs wired" 'MEKANISM_FABRIC_ITEM_RENDERER_PROOF suppressed_models=10 builtin_renderers=18'
 if grep -E 'Missing model|Failed to load model|Exception loading model' "${LOG_FILE}.latest.log" | grep -Ev 'energy_cube|qio_redstone_adapter|/robit|fluid_(tank|container)|neoforge:item/bucket' | grep -q .; then
   echo "FAIL no missing-model errors"
   grep -E 'Missing model|Failed to load model|Exception loading model' "${LOG_FILE}.latest.log" | head -5

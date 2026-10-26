@@ -1,7 +1,16 @@
 package mekanism.fabric.client.render;
 
 import java.util.function.Supplier;
+import mekanism.client.model.ModelArmoredFreeRunners;
+import mekanism.client.model.ModelArmoredJetpack;
+import mekanism.client.model.ModelAtomicDisassembler;
 import mekanism.client.model.ModelEnergyCore;
+import mekanism.client.model.ModelFlamethrower;
+import mekanism.client.model.ModelFreeRunners;
+import mekanism.client.model.ModelIndustrialAlarm;
+import mekanism.client.model.ModelJetpack;
+import mekanism.client.model.ModelScubaMask;
+import mekanism.client.model.ModelScubaTank;
 import mekanism.client.model.ModelIndustrialAlarm;
 import mekanism.client.render.tileentity.RenderBin;
 import mekanism.client.render.tileentity.RenderDigitalMiner;
@@ -45,6 +54,15 @@ public final class FabricTileEntityRendererRegistration {
         //The two Java models the tile renderers construct per instance, mirroring the official layer registration.
         registerLayer(ModelEnergyCore.CORE_LAYER, ModelEnergyCore::createLayerDefinition);
         registerLayer(ModelIndustrialAlarm.ALARM_LAYER, ModelIndustrialAlarm::createLayerDefinition);
+        //The gear item ISBER layers (the official registerLayerDefinitions list minus the transporter-box layer).
+        registerLayer(ModelJetpack.JETPACK_LAYER, ModelJetpack::createLayerDefinition);
+        registerLayer(ModelArmoredJetpack.ARMORED_JETPACK_LAYER, ModelArmoredJetpack::createLayerDefinition);
+        registerLayer(ModelAtomicDisassembler.DISASSEMBLER_LAYER, ModelAtomicDisassembler::createLayerDefinition);
+        registerLayer(ModelFlamethrower.FLAMETHROWER_LAYER, ModelFlamethrower::createLayerDefinition);
+        registerLayer(ModelFreeRunners.FREE_RUNNER_LAYER, ModelFreeRunners::createLayerDefinition);
+        registerLayer(ModelArmoredFreeRunners.ARMORED_FREE_RUNNER_LAYER, ModelArmoredFreeRunners::createLayerDefinition);
+        registerLayer(ModelScubaMask.MASK_LAYER, ModelScubaMask::createLayerDefinition);
+        registerLayer(ModelScubaTank.TANK_LAYER, ModelScubaTank::createLayerDefinition);
 
         int renderers = 0;
         renderers += bind(RenderThermoelectricBoiler::new, MekanismTileEntityTypes.BOILER_CASING, MekanismTileEntityTypes.BOILER_VALVE);
@@ -66,7 +84,7 @@ public final class FabricTileEntityRendererRegistration {
         renderers += bind(RenderFluidTank::new, MekanismTileEntityTypes.BASIC_FLUID_TANK, MekanismTileEntityTypes.ADVANCED_FLUID_TANK,
               MekanismTileEntityTypes.ELITE_FLUID_TANK, MekanismTileEntityTypes.ULTIMATE_FLUID_TANK, MekanismTileEntityTypes.CREATIVE_FLUID_TANK);
         org.slf4j.LoggerFactory.getLogger("Mekanism/FabricTileEntityRenderers")
-              .info("MEKANISM_FABRIC_BER_PROOF tile_types={} renderers=15 layers=2", renderers);
+              .info("MEKANISM_FABRIC_BER_PROOF tile_types={} renderers=15 layers=10", renderers);
     }
 
     @SafeVarargs

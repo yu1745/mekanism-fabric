@@ -3,8 +3,8 @@ package mekanism.client.model;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import java.util.List;
+import mekanism.api.MekanismAPI;
 import mekanism.client.render.MekanismRenderType;
-import mekanism.common.Mekanism;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.MekanismUtils.ResourceType;
 import net.minecraft.client.model.geom.EntityModelSet;
@@ -21,7 +21,11 @@ import org.jetbrains.annotations.NotNull;
 
 public class ModelScubaMask extends MekanismJavaModel {
 
-    public static final ModelLayerLocation MASK_LAYER = new ModelLayerLocation(Mekanism.rl("scuba_mask"), "main");
+    private static ResourceLocation rl(String path) {
+        return ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, path);
+    }
+
+    public static final ModelLayerLocation MASK_LAYER = new ModelLayerLocation(rl("scuba_mask"), "main");
     private static final ResourceLocation MASK_TEXTURE = MekanismUtils.getResource(ResourceType.RENDER, "scuba_set.png");
 
     private static final ModelPartData HELMET_FEED = new ModelPartData("helmetFeed", CubeListBuilder.create()

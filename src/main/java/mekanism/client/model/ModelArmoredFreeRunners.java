@@ -1,9 +1,10 @@
 package mekanism.client.model;
 
+import mekanism.api.MekanismAPI;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import java.util.List;
-import mekanism.common.Mekanism;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.client.model.geom.EntityModelSet;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
@@ -15,7 +16,11 @@ import org.jetbrains.annotations.NotNull;
 
 public class ModelArmoredFreeRunners extends ModelFreeRunners {
 
-    public static final ModelLayerLocation ARMORED_FREE_RUNNER_LAYER = new ModelLayerLocation(Mekanism.rl("armored_free_runners"), "main");
+    private static ResourceLocation rl(String path) {
+        return ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, path);
+    }
+
+    public static final ModelLayerLocation ARMORED_FREE_RUNNER_LAYER = new ModelLayerLocation(rl("armored_free_runners"), "main");
 
     private static final ModelPartData PLATE_L = new ModelPartData("PlateL", CubeListBuilder.create()
           .mirror()

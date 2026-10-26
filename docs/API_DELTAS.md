@@ -633,3 +633,9 @@ gate）BUILD SUCCESSFUL。未运行（按完成度优先策略）：全量测试
 - `MekanismISTER.renderBlockItem` 从 NeoForge 通道（getRenderPasses/renderTypes/ModelData/renderQuadList）改写为 vanilla 1.21.1 等价路径（单块模型 + `ItemBlockRenderTypes.getRenderType(state, fabulous)` + 内联染色四边形循环，即 vanilla renderQuadList 私有体）；NeoForge 树公开化的 `Minecraft.levelRenderer`/`LevelRenderer.ticks`（官方 getTicks getter）/`Minecraft.itemColors`（官方 getItemColors getter）经 access widener 对齐，官方 getter 调用点为宽化字段读（微 delta，注明）。
 - 能量立方物品外壳仍属延后的 energy_cube loader 族（其 side-state 切换读 NeoForge model data），核心（ModelEnergyCore）正常渲染；三个官方物品条装饰器（ChemicalFluidBar/MekaSuitBar/TransmitterType）在本 fabric-api 版本无对应 API，延后。
 - 验收：client smoke 扩至 8 检查（新增 `MEKANISM_FABRIC_ITEM_RENDERER_PROOF suppressed_models=10 builtin_renderers=10`）；未验证风险：物品在 GUI/手中的实际画面归功能里程碑门禁。
+
+### 装备物品 ISBER 闭环（Task052 客户端渲染弧 5(d) 第二段，2026-10-26）
+
+- 六个装备 ISBER（jetpack/armored jetpack/free runners/armored free runners/scuba mask/scuba tank/atomic disassembler/flamethrower）经同一 `BuiltinItemRendererRegistry` 通道接线；官方物品 JSON 本就 parent 到 `minecraft:builtin/entity`（vanilla 特殊模型、烘焙零 quads），Fabric 通道零 JSON 改动、零抑制器。八个 `Model*` Java 模型（jetpack 等）+ 八个层定义经 `EntityModelLayerRegistry` 注册（transporter box 层随 transmitter 车道）；`Mekanism.rl` → `MekanismAPI.MEKANISM_MODID` 私有助手（既定先例）。
+- 护甲形态半（`MekCustomArmorRenderProperties` 的 HumanoidModel gear 渲染，`JetpackArmor` 等）随 armor 车道延后；物品形态先接通。
+- 验收：client smoke 8 检查（BER proof layers=2→10、ITEM_RENDERER proof builtin_renderers=10→18）两次全绿；machine smoke 20/20。

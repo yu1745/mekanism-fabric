@@ -3,7 +3,7 @@ package mekanism.client.model;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import java.util.List;
-import mekanism.common.Mekanism;
+import mekanism.api.MekanismAPI;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.MekanismUtils.ResourceType;
 import net.minecraft.client.model.geom.EntityModelSet;
@@ -19,7 +19,11 @@ import org.jetbrains.annotations.NotNull;
 
 public class ModelFlamethrower extends MekanismJavaModel {
 
-    public static final ModelLayerLocation FLAMETHROWER_LAYER = new ModelLayerLocation(Mekanism.rl("flamethrower"), "main");
+    private static ResourceLocation rl(String path) {
+        return ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, path);
+    }
+
+    public static final ModelLayerLocation FLAMETHROWER_LAYER = new ModelLayerLocation(rl("flamethrower"), "main");
     private static final ResourceLocation FLAMETHROWER_TEXTURE = MekanismUtils.getResource(ResourceType.RENDER, "flamethrower.png");
 
     private static final ModelPartData RING_BOTTOM = new ModelPartData("RingBottom", CubeListBuilder.create()
