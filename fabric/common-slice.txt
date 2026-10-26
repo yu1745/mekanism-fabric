@@ -1136,3 +1136,4 @@ mekanism/common/capabilities/holder/chemical/ConfigChemicalTankHolder.java
 mekanism/common/capabilities/holder/fluid/ConfigFluidTankHolder.java
 mekanism/client/sound/JetpackSound.java
 mekanism/common/item/interfaces/IItemUseFirst.java
+mekanism/common/registries/MekanismCreativeTabs.java

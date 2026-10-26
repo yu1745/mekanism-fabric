@@ -105,17 +105,19 @@ public final class MekanismFabricBootstrap implements ModInitializer {
         mekanism.common.registries.MekanismTileEntityTypes.TILE_ENTITY_TYPES.getEntries();
         mekanism.fabric.registry.FabricMekanismBlockRegistries.initialize();
         mekanism.common.registries.MekanismContainerTypes.CONTAINER_TYPES.registerAll(BuiltInRegistries.MENU);
+        mekanism.common.registries.MekanismCreativeTabs.CREATIVE_TABS.registerAll(BuiltInRegistries.CREATIVE_MODE_TAB);
+        mekanism.fabric.item.FabricCreativeTabContents.initialize();
         //Fluid families: still/flowing fluids first (the liquid block resolves the registered flowing fluid), then the
         //liquid blocks and buckets. Bucket dispense behavior mirrors the official common-setup pass.
         mekanism.common.registries.MekanismFluids.FLUIDS.registerAll(BuiltInRegistries.FLUID, BuiltInRegistries.BLOCK, BuiltInRegistries.ITEM);
         mekanism.common.registries.MekanismFluids.FLUIDS.registerBucketDispenserBehavior();
         //Module data is a Mekanism-owned synced registry; module items must exist before the module data evaluates its item holders.
         mekanism.fabric.gear.FabricModuleRegistry.initialize();
-        LOGGER.info("MEKANISM_FABRIC_CONTENT_PROOF blocks={} items={} block_entities={} menus={} fluids={} sounds={} data_components={} armor_materials={} modules={}",
+        LOGGER.info("MEKANISM_FABRIC_CONTENT_PROOF blocks={} items={} block_entities={} menus={} fluids={} sounds={} data_components={} armor_materials={} modules={} creative_tabs={}",
               mekanismCount(BuiltInRegistries.BLOCK), mekanismCount(BuiltInRegistries.ITEM), mekanismCount(BuiltInRegistries.BLOCK_ENTITY_TYPE),
               mekanismCount(BuiltInRegistries.MENU), mekanismCount(BuiltInRegistries.FLUID), mekanismCount(BuiltInRegistries.SOUND_EVENT),
               mekanismCount(BuiltInRegistries.DATA_COMPONENT_TYPE), mekanismCount(BuiltInRegistries.ARMOR_MATERIAL),
-              mekanism.api.MekanismAPI.MODULE_REGISTRY.size());
+              mekanism.api.MekanismAPI.MODULE_REGISTRY.size(), mekanismCount(BuiltInRegistries.CREATIVE_MODE_TAB));
         MekanismUsernameLifecycle.initialize();
         LOGGER.info("MEKANISM_FABRIC_NETWORK_PROOF protocol={} phase=configuration codecs={} server_receiver={} client_required={}",
               networking.protocolVersion(), networking.codecs(), networking.serverReceiver(), networking.clientRequired());

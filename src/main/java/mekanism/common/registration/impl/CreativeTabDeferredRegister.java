@@ -11,6 +11,7 @@ import mekanism.client.SpecialColors;
 import mekanism.common.registration.MekanismDeferredHolder;
 import mekanism.common.registration.MekanismDeferredRegister;
 import mekanism.common.registries.MekanismBlocks;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.CreativeModeTab;
@@ -22,24 +23,31 @@ import org.jetbrains.annotations.NotNull;
 
 public class CreativeTabDeferredRegister extends MekanismDeferredRegister<CreativeModeTab> {
 
-    private final Consumer<CreativeModeTab.Output> addToExistingTabs;
+    private final ExistingTabContents addToExistingTabs;
 
     public CreativeTabDeferredRegister(String modid) {
-        this(modid, output -> {
+        this(modid, (tabKey, output, parameters) -> {
         });
     }
 
-    public CreativeTabDeferredRegister(String modid, Consumer<CreativeModeTab.Output> addToExistingTabs) {
+    public CreativeTabDeferredRegister(String modid, ExistingTabContents addToExistingTabs) {
         super(Registries.CREATIVE_MODE_TAB, modid);
         this.addToExistingTabs = addToExistingTabs;
     }
 
     /**
      * Fabric port delta: the official class wired {@code addToExistingTabs} through a NeoForge bus listener. The base register is bus-free in this port, so
-     * the platform bootstrap registers the consumer with Fabric's {@code ItemGroupEvents.modifyEntriesEvent} for the vanilla tabs it targets.
+     * the platform bootstrap registers this callback with Fabric's {@code ItemGroupEvents.modifyEntriesEvent} for the vanilla tabs it targets. The callback
+     * receives the tab key and the real display parameters that NeoForge exposed through {@code BuildCreativeModeTabContentsEvent}.
      */
-    public Consumer<CreativeModeTab.Output> getAddToExistingTabs() {
+    public ExistingTabContents getAddToExistingTabs() {
         return addToExistingTabs;
+    }
+
+    @FunctionalInterface
+    public interface ExistingTabContents {
+
+        void addToDisplay(ResourceKey<CreativeModeTab> tabKey, CreativeModeTab.Output output, CreativeModeTab.ItemDisplayParameters parameters);
     }
 
     /**

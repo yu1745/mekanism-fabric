@@ -2,7 +2,6 @@ package mekanism.common.registries;
 
 import mekanism.api.MekanismAPI;
 import mekanism.api.MekanismAPITags;
-import mekanism.common.Mekanism;
 import mekanism.common.MekanismLang;
 import mekanism.common.block.attribute.Attribute;
 import mekanism.common.block.attribute.AttributeTier;
@@ -19,6 +18,8 @@ import mekanism.common.tier.TransporterTier;
 import mekanism.common.util.ChemicalUtil;
 import mekanism.common.util.EnumUtils;
 import mekanism.common.util.FluidUtils;
+import net.fabricmc.fabric.api.tag.convention.v2.ConventionalFluidTags;
+import mekanism.api.MekanismAPI;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
@@ -29,17 +30,16 @@ import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.material.Fluids;
-import net.neoforged.neoforge.common.Tags;
-import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 
 public class MekanismCreativeTabs {
 
-    public static final CreativeTabDeferredRegister CREATIVE_TABS = new CreativeTabDeferredRegister(Mekanism.MODID, MekanismCreativeTabs::addToExistingTabs);
+    public static final CreativeTabDeferredRegister CREATIVE_TABS = new CreativeTabDeferredRegister(MekanismAPI.MEKANISM_MODID, MekanismCreativeTabs::addToExistingTabs);
 
     public static final MekanismDeferredHolder<CreativeModeTab, CreativeModeTab> MEKANISM = CREATIVE_TABS.registerMain(MekanismLang.MEKANISM,
           MekanismBlocks.METALLURGIC_INFUSER.getItemHolder(), builder ->
-                builder.withSearchBar()//Allow our tabs to be searchable for convenience purposes
-                      .displayItems((displayParameters, output) -> {
+                //Fabric port delta: NeoForge's withSearchBar() has no vanilla counterpart. Items are still added to the vanilla
+                // search tab through PARENT_AND_SEARCH_TABS visibility, so creative search keeps finding them.
+                builder.displayItems((displayParameters, output) -> {
                           CreativeTabDeferredRegister.addToDisplay(MekanismItems.ITEMS, output);
                           CreativeTabDeferredRegister.addToDisplay(MekanismBlocks.BLOCKS, output);
                           CreativeTabDeferredRegister.addToDisplay(MekanismFluids.FLUIDS, output);
@@ -55,7 +55,7 @@ public class MekanismCreativeTabs {
                       //Only add sources and fluids that aren't hidden
                       .filterElements(fluid -> fluid != Fluids.EMPTY && fluid.isSource(fluid.defaultFluidState()))
                       .listElements()
-                      .filter(holder -> !holder.is(Tags.Fluids.HIDDEN_FROM_RECIPE_VIEWERS))
+                      .filter(holder -> !holder.is(ConventionalFluidTags.HIDDEN_FROM_RECIPE_VIEWERS))
                       .forEach(holder -> output.accept(FluidUtils.getFilledVariant(MekanismBlocks.CREATIVE_FLUID_TANK.getItemHolder(), holder)));
             }
             if (chemical) {
@@ -70,20 +70,19 @@ public class MekanismCreativeTabs {
         }
     }
 
-    private static void addToExistingTabs(BuildCreativeModeTabContentsEvent event) {
-        ResourceKey<CreativeModeTab> tabKey = event.getTabKey();
+    public static void addToExistingTabs(ResourceKey<CreativeModeTab> tabKey, CreativeModeTab.Output output, CreativeModeTab.ItemDisplayParameters parameters) {
         if (tabKey == CreativeModeTabs.BUILDING_BLOCKS) {
-            CreativeTabDeferredRegister.addToDisplay(event, MekanismBlocks.SALT_BLOCK, MekanismBlocks.BRONZE_BLOCK, MekanismBlocks.STEEL_BLOCK,
+            CreativeTabDeferredRegister.addToDisplay(output, MekanismBlocks.SALT_BLOCK, MekanismBlocks.BRONZE_BLOCK, MekanismBlocks.STEEL_BLOCK,
                   MekanismBlocks.CHARCOAL_BLOCK, MekanismBlocks.REFINED_OBSIDIAN_BLOCK, MekanismBlocks.REFINED_GLOWSTONE_BLOCK);
             for (PrimaryResource resource : EnumUtils.PRIMARY_RESOURCES) {
                 if (resource.getResourceBlockInfo() != null) {
-                    CreativeTabDeferredRegister.addToDisplay(event, MekanismBlocks.PROCESSED_RESOURCE_BLOCKS.get(resource));
+                    CreativeTabDeferredRegister.addToDisplay(output, MekanismBlocks.PROCESSED_RESOURCE_BLOCKS.get(resource));
                 }
             }
         } else if (tabKey == CreativeModeTabs.NATURAL_BLOCKS) {
-            CreativeTabDeferredRegister.addToDisplay(event, MekanismBlocks.SALT_BLOCK);
+            CreativeTabDeferredRegister.addToDisplay(output, MekanismBlocks.SALT_BLOCK);
             for (OreBlockType oreType : MekanismBlocks.ORES.values()) {
-                CreativeTabDeferredRegister.addToDisplay(event, oreType.stone(), oreType.deepslate());
+                CreativeTabDeferredRegister.addToDisplay(output, oreType.stone(), oreType.deepslate());
             }
         } else if (tabKey == CreativeModeTabs.FUNCTIONAL_BLOCKS) {
             for (Holder<Item> item : MekanismBlocks.BLOCKS.getSecondaryEntries()) {
@@ -91,33 +90,33 @@ public class MekanismCreativeTabs {
                 if (item.value() instanceof BlockItem blockItem) {
                     Block block = blockItem.getBlock();
                     if (block instanceof BlockTransmitter || block instanceof BlockBase<?> base && base.getType() instanceof Machine) {
-                        CreativeTabDeferredRegister.addToDisplay(event, item);
+                        CreativeTabDeferredRegister.addToDisplay(output, item);
                     }
                 }
             }
-            CreativeTabDeferredRegister.addToDisplay(event, MekanismBlocks.SECURITY_DESK, MekanismBlocks.RADIOACTIVE_WASTE_BARREL, MekanismBlocks.PERSONAL_CHEST,
+            CreativeTabDeferredRegister.addToDisplay(output, MekanismBlocks.SECURITY_DESK, MekanismBlocks.RADIOACTIVE_WASTE_BARREL, MekanismBlocks.PERSONAL_CHEST,
                   MekanismBlocks.PERSONAL_BARREL, MekanismBlocks.CHARGEPAD, MekanismBlocks.LASER, MekanismBlocks.LASER_AMPLIFIER, MekanismBlocks.LASER_TRACTOR_BEAM,
                   MekanismBlocks.QUANTUM_ENTANGLOPORTER, MekanismBlocks.OREDICTIONIFICATOR, MekanismBlocks.FUELWOOD_HEATER, MekanismBlocks.MODIFICATION_STATION,
                   MekanismBlocks.QIO_DRIVE_ARRAY, MekanismBlocks.QIO_DASHBOARD, MekanismBlocks.QIO_EXPORTER, MekanismBlocks.QIO_IMPORTER, MekanismBlocks.QIO_REDSTONE_ADAPTER);
         } else if (tabKey == CreativeModeTabs.REDSTONE_BLOCKS) {
-            CreativeTabDeferredRegister.addToDisplay(event, MekanismBlocks.INDUSTRIAL_ALARM);
+            CreativeTabDeferredRegister.addToDisplay(output, MekanismBlocks.INDUSTRIAL_ALARM);
             for (Holder<Item> item : MekanismBlocks.BLOCKS.getSecondaryEntries()) {
                 //Note: This should always be a block item
                 if (item.value() instanceof BlockItem blockItem) {
                     Block block = blockItem.getBlock();
                     if (Attribute.has(block, AttributeComparator.class)) {
-                        CreativeTabDeferredRegister.addToDisplay(event, item);
+                        CreativeTabDeferredRegister.addToDisplay(output, item);
                     } else if (block instanceof BlockTransmitter) {
                         AttributeTier<?> attribute = Attribute.get(block, AttributeTier.class);
                         if (attribute != null && !(attribute.tier() instanceof TransporterTier)) {
-                            CreativeTabDeferredRegister.addToDisplay(event, item);
+                            CreativeTabDeferredRegister.addToDisplay(output, item);
                         }
                     }
                 }
             }
-            CreativeTabDeferredRegister.addToDisplay(event, MekanismBlocks.DIVERSION_TRANSPORTER);
+            CreativeTabDeferredRegister.addToDisplay(output, MekanismBlocks.DIVERSION_TRANSPORTER);
         } else if (tabKey == CreativeModeTabs.TOOLS_AND_UTILITIES) {
-            CreativeTabDeferredRegister.addToDisplay(event,
+            CreativeTabDeferredRegister.addToDisplay(output,
                   MekanismItems.CONFIGURATOR, MekanismItems.NETWORK_READER, MekanismItems.DOSIMETER, MekanismItems.GEIGER_COUNTER, MekanismItems.DICTIONARY,
                   MekanismItems.CONFIGURATION_CARD, MekanismItems.GAUGE_DROPPER, MekanismItems.CRAFTING_FORMULA, MekanismItems.PORTABLE_QIO_DASHBOARD,
                   MekanismItems.ATOMIC_DISASSEMBLER, MekanismItems.MEKA_TOOL, MekanismItems.SCUBA_MASK, MekanismItems.SCUBA_TANK, MekanismItems.FREE_RUNNERS,
@@ -130,21 +129,21 @@ public class MekanismCreativeTabs {
                   MekanismItems.ANCHOR_UPGRADE, MekanismItems.STONE_GENERATOR_UPGRADE
             );
             //Tanks
-            CreativeTabDeferredRegister.addToDisplay(event,
+            CreativeTabDeferredRegister.addToDisplay(output,
                   MekanismBlocks.BASIC_FLUID_TANK, MekanismBlocks.ADVANCED_FLUID_TANK, MekanismBlocks.ELITE_FLUID_TANK, MekanismBlocks.ULTIMATE_FLUID_TANK,
                   MekanismBlocks.CREATIVE_FLUID_TANK
             );
-            CreativeTabDeferredRegister.addToDisplay(MekanismFluids.FLUIDS, event);
-            addFilledTanks(event.getParameters(), event, false);
+            CreativeTabDeferredRegister.addToDisplay(MekanismFluids.FLUIDS, output);
+            addFilledTanks(parameters, output, false);
         } else if (tabKey == CreativeModeTabs.COMBAT) {
-            CreativeTabDeferredRegister.addToDisplay(event, MekanismItems.ATOMIC_DISASSEMBLER, MekanismItems.FLAMETHROWER, MekanismItems.ELECTRIC_BOW,
+            CreativeTabDeferredRegister.addToDisplay(output, MekanismItems.ATOMIC_DISASSEMBLER, MekanismItems.FLAMETHROWER, MekanismItems.ELECTRIC_BOW,
                   MekanismItems.MEKA_TOOL, MekanismItems.MEKASUIT_HELMET, MekanismItems.MEKASUIT_BODYARMOR, MekanismItems.MEKASUIT_PANTS, MekanismItems.MEKASUIT_BOOTS,
                   MekanismItems.ARMORED_FREE_RUNNERS, MekanismItems.ARMORED_JETPACK);
         } else if (tabKey == CreativeModeTabs.FOOD_AND_DRINKS) {
             //Only add the filled canteen
-            event.accept(FluidUtils.getFilledVariant(MekanismItems.CANTEEN, MekanismFluids.NUTRITIONAL_PASTE), CreativeModeTab.TabVisibility.PARENT_TAB_ONLY);
+            output.accept(FluidUtils.getFilledVariant(MekanismItems.CANTEEN, MekanismFluids.NUTRITIONAL_PASTE), CreativeModeTab.TabVisibility.PARENT_TAB_ONLY);
         } else if (tabKey == CreativeModeTabs.INGREDIENTS) {
-            CreativeTabDeferredRegister.addToDisplay(event,
+            CreativeTabDeferredRegister.addToDisplay(output,
                   MekanismItems.MODULE_BASE, MekanismItems.INFUSED_ALLOY, MekanismItems.REINFORCED_ALLOY, MekanismItems.ATOMIC_ALLOY,
                   MekanismItems.BASIC_CONTROL_CIRCUIT, MekanismItems.ADVANCED_CONTROL_CIRCUIT, MekanismItems.ELITE_CONTROL_CIRCUIT, MekanismItems.ULTIMATE_CONTROL_CIRCUIT,
                   MekanismItems.ENRICHED_CARBON, MekanismItems.ENRICHED_REDSTONE, MekanismItems.ENRICHED_DIAMOND, MekanismItems.ENRICHED_OBSIDIAN,
@@ -160,7 +159,7 @@ public class MekanismCreativeTabs {
                   MekanismItems.BRONZE_INGOT, MekanismItems.STEEL_INGOT, MekanismItems.REFINED_OBSIDIAN_INGOT, MekanismItems.REFINED_GLOWSTONE_INGOT
             );
             for (Holder<Item> item : MekanismItems.PROCESSED_RESOURCES.values()) {
-                CreativeTabDeferredRegister.addToDisplay(event, item);
+                CreativeTabDeferredRegister.addToDisplay(output, item);
             }
         }
     }
