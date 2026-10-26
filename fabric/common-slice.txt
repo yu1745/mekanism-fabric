@@ -269,6 +269,7 @@ mekanism/client/render/data/ChemicalRenderData.java
 mekanism/client/render/data/FluidRenderData.java
 mekanism/client/render/data/RenderData.java
 mekanism/client/render/data/ValveRenderData.java
+mekanism/client/render/entity/RenderFlame.java
 mekanism/client/render/hud/MekaSuitEnergyLevel.java
 mekanism/client/render/hud/MekanismHUD.java
 mekanism/client/render/hud/MekanismStatusOverlay.java

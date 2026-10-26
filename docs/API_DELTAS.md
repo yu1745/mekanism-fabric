@@ -658,3 +658,8 @@ gate）BUILD SUCCESSFUL。未运行（按完成度优先策略）：全量测试
 - 四个官方 HUD 层（`LayeredDraw.Layer` 原生接口）全部接通:MekaSuitEnergyLevel（ARMOR_LEVEL 之上）、MekanismHUD（SUBTITLE_OVERLAY 之上）、MekanismStatusOverlay（原生 selected-item-name 位,ModeStatusOverlayMixin 早前已建）、RadiationOverlay（全层之下,RadiationOverlayMixin 早前已建）。1.21.1 fabric API 无分层 HUD 插入（仅尾部 HudRenderCallback）,故前两者经 `FabricHudLayersMixin` 包裹 vanilla `Gui` 构造器的两个 `LayeredDraw.add` 位点（ordinal 2/13）,与 NeoForge 插槽逐位对齐。
 - 平台适配:`FabricHudHeights.leftColumnHeight` 复刻 NeoForge `Gui.leftHeight`（vanilla 1.21.1 无此字段,renderPlayerHealth 局部变量算行）——沿 RadiationOverlay→FabricRadiationAttachments 先例;`+=8` 下游消费者缺失致最坏情形模式文本与本条 8px 重叠（记录）。MekanismHUD 的 curios 块随 curios 车道延后（装备槽主路径完整）。访问放宽镜像上游 AT 三项:Gui.subtitleOverlay、SubtitleOverlay.audibleSubtitles、SubtitleOverlay$Subtitle（HUDRenderer 字幕宽度测量用）。
 - 验收:模型 smoke 第 9 检查 `MEKANISM_FABRIC_HUD_PROOF layers=2`（新 mixin）+ 既有状态/辐射 mixin 真机运行;9/9 零缺失模型。切片 api 262 / common 1452 / platform 143。
+
+### Flame 实体渲染器（Task052 entity 渲染弧第一段,2026-10-26）
+
+- `RenderFlame`（喷火器火舌实体,手绘方块面片 + FLAME render type,无模型依赖）经 fabric `EntityRendererRegistry` 注册——vanilla `EntityRenderers.register` 为 private,loader 拥有公开注册面。Robit 渲染器随 robit 模型族切片延后（baked-model 驱动,需 RobitSpriteUploader + 两个 deferred robit 缓存模型）。
+- 验收:模型 smoke 第 10 检查 `MEKANISM_FABRIC_ENTITY_RENDERER_PROOF entities=1`,客户端 boot 注册 proof + 零缺失模型;两次连续通过。切片 api 262 / common 1453 / platform 144。真机火舌视觉(需世界内实体)留待 mcdebug GUI 会话或用户观察——注册面与渲染路径代码已真机 boot 覆盖,渲染调用未覆盖(记录残留)。
