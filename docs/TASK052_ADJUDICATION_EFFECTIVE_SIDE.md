@@ -1,6 +1,6 @@
 # Task052 adjudication — EffectiveSide server/worker thread-group semantics
 
-This resolves the priority blocker recorded in `TASK052_PAUSE_AFTER_ASTRA.md`. The pause is lifted by the user's 2026-10-26 authorization to continue the port. Per the same user instruction, the model-dispatch sections of `AGENTS.md` are moot from now on: the main agent is the sole implementer, no pi/Astra/DeepSeek dispatch applies.
+This resolves the priority blocker recorded in `TASK052_PAUSE_AFTER_ASTRA.md`. The pause is lifted by the user's 2026-10-26 authorization to continue the port, with the main agent as the sole implementer.
 
 ## Upstream mechanism (evidence)
 
