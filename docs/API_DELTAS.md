@@ -547,3 +547,13 @@ set. A real `RecipeManager` decode-and-serve case proves the served recipe repor
 eager+lazy 的 removed/clearRemoved/load 代际守卫与保留别名 fail-closed）、`CapabilityTileRegistrationTest`（3，Knot 真加载器：真实
 `registerForBlockEntity` 注册后经真实 per-find 分发验证策略/生命周期/逐-find 新鲜解析与 Team Reborn 懒工厂）。`assemble`（remapJar + 三个 slice
 gate）BUILD SUCCESSFUL。未运行（按完成度优先策略）：全量测试、packaged smoke、clean release、真实 server/client fixture。
+
+### Play 通道 (C2S) 平台差异（Task052，2026-10-26）
+
+- 官方 `IPayloadContext` 处理器统一改为 `IMekanismPacket#handle(Player)`：Fabric 的 play receiver 已解析发送玩家，`PacketUtils.config/ejector/filterManager/blockEntity` 直接接收该 `Player`。
+- 无效包拒绝：`IPayloadContext#disconnect` → `ServerPlayer#connection#disconnect`（play payload 在 Fabric 上没有 context 级断开入口）。
+- `PacketDropperUse` 通过 `ContainerType.FLUID.createHandler(stack)` 访问滴管自身的 attachment 流体罐；NeoForge 的外来 item fluid capability 在此无 attachment 等价物。
+- `PacketPortableTeleporterTeleport` 经 `MekanismEventBus` 发布真实 `MekanismTeleportEvent.PortableTeleporter`，保留可取消语义。
+- `AbstractContainerMenu#synchronizeCarriedToRemote` 在 vanilla 为 private，已加入 `mekanism.accesswidener`；用于滴管手持栈同步。
+- `PacketModeChangeCurios` 不移植：Curios 无 Fabric 对等物，官方 `PacketModeChange`（装备槽）保留。
+- 注册：25 个 C2S payload 由 `FabricServerPlayNetworking` 在 `PayloadTypeRegistry.playC2S()` 注册，并按类型各注册一个 `ServerPlayNetworking` receiver，重复注册直接抛错。

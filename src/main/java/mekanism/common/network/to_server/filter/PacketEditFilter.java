@@ -2,7 +2,6 @@ package mekanism.common.network.to_server.filter;
 
 import io.netty.handler.codec.DecoderException;
 import java.util.Optional;
-import mekanism.common.Mekanism;
 import mekanism.common.content.filter.BaseFilter;
 import mekanism.common.content.filter.FilterManager;
 import mekanism.common.content.filter.IFilter;
@@ -13,13 +12,14 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public record PacketEditFilter<FILTER extends IFilter<FILTER>>(BlockPos pos, FILTER filter, @Nullable FILTER edited) implements IMekanismPacket {
 
-    public static final CustomPacketPayload.Type<PacketEditFilter<?>> TYPE = new CustomPacketPayload.Type<>(Mekanism.rl("edit_filter"));
+    public static final CustomPacketPayload.Type<PacketEditFilter<?>> TYPE = new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("mekanism", "edit_filter"));
     public static final StreamCodec<RegistryFriendlyByteBuf, PacketEditFilter<?>> STREAM_CODEC = StreamCodec.composite(
           BlockPos.STREAM_CODEC, PacketEditFilter::pos,
           BaseFilter.GENERIC_STREAM_CODEC, PacketEditFilter::filter,
@@ -41,8 +41,8 @@ public record PacketEditFilter<FILTER extends IFilter<FILTER>>(BlockPos pos, FIL
     }
 
     @Override
-    public void handle(IPayloadContext context) {
-        FilterManager<?> filterManager = PacketUtils.filterManager(context, pos);
+    public void handle(Player player) {
+        FilterManager<?> filterManager = PacketUtils.filterManager(player, pos);
         if (filterManager != null) {
             filterManager.tryEditFilter(filter, edited);
         }

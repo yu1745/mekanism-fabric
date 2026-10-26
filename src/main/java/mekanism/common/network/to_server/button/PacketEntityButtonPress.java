@@ -4,7 +4,6 @@ import io.netty.buffer.ByteBuf;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.IntFunction;
-import mekanism.common.Mekanism;
 import mekanism.common.MekanismLang;
 import mekanism.common.network.IMekanismPacket;
 import mekanism.common.registries.MekanismContainerTypes;
@@ -12,11 +11,12 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.ByIdMap;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -26,7 +26,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public record PacketEntityButtonPress(ClickedEntityButton buttonClicked, int entityID) implements IMekanismPacket {
 
-    public static final CustomPacketPayload.Type<PacketEntityButtonPress> TYPE = new CustomPacketPayload.Type<>(Mekanism.rl("entity_button"));
+    public static final CustomPacketPayload.Type<PacketEntityButtonPress> TYPE = new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("mekanism", "entity_button"));
     public static final StreamCodec<ByteBuf, PacketEntityButtonPress> STREAM_CODEC = StreamCodec.composite(
           ClickedEntityButton.STREAM_CODEC, PacketEntityButtonPress::buttonClicked,
           ByteBufCodecs.VAR_INT, PacketEntityButtonPress::entityID,
@@ -44,8 +44,10 @@ public record PacketEntityButtonPress(ClickedEntityButton buttonClicked, int ent
     }
 
     @Override
-    public void handle(IPayloadContext context) {
-        Player player = context.player();
+    public void handle(Player sender) {
+        if (!(sender instanceof ServerPlayer player)) {
+            return;
+        }
         Entity entity = player.level().getEntity(entityID);
         MenuProvider provider = buttonClicked.getProvider(entity);
         if (provider != null) {

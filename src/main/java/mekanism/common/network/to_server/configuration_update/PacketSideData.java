@@ -2,7 +2,6 @@ package mekanism.common.network.to_server.configuration_update;
 
 import io.netty.buffer.ByteBuf;
 import mekanism.api.RelativeSide;
-import mekanism.common.Mekanism;
 import mekanism.common.lib.transmitter.TransmissionType;
 import mekanism.common.network.IMekanismPacket;
 import mekanism.common.network.MekClickType;
@@ -13,12 +12,13 @@ import mekanism.common.tile.component.config.DataType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
 
 public record PacketSideData(BlockPos pos, MekClickType clickType, RelativeSide inputSide, TransmissionType transmission) implements IMekanismPacket {
 
-    public static final CustomPacketPayload.Type<PacketSideData> TYPE = new CustomPacketPayload.Type<>(Mekanism.rl("side_data"));
+    public static final CustomPacketPayload.Type<PacketSideData> TYPE = new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("mekanism", "side_data"));
     public static final StreamCodec<ByteBuf, PacketSideData> STREAM_CODEC = StreamCodec.composite(
           BlockPos.STREAM_CODEC, PacketSideData::pos,
           MekClickType.STREAM_CODEC, PacketSideData::clickType,
@@ -34,8 +34,8 @@ public record PacketSideData(BlockPos pos, MekClickType clickType, RelativeSide 
     }
 
     @Override
-    public void handle(IPayloadContext context) {
-        TileComponentConfig configComponent = PacketUtils.config(context, pos);
+    public void handle(Player player) {
+        TileComponentConfig configComponent = PacketUtils.config(player, pos);
         if (configComponent != null) {
             ConfigInfo info = configComponent.getConfig(transmission);
             if (info != null) {

@@ -4,7 +4,6 @@ import io.netty.buffer.ByteBuf;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.IntFunction;
-import mekanism.common.Mekanism;
 import mekanism.common.MekanismLang;
 import mekanism.common.item.interfaces.IGuiItem;
 import mekanism.common.network.IMekanismPacket;
@@ -14,12 +13,13 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.ByIdMap;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.MenuProvider;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -28,7 +28,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public record PacketItemButtonPress(ClickedItemButton buttonClicked, InteractionHand hand) implements IMekanismPacket {
 
-    public static final CustomPacketPayload.Type<PacketItemButtonPress> TYPE = new CustomPacketPayload.Type<>(Mekanism.rl("item_button"));
+    public static final CustomPacketPayload.Type<PacketItemButtonPress> TYPE = new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("mekanism", "item_button"));
     public static final StreamCodec<ByteBuf, PacketItemButtonPress> STREAM_CODEC = StreamCodec.composite(
           ClickedItemButton.STREAM_CODEC, PacketItemButtonPress::buttonClicked,
           PacketUtils.INTERACTION_HAND_STREAM_CODEC, PacketItemButtonPress::hand,
@@ -42,8 +42,10 @@ public record PacketItemButtonPress(ClickedItemButton buttonClicked, Interaction
     }
 
     @Override
-    public void handle(IPayloadContext context) {
-        Player player = context.player();
+    public void handle(Player sender) {
+        if (!(sender instanceof ServerPlayer player)) {
+            return;
+        }
         ItemStack stack = player.getItemInHand(hand);
         if (stack.getItem() instanceof IGuiItem) {
             MenuProvider provider = buttonClicked.getProvider(stack, hand);

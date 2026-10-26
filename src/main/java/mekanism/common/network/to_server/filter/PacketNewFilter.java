@@ -1,6 +1,5 @@
 package mekanism.common.network.to_server.filter;
 
-import mekanism.common.Mekanism;
 import mekanism.common.content.filter.BaseFilter;
 import mekanism.common.content.filter.FilterManager;
 import mekanism.common.content.filter.IFilter;
@@ -10,12 +9,13 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
 
 public record PacketNewFilter(BlockPos pos, IFilter<?> filter) implements IMekanismPacket {
 
-    public static final CustomPacketPayload.Type<PacketNewFilter> TYPE = new CustomPacketPayload.Type<>(Mekanism.rl("new_filter"));
+    public static final CustomPacketPayload.Type<PacketNewFilter> TYPE = new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("mekanism", "new_filter"));
     public static final StreamCodec<RegistryFriendlyByteBuf, PacketNewFilter> STREAM_CODEC = StreamCodec.composite(
           BlockPos.STREAM_CODEC, PacketNewFilter::pos,
           BaseFilter.GENERIC_STREAM_CODEC, PacketNewFilter::filter,
@@ -29,8 +29,8 @@ public record PacketNewFilter(BlockPos pos, IFilter<?> filter) implements IMekan
     }
 
     @Override
-    public void handle(IPayloadContext context) {
-        FilterManager<?> filterManager = PacketUtils.filterManager(context, pos);
+    public void handle(Player player) {
+        FilterManager<?> filterManager = PacketUtils.filterManager(player, pos);
         if (filterManager != null) {
             filterManager.tryAddFilter(filter, true);
         }

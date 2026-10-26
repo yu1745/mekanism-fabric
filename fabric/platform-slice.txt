@@ -118,3 +118,4 @@ mekanism/fabric/mixin/item/ItemStackMekaSuitDamageMixin.java
 mekanism/fabric/mixin/item/ClientElytraStartMixin.java
 mekanism/fabric/item/FabricCreativeTabContents.java
 mekanism/fabric/mixin/item/ResultSlotCraftingMixin.java
+mekanism/fabric/network/FabricServerPlayNetworking.java

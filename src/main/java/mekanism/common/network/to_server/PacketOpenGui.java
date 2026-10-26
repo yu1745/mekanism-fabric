@@ -5,7 +5,6 @@ import java.util.function.IntFunction;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import mekanism.api.functions.ConstantPredicates;
-import mekanism.common.Mekanism;
 import mekanism.common.MekanismLang;
 import mekanism.common.inventory.container.ContainerProvider;
 import mekanism.common.inventory.container.ModuleTweakerContainer;
@@ -14,15 +13,15 @@ import mekanism.common.registries.MekanismContainerTypes;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.ByIdMap;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Player;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.jetbrains.annotations.NotNull;
 
 public record PacketOpenGui(GuiType guiType) implements IMekanismPacket {
 
-    public static final CustomPacketPayload.Type<PacketOpenGui> TYPE = new CustomPacketPayload.Type<>(Mekanism.rl("open_gui"));
+    public static final CustomPacketPayload.Type<PacketOpenGui> TYPE = new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("mekanism", "open_gui"));
     public static final StreamCodec<ByteBuf, PacketOpenGui> STREAM_CODEC = GuiType.STREAM_CODEC.map(
           PacketOpenGui::new, PacketOpenGui::guiType
     );
@@ -34,8 +33,7 @@ public record PacketOpenGui(GuiType guiType) implements IMekanismPacket {
     }
 
     @Override
-    public void handle(IPayloadContext context) {
-        Player player = context.player();
+    public void handle(Player player) {
         if (guiType.shouldOpenForPlayer.test(player)) {
             player.openMenu(guiType.containerSupplier.get());
         }

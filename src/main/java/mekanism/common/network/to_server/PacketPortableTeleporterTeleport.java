@@ -4,8 +4,8 @@ import io.netty.buffer.ByteBuf;
 import mekanism.api.Action;
 import mekanism.api.AutomationType;
 import mekanism.api.energy.IEnergyContainer;
+import mekanism.api.event.MekanismEventBus;
 import mekanism.api.event.MekanismTeleportEvent;
-import mekanism.common.Mekanism;
 import mekanism.common.content.teleporter.TeleporterFrequency;
 import mekanism.common.item.ItemPortableTeleporter;
 import mekanism.common.lib.frequency.Frequency.FrequencyIdentity;
@@ -20,6 +20,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -28,13 +31,11 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.portal.DimensionTransition;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.jetbrains.annotations.NotNull;
 
 public record PacketPortableTeleporterTeleport(InteractionHand currentHand, FrequencyIdentity identity) implements IMekanismPacket {
 
-    public static final CustomPacketPayload.Type<PacketPortableTeleporterTeleport> TYPE = new CustomPacketPayload.Type<>(Mekanism.rl("portable_teleport"));
+    public static final CustomPacketPayload.Type<PacketPortableTeleporterTeleport> TYPE = new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("mekanism", "portable_teleport"));
     public static final StreamCodec<ByteBuf, PacketPortableTeleporterTeleport> STREAM_CODEC = StreamCodec.composite(
           PacketUtils.INTERACTION_HAND_STREAM_CODEC, PacketPortableTeleporterTeleport::currentHand,
           FrequencyType.TELEPORTER.getIdentitySerializer().streamCodec(), PacketPortableTeleporterTeleport::identity,
@@ -48,8 +49,10 @@ public record PacketPortableTeleporterTeleport(InteractionHand currentHand, Freq
     }
 
     @Override
-    public void handle(IPayloadContext context) {
-        ServerPlayer player = (ServerPlayer) context.player();
+    public void handle(Player sender) {
+        if (!(sender instanceof ServerPlayer player)) {
+            return;
+        }
         ItemStack stack = player.getItemInHand(currentHand);
         if (!stack.isEmpty() && stack.getItem() instanceof ItemPortableTeleporter) {
             TeleporterFrequency found = FrequencyType.TELEPORTER.getFrequency(identity, player.getUUID());
@@ -80,7 +83,7 @@ public record PacketPortableTeleporterTeleport(InteractionHand currentHand, Freq
                         teleporter.teleDelay = 5;
                         BlockPos teleporterTargetPos = teleporter.getTeleporterTargetPos();
                         MekanismTeleportEvent.PortableTeleporter event = new MekanismTeleportEvent.PortableTeleporter(player, teleporterTargetPos, coords.dimension(), stack, energyCost);
-                        if (NeoForge.EVENT_BUS.post(event).isCanceled()) {
+                        if (MekanismEventBus.post(event).isCanceled()) {
                             //Fail if the event was cancelled
                             return;
                         }

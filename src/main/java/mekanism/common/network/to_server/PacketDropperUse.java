@@ -9,13 +9,14 @@ import mekanism.api.chemical.IChemicalHandler;
 import mekanism.api.chemical.IChemicalTank;
 import mekanism.api.chemical.IMekanismChemicalHandler;
 import mekanism.api.fluid.IExtendedFluidTank;
+import mekanism.api.fluid.FluidStack;
 import mekanism.api.fluid.IMekanismFluidHandler;
 import mekanism.api.radiation.IRadiationManager;
 import mekanism.api.tier.BaseTier;
-import mekanism.common.Mekanism;
 import mekanism.common.advancements.MekanismCriteriaTriggers;
 import mekanism.common.advancements.triggers.UseGaugeDropperTrigger.UseDropperAction;
 import mekanism.common.block.attribute.Attribute;
+import mekanism.common.attachments.containers.ContainerType;
 import mekanism.common.capabilities.Capabilities;
 import mekanism.common.item.ItemGaugeDropper;
 import mekanism.common.lib.multiblock.MultiblockData;
@@ -28,19 +29,17 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.ByIdMap;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandlerItem;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.jetbrains.annotations.NotNull;
 
 public record PacketDropperUse(BlockPos pos, DropperAction action, TankType tankType, int tankId) implements IMekanismPacket {
 
-    public static final CustomPacketPayload.Type<PacketDropperUse> TYPE = new CustomPacketPayload.Type<>(Mekanism.rl("use_dropper"));
+    public static final CustomPacketPayload.Type<PacketDropperUse> TYPE = new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("mekanism", "use_dropper"));
     public static final StreamCodec<ByteBuf, PacketDropperUse> STREAM_CODEC = StreamCodec.composite(
           BlockPos.STREAM_CODEC, PacketDropperUse::pos,
           DropperAction.STREAM_CODEC, PacketDropperUse::action,
@@ -56,8 +55,8 @@ public record PacketDropperUse(BlockPos pos, DropperAction action, TankType tank
     }
 
     @Override
-    public void handle(IPayloadContext context) {
-        if (tankId >= 0 && context.player() instanceof ServerPlayer player) {
+    public void handle(Player sender) {
+        if (tankId >= 0 && sender instanceof ServerPlayer player) {
             ItemStack stack = player.containerMenu.getCarried();
             if (!stack.isEmpty() && stack.getItem() instanceof ItemGaugeDropper) {
                 TileEntityMekanism tile = WorldUtils.getTileEntity(TileEntityMekanism.class, player.level(), pos);
@@ -134,8 +133,10 @@ public record PacketDropperUse(BlockPos pos, DropperAction action, TankType tank
             MekanismCriteriaTriggers.USE_GAUGE_DROPPER.value().trigger(player, UseDropperAction.DUMP);
             return;
         }
-        IFluidHandlerItem fluidHandlerItem = Capabilities.FLUID.getCapability(stack);
-        if (fluidHandlerItem instanceof IMekanismFluidHandler fluidHandler) {
+        //Fabric port delta: the item's fluid tank is the Mekanism attachment container (the official Forge item capability is the same
+        //attachment on NeoForge); foreign fluid-item capabilities have no attachment-backed equivalent here.
+        IMekanismFluidHandler fluidHandler = ContainerType.FLUID.createHandler(stack);
+        if (fluidHandler != null) {
             IExtendedFluidTank itemFluidTank = fluidHandler.getFluidTank(0, null);
             if (itemFluidTank != null) {
                 if (action == DropperAction.FILL_DROPPER) {

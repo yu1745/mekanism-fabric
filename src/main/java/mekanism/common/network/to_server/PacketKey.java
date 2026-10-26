@@ -2,17 +2,18 @@ package mekanism.common.network.to_server;
 
 import io.netty.buffer.ByteBuf;
 import java.util.UUID;
-import mekanism.common.Mekanism;
+import mekanism.common.base.KeySync;
 import mekanism.common.network.IMekanismPacket;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
 
 public record PacketKey(int key, boolean add) implements IMekanismPacket {
 
-    public static final CustomPacketPayload.Type<PacketKey> TYPE = new CustomPacketPayload.Type<>(Mekanism.rl("key"));
+    public static final CustomPacketPayload.Type<PacketKey> TYPE = new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("mekanism", "key"));
     public static final StreamCodec<ByteBuf, PacketKey> STREAM_CODEC = StreamCodec.composite(
           ByteBufCodecs.VAR_INT, PacketKey::key,
           ByteBufCodecs.BOOL, PacketKey::add,
@@ -26,12 +27,12 @@ public record PacketKey(int key, boolean add) implements IMekanismPacket {
     }
 
     @Override
-    public void handle(IPayloadContext context) {
-        UUID player = context.player().getUUID();
+    public void handle(Player player) {
+        UUID playerId = player.getUUID();
         if (add) {
-            Mekanism.keyMap.add(player, key);
+            KeySync.INSTANCE.add(playerId, key);
         } else {
-            Mekanism.keyMap.remove(player, key);
+            KeySync.INSTANCE.remove(playerId, key);
         }
     }
 }

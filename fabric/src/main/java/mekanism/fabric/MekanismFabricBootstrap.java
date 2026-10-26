@@ -18,6 +18,7 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import mekanism.fabric.config.FabricMekanismConfigManager;
 import mekanism.fabric.datamaps.FabricMekanismDataMaps;
 import mekanism.fabric.network.FabricMekanismNetworking;
+import mekanism.fabric.network.FabricServerPlayNetworking;
 import mekanism.fabric.network.FabricChemicalNetworking;
 import mekanism.fabric.network.FabricContainerNetworking;
 import mekanism.fabric.network.FabricTileUpdateNetworking;
@@ -85,6 +86,7 @@ public final class MekanismFabricBootstrap implements ModInitializer {
         verifyIngredientCreatorService();
         verifyRecipeRegistration();
         FabricMekanismNetworking.Registration networking = FabricMekanismNetworking.initialize();
+        FabricServerPlayNetworking.initialize();
         FabricChemicalNetworking.initialize();
         FabricTileUpdateNetworking.initialize();
         FabricContainerNetworking.initialize();

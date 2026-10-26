@@ -10,7 +10,6 @@ import java.util.stream.Stream;
 import mekanism.api.robit.RobitSkin;
 import mekanism.api.security.IEntitySecurityUtils;
 import mekanism.api.text.TextComponentUtil;
-import mekanism.common.Mekanism;
 import mekanism.common.entity.EntityRobit;
 import mekanism.common.entity.RobitPrideSkinData;
 import mekanism.common.network.IMekanismPacket;
@@ -19,16 +18,16 @@ import net.minecraft.Util;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.jetbrains.annotations.NotNull;
 
 public record PacketRobitName(int entityId, String name) implements IMekanismPacket {
 
     public static final int MAX_NAME_LENGTH = 50;
-    public static final CustomPacketPayload.Type<PacketRobitName> TYPE = new CustomPacketPayload.Type<>(Mekanism.rl("robit_name"));
+    public static final CustomPacketPayload.Type<PacketRobitName> TYPE = new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("mekanism", "robit_name"));
     public static final StreamCodec<ByteBuf, PacketRobitName> STREAM_CODEC = StreamCodec.composite(
           ByteBufCodecs.VAR_INT, PacketRobitName::entityId,
           ByteBufCodecs.stringUtf8(MAX_NAME_LENGTH), PacketRobitName::name,
@@ -59,11 +58,10 @@ public record PacketRobitName(int entityId, String name) implements IMekanismPac
     }
 
     @Override
-    public void handle(IPayloadContext context) {
+    public void handle(Player player) {
         if (!hasContent(name)) {//Ensure the client sent a valid string
             return;
         }
-        Player player = context.player();
         Entity entity = player.level().getEntity(entityId);
         //Validate the player can access the robit before changing the robit's name
         if (entity instanceof EntityRobit robit && IEntitySecurityUtils.INSTANCE.canAccess(player, robit)) {

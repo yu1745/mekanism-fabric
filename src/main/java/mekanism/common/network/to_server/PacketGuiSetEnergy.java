@@ -3,7 +3,6 @@ package mekanism.common.network.to_server;
 import io.netty.buffer.ByteBuf;
 import java.util.function.IntFunction;
 import java.util.function.ObjLongConsumer;
-import mekanism.common.Mekanism;
 import mekanism.common.network.IMekanismPacket;
 import mekanism.common.network.PacketUtils;
 import mekanism.common.tile.base.TileEntityMekanism;
@@ -13,13 +12,14 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.ByIdMap;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.jetbrains.annotations.NotNull;
 
 public record PacketGuiSetEnergy(GuiEnergyValue interaction, BlockPos pos, long value) implements IMekanismPacket {
 
-    public static final CustomPacketPayload.Type<PacketGuiSetEnergy> TYPE = new CustomPacketPayload.Type<>(Mekanism.rl("set_energy"));
+    public static final CustomPacketPayload.Type<PacketGuiSetEnergy> TYPE = new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("mekanism", "set_energy"));
     public static final StreamCodec<ByteBuf, PacketGuiSetEnergy> STREAM_CODEC = StreamCodec.composite(
           GuiEnergyValue.STREAM_CODEC, PacketGuiSetEnergy::interaction,
           BlockPos.STREAM_CODEC, PacketGuiSetEnergy::pos,
@@ -34,8 +34,8 @@ public record PacketGuiSetEnergy(GuiEnergyValue interaction, BlockPos pos, long 
     }
 
     @Override
-    public void handle(IPayloadContext context) {
-        if (PacketUtils.blockEntity(context, pos) instanceof TileEntityMekanism tile) {
+    public void handle(Player player) {
+        if (PacketUtils.blockEntity(player, pos) instanceof TileEntityMekanism tile) {
             interaction.consume(tile, value);
         }
     }

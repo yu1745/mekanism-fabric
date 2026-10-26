@@ -4,7 +4,6 @@ import io.netty.buffer.ByteBuf;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.IntFunction;
-import mekanism.common.Mekanism;
 import mekanism.common.MekanismLang;
 import mekanism.common.block.attribute.Attribute;
 import mekanism.common.block.attribute.AttributeGui;
@@ -19,11 +18,12 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.ByIdMap;
 import net.minecraft.world.MenuProvider;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -33,7 +33,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public record PacketTileButtonPress(ClickedTileButton buttonClicked, BlockPos pos) implements IMekanismPacket {
 
-    public static final CustomPacketPayload.Type<PacketTileButtonPress> TYPE = new CustomPacketPayload.Type<>(Mekanism.rl("tile_button"));
+    public static final CustomPacketPayload.Type<PacketTileButtonPress> TYPE = new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("mekanism", "tile_button"));
     public static final StreamCodec<ByteBuf, PacketTileButtonPress> STREAM_CODEC = StreamCodec.composite(
           ClickedTileButton.STREAM_CODEC, PacketTileButtonPress::buttonClicked,
           BlockPos.STREAM_CODEC, PacketTileButtonPress::pos,
@@ -51,8 +51,10 @@ public record PacketTileButtonPress(ClickedTileButton buttonClicked, BlockPos po
     }
 
     @Override
-    public void handle(IPayloadContext context) {
-        Player player = context.player();
+    public void handle(Player sender) {
+        if (!(sender instanceof ServerPlayer player)) {
+            return;
+        }
         TileEntityMekanism tile = WorldUtils.getTileEntity(TileEntityMekanism.class, player.level(), pos);
         MenuProvider provider = buttonClicked.getProvider(tile);
         if (provider != null) {

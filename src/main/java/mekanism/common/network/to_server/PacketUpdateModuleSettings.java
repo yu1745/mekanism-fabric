@@ -5,7 +5,6 @@ import mekanism.api.MekanismAPI;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.gear.ModuleData;
 import mekanism.api.gear.config.ModuleConfig;
-import mekanism.common.Mekanism;
 import mekanism.common.MekanismLang;
 import mekanism.common.content.gear.ModuleContainer;
 import mekanism.common.content.gear.ModuleHelper;
@@ -18,13 +17,12 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.jetbrains.annotations.NotNull;
 
 @NothingNullByDefault
 public record PacketUpdateModuleSettings(int slotId, ModuleConfigTarget<?> target) implements IMekanismPacket {
 
-    public static final CustomPacketPayload.Type<PacketUpdateModuleSettings> TYPE = new CustomPacketPayload.Type<>(Mekanism.rl("update_module"));
+    public static final CustomPacketPayload.Type<PacketUpdateModuleSettings> TYPE = new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("mekanism", "update_module"));
     public static final StreamCodec<RegistryFriendlyByteBuf, PacketUpdateModuleSettings> STREAM_CODEC = StreamCodec.composite(
           ByteBufCodecs.VAR_INT, PacketUpdateModuleSettings::slotId,
           ModuleConfigTarget.STREAM_CODEC, PacketUpdateModuleSettings::target,
@@ -42,8 +40,7 @@ public record PacketUpdateModuleSettings(int slotId, ModuleConfigTarget<?> targe
     }
 
     @Override
-    public void handle(IPayloadContext context) {
-        Player player = context.player();
+    public void handle(Player player) {
         ItemStack stack = player.getInventory().getItem(slotId);
         ModuleContainer container = ModuleHelper.get().getModuleContainer(stack);
         //Validate the container still has the container, and it didn't end up somehow getting removed by the time the server received the packet
@@ -53,7 +50,10 @@ public record PacketUpdateModuleSettings(int slotId, ModuleConfigTarget<?> targe
             } catch (IllegalArgumentException | IllegalStateException e) {
                 //If the packet is invalid, for example if a config got sent setting to an enum value that is not in range
                 // or if a module config with the given name couldn't be found
-                context.disconnect(MekanismLang.INVALID_PACKET.translate(e.getMessage()));
+                if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
+                    //Fabric port delta: a play payload cannot disconnect through the NeoForge context; disconnect the sender directly.
+                    serverPlayer.connection.disconnect(MekanismLang.INVALID_PACKET.translate(e.getMessage()));
+                }
             }
         }
     }

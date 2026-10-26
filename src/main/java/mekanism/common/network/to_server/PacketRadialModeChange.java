@@ -5,7 +5,7 @@ import java.util.List;
 import mekanism.api.radial.RadialData;
 import mekanism.api.radial.mode.INestedRadialMode;
 import mekanism.api.radial.mode.IRadialMode;
-import mekanism.common.Mekanism;
+import mekanism.api.MekanismAPI;
 import mekanism.common.lib.radial.IGenericRadialModeItem;
 import mekanism.common.network.IMekanismPacket;
 import mekanism.common.network.PacketUtils;
@@ -16,12 +16,11 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.jetbrains.annotations.NotNull;
 
 public record PacketRadialModeChange(EquipmentSlot slot, List<ResourceLocation> path, int networkRepresentation) implements IMekanismPacket {
 
-    public static final CustomPacketPayload.Type<PacketRadialModeChange> TYPE = new CustomPacketPayload.Type<>(Mekanism.rl("radial_mode"));
+    public static final CustomPacketPayload.Type<PacketRadialModeChange> TYPE = new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("mekanism", "radial_mode"));
     public static final StreamCodec<ByteBuf, PacketRadialModeChange> STREAM_CODEC = StreamCodec.composite(
           PacketUtils.EQUIPMENT_SLOT_STREAM_CODEC, PacketRadialModeChange::slot,
           ResourceLocation.STREAM_CODEC.apply(ByteBufCodecs.list()), PacketRadialModeChange::path,
@@ -37,8 +36,7 @@ public record PacketRadialModeChange(EquipmentSlot slot, List<ResourceLocation> 
 
     @Override
     @SuppressWarnings("ConstantConditions")//not null, validated by hasNestedData
-    public void handle(IPayloadContext context) {
-        Player player = context.player();
+    public void handle(Player player) {
         ItemStack stack = player.getItemBySlot(slot);
         if (!stack.isEmpty() && stack.getItem() instanceof IGenericRadialModeItem radialModeItem) {
             RadialData<?> radialData = radialModeItem.getRadialData(stack);
@@ -46,7 +44,7 @@ public record PacketRadialModeChange(EquipmentSlot slot, List<ResourceLocation> 
                 for (ResourceLocation path : path) {
                     INestedRadialMode nestedData = radialData.fromIdentifier(path);
                     if (nestedData == null || !nestedData.hasNestedData()) {
-                        Mekanism.logger.warn("Could not find path ({}) in current radial data.", path);
+                        MekanismAPI.logger.warn("Could not find path ({}) in current radial data.", path);
                         return;
                     }
                     radialData = nestedData.nestedData();
