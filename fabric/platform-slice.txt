@@ -122,6 +122,7 @@ mekanism/fabric/radiation/FabricRadiationAttachments.java
 mekanism/fabric/radiation/FabricRadiationClientLifecycle.java
 mekanism/fabric/radiation/FabricRadiationLifecycle.java
 mekanism/fabric/recipe/FabricIngredientCreatorProvider.java
+mekanism/fabric/recipe/FabricModVersionLoadedCondition.java
 mekanism/fabric/recipe/FabricRecipeCacheClientLifecycle.java
 mekanism/fabric/recipe/FabricRecipeCacheLifecycle.java
 mekanism/fabric/recipe/FabricRecipeRegistration.java

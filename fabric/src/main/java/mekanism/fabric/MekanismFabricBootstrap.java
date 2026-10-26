@@ -49,6 +49,8 @@ public final class MekanismFabricBootstrap implements ModInitializer {
 
     @Override
     public void onInitialize() {
+        //The compat recipes' mekanism-namespaced version condition must register before any datapack load.
+        mekanism.fabric.recipe.FabricModVersionLoadedCondition.register();
         //Task052 Q4 lifecycle owner: capture the starting server (no overworld access here), and on the post-save SERVER_STOPPED tail run the domain
         // cleanup in the original Mekanism.serverStopped order before releasing the shared server reference for the same server instance only
         ServerLifecycleEvents.SERVER_STARTING.register(MekanismServerLifecycle::captureStartingServer);

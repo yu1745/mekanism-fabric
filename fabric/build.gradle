@@ -196,7 +196,7 @@ def platformSlice = loadSlice('platform-slice.txt')
 def apiSliceFiles = apiSlice.collect { file("../src/api/java/${it}") }
 def commonSliceFiles = commonSlice.collect { file("../src/main/java/${it}") }
 def platformSliceFiles = platformSlice.collect { file("src/main/java/${it}") }
-if (apiSlice.size() != 262 || commonSlice.size() != 1449 || platformSlice.size() != 140) {
+if (apiSlice.size() != 262 || commonSlice.size() != 1449 || platformSlice.size() != 141) {
     throw new GradleException("Unexpected Fabric source slice counts: api=${apiSlice.size()} common=${commonSlice.size()} platform=${platformSlice.size()}")
 }
 
@@ -656,6 +656,57 @@ dependencies {
 }
 
 def resolvedModVersion = project.version.toString()
+//The 637 official compat recipes gate themselves on other mods via the NeoForge `neoforge:conditions`
+//wrapper, which has no Fabric equivalent. The packaging transform is mechanical and documented:
+//the wrapper key becomes `fabric:load_conditions`, `neoforge:mod_loaded` becomes
+//`fabric:all_mods_loaded`, `neoforge:not` maps one-to-one, and `neoforge:tag_empty` becomes
+//`fabric:tags_populated` under a `fabric:not` (delta: Fabric checks tag existence, not emptiness -
+//only visible for a tag that exists while empty, where the recipe loads but matches nothing).
+//Official sources stay byte-unchanged; only the packaged form is transformed.
+tasks.register('transformCompatRecipes') {
+    def srcDir = file('../src/datagen/generated/mekanism/data/mekanism/recipe/compat')
+    def outputDir = layout.buildDirectory.dir('transformed-compat')
+    inputs.dir srcDir
+    outputs.dir outputDir
+    doLast {
+        def mapCondition
+        mapCondition = { def condition ->
+            def type = condition['type']
+            if (type == 'neoforge:mod_loaded') {
+                return [condition: 'fabric:all_mods_loaded', values: [condition['modid']]]
+            }
+            if (type == 'neoforge:not') {
+                return [condition: 'fabric:not', value: mapCondition(condition['value'])]
+            }
+            if (type == 'neoforge:tag_empty') {
+                return [condition: 'fabric:tags_populated', registry: 'minecraft:item', values: [condition['tag']]]
+            }
+            if (type == 'mekanism:mod_version_loaded') {
+                //Handled by the port's FabricModVersionLoadedCondition: same mekanism id, same fields.
+                return [condition: 'mekanism:mod_version_loaded', modid: condition['modid'], version: condition['version']]
+            }
+            throw new GradleException('Unmapped compat condition type: ' + type)
+        }
+        def json = new JsonSlurper()
+        def outDir = outputDir.get().asFile
+        if (outDir.exists()) {
+            outDir.deleteDir()
+        }
+        int count = 0
+        srcDir.eachFileRecurse(groovy.io.FileType.FILES) { f ->
+            def relative = srcDir.toPath().relativize(f.toPath()).toFile()
+            def target = new File(outDir, 'data/mekanism/recipe/compat/' + relative.getPath())
+            target.parentFile.mkdirs()
+            def root = json.parse(f)
+            def conditions = root.remove('neoforge:conditions')
+            root['fabric:load_conditions'] = conditions.collect { mapCondition(it) }
+            target.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(root))
+            count++
+        }
+        logger.lifecycle('transformed {} compat recipes for the Fabric condition wrapper', count)
+    }
+}
+
 processResources {
     duplicatesStrategy = DuplicatesStrategy.FAIL
     inputs.property 'version', resolvedModVersion
@@ -735,9 +786,8 @@ processResources {
         //or foreign-mod references).
         include 'data/mekanism/advancement/**'
         //Official recipes: the NeoForge typed ingredient forms (neoforge:compound/difference/intersection) decode
-        //through the port's ItemStackIngredient codec, so the full core catalog ships. `compat/**` targets other mods
-        //and is gated by the NeoForge `neoforge:conditions` wrapper, which has no Fabric equivalent without a packaging
-        //transform - that transform is the remaining datagen/compatibility slice.
+        //through the port's ItemStackIngredient codec, so the full core catalog ships. The compat recipes copy from
+        //the condition-transform task below; the raw `neoforge:conditions` forms stay out of this spec only.
         include 'data/mekanism/recipe/**'
         exclude 'data/mekanism/recipe/compat/**'
         include 'data/mekanism/mekanism/robit_skin/**'
@@ -749,6 +799,9 @@ processResources {
         include 'data/mekanism/worldgen/configured_feature/*.json'
         include 'data/mekanism/worldgen/placed_feature/*.json'
         include 'data/mekanism/neoforge/biome_modifier/*.json'
+    }
+    from(tasks.named('transformCompatRecipes')) {
+        include 'data/mekanism/recipe/compat/**'
     }
 }
 
