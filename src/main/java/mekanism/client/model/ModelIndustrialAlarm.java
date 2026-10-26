@@ -2,8 +2,8 @@ package mekanism.client.model;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import mekanism.api.MekanismAPI;
 import mekanism.client.render.MekanismRenderType;
-import mekanism.common.Mekanism;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.MekanismUtils.ResourceType;
 import net.minecraft.client.model.geom.EntityModelSet;
@@ -20,8 +20,11 @@ import net.minecraft.util.Mth;
 import org.jetbrains.annotations.NotNull;
 
 public class ModelIndustrialAlarm extends MekanismJavaModel {
+    private static ResourceLocation rl(String path) {
+        return ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, path);
+    }
 
-    public static final ModelLayerLocation ALARM_LAYER = new ModelLayerLocation(Mekanism.rl("industrial_alarm"), "main");
+    public static final ModelLayerLocation ALARM_LAYER = new ModelLayerLocation(rl("industrial_alarm"), "main");
     private static final ResourceLocation TEXTURE_ACTIVE = MekanismUtils.getResource(ResourceType.RENDER, "industrial_alarm_active.png");
 
     private static final ModelPartData BULB = new ModelPartData("bulb", CubeListBuilder.create()

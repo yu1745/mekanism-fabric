@@ -2,10 +2,10 @@ package mekanism.client.model;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import mekanism.api.MekanismAPI;
 import mekanism.api.SupportsColorMap;
 import mekanism.api.tier.BaseTier;
 import mekanism.client.render.MekanismRenderType;
-import mekanism.common.Mekanism;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.MekanismUtils.ResourceType;
 import net.minecraft.client.model.geom.EntityModelSet;
@@ -20,8 +20,11 @@ import net.minecraft.util.FastColor;
 import org.jetbrains.annotations.NotNull;
 
 public class ModelEnergyCore extends MekanismJavaModel {
+    private static ResourceLocation rl(String path) {
+        return ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, path);
+    }
 
-    public static final ModelLayerLocation CORE_LAYER = new ModelLayerLocation(Mekanism.rl("energy_core"), "main");
+    public static final ModelLayerLocation CORE_LAYER = new ModelLayerLocation(rl("energy_core"), "main");
     private static final ResourceLocation CORE_TEXTURE = MekanismUtils.getResource(ResourceType.RENDER, "energy_core.png");
 
     private static final ModelPartData CUBE = new ModelPartData("cube", CubeListBuilder.create()

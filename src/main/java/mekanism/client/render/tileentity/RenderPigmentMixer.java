@@ -20,9 +20,7 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.client.model.data.ModelData;
 import org.jetbrains.annotations.Nullable;
 
 @NothingNullByDefault
@@ -77,7 +75,7 @@ public class RenderPigmentMixer extends MekanismTileEntityRenderer<TileEntityPig
     public void renderWireFrame(BlockEntity tile, float partialTick, PoseStack matrix, VertexConsumer buffer) {
         if (tile instanceof TileEntityPigmentMixer mixer) {
             if (lines == null) {
-                lines = Outlines.extract(MekanismModelCache.INSTANCE.PIGMENT_MIXER_SHAFT.getBakedModel(), null, tile.getLevel().random, ModelData.EMPTY, null);
+                lines = Outlines.extract(MekanismModelCache.INSTANCE.PIGMENT_MIXER_SHAFT.getBakedModel(), null, tile.getLevel().random);
             }
             setupRenderer(mixer, partialTick, matrix);
             Pose pose = matrix.last();
@@ -100,9 +98,4 @@ public class RenderPigmentMixer extends MekanismTileEntityRenderer<TileEntityPig
         matrix.translate(-shift, 0, -shift);
     }
 
-    @Override
-    public AABB getRenderBoundingBox(TileEntityPigmentMixer tile) {
-        //We only care about the position that is above because we only use the BER to render the shaft which is in the upper block
-        return new AABB(tile.getBlockPos().above());
-    }
 }

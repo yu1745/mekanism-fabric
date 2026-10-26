@@ -25,6 +25,14 @@ import mekanism.client.render.RenderResizableCuboid.FaceDisplay;
 import mekanism.client.render.data.FluidRenderData;
 import mekanism.client.render.data.ValveRenderData;
 import mekanism.client.render.lib.ColorAtlas;
+import mekanism.client.render.tileentity.RenderDigitalMiner;
+import mekanism.client.render.tileentity.RenderDimensionalStabilizer;
+import mekanism.client.render.tileentity.RenderFluidTank;
+import mekanism.client.render.tileentity.RenderNutritionalLiquifier;
+import mekanism.client.render.tileentity.RenderPigmentMixer;
+import mekanism.client.render.tileentity.RenderSeismicVibrator;
+import mekanism.client.render.tileentity.RenderTeleporter;
+
 import mekanism.client.render.lib.ColorAtlas.ColorRegistryObject;
 import mekanism.common.lib.Color;
 import mekanism.common.lib.multiblock.IValveHandler.ValveData;
@@ -291,10 +299,9 @@ public class MekanismRenderer {
 
     /**
      * Fabric port delta: NeoForge's TextureAtlasStitchedEvent is replicated by the platform TextureAtlasMixin (after
-     * TextureAtlas#upload). The per-renderer sprite-reset fan-out (RenderLogisticalTransporter.onStitch,
-     * RenderTransmitterBase.onStitch, ModelRenderer/RenderDigitalMiner/RenderDimensionalStabilizer/RenderFluidTank/
-     * RenderNutritionalLiquifier/RenderPigmentMixer/RenderMechanicalPipe/RenderSeismicVibrator reset hooks and
-     * RenderTickHandler.resetCached) belongs to the block-entity-renderer lane and is wired when those renderers land.
+     * TextureAtlas#upload). The per-renderer sprite-reset fan-out for the tile entity renderers and the level-render
+     * cache is restored here; the transmitter renderer resets (RenderLogisticalTransporter/RenderTransmitterBase/
+     * RenderMechanicalPipe.onStitch) stay deferred with the transmitter BER lane.
      */
     public static void onStitch(TextureAtlas map) {
         for (TransmissionType type : EnumUtils.TRANSMISSION_TYPES) {
@@ -308,10 +315,16 @@ public class MekanismRenderer {
         teleporterPortal = map.getSprite(rl("block/teleporter_portal"));
 
         //Note: These are called in post rather than pre to make sure the icons have properly been stitched/attached
-        //Deferred with the BER/render lane; restore there: RenderLogisticalTransporter.onStitch(map), RenderTransmitterBase.onStitch(),
-        //RenderDigitalMiner.resetCachedVisuals(), RenderDimensionalStabilizer.resetCachedVisuals(), RenderFluidTank.resetCachedModels(),
-        //RenderNutritionalLiquifier.resetCachedModels(), RenderPigmentMixer.resetCached(), RenderMechanicalPipe.onStitch(),
-        //RenderSeismicVibrator.resetCached(), RenderTickHandler.resetCached(), RenderTeleporter.resetCachedModels()
+        //The tile-lane resets are live; the transmitter-lane resets restore with that lane:
+        //RenderLogisticalTransporter.onStitch(map), RenderTransmitterBase.onStitch(), RenderMechanicalPipe.onStitch()
+        RenderDigitalMiner.resetCachedVisuals();
+        RenderDimensionalStabilizer.resetCachedVisuals();
+        RenderFluidTank.resetCachedModels();
+        RenderNutritionalLiquifier.resetCachedModels();
+        RenderPigmentMixer.resetCached();
+        RenderSeismicVibrator.resetCached();
+        RenderTeleporter.resetCachedModels();
+        RenderTickHandler.resetCached();
 
         //Reset any cached models now that the atlases are built
         ModelRenderer.resetCachedModels();

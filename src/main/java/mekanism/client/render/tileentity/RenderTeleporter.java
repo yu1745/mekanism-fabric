@@ -19,7 +19,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.Direction.Axis;
 import net.minecraft.core.Direction.AxisDirection;
 import net.minecraft.util.profiling.ProfilerFiller;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
@@ -101,10 +100,4 @@ public class RenderTeleporter extends MekanismTileEntityRenderer<TileEntityTelep
         return tile.shouldRender && tile.getLevel() != null && super.shouldRender(tile, camera);
     }
 
-    @Override
-    public AABB getRenderBoundingBox(TileEntityTeleporter tile) {
-        //Note: If the frame direction is "null" we instead just only mark the teleporter itself.
-        Direction frameDirection = tile.getFrameDirection();
-        return frameDirection == null ? super.getRenderBoundingBox(tile) : tile.getTeleporterBoundingBox(frameDirection);
-    }
 }

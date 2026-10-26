@@ -121,3 +121,11 @@ accessible field net/minecraft/client/gui/components/Tooltip cachedTooltip Ljava
 # Mekanism force-ticking checks wrap the vanilla nearby-player gate.
 accessible method net/minecraft/server/level/ChunkMap anyPlayerCloseEnoughForSpawning (Lnet/minecraft/world/level/ChunkPos;)Z
 accessible method net/minecraft/core/dispenser/ShearsDispenseItemBehavior tryShearBeehive (Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/core/BlockPos;)Z
+
+# Tile BER lane: the NeoForge trees expose these to Mekanism's renderers (official RenderLevelStageEvent
+# render-tick source and MekanismJavaModel's part walks); both upstream accesstransformer.cfg files mirror them.
+accessible field net/minecraft/client/renderer/LevelRenderer ticks I
+accessible field net/minecraft/client/Minecraft levelRenderer Lnet/minecraft/client/renderer/LevelRenderer;
+accessible field net/minecraft/client/model/geom/ModelPart cubes Ljava/util/List;
+accessible field net/minecraft/client/model/geom/ModelPart children Ljava/util/Map;
+accessible field net/minecraft/client/model/geom/ModelPart$Cube polygons [Lnet/minecraft/client/model/geom/ModelPart$Polygon;

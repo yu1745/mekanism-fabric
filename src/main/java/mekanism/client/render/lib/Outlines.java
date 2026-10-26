@@ -7,31 +7,30 @@ import java.util.List;
 import java.util.Set;
 import mekanism.common.util.EnumUtils;
 import net.minecraft.MethodsReturnNonnullByDefault;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.Direction;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.client.model.IQuadTransformer;
-import net.neoforged.neoforge.client.model.data.ModelData;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.VertexFormatElement;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Math;
 import org.joml.Vector3f;
 
 public class Outlines {
 
-    public static List<Line> extract(BakedModel model, @Nullable BlockState state, RandomSource rand, ModelData modelData, @Nullable RenderType renderType) {
+    public static List<Line> extract(BakedModel model, @Nullable BlockState state, RandomSource rand) {
         Set<Line> lines = new HashSet<>();
         VertexExtractor consumer = new VertexExtractor(lines);
         for (Direction direction : EnumUtils.DIRECTIONS) {
-            for (BakedQuad quad : model.getQuads(state, direction, rand, modelData, renderType)) {
+            for (BakedQuad quad : model.getQuads(state, direction, rand)) {
                 consumer.unpack(quad);
             }
         }
 
-        for (BakedQuad quad : model.getQuads(state, null, rand, modelData, renderType)) {
+        for (BakedQuad quad : model.getQuads(state, null, rand)) {
             consumer.unpack(quad);
         }
         return new ArrayList<>(lines);
@@ -61,11 +60,14 @@ public class Outlines {
             }
         }
 
-        //Based on how QuadTransformers#applying extracts the vertex positions
+        //Based on how NeoForge's quad transformers extract the vertex positions: the baked quad int array packs
+        //vertices in DefaultVertexFormat.BLOCK order, so the stride and position offset derive from the format.
         public void unpack(BakedQuad pQuad) {
             int[] quadVertices = pQuad.getVertices();
+            int stride = DefaultVertexFormat.BLOCK.getVertexSize() / 4;
+            int position = DefaultVertexFormat.BLOCK.getOffset(VertexFormatElement.POSITION) / 4;
             for (int i = 0; i < 4; i++) {
-                int offset = i * IQuadTransformer.STRIDE + IQuadTransformer.POSITION;
+                int offset = i * stride + position;
                 float x = Float.intBitsToFloat(quadVertices[offset]);
                 float y = Float.intBitsToFloat(quadVertices[offset + 1]);
                 float z = Float.intBitsToFloat(quadVertices[offset + 2]);

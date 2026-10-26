@@ -1,0 +1,83 @@
+package mekanism.fabric.client.render;
+
+import java.util.function.Supplier;
+import mekanism.client.model.ModelEnergyCore;
+import mekanism.client.model.ModelIndustrialAlarm;
+import mekanism.client.render.tileentity.RenderBin;
+import mekanism.client.render.tileentity.RenderDigitalMiner;
+import mekanism.client.render.tileentity.RenderDimensionalStabilizer;
+import mekanism.client.render.tileentity.RenderDynamicTank;
+import mekanism.client.render.tileentity.RenderEnergyCube;
+import mekanism.client.render.tileentity.RenderFluidTank;
+import mekanism.client.render.tileentity.RenderIndustrialAlarm;
+import mekanism.client.render.tileentity.RenderNutritionalLiquifier;
+import mekanism.client.render.tileentity.RenderPersonalChest;
+import mekanism.client.render.tileentity.RenderPigmentMixer;
+import mekanism.client.render.tileentity.RenderSPS;
+import mekanism.client.render.tileentity.RenderSeismicVibrator;
+import mekanism.client.render.tileentity.RenderTeleporter;
+import mekanism.client.render.tileentity.RenderThermalEvaporationPlant;
+import mekanism.client.render.tileentity.RenderThermoelectricBoiler;
+import mekanism.common.registries.MekanismTileEntityTypes;
+import net.fabricmc.fabric.api.client.rendering.v1.EntityModelLayerRegistry;
+import net.minecraft.client.model.geom.ModelLayerLocation;
+import net.minecraft.client.model.geom.builders.LayerDefinition;
+import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
+
+/**
+ * Tile-lane slice of the official {@code ClientRegistration.registerRenderers}: the fifteen tile entity renderers
+ * through vanilla {@code BlockEntityRenderers.register} plus the two BER model layers through Fabric's
+ * {@link EntityModelLayerRegistry} (the official {@code EntityRenderersEvent.RegisterLayerDefinitions} handler).
+ *
+ * <p>The transmitter renderers of the official block stay deferred: on this port the transmitter shell visual is
+ * owned by the baked-model seam ({@code FabricTransmitterModels}), and the contents overlay re-bakes through the
+ * official OBJ geometry loader, which has no Fabric counterpart yet - see {@code docs/TASK052_RESUME_2026-10-26.md}.</p>
+ */
+public final class FabricTileEntityRendererRegistration {
+
+    private FabricTileEntityRendererRegistration() {
+    }
+
+    public static void register() {
+        //The two Java models the tile renderers construct per instance, mirroring the official layer registration.
+        registerLayer(ModelEnergyCore.CORE_LAYER, ModelEnergyCore::createLayerDefinition);
+        registerLayer(ModelIndustrialAlarm.ALARM_LAYER, ModelIndustrialAlarm::createLayerDefinition);
+
+        int renderers = 0;
+        renderers += bind(RenderThermoelectricBoiler::new, MekanismTileEntityTypes.BOILER_CASING, MekanismTileEntityTypes.BOILER_VALVE);
+        renderers += bind(RenderDynamicTank::new, MekanismTileEntityTypes.DYNAMIC_TANK, MekanismTileEntityTypes.DYNAMIC_VALVE);
+        renderers += bind(RenderDigitalMiner::new, MekanismTileEntityTypes.DIGITAL_MINER);
+        renderers += bind(RenderDimensionalStabilizer::new, MekanismTileEntityTypes.DIMENSIONAL_STABILIZER);
+        renderers += bind(RenderPersonalChest::new, MekanismTileEntityTypes.PERSONAL_CHEST);
+        renderers += bind(RenderNutritionalLiquifier::new, MekanismTileEntityTypes.NUTRITIONAL_LIQUIFIER);
+        renderers += bind(RenderPigmentMixer::new, MekanismTileEntityTypes.PIGMENT_MIXER);
+        renderers += bind(RenderSeismicVibrator::new, MekanismTileEntityTypes.SEISMIC_VIBRATOR);
+        renderers += bind(RenderTeleporter::new, MekanismTileEntityTypes.TELEPORTER);
+        renderers += bind(RenderThermalEvaporationPlant::new, MekanismTileEntityTypes.THERMAL_EVAPORATION_CONTROLLER);
+        renderers += bind(RenderIndustrialAlarm::new, MekanismTileEntityTypes.INDUSTRIAL_ALARM);
+        renderers += bind(RenderSPS::new, MekanismTileEntityTypes.SPS_CASING, MekanismTileEntityTypes.SPS_PORT);
+        renderers += bind(RenderBin::new, MekanismTileEntityTypes.BASIC_BIN, MekanismTileEntityTypes.ADVANCED_BIN, MekanismTileEntityTypes.ELITE_BIN,
+              MekanismTileEntityTypes.ULTIMATE_BIN, MekanismTileEntityTypes.CREATIVE_BIN);
+        renderers += bind(RenderEnergyCube::new, MekanismTileEntityTypes.BASIC_ENERGY_CUBE, MekanismTileEntityTypes.ADVANCED_ENERGY_CUBE,
+              MekanismTileEntityTypes.ELITE_ENERGY_CUBE, MekanismTileEntityTypes.ULTIMATE_ENERGY_CUBE, MekanismTileEntityTypes.CREATIVE_ENERGY_CUBE);
+        renderers += bind(RenderFluidTank::new, MekanismTileEntityTypes.BASIC_FLUID_TANK, MekanismTileEntityTypes.ADVANCED_FLUID_TANK,
+              MekanismTileEntityTypes.ELITE_FLUID_TANK, MekanismTileEntityTypes.ULTIMATE_FLUID_TANK, MekanismTileEntityTypes.CREATIVE_FLUID_TANK);
+        org.slf4j.LoggerFactory.getLogger("Mekanism/FabricTileEntityRenderers")
+              .info("MEKANISM_FABRIC_BER_PROOF tile_types={} renderers=15 layers=2", renderers);
+    }
+
+    @SafeVarargs
+    private static <T extends BlockEntity> int bind(BlockEntityRendererProvider<? super T> provider, Supplier<? extends BlockEntityType<? extends T>>... types) {
+        for (Supplier<? extends BlockEntityType<? extends T>> type : types) {
+            BlockEntityRenderers.register(type.get(), provider);
+        }
+        return types.length;
+    }
+
+    private static void registerLayer(ModelLayerLocation location, Supplier<LayerDefinition> definition) {
+        EntityModelLayerRegistry.registerModelLayer(location, definition::get);
+    }
+}

@@ -52,6 +52,17 @@ public final class MekanismFabricClientBootstrap implements ClientModInitializer
         //Loader-closure owner for the shipped NeoForge-loader models (composite factories, the Meka-Tool OBJs, the
         //QIO dashboard layers); the energy-cube geometry loader stays deferred to the BE-aware render seam.
         mekanism.fabric.client.model.FabricMekanismModelPlugin.initialize();
+        //Offline model-cache capture for the tile renderers (the official BakingCompleted/setup pairing).
+        net.fabricmc.fabric.api.client.model.loading.v1.ModelLoadingPlugin.register(new mekanism.fabric.client.model.FabricModelCachePlugin());
+        //Tile entity renderers (the official ClientRegistration.registerRenderers tile half) and the transparent
+        //LazyRender queue drained at the after-translucent stage (the official RenderLevelStageEvent handler).
+        mekanism.fabric.client.render.FabricTileEntityRendererRegistration.register();
+        net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.AFTER_TRANSLUCENT.register(context ->
+              mekanism.client.render.RenderTickHandler.renderTransparentLayer(context.camera(),
+                    context.matrixStack(),
+                    mekanism.client.render.RenderTickHandler.minecraft.levelRenderer.ticks,
+                    context.tickCounter().getGameTimeDeltaPartialTick(false),
+                    context.profiler()));
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientWorldEvents.AFTER_CLIENT_WORLD_CHANGE.register((client, world) ->
               mekanism.common.lib.transmitter.TransmitterNetworkRegistry.clearClientNetworks());
         net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((handler, client) ->
