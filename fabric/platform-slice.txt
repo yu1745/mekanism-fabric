@@ -105,3 +105,14 @@ mekanism/fabric/mixin/player/ServerPlayerGameModeMixin.java
 mekanism/fabric/mixin/entity/LivingEntityGameplayMixin.java
 mekanism/fabric/mixin/entity/BlockStateDestroyProgressMixin.java
 mekanism/fabric/mixin/entity/PlayerGearTickMixin.java
+mekanism/fabric/mixin/tile/LevelChunkUnloadMixin.java
+mekanism/fabric/mixin/entity/LivingEntityElytraMixin.java
+mekanism/fabric/mixin/entity/PlayerElytraStartMixin.java
+mekanism/fabric/mixin/entity/EnderManMaskMixin.java
+mekanism/fabric/mixin/block/PowderSnowWalkMixin.java
+mekanism/fabric/mixin/entity/ItemEntityDestroyMixin.java
+mekanism/fabric/mixin/entity/PiglinAiCurrencyMixin.java
+mekanism/fabric/mixin/entity/PiglinOffHandMixin.java
+mekanism/fabric/mixin/entity/PiglinNeutralityMixin.java
+mekanism/fabric/mixin/item/ItemStackMekaSuitDamageMixin.java
+mekanism/fabric/mixin/item/ClientElytraStartMixin.java

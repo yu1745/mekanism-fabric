@@ -94,11 +94,28 @@ public final class MekanismFabricBootstrap implements ModInitializer {
         mekanism.fabric.radiation.FabricRadiationLifecycle.initialize();
         FabricMekanismDataMaps.initializeCallbacks();
         FabricCapabilityTileLifecycle.initialize();
+        //Canonical content catalog commit. The catalogs declare into shared registers, so their static initializers must run
+        //before the single registration window; data components and armor materials are dependencies of item factories.
+        mekanism.common.registries.MekanismDataComponents.DATA_COMPONENTS.registerAll(BuiltInRegistries.DATA_COMPONENT_TYPE);
+        mekanism.common.registries.MekanismArmorMaterials.ARMOR_MATERIALS.registerAll(BuiltInRegistries.ARMOR_MATERIAL);
+        mekanism.common.registries.MekanismSounds.SOUND_EVENTS.registerAll(BuiltInRegistries.SOUND_EVENT);
+        mekanism.common.registries.MekanismItems.ITEMS.registerAll(BuiltInRegistries.ITEM);
+        //Force the shared block/type catalogs to declare before the platform register commits them.
+        mekanism.common.registries.MekanismBlocks.PROCESSED_RESOURCE_BLOCKS.size();
+        mekanism.common.registries.MekanismTileEntityTypes.TILE_ENTITY_TYPES.getEntries();
         mekanism.fabric.registry.FabricMekanismBlockRegistries.initialize();
+        mekanism.common.registries.MekanismContainerTypes.CONTAINER_TYPES.registerAll(BuiltInRegistries.MENU);
         //Fluid families: still/flowing fluids first (the liquid block resolves the registered flowing fluid), then the
         //liquid blocks and buckets. Bucket dispense behavior mirrors the official common-setup pass.
         mekanism.common.registries.MekanismFluids.FLUIDS.registerAll(BuiltInRegistries.FLUID, BuiltInRegistries.BLOCK, BuiltInRegistries.ITEM);
         mekanism.common.registries.MekanismFluids.FLUIDS.registerBucketDispenserBehavior();
+        //Module data is a Mekanism-owned synced registry; module items must exist before the module data evaluates its item holders.
+        mekanism.fabric.gear.FabricModuleRegistry.initialize();
+        LOGGER.info("MEKANISM_FABRIC_CONTENT_PROOF blocks={} items={} block_entities={} menus={} fluids={} sounds={} data_components={} armor_materials={} modules={}",
+              mekanismCount(BuiltInRegistries.BLOCK), mekanismCount(BuiltInRegistries.ITEM), mekanismCount(BuiltInRegistries.BLOCK_ENTITY_TYPE),
+              mekanismCount(BuiltInRegistries.MENU), mekanismCount(BuiltInRegistries.FLUID), mekanismCount(BuiltInRegistries.SOUND_EVENT),
+              mekanismCount(BuiltInRegistries.DATA_COMPONENT_TYPE), mekanismCount(BuiltInRegistries.ARMOR_MATERIAL),
+              mekanism.api.MekanismAPI.MODULE_REGISTRY.size());
         MekanismUsernameLifecycle.initialize();
         LOGGER.info("MEKANISM_FABRIC_NETWORK_PROOF protocol={} phase=configuration codecs={} server_receiver={} client_required={}",
               networking.protocolVersion(), networking.codecs(), networking.serverReceiver(), networking.clientRequired());
@@ -139,6 +156,10 @@ public final class MekanismFabricBootstrap implements ModInitializer {
             }
             LOGGER.info("MEKANISM_FABRIC_HEAT_PROOF positional=true ambient_finite=true");
         });
+    }
+
+    private static long mekanismCount(net.minecraft.core.Registry<?> registry) {
+        return registry.keySet().stream().filter(id -> id.getNamespace().equals(mekanism.api.MekanismAPI.MEKANISM_MODID)).count();
     }
 
     private static void verifyStartupConfig(FabricMekanismConfigManager.Registration registration) {

@@ -31,3 +31,4 @@ libs/
 /fabric/.gradle
 /fabric/run
 /upstream/
+/dist/

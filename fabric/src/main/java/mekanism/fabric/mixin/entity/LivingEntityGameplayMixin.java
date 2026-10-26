@@ -37,10 +37,11 @@ abstract class LivingEntityGameplayMixin {
         }
     }
 
-    @ModifyVariable(method = "hurt", at = @At("HEAD"), argsOnly = true)
-    private float mekanism$reduceIncomingDamage(float amount, DamageSource source) {
-        DamageReduction reduction = CommonPlayerTickHandler.reduceIncomingDamage((LivingEntity) (Object) this, source, amount);
-        return reduction.cancel() ? amount : reduction.remaining();
+    @ModifyVariable(method = "hurt", at = @At("HEAD"), argsOnly = true, index = 2)
+    private float mekanism$reduceIncomingDamage(float value, DamageSource source, float amount) {
+        //Handler signature is (current value, then all target arguments); the value is the incoming amount.
+        DamageReduction reduction = CommonPlayerTickHandler.reduceIncomingDamage((LivingEntity) (Object) this, source, value);
+        return reduction.cancel() ? value : reduction.remaining();
     }
 
     @Inject(method = "hurt", at = @At("RETURN"))
@@ -68,10 +69,11 @@ abstract class LivingEntityGameplayMixin {
         }
     }
 
-    @ModifyVariable(method = "causeFallDamage", at = @At("HEAD"), argsOnly = true)
-    private float mekanism$reduceFallDistance(float fallDistance, float damageMultiplier, DamageSource source) {
-        FallResult result = CommonPlayerTickHandler.reduceFallDamage((LivingEntity) (Object) this, fallDistance, damageMultiplier, source);
-        return result.cancel() ? fallDistance : result.remainingDistance();
+    @ModifyVariable(method = "causeFallDamage", at = @At("HEAD"), argsOnly = true, index = 1)
+    private float mekanism$reduceFallDistance(float value, float fallDistance, float damageMultiplier, DamageSource source) {
+        //Handler signature is (current value, then all target arguments); the value is the fall distance.
+        FallResult result = CommonPlayerTickHandler.reduceFallDamage((LivingEntity) (Object) this, value, damageMultiplier, source);
+        return result.cancel() ? value : result.remainingDistance();
     }
 
     @Inject(method = "causeFallDamage", at = @At("RETURN"))

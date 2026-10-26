@@ -107,7 +107,7 @@ class MekanismDeferredRegisterTest {
         assertSame(register.getPrimaryEntries().iterator().next().get(), holder.get());
         assertSame(primary.get(holder.getId()), holder.get());
         assertTrue(holder.is(primary.getHolderOrThrow(holder.getKey())));
-        assertTrue(holder.canSerializeIn(primary));
+        assertTrue(holder.canSerializeIn(primary.holderOwner()));
         assertEquals("block item", holder.getSecondary());
         assertSame(secondary.get(holder.getId()), holder.getSecondary());
     }
