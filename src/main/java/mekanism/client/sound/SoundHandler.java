@@ -64,6 +64,7 @@ public class SoundHandler {
     public static final Map<RadiationScale, GeigerSound> radiationSoundMap = new EnumMap<>(RadiationScale.class);
 
     private static final Long2ObjectMap<SoundInstance> soundMap = new Long2ObjectOpenHashMap<>();
+    private static final java.util.concurrent.atomic.AtomicBoolean RESTART_PROOF = new java.util.concurrent.atomic.AtomicBoolean();
     private static boolean hadPlayerSounds;
 
     /**
@@ -136,6 +137,9 @@ public class SoundHandler {
     }
 
     public static void restartSounds() {
+        if (RESTART_PROOF.compareAndSet(false, true)) {
+            org.slf4j.LoggerFactory.getLogger("Mekanism/FabricSounds").info("MEKANISM_FABRIC_SOUND_PROOF restart=wired");
+        }
         boolean hasPlayerSounds = playerSoundsEnabled();
         if (hasPlayerSounds != hadPlayerSounds) {
             hadPlayerSounds = hasPlayerSounds;

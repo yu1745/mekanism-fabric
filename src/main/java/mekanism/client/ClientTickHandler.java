@@ -18,6 +18,8 @@ import mekanism.common.CommonPlayerTickHandler;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.content.gear.mekasuit.ModuleVisionEnhancementUnit;
 import mekanism.common.item.gear.ItemHDPEElytra;
+import mekanism.client.sound.GeigerSound;
+import mekanism.client.sound.SoundHandler;
 import mekanism.common.base.PlayerState;
 import mekanism.common.item.gear.ItemJetpack;
 import mekanism.common.item.gear.ItemMekaSuitArmor;
@@ -156,6 +158,8 @@ public class ClientTickHandler {
 
         if (tickingNormally) {
             //Note: If we aren't ticking normally we can skip adding the particles or checking if the time matches as we know the time hasn't changed
+            //Reboot player sounds if needed (the holiday notify above stays deferred with the holiday lane)
+            SoundHandler.restartSounds();
             for (Iterator<Entry<Player, TeleportData>> iter = portableTeleports.entrySet().iterator(); iter.hasNext(); ) {
                 Entry<Player, TeleportData> entry = iter.next();
                 Player player = entry.getKey();
@@ -218,7 +222,14 @@ public class ClientTickHandler {
             }
         }
 
-        //The geiger counter sound block belongs to the sound lane (GeigerSound/SoundHandler) and stays deferred with it.
+        if (MekanismConfig.client.enablePlayerSounds.get()) {
+            RadiationScale scale = ClientRadiation.getClientScale();
+            if (scale != RadiationScale.NONE && !SoundHandler.radiationSoundMap.containsKey(scale)) {
+                GeigerSound sound = GeigerSound.create(minecraft.player, scale);
+                SoundHandler.radiationSoundMap.put(scale, sound);
+                SoundHandler.playSound(sound);
+            }
+        }
     }
 
     private boolean updateSelectorRenderer(EquipmentSlot slot) {
