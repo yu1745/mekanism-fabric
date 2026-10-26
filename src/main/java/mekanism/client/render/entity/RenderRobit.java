@@ -5,9 +5,9 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import mekanism.client.RobitSpriteUploader;
 import mekanism.client.model.MekanismModelCache;
+import mekanism.client.model.robit.RobitBakedModel;
 import mekanism.client.render.MekanismRenderer;
 import mekanism.client.render.entity.RenderRobit.RobitModelWrapper;
-import mekanism.common.Mekanism;
 import mekanism.common.entity.EntityRobit;
 import mekanism.common.registries.MekanismRobitSkins;
 import mekanism.common.registries.MekanismRobitSkins.SkinLookup;
@@ -55,7 +55,7 @@ public class RenderRobit extends MobRenderer<EntityRobit, RobitModelWrapper> {
             BakedModel model = MekanismModelCache.INSTANCE.getRobitSkin(skinLookup);
             if (model == null) {
                 //No model means we can't render (this shouldn't happen as we try to fall back to the default skin)
-                Mekanism.logger.warn("Robit with skin: {} does not have a model. If this happened during a resource reload this can be ignored.", skinLookup.location());
+                org.slf4j.LoggerFactory.getLogger("Mekanism/RenderRobit").warn("Robit with skin: {} does not have a model. If this happened during a resource reload this can be ignored.", skinLookup.location());
             } else {
                 matrix.pushPose();
                 matrix.mulPose(Axis.XP.rotationDegrees(180));
@@ -65,8 +65,10 @@ public class RenderRobit extends MobRenderer<EntityRobit, RobitModelWrapper> {
                 float green = MekanismRenderer.getGreen(color);
                 float blue = MekanismRenderer.getBlue(color);
                 float alpha = MekanismRenderer.getAlpha(color);
-                for (BakedQuad quad : model.getQuads(null, null, robit.level().random, robit.getModelData(), null)) {
-                    builder.putBulkData(last, quad, red, green, blue, alpha, light, overlayLight, false);
+                //Fabric port: the entity's model data has no fabric equivalent - the skin texture is read directly
+                //and the per-skin transform of the reshaped RobitBakedModel applies it.
+                for (BakedQuad quad : RobitBakedModel.transformForSkin(model.getQuads(null, null, robit.level().random), robit.getModelTexture())) {
+                    builder.putBulkData(last, quad, red, green, blue, alpha, light, overlayLight);
                 }
                 matrix.popPose();
             }

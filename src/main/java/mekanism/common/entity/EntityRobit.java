@@ -784,7 +784,7 @@ public class EntityRobit extends PathfinderMob implements IRobit, IMekanismInven
     /**
      * @apiNote Only call on the client.
      */
-    private ResourceLocation getModelTexture() {
+    public ResourceLocation getModelTexture() {
         Registry<RobitSkin> robitSkins = level().registryAccess().registryOrThrow(MekanismAPI.ROBIT_SKIN_REGISTRY_NAME);
         ResourceKey<RobitSkin> skinKey = getSkin();
         Optional<RobitSkin> optionalSkin = robitSkins.getOptional(skinKey);

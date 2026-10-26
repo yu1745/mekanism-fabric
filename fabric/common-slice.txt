@@ -1,5 +1,6 @@
 mekanism/client/ClientPlayerAccess.java
 mekanism/client/ClientTickHandler.java
+mekanism/client/RobitSpriteUploader.java
 mekanism/client/SparkleAnimation.java
 mekanism/client/SpecialColors.java
 mekanism/client/gui/GuiBoilerStats.java
@@ -245,6 +246,8 @@ mekanism/client/model/data/TransmitterModelData.java
 mekanism/client/model/energycube/EnergyCubeBakedModel.java
 mekanism/client/model/energycube/EnergyCubeGeometry.java
 mekanism/client/model/energycube/EnergyCubeModelLoader.java
+mekanism/client/model/robit/RobitBakedModel.java
+mekanism/client/model/robit/RobitModel.java
 mekanism/client/particle/RadiationParticle.java
 mekanism/client/recipe_viewer/RecipeViewerUtils.java
 mekanism/client/recipe_viewer/emi/INamedRVRecipe.java
@@ -278,6 +281,7 @@ mekanism/client/render/data/FluidRenderData.java
 mekanism/client/render/data/RenderData.java
 mekanism/client/render/data/ValveRenderData.java
 mekanism/client/render/entity/RenderFlame.java
+mekanism/client/render/entity/RenderRobit.java
 mekanism/client/render/hud/MekaSuitEnergyLevel.java
 mekanism/client/render/hud/MekanismHUD.java
 mekanism/client/render/hud/MekanismStatusOverlay.java

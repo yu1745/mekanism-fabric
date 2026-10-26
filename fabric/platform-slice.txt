@@ -19,12 +19,14 @@ mekanism/fabric/client/model/FabricMergedQuadsModel.java
 mekanism/fabric/client/model/FabricModelCachePlugin.java
 mekanism/fabric/client/model/FabricModelJson.java
 mekanism/fabric/client/model/FabricObjModel.java
+mekanism/fabric/client/model/FabricRobitUnbakedModel.java
 mekanism/fabric/client/render/FabricBoltRendering.java
 mekanism/fabric/client/render/FabricEntityRendererRegistration.java
 mekanism/fabric/client/render/FabricTileEntityRendererRegistration.java
 mekanism/fabric/client/render/armor/FabricArmorLayerRegistration.java
 mekanism/fabric/client/render/armor/FabricGearModels.java
 mekanism/fabric/client/render/item/FabricItemRendererRegistration.java
+mekanism/fabric/client/render/item/FabricRobitItemRenderer.java
 mekanism/fabric/client/render/obj/FabricObjGeometryReader.java
 mekanism/fabric/client/render/obj/FabricTransmitterAssets.java
 mekanism/fabric/client/render/obj/FabricTransmitterBakedModel.java

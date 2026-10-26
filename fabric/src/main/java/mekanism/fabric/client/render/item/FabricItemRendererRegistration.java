@@ -43,6 +43,10 @@ public final class FabricItemRendererRegistration implements ModelLoadingPlugin 
               MekanismBlocks.ULTIMATE_FLUID_TANK, MekanismBlocks.CREATIVE_FLUID_TANK}) {
             ids.add(ResourceLocation.fromNamespaceAndPath("mekanism", "item/" + block.getId().getPath()));
         }
+        //Robit items: the baked placeholder quads (missingno sprites) are suppressed; the builtin renderer draws
+        //them on the robit atlas with the per-skin texture transform.
+        ids.add(ResourceLocation.fromNamespaceAndPath("mekanism", "item/robit"));
+        ids.add(ResourceLocation.fromNamespaceAndPath("mekanism", "item/robit_allay"));
         return ids;
     }
 
@@ -88,13 +92,15 @@ public final class FabricItemRendererRegistration implements ModelLoadingPlugin 
               mekanism.client.render.item.gear.RenderAtomicDisassembler.RENDERER.renderByItem(stack, context, matrices, vertexConsumers, light, overlay));
         BuiltinItemRendererRegistry.INSTANCE.register(MekanismItems.FLAMETHROWER.asItem(), (stack, context, matrices, vertexConsumers, light, overlay) ->
               mekanism.client.render.item.gear.RenderFlameThrower.RENDERER.renderByItem(stack, context, matrices, vertexConsumers, light, overlay));
+        //Robit items: the per-skin quads draw on the robit atlas.
+        BuiltinItemRendererRegistry.INSTANCE.register(MekanismItems.ROBIT.asItem(), FabricRobitItemRenderer::renderByItem);
     }
 
     @Override
     public void onInitializeModelLoader(Context context) {
         Set<ResourceLocation> suppressed = suppressedItemModels();
         context.resolveModel().register(ctx -> suppressed.contains(ctx.id()) ? new QuadsEmptyModel(ctx.getOrLoadModel(ctx.id())) : null);
-        LOGGER.info("MEKANISM_FABRIC_ITEM_RENDERER_PROOF suppressed_models={} builtin_renderers=18", suppressed.size());
+        LOGGER.info("MEKANISM_FABRIC_ITEM_RENDERER_PROOF suppressed_models={} builtin_renderers=19", suppressed.size());
     }
 
     /** Keeps the official unbaked model for dependencies/parents; the bake only suppresses the quads. */

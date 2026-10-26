@@ -1,6 +1,10 @@
 package mekanism.client.model;
 
+import mekanism.api.MekanismAPI;
+import mekanism.common.registries.MekanismRobitSkins;
+import net.minecraft.client.resources.model.BakedModel;
 import mekanism.common.tile.qio.TileEntityQIODriveArray.DriveStatus;
+import net.minecraft.resources.ResourceLocation;
 import mekanism.common.util.EnumUtils;
 
 /**
@@ -16,6 +20,19 @@ public class MekanismModelCache extends BaseModelCache {
     public final JSONModelData VIBRATOR_SHAFT = registerJSON("block/vibrator_shaft");
     public final JSONModelData PIGMENT_MIXER_SHAFT = registerJSON("block/pigment_mixer_shaft");
     public final JSONModelData[] QIO_DRIVES = new JSONModelData[EnumUtils.DRIVE_STATUSES.length];
+
+    /**
+     * Fabric port of the robit skin cache: resolves the skin's model (custom model, else the default per skin family)
+     * through the model manager - the models are baked by the fabric model plugin's robit case.
+     */
+    public BakedModel getRobitSkin(MekanismRobitSkins.SkinLookup skinLookup) {
+        ResourceLocation customModel = skinLookup.skin().customModel();
+        if (customModel != null) {
+            return BaseModelCache.getBakedModel(customModel);
+        }
+        String fallback = skinLookup.name().location().getPath().equals("allay") ? "item/robit_allay" : "item/robit";
+        return BaseModelCache.getBakedModel(ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, fallback));
+    }
 
     private MekanismModelCache() {
         super("mekanism");

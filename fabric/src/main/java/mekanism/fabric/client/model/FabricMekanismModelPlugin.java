@@ -89,7 +89,7 @@ public final class FabricMekanismModelPlugin {
             int objModels = 0;
             int energyCubeBaked = 0;
             int deferredDataBased = 0;
-            int deferredRobit = 0;
+            int robitBaked = 0;
             int deferredFluidContainers = 0;
             int transmitterOwned = 0;
             for (Map.Entry<ResourceLocation, Resource> entry : resources.listResources("models", id -> id.getPath().endsWith(".json")).entrySet()) {
@@ -142,7 +142,13 @@ public final class FabricMekanismModelPlugin {
                         energyCubeBaked++;
                     }
                     case LOADER_DATA_BASED -> deferredDataBased++;
-                    case LOADER_ROBIT -> deferredRobit++;
+                    case LOADER_ROBIT -> {
+                        //Robit models bake as plain element models with missingno placeholders; the per-skin
+                        //texture transform applies at draw time (builtin renderer for items, entity renderer for
+                        //the robit itself). The item quads are suppressed by the builtin-renderer lane.
+                        prepared.put(id, new FabricRobitUnbakedModel(id, root));
+                        robitBaked++;
+                    }
                     case LOADER_FLUID_CONTAINER -> {
                         //The only deferred family whose vanilla parse crashes the reload: its parent
                         //neoforge:item/bucket exists solely in the NeoForge jar. The explicit deferred model cuts
@@ -154,9 +160,9 @@ public final class FabricMekanismModelPlugin {
                     default -> throw new IllegalStateException("Mekanism model " + id + " declares an unhandled loader: " + loader);
                 }
             }
-            LOGGER.info("MEKANISM_FABRIC_MODELS_PROOF composite={} separate_transforms={} item_layers={} obj={} energy_cube_baked={} data_based_deferred={} robit_deferred={} fluid_container_deferred={} transmitter_owned={}",
+            LOGGER.info("MEKANISM_FABRIC_MODELS_PROOF composite={} separate_transforms={} item_layers={} obj={} energy_cube_baked={} data_based_deferred={} robit_baked={} fluid_container_deferred={} transmitter_owned={}",
                   composites, separateTransforms, itemLayers, objModels, energyCubeBaked, deferredDataBased,
-                  deferredRobit, deferredFluidContainers, transmitterOwned);
+                  robitBaked, deferredFluidContainers, transmitterOwned);
             return prepared;
         }, executor);
     }

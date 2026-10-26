@@ -24,8 +24,9 @@ public final class FabricEntityRendererRegistration {
 
     public static void register() {
         EntityRendererRegistry.register(MekanismEntityTypes.FLAME.get(), RenderFlame::new);
+        EntityRendererRegistry.register(MekanismEntityTypes.ROBIT.get(), mekanism.client.render.entity.RenderRobit::new);
         if (PROOF.compareAndSet(false, true)) {
-            LOGGER.info("MEKANISM_FABRIC_ENTITY_RENDERER_PROOF entities=1 (flame; robit deferred with its model family)");
+            LOGGER.info("MEKANISM_FABRIC_ENTITY_RENDERER_PROOF entities=2 (flame, robit)");
         }
     }
 }

@@ -1,114 +1,101 @@
 package mekanism.client.model.robit;
 
 import java.util.List;
-import java.util.function.BiPredicate;
 import mekanism.api.annotations.NothingNullByDefault;
-import mekanism.api.robit.RobitSkin;
 import mekanism.client.RobitSpriteUploader;
-import mekanism.client.model.MekanismModelCache;
-import mekanism.client.model.baked.ExtensionOverrideBakedModel;
 import mekanism.client.render.lib.QuadTransformation;
 import mekanism.client.render.lib.QuadTransformation.TextureFilteredTransformation;
 import mekanism.client.render.lib.QuadUtils;
-import mekanism.common.entity.EntityRobit;
-import mekanism.common.item.ItemRobit;
-import mekanism.common.registries.MekanismDataComponents;
-import mekanism.common.registries.MekanismRobitSkins;
-import mekanism.common.registries.MekanismRobitSkins.SkinLookup;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.block.model.ItemOverrides;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.model.BakedModel;
-import net.minecraft.core.RegistryAccess;
-import net.minecraft.resources.ResourceKey;
+import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.client.model.data.ModelData;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.block.state.BlockState;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * Fabric port of the official robit baked model. The NeoForge extension-override shell (model data driven side
+ * selection and the extended item override framework) collapses to the two surfaces the robit needs on Fabric:
+ * the per-skin texture transform of the missingno placeholder quads, and the robit atlas render type. The robit item
+ * renders through the builtin renderer (reading the stack's skin component), and the entity renders through
+ * {@code RenderRobit}, so no model-data path survives.
+ */
 @NothingNullByDefault
-public class RobitBakedModel extends ExtensionOverrideBakedModel<ResourceLocation> {
+public class RobitBakedModel implements BakedModel {
 
-    private static final BiPredicate<ResourceLocation, ResourceLocation> DATA_EQUALITY_CHECK = ResourceLocation::equals;
+    private final BakedModel original;
+    @Nullable
+    private final ResourceLocation skinTexture;
 
     public RobitBakedModel(BakedModel original) {
-        super(original, RobitItemOverrideList::new);
+        this(original, null);
     }
 
-    @Override
-    public List<BakedQuad> createQuads(QuadsKey<ResourceLocation> key) {
-        List<BakedQuad> quads = key.getQuads();
-        if (RobitSpriteUploader.UPLOADER != null) {
-            ResourceLocation selectedTexture = key.getData();
-            //Only replace missing textures (which should in general be #robit in the actual json without a mapping to it)
-            //TODO: This technically doesn't behave quite right for textures that are not replaced given the sprites on the
-            // model likely are on a different atlas than the robit textures, so the render type will be wrong
-            QuadTransformation transformation = QuadTransformation.texture(RobitSpriteUploader.UPLOADER.getSprite(selectedTexture));
+    public RobitBakedModel(BakedModel original, @Nullable ResourceLocation skinTexture) {
+        this.original = original;
+        this.skinTexture = skinTexture;
+    }
+
+    /**
+     * The official per-skin texture transform: replaces the missingno placeholder sprites (the shipped models declare
+     * an unmapped {@code #robit} reference) with the skin's current texture.
+     */
+    public static List<BakedQuad> transformForSkin(List<BakedQuad> quads, @Nullable ResourceLocation skinTexture) {
+        if (skinTexture != null && RobitSpriteUploader.UPLOADER != null) {
+            QuadTransformation transformation = QuadTransformation.texture(RobitSpriteUploader.UPLOADER.getSprite(skinTexture));
             transformation = TextureFilteredTransformation.of(transformation, rl -> rl.getPath().equals("missingno"));
-            quads = QuadUtils.transformBakedQuads(quads, transformation);
+            return QuadUtils.transformBakedQuads(quads, transformation);
         }
         return quads;
     }
 
-    @Nullable
     @Override
-    public QuadsKey<ResourceLocation> createKey(QuadsKey<ResourceLocation> key, ModelData data) {
-        ResourceLocation skinTexture = data.get(EntityRobit.SKIN_TEXTURE_PROPERTY);
-        if (skinTexture == null) {
-            return null;
-        }
-        return key.data(skinTexture, skinTexture.hashCode(), DATA_EQUALITY_CHECK);
+    public @NotNull List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side, @NotNull RandomSource rand) {
+        return transformForSkin(original.getQuads(state, side, rand), skinTexture);
+    }
+
+    /** The robit atlas is the official render surface for every robit quad. */
+    public static List<RenderType> getRenderTypes() {
+        return RobitSpriteUploader.RENDER_TYPES;
     }
 
     @Override
-    protected RobitBakedModel wrapModel(BakedModel model) {
-        return new RobitBakedModel(model);
+    public boolean useAmbientOcclusion() {
+        return original.useAmbientOcclusion();
     }
 
-    private static class RobitItemOverrideList extends ExtendedItemOverrides {
+    @Override
+    public boolean isGui3d() {
+        return original.isGui3d();
+    }
 
-        RobitItemOverrideList(ItemOverrides original) {
-            super(original);
-        }
+    @Override
+    public boolean usesBlockLight() {
+        return original.usesBlockLight();
+    }
 
-        @Nullable
-        @Override
-        public BakedModel resolve(BakedModel model, ItemStack stack, @Nullable ClientLevel world, @Nullable LivingEntity entity, int seed) {
-            if (!stack.isEmpty() && stack.getItem() instanceof ItemRobit) {
-                RegistryAccess registryAccess;
-                if (world != null) {
-                    registryAccess = world.registryAccess();
-                } else if (entity != null) {
-                    registryAccess = entity.level().registryAccess();
-                } else {
-                    ClientLevel level = Minecraft.getInstance().level;
-                    if (level == null) {
-                        //Failed to lookup the skin so don't do any overrides
-                        return original.resolve(model, stack, null, null, seed);
-                    }
-                    registryAccess = level.registryAccess();
-                }
-                ResourceKey<RobitSkin> skinKey = stack.getOrDefault(MekanismDataComponents.ROBIT_SKIN, MekanismRobitSkins.BASE);
-                SkinLookup skinLookup = MekanismRobitSkins.lookup(registryAccess, skinKey);
-                RobitSkin skin = skinLookup.skin();
-                if (skin.customModel() != null) {
-                    //If the skin has a custom model look it up and if it isn't the model we are currently resolving for
-                    // (to avoid stack overflow and recursion), then lookup the overrides of that model
-                    BakedModel customModel = MekanismModelCache.INSTANCE.getRobitSkin(skinLookup);
-                    if (customModel != null && customModel != model) {
-                        return customModel.getOverrides().resolve(customModel, stack, world, entity, seed);
-                    }
-                }
-                List<ResourceLocation> textures = skin.textures();
-                if (!textures.isEmpty()) {
-                    //Assuming the skin actually has textures (it should), grab the first texture as the model data
-                    ModelData modelData = ModelData.of(EntityRobit.SKIN_TEXTURE_PROPERTY, textures.getFirst());
-                    return wrap(model, stack, world, entity, seed, modelData, RobitModelDataBakedModel::new);
-                }
-            }
-            return original.resolve(model, stack, world, entity, seed);
-        }
+    @Override
+    public boolean isCustomRenderer() {
+        return false;
+    }
+
+    @Override
+    public @NotNull TextureAtlasSprite getParticleIcon() {
+        return original.getParticleIcon();
+    }
+
+    @Override
+    public @NotNull ItemOverrides getOverrides() {
+        return ItemOverrides.EMPTY;
+    }
+
+    @Override
+    public @NotNull net.minecraft.client.renderer.block.model.ItemTransforms getTransforms() {
+        return original.getTransforms();
     }
 }
