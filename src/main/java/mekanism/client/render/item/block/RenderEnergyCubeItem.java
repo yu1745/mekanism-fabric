@@ -23,7 +23,6 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.client.model.data.ModelData;
 import org.jetbrains.annotations.NotNull;
 
 public class RenderEnergyCubeItem extends MekanismISTER {
@@ -51,11 +50,12 @@ public class RenderEnergyCubeItem extends MekanismISTER {
             }
             sideStates[side.ordinal()] = state;
         }
-        ModelData modelData = ModelData.of(TileEntityEnergyCube.SIDE_STATE_PROPERTY, sideStates);
-        renderBlockItem(stack, displayContext, matrix, renderer, light, overlayLight, modelData);
+        //The port's vanilla-quad render path has no model-data channel; the shell side states are the
+        //deferred energy_cube loader family, so the item shell renders via the vanilla quads that exist.
+        renderBlockItem(stack, displayContext, matrix, renderer, light, overlayLight);
         double energyPercentage = StorageUtils.getEnergyRatio(stack);
         if (energyPercentage > 0) {
-            float ticks = Minecraft.getInstance().levelRenderer.getTicks() + MekanismRenderer.getPartialTick();
+            float ticks = Minecraft.getInstance().levelRenderer.ticks + MekanismRenderer.getPartialTick();
             float scaledTicks = 4 * ticks;
             matrix.pushPose();
             matrix.translate(0.5, 0.5, 0.5);

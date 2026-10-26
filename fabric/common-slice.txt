@@ -262,6 +262,9 @@ mekanism/client/render/data/RenderData.java
 mekanism/client/render/data/ValveRenderData.java
 mekanism/client/render/hud/MekanismStatusOverlay.java
 mekanism/client/render/hud/RadiationOverlay.java
+mekanism/client/render/item/MekanismISTER.java
+mekanism/client/render/item/block/RenderEnergyCubeItem.java
+mekanism/client/render/item/block/RenderFluidTankItem.java
 mekanism/client/render/lib/ColorAtlas.java
 mekanism/client/render/lib/Outlines.java
 mekanism/client/render/lib/ScrollIncrementer.java

@@ -54,6 +54,10 @@ public final class MekanismFabricClientBootstrap implements ClientModInitializer
         mekanism.fabric.client.model.FabricMekanismModelPlugin.initialize();
         //Offline model-cache capture for the tile renderers (the official BakingCompleted/setup pairing).
         net.fabricmc.fabric.api.client.model.loading.v1.ModelLoadingPlugin.register(new mekanism.fabric.client.model.FabricModelCachePlugin());
+        //Block-item ISBERs (energy cube, fluid tank): official item JSONs stay, quads suppressed in favor of the
+        //builtin renderers (the official registerItemExtensions wiring).
+        mekanism.fabric.client.render.item.FabricItemRendererRegistration.registerRenderers();
+        net.fabricmc.fabric.api.client.model.loading.v1.ModelLoadingPlugin.register(new mekanism.fabric.client.render.item.FabricItemRendererRegistration());
         //Tile entity renderers (the official ClientRegistration.registerRenderers tile half) and the transparent
         //LazyRender queue drained at the after-translucent stage (the official RenderLevelStageEvent handler).
         mekanism.fabric.client.render.FabricTileEntityRendererRegistration.register();
