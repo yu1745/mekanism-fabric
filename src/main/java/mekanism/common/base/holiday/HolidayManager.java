@@ -10,7 +10,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import mekanism.api.robit.RobitSkin;
-import mekanism.common.Mekanism;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.registration.impl.SoundEventRegistryObject;
 import mekanism.common.registries.MekanismRobitSkins;
@@ -20,8 +19,13 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class HolidayManager {
+
+    //Fabric port delta: the excluded NeoForge entrypoint's logger is replaced by the same SLF4J category the rest of the port logs under
+    private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism");
 
     private HolidayManager() {
     }
@@ -70,7 +74,7 @@ public final class HolidayManager {
                 }
             }
         }
-        Mekanism.logger.info("Initialized HolidayManager.");
+        LOGGER.info("Initialized HolidayManager.");
     }
 
     private static void updateToday() {

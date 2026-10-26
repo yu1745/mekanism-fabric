@@ -1,98 +1,43 @@
 package mekanism.client.key;
 
-import java.util.Optional;
-import mekanism.client.ClientRegistrationUtil;
-import mekanism.client.MekanismClient;
-import mekanism.client.sound.SoundHandler;
-import mekanism.common.Mekanism;
 import mekanism.common.MekanismLang;
-import mekanism.common.base.KeySync;
-import mekanism.common.config.MekanismConfig;
-import mekanism.common.integration.curios.CuriosIntegration;
-import mekanism.common.inventory.container.ModuleTweakerContainer;
-import mekanism.common.item.interfaces.IChemicalItem;
-import mekanism.common.item.interfaces.IModeItem;
-import mekanism.common.network.PacketUtils;
-import mekanism.common.network.to_server.PacketModeChange;
-import mekanism.common.network.to_server.PacketModeChangeCurios;
-import mekanism.common.network.to_server.PacketOpenGui;
-import mekanism.common.network.to_server.PacketOpenGui.GuiType;
-import mekanism.common.registries.MekanismSounds;
+import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.minecraft.client.KeyMapping;
-import net.minecraft.client.Minecraft;
-import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.entity.player.Player;
-import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
-import net.neoforged.neoforge.client.settings.KeyModifier;
 import org.lwjgl.glfw.GLFW;
-import top.theillusivec4.curios.api.SlotContext;
-import top.theillusivec4.curios.api.SlotResult;
 
+/**
+ * Fabric port delta, following the Task031 declaration-first precedent: all ten official keys keep their names, translation keys, categories and default
+ * GLFW codes and are registered for real, but the NeoForge {@code MekKeyBindingBuilder} press/release callback system has no vanilla equivalent —
+ * vanilla {@link KeyMapping} is declarative only, has no key-conflict-context system, and cannot encode modifier-qualified defaults ({@code SHIFT+N}
+ * registers as plain {@code N}, user-rebindable). The original press behaviors — mode-change and curios packets for the five equipment keys and the
+ * module tweaker GUI, {@code MekanismClient} boost-key sync, and the HUD config toggle — are deferred to the client input vertical with their exact
+ * call chains intact, and are not stubbed here.
+ */
 public class MekanismKeyHandler {
 
-    public static final KeyMapping handModeSwitchKey = new MekKeyBindingBuilder().description(MekanismLang.KEY_HAND_MODE).conflictInGame().keyCode(GLFW.GLFW_KEY_N)
-          .onKeyDown((kb, isRepeat) -> {
-              Player player = Minecraft.getInstance().player;
-              if (player != null) {
-                  if (IModeItem.isModeItem(player, EquipmentSlot.MAINHAND, false)) {
-                      PacketUtils.sendToServer(new PacketModeChange(EquipmentSlot.MAINHAND, player.isShiftKeyDown()));
-                  } else if (!IModeItem.isModeItem(player, EquipmentSlot.MAINHAND) && IModeItem.isModeItem(player, EquipmentSlot.OFFHAND, false)) {
-                      //Otherwise, try their offhand
-                      PacketUtils.sendToServer(new PacketModeChange(EquipmentSlot.OFFHAND, player.isShiftKeyDown()));
-                  }
-              }
-          }).build();
-    public static final KeyMapping headModeSwitchKey = new MekKeyBindingBuilder().description(MekanismLang.KEY_HEAD_MODE).conflictInGame().keyCode(GLFW.GLFW_KEY_V)
-          .onKeyDown((kb, isRepeat) -> handlePotentialModeItem(EquipmentSlot.HEAD)).build();
-    public static final KeyMapping chestModeSwitchKey = new MekKeyBindingBuilder().description(MekanismLang.KEY_CHEST_MODE).conflictInGame().keyCode(GLFW.GLFW_KEY_G)
-          .onKeyDown((kb, isRepeat) -> handlePotentialModeItem(EquipmentSlot.CHEST)).build();
-    public static final KeyMapping legsModeSwitchKey = new MekKeyBindingBuilder().description(MekanismLang.KEY_LEGS_MODE).conflictInGame().keyCode(GLFW.GLFW_KEY_J)
-          .onKeyDown((kb, isRepeat) -> handlePotentialModeItem(EquipmentSlot.LEGS)).build();
-    public static final KeyMapping feetModeSwitchKey = new MekKeyBindingBuilder().description(MekanismLang.KEY_FEET_MODE).conflictInGame().keyCode(GLFW.GLFW_KEY_B)
-          .onKeyDown((kb, isRepeat) -> handlePotentialModeItem(EquipmentSlot.FEET)).build();
-    public static final KeyMapping detailsKey = new MekKeyBindingBuilder().description(MekanismLang.KEY_DETAILS_MODE).conflictInGui().keyCode(GLFW.GLFW_KEY_LEFT_SHIFT).build();
-    public static final KeyMapping descriptionKey = new MekKeyBindingBuilder().description(MekanismLang.KEY_DESCRIPTION_MODE).conflictInGui().modifier(KeyModifier.SHIFT)
-          .keyCode(GLFW.GLFW_KEY_N).build();
-    public static final KeyMapping moduleTweakerKey = new MekKeyBindingBuilder().description(MekanismLang.KEY_MODULE_TWEAKER).conflictInGame().keyCode(GLFW.GLFW_KEY_BACKSLASH)
-          .onKeyDown((kb, isRepeat) -> {
-              Player player = Minecraft.getInstance().player;
-              if (player != null && ModuleTweakerContainer.hasTweakableItem(player)) {
-                  PacketUtils.sendToServer(new PacketOpenGui(GuiType.MODULE_TWEAKER));
-              }
-          }).build();
-    public static final KeyMapping boostKey = new MekKeyBindingBuilder().description(MekanismLang.KEY_BOOST).conflictInGame().keyCode(GLFW.GLFW_KEY_LEFT_CONTROL)
-          .onKeyDown((kb, isRepeat) -> MekanismClient.updateKey(kb, KeySync.BOOST)).onKeyUp(kb -> MekanismClient.updateKey(kb, KeySync.BOOST)).build();
-    public static final KeyMapping hudKey = new MekKeyBindingBuilder().description(MekanismLang.KEY_HUD).conflictInGame().keyCode(GLFW.GLFW_KEY_H)
-          .onKeyDown((kb, isRepeat) -> {
-              MekanismConfig.client.enableHUD.set(!MekanismConfig.client.enableHUD.get());
-              // save the updated config info
-              MekanismConfig.client.save();
-          }).build();
+    private static final String CATEGORY = MekanismLang.MEKANISM.getTranslationKey();
 
-    public static void registerKeybindings(RegisterKeyMappingsEvent event) {
-        ClientRegistrationUtil.registerKeyBindings(event, handModeSwitchKey, headModeSwitchKey, chestModeSwitchKey, legsModeSwitchKey, feetModeSwitchKey,
-              detailsKey, descriptionKey, moduleTweakerKey, boostKey, hudKey);
-    }
+    public static final KeyMapping handModeSwitchKey = new KeyMapping(MekanismLang.KEY_HAND_MODE.getTranslationKey(), GLFW.GLFW_KEY_N, CATEGORY);
+    public static final KeyMapping headModeSwitchKey = new KeyMapping(MekanismLang.KEY_HEAD_MODE.getTranslationKey(), GLFW.GLFW_KEY_V, CATEGORY);
+    public static final KeyMapping chestModeSwitchKey = new KeyMapping(MekanismLang.KEY_CHEST_MODE.getTranslationKey(), GLFW.GLFW_KEY_G, CATEGORY);
+    public static final KeyMapping legsModeSwitchKey = new KeyMapping(MekanismLang.KEY_LEGS_MODE.getTranslationKey(), GLFW.GLFW_KEY_J, CATEGORY);
+    public static final KeyMapping feetModeSwitchKey = new KeyMapping(MekanismLang.KEY_FEET_MODE.getTranslationKey(), GLFW.GLFW_KEY_B, CATEGORY);
+    public static final KeyMapping detailsKey = new KeyMapping(MekanismLang.KEY_DETAILS_MODE.getTranslationKey(), GLFW.GLFW_KEY_LEFT_SHIFT, CATEGORY);
+    public static final KeyMapping descriptionKey = new KeyMapping(MekanismLang.KEY_DESCRIPTION_MODE.getTranslationKey(), GLFW.GLFW_KEY_N, CATEGORY);
+    public static final KeyMapping moduleTweakerKey = new KeyMapping(MekanismLang.KEY_MODULE_TWEAKER.getTranslationKey(), GLFW.GLFW_KEY_BACKSLASH, CATEGORY);
+    public static final KeyMapping boostKey = new KeyMapping(MekanismLang.KEY_BOOST.getTranslationKey(), GLFW.GLFW_KEY_LEFT_CONTROL, CATEGORY);
+    public static final KeyMapping hudKey = new KeyMapping(MekanismLang.KEY_HUD.getTranslationKey(), GLFW.GLFW_KEY_H, CATEGORY);
 
-    private static void handlePotentialModeItem(EquipmentSlot slot) {
-        Player player = Minecraft.getInstance().player;
-        if (player != null) {
-            if (IModeItem.isModeItem(player, slot)) {
-                PacketUtils.sendToServer(new PacketModeChange(slot, player.isShiftKeyDown()));
-                SoundHandler.playSound(MekanismSounds.HYDRAULIC);
-            } else if (Mekanism.hooks.curios.isLoaded()) {
-                Optional<SlotResult> curiosResult = CuriosIntegration.findFirstCurioAsResult(player, stack -> {
-                    if (stack.canEquip(slot, player) && IModeItem.isModeItem(stack, slot)) {
-                        return !(stack.getItem() instanceof IChemicalItem item) || item.hasChemical(stack);
-                    }
-                    return false;
-                });
-                if (curiosResult.isPresent()) {
-                    SlotContext slotContext = curiosResult.get().slotContext();
-                    PacketUtils.sendToServer(new PacketModeChangeCurios(slotContext.identifier(), slotContext.index(), player.isShiftKeyDown()));
-                    SoundHandler.playSound(MekanismSounds.HYDRAULIC);
-                }
-            }
-        }
+    public static void registerKeybindings() {
+        KeyBindingHelper.registerKeyBinding(handModeSwitchKey);
+        KeyBindingHelper.registerKeyBinding(headModeSwitchKey);
+        KeyBindingHelper.registerKeyBinding(chestModeSwitchKey);
+        KeyBindingHelper.registerKeyBinding(legsModeSwitchKey);
+        KeyBindingHelper.registerKeyBinding(feetModeSwitchKey);
+        KeyBindingHelper.registerKeyBinding(detailsKey);
+        KeyBindingHelper.registerKeyBinding(descriptionKey);
+        KeyBindingHelper.registerKeyBinding(moduleTweakerKey);
+        KeyBindingHelper.registerKeyBinding(boostKey);
+        KeyBindingHelper.registerKeyBinding(hudKey);
     }
 }

@@ -76,6 +76,8 @@ public final class MekanismFabricBootstrap implements ModInitializer {
         FabricMekanismConfigManager.Registration startup = CONFIG_MANAGER.registerAndLoad(STARTUP_CONFIG);
         verifyStartupConfig(startup);
         FabricChemicalConfig.initializeCommon(CONFIG_MANAGER);
+        //Original commonSetup transplant: holiday state starts with the config owner available and wraps filterable sounds once, at startup
+        mekanism.common.base.holiday.HolidayManager.init();
         FabricChemicalLifecycle.initialize();
         FabricChemicalIngredientTypeRegistryLifecycle.initialize();
         mekanism.fabric.robit.FabricRobitRegistries.initialize();

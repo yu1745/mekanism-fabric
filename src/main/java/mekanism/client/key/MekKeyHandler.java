@@ -3,11 +3,14 @@ package mekanism.client.key;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
-import net.neoforged.neoforge.client.settings.IKeyConflictContext;
-import net.neoforged.neoforge.client.settings.KeyConflictContext;
-import net.neoforged.neoforge.client.settings.KeyModifier;
 import org.lwjgl.glfw.GLFW;
 
+/**
+ * Fabric port delta: NeoForge's {@code IKeyConflictContext}/{@code KeyModifier} tracking has no Fabric equivalent, and vanilla {@link KeyMapping} state
+ * does not update while a screen is open — which is exactly where tooltips (and the radial menu) query pressed keys. The context/modifier branches are
+ * therefore replaced by an unconditional raw-input poll of the bound key, which keeps the observable behavior (the key answers while held, in game and
+ * in screens) at the cost of vanilla's flat binding model without modifier-qualified defaults.
+ */
 public class MekKeyHandler {
 
     private MekKeyHandler() {
@@ -17,12 +20,12 @@ public class MekKeyHandler {
         if (keyBinding.isDown()) {
             return true;
         }
-        if (keyBinding.getKeyConflictContext().isActive() && keyBinding.getKeyModifier().isActive(keyBinding.getKeyConflictContext())) {
-            //Manually check in case keyBinding#pressed just never got a chance to be updated
-            return isKeyDown(keyBinding);
-        }
-        //If we failed, due to us being a key modifier as our key, check the old way
-        return KeyModifier.isKeyCodeModifier(keyBinding.getKey()) && isKeyDown(keyBinding);
+        //Manually check in case keyBinding#pressed just never got a chance to be updated (always the case inside screens)
+        return isKeyDown(keyBinding);
+    }
+
+    public static boolean isRadialPressed() {
+        return isKeyPressed(MekanismKeyHandler.handModeSwitchKey);
     }
 
     private static boolean isKeyDown(KeyMapping keyBinding) {
@@ -40,25 +43,5 @@ public class MekKeyHandler {
             }
         }
         return false;
-    }
-
-    public static boolean isRadialPressed() {
-        KeyMapping keyBinding = MekanismKeyHandler.handModeSwitchKey;
-        if (keyBinding.isDown()) {
-            return true;
-        }
-        IKeyConflictContext conflictContext = keyBinding.getKeyConflictContext();
-        if (!conflictContext.isActive()) {
-            //If the conflict context (game) isn't active try it as being a gui but without it normally actually conflicting with gui keybindings
-            conflictContext = KeyConflictContext.GUI;
-        }
-        //If we have no modifier set on the radial key allow it to be "active" even if another modifier is pressed, as we only
-        // check the radial menu at specific times, so we don't want to close it if the player hits shift or something
-        if (conflictContext.isActive() && (keyBinding.getKeyModifier() == KeyModifier.NONE || keyBinding.getKeyModifier().isActive(conflictContext))) {
-            //Manually check in case keyBinding#pressed just never got a chance to be updated
-            return isKeyDown(keyBinding);
-        }
-        //If we failed, due to us being a key modifier as our key, check the old way
-        return KeyModifier.isKeyCodeModifier(keyBinding.getKey()) && isKeyDown(keyBinding);
     }
 }

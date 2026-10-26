@@ -783,3 +783,15 @@ mekanism/common/lib/transmitter/acceptor/EnergyAcceptorCache.java
 mekanism/common/content/network/transmitter/UniversalCable.java
 mekanism/common/content/network/distribution/EnergyTransmitterSaveTarget.java
 mekanism/common/upgrade/transmitter/UniversalCableUpgradeData.java
+mekanism/common/base/holiday/HolidayManager.java
+mekanism/common/base/holiday/Holiday.java
+mekanism/common/base/holiday/AprilFools.java
+mekanism/common/base/holiday/Christmas.java
+mekanism/common/base/holiday/May4.java
+mekanism/common/base/holiday/NewYear.java
+mekanism/common/base/holiday/Pride.java
+mekanism/common/item/block/ItemBlockTooltip.java
+mekanism/common/util/text/UpgradeDisplay.java
+mekanism/client/key/MekKeyHandler.java
+mekanism/client/key/MekanismKeyHandler.java
+mekanism/common/registration/impl/DataComponentDeferredRegister.java
