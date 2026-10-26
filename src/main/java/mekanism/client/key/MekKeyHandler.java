@@ -29,7 +29,8 @@ public class MekKeyHandler {
     }
 
     private static boolean isKeyDown(KeyMapping keyBinding) {
-        InputConstants.Key key = keyBinding.getKey();
+        //Fabric port delta: KeyMapping#getKey is NeoForge-only; the access-widened field is the vanilla equivalent.
+        InputConstants.Key key = keyBinding.key;
         int keyCode = key.getValue();
         if (keyCode != InputConstants.UNKNOWN.getValue()) {
             long windowHandle = Minecraft.getInstance().getWindow().getWindow();

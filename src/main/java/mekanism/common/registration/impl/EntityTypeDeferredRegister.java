@@ -12,6 +12,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.SpawnPlacementType;
 import net.minecraft.world.entity.SpawnPlacementTypes;
 import net.minecraft.world.entity.SpawnPlacements;
@@ -110,7 +111,8 @@ public class EntityTypeDeferredRegister extends MekanismDeferredRegister<EntityT
                 //Nothing was specified to register; keep the vanilla default rather than inventing a placement
                 return;
             }
-            SpawnPlacements.register((EntityType<ENTITY>) entityType, placementType, heightmap, predicate);
+            //Vanilla only stores placements for Mob types; the official registration data is only ever supplied for mobs.
+            SpawnPlacements.register((EntityType<Mob>) entityType, placementType, heightmap, (SpawnPlacements.SpawnPredicate<Mob>) predicate);
         }
     }
 }

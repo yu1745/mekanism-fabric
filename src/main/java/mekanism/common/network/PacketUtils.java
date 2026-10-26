@@ -31,9 +31,11 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientboundBundlePacket;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.ByIdMap;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ChunkPos;
@@ -179,6 +181,27 @@ public class PacketUtils {
     public static <MSG extends CustomPacketPayload> boolean sendToServer(MSG message) {
         ClientPlayNetworking.send(message);
         return true;
+    }
+
+    /**
+     * Send this message to every connected player on the current server.
+     */
+    public static <MSG extends CustomPacketPayload> void sendToAllPlayers(MSG message) {
+        MinecraftServer server = MekanismServerLifecycle.getServer();
+        if (server != null) {
+            for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+                ServerPlayNetworking.send(player, message);
+            }
+        }
+    }
+
+    /**
+     * Send this message to every player tracking the given entity.
+     */
+    public static <MSG extends CustomPacketPayload> void sendToTracking(Entity entity, MSG message) {
+        for (ServerPlayer player : PlayerLookup.tracking(entity)) {
+            ServerPlayNetworking.send(player, message);
+        }
     }
 
     public static <MSG extends CustomPacketPayload> void sendToAllTracking(MSG message, BlockEntity tile) {

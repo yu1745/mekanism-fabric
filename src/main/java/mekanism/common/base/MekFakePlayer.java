@@ -307,9 +307,5 @@ public class MekFakePlayer extends ServerPlayer {
         @Override
         public void disconnect(Component disconnectionMessage) {
         }
-
-        @Override
-        public void onDisconnect(Component disconnectionMessage) {
-        }
     }
 }

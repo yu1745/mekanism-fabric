@@ -6,6 +6,7 @@ import mekanism.common.util.WorldUtils;
 import net.fabricmc.fabric.api.lookup.v1.block.BlockApiLookup;
 import net.fabricmc.fabric.api.lookup.v1.entity.EntityApiLookup;
 import net.fabricmc.fabric.api.lookup.v1.item.ItemApiLookup;
+import net.fabricmc.fabric.api.transfer.v1.context.ContainerItemContext;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.entity.Entity;
@@ -49,7 +50,7 @@ public interface IEnergyCompat {
     /**
      * Gets the item lookup this compat integrates with.
      */
-    ItemApiLookup<?, Void> getItemCapability();
+    ItemApiLookup<?, ContainerItemContext> getItemCapability();
 
     /**
      * Gets the entity lookup this compat integrates with.
@@ -107,7 +108,7 @@ public interface IEnergyCompat {
     @Nullable
     private Object getCapability(ItemStack stack) {
         //Note: Safety handling of empty stack is done when looking up the provider inside find's implementation
-        return getItemCapability().find(stack, null);
+        return getItemCapability().find(stack, ContainerItemContext.withConstant(stack));
     }
 
     @Nullable

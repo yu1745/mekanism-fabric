@@ -17,12 +17,26 @@
     "radiation.RadiationEntityTickMixin",
     "radiation.RadiationPlayerTickMixin",
     "transmitter.TransmitterTicketLevelMixin",
-    "player.ServerPlayerGameModeMixin"
+    "player.ServerPlayerGameModeMixin",
+    "entity.LivingEntityGameplayMixin",
+    "entity.BlockStateDestroyProgressMixin",
+    "entity.PlayerGearTickMixin",
+    "tile.LevelChunkUnloadMixin",
+    "entity.LivingEntityElytraMixin",
+    "entity.PlayerElytraStartMixin",
+    "entity.EnderManMaskMixin",
+    "block.PowderSnowWalkMixin",
+    "entity.ItemEntityDestroyMixin",
+    "entity.PiglinAiCurrencyMixin",
+    "entity.PiglinOffHandMixin",
+    "entity.PiglinNeutralityMixin",
+    "item.ItemStackMekaSuitDamageMixin"
   ],
   "client": [
     "item.ClientConfiguratorUseMixin",
     "item.ModeStatusOverlayMixin",
-    "radiation.RadiationOverlayMixin"
+    "radiation.RadiationOverlayMixin",
+    "item.ClientElytraStartMixin"
   ],
   "injectors": {
     "defaultRequire": 1

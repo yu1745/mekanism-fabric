@@ -116,7 +116,9 @@ public class TileEntityFluidicPlenisher extends TileEntityMekanism implements IC
     }
 
     private boolean isValidFluid(@NotNull FluidStack stack) {
-        return stack.getFluidType().canBePlacedInLevel(getLevel(), worldPosition.below(), stack);
+        //Fabric port delta: NeoForge FluidType#canBePlacedInLevel answers !defaultFluidState().createLegacyBlock().isAir();
+        // Mekanism fluids all own a liquid block, so the vanilla legacy-block query is the same decision.
+        return !stack.getFluid().defaultFluidState().createLegacyBlock().isAir();
     }
 
     @Override

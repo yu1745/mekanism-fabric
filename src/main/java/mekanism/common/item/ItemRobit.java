@@ -40,10 +40,11 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.gameevent.GameEvent;
+import mekanism.common.item.interfaces.IDropContentsOnDestroy;
 import mekanism.fabric.network.FabricSecurityNetworking;
 import org.jetbrains.annotations.NotNull;
 
-public class ItemRobit extends ItemEnergized implements ICapabilityAware {
+public class ItemRobit extends ItemEnergized implements ICapabilityAware, IDropContentsOnDestroy {
 
     public ItemRobit(Properties properties) {
         super(properties.rarity(Rarity.RARE).stacksTo(1)
@@ -61,7 +62,7 @@ public class ItemRobit extends ItemEnergized implements ICapabilityAware {
     @Override
     public void appendHoverText(@NotNull ItemStack stack, @NotNull Item.TooltipContext context, @NotNull List<Component> tooltip, @NotNull TooltipFlag flag) {
         super.appendHoverText(stack, context, tooltip, flag);
-        Component name = stack.get(MekanismDataComponents.ROBIT_NAME);
+        Component name = stack.get(MekanismDataComponents.ROBIT_NAME.get());
         if (name == null) {
             name = MekanismLang.ROBIT.translate();
         }
@@ -102,7 +103,7 @@ public class ItemRobit extends ItemEnergized implements ICapabilityAware {
                     robit.setOwnerUUID(ownerUUID);
                 }
                 ContainerType.ITEM.copyFromStack(world.registryAccess(), stack, robit.getInventorySlots(null));
-                Component name = stack.get(MekanismDataComponents.ROBIT_NAME);
+                Component name = stack.get(MekanismDataComponents.ROBIT_NAME.get());
                 if (name != null) {
                     robit.setCustomName(name);
                 }
@@ -132,7 +133,7 @@ public class ItemRobit extends ItemEnergized implements ICapabilityAware {
     public void inventoryTick(@NotNull ItemStack stack, @NotNull Level level, @NotNull Entity entity, int slot, boolean isSelected) {
         super.inventoryTick(stack, level, entity, slot, isSelected);
         if (!level.isClientSide && HolidayManager.hasRobitSkinsToday() && !stack.getOrDefault(MekanismDataComponents.DEFAULT_MANUALLY_SELECTED.get(), false)) {
-            ResourceKey<RobitSkin> skin = stack.get(MekanismDataComponents.ROBIT_SKIN);
+            ResourceKey<RobitSkin> skin = stack.get(MekanismDataComponents.ROBIT_SKIN.get());
             if (skin == null || skin == MekanismRobitSkins.BASE) {
                 //Randomize the robit's skin
                 stack.set(MekanismDataComponents.ROBIT_SKIN.get(), HolidayManager.getRandomBaseSkin(level.random));

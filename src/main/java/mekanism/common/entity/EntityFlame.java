@@ -9,6 +9,7 @@ import mekanism.common.registries.MekanismDamageTypes;
 import mekanism.common.registries.MekanismDataSerializers;
 import mekanism.common.registries.MekanismEntityTypes;
 import mekanism.common.util.MekanismUtils;
+import mekanism.common.util.WorldUtils;
 import mekanism.common.util.ToolAbilityUtils;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.BlockPos;
@@ -276,7 +277,8 @@ public class EntityFlame extends Projectile {
 
     @Override
     protected void defineSynchedData(@NotNull SynchedEntityData.Builder builder) {
-        super.defineSynchedData(builder);
+        //Fabric port delta: Entity#defineSynchedData is abstract and Projectile does not implement it, so subclasses
+        // cannot chain to a super implementation.
         builder.define(MODE, FlamethrowerMode.COMBAT);
     }
 }

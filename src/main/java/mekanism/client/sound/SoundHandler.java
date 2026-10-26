@@ -10,7 +10,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
 import mekanism.api.Upgrade;
 import mekanism.client.sound.PlayerSound.SoundType;
-import mekanism.common.Mekanism;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.lib.radiation.RadiationScale;
 import mekanism.common.registration.impl.SoundEventRegistryObject;
@@ -34,12 +33,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.ClientHooks;
-import net.neoforged.neoforge.client.event.sound.PlaySoundEvent;
-import net.neoforged.neoforge.client.event.sound.SoundEngineLoadEvent;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -59,7 +52,6 @@ import org.jetbrains.annotations.NotNull;
  *
  * @apiNote Only used by client
  */
-@EventBusSubscriber(modid = Mekanism.MODID, value = Dist.CLIENT)
 public class SoundHandler {
 
     private SoundHandler() {
@@ -72,9 +64,15 @@ public class SoundHandler {
     public static final Map<RadiationScale, GeigerSound> radiationSoundMap = new EnumMap<>(RadiationScale.class);
 
     private static final Long2ObjectMap<SoundInstance> soundMap = new Long2ObjectOpenHashMap<>();
-    private static boolean IN_MUFFLED_CHECK = false;
-    private static SoundEngine soundEngine;
     private static boolean hadPlayerSounds;
+
+    /**
+     * Fabric port delta: the SoundEngine is read from the client sound manager (access-widened) instead of being captured in a
+     * NeoForge sound-engine-load event.
+     */
+    private static SoundEngine soundEngine() {
+        return Minecraft.getInstance().getSoundManager().soundEngine;
+    }
 
     public static void clearPlayerSounds() {
         jetpackSounds.clear();
@@ -154,7 +152,8 @@ public class SoundHandler {
 
     private static void restartSounds(PlayerSound... sounds) {
         for (PlayerSound sound : sounds) {
-            if (!sound.isStopped() && soundEngine != null && !soundEngine.instanceToChannel.containsKey(sound)) {
+            SoundEngine engine = soundEngine();
+            if (!sound.isStopped() && engine != null && !engine.instanceToChannel.containsKey(sound)) {
                 //Note: We need to directly check the instanceToChannel, because isActive will give wrong results as it doesn't
                 // get cleared out of the soundDeleteTime map. We also don't restart sounds if they marked themselves as stopped
                 // as the cases we have that is if the player is no longer present or the player died, in which case the sound will
@@ -204,10 +203,9 @@ public class SoundHandler {
 
             // Start the sound
             playSound(s);
-
-            // N.B. By the time playSound returns, our expectation is that our wrapping-detector handler has fired
-            // and dealt with any muting interceptions and, CRITICALLY, updated the soundMap with the final ISound.
-            s = soundMap.get(pos.asLong());
+            //Fabric port delta: without a play-sound interception event nothing can substitute the played instance, so the
+            // sound map records the instance we created (the official hook recorded it after a possible substitution).
+            soundMap.put(pos.asLong(), s);
         }
         return s;
     }
@@ -246,48 +244,7 @@ public class SoundHandler {
         return player.position().distanceToSqr(sound.getX(), sound.getY(), sound.getZ()) < scaledDistance * scaledDistance;
     }
 
-    @SubscribeEvent
-    public static void onSoundEngineSetup(SoundEngineLoadEvent event) {
-        //Grab the sound engine, so that we are able to play sounds. We use this event rather than requiring the use of an AT
-        if (soundEngine == null) {
-            //Note: We include a null check as the constructor for SoundEngine is public and calls this event
-            // And we do not want to end up grabbing a modders variant of this
-            soundEngine = event.getEngine();
-        }
-    }
 
-    public static void onTilePlaySound(PlaySoundEvent event) {
-        // Ignore any sound event which is null or is happening in a muffled check
-        SoundInstance resultSound = event.getSound();
-        if (resultSound == null || IN_MUFFLED_CHECK) {
-            return;
-        }
-
-        // Ignore any sound event outside this mod namespace
-        ResourceLocation soundLoc = event.getOriginalSound().getLocation();
-        //If it is mekanism or one of the submodules let continue
-        if (!soundLoc.getNamespace().startsWith(Mekanism.MODID)) {
-            return;
-        }
-
-        // If this is a Mek player sound, unwrap any muffling that other mods may have attempted. I haven't
-        // sorted out a good way to deal with long-lived, non-repeating, dynamic volume sounds -- something
-        // to investigate in the future.
-        if (event.getOriginalSound() instanceof PlayerSound sound) {
-            event.setSound(sound);
-            return;
-        }
-
-        //Ignore any non-tile Mek sounds
-        if (event.getName().startsWith("tile.")) {
-            //At this point, we've got a known block Mekanism sound.
-            // Update our soundMap so that we can actually have a shot at stopping this sound; note that we also
-            // need to "unoffset" the sound position so that we build the correct key for the sound map
-            // Aside: I really, really, wish Forge returned the final result sound as part of playSound :/
-            BlockPos pos = BlockPos.containing(resultSound.getX() - 0.5, resultSound.getY() - 0.5, resultSound.getZ() - 0.5);
-            soundMap.put(pos.asLong(), resultSound);
-        }
-    }
 
     private static class TileTickableSound extends AbstractTickableSoundInstance {
 
@@ -328,26 +285,9 @@ public class SoundHandler {
                     stop();
                     return;
                 }
-                // Run the event bus with the original sound. Note that we must make sure to set the GLOBAL/STATIC
-                // flag that ensures we don't wrap already muffled sounds. This is...NOT ideal and makes some
-                // significant (hopefully well-informed) assumptions about locking/ordering of all these calls.
-                IN_MUFFLED_CHECK = true;
-                //Make sure we set our volume back to what it actually would be for purposes of letting other mods know
-                // what volume to use
-                volume = originalVolume;
-                SoundInstance s = ClientHooks.playSound(soundEngine, this);
-                IN_MUFFLED_CHECK = false;
-
-                if (s == this) {
-                    // No filtering done, use the original sound's volume
-                    volume = originalVolume * getTileVolumeFactor();
-                } else if (s == null) {
-                    // Full on mute; go ahead and shutdown
-                    stop();
-                } else {
-                    // Altered sound returned; adjust volume
-                    volume = s.getVolume() * getTileVolumeFactor();
-                }
+                //Fabric port delta: Fabric has no play-sound interception event, so no external manipulation can substitute,
+                // mute, or alter this instance; the periodic refresh only needs to recompute this mod's own muffling factor.
+                volume = originalVolume * getTileVolumeFactor();
             }
         }
 

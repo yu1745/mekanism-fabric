@@ -255,7 +255,7 @@ public class TileComponentChunkLoader<T extends TileEntityMekanism & IChunkLoade
         tile.markForSave();
     }
 
-    LongSet getTileChunks() {
+    public LongSet getTileChunks() {
         Set<ChunkPos> chunks = tile.getChunkSet();
         if (chunks.isEmpty()) {
             return LongSets.EMPTY_SET;
@@ -273,7 +273,7 @@ public class TileComponentChunkLoader<T extends TileEntityMekanism & IChunkLoade
     }
 
     /** Records the ticket set the persisted data holds for this owner; used by the post-start validation. */
-    void adoptRecordedTickets(@NotNull ServerLevel world, @NotNull BlockPos pos, @NotNull LongSet recorded) {
+    public void adoptRecordedTickets(@NotNull ServerLevel world, @NotNull BlockPos pos, @NotNull LongSet recorded) {
         chunkSet.clear();
         chunkSet.addAll(recorded);
         hasRegistered = true;
@@ -283,7 +283,7 @@ public class TileComponentChunkLoader<T extends TileEntityMekanism & IChunkLoade
     }
 
     /** Clears the loader's own record after its tickets were released by validation. */
-    void clearRecordedTickets() {
+    public void clearRecordedTickets() {
         chunkSet.clear();
         hasRegistered = false;
         prevWorld = null;

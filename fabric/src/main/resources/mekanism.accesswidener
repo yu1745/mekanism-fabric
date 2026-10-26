@@ -58,3 +58,26 @@ accessible field net/minecraft/world/item/ShovelItem FLATTENABLES Ljava/util/Map
 # IBlockStateExtension.isFlammable and Block#onCaughtFire.
 accessible method net/minecraft/world/level/block/FireBlock getBurnOdds (Lnet/minecraft/world/level/block/state/BlockState;)I
 accessible method net/minecraft/world/level/block/TntBlock explode (Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/LivingEntity;)V
+
+# Fabric port delta for the client sound engine: NeoForge exposes it through a sound-engine-load event, while the port reads the
+# vanilla sound manager's engine (vanilla keeps the field private).
+accessible field net/minecraft/client/sounds/SoundManager soundEngine Lnet/minecraft/client/sounds/SoundEngine;
+
+# Fluid liquid blocks pick the closest vanilla map color to the fluid tint. NeoForge exposes the fluid color through
+# FluidType and vanilla's own water/lava blocks hardcode their MapColor; vanilla keeps the material color table private.
+accessible field net/minecraft/world/level/material/MapColor MATERIAL_COLORS [Lnet/minecraft/world/level/material/MapColor;
+
+# NeoForge exposes several positional/extension hooks and cross-package sound-engine state that vanilla keeps private.
+# Each entry below backs a specific ported caller; see docs/TASK052_RESUME_2026-10-26.md for the mapping.
+accessible field net/minecraft/server/network/ServerGamePacketListenerImpl aboveGroundTickCount I
+accessible method net/minecraft/world/entity/player/Player playStepSound (Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)V
+accessible method net/minecraft/world/level/block/state/BlockBehaviour$BlockStateBase asState ()Lnet/minecraft/world/level/block/state/BlockState;
+accessible field net/minecraft/client/sounds/SoundEngine listeners Ljava/util/List;
+accessible field net/minecraft/client/sounds/SoundEngine instanceToChannel Ljava/util/Map;
+accessible method net/minecraft/world/level/levelgen/placement/PlacedFeature placeWithContext (Lnet/minecraft/world/level/levelgen/placement/PlacementContext;Lnet/minecraft/util/RandomSource;Lnet/minecraft/core/BlockPos;)Z
+accessible field net/minecraft/world/level/chunk/ChunkGenerator featuresPerStep Ljava/util/function/Supplier;
+accessible field net/minecraft/world/item/BucketItem content Lnet/minecraft/world/level/material/Fluid;
+accessible field net/minecraft/client/KeyMapping key Lcom/mojang/blaze3d/platform/InputConstants$Key;
+accessible field net/minecraft/world/level/biome/Biome climateSettings Lnet/minecraft/world/level/biome/Biome$ClimateSettings;
+accessible class net/minecraft/world/level/biome/Biome$ClimateSettings
+accessible field net/minecraft/world/item/ItemStackLinkedSet TYPE_AND_TAG Lit/unimi/dsi/fastutil/Hash$Strategy;

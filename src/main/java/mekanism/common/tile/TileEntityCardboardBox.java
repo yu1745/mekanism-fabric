@@ -6,6 +6,7 @@ import mekanism.common.registries.MekanismTileEntityTypes;
 import mekanism.common.tile.base.TileEntityUpdateable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
@@ -41,7 +42,7 @@ public class TileEntityCardboardBox extends TileEntityUpdateable {
         if (components().has(MekanismDataComponents.BLOCK_DATA.get())) {
             //If we have the block data component, just sync all the components to the client, as when handling the update tag
             // it deserializes any components and replaces the components with the new value
-            ComponentHelper.COMPONENTS_CODEC.encodeStart(provider.createSerializationContext(NbtOps.INSTANCE), components())
+            DataComponentMap.CODEC.encodeStart(provider.createSerializationContext(NbtOps.INSTANCE), components())
                   .resultOrPartial(error -> LOGGER.warn("Failed to save components: {}", error))
                   .ifPresent(tag -> updateTag.merge((CompoundTag) tag));
         }

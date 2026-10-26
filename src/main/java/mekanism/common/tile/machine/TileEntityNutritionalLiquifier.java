@@ -49,6 +49,7 @@ import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.NBTUtils;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.food.FoodProperties;
@@ -139,7 +140,7 @@ public class TileEntityNutritionalLiquifier extends TileEntityProgressMachine<Ba
     }
 
     public static boolean isValidInput(ItemStack stack) {
-        FoodProperties food = stack.getFoodProperties(null);
+        FoodProperties food = stack.get(DataComponents.FOOD);
         //And only allow inserting foods that actually would provide paste
         return food != null && food.nutrition() > 0;
     }
@@ -193,7 +194,7 @@ public class TileEntityNutritionalLiquifier extends TileEntityProgressMachine<Ba
         if (stack.isEmpty()) {
             return null;
         }
-        FoodProperties food = stack.getFoodProperties(null);
+        FoodProperties food = stack.get(DataComponents.FOOD);
         if (food == null || food.nutrition() <= 0) {
             //If the food provides no healing don't allow consuming it as it won't provide any paste
             return null;

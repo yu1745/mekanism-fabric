@@ -24,8 +24,9 @@ public final class MekanismEventBus {
      * Registers a listener for the given concrete event type. Listener failures are not intercepted: a throwing listener aborts the dispatch, matching the
      * upstream bus where an exception in one listener propagates to the firing code.
      */
+    @SuppressWarnings("unchecked")
     public static <E extends MekanismEvent> void addListener(Class<E> type, Consumer<? super E> listener) {
-        LISTENERS.computeIfAbsent(type, key -> new CopyOnWriteArrayList<>()).add(listener);
+        LISTENERS.computeIfAbsent(type, key -> new CopyOnWriteArrayList<>()).add((Consumer<Object>) listener);
     }
 
     /**

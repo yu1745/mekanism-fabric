@@ -67,7 +67,7 @@ public class DiversionTransporter extends LogisticalTransporterBase {
                     if (modeReqsMet(direction)) {
                         //Notify any listeners to our position that we now do have a capability
                         //Note: We don't invalidate our impls because we know they are already invalid, so we can short circuit setting them to null from null
-                        transmitterTile.invalidateCapabilities();
+                        transmitterTile.invalidateCapabilitiesFull();
                     } else {
                         //We no longer have a capability, invalidate it, which will also notify the level
                         transmitterTile.invalidateCapability(Capabilities.ITEM.block(), direction);
@@ -140,7 +140,7 @@ public class DiversionTransporter extends LogisticalTransporterBase {
                     if (nowExposes) {
                         //Notify any listeners to our position that we now do have a capability
                         //Note: We don't invalidate our impls because we know they are already invalid, so we can short circuit setting them to null from null
-                        transmitterTile.invalidateCapabilities();
+                        transmitterTile.invalidateCapabilitiesFull();
                     } else {
                         //We no longer have a capability, invalidate it, which will also notify the level
                         transmitterTile.invalidateCapability(Capabilities.ITEM.block(), side);

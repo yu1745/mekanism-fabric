@@ -136,7 +136,7 @@ public class TileEntityFluidTank extends TileEntityMekanism implements IConfigur
         if (lightUpdateDelay > 0) {
             lightUpdateDelay--;
             if (lightUpdateDelay == 0) {
-                int lightLevel = getBlockState().getLightEmission(level, worldPosition);
+                int lightLevel = getBlockState().getLightEmission();
                 if (lightLevel != lastLightLevel) {
                     lastLightLevel = lightLevel;
                     level.getLightEngine().checkBlock(worldPosition);

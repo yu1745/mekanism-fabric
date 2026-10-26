@@ -1,10 +1,11 @@
 package mekanism.common.item;
 
+import mekanism.common.item.interfaces.IPiglinCurrencyItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
-public class ItemRefinedGlowstoneIngot extends Item {
+public class ItemRefinedGlowstoneIngot extends Item implements IPiglinCurrencyItem {
 
     public ItemRefinedGlowstoneIngot(Item.Properties properties) {
         super(properties);

@@ -9,9 +9,10 @@ import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
-import net.minecraft.world.entity.Entity;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -50,10 +51,17 @@ public class BlockOre extends Block implements IHasDescription {
         return this::getDescriptionTranslationKey;
     }
 
+    /**
+     * Fabric port delta: NeoForge's {@code getExpDrop} extension let vanilla award the ore experience. Vanilla only
+     * awards experience from an overridden {@code playerDestroy}, so the same range is dropped here directly (no silk
+     * touch or fortune processing, matching the official override's contract).
+     */
     @Override
-    public int getExpDrop(@NotNull BlockState state, @NotNull LevelAccessor level, @NotNull BlockPos pos, @Nullable BlockEntity blockEntity, @Nullable Entity breaker,
-          @NotNull ItemStack tool) {
-        //Note: If min exp = max exp = 0, then this will just return zero, similar to what super does
-        return Mth.nextInt(level.getRandom(), ore.getMinExp(), ore.getMaxExp());
+    public void playerDestroy(@NotNull Level level, @NotNull Player player, @NotNull BlockPos pos, @NotNull BlockState state,
+          @Nullable BlockEntity blockEntity, @NotNull ItemStack tool) {
+        super.playerDestroy(level, player, pos, state, blockEntity, tool);
+        if (level instanceof ServerLevel serverLevel) {
+            popExperience(serverLevel, pos, Mth.nextInt(level.getRandom(), ore.getMinExp(), ore.getMaxExp()));
+        }
     }
 }

@@ -9,6 +9,7 @@ import java.util.Optional;
 import mekanism.api.MekanismAPI;
 import mekanism.api.SerializationConstants;
 import mekanism.api.chemical.Chemical;
+import mekanism.api.chemical.ChemicalDataContext;
 import mekanism.api.chemical.ChemicalStack;
 import mekanism.api.chemical.attribute.ChemicalAttributes;
 import mekanism.api.datamaps.IMekanismDataMapTypes;
@@ -56,9 +57,14 @@ public record BoilerRecipeViewerRecipe(ResourceLocation id, @Nullable ChemicalSt
               HeatUtils.BASE_BOIL_TEMP + waterToSteamHeatNecessary / (BoilerMultiblockData.CASING_HEAT_CAPACITY * MekanismConfig.general.boilerWaterConductivity.get())
         ));
         //Add recipes for all heated coolants
-        for (Map.Entry<ResourceKey<Chemical>, HeatedCoolant> entry : MekanismAPI.CHEMICAL_REGISTRY.getDataMap(IMekanismDataMapTypes.INSTANCE.heatedChemicalCoolant()).entrySet()) {
+        //Fabric port delta: the chemical data maps are owned by the Fabric data-map session, not a registry data map.
+        Map<ResourceKey<Chemical>, ?> coolantMaps = ChemicalDataContext.current().maps().get(IMekanismDataMapTypes.INSTANCE.heatedChemicalCoolant());
+        if (coolantMaps == null) {
+            coolantMaps = Map.of();
+        }
+        for (Map.Entry<ResourceKey<Chemical>, ?> entry : coolantMaps.entrySet()) {
             ResourceKey<Chemical> key = entry.getKey();
-            HeatedCoolant coolant = entry.getValue();
+            HeatedCoolant coolant = (HeatedCoolant) entry.getValue();
             //Amount of coolant that is actually used to
             long coolantAmount = Math.round(waterToSteamHeatNecessary / coolant.thermalEnthalpy());
             recipes.add(new BoilerRecipeViewerRecipe(

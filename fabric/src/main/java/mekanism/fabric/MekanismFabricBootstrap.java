@@ -95,11 +95,32 @@ public final class MekanismFabricBootstrap implements ModInitializer {
         FabricMekanismDataMaps.initializeCallbacks();
         FabricCapabilityTileLifecycle.initialize();
         mekanism.fabric.registry.FabricMekanismBlockRegistries.initialize();
+        //Fluid families: still/flowing fluids first (the liquid block resolves the registered flowing fluid), then the
+        //liquid blocks and buckets. Bucket dispense behavior mirrors the official common-setup pass.
+        mekanism.common.registries.MekanismFluids.FLUIDS.registerAll(BuiltInRegistries.FLUID, BuiltInRegistries.BLOCK, BuiltInRegistries.ITEM);
+        mekanism.common.registries.MekanismFluids.FLUIDS.registerBucketDispenserBehavior();
         MekanismUsernameLifecycle.initialize();
         LOGGER.info("MEKANISM_FABRIC_NETWORK_PROOF protocol={} phase=configuration codecs={} server_receiver={} client_required={}",
               networking.protocolVersion(), networking.codecs(), networking.serverReceiver(), networking.clientRequired());
+        //Entity data serializers are not a vanilla registry: numeric ids are assigned directly, before any entity exists.
+        mekanism.common.registries.MekanismDataSerializers.DATA_SERIALIZERS.registerAll();
         mekanism.common.registries.MekanismEntityTypes.ENTITY_TYPES.registerAll(BuiltInRegistries.ENTITY_TYPE);
         mekanism.common.CommonWorldTickHandler.register();
+        //NeoForge's IItemExtension#onItemUseFirst hook: vanilla fires no per-item pre-block-use callback, so the Fabric
+        //use-block event forwards to items implementing the Mekanism surface at the same point.
+        net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
+            net.minecraft.world.item.ItemStack held = player.getItemInHand(hand);
+            if (held.getItem() instanceof mekanism.common.item.interfaces.IItemUseFirst first) {
+                return first.onItemUseFirst(held, new net.minecraft.world.item.context.UseOnContext(player, hand, hitResult));
+            }
+            return net.minecraft.world.InteractionResult.PASS;
+        });
+        //NeoForge's Entity#onRemovedFromLevel hook: the robit registers its follow-up chunk ticket at entity unload.
+        net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents.ENTITY_UNLOAD.register((entity, world) -> {
+            if (entity instanceof mekanism.common.entity.EntityRobit robit) {
+                robit.onRemovedFromLevel();
+            }
+        });
         MekanismGameEvents.GAME_EVENTS.registerAll(BuiltInRegistries.GAME_EVENT);
         mekanism.common.registries.MekanismParticleTypes.PARTICLE_TYPES.registerAll(BuiltInRegistries.PARTICLE_TYPE);
         mekanism.common.advancements.MekanismCriteriaTriggers.CRITERIA_TRIGGERS.registerAll(BuiltInRegistries.TRIGGER_TYPES);

@@ -14,6 +14,7 @@ import mekanism.client.key.MekanismKeyHandler;
 import mekanism.common.MekanismLang;
 import mekanism.common.attachments.IAttachmentAware;
 import mekanism.common.attachments.component.UpgradeAware;
+import mekanism.common.item.interfaces.IDropContentsOnDestroy;
 import mekanism.common.attachments.containers.ContainerType;
 import mekanism.common.attachments.containers.energy.ComponentBackedNoClampEnergyContainer;
 import mekanism.common.attachments.containers.energy.EnergyContainersBuilder;
@@ -48,7 +49,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import mekanism.api.fluid.FluidStack;
 import org.jetbrains.annotations.NotNull;
 
-public class ItemBlockTooltip<BLOCK extends Block & IHasDescription> extends ItemBlockMekanism<BLOCK> implements ICapabilityAware, IAttachmentAware {
+public class ItemBlockTooltip<BLOCK extends Block & IHasDescription> extends ItemBlockMekanism<BLOCK> implements ICapabilityAware, IAttachmentAware,
+      IDropContentsOnDestroy {
 
     private final boolean hasDetails;
 
@@ -108,7 +110,7 @@ public class ItemBlockTooltip<BLOCK extends Block & IHasDescription> extends Ite
             tooltip.add(MekanismLang.HAS_INVENTORY.translateColored(EnumColor.AQUA, EnumColor.GRAY, YesNo.hasInventory(stack)));
         }
         if (Attribute.has(getBlock(), AttributeUpgradeSupport.class)) {
-            UpgradeAware upgradeAware = stack.get(MekanismDataComponents.UPGRADES);
+            UpgradeAware upgradeAware = stack.get(MekanismDataComponents.UPGRADES.get());
             if (upgradeAware != null) {
                 for (Entry<Upgrade, Integer> entry : upgradeAware.upgrades().entrySet()) {
                     tooltip.add(UpgradeDisplay.of(entry.getKey(), entry.getValue()).getTextComponent());

@@ -13,12 +13,6 @@ public class ItemHDPEElytra extends ElytraItem {
         super(properties);
     }
 
-    @Nullable
-    @Override
-    public EquipmentSlot getEquipmentSlot(ItemStack stack) {
-        return EquipmentSlot.CHEST;
-    }
-
     @Override
     public boolean isValidRepairItem(@NotNull ItemStack toRepair, ItemStack repair) {
         return repair.is(MekanismItems.HDPE_SHEET);

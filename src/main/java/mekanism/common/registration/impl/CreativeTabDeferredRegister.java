@@ -16,6 +16,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
 import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroupEntries;
 import org.jetbrains.annotations.NotNull;
 
@@ -53,10 +54,11 @@ public class CreativeTabDeferredRegister extends MekanismDeferredRegister<Creati
      */
     public MekanismDeferredHolder<CreativeModeTab, CreativeModeTab> register(String name, ILangEntry title, Holder<Item> icon, UnaryOperator<CreativeModeTab.Builder> operator) {
         return register(name, () -> {
-            CreativeModeTab.Builder builder = CreativeModeTab.builder()
+            //Fabric port delta: NeoForge's withTabFactory/custom tab class and the getLabelColor hook have no vanilla
+            // counterpart; FabricItemGroup.builder() owns the vanilla row/column assignment.
+            CreativeModeTab.Builder builder = FabricItemGroup.builder()
                   .title(title.translate())
-                  .icon(() -> new ItemStack(icon))
-                  .withTabFactory(MekanismCreativeTab::new);
+                  .icon(() -> new ItemStack(icon));
             return operator.apply(builder).build();
         });
     }
@@ -116,18 +118,6 @@ public class CreativeTabDeferredRegister extends MekanismDeferredRegister<Creati
 
         default boolean addDefault() {
             return true;
-        }
-    }
-
-    public static class MekanismCreativeTab extends CreativeModeTab {
-
-        protected MekanismCreativeTab(CreativeModeTab.Builder builder) {
-            super(builder);
-        }
-
-        @Override
-        public int getLabelColor() {
-            return SpecialColors.TEXT_TITLE.argb();
         }
     }
 }

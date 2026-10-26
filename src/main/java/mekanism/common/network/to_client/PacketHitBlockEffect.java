@@ -6,6 +6,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.NotNull;
@@ -25,6 +26,10 @@ public record PacketHitBlockEffect(BlockHitResult result) implements IMekanismPa
 
     @Override
     public void handle(Player player) {
-        Minecraft.getInstance().particleEngine.addBlockHitEffects(result.getBlockPos(), result);
+        //Fabric port delta: NeoForge adds a positional addBlockHitEffects overload; vanilla exposes the same particle
+        // burst through ParticleEngine#destroy with the local block state.
+        if (Minecraft.getInstance().level != null) {
+            Minecraft.getInstance().particleEngine.destroy(result.getBlockPos(), Minecraft.getInstance().level.getBlockState(result.getBlockPos()));
+        }
     }
 }

@@ -6,6 +6,7 @@ import mekanism.api.chemical.IChemicalHandler;
 import mekanism.api.fluid.IExtendedFluidHandler;
 import mekanism.api.functions.ConstantPredicates;
 import mekanism.common.attachments.containers.chemical.ComponentBackedChemicalTank;
+import mekanism.common.attachments.containers.ContainerType;
 import mekanism.common.attachments.containers.chemical.merged.MergedTankCreator;
 import mekanism.common.attachments.containers.fluid.ComponentBackedFluidTank;
 import mekanism.common.config.MekanismConfig;

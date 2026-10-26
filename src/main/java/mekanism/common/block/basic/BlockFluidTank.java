@@ -26,22 +26,9 @@ public class BlockFluidTank extends BlockTileModel<TileEntityFluidTank, Machine<
         super(type, properties -> properties.mapColor(BlockResourceInfo.STEEL.getMapColor()));
     }
 
-    @Override
-    public int getLightEmission(BlockState state, BlockGetter world, BlockPos pos) {
-        int ambientLight = super.getLightEmission(state, world, pos);
-        if (ambientLight == 15) {
-            //If we are already at the max light value don't bother looking up the tile to see if it has a fluid that gives off light
-            return ambientLight;
-        }
-        TileEntityFluidTank tile = WorldUtils.getTileEntity(TileEntityFluidTank.class, world, pos);
-        if (tile != null) {
-            FluidStack fluid = tile.fluidTank.getFluid();
-            if (!fluid.isEmpty()) {
-                ambientLight = Math.max(ambientLight, fluid.getFluidType().getLightLevel(fluid));
-            }
-        }
-        return ambientLight;
-    }
+    //Fabric port delta: NeoForge's positional IBlockStateExtension#getLightEmission(BlockState, BlockGetter, BlockPos)
+    // hook let the tank emit light from its stored fluid. Vanilla light emission is per block state only, so the
+    // fluid-driven emission is not available until a positional light hook exists.
 
     @NotNull
     @Override

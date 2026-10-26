@@ -558,7 +558,6 @@ public class MekanismTileEntityTypes {
 
     private static TileEntityTypeRegistryObject<TileEntityUniversalCable> registerCable(MekanismDeferredHolder<Block, ?> block) {
         BlockEntityTypeBuilder<TileEntityUniversalCable> builder = transmitterBuilder(block, TileEntityUniversalCable::new);
-        EnergyCompatUtils.addBlockCapabilities(builder);
         if (ComputerCapabilityHelper.isEnabled()) {
             ComputerCapabilityHelper.addComputerCapabilities(builder, ConstantPredicates.ALWAYS_TRUE);
         }

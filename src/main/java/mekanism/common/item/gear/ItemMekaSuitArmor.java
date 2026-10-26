@@ -44,7 +44,12 @@ import mekanism.common.content.gear.ModuleContainer;
 import mekanism.common.content.gear.ModuleHelper;
 import mekanism.common.content.gear.mekasuit.ModuleElytraUnit;
 import mekanism.common.content.gear.mekasuit.ModuleJetpackUnit;
+import mekanism.common.item.interfaces.IDropContentsOnDestroy;
+import mekanism.common.item.interfaces.IElytraFlight;
+import mekanism.common.item.interfaces.IEnderMaskItem;
 import mekanism.common.item.interfaces.IJetpackItem;
+import mekanism.common.item.interfaces.IPiglinNeutralItem;
+import mekanism.common.item.interfaces.IPowderSnowWalk;
 import mekanism.common.registration.impl.CreativeTabDeferredRegister.ICustomCreativeTabContents;
 import mekanism.common.registries.MekanismArmorMaterials;
 import mekanism.common.registries.MekanismChemicals;
@@ -79,7 +84,8 @@ import net.minecraft.world.level.gameevent.GameEvent;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class ItemMekaSuitArmor extends ItemSpecialArmor implements IModuleContainerItem, IJetpackItem, ICustomCreativeTabContents, IAttachmentAware, ICapabilityAware {
+public class ItemMekaSuitArmor extends ItemSpecialArmor implements IModuleContainerItem, IJetpackItem, ICustomCreativeTabContents, IAttachmentAware, ICapabilityAware,
+      IElytraFlight, IPowderSnowWalk, IEnderMaskItem, IPiglinNeutralItem, IDropContentsOnDestroy {
 
     //TODO: Expand this system so that modules can maybe define needed tanks?
     private final List<ChemicalTankSpec> chemicalTankSpecs = new ArrayList<>();
@@ -127,11 +133,8 @@ public class ItemMekaSuitArmor extends ItemSpecialArmor implements IModuleContai
         }
     }
 
-    @Override
-    public <T extends LivingEntity> int damageItem(@NotNull ItemStack stack, int amount, T entity, @NotNull Consumer<Item> onBroken) {
-        // safety check
-        return 0;
-    }
+    //Fabric port delta: NeoForge's damageItem hook let the suit refuse all durability loss. Vanilla has no item damage
+    // hook, so the Fabric-side ItemStack mixin cancels durability damage for MekaSuit pieces instead.
 
     @Override
     public void onDestroyed(@NotNull ItemEntity item, @NotNull DamageSource damageSource) {

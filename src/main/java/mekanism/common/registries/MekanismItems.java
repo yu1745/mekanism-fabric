@@ -237,7 +237,7 @@ public class MekanismItems {
     public static final ItemRegistryObject<ItemUpgrade> CHEMICAL_UPGRADE = registerUpgrade(Upgrade.CHEMICAL);
 
     static {//TODO - 1.22: remove backcompat
-        ITEMS.addAlias(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("mekanism", "upgrade_gas"), CHEMICAL_UPGRADE.getId());
+    //Fabric port delta: the NeoForge item registry alias for the legacy upgrade_gas id has no vanilla counterpart.
     }
 
     public static final ItemRegistryObject<ItemUpgrade> ANCHOR_UPGRADE = registerUpgrade(Upgrade.ANCHOR);

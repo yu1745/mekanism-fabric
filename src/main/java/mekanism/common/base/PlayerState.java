@@ -8,7 +8,6 @@ import mekanism.api.functions.ToFloatFunction;
 import mekanism.client.sound.PlayerSound.SoundType;
 import mekanism.client.sound.SoundHandler;
 import mekanism.common.CommonPlayerTickHandler;
-import mekanism.common.Mekanism;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.lib.radiation.PlayerExposure;
 import mekanism.common.network.PacketUtils;
@@ -25,11 +24,13 @@ import net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.LevelAccessor;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 public class PlayerState {
 
-    private static final ResourceLocation STEP_ASSIST_MODIFIER_ID = Mekanism.rl("step_assist");
+    /** Fabric port delta: owner of the excluded entrypoint's {@code playerState} field. */
+    public static final PlayerState INSTANCE = new PlayerState();
+
+    private static final ResourceLocation STEP_ASSIST_MODIFIER_ID = ResourceLocation.fromNamespaceAndPath("mekanism", "step_assist");
 
     //these are read from the render thread on client, so use a map which is more resilient to that (even if data is 'outdated')
     private final Set<UUID> activeJetpacks = Collections.newSetFromMap(new ConcurrentHashMap<>());
@@ -59,7 +60,7 @@ public class PlayerState {
         }
         PlayerExposure.resetPlayer(uuid);
         if (!isRemote) {
-            PacketDistributor.sendToAllPlayers(new PacketResetPlayerClient(uuid));
+            PacketUtils.sendToAllPlayers(new PacketResetPlayerClient(uuid));
         }
     }
 

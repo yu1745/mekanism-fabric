@@ -86,7 +86,7 @@ public class ItemDictionary extends Item {
     public InteractionResult interactLivingEntity(@NotNull ItemStack stack, @NotNull Player player, @NotNull LivingEntity entity, @NotNull InteractionHand hand) {
         if (!player.isShiftKeyDown()) {
             if (!player.level().isClientSide) {
-                sendTagsOrEmptyToPlayer(player, MekanismLang.DICTIONARY_ENTITY_TYPE_TAGS_FOUND, entity.getType().getTags());
+                sendTagsOrEmptyToPlayer(player, MekanismLang.DICTIONARY_ENTITY_TYPE_TAGS_FOUND, entity.getType().builtInRegistryHolder().tags());
             }
             return InteractionResult.sidedSuccess(player.level().isClientSide);
         }

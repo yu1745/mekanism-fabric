@@ -1,6 +1,6 @@
 package mekanism.client.sound;
 
-import mekanism.common.Mekanism;
+import mekanism.common.base.PlayerState;
 import mekanism.common.registries.MekanismSounds;
 import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.NotNull;
@@ -13,6 +13,6 @@ public class JetpackSound extends PlayerSound {
 
     @Override
     public boolean shouldPlaySound(@NotNull Player player) {
-        return Mekanism.playerState.isJetpackOn(player);
+        return PlayerState.INSTANCE.isJetpackOn(player);
     }
 }

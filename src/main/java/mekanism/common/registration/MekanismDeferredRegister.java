@@ -17,7 +17,7 @@ import net.minecraft.resources.ResourceLocation;
 public class MekanismDeferredRegister<T> {
 
     @FunctionalInterface
-    interface Registrar<T> {
+    public interface Registrar<T> {
         T register(ResourceKey<? extends Registry<T>> registryKey, ResourceKey<T> key, T value);
     }
 
@@ -96,8 +96,8 @@ public class MekanismDeferredRegister<T> {
         delegate.registerAll(registry);
     }
 
-    /** Package-private test seam for canonical binding semantics without mutating a global registry. */
-    void registerAll(Registrar<T> registrar) {
+    /** Registration seam for registries vanilla declares outside a {@link Registry} (primarily the entity data serializers). */
+    protected void registerAll(Registrar<T> registrar) {
         Objects.requireNonNull(registrar);
         delegate.registerAll(registrar::register);
     }

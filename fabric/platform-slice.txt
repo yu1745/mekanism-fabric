@@ -102,3 +102,6 @@ mekanism/fabric/mixin/gear/GearBoltRenderMixin.java
 mekanism/fabric/mixin/server/MinecraftServerMixin.java
 mekanism/fabric/client/FabricFluidColors.java
 mekanism/fabric/mixin/player/ServerPlayerGameModeMixin.java
+mekanism/fabric/mixin/entity/LivingEntityGameplayMixin.java
+mekanism/fabric/mixin/entity/BlockStateDestroyProgressMixin.java
+mekanism/fabric/mixin/entity/PlayerGearTickMixin.java

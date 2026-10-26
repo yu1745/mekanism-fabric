@@ -11,6 +11,9 @@ public class KeySync {
     public static final int ASCEND = 0;
     public static final int BOOST = 1;
 
+    /** Fabric port delta: owner of the excluded entrypoint's {@code keyMap} field. */
+    public static final KeySync INSTANCE = new KeySync();
+
     public final Map<UUID, KeySet> keys = new Object2ObjectOpenHashMap<>();
 
     public KeySet getPlayerKeys(UUID playerUUID) {

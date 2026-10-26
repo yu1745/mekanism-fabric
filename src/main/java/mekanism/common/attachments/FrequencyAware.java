@@ -90,7 +90,7 @@ public record FrequencyAware<FREQ extends Frequency>(Optional<FrequencyIdentity>
                     //TODO - 1.21: Re-evaluate this
                     stack.remove(type);
                     if (stack.getItem() instanceof IColoredItem) {
-                        stack.remove(MekanismDataComponents.COLOR);
+                        stack.remove(MekanismDataComponents.COLOR.get());
                     }
                 }
             }

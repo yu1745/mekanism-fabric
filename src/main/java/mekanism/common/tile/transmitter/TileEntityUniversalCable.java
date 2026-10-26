@@ -103,7 +103,7 @@ public class TileEntityUniversalCable extends TileEntityTransmitter implements I
         } else if (old == ConnectionType.NONE) {
             //Notify any listeners to our position that we now do have a capability
             //Note: We don't invalidate our impls because we know they are already invalid, so we can short circuit setting them to null from null
-            invalidateCapabilities();
+            invalidateCapabilitiesFull();
         }
     }
 
@@ -118,7 +118,7 @@ public class TileEntityUniversalCable extends TileEntityTransmitter implements I
         } else {
             //Notify any listeners to our position that we now do have a capability
             //Note: We don't invalidate our impls because we know they are already invalid, so we can short circuit setting them to null from null
-            invalidateCapabilities();
+            invalidateCapabilitiesFull();
         }
     }
 

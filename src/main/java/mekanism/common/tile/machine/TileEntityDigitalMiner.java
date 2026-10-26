@@ -86,6 +86,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.core.SectionPos;
 import net.minecraft.core.Vec3i;
 import net.minecraft.core.component.DataComponentMap;
@@ -595,7 +596,6 @@ public class TileEntityDigitalMiner extends TileEntityMekanism implements IChunk
         if (MekanismAPI.debug && !canMine) {
             LOGGER.debug("Denied mining block: {} @ {} {}", state, level.dimension().location(), pos);
         }
-        dummy.cleanupFakePlayer((ServerLevel) level);
         return canMine;
     }
 
@@ -851,7 +851,7 @@ public class TileEntityDigitalMiner extends TileEntityMekanism implements IChunk
             Item inverseReplaceTarget = stack.getOrDefault(MekanismDataComponents.REPLACE_STACK.get(), Items.AIR);
             return inverseReplaceTarget != Items.AIR && inverseReplaceTarget == target;
         }
-        FilterAware filterAware = stack.get(MekanismDataComponents.FILTER_AWARE);
+        FilterAware filterAware = stack.get(MekanismDataComponents.FILTER_AWARE.get());
         return filterAware != null && filterAware.anyEnabledMatch(MinerFilter.class, filter -> filter.replaceTargetMatches(target));
     }
 
@@ -1313,7 +1313,7 @@ public class TileEntityDigitalMiner extends TileEntityMekanism implements IChunk
         }
         ItemStack stack = ItemAtomicDisassembler.fullyChargedStack();
         if (getSilkTouch()) {
-            Optional<Reference<Enchantment>> silkTouch = level.holder(Enchantments.SILK_TOUCH);
+            Optional<Reference<Enchantment>> silkTouch = level.registryAccess().registryOrThrow(Registries.ENCHANTMENT).getHolder(Enchantments.SILK_TOUCH);
             //noinspection OptionalIsPresent - Capturing lambda
             if (silkTouch.isPresent()) {
                 stack.enchant(silkTouch.get(), 1);

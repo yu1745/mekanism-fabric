@@ -8,6 +8,7 @@ import mekanism.fabric.energy.FabricEnergyLookup;
 import net.fabricmc.fabric.api.lookup.v1.block.BlockApiLookup;
 import net.fabricmc.fabric.api.lookup.v1.entity.EntityApiLookup;
 import net.fabricmc.fabric.api.lookup.v1.item.ItemApiLookup;
+import net.fabricmc.fabric.api.transfer.v1.context.ContainerItemContext;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.core.Direction;
 import org.jetbrains.annotations.Nullable;
@@ -29,7 +30,7 @@ public class ForgeEnergyCompat implements IEnergyCompat {
     }
 
     @Override
-    public ItemApiLookup<?, Void> getItemCapability() {
+    public ItemApiLookup<?, ContainerItemContext> getItemCapability() {
         return EnergyStorage.ITEM;
     }
 

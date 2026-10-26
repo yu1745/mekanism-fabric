@@ -198,9 +198,8 @@ public class TileEntityFormulaicAssemblicator extends TileEntityConfigurableMach
         return formulaSlot;
     }
 
-    @Override
+    /** Called by the native block-entity LOAD event; vanilla has no overridable {@code onLoad} hook. */
     public void onLoad() {
-        super.onLoad();
         if (!isRemote()) {
             checkFormula();
             recalculateRecipe();

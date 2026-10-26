@@ -8,41 +8,33 @@ import mekanism.api.gear.IModule;
 import mekanism.api.gear.IModuleContainer;
 import mekanism.api.gear.IModuleHelper;
 import mekanism.client.key.MekanismKeyHandler;
-import mekanism.common.Mekanism;
 import mekanism.common.MekanismLang;
 import mekanism.common.base.KeySync;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.config.listener.ConfigBasedCachedLongSupplier;
 import mekanism.common.content.gear.mekasuit.ModuleLocomotiveBoostingUnit.SprintBoost;
 import mekanism.common.registries.MekanismGameEvents;
-import mekanism.common.registries.MekanismItems;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.MekanismUtils.ResourceType;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.entity.EquipmentSlotGroup;
-import net.minecraft.world.entity.ai.attributes.AttributeModifier;
-import net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.common.NeoForgeMod;
-import mekanism.api.gear.GearAttributeContext;
 
 @ParametersAreNotNullByDefault
 public record ModuleGravitationalModulatingUnit(SprintBoost speedBoost) implements ICustomModule<ModuleGravitationalModulatingUnit> {
 
     public static final int BOOST_ENERGY_MULTIPLIER = 4;
 
-    private static final AttributeModifier CREATIVE_FLIGHT_MODIFIER = new AttributeModifier(Mekanism.rl("mekasuit_gravitational_modulation"), 1, Operation.ADD_VALUE);
     private static final ConfigBasedCachedLongSupplier BOOST_USAGE = new ConfigBasedCachedLongSupplier(
           () -> BOOST_ENERGY_MULTIPLIER * MekanismConfig.gear.mekaSuitEnergyUsageGravitationalModulation.get(),
           MekanismConfig.gear.mekaSuitEnergyUsageGravitationalModulation
     );
     private static final ResourceLocation icon = MekanismUtils.getResource(ResourceType.GUI_HUD, "gravitational_modulation_unit.png");
     private static final Vec3 BOOST_VEC = new Vec3(0, 0, 1);
-    public static final ResourceLocation SPEED_BOOST = Mekanism.rl("speed_boost");
+    public static final ResourceLocation SPEED_BOOST = ResourceLocation.fromNamespaceAndPath("mekanism", "speed_boost");
 
     public ModuleGravitationalModulatingUnit(IModule<ModuleGravitationalModulatingUnit> module) {
         this(module.<SprintBoost>getConfigOrThrow(SPEED_BOOST).get());
@@ -63,13 +55,8 @@ public record ModuleGravitationalModulatingUnit(SprintBoost speedBoost) implemen
         module.toggleEnabled(moduleContainer, stack, player, MekanismLang.MODULE_GRAVITATIONAL_MODULATION.translate());
     }
 
-    @Override
-    public void adjustAttributes(IModule<ModuleGravitationalModulatingUnit> module, GearAttributeContext event) {
-        ItemStack stack = event.getItemStack();
-        if (stack.is(MekanismItems.MEKASUIT_BODYARMOR) && module.hasEnoughEnergy(stack, MekanismConfig.gear.mekaSuitEnergyUsageGravitationalModulation)) {
-            event.addModifier(NeoForgeMod.CREATIVE_FLIGHT, CREATIVE_FLIGHT_MODIFIER, EquipmentSlotGroup.CHEST);
-        }
-    }
+    //Fabric port delta: vanilla has no creative-flight attribute; the flight grant is maintained by MekaSuitFlight on the
+    // server player tick (installed + energized module => mayfly), so this module contributes no attribute modifier.
 
     @Override
     public void tickClient(IModule<ModuleGravitationalModulatingUnit> module, IModuleContainer moduleContainer, ItemStack stack, Player player) {
@@ -88,7 +75,7 @@ public record ModuleGravitationalModulatingUnit(SprintBoost speedBoost) implemen
         // Note: If they don't have enough energy to use the grav unit, don't try to process the player, and assume another mod is providing flight
         if (shouldProcess(player) && module.hasEnoughEnergy(stack, MekanismConfig.gear.mekaSuitEnergyUsageGravitationalModulation)) {
             float boost = speedBoost.getBoost();
-            if (boost > 0 && Mekanism.keyMap.has(player.getUUID(), KeySync.BOOST) && module.hasEnoughEnergy(stack, BOOST_USAGE)) {
+            if (boost > 0 && KeySync.INSTANCE.has(player.getUUID(), KeySync.BOOST) && module.hasEnoughEnergy(stack, BOOST_USAGE)) {
                 player.moveRelative(boost, BOOST_VEC);
                 module.useEnergy(player, stack, BOOST_USAGE.getAsLong());
                 gravUnitGameEvent(player, MekanismGameEvents.GRAVITY_MODULATE_BOOSTED);

@@ -1,6 +1,7 @@
 package mekanism.common.registration.impl;
 
 import mekanism.api.annotations.NothingNullByDefault;
+import mekanism.api.fluid.FluidStack;
 import mekanism.api.text.IHasTextComponent;
 import mekanism.api.text.IHasTranslationKey;
 import mekanism.common.registration.MekanismDeferredHolder;
@@ -9,34 +10,36 @@ import net.minecraft.world.item.BucketItem;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.material.Fluid;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.FluidType;
-import net.neoforged.neoforge.registries.DeferredHolder;
 
+/**
+ * The four registered pieces of one Mekanism fluid family. NeoForge also had a registry entry for the {@code FluidType};
+ * vanilla has no such registry, so the metadata is carried as a plain {@link FluidDeferredRegister.MekanismFluidType}
+ * value while the still, flowing, block, and bucket entries stay canonical registry holders.
+ */
 @NothingNullByDefault
-public class FluidRegistryObject<TYPE extends FluidType, STILL extends Fluid, FLOWING extends Fluid, BLOCK extends LiquidBlock, BUCKET extends BucketItem>
+public class FluidRegistryObject<STILL extends Fluid, FLOWING extends Fluid, BLOCK extends LiquidBlock, BUCKET extends BucketItem>
     extends MekanismDeferredHolder<Fluid, STILL> implements IHasTextComponent, IHasTranslationKey {
 
-    private final DeferredHolder<FluidType, TYPE> fluidType;
-    private final DeferredHolder<Fluid, FLOWING> flowing;
+    private final FluidDeferredRegister.MekanismFluidType fluidType;
+    private final MekanismDeferredHolder<Fluid, FLOWING> flowing;
     private final ItemRegistryObject<BUCKET> bucket;
-    private final DeferredHolder<Block, BLOCK> block;
+    private final MekanismDeferredHolder<Block, BLOCK> block;
 
-    FluidRegistryObject(DeferredHolder<FluidType, TYPE> fluidType, DeferredHolder<Fluid, STILL> still, DeferredHolder<Fluid, FLOWING> flowing,
-          ItemRegistryObject<BUCKET> bucket, DeferredHolder<Block, BLOCK> block) {
+    FluidRegistryObject(FluidDeferredRegister.MekanismFluidType fluidType, MekanismDeferredHolder<Fluid, STILL> still,
+          MekanismDeferredHolder<Fluid, FLOWING> flowing, ItemRegistryObject<BUCKET> bucket, MekanismDeferredHolder<Block, BLOCK> block) {
         //Default our fluid to being the still variant
-        super(still.getKey());
+        super(still);
         this.fluidType = fluidType;
         this.flowing = flowing;
         this.bucket = bucket;
         this.block = block;
     }
 
-    public TYPE getFluidType() {
-        return fluidType.get();
+    public FluidDeferredRegister.MekanismFluidType getFluidType() {
+        return fluidType;
     }
 
-    public DeferredHolder<Fluid, FLOWING> getFlowingFluid() {
+    public MekanismDeferredHolder<Fluid, FLOWING> getFlowingFluid() {
         return flowing;
     }
 

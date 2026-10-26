@@ -410,7 +410,7 @@ public class TileEntityLogisticalSorter extends TileEntityMekanism implements IT
     @Override
     protected void applyImplicitComponents(@NotNull BlockEntity.DataComponentInput input) {
         super.applyImplicitComponents(input);
-        color = input.get(MekanismDataComponents.COLOR);
+        color = input.get(MekanismDataComponents.COLOR.get());
         autoEject = input.getOrDefault(MekanismDataComponents.EJECT.get(), autoEject);
         roundRobin = input.getOrDefault(MekanismDataComponents.ROUND_ROBIN.get(), roundRobin);
         singleItem = input.getOrDefault(MekanismDataComponents.SINGLE_ITEM.get(), singleItem);

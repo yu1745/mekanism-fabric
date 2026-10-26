@@ -74,7 +74,7 @@ public class BlockCardboardBox extends BlockMekanism implements IStateStorage, I
     @Override
     public BlockState getStateForPlacement(@NotNull BlockPlaceContext context) {
         BlockState state = super.getStateForPlacement(context);
-        if (state != null && context.getItemInHand().has(MekanismDataComponents.BLOCK_DATA)) {
+        if (state != null && context.getItemInHand().has(MekanismDataComponents.BLOCK_DATA.get())) {
             return state.setValue(BlockStateHelper.storageProperty, true);
         }
         return state;

@@ -10,6 +10,7 @@ import mekanism.common.config.MekanismConfig;
 import mekanism.common.item.interfaces.IFreeRunnerItem;
 import mekanism.common.item.interfaces.IFreeRunnerItem.FreeRunnerMode;
 import mekanism.common.item.interfaces.IHasConditionalAttributes;
+import mekanism.common.item.interfaces.IPowderSnowWalk;
 import mekanism.common.item.interfaces.IItemHUDProvider;
 import mekanism.common.item.interfaces.IModeItem.IAttachmentBasedModeItem;
 import mekanism.common.registration.impl.CreativeTabDeferredRegister.ICustomCreativeTabContents;
@@ -38,7 +39,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class ItemFreeRunners extends ItemSpecialArmor implements IItemHUDProvider, ICustomCreativeTabContents, IAttachmentBasedModeItem<FreeRunnerMode>,
-      IHasConditionalAttributes, IFreeRunnerItem {
+      IHasConditionalAttributes, IFreeRunnerItem, IPowderSnowWalk {
 
     private static final AttributeModifier MOVEMENT_EFFICIENCY = new AttributeModifier(ResourceLocation.fromNamespaceAndPath("mekanism", "free_runners"), 1, Operation.ADD_VALUE);
 

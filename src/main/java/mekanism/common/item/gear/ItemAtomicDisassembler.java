@@ -14,6 +14,7 @@ import java.util.function.Function;
 import java.util.function.IntFunction;
 import mekanism.api.Action;
 import mekanism.api.AutomationType;
+import mekanism.api.ItemAbility;
 import mekanism.api.IDisableableEnum;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.energy.IEnergyContainer;
@@ -72,7 +73,8 @@ import mekanism.common.util.Lazy;
 import mekanism.api.gear.GearAttributeContext;
 import org.jetbrains.annotations.NotNull;
 
-public class ItemAtomicDisassembler extends ItemEnergized implements IItemHUDProvider, IRadialModeItem<DisassemblerMode>, IHasConditionalAttributes {
+public class ItemAtomicDisassembler extends ItemEnergized implements IItemHUDProvider, IRadialModeItem<DisassemblerMode>, IHasConditionalAttributes,
+      ItemAbility.IItemAbilityProvider {
 
     //All basic dig actions except shears
     public static final Set<ItemAbility> ALWAYS_SUPPORTED_ACTIONS = Set.of(ItemAbilities.AXE_DIG, ItemAbilities.HOE_DIG, ItemAbilities.SHOVEL_DIG, ItemAbilities.PICKAXE_DIG,
@@ -155,7 +157,7 @@ public class ItemAtomicDisassembler extends ItemEnergized implements IItemHUDPro
             return 0;
         }
         //Use raw hardness to get the best guess of if it is zero or not
-        long energyRequired = getDestroyEnergy(stack, state.destroySpeed);
+        long energyRequired = getDestroyEnergy(stack, state.getBlock().defaultDestroyTime());
         long energyAvailable = energyContainer.extract(energyRequired, Action.SIMULATE, AutomationType.MANUAL);
         if (energyAvailable < energyRequired) {
             //If we can't extract all the energy we need to break it go at base speed reduced by how much we actually have available

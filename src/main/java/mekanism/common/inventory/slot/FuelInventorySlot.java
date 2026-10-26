@@ -9,6 +9,8 @@ import mekanism.api.IContentsListener;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.functions.ConstantPredicates;
 import mekanism.common.util.MekanismUtils;
+import net.fabricmc.fabric.api.registry.FuelRegistry;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -28,19 +30,29 @@ public class FuelInventorySlot extends BasicInventorySlot {
               listener, x, y);
     }
 
+    /** Fabric port delta: vanilla has no ItemStack#getBurnTime; the Fabric FuelRegistry owns the fuel value table. */
+    public static int getBurnTime(@NotNull ItemStack stack) {
+        if (stack.isEmpty()) {
+            return 0;
+        }
+        Integer fuelValue = FuelRegistry.INSTANCE.get(stack.getItem());
+        return fuelValue == null ? 0 : fuelValue;
+    }
+
     public int burn() {
         if (isEmpty()) {
             return 0;
         }
-        int burnTime = current.getBurnTime(null) / 2;
+        int burnTime = getBurnTime(current) / 2;
         if (burnTime != 0) {
-            if (current.hasCraftingRemainingItem()) {
+            Item item = current.getItem();
+            if (item.hasCraftingRemainingItem()) {
                 if (current.getCount() > 1) {
                     //If we have a container but have more than a single stack of it somehow just exit
                     return 0;
                 }
                 //If the item has a container, then replace it with the container
-                setStack(current.getCraftingRemainingItem());
+                setStack(new ItemStack(item.getCraftingRemainingItem()));
             } else {
                 //Otherwise, shrink the size of the stack by one
                 MekanismUtils.logMismatchedStackSize(shrinkStack(1, Action.EXECUTE), 1);

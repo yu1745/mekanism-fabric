@@ -288,7 +288,10 @@ public class EntityRobit extends PathfinderMob implements IRobit, IMekanismInven
         return MathUtils.ceilToLong(DISTANCE_MULTIPLIER * Math.sqrt(distanceToSqr(xo, yo, zo)));
     }
 
-    @Override
+    /**
+     * Fabric port delta: NeoForge calls {@code onRemovedFromLevel()} when the entity leaves the level. Vanilla exposes
+     * the same moment through {@code ServerEntityEvents.ENTITY_UNLOAD}, which the platform bootstrap forwards here.
+     */
     public void onRemovedFromLevel() {
         if (level() != null && !level().isClientSide && getFollowing() && getOwner() != null) {
             //If this robit is currently following its owner and is being removed from the world (due to chunk unloading)
@@ -296,7 +299,6 @@ public class EntityRobit extends PathfinderMob implements IRobit, IMekanismInven
             // (as it runs every 10 ticks, half a second), and then teleport to the owner.
             ((ServerLevel) level()).getChunkSource().addRegionTicket(ROBIT_CHUNK_UNLOAD, new ChunkPos(blockPosition()), 2, getId());
         }
-        super.onRemovedFromLevel();
     }
 
     @Override
@@ -442,7 +444,7 @@ public class EntityRobit extends PathfinderMob implements IRobit, IMekanismInven
             if (provider != null) {
                 gameEvent(GameEvent.ENTITY_INTERACT, player);
                 //Validate the provider isn't null, it shouldn't be but just in case
-                mekanism.common.inventory.container.ContainerProvider.open(player, provider, buf -> buf.writeVarInt(getId()));
+                mekanism.common.inventory.container.ContainerProvider.open((ServerPlayer) player, provider, buf -> buf.writeVarInt(getId()));
             }
         }
         return InteractionResult.sidedSuccess(level().isClientSide);
@@ -683,7 +685,7 @@ public class EntityRobit extends PathfinderMob implements IRobit, IMekanismInven
     }
 
     @Override
-    public ItemStack getPickedResult(@NotNull HitResult target) {
+    public ItemStack getPickResult() {
         return getItemVariant();
     }
 

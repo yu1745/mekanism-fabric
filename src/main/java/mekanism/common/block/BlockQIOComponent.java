@@ -29,7 +29,7 @@ public class BlockQIOComponent<TILE extends TileEntityQIOComponent, BLOCK extend
             AttributeStateActive attribute = Attribute.get(state, AttributeStateActive.class);
             if (attribute != null) {
                 ItemStack stack = context.getItemInHand();
-                FrequencyAware<QIOFrequency> frequencyAware = stack.get(MekanismDataComponents.QIO_FREQUENCY);
+                FrequencyAware<QIOFrequency> frequencyAware = stack.get(MekanismDataComponents.QIO_FREQUENCY.get());
                 if (frequencyAware != null) {
                     if (context.getLevel().isClientSide) {
                         state = attribute.setActive(state, frequencyAware.identity().isPresent());

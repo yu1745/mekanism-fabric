@@ -30,6 +30,7 @@ import mekanism.common.lib.transmitter.DynamicBufferedNetwork;
 import mekanism.common.lib.transmitter.DynamicNetwork;
 import mekanism.common.lib.transmitter.TransmitterNetworkRegistry;
 import mekanism.common.tile.base.CapabilityTileEntity;
+import mekanism.common.tile.interfaces.IChunkUnloadListener;
 import mekanism.common.upgrade.transmitter.TransmitterUpgradeData;
 import mekanism.common.util.EnumUtils;
 import mekanism.common.util.MultipartUtils;
@@ -53,7 +54,7 @@ import net.fabricmc.fabric.api.lookup.v1.block.BlockApiLookup;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public abstract class TileEntityTransmitter extends CapabilityTileEntity implements ISidedConfigurable, IAlloyInteraction,
+public abstract class TileEntityTransmitter extends CapabilityTileEntity implements ISidedConfigurable, IAlloyInteraction, IChunkUnloadListener,
       net.fabricmc.fabric.api.blockview.v2.RenderDataBlockEntity {
 
     /**
@@ -161,7 +162,6 @@ public abstract class TileEntityTransmitter extends CapabilityTileEntity impleme
             //Only take the transmitter's share if it was unloaded and not if we are being removed
             getTransmitter().validateAndTakeShare();
         }
-        super.onChunkUnloaded();
     }
 
     @Override

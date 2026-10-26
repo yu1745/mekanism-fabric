@@ -90,12 +90,8 @@ public class MekanismDataComponents {
                 .cacheEncoding()
     );
 
-    static {//TODO - 1.22: remove backcompat
-        DATA_COMPONENTS.addAlias(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("mekanism", "gases"), ATTACHED_CHEMICALS.getId());
-        DATA_COMPONENTS.addAlias(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("mekanism", "infuse_types"), ATTACHED_CHEMICALS.getId());
-        DATA_COMPONENTS.addAlias(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("mekanism", "pigments"), ATTACHED_CHEMICALS.getId());
-        DATA_COMPONENTS.addAlias(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("mekanism", "slurries"), ATTACHED_CHEMICALS.getId());
-    }
+    //Fabric port delta: NeoForge's data-component registry aliases (gases/infuse_types/pigments/slurries) have no
+    //vanilla registry equivalent, so the legacy ids are not remapped on Fabric.
 
     public static final MekanismDeferredHolder<DataComponentType<?>, DataComponentType<AttachedHeat>> ATTACHED_HEAT = DATA_COMPONENTS.simple("heat_data",
           builder -> builder.persistent(AttachedHeat.CODEC)

@@ -2,7 +2,6 @@ package mekanism.common.tile.qio;
 
 import java.util.Optional;
 import mekanism.api.SerializationConstants;
-import mekanism.client.model.data.DataBasedModelLoader;
 import mekanism.common.content.qio.QIOFrequency;
 import mekanism.common.integration.computer.ComputerException;
 import mekanism.common.integration.computer.annotation.ComputerMethod;
@@ -165,7 +164,7 @@ public class TileEntityQIORedstoneAdapter extends TileEntityQIOComponent {
     @Override
     protected void applyImplicitComponents(@NotNull BlockEntity.DataComponentInput input) {
         super.applyImplicitComponents(input);
-        itemType = input.getOrDefault(MekanismDataComponents.ITEM_TARGET.get(), Optional.empty()).orElse(null);
+        itemType = input.getOrDefault(MekanismDataComponents.ITEM_TARGET.get(), Optional.<HashedItem>empty()).orElse(null);
         count = input.getOrDefault(MekanismDataComponents.LONG_AMOUNT.get(), count);
         fuzzy = input.getOrDefault(MekanismDataComponents.FUZZY.get(), fuzzy);
         inverted = input.getOrDefault(MekanismDataComponents.INVERSE.get(), inverted);

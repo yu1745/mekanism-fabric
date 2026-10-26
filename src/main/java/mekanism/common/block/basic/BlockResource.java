@@ -24,8 +24,7 @@ public class BlockResource extends BlockMekanism {
         return resource;
     }
 
-    @Override
-    public boolean isPortalFrame(BlockState state, BlockGetter world, BlockPos pos) {
-        return resource.isPortalFrame();
-    }
+    //Fabric port delta: NeoForge's IBlockExtension#isPortalFrame hook (used by PortalShape) has no vanilla equivalent,
+    // so Mekanism frame blocks cannot extend vanilla nether-portal frame detection on Fabric.
+
 }

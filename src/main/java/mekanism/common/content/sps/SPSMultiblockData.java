@@ -208,8 +208,6 @@ public class SPSMultiblockData extends MultiblockData implements IValveHandler {
                         if (type.is(MekanismTags.Entities.VALID_SPS_EXPERIMENT)) {
                             if (lightningBolt == null) {
                                 lightningBolt = new LightningBolt(EntityType.LIGHTNING_BOLT, world);
-                                //Set the damage to zero so when we call thunderHit we don't actually hurt the entity
-                                lightningBolt.setDamage(0);
                                 lightningBolt.setVisualOnly(true);
                             }
                             //Fabric port delta: upstream consulted the NeoForge lightning-strike hook so mods could veto the SPS's synthetic strike;
@@ -304,7 +302,7 @@ public class SPSMultiblockData extends MultiblockData implements IValveHandler {
         }
 
         public void write(CompoundTag tags) {
-            ListTag list = new ListTag(coilMap.size());
+            ListTag list = new ListTag();
             for (CoilData data : coilMap.values()) {
                 CompoundTag tag = new CompoundTag();
                 tag.put(SerializationConstants.POSITION, NbtUtils.writeBlockPos(data.coilPos));

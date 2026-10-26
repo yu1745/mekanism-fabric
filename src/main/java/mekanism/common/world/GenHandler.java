@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.ToIntFunction;
-import mekanism.common.Mekanism;
 import mekanism.common.resource.ore.OreType;
 import mekanism.common.resource.ore.OreType.OreVeinType;
 import mekanism.common.util.EnumUtils;
@@ -32,8 +31,12 @@ import net.minecraft.world.level.levelgen.XoroshiroRandomSource;
 import net.minecraft.world.level.levelgen.placement.PlacedFeature;
 import net.minecraft.world.level.levelgen.placement.PlacementContext;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class GenHandler {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism");
 
     private GenHandler() {
     }
@@ -104,13 +107,13 @@ public class GenHandler {
         for (OreType type : EnumUtils.ORE_TYPES) {
             for (int vein = 0, features = type.getBaseConfigs().size(); vein < features; vein++) {
                 OreVeinType oreVeinType = new OreVeinType(type, vein);
-                MekFeature mekFeature = MekFeature.create(placedFeatures, Mekanism.rl(oreVeinType.name()));
+                MekFeature mekFeature = MekFeature.create(placedFeatures, ResourceLocation.fromNamespaceAndPath("mekanism", oreVeinType.name()));
                 if (mekFeature != null) {
                     cachedFeatures.add(mekFeature);
                 }
             }
         }
-        MekFeature saltFeature = MekFeature.create(placedFeatures, Mekanism.rl("salt"));
+        MekFeature saltFeature = MekFeature.create(placedFeatures, ResourceLocation.fromNamespaceAndPath("mekanism", "salt"));
         if (saltFeature != null) {
             cachedFeatures.add(saltFeature);
         }
@@ -123,14 +126,14 @@ public class GenHandler {
         public static MekFeature create(Registry<PlacedFeature> placedFeatures, ResourceLocation name) {
             Optional<Reference<PlacedFeature>> placedFeature = placedFeatures.getHolder(ResourceKey.create(Registries.PLACED_FEATURE, name));
             if (placedFeature.isEmpty()) {
-                Mekanism.logger.error("Failed to retrieve placed feature ({}).", name);
+                LOGGER.error("Failed to retrieve placed feature ({}).", name);
                 return null;
             }
             ResourceLocation retrogenName = name.withSuffix("_retrogen");
             ResourceKey<PlacedFeature> retrogenKey = ResourceKey.create(Registries.PLACED_FEATURE, retrogenName);
             Optional<Reference<PlacedFeature>> retrogenFeature = placedFeatures.getHolder(retrogenKey);
             if (retrogenFeature.isEmpty()) {
-                Mekanism.logger.error("Failed to retrieve retrogen placed feature ({}).", retrogenName);
+                LOGGER.error("Failed to retrieve retrogen placed feature ({}).", retrogenName);
                 return null;
             }
             return new MekFeature(placedFeature.get(), retrogenFeature.get(), retrogenKey.toString());

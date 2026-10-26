@@ -9,6 +9,7 @@ import mekanism.api.fluid.IMekanismFluidHandler;
 import mekanism.api.security.IItemSecurityUtils;
 import mekanism.api.text.EnumColor;
 import mekanism.common.MekanismLang;
+import mekanism.common.attachments.containers.fluid.ComponentBackedFluidTankFluidTank;
 import mekanism.common.block.attribute.Attribute;
 import mekanism.common.block.basic.BlockFluidTank;
 import mekanism.common.block.prefab.BlockTile;
@@ -194,7 +195,7 @@ public class ItemBlockFluidTank extends ItemBlockTooltip<BlockTile<?, ?>> implem
                                     return InteractionResultHolder.fail(stack);
                                 }
                             }
-                            sound = bucketPickup.getPickupSound(blockState);
+                            sound = bucketPickup.getPickupSound();
                         }
                         if (validFluid(fluidTank, fluidStack)) {
                             uncheckedGrow(fluidTank, fluidStack);
@@ -328,7 +329,7 @@ public class ItemBlockFluidTank extends ItemBlockTooltip<BlockTile<?, ?>> implem
                                 return super.execute(source, stack);
                             }
                         }
-                        sound = bucketPickup.getPickupSound(blockState);
+                        sound = bucketPickup.getPickupSound();
                     }
                     if (validFluid(fluidTank, fluidStack)) {
                         tank.uncheckedGrow(fluidTank, fluidStack);

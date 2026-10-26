@@ -74,7 +74,7 @@ public class CommonWorldTickHandler {
         ServerChunkEvents.CHUNK_LOAD.register((level, chunk) -> handler.onChunkDataLoad(level, chunk));
         ServerWorldEvents.LOAD.register((server, level) -> handler.worldLoadEvent(level));
         ServerTickEvents.END_SERVER_TICK.register(handler::onServerTick);
-        ServerTickEvents.END_LEVEL_TICK.register(handler::onLevelTick);
+        ServerTickEvents.END_WORLD_TICK.register(handler::onLevelTick);
     }
 
     public void addRegenChunk(ResourceKey<Level> dimension, ChunkPos chunkCoord) {

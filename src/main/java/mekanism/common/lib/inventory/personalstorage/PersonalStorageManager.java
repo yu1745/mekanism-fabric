@@ -116,13 +116,13 @@ public class PersonalStorageManager {
      */
     public static Optional<AbstractPersonalStorageItemInventory> getInventoryIfPresent(ItemStack stack) {
         UUID owner = IItemSecurityUtils.INSTANCE.getOwnerUUID(stack);
-        return owner != null && stack.has(MekanismDataComponents.PERSONAL_STORAGE_ID) ? getInventoryFor(stack, owner) : Optional.empty();
+        return owner != null && stack.has(MekanismDataComponents.PERSONAL_STORAGE_ID.get()) ? getInventoryFor(stack, owner) : Optional.empty();
     }
 
     public static void deleteInventory(ItemStack stack) {
         UUID owner = IItemSecurityUtils.INSTANCE.getOwnerUUID(stack);
         if (owner != null) {
-            UUID storageId = stack.remove(MekanismDataComponents.PERSONAL_STORAGE_ID);
+            UUID storageId = stack.remove(MekanismDataComponents.PERSONAL_STORAGE_ID.get());
             if (storageId != null) {
                 //If there actually was an id stored then remove the corresponding inventory
                 Optional<PersonalStorageData> data = forOwner(owner);
@@ -136,7 +136,7 @@ public class PersonalStorageManager {
 
     @NotNull
     private static UUID getInventoryId(ItemStack stack) {
-        UUID invId = stack.get(MekanismDataComponents.PERSONAL_STORAGE_ID);
+        UUID invId = stack.get(MekanismDataComponents.PERSONAL_STORAGE_ID.get());
         if (invId == null) {
             invId = UUID.randomUUID();
             stack.set(MekanismDataComponents.PERSONAL_STORAGE_ID.get(), invId);

@@ -1,6 +1,7 @@
 package mekanism.fabric.tile;
 
 import mekanism.common.tile.base.CapabilityTileEntity;
+import mekanism.common.tile.machine.TileEntityFormulaicAssemblicator;
 import mekanism.common.tile.machine.TileEntityOredictionificator;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerBlockEntityEvents;
 
@@ -28,6 +29,9 @@ public final class FabricCapabilityTileLifecycle {
                 tile.openCapabilityExposure();
             }
             if (blockEntity instanceof TileEntityOredictionificator tile) {
+                tile.onLoad();
+            }
+            if (blockEntity instanceof TileEntityFormulaicAssemblicator tile) {
                 tile.onLoad();
             }
         });

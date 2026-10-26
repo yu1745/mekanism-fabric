@@ -11,6 +11,7 @@ import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import mekanism.api.Action;
 import mekanism.api.AutomationType;
+import mekanism.api.ItemAbility;
 import mekanism.api.energy.IEnergyContainer;
 import mekanism.api.event.MekanismTeleportEvent;
 import mekanism.api.gear.ICustomModule;
@@ -33,6 +34,7 @@ import mekanism.common.content.gear.mekatool.ModuleExcavationEscalationUnit;
 import mekanism.common.content.gear.mekatool.ModuleTeleportationUnit;
 import mekanism.common.content.gear.mekatool.ModuleVeinMiningUnit;
 import mekanism.common.item.ItemEnergized;
+import mekanism.common.item.interfaces.IDropContentsOnDestroy;
 import mekanism.common.network.PacketUtils;
 import mekanism.common.network.to_client.PacketPortalFX;
 import mekanism.common.registries.MekanismModules;
@@ -80,7 +82,7 @@ import mekanism.api.gear.GearAttributeContext;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class ItemMekaTool extends ItemEnergized implements IRadialModuleContainerItem, IBlastingItem {
+public class ItemMekaTool extends ItemEnergized implements IRadialModuleContainerItem, IBlastingItem, ItemAbility.IItemAbilityProvider, IDropContentsOnDestroy {
 
     private static final ResourceLocation RADIAL_ID = ResourceLocation.fromNamespaceAndPath("mekanism", "meka_tool");
 
@@ -214,7 +216,7 @@ public class ItemMekaTool extends ItemEnergized implements IRadialModuleContaine
             return 0;
         }
         //Use raw hardness to get the best guess of if it is zero or not
-        long energyRequired = getDestroyEnergy(stack, state.destroySpeed, isModuleEnabled(stack, MekanismModules.SILK_TOUCH_UNIT));
+        long energyRequired = getDestroyEnergy(stack, state.getBlock().defaultDestroyTime(), isModuleEnabled(stack, MekanismModules.SILK_TOUCH_UNIT));
         long energyAvailable = energyContainer.extract(energyRequired, Action.SIMULATE, AutomationType.MANUAL);
         if (energyAvailable < energyRequired) {
             //If we can't extract all the energy we need to break it go at base speed reduced by how much we actually have available
