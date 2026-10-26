@@ -1,6 +1,5 @@
 package mekanism.client.model.energycube;
 
-import com.mojang.math.Transformation;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
@@ -18,18 +17,15 @@ import net.minecraft.client.renderer.block.model.BlockModel;
 import net.minecraft.client.renderer.block.model.ItemOverrides;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.model.BakedModel;
-import net.minecraft.client.resources.model.Material;
-import net.minecraft.client.resources.model.ModelBaker;
 import net.minecraft.client.resources.model.ModelState;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.ResourceLocation;
-import net.neoforged.neoforge.client.RenderTypeGroup;
-import net.neoforged.neoforge.client.model.SimpleModelState;
-import net.neoforged.neoforge.client.model.geometry.IGeometryBakingContext;
-import net.neoforged.neoforge.client.model.geometry.IUnbakedGeometry;
 import org.jetbrains.annotations.Nullable;
 
-public class EnergyCubeGeometry implements IUnbakedGeometry<EnergyCubeGeometry> {
+/**
+ * Fabric port: the NeoForge {@code IUnbakedGeometry} surface becomes a plain baker - the fabric model plugin resolves
+ * the sprite getter from the blocks atlas at bake time (post-stitch) and drives {@link #bake} directly.
+ */
+public class EnergyCubeGeometry {
 
     private final List<BlockElement> frame;
     private final Map<RelativeSide, List<BlockElement>> leds;
@@ -41,24 +37,11 @@ public class EnergyCubeGeometry implements IUnbakedGeometry<EnergyCubeGeometry> 
         this.ports = ports;
     }
 
-    @Override
-    public BakedModel bake(IGeometryBakingContext context, ModelBaker baker, Function<Material, TextureAtlasSprite> spriteGetter, ModelState modelState,
-          ItemOverrides overrides) {
-        TextureAtlasSprite particle = spriteGetter.apply(context.getMaterial("particle"));
-
-        ResourceLocation renderTypeHint = context.getRenderTypeHint();
-        RenderTypeGroup renderTypes = renderTypeHint == null ? RenderTypeGroup.EMPTY : context.getRenderType(renderTypeHint);
-
-        Transformation rootTransform = context.getRootTransform();
-        if (!rootTransform.isIdentity()) {
-            modelState = new SimpleModelState(modelState.getRotation().compose(rootTransform), modelState.isUvLocked());
-        }
-        Function<String, TextureAtlasSprite> rawSpriteGetter = spriteGetter.compose(context::getMaterial);
+    public EnergyCubeBakedModel bake(Function<String, TextureAtlasSprite> rawSpriteGetter, ModelState modelState, TextureAtlasSprite particle) {
         FaceData frame = bakeElement(rawSpriteGetter, modelState, this.frame);
         Map<RelativeSide, FaceData> leds = bakeElements(rawSpriteGetter, modelState, this.leds);
         Map<RelativeSide, FaceData> ports = bakeElements(rawSpriteGetter, modelState, this.ports);
-        return new EnergyCubeBakedModel(context.useAmbientOcclusion(), context.useBlockLight(), context.isGui3d(), context.getTransforms(), overrides, particle, frame, leds, ports,
-              renderTypes);
+        return new EnergyCubeBakedModel(frame, leds, ports);
     }
 
     private Map<RelativeSide, FaceData> bakeElements(Function<String, TextureAtlasSprite> spriteGetter, ModelState modelState,
@@ -77,7 +60,7 @@ public class EnergyCubeGeometry implements IUnbakedGeometry<EnergyCubeGeometry> 
             for (Entry<Direction, BlockElementFace> faceEntry : element.faces.entrySet()) {
                 BlockElementFace face = faceEntry.getValue();
                 TextureAtlasSprite sprite = spriteGetter.apply(face.texture());
-                Direction direction = face.cullForDirection() == null ? null : modelState.getRotation().rotateTransform(face.cullForDirection());
+                Direction direction = face.cullForDirection() == null ? null : Direction.rotate(modelState.getRotation().getMatrix(), face.cullForDirection());
                 data.addFace(direction, BlockModel.bakeFace(element, face, sprite, faceEntry.getKey(), modelState));
             }
         }

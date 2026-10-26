@@ -87,7 +87,7 @@ public final class FabricMekanismModelPlugin {
             int separateTransforms = 0;
             int itemLayers = 0;
             int objModels = 0;
-            int deferredEnergyCubes = 0;
+            int energyCubeBaked = 0;
             int deferredDataBased = 0;
             int deferredRobit = 0;
             int deferredFluidContainers = 0;
@@ -98,6 +98,17 @@ public final class FabricMekanismModelPlugin {
                 }
                 String json = read(entry.getValue());
                 if (!json.contains("\"loader\"")) {
+                    //The energy cube tier children carry no loader - they parent onto the geometry carrier and
+                    //override textures; handled with the merged map below.
+                    if (entry.getKey().getPath().startsWith("models/block/energy_cube/")) {
+                        JsonObject childRoot = JsonParser.parseString(json).getAsJsonObject();
+                        JsonElement parent = childRoot.get("parent");
+                        if (parent != null && parent.getAsString().equals("mekanism:block/energy_cube/base")) {
+                            ResourceLocation id = modelId(entry.getKey());
+                            prepared.put(id, new FabricEnergyCubeUnbakedModel(id, childRoot, energyCubeBaseTextures(resources)));
+                            energyCubeBaked++;
+                        }
+                    }
                     continue;
                 }
                 ResourceLocation id = modelId(entry.getKey());
@@ -125,7 +136,11 @@ public final class FabricMekanismModelPlugin {
                         objModels++;
                     }
                     case LOADER_TRANSMITTER -> transmitterOwned++;
-                    case LOADER_ENERGY_CUBE -> deferredEnergyCubes++;
+                    case LOADER_ENERGY_CUBE -> {
+                        //The geometry carrier: parsed here, its textures seed the tier children below.
+                        prepared.put(id, new FabricEnergyCubeUnbakedModel(id, root, null));
+                        energyCubeBaked++;
+                    }
                     case LOADER_DATA_BASED -> deferredDataBased++;
                     case LOADER_ROBIT -> deferredRobit++;
                     case LOADER_FLUID_CONTAINER -> {
@@ -139,11 +154,18 @@ public final class FabricMekanismModelPlugin {
                     default -> throw new IllegalStateException("Mekanism model " + id + " declares an unhandled loader: " + loader);
                 }
             }
-            LOGGER.info("MEKANISM_FABRIC_MODELS_PROOF composite={} separate_transforms={} item_layers={} obj={} energy_cube_deferred={} data_based_deferred={} robit_deferred={} fluid_container_deferred={} transmitter_owned={}",
-                  composites, separateTransforms, itemLayers, objModels, deferredEnergyCubes, deferredDataBased,
+            LOGGER.info("MEKANISM_FABRIC_MODELS_PROOF composite={} separate_transforms={} item_layers={} obj={} energy_cube_baked={} data_based_deferred={} robit_deferred={} fluid_container_deferred={} transmitter_owned={}",
+                  composites, separateTransforms, itemLayers, objModels, energyCubeBaked, deferredDataBased,
                   deferredRobit, deferredFluidContainers, transmitterOwned);
             return prepared;
         }, executor);
+    }
+
+    /** The geometry carrier's texture map, which the tier children's references resolve against. */
+    private static JsonObject energyCubeBaseTextures(ResourceManager resources) {
+        ResourceLocation fileId = ResourceLocation.fromNamespaceAndPath("mekanism", "models/block/energy_cube/base.json");
+        Resource resource = resources.getResource(fileId).orElseThrow();
+        return JsonParser.parseString(read(resource)).getAsJsonObject().getAsJsonObject("textures");
     }
 
     private static String loaderOf(ResourceLocation id, JsonObject root) {

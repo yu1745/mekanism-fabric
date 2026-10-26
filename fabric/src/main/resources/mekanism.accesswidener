@@ -146,3 +146,7 @@ accessible field net/minecraft/client/model/PlayerModel cloak Lnet/minecraft/cli
 accessible field net/minecraft/client/model/ArmorStandModel rightBodyStick Lnet/minecraft/client/model/geom/ModelPart;
 accessible field net/minecraft/client/model/ArmorStandModel leftBodyStick Lnet/minecraft/client/model/geom/ModelPart;
 accessible field net/minecraft/client/model/ArmorStandModel shoulderStick Lnet/minecraft/client/model/geom/ModelPart;
+#Energy cube model family: the fabric model plugin parses the shipped geometry with the vanilla block-model
+#Gson and bakes elements through the vanilla face bakery, both package-private in vanilla.
+accessible field net/minecraft/client/renderer/block/model/BlockModel GSON Lcom/google/gson/Gson;
+accessible method net/minecraft/client/renderer/block/model/BlockModel bakeFace (Lnet/minecraft/client/renderer/block/model/BlockElement;Lnet/minecraft/client/renderer/block/model/BlockElementFace;Lnet/minecraft/client/renderer/texture/TextureAtlasSprite;Lnet/minecraft/core/Direction;Lnet/minecraft/client/resources/model/ModelState;)Lnet/minecraft/client/renderer/block/model/BakedQuad;

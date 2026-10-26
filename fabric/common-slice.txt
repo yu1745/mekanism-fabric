@@ -242,6 +242,9 @@ mekanism/client/model/ModelPartData.java
 mekanism/client/model/ModelScubaMask.java
 mekanism/client/model/ModelScubaTank.java
 mekanism/client/model/data/TransmitterModelData.java
+mekanism/client/model/energycube/EnergyCubeBakedModel.java
+mekanism/client/model/energycube/EnergyCubeGeometry.java
+mekanism/client/model/energycube/EnergyCubeModelLoader.java
 mekanism/client/particle/RadiationParticle.java
 mekanism/client/recipe_viewer/RecipeViewerUtils.java
 mekanism/client/recipe_viewer/emi/INamedRVRecipe.java
@@ -286,7 +289,11 @@ mekanism/client/render/item/gear/RenderScubaMask.java
 mekanism/client/render/item/gear/RenderScubaTank.java
 mekanism/client/render/lib/ColorAtlas.java
 mekanism/client/render/lib/Outlines.java
+mekanism/client/render/lib/Quad.java
+mekanism/client/render/lib/QuadTransformation.java
+mekanism/client/render/lib/QuadUtils.java
 mekanism/client/render/lib/ScrollIncrementer.java
+mekanism/client/render/lib/Vertex.java
 mekanism/client/render/lib/effect/BillboardingEffectRenderer.java
 mekanism/client/render/lib/effect/BoltRenderer.java
 mekanism/client/render/tileentity/IWireFrameRenderer.java

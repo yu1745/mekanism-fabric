@@ -14,7 +14,6 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Direction.Axis;
 import net.minecraft.core.Vec3i;
-import net.neoforged.neoforge.client.model.pipeline.QuadBakingVertexConsumer;
 import org.joml.Vector3f;
 
 public class Quad {
@@ -44,9 +43,10 @@ public class Quad {
         sprite = quad.getSprite();
         tintIndex = quad.getTintIndex();
         shade = quad.isShade();
-        hasAmbientOcclusion = quad.hasAmbientOcclusion();
+        //Fabric port: vanilla 1.21.1 BakedQuad carries no per-quad ambient occlusion flag; the port models treat
+        //it as absent (the energy cube draws with the block AO of its render layer).
         BakedQuadUnpacker unpacker = new BakedQuadUnpacker();
-        unpacker.putBulkData(new PoseStack().last(), quad, 1, 1, 1, 1, 0, OverlayTexture.NO_OVERLAY, true);
+        unpacker.putBulkData(new PoseStack().last(), quad, 1, 1, 1, 1, 0, OverlayTexture.NO_OVERLAY);
         vertices = unpacker.getVertices();
     }
 
@@ -108,17 +108,25 @@ public class Quad {
         this.hasAmbientOcclusion = hasAmbientOcclusion;
     }
 
+    @SuppressWarnings("unused")
     public BakedQuad bake() {
-        QuadBakingVertexConsumer quadBaker = new QuadBakingVertexConsumer();
-        quadBaker.setSprite(sprite);
-        quadBaker.setDirection(side);
-        quadBaker.setTintIndex(tintIndex);
-        quadBaker.setShade(shade);
-        quadBaker.setHasAmbientOcclusion(hasAmbientOcclusion);
-        for (Vertex vertex : vertices) {
-            vertex.write(quadBaker);
+        //Fabric port: NeoForge's QuadBakingVertexConsumer is replaced by the vanilla quad vertex encoding -
+        //8 ints per vertex (position, color, texture uv, then overlay and light packed the way the official
+        //pipeline stored them). The draw sites pass light explicitly, matching the official armor/HUD paths.
+        int[] vertexData = new int[32];
+        for (int i = 0; i < 4; i++) {
+            Vertex vertex = vertices[i];
+            int j = i * 8;
+            vertexData[j] = Float.floatToRawIntBits(vertex.getPos().x());
+            vertexData[j + 1] = Float.floatToRawIntBits(vertex.getPos().y());
+            vertexData[j + 2] = Float.floatToRawIntBits(vertex.getPos().z());
+            vertexData[j + 3] = (vertex.getRed() & 0xFF) << 24 | (vertex.getGreen() & 0xFF) << 16 | (vertex.getBlue() & 0xFF) << 8 | vertex.getAlpha() & 0xFF;
+            vertexData[j + 4] = Float.floatToRawIntBits(vertex.getTexU());
+            vertexData[j + 5] = Float.floatToRawIntBits(vertex.getTexV());
+            vertexData[j + 6] = (vertex.getOverlayU() & 0xFFFF) | (vertex.getOverlayV() & 0xFFFF) << 16;
+            vertexData[j + 7] = (vertex.getRawLightU() & 0xFFFF) | (vertex.getRawLightV() & 0xFFFF) << 16;
         }
-        return quadBaker.bakeQuad();
+        return new BakedQuad(vertexData, tintIndex, side, sprite, shade);
     }
 
     public Quad copy() {
@@ -193,11 +201,8 @@ public class Quad {
             return this;
         }
 
-        @Override
-        public VertexConsumer misc(VertexFormatElement element, int... rawData) {
-            vertices[vertexIndex].misc(element, Arrays.copyOf(rawData, rawData.length));
-            return this;
-        }
+        //Fabric port: the vanilla 1.21.1 VertexConsumer has no misc() extension point; the unpacker keeps only
+        //the standard element set (the official misc data rode NeoForge's extended consumer).
     }
 
     public static class Builder {

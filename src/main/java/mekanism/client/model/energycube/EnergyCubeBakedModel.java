@@ -5,73 +5,56 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.BiPredicate;
 import mekanism.api.RelativeSide;
-import mekanism.client.model.baked.ExtensionBakedModel.QuadsKey;
 import mekanism.client.model.energycube.EnergyCubeGeometry.FaceData;
 import mekanism.client.render.lib.QuadTransformation;
 import mekanism.common.tile.TileEntityEnergyCube;
 import mekanism.common.tile.TileEntityEnergyCube.CubeSideState;
 import mekanism.common.util.EnumUtils;
 import net.minecraft.Util;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.block.model.BakedQuad;
-import net.minecraft.client.renderer.block.model.ItemOverrides;
-import net.minecraft.client.renderer.block.model.ItemTransforms;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.Direction;
-import net.minecraft.util.RandomSource;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.client.ChunkRenderTypeSet;
-import net.neoforged.neoforge.client.RenderTypeGroup;
-import net.neoforged.neoforge.client.model.IDynamicBakedModel;
-import net.neoforged.neoforge.client.model.data.ModelData;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class EnergyCubeBakedModel implements IDynamicBakedModel {
+/**
+ * Fabric port of the official energy cube dynamic baked model. The NeoForge {@code IDynamicBakedModel} shell (render
+ * type sets, item render types, particle/transforms pass-through) becomes a plain quad source: the static block model
+ * carries the frame, and {@link RenderEnergyCube} on the Fabric port draws the side LEDs and ports from
+ * {@link #getQuads} using the tile's render data - the same per-side selection {@code createQuads} performed.
+ */
+public class EnergyCubeBakedModel {
 
     private static final CubeSideState[] INACTIVE = Util.make(new CubeSideState[EnumUtils.DIRECTIONS.length], sideStates -> Arrays.fill(sideStates, CubeSideState.INACTIVE));
     private static final QuadTransformation LED_TRANSFORMS = QuadTransformation.list(QuadTransformation.fullbright, QuadTransformation.uvShift(-0.125F, 0));
-    private static final BiPredicate<CubeSideState[], CubeSideState[]> DATA_EQUALITY_CHECK = Arrays::equals;
 
-    private final LoadingCache<QuadsKey<CubeSideState[]>, List<BakedQuad>> cache = CacheBuilder.newBuilder().build(new CacheLoader<>() {
+    private final LoadingCache<QuadKey, QuadSplits> cache = CacheBuilder.newBuilder().build(new CacheLoader<>() {
         @NotNull
         @Override
-        public List<BakedQuad> load(@NotNull QuadsKey<CubeSideState[]> key) {
+        public QuadSplits load(@NotNull QuadKey key) {
             return createQuads(key);
         }
     });
 
     private final FaceData frame;
     private final Map<RelativeSide, FaceData> leds;
-    private final Map<RelativeSide, FaceData> activeLEDs;
     private final Map<RelativeSide, FaceData> ports;
+    private final Map<RelativeSide, FaceData> activeLEDs;
     private final Map<RelativeSide, FaceData> activePorts;
-    private final ChunkRenderTypeSet blockRenderTypes;
-    private final List<RenderType> itemRenderTypes;
-    private final List<RenderType> fabulousItemRenderTypes;
-    private final boolean isAmbientOcclusion;
-    private final boolean usesBlockLight;
-    private final boolean isGui3d;
+    @Nullable
     private final TextureAtlasSprite particle;
-    private final ItemOverrides overrides;
-    private final ItemTransforms transforms;
 
-    EnergyCubeBakedModel(boolean useAmbientOcclusion, boolean usesBlockLight, boolean isGui3d, ItemTransforms transforms, ItemOverrides overrides,
-          TextureAtlasSprite particle, FaceData frame, Map<RelativeSide, FaceData> leds, Map<RelativeSide, FaceData> ports, RenderTypeGroup renderTypes) {
-        this.isAmbientOcclusion = useAmbientOcclusion;
-        this.usesBlockLight = usesBlockLight;
-        this.isGui3d = isGui3d;
-        this.overrides = overrides;
-        this.transforms = transforms;
-        this.particle = particle;
+    EnergyCubeBakedModel(FaceData frame, Map<RelativeSide, FaceData> leds, Map<RelativeSide, FaceData> ports) {
+        this(frame, leds, ports, null);
+    }
+
+    EnergyCubeBakedModel(FaceData frame, Map<RelativeSide, FaceData> leds, Map<RelativeSide, FaceData> ports, @Nullable TextureAtlasSprite particle) {
         this.frame = frame;
         this.leds = leds;
         this.ports = ports;
@@ -85,111 +68,88 @@ public class EnergyCubeBakedModel implements IDynamicBakedModel {
         for (Map.Entry<RelativeSide, FaceData> entry : this.ports.entrySet()) {
             activePorts.put(entry.getKey(), entry.getValue().transform(QuadTransformation.filtered_fullbright));
         }
-        if (renderTypes.isEmpty()) {
-            this.blockRenderTypes = null;
-            this.itemRenderTypes = null;
-            this.fabulousItemRenderTypes = null;
-        } else {
-            this.blockRenderTypes = ChunkRenderTypeSet.of(renderTypes.block());
-            this.itemRenderTypes = Collections.singletonList(renderTypes.entity());
-            this.fabulousItemRenderTypes = Collections.singletonList(renderTypes.entityFabulous());
-        }
+        this.particle = particle;
     }
 
+    @Nullable
+    public TextureAtlasSprite getParticle() {
+        return particle;
+    }
+
+    /** The static frame quads the block model bakes with (the dynamic sides live in the BER). */
+    public List<BakedQuad> getFrameQuads(@Nullable Direction side) {
+        return frame.getFaces(side);
+    }
+
+    /** The inactive-state LED quads (the official default when there is no side data). */
+    public List<BakedQuad> getInactiveLEDQuads(@Nullable Direction side) {
+        List<BakedQuad> quads = new ArrayList<>();
+        for (RelativeSide dir : EnumUtils.SIDES) {
+            quads.addAll(leds.get(dir).getFaces(side));
+        }
+        return quads;
+    }
+
+    /**
+     * The official per-side selection split by draw lighting: the fabric BER draws the lit half with full brightness
+     * (the official fullbright quad transformation is preserved) and the unlit half with the world light, instead of
+     * NeoForge's single mixed quad list over the chunk pipeline.
+     */
     @NotNull
-    @Override
-    public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side, @NotNull RandomSource rand, @NotNull ModelData data,
-          @Nullable RenderType renderType) {
-        CubeSideState[] sideStates = data.get(TileEntityEnergyCube.SIDE_STATE_PROPERTY);
+    public QuadSplits getSplitQuads(@Nullable Direction side, @Nullable CubeSideState[] sideStates) {
         if (sideStates == null || sideStates.length != EnumUtils.SIDES.length) {
             //If there is no side data then treat everything as inactive
             sideStates = INACTIVE;
         }
         //Note: We intentionally ignore the state and use null here to minimize cache size as it doesn't actually matter
         // or get used for energy cube models
-        QuadsKey<CubeSideState[]> key = new QuadsKey<>(null, side, rand, renderType, frame.getFaces(side));
-        key.data(sideStates, Arrays.hashCode(sideStates), DATA_EQUALITY_CHECK);
-        return cache.getUnchecked(key);
+        return cache.getUnchecked(new QuadKey(side, sideStates));
     }
 
-    private List<BakedQuad> createQuads(QuadsKey<CubeSideState[]> key) {
-        Direction side = key.getSide();
-        CubeSideState[] data = Objects.requireNonNull(key.getData());
-        //Make the list of quads mutable so that we can add the proper extra portions to it
-        List<BakedQuad> quads = new ArrayList<>(key.getQuads());
+    /** Convenience for the static block/item model: the all-inactive selection (frame excluded). */
+    @NotNull
+    public QuadSplits getInactiveQuads(@Nullable Direction side) {
+        return getSplitQuads(side, null);
+    }
+
+    private QuadSplits createQuads(QuadKey key) {
+        Direction side = key.side();
+        CubeSideState[] data = Objects.requireNonNull(key.sideStates());
+        List<BakedQuad> lit = new ArrayList<>();
+        List<BakedQuad> unlit = new ArrayList<>();
         for (int i = 0; i < EnumUtils.SIDES.length; i++) {
             RelativeSide dir = EnumUtils.SIDES[i];
             CubeSideState sideState = data[i];
             if (sideState == CubeSideState.ACTIVE_LIT) {
-                quads.addAll(activeLEDs.get(dir).getFaces(side));
-                quads.addAll(activePorts.get(dir).getFaces(side));
+                lit.addAll(activeLEDs.get(dir).getFaces(side));
+                lit.addAll(activePorts.get(dir).getFaces(side));
             } else {
-                quads.addAll(leds.get(dir).getFaces(side));
+                unlit.addAll(leds.get(dir).getFaces(side));
                 if (sideState == CubeSideState.ACTIVE_UNLIT) {
-                    quads.addAll(ports.get(dir).getFaces(side));
+                    unlit.addAll(ports.get(dir).getFaces(side));
                 }
             }
         }
-        return quads;
+        return new QuadSplits(lit, unlit);
     }
 
-    @Override
-    public boolean useAmbientOcclusion() {
-        return isAmbientOcclusion;
+    public record QuadSplits(List<BakedQuad> lit, List<BakedQuad> unlit) {
     }
 
-    @Override
-    public boolean isGui3d() {
-        return isGui3d;
-    }
+    private record QuadKey(@Nullable Direction side, CubeSideState[] sideStates) {
 
-    @Override
-    public boolean usesBlockLight() {
-        return usesBlockLight;
-    }
-
-    @Override
-    public boolean isCustomRenderer() {
-        return false;
-    }
-
-    @NotNull
-    @Override
-    @Deprecated
-    public TextureAtlasSprite getParticleIcon() {
-        return particle;
-    }
-
-    @NotNull
-    @Override
-    @Deprecated
-    public ItemOverrides getOverrides() {
-        return overrides;
-    }
-
-    @NotNull
-    @Override
-    @Deprecated
-    public ItemTransforms getTransforms() {
-        return transforms;
-    }
-
-    @NotNull
-    @Override
-    public ChunkRenderTypeSet getRenderTypes(@NotNull BlockState state, @NotNull RandomSource rand, @NotNull ModelData data) {
-        return blockRenderTypes == null ? IDynamicBakedModel.super.getRenderTypes(state, rand, data) : blockRenderTypes;
-    }
-
-    @NotNull
-    @Override
-    public List<RenderType> getRenderTypes(@NotNull ItemStack stack, boolean fabulous) {
-        if (fabulous) {
-            if (fabulousItemRenderTypes != null) {
-                return fabulousItemRenderTypes;
-            }
-        } else if (itemRenderTypes != null) {
-            return itemRenderTypes;
+        private QuadKey {
+            sideStates = sideStates.clone();
         }
-        return IDynamicBakedModel.super.getRenderTypes(stack, fabulous);
+
+        @Override
+        public boolean equals(Object obj) {
+            return obj instanceof QuadKey other && other.side == side && Arrays.equals(other.sideStates, sideStates);
+        }
+
+        @Override
+        public int hashCode() {
+            return 31 * Arrays.hashCode(sideStates) + Objects.hashCode(side);
+        }
     }
 }

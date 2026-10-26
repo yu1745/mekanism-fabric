@@ -118,6 +118,23 @@ public class Vertex {
         return color(color.r(), color.g(), color.b(), color.a());
     }
 
+    //Fabric port: read accessors for the quad baking path (NeoForge's consumer hid these behind its own pipeline).
+    public int getRed() {
+        return red;
+    }
+
+    public int getGreen() {
+        return green;
+    }
+
+    public int getBlue() {
+        return blue;
+    }
+
+    public int getAlpha() {
+        return alpha;
+    }
+
     public Vertex color(int red, int green, int blue, int alpha) {
         this.red = red;
         this.green = green;
@@ -202,8 +219,6 @@ public class Vertex {
         consumer.setUv1(overlayU, overlayV);
         consumer.setUv2(lightU, lightV);
         consumer.setNormal(normal.x(), normal.y(), normal.z());
-        for (Map.Entry<VertexFormatElement, int[]> entry : miscData.entrySet()) {
-            consumer.misc(entry.getKey(), entry.getValue());
-        }
+        //Fabric port: the NeoForge misc() extension has no vanilla counterpart; misc data stays unpacked.
     }
 }

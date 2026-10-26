@@ -32,6 +32,10 @@ public class RenderEnergyCube extends ModelTileEntityRenderer<TileEntityEnergyCu
 
     @Override
     protected void render(TileEntityEnergyCube tile, float partialTicks, PoseStack matrix, MultiBufferSource renderer, int light, int overlayLight, ProfilerFiller profiler) {
+        //Fabric port: the side LEDs and ports draw here from the baked official geometry, driven by the tile's render
+        //data - the per-instance side selection rides the BER because fabric has no model-data equivalent. The static
+        //block model carries the frame; the lit halves use full brightness like the official fullbright transform.
+        mekanism.fabric.client.model.FabricEnergyCubeModel.FabricEnergyCubeModels.renderTier(tile, matrix, renderer, light, overlayLight);
         float energyScale = tile.getEnergyScale();
         Vec3 renderPos = tile.getBlockPos().getCenter();
         BaseTier baseTier = tile.getTier().getBaseTier();

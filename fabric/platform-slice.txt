@@ -11,6 +11,8 @@ mekanism/fabric/client/hud/FabricClientTickRegistration.java
 mekanism/fabric/client/hud/FabricHudHeights.java
 mekanism/fabric/client/model/FabricCompositeModel.java
 mekanism/fabric/client/model/FabricDeferredLoaderModel.java
+mekanism/fabric/client/model/FabricEnergyCubeModel.java
+mekanism/fabric/client/model/FabricEnergyCubeUnbakedModel.java
 mekanism/fabric/client/model/FabricItemLayersModel.java
 mekanism/fabric/client/model/FabricMekanismModelPlugin.java
 mekanism/fabric/client/model/FabricMergedQuadsModel.java
