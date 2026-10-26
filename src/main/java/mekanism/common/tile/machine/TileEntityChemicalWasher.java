@@ -55,8 +55,7 @@ import mekanism.common.tile.prefab.TileEntityRecipeMachine;
 import mekanism.common.util.MekanismUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.FluidType;
+import mekanism.api.fluid.FluidStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -71,8 +70,8 @@ public class TileEntityChemicalWasher extends TileEntityRecipeMachine<FluidChemi
           RecipeError.NOT_ENOUGH_OUTPUT_SPACE,
           RecipeError.INPUT_DOESNT_PRODUCE_OUTPUT
     );
-    public static final long MAX_SLURRY = 10L * FluidType.BUCKET_VOLUME;
-    public static final int MAX_FLUID = 10 * FluidType.BUCKET_VOLUME;
+    public static final long MAX_SLURRY = 10L * 1_000;
+    public static final int MAX_FLUID = 10 * 1_000;
 
     @WrappingComputerMethod(wrapper = ComputerFluidTankWrapper.class, methodNames = {"getFluid", "getFluidCapacity", "getFluidNeeded",
                                                                                      "getFluidFilledPercentage"}, docPlaceholder = "fluid tank")

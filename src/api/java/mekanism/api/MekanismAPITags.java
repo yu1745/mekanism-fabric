@@ -177,6 +177,11 @@ public class MekanismAPITags {
          * Represents any type of damage that can be prevented by the Scuba Mask or the Inhalation Purification Unit.
          */
         public static final TagKey<DamageType> IS_PREVENTABLE_MAGIC = tag("is_preventable_magic");
+        /**
+         * Fabric port delta: mirrors the upstream-consumed {@code neoforge:is_technical} convention tag under its official identifier; the tag content
+         * ships with the datapack vertical. Upstream referenced it through the NeoForge {@code Tags.DamageTypes} constants.
+         */
+        public static final TagKey<DamageType> IS_TECHNICAL = TagKey.create(Registries.DAMAGE_TYPE, ResourceLocation.fromNamespaceAndPath("neoforge", "is_technical"));
 
         private static TagKey<DamageType> tag(String name) {
             return TagKey.create(Registries.DAMAGE_TYPE, rl(name));

@@ -67,7 +67,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.common.util.ItemStackMap;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenCustomHashMap;
+import net.minecraft.world.item.ItemStackLinkedSet;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -524,7 +525,8 @@ public abstract class TileEntityFactory<RECIPE extends MekanismRecipe<?>> extend
     //End methods IComputerTile
 
     private void sortInventory() {
-        Map<ItemStack, RecipeProcessInfo<RECIPE>> processes = ItemStackMap.createTypeAndTagMap();
+        //Vanilla ItemStackLinkedSet.TYPE_AND_TAG hashing replaces the upstream ItemStackMap wrapper, which only delegated to it
+        Map<ItemStack, RecipeProcessInfo<RECIPE>> processes = new Object2ObjectOpenCustomHashMap<>(ItemStackLinkedSet.TYPE_AND_TAG);
         List<ProcessInfo> emptyProcesses = new ArrayList<>();
         for (ProcessInfo processInfo : processInfoSlots) {
             IInventorySlot inputSlot = processInfo.inputSlot();

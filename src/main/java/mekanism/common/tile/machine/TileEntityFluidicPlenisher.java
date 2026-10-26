@@ -52,8 +52,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.FluidType;
+import mekanism.api.fluid.FluidStack;
 import org.jetbrains.annotations.NotNull;
 
 public class TileEntityFluidicPlenisher extends TileEntityMekanism implements IConfigurable {
@@ -63,7 +62,7 @@ public class TileEntityFluidicPlenisher extends TileEntityMekanism implements IC
      * How many ticks it takes to run an operation.
      */
     public static final int BASE_TICKS_REQUIRED = SharedConstants.TICKS_PER_SECOND;
-    public static final int MAX_FLUID = 10 * FluidType.BUCKET_VOLUME;
+    public static final int MAX_FLUID = 10 * 1_000;
 
     private final Set<BlockPos> activeNodes = new ObjectLinkedOpenHashSet<>();
     private final Set<BlockPos> usedNodes = new ObjectOpenHashSet<>();
@@ -141,7 +140,7 @@ public class TileEntityFluidicPlenisher extends TileEntityMekanism implements IC
                             WorldUtils.tryPlaceContainedLiquid(null, level, below, fluidTank.getFluid(), null)) {
                             level.gameEvent(null, GameEvent.FLUID_PLACE, below);
                             clientEnergyUsed = energyContainer.extract(energyPerTick, Action.EXECUTE, AutomationType.INTERNAL);
-                            fluidTank.extract(FluidType.BUCKET_VOLUME, Action.EXECUTE, AutomationType.INTERNAL);
+                            fluidTank.extract(1_000, Action.EXECUTE, AutomationType.INTERNAL);
                         }
                     } else {
                         doPlenish();
@@ -154,7 +153,7 @@ public class TileEntityFluidicPlenisher extends TileEntityMekanism implements IC
     }
 
     private boolean canExtractBucket() {
-        return fluidTank.extract(FluidType.BUCKET_VOLUME, Action.SIMULATE, AutomationType.INTERNAL).getAmount() == FluidType.BUCKET_VOLUME;
+        return fluidTank.extract(1_000, Action.SIMULATE, AutomationType.INTERNAL).getAmount() == 1_000;
     }
 
     private void doPlenish() {
@@ -182,7 +181,7 @@ public class TileEntityFluidicPlenisher extends TileEntityMekanism implements IC
                 if (canReplace(nodePos, true, false) && canExtractBucket() &&
                     WorldUtils.tryPlaceContainedLiquid(null, level, nodePos, fluidTank.getFluid(), null)) {
                     level.gameEvent(null, GameEvent.FLUID_PLACE, nodePos);
-                    fluidTank.extract(FluidType.BUCKET_VOLUME, Action.EXECUTE, AutomationType.INTERNAL);
+                    fluidTank.extract(1_000, Action.EXECUTE, AutomationType.INTERNAL);
                 }
                 for (Direction dir : dirs) {
                     mutable.setWithOffset(nodePos, dir);

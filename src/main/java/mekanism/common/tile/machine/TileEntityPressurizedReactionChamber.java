@@ -52,8 +52,7 @@ import net.minecraft.SharedConstants;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.FluidType;
+import mekanism.api.fluid.FluidStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -75,8 +74,8 @@ public class TileEntityPressurizedReactionChamber extends TileEntityProgressMach
           RecipeError.INPUT_DOESNT_PRODUCE_OUTPUT
     );
     private static final int BASE_DURATION = 5 * SharedConstants.TICKS_PER_SECOND;
-    public static final int MAX_FLUID = 10 * FluidType.BUCKET_VOLUME;
-    public static final long MAX_GAS = 10L * FluidType.BUCKET_VOLUME;
+    public static final int MAX_FLUID = 10 * 1_000;
+    public static final long MAX_GAS = 10L * 1_000;
 
     @WrappingComputerMethod(wrapper = ComputerFluidTankWrapper.class, methodNames = {"getInputFluid", "getInputFluidCapacity", "getInputFluidNeeded",
                                                                                      "getInputFluidFilledPercentage"}, docPlaceholder = "fluid input")

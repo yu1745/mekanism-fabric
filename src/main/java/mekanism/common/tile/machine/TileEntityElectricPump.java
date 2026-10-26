@@ -63,8 +63,7 @@ import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.FluidType;
+import mekanism.api.fluid.FluidStack;
 import net.fabricmc.fabric.api.transfer.v1.fluid.FluidStorage;
 import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
 import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
@@ -77,7 +76,7 @@ public class TileEntityElectricPump extends TileEntityMekanism implements IConfi
      * How many ticks it takes to run an operation.
      */
     private static final int BASE_TICKS_REQUIRED = 19;
-    public static final int MAX_FLUID = 10 * FluidType.BUCKET_VOLUME;
+    public static final int MAX_FLUID = 10 * 1_000;
     private static final int BASE_OUTPUT_RATE = 256;
 
     /**
@@ -187,7 +186,7 @@ public class TileEntityElectricPump extends TileEntityMekanism implements IConfi
     }
 
     public int estimateIncrementAmount() {
-        return fluidTank.getFluid().is(MekanismFluids.HEAVY_WATER) ? MekanismConfig.general.pumpHeavyWaterAmount.get() : FluidType.BUCKET_VOLUME;
+        return fluidTank.getFluid().is(MekanismFluids.HEAVY_WATER) ? MekanismConfig.general.pumpHeavyWaterAmount.get() : 1_000;
     }
 
     private boolean suck() {
@@ -282,7 +281,7 @@ public class TileEntityElectricPump extends TileEntityMekanism implements IConfi
         if (hasFilter && sourceFluid == Fluids.WATER) {
             return MekanismFluids.HEAVY_WATER.asStack(MekanismConfig.general.pumpHeavyWaterAmount.get());
         }
-        return new FluidStack(sourceFluid, FluidType.BUCKET_VOLUME);
+        return new FluidStack(sourceFluid, 1_000);
     }
 
     private void suck(@NotNull FluidStack fluidStack, BlockPos pos, boolean addRecurring) {

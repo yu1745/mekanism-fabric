@@ -68,7 +68,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import mekanism.common.item.ItemAbilities;
 import mekanism.api.ItemAbility;
-import net.neoforged.neoforge.common.util.Lazy;
+import mekanism.common.util.Lazy;
 import mekanism.api.gear.GearAttributeContext;
 import org.jetbrains.annotations.NotNull;
 

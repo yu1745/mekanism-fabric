@@ -64,8 +64,7 @@ import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.FluidType;
+import mekanism.api.fluid.FluidStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -84,7 +83,7 @@ public class TileEntityRotaryCondensentrator extends TileEntityRecipeMachine<Rot
           NOT_ENOUGH_SPACE_FLUID_OUTPUT_ERROR,
           RecipeError.INPUT_DOESNT_PRODUCE_OUTPUT
     );
-    public static final int CAPACITY = 10 * FluidType.BUCKET_VOLUME;
+    public static final int CAPACITY = 10 * 1_000;
 
     @WrappingComputerMethod(wrapper = ComputerChemicalTankWrapper.class, methodNames = {"getGas", "getGasCapacity", "getGasNeeded",
                                                                                         "getGasFilledPercentage"}, docPlaceholder = "gas tank")

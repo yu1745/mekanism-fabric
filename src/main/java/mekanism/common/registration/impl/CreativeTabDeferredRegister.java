@@ -16,28 +16,29 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
+import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEntries;
 import org.jetbrains.annotations.NotNull;
 
 public class CreativeTabDeferredRegister extends MekanismDeferredRegister<CreativeModeTab> {
 
-    private final Consumer<BuildCreativeModeTabContentsEvent> addToExistingTabs;
+    private final Consumer<CreativeModeTab.Output> addToExistingTabs;
 
     public CreativeTabDeferredRegister(String modid) {
-        this(modid, event -> {
+        this(modid, output -> {
         });
     }
 
-    public CreativeTabDeferredRegister(String modid, Consumer<BuildCreativeModeTabContentsEvent> addToExistingTabs) {
+    public CreativeTabDeferredRegister(String modid, Consumer<CreativeModeTab.Output> addToExistingTabs) {
         super(Registries.CREATIVE_MODE_TAB, modid);
         this.addToExistingTabs = addToExistingTabs;
     }
 
-    @Override
-    public void register(@NotNull IEventBus bus) {
-        super.register(bus);
-        bus.addListener(addToExistingTabs);
+    /**
+     * Fabric port delta: the official class wired {@code addToExistingTabs} through a NeoForge bus listener. The base register is bus-free in this port, so
+     * the platform bootstrap registers the consumer with Fabric's {@code ItemGroupEvents.modifyEntriesEvent} for the vanilla tabs it targets.
+     */
+    public Consumer<CreativeModeTab.Output> getAddToExistingTabs() {
+        return addToExistingTabs;
     }
 
     /**
@@ -76,7 +77,7 @@ public class CreativeTabDeferredRegister extends MekanismDeferredRegister<Creati
     @SafeVarargs
     public static void addToDisplay(CreativeModeTab.Output output, Holder<Item>... items) {
         CreativeModeTab.TabVisibility visibility;
-        if (output instanceof BuildCreativeModeTabContentsEvent) {
+        if (output instanceof ItemGroupEntries) {
             //If we are added from the event, only add the item to the parent tab, as we will already be contained in the search tab
             // from when we are adding to our tabs
             visibility = CreativeModeTab.TabVisibility.PARENT_TAB_ONLY;
