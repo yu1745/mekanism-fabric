@@ -5,7 +5,6 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import mekanism.api.SerializationConstants;
-import mekanism.common.Mekanism;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.config.WorldConfig.OreVeinConfig;
 import mekanism.common.registries.MekanismHeightProviderTypes;
@@ -16,8 +15,14 @@ import net.minecraft.world.level.levelgen.WorldGenerationContext;
 import net.minecraft.world.level.levelgen.heightproviders.HeightProvider;
 import net.minecraft.world.level.levelgen.heightproviders.HeightProviderType;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ConfigurableHeightProvider extends HeightProvider {
+
+    //Fabric port delta: the official class warns through Mekanism.logger; the main mod class is not part of this
+    //port's admission, so this file keeps the exact warn message on a private same-category SLF4J logger instead.
+    private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism");
 
     public static final MapCodec<ConfigurableHeightProvider> CODEC = RecordCodecBuilder.mapCodec(builder -> builder.group(
           OreVeinType.CODEC.fieldOf(SerializationConstants.ORE_TYPE).forGetter(config -> config.oreVeinType)
@@ -45,7 +50,7 @@ public class ConfigurableHeightProvider extends HeightProvider {
                 warnedFor = new LongOpenHashSet();
             }
             if (warnedFor.add((long) min << 32 | max)) {
-                Mekanism.logger.warn("Empty height range: {}", this);
+                LOGGER.warn("Empty height range: {}", this);
             }
             return min;
         }

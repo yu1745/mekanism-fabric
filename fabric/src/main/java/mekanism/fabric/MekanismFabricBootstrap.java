@@ -39,6 +39,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.gameevent.GameEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.util.List;
 
 /** Minimal Java entrypoint for the incremental Mekanism Fabric port. */
 public final class MekanismFabricBootstrap implements ModInitializer {
@@ -154,6 +155,15 @@ public final class MekanismFabricBootstrap implements ModInitializer {
         MekanismGameEvents.GAME_EVENTS.registerAll(BuiltInRegistries.GAME_EVENT);
         mekanism.common.registries.MekanismParticleTypes.PARTICLE_TYPES.registerAll(BuiltInRegistries.PARTICLE_TYPE);
         mekanism.common.advancements.MekanismCriteriaTriggers.CRITERIA_TRIGGERS.registerAll(BuiltInRegistries.TRIGGER_TYPES);
+        //Official worldgen: the custom feature/provider codecs must exist before the datapack decodes the packaged
+        //configured/placed features, and the biome modifier adapter must register before biomes load.
+        mekanism.common.registries.MekanismFeatures.FEATURES.registerAll(BuiltInRegistries.FEATURE);
+        mekanism.common.registries.MekanismIntProviderTypes.INT_PROVIDER_TYPES.registerAll(BuiltInRegistries.INT_PROVIDER_TYPE);
+        mekanism.common.registries.MekanismHeightProviderTypes.HEIGHT_PROVIDER_TYPES.registerAll(BuiltInRegistries.HEIGHT_PROVIDER_TYPE);
+        mekanism.common.registries.MekanismPlacementModifiers.PLACEMENT_MODIFIERS.registerAll(BuiltInRegistries.PLACEMENT_MODIFIER_TYPE);
+        verifyWorldGenRegistration();
+        mekanism.fabric.worldgen.FabricBiomeModifiers.initialize();
+        mekanism.fabric.worldgen.FabricWorldGenConfig.initializeCallbacks();
 
         verifyGameEvent(MekanismGameEvents.SEISMIC_VIBRATION, "seismic_vibration", 64);
         verifyGameEvent(MekanismGameEvents.JETPACK_BURN, "jetpack_burn", 16);
@@ -173,6 +183,24 @@ public final class MekanismFabricBootstrap implements ModInitializer {
 
     private static long mekanismCount(net.minecraft.core.Registry<?> registry) {
         return registry.keySet().stream().filter(id -> id.getNamespace().equals(mekanism.api.MekanismAPI.MEKANISM_MODID)).count();
+    }
+
+    private static void verifyWorldGenRegistration() {
+        verifyWorldGenEntry(BuiltInRegistries.FEATURE, mekanism.common.registries.MekanismFeatures.FEATURES.getEntries());
+        verifyWorldGenEntry(BuiltInRegistries.INT_PROVIDER_TYPE, mekanism.common.registries.MekanismIntProviderTypes.INT_PROVIDER_TYPES.getEntries());
+        verifyWorldGenEntry(BuiltInRegistries.HEIGHT_PROVIDER_TYPE, mekanism.common.registries.MekanismHeightProviderTypes.HEIGHT_PROVIDER_TYPES.getEntries());
+        verifyWorldGenEntry(BuiltInRegistries.PLACEMENT_MODIFIER_TYPE, mekanism.common.registries.MekanismPlacementModifiers.PLACEMENT_MODIFIERS.getEntries());
+        LOGGER.info("MEKANISM_FABRIC_WORLDGEN_REGISTRY_PROOF features=3 int_provider_types=2 height_provider_types=1 placement_modifier_types=1");
+    }
+
+    private static <T> void verifyWorldGenEntry(net.minecraft.core.Registry<T> registry,
+          List<? extends mekanism.common.registration.MekanismDeferredHolder<T, ? extends T>> entries) {
+        for (mekanism.common.registration.MekanismDeferredHolder<T, ? extends T> entry : entries) {
+            T registered = registry.get(entry.getId());
+            if (!entry.isBound() || registered != entry.value()) {
+                throw new IllegalStateException("Mekanism worldgen registry entry was not registered: " + entry.getId());
+            }
+        }
     }
 
     private static void verifyStartupConfig(FabricMekanismConfigManager.Registration registration) {

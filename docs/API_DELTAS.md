@@ -595,3 +595,12 @@ gate）BUILD SUCCESSFUL。未运行（按完成度优先策略）：全量测试
 - NeoForge 21.1.200 mod-fluid 默认不生成无限源，爆炸抗性为1，向下替换还需异族流体。Mekanism 注册没有覆盖这些值。
 - Chunk generation version 恢复原 root `mek_world_gen_version`：旧文件缺失为0；尚待 retrogen 的版本由 transient chunk attachment 承载，完成后显式保存当前版本。这不代表矿物生物群系注入已完成。
 - C2S catalog 现为26个，补上三个已注册 GUI 实际使用的 `PacketGuiInteract`；日志计数来自成功注册次数。彩色文本恢复原专用 filter，蜂巢剪切调用实际 vanilla harvest，电弓用 detached enchanted bow 调用原 projectile 创建流程。
+
+### 世界生成边界（Task052 官方矿物生成闭环，2026-10-26）
+
+- 官方 `data/mekanism/neoforge/biome_modifier/*.json`（6 个 `neoforge:add_features`，共引用 11 个 placed feature）按原样打包，仍是唯一事实来源；`FabricBiomeModifiers` 在启动时解析并逐 placed feature 调 `BiomeModifications.addFeature`，不发明注册表、不修改官方 JSON。`biomes` 字段保持官方 `HolderSet<Biome>` 语义：`#tag` 引用或 biome ID（单个/数组），在 biome 选择上下文上惰性匹配（tag 只有世界加载时才可解析）。`#` 前缀必须在 `ResourceLocation.parse` 之前剥离。
+- 非 `add_features` 官方类型（当前仅 Additions 的 `mekanismadditions:baby_mob_spawn`）直接拒绝而不是静默忽略，防止未来新增类型被无声丢弃；Additions 的 mob 修饰符不属于本轮边界。
+- 打包面新增 `data/mekanism/worldgen/configured_feature/`、`placed_feature/` 与 `neoforge/biome_modifier/` 三个目录（`tags/worldgen/biome/spawn_ores.json` 原已在 `data/mekanism/tags/**` 内）。configured/placed feature 作为普通 datapack 内容加载；`mekanism:ore`、`mekanism:disk`、`mekanism:ore_retrogen` feature、`configurable_constant`/`configurable_uniform` int provider、`configurable` height provider 与 `mekanism:disableable` placement modifier 共 7 个 codec 条目随 bootstrap 注册进对应 BuiltInRegistries。
+- 官方世界配置 `MekanismConfig.world`（`serverconfig/Mekanism/world.toml`，SERVER 型）由 `FabricWorldGenConfig` 按 `FabricChemicalConfig` 的世界片段模式接管：SERVER_STARTING 在 server 线程以 `<world>/serverconfig` 为根注册加载，SERVER_STOPPED 卸载，每世界路径一个 claim。feature codec 的解码只绑定 cached value supplier（惰性），真正的 config 读取发生在世界生成/区块事件时，此时 owner 已加载。未来完整配置闭包不得再把 world config 注册进全局 `config/` manager（会与真实 owner 冲突）。
+- `ConfigurableHeightProvider` 的官方 `Mekanism.logger` 改为同类别私有 SLF4J logger（与 `SerializerHelper` 先例一致），警告文本不变；四个 registry 类的 `DeferredHolder/DeferredRegister` 换成本项目注册件、`Mekanism.MODID` 换字面 mod id（与 `MekanismItems` 同型）。
+- 验收：`scripts/fabric-worldgen-smoke.sh`（固定 seed 世界 + 512 chunk forceload + 停服后扫描真实 region 文件调色板）5/5：注册 proof、`modifiers=6 features=11` proof、datapack 零错误、`world.toml` 落盘、六类目标（五种矿石 stone/deepslate 形态 + 盐盘）均在真实生成区块中命中。retrogen（`enableRegeneration` 默认 false）由既有 `CommonWorldTickHandler`/`ChunkGenVersionMixin` owner 承接，本轮未变。

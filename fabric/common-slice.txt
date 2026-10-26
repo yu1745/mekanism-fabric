@@ -1163,8 +1163,12 @@ mekanism/common/registries/MekanismDamageTypes.java
 mekanism/common/registries/MekanismDataComponents.java
 mekanism/common/registries/MekanismDataSerializers.java
 mekanism/common/registries/MekanismEntityTypes.java
+mekanism/common/registries/MekanismFeatures.java
 mekanism/common/registries/MekanismFluids.java
 mekanism/common/registries/MekanismGameEvents.java
+mekanism/common/registries/MekanismHeightProviderTypes.java
+mekanism/common/registries/MekanismIntProviderTypes.java
+mekanism/common/registries/MekanismPlacementModifiers.java
 mekanism/common/registries/MekanismItems.java
 mekanism/common/registries/MekanismModules.java
 mekanism/common/registries/MekanismParticleTypes.java
@@ -1388,8 +1392,17 @@ mekanism/common/util/UpgradeUtils.java
 mekanism/common/util/VoxelShapeUtils.java
 mekanism/common/util/WorldUtils.java
 mekanism/common/world/GenHandler.java
+mekanism/common/world/ConfigurableConstantInt.java
+mekanism/common/world/ConfigurableUniformInt.java
+mekanism/common/world/DisableableFeaturePlacement.java
+mekanism/common/world/OreRetrogenFeature.java
+mekanism/common/world/ResizableDiskConfig.java
+mekanism/common/world/ResizableDiskReplaceFeature.java
+mekanism/common/world/ResizableOreFeature.java
+mekanism/common/world/ResizableOreFeatureConfig.java
 mekanism/common/world/height/AnchorType.java
 mekanism/common/world/height/ConfigurableHeightRange.java
+mekanism/common/world/height/ConfigurableHeightProvider.java
 mekanism/common/world/height/ConfigurableVerticalAnchor.java
 mekanism/common/world/height/HeightShape.java
 # Original configurable-machine component and its already-ported item/fluid/chemical sender paths

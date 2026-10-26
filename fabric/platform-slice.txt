@@ -120,6 +120,8 @@ mekanism/fabric/robit/FabricRobitRegistries.java
 mekanism/fabric/robit/RobitSkinMappedRegistry.java
 mekanism/fabric/tile/FabricCapabilityTileLifecycle.java
 mekanism/fabric/tile/MekanismBlockLookups.java
+mekanism/fabric/worldgen/FabricBiomeModifiers.java
+mekanism/fabric/worldgen/FabricWorldGenConfig.java
 # Task052 canonical robit serializer and native dynamic load owner
 
 # Review: real chunk ticket ticking and Robit damage boundaries

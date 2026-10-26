@@ -196,7 +196,7 @@ def platformSlice = loadSlice('platform-slice.txt')
 def apiSliceFiles = apiSlice.collect { file("../src/api/java/${it}") }
 def commonSliceFiles = commonSlice.collect { file("../src/main/java/${it}") }
 def platformSliceFiles = platformSlice.collect { file("src/main/java/${it}") }
-if (apiSlice.size() != 262 || commonSlice.size() != 1389 || platformSlice.size() != 125) {
+if (apiSlice.size() != 262 || commonSlice.size() != 1402 || platformSlice.size() != 127) {
     throw new GradleException("Unexpected Fabric source slice counts: api=${apiSlice.size()} common=${commonSlice.size()} platform=${platformSlice.size()}")
 }
 
@@ -723,6 +723,13 @@ processResources {
               .findAll { it && !it.startsWith('#') } as Set
         exclude { details -> neoforgeOnlyRecipes.contains(details.path) }
         include 'data/mekanism/mekanism/robit_skin/**'
+        //Official ore/salt worldgen: configured and placed features load as ordinary datapack content. The NeoForge
+        //`neoforge/biome_modifier` files are not a vanilla registry; FabricBiomeModifiers parses them at startup and
+        //applies each add_features entry through Fabric's BiomeModifications, keeping the official files the source
+        //of truth. The Additions baby_mob_spawn modifiers belong to the Additions lane and stay out.
+        include 'data/mekanism/worldgen/configured_feature/*.json'
+        include 'data/mekanism/worldgen/placed_feature/*.json'
+        include 'data/mekanism/neoforge/biome_modifier/*.json'
     }
 }
 
