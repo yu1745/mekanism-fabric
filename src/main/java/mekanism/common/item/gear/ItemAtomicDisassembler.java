@@ -8,7 +8,6 @@ import it.unimi.dsi.fastutil.objects.Reference2BooleanMaps;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
 import java.util.function.Function;
@@ -45,7 +44,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -68,11 +66,10 @@ import net.minecraft.world.item.component.Tool;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.common.ItemAbilities;
-import net.neoforged.neoforge.common.ItemAbility;
+import mekanism.common.item.ItemAbilities;
+import mekanism.api.ItemAbility;
 import net.neoforged.neoforge.common.util.Lazy;
 import mekanism.api.gear.GearAttributeContext;
-import net.neoforged.neoforge.registries.holdersets.AnyHolderSet;
 import org.jetbrains.annotations.NotNull;
 
 public class ItemAtomicDisassembler extends ItemEnergized implements IItemHUDProvider, IRadialModeItem<DisassemblerMode>, IHasConditionalAttributes {
@@ -94,10 +91,25 @@ public class ItemAtomicDisassembler extends ItemEnergized implements IItemHUDPro
         super(properties.rarity(Rarity.RARE).setNoRepair().stacksTo(1)
               .component(MekanismDataComponents.DISASSEMBLER_MODE, DisassemblerMode.NORMAL)
               .component(DataComponents.TOOL, new Tool(List.of(
-                    Tool.Rule.deniesDrops(MekanismTags.Blocks.INCORRECT_FOR_DISASSEMBLER),
-                    new Tool.Rule(new AnyHolderSet<>(BuiltInRegistries.BLOCK.asLookup()), Optional.empty(), Optional.of(true))
+                    Tool.Rule.deniesDrops(MekanismTags.Blocks.INCORRECT_FOR_DISASSEMBLER)
               ), 1, 0))
         );
+    }
+
+    @Override
+    public boolean isCorrectToolForDrops(@NotNull ItemStack stack, @NotNull BlockState state) {
+        //Fabric port: the upstream catch-all rule used NeoForge's AnyHolderSet type, which has no serializable vanilla equivalent. Honor any
+        // user-supplied component rules first, then apply the official default: every block not explicitly denied drops correctly
+        // (docs/TASK052_ADJUDICATION_GEAR_CATALOG.md)
+        Tool tool = stack.get(DataComponents.TOOL);
+        if (tool != null) {
+            for (Tool.Rule rule : tool.rules()) {
+                if (rule.correctForDrops().isPresent() && state.is(rule.blocks())) {
+                    return rule.correctForDrops().get();
+                }
+            }
+        }
+        return !state.is(MekanismTags.Blocks.INCORRECT_FOR_DISASSEMBLER);
     }
 
     @Override

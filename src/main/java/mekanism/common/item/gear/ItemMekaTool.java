@@ -8,7 +8,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import mekanism.api.Action;
 import mekanism.api.AutomationType;
@@ -44,7 +43,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.RegistryLookup;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -79,7 +77,6 @@ import net.minecraft.world.phys.HitResult;
 import net.neoforged.neoforge.common.ItemAbility;
 import net.neoforged.neoforge.common.NeoForge;
 import mekanism.api.gear.GearAttributeContext;
-import net.neoforged.neoforge.registries.holdersets.AnyHolderSet;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -90,10 +87,25 @@ public class ItemMekaTool extends ItemEnergized implements IRadialModuleContaine
     public ItemMekaTool(Properties properties) {
         super(IModuleHelper.INSTANCE.applyModuleContainerProperties(properties.rarity(Rarity.EPIC).setNoRepair().stacksTo(1)
               .component(DataComponents.TOOL, new Tool(List.of(
-                    Tool.Rule.deniesDrops(MekanismTags.Blocks.INCORRECT_FOR_MEKA_TOOL),
-                    new Tool.Rule(new AnyHolderSet<>(BuiltInRegistries.BLOCK.asLookup()), Optional.empty(), Optional.of(true))
+                    Tool.Rule.deniesDrops(MekanismTags.Blocks.INCORRECT_FOR_MEKA_TOOL)
               ), 1, 0))
         ));
+    }
+
+    @Override
+    public boolean isCorrectToolForDrops(@NotNull ItemStack stack, @NotNull BlockState state) {
+        //Fabric port: the upstream catch-all rule used NeoForge's AnyHolderSet type, which has no serializable vanilla equivalent. Honor any
+        // user-supplied component rules first, then apply the official default: every block not explicitly denied drops correctly
+        // (docs/TASK052_ADJUDICATION_GEAR_CATALOG.md)
+        Tool tool = stack.get(DataComponents.TOOL);
+        if (tool != null) {
+            for (Tool.Rule rule : tool.rules()) {
+                if (rule.correctForDrops().isPresent() && state.is(rule.blocks())) {
+                    return rule.correctForDrops().get();
+                }
+            }
+        }
+        return !state.is(MekanismTags.Blocks.INCORRECT_FOR_MEKA_TOOL);
     }
 
     @Override

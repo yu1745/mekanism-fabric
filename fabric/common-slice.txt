@@ -795,3 +795,5 @@ mekanism/common/util/text/UpgradeDisplay.java
 mekanism/client/key/MekKeyHandler.java
 mekanism/client/key/MekanismKeyHandler.java
 mekanism/common/registration/impl/DataComponentDeferredRegister.java
+mekanism/common/item/ItemAbilities.java
+mekanism/common/util/ToolAbilityUtils.java

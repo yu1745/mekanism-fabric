@@ -21,6 +21,7 @@ import mekanism.common.network.to_client.PacketLightningRender;
 import mekanism.common.network.to_client.PacketLightningRender.LightningPreset;
 import mekanism.common.tags.MekanismTags;
 import mekanism.common.util.MekanismUtils;
+import mekanism.common.util.ToolAbilityUtils;
 import mekanism.common.util.StorageUtils;
 import net.minecraft.advancements.CriteriaTriggers;
 import net.minecraft.core.BlockPos;
@@ -50,8 +51,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.common.ItemAbilities;
-import net.neoforged.neoforge.common.ItemAbility;
+import mekanism.common.item.ItemAbilities;
+import mekanism.api.ItemAbility;
 import net.neoforged.neoforge.common.util.Lazy;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -191,7 +192,7 @@ public record ModuleFarmingUnit(FarmingRadius farmingRadius) implements ICustomM
             //Skip modifying the blocks if there is something we think is invalid about the position in the world in general
             return InteractionResult.PASS;
         }
-        BlockState modifiedState = clickedState.getToolModifiedState(context, action, false);
+        BlockState modifiedState = ToolAbilityUtils.getToolModifiedState(clickedState, context, action, false);
         if (modifiedState == null) {
             //Skip modifying the blocks if the one we clicked cannot be modified
             return InteractionResult.PASS;
@@ -233,7 +234,7 @@ public record ModuleFarmingUnit(FarmingRadius farmingRadius) implements ICustomM
             UseOnContext adjustedContext = new UseOnContext(world, context.getPlayer(), context.getHand(), context.getItemInHand(), new BlockHitResult(
                   context.getClickLocation().add(newPos.getX() - pos.getX(), newPos.getY() - pos.getY(), newPos.getZ() - pos.getZ()),
                   context.getClickedFace(), newPos, context.isInside()));
-            if (toolAOEData.isValid(world, newPos, state) && modifiedState == state.getToolModifiedState(adjustedContext, action, true)) {
+            if (toolAOEData.isValid(world, newPos, state) && modifiedState == ToolAbilityUtils.getToolModifiedState(state, adjustedContext, action, true)) {
                 //Some of the below methods don't behave properly when the BlockPos is mutable, so now that we are onto ones where it may actually
                 // matter we make sure to get an immutable instance of newPos
                 newPos = newPos.immutable();
@@ -243,7 +244,7 @@ public record ModuleFarmingUnit(FarmingRadius farmingRadius) implements ICustomM
                     CriteriaTriggers.ITEM_USED_ON_BLOCK.trigger(player, newPos, context.getItemInHand());
                 }
                 //Run it without simulation in case there are any side effects
-                state.getToolModifiedState(adjustedContext, action, false);
+                ToolAbilityUtils.getToolModifiedState(state, adjustedContext, action, false);
                 //Replace the block. Note it just directly sets it (in the same way the normal tools do).
                 world.setBlock(newPos, modifiedState, Block.UPDATE_ALL_IMMEDIATE);
                 if (sound != null) {

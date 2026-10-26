@@ -9,6 +9,7 @@ import mekanism.common.registries.MekanismAttachmentTypes;
 import mekanism.common.registries.MekanismDamageTypes;
 import mekanism.common.registries.MekanismEntityTypes;
 import mekanism.common.util.MekanismUtils;
+import mekanism.common.util.ToolAbilityUtils;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -45,8 +46,8 @@ import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.HitResult.Type;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.common.ItemAbilities;
-import net.neoforged.neoforge.common.ItemAbility;
+import mekanism.common.item.ItemAbilities;
+import mekanism.api.ItemAbility;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.common.util.BlockSnapshot;
 import net.neoforged.neoforge.entity.IEntityWithComplexSpawn;
@@ -188,7 +189,7 @@ public class EntityFlame extends Projectile implements IEntityWithComplexSpawn {
 
     private boolean tryModify(@Nullable Entity shooter, BlockPos pos, Direction hitSide, BlockState state, UseOnContext context, ItemAbility ability) {
         BlockSnapshot blockSnapshot = BlockSnapshot.create(level().dimension(), level(), pos);
-        BlockState modifiedState = state.getToolModifiedState(context, ability, false);
+        BlockState modifiedState = ToolAbilityUtils.getToolModifiedState(state, context, ability, false);
         if (modifiedState != null) {
             level().setBlockAndUpdate(pos, modifiedState);
         }

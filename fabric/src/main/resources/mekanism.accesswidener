@@ -47,3 +47,8 @@ accessible method net/minecraft/resources/ResourceLocation validNamespaceChar (C
 
 # Security config and play payloads share the actual native connection across listener transitions.
 accessible field net/minecraft/client/multiplayer/ClientCommonPacketListenerImpl connection Lnet/minecraft/network/Connection;
+
+# ToolAbilityUtils replicates the NeoForge tool-modified-state defaults over the vanilla
+# tool maps (AxeItem.getStripped / ShovelItem pathing), which vanilla keeps protected.
+accessible field net/minecraft/world/item/AxeItem STRIPPABLES Ljava/util/Map;
+accessible field net/minecraft/world/item/ShovelItem FLATTENABLES Ljava/util/Map;

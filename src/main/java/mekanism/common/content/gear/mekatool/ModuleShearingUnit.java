@@ -6,6 +6,7 @@ import mekanism.api.AutomationType;
 import mekanism.api.annotations.ParametersAreNotNullByDefault;
 import mekanism.api.energy.IEnergyContainer;
 import mekanism.api.gear.ICustomModule;
+import mekanism.common.util.ToolAbilityUtils;
 import mekanism.api.gear.IModule;
 import mekanism.api.gear.IModuleContainer;
 import mekanism.common.config.MekanismConfig;
@@ -31,8 +32,8 @@ import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.common.CommonHooks;
 import net.neoforged.neoforge.common.IShearable;
-import net.neoforged.neoforge.common.ItemAbilities;
-import net.neoforged.neoforge.common.ItemAbility;
+import mekanism.common.item.ItemAbilities;
+import mekanism.api.ItemAbility;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -90,7 +91,7 @@ public class ModuleShearingUnit implements ICustomModule<ModuleShearingUnit> {
             Level level = context.getLevel();
             BlockPos blockpos = context.getClickedPos();
             BlockState state = level.getBlockState(blockpos);
-            BlockState trimmedState = state.getToolModifiedState(context, ItemAbilities.SHEARS_TRIM, false);
+            BlockState trimmedState = ToolAbilityUtils.getToolModifiedState(state, context, ItemAbilities.SHEARS_TRIM, false);
             if (trimmedState != null) {
                 if (context.getPlayer() instanceof ServerPlayer player) {
                     CriteriaTriggers.ITEM_USED_ON_BLOCK.trigger(player, blockpos, stack);
