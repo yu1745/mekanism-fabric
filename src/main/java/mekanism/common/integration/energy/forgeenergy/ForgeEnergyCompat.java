@@ -46,8 +46,9 @@ public class ForgeEnergyCompat implements IEnergyCompat {
 
     @Override
     public boolean capabilityExists() {
-        //Team Reborn Energy is an external runtime dependency of this port, not a bundled one
-        return FabricLoader.getInstance().isModLoaded("teamreborn");
+        //Team Reborn Energy is an external runtime dependency of this port, not a bundled one. Its mod id is
+        //team_reborn_energy; a wrong id silently disables every energy acceptor and leaves transmitter networks unconnected.
+        return FabricLoader.getInstance().isModLoaded("team_reborn_energy");
     }
 
     @Override

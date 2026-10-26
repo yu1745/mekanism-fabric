@@ -53,14 +53,11 @@ public class EnergyAcceptorCache extends AbstractAcceptorCache<IStrictEnergyHand
                 IEnergyCompat energyCompat = cacheInfo.energyCompat();
                 //Validate that the energy compat is actually usable
                 if (energyCompat.isUsable()) {
-                    Object capability = cacheInfo.cache().getCapability();
-                    if (capability != null) {
-                        //TODO: If creating these wrappers ends up showing as a performance hotspot/causing issues for the GC
-                        // we should look into seeing if we can somehow cache the wrapped object
-                        IStrictEnergyHandler wrapped = energyCompat.wrapAsStrictEnergyHandler(capability);
-                        if (wrapped != null) {
-                            return wrapped;
-                        }
+                    //Fabric port delta: BlockEnergyCapabilityCache already resolves and wraps the external Team Reborn storage into the
+                    //Joules-domain handler, so this must not wrap the result a second time (the official NeoForge cache held the raw capability).
+                    IStrictEnergyHandler handler = cacheInfo.cache().getCapability();
+                    if (handler != null) {
+                        return handler;
                     }
                 }
             }

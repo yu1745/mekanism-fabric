@@ -100,13 +100,23 @@ cd "$SERVER_DIR"
   echo "setblock 3 100 0 mekanism:energized_smelter"
   echo "setblock 6 100 0 mekanism:basic_universal_cable"
   echo "setblock 9 100 0 mekanism:qio_dashboard"
+  #Energy network scenario: a storage cube ejects through a universal cable into a second chamber. The side configs are what a
+  #placed block item applies; data merge is used because /setblock places no item components.
+  echo "setblock 12 100 0 mekanism:enrichment_chamber"
+  echo "setblock 14 100 0 mekanism:basic_energy_cube"
   sleep 2
   echo 'data merge block 0 100 0 {energy_containers:[{container:0b,stored:20000L}], items:[{slot:0b,item:{id:"minecraft:iron_ore",count:2}}]}'
   echo 'data merge block 3 100 0 {energy_containers:[{container:0b,stored:20000L}], items:[{slot:0b,item:{id:"minecraft:iron_ore",count:2}}]}'
+  echo 'data merge block 12 100 0 {component_config:{config0:[I;1,1,1,1,1,1]}, items:[{slot:0b,item:{id:"minecraft:iron_ore",count:2}}]}'
+  echo 'data merge block 14 100 0 {component_config:{eject0:1b, config0:[I;4,4,4,4,4,4]}, energy_containers:[{container:0b,stored:100000L}]}'
+  sleep 3
+  echo "setblock 13 100 0 mekanism:basic_universal_cable"
   sleep 20
   echo "data get block 0 100 0"
   echo "data get block 3 100 0"
   echo "data get block 9 100 0"
+  echo "data get block 12 100 0"
+  echo "data get block 14 100 0"
   sleep 3
   echo "stop"
   sleep 5
@@ -133,6 +143,14 @@ else
 fi
 check "enrichment chamber produced iron dust" '0, 100, 0 has the following block data.*mekanism:dust_iron'
 check "energized smelter produced an iron ingot" '3, 100, 0 has the following block data.*minecraft:iron_ingot'
+check "cable-powered chamber produced iron dust" '12, 100, 0 has the following block data.*mekanism:dust_iron'
+if grep -Eq '14, 100, 0 has the following block data.*stored: ' "$LOG_FILE" \
+      && ! grep -Eq '14, 100, 0 has the following block data.*stored: 100000L' "$LOG_FILE"; then
+  printf 'PASS energy cube discharged into the cable network\n'
+else
+  printf 'FAIL energy cube discharged into the cable network\n'
+  failures=$((failures + 1))
+fi
 if grep -q 'Encountered an unexpected exception' "$LOG_FILE"; then
   printf 'FAIL no uncaught server exception\n'
   failures=$((failures + 1))

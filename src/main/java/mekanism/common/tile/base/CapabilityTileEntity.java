@@ -20,8 +20,11 @@ import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
+import net.minecraft.world.level.Level;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -111,6 +114,19 @@ public abstract class CapabilityTileEntity extends TileEntityUpdateable {
      */
     public CapabilityTileEntity(Holder<? extends BlockEntityType<?>> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
+    }
+
+    /**
+     * Opens exposure as soon as the tile enters a server level. Fabric's {@code ServerBlockEntityEvents.BLOCK_ENTITY_LOAD} only covers block entities loaded from a
+     * chunk; a machine placed by a player (or by any runtime block change) is created and attached through {@code LevelChunk#setBlockEntity} without ever firing
+     * that event, so without this hook a freshly placed machine exposed no capabilities until the chunk reloaded and no cable could connect to it.
+     */
+    @Override
+    public void setLevel(@NotNull Level level) {
+        super.setLevel(level);
+        if (level instanceof ServerLevel) {
+            openCapabilityExposure();
+        }
     }
 
     /**

@@ -564,3 +564,12 @@ gate）BUILD SUCCESSFUL。未运行（按完成度优先策略）：全量测试
 - 规则：mod 接口不得以 abstract 形式重声明会被 remap 的 vanilla 方法名（至少 `getLevel`/`getBlockPos` 这类 `BlockEntity` 方法）。
 - 修复：新增 `mekanism.common.base.ILevelProvider`，以单一 default `getLevel()` 委托 `BlockEntity#getLevel`；`IRecipeLookupHandler`、`ITileWrapper`、`IQIOCraftingWindowHolder` 均 extend 它并删除各自的 `getLevel` 声明（两个互不相关的 default 也无法解析）。`ITileWrapper#getBlockPos` 同理保留 default；`Transmitter` 与 `PortableQIODashboardInventory` 保留显式实现。
 - 验证：`scripts/fabric-machine-smoke.sh` 在真实打包服务端驱动富集仓与冶炼机，断言 2 铁矿石→4 铁粉、2 铁矿石→2 铁锭，且无异常/崩溃；接口层级改动后必须 `compileJava --rerun`。
+
+### 能量边界（Task052 能量网络打通，2026-10-26）
+
+- `ForgeEnergyCompat#capabilityExists` 必须使用 Team Reborn Energy 的真实 mod id `team_reborn_energy`；写错会让所有能量 acceptor 缓存为空且 `isUsable` 路径失效。
+- `CapabilityTileEntity#setLevel` 在进入 `ServerLevel` 时开启 exposure。Fabric 的 `BLOCK_ENTITY_LOAD` 只覆盖区块加载的 BE，玩家放置（`LevelChunk#setBlockEntity`）不会触发；只在 LOAD 开启会让新放置机器的 provider 全部返回 null。
+- `BlockEnergyCapabilityCache#getCapability` 在本移植返回已包装的 `IStrictEnergyHandler`，`EnergyAcceptorCache` 不得再调用 `wrapAsStrictEnergyHandler`（否则把 handler 强转 `EnergyStorage` 抛 CCE）。
+- 通用线缆的能量能力：官方 `EnergyCompatUtils.addBlockCapabilities(builder)` 由 Fabric exposure seam 取代后，`registerCable` 必须显式 `.with(EnergyStorage.SIDED, CapabilityTileEntity::basicCapabilityProvider)`；否则线缆不暴露能量，任何存储/发电机都无法输入。
+- 机器默认侧面配置来自物品组件的 `AttachedSideConfig`（放置时由原版应用）；`/setblock` 不应用物品组件，测试需用 `data merge block` 写入 `component_config`（ENERGY ordinal 0 的 `config0` 数组、`eject0`）。
+- 验证：`scripts/fabric-machine-smoke.sh` 9/9（含 cube→cable→chamber）。
