@@ -123,6 +123,8 @@ cd "$SERVER_DIR"
   echo "setblock 34 100 0 mekanism:enrichment_chamber"
   echo "setblock 36 100 0 mekanism:basic_fluid_tank"
   echo "setblock 38 100 0 mekanism:electrolytic_separator"
+  #Chemical auto-eject destination: the separator ejects its right (oxygen) tank upward (TOP side).
+  echo "setblock 38 101 0 mekanism:basic_chemical_tank"
   sleep 2
   echo 'data merge block 0 100 0 {energy_containers:[{container:0b,stored:20000L}], items:[{slot:0b,item:{id:"minecraft:iron_ore",count:2}}]}'
   echo 'data merge block 3 100 0 {energy_containers:[{container:0b,stored:20000L}], items:[{slot:0b,item:{id:"minecraft:iron_ore",count:2}}]}'
@@ -134,7 +136,11 @@ cd "$SERVER_DIR"
   echo 'data merge block 30 100 0 {component_config:{config2:[I;1,1,1,1,1,1]}}'
   echo 'data merge block 34 100 0 {component_config:{config0:[I;1,1,1,1,1,1], config3:[I;1,1,1,1,1,1]}, energy_containers:[{container:0b,stored:20000L}]}'
   echo 'data merge block 36 100 0 {component_config:{config1:[I;4,4,4,4,4,4]}, fluid_tanks:[{tank:0b,stored:{id:"minecraft:water",amount:8000}}]}'
-  echo 'data merge block 38 100 0 {component_config:{config0:[I;1,1,1,1,1,1], config1:[I;1,1,1,1,1,1], config2:[I;4,4,4,4,4,4]}, energy_containers:[{container:0b,stored:20000L}]}'
+  echo 'data merge block 38 100 0 {component_config:{eject2:1b, config0:[I;1,1,1,1,1,1], config1:[I;1,1,1,1,1,1], config2:[I;0,0,0,0,6,0]}, energy_containers:[{container:0b,stored:20000L}]}'
+  #The eject destination accepts chemical input on every side; the separator's TOP chemical side is OUTPUT_2 (ordinal 6) --
+  #its chemical config only exposes OUTPUT_1/OUTPUT_2 (left=hydrogen, right=oxygen), so the plain OUTPUT ordinal (4)
+  #would silently eject nothing.
+  echo 'data merge block 38 101 0 {component_config:{config2:[I;1,1,1,1,1,1]}}'
   sleep 3
   echo "setblock 13 100 0 mekanism:basic_universal_cable"
   echo "setblock 21 100 0 mekanism:basic_logistical_transporter"
@@ -165,6 +171,7 @@ cd "$SERVER_DIR"
   echo "data get block 34 100 0"
   echo "data get block 36 100 0"
   echo "data get block 38 100 0"
+  echo "data get block 38 101 0"
   echo "data get block 33 100 0"
   echo "data get block 37 100 0"
   echo "data get block 21 100 0"
@@ -207,6 +214,7 @@ fi
 check "pressurized tube moved the chemical" '30, 100, 0 has the following block data.*chemical_tanks.*mekanism:oxygen'
 check "transporter fed the machine input" '34, 100, 0 has the following block data.*mekanism:dust_iron'
 check "pipe fed the machine fluid input" '38, 100, 0 has the following block data.*chemical_tanks.*mekanism:hydrogen'
+check "separator auto-ejected oxygen to the adjacent tank" '38, 101, 0 has the following block data.*chemical_tanks.*mekanism:oxygen'
 if grep -Eq '28, 100, 0 has the following block data.*stored: ' "$LOG_FILE"; then
   printf 'FAIL chemical source tank was emptied\n'
   failures=$((failures + 1))
