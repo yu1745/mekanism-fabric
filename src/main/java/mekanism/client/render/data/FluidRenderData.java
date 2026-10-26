@@ -6,7 +6,7 @@ import mekanism.client.render.MekanismRenderer.FluidTextureType;
 import mekanism.common.util.MekanismUtils;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
-import net.neoforged.neoforge.fluids.FluidStack;
+import mekanism.api.fluid.FluidStack;
 import org.jetbrains.annotations.Nullable;
 
 @NothingNullByDefault

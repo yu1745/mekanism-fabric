@@ -136,7 +136,7 @@ public class GuiFormulaicAssemblicator extends GuiConfigurableTile<TileEntityFor
         if (!tile.hasValidFormula()) {
             ItemStack stack = tile.getFormulaSlot().getStack();
             if (!stack.isEmpty() && stack.getItem() instanceof ItemCraftingFormula) {
-                return stack.getOrDefault(MekanismDataComponents.FORMULA_HOLDER, FormulaAttachment.EMPTY).isEmpty();
+                return stack.getOrDefault(MekanismDataComponents.FORMULA_HOLDER.get(), FormulaAttachment.EMPTY).isEmpty();
             }
         }
         return false;

@@ -1,9 +1,9 @@
 package mekanism.client.gui.element;
 
+import mekanism.api.MekanismAPI;
 import com.mojang.blaze3d.platform.NativeImage;
 import java.io.InputStream;
 import mekanism.client.gui.IGuiWrapper;
-import mekanism.common.Mekanism;
 import mekanism.common.lib.Color;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.MekanismUtils.ResourceType;
@@ -46,11 +46,11 @@ public class GuiElementHolder extends GuiScalableElement {
                 //Don't allow fully transparent colors, fallback to default color.
                 // Mark as null for now so that it can default to the proper color
                 argb = 0xFF787878;
-                Mekanism.logger.warn("Unable to retrieve background color for element holder.");
+                MekanismAPI.logger.warn("Unable to retrieve background color for element holder.");
             }
             BACKGROUND_COLOR = argb;
         } catch (Exception e) {
-            Mekanism.logger.error("Failed to retrieve background color for element holder", e);
+            MekanismAPI.logger.error("Failed to retrieve background color for element holder", e);
         }
     }
 }

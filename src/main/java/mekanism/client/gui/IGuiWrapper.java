@@ -1,11 +1,11 @@
 package mekanism.client.gui;
 
+import mekanism.api.MekanismAPI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BooleanSupplier;
 import mekanism.client.gui.element.window.GuiWindow;
 import mekanism.client.render.IFancyFontRenderer;
-import mekanism.common.Mekanism;
 import mekanism.common.inventory.container.SelectedWindowData;
 import mekanism.common.inventory.warning.WarningTracker.WarningType;
 import net.minecraft.client.Minecraft;
@@ -24,6 +24,10 @@ public interface IGuiWrapper extends ContainerEventHandler, IFancyFontRenderer {
         return ItemStack.EMPTY;
     }
 
+    default Minecraft getMinecraft() {
+        return Minecraft.getInstance();
+    }
+
     int getGuiLeft();
 
     int getGuiTop();
@@ -34,11 +38,11 @@ public interface IGuiWrapper extends ContainerEventHandler, IFancyFontRenderer {
     int getYSize();
 
     default void addWindow(GuiWindow window) {
-        Mekanism.logger.error("Tried to call 'addWindow' but unsupported in {}", getClass().getName());
+        MekanismAPI.logger.error("Tried to call 'addWindow' but unsupported in {}", getClass().getName());
     }
 
     default void removeWindow(GuiWindow window) {
-        Mekanism.logger.error("Tried to call 'removeWindow' but unsupported in {}", getClass().getName());
+        MekanismAPI.logger.error("Tried to call 'removeWindow' but unsupported in {}", getClass().getName());
     }
 
     default boolean currentlyQuickCrafting() {
@@ -52,7 +56,7 @@ public interface IGuiWrapper extends ContainerEventHandler, IFancyFontRenderer {
 
     @NotNull
     default BooleanSupplier trackWarning(@NotNull WarningType type, @NotNull BooleanSupplier warningSupplier) {
-        Mekanism.logger.error("Tried to call 'trackWarning' but unsupported in {}", getClass().getName());
+        MekanismAPI.logger.error("Tried to call 'trackWarning' but unsupported in {}", getClass().getName());
         return warningSupplier;
     }
 
@@ -70,7 +74,8 @@ public interface IGuiWrapper extends ContainerEventHandler, IFancyFontRenderer {
         } else {
             List<Component> tooltip = new ArrayList<>(Screen.getTooltipFromItem(Minecraft.getInstance(), stack));
             tooltip.addAll(toAppend);
-            guiGraphics.renderTooltip(font(), tooltip, stack.getTooltipImage(), stack, xAxis, yAxis);
+            //Fabric port delta: NeoForge's stack-aware renderTooltip overload collapses to vanilla's, as the image component already carries the stack's tooltip image
+            guiGraphics.renderTooltip(font(), tooltip, stack.getTooltipImage(), xAxis, yAxis);
         }
     }
 
@@ -79,6 +84,6 @@ public interface IGuiWrapper extends ContainerEventHandler, IFancyFontRenderer {
     }
 
     default void setSelectedWindow(SelectedWindowData selectedWindow) {
-        Mekanism.logger.error("Tried to call 'setSelectedWindow' but unsupported in {}", getClass().getName());
+        MekanismAPI.logger.error("Tried to call 'setSelectedWindow' but unsupported in {}", getClass().getName());
     }
 }

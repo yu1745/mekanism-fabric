@@ -26,7 +26,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -66,7 +65,8 @@ public class SideDataButton extends BasicColorButton {
             BlockPos otherBlockPos = tile.getBlockPos().relative(globalSide);
             BlockState blockOnSide = tileWorld.getBlockState(otherBlockPos);
             if (!blockOnSide.isAir()) {
-                otherBlockItem = blockOnSide.getCloneItemStack(new BlockHitResult(otherBlockPos.getCenter().relative(globalSide.getOpposite(), 0.5), globalSide.getOpposite(), otherBlockPos, false), tileWorld, otherBlockPos, Minecraft.getInstance().player);
+                //Fabric port delta: vanilla only has the 3-arg pick-block; the hit-result-carrying 4-arg form is a NeoForge patch
+                otherBlockItem = blockOnSide.getBlock().getCloneItemStack(tileWorld, otherBlockPos, blockOnSide);
             } else {
                 otherBlockItem = ItemStack.EMPTY;
             }

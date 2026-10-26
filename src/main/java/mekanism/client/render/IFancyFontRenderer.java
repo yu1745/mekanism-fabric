@@ -18,6 +18,10 @@ import org.joml.Matrix4f;
 //TODO - 1.21: Document this class
 public interface IFancyFontRenderer {
 
+    /** NeoForge AbstractWidget patch constants, hosted on this interface (vanilla has no scrolling-text timing constants). */
+    double PERIOD_PER_SCROLLED_PIXEL = 0.5;
+    double MIN_SCROLL_PERIOD = 3.0;
+
     int getXSize();
 
     default Font font() {
@@ -106,7 +110,8 @@ public interface IFancyFontRenderer {
         } else {
             targetX = alignment.getTarget(font, minX, maxX, textWidth);
         }
-        graphics.drawString(font, text.getVisualOrderText(), targetX, targetY, color, shadow);
+        //Fabric port delta: NeoForge's float-coordinate drawString overloads have no vanilla equivalent; positions truncate to ints
+        graphics.drawString(font, text.getVisualOrderText(), (int) targetX, (int) targetY, color, shadow);
         if (isScrolling) {
             graphics.disableScissor();
         }
@@ -190,7 +195,8 @@ public interface IFancyFontRenderer {
     private static double getOverflowedBy(Font font, double overflowWidth, long visibleDuration) {
         //Seconds since the gui was opened
         double seconds = visibleDuration / 1_000D;
-        double scrollPeriod = Math.max(overflowWidth * AbstractWidget.PERIOD_PER_SCROLLED_PIXEL, AbstractWidget.MIN_SCROLL_PERIOD);
+        //NeoForge AbstractWidget patch constants, hosted here (vanilla has no scrolling-text timing constants)
+        double scrollPeriod = Math.max(overflowWidth * PERIOD_PER_SCROLLED_PIXEL, MIN_SCROLL_PERIOD);
         //Controls the speed at which we go between the start of the scroll and the end
         double scrollSpeedModifier = Math.cos((2 * Math.PI) * seconds / scrollPeriod);
         if (!font.isBidirectional()) {
@@ -271,7 +277,7 @@ public interface IFancyFontRenderer {
             calculateLines(font, scale == 1 ? maxLength : Mth.floor(maxLength / scale));
             int maxX = x + maxLength;
             for (FormattedCharSequence line : linesToDraw) {
-                graphics.drawString(font, line, alignment.getTarget(font, x, maxX, scale * font.width(line)), startY, color, false);
+                graphics.drawString(font, line, (int) alignment.getTarget(font, x, maxX, scale * font.width(line)), startY, color, false);
                 startY += font.lineHeight;
             }
         }

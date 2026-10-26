@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.BooleanSupplier;
+import mekanism.api.MekanismAPI;
 import mekanism.client.gui.element.GuiElement;
 import mekanism.client.gui.element.slot.GuiSlot;
 import mekanism.client.gui.element.slot.GuiVirtualSlot;
@@ -14,7 +15,6 @@ import mekanism.client.gui.element.slot.SlotType;
 import mekanism.client.gui.element.tab.GuiWarningTab;
 import mekanism.client.gui.element.window.GuiWindow;
 import mekanism.client.render.MekanismRenderer;
-import mekanism.common.Mekanism;
 import mekanism.common.inventory.container.MekanismContainer;
 import mekanism.common.inventory.container.SelectedWindowData;
 import mekanism.common.inventory.container.slot.ContainerSlotType;
@@ -49,6 +49,32 @@ import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 public abstract class GuiMekanism<CONTAINER extends AbstractContainerMenu> extends VirtualSlotContainerScreen<CONTAINER> implements IGuiWrapper {
+    //NeoForge Screen patch equivalent: left/top/size accessors over the vanilla screen fields
+    @Override
+    public int getGuiLeft() {
+        return leftPos;
+    }
+
+    @Override
+    public int getGuiTop() {
+        return topPos;
+    }
+
+    @Override
+    public int getXSize() {
+        return imageWidth;
+    }
+
+    @Override
+    public int getYSize() {
+        return imageHeight;
+    }
+
+    @Nullable
+    public Slot getSlotUnderMouse() {
+        return hoveredSlot;
+    }
+
 
     public static final ResourceLocation BASE_BACKGROUND = MekanismUtils.getResource(ResourceType.GUI, "base.png");
     public static final ResourceLocation SHADOW = MekanismUtils.getResource(ResourceType.GUI, "shadow.png");
@@ -288,7 +314,7 @@ public abstract class GuiMekanism<CONTAINER extends AbstractContainerMenu> exten
         if (windows.isEmpty()) {
             return super.handleTabNavigation(navigation);
         }
-        return handleNavigationWithWindows(navigation, ContainerEventHandler::handleTabNavigation);
+        return handleNavigationWithWindows(navigation, (handler, nav) -> handler.handleTabNavigation(nav));
     }
 
     @Nullable
@@ -297,7 +323,7 @@ public abstract class GuiMekanism<CONTAINER extends AbstractContainerMenu> exten
         if (windows.isEmpty()) {
             return super.handleArrowNavigation(navigation);
         }
-        return handleNavigationWithWindows(navigation, ContainerEventHandler::handleArrowNavigation);
+        return handleNavigationWithWindows(navigation, (handler, nav) -> handler.handleArrowNavigation(nav));
     }
 
     @Override
@@ -558,7 +584,7 @@ public abstract class GuiMekanism<CONTAINER extends AbstractContainerMenu> exten
     @Nullable
     @Override
     @Deprecated//Don't use directly, this is normally private in ContainerScreen
-    protected Slot findSlot(double mouseX, double mouseY) {
+    public Slot findSlot(double mouseX, double mouseY) {
         //We override the implementation we have in VirtualSlotContainerScreen so that we can cache getting our window
         // and have some general performance improvements given we can batch a bunch of lookups together
         boolean checkedWindow = false;
@@ -714,7 +740,7 @@ public abstract class GuiMekanism<CONTAINER extends AbstractContainerMenu> exten
         // it in an unexpected state.
         MekanismRenderer.resetColor(guiGraphics);
         if (getXSize() < 8 || getYSize() < 8) {
-            Mekanism.logger.warn("Gui: {}, was too small to draw the background of. Unable to draw a background for a gui smaller than 8 by 8.", getClass().getSimpleName());
+            MekanismAPI.logger.warn("Gui: {}, was too small to draw the background of. Unable to draw a background for a gui smaller than 8 by 8.", getClass().getSimpleName());
             return;
         }
         GuiUtils.renderBackgroundTexture(guiGraphics, BASE_BACKGROUND, 4, 4, leftPos, topPos, imageWidth, imageHeight, 256, 256);

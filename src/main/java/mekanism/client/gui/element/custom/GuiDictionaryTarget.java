@@ -1,5 +1,6 @@
 package mekanism.client.gui.element.custom;
 
+import mekanism.api.MekanismAPI;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashSet;
@@ -20,7 +21,6 @@ import mekanism.client.gui.tooltip.TooltipUtils;
 import mekanism.client.recipe_viewer.interfaces.IRecipeViewerGhostTarget;
 import mekanism.client.render.MekanismRenderer;
 import mekanism.client.render.MekanismRenderer.FluidTextureType;
-import mekanism.common.Mekanism;
 import mekanism.common.base.TagCache;
 import mekanism.common.block.interfaces.IHasTileEntity;
 import mekanism.common.capabilities.Capabilities;
@@ -41,8 +41,9 @@ import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.item.alchemy.PotionContents;
 import net.minecraft.world.item.enchantment.ItemEnchantments;
 import net.minecraft.world.level.block.Block;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandlerItem;
+import mekanism.api.fluid.FluidStack;
+import mekanism.api.fluid.IExtendedFluidTank;
+import mekanism.common.attachments.containers.ContainerType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -141,7 +142,7 @@ public class GuiDictionaryTarget extends GuiElement implements IRecipeViewerGhos
                     }
                     //Entity type tags
                     if (item instanceof SpawnEggItem spawnEggItem) {
-                        tags.put(DictionaryTagType.ENTITY_TYPE, TagCache.getTagsAsStrings(spawnEggItem.getType(stack).getTags()));
+                        tags.put(DictionaryTagType.ENTITY_TYPE, TagCache.getTagsAsStrings(spawnEggItem.getType(stack).builtInRegistryHolder()));
                     }
                     //Enchantment tags
                     ItemEnchantments enchantments = stack.getEnchantments();
@@ -172,10 +173,11 @@ public class GuiDictionaryTarget extends GuiElement implements IRecipeViewerGhos
                         ));
                     }
                     //Get tags of any contained fluids
-                    IFluidHandlerItem fluidHandler = Capabilities.FLUID.getCapability(stack);
-                    if (fluidHandler != null) {
-                        tags.put(DictionaryTagType.FLUID, TagCache.getTagsAsStrings(IntStream.range(0, fluidHandler.getTanks())
-                              .mapToObj(fluidHandler::getFluidInTank)
+                    //Fabric port delta: NeoForge's IFluidHandlerItem becomes the port's attachment container seam
+                    List<IExtendedFluidTank> fluidTanks = ContainerType.FLUID.getAttachmentContainersIfPresent(stack);
+                    if (!fluidTanks.isEmpty()) {
+                        tags.put(DictionaryTagType.FLUID, TagCache.getTagsAsStrings(fluidTanks.stream()
+                              .map(IExtendedFluidTank::getFluid)
                               .filter(fluidInTank -> !fluidInTank.isEmpty())
                               .flatMap(FluidStack::getTags)
                               .distinct()
@@ -211,7 +213,7 @@ public class GuiDictionaryTarget extends GuiElement implements IRecipeViewerGhos
                 }
             }
             default -> {
-                Mekanism.logger.warn("Unable to get tags for unknown type: {}", newTarget);
+                MekanismAPI.logger.warn("Unable to get tags for unknown type: {}", newTarget);
                 return;
             }
         }

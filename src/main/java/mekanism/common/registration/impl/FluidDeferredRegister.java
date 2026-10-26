@@ -243,6 +243,11 @@ public class FluidDeferredRegister {
             this.definition = definition;
         }
 
+        /** The vanilla-neutral {@link MekanismFluidType} metadata registered for this fluid family. */
+        public MekanismFluidType getMekanismFluidType() {
+            return definition.fluidType;
+        }
+
         @Override
         public Fluid getFlowing() {
             return definition.flowing.get();

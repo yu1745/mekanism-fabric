@@ -21,6 +21,8 @@ public final class MekanismFabricClientBootstrap implements ClientModInitializer
     @Override
     public void onInitializeClient() {
         FabricClientConfigLifecycle.initialize();
+        //Official RegisterMenuScreensEvent transplant: machine screens register during client init
+        mekanism.fabric.client.FabricScreenRegistration.register();
         //Official RegisterKeyMappingsEvent transplant: all declared keys register during client init
         mekanism.client.key.MekanismKeyHandler.registerKeybindings();
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientBlockEntityEvents.BLOCK_ENTITY_LOAD.register((blockEntity, world) -> {

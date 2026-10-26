@@ -15,27 +15,21 @@ import mekanism.api.MekanismAPITags;
 import mekanism.api.SupportsColorMap;
 import mekanism.api.chemical.Chemical;
 import mekanism.api.chemical.ChemicalStack;
+import mekanism.api.fluid.FluidStack;
 import mekanism.client.SpecialColors;
+import mekanism.fabric.client.FabricFluidColors;
+import net.fabricmc.fabric.api.client.render.fluid.v1.FluidRenderHandler;
+import net.fabricmc.fabric.api.client.render.fluid.v1.FluidRenderHandlerRegistry;
 import mekanism.client.gui.element.GuiElementHolder;
 import mekanism.client.render.RenderResizableCuboid.FaceDisplay;
 import mekanism.client.render.data.FluidRenderData;
 import mekanism.client.render.data.ValveRenderData;
 import mekanism.client.render.lib.ColorAtlas;
 import mekanism.client.render.lib.ColorAtlas.ColorRegistryObject;
-import mekanism.client.render.tileentity.RenderDigitalMiner;
-import mekanism.client.render.tileentity.RenderDimensionalStabilizer;
-import mekanism.client.render.tileentity.RenderFluidTank;
-import mekanism.client.render.tileentity.RenderNutritionalLiquifier;
-import mekanism.client.render.tileentity.RenderPigmentMixer;
-import mekanism.client.render.tileentity.RenderSeismicVibrator;
-import mekanism.client.render.tileentity.RenderTeleporter;
-import mekanism.client.render.transmitter.RenderLogisticalTransporter;
-import mekanism.client.render.transmitter.RenderMechanicalPipe;
-import mekanism.client.render.transmitter.RenderTransmitterBase;
-import mekanism.common.Mekanism;
 import mekanism.common.lib.Color;
 import mekanism.common.lib.multiblock.IValveHandler.ValveData;
 import mekanism.common.lib.transmitter.TransmissionType;
+import mekanism.common.registration.impl.FluidDeferredRegister;
 import mekanism.common.util.EnumUtils;
 import mekanism.common.util.MekanismUtils;
 import net.minecraft.client.Camera;
@@ -52,16 +46,9 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FastColor;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.TextureAtlasStitchedEvent;
-import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
-import net.neoforged.neoforge.fluids.FluidStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-@EventBusSubscriber(modid = Mekanism.MODID, value = Dist.CLIENT)
 public class MekanismRenderer {
 
     //TODO: Replace various usages of LightTexture.FULL_BRIGHT with the getter for calculating glow light, at least if we end up making it only
@@ -82,25 +69,18 @@ public class MekanismRenderer {
      * @return the sprite, or missing sprite if not found
      */
     public static TextureAtlasSprite getBaseFluidTexture(@NotNull Fluid fluid, @NotNull FluidTextureType type) {
-        IClientFluidTypeExtensions properties = IClientFluidTypeExtensions.of(fluid);
-        ResourceLocation spriteLocation;
-        if (type == FluidTextureType.STILL) {
-            spriteLocation = properties.getStillTexture();
-        } else {
-            spriteLocation = properties.getFlowingTexture();
+        //Fabric port delta: IClientFluidTypeExtensions' still/flowing sprites come from the FluidRenderHandler atlas sprites
+        FluidRenderHandler handler = FluidRenderHandlerRegistry.INSTANCE.get(fluid);
+        if (handler == null) {
+            return getSprite((ResourceLocation) null);
         }
-        return getSprite(spriteLocation);
+        TextureAtlasSprite[] sprites = handler.getFluidSprites(null, null, fluid.defaultFluidState());
+        return sprites[type == FluidTextureType.STILL ? 0 : 1];
     }
 
     public static TextureAtlasSprite getFluidTexture(@NotNull FluidStack fluidStack, @NotNull FluidTextureType type) {
-        IClientFluidTypeExtensions properties = IClientFluidTypeExtensions.of(fluidStack.getFluid());
-        ResourceLocation spriteLocation;
-        if (type == FluidTextureType.STILL) {
-            spriteLocation = properties.getStillTexture(fluidStack);
-        } else {
-            spriteLocation = properties.getFlowingTexture(fluidStack);
-        }
-        return getSprite(spriteLocation);
+        //stack-level texture overrides have no Fluid API equivalent; the fluid-level handler sprites are the shared base
+        return getBaseFluidTexture(fluidStack.getFluid(), type);
     }
 
     public static TextureAtlasSprite getChemicalTexture(@NotNull ChemicalStack stack) {
@@ -109,6 +89,10 @@ public class MekanismRenderer {
 
     public static TextureAtlasSprite getChemicalTexture(@NotNull Holder<Chemical> chemical) {
         return getSprite(chemical.value().getIcon());
+    }
+
+    private static ResourceLocation rl(String path) {
+        return ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, path);
     }
 
     public static TextureAtlasSprite getSprite(ResourceLocation spriteLocation) {
@@ -185,7 +169,7 @@ public class MekanismRenderer {
 
     public static void color(GuiGraphics guiGraphics, @NotNull FluidStack fluid) {
         if (!fluid.isEmpty()) {
-            color(guiGraphics, IClientFluidTypeExtensions.of(fluid.getFluid()).getTintColor(fluid));
+            color(guiGraphics, FabricFluidColors.getTintColor(fluid));
         }
     }
 
@@ -210,7 +194,7 @@ public class MekanismRenderer {
     }
 
     public static int getColorARGB(@NotNull FluidStack fluidStack) {
-        return IClientFluidTypeExtensions.of(fluidStack.getFluid()).getTintColor(fluidStack);
+        return FabricFluidColors.getTintColor(fluidStack);
     }
 
     public static int getColorARGB(@NotNull FluidStack fluidStack, float fluidScale) {
@@ -254,7 +238,14 @@ public class MekanismRenderer {
     }
 
     public static int calculateGlowLight(int combinedLight, @NotNull FluidStack fluid) {
-        return fluid.isEmpty() ? combinedLight : calculateGlowLight(combinedLight, fluid.getFluidType().getLightLevel(fluid));
+        if (fluid.isEmpty()) {
+            return combinedLight;
+        }
+        if (fluid.getFluid() instanceof FluidDeferredRegister.MekanismFlowingFluid mekFluid) {
+            return calculateGlowLight(combinedLight, mekFluid.getMekanismFluidType().getLightLevel(fluid));
+        }
+        //Non-Mekanism fluids carry no FluidType metadata in this port; NeoForge defaulted their light level to 0
+        return combinedLight;
     }
 
     public static int calculateGlowLight(int combinedLight, int glow) {
@@ -287,7 +278,7 @@ public class MekanismRenderer {
     private static <T extends Enum<T> & SupportsColorMap> void parseColorAtlas(ResourceLocation rl, T[] elements) {
         List<Color> parsed = ColorAtlas.load(rl, elements.length);
         if (parsed.size() < elements.length) {
-            Mekanism.logger.error("Failed to parse color atlas: {}.", rl);
+            MekanismAPI.logger.error("Failed to parse color atlas: {}.", rl);
             return;
         }
         for (int i = 0; i < elements.length; i++) {
@@ -298,42 +289,37 @@ public class MekanismRenderer {
         }
     }
 
-    @SubscribeEvent
-    public static void onStitch(TextureAtlasStitchedEvent event) {
-        TextureAtlas map = event.getAtlas();
-        if (!map.location().equals(TextureAtlas.LOCATION_BLOCKS)) {
-            return;
-        }
+    /**
+     * Fabric port delta: NeoForge's TextureAtlasStitchedEvent is replicated by the platform TextureAtlasMixin (after
+     * TextureAtlas#upload). The per-renderer sprite-reset fan-out (RenderLogisticalTransporter.onStitch,
+     * RenderTransmitterBase.onStitch, ModelRenderer/RenderDigitalMiner/RenderDimensionalStabilizer/RenderFluidTank/
+     * RenderNutritionalLiquifier/RenderPigmentMixer/RenderMechanicalPipe/RenderSeismicVibrator reset hooks and
+     * RenderTickHandler.resetCached) belongs to the block-entity-renderer lane and is wired when those renderers land.
+     */
+    public static void onStitch(TextureAtlas map) {
         for (TransmissionType type : EnumUtils.TRANSMISSION_TYPES) {
-            overlays.put(type, map.getSprite(Mekanism.rl("block/overlay/" + type.getTransmission() + "_overlay")));
+            overlays.put(type, map.getSprite(rl("block/overlay/" + type.getTransmission() + "_overlay")));
         }
 
-        whiteIcon = map.getSprite(Mekanism.rl("block/overlay/overlay_white"));
-        energyIcon = map.getSprite(Mekanism.rl("liquid/energy"));
-        heatIcon = map.getSprite(Mekanism.rl("liquid/heat"));
-        redstonePulse = map.getSprite(Mekanism.rl("icon/redstone_control_pulse"));
-        teleporterPortal = map.getSprite(Mekanism.rl("block/teleporter_portal"));
+        whiteIcon = map.getSprite(rl("block/overlay/overlay_white"));
+        energyIcon = map.getSprite(rl("liquid/energy"));
+        heatIcon = map.getSprite(rl("liquid/heat"));
+        redstonePulse = map.getSprite(rl("icon/redstone_control_pulse"));
+        teleporterPortal = map.getSprite(rl("block/teleporter_portal"));
 
         //Note: These are called in post rather than pre to make sure the icons have properly been stitched/attached
-        RenderLogisticalTransporter.onStitch(map);
-        RenderTransmitterBase.onStitch();
+        //Deferred with the BER/render lane; restore there: RenderLogisticalTransporter.onStitch(map), RenderTransmitterBase.onStitch(),
+        //RenderDigitalMiner.resetCachedVisuals(), RenderDimensionalStabilizer.resetCachedVisuals(), RenderFluidTank.resetCachedModels(),
+        //RenderNutritionalLiquifier.resetCachedModels(), RenderPigmentMixer.resetCached(), RenderMechanicalPipe.onStitch(),
+        //RenderSeismicVibrator.resetCached(), RenderTickHandler.resetCached(), RenderTeleporter.resetCachedModels()
 
         //Reset any cached models now that the atlases are built
         ModelRenderer.resetCachedModels();
-        RenderDigitalMiner.resetCachedVisuals();
-        RenderDimensionalStabilizer.resetCachedVisuals();
-        RenderFluidTank.resetCachedModels();
-        RenderNutritionalLiquifier.resetCachedModels();
-        RenderPigmentMixer.resetCached();
-        RenderMechanicalPipe.onStitch();
-        RenderSeismicVibrator.resetCached();
-        RenderTickHandler.resetCached();
-        RenderTeleporter.resetCachedModels();
 
-        parseColorAtlas(Mekanism.rl("textures/colormap/primary.png"), EnumUtils.COLORS);
-        parseColorAtlas(Mekanism.rl("textures/colormap/tiers.png"), EnumUtils.TIERS);
-        SpecialColors.GUI_OBJECTS.parse(Mekanism.rl("textures/colormap/gui_objects.png"));
-        SpecialColors.GUI_TEXT.parse(Mekanism.rl("textures/colormap/gui_text.png"));
+        parseColorAtlas(rl("textures/colormap/primary.png"), EnumUtils.COLORS);
+        parseColorAtlas(rl("textures/colormap/tiers.png"), EnumUtils.TIERS);
+        SpecialColors.GUI_OBJECTS.parse(rl("textures/colormap/gui_objects.png"));
+        SpecialColors.GUI_TEXT.parse(rl("textures/colormap/gui_text.png"));
         GuiElementHolder.updateBackgroundColor();
     }
 

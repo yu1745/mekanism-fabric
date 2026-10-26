@@ -1,5 +1,6 @@
 package mekanism.fabric;
 
+import mekanism.api.MekanismAPI;
 import mekanism.api.MekanismServices;
 import mekanism.api.heat.HeatAPI;
 import mekanism.api.recipes.ingredients.creator.IIngredientCreatorProvider;

@@ -21,6 +21,7 @@ import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraft.util.StringUtil;
+import net.minecraft.util.StringUtil;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
@@ -371,13 +372,14 @@ public class GuiTextField extends GuiElement {
         }
 
         @Override
-        public void onClick(double mouseX, double mouseY, int button) {
-            if (button == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
+        public boolean mouseClicked(double mouseX, double mouseY, int button) {
+            if (button == GLFW.GLFW_MOUSE_BUTTON_RIGHT && isValidClickButton(button) && isMouseOver(mouseX, mouseY)) {
                 //Allow clearing on right click
+                playDownSound(Minecraft.getInstance().getSoundManager());
                 setValue("");
-            } else {
-                super.onClick(mouseX, mouseY, button);
+                return true;
             }
+            return super.mouseClicked(mouseX, mouseY, button);
         }
 
         @Override
@@ -390,7 +392,7 @@ public class GuiTextField extends GuiElement {
                 String value = getValue();
                 int spaceLeft = this.maxLength - value.length() - (startIndex - highlightEndIndex);
                 if (spaceLeft > 0) {
-                    String filtered = filterText(text);
+                    String filtered = StringUtil.filterText(text);
                     int length = filtered.length();
                     if (spaceLeft < length) {
                         if (Character.isHighSurrogate(filtered.charAt(spaceLeft - 1))) {

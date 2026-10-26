@@ -34,10 +34,11 @@
     "item.ResultSlotCraftingMixin"
   ],
   "client": [
+    "client.TextureAtlasMixin",
     "item.ClientConfiguratorUseMixin",
+    "item.ClientElytraStartMixin",
     "item.ModeStatusOverlayMixin",
-    "radiation.RadiationOverlayMixin",
-    "item.ClientElytraStartMixin"
+    "radiation.RadiationOverlayMixin"
   ],
   "injectors": {
     "defaultRequire": 1

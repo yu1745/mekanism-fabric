@@ -32,6 +32,6 @@ public class GuiPortableQIODashboard extends GuiQIOItemViewer<PortableQIODashboa
         if (stack.isEmpty()) {//Note: This shouldn't be empty, but we validate it just in case
             return null;
         }
-        return stack.getOrDefault(MekanismDataComponents.QIO_FREQUENCY, FrequencyAware.none()).identity().orElse(null);
+        return stack.getOrDefault(MekanismDataComponents.QIO_FREQUENCY.get(), FrequencyAware.none()).identity().orElse(null);
     }
 }

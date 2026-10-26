@@ -432,7 +432,14 @@ public abstract class GuiElement extends AbstractWidget implements IFancyFontRen
             //If we can't find a child, but we do have some, allow clearing whatever focus we currently have
             clearFocus();
         }
-        return super.mouseClicked(mouseX, mouseY, button);
+        //NeoForge widget patch equivalent: vanilla's self-dispatch drops the mouse button before onClick; our
+        // element hierarchy carries it through, mirroring vanilla's guard shape
+        if (visible && active && isValidClickButton(button) && isMouseOver(mouseX, mouseY)) {
+            playDownSound(Minecraft.getInstance().getSoundManager());
+            onClick(mouseX, mouseY, button);
+            return true;
+        }
+        return false;
     }
 
     @Override
@@ -608,7 +615,30 @@ public abstract class GuiElement extends AbstractWidget implements IFancyFontRen
     public void renderWidget(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
     }
 
-    @Override
+    // ---- NeoForge AbstractWidget patch equivalents (vanilla AbstractWidget has no FG-color support) ----
+
+    public static final int UNSET_FG_COLOR = -1;
+
+    protected int packedFGColor = UNSET_FG_COLOR;
+
+    public void setFGColor(int color) {
+        this.packedFGColor = color;
+    }
+
+    public void clearFGColor() {
+        this.packedFGColor = UNSET_FG_COLOR;
+    }
+
+    /** NeoForge widget patch shape: vanilla drops the mouse button before onClick; our element hierarchy carries it. */
+    public void onClick(double mouseX, double mouseY, int button) {
+        onClick(mouseX, mouseY);
+    }
+
+    /** NeoForge patch equivalent: vanilla anchors tooltips to {@link #getRectangle()}; the patch allows hover-anchoring. */
+    protected ScreenRectangle getTooltipRectangle(double mouseX, double mouseY) {
+        return getRectangle();
+    }
+
     public int getFGColor() {
         if (packedFGColor != UNSET_FG_COLOR) {
             return packedFGColor;

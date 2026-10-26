@@ -29,7 +29,7 @@ public abstract class VirtualSlotContainerScreen<T extends AbstractContainerMenu
     @Nullable
     @Override
     @Deprecated//Don't use directly, this is normally private in ContainerScreen
-    protected Slot findSlot(double mouseX, double mouseY) {
+    public Slot findSlot(double mouseX, double mouseY) {
         for (Slot slot : menu.slots) {
             //Like super.getSelectedSlot except uses our isMouseOverSlot so
             // that our redirection doesn't break this
@@ -42,7 +42,7 @@ public abstract class VirtualSlotContainerScreen<T extends AbstractContainerMenu
 
     @Override
     @Deprecated//Don't use directly, this is normally private in ContainerScreen
-    protected final boolean isHovering(@NotNull Slot slot, double mouseX, double mouseY) {
+    public final boolean isHovering(@NotNull Slot slot, double mouseX, double mouseY) {
         boolean mouseOver = isMouseOverSlot(slot, mouseX, mouseY);
         if (mouseOver && slot instanceof IVirtualSlot) {
             //Fake that the slot is "not" selected so that when this is called by render
@@ -58,7 +58,7 @@ public abstract class VirtualSlotContainerScreen<T extends AbstractContainerMenu
 
     @Override
     @Deprecated//Don't use directly, this is normally private in ContainerScreen
-    protected final void renderFloatingItem(@NotNull GuiGraphics guiGraphics, @NotNull ItemStack stack, int x, int y, @Nullable String altText) {
+    public final void renderFloatingItem(@NotNull GuiGraphics guiGraphics, @NotNull ItemStack stack, int x, int y, @Nullable String altText) {
         if (!stack.isEmpty()) {
             //Note: We ignore if the virtual slot is not actually available as we still want to transition back to the spot
             // it was in visually
@@ -126,8 +126,8 @@ public abstract class VirtualSlotContainerScreen<T extends AbstractContainerMenu
 
     public boolean slotClicked(@NotNull Slot slot, int button) {
         //Copy of super.mouseClicked, minus the call to all the sub elements as we know how we are interacting with it
-        InputConstants.Key mouseKey = InputConstants.Type.MOUSE.getOrCreate(button);
-        boolean pickBlockButton = minecraft.options.keyPickItem.isActiveAndMatches(mouseKey);
+        //Fabric port delta: NeoForge's KeyMapping.isActiveAndMatches(Key) becomes matchesMouse(button) on vanilla
+        boolean pickBlockButton = minecraft.options.keyPickItem.matchesMouse(button);
         long time = Util.getMillis();
         this.doubleclick = this.lastClickSlot == slot && time - this.lastClickTime < 250L && this.lastClickButton == button;
         this.skipNextRelease = false;

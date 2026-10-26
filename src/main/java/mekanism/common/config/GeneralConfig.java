@@ -1,5 +1,6 @@
 package mekanism.common.config;
 
+import mekanism.api.MekanismAPI;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;

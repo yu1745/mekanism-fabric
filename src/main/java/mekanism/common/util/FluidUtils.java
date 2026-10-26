@@ -26,6 +26,9 @@ import org.jetbrains.annotations.Nullable;
 
 public final class FluidUtils {
 
+    /** Vanilla-neutral millibucket-per-bucket volume (the official code used NeoForge's {@code FluidType.BUCKET_VOLUME}). */
+    public static final int BUCKET_VOLUME = 1000;
+
     //Connection status (accurate, do not overstate): TileComponentEjector (FLUID branch), TileEntityFluidTank (DOWN output) and TileEntityElectricPump (UP output)
     // now perform direct per-operation FluidStorage.SIDED.find lookups on the physical opposite face and route their real-tank sends through the sender-owned
     // FluidSendTransaction overloads below; unloaded neighbors are skipped and no Storage is retained across ticks.

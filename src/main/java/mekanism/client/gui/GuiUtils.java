@@ -1,5 +1,6 @@
 package mekanism.client.gui;
 
+import mekanism.api.MekanismAPI;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.BufferUploader;
@@ -11,7 +12,6 @@ import com.mojang.math.Divisor;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import java.util.List;
 import java.util.function.Predicate;
-import mekanism.common.Mekanism;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -283,7 +283,7 @@ public class GuiUtils {
 
                 pose.popPose();
             } catch (Exception e) {
-                Mekanism.logger.error("Failed to render stack into gui: {}", stack, e);
+                MekanismAPI.logger.error("Failed to render stack into gui: {}", stack, e);
             }
         }
     }
