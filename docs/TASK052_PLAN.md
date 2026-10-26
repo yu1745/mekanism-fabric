@@ -27,7 +27,7 @@ Important unsettled items: server lifecycle ordering for frequency persistence/r
 
 ## Verification and safety
 
-One GLM5.3 implementer, clean isolated worktree, immediate 270-second supervision. No model fallback. Preserve and report progress if the model is unavailable/quota exhausted. No production, mirror, deployment, push, indexing, broad directory scans or reference-tree writes. Search precise task directories with rg/fd; never scan ~, /, ~/server or broad parents.
+Single implementer in the clean isolated worktree: this session selects the route, implements, and verifies; no sub-agent dispatch and no model switching. Preserve and report progress if a hard blocker appears. No production, mirror, deployment, push, indexing, broad directory scans or reference-tree writes. Search precise task directories with rg/fd; never scan ~, /, ~/server or broad parents.
 
 Completion-first ordinary gate: assemble with existing slice/platform guards, plus a small selection of existing focused checks for the changed risky boundary. No default full suite, clean release, client/server fixtures, packaged smoke or new test infrastructure. Tests are not a reason to defer connecting the real owners. Parent reviews actual diff and evidence before acceptance. A genuine usable-machine milestone, if reached, needs an actual end-to-end check before a functionality claim; do not claim one merely because the owner compiles.
 
