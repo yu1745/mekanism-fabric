@@ -74,7 +74,7 @@ public class ClearConfigurationRecipe extends CustomRecipe {
         for (int i = 0, slots = input.size(); i < slots; ++i) {
             ItemStack stackInSlot = input.getItem(i);
             if (!stackInSlot.isEmpty()) {
-                if (stackInSlot.isComponentsPatchEmpty()) {
+                if (stackInSlot.getComponentsPatch().isEmpty()) {
                     //We currently only want to target block items that have at least one component
                     return ItemStack.EMPTY;
                 }

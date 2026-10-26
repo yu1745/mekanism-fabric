@@ -30,7 +30,8 @@
     "entity.PiglinAiCurrencyMixin",
     "entity.PiglinOffHandMixin",
     "entity.PiglinNeutralityMixin",
-    "item.ItemStackMekaSuitDamageMixin"
+    "item.ItemStackMekaSuitDamageMixin",
+    "item.ResultSlotCraftingMixin"
   ],
   "client": [
     "item.ClientConfiguratorUseMixin",

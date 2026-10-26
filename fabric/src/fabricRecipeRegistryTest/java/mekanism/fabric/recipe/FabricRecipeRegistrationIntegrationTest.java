@@ -19,6 +19,8 @@ import mekanism.api.recipes.basic.BasicCrushingRecipe;
 import mekanism.api.recipes.ingredients.ItemStackIngredient;
 import mekanism.api.recipes.ingredients.creator.IngredientCreatorAccess;
 import mekanism.common.registries.MekanismChemicalIngredientTypes;
+import mekanism.common.registries.MekanismRecipeSerializersInternal;
+import mekanism.common.registration.MekanismDeferredHolder;
 import mekanism.fabric.chemical.FabricChemicalLifecycle;
 import mekanism.fabric.chemical.FabricChemicalRegistryLifecycle;
 import mekanism.fabric.registry.FabricDefaultedRegistry;
@@ -163,6 +165,31 @@ class FabricRecipeRegistrationIntegrationTest {
               "a duplicate serializer registration must fail on the occupied keys");
         assertSame(MekanismRecipeTypes.TYPE_SAWING.value(), BuiltInRegistries.RECIPE_TYPE.get(
               ResourceLocation.fromNamespaceAndPath("mekanism", "sawing")), "a failed duplicate registration must not disturb the registry");
+    }
+
+
+    @Test
+    void recipeUpgradeAndBinSerializersRegisterUnderOfficialIds() {
+        //These four are declared by the internal catalog instead of the public api holder list: recipes with data-carrying inputs (mek_data),
+        //configuration clearing, and the two bin crafting specials. The dedicated server loads 85 mek_data recipes, so a missing entry is fatal.
+        List<MekanismDeferredHolder<RecipeSerializer<?>, ? extends RecipeSerializer<?>>> holders = List.of(MekanismRecipeSerializersInternal.MEK_DATA,
+              MekanismRecipeSerializersInternal.CLEAR_CONFIGURATION, MekanismRecipeSerializersInternal.BIN_INSERT, MekanismRecipeSerializersInternal.BIN_EXTRACT);
+        assertEquals(4, holders.stream().map(MekanismDeferredHolder::getId).distinct().count(), "the four internal serializer ids must be distinct");
+        for (MekanismDeferredHolder<RecipeSerializer<?>, ? extends RecipeSerializer<?>> holder : holders) {
+            ResourceLocation id = holder.getId();
+            assertEquals("mekanism", id.getNamespace(), "every internal serializer id must be in the mekanism namespace");
+            assertTrue(BuiltInRegistries.RECIPE_SERIALIZER.containsKey(id), "internal recipe serializer must be registered: " + id);
+            assertTrue(holder.isBound(), "an internal serializer holder must be bound: " + id);
+            assertSame(BuiltInRegistries.RECIPE_SERIALIZER.get(id), holder.get(), "the internal holder must resolve to the registered instance: " + id);
+        }
+        //30 = the 26 public api serializers plus these four; no id may be registered twice.
+        long mekanismSerializers = BuiltInRegistries.RECIPE_SERIALIZER.keySet().stream()
+              .filter(id -> id.getNamespace().equals("mekanism")).count();
+        assertEquals(30, mekanismSerializers, "there must be exactly 30 registered mekanism recipe serializers");
+        assertTrue(BuiltInRegistries.RECIPE_SERIALIZER.containsKey(ResourceLocation.fromNamespaceAndPath("mekanism", "mek_data")));
+        assertTrue(BuiltInRegistries.RECIPE_SERIALIZER.containsKey(ResourceLocation.fromNamespaceAndPath("mekanism", "clear_configuration")));
+        assertTrue(BuiltInRegistries.RECIPE_SERIALIZER.containsKey(ResourceLocation.fromNamespaceAndPath("mekanism", "bin_insert")));
+        assertTrue(BuiltInRegistries.RECIPE_SERIALIZER.containsKey(ResourceLocation.fromNamespaceAndPath("mekanism", "bin_extract")));
     }
 
     @SuppressWarnings("unchecked")

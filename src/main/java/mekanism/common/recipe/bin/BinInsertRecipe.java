@@ -21,7 +21,6 @@ import net.minecraft.world.item.crafting.CraftingBookCategory;
 import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent.ItemCraftedEvent;
 
 //TODO: Test this recipe in various modded crafting tables/auto crafters
 @NothingNullByDefault
@@ -117,7 +116,7 @@ public class BinInsertRecipe extends BinRecipe {
             }
         }
         //TODO: I think we can just skip this when handling it as a SpecialQIORecipe
-        binStack.set(MekanismDataComponents.FROM_RECIPE, true);
+        binStack.set(MekanismDataComponents.FROM_RECIPE.get(), true);
         return binStack;
     }
 
@@ -181,17 +180,15 @@ public class BinInsertRecipe extends BinRecipe {
         return MekanismRecipeSerializersInternal.BIN_INSERT.get();
     }
 
-    public static void onCrafting(ItemCraftedEvent event) {
-        ItemStack result = event.getCrafting();
+    public static void onCrafting(ItemStack result, Container craftingMatrix) {
         if (!result.isEmpty() && result.getItem() instanceof ItemBlockBin) {
             //Remove the marker that the bin was crafted from a bin recipe
-            Boolean fromRecipe = result.remove(MekanismDataComponents.FROM_RECIPE);
+            Boolean fromRecipe = result.remove(MekanismDataComponents.FROM_RECIPE.get());
             if (fromRecipe != null && fromRecipe) {
                 //And if it was try to move extra items from the container into it
                 ComponentBackedBinInventorySlot slot = convertToSlot(result);
                 ItemStack storedStack = slot.getStack();
                 if (!storedStack.isEmpty()) {
-                    Container craftingMatrix = event.getInventory();
                     for (int i = 0, slots = craftingMatrix.getContainerSize(); i < slots; ++i) {
                         ItemStack stack = craftingMatrix.getItem(i);
                         //Check remaining items

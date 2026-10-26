@@ -11,7 +11,7 @@ import mekanism.api.fluid.IMekanismFluidHandler;
 import mekanism.common.attachments.containers.ContainerType;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.fluids.FluidStack;
+import mekanism.api.fluid.FluidStack;
 import org.jetbrains.annotations.Nullable;
 
 @NothingNullByDefault

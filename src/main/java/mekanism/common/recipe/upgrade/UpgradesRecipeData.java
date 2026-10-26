@@ -115,7 +115,7 @@ public class UpgradesRecipeData implements RecipeUpgradeData<UpgradesRecipeData>
             }
         }
         //Add any upgrades we might have to the stack, and allow it to take over the map
-        stack.set(MekanismDataComponents.UPGRADES, new UpgradeAware(upgrades, inputStack, outputStack));
+        stack.set(MekanismDataComponents.UPGRADES.get(), new UpgradeAware(upgrades, inputStack, outputStack));
         //Try merging stored stacks
         return true;
     }

@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
+import mekanism.api.INBTSerializable;
 import mekanism.api.Upgrade;
 import mekanism.api.annotations.ParametersAreNotNullByDefault;
 import mekanism.api.inventory.IInventorySlot;
@@ -29,11 +30,10 @@ import mekanism.common.lib.inventory.personalstorage.PersonalStorageManager;
 import mekanism.common.registries.MekanismDataComponents;
 import mekanism.common.tier.BinTier;
 import net.minecraft.core.HolderLookup;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.common.util.INBTSerializable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -134,9 +134,9 @@ public interface RecipeUpgradeData<TYPE extends RecipeUpgradeData<TYPE>> {
                 SecurityMode securityMode = securityObject == null ? SecurityMode.PUBLIC : securityObject.getSecurityMode();
                 yield new SecurityRecipeData(ownerUUID, securityMode);
             }
-            case SORTING -> stack.getOrDefault(MekanismDataComponents.SORTING, false) ? SortingRecipeData.SORTING : null;
+            case SORTING -> stack.getOrDefault(MekanismDataComponents.SORTING.get(), false) ? SortingRecipeData.SORTING : null;
             case UPGRADE -> {
-                UpgradeAware upgradeAware = stack.get(MekanismDataComponents.UPGRADES);
+                UpgradeAware upgradeAware = stack.get(MekanismDataComponents.UPGRADES.get());
                 if (upgradeAware != null) {
                     Map<Upgrade, Integer> upgrades = upgradeAware.upgrades();
                     List<IInventorySlot> slots = upgradeAware.asInventorySlots();
@@ -147,10 +147,10 @@ public interface RecipeUpgradeData<TYPE extends RecipeUpgradeData<TYPE>> {
                 yield null;
             }
             case QIO_DRIVE -> {
-                DriveMetadata data = stack.getOrDefault(MekanismDataComponents.DRIVE_METADATA, DriveMetadata.EMPTY);
+                DriveMetadata data = stack.getOrDefault(MekanismDataComponents.DRIVE_METADATA.get(), DriveMetadata.EMPTY);
                 if (data.count() > 0 && data.types() > 0) {
                     //If we don't have any stored items don't actually grab any recipe data
-                    DriveContents contents = stack.get(MekanismDataComponents.DRIVE_CONTENTS);
+                    DriveContents contents = stack.get(MekanismDataComponents.DRIVE_CONTENTS.get());
                     if (contents != null) {
                         yield new QIORecipeData(data, contents);
                     }

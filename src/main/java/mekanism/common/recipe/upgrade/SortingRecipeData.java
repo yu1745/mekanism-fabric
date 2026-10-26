@@ -22,7 +22,7 @@ public class SortingRecipeData implements RecipeUpgradeData<SortingRecipeData> {
 
     @Override
     public boolean applyToStack(HolderLookup.Provider provider, ItemStack stack) {
-        stack.set(MekanismDataComponents.SORTING, true);
+        stack.set(MekanismDataComponents.SORTING.get(), true);
         return true;
     }
 }

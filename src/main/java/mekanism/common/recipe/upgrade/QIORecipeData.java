@@ -73,9 +73,9 @@ public class QIORecipeData implements RecipeUpgradeData<QIORecipeData> {
             // then return that we are not able to actually apply them to the stack
             return false;
         }
-        stack.set(MekanismDataComponents.DRIVE_METADATA, new DriveMetadata(itemCount, itemMap.size()));
+        stack.set(MekanismDataComponents.DRIVE_METADATA.get(), new DriveMetadata(itemCount, itemMap.size()));
         //Note: We just directly pass the item map to it, as we don't need it anymore so the drive contents can take it over
-        stack.set(MekanismDataComponents.DRIVE_CONTENTS, new DriveContents(itemMap));
+        stack.set(MekanismDataComponents.DRIVE_CONTENTS.get(), new DriveContents(itemMap));
         return true;
     }
 }

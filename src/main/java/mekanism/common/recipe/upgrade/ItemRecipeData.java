@@ -2,6 +2,8 @@ package mekanism.common.recipe.upgrade;
 
 import java.util.ArrayList;
 import java.util.List;
+import mekanism.api.Action;
+import mekanism.api.AutomationType;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.functions.ConstantPredicates;
 import mekanism.api.inventory.IInventorySlot;
@@ -12,7 +14,6 @@ import mekanism.common.lib.inventory.personalstorage.PersonalStorageManager;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.items.ItemHandlerHelper;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -68,11 +69,36 @@ public class ItemRecipeData implements RecipeUpgradeData<ItemRecipeData> {
 
     static boolean applyToStack(IMekanismInventory outputHandler, List<IInventorySlot> dataSlots) {
         for (IInventorySlot slot : dataSlots) {
-            if (!slot.isEmpty() && !ItemHandlerHelper.insertItemStacked(outputHandler, slot.getStack(), false).isEmpty()) {
+            if (!slot.isEmpty() && !insertStacked(outputHandler, slot.getStack()).isEmpty()) {
                 //If we have a remainder something failed so bail
                 return false;
             }
         }
         return true;
+    }
+
+    /**
+     * Port of NeoForge's {@code ItemHandlerHelper.insertItemStacked} for Mekanism inventory slots: fill matching stacks first, then empty slots.
+     */
+    private static ItemStack insertStacked(IMekanismInventory outputHandler, ItemStack stack) {
+        List<IInventorySlot> outputSlots = outputHandler.getInventorySlots(null);
+        ItemStack remainder = stack;
+        for (IInventorySlot slot : outputSlots) {
+            if (!slot.isEmpty() && ItemStack.isSameItemSameComponents(slot.getStack(), remainder)) {
+                remainder = slot.insertItem(remainder, Action.EXECUTE, AutomationType.INTERNAL);
+                if (remainder.isEmpty()) {
+                    return ItemStack.EMPTY;
+                }
+            }
+        }
+        for (IInventorySlot slot : outputSlots) {
+            if (slot.isEmpty()) {
+                remainder = slot.insertItem(remainder, Action.EXECUTE, AutomationType.INTERNAL);
+                if (remainder.isEmpty()) {
+                    return ItemStack.EMPTY;
+                }
+            }
+        }
+        return remainder;
     }
 }

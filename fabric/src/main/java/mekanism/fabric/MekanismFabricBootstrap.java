@@ -106,6 +106,8 @@ public final class MekanismFabricBootstrap implements ModInitializer {
         mekanism.fabric.registry.FabricMekanismBlockRegistries.initialize();
         mekanism.common.registries.MekanismContainerTypes.CONTAINER_TYPES.registerAll(BuiltInRegistries.MENU);
         mekanism.common.registries.MekanismCreativeTabs.CREATIVE_TABS.registerAll(BuiltInRegistries.CREATIVE_MODE_TAB);
+        mekanism.common.item.loot.MekanismLootFunctions.REGISTER.registerAll(BuiltInRegistries.LOOT_FUNCTION_TYPE);
+        mekanism.common.item.predicate.MekanismItemPredicates.PREDICATES.registerAll(BuiltInRegistries.ITEM_SUB_PREDICATE_TYPE);
         mekanism.fabric.item.FabricCreativeTabContents.initialize();
         //Fluid families: still/flowing fluids first (the liquid block resolves the registered flowing fluid), then the
         //liquid blocks and buckets. Bucket dispense behavior mirrors the official common-setup pass.
@@ -203,7 +205,7 @@ public final class MekanismFabricBootstrap implements ModInitializer {
         for (String entry : java.util.List.of("crushing", "enriching", "smelting", "chemical_infusing", "combining", "separating", "washing", "evaporating",
               "activating", "centrifuging", "crystallizing", "dissolution", "compressing", "purifying", "injecting", "nucleosynthesizing",
               "energy_conversion", "chemical_conversion", "oxidizing", "pigment_extracting", "pigment_mixing", "metallurgic_infusing", "painting", "reaction",
-              "rotary", "sawing")) {
+              "rotary", "sawing", "mek_data", "clear_configuration", "bin_insert", "bin_extract")) {
             if (!BuiltInRegistries.RECIPE_SERIALIZER.containsKey(ResourceLocation.fromNamespaceAndPath("mekanism", entry))) {
                 throw new IllegalStateException("Mekanism recipe serializer was not registered: " + entry);
             }

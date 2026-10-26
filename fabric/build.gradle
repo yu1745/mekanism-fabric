@@ -194,7 +194,7 @@ def platformSlice = loadSlice('platform-slice.txt')
 def apiSliceFiles = apiSlice.collect { file("../src/api/java/${it}") }
 def commonSliceFiles = commonSlice.collect { file("../src/main/java/${it}") }
 def platformSliceFiles = platformSlice.collect { file("src/main/java/${it}") }
-if (apiSlice.size() != 262 || commonSlice.size() != 1109 || platformSlice.size() != 117) {
+if (apiSlice.size() != 262 || commonSlice.size() != 1129 || platformSlice.size() != 118) {
     throw new GradleException("Unexpected Fabric source slice counts: api=${apiSlice.size()} common=${commonSlice.size()} platform=${platformSlice.size()}")
 }
 
@@ -697,6 +697,26 @@ processResources {
         include 'data/mekanism/tags/mekanism/chemical/tin.json'
         include 'data/mekanism/tags/mekanism/chemical/waste_barrel_decay_blacklist.json'
         include 'data/mekanism/tags/mekanism/chemical/water_vapor.json'
+        //All generated vanilla/Mekanism block, item, entity, fluid, game-event, damage, mob-effect, data-component and
+        //worldgen-biome tags: tag files merge with lower packs (replace=false), so these only add the official entries.
+        include 'data/mekanism/tags/**'
+        include 'data/minecraft/tags/**'
+        //Fabric's convention namespace replaces NeoForge's; the generated c: tags define osmium/tin/lead families
+        //that only the mod itself can provide. NeoForge-specific data/tags stay out (no loader equivalent).
+        include 'data/c/tags/**'
+        //Generated block loot tables use only vanilla functions plus Mekanism's own personal_storage_contents.
+        include 'data/mekanism/loot_table/**'
+        //Vanilla/Mekanism-trigger advancements and the canonical robit skin catalog (verified portable: no NeoForge
+        //or foreign-mod references).
+        include 'data/mekanism/advancement/**'
+        //Official recipes that only use vanilla/Mekanism JSON shapes. `compat/**` targets other mods and is gated by
+        //NeoForge mod_loaded conditions; the listed files use the NeoForge compound ingredient. Both await the datagen lane.
+        include 'data/mekanism/recipe/**'
+        exclude 'data/mekanism/recipe/compat/**'
+        def neoforgeOnlyRecipes = file('recipe-neoforge-only.txt').readLines()
+              .findAll { it && !it.startsWith('#') } as Set
+        exclude { details -> neoforgeOnlyRecipes.contains(details.path) }
+        include 'data/mekanism/mekanism/robit_skin/**'
     }
 }
 
@@ -912,7 +932,7 @@ def verifyFabricTestContract = tasks.register('verifyFabricTestContract') {
               || annotationCount(genericInputCacheTestSource) != 7 || annotationCount(rotaryInputCacheTestSource) != 5 || annotationCount(windowConfigTestSource) != 6
               || annotationCount(windowDomainTestSource) != 6 || annotationCount(concreteSlotTestSource) != 6
               || annotationCount(fabricItemStorageTestSource) != 5 || annotationCount(recipeOutputHandlingTestSource) != 6
-              || annotationCount(recipeSerializerContractTestSource) != 6 || annotationCount(recipeRegistryKnotTestSource) != 5
+              || annotationCount(recipeSerializerContractTestSource) != 6 || annotationCount(recipeRegistryKnotTestSource) != 6
               || annotationCount(recipeTypeOwnerTestSource) != 6 || annotationCount(recipeCacheLookupMonitorTestSource) != 8
               || annotationCount(apiFirstInitTestSource) != 1 || annotationCount(commonFirstInitTestSource) != 1) {
             throw new GradleException('Registry/data-map/window/slot/recipe fixed test method counts changed')
@@ -942,9 +962,9 @@ def verifyFabricTestContract = tasks.register('verifyFabricTestContract') {
         def transfer = readTotals(transferXmlResults, 'transfer', 9, 43)
         def registry = readTotals(registryXmlResults, 'root-registry', 1, 3)
         def dataMap = readTotals(dataMapXmlResults, 'data-map', 2, 4)
-        def recipeRegistry = readTotals(recipeRegistryXmlResults, 'recipe-registry', 3, 7)
+        def recipeRegistry = readTotals(recipeRegistryXmlResults, 'recipe-registry', 3, 8)
         if (ordinary[0] + transfer[0] + registry[0] + dataMap[0] + recipeRegistry[0] != 100
-              || ordinary[1] + transfer[1] + registry[1] + dataMap[1] + recipeRegistry[1] != 481) {
+              || ordinary[1] + transfer[1] + registry[1] + dataMap[1] + recipeRegistry[1] != 482) {
             throw new GradleException('Unexpected aggregate Fabric test totals')
         }
     }

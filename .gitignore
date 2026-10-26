@@ -19,6 +19,7 @@ MDK.zip
 !/fabric/api-slice.txt
 !/fabric/common-slice.txt
 !/fabric/platform-slice.txt
+!/fabric/recipe-neoforge-only.txt
 !/fabric/src/main/resources/META-INF/licenses/*.txt
 *.launch
 
