@@ -557,3 +557,10 @@ gate）BUILD SUCCESSFUL。未运行（按完成度优先策略）：全量测试
 - `AbstractContainerMenu#synchronizeCarriedToRemote` 在 vanilla 为 private，已加入 `mekanism.accesswidener`；用于滴管手持栈同步。
 - `PacketModeChangeCurios` 不移植：Curios 无 Fabric 对等物，官方 `PacketModeChange`（装备槽）保留。
 - 注册：25 个 C2S payload 由 `FabricServerPlayNetworking` 在 `PayloadTypeRegistry.playC2S()` 注册，并按类型各注册一个 `ServerPlayNetworking` receiver，重复注册直接抛错。
+
+### 接口重声明 vanilla 方法名（Task052 机器首跑修复，2026-10-26）
+
+- 现象：`TileEntityEnrichmentChamber` 首次 tick 抛 `AbstractMethodError`（`IRecipeLookupHandler.getLevel`）。dev 名字下接口抽象方法与 `BlockEntity#getLevel` 同名即视为实现；remap 后 vanilla 方法变为 `method_10997`，而 mod 接口不在 Minecraft 继承链上、名字不变，导致抽象方法无实现。
+- 规则：mod 接口不得以 abstract 形式重声明会被 remap 的 vanilla 方法名（至少 `getLevel`/`getBlockPos` 这类 `BlockEntity` 方法）。
+- 修复：新增 `mekanism.common.base.ILevelProvider`，以单一 default `getLevel()` 委托 `BlockEntity#getLevel`；`IRecipeLookupHandler`、`ITileWrapper`、`IQIOCraftingWindowHolder` 均 extend 它并删除各自的 `getLevel` 声明（两个互不相关的 default 也无法解析）。`ITileWrapper#getBlockPos` 同理保留 default；`Transmitter` 与 `PortableQIODashboardInventory` 保留显式实现。
+- 验证：`scripts/fabric-machine-smoke.sh` 在真实打包服务端驱动富集仓与冶炼机，断言 2 铁矿石→4 铁粉、2 铁矿石→2 铁锭，且无异常/崩溃；接口层级改动后必须 `compileJava --rerun`。

@@ -3,20 +3,14 @@ package mekanism.common.recipe.lookup;
 import mekanism.api.IContentsListener;
 import mekanism.api.recipes.MekanismRecipe;
 import mekanism.api.recipes.cache.CachedRecipe;
+import mekanism.common.base.ILevelProvider;
 import mekanism.client.recipe_viewer.type.IRecipeViewerRecipeType;
 import mekanism.common.recipe.IMekanismRecipeTypeProvider;
 import mekanism.common.recipe.lookup.cache.IInputRecipeCache;
-import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public interface IRecipeLookupHandler<RECIPE extends MekanismRecipe<?>> extends IContentsListener {
-
-    /**
-     * @return The world for this {@link IRecipeLookupHandler}.
-     */
-    @Nullable
-    Level getLevel();
+public interface IRecipeLookupHandler<RECIPE extends MekanismRecipe<?>> extends IContentsListener, ILevelProvider {
 
     /**
      * @return The recipe type this {@link IRecipeLookupHandler} handles.

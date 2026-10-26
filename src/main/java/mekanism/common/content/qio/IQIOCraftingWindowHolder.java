@@ -1,15 +1,12 @@
 package mekanism.common.content.qio;
 
 import mekanism.api.IContentsListener;
-import net.minecraft.world.level.Level;
+import mekanism.common.base.ILevelProvider;
 import org.jetbrains.annotations.Nullable;
 
-public interface IQIOCraftingWindowHolder extends IContentsListener {
+public interface IQIOCraftingWindowHolder extends IContentsListener, ILevelProvider {
 
     byte MAX_CRAFTING_WINDOWS = 3;
-
-    @Nullable
-    Level getLevel();
 
     QIOCraftingWindow[] getCraftingWindows();
 

@@ -246,3 +246,7 @@ rejects. Every other rejection is unchanged: `common/recipe/MekanismRecipeType*`
 `common/recipe/ClearConfigurationRecipe.class`, every `mekanism/client/**` class, `common/registries/MekanismItems*`, `mekanism/api/MekanismAPI.class`, all
 `data/mekanism/recipe/**` production recipe JSON, and every fixture/test class. Only `FABRIC_SMOKE_STATIC_ONLY=1` was run in the implementation worktree; the parent
 runs the dedicated-server gate before release.
+
+## Task 052 machine end-to-end smoke
+
+`scripts/fabric-machine-smoke.sh` starts the newest packaged jar (preferring a newer `fabric/build/libs` artifact over a stale `dist/`) in a disposable dedicated server, places an enrichment chamber, an energized smelter, a basic universal cable and a QIO dashboard, injects energy and input with the vanilla `data merge block` command, lets the server tick, and asserts the serialized block-entity state contains the processed outputs (`mekanism:dust_iron` from 2 iron ore, `minecraft:iron_ingot`). It also asserts the 25-payload server play channel, zero recipe parse errors, no uncaught exception and no crash report, so it covers the actual machine tick/recipe/energy/container path rather than registration alone. Prerequisite: a remapped jar (`./fabric-build.sh remapJar` or `./build.sh`). `FABRIC_MACHINE_SMOKE_TIMEOUT` bounds the run and `FABRIC_SMOKE_KEEP_SERVER=1` retains the disposable directory.
