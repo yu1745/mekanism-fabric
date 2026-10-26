@@ -3,7 +3,6 @@ package mekanism.client.render.layer;
 import com.mojang.blaze3d.vertex.PoseStack;
 import mekanism.api.annotations.ParametersAreNotNullByDefault;
 import mekanism.client.render.armor.ICustomArmor;
-import mekanism.client.render.armor.ISpecialGear;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
@@ -15,7 +14,6 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
 
 @ParametersAreNotNullByDefault
 public class MekanismArmorLayer<T extends LivingEntity, M extends HumanoidModel<T>, A extends HumanoidModel<T>> extends HumanoidArmorLayer<T, M, A> {
@@ -36,8 +34,8 @@ public class MekanismArmorLayer<T extends LivingEntity, M extends HumanoidModel<
     private void renderArmorPart(PoseStack matrix, MultiBufferSource renderer, T entity, EquipmentSlot slot, int light, float partialTicks) {
         ItemStack stack = entity.getItemBySlot(slot);
         Item item = stack.getItem();
-        if (item instanceof ArmorItem armorItem && armorItem.getEquipmentSlot() == slot && IClientItemExtensions.of(item) instanceof ISpecialGear specialGear) {
-            ICustomArmor model = specialGear.gearModel();
+        ICustomArmor model = mekanism.fabric.client.render.armor.FabricGearModels.gearModel(stack);
+        if (item instanceof ArmorItem armorItem && armorItem.getEquipmentSlot() == slot && model != null) {
             A coreModel = slot == EquipmentSlot.LEGS ? innerModel : outerModel;
             getParentModel().copyPropertiesTo(coreModel);
             setPartVisibility(coreModel, slot);

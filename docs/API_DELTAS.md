@@ -671,3 +671,11 @@ gate）BUILD SUCCESSFUL。未运行（按完成度优先策略）：全量测试
 - 访问放宽镜像上游 AT 5 项模型部件(ear/cloak/rightBodyStick/leftBodyStick/shoulderStick——**描述符包名必须是 mojmap `model.geom`**,首写 yarn `model.geometry` 静默不生效,与 fogRed 三项一并修正)。
 - 延后(记录):连接生命周期(MekanismClient.launchClient/reset)、喷火/盖革声(SoundHandler)、节日通知(HolidayManager)、KeySync——各随自己车道。
 - 验收:模型 smoke 第 11 检查 `MEKANISM_FABRIC_CLIENT_TICK_PROOF handler=registered seams=...`,11/11 两次连续;切片 api 262 / common 1454 / platform 150。
+
+### Armor 层车道·简单装备半（Task052,2026-10-26）
+
+- jetpack/强化喷气背包/自由跑鞋/强化自由跑鞋/潜水面膜/潜水气瓶六件的自定义盔甲渲染接通:`MekanismArmorLayer`(随 vanilla HumanoidArmorLayer 内外模型克隆)经 fabric `LivingEntityFeatureRendererRegistrationCallback` 挂上每个带原生盔甲层的 LivingEntity 渲染器(玩家含内,与官方 addCustomLayers 的全类型扫描一致);`MekanismElytraLayer`(HDPE 降落的翼)同挂。
+- 缝位:NeoForge `IClientItemExtensions` 表面→`FabricGearModels` 按物品查 `ICustomArmor`(注册镜像官方 render-properties 六项);vanilla 1.21.1 ElytraLayer 无 texture 钩子(NeoForge 补丁)→ render 体镜像 vanilla,HDPE 纹理替换,elytraModel 字段走访问放宽。
+- 访问放宽:HumanoidArmorLayer inner/outer、AgeableListModel 六标量(镜像上游 AT)、LivingEntityRenderer.layers、ElytraLayer.elytraModel。
+- 延后(记录):`MekaSuitArmor` 四件套(OBJ 模型缓存半,IGeometryBakingContext/BakingCompleted 依赖)+ `ISpecialGear`(NeoForge 扩展件,随其)——注册表持 `ICustomArmor`,层路径已为 MekaSuit 就位。
+- 验收:模型 smoke 第 12 检查 `MEKANISM_FABRIC_ARMOR_LAYER_PROOF callback=registered`,11/11→12/12 两次连续;切片 api 262 / common 1467 / platform 154。穿着视觉留 mcdebug/观察(与 flame/ecube 同)。

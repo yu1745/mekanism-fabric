@@ -66,6 +66,7 @@ check "block-item ISBERs wired" 'MEKANISM_FABRIC_ITEM_RENDERER_PROOF suppressed_
 check "HUD layers inserted into the vanilla draw" 'MEKANISM_FABRIC_HUD_PROOF layers=2'
 check "entity renderers registered" 'MEKANISM_FABRIC_ENTITY_RENDERER_PROOF entities=1'
 check "gear client tick handler wired" 'MEKANISM_FABRIC_CLIENT_TICK_PROOF handler=registered seams=mouse,fog_color,fog_setup,living_visibility,recipe_cache'
+check "armor layers registered" 'MEKANISM_FABRIC_ARMOR_LAYER_PROOF callback=registered'
 if grep -E 'Missing model|Failed to load model|Exception loading model' "${LOG_FILE}.latest.log" | grep -Ev 'energy_cube|qio_redstone_adapter|/robit|fluid_(tank|container)|neoforge:item/bucket' | grep -q .; then
   echo "FAIL no missing-model errors"
   grep -E 'Missing model|Failed to load model|Exception loading model' "${LOG_FILE}.latest.log" | head -5

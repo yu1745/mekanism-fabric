@@ -150,3 +150,18 @@ accessible field net/minecraft/client/model/ArmorStandModel shoulderStick Lnet/m
 #Gson and bakes elements through the vanilla face bakery, both package-private in vanilla.
 accessible field net/minecraft/client/renderer/block/model/BlockModel GSON Lcom/google/gson/Gson;
 accessible method net/minecraft/client/renderer/block/model/BlockModel bakeFace (Lnet/minecraft/client/renderer/block/model/BlockElement;Lnet/minecraft/client/renderer/block/model/BlockElementFace;Lnet/minecraft/client/renderer/texture/TextureAtlasSprite;Lnet/minecraft/core/Direction;Lnet/minecraft/client/resources/model/ModelState;)Lnet/minecraft/client/renderer/block/model/BakedQuad;
+#Armor layer lane: the port mirrors the official addCustomLayers scan over the renderer's layer list.
+accessible field net/minecraft/client/renderer/entity/LivingEntityRenderer layers Ljava/util/List;
+#Armor layer lane (mirrors upstream accesstransformer.cfg): the free-runner armor scales the baby humanoid parts.
+accessible field net/minecraft/client/model/AgeableListModel babyHeadScale F
+accessible field net/minecraft/client/model/AgeableListModel babyBodyScale F
+accessible field net/minecraft/client/model/AgeableListModel bodyYOffset F
+#Armor layer lane (mirrors upstream accesstransformer.cfg, continued): the armor layer clones the vanilla layer's
+#inner/outer humanoid models; the free-runner/scuba-mask baby-model scalars follow the upstream entries.
+accessible field net/minecraft/client/renderer/entity/layers/HumanoidArmorLayer innerModel Lnet/minecraft/client/model/HumanoidModel;
+accessible field net/minecraft/client/renderer/entity/layers/HumanoidArmorLayer outerModel Lnet/minecraft/client/model/HumanoidModel;
+accessible field net/minecraft/client/model/AgeableListModel scaleHead Z
+accessible field net/minecraft/client/model/AgeableListModel babyHeadScale F
+accessible field net/minecraft/client/model/AgeableListModel babyYHeadOffset F
+accessible field net/minecraft/client/model/AgeableListModel babyZHeadOffset F
+accessible field net/minecraft/client/renderer/entity/layers/ElytraLayer elytraModel Lnet/minecraft/client/model/ElytraModel;

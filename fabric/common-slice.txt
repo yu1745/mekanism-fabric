@@ -268,7 +268,11 @@ mekanism/client/render/MekanismShaders.java
 mekanism/client/render/ModelRenderer.java
 mekanism/client/render/RenderResizableCuboid.java
 mekanism/client/render/RenderTickHandler.java
+mekanism/client/render/armor/FreeRunnerArmor.java
 mekanism/client/render/armor/ICustomArmor.java
+mekanism/client/render/armor/JetpackArmor.java
+mekanism/client/render/armor/ScubaMaskArmor.java
+mekanism/client/render/armor/ScubaTankArmor.java
 mekanism/client/render/data/ChemicalRenderData.java
 mekanism/client/render/data/FluidRenderData.java
 mekanism/client/render/data/RenderData.java
@@ -287,6 +291,8 @@ mekanism/client/render/item/gear/RenderFreeRunners.java
 mekanism/client/render/item/gear/RenderJetpack.java
 mekanism/client/render/item/gear/RenderScubaMask.java
 mekanism/client/render/item/gear/RenderScubaTank.java
+mekanism/client/render/layer/MekanismArmorLayer.java
+mekanism/client/render/layer/MekanismElytraLayer.java
 mekanism/client/render/lib/ColorAtlas.java
 mekanism/client/render/lib/Outlines.java
 mekanism/client/render/lib/Quad.java
