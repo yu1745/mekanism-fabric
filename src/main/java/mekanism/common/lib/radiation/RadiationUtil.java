@@ -3,7 +3,6 @@ package mekanism.common.lib.radiation;
 import mekanism.api.radiation.IRadiationSource;
 import mekanism.api.radiation.capability.IRadiationEntity;
 import mekanism.api.radiation.capability.IRadiationShielding;
-import mekanism.common.Mekanism;
 import mekanism.fabric.gear.GearItemLookups;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.integration.curios.CuriosIntegration;
@@ -13,7 +12,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.items.IItemHandler;
 
 public class RadiationUtil {
 
@@ -45,17 +43,15 @@ public class RadiationUtil {
                 }
             }
         }
-        if (resistance < 1 && Mekanism.hooks.curios.isLoaded()) {
-            IItemHandler handler = CuriosIntegration.getCuriosInventory(entity);
-            if (handler != null) {
-                for (int i = 0, slots = handler.getSlots(); i < slots; i++) {
-                    ItemStack stack = handler.getStackInSlot(i);
-                    IRadiationShielding shielding = GearItemLookups.RADIATION_SHIELDING.find(stack, null);
-                    if (shielding != null) {
-                        resistance += shielding.getRadiationShielding();
-                        if (resistance >= 1) {
-                            return 1;
-                        }
+        if (resistance < 1 && CuriosIntegration.isLoaded()) {
+            //Fabric port delta: the presence seam exposes accessory-slot stacks directly; the real port query returns the
+            // same worn stacks the official Curios inventory iteration saw.
+            for (ItemStack stack : CuriosIntegration.getEquippedStacks(entity)) {
+                IRadiationShielding shielding = GearItemLookups.RADIATION_SHIELDING.find(stack, null);
+                if (shielding != null) {
+                    resistance += shielding.getRadiationShielding();
+                    if (resistance >= 1) {
+                        return 1;
                     }
                 }
             }

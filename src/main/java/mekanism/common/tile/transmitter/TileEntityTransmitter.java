@@ -54,7 +54,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class TileEntityTransmitter extends CapabilityTileEntity implements ISidedConfigurable, IAlloyInteraction,
-      net.fabricmc.fabric.api.rendering.data.v1.RenderAttachmentBlockEntity {
+      net.fabricmc.fabric.api.blockview.v2.RenderDataBlockEntity {
 
     /**
      * Fabric migration of the official NeoForge {@code ICapabilityProvider}: the already-established
@@ -310,11 +310,11 @@ public abstract class TileEntityTransmitter extends CapabilityTileEntity impleme
      * Fabric render-attachment snapshot (replaces the former NeoForge ModelData/TRANSMITTER_PROPERTY path): fresh
      * immutable {@link TransmitterModelData} built through the existing
      * {@link #initModelData()}/{@link #updateModelData(TransmitterModelData)} hooks. Consulted by chunk meshing via
-     * {@link net.fabricmc.fabric.api.rendering.data.v1.RenderAttachedBlockView}; never reads live transmitter state
+     * {@code net.fabricmc.fabric.api.blockview.v2.FabricBlockView}; never reads live transmitter state
      * asynchronously.
      */
     @Override
-    public Object getRenderAttachmentData() {
+    public Object getRenderData() {
         return buildRenderAttachment();
     }
 

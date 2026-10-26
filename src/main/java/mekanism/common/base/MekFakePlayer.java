@@ -2,15 +2,32 @@ package mekanism.common.base;
 
 import com.mojang.authlib.GameProfile;
 import java.lang.ref.WeakReference;
+import java.nio.charset.StandardCharsets;
 import java.util.Objects;
+import java.util.OptionalInt;
 import java.util.UUID;
 import java.util.function.Function;
-import mekanism.common.Mekanism;
 import mekanism.common.util.MekanismUtils;
+import net.minecraft.network.Connection;
+import net.minecraft.network.protocol.PacketFlow;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.PacketListener;
+import net.minecraft.network.PacketSendListener;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ClientInformation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.CommonListenerCookie;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.stats.Stat;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
-import net.neoforged.neoforge.common.util.FakePlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.MenuProvider;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Global, shared FakePlayer for Mekanism-specific uses
@@ -24,8 +41,19 @@ import org.jetbrains.annotations.NotNull;
  * Use of the fake player is via a consumer type lambda, where usage is only valid inside the lambda. Afterwards it may be garbage collected at any point.
  * <p>
  * Supports emulating a specific UUID, for use with TileComponentSecurity
+ * <p>
+ * Fabric port delta: the upstream base was NeoForge's {@code FakePlayer}; Fabric has no fake-player utility, so this port carries the same semantics directly
+ * on a {@link ServerPlayer} — inert ticking/messages/stats/death, invulnerable and non-PvP, riding refused, menus refused, and a null-channel connection whose
+ * sends are no-ops, mirroring the upstream dummy connection. Advancement state is the vanilla in-constructor object: it never persists, because the shared
+ * instance never ticks or logs out. The shared profile derives from the same UUID seed ("mekanism.common") and display name ("Mekanism", the upstream
+ * {@code LOG_TAG}) as the excluded entrypoint's {@code gameProfile} constant.
  */
-public class MekFakePlayer extends FakePlayer {
+public class MekFakePlayer extends ServerPlayer {
+
+    /**
+     * The GameProfile used by the dummy Mekanism player
+     */
+    public static final GameProfile GAME_PROFILE = new GameProfile(UUID.nameUUIDFromBytes("mekanism.common".getBytes(StandardCharsets.UTF_8)), "Mekanism");
 
     private static WeakReference<MekFakePlayer> INSTANCE;
 
@@ -35,8 +63,9 @@ public class MekFakePlayer extends FakePlayer {
     private UUID emulatingUUID = null;
 
     private MekFakePlayer(ServerLevel world) {
-        super(world, new FakeGameProfile());
-        ((FakeGameProfile) this.getGameProfile()).myFakePlayer = this;
+        super(world.getServer(), world, new FakeGameProfile(), ClientInformation.createDefault());
+        ((FakeGameProfile) this.getGameProfile()).setMyFakePlayer(this);
+        this.connection = new MekFakePlayerNetHandler(world.getServer(), this);
     }
 
     @Override
@@ -129,6 +158,55 @@ public class MekFakePlayer extends FakePlayer {
     }
 
     /**
+     * Fabric port replacement for the NeoForge-injected {@code Entity#isFakePlayer()} check used by the teleporter and personal-storage guards.
+     */
+    public static boolean isFakePlayer(@Nullable Entity entity) {
+        return entity instanceof MekFakePlayer;
+    }
+
+    //Carrier overrides mirroring the upstream NeoForge FakePlayer base: the fake player never ticks, never shows messages or stats,
+    // never dies from damage, and never rides or opens menus.
+    @Override
+    public void tick() {
+    }
+
+    @Override
+    public void displayClientMessage(Component chatComponent, boolean actionBar) {
+    }
+
+    @Override
+    public void awardStat(Stat<?> stat, int amount) {
+    }
+
+    @Override
+    public boolean isInvulnerableTo(DamageSource source) {
+        return true;
+    }
+
+    @Override
+    public boolean canHarmPlayer(Player player) {
+        return false;
+    }
+
+    @Override
+    public void die(DamageSource source) {
+    }
+
+    @Override
+    public void updateOptions(ClientInformation information) {
+    }
+
+    @Override
+    public OptionalInt openMenu(@Nullable MenuProvider menuProvider) {
+        return OptionalInt.empty();
+    }
+
+    @Override
+    public boolean startRiding(Entity entity, boolean force) {
+        return false;
+    }
+
+    /**
      * Game profile supporting our UUID emulation
      */
     private static class FakeGameProfile extends GameProfile {
@@ -136,11 +214,15 @@ public class MekFakePlayer extends FakePlayer {
         private MekFakePlayer myFakePlayer = null;
 
         public FakeGameProfile() {
-            super(Mekanism.gameProfile.getId(), Mekanism.gameProfile.getName());
+            super(GAME_PROFILE.getId(), GAME_PROFILE.getName());
         }
 
         private UUID getEmulatingUUID() {
             return myFakePlayer == null ? null : myFakePlayer.emulatingUUID;
+        }
+
+        private void setMyFakePlayer(MekFakePlayer myFakePlayer) {
+            this.myFakePlayer = myFakePlayer;
         }
 
         @Override
@@ -174,6 +256,60 @@ public class MekFakePlayer extends FakePlayer {
             int result = id == null ? 0 : id.hashCode();
             result = 31 * result + (name == null ? 0 : name.hashCode());
             return result;
+        }
+    }
+
+    /**
+     * Null-channel connection: sends are dropped, matching the upstream dummy connection so retained fake-player internals never touch a real socket.
+     */
+    private static class MekFakeConnection extends Connection {
+
+        public MekFakeConnection() {
+            super(PacketFlow.SERVERBOUND);
+        }
+
+        @Override
+        public void setListenerForServerboundHandshake(PacketListener listener) {
+        }
+
+        @Override
+        public void send(Packet<?> packet) {
+        }
+
+        @Override
+        public void send(Packet<?> packet, @Nullable PacketSendListener packetSendListener) {
+        }
+
+        @Override
+        public void send(Packet<?> packet, @Nullable PacketSendListener packetSendListener, boolean ensureRunning) {
+        }
+    }
+
+    /**
+     * Inert packet handler mirroring the upstream {@code FakePlayerNetHandler}: constructed against the dummy connection, never ticks, never disconnects.
+     */
+    private static class MekFakePlayerNetHandler extends ServerGamePacketListenerImpl {
+
+        private static final Connection DUMMY_CONNECTION = new MekFakeConnection();
+
+        public MekFakePlayerNetHandler(MinecraftServer server, ServerPlayer player) {
+            super(server, DUMMY_CONNECTION, player, CommonListenerCookie.createInitial(player.getGameProfile(), false));
+        }
+
+        @Override
+        public void tick() {
+        }
+
+        @Override
+        public void resetPosition() {
+        }
+
+        @Override
+        public void disconnect(Component disconnectionMessage) {
+        }
+
+        @Override
+        public void onDisconnect(Component disconnectionMessage) {
         }
     }
 }

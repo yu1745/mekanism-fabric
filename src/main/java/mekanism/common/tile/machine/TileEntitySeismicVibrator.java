@@ -7,7 +7,7 @@ import mekanism.api.Action;
 import mekanism.api.AutomationType;
 import mekanism.api.IContentsListener;
 import mekanism.api.RelativeSide;
-import mekanism.common.Mekanism;
+
 import mekanism.common.capabilities.energy.MachineEnergyContainer;
 import mekanism.common.capabilities.holder.energy.EnergyContainerHelper;
 import mekanism.common.capabilities.holder.energy.IEnergyContainerHolder;
@@ -18,6 +18,7 @@ import mekanism.common.integration.computer.SpecialComputerMethodWrapper.Compute
 import mekanism.common.integration.computer.annotation.ComputerMethod;
 import mekanism.common.integration.computer.annotation.WrappingComputerMethod;
 import mekanism.common.inventory.slot.EnergyInventorySlot;
+import mekanism.common.lib.MekanismServerState;
 import mekanism.common.registries.MekanismBlocks;
 import mekanism.common.registries.MekanismGameEvents;
 import mekanism.common.tile.base.TileEntityMekanism;
@@ -90,16 +91,16 @@ public class TileEntitySeismicVibrator extends TileEntityMekanism implements IBo
 
     private void updateActiveVibrators() {
         if (getActive()) {
-            Mekanism.activeVibrators.add(getTileGlobalPos());
+            MekanismServerState.activeVibrators().add(getTileGlobalPos());
         } else {
-            Mekanism.activeVibrators.remove(getTileGlobalPos());
+            MekanismServerState.activeVibrators().remove(getTileGlobalPos());
         }
     }
 
     @Override
     public void setRemoved() {
         super.setRemoved();
-        Mekanism.activeVibrators.remove(getTileGlobalPos());
+        MekanismServerState.activeVibrators().remove(getTileGlobalPos());
     }
 
     public MachineEnergyContainer<TileEntitySeismicVibrator> getEnergyContainer() {

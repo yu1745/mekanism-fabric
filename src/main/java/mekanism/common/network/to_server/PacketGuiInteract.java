@@ -7,7 +7,7 @@ import mekanism.api.functions.TriConsumer;
 import mekanism.api.security.IBlockSecurityUtils;
 import mekanism.api.security.IEntitySecurityUtils;
 import mekanism.api.security.SecurityMode;
-import mekanism.common.Mekanism;
+
 import mekanism.common.content.filter.SortableFilterManager;
 import mekanism.common.entity.EntityRobit;
 import mekanism.common.inventory.container.MekanismContainer;
@@ -41,13 +41,13 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.ByIdMap;
 import net.minecraft.util.ByIdMap.OutOfBoundsStrategy;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -55,7 +55,7 @@ import org.jetbrains.annotations.NotNull;
  */
 public class PacketGuiInteract implements IMekanismPacket {
 
-    public static final CustomPacketPayload.Type<PacketGuiInteract> TYPE = new CustomPacketPayload.Type<>(Mekanism.rl("gui_interact"));
+    public static final CustomPacketPayload.Type<PacketGuiInteract> TYPE = new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("mekanism", "gui_interact"));
     public static final StreamCodec<RegistryFriendlyByteBuf, PacketGuiInteract> STREAM_CODEC = InteractionType.STREAM_CODEC.<RegistryFriendlyByteBuf>cast()
           .dispatch(packet -> packet.interactionType, type -> switch (type) {
               case ENTITY -> StreamCodec.composite(
@@ -141,8 +141,7 @@ public class PacketGuiInteract implements IMekanismPacket {
     }
 
     @Override
-    public void handle(IPayloadContext context) {
-        Player player = context.player();
+    public void handle(Player player) {
         if (interactionType == InteractionType.ENTITY) {
             Entity entity = player.level().getEntity(entityID);
             if (entity != null) {

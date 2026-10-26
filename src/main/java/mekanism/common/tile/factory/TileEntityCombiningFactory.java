@@ -13,7 +13,6 @@ import mekanism.api.recipes.inputs.IInputHandler;
 import mekanism.api.recipes.inputs.InputHelper;
 import mekanism.client.recipe_viewer.type.IRecipeViewerRecipeType;
 import mekanism.client.recipe_viewer.type.RecipeViewerRecipeType;
-import mekanism.common.Mekanism;
 import mekanism.common.capabilities.holder.slot.InventorySlotHelper;
 import mekanism.common.integration.computer.SpecialComputerMethodWrapper.ComputerIInventorySlotWrapper;
 import mekanism.common.integration.computer.annotation.WrappingComputerMethod;
@@ -36,8 +35,12 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TileEntityCombiningFactory extends TileEntityItemToItemFactory<CombinerRecipe> implements DoubleItemRecipeLookupHandler<CombinerRecipe> {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism");
 
     private static final CheckRecipeType<ItemStack, ItemStack, CombinerRecipe, ItemStack> OUTPUT_CHECK =
           (recipe, input, extra, output) -> InventoryUtils.areItemsStackable(recipe.getOutput(input, extra), output);
@@ -145,7 +148,7 @@ public class TileEntityCombiningFactory extends TileEntityItemToItemFactory<Comb
             //Copy the stack using NBT so that if it is not actually valid due to a reload we don't crash
             extraSlot.deserializeNBT(provider, data.extraSlot.serializeNBT(provider));
         } else {
-            Mekanism.logger.warn("Unhandled upgrade data.", new Throwable());
+            LOGGER.warn("Unhandled upgrade data.", new Throwable());
         }
     }
 

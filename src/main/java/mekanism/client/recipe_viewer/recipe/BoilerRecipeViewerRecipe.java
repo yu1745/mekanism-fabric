@@ -18,7 +18,6 @@ import mekanism.api.recipes.ingredients.FluidStackIngredient;
 import mekanism.api.recipes.ingredients.creator.IngredientCreatorAccess;
 import mekanism.client.recipe_viewer.RecipeViewerUtils;
 import mekanism.client.recipe_viewer.emi.INamedRVRecipe;
-import mekanism.common.Mekanism;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.content.boiler.BoilerMultiblockData;
 import mekanism.common.registries.MekanismChemicals;
@@ -51,7 +50,7 @@ public record BoilerRecipeViewerRecipe(ResourceLocation id, @Nullable ChemicalSt
         FluidStackIngredient water = IngredientCreatorAccess.fluid().from(FluidTags.WATER, WATER_AMOUNT);
         ChemicalStack steam = MekanismChemicals.STEAM.asStack(WATER_AMOUNT);
         recipes.add(new BoilerRecipeViewerRecipe(
-              RecipeViewerUtils.synthetic(Mekanism.rl("water"), "boiler"),
+              RecipeViewerUtils.synthetic(ResourceLocation.fromNamespaceAndPath("mekanism", "water"), "boiler"),
               null, water,
               steam, ChemicalStack.EMPTY,
               HeatUtils.BASE_BOIL_TEMP + waterToSteamHeatNecessary / (BoilerMultiblockData.CASING_HEAT_CAPACITY * MekanismConfig.general.boilerWaterConductivity.get())
@@ -63,7 +62,7 @@ public record BoilerRecipeViewerRecipe(ResourceLocation id, @Nullable ChemicalSt
             //Amount of coolant that is actually used to
             long coolantAmount = Math.round(waterToSteamHeatNecessary / coolant.thermalEnthalpy());
             recipes.add(new BoilerRecipeViewerRecipe(
-                  RecipeViewerUtils.synthetic(key.location(), "boiler", Mekanism.MODID),
+                  RecipeViewerUtils.synthetic(key.location(), "boiler", "mekanism"),
                   IngredientCreatorAccess.chemicalStack().fromHolder(MekanismAPI.CHEMICAL_REGISTRY.getHolderOrThrow(key), coolantAmount), water,
                   steam, coolant.cool(coolantAmount),
                   HeatUtils.BASE_BOIL_TEMP
@@ -77,7 +76,7 @@ public record BoilerRecipeViewerRecipe(ResourceLocation id, @Nullable ChemicalSt
                 //If it is a cooled coolant add a recipe for it
                 long coolantAmount = Math.round(waterToSteamHeatNecessary / heatedCoolant.getThermalEnthalpy());
                 recipes.add(new BoilerRecipeViewerRecipe(
-                      RecipeViewerUtils.synthetic(gas.toString(), "boiler", Mekanism.MODID),
+                      RecipeViewerUtils.synthetic(gas.toString(), "boiler", "mekanism"),
                       IngredientCreatorAccess.chemicalStack().from(gas, coolantAmount), water,
                       steam, heatedCoolant.getCooledChemical().getStack(coolantAmount),
                       HeatUtils.BASE_BOIL_TEMP

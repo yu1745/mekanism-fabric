@@ -13,7 +13,6 @@ import mekanism.api.IContentsListener;
 import mekanism.api.RelativeSide;
 import mekanism.api.SerializationConstants;
 import mekanism.api.Upgrade;
-import mekanism.common.Mekanism;
 import mekanism.common.MekanismLang;
 import mekanism.common.attachments.containers.ContainerType;
 import mekanism.common.capabilities.energy.MachineEnergyContainer;
@@ -69,8 +68,12 @@ import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
 import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TileEntityElectricPump extends TileEntityMekanism implements IConfigurable {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism");
 
     /**
      * How many ticks it takes to run an operation.
@@ -248,7 +251,7 @@ public class TileEntityElectricPump extends TileEntityMekanism implements IConfi
                                 // making sure that we replace to heavy water if we got heavy water
                                 fluidStack = getOutput(sourceFluid, hasFilter);
                                 if (!validFluid(fluidStack)) {
-                                    Mekanism.logger.warn("Fluid removed without successfully picking up. Fluid {} at {} in {} was valid, but after picking up was {}.",
+                                    LOGGER.warn("Fluid removed without successfully picking up. Fluid {} at {} in {} was valid, but after picking up was {}.",
                                           fluidState.getType(), pos, level, sourceFluid);
                                     return false;
                                 }

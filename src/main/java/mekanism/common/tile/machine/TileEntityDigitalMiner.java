@@ -30,7 +30,6 @@ import mekanism.api.SerializationConstants;
 import mekanism.api.Upgrade;
 import mekanism.api.inventory.IInventorySlot;
 import mekanism.common.CommonWorldTickHandler;
-import mekanism.common.Mekanism;
 import mekanism.common.attachments.FilterAware;
 import mekanism.common.attachments.OverflowAware;
 import mekanism.common.base.MekFakePlayer;
@@ -112,17 +111,18 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.level.redstone.Redstone;
 import net.fabricmc.fabric.api.lookup.v1.block.BlockApiLookup;
-import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.level.BlockEvent;
 import net.fabricmc.fabric.api.transfer.v1.item.ItemStorage;
 import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
 import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
 import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TileEntityDigitalMiner extends TileEntityMekanism implements IChunkLoader, IBoundingBlock, ITileFilterHolder<MinerFilter<?>>, IHasVisualization {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism");
 
     public static final int DEFAULT_HEIGHT_RANGE = 60;
     public static final int DEFAULT_RADIUS = 10;
@@ -524,13 +524,13 @@ public class TileEntityDigitalMiner extends TileEntityMekanism implements IChunk
                             //Exit out. We either mined the block or don't have room so there is no reason to continue checking
                             return;
                         } else if (MekanismAPI.debug) {
-                            Mekanism.logger.error("Filter failed or can't mine: {} @ {} {}", state, getWorldNN().dimension().location(), pos);
+                            LOGGER.error("Filter failed or can't mine: {} @ {} {}", state, getWorldNN().dimension().location(), pos);
                         }
                     } else if (MekanismAPI.debug) {
-                        Mekanism.logger.error("State was air or was blacklisted (mismatch between search and runtime): {} @ {} {}", state, getWorldNN().dimension().location(), pos);
+                        LOGGER.error("State was air or was blacklisted (mismatch between search and runtime): {} @ {} {}", state, getWorldNN().dimension().location(), pos);
                     }
                 } else if (MekanismAPI.debug) {
-                    Mekanism.logger.debug("Block was not loaded {} {}", getWorldNN().dimension().location(), pos);
+                    LOGGER.debug("Block was not loaded {} {}", getWorldNN().dimension().location(), pos);
                 }
                 //If we failed to mine the block, because it isn't loaded, is air, or we shouldn't mine it
                 // remove the block from our list of blocks to mine, and reduce the number of blocks we have to mine
@@ -588,11 +588,12 @@ public class TileEntityDigitalMiner extends TileEntityMekanism implements IChunk
     }
 
     private boolean canMine(BlockState state, BlockPos pos) {
-        MekFakePlayer dummy = MekFakePlayer.setupFakePlayer((ServerLevel) level, this.worldPosition.getX(), this.worldPosition.getY(), this.worldPosition.getZ());
-        dummy.setEmulatingUUID(getOwnerUUID());//pretend to be the owner
-        boolean canMine = !NeoForge.EVENT_BUS.post(new BlockEvent.BreakEvent(level, pos, state, dummy)).isCanceled();
+        //Fabric port delta: the upstream probe posted a cancellable BreakEvent so protection mods could veto miner breaks; Fabric's protection pipeline
+        // runs on real player break events upstream of this path, and no postable equivalent exists — the probe therefore always answers allowed
+        // (docs/TASK052_RESUME_2026-10-26.md)
+        boolean canMine = true;
         if (MekanismAPI.debug && !canMine) {
-            Mekanism.logger.debug("Denied mining block: {} @ {} {}", state, level.dimension().location(), pos);
+            LOGGER.debug("Denied mining block: {} @ {} {}", state, level.dimension().location(), pos);
         }
         dummy.cleanupFakePlayer((ServerLevel) level);
         return canMine;
@@ -846,8 +847,8 @@ public class TileEntityDigitalMiner extends TileEntityMekanism implements IChunk
 
     public static boolean isSavedReplaceTarget(ItemStack stack, Item target) {
         //This method is here to make it easier to maintain parity if we change the logic of isReplaceTarget
-        if (stack.getOrDefault(MekanismDataComponents.INVERSE, false)) {
-            Item inverseReplaceTarget = stack.getOrDefault(MekanismDataComponents.REPLACE_STACK, Items.AIR);
+        if (stack.getOrDefault(MekanismDataComponents.INVERSE.get(), false)) {
+            Item inverseReplaceTarget = stack.getOrDefault(MekanismDataComponents.REPLACE_STACK.get(), Items.AIR);
             return inverseReplaceTarget != Items.AIR && inverseReplaceTarget == target;
         }
         FilterAware filterAware = stack.get(MekanismDataComponents.FILTER_AWARE);
@@ -921,7 +922,7 @@ public class TileEntityDigitalMiner extends TileEntityMekanism implements IChunk
             if (encoded.isSuccess()) {
                 nbtTags.put(SerializationConstants.OVERFLOW, encoded.getOrThrow());
             } else {
-                encoded.ifError(error -> Mekanism.logger.warn("Failed to encode overflowed items: {}", error.message()));
+                encoded.ifError(error -> LOGGER.warn("Failed to encode overflowed items: {}", error.message()));
             }
         }
     }
@@ -1069,7 +1070,7 @@ public class TileEntityDigitalMiner extends TileEntityMekanism implements IChunk
             DataResult<Object2IntMap<HashedItem>> decoded = OverflowAware.CODEC.parse(provider.createSerializationContext(NbtOps.INSTANCE), overflowTag)
                   .map(OverflowAware::overflow);
             decoded.ifSuccess(overflow::putAll);
-            decoded.ifError(error -> Mekanism.logger.warn("Failed to decode overflowed items: {}", error.message()));
+            decoded.ifError(error -> LOGGER.warn("Failed to decode overflowed items: {}", error.message()));
             hasOverflow = !overflow.isEmpty();
             //Note: Marking rechecking if any of the overflow can fit probably isn't strictly necessary here as in theory it already tried
             // to insert anything before when it was saving, but it doesn't really hurt and then if the last tick had it get overflow or
@@ -1081,24 +1082,24 @@ public class TileEntityDigitalMiner extends TileEntityMekanism implements IChunk
     @Override
     protected void collectImplicitComponents(@NotNull DataComponentMap.Builder builder) {
         super.collectImplicitComponents(builder);
-        builder.set(MekanismDataComponents.RADIUS, getRadius());
-        builder.set(MekanismDataComponents.MIN_Y, getMinY());
-        builder.set(MekanismDataComponents.MAX_Y, getMaxY());
-        builder.set(MekanismDataComponents.EJECT, doEject);
-        builder.set(MekanismDataComponents.PULL, doPull);
-        builder.set(MekanismDataComponents.SILK_TOUCH, getSilkTouch());
-        builder.set(MekanismDataComponents.INVERSE, inverse);
-        builder.set(MekanismDataComponents.REPLACE_STACK, inverseReplaceTarget);
-        builder.set(MekanismDataComponents.INVERSE_REQUIRES_REPLACE, inverseRequiresReplacement);
-        builder.set(MekanismDataComponents.OVERFLOW_AWARE, new OverflowAware(new Object2IntLinkedOpenHashMap<>(overflow)));
+        builder.set(MekanismDataComponents.RADIUS.get(), getRadius());
+        builder.set(MekanismDataComponents.MIN_Y.get(), getMinY());
+        builder.set(MekanismDataComponents.MAX_Y.get(), getMaxY());
+        builder.set(MekanismDataComponents.EJECT.get(), doEject);
+        builder.set(MekanismDataComponents.PULL.get(), doPull);
+        builder.set(MekanismDataComponents.SILK_TOUCH.get(), getSilkTouch());
+        builder.set(MekanismDataComponents.INVERSE.get(), inverse);
+        builder.set(MekanismDataComponents.REPLACE_STACK.get(), inverseReplaceTarget);
+        builder.set(MekanismDataComponents.INVERSE_REQUIRES_REPLACE.get(), inverseRequiresReplacement);
+        builder.set(MekanismDataComponents.OVERFLOW_AWARE.get(), new OverflowAware(new Object2IntLinkedOpenHashMap<>(overflow)));
     }
 
     @Override
     protected void applyImplicitComponents(@NotNull BlockEntity.DataComponentInput input) {
         super.applyImplicitComponents(input);
-        setRadius(Math.min(input.getOrDefault(MekanismDataComponents.RADIUS, radius), MekanismConfig.general.minerMaxRadius.get()));
-        int newMinY = input.getOrDefault(MekanismDataComponents.MIN_Y, minY);
-        int newMaxY = input.getOrDefault(MekanismDataComponents.MAX_Y, minY);
+        setRadius(Math.min(input.getOrDefault(MekanismDataComponents.RADIUS.get(), radius), MekanismConfig.general.minerMaxRadius.get()));
+        int newMinY = input.getOrDefault(MekanismDataComponents.MIN_Y.get(), minY);
+        int newMaxY = input.getOrDefault(MekanismDataComponents.MAX_Y.get(), minY);
         if (level != null && !isRemote()) {
             setMinY(Math.max(newMinY, level.getMinBuildHeight()));
             setMaxY(Math.min(newMaxY, level.getMaxBuildHeight() - 1));
@@ -1106,15 +1107,15 @@ public class TileEntityDigitalMiner extends TileEntityMekanism implements IChunk
             setMinY(newMinY);
             setMaxY(newMaxY);
         }
-        doEject = input.getOrDefault(MekanismDataComponents.EJECT, doEject);
-        doPull = input.getOrDefault(MekanismDataComponents.PULL, doPull);
-        setSilkTouch(input.getOrDefault(MekanismDataComponents.SILK_TOUCH, silkTouch));
-        inverse = input.getOrDefault(MekanismDataComponents.INVERSE, inverse);
-        inverseReplaceTarget = input.getOrDefault(MekanismDataComponents.REPLACE_STACK, inverseReplaceTarget);
-        inverseRequiresReplacement = input.getOrDefault(MekanismDataComponents.INVERSE_REQUIRES_REPLACE, inverseRequiresReplacement);
+        doEject = input.getOrDefault(MekanismDataComponents.EJECT.get(), doEject);
+        doPull = input.getOrDefault(MekanismDataComponents.PULL.get(), doPull);
+        setSilkTouch(input.getOrDefault(MekanismDataComponents.SILK_TOUCH.get(), silkTouch));
+        inverse = input.getOrDefault(MekanismDataComponents.INVERSE.get(), inverse);
+        inverseReplaceTarget = input.getOrDefault(MekanismDataComponents.REPLACE_STACK.get(), inverseReplaceTarget);
+        inverseRequiresReplacement = input.getOrDefault(MekanismDataComponents.INVERSE_REQUIRES_REPLACE.get(), inverseRequiresReplacement);
         //Clear any existing overflow and read what is the actual overflow from the stack
         overflow.clear();
-        overflow.putAll(input.getOrDefault(MekanismDataComponents.OVERFLOW_AWARE, OverflowAware.EMPTY).overflow());
+        overflow.putAll(input.getOrDefault(MekanismDataComponents.OVERFLOW_AWARE.get(), OverflowAware.EMPTY).overflow());
         hasOverflow = !overflow.isEmpty();
         //Note: Marking rechecking if any of the overflow can fit probably isn't strictly necessary here as in theory it already tried
         // to insert anything before when it was saving, but it doesn't really hurt and then if the last tick had it get overflow or

@@ -4,6 +4,7 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -18,6 +19,14 @@ import org.jetbrains.annotations.Nullable;
 public final class ClientPlayerAccess {
 
     private ClientPlayerAccess() {
+    }
+
+    @Nullable
+    public static Level tryGetClientWorld() {
+        if (FabricLoader.getInstance().getEnvironmentType() == EnvType.CLIENT) {
+            return Minecraft.getInstance().level;
+        }
+        return null;
     }
 
     @Nullable

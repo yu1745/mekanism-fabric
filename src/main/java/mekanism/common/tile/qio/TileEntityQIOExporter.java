@@ -14,7 +14,6 @@ import mekanism.api.IContentsListener;
 import mekanism.api.SerializationConstants;
 import mekanism.api.RelativeSide;
 import mekanism.api.math.MathUtils;
-import mekanism.common.Mekanism;
 import mekanism.common.attachments.containers.ContainerType;
 import mekanism.common.capabilities.Capabilities;
 import mekanism.common.capabilities.holder.slot.IInventorySlotHolder;
@@ -64,8 +63,12 @@ import net.fabricmc.fabric.api.transfer.v1.transaction.TransactionContext;
 import net.fabricmc.fabric.api.transfer.v1.transaction.base.SnapshotParticipant;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TileEntityQIOExporter extends TileEntityQIOFilterHandler implements IAdvancedTransportEjector {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism");
 
     private static final EfficientEjector<Object2LongMap.Entry<HashedItem>> FILTER_EJECTOR = new EfficientEjector<>(Entry::getKey, e -> MathUtils.clampToInt(e.getLongValue()),
           (exporter, freq) -> exporter.getFilterEjectMap(freq).object2LongEntrySet());
@@ -224,15 +227,15 @@ public class TileEntityQIOExporter extends TileEntityQIOFilterHandler implements
     @Override
     protected void collectImplicitComponents(@NotNull DataComponentMap.Builder builder) {
         super.collectImplicitComponents(builder);
-        builder.set(MekanismDataComponents.AUTO, exportWithoutFilter);
-        builder.set(MekanismDataComponents.ROUND_ROBIN, roundRobin);
+        builder.set(MekanismDataComponents.AUTO.get(), exportWithoutFilter);
+        builder.set(MekanismDataComponents.ROUND_ROBIN.get(), roundRobin);
     }
 
     @Override
     protected void applyImplicitComponents(@NotNull BlockEntity.DataComponentInput input) {
         super.applyImplicitComponents(input);
-        exportWithoutFilter = input.getOrDefault(MekanismDataComponents.AUTO, exportWithoutFilter);
-        roundRobin = input.getOrDefault(MekanismDataComponents.ROUND_ROBIN, roundRobin);
+        exportWithoutFilter = input.getOrDefault(MekanismDataComponents.AUTO.get(), exportWithoutFilter);
+        roundRobin = input.getOrDefault(MekanismDataComponents.ROUND_ROBIN.get(), roundRobin);
     }
 
     @Nullable
@@ -423,7 +426,7 @@ public class TileEntityQIOExporter extends TileEntityQIOFilterHandler implements
                         // aborts the destination insertion instead of being logged after the destination committed
                         ItemStack ret = freq.removeByType(type, toUse, tx);
                         if (ret.getCount() != toUse) {
-                            Mekanism.logger.error("QIO ejection item removal didn't line up with prediction: removed {}, expected {}", ret.getCount(), toUse);
+                            LOGGER.error("QIO ejection item removal didn't line up with prediction: removed {}, expected {}", ret.getCount(), toUse);
                             throw new IllegalStateException("QIO export exact debit mismatch");
                         }
                         tx.commit();

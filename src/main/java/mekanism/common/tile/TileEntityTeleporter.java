@@ -27,6 +27,7 @@ import mekanism.api.security.SecurityMode;
 import mekanism.api.text.EnumColor;
 import mekanism.api.text.IHasTextComponent.IHasEnumNameTextComponent;
 import mekanism.api.text.ILangEntry;
+import mekanism.common.base.MekFakePlayer;
 import mekanism.common.MekanismLang;
 import mekanism.common.advancements.MekanismCriteriaTriggers;
 import mekanism.common.attachments.containers.ContainerType;
@@ -89,16 +90,25 @@ import net.minecraft.world.level.portal.DimensionTransition.PostDimensionTransit
 import net.minecraft.world.level.redstone.Redstone;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.common.Tags;
-import net.neoforged.neoforge.entity.PartEntity;
-import net.neoforged.neoforge.network.PacketDistributor;
-import org.jetbrains.annotations.NotNull;
+import mekanism.api.event.MekanismEventBus;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.boss.EnderDragonPart;import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class TileEntityTeleporter extends TileEntityMekanism implements IChunkLoader {
 
     private static final TeleportInfo NO_FRAME = new TeleportInfo(TeleporterStatus.NO_FRAME, null, Collections.emptyList());
+
+    /**
+     * Fabric port delta: mirrors the upstream-consumed {@code c:teleporting_not_supported} convention tag under its official identifier; content ships with
+     * the datapack vertical. Upstream referenced it through the NeoForge {@code Tags.EntityTypes} constants.
+     */
+    private static final TagKey<EntityType<?>> TELEPORTING_NOT_SUPPORTED = TagKey.create(Registries.ENTITY_TYPE,
+          ResourceLocation.fromNamespaceAndPath("c", "teleporting_not_supported"));
     private static final TeleportInfo NO_DESTINATION = new TeleportInfo(TeleporterStatus.NO_DESTINATION, null, Collections.emptyList());
     private static final TeleportInfo NOT_ENOUGH_ENERGY = new TeleportInfo(TeleporterStatus.NOT_ENOUGH_ENERGY, null, Collections.emptyList());
     private static final PostDimensionTransition AWARD_ADVANCEMENT = entity -> {
@@ -152,7 +162,7 @@ public class TileEntityTeleporter extends TileEntityMekanism implements IChunkLo
     }
 
     private boolean canTeleportEntity(Entity entity, @Nullable Level destinationLevel) {
-        if (entity.isSpectator() || !entity.canUsePortal(false) || entity instanceof PartEntity || entity.getType().is(Tags.EntityTypes.TELEPORTING_NOT_SUPPORTED)) {
+        if (entity.isSpectator() || !entity.canUsePortal(false) || entity instanceof EnderDragonPart || entity.getType().is(TELEPORTING_NOT_SUPPORTED)) {
             return false;
         } else if (destinationLevel != null && !entity.canChangeDimensions(entity.level(), destinationLevel)) {
             return false;
@@ -347,7 +357,7 @@ public class TileEntityTeleporter extends TileEntityMekanism implements IChunkLo
                 long energyCost = calculateEnergyCost(entity, teleWorld, teleportInfo.closest);
 
                 MekanismTeleportEvent.Teleporter event = new MekanismTeleportEvent.Teleporter(entity, teleporterTargetPos, teleWorld.dimension(), energyCost);
-                if (NeoForge.EVENT_BUS.post(event).isCanceled()) {
+                if (MekanismEventBus.post(event).isCanceled()) {
                     //Skip the entity if the event was cancelled
                     continue;
                 }
@@ -422,7 +432,7 @@ public class TileEntityTeleporter extends TileEntityMekanism implements IChunkLo
                 //Force re-apply any passengers so that players don't get "stuck" outside what they may be riding
                 ((ServerChunkCache) entity.level().getChunkSource()).broadcast(entity, new ClientboundSetPassengersPacket(entity));
                 Entity controller = entity.getControllingPassenger();
-                if (controller != entity && controller instanceof ServerPlayer player && !player.isFakePlayer()) {
+                if (controller != entity && controller instanceof ServerPlayer player && !MekFakePlayer.isFakePlayer(player)) {
                     if (player.connection != null) {
                         //Force sync the fact that the vehicle moved to the client that is controlling it
                         // so that it makes sure to use the correct positions when sending move packets
@@ -431,10 +441,10 @@ public class TileEntityTeleporter extends TileEntityMekanism implements IChunkLo
                     }
                 }
             }
-            if (persistMovement && entity instanceof ServerPlayer player && !player.isFakePlayer()) {
+            if (persistMovement && entity instanceof ServerPlayer player && !MekFakePlayer.isFakePlayer(player)) {
                 player.setDeltaMovement(deltaMovement);
                 //Force sync the delta movement to the client so that they don't stop moving due to the teleport and movement being client sided
-                PacketDistributor.sendToPlayer(player, new PacketSetDeltaMovement(deltaMovement));
+                ServerPlayNetworking.send(player, new PacketSetDeltaMovement(deltaMovement));
             }
             //Handle transition logic even though we didn't change dimensions
             if (transition != DimensionTransition.DO_NOTHING) {

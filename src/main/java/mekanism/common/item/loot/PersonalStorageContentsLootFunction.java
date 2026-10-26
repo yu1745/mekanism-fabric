@@ -16,7 +16,7 @@ import net.minecraft.world.level.storage.loot.functions.LootItemFunction;
 import net.minecraft.world.level.storage.loot.functions.LootItemFunctionType;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParam;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
-import net.neoforged.fml.util.thread.EffectiveSide;
+import mekanism.common.util.EffectiveSide;
 
 /**
  * Loot function which copies the Personal Storage inventory to the saved data and adds an inv id to the stack
@@ -45,7 +45,7 @@ public class PersonalStorageContentsLootFunction implements LootItemFunction {
         if (blockEntity instanceof TileEntityPersonalStorage personalStorage && !personalStorage.isInventoryEmpty()) {
             List<IInventorySlot> tileSlots = personalStorage.getInventorySlots(null);
             AbstractPersonalStorageItemInventory destInv;
-            if (EffectiveSide.get().isClient()) {
+            if (EffectiveSide.isClient()) {
                 destInv = new ClientSidePersonalStorageInventory();
             } else {
                 destInv = PersonalStorageManager.getInventoryFor(stack).orElseThrow(() -> new IllegalStateException("Inventory not available?!"));

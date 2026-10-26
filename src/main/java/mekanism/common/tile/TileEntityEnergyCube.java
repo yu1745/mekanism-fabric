@@ -33,13 +33,11 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.client.model.data.ModelData;
-import net.neoforged.neoforge.client.model.data.ModelProperty;
+import net.fabricmc.fabric.api.blockview.v2.RenderDataBlockEntity;
 import org.jetbrains.annotations.NotNull;
 
-public class TileEntityEnergyCube extends TileEntityConfigurableMachine {
+public class TileEntityEnergyCube extends TileEntityConfigurableMachine implements RenderDataBlockEntity {
 
-    public static final ModelProperty<CubeSideState[]> SIDE_STATE_PROPERTY = new ModelProperty<>();
 
     /**
      * This Energy Cube's tier.
@@ -177,12 +175,11 @@ public class TileEntityEnergyCube extends TileEntityConfigurableMachine {
         }
     }
 
-    @NotNull
     @Override
-    public ModelData getModelData() {
+    public CubeSideState[] getRenderData() {
         ConfigInfo config = getConfig().getConfig(TransmissionType.ENERGY);
-        if (config == null) {//Should not happen but validate it anyway
-            return super.getModelData();
+        if (config == null) {//Should not happen but validate it anyway; no render data keeps the default model
+            return null;
         }
         CubeSideState[] sideStates = new CubeSideState[EnumUtils.SIDES.length];
         for (RelativeSide side : EnumUtils.SIDES) {
@@ -197,7 +194,7 @@ public class TileEntityEnergyCube extends TileEntityConfigurableMachine {
             }
             sideStates[side.ordinal()] = state;
         }
-        return ModelData.of(SIDE_STATE_PROPERTY, sideStates);
+        return sideStates;
     }
 
     public enum CubeSideState {

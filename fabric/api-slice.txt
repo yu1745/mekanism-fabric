@@ -255,3 +255,10 @@ mekanism/api/tier/ITier.java
 
 # Task052 canonical robit serializer and native dynamic load owner
 mekanism/api/robit/RobitSkinRegistry.java
+mekanism/api/event/MekanismEvent.java
+mekanism/api/event/MekanismEventBus.java
+mekanism/api/event/MekanismTeleportEvent.java
+mekanism/api/recipes/cache/TwoInputCachedRecipe.java
+mekanism/api/recipes/cache/RotaryCachedRecipe.java
+mekanism/api/recipes/cache/PressurizedReactionCachedRecipe.java
+mekanism/api/recipes/cache/ChemicalChemicalToChemicalCachedRecipe.java

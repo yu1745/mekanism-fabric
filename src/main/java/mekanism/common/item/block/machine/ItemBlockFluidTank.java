@@ -8,7 +8,6 @@ import mekanism.api.fluid.IExtendedFluidTank;
 import mekanism.api.fluid.IMekanismFluidHandler;
 import mekanism.api.security.IItemSecurityUtils;
 import mekanism.api.text.EnumColor;
-import mekanism.common.Mekanism;
 import mekanism.common.MekanismLang;
 import mekanism.common.block.attribute.Attribute;
 import mekanism.common.block.basic.BlockFluidTank;
@@ -62,18 +61,19 @@ import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult.Type;
-import net.neoforged.neoforge.common.NeoForgeMod;
-import net.neoforged.neoforge.common.SoundActions;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandlerItem;
+import mekanism.api.fluid.FluidStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ItemBlockFluidTank extends ItemBlockTooltip<BlockTile<?, ?>> implements IAttachmentBasedModeItem<Boolean> {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism");
+
     public ItemBlockFluidTank(BlockFluidTank block, Item.Properties properties) {
-        super(block, true, properties.component(MekanismDataComponents.BUCKET_MODE, false)
-              .component(MekanismDataComponents.EDIT_MODE, ContainerEditMode.BOTH)
+        super(block, true, properties.component(MekanismDataComponents.BUCKET_MODE.get(), false)
+              .component(MekanismDataComponents.EDIT_MODE.get(), ContainerEditMode.BOTH)
         );
     }
 
@@ -120,21 +120,10 @@ public class ItemBlockFluidTank extends ItemBlockTooltip<BlockTile<?, ?>> implem
                 //Skip if the item is stacked
                 return InteractionResult.PASS;
             }
+            //Fabric port delta: milking into the tank required NeoForge's milk fluid, which has no Fabric counterpart (vanilla has no milk fluid and the
+            // port invents no content). Bucket mode therefore cannot scoop milk on this platform (docs/TASK052_RESUME_2026-10-26.md)
             if (entity instanceof Cow || entity instanceof Goat) {
-                IExtendedFluidTank fluidTank = getExtendedFluidTank(stack);
-                //Get the fluid tank for the stack
-                if (fluidTank == null) {
-                    //If there isn't one then there is something wrong with the stack, treat it as a normal stack and skip
-                    return InteractionResult.PASS;
-                }
-                FluidStack milk = new FluidStack(NeoForgeMod.MILK.get(), 1_000);
-                //Try to insert the fluid
-                if (fluidTank.insert(milk, Action.EXECUTE, AutomationType.MANUAL).getAmount() < 1_000) {
-                    player.playSound(entity instanceof Cow ? SoundEvents.COW_MILK : SoundEvents.GOAT_MILK, 1.0F, 1.0F);
-                    return InteractionResult.sidedSuccess(level.isClientSide);
-                }
-                //Fail if we can't insert any
-                return InteractionResult.FAIL;
+                return InteractionResult.PASS;
             }
         }
         return InteractionResult.PASS;
@@ -200,7 +189,7 @@ public class ItemBlockFluidTank extends ItemBlockTooltip<BlockTile<?, ?>> implem
                                 // making sure that we replace to heavy water if we got heavy water
                                 fluidStack = new FluidStack(fluid, 1_000);
                                 if (!validFluid(fluidTank, fluidStack)) {
-                                    Mekanism.logger.warn("Fluid removed without successfully picking up. Fluid {} at {} in {} was valid, but after picking up was {}.",
+                                    LOGGER.warn("Fluid removed without successfully picking up. Fluid {} at {} in {} was valid, but after picking up was {}.",
                                           fluidState.getType(), pos, world.dimension().location(), fluid);
                                     return InteractionResultHolder.fail(stack);
                                 }
@@ -254,9 +243,9 @@ public class ItemBlockFluidTank extends ItemBlockTooltip<BlockTile<?, ?>> implem
     }
 
     private static IExtendedFluidTank getExtendedFluidTank(@NotNull ItemStack stack) {
-        IFluidHandlerItem fluidHandlerItem = Capabilities.FLUID.getCapability(stack);
-        if (fluidHandlerItem instanceof IMekanismFluidHandler fluidHandler) {
-            return fluidHandler.getFluidTank(0, null);
+        //Fabric port delta: the tank's own registered fluid container replaces the NeoForge item capability lookup
+        if (stack.getItem() instanceof ItemBlockFluidTank) {
+            return ComponentBackedFluidTankFluidTank.create(null, stack, 0);
         }
         return null;
     }
@@ -333,7 +322,7 @@ public class ItemBlockFluidTank extends ItemBlockTooltip<BlockTile<?, ?>> implem
                             // making sure that we replace to heavy water if we got heavy water
                             fluidStack = new FluidStack(fluid, 1_000);
                             if (!validFluid(fluidTank, fluidStack)) {
-                                Mekanism.logger.warn("Fluid removed without successfully picking up. Fluid {} at {} in {} was valid, but after picking up was {}.",
+                                LOGGER.warn("Fluid removed without successfully picking up. Fluid {} at {} in {} was valid, but after picking up was {}.",
                                       fluidState.getType(), pos, world.dimension().location(), fluid);
                                 //If we can't insert or extract it, then eject the stack similar to how vanilla does for buckets
                                 return super.execute(source, stack);
@@ -393,7 +382,8 @@ public class ItemBlockFluidTank extends ItemBlockTooltip<BlockTile<?, ?>> implem
                         player.awardStat(Stats.FILL_CAULDRON);
                         player.awardStat(Stats.ITEM_USED.get(stack.getItem()));
                         level.setBlockAndUpdate(pos, endState);
-                        SoundEvent emptySound = fluidStack.getFluidType().getSound(player, level, pos, SoundActions.BUCKET_EMPTY);
+                        //Fabric port delta: NeoForge's FluidType sound hooks have no Fabric equivalent; the vanilla bucket-empty sound is used for all fluids
+                        SoundEvent emptySound = SoundEvents.BUCKET_EMPTY;
                         if (emptySound != null) {
                             level.playSound(null, pos, emptySound, SoundSource.BLOCKS, 1.0F, 1.0F);
                         }
@@ -466,7 +456,8 @@ public class ItemBlockFluidTank extends ItemBlockTooltip<BlockTile<?, ?>> implem
                     player.awardStat(Stats.USE_CAULDRON);
                     player.awardStat(Stats.ITEM_USED.get(stack.getItem()));
                     level.setBlockAndUpdate(pos, Blocks.CAULDRON.defaultBlockState());
-                    SoundEvent fillSound = fluidStack.getFluidType().getSound(null, level, pos, SoundActions.BUCKET_FILL);
+                    //Fabric port delta: NeoForge's FluidType sound hooks have no Fabric equivalent; the vanilla bucket-fill sound is used for all fluids
+                    SoundEvent fillSound = SoundEvents.BUCKET_FILL;
                     if (fillSound != null) {
                         level.playSound(null, pos, fillSound, SoundSource.BLOCKS, 1.0F, 1.0F);
                     }

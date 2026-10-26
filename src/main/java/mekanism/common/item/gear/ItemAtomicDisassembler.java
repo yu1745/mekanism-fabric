@@ -25,7 +25,7 @@ import mekanism.api.radial.mode.IRadialMode;
 import mekanism.api.text.EnumColor;
 import mekanism.api.text.IHasTextComponent.IHasEnumNameTextComponent;
 import mekanism.api.text.ILangEntry;
-import mekanism.common.Mekanism;
+
 import mekanism.common.MekanismLang;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.content.gear.mekatool.ModuleExcavationEscalationUnit.ExcavationMode;
@@ -78,7 +78,7 @@ public class ItemAtomicDisassembler extends ItemEnergized implements IItemHUDPro
     public static final Set<ItemAbility> ALWAYS_SUPPORTED_ACTIONS = Set.of(ItemAbilities.AXE_DIG, ItemAbilities.HOE_DIG, ItemAbilities.SHOVEL_DIG, ItemAbilities.PICKAXE_DIG,
           ItemAbilities.SWORD_DIG);
     private static final Lazy<RadialData<DisassemblerMode>> LAZY_RADIAL_DATA = Lazy.of(() ->
-          IRadialDataHelper.INSTANCE.dataForEnum(Mekanism.rl("disassembler_mode"), DisassemblerMode.NORMAL));
+          IRadialDataHelper.INSTANCE.dataForEnum(ResourceLocation.fromNamespaceAndPath("mekanism", "disassembler_mode"), DisassemblerMode.NORMAL));
 
     /**
      * @apiNote For use in calculating drops of given blocks. Given mods may do checks relating to tool actions we need to make sure that this stack is full energy.
@@ -88,8 +88,8 @@ public class ItemAtomicDisassembler extends ItemEnergized implements IItemHUDPro
     }
 
     public ItemAtomicDisassembler(Properties properties) {
-        super(properties.rarity(Rarity.RARE).setNoRepair().stacksTo(1)
-              .component(MekanismDataComponents.DISASSEMBLER_MODE, DisassemblerMode.NORMAL)
+        super(properties.rarity(Rarity.RARE).stacksTo(1)
+              .component(MekanismDataComponents.DISASSEMBLER_MODE.get(), DisassemblerMode.NORMAL)
               .component(DataComponents.TOOL, new Tool(List.of(
                     Tool.Rule.deniesDrops(MekanismTags.Blocks.INCORRECT_FOR_DISASSEMBLER)
               ), 1, 0))
@@ -261,21 +261,6 @@ public class ItemAtomicDisassembler extends ItemEnergized implements IItemHUDPro
     @Override
     public boolean isEnchantable(@NotNull ItemStack stack) {
         return false;
-    }
-
-    @Override
-    public boolean isBookEnchantable(@NotNull ItemStack stack, @NotNull ItemStack book) {
-        return isEnchantable(stack) && super.isBookEnchantable(stack, book);
-    }
-
-    @Override
-    public boolean isPrimaryItemFor(@NotNull ItemStack stack, @NotNull Holder<Enchantment> enchantment) {
-        return isEnchantable(stack) && super.isPrimaryItemFor(stack, enchantment);
-    }
-
-    @Override
-    public boolean supportsEnchantment(@NotNull ItemStack stack, @NotNull Holder<Enchantment> enchantment) {
-        return isEnchantable(stack) && super.supportsEnchantment(stack, enchantment);
     }
 
     @NothingNullByDefault

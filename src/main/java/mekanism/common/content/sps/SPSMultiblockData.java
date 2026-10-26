@@ -47,7 +47,6 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
-import net.neoforged.neoforge.event.EventHooks;
 
 public class SPSMultiblockData extends MultiblockData implements IValveHandler {
 
@@ -213,7 +212,9 @@ public class SPSMultiblockData extends MultiblockData implements IValveHandler {
                                 lightningBolt.setDamage(0);
                                 lightningBolt.setVisualOnly(true);
                             }
-                            if (!EventHooks.onEntityStruckByLightning(entity, lightningBolt) && world instanceof ServerLevel serverLevel) {//This should always be a server level
+                            //Fabric port delta: upstream consulted the NeoForge lightning-strike hook so mods could veto the SPS's synthetic strike;
+                            // Fabric has no such veto pipeline, so the vanilla strike path runs unconditionally
+                            if (world instanceof ServerLevel serverLevel) {//This should always be a server level
                                 //Keep track of the remaining fire ticks so that we can skip lighting it on fire as we are not actual lightning
                                 int remainingFireTicks = entity.getRemainingFireTicks();
                                 entity.thunderHit(serverLevel, lightningBolt);

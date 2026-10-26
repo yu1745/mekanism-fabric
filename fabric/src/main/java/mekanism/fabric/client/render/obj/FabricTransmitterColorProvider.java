@@ -2,7 +2,7 @@ package mekanism.fabric.client.render.obj;
 
 import mekanism.client.model.data.TransmitterModelData;
 import net.fabricmc.fabric.api.client.rendering.v1.ColorProviderRegistry;
-import net.fabricmc.fabric.api.rendering.data.v1.RenderAttachedBlockView;
+import net.fabricmc.fabric.api.blockview.v2.FabricBlockView;
 import net.minecraft.client.color.block.BlockColor;
 import net.minecraft.world.level.block.Block;
 import org.slf4j.Logger;
@@ -29,8 +29,8 @@ public final class FabricTransmitterColorProvider {
 
     // Package-visible for focused checks of the actual registered callback, without initializing a block registry.
     static final BlockColor COLOR = (state, world, pos, tintIndex) -> {
-        if (tintIndex == TRANSMITTER_TINT_INDEX && pos != null && world instanceof RenderAttachedBlockView attached
-              && attached.getBlockEntityRenderAttachment(pos) instanceof TransmitterModelData data && data.getHasColor()) {
+        if (tintIndex == TRANSMITTER_TINT_INDEX && pos != null && world instanceof FabricBlockView view
+              && view.getBlockEntityRenderData(pos) instanceof TransmitterModelData data && data.getHasColor()) {
             return data.getPackedColor();
         }
         return -1;

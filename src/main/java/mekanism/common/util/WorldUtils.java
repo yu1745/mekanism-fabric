@@ -25,6 +25,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
@@ -38,7 +39,9 @@ import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.FireBlock;
 import net.minecraft.world.level.block.LiquidBlockContainer;
+import net.minecraft.world.level.block.TntBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
@@ -674,6 +677,22 @@ public class WorldUtils {
             }
         }
         return false;
+    }
+
+    /**
+     * Fabric port delta: vanilla's per-block burn odds (the same flammability table the fire spread logic consults) replace
+     * the NeoForge {@code IBlockStateExtension#isFlammable} query, whose data source was that table.
+     */
+    public static boolean isFlammable(BlockState state) {
+        return ((FireBlock) Blocks.FIRE).getBurnOdds(state) > 0;
+    }
+
+    /**
+     * Fabric port delta: the vanilla igniter-aware TNT priming overload replaces the NeoForge {@code Block#onCaughtFire}
+     * default path, which primed the same TNT entity with the same igniter attribution.
+     */
+    public static void igniteTnt(Level level, BlockPos pos, @Nullable LivingEntity igniter) {
+        TntBlock.explode(level, pos, igniter);
     }
 
     public static boolean tryPlaceContainedLiquid(@Nullable Player player, Level world, BlockPos pos, @NotNull FluidStack fluidStack, @Nullable Direction side) {

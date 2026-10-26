@@ -12,16 +12,7 @@ import org.jetbrains.annotations.NotNull;
 public class ItemScubaMask extends ItemSpecialArmor {
 
     public ItemScubaMask(Properties properties) {
-        super(MekanismArmorMaterials.SCUBA_MASK, ArmorItem.Type.HELMET, properties.rarity(Rarity.RARE).setNoRepair().stacksTo(1));
+        super(MekanismArmorMaterials.SCUBA_MASK, ArmorItem.Type.HELMET, properties.rarity(Rarity.RARE).stacksTo(1));
     }
 
-    @Override
-    public boolean isPrimaryItemFor(@NotNull ItemStack stack, @NotNull Holder<Enchantment> enchantment) {
-        return enchantment.is(Enchantments.AQUA_AFFINITY) || super.isPrimaryItemFor(stack, enchantment);
-    }
-
-    @Override
-    public boolean supportsEnchantment(@NotNull ItemStack stack, @NotNull Holder<Enchantment> enchantment) {
-        return enchantment.is(Enchantments.AQUA_AFFINITY) || super.supportsEnchantment(stack, enchantment);
-    }
 }

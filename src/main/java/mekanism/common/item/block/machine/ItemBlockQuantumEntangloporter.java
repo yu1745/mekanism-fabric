@@ -37,8 +37,8 @@ public class ItemBlockQuantumEntangloporter extends ItemBlockTooltip<BlockTileMo
 
     public ItemBlockQuantumEntangloporter(BlockTileModel<TileEntityQuantumEntangloporter, BlockTypeTile<TileEntityQuantumEntangloporter>> block, Item.Properties properties) {
         super(block, true, properties
-              .component(MekanismDataComponents.EJECTOR, AttachedEjector.DEFAULT)
-              .component(MekanismDataComponents.SIDE_CONFIG, SIDE_CONFIG)
+              .component(MekanismDataComponents.EJECTOR.get(), AttachedEjector.DEFAULT)
+              .component(MekanismDataComponents.SIDE_CONFIG.get(), SIDE_CONFIG)
         );
     }
 

@@ -8,7 +8,6 @@ import mekanism.api.functions.ConstantPredicates;
 import mekanism.common.attachments.containers.chemical.ComponentBackedChemicalTank;
 import mekanism.common.attachments.containers.chemical.merged.MergedTankCreator;
 import mekanism.common.attachments.containers.fluid.ComponentBackedFluidTank;
-import mekanism.common.capabilities.Capabilities;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.util.ChemicalUtil;
 import mekanism.common.util.FluidUtils;
@@ -23,7 +22,6 @@ import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
 import mekanism.api.fluid.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandlerItem;
 import org.jetbrains.annotations.NotNull;
 
 public class ItemGaugeDropper extends Item {
@@ -68,13 +66,14 @@ public class ItemGaugeDropper extends Item {
         ItemStack stack = player.getItemInHand(hand);
         if (player.isShiftKeyDown()) {
             if (!world.isClientSide) {
-                IFluidHandlerItem fluidHandler = Capabilities.FLUID.getCapability(stack);
-                if (fluidHandler instanceof IExtendedFluidHandler fluidHandlerItem) {
+                //Fabric port delta: the merged fluid handler is obtained through this item's registered creator instead of the NeoForge item capability lookup
+                IExtendedFluidHandler fluidHandlerItem = (IExtendedFluidHandler) MERGED_TANK_CREATOR.create(ContainerType.FLUID, stack, 0);
+                if (fluidHandlerItem != null) {
                     for (int tank = 0, tanks = fluidHandlerItem.getTanks(); tank < tanks; tank++) {
                         fluidHandlerItem.setFluidInTank(tank, FluidStack.EMPTY);
                     }
                 }
-                IChemicalHandler handler = Capabilities.CHEMICAL.getCapability(stack);
+                IChemicalHandler handler = (IChemicalHandler) MERGED_TANK_CREATOR.create(ContainerType.CHEMICAL, stack, 0);
                 if (handler != null) {
                     for (int tank = 0; tank < handler.getChemicalTanks(); tank++) {
                         handler.setChemicalInTank(tank, ChemicalStack.EMPTY);

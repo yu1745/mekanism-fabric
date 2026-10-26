@@ -205,13 +205,13 @@ public class TileEntityChemicalTank extends TileEntityConfigurableMachine implem
     @Override
     protected void collectImplicitComponents(@NotNull DataComponentMap.Builder builder) {
         super.collectImplicitComponents(builder);
-        builder.set(MekanismDataComponents.DUMP_MODE, dumping);
+        builder.set(MekanismDataComponents.DUMP_MODE.get(), dumping);
     }
 
     @Override
     protected void applyImplicitComponents(@NotNull BlockEntity.DataComponentInput input) {
         super.applyImplicitComponents(input);
-        dumping = input.getOrDefault(MekanismDataComponents.DUMP_MODE, dumping);
+        dumping = input.getOrDefault(MekanismDataComponents.DUMP_MODE.get(), dumping);
     }
 
     @Override

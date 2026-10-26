@@ -1,7 +1,8 @@
 package mekanism.common.tile.multiblock;
 
-import mekanism.common.Mekanism;
+
 import mekanism.common.content.evaporation.EvaporationMultiblockData;
+import mekanism.common.lib.multiblock.MekanismMultiblockManagers;
 import mekanism.common.lib.multiblock.MultiblockManager;
 import mekanism.common.registries.MekanismBlocks;
 import mekanism.common.tile.prefab.TileEntityMultiblock;
@@ -27,7 +28,7 @@ public class TileEntityThermalEvaporationBlock extends TileEntityMultiblock<Evap
 
     @Override
     public MultiblockManager<EvaporationMultiblockData> getManager() {
-        return Mekanism.evaporationManager;
+        return MekanismMultiblockManagers.evaporationManager;
     }
 
     @Override

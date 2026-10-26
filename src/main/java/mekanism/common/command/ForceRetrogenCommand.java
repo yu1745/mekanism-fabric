@@ -4,7 +4,7 @@ import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import mekanism.api.text.EnumColor;
-import mekanism.common.Mekanism;
+import mekanism.common.CommonWorldTickHandler;
 import mekanism.common.MekanismLang;
 import mekanism.common.base.MekanismPermissions;
 import mekanism.common.config.MekanismConfig;
@@ -63,7 +63,7 @@ public class ForceRetrogenCommand {
         for (int chunkX = chunkXStart; chunkX <= chunkXEnd; chunkX++) {
             for (int chunkZ = chunkZStart; chunkZ <= chunkZEnd; chunkZ++) {
                 if (world.hasChunk(chunkX, chunkZ)) {
-                    Mekanism.worldTickHandler.addRegenChunk(registryKey, new ChunkPos(chunkX, chunkZ));
+                    CommonWorldTickHandler.INSTANCE.addRegenChunk(registryKey, new ChunkPos(chunkX, chunkZ));
                     int finalChunkX = chunkX, finalChunkZ = chunkZ;
                     source.sendSuccess(() -> MekanismLang.COMMAND_RETROGEN_CHUNK_QUEUED.translateColored(EnumColor.GRAY, EnumColor.INDIGO,
                           MekanismLang.GENERIC_WITH_COMMA.translate(finalChunkX, finalChunkZ), EnumColor.INDIGO, world), true);

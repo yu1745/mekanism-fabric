@@ -11,7 +11,7 @@ import mekanism.api.energy.IEnergyContainer;
 import mekanism.api.text.EnumColor;
 import mekanism.api.text.IHasTextComponent.IHasEnumNameTextComponent;
 import mekanism.api.text.ILangEntry;
-import mekanism.common.Mekanism;
+
 import mekanism.common.MekanismLang;
 import mekanism.common.integration.curios.CuriosIntegration;
 import net.minecraft.network.chat.Component;
@@ -118,7 +118,7 @@ public interface IFreeRunnerItem {
         ItemStack feet = entity.getItemBySlot(EquipmentSlot.FEET);
         if (matcher.test(feet)) {
             return feet;
-        } else if (Mekanism.hooks.curios.isLoaded()) {
+        } else if (CuriosIntegration.isLoaded()) {
             return CuriosIntegration.findFirstCurio(entity, matcher);
         }
         return ItemStack.EMPTY;

@@ -52,3 +52,9 @@ accessible field net/minecraft/client/multiplayer/ClientCommonPacketListenerImpl
 # tool maps (AxeItem.getStripped / ShovelItem pathing), which vanilla keeps protected.
 accessible field net/minecraft/world/item/AxeItem STRIPPABLES Ljava/util/Map;
 accessible field net/minecraft/world/item/ShovelItem FLATTENABLES Ljava/util/Map;
+
+# Fabric port delta for the NeoForge state-extension fire hooks: vanilla keeps the flammability table lookup and the
+# igniter-aware TNT priming overload private, while the official laser/flame paths query them through
+# IBlockStateExtension.isFlammable and Block#onCaughtFire.
+accessible method net/minecraft/world/level/block/FireBlock getBurnOdds (Lnet/minecraft/world/level/block/state/BlockState;)I
+accessible method net/minecraft/world/level/block/TntBlock explode (Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/LivingEntity;)V

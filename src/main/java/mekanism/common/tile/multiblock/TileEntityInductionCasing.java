@@ -1,9 +1,10 @@
 package mekanism.common.tile.multiblock;
 
-import mekanism.common.Mekanism;
+
 import mekanism.common.content.matrix.MatrixMultiblockData;
 import mekanism.common.inventory.container.MekanismContainer;
 import mekanism.common.inventory.container.sync.dynamic.SyncMapper;
+import mekanism.common.lib.multiblock.MekanismMultiblockManagers;
 import mekanism.common.lib.multiblock.MultiblockManager;
 import mekanism.common.registries.MekanismBlocks;
 import mekanism.common.registries.MekanismContainerTypes;
@@ -32,7 +33,7 @@ public class TileEntityInductionCasing extends TileEntityMultiblock<MatrixMultib
 
     @Override
     public MultiblockManager<MatrixMultiblockData> getManager() {
-        return Mekanism.matrixManager;
+        return MekanismMultiblockManagers.matrixManager;
     }
 
     @Override

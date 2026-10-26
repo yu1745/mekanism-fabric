@@ -8,7 +8,7 @@ import mekanism.common.registries.MekanismBlocks;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
-import net.neoforged.neoforge.fluids.FluidStack;
+import mekanism.api.fluid.FluidStack;
 
 @NothingNullByDefault
 public class NutritionalLiquifierIRecipe extends BasicItemStackToFluidOptionalItemRecipe {

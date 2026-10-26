@@ -124,26 +124,6 @@ public class ItemBlockTooltip<BLOCK extends Block & IHasDescription> extends Ite
         }
     }
 
-    @Override
-    public boolean shouldCauseReequipAnimation(@NotNull ItemStack oldStack, @NotNull ItemStack newStack, boolean slotChanged) {
-        if (exposesEnergyCapOrTooltips()) {
-            //Ignore NBT for energized items causing re-equip animations
-            //TODO: Only ignore the energy attachment?
-            return slotChanged || oldStack.getItem() != newStack.getItem();
-        }
-        return super.shouldCauseReequipAnimation(oldStack, newStack, slotChanged);
-    }
-
-    @Override
-    public boolean shouldCauseBlockBreakReset(@NotNull ItemStack oldStack, @NotNull ItemStack newStack) {
-        if (exposesEnergyCapOrTooltips()) {
-            //Ignore NBT for energized items causing block break reset
-            //TODO: Only ignore the energy attachment?
-            return oldStack.getItem() != newStack.getItem();
-        }
-        return super.shouldCauseBlockBreakReset(oldStack, newStack);
-    }
-
     protected Predicate<@NotNull AutomationType> getEnergyCapInsertPredicate() {
         return ConstantPredicates.alwaysTrue();
     }
@@ -203,7 +183,7 @@ public class ItemBlockTooltip<BLOCK extends Block & IHasDescription> extends Ite
 
         private UpgradeBasedUnsignedLongCache(ItemStack stack, LongSupplier baseStorage) {
             this.stack = stack;
-            UpgradeAware upgradeAware = this.stack.getOrDefault(MekanismDataComponents.UPGRADES, UpgradeAware.EMPTY);
+            UpgradeAware upgradeAware = this.stack.getOrDefault(MekanismDataComponents.UPGRADES.get(), UpgradeAware.EMPTY);
             this.lastInstalled = upgradeAware.getUpgradeCount(Upgrade.ENERGY);
             this.baseStorage = baseStorage;
             this.value = MekanismUtils.getMaxEnergy(this.lastInstalled, this.baseStorage.getAsLong());
@@ -211,7 +191,7 @@ public class ItemBlockTooltip<BLOCK extends Block & IHasDescription> extends Ite
 
         @Override
         public long getAsLong() {
-            UpgradeAware upgradeAware = stack.getOrDefault(MekanismDataComponents.UPGRADES, UpgradeAware.EMPTY);
+            UpgradeAware upgradeAware = stack.getOrDefault(MekanismDataComponents.UPGRADES.get(), UpgradeAware.EMPTY);
             int installed = upgradeAware.getUpgradeCount(Upgrade.ENERGY);
             if (installed != lastInstalled) {
                 lastInstalled = installed;

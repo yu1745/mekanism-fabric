@@ -13,25 +13,28 @@ import mekanism.api.IContentsListener;
 import mekanism.api.annotations.ParametersAreNotNullByDefault;
 import mekanism.api.inventory.IInventorySlot;
 import mekanism.api.security.IItemSecurityUtils;
-import mekanism.common.Mekanism;
 import mekanism.common.inventory.slot.BasicInventorySlot;
 import mekanism.common.lib.MekanismSavedData;
 import mekanism.common.registries.MekanismDataComponents;
 import net.minecraft.MethodsReturnNonnullByDefault;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.fml.util.thread.EffectiveSide;
+import mekanism.common.util.EffectiveSide;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @MethodsReturnNonnullByDefault
 @ParametersAreNotNullByDefault
 public class PersonalStorageManager {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism");
+
     private static final Map<UUID, PersonalStorageData> STORAGE_BY_PLAYER_UUID = new HashMap<>();
 
     private static Optional<PersonalStorageData> forOwner(UUID playerUUID) {
-        if (EffectiveSide.get().isClient()) {
+        if (EffectiveSide.isClient()) {
             return Optional.empty();
         }
         return Optional.of(STORAGE_BY_PLAYER_UUID.computeIfAbsent(playerUUID, uuid -> MekanismSavedData.createSavedData(PersonalStorageData::new, "personal_storage" + File.separator + uuid)));
@@ -47,7 +50,7 @@ public class PersonalStorageManager {
     public static Optional<AbstractPersonalStorageItemInventory> getInventoryFor(ItemStack stack) {
         UUID owner = IItemSecurityUtils.INSTANCE.getOwnerUUID(stack);
         if (owner == null) {
-            Mekanism.logger.error("Storage inventory asked for but stack has no owner! {}", stack, new Exception());
+            LOGGER.error("Storage inventory asked for but stack has no owner! {}", stack, new Exception());
             return Optional.empty();
         }
         return getInventoryFor(stack, owner);
@@ -136,7 +139,7 @@ public class PersonalStorageManager {
         UUID invId = stack.get(MekanismDataComponents.PERSONAL_STORAGE_ID);
         if (invId == null) {
             invId = UUID.randomUUID();
-            stack.set(MekanismDataComponents.PERSONAL_STORAGE_ID, invId);
+            stack.set(MekanismDataComponents.PERSONAL_STORAGE_ID.get(), invId);
         }
         return invId;
     }

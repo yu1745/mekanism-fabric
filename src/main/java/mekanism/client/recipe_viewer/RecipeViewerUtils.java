@@ -18,10 +18,9 @@ import mekanism.api.datamaps.chemical.ChemicalSolidTag;
 import mekanism.api.recipes.ItemStackToChemicalRecipe;
 import mekanism.api.recipes.basic.BasicItemStackToFluidOptionalItemRecipe;
 import mekanism.api.recipes.ingredients.ChemicalStackIngredient;
-import mekanism.client.MekanismClient;
-import mekanism.client.gui.element.bar.GuiBar.IBarInfoHandler;
+import mekanism.client.ClientPlayerAccess;
+import mekanism.client.gui.element.bar.IBarInfoHandler;
 import mekanism.client.gui.element.progress.IProgressInfoHandler;
-import mekanism.common.Mekanism;
 import mekanism.common.MekanismLang;
 import mekanism.common.recipe.IMekanismRecipeTypeProvider;
 import mekanism.common.recipe.MekanismRecipeType;
@@ -155,7 +154,7 @@ public class RecipeViewerUtils {
         for (Map.Entry<ResourceKey<Item>, Item> entry : BuiltInRegistries.ITEM.entrySet()) {
             BasicItemStackToFluidOptionalItemRecipe recipe = TileEntityNutritionalLiquifier.getRecipe(entry.getValue().getDefaultInstance());
             if (recipe != null) {
-                liquification.put(synthetic(entry.getKey().location(), "liquification", Mekanism.MODID), recipe);
+                liquification.put(synthetic(entry.getKey().location(), "liquification", "mekanism"), recipe);
             }
         }
         return liquification;
@@ -185,7 +184,7 @@ public class RecipeViewerUtils {
 
     public static TooltipContext getRVTooltipContext() {
         //Similar to how ItemEmiStack works
-        Level level = MekanismClient.tryGetClientWorld();
+        Level level = ClientPlayerAccess.tryGetClientWorld();
         if (level == null) {
             return TooltipContext.EMPTY;
         } else if (Minecraft.getInstance().isSameThread()) {

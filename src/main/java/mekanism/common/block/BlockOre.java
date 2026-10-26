@@ -1,12 +1,13 @@
 package mekanism.common.block;
 
 import mekanism.api.text.ILangEntry;
-import mekanism.common.Mekanism;
+
 import mekanism.common.block.interfaces.IHasDescription;
 import mekanism.common.block.states.BlockStateHelper;
 import mekanism.common.resource.ore.OreType;
 import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
@@ -38,7 +39,7 @@ public class BlockOre extends Block implements IHasDescription {
     @NotNull
     public String getDescriptionTranslationKey() {
         if (descriptionTranslationKey == null) {
-            descriptionTranslationKey = Util.makeDescriptionId("description", Mekanism.rl(ore.getResource().getRegistrySuffix() + "_ore"));
+            descriptionTranslationKey = Util.makeDescriptionId("description", ResourceLocation.fromNamespaceAndPath("mekanism", ore.getResource().getRegistrySuffix() + "_ore"));
         }
         return descriptionTranslationKey;
     }

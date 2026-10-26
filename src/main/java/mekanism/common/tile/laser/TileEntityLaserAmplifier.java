@@ -191,19 +191,19 @@ public class TileEntityLaserAmplifier extends TileEntityLaserReceptor implements
     @Override
     protected void applyImplicitComponents(@NotNull BlockEntity.DataComponentInput input) {
         super.applyImplicitComponents(input);
-        updateMinThreshold(input.getOrDefault(MekanismDataComponents.MIN_THRESHOLD, minThreshold));
-        updateMaxThreshold(input.getOrDefault(MekanismDataComponents.MAX_THRESHOLD, maxThreshold));
-        setDelay(input.getOrDefault(MekanismDataComponents.DELAY, delay));
-        outputMode = input.getOrDefault(MekanismDataComponents.REDSTONE_OUTPUT, outputMode);
+        updateMinThreshold(input.getOrDefault(MekanismDataComponents.MIN_THRESHOLD.get(), minThreshold));
+        updateMaxThreshold(input.getOrDefault(MekanismDataComponents.MAX_THRESHOLD.get(), maxThreshold));
+        setDelay(input.getOrDefault(MekanismDataComponents.DELAY.get(), delay));
+        outputMode = input.getOrDefault(MekanismDataComponents.REDSTONE_OUTPUT.get(), outputMode);
     }
 
     @Override
     protected void collectImplicitComponents(@NotNull DataComponentMap.Builder builder) {
         super.collectImplicitComponents(builder);
-        builder.set(MekanismDataComponents.MIN_THRESHOLD, minThreshold);
-        builder.set(MekanismDataComponents.MAX_THRESHOLD, maxThreshold);
-        builder.set(MekanismDataComponents.DELAY, delay);
-        builder.set(MekanismDataComponents.REDSTONE_OUTPUT, outputMode);
+        builder.set(MekanismDataComponents.MIN_THRESHOLD.get(), minThreshold);
+        builder.set(MekanismDataComponents.MAX_THRESHOLD.get(), maxThreshold);
+        builder.set(MekanismDataComponents.DELAY.get(), delay);
+        builder.set(MekanismDataComponents.REDSTONE_OUTPUT.get(), outputMode);
     }
 
     @Override

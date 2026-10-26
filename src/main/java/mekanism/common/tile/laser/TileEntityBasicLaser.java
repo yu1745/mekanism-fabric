@@ -54,11 +54,6 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult.Type;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
-import net.neoforged.neoforge.common.CommonHooks;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.common.damagesource.DamageContainer;
-import net.neoforged.neoforge.event.entity.living.LivingShieldBlockEvent;
-import net.neoforged.neoforge.event.level.BlockEvent;
 import org.jetbrains.annotations.NotNull;
 
 //TODO - V11: Make the laser "shrink" the further distance it goes, If above a certain energy level and in water makes it make a bubble stream
@@ -326,18 +321,17 @@ public abstract class TileEntityBasicLaser extends TileEntityMekanism {
     private void withFakePlayer(ServerLevel level, double x, double y, double z, BlockPos hitPos, BlockState hitState, Direction hitSide) {
         MekFakePlayer dummy = MekFakePlayer.setupFakePlayer(level, x, y, z);
         dummy.setEmulatingUUID(getOwnerUUID());//pretend to be the owner
-        BlockEvent.BreakEvent event = new BlockEvent.BreakEvent(level, hitPos, hitState, dummy);
-        if (!NeoForge.EVENT_BUS.post(event).isCanceled()) {
-            if (hitState.getBlock() instanceof TntBlock && hitState.isFlammable(level, hitPos, hitSide)) {
-                //Convert TNT that can be lit on fire into a tnt entity
-                //Note: We don't mark the fake player as the igniter as then when the tnt explodes if it hits a player
-                // there will be a crash as our fake player's level will be null
-                hitState.onCaughtFire(level, hitPos, hitSide, null);
-                level.removeBlock(hitPos, false);
-            } else {
-                //Use the disassembler as the item to break the block with as that is marked as being the correct tool for drops
-                handleBreakBlock(hitState, level, hitPos, dummy, ItemAtomicDisassembler.fullyChargedStack());
-            }
+        //Fabric port delta: the NeoForge break-event veto probe is dropped (same adjudication as the cardboard box and miner
+        // probes): Fabric has no postable cancellable break event, and its protection pipeline guards real player breaks.
+        if (hitState.getBlock() instanceof TntBlock && WorldUtils.isFlammable(hitState)) {
+            //Convert TNT that can be lit on fire into a tnt entity
+            //Note: We don't mark the fake player as the igniter as then when the tnt explodes if it hits a player
+            // there will be a crash as our fake player's level will be null
+            WorldUtils.igniteTnt(level, hitPos, null);
+            level.removeBlock(hitPos, false);
+        } else {
+            //Use the disassembler as the item to break the block with as that is marked as being the correct tool for drops
+            handleBreakBlock(hitState, level, hitPos, dummy, ItemAtomicDisassembler.fullyChargedStack());
         }
         dummy.cleanupFakePlayer(level);
     }
@@ -351,20 +345,17 @@ public abstract class TileEntityBasicLaser extends TileEntityMekanism {
     private float damageShield(Level level, LivingEntity livingEntity, Pos3D from, float damage) {
         DamageSource source = MekanismDamageTypes.LASER.source(level, from);
         //Absorb part of the damage based on the given absorption ratio
-        DamageContainer damageContainer = new DamageContainer(source, damage);
-        //Note: Even though we fire this even here manually, it doesn't cause issues with the damage pipeline
-        // as if we do block damage, then we won't end up firing the normal pipeline
-        LivingShieldBlockEvent event = CommonHooks.onDamageBlock(livingEntity, damageContainer, livingEntity.isDamageSourceBlocked(source));
-        if (event.isCanceled() || !event.getBlocked()) {
+        //Fabric port delta: vanilla shield blocking replaces the NeoForge LivingShieldBlockEvent hook, whose defaults are
+        // exactly the vanilla rules replicated here: a covering shield blocks the full incoming amount, the shield item
+        // takes the same durability damage, and the blocked-damage stat uses vanilla's cap and rounding.
+        if (!livingEntity.isDamageSourceBlocked(source)) {
             //Blocking was not allowed, return we didn't block any damage
             return 0;
         }
-        float shieldDamage = event.shieldDamage();
-        if (shieldDamage > 0) {
-            //Only damage the shield if the shield isn't setup to block damage for free
-            livingEntity.hurtCurrentlyUsedShield(shieldDamage);
+        float damageBlocked = damage;
+        if (damageBlocked > 0) {
+            livingEntity.hurtCurrentlyUsedShield(damageBlocked);
         }
-        float damageBlocked = event.getBlockedDamage();
         if (livingEntity instanceof ServerPlayer player && damageBlocked > 0 && damageBlocked < 3.4028235E37F) {
             player.awardStat(Stats.DAMAGE_BLOCKED_BY_SHIELD, Math.round(damageBlocked * 10F));
         }

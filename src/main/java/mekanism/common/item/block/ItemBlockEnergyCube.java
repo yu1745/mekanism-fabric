@@ -59,8 +59,8 @@ public class ItemBlockEnergyCube extends ItemBlockTooltip<BlockEnergyCube> imple
 
     public ItemBlockEnergyCube(BlockEnergyCube block, Item.Properties properties) {
         super(block, true, properties
-              .component(MekanismDataComponents.EJECTOR, AttachedEjector.DEFAULT)
-              .component(MekanismDataComponents.SIDE_CONFIG, SIDE_CONFIG)
+              .component(MekanismDataComponents.EJECTOR.get(), AttachedEjector.DEFAULT)
+              .component(MekanismDataComponents.SIDE_CONFIG.get(), SIDE_CONFIG)
         );
     }
 
@@ -117,7 +117,7 @@ public class ItemBlockEnergyCube extends ItemBlockTooltip<BlockEnergyCube> imple
 
     public static ItemStack withCreativeSideConfig(AttachedSideConfig config) {
         ItemStack stack = new ItemStack(MekanismBlocks.CREATIVE_ENERGY_CUBE);
-        stack.set(MekanismDataComponents.SIDE_CONFIG, config);
+        stack.set(MekanismDataComponents.SIDE_CONFIG.get(), config);
         return stack;
     }
 

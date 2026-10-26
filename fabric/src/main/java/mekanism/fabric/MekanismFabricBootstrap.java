@@ -98,6 +98,8 @@ public final class MekanismFabricBootstrap implements ModInitializer {
         MekanismUsernameLifecycle.initialize();
         LOGGER.info("MEKANISM_FABRIC_NETWORK_PROOF protocol={} phase=configuration codecs={} server_receiver={} client_required={}",
               networking.protocolVersion(), networking.codecs(), networking.serverReceiver(), networking.clientRequired());
+        mekanism.common.registries.MekanismEntityTypes.ENTITY_TYPES.registerAll(BuiltInRegistries.ENTITY_TYPE);
+        mekanism.common.CommonWorldTickHandler.register();
         MekanismGameEvents.GAME_EVENTS.registerAll(BuiltInRegistries.GAME_EVENT);
         mekanism.common.registries.MekanismParticleTypes.PARTICLE_TYPES.registerAll(BuiltInRegistries.PARTICLE_TYPE);
         mekanism.common.advancements.MekanismCriteriaTriggers.CRITERIA_TRIGGERS.registerAll(BuiltInRegistries.TRIGGER_TYPES);
@@ -108,6 +110,8 @@ public final class MekanismFabricBootstrap implements ModInitializer {
         verifyGameEvent(MekanismGameEvents.GRAVITY_MODULATE_BOOSTED, "gravity_modulate_boosted", 32);
         LOGGER.info("MEKANISM_FABRIC_REGISTRY_PROOF key=mekanism:seismic_vibration canonical_identity=true entries=4");
         ServerLifecycleEvents.SERVER_STARTED.register(server -> {
+            //Revalidate persisted chunk-loader tickets exactly like the official loading-validation callback
+            mekanism.common.tile.component.TileComponentChunkLoader.validateTickets(server);
             double ambient = HeatAPI.getAmbientTemp(server.overworld(), BlockPos.ZERO);
             if (!Double.isFinite(ambient) || ambient <= 0) {
                 throw new IllegalStateException("Fabric positional ambient-temperature proof failed: " + ambient);

@@ -246,13 +246,13 @@ public class TileEntityRotaryCondensentrator extends TileEntityRecipeMachine<Rot
     @Override
     protected void applyImplicitComponents(@NotNull BlockEntity.DataComponentInput input) {
         super.applyImplicitComponents(input);
-        mode = input.getOrDefault(MekanismDataComponents.ROTARY_MODE, mode);
+        mode = input.getOrDefault(MekanismDataComponents.ROTARY_MODE.get(), mode);
     }
 
     @Override
     protected void collectImplicitComponents(@NotNull DataComponentMap.Builder builder) {
         super.collectImplicitComponents(builder);
-        builder.set(MekanismDataComponents.ROTARY_MODE, mode);
+        builder.set(MekanismDataComponents.ROTARY_MODE.get(), mode);
     }
 
     @Override

@@ -3,7 +3,28 @@
   "minVersion": "0.8",
   "package": "mekanism.fabric.mixin",
   "compatibilityLevel": "JAVA_21",
-  "mixins": ["server.MinecraftServerMixin", "robit.RegistryDataMixin", "block.BucketItemMixin", "block.BoundingDestroyMixin", "block.BoundingExplosionMixin", "block.MachineExplosionMixin", "block.MachinePistonReactionMixin", "block.MachineRedstoneConnectionMixin", "block.MachinePathTypeMixin", "item.ConfiguratorUseMixin", "radiation.RadiationEntityTickMixin", "radiation.RadiationPlayerTickMixin", "transmitter.TransmitterTicketLevelMixin"],
-  "client": ["item.ClientConfiguratorUseMixin", "item.ModeStatusOverlayMixin", "radiation.RadiationOverlayMixin"],
-  "injectors": {"defaultRequire": 1}
+  "mixins": [
+    "server.MinecraftServerMixin",
+    "robit.RegistryDataMixin",
+    "block.BucketItemMixin",
+    "block.BoundingDestroyMixin",
+    "block.BoundingExplosionMixin",
+    "block.MachineExplosionMixin",
+    "block.MachinePistonReactionMixin",
+    "block.MachineRedstoneConnectionMixin",
+    "block.MachinePathTypeMixin",
+    "item.ConfiguratorUseMixin",
+    "radiation.RadiationEntityTickMixin",
+    "radiation.RadiationPlayerTickMixin",
+    "transmitter.TransmitterTicketLevelMixin",
+    "player.ServerPlayerGameModeMixin"
+  ],
+  "client": [
+    "item.ClientConfiguratorUseMixin",
+    "item.ModeStatusOverlayMixin",
+    "radiation.RadiationOverlayMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
 }

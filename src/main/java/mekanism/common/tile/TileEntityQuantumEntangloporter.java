@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
 import mekanism.api.IContentsListener;
+import mekanism.api.chemical.IChemicalHandler;
 import mekanism.api.chemical.IChemicalTank;
 import mekanism.api.energy.IEnergyContainer;
 import mekanism.api.fluid.IExtendedFluidTank;
@@ -16,8 +17,7 @@ import mekanism.api.heat.IHeatCapacitor;
 import mekanism.api.heat.IHeatHandler;
 import mekanism.api.security.SecurityMode;
 import mekanism.common.attachments.containers.ContainerType;
-import mekanism.common.capabilities.Capabilities;
-import mekanism.common.capabilities.IMultiTypeCapability;
+import mekanism.common.capabilities.resolver.manager.ChemicalHandlerManager;
 import mekanism.common.capabilities.heat.CachedAmbientTemperature;
 import mekanism.common.capabilities.holder.chemical.IChemicalTankHolder;
 import mekanism.common.capabilities.holder.chemical.QuantumEntangloporterChemicalTankHolder;
@@ -67,13 +67,13 @@ import net.fabricmc.fabric.api.transfer.v1.fluid.FluidStorage;
 import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
 import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
 import mekanism.common.util.WorldUtils;
-import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
+import net.fabricmc.fabric.api.lookup.v1.block.BlockApiCache;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class TileEntityQuantumEntangloporter extends TileEntityConfigurableMachine implements IChunkLoader {
 
-    private final Map<TransmissionType, Map<Direction, BlockCapabilityCache<?, @Nullable Direction>>> capabilityCaches = new EnumMap<>(TransmissionType.class);
+    private final Map<Direction, BlockApiCache<IChemicalHandler, Direction>> adjacentChemicalCaches = new EnumMap<>(Direction.class);
     private final Map<Direction, BlockEnergyCapabilityCache> adjacentEnergyCaps = new EnumMap<>(Direction.class);
     private final TileComponentChunkLoader<TileEntityQuantumEntangloporter> chunkLoaderComponent;
 
@@ -208,21 +208,17 @@ public class TileEntityQuantumEntangloporter extends TileEntityConfigurableMachi
             //Not currently handled
             return null;
         }
-        Map<Direction, BlockCapabilityCache<?, @Nullable Direction>> caches = capabilityCaches.computeIfAbsent(transmissionType, type -> new EnumMap<>(Direction.class));
-        BlockCapabilityCache<?, @Nullable Direction> cache = caches.get(side);
-        if (cache == null) {
-            IMultiTypeCapability<HANDLER, ?> capability = (IMultiTypeCapability<HANDLER, ?>) switch (transmissionType) {
-                //Note: FLUID is deliberately NOT handled here; the generic NeoForge capability path would return the old
-                // fluid handler identity while callers now consume Fabric's Storage<FluidVariant>. Use getFluidStorage instead.
-                case CHEMICAL -> Capabilities.CHEMICAL;
-                default -> null;
-            };
-            if (capability != null) {
-                cache = capability.createCache((ServerLevel) level, worldPosition.relative(side), side.getOpposite());
-                caches.put(side, cache);
-            }
+        if (transmissionType != TransmissionType.CHEMICAL) {
+            //Note: FLUID is deliberately not handled here; callers consume Fabric's Storage<FluidVariant> through getFluidStorage, and ITEM goes through the
+            // inventory frequency. Only the Mekanism chemical lookup has an external neighbor identity
+            return null;
         }
-        return cache == null ? null : (HANDLER) cache.getCapability();
+        BlockApiCache<IChemicalHandler, Direction> cache = adjacentChemicalCaches.get(side);
+        if (cache == null) {
+            cache = BlockApiCache.create(ChemicalHandlerManager.CHEMICAL_HANDLER, (ServerLevel) level, worldPosition.relative(side));
+            adjacentChemicalCaches.put(side, cache);
+        }
+        return (HANDLER) cache.find(side.getOpposite());
     }
 
     /**

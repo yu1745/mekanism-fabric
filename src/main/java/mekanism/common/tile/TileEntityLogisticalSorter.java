@@ -400,20 +400,20 @@ public class TileEntityLogisticalSorter extends TileEntityMekanism implements IT
     protected void collectImplicitComponents(@NotNull DataComponentMap.Builder builder) {
         super.collectImplicitComponents(builder);
         if (color != null) {
-            builder.set(MekanismDataComponents.COLOR, color);
+            builder.set(MekanismDataComponents.COLOR.get(), color);
         }
-        builder.set(MekanismDataComponents.EJECT, autoEject);
-        builder.set(MekanismDataComponents.ROUND_ROBIN, roundRobin);
-        builder.set(MekanismDataComponents.SINGLE_ITEM, singleItem);
+        builder.set(MekanismDataComponents.EJECT.get(), autoEject);
+        builder.set(MekanismDataComponents.ROUND_ROBIN.get(), roundRobin);
+        builder.set(MekanismDataComponents.SINGLE_ITEM.get(), singleItem);
     }
 
     @Override
     protected void applyImplicitComponents(@NotNull BlockEntity.DataComponentInput input) {
         super.applyImplicitComponents(input);
         color = input.get(MekanismDataComponents.COLOR);
-        autoEject = input.getOrDefault(MekanismDataComponents.EJECT, autoEject);
-        roundRobin = input.getOrDefault(MekanismDataComponents.ROUND_ROBIN, roundRobin);
-        singleItem = input.getOrDefault(MekanismDataComponents.SINGLE_ITEM, singleItem);
+        autoEject = input.getOrDefault(MekanismDataComponents.EJECT.get(), autoEject);
+        roundRobin = input.getOrDefault(MekanismDataComponents.ROUND_ROBIN.get(), roundRobin);
+        singleItem = input.getOrDefault(MekanismDataComponents.SINGLE_ITEM.get(), singleItem);
     }
 
     @Override

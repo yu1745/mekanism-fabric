@@ -345,15 +345,15 @@ public class TileEntityElectrolyticSeparator extends TileEntityRecipeMachine<Ele
     @Override
     protected void collectImplicitComponents(@NotNull DataComponentMap.Builder builder) {
         super.collectImplicitComponents(builder);
-        builder.set(MekanismDataComponents.DUMP_MODE, dumpLeft);
-        builder.set(MekanismDataComponents.SECONDARY_DUMP_MODE, dumpRight);
+        builder.set(MekanismDataComponents.DUMP_MODE.get(), dumpLeft);
+        builder.set(MekanismDataComponents.SECONDARY_DUMP_MODE.get(), dumpRight);
     }
 
     @Override
     protected void applyImplicitComponents(@NotNull BlockEntity.DataComponentInput input) {
         super.applyImplicitComponents(input);
-        dumpLeft = input.getOrDefault(MekanismDataComponents.DUMP_MODE, dumpLeft);
-        dumpRight = input.getOrDefault(MekanismDataComponents.SECONDARY_DUMP_MODE, dumpRight);
+        dumpLeft = input.getOrDefault(MekanismDataComponents.DUMP_MODE.get(), dumpLeft);
+        dumpRight = input.getOrDefault(MekanismDataComponents.SECONDARY_DUMP_MODE.get(), dumpRight);
     }
 
     @Override

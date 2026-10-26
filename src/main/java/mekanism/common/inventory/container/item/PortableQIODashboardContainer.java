@@ -157,6 +157,6 @@ public class PortableQIODashboardContainer extends QIOItemViewerContainer {
     public void toggleTargetDirection() {
         //Change the data client side so that it is reflected in the gui as we don't handle updating client side data
         PacketUtils.sendToServer(new PacketItemGuiInteract(ItemGuiInteraction.TARGET_DIRECTION_BUTTON, this.hand));
-        //stack.set(MekanismDataComponents.INSERT_INTO_FREQUENCY, !stack.getData(MekanismDataComponents.INSERT_INTO_FREQUENCY));
+        //stack.set(MekanismDataComponents.INSERT_INTO_FREQUENCY.get(), !stack.getData(MekanismDataComponents.INSERT_INTO_FREQUENCY));
     }
 }

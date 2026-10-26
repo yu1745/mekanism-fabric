@@ -9,7 +9,6 @@ import java.util.UUID;
 import mekanism.api.SerializationConstants;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.inventory.IInventorySlot;
-import mekanism.common.Mekanism;
 import mekanism.common.attachments.containers.ContainerType;
 import mekanism.common.lib.MekanismSavedData;
 import net.minecraft.core.HolderLookup;
@@ -17,9 +16,13 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @NothingNullByDefault
 class PersonalStorageData extends MekanismSavedData {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism");
 
     private final Map<UUID, PersonalStorageItemInventory> inventoriesById = new HashMap<>();
 
@@ -91,7 +94,7 @@ class PersonalStorageData extends MekanismSavedData {
         if (isDirty()) {
             File folder = file.getParentFile();
             if (!folder.exists() && !folder.mkdirs()) {
-                Mekanism.logger.error("Could not create personal storage directory, saves may fail");
+                LOGGER.error("Could not create personal storage directory, saves may fail");
             }
         }
         super.save(file, provider);

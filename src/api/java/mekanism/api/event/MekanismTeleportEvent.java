@@ -11,17 +11,22 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.BlockHitResult;
-import net.neoforged.fml.LogicalSide;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.entity.EntityTeleportEvent;
+import net.minecraft.world.phys.Vec3;
 
 /**
- * Base Mekanism extension of the {@link EntityTeleportEvent}.
+ * Fabric port delta: the upstream root was the NeoForge {@code EntityTeleportEvent} hierarchy; this port owns the base type ({@link MekanismEvent}) and the
+ * dispatch ({@link MekanismEventBus}), so the carried surface (teleporting entity, mutable target coordinates) lives here instead. Upstream javadoc
+ * statements about the NeoForge event bus and logical sides now read as "posted through {@link MekanismEventBus} on the server thread".
  *
  * @since 10.3.9
  */
 @NothingNullByDefault
-public class MekanismTeleportEvent extends EntityTeleportEvent {
+public class MekanismTeleportEvent extends MekanismEvent {
+
+    private final Entity entity;
+    private double targetX;
+    private double targetY;
+    private double targetZ;
 
     /**
      * @param entity  Entity teleporting.
@@ -30,7 +35,54 @@ public class MekanismTeleportEvent extends EntityTeleportEvent {
      * @param targetZ Destination z position.
      */
     protected MekanismTeleportEvent(Entity entity, double targetX, double targetY, double targetZ) {
-        super(entity, targetX, targetY, targetZ);
+        this.entity = entity;
+        this.targetX = targetX;
+        this.targetY = targetY;
+        this.targetZ = targetZ;
+    }
+
+    public Entity getEntity() {
+        return entity;
+    }
+
+    public double getTargetX() {
+        return targetX;
+    }
+
+    public void setTargetX(double targetX) {
+        this.targetX = targetX;
+    }
+
+    public double getTargetY() {
+        return targetY;
+    }
+
+    public void setTargetY(double targetY) {
+        this.targetY = targetY;
+    }
+
+    public double getTargetZ() {
+        return targetZ;
+    }
+
+    public void setTargetZ(double targetZ) {
+        this.targetZ = targetZ;
+    }
+
+    public Vec3 getTarget() {
+        return new Vec3(targetX, targetY, targetZ);
+    }
+
+    public double getPrevX() {
+        return getEntity().getX();
+    }
+
+    public double getPrevY() {
+        return getEntity().getY();
+    }
+
+    public double getPrevZ() {
+        return getEntity().getZ();
     }
 
     /**
@@ -42,9 +94,9 @@ public class MekanismTeleportEvent extends EntityTeleportEvent {
      * <br>
      * This event <strong>does not</strong> allow changing the target position.
      * <br>
-     * This event is fired on the {@link NeoForge#EVENT_BUS}.
+     * This event is fired on the {@link MekanismEventBus}.
      * <br>
-     * This event is only fired on the {@link LogicalSide#SERVER} side.
+     * This event is only fired on the server side.
      */
     public static class MekaTool extends MekanismTeleportEvent {
 
@@ -132,9 +184,9 @@ public class MekanismTeleportEvent extends EntityTeleportEvent {
      * <br>
      * This event <strong>does not</strong> allow changing the target position.
      * <br>
-     * This event is fired on the {@link NeoForge#EVENT_BUS}.
+     * This event is fired on the {@link MekanismEventBus}.
      * <br>
-     * This event is only fired on the {@link LogicalSide#SERVER} side.
+     * This event is only fired on the server side.
      *
      * @since 10.5.2
      */
@@ -161,9 +213,9 @@ public class MekanismTeleportEvent extends EntityTeleportEvent {
      * <br>
      * This event <strong>does not</strong> allow changing the target position.
      * <br>
-     * This event is fired on the {@link NeoForge#EVENT_BUS}.
+     * This event is fired on the {@link MekanismEventBus}.
      * <br>
-     * This event is only fired on the {@link LogicalSide#SERVER} side.
+     * This event is only fired on the server side.
      * <br>
      *
      * @apiNote This event is only fired once for the base entity, and is not fired for any of the passengers that are teleported with it. If you care about seeing
@@ -202,9 +254,9 @@ public class MekanismTeleportEvent extends EntityTeleportEvent {
      * <br>
      * This event <strong>does not</strong> allow changing the target position.
      * <br>
-     * This event is fired on the {@link NeoForge#EVENT_BUS}.
+     * This event is fired on the {@link MekanismEventBus}.
      * <br>
-     * This event is only fired on the {@link LogicalSide#SERVER} side.
+     * This event is only fired on the server side.
      *
      * @since 10.5.2
      */

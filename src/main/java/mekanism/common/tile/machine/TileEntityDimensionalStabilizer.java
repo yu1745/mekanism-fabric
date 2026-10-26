@@ -259,7 +259,7 @@ public class TileEntityDimensionalStabilizer extends TileEntityMekanism implemen
         //TODO - 1.20.4: Deduplicate this and the from nbt
         boolean changed = false;
         int lastChunksLoaded = chunksLoaded;
-        StabilizedChunks chunksToLoad = input.getOrDefault(MekanismDataComponents.STABILIZER_CHUNKS, StabilizedChunks.NONE);
+        StabilizedChunks chunksToLoad = input.getOrDefault(MekanismDataComponents.STABILIZER_CHUNKS.get(), StabilizedChunks.NONE);
         if (chunksToLoad == StabilizedChunks.NONE) {
             //Skip if we don't have any data
             return;
@@ -284,7 +284,7 @@ public class TileEntityDimensionalStabilizer extends TileEntityMekanism implemen
     @Override
     protected void collectImplicitComponents(@NotNull DataComponentMap.Builder builder) {
         super.collectImplicitComponents(builder);
-        builder.set(MekanismDataComponents.STABILIZER_CHUNKS, StabilizedChunks.create(this));
+        builder.set(MekanismDataComponents.STABILIZER_CHUNKS.get(), StabilizedChunks.create(this));
     }
 
     @Override

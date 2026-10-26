@@ -24,12 +24,12 @@ import org.jetbrains.annotations.NotNull;
 public class ItemCraftingFormula extends Item {
 
     public ItemCraftingFormula(Properties properties) {
-        super(properties.component(MekanismDataComponents.FORMULA_HOLDER, FormulaAttachment.EMPTY));
+        super(properties.component(MekanismDataComponents.FORMULA_HOLDER.get(), FormulaAttachment.EMPTY));
     }
 
     @Override
     public void appendHoverText(@NotNull ItemStack itemStack, @NotNull Item.TooltipContext context, @NotNull List<Component> tooltip, @NotNull TooltipFlag flag) {
-        Map<HashedItem, Integer> stacks = itemStack.getOrDefault(MekanismDataComponents.FORMULA_HOLDER, FormulaAttachment.EMPTY).nonEmptyItems()
+        Map<HashedItem, Integer> stacks = itemStack.getOrDefault(MekanismDataComponents.FORMULA_HOLDER.get(), FormulaAttachment.EMPTY).nonEmptyItems()
               .collect(Collectors.toMap(HashedItem::raw, ItemStack::getCount, Integer::sum, LinkedHashMap::new));
         if (!stacks.isEmpty()) {
             tooltip.add(MekanismLang.INGREDIENTS.translateColored(EnumColor.GRAY));
@@ -45,7 +45,7 @@ public class ItemCraftingFormula extends Item {
         ItemStack stack = player.getItemInHand(hand);
         if (player.isShiftKeyDown()) {
             if (!world.isClientSide) {
-                stack.set(MekanismDataComponents.FORMULA_HOLDER, FormulaAttachment.EMPTY);
+                stack.set(MekanismDataComponents.FORMULA_HOLDER.get(), FormulaAttachment.EMPTY);
             }
             return InteractionResultHolder.sidedSuccess(stack, world.isClientSide);
         }
@@ -55,7 +55,7 @@ public class ItemCraftingFormula extends Item {
     @NotNull
     @Override
     public Component getName(@NotNull ItemStack stack) {
-        FormulaAttachment attachment = stack.getOrDefault(MekanismDataComponents.FORMULA_HOLDER, FormulaAttachment.EMPTY);
+        FormulaAttachment attachment = stack.getOrDefault(MekanismDataComponents.FORMULA_HOLDER.get(), FormulaAttachment.EMPTY);
         if (attachment.hasItems()) {
             if (attachment.invalid()) {
                 return TextComponentUtil.build(super.getName(stack), " ", EnumColor.DARK_RED, MekanismLang.INVALID);

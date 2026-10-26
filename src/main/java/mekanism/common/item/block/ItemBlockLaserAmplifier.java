@@ -15,9 +15,9 @@ public class ItemBlockLaserAmplifier extends ItemBlockTooltip<BlockTileModel<Til
 
     public ItemBlockLaserAmplifier(BlockTileModel<TileEntityLaserAmplifier, BlockTypeTile<TileEntityLaserAmplifier>> block, Item.Properties properties) {
         super(block, true, properties
-              .component(MekanismDataComponents.REDSTONE_OUTPUT, RedstoneOutput.OFF)
-              .component(MekanismDataComponents.DELAY, 0)
-              .component(MekanismDataComponents.MIN_THRESHOLD, 0L)
+              .component(MekanismDataComponents.REDSTONE_OUTPUT.get(), RedstoneOutput.OFF)
+              .component(MekanismDataComponents.DELAY.get(), 0)
+              .component(MekanismDataComponents.MIN_THRESHOLD.get(), 0L)
         );
     }
 

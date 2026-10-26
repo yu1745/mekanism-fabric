@@ -19,13 +19,13 @@ import mekanism.api.recipes.SawmillRecipe;
 import mekanism.api.recipes.basic.BasicItemStackToFluidOptionalItemRecipe;
 import mekanism.client.recipe_viewer.recipe.BoilerRecipeViewerRecipe;
 import mekanism.client.recipe_viewer.recipe.SPSRecipeViewerRecipe;
-import mekanism.common.Mekanism;
 import mekanism.common.MekanismLang;
 import mekanism.common.recipe.MekanismRecipeType;
 import mekanism.common.registries.MekanismBlocks;
 import mekanism.common.registries.MekanismItems;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.MekanismUtils.ResourceType;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeType;
@@ -90,8 +90,8 @@ public class RecipeViewerRecipeType {
     //TODO - 1.20.4: Re-evaluate ^^
     public static final RVRecipeTypeWrapper<?, PressurizedReactionRecipe, ?> REACTION = new RVRecipeTypeWrapper<>(MekanismRecipeType.REACTION, PressurizedReactionRecipe.class, -3, -15, 170, 60, MekanismBlocks.PRESSURIZED_REACTION_CHAMBER);
 
-    public static final RotaryRVRecipeType CONDENSENTRATING = new RotaryRVRecipeType(Mekanism.rl("condensentrating"), MekanismLang.CONDENSENTRATING);
-    public static final RotaryRVRecipeType DECONDENSENTRATING = new RotaryRVRecipeType(Mekanism.rl("decondensentrating"), MekanismLang.DECONDENSENTRATING);
+    public static final RotaryRVRecipeType CONDENSENTRATING = new RotaryRVRecipeType(ResourceLocation.fromNamespaceAndPath("mekanism", "condensentrating"), MekanismLang.CONDENSENTRATING);
+    public static final RotaryRVRecipeType DECONDENSENTRATING = new RotaryRVRecipeType(ResourceLocation.fromNamespaceAndPath("mekanism", "decondensentrating"), MekanismLang.DECONDENSENTRATING);
 
     public static final RVRecipeTypeWrapper<?, SawmillRecipe, ?> SAWING = new RVRecipeTypeWrapper<>(MekanismRecipeType.SAWING, SawmillRecipe.class, -28, -16, 144, 54, MekanismBlocks.PRECISION_SAWMILL);
 

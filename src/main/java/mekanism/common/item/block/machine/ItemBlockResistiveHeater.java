@@ -13,7 +13,7 @@ public class ItemBlockResistiveHeater extends ItemBlockTooltip<BlockTile<?, ?>> 
 
     public ItemBlockResistiveHeater(BlockTile<?, ?> block, Item.Properties properties) {
         super(block, true, properties
-              .component(MekanismDataComponents.ENERGY_USAGE, TileEntityResistiveHeater.BASE_USAGE)
+              .component(MekanismDataComponents.ENERGY_USAGE.get(), TileEntityResistiveHeater.BASE_USAGE)
         );
     }
 

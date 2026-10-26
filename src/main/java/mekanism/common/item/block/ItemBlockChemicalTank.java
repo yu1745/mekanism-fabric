@@ -37,9 +37,9 @@ public class ItemBlockChemicalTank extends ItemBlockTooltip<BlockTileModel<TileE
 
     public ItemBlockChemicalTank(BlockTileModel<TileEntityChemicalTank, Machine<TileEntityChemicalTank>> block, Item.Properties properties) {
         super(block, true, properties
-              .component(MekanismDataComponents.DUMP_MODE, GasMode.IDLE)
-              .component(MekanismDataComponents.EJECTOR, AttachedEjector.DEFAULT)
-              .component(MekanismDataComponents.SIDE_CONFIG, SIDE_CONFIG)
+              .component(MekanismDataComponents.DUMP_MODE.get(), GasMode.IDLE)
+              .component(MekanismDataComponents.EJECTOR.get(), AttachedEjector.DEFAULT)
+              .component(MekanismDataComponents.SIDE_CONFIG.get(), SIDE_CONFIG)
         );
     }
 

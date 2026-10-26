@@ -43,8 +43,8 @@ public class ItemPortableQIODashboard extends Item implements IFrequencyItem, IG
 
     public ItemPortableQIODashboard(Properties properties) {
         super(properties.stacksTo(1).rarity(Rarity.RARE)
-              .component(MekanismDataComponents.INSERT_INTO_FREQUENCY, true)
-              .component(MekanismDataComponents.QIO_DASHBOARD, PortableDashboardContents.EMPTY)
+              .component(MekanismDataComponents.INSERT_INTO_FREQUENCY.get(), true)
+              .component(MekanismDataComponents.QIO_DASHBOARD.get(), PortableDashboardContents.EMPTY)
         );
     }
 
@@ -59,11 +59,6 @@ public class ItemPortableQIODashboard extends Item implements IFrequencyItem, IG
         MekanismUtils.addFrequencyItemTooltip(stack, tooltip);
         tooltip.add(MekanismLang.HAS_INVENTORY.translateColored(EnumColor.AQUA, EnumColor.GRAY, YesNo.hasInventory(stack)));
         super.appendHoverText(stack, context, tooltip, flag);
-    }
-
-    @Override
-    public boolean shouldCauseReequipAnimation(@NotNull ItemStack oldStack, @NotNull ItemStack newStack, boolean slotChanged) {
-        return slotChanged || oldStack.getItem() != newStack.getItem();
     }
 
     @NotNull

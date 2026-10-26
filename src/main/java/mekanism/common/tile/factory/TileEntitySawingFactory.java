@@ -16,7 +16,6 @@ import mekanism.api.recipes.outputs.IOutputHandler;
 import mekanism.api.recipes.outputs.OutputHelper;
 import mekanism.client.recipe_viewer.type.IRecipeViewerRecipeType;
 import mekanism.client.recipe_viewer.type.RecipeViewerRecipeType;
-import mekanism.common.Mekanism;
 import mekanism.common.capabilities.holder.slot.InventorySlotHelper;
 import mekanism.common.integration.computer.ComputerException;
 import mekanism.common.integration.computer.annotation.ComputerMethod;
@@ -43,8 +42,12 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TileEntitySawingFactory extends TileEntityFactory<SawmillRecipe> implements ItemRecipeLookupHandler<SawmillRecipe> {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism");
 
     private static final CheckRecipeType<ItemStack, SawmillRecipe, ItemStack, ItemStack> OUTPUT_CHECK = (recipe, input, output, extra) -> {
         ChanceOutput chanceOutput = recipe.getOutput(input);
@@ -169,7 +172,7 @@ public class TileEntitySawingFactory extends TileEntityFactory<SawmillRecipe> im
             //Validate we have the correct type of data before passing it upwards
             super.parseUpgradeData(provider, upgradeData);
         } else {
-            Mekanism.logger.warn("Unhandled upgrade data.", new Throwable());
+            LOGGER.warn("Unhandled upgrade data.", new Throwable());
         }
     }
 

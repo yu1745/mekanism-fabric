@@ -93,7 +93,7 @@ public class ItemMekaSuitArmor extends ItemSpecialArmor implements IModuleContai
 
     public ItemMekaSuitArmor(ArmorItem.Type armorType, Properties properties) {
         super(MekanismArmorMaterials.MEKASUIT, armorType, IModuleHelper.INSTANCE.applyModuleContainerProperties(
-              properties.rarity(Rarity.EPIC).setNoRepair().stacksTo(1)
+              properties.rarity(Rarity.EPIC).stacksTo(1)
         ));
         switch (armorType) {
             case HELMET -> {
@@ -184,41 +184,7 @@ public class ItemMekaSuitArmor extends ItemSpecialArmor implements IModuleContai
         return MekanismConfig.client.energyColor.get();
     }
 
-    @Override
-    public boolean isNotReplaceableByPickAction(ItemStack stack, Player player, int inventorySlot) {
-        //Try to avoid replacing this item if there are any modules currently installed
-        return super.isNotReplaceableByPickAction(stack, player, inventorySlot) || hasInstalledModules(stack);
-    }
-
-    @Override
-    public int getEnchantmentLevel(ItemStack stack, Holder<Enchantment> enchantment) {
-        //Enchantments in our data
-        IModuleContainer container = IModuleHelper.INSTANCE.getModuleContainer(stack);
-        int moduleLevel = container == null ? 0 : container.getModuleEnchantmentLevel(enchantment);
-        return Math.max(moduleLevel, super.getEnchantmentLevel(stack, enchantment));
-    }
-
     @NotNull
-    @Override
-    public ItemEnchantments getAllEnchantments(@NotNull ItemStack stack, RegistryLookup<Enchantment> lookup) {
-        ItemEnchantments enchantments = super.getAllEnchantments(stack, lookup);
-        IModuleContainer container = IModuleHelper.INSTANCE.getModuleContainer(stack);
-        if (container != null) {
-            ItemEnchantments moduleEnchantments = container.moduleBasedEnchantments();
-            if (enchantments.isEmpty()) {
-                //Skip copying if there are no builtin enchantments
-                return moduleEnchantments;
-            } else if (!moduleEnchantments.isEmpty()) {
-                ItemEnchantments.Mutable mutable = new ItemEnchantments.Mutable(enchantments);
-                for (Object2IntMap.Entry<Holder<Enchantment>> entry : moduleEnchantments.entrySet()) {
-                    mutable.upgrade(entry.getKey(), entry.getIntValue());
-                }
-                return mutable.toImmutable();
-            }
-        }
-        return enchantments;
-    }
-
     @Override
     public void addItems(Holder<Item> item, Consumer<ItemStack> tabOutput) {
         tabOutput.accept(StorageUtils.getFilledEnergyVariant(item));
@@ -388,18 +354,6 @@ public class ItemMekaSuitArmor extends ItemSpecialArmor implements IModuleContai
     @Override
     public float getToughness() {
         return getMaterial().value().toughness();
-    }
-
-    @Override
-    public boolean shouldCauseReequipAnimation(ItemStack oldStack, ItemStack newStack, boolean slotChanged) {
-        //Ignore NBT for energized items causing re-equip animations
-        return slotChanged || oldStack.getItem() != newStack.getItem();
-    }
-
-    @Override
-    public boolean shouldCauseBlockBreakReset(ItemStack oldStack, ItemStack newStack) {
-        //Ignore NBT for energized items causing block break reset
-        return oldStack.getItem() != newStack.getItem();
     }
 
     public static float getDamageAbsorbed(Player player, DamageSource source, float amount) {

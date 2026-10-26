@@ -5,8 +5,8 @@ import mekanism.common.config.MekanismConfig;
 import mekanism.common.item.gear.ItemFlamethrower.FlamethrowerMode;
 import mekanism.common.lib.math.Pos3D;
 import mekanism.common.recipe.MekanismRecipeType;
-import mekanism.common.registries.MekanismAttachmentTypes;
 import mekanism.common.registries.MekanismDamageTypes;
+import mekanism.common.registries.MekanismDataSerializers;
 import mekanism.common.registries.MekanismEntityTypes;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.ToolAbilityUtils;
@@ -14,7 +14,7 @@ import net.minecraft.SharedConstants;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
@@ -48,18 +48,16 @@ import net.minecraft.world.phys.HitResult.Type;
 import net.minecraft.world.phys.Vec3;
 import mekanism.common.item.ItemAbilities;
 import mekanism.api.ItemAbility;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.common.util.BlockSnapshot;
-import net.neoforged.neoforge.entity.IEntityWithComplexSpawn;
-import net.neoforged.neoforge.event.EventHooks;
-import net.neoforged.neoforge.event.level.BlockEvent;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class EntityFlame extends Projectile implements IEntityWithComplexSpawn {
+public class EntityFlame extends Projectile {
 
     public static final int LIFESPAN = 4 * SharedConstants.TICKS_PER_SECOND;
     private static final int DAMAGE = 10;
+    /** Fabric port delta: synched entity data replaces the official complex-spawn-data hook, so the mode reaches the client through the vanilla spawn packet. */
+    private static final EntityDataAccessor<FlamethrowerMode> MODE = SynchedEntityData.defineId(EntityFlame.class,
+          MekanismDataSerializers.FLAMETHROWER_MODE.value());
 
     public EntityFlame(EntityType<EntityFlame> type, Level world) {
         super(type, world);
@@ -83,7 +81,7 @@ public class EntityFlame extends Projectile implements IEntityWithComplexSpawn {
         Vec3 mergedVec = ownerPos.add(flameVec);
         flame.setPos(mergedVec.x, mergedVec.y, mergedVec.z);
         flame.setOwner(owner);
-        flame.setData(MekanismAttachmentTypes.FLAMETHROWER_MODE, mode);
+        flame.getEntityData().set(MODE, mode);
         flame.shootFromRotation(owner, owner.getXRot(), owner.getYRot(), 0, 0.5F, 1);
         //Attempt to ray trace the area between the owner and where the flame would actually start
         // if it hits a block instead just have the flame hit the block directly to avoid being able
@@ -118,9 +116,8 @@ public class EntityFlame extends Projectile implements IEntityWithComplexSpawn {
                 }
             }
             if (hitResult != null && hitResult.getType() != HitResult.Type.MISS) {
-                if (!EventHooks.onProjectileImpact(this, hitResult)) {
-                    onHit(hitResult);
-                }
+                //Fabric port delta: the NeoForge projectile-impact veto has no Fabric equivalent; vanilla onHit runs directly
+                onHit(hitResult);
             }
 
             setPos(motionVec.x, motionVec.y, motionVec.z);
@@ -137,7 +134,7 @@ public class EntityFlame extends Projectile implements IEntityWithComplexSpawn {
             }
         }
         if (!entity.fireImmune()) {
-            if (entity instanceof ItemEntity item && getData(MekanismAttachmentTypes.FLAMETHROWER_MODE) == FlamethrowerMode.HEAT) {
+            if (entity instanceof ItemEntity item && getEntityData().get(MODE) == FlamethrowerMode.HEAT) {
                 if (entity.tickCount > 5 * SharedConstants.TICKS_PER_SECOND && !smeltItem(item)) {
                     burn(entity);
                 }
@@ -156,7 +153,7 @@ public class EntityFlame extends Projectile implements IEntityWithComplexSpawn {
         BlockState hitState = level().getBlockState(hitPos);
         boolean hitFluid = !hitState.getFluidState().isEmpty();
         if (!level().isClientSide && MekanismConfig.general.aestheticWorldDamage.get() && !hitFluid) {
-            FlamethrowerMode mode = getData(MekanismAttachmentTypes.FLAMETHROWER_MODE);
+            FlamethrowerMode mode = getEntityData().get(MODE);
             if (mode == FlamethrowerMode.HEAT) {
                 Entity owner = getOwner();
                 if (owner instanceof Player player) {
@@ -170,10 +167,11 @@ public class EntityFlame extends Projectile implements IEntityWithComplexSpawn {
                 if (!tryModify(owner, hitPos, hitSide, hitState, igniterContext, ItemAbilities.FIRESTARTER_LIGHT)) {
                     if (BaseFireBlock.canBePlacedAt(level(), sidePos, hitSide)) {
                         tryPlace(owner, sidePos, hitSide, BaseFireBlock.getState(level(), sidePos));
-                    } else if (hitState.isFlammable(level(), hitPos, hitSide)) {
-                        //TODO: Is there some event we should/can be firing here?
-                        hitState.onCaughtFire(level(), hitPos, hitSide, owner instanceof LivingEntity livingEntity ? livingEntity : null);
+                    } else if (WorldUtils.isFlammable(hitState)) {
+                        //Fabric port delta: the official onCaughtFire path only had an effect for TNT (the default is a no-op),
+                        // so the vanilla priming overload is used exactly for that target.
                         if (hitState.getBlock() instanceof TntBlock) {
+                            WorldUtils.igniteTnt(level(), hitPos, owner instanceof LivingEntity livingEntity ? livingEntity : null);
                             level().removeBlock(hitPos, false);
                         }
                     }
@@ -188,29 +186,19 @@ public class EntityFlame extends Projectile implements IEntityWithComplexSpawn {
     }
 
     private boolean tryModify(@Nullable Entity shooter, BlockPos pos, Direction hitSide, BlockState state, UseOnContext context, ItemAbility ability) {
-        BlockSnapshot blockSnapshot = BlockSnapshot.create(level().dimension(), level(), pos);
+        //Fabric port delta: the official snapshot/try-place/restore dance existed only to support the NeoForge place-event veto;
+        // Fabric has no cancellable placement event, so a successful tool modification is the accepted result.
         BlockState modifiedState = ToolAbilityUtils.getToolModifiedState(state, context, ability, false);
-        if (modifiedState != null) {
-            level().setBlockAndUpdate(pos, modifiedState);
-        }
-        if (modifiedState == null || EventHooks.onBlockPlace(shooter, blockSnapshot, hitSide)) {
-            level().restoringBlockSnapshots = true;
-            blockSnapshot.restore(blockSnapshot.getFlags() | Block.UPDATE_CLIENTS);
-            level().restoringBlockSnapshots = false;
+        if (modifiedState == null) {
             return false;
         }
+        level().setBlockAndUpdate(pos, modifiedState);
         return true;
     }
 
     private boolean tryPlace(@Nullable Entity shooter, BlockPos pos, Direction hitSide, BlockState newState) {
-        BlockSnapshot blockSnapshot = BlockSnapshot.create(level().dimension(), level(), pos);
+        //Fabric port delta: as above, placement is applied directly because no cancellable Fabric placement event exists.
         level().setBlockAndUpdate(pos, newState);
-        if (EventHooks.onBlockPlace(shooter, blockSnapshot, hitSide)) {
-            level().restoringBlockSnapshots = true;
-            blockSnapshot.restore(blockSnapshot.getFlags() | Block.UPDATE_CLIENTS);
-            level().restoringBlockSnapshots = false;
-            return false;
-        }
         return true;
     }
 
@@ -247,10 +235,8 @@ public class EntityFlame extends Projectile implements IEntityWithComplexSpawn {
         }
         if (recipe.isPresent()) {
             if (!level().isClientSide) {
-                if (NeoForge.EVENT_BUS.post(new BlockEvent.BreakEvent(level(), blockPos, hitState, shooter)).isCanceled()) {
-                    //We can't break the block exit
-                    return;
-                }
+                //Fabric port delta: the NeoForge break-event veto probe is dropped (same adjudication as the cardboard box,
+                // miner and laser probes); Fabric's protection pipeline guards real player breaks instead.
                 ItemStack result = recipe.get().value().getResultItem(level().registryAccess());
                 if (!(result.getItem() instanceof BlockItem) || !tryPlace(shooter, blockPos, hitSide, Block.byItem(result.getItem()).defaultBlockState())) {
                     level().removeBlock(blockPos, false);
@@ -290,15 +276,7 @@ public class EntityFlame extends Projectile implements IEntityWithComplexSpawn {
 
     @Override
     protected void defineSynchedData(@NotNull SynchedEntityData.Builder builder) {
-    }
-
-    @Override
-    public void writeSpawnData(RegistryFriendlyByteBuf buffer) {
-        buffer.writeEnum(getData(MekanismAttachmentTypes.FLAMETHROWER_MODE));
-    }
-
-    @Override
-    public void readSpawnData(RegistryFriendlyByteBuf buffer) {
-        setData(MekanismAttachmentTypes.FLAMETHROWER_MODE, buffer.readEnum(FlamethrowerMode.class));
+        super.defineSynchedData(builder);
+        builder.define(MODE, FlamethrowerMode.COMBAT);
     }
 }

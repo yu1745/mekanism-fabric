@@ -1,20 +1,20 @@
 package mekanism.common.network.to_client;
 
 import io.netty.buffer.ByteBuf;
-import mekanism.common.Mekanism;
 import mekanism.common.network.IMekanismPacket;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.jetbrains.annotations.NotNull;
 
 public record PacketPortalFX(BlockPos pos, Direction direction) implements IMekanismPacket {
 
-    public static final CustomPacketPayload.Type<PacketPortalFX> TYPE = new CustomPacketPayload.Type<>(Mekanism.rl("portal_fx"));
+    public static final CustomPacketPayload.Type<PacketPortalFX> TYPE = new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("mekanism", "portal_fx"));
     public static final StreamCodec<ByteBuf, PacketPortalFX> STREAM_CODEC = StreamCodec.composite(
           BlockPos.STREAM_CODEC, PacketPortalFX::pos,
           Direction.STREAM_CODEC, PacketPortalFX::direction,
@@ -32,8 +32,8 @@ public record PacketPortalFX(BlockPos pos, Direction direction) implements IMeka
     }
 
     @Override
-    public void handle(IPayloadContext context) {
-        Level world = context.player().level();
+    public void handle(Player player) {
+        Level world = player.level();
         BlockPos secondPos = pos.relative(direction);
         for (int i = 0; i < 50; i++) {
             world.addParticle(ParticleTypes.PORTAL, pos.getX() + world.random.nextFloat(), pos.getY() + world.random.nextFloat(),

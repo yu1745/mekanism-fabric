@@ -1,7 +1,8 @@
 package mekanism.common.tile.multiblock;
 
-import mekanism.common.Mekanism;
+
 import mekanism.common.content.tank.TankMultiblockData;
+import mekanism.common.lib.multiblock.MekanismMultiblockManagers;
 import mekanism.common.lib.multiblock.MultiblockManager;
 import mekanism.common.registries.MekanismBlocks;
 import mekanism.common.tile.interfaces.IFluidContainerManager;
@@ -58,7 +59,7 @@ public class TileEntityDynamicTank extends TileEntityMultiblock<TankMultiblockDa
 
     @Override
     public MultiblockManager<TankMultiblockData> getManager() {
-        return Mekanism.tankManager;
+        return MekanismMultiblockManagers.tankManager;
     }
 
     @Override

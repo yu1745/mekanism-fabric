@@ -4,9 +4,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Supplier;
 import javax.annotation.Nullable;
-import mekanism.common.Mekanism;
 import mekanism.common.registration.MekanismDeferredHolder;
 import mekanism.common.registration.MekanismDeferredRegister;
+import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
+import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -17,12 +18,19 @@ import net.minecraft.world.entity.SpawnPlacements;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.level.levelgen.Heightmap;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
-import net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+/**
+ * Fabric port delta: the official NeoForge mod-bus listeners for entity attribute creation and spawn placements become part of
+ * {@link #registerAll(Registry)}. Fabric registers attributes through {@link FabricDefaultAttributeRegistry} and placements
+ * through the vanilla {@link SpawnPlacements} table, which is what the NeoForge events ultimately wrote to; the official AND
+ * operation collapsed because these registrations are the first (and only) placement entry for their types.
+ */
 public class EntityTypeDeferredRegister extends MekanismDeferredRegister<EntityType<?>> {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism");
 
     private Map<Supplier<? extends EntityType<? extends LivingEntity>>, Supplier<AttributeSupplier.Builder>> livingEntityAttributes = new HashMap<>();
     private Map<Supplier<? extends EntityType<? extends LivingEntity>>, SpawnPlacementData<?>> livingEntityPlacements = new HashMap<>();
@@ -38,15 +46,14 @@ public class EntityTypeDeferredRegister extends MekanismDeferredRegister<EntityT
 
     public <ENTITY extends LivingEntity> MekanismDeferredHolder<EntityType<?>, EntityType<ENTITY>> registerBasicPlacement(String name,
           Supplier<EntityType.Builder<ENTITY>> builder, Supplier<AttributeSupplier.Builder> attributes, SpawnPlacements.SpawnPredicate<ENTITY> placementPredicate) {
-        return register(name, builder, attributes, SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, placementPredicate,
-              RegisterSpawnPlacementsEvent.Operation.AND);
+        return register(name, builder, attributes, SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, placementPredicate);
     }
 
     public <ENTITY extends LivingEntity> MekanismDeferredHolder<EntityType<?>, EntityType<ENTITY>> register(String name, Supplier<EntityType.Builder<ENTITY>> builder,
           Supplier<AttributeSupplier.Builder> attributes, @Nullable SpawnPlacementType placementType, @Nullable Heightmap.Types heightmap,
-          SpawnPlacements.SpawnPredicate<ENTITY> placementPredicate, RegisterSpawnPlacementsEvent.Operation placementOperation) {
+          SpawnPlacements.SpawnPredicate<ENTITY> placementPredicate) {
         MekanismDeferredHolder<EntityType<?>, EntityType<ENTITY>> entityTypeRO = register(name, builder, attributes);
-        livingEntityPlacements.put(entityTypeRO, new SpawnPlacementData<>(placementType, heightmap, placementPredicate, placementOperation));
+        livingEntityPlacements.put(entityTypeRO, new SpawnPlacementData<>(placementType, heightmap, placementPredicate));
         return entityTypeRO;
     }
 
@@ -62,32 +69,32 @@ public class EntityTypeDeferredRegister extends MekanismDeferredRegister<EntityT
     }
 
     @Override
-    public void register(@NotNull IEventBus bus) {
-        super.register(bus);
-        bus.addListener(this::registerEntityAttributes);
-        bus.addListener(this::registerPlacements);
+    public void registerAll(@NotNull Registry<EntityType<?>> registry) {
+        super.registerAll(registry);
+        registerEntityAttributes();
+        registerPlacements();
     }
 
-    private void registerEntityAttributes(EntityAttributeCreationEvent event) {
+    private void registerEntityAttributes() {
         if (livingEntityAttributes == null) {
-            Mekanism.logger.error("Entity Attributes have already been created. This should not happen.");
+            LOGGER.error("Entity Attributes have already been created. This should not happen.");
         } else {
             //Register our living entity attributes
             for (Map.Entry<Supplier<? extends EntityType<? extends LivingEntity>>, Supplier<AttributeSupplier.Builder>> entry : livingEntityAttributes.entrySet()) {
-                event.put(entry.getKey().get(), entry.getValue().get().build());
+                FabricDefaultAttributeRegistry.register(entry.getKey().get(), entry.getValue().get().build());
             }
             //And set the map to null to allow it to be garbage collected
             livingEntityAttributes = null;
         }
     }
 
-    private void registerPlacements(RegisterSpawnPlacementsEvent event) {
+    private void registerPlacements() {
         if (livingEntityPlacements == null) {
-            Mekanism.logger.error("Entity Placements have already been set. This should not happen.");
+            LOGGER.error("Entity Placements have already been set. This should not happen.");
         } else {
             //Register our living entity placements
             for (Map.Entry<Supplier<? extends EntityType<? extends LivingEntity>>, SpawnPlacementData<?>> entry : livingEntityPlacements.entrySet()) {
-                entry.getValue().register(event, entry.getKey().get());
+                entry.getValue().register(entry.getKey().get());
             }
             //And set the map to null to allow it to be garbage collected
             livingEntityPlacements = null;
@@ -95,11 +102,15 @@ public class EntityTypeDeferredRegister extends MekanismDeferredRegister<EntityT
     }
 
     private record SpawnPlacementData<ENTITY extends LivingEntity>(@Nullable SpawnPlacementType placementType, @Nullable Heightmap.Types heightmap,
-                                                                  SpawnPlacements.SpawnPredicate<ENTITY> predicate,
-                                                                   RegisterSpawnPlacementsEvent.Operation operation) {
+                                                                   SpawnPlacements.SpawnPredicate<ENTITY> predicate) {
 
-        private void register(RegisterSpawnPlacementsEvent event, EntityType<?> entityType) {
-            event.register((EntityType<ENTITY>) entityType, placementType, heightmap, predicate, operation);
+        @SuppressWarnings("unchecked")
+        private void register(EntityType<?> entityType) {
+            if (placementType == null && heightmap == null) {
+                //Nothing was specified to register; keep the vanilla default rather than inventing a placement
+                return;
+            }
+            SpawnPlacements.register((EntityType<ENTITY>) entityType, placementType, heightmap, predicate);
         }
     }
 }

@@ -21,7 +21,7 @@ import mekanism.api.math.MathUtils;
 import mekanism.api.text.EnumColor;
 import mekanism.client.key.MekKeyHandler;
 import mekanism.client.key.MekanismKeyHandler;
-import mekanism.common.Mekanism;
+
 import mekanism.common.MekanismLang;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.content.gear.IBlastingItem;
@@ -75,17 +75,17 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import mekanism.api.ItemAbility;
-import net.neoforged.neoforge.common.NeoForge;
+import mekanism.api.event.MekanismEventBus;
 import mekanism.api.gear.GearAttributeContext;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class ItemMekaTool extends ItemEnergized implements IRadialModuleContainerItem, IBlastingItem {
 
-    private static final ResourceLocation RADIAL_ID = Mekanism.rl("meka_tool");
+    private static final ResourceLocation RADIAL_ID = ResourceLocation.fromNamespaceAndPath("mekanism", "meka_tool");
 
     public ItemMekaTool(Properties properties) {
-        super(IModuleHelper.INSTANCE.applyModuleContainerProperties(properties.rarity(Rarity.EPIC).setNoRepair().stacksTo(1)
+        super(IModuleHelper.INSTANCE.applyModuleContainerProperties(properties.rarity(Rarity.EPIC).stacksTo(1)
               .component(DataComponents.TOOL, new Tool(List.of(
                     Tool.Rule.deniesDrops(MekanismTags.Blocks.INCORRECT_FOR_MEKA_TOOL)
               ), 1, 0))
@@ -165,41 +165,6 @@ public class ItemMekaTool extends ItemEnergized implements IRadialModuleContaine
         IModule<ModuleExcavationEscalationUnit> module = container.getIfEnabled(MekanismModules.EXCAVATION_ESCALATION_UNIT);
         float efficiency = module == null ? MekanismConfig.gear.mekaToolBaseEfficiency.get() : module.getCustomInstance().getEfficiency();
         return MathUtils.clampToLong(destroyEnergy * efficiency);
-    }
-
-    @Override
-    public boolean isNotReplaceableByPickAction(ItemStack stack, Player player, int inventorySlot) {
-        //Try to avoid replacing this item if there are any modules currently installed
-        return super.isNotReplaceableByPickAction(stack, player, inventorySlot) || hasInstalledModules(stack);
-    }
-
-    @Override
-    public int getEnchantmentLevel(ItemStack stack, Holder<Enchantment> enchantment) {
-        //Enchantments in our data
-        IModuleContainer container = IModuleHelper.INSTANCE.getModuleContainer(stack);
-        int moduleLevel = container == null ? 0 : container.getModuleEnchantmentLevel(enchantment);
-        return Math.max(moduleLevel, super.getEnchantmentLevel(stack, enchantment));
-    }
-
-    @NotNull
-    @Override
-    public ItemEnchantments getAllEnchantments(@NotNull ItemStack stack, RegistryLookup<Enchantment> lookup) {
-        ItemEnchantments enchantments = super.getAllEnchantments(stack, lookup);
-        IModuleContainer container = IModuleHelper.INSTANCE.getModuleContainer(stack);
-        if (container != null) {
-            ItemEnchantments moduleEnchantments = container.moduleBasedEnchantments();
-            if (enchantments.isEmpty()) {
-                //Skip copying if there are no builtin enchantments
-                return moduleEnchantments;
-            } else if (!moduleEnchantments.isEmpty()) {
-                ItemEnchantments.Mutable mutable = new ItemEnchantments.Mutable(enchantments);
-                for (Object2IntMap.Entry<Holder<Enchantment>> entry : moduleEnchantments.entrySet()) {
-                    mutable.upgrade(entry.getKey(), entry.getIntValue());
-                }
-                return mutable.toImmutable();
-            }
-        }
-        return enchantments;
     }
 
     @NotNull
@@ -406,7 +371,7 @@ public class ItemMekaTool extends ItemEnergized implements IRadialModuleContaine
                         double targetY = pos.getY() + 1.5;
                         double targetZ = pos.getZ() + 0.5;
                         MekanismTeleportEvent.MekaTool event = new MekanismTeleportEvent.MekaTool(player, targetX, targetY, targetZ, stack, result);
-                        if (NeoForge.EVENT_BUS.post(event).isCanceled()) {
+                        if (MekanismEventBus.post(event).isCanceled()) {
                             //Fail if the event was cancelled
                             return InteractionResultHolder.fail(stack);
                         }
@@ -437,21 +402,6 @@ public class ItemMekaTool extends ItemEnergized implements IRadialModuleContaine
     @Override
     public boolean isEnchantable(@NotNull ItemStack stack) {
         return false;
-    }
-
-    @Override
-    public boolean isBookEnchantable(@NotNull ItemStack stack, @NotNull ItemStack book) {
-        return isEnchantable(stack) && super.isBookEnchantable(stack, book);
-    }
-
-    @Override
-    public boolean isPrimaryItemFor(@NotNull ItemStack stack, @NotNull Holder<Enchantment> enchantment) {
-        return isEnchantable(stack) && super.isPrimaryItemFor(stack, enchantment);
-    }
-
-    @Override
-    public boolean supportsEnchantment(@NotNull ItemStack stack, @NotNull Holder<Enchantment> enchantment) {
-        return isEnchantable(stack) && super.supportsEnchantment(stack, enchantment);
     }
 
     @Override

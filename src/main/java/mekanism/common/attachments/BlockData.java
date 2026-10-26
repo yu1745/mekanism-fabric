@@ -8,6 +8,7 @@ import java.util.function.Consumer;
 import java.util.stream.Stream;
 import mekanism.api.SerializationConstants;
 import mekanism.api.annotations.NothingNullByDefault;
+import mekanism.api.fluid.FluidStack;
 import mekanism.api.text.EnumColor;
 import mekanism.common.MekanismLang;
 import mekanism.common.config.MekanismConfig;
@@ -15,12 +16,16 @@ import mekanism.common.util.RegistryUtils;
 import mekanism.common.util.WorldUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -32,8 +37,6 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.PotDecorations;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.FluidType;
 import org.jetbrains.annotations.Nullable;
 
 @NothingNullByDefault
@@ -65,12 +68,13 @@ public record BlockData(BlockState blockState, @Nullable CompoundTag blockEntity
         }
 
         FluidState fluidState = adjustedState.getFluidState();
-        FluidType fluidType = fluidState.getFluidType();
         //Note: Doesn't support nbt
-        FluidStack fluid = new FluidStack(fluidState.getType(), FluidType.BUCKET_VOLUME);
+        FluidStack fluid = new FluidStack(fluidState.getType(), 1_000);
         BucketPickup tryPickup = null;
         //Do our best effort to support to not allow water to be placed into the nether
-        if (fluidType.isVaporizedOnPlacement(level, pos, fluid)) {
+        //Fabric port delta: vanilla's ultra-warm water rule replaces the NeoForge per-fluid-type placement hook; vanilla
+        // vaporizes exactly WATER in ultrawarm dimensions, which is the behavior the official hook guaranteed for vanilla fluids
+        if (level.dimensionType().ultraWarm() && fluidState.getType().is(FluidTags.WATER)) {
             if (!MekanismConfig.general.strictUnboxing.get() && adjustedState.getBlock() instanceof BucketPickup pickup) {
                 tryPickup = pickup;
             } else {
@@ -95,7 +99,12 @@ public record BlockData(BlockState blockState, @Nullable CompoundTag blockEntity
         }
         if (tryPickup != null) {
             if (!tryPickup.pickupBlock(player, level, pos, adjustedState).isEmpty()) {
-                fluidType.onVaporize(null, level, pos, fluid);
+                //Fabric port delta: the vanilla BucketItem vaporize effect replaces the NeoForge fluid-type callback
+                level.playSound(player, pos, SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 0.5F,
+                      2.6F + (level.random.nextFloat() - level.random.nextFloat()) * 0.8F);
+                for (int i = 0; i < 8; i++) {
+                    level.addParticle(ParticleTypes.LARGE_SMOKE, pos.getX() + Math.random(), pos.getY() + Math.random(), pos.getZ() + Math.random(), 0.0, 0.0, 0.0);
+                }
             }
         }
         return true;

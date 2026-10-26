@@ -1,7 +1,6 @@
 package mekanism.common.tile;
 
 import java.util.List;
-import mekanism.common.Mekanism;
 import mekanism.common.registries.MekanismDataComponents;
 import mekanism.common.registries.MekanismTileEntityTypes;
 import mekanism.common.tile.base.TileEntityUpdateable;
@@ -12,9 +11,13 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 //TODO: If we end up with more blocks where we care about the actual backing component, we should abstract some of this up into TileEntityUpdateable
 public class TileEntityCardboardBox extends TileEntityUpdateable {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism");
 
     public TileEntityCardboardBox(BlockPos pos, BlockState state) {
         super(MekanismTileEntityTypes.CARDBOARD_BOX, pos, state);
@@ -39,7 +42,7 @@ public class TileEntityCardboardBox extends TileEntityUpdateable {
             //If we have the block data component, just sync all the components to the client, as when handling the update tag
             // it deserializes any components and replaces the components with the new value
             ComponentHelper.COMPONENTS_CODEC.encodeStart(provider.createSerializationContext(NbtOps.INSTANCE), components())
-                  .resultOrPartial(error -> Mekanism.logger.warn("Failed to save components: {}", error))
+                  .resultOrPartial(error -> LOGGER.warn("Failed to save components: {}", error))
                   .ifPresent(tag -> updateTag.merge((CompoundTag) tag));
         }
         return updateTag;

@@ -18,7 +18,7 @@ import net.fabricmc.fabric.api.renderer.v1.material.RenderMaterial;
 import net.fabricmc.fabric.api.renderer.v1.mesh.QuadEmitter;
 import net.fabricmc.fabric.api.renderer.v1.model.FabricBakedModel;
 import net.fabricmc.fabric.api.renderer.v1.render.RenderContext;
-import net.fabricmc.fabric.api.rendering.data.v1.RenderAttachedBlockView;
+import net.fabricmc.fabric.api.blockview.v2.FabricBlockView;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.block.model.ItemOverrides;
 import net.minecraft.client.renderer.block.model.ItemTransforms;
@@ -39,7 +39,7 @@ import org.joml.Vector3f;
 /**
  * Fabric consumer for the transmitter block model: a real vanilla {@link BakedModel} (so it is the actual result of
  * the model loader) that additionally implements {@link FabricBakedModel} for chunk meshing. During meshing the block
- * view is a Fabric {@link RenderAttachedBlockView}, and the attachment (the immutable {@link TransmitterModelData}
+ * view is a Fabric {@link FabricBlockView}, and the block entity render data (the immutable {@link TransmitterModelData}
  * snapshot published by {@code TileEntityTransmitter}) is the only data source consulted — never the live tile.
  *
  * <p>Six-part selection, end-icon rotation, opaque texture remapping, glass/cutout split (internal parts emit with a
@@ -122,8 +122,8 @@ public final class FabricTransmitterBakedModel implements BakedModel, FabricBake
 
     @Override
     public void emitBlockQuads(BlockAndTintGetter blockView, BlockState state, BlockPos pos, java.util.function.Supplier<RandomSource> randomSupplier, RenderContext context) {
-        Object attachment = blockView instanceof RenderAttachedBlockView renderAttachedView
-              ? renderAttachedView.getBlockEntityRenderAttachment(pos) : null;
+        Object attachment = blockView instanceof FabricBlockView fabricView
+              ? fabricView.getBlockEntityRenderData(pos) : null;
         if (attachment instanceof TransmitterModelData data) {
             //The producer is required to publish immutable snapshots; this consumer only reads them
             emit(data, context);

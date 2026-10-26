@@ -31,9 +31,9 @@ public class ItemBlockFactory extends ItemBlockTooltip<BlockTile<?, ?>> {
 
     public ItemBlockFactory(BlockFactory<?> block, Properties properties) {
         super(block, true, properties
-              .component(MekanismDataComponents.SORTING, false)
-              .component(MekanismDataComponents.EJECTOR, AttachedEjector.DEFAULT)
-              .component(MekanismDataComponents.SIDE_CONFIG, getSideConfig(block))
+              .component(MekanismDataComponents.SORTING.get(), false)
+              .component(MekanismDataComponents.EJECTOR.get(), AttachedEjector.DEFAULT)
+              .component(MekanismDataComponents.SIDE_CONFIG.get(), getSideConfig(block))
         );
     }
 

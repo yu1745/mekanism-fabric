@@ -12,7 +12,7 @@ import mekanism.api.text.EnumColor;
 import mekanism.api.text.IHasTextComponent.IHasEnumNameTextComponent;
 import mekanism.api.text.ILangEntry;
 import mekanism.common.CommonPlayerTickHandler;
-import mekanism.common.Mekanism;
+
 import mekanism.common.MekanismLang;
 import mekanism.common.integration.curios.CuriosIntegration;
 import mekanism.common.util.MekanismUtils;
@@ -129,7 +129,7 @@ public interface IJetpackItem {
         ItemStack chest = entity.getItemBySlot(EquipmentSlot.CHEST);
         if (matcher.test(chest)) {
             return chest;
-        } else if (Mekanism.hooks.curios.isLoaded()) {
+        } else if (CuriosIntegration.isLoaded()) {
             return CuriosIntegration.findFirstCurio(entity, matcher);
         }
         return ItemStack.EMPTY;

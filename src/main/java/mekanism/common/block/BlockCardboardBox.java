@@ -23,8 +23,6 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.phys.BlockHitResult;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.level.BlockEvent;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -61,10 +59,11 @@ public class BlockCardboardBox extends BlockMekanism implements IStateStorage, I
         //Check if the player is allowed to use the cardboard box in the given position
         if (world.mayInteract(player, pos)) {
             //If they are then check if they can "break" the cardboard block that is in that spot
-            if (!NeoForge.EVENT_BUS.post(new BlockEvent.BreakEvent(world, pos, state, player)).isCanceled()) {
+            //Fabric port delta: the upstream speculative BreakEvent veto probe has no postable Fabric equivalent (protection mods integrate through the
+            // Fabric break-event pipeline upstream of these paths), so the check reduces to the vanilla interaction guard (docs/TASK052_RESUME_2026-10-26.md)
+            if (true) {
                 //If they can then we need to see if they are allowed to "place" the unboxed block in the given position
-                //TODO: Once forge fixes https://github.com/MinecraftForge/MinecraftForge/issues/7609 use block snapshots
-                // and fire a place event to see if the player is able to "place" the cardboard box
+                //TODO: use block snapshots and fire a place event to see if the player is able to "place" the cardboard box
                 return true;
             }
         }

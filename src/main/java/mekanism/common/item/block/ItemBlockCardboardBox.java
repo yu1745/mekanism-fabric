@@ -30,8 +30,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.level.BlockEvent;
 import org.jetbrains.annotations.NotNull;
 
 public class ItemBlockCardboardBox extends ItemBlockMekanism<BlockCardboardBox> {
@@ -104,7 +102,7 @@ public class ItemBlockCardboardBox extends ItemBlockMekanism<BlockCardboardBox> 
                     if (box != null) {
                         box.setComponents(DataComponentMap.builder()
                               .addAll(box.components())
-                              .set(MekanismDataComponents.BLOCK_DATA, data)
+                              .set(MekanismDataComponents.BLOCK_DATA.get(), data)
                               .build());
                     }
                 }

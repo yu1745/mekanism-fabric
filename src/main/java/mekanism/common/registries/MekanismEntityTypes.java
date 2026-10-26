@@ -1,6 +1,6 @@
 package mekanism.common.registries;
 
-import mekanism.common.Mekanism;
+
 import mekanism.common.entity.EntityFlame;
 import mekanism.common.entity.EntityRobit;
 import mekanism.common.registration.MekanismDeferredHolder;
@@ -14,7 +14,7 @@ public class MekanismEntityTypes {
     private MekanismEntityTypes() {
     }
 
-    public static final EntityTypeDeferredRegister ENTITY_TYPES = new EntityTypeDeferredRegister(Mekanism.MODID);
+    public static final EntityTypeDeferredRegister ENTITY_TYPES = new EntityTypeDeferredRegister("mekanism");
 
     public static final MekanismDeferredHolder<EntityType<?>, EntityType<EntityFlame>> FLAME = ENTITY_TYPES.registerBuilder("flame", () -> EntityType.Builder.of(EntityFlame::new, MobCategory.MISC)
           .fireImmune()

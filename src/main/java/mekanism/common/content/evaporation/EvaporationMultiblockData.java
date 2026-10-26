@@ -53,8 +53,11 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
-import net.neoforged.neoforge.fluids.FluidStack;
+import mekanism.api.fluid.FluidStack;
+import net.fabricmc.fabric.api.lookup.v1.block.BlockApiCache;
+import net.fabricmc.fabric.api.lookup.v1.block.BlockApiLookup;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -96,7 +99,14 @@ public class EvaporationMultiblockData extends MultiblockData implements IValveH
     @ContainerSync
     private final boolean[] trackedErrors = new boolean[TRACKED_ERROR_TYPES.size()];
 
-    private final Int2ObjectMap<BlockCapabilityCache<IEvaporationSolar, Void>> cachedSolar = new Int2ObjectArrayMap<>(4);
+    /**
+     * Fabric port delta: Mekanism-owned evaporation-solar lookup identity (upstream it lived on the unported {@code Capabilities} catalog); providers
+     * register on it when the tile registry vertical lands.
+     */
+    public static final BlockApiLookup<IEvaporationSolar, Void> EVAPORATION_SOLAR = BlockApiLookup.get(
+          ResourceLocation.fromNamespaceAndPath("mekanism", "evaporation_solar"), IEvaporationSolar.class, Void.class);
+
+    private final Int2ObjectMap<BlockApiCache<IEvaporationSolar, Void>> cachedSolar = new Int2ObjectArrayMap<>(4);
 
     private final IOutputHandler<@NotNull FluidStack> outputHandler;
     private final IInputHandler<@NotNull FluidStack> inputHandler;
@@ -288,8 +298,8 @@ public class EvaporationMultiblockData extends MultiblockData implements IValveH
     @ComputerMethod
     int getActiveSolars() {
         int ret = 0;
-        for (BlockCapabilityCache<IEvaporationSolar, Void> capability : cachedSolar.values()) {
-            IEvaporationSolar solar = capability.getCapability();
+        for (BlockApiCache<IEvaporationSolar, Void> capability : cachedSolar.values()) {
+            IEvaporationSolar solar = capability.find(null);
             if (solar != null && solar.canSeeSun()) {
                 ret++;
             }
@@ -300,7 +310,7 @@ public class EvaporationMultiblockData extends MultiblockData implements IValveH
     private void updateSolarSpot(Level world, BlockPos pos, int corner) {
         //Create a capability cache for the given corner. When we are unformed we will clear references to our caches
         // which allow them to be garbage collected
-        cachedSolar.put(corner, BlockCapabilityCache.create(Capabilities.EVAPORATION_SOLAR, (ServerLevel) world, pos, null));
+        cachedSolar.put(corner, BlockApiCache.create(EVAPORATION_SOLAR, (ServerLevel) world, pos));
     }
 
     private void updateSolars(Level world) {

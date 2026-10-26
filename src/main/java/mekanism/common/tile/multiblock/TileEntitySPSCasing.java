@@ -3,8 +3,9 @@ package mekanism.common.tile.multiblock;
 import java.util.LinkedList;
 import java.util.Queue;
 import mekanism.api.SerializationConstants;
-import mekanism.common.Mekanism;
+
 import mekanism.common.content.sps.SPSMultiblockData;
+import mekanism.common.lib.multiblock.MekanismMultiblockManagers;
 import mekanism.common.lib.multiblock.MultiblockManager;
 import mekanism.common.particle.SPSOrbitEffect;
 import mekanism.common.registries.MekanismBlocks;
@@ -74,7 +75,7 @@ public class TileEntitySPSCasing extends TileEntityMultiblock<SPSMultiblockData>
 
     @Override
     public MultiblockManager<SPSMultiblockData> getManager() {
-        return Mekanism.spsManager;
+        return MekanismMultiblockManagers.spsManager;
     }
 
     @Override

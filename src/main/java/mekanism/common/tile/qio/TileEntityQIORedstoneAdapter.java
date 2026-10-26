@@ -26,7 +26,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.client.model.data.ModelData;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -132,11 +131,8 @@ public class TileEntityQIORedstoneAdapter extends TileEntityQIOComponent {
 
     @NotNull
     @Override
-    public ModelData getModelData() {
-        if (isEmitting) {
-            return ModelData.of(DataBasedModelLoader.EMITTING, null);
-        }
-        return super.getModelData();
+    public Boolean getRenderData() {
+        return isEmitting ? Boolean.TRUE : null;
     }
 
     @NotNull
@@ -160,19 +156,19 @@ public class TileEntityQIORedstoneAdapter extends TileEntityQIOComponent {
     @Override
     protected void collectImplicitComponents(@NotNull DataComponentMap.Builder builder) {
         super.collectImplicitComponents(builder);
-        builder.set(MekanismDataComponents.ITEM_TARGET, Optional.ofNullable(itemType));
-        builder.set(MekanismDataComponents.LONG_AMOUNT, count);
-        builder.set(MekanismDataComponents.FUZZY, fuzzy);
-        builder.set(MekanismDataComponents.INVERSE, inverted);
+        builder.set(MekanismDataComponents.ITEM_TARGET.get(), Optional.ofNullable(itemType));
+        builder.set(MekanismDataComponents.LONG_AMOUNT.get(), count);
+        builder.set(MekanismDataComponents.FUZZY.get(), fuzzy);
+        builder.set(MekanismDataComponents.INVERSE.get(), inverted);
     }
 
     @Override
     protected void applyImplicitComponents(@NotNull BlockEntity.DataComponentInput input) {
         super.applyImplicitComponents(input);
-        itemType = input.getOrDefault(MekanismDataComponents.ITEM_TARGET, Optional.empty()).orElse(null);
-        count = input.getOrDefault(MekanismDataComponents.LONG_AMOUNT, count);
-        fuzzy = input.getOrDefault(MekanismDataComponents.FUZZY, fuzzy);
-        inverted = input.getOrDefault(MekanismDataComponents.INVERSE, inverted);
+        itemType = input.getOrDefault(MekanismDataComponents.ITEM_TARGET.get(), Optional.empty()).orElse(null);
+        count = input.getOrDefault(MekanismDataComponents.LONG_AMOUNT.get(), count);
+        fuzzy = input.getOrDefault(MekanismDataComponents.FUZZY.get(), fuzzy);
+        inverted = input.getOrDefault(MekanismDataComponents.INVERSE.get(), inverted);
     }
 
     @ComputerMethod(nameOverride = "getTargetItem")

@@ -4,7 +4,6 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 import mekanism.api.functions.ConstantPredicates;
 import mekanism.api.security.IBlockSecurityUtils;
-import mekanism.common.Mekanism;
 import mekanism.common.block.BlockEnergyCube;
 import mekanism.common.block.basic.BlockBin;
 import mekanism.common.block.basic.BlockFluidTank;
@@ -15,6 +14,7 @@ import mekanism.common.integration.computer.ComputerCapabilityHelper;
 import mekanism.common.integration.energy.EnergyCompatUtils;
 import mekanism.common.item.block.ItemBlockChemicalTank;
 import mekanism.common.item.block.machine.ItemBlockFactory;
+import mekanism.common.registration.MekanismDeferredHolder;
 import mekanism.common.registration.impl.BlockRegistryObject;
 import mekanism.common.registration.impl.TileEntityTypeDeferredRegister;
 import mekanism.common.registration.impl.TileEntityTypeDeferredRegister.BlockEntityTypeBuilder;
@@ -116,7 +116,6 @@ import net.minecraft.core.Holder;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.registries.DeferredHolder;
 
 public class MekanismTileEntityTypes {
 
@@ -517,56 +516,56 @@ public class MekanismTileEntityTypes {
 
     private static TileEntityTypeRegistryObject<TileEntityDiversionTransporter> registerDiversionTransporter() {
         BlockEntityTypeBuilder<TileEntityDiversionTransporter> builder = transporterBuilder(MekanismBlocks.DIVERSION_TRANSPORTER, TileEntityDiversionTransporter::new);
-        if (Mekanism.hooks.computerCompatEnabled()) {
+        if (ComputerCapabilityHelper.isEnabled()) {
             ComputerCapabilityHelper.addComputerCapabilities(builder, ConstantPredicates.ALWAYS_TRUE);
         }
         return builder.build();
     }
 
-    private static <BE extends TileEntityLogisticalTransporterBase> TileEntityTypeRegistryObject<BE> registerTransporter(DeferredHolder<Block, ?> block, BlockEntityFactory<BE> factory) {
+    private static <BE extends TileEntityLogisticalTransporterBase> TileEntityTypeRegistryObject<BE> registerTransporter(MekanismDeferredHolder<Block, ?> block, BlockEntityFactory<BE> factory) {
         return transporterBuilder(block, factory).build();
     }
 
-    private static <BE extends TileEntityLogisticalTransporterBase> BlockEntityTypeBuilder<BE> transporterBuilder(DeferredHolder<Block, ?> block, BlockEntityFactory<BE> factory) {
+    private static <BE extends TileEntityLogisticalTransporterBase> BlockEntityTypeBuilder<BE> transporterBuilder(MekanismDeferredHolder<Block, ?> block, BlockEntityFactory<BE> factory) {
         return transmitterBuilder(block, factory)
               .clientTicker(TileEntityLogisticalTransporterBase::tickClient)
               .with(Capabilities.ITEM.block(), CapabilityTileEntity.ITEM_HANDLER_PROVIDER);
     }
 
-    private static TileEntityTypeRegistryObject<TileEntityMechanicalPipe> registerPipe(DeferredHolder<Block, ?> block) {
+    private static TileEntityTypeRegistryObject<TileEntityMechanicalPipe> registerPipe(MekanismDeferredHolder<Block, ?> block) {
         BlockEntityTypeBuilder<TileEntityMechanicalPipe> builder = transmitterBuilder(block, TileEntityMechanicalPipe::new)
               .with(Capabilities.FLUID.block(), CapabilityTileEntity.FLUID_HANDLER_PROVIDER);
-        if (Mekanism.hooks.computerCompatEnabled()) {
+        if (ComputerCapabilityHelper.isEnabled()) {
             ComputerCapabilityHelper.addComputerCapabilities(builder, ConstantPredicates.ALWAYS_TRUE);
         }
         return builder.build();
     }
 
-    private static TileEntityTypeRegistryObject<TileEntityPressurizedTube> registerTube(DeferredHolder<Block, ?> block) {
+    private static TileEntityTypeRegistryObject<TileEntityPressurizedTube> registerTube(MekanismDeferredHolder<Block, ?> block) {
         BlockEntityTypeBuilder<TileEntityPressurizedTube> builder = transmitterBuilder(block, TileEntityPressurizedTube::new)
               .with(Capabilities.CHEMICAL.block(), CapabilityTileEntity.CHEMICAL_HANDLER_PROVIDER);
-        if (Mekanism.hooks.computerCompatEnabled()) {
+        if (ComputerCapabilityHelper.isEnabled()) {
             ComputerCapabilityHelper.addComputerCapabilities(builder, ConstantPredicates.ALWAYS_TRUE);
         }
         return builder.build();
     }
 
-    private static TileEntityTypeRegistryObject<TileEntityThermodynamicConductor> registerConductor(DeferredHolder<Block, ?> block) {
+    private static TileEntityTypeRegistryObject<TileEntityThermodynamicConductor> registerConductor(MekanismDeferredHolder<Block, ?> block) {
         return transmitterBuilder(block, TileEntityThermodynamicConductor::new)
               .with(Capabilities.HEAT, CapabilityTileEntity.HEAT_HANDLER_PROVIDER)
               .build();
     }
 
-    private static TileEntityTypeRegistryObject<TileEntityUniversalCable> registerCable(DeferredHolder<Block, ?> block) {
+    private static TileEntityTypeRegistryObject<TileEntityUniversalCable> registerCable(MekanismDeferredHolder<Block, ?> block) {
         BlockEntityTypeBuilder<TileEntityUniversalCable> builder = transmitterBuilder(block, TileEntityUniversalCable::new);
         EnergyCompatUtils.addBlockCapabilities(builder);
-        if (Mekanism.hooks.computerCompatEnabled()) {
+        if (ComputerCapabilityHelper.isEnabled()) {
             ComputerCapabilityHelper.addComputerCapabilities(builder, ConstantPredicates.ALWAYS_TRUE);
         }
         return builder.build();
     }
 
-    private static <BE extends TileEntityTransmitter> BlockEntityTypeBuilder<BE> transmitterBuilder(DeferredHolder<Block, ?> block, BlockEntityFactory<BE> factory) {
+    private static <BE extends TileEntityTransmitter> BlockEntityTypeBuilder<BE> transmitterBuilder(MekanismDeferredHolder<Block, ?> block, BlockEntityFactory<BE> factory) {
         return TILE_ENTITY_TYPES.builder(block, (pos, state) -> factory.create(block, pos, state))
               .serverTicker(TileEntityTransmitter::tickServer)
               .withSimple(Capabilities.ALLOY_INTERACTION)
@@ -581,7 +580,7 @@ public class MekanismTileEntityTypes {
     public static final TileEntityTypeRegistryObject<TileEntityEnergyCube> ULTIMATE_ENERGY_CUBE = registerEnergyCube(MekanismBlocks.ULTIMATE_ENERGY_CUBE);
     public static final TileEntityTypeRegistryObject<TileEntityEnergyCube> CREATIVE_ENERGY_CUBE = registerEnergyCube(MekanismBlocks.CREATIVE_ENERGY_CUBE);
 
-    private static TileEntityTypeRegistryObject<TileEntityEnergyCube> registerEnergyCube(DeferredHolder<Block, BlockEnergyCube> block) {
+    private static TileEntityTypeRegistryObject<TileEntityEnergyCube> registerEnergyCube(MekanismDeferredHolder<Block, BlockEnergyCube> block) {
         return TILE_ENTITY_TYPES.mekBuilder(block, (pos, state) -> new TileEntityEnergyCube(block, pos, state))
               .serverTicker(TileEntityMekanism::tickServer)
               .withSimple(Capabilities.CONFIG_CARD)
@@ -609,7 +608,7 @@ public class MekanismTileEntityTypes {
     public static final TileEntityTypeRegistryObject<TileEntityFluidTank> ULTIMATE_FLUID_TANK = registerFluidTank(MekanismBlocks.ULTIMATE_FLUID_TANK);
     public static final TileEntityTypeRegistryObject<TileEntityFluidTank> CREATIVE_FLUID_TANK = registerFluidTank(MekanismBlocks.CREATIVE_FLUID_TANK);
 
-    private static TileEntityTypeRegistryObject<TileEntityFluidTank> registerFluidTank(DeferredHolder<Block, BlockFluidTank> block) {
+    private static TileEntityTypeRegistryObject<TileEntityFluidTank> registerFluidTank(MekanismDeferredHolder<Block, BlockFluidTank> block) {
         return TILE_ENTITY_TYPES.mekBuilder(block, (pos, state) -> new TileEntityFluidTank(block, pos, state))
               .clientTicker(TileEntityMekanism::tickClient)
               .serverTicker(TileEntityMekanism::tickServer)
@@ -625,7 +624,7 @@ public class MekanismTileEntityTypes {
     public static final TileEntityTypeRegistryObject<TileEntityBin> ULTIMATE_BIN = registerBin(MekanismBlocks.ULTIMATE_BIN);
     public static final TileEntityTypeRegistryObject<TileEntityBin> CREATIVE_BIN = registerBin(MekanismBlocks.CREATIVE_BIN);
 
-    private static TileEntityTypeRegistryObject<TileEntityBin> registerBin(DeferredHolder<Block, BlockBin> block) {
+    private static TileEntityTypeRegistryObject<TileEntityBin> registerBin(MekanismDeferredHolder<Block, BlockBin> block) {
         return TILE_ENTITY_TYPES.mekBuilder(block, (pos, state) -> new TileEntityBin(block, pos, state))
               .serverTicker(TileEntityMekanism::tickServer)
               .withSimple(Capabilities.CONFIGURABLE)

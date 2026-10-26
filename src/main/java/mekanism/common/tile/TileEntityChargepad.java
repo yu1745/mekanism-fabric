@@ -7,13 +7,11 @@ import mekanism.api.AutomationType;
 import mekanism.api.IContentsListener;
 import mekanism.api.RelativeSide;
 import mekanism.api.energy.IStrictEnergyHandler;
-import mekanism.common.Mekanism;
 import mekanism.common.capabilities.Capabilities;
 import mekanism.common.capabilities.energy.MachineEnergyContainer;
 import mekanism.common.capabilities.holder.energy.EnergyContainerHelper;
 import mekanism.common.capabilities.holder.energy.IEnergyContainerHolder;
 import mekanism.common.entity.EntityRobit;
-import mekanism.common.integration.curios.CuriosIntegration;
 import mekanism.common.integration.energy.EnergyCompatUtils;
 import mekanism.common.registries.MekanismBlocks;
 import mekanism.common.tile.base.TileEntityMekanism;
@@ -23,11 +21,11 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
-import net.neoforged.neoforge.items.IItemHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -61,15 +59,12 @@ public class TileEntityChargepad extends TileEntityMekanism {
                 if (energyContainer.isEmpty()) {
                     //If we run out of energy, stop checking the remaining entities
                     break;
-                } else if (entity instanceof Player) {
-                    IItemHandler itemHandler = Capabilities.ITEM.getCapability(entity);
-                    if (chargeHandler(itemHandler)) {
+                } else if (entity instanceof Player player) {
+                    //Fabric port delta: Fabric has no entity item capability; the upstream player handler wrapped the vanilla inventory, which is what we
+                    // iterate directly. The Curios fallback is on the unbound integration boundary (docs/TASK052_ADJUDICATION_GEAR_CATALOG.md) and is
+                    // absent until the artifact can be pinned and the integration audited
+                    if (chargeHandler(player.getInventory())) {
                         active = true;
-                    } else if (Mekanism.hooks.curios.isLoaded()) {
-                        //If we didn't charge anything in the inventory and curios is loaded try charging things in the curios slots
-                        if (chargeHandler(CuriosIntegration.getCuriosInventory(entity))) {
-                            active = true;
-                        }
                     }
                 } else if (provideEnergy(EnergyCompatUtils.getStrictEnergyHandler(entity))) {
                     //Note: Robits are handled by this path
@@ -83,12 +78,12 @@ public class TileEntityChargepad extends TileEntityMekanism {
         return sendUpdatePacket;
     }
 
-    private boolean chargeHandler(@Nullable IItemHandler itemHandler) {
-        //Ensure that we have an item handler capability, because if for example the player is dead we will not
-        if (itemHandler != null) {
-            int slots = itemHandler.getSlots();
+    private boolean chargeHandler(@Nullable Container inventory) {
+        //Ensure that we have an inventory, because if for example the player is dead we will not
+        if (inventory != null) {
+            int slots = inventory.getContainerSize();
             for (int slot = 0; slot < slots; slot++) {
-                ItemStack stack = itemHandler.getStackInSlot(slot);
+                ItemStack stack = inventory.getItem(slot);
                 if (!stack.isEmpty() && provideEnergy(EnergyCompatUtils.getStrictEnergyHandler(stack))) {
                     //Only allow charging one item per player each check
                     return true;

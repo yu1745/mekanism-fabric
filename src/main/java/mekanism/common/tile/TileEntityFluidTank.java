@@ -11,7 +11,6 @@ import mekanism.common.util.WorldUtils;
 import net.fabricmc.fabric.api.transfer.v1.fluid.FluidStorage;
 import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
 import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
-import mekanism.common.Mekanism;
 import mekanism.common.attachments.containers.ContainerType;
 import mekanism.common.block.attribute.Attribute;
 import mekanism.common.capabilities.fluid.FluidTankFluidTank;
@@ -66,8 +65,12 @@ import net.minecraft.world.level.material.Fluid;
 import mekanism.api.fluid.FluidStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TileEntityFluidTank extends TileEntityMekanism implements IConfigurable, IFluidContainerManager {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism");
 
     @WrappingComputerMethod(wrapper = ComputerFluidTankWrapper.class, methodNames = {"getStored", "getCapacity", "getNeeded",
                                                                                      "getFilledPercentage"}, docPlaceholder = "tank")
@@ -211,13 +214,13 @@ public class TileEntityFluidTank extends TileEntityMekanism implements IConfigur
     @Override
     protected void collectImplicitComponents(@NotNull DataComponentMap.Builder builder) {
         super.collectImplicitComponents(builder);
-        builder.set(MekanismDataComponents.EDIT_MODE, editMode);
+        builder.set(MekanismDataComponents.EDIT_MODE.get(), editMode);
     }
 
     @Override
     protected void applyImplicitComponents(@NotNull BlockEntity.DataComponentInput input) {
         super.applyImplicitComponents(input);
-        editMode = input.getOrDefault(MekanismDataComponents.EDIT_MODE, editMode);
+        editMode = input.getOrDefault(MekanismDataComponents.EDIT_MODE.get(), editMode);
     }
 
     @Override
@@ -348,7 +351,7 @@ public class TileEntityFluidTank extends TileEntityMekanism implements IConfigur
             ResourceLocation key = RegistryUtils.getName(fluid.getFluidHolder());
             if (key == null) {
                 //Note: This should never be null as it returns a reference holder, but if it is, log an error
-                Mekanism.logger.error("Attempted to sync a fluid tank that is storing an unregistered fluid. This should not happen, and likely indicates a porting bug.");
+                LOGGER.error("Attempted to sync a fluid tank that is storing an unregistered fluid. This should not happen, and likely indicates a porting bug.");
             } else {
                 fluidData.putString(SerializationConstants.ID, key.toString());
                 if (!fluid.isComponentsPatchEmpty()) {
@@ -358,7 +361,7 @@ public class TileEntityFluidTank extends TileEntityMekanism implements IConfigur
                     if (componentData.isSuccess()) {
                         fluidData.put(SerializationConstants.DATA, componentData.getOrThrow());
                     } else {
-                        componentData.ifError(error -> Mekanism.logger.error("Failed to encode fluid stack component data: {}", error.message()));
+                        componentData.ifError(error -> LOGGER.error("Failed to encode fluid stack component data: {}", error.message()));
                     }
                 }
                 fluidData.putBoolean(SerializationConstants.VALVE, !valveFluid.isEmpty());
@@ -393,7 +396,7 @@ public class TileEntityFluidTank extends TileEntityMekanism implements IConfigur
                 String fluidId = fluidData.getString(SerializationConstants.ID);
                 Optional<Reference<Fluid>> holder = Optional.ofNullable(ResourceLocation.tryParse(fluidId)).flatMap(BuiltInRegistries.FLUID::getHolder);
                 if (holder.isEmpty()) {
-                    Mekanism.logger.info("Received update packet for a fluid tank for an unregistered fluid with expected id: {}", fluidId);
+                    LOGGER.info("Received update packet for a fluid tank for an unregistered fluid with expected id: {}", fluidId);
                 } else {
                     Reference<Fluid> fluidType = holder.get();
                     DataComponentPatch patch = DataComponentPatch.EMPTY;
@@ -406,7 +409,7 @@ public class TileEntityFluidTank extends TileEntityMekanism implements IConfigur
                         if (componentPatch.isSuccess()) {
                             patch = componentPatch.getOrThrow();
                         } else {
-                            componentPatch.ifError(error -> Mekanism.logger.info(
+                            componentPatch.ifError(error -> LOGGER.info(
                                   "Received update packet for a fluid tank storing {}, and could not decode the data component patch: {}", fluidId, error.message()));
                         }
                     }

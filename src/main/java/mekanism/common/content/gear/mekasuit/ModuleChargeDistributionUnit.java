@@ -8,7 +8,6 @@ import mekanism.api.energy.IStrictEnergyHandler;
 import mekanism.api.gear.ICustomModule;
 import mekanism.api.gear.IModule;
 import mekanism.api.gear.IModuleContainer;
-import mekanism.common.Mekanism;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.content.network.EnergyNetwork;
 import mekanism.common.content.network.distribution.EnergySaveTarget;
@@ -20,13 +19,12 @@ import mekanism.common.util.StorageUtils;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.items.IItemHandler;
 
 @ParametersAreNotNullByDefault
 public record ModuleChargeDistributionUnit(boolean chargeSuit, boolean chargeInventory) implements ICustomModule<ModuleChargeDistributionUnit> {
 
-    public static final ResourceLocation CHARGE_SUIT = Mekanism.rl("charge_suit");
-    public static final ResourceLocation CHARGE_INVENTORY = Mekanism.rl("charge_inventory");
+    public static final ResourceLocation CHARGE_SUIT = ResourceLocation.fromNamespaceAndPath("mekanism", "charge_suit");
+    public static final ResourceLocation CHARGE_INVENTORY = ResourceLocation.fromNamespaceAndPath("mekanism", "charge_inventory");
 
     public ModuleChargeDistributionUnit(IModule<ModuleChargeDistributionUnit> module) {
         this(module.getBooleanConfigOrFalse(CHARGE_SUIT), module.getBooleanConfigOrFalse(CHARGE_INVENTORY));
@@ -83,14 +81,11 @@ public record ModuleChargeDistributionUnit(boolean chargeSuit, boolean chargeInv
                     }
                 }
             }
-            if (Mekanism.hooks.curios.isLoaded()) {
-                IItemHandler handler = CuriosIntegration.getCuriosInventory(player);
-                if (handler != null) {
-                    for (int slot = 0, slots = handler.getSlots(); slot < slots; slot++) {
-                        toCharge = charge(energyContainer, handler.getStackInSlot(slot), toCharge);
-                        if (toCharge == 0L) {
-                            return;
-                        }
+            if (CuriosIntegration.isLoaded()) {
+                for (ItemStack stack : CuriosIntegration.getEquippedStacks(player)) {
+                    toCharge = charge(energyContainer, stack, toCharge);
+                    if (toCharge == 0L) {
+                        return;
                     }
                 }
             }

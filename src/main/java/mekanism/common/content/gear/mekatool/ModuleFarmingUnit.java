@@ -14,7 +14,7 @@ import mekanism.api.gear.IModule;
 import mekanism.api.gear.IModuleContainer;
 import mekanism.api.text.IHasTextComponent;
 import mekanism.api.text.TextComponentUtil;
-import mekanism.common.Mekanism;
+
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.network.PacketUtils;
 import mekanism.common.network.to_client.PacketLightningRender;
@@ -53,14 +53,14 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import mekanism.common.item.ItemAbilities;
 import mekanism.api.ItemAbility;
-import net.neoforged.neoforge.common.util.Lazy;
+import mekanism.common.util.Lazy;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @ParametersAreNotNullByDefault
 public record ModuleFarmingUnit(FarmingRadius farmingRadius) implements ICustomModule<ModuleFarmingUnit> {
 
-    public static final ResourceLocation FARMING_RADIUS = Mekanism.rl("farming_radius");
+    public static final ResourceLocation FARMING_RADIUS = ResourceLocation.fromNamespaceAndPath("mekanism", "farming_radius");
 
     public ModuleFarmingUnit(IModule<ModuleFarmingUnit> module) {
         this(module.<FarmingRadius>getConfigOrThrow(FARMING_RADIUS).get());

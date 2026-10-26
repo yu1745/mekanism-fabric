@@ -16,7 +16,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEntries;
+import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroupEntries;
 import org.jetbrains.annotations.NotNull;
 
 public class CreativeTabDeferredRegister extends MekanismDeferredRegister<CreativeModeTab> {
@@ -77,7 +77,7 @@ public class CreativeTabDeferredRegister extends MekanismDeferredRegister<Creati
     @SafeVarargs
     public static void addToDisplay(CreativeModeTab.Output output, Holder<Item>... items) {
         CreativeModeTab.TabVisibility visibility;
-        if (output instanceof ItemGroupEntries) {
+        if (output instanceof FabricItemGroupEntries) {
             //If we are added from the event, only add the item to the parent tab, as we will already be contained in the search tab
             // from when we are adding to our tabs
             visibility = CreativeModeTab.TabVisibility.PARENT_TAB_ONLY;

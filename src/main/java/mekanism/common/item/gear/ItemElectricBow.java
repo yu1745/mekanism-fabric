@@ -40,7 +40,7 @@ import org.jetbrains.annotations.NotNull;
 public class ItemElectricBow extends BowItem implements IItemHUDProvider, ICustomCreativeTabContents, IAttachmentBasedModeItem<Boolean> {
 
     public ItemElectricBow(Properties properties) {
-        super(properties.rarity(Rarity.RARE).setNoRepair().stacksTo(1).component(MekanismDataComponents.ELECTRIC_BOW_MODE, false));
+        super(properties.rarity(Rarity.RARE).stacksTo(1).component(MekanismDataComponents.ELECTRIC_BOW_MODE.get(), false));
     }
 
     @Override
@@ -75,41 +75,7 @@ public class ItemElectricBow extends BowItem implements IItemHUDProvider, ICusto
         }
     }
 
-    @Override
-    public boolean isPrimaryItemFor(@NotNull ItemStack stack, @NotNull Holder<Enchantment> enchantment) {
-        //Note: This stops application of it via enchanted books while in survival. We don't override isBookEnchantable as we don't care
-        // if someone enchants it in creative and would rather not stop players from enchanting with books that have flame and power on them
-        return !enchantment.is(Enchantments.FLAME) && super.isPrimaryItemFor(stack, enchantment);
-    }
-
-    @Override
-    public int getEnchantmentLevel(@NotNull ItemStack stack, @NotNull Holder<Enchantment> enchantment) {
-        if (stack.isEmpty()) {
-            return 0;
-        } else if (enchantment.is(Enchantments.FLAME) && getMode(stack)) {
-            return Math.max(1, super.getEnchantmentLevel(stack, enchantment));
-        }
-        return super.getEnchantmentLevel(stack, enchantment);
-    }
-
     @NotNull
-    @Override
-    public ItemEnchantments getAllEnchantments(@NotNull ItemStack stack, @NotNull RegistryLookup<Enchantment> lookup) {
-        ItemEnchantments enchantments = super.getAllEnchantments(stack, lookup);
-        if (getMode(stack)) {
-            Optional<Reference<Enchantment>> enchantment = lookup.get(Enchantments.FLAME);
-            if (enchantment.isPresent()) {
-                Holder<Enchantment> flame = enchantment.get();
-                if (enchantments.getLevel(flame) == 0){
-                    ItemEnchantments.Mutable mutable = new ItemEnchantments.Mutable(enchantments);
-                    mutable.set(flame, 1);
-                    return mutable.toImmutable();
-                }
-            }
-        }
-        return enchantments;
-    }
-
     @Override
     public DataComponentType<Boolean> getModeDataType() {
         return MekanismDataComponents.ELECTRIC_BOW_MODE.get();
@@ -161,15 +127,4 @@ public class ItemElectricBow extends BowItem implements IItemHUDProvider, ICusto
         return MekanismLang.FIRE_MODE.translateColored(EnumColor.PINK, OnOff.of(getMode(stack), true));
     }
 
-    @Override
-    public boolean shouldCauseReequipAnimation(ItemStack oldStack, ItemStack newStack, boolean slotChanged) {
-        //Ignore NBT for energized items causing re-equip animations
-        return slotChanged || oldStack.getItem() != newStack.getItem();
-    }
-
-    @Override
-    public boolean shouldCauseBlockBreakReset(ItemStack oldStack, ItemStack newStack) {
-        //Ignore NBT for energized items causing block break reset
-        return oldStack.getItem() != newStack.getItem();
-    }
 }

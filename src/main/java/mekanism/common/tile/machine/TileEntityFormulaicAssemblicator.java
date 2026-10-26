@@ -19,7 +19,6 @@ import mekanism.api.Upgrade;
 import mekanism.api.functions.ConstantPredicates;
 import mekanism.api.inventory.IInventorySlot;
 import mekanism.common.recipe.lookup.cache.RecipeCacheContext;
-import mekanism.common.Mekanism;
 import mekanism.common.attachments.FormulaAttachment;
 import mekanism.common.capabilities.energy.MachineEnergyContainer;
 import mekanism.common.capabilities.holder.energy.EnergyContainerHelper;
@@ -71,8 +70,12 @@ import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TileEntityFormulaicAssemblicator extends TileEntityConfigurableMachine implements IHasMode {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism");
 
     public static final Predicate<@NotNull ItemStack> FORMULA_SLOT_VALIDATOR = stack -> stack.getItem() instanceof ItemCraftingFormula;
     private static final NonNullList<ItemStack> EMPTY_LIST = NonNullList.create();
@@ -268,7 +271,7 @@ public class TileEntityFormulaicAssemblicator extends TileEntityConfigurableMach
 
     private void checkFormula() {
         ItemStack formulaStack = formulaSlot.getStack();
-        FormulaAttachment attachment = formulaStack.getOrDefault(MekanismDataComponents.FORMULA_HOLDER, FormulaAttachment.EMPTY);
+        FormulaAttachment attachment = formulaStack.getOrDefault(MekanismDataComponents.FORMULA_HOLDER.get(), FormulaAttachment.EMPTY);
         if (!attachment.isEmpty() && !attachment.invalid()) {
             if (formula.isEmpty() || lastFormulaStack != formulaStack) {
                 formula = loadFormula(formulaStack, attachment);
@@ -294,7 +297,7 @@ public class TileEntityFormulaicAssemblicator extends TileEntityConfigurableMach
             return recipe;
         }
         formulaStack = formulaStack.copy();
-        formulaStack.set(MekanismDataComponents.FORMULA_HOLDER, attachment.asInvalid());
+        formulaStack.set(MekanismDataComponents.FORMULA_HOLDER.get(), attachment.asInvalid());
         formulaSlot.setStack(formulaStack);
         return RecipeFormula.EMPTY;
     }
@@ -611,7 +614,7 @@ public class TileEntityFormulaicAssemblicator extends TileEntityConfigurableMach
             }
         }
         if (!storedMap.isEmpty()) {
-            Mekanism.logger.error("Critical error: Formulaic Assemblicator had items left over after organizing stock. Impossible!");
+            LOGGER.error("Critical error: Formulaic Assemblicator had items left over after organizing stock. Impossible!");
         }
     }
 
@@ -674,12 +677,12 @@ public class TileEntityFormulaicAssemblicator extends TileEntityConfigurableMach
         if (formulaSlot.isEmpty()) {
             return;
         }
-        FormulaAttachment formulaAttachment = formulaSlot.getStack().getOrDefault(MekanismDataComponents.FORMULA_HOLDER, FormulaAttachment.EMPTY);
+        FormulaAttachment formulaAttachment = formulaSlot.getStack().getOrDefault(MekanismDataComponents.FORMULA_HOLDER.get(), FormulaAttachment.EMPTY);
         if (formulaAttachment.isEmpty()) {
             RecipeFormula formula = RecipeFormula.create(level, craftingGridSlots);
             if (formula.valid()) {
                 ItemStack stack = formulaSlot.getStack().copy();
-                stack.set(MekanismDataComponents.FORMULA_HOLDER, FormulaAttachment.create(formula));
+                stack.set(MekanismDataComponents.FORMULA_HOLDER.get(), FormulaAttachment.create(formula));
                 formulaSlot.setStack(stack);
             }
         }
@@ -790,7 +793,7 @@ public class TileEntityFormulaicAssemblicator extends TileEntityConfigurableMach
     @ComputerMethod(nameOverride = "encodeFormula", requiresPublicSecurity = true, methodDescription = "Requires an unencoded formula in the formula slot and a valid recipe")
     void computerEncodeFormula() throws ComputerException {
         validateSecurityIsPublic();
-        FormulaAttachment formulaAttachment = formulaSlot.getStack().getOrDefault(MekanismDataComponents.FORMULA_HOLDER, FormulaAttachment.EMPTY);
+        FormulaAttachment formulaAttachment = formulaSlot.getStack().getOrDefault(MekanismDataComponents.FORMULA_HOLDER.get(), FormulaAttachment.EMPTY);
         if (formulaAttachment.isEmpty()) {
             throw new ComputerException("No formula found.");
         } else if (hasValidFormula() || formulaAttachment.hasItems()) {

@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.function.Consumer;
 import mekanism.api.energy.IEnergyContainer;
 import mekanism.api.text.EnumColor;
-import mekanism.common.Mekanism;
+
 import mekanism.common.MekanismLang;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.item.interfaces.IFreeRunnerItem;
@@ -19,6 +19,7 @@ import mekanism.common.util.StorageUtils;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.EquipmentSlotGroup;
 import net.minecraft.world.entity.LivingEntity;
@@ -39,15 +40,15 @@ import org.jetbrains.annotations.Nullable;
 public class ItemFreeRunners extends ItemSpecialArmor implements IItemHUDProvider, ICustomCreativeTabContents, IAttachmentBasedModeItem<FreeRunnerMode>,
       IHasConditionalAttributes, IFreeRunnerItem {
 
-    private static final AttributeModifier MOVEMENT_EFFICIENCY = new AttributeModifier(Mekanism.rl("free_runners"), 1, Operation.ADD_VALUE);
+    private static final AttributeModifier MOVEMENT_EFFICIENCY = new AttributeModifier(ResourceLocation.fromNamespaceAndPath("mekanism", "free_runners"), 1, Operation.ADD_VALUE);
 
     public ItemFreeRunners(Properties properties) {
         this(MekanismArmorMaterials.FREE_RUNNERS, properties);
     }
 
     public ItemFreeRunners(Holder<ArmorMaterial> material, Properties properties) {
-        super(material, ArmorItem.Type.BOOTS, properties.rarity(Rarity.RARE).setNoRepair().stacksTo(1)
-              .component(MekanismDataComponents.FREE_RUNNER_MODE, FreeRunnerMode.NORMAL)
+        super(material, ArmorItem.Type.BOOTS, properties.rarity(Rarity.RARE).stacksTo(1)
+              .component(MekanismDataComponents.FREE_RUNNER_MODE.get(), FreeRunnerMode.NORMAL)
         );
     }
 

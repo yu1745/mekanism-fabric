@@ -39,10 +39,10 @@ import mekanism.api.security.ISecurityObject;
 import mekanism.api.security.SecurityMode;
 import mekanism.client.recipe_viewer.type.IRecipeViewerRecipeType;
 import mekanism.client.recipe_viewer.type.RecipeViewerRecipeType;
-import mekanism.common.Mekanism;
 import mekanism.common.MekanismLang;
 import mekanism.common.advancements.MekanismCriteriaTriggers;
 import mekanism.common.attachments.containers.ContainerType;
+import mekanism.common.base.MekFakePlayer;
 import mekanism.common.base.holiday.HolidayManager;
 import mekanism.common.capabilities.Capabilities;
 import mekanism.common.capabilities.energy.BasicEnergyContainer;
@@ -100,6 +100,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.MenuProvider;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
@@ -121,21 +122,20 @@ import net.minecraft.world.level.pathfinder.PathType;
 import net.minecraft.world.level.portal.DimensionTransition;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.client.model.data.ModelData;
-import net.neoforged.neoforge.client.model.data.ModelProperty;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.common.damagesource.DamageContainer;
+import mekanism.api.event.MekanismEventBus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 //TODO: When Galacticraft gets ported make it so the robit can "breath" without a mask
 public class EntityRobit extends PathfinderMob implements IRobit, IMekanismInventory, IMekanismStrictEnergyHandler, ItemRecipeLookupHandler<ItemStackToItemStackRecipe> {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism");
+
     public static AttributeSupplier.Builder getDefaultAttributes() {
         return createMobAttributes().add(Attributes.MAX_HEALTH, 1.0D).add(Attributes.MOVEMENT_SPEED, 0.3F);
     }
-
-    public static final ModelProperty<ResourceLocation> SKIN_TEXTURE_PROPERTY = new ModelProperty<>();
 
     private static <T> EntityDataAccessor<T> define(EntityDataSerializer<T> dataSerializer) {
         return SynchedEntityData.defineId(EntityRobit.class, dataSerializer);
@@ -275,7 +275,7 @@ public class EntityRobit extends PathfinderMob implements IRobit, IMekanismInven
     protected void defineSynchedData(@NotNull SynchedEntityData.Builder builder) {
         super.defineSynchedData(builder);
         //Default before it has a brief chance to get set the owner to mekanism's fake player
-        builder.define(OWNER_UUID, Mekanism.gameProfile.getId());
+        builder.define(OWNER_UUID, MekFakePlayer.GAME_PROFILE.getId());
         builder.define(OWNER_NAME, "");
         builder.define(SECURITY, SecurityMode.PUBLIC);
         builder.define(FOLLOW, false);
@@ -400,7 +400,7 @@ public class EntityRobit extends PathfinderMob implements IRobit, IMekanismInven
             return;
         }
         MekanismTeleportEvent.Robit event = new MekanismTeleportEvent.Robit(this);
-        if (NeoForge.EVENT_BUS.post(event).isCanceled()) {
+        if (MekanismEventBus.post(event).isCanceled()) {
             //Fail if the event was cancelled
             return;
         }
@@ -456,15 +456,15 @@ public class EntityRobit extends PathfinderMob implements IRobit, IMekanismInven
         }
         ContainerType.ITEM.copyToStack(level().registryAccess(), getInventorySlots(null), stack);
         if (hasCustomName()) {
-            stack.set(MekanismDataComponents.ROBIT_NAME, getName());
+            stack.set(MekanismDataComponents.ROBIT_NAME.get(), getName());
         }
         ISecurityObject security = IItemSecurityUtils.INSTANCE.securityCapability(stack);
         if (security != null) {
             security.setOwnerUUID(getOwnerUUID());
             security.setSecurityMode(getSecurityMode());
         }
-        stack.set(MekanismDataComponents.DEFAULT_MANUALLY_SELECTED, isDefaultSkinManuallySelected());
-        stack.set(MekanismDataComponents.ROBIT_SKIN, getSkin());
+        stack.set(MekanismDataComponents.DEFAULT_MANUALLY_SELECTED.get(), isDefaultSkinManuallySelected());
+        stack.set(MekanismDataComponents.ROBIT_SKIN.get(), getSkin());
         return stack;
     }
 
@@ -526,10 +526,21 @@ public class EntityRobit extends PathfinderMob implements IRobit, IMekanismInven
     }
 
     @Override
-    public void onDamageTaken(@NotNull DamageContainer damageContainer) {
-        energyContainer.extract(MathUtils.clampToLong(1_000D * damageContainer.getNewDamage()), Action.EXECUTE, AutomationType.INTERNAL);
-        //Don't actually allow taking damage to reduce the robit's health
-        setHealth(getMaxHealth());
+    public boolean hurt(@NotNull DamageSource source, float amount) {
+        //Fabric port delta: the upstream override hooked NeoForge's DamageContainer pipeline (onDamageTaken) to drain energy for the mitigated damage
+        // while never losing health. The vanilla pipeline exposes the same observable outcome through the applied health delta: drain energy for what the
+        // pipeline actually applied, then keep the robit at full health
+        float healthBefore = getHealth();
+        boolean hurt = super.hurt(source, amount);
+        if (hurt) {
+            float applied = healthBefore - getHealth();
+            if (applied > 0) {
+                energyContainer.extract(MathUtils.clampToLong(1_000D * applied), Action.EXECUTE, AutomationType.INTERNAL);
+            }
+            //Don't actually allow taking damage to reduce the robit's health
+            setHealth(getMaxHealth());
+        }
+        return hurt;
     }
 
     @Override
@@ -777,13 +788,7 @@ public class EntityRobit extends PathfinderMob implements IRobit, IMekanismInven
         return true;
     }
 
-    /**
-     * @apiNote Only call on the client.
-     */
-    public ModelData getModelData() {
-        //TODO: Eventually we might want to evaluate caching this model data object
-        return ModelData.of(SKIN_TEXTURE_PROPERTY, getModelTexture());
-    }
+    //Fabric port delta: entity model data has no Fabric equivalent; the robit renderer reads the skin texture directly.
 
     /**
      * @apiNote Only call on the client.
@@ -796,7 +801,7 @@ public class EntityRobit extends PathfinderMob implements IRobit, IMekanismInven
         if (optionalSkin.isPresent()) {
             skin = optionalSkin.get();
         } else {
-            Mekanism.logger.error("Unknown Robit Skin: {}; resetting skin to base.", skinKey.location());
+            LOGGER.error("Unknown Robit Skin: {}; resetting skin to base.", skinKey.location());
             setSkin(skinKey = MekanismRobitSkins.BASE, null);
             skin = robitSkins.getOrThrow(skinKey);
         }
@@ -805,7 +810,7 @@ public class EntityRobit extends PathfinderMob implements IRobit, IMekanismInven
             //Note: Should not really happen but in case a custom impl has no textures handle it
             textureIndex = 0;
             if (skinKey != MekanismRobitSkins.BASE) {
-                Mekanism.logger.error("Robit Skin: {}, has no textures; resetting skin to base.", skinKey.location());
+                LOGGER.error("Robit Skin: {}, has no textures; resetting skin to base.", skinKey.location());
                 setSkin(skinKey = MekanismRobitSkins.BASE, null);
                 skin = robitSkins.getOrThrow(skinKey);
             }

@@ -3,6 +3,7 @@ package mekanism.common.item.block;
 import java.util.Collections;
 import java.util.List;
 import mekanism.api.inventory.IInventorySlot;
+import mekanism.common.base.MekFakePlayer;
 import mekanism.common.block.BlockPersonalStorage;
 import mekanism.common.inventory.container.item.PersonalStorageItemContainer;
 import mekanism.common.item.interfaces.IDroppableContents;
@@ -64,7 +65,7 @@ public class ItemBlockPersonalStorage<BLOCK extends BlockPersonalStorage<?, ?>> 
     protected boolean canPlace(@NotNull BlockPlaceContext context, @NotNull BlockState state) {
         Player player = context.getPlayer();
         //Only allow placing if there is no player, it is a fake player, or the player is sneaking
-        return (player == null || player.isFakePlayer() || player.isShiftKeyDown()) && super.canPlace(context, state);
+        return (player == null || MekFakePlayer.isFakePlayer(player) || player.isShiftKeyDown()) && super.canPlace(context, state);
     }
 
     @Override

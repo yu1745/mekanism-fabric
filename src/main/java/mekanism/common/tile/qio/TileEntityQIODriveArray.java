@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.function.IntFunction;
 import mekanism.api.IContentsListener;
 import mekanism.api.SerializationConstants;
-import mekanism.common.Mekanism;
+
 import mekanism.common.capabilities.holder.slot.IInventorySlotHolder;
 import mekanism.common.capabilities.holder.slot.InventorySlotHelper;
 import mekanism.common.content.qio.IQIODriveHolder;
@@ -27,14 +27,12 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.ByIdMap;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.client.model.data.ModelData;
-import net.neoforged.neoforge.client.model.data.ModelProperty;
+import net.fabricmc.fabric.api.blockview.v2.RenderDataBlockEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class TileEntityQIODriveArray extends TileEntityQIOComponent implements IQIODriveHolder {
+public class TileEntityQIODriveArray extends TileEntityQIOComponent implements IQIODriveHolder, RenderDataBlockEntity {
 
-    public static final ModelProperty<byte[]> DRIVE_STATUS_PROPERTY = new ModelProperty<>();
     public static final int DRIVE_SLOTS = 12;
 
     private List<QIODriveSlot> driveSlots;
@@ -109,8 +107,8 @@ public class TileEntityQIODriveArray extends TileEntityQIOComponent implements I
 
     @NotNull
     @Override
-    public ModelData getModelData() {
-        return ModelData.of(DRIVE_STATUS_PROPERTY, driveStatus);
+    public byte[] getRenderData() {
+        return driveStatus;
     }
 
     @NotNull
@@ -201,10 +199,10 @@ public class TileEntityQIODriveArray extends TileEntityQIOComponent implements I
 
     public enum DriveStatus {
         NONE(null),
-        OFFLINE(Mekanism.rl("block/qio_drive/qio_drive_offline")),
-        READY(Mekanism.rl("block/qio_drive/qio_drive_empty")),
-        NEAR_FULL(Mekanism.rl("block/qio_drive/qio_drive_partial")),
-        FULL(Mekanism.rl("block/qio_drive/qio_drive_full"));
+        OFFLINE(ResourceLocation.fromNamespaceAndPath("mekanism", "block/qio_drive/qio_drive_offline")),
+        READY(ResourceLocation.fromNamespaceAndPath("mekanism", "block/qio_drive/qio_drive_empty")),
+        NEAR_FULL(ResourceLocation.fromNamespaceAndPath("mekanism", "block/qio_drive/qio_drive_partial")),
+        FULL(ResourceLocation.fromNamespaceAndPath("mekanism", "block/qio_drive/qio_drive_full"));
 
         public static final IntFunction<DriveStatus> BY_ID = ByIdMap.continuous(DriveStatus::ordinal, values(), ByIdMap.OutOfBoundsStrategy.WRAP);
         public static final StreamCodec<ByteBuf, DriveStatus> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, DriveStatus::ordinal);

@@ -417,13 +417,13 @@ public abstract class TileEntityFactory<RECIPE extends MekanismRecipe<?>> extend
     @Override
     protected void collectImplicitComponents(@NotNull DataComponentMap.Builder builder) {
         super.collectImplicitComponents(builder);
-        builder.set(MekanismDataComponents.SORTING, isSorting());
+        builder.set(MekanismDataComponents.SORTING.get(), isSorting());
     }
 
     @Override
     protected void applyImplicitComponents(@NotNull BlockEntity.DataComponentInput input) {
         super.applyImplicitComponents(input);
-        sorting = input.getOrDefault(MekanismDataComponents.SORTING, sorting);
+        sorting = input.getOrDefault(MekanismDataComponents.SORTING.get(), sorting);
     }
 
     @Override
