@@ -41,6 +41,11 @@
   "client": [
     "client.TextureAtlasMixin",
     "client.FabricHudLayersMixin",
+    "client.ClientMouseScrollMixin",
+    "client.FogColorMixin",
+    "client.FogSetupMixin",
+    "client.LivingEntityVisibilityMixin",
+    "client.ClientRecipeCacheMixin",
     "item.ClientConfiguratorUseMixin",
     "item.ClientElytraStartMixin",
     "item.ModeStatusOverlayMixin",

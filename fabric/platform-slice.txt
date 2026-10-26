@@ -7,6 +7,7 @@ mekanism/fabric/chemical/FabricChemicalLifecycle.java
 mekanism/fabric/chemical/FabricChemicalRegistryLifecycle.java
 mekanism/fabric/client/FabricFluidColors.java
 mekanism/fabric/client/FabricScreenRegistration.java
+mekanism/fabric/client/hud/FabricClientTickRegistration.java
 mekanism/fabric/client/hud/FabricHudHeights.java
 mekanism/fabric/client/model/FabricCompositeModel.java
 mekanism/fabric/client/model/FabricDeferredLoaderModel.java
@@ -69,7 +70,12 @@ mekanism/fabric/mixin/block/MachinePathTypeMixin.java
 mekanism/fabric/mixin/block/MachinePistonReactionMixin.java
 mekanism/fabric/mixin/block/MachineRedstoneConnectionMixin.java
 mekanism/fabric/mixin/block/PowderSnowWalkMixin.java
+mekanism/fabric/mixin/client/ClientMouseScrollMixin.java
+mekanism/fabric/mixin/client/ClientRecipeCacheMixin.java
 mekanism/fabric/mixin/client/FabricHudLayersMixin.java
+mekanism/fabric/mixin/client/FogColorMixin.java
+mekanism/fabric/mixin/client/FogSetupMixin.java
+mekanism/fabric/mixin/client/LivingEntityVisibilityMixin.java
 mekanism/fabric/mixin/client/TextureAtlasMixin.java
 mekanism/fabric/mixin/entity/BlockStateDestroyProgressMixin.java
 mekanism/fabric/mixin/entity/EnderManMaskMixin.java

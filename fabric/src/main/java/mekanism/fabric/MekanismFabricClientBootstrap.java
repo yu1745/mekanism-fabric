@@ -62,6 +62,7 @@ public final class MekanismFabricClientBootstrap implements ClientModInitializer
         //LazyRender queue drained at the after-translucent stage (the official RenderLevelStageEvent handler).
         mekanism.fabric.client.render.FabricTileEntityRendererRegistration.register();
         mekanism.fabric.client.render.FabricEntityRendererRegistration.register();
+        mekanism.fabric.client.hud.FabricClientTickRegistration.register();
         net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.AFTER_TRANSLUCENT.register(context ->
               mekanism.client.render.RenderTickHandler.renderTransparentLayer(context.camera(),
                     context.matrixStack(),

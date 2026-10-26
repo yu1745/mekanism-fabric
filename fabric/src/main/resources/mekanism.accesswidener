@@ -135,3 +135,14 @@ accessible field net/minecraft/client/Minecraft itemColors Lnet/minecraft/client
 accessible field net/minecraft/client/gui/Gui subtitleOverlay Lnet/minecraft/client/gui/components/SubtitleOverlay;
 accessible field net/minecraft/client/gui/components/SubtitleOverlay audibleSubtitles Ljava/util/List;
 accessible class net/minecraft/client/gui/components/SubtitleOverlay$Subtitle
+#Gear client tick lane: the vision-enhancement tint folds into the fog color fields after vanilla computes them.
+accessible field net/minecraft/client/renderer/FogRenderer fogRed F
+accessible field net/minecraft/client/renderer/FogRenderer fogGreen F
+accessible field net/minecraft/client/renderer/FogRenderer fogBlue F
+#Gear client tick lane (mirrors upstream accesstransformer.cfg): the MekaSuit model-visibility pass hides
+#vanilla humanoid model parts for suit wearers and HDPE elytra capes.
+accessible field net/minecraft/client/model/PlayerModel ear Lnet/minecraft/client/model/geom/ModelPart;
+accessible field net/minecraft/client/model/PlayerModel cloak Lnet/minecraft/client/model/geom/ModelPart;
+accessible field net/minecraft/client/model/ArmorStandModel rightBodyStick Lnet/minecraft/client/model/geom/ModelPart;
+accessible field net/minecraft/client/model/ArmorStandModel leftBodyStick Lnet/minecraft/client/model/geom/ModelPart;
+accessible field net/minecraft/client/model/ArmorStandModel shoulderStick Lnet/minecraft/client/model/geom/ModelPart;

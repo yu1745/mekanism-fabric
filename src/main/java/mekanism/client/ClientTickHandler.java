@@ -14,15 +14,11 @@ import mekanism.client.key.MekKeyHandler;
 import mekanism.client.render.MekanismRenderer;
 import mekanism.client.render.hud.MekanismStatusOverlay;
 import mekanism.client.render.lib.ScrollIncrementer;
-import mekanism.client.sound.GeigerSound;
-import mekanism.client.sound.SoundHandler;
 import mekanism.common.CommonPlayerTickHandler;
-import mekanism.common.Mekanism;
-import mekanism.common.base.KeySync;
-import mekanism.common.base.holiday.HolidayManager;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.content.gear.mekasuit.ModuleVisionEnhancementUnit;
 import mekanism.common.item.gear.ItemHDPEElytra;
+import mekanism.common.base.PlayerState;
 import mekanism.common.item.gear.ItemJetpack;
 import mekanism.common.item.gear.ItemMekaSuitArmor;
 import mekanism.common.item.gear.ItemScubaTank;
@@ -45,6 +41,7 @@ import net.minecraft.client.model.ArmorStandModel;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.PlayerModel;
+import net.minecraft.client.renderer.FogRenderer;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
@@ -57,14 +54,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.material.FogType;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
-import net.neoforged.neoforge.client.event.ClientTickEvent;
-import net.neoforged.neoforge.client.event.InputEvent.MouseScrollingEvent;
-import net.neoforged.neoforge.client.event.RecipesUpdatedEvent;
-import net.neoforged.neoforge.client.event.RenderLivingEvent;
-import net.neoforged.neoforge.client.event.ViewportEvent;
-import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 
 /**
  * Client-side tick handler for Mekanism. Used mainly for the update check upon startup.
@@ -72,6 +61,9 @@ import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
  * @author AidanBrady
  */
 public class ClientTickHandler {
+
+    /** Fabric port: the platform registers and drives this single instance (NeoForge instantiated it via the bus). */
+    public static final ClientTickHandler INSTANCE = new ClientTickHandler();
 
     private static final Minecraft minecraft = Minecraft.getInstance();
     private static final RandomSource rand = RandomSource.create();
@@ -84,8 +76,6 @@ public class ClientTickHandler {
         portableTeleports.clear();
         visionEnhancement = false;
     }
-
-    private boolean isConnected;
 
     public static boolean isJetpackInUse(Player player, ItemStack jetpack) {
         if (!player.isSpectator() && !jetpack.isEmpty()) {
@@ -108,14 +98,14 @@ public class ClientTickHandler {
 
     public static boolean isScubaMaskOn(Player player) {
         if (player != minecraft.player) {
-            return Mekanism.playerState.isScubaMaskOn(player);
+            return PlayerState.INSTANCE.isScubaMaskOn(player);
         }
         return CommonPlayerTickHandler.isScubaMaskOn(player, player.getItemBySlot(EquipmentSlot.CHEST));
     }
 
     public static boolean isGravitationalModulationOn(Player player) {
         if (player != minecraft.player) {
-            return Mekanism.playerState.isGravitationalModulationOn(player);
+            return PlayerState.INSTANCE.isGravitationalModulationOn(player);
         }
         return CommonPlayerTickHandler.isGravitationalModulationOn(player);
     }
@@ -142,41 +132,16 @@ public class ClientTickHandler {
         }
     }
 
-    @SubscribeEvent
-    public void onStartTracking(EntityJoinLevelEvent event) {
-        if (event.getLevel().isClientSide && event.getEntity() instanceof Player player && MekanismConfig.client.enablePlayerSounds.get()) {
-            SoundHandler.startFlamethrowerSound(player);
-        }
-    }
+    //Fabric port: the connection lifecycle handlers (MekanismClient.launchClient/reset) and the entity-tracking
+    //handler (SoundHandler.startFlamethrowerSound) belong to the client-hub and sound lanes and stay deferred with them.
 
-    @SubscribeEvent
-    public void onJoinServer(ClientPlayerNetworkEvent.LoggingIn event) {
-        if (!isConnected) {//Note: This should always be true when the event is fired
-            isConnected = true;
-            MekanismClient.launchClient(event.getConnection());
-        }
-    }
-
-    @SubscribeEvent
-    public void onLeaveServer(ClientPlayerNetworkEvent.LoggingOut event) {
-        //Note: We check if the client has actually connected before handling this, as this event is also called when the client is setting up the server
-        if (isConnected) {
-            isConnected = false;
-            MekanismClient.reset();
-        }
-    }
-
-    @SubscribeEvent
-    public void onTick(ClientTickEvent.Pre event) {
+    public void onTick() {
         if (minecraft.level == null || minecraft.player == null) {
             return;
         }
         boolean tickingNormally = MekanismRenderer.isRunningNormally();
-        HolidayManager.notify(minecraft.player);
-
-        //Reboot player sounds if needed
-        SoundHandler.restartSounds();
-
+        //HolidayManager.notify belongs to the holiday lane and stays deferred with it.
+        //SoundHandler.restartSounds belongs to the sound lane (flamethrower/geiger sounds) and stays deferred with it.
         //Radiation pre-tick particles are owned by FabricRadiationClientLifecycle.
 
         UUID playerUUID = minecraft.player.getUUID();
@@ -184,9 +149,10 @@ public class ClientTickHandler {
         // kicks off sounds as necessary
         ItemStack jetpack = IJetpackItem.getActiveJetpack(minecraft.player);
         boolean jetpackInUse = isJetpackInUse(minecraft.player, jetpack);
-        Mekanism.playerState.setJetpackState(playerUUID, jetpackInUse, true);
-        Mekanism.playerState.setScubaMaskState(playerUUID, isScubaMaskOn(minecraft.player), true);
-        Mekanism.playerState.setGravitationalModulationState(playerUUID, isGravitationalModulationOn(minecraft.player), true);
+        //Mekanism.playerState resolves to the admitted base.PlayerState singleton on Fabric (Mekanism.rl precedent).
+        PlayerState.INSTANCE.setJetpackState(playerUUID, jetpackInUse, true);
+        PlayerState.INSTANCE.setScubaMaskState(playerUUID, isScubaMaskOn(minecraft.player), true);
+        PlayerState.INSTANCE.setGravitationalModulationState(playerUUID, isGravitationalModulationOn(minecraft.player), true);
 
         if (tickingNormally) {
             //Note: If we aren't ticking normally we can skip adding the particles or checking if the time matches as we know the time hasn't changed
@@ -212,7 +178,7 @@ public class ClientTickHandler {
             if (!primaryJetpack.isEmpty()) {
                 JetpackMode primaryMode = ((IJetpackItem) primaryJetpack.getItem()).getJetpackMode(primaryJetpack);
                 JetpackMode mode = IJetpackItem.getPlayerJetpackMode(minecraft.player, primaryMode, p -> p.input.jumping);
-                MekanismClient.updateKey(minecraft.player.input.jumping, KeySync.ASCEND);
+                //MekanismClient.updateKey (KeySync) belongs to the client-hub lane and stays deferred with it.
                 double jetpackThrust = ((IJetpackItem) primaryJetpack.getItem()).getJetpackThrust(primaryJetpack);
                 if (jetpackInUse && IJetpackItem.handleJetpackMotion(minecraft.player, mode, jetpackThrust, p -> p.input.jumping)) {
                     minecraft.player.resetFallDistance();
@@ -252,14 +218,7 @@ public class ClientTickHandler {
             }
         }
 
-        if (tickingNormally && MekanismConfig.client.enablePlayerSounds.get()) {
-            RadiationScale scale = ClientRadiation.getClientScale();
-            if (scale != RadiationScale.NONE && !SoundHandler.radiationSoundMap.containsKey(scale)) {
-                GeigerSound sound = GeigerSound.create(minecraft.player, scale);
-                SoundHandler.radiationSoundMap.put(scale, sound);
-                SoundHandler.playSound(sound);
-            }
-        }
+        //The geiger counter sound block belongs to the sound lane (GeigerSound/SoundHandler) and stays deferred with it.
     }
 
     private boolean updateSelectorRenderer(EquipmentSlot slot) {
@@ -280,65 +239,74 @@ public class ClientTickHandler {
         return false;
     }
 
-    @SubscribeEvent
-    public void onMouseEvent(MouseScrollingEvent event) {
+    /** Fabric port: returns whether the scroll was consumed as a mode change (the caller cancels vanilla scrolling). */
+    public boolean onMouseEvent(double scrollDeltaY) {
         if (MekanismConfig.client.allowModeScroll.get() && minecraft.player != null && minecraft.player.isShiftKeyDown()) {
-            double delta = event.getScrollDeltaY();
-            if (delta != 0 && IModeItem.isModeItem(minecraft.player, EquipmentSlot.MAINHAND)) {
-                int shift = scrollIncrementer.scroll(delta);
+            if (scrollDeltaY != 0 && IModeItem.isModeItem(minecraft.player, EquipmentSlot.MAINHAND)) {
+                int shift = scrollIncrementer.scroll(scrollDeltaY);
                 if (shift != 0) {
                     MekanismStatusOverlay.INSTANCE.setTimer();
                     PacketUtils.sendToServer(new PacketModeChange(EquipmentSlot.MAINHAND, shift));
                 }
-                event.setCanceled(true);
+                return true;
             }
         }
+        return false;
     }
 
-    @SubscribeEvent
-    public void onFogLighting(ViewportEvent.ComputeFogColor event) {
+    /** Fabric port: folds the official ComputeFogColor tint into the FogRenderer's static color fields. */
+    public static void onFogLighting() {
         if (visionEnhancement) {
             float oldRatio = 0.1F;
             float newRatio = 1 - oldRatio;
-            float red = oldRatio * event.getRed();
-            float green = oldRatio * event.getGreen();
-            float blue = oldRatio * event.getBlue();
-            event.setRed(red + newRatio * 0.4F);
-            event.setGreen(green + newRatio * 0.8F);
-            event.setBlue(blue + newRatio * 0.4F);
+            FogRenderer.fogRed = oldRatio * FogRenderer.fogRed + newRatio * 0.4F;
+            FogRenderer.fogGreen = oldRatio * FogRenderer.fogGreen + newRatio * 0.8F;
+            FogRenderer.fogBlue = oldRatio * FogRenderer.fogBlue + newRatio * 0.4F;
         }
     }
 
-    @SubscribeEvent
-    public void onFog(ViewportEvent.RenderFog event) {
-        if (visionEnhancement && event.getCamera().getEntity() instanceof Player player) {
-            IModule<ModuleVisionEnhancementUnit> module = IModuleHelper.INSTANCE.getIfEnabled(player, EquipmentSlot.HEAD, MekanismModules.VISION_ENHANCEMENT_UNIT);
-            if (module != null) {
-                //This near plane is the same as spectators have set for lava and powdered snow
-                event.setNearPlaneDistance(-8.0F);
-                if (event.getFarPlaneDistance() < 20) {
-                    float scalar;
-                    if (event.getType() == FogType.LAVA) {
-                        //Special handling for lava which is usually either at 1 or 3
-                        scalar = 24 * event.getFarPlaneDistance();
-                    } else {
-                        //Shortly before 27 this ends up being 192, but we want to get it beforehand, so we just allow numbers below 20
-                        scalar = 5 + 2.5F * (float) Math.pow(Math.E, 0.16F * event.getFarPlaneDistance());
-                    }
-                    //192 is roughly equivalent to what spectators have lava, powdered snow, and a couple other bounds for fog are,
-                    // so we want to make sure we don't go above that
-                    event.setFarPlaneDistance(Math.min(192, scalar));
-                }
-                //Scale the distance based on the number of installed modules
-                event.scaleFarPlaneDistance(((float) Math.pow(module.getInstalledCount(), 1.25)) / module.getUntypedData().getMaxStackSize());
-                //Cancel the event to ensure our changes are applied
-                event.setCanceled(true);
+    /** Fabric port: the official RenderFog near-plane override (-8.0F, the spectator lava/snow near plane). */
+    public static float onFogStart(float vanillaStart) {
+        return activeVisionModule() != null ? -8.0F : vanillaStart;
+    }
+
+    /** Fabric port: the official RenderFog far-plane transform and the per-module distance scaling. */
+    public static float onFogEnd(float farPlaneDistance) {
+        IModule<ModuleVisionEnhancementUnit> module = activeVisionModule();
+        if (module == null) {
+            return farPlaneDistance;
+        }
+        float end = farPlaneDistance;
+        if (end < 20) {
+            float scalar;
+            if (isLavaFog()) {
+                //Special handling for lava which is usually either at 1 or 3
+                scalar = 24 * end;
+            } else {
+                //Shortly before 27 this ends up being 192, but we want to get it beforehand, so we just allow numbers below 20
+                scalar = 5 + 2.5F * (float) Math.pow(Math.E, 0.16F * end);
             }
+            //192 is roughly equivalent to what spectators have lava, powdered snow, and a couple other bounds for fog are,
+            // so we want to make sure we don't go above that
+            end = Math.min(192, scalar);
         }
+        //Scale the distance based on the number of installed modules
+        return end * (((float) Math.pow(module.getInstalledCount(), 1.25)) / module.getUntypedData().getMaxStackSize());
     }
 
-    @SubscribeEvent
-    public void recipesUpdated(RecipesUpdatedEvent event) {
+    private static IModule<ModuleVisionEnhancementUnit> activeVisionModule() {
+        if (visionEnhancement && Minecraft.getInstance().getCameraEntity() instanceof Player player) {
+            return IModuleHelper.INSTANCE.getIfEnabled(player, EquipmentSlot.HEAD, MekanismModules.VISION_ENHANCEMENT_UNIT);
+        }
+        return null;
+    }
+
+    private static boolean isLavaFog() {
+        return Minecraft.getInstance().gameRenderer.getMainCamera().getFluidInCamera() == FogType.LAVA;
+    }
+
+    /** Fabric port: rides the recipe-sync packet instead of the NeoForge event (same note applies). */
+    public static void onRecipesUpdated() {
         //Note: Dedicated servers first connection the server sends recipes then tags, and on reload sends tags then recipes.
         // We ignore this fact and only clear the cache in the recipes updated event however, as the cache should already be
         // empty on our initial connection, and even if it isn't the client has no way to query the recipes and cause the
@@ -346,21 +314,19 @@ public class ClientTickHandler {
         MekanismRecipeType.clearCache();
     }
 
-    @SubscribeEvent
-    public void renderEntityPre(RenderLivingEvent.Pre<?, ?> evt) {
-        EntityModel<?> model = evt.getRenderer().getModel();
+    /** Fabric port: the official RenderLivingEvent.Pre handler, driven by the living-renderer mixin. */
+    public static void onRenderEntityPre(LivingEntity entity, EntityModel<?> model) {
         if (model instanceof HumanoidModel<?> humanoidModel) {
             //If the entity has a biped model, then see if it is wearing a meka suit, in which case we want to hide various parts of the model
-            setModelVisibility(evt.getEntity(), humanoidModel, false);
+            setModelVisibility(entity, humanoidModel, false);
         }
     }
 
-    @SubscribeEvent
-    public void renderEntityPost(RenderLivingEvent.Post<?, ?> evt) {
-        EntityModel<?> model = evt.getRenderer().getModel();
+    /** Fabric port: the official RenderLivingEvent.Post handler, driven by the living-renderer mixin. */
+    public static void onRenderEntityPost(LivingEntity entity, EntityModel<?> model) {
         if (model instanceof HumanoidModel<?> humanoidModel) {
             //Undo model visibility changes we made to ensure that other entities of the same type are properly visible
-            setModelVisibility(evt.getEntity(), humanoidModel, true);
+            setModelVisibility(entity, humanoidModel, true);
         }
     }
 

@@ -663,3 +663,11 @@ gate）BUILD SUCCESSFUL。未运行（按完成度优先策略）：全量测试
 
 - `RenderFlame`（喷火器火舌实体,手绘方块面片 + FLAME render type,无模型依赖）经 fabric `EntityRendererRegistry` 注册——vanilla `EntityRenderers.register` 为 private,loader 拥有公开注册面。Robit 渲染器随 robit 模型族切片延后（baked-model 驱动,需 RobitSpriteUploader + 两个 deferred robit 缓存模型）。
 - 验收:模型 smoke 第 10 检查 `MEKANISM_FABRIC_ENTITY_RENDERER_PROOF entities=1`,客户端 boot 注册 proof + 零缺失模型;两次连续通过。切片 api 262 / common 1453 / platform 144。真机火舌视觉(需世界内实体)留待 mcdebug GUI 会话或用户观察——注册面与渲染路径代码已真机 boot 覆盖,渲染调用未覆盖(记录残留)。
+
+### Gear 客户端 tick 车道（Task052,2026-10-26）
+
+- `ClientTickHandler`（412 行）正式纳入:jetpack/潜水/重力调制玩家状态同步（驱动服务端飞行,经已纳的 `base.PlayerState.INSTANCE`,`Mekanism.playerState` 换名同 rl() 先例）、喷气背包推力与模式、夜视/视觉增强（药水+雾)、便携传送延迟计时、MekaTool 滚轮模式切换、MekaSuit 模型部件隐藏、径向选择器 GUI（GuiRadialSelector 同时纳入）。
+- 缝位:fabric `ClientTickEvents.START_CLIENT_TICK`(tick);`ClientMouseScrollMixin`(MouseHandler.onScroll HEAD 可取消);`FogColorMixin`(FogRenderer.setupColor TAIL,静态回调——首跑非静态被 mixin 拒绝,服务端日志逐字暴露);`FogSetupMixin`(setupFog TAIL 重发 shader 雾值,等效官方可取消事件);`LivingEntityVisibilityMixin`(render HEAD/RETURN);`ClientRecipeCacheMixin`(handleUpdateRecipes TAIL,1.21.1 fabric 无 RecipesUpdatedEvent)。
+- 访问放宽镜像上游 AT 5 项模型部件(ear/cloak/rightBodyStick/leftBodyStick/shoulderStick——**描述符包名必须是 mojmap `model.geom`**,首写 yarn `model.geometry` 静默不生效,与 fogRed 三项一并修正)。
+- 延后(记录):连接生命周期(MekanismClient.launchClient/reset)、喷火/盖革声(SoundHandler)、节日通知(HolidayManager)、KeySync——各随自己车道。
+- 验收:模型 smoke 第 11 检查 `MEKANISM_FABRIC_CLIENT_TICK_PROOF handler=registered seams=...`,11/11 两次连续;切片 api 262 / common 1454 / platform 150。

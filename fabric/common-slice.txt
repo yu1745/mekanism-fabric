@@ -1,4 +1,5 @@
 mekanism/client/ClientPlayerAccess.java
+mekanism/client/ClientTickHandler.java
 mekanism/client/SparkleAnimation.java
 mekanism/client/SpecialColors.java
 mekanism/client/gui/GuiBoilerStats.java
