@@ -734,14 +734,14 @@ processResources {
         //Vanilla/Mekanism-trigger advancements and the canonical robit skin catalog (verified portable: no NeoForge
         //or foreign-mod references).
         include 'data/mekanism/advancement/**'
-        //Official recipes that only use vanilla/Mekanism JSON shapes. `compat/**` targets other mods and is gated by
-        //NeoForge mod_loaded conditions; the listed files use the NeoForge compound ingredient. Both await the datagen lane.
+        //Official recipes: the NeoForge typed ingredient forms (neoforge:compound/difference/intersection) decode
+        //through the port's ItemStackIngredient codec, so the full core catalog ships. `compat/**` targets other mods
+        //and is gated by the NeoForge `neoforge:conditions` wrapper, which has no Fabric equivalent without a packaging
+        //transform - that transform is the remaining datagen/compatibility slice.
         include 'data/mekanism/recipe/**'
         exclude 'data/mekanism/recipe/compat/**'
-        def neoforgeOnlyRecipes = file('recipe-neoforge-only.txt').readLines()
-              .findAll { it && !it.startsWith('#') } as Set
-        exclude { details -> neoforgeOnlyRecipes.contains(details.path) }
         include 'data/mekanism/mekanism/robit_skin/**'
+
         //Official ore/salt worldgen: configured and placed features load as ordinary datapack content. The NeoForge
         //`neoforge/biome_modifier` files are not a vanilla registry; FabricBiomeModifiers parses them at startup and
         //applies each add_features entry through Fabric's BiomeModifications, keeping the official files the source

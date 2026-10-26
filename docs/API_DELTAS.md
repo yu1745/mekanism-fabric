@@ -639,3 +639,9 @@ gate）BUILD SUCCESSFUL。未运行（按完成度优先策略）：全量测试
 - 六个装备 ISBER（jetpack/armored jetpack/free runners/armored free runners/scuba mask/scuba tank/atomic disassembler/flamethrower）经同一 `BuiltinItemRendererRegistry` 通道接线；官方物品 JSON 本就 parent 到 `minecraft:builtin/entity`（vanilla 特殊模型、烘焙零 quads），Fabric 通道零 JSON 改动、零抑制器。八个 `Model*` Java 模型（jetpack 等）+ 八个层定义经 `EntityModelLayerRegistry` 注册（transporter box 层随 transmitter 车道）；`Mekanism.rl` → `MekanismAPI.MEKANISM_MODID` 私有助手（既定先例）。
 - 护甲形态半（`MekCustomArmorRenderProperties` 的 HumanoidModel gear 渲染，`JetpackArmor` 等）随 armor 车道延后；物品形态先接通。
 - 验收：client smoke 8 检查（BER proof layers=2→10、ITEM_RENDERER proof builtin_renderers=10→18）两次全绿；machine smoke 20/20。
+
+### NeoForge 类型化配料解码闭环（Task052 datagen 车道第一段，2026-10-26）
+
+- 官方 320 个使用 `neoforge:compound`/`neoforge:difference`/`neoforge:intersection` 类型化配料的配方（染色/绘画/颜料提取/生物燃料/碳转化等核心目录）此前整批排除；`ItemStackIngredient` 编解码在既有 compound 支持上补齐 difference（base−subtracted）与 intersection（children AND）两类官方形状：JSON 编解码对称、网络流编解码以 mode byte 扩展（0 simple/1 compound/2 difference/3 intersection）、匹配语义（并/差/交）、配方输入缓存映射（intersection 缓存面=全部 children）与空匹配判定（intersection 任一成员为空即空）齐全。
+- 打包面解除 320 个排除项（`recipe-neoforge-only.txt` 删除），release JAR 配方 1476→1816；真实服务端 "Loaded 2868 recipes"、零配方解析错误、machine smoke 20/20。637 个 `compat/**` 配方仍延后：其 `neoforge:conditions`（mod_loaded 门）包装键在 Fabric 条件系统（固定 `fabric:load_conditions` 键）无对应物，需打包期 JSON 变换或裁决——作为 datagen 车道剩余切片记录。
+- 验收：新增 `NeoForgeTypedIngredientTest` 4 例（三种官方形状的精确 JSON 解码、并/差/交匹配语义、重编码对称、缓存面）。

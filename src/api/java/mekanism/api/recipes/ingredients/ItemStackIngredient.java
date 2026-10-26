@@ -41,6 +41,13 @@ public final class ItemStackIngredient implements InputIngredient<@NotNull ItemS
 
     private static final Logger LOGGER = LoggerFactory.getLogger("mekanism.api.MekanismAPI");
     private static final String COMPOUND_TYPE = "neoforge:compound";
+    private static final String DIFFERENCE_TYPE = "neoforge:difference";
+    private static final String INTERSECTION_TYPE = "neoforge:intersection";
+
+    private static final byte MODE_SIMPLE = 0;
+    private static final byte MODE_COMPOUND = 1;
+    private static final byte MODE_DIFFERENCE = 2;
+    private static final byte MODE_INTERSECTION = 3;
 
     /**
      * A codec which can (de)encode item stack ingredients.
@@ -78,7 +85,7 @@ public final class ItemStackIngredient implements InputIngredient<@NotNull ItemS
         if (amount < 1) {
             throw new IllegalArgumentException("ItemStackIngredients require a positive count.");
         }
-        return new ItemStackIngredient(ingredient, amount, null, null);
+        return new ItemStackIngredient(ingredient, amount, null, null, null, null);
     }
 
     /**
@@ -104,7 +111,7 @@ public final class ItemStackIngredient implements InputIngredient<@NotNull ItemS
             //Match the official compound ingredient behavior of collapsing single element unions
             return of(children.getFirst(), amount);
         }
-        return new ItemStackIngredient(children.getFirst(), amount, null, List.copyOf(children));
+        return new ItemStackIngredient(children.getFirst(), amount, null, List.copyOf(children), null, null);
     }
 
     /**
@@ -130,7 +137,7 @@ public final class ItemStackIngredient implements InputIngredient<@NotNull ItemS
         if (amount < 1) {
             throw new IllegalArgumentException("ItemStackIngredients require a positive count.");
         }
-        return new ItemStackIngredient(ingredient, amount, components, null);
+        return new ItemStackIngredient(ingredient, amount, components, null, null, null);
     }
 
     private final Ingredient ingredient;
@@ -140,13 +147,68 @@ public final class ItemStackIngredient implements InputIngredient<@NotNull ItemS
     @Nullable
     private final List<Ingredient> compoundChildren;
     @Nullable
+    private final Ingredient subtracted;
+    @Nullable
+    private final List<Ingredient> intersectionChildren;
+    @Nullable
     private List<ItemStack> representations;
 
-    private ItemStackIngredient(Ingredient ingredient, int count, @Nullable DataComponentPredicate components, @Nullable List<Ingredient> compoundChildren) {
+    /**
+     * Creates an Item Stack Ingredient that matches the given ingredient minus any stacks matching the subtracted ingredient. Used to decode the official
+     * {@code neoforge:difference} typed JSON.
+     *
+     * @param ingredient Ingredient whose matches to start from.
+     * @param subtracted Ingredient whose matches to exclude.
+     * @param amount     Amount needed.
+     *
+     * @throws NullPointerException     if either ingredient instance is null.
+     * @throws IllegalArgumentException if the base ingredient is empty or the amount is not positive.
+     *
+     * @since 10.7.12
+     */
+    public static ItemStackIngredient ofDifference(Ingredient ingredient, Ingredient subtracted, int amount) {
+        Objects.requireNonNull(ingredient, "ItemStackIngredients cannot be created from a null ingredient.");
+        Objects.requireNonNull(subtracted, "Difference ItemStackIngredients cannot be created from a null subtracted ingredient.");
+        if (ingredient.isEmpty()) {
+            throw new IllegalArgumentException("ItemStackIngredients cannot be created using the empty ingredient.");
+        }
+        if (amount < 1) {
+            throw new IllegalArgumentException("ItemStackIngredients require a positive count.");
+        }
+        return new ItemStackIngredient(ingredient, amount, null, null, subtracted, null);
+    }
+
+    /**
+     * Creates an Item Stack Ingredient that matches the intersection of the given ingredients and amount. Used to decode the official
+     * {@code neoforge:intersection} typed JSON.
+     *
+     * @param children Ingredients whose intersection to match.
+     * @param amount   Amount needed.
+     *
+     * @throws NullPointerException     if the children instance is null.
+     * @throws IllegalArgumentException if no children are given or the amount is not positive.
+     *
+     * @since 10.7.12
+     */
+    public static ItemStackIngredient ofIntersection(List<Ingredient> children, int amount) {
+        Objects.requireNonNull(children, "ItemStackIngredients cannot be created from a null ingredient list.");
+        if (children.isEmpty()) {
+            throw new IllegalArgumentException("Intersection ItemStackIngredients cannot be created from no ingredients.");
+        }
+        if (amount < 1) {
+            throw new IllegalArgumentException("ItemStackIngredients require a positive count.");
+        }
+        return new ItemStackIngredient(children.getFirst(), amount, null, null, null, List.copyOf(children));
+    }
+
+    private ItemStackIngredient(Ingredient ingredient, int count, @Nullable DataComponentPredicate components, @Nullable List<Ingredient> compoundChildren,
+          @Nullable Ingredient subtracted, @Nullable List<Ingredient> intersectionChildren) {
         this.ingredient = ingredient;
         this.count = count;
         this.components = components;
         this.compoundChildren = compoundChildren;
+        this.subtracted = subtracted;
+        this.intersectionChildren = intersectionChildren;
     }
 
     @Override
@@ -173,6 +235,17 @@ public final class ItemStackIngredient implements InputIngredient<@NotNull ItemS
             }
             return false;
         }
+        if (intersectionChildren != null) {
+            for (Ingredient child : intersectionChildren) {
+                if (!child.test(stack)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        if (subtracted != null && subtracted.test(stack)) {
+            return false;
+        }
         return ingredient.test(stack);
     }
 
@@ -195,6 +268,15 @@ public final class ItemStackIngredient implements InputIngredient<@NotNull ItemS
                 }
             }
             return true;
+        }
+        if (intersectionChildren != null) {
+            //An intersection matches nothing as soon as one of its members matches nothing
+            for (Ingredient child : intersectionChildren) {
+                if (hasNoItems(child)) {
+                    return true;
+                }
+            }
+            return false;
         }
         return hasNoItems(ingredient);
     }
@@ -266,7 +348,14 @@ public final class ItemStackIngredient implements InputIngredient<@NotNull ItemS
      */
     @Internal
     public List<Ingredient> ingredients() {
-        return compoundChildren == null ? List.of(ingredient) : compoundChildren;
+        if (compoundChildren != null) {
+            return compoundChildren;
+        }
+        if (intersectionChildren != null) {
+            //The intersection's cache surface is its membership; the primary ingredient is the first child
+            return intersectionChildren;
+        }
+        return List.of(ingredient);
     }
 
     /**
@@ -330,10 +419,16 @@ public final class ItemStackIngredient implements InputIngredient<@NotNull ItemS
             T typeValue = ops.get(input, SerializationConstants.TYPE).result().orElse(null);
             if (typeValue != null) {
                 return ops.getStringValue(typeValue).flatMap(type -> {
-                    if (!COMPOUND_TYPE.equals(type)) {
-                        return DataResult.error(() -> "Unknown custom item ingredient type: '" + type + "' is not supported");
+                    if (COMPOUND_TYPE.equals(type)) {
+                        return decodeCompound(ops, input);
                     }
-                    return decodeCompound(ops, input);
+                    if (DIFFERENCE_TYPE.equals(type)) {
+                        return decodeDifference(ops, input);
+                    }
+                    if (INTERSECTION_TYPE.equals(type)) {
+                        return decodeIntersection(ops, input);
+                    }
+                    return DataResult.error(() -> "Unknown custom item ingredient type: '" + type + "' is not supported");
                 });
             }
             return Ingredient.CODEC_NONEMPTY.decode(ops, input)
@@ -361,12 +456,41 @@ public final class ItemStackIngredient implements InputIngredient<@NotNull ItemS
             return Ingredient.CODEC_NONEMPTY.listOf().decode(ops, value).map(Pair::getFirst);
         }
 
+        private <T> DataResult<ItemStackIngredient> decodeDifference(DynamicOps<T> ops, T input) {
+            T baseValue = ops.get(input, SerializationConstants.BASE).result().orElse(null);
+            if (baseValue == null) {
+                return DataResult.error(() -> "No " + SerializationConstants.BASE + " field found");
+            }
+            T subtractedValue = ops.get(input, SerializationConstants.SUBTRACTED).result().orElse(null);
+            if (subtractedValue == null) {
+                return DataResult.error(() -> "No " + SerializationConstants.SUBTRACTED + " field found");
+            }
+            return Ingredient.CODEC_NONEMPTY.decode(ops, baseValue).flatMap(base -> Ingredient.CODEC_NONEMPTY.decode(ops, subtractedValue)
+                  .flatMap(subtracted -> decodeCount(ops, input).map(count -> ItemStackIngredient.ofDifference(base.getFirst(), subtracted.getFirst(), count))));
+        }
+
+        private <T> DataResult<ItemStackIngredient> decodeIntersection(DynamicOps<T> ops, T input) {
+            DataResult<List<Ingredient>> children = decodeChildren(ops, input, SerializationConstants.CHILDREN);
+            return children.flatMap(list -> {
+                if (list.isEmpty()) {
+                    return DataResult.error(() -> "Intersection item ingredients must have at least one child");
+                }
+                return decodeCount(ops, input).map(count -> ItemStackIngredient.ofIntersection(list, count));
+            });
+        }
+
         private <T> DataResult<Integer> decodeCount(DynamicOps<T> ops, T input) {
             return Codec.intRange(1, Integer.MAX_VALUE).optionalFieldOf(SerializationConstants.COUNT, 1).codec().decode(ops, input).map(Pair::getFirst);
         }
 
         @Override
         public <T> DataResult<T> encode(ItemStackIngredient value, DynamicOps<T> ops, T prefix) {
+            if (value.subtracted != null) {
+                return encodeDifference(value, ops, prefix);
+            }
+            if (value.intersectionChildren != null) {
+                return encodeIntersection(value, ops, prefix);
+            }
             List<Ingredient> ingredients = value.ingredients();
             if (ingredients.size() > 1) {
                 return encodeCompound(value, ops, prefix, ingredients);
@@ -378,6 +502,28 @@ public final class ItemStackIngredient implements InputIngredient<@NotNull ItemS
                 }
                 //Multi-value ingredients serialize to list form, which cannot carry an inline count; wrap them in the typed compound form instead
                 return encodeCompound(value, ops, prefix, ingredients);
+            });
+        }
+
+        private <T> DataResult<T> encodeDifference(ItemStackIngredient value, DynamicOps<T> ops, T prefix) {
+            return Ingredient.CODEC_NONEMPTY.encodeStart(ops, value.ingredient).flatMap(base -> Ingredient.CODEC_NONEMPTY.encodeStart(ops, value.subtracted)
+                  .flatMap(subtracted -> {
+                      RecordBuilder<T> builder = ops.mapBuilder();
+                      builder.add(SerializationConstants.TYPE, ops.createString(DIFFERENCE_TYPE));
+                      builder.add(SerializationConstants.BASE, base);
+                      builder.add(SerializationConstants.SUBTRACTED, subtracted);
+                      builder.add(SerializationConstants.COUNT, ops.createInt(value.count));
+                      return builder.build(prefix);
+                  }));
+        }
+
+        private <T> DataResult<T> encodeIntersection(ItemStackIngredient value, DynamicOps<T> ops, T prefix) {
+            return Ingredient.CODEC_NONEMPTY.listOf().encodeStart(ops, value.intersectionChildren).flatMap(children -> {
+                RecordBuilder<T> builder = ops.mapBuilder();
+                builder.add(SerializationConstants.TYPE, ops.createString(INTERSECTION_TYPE));
+                builder.add(SerializationConstants.CHILDREN, children);
+                builder.add(SerializationConstants.COUNT, ops.createInt(value.count));
+                return builder.build(prefix);
             });
         }
 
@@ -397,10 +543,11 @@ public final class ItemStackIngredient implements InputIngredient<@NotNull ItemS
         @Override
         public ItemStackIngredient decode(RegistryFriendlyByteBuf buffer) {
             int count = ByteBufCodecs.VAR_INT.decode(buffer);
-            boolean compound = buffer.readBoolean();
+            int mode = buffer.readByte();
             Ingredient primary;
             List<Ingredient> children = null;
-            if (compound) {
+            Ingredient subtracted = null;
+            if (mode == MODE_COMPOUND) {
                 int size = ByteBufCodecs.VAR_INT.decode(buffer);
                 if (size < 1) {
                     throw new IllegalStateException("Compound item ingredient wire payload must have at least one child");
@@ -411,19 +558,38 @@ public final class ItemStackIngredient implements InputIngredient<@NotNull ItemS
                 }
                 children = decoded;
                 primary = decoded.getFirst();
-            } else {
+            } else if (mode == MODE_DIFFERENCE) {
                 primary = Ingredient.CONTENTS_STREAM_CODEC.decode(buffer);
+                subtracted = Ingredient.CONTENTS_STREAM_CODEC.decode(buffer);
+            } else if (mode == MODE_INTERSECTION) {
+                int size = ByteBufCodecs.VAR_INT.decode(buffer);
+                if (size < 1) {
+                    throw new IllegalStateException("Intersection item ingredient wire payload must have at least one child");
+                }
+                List<Ingredient> decoded = new ArrayList<>(size);
+                for (int i = 0; i < size; i++) {
+                    decoded.add(Ingredient.CONTENTS_STREAM_CODEC.decode(buffer));
+                }
+                children = decoded;
+                primary = decoded.getFirst();
+            } else if (mode == MODE_SIMPLE) {
+                primary = Ingredient.CONTENTS_STREAM_CODEC.decode(buffer);
+            } else {
+                throw new IllegalStateException("Unknown item ingredient wire mode: " + mode);
             }
             boolean hasComponents = buffer.readBoolean();
             if (hasComponents) {
-                if (compound) {
-                    throw new IllegalStateException("Item ingredient wire payload cannot be both compound and component-sensitive");
+                if (mode != MODE_SIMPLE) {
+                    throw new IllegalStateException("Item ingredient wire payload cannot combine a shaped form with component sensitivity");
                 }
                 DataComponentPredicate components = DataComponentPredicate.STREAM_CODEC.decode(buffer);
                 return ItemStackIngredient.of(primary, count, components);
             }
+            if (subtracted != null) {
+                return ItemStackIngredient.ofDifference(primary, subtracted, count);
+            }
             if (children != null && children.size() > 1) {
-                return ItemStackIngredient.of(children, count);
+                return mode == MODE_INTERSECTION ? ItemStackIngredient.ofIntersection(children, count) : ItemStackIngredient.of(children, count);
             }
             return ItemStackIngredient.of(primary, count);
         }
@@ -431,21 +597,39 @@ public final class ItemStackIngredient implements InputIngredient<@NotNull ItemS
         @Override
         public void encode(RegistryFriendlyByteBuf buffer, ItemStackIngredient value) {
             ByteBufCodecs.VAR_INT.encode(buffer, value.count);
-            List<Ingredient> ingredients = value.ingredients();
-            boolean compound = ingredients.size() > 1;
-            buffer.writeBoolean(compound);
-            if (compound) {
-                ByteBufCodecs.VAR_INT.encode(buffer, ingredients.size());
-                for (Ingredient child : ingredients) {
+            if (value.subtracted != null) {
+                buffer.writeByte(MODE_DIFFERENCE);
+                Ingredient.CONTENTS_STREAM_CODEC.encode(buffer, value.ingredient);
+                Ingredient.CONTENTS_STREAM_CODEC.encode(buffer, value.subtracted);
+            } else if (value.intersectionChildren != null) {
+                buffer.writeByte(MODE_INTERSECTION);
+                ByteBufCodecs.VAR_INT.encode(buffer, value.intersectionChildren.size());
+                for (Ingredient child : value.intersectionChildren) {
                     Ingredient.CONTENTS_STREAM_CODEC.encode(buffer, child);
                 }
             } else {
-                Ingredient.CONTENTS_STREAM_CODEC.encode(buffer, ingredients.getFirst());
+                List<Ingredient> ingredients = value.ingredients();
+                boolean compound = ingredients.size() > 1;
+                buffer.writeByte(compound ? MODE_COMPOUND : MODE_SIMPLE);
+                if (compound) {
+                    ByteBufCodecs.VAR_INT.encode(buffer, ingredients.size());
+                    for (Ingredient child : ingredients) {
+                        Ingredient.CONTENTS_STREAM_CODEC.encode(buffer, child);
+                    }
+                } else {
+                    Ingredient.CONTENTS_STREAM_CODEC.encode(buffer, ingredients.getFirst());
+                }
+                boolean hasComponents = value.hasComponentPredicate();
+                buffer.writeBoolean(hasComponents);
+                if (hasComponents) {
+                    DataComponentPredicate.STREAM_CODEC.encode(buffer, value.components);
+                }
+                return;
             }
             boolean hasComponents = value.hasComponentPredicate();
             buffer.writeBoolean(hasComponents);
             if (hasComponents) {
-                DataComponentPredicate.STREAM_CODEC.encode(buffer, value.components);
+                throw new IllegalStateException("Item ingredient wire payload cannot combine a shaped form with component sensitivity");
             }
         }
     }
