@@ -59,14 +59,15 @@ check() {
 
 check "client bootstrap reached the title screen" 'Sound engine started'
 check "client entrypoint completed networking init" 'MEKANISM_FABRIC_NETWORK_CLIENT_PROOF'
-check "loader closure parsed the shipped loader families" 'MEKANISM_FABRIC_MODELS_PROOF composite=82 separate_transforms=1 item_layers=1 obj=1 energy_cube_baked=6 data_based_deferred=1 robit_baked=2 fluid_container_deferred=18 transmitter_owned=3'
+check "loader closure parsed the shipped loader families" 'MEKANISM_FABRIC_MODELS_PROOF composite=82 separate_transforms=1 item_layers=1 obj=1 energy_cube_baked=6 data_based_baked=1 robit_baked=2 fluid_container_deferred=18 transmitter_owned=3'
 check "tile renderer offline model cache registered" 'MEKANISM_FABRIC_MODEL_CACHE_PROOF json_models=7'
-check "tile entity renderers registered" 'MEKANISM_FABRIC_BER_PROOF tile_types=30 renderers=15 layers=10'
+check "tile entity renderers registered" 'MEKANISM_FABRIC_BER_PROOF tile_types=31 renderers=16 layers=10'
 check "block-item ISBERs wired" 'MEKANISM_FABRIC_ITEM_RENDERER_PROOF suppressed_models=12 builtin_renderers=19'
 check "HUD layers inserted into the vanilla draw" 'MEKANISM_FABRIC_HUD_PROOF layers=2'
 check "entity renderers registered" 'MEKANISM_FABRIC_ENTITY_RENDERER_PROOF entities=2'
 check "gear client tick handler wired" 'MEKANISM_FABRIC_CLIENT_TICK_PROOF handler=registered seams=mouse,fog_color,fog_setup,living_visibility,recipe_cache'
 check "armor layers registered" 'MEKANISM_FABRIC_ARMOR_LAYER_PROOF callback=registered'
+check "data based model baked" 'MEKANISM_FABRIC_DATA_BASED_PROOF baked=1'
 if grep -E 'Missing model|Failed to load model|Exception loading model' "${LOG_FILE}.latest.log" | grep -Ev 'energy_cube|qio_redstone_adapter|/robit|fluid_(tank|container)|neoforge:item/bucket' | grep -q .; then
   echo "FAIL no missing-model errors"
   grep -E 'Missing model|Failed to load model|Exception loading model' "${LOG_FILE}.latest.log" | head -5

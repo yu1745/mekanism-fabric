@@ -88,7 +88,7 @@ public final class FabricMekanismModelPlugin {
             int itemLayers = 0;
             int objModels = 0;
             int energyCubeBaked = 0;
-            int deferredDataBased = 0;
+            int dataBasedBaked = 0;
             int robitBaked = 0;
             int deferredFluidContainers = 0;
             int transmitterOwned = 0;
@@ -141,7 +141,12 @@ public final class FabricMekanismModelPlugin {
                         prepared.put(id, new FabricEnergyCubeUnbakedModel(id, root, null));
                         energyCubeBaked++;
                     }
-                    case LOADER_DATA_BASED -> deferredDataBased++;
+                    case LOADER_DATA_BASED -> {
+                        //The official data-based switch rides NeoForge model data; the port bakes the no-data
+                        //model as the static bake and hands the lit half to the tile renderer registry.
+                        prepared.put(id, new FabricDataBasedUnbakedModel(id, root));
+                        dataBasedBaked++;
+                    }
                     case LOADER_ROBIT -> {
                         //Robit models bake as plain element models with missingno placeholders; the per-skin
                         //texture transform applies at draw time (builtin renderer for items, entity renderer for
@@ -160,8 +165,8 @@ public final class FabricMekanismModelPlugin {
                     default -> throw new IllegalStateException("Mekanism model " + id + " declares an unhandled loader: " + loader);
                 }
             }
-            LOGGER.info("MEKANISM_FABRIC_MODELS_PROOF composite={} separate_transforms={} item_layers={} obj={} energy_cube_baked={} data_based_deferred={} robit_baked={} fluid_container_deferred={} transmitter_owned={}",
-                  composites, separateTransforms, itemLayers, objModels, energyCubeBaked, deferredDataBased,
+            LOGGER.info("MEKANISM_FABRIC_MODELS_PROOF composite={} separate_transforms={} item_layers={} obj={} energy_cube_baked={} data_based_baked={} robit_baked={} fluid_container_deferred={} transmitter_owned={}",
+                  composites, separateTransforms, itemLayers, objModels, energyCubeBaked, dataBasedBaked,
                   robitBaked, deferredFluidContainers, transmitterOwned);
             return prepared;
         }, executor);

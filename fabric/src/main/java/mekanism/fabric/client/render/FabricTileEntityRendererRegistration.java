@@ -83,8 +83,10 @@ public final class FabricTileEntityRendererRegistration {
               MekanismTileEntityTypes.ELITE_ENERGY_CUBE, MekanismTileEntityTypes.ULTIMATE_ENERGY_CUBE, MekanismTileEntityTypes.CREATIVE_ENERGY_CUBE);
         renderers += bind(RenderFluidTank::new, MekanismTileEntityTypes.BASIC_FLUID_TANK, MekanismTileEntityTypes.ADVANCED_FLUID_TANK,
               MekanismTileEntityTypes.ELITE_FLUID_TANK, MekanismTileEntityTypes.ULTIMATE_FLUID_TANK, MekanismTileEntityTypes.CREATIVE_FLUID_TANK);
+        //The port-only data-based replacement BER (the official qio adapter switches models through NeoForge model data).
+        renderers += bind(mekanism.client.render.tileentity.RenderQIORedstoneAdapter::new, MekanismTileEntityTypes.QIO_REDSTONE_ADAPTER);
         org.slf4j.LoggerFactory.getLogger("Mekanism/FabricTileEntityRenderers")
-              .info("MEKANISM_FABRIC_BER_PROOF tile_types={} renderers=15 layers=10", renderers);
+              .info("MEKANISM_FABRIC_BER_PROOF tile_types={} renderers=16 layers=10", renderers);
     }
 
     @SafeVarargs

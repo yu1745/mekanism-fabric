@@ -320,6 +320,7 @@ mekanism/client/render/tileentity/RenderIndustrialAlarm.java
 mekanism/client/render/tileentity/RenderNutritionalLiquifier.java
 mekanism/client/render/tileentity/RenderPersonalChest.java
 mekanism/client/render/tileentity/RenderPigmentMixer.java
+mekanism/client/render/tileentity/RenderQIORedstoneAdapter.java
 mekanism/client/render/tileentity/RenderSPS.java
 mekanism/client/render/tileentity/RenderSeismicVibrator.java
 mekanism/client/render/tileentity/RenderTeleporter.java

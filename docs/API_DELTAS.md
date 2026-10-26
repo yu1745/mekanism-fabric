@@ -679,3 +679,9 @@ gate）BUILD SUCCESSFUL。未运行（按完成度优先策略）：全量测试
 - 访问放宽:HumanoidArmorLayer inner/outer、AgeableListModel 六标量(镜像上游 AT)、LivingEntityRenderer.layers、ElytraLayer.elytraModel。
 - 延后(记录):`MekaSuitArmor` 四件套(OBJ 模型缓存半,IGeometryBakingContext/BakingCompleted 依赖)+ `ISpecialGear`(NeoForge 扩展件,随其)——注册表持 `ICustomArmor`,层路径已为 MekaSuit 就位。
 - 验收:模型 smoke 第 12 检查 `MEKANISM_FABRIC_ARMOR_LAYER_PROOF callback=registered`,11/11→12/12 两次连续;切片 api 262 / common 1467 / platform 154。穿着视觉留 mcdebug/观察(与 flame/ecube 同)。
+
+### data_based 模型族（Task052,2026-10-26)
+
+- `mekanism:data_based`(qio_redstone_adapter 点亮切换)重构:NeoForge ModelData 驱动的双模型切换→静态烘焙(no_data=unlit)+ 移植侧 BER `RenderQIORedstoneAdapter` 按方块实体 render data(`getRenderData()` 返回 isEmitting)叠绘 lit 模型四元组(能量方块先例的分层)。
+- 插件 `LOADER_DATA_BASED` 落地:依赖解析 no_data/emitting 两模型、各自烘焙;lit 半按模型 id 注册进 `FabricDataBasedModels`(家族仅一件,lit id 常量化)。
+- 验收:模型 smoke 第 13 检查 `MEKANISM_FABRIC_DATA_BASED_PROOF baked=1`,BER proof `tile_types=31 renderers=16`;两次连续 13/13。视觉(点亮态)留 mcdebug/观察。
