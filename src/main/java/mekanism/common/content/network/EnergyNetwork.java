@@ -18,6 +18,8 @@ import mekanism.common.content.network.distribution.EnergyAcceptorTarget;
 import mekanism.common.content.network.distribution.EnergyTransmitterSaveTarget;
 import mekanism.common.content.network.transmitter.UniversalCable;
 import mekanism.common.lib.transmitter.DynamicBufferedNetwork;
+import mekanism.common.lib.transmitter.acceptor.FreshNetworkAcceptorCache;
+import mekanism.common.lib.transmitter.acceptor.NetworkAcceptorCache;
 import mekanism.common.util.EmitUtils;
 import mekanism.common.util.text.EnergyDisplay;
 import net.minecraft.core.Direction;
@@ -46,6 +48,11 @@ public class EnergyNetwork extends DynamicBufferedNetwork<IStrictEnergyHandler, 
     public EnergyNetwork(Collection<EnergyNetwork> networks) {
         this(UUID.randomUUID());
         adoptAllAndRegister(networks);
+    }
+
+    @Override
+    protected NetworkAcceptorCache<IStrictEnergyHandler> createAcceptorCache() {
+        return new FreshNetworkAcceptorCache<>(this::getTransmitters);
     }
 
     @Override

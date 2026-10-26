@@ -96,16 +96,14 @@ public class ItemMekaTool extends ItemEnergized implements IRadialModuleContaine
 
     @Override
     public boolean isCorrectToolForDrops(@NotNull ItemStack stack, @NotNull BlockState state) {
-        //Fabric port: the upstream catch-all rule used NeoForge's AnyHolderSet type, which has no serializable vanilla equivalent. Honor any
-        // user-supplied component rules first, then apply the official default: every block not explicitly denied drops correctly
-        // (docs/TASK052_ADJUDICATION_GEAR_CATALOG.md)
         Tool tool = stack.get(DataComponents.TOOL);
-        if (tool != null) {
-            for (Tool.Rule rule : tool.rules()) {
-                if (rule.correctForDrops().isPresent() && state.is(rule.blocks())) {
-                    return rule.correctForDrops().get();
-                }
-            }
+        if (tool == null) {
+            return false;
+        }
+        //Only the item's default component needs the missing AnyHolderSet catch-all adaptation.
+        //A replacement component is authoritative, including an empty rule list or explicit removal.
+        if (!tool.equals(components().get(DataComponents.TOOL))) {
+            return tool.isCorrectForDrops(state);
         }
         return !state.is(MekanismTags.Blocks.INCORRECT_FOR_MEKA_TOOL);
     }

@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import mekanism.api.fluid.FluidStack;
+import mekanism.api.security.IBlockSecurityUtils;
 import mekanism.common.lib.MekanismServerState;
 import mekanism.common.lib.multiblock.IInternalMultiblock;
 import mekanism.common.lib.multiblock.IMultiblock;
@@ -51,6 +52,7 @@ import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.tags.FluidTags;
+import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.fabricmc.fabric.api.lookup.v1.block.BlockApiLookup;
 import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
 import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariantAttributes;
@@ -61,6 +63,12 @@ import org.jetbrains.annotations.Nullable;
 public class WorldUtils {
 
     private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger("Mekanism");
+
+    /** Speculative break veto shared by automatic mining and cardboard-box replacement; it never reports a successful break. */
+    public static boolean canBreakBlock(Level world, Player player, BlockPos pos, BlockState state) {
+        return IBlockSecurityUtils.INSTANCE.canAccess(player, world, pos) && (world.isClientSide ||
+              PlayerBlockBreakEvents.BEFORE.invoker().beforeBlockBreak(world, player, pos, state, world.getBlockEntity(pos)));
+    }
 
     /**
      * Checks if the chunk at the given position is loaded but does not validate the position is in bounds of the world.

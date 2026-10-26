@@ -3,6 +3,7 @@ package mekanism.common.integration.energy;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.energy.IStrictEnergyHandler;
 import mekanism.common.util.WorldUtils;
+import mekanism.common.attachments.containers.ContainerType;
 import net.fabricmc.fabric.api.lookup.v1.block.BlockApiLookup;
 import net.fabricmc.fabric.api.lookup.v1.entity.EntityApiLookup;
 import net.fabricmc.fabric.api.lookup.v1.item.ItemApiLookup;
@@ -84,14 +85,14 @@ public interface IEnergyCompat {
     }
 
     /**
-     * Gets an exposed capability of this compat's type from a stack and wraps it into a strict energy handler.
+     * Gets a registered internal Mekanism handler. Use the context overload for native external items.
      *
      * @param stack ItemStack to check for the capability
      */
     @Nullable
     default IStrictEnergyHandler getStrictEnergyHandler(ItemStack stack) {
-        Object capability = getCapability(stack);
-        return capability == null ? null : wrapAsStrictEnergyHandler(capability);
+        //A bare stack has no owner that can install native item/count replacements.
+        return ContainerType.ENERGY.getRegisteredHandler(stack);
     }
 
     /**
@@ -105,10 +106,11 @@ public interface IEnergyCompat {
         return capability == null ? null : wrapAsStrictEnergyHandler(capability);
     }
 
+    /** External item mutation requires the actual owning inventory context, never a withConstant probe. */
     @Nullable
-    private Object getCapability(ItemStack stack) {
-        //Note: Safety handling of empty stack is done when looking up the provider inside find's implementation
-        return getItemCapability().find(stack, ContainerItemContext.withConstant(stack));
+    default IStrictEnergyHandler getStrictEnergyHandler(ContainerItemContext context) {
+        Object capability = context.find(getItemCapability());
+        return capability == null ? null : wrapAsStrictEnergyHandler(capability);
     }
 
     @Nullable

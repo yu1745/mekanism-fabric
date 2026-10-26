@@ -589,14 +589,18 @@ public class TileEntityDigitalMiner extends TileEntityMekanism implements IChunk
     }
 
     private boolean canMine(BlockState state, BlockPos pos) {
-        //Fabric port delta: the upstream probe posted a cancellable BreakEvent so protection mods could veto miner breaks; Fabric's protection pipeline
-        // runs on real player break events upstream of this path, and no postable equivalent exists — the probe therefore always answers allowed
-        // (docs/TASK052_RESUME_2026-10-26.md)
-        boolean canMine = true;
-        if (MekanismAPI.debug && !canMine) {
-            LOGGER.debug("Denied mining block: {} @ {} {}", state, level.dimension().location(), pos);
+        ServerLevel world = (ServerLevel) level;
+        MekFakePlayer dummy = MekFakePlayer.setupFakePlayer(world, worldPosition.getX(), worldPosition.getY(), worldPosition.getZ());
+        dummy.setEmulatingUUID(getOwnerUUID());
+        try {
+            boolean canMine = WorldUtils.canBreakBlock(world, dummy, pos, state);
+            if (MekanismAPI.debug && !canMine) {
+                LOGGER.debug("Denied mining block: {} @ {} {}", state, level.dimension().location(), pos);
+            }
+            return canMine;
+        } finally {
+            dummy.cleanupFakePlayer(world);
         }
-        return canMine;
     }
 
     private BlockState getStateForPlacement(ItemStack stack, BlockPos pos) {

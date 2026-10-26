@@ -117,3 +117,7 @@ accessible field net/minecraft/client/gui/components/EditBox highlightPos I
 accessible field net/minecraft/client/gui/components/EditBox maxLength I
 accessible method net/minecraft/client/gui/components/Tooltip <init> (Lnet/minecraft/network/chat/Component;Lnet/minecraft/network/chat/Component;)V
 accessible field net/minecraft/client/gui/components/Tooltip cachedTooltip Ljava/util/List;
+
+# Mekanism force-ticking checks wrap the vanilla nearby-player gate.
+accessible method net/minecraft/server/level/ChunkMap anyPlayerCloseEnoughForSpawning (Lnet/minecraft/world/level/ChunkPos;)Z
+accessible method net/minecraft/core/dispenser/ShearsDispenseItemBehavior tryShearBeehive (Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/core/BlockPos;)Z

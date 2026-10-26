@@ -94,7 +94,9 @@ public final class Module<MODULE extends ICustomModule<MODULE>> implements IModu
     }
 
     private Module(Holder<ModuleData<?>> holder, int installed, List<ModuleConfig<?>> configItems) {
-        this.holder = holder;
+        //NeoForge's holder codec unwraps DeferredHolder; vanilla requires the registry's actual reference.
+        //Resolve by the real value's registry identity, preserving the canonical type for both NBT and packets.
+        this.holder = MekanismAPI.MODULE_REGISTRY.wrapAsHolder(holder.value());
         this.installed = installed;
         this.configItems = configItems;
         for (ModuleConfig<?> configItem : this.configItems) {

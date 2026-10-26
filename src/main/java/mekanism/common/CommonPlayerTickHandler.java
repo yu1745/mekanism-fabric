@@ -161,30 +161,15 @@ public class CommonPlayerTickHandler {
     }
 
     /**
-     * Result of one incoming-damage reduction query. Cached per hurt call (the same thread computes it once, whether the
-     * cancellation injector or the amount modifier reaches it first) so the armor energy is extracted exactly once.
+     * Result of one incoming-damage reduction query. The actual hurt invocation shares this result between cancellation
+     * and amount adjustment, so armor energy is extracted exactly once.
      */
     public record DamageReduction(LivingEntity entity, DamageSource source, float original, float remaining, boolean cancel) {
     }
 
-    private static final ThreadLocal<DamageReduction> DAMAGE_REDUCTION = new ThreadLocal<>();
-
-    public static void clearIncomingDamage() {
-        DAMAGE_REDUCTION.remove();
-    }
-
-    /**
-     * Fabric port delta: replaces the NeoForge incoming-damage event. The damage-container rules are preserved: gas-mask
-     * prevention cancels, and powered MekaSuit absorption reduces the raw amount (or cancels when fully absorbed).
-     */
+    /** Called once by the post-guard Fabric damage hook; the mixin owns the invocation-local result. */
     public static DamageReduction reduceIncomingDamage(LivingEntity entity, DamageSource source, float damage) {
-        DamageReduction cached = DAMAGE_REDUCTION.get();
-        if (cached != null && cached.entity() == entity && cached.source() == source && cached.original() == damage) {
-            return cached;
-        }
-        DamageReduction result = computeIncomingDamage(entity, source, damage);
-        DAMAGE_REDUCTION.set(result);
-        return result;
+        return computeIncomingDamage(entity, source, damage);
     }
 
     private static DamageReduction computeIncomingDamage(LivingEntity entity, DamageSource source, float damage) {
@@ -222,30 +207,15 @@ public class CommonPlayerTickHandler {
     }
 
     /**
-     * Result of the fall-absorption query for one fall event. Cached per call so energy is extracted once even when both the
+     * Result of the fall-absorption query for one fall event. Shared per invocation so energy is extracted once even when both the
      * cancellation and distance injectors run.
      */
     public record FallResult(LivingEntity entity, float distance, float multiplicity, DamageSource source, float remainingDistance, boolean cancel) {
     }
 
-    private static final ThreadLocal<FallResult> FALL_RESULT = new ThreadLocal<>();
-
-    public static void clearFallDamage() {
-        FALL_RESULT.remove();
-    }
-
-    /**
-     * Fabric port delta: replaces the NeoForge living-fall event. A fully absorbed fall keeps the official behavior of playing the
-     * landing step sound and cancelling the damage, while partial absorption returns the reduced fall distance.
-     */
+    /** Called once per fall invocation; nested/passenger calls cannot overwrite its result. */
     public static FallResult reduceFallDamage(LivingEntity entity, float distance, float damageMultiplier, DamageSource source) {
-        FallResult cached = FALL_RESULT.get();
-        if (cached != null && cached.entity() == entity && cached.distance() == distance && cached.multiplicity() == damageMultiplier) {
-            return cached;
-        }
-        FallResult result = computeFallDamage(entity, distance, damageMultiplier, source);
-        FALL_RESULT.set(result);
-        return result;
+        return computeFallDamage(entity, distance, damageMultiplier, source);
     }
 
     private static FallResult computeFallDamage(LivingEntity entity, float distance, float damageMultiplier, DamageSource source) {

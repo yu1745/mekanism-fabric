@@ -270,8 +270,8 @@ public class FluidDeferredRegister {
 
         @Override
         protected boolean canConvertToSource(Level level) {
-            //BaseFlowingFluid.Properties enables source conversion by default for modded fluids
-            return true;
+            //NeoForge 21.1.200 FluidType.Properties defaults to false; no official Mekanism fluid overrides it.
+            return false;
         }
 
         @Override
@@ -296,13 +296,13 @@ public class FluidDeferredRegister {
 
         @Override
         protected float getExplosionResistance() {
-            return 100.0F;
+            return 1.0F;
         }
 
         @Override
         protected boolean canBeReplacedWith(FluidState state, net.minecraft.world.level.BlockGetter level, BlockPos pos, Fluid fluid,
               net.minecraft.core.Direction direction) {
-            return direction == net.minecraft.core.Direction.DOWN;
+            return direction == net.minecraft.core.Direction.DOWN && !isSame(fluid);
         }
 
         @Override

@@ -16,6 +16,7 @@ import mekanism.common.integration.energy.EnergyCompatUtils;
 import mekanism.common.registries.MekanismBlocks;
 import mekanism.common.tile.base.TileEntityMekanism;
 import mekanism.common.util.MekanismUtils;
+import mekanism.fabric.energy.ItemEnergyContainer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
@@ -84,7 +85,10 @@ public class TileEntityChargepad extends TileEntityMekanism {
             int slots = inventory.getContainerSize();
             for (int slot = 0; slot < slots; slot++) {
                 ItemStack stack = inventory.getItem(slot);
-                if (!stack.isEmpty() && provideEnergy(EnergyCompatUtils.getStrictEnergyHandler(stack))) {
+                ItemEnergyContainer itemEnergy = ItemEnergyContainer.find(stack);
+                if (itemEnergy != null && itemEnergy.transfer(energyContainer, false, energyContainer.getEnergyPerTick(), AutomationType.INTERNAL) > 0) {
+                    inventory.setItem(slot, itemEnergy.getContainer());
+                    inventory.setChanged();
                     //Only allow charging one item per player each check
                     return true;
                 }

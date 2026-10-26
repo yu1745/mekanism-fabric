@@ -5,7 +5,6 @@ import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import it.unimi.dsi.fastutil.longs.LongSets;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import mekanism.api.MekanismAPI;
@@ -18,12 +17,10 @@ import mekanism.common.tile.base.TileEntityMekanism;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -31,8 +28,7 @@ import org.slf4j.Logger;
 public class TileComponentChunkLoader<T extends TileEntityMekanism & IChunkLoader> implements ITileComponent {
 
     private static final Logger LOGGER = LogUtils.getLogger();
-    //Fabric port delta: the NeoForge TicketController is replaced by the owned vanilla-forced-chunk seam. The id the
-    // controller used for ticket persistence is not needed because ChunkLoaderTickets persists the owners itself.
+    //Fabric port delta: the NeoForge controller is replaced by persistent block-owner region tickets.
 
     /**
      * TileEntity implementing this component.
@@ -56,6 +52,10 @@ public class TileComponentChunkLoader<T extends TileEntityMekanism & IChunkLoade
         this.forceTicks = forceTicks;
     }
 
+    public boolean forcesTicks() {
+        return forceTicks;
+    }
+
     public boolean canOperate() {
         return MekanismConfig.general.allowChunkloading.get() && tile.supportsUpgrades() && tile.getComponent().isUpgradeInstalled(Upgrade.ANCHOR);
     }
@@ -65,7 +65,7 @@ public class TileComponentChunkLoader<T extends TileEntityMekanism & IChunkLoade
         LOGGER.debug("Attempting to remove {} chunk tickets. Pos: {} World: {}", tickets, pos, world.dimension().location());
         if (tickets > 0) {
             for (long chunkPos : chunkSet) {
-                boolean success = ChunkLoaderTickets.setTicket(world, pos, ChunkPos.getX(chunkPos), ChunkPos.getZ(chunkPos), false);
+                boolean success = ChunkLoaderTickets.setTicket(world, pos, ChunkPos.getX(chunkPos), ChunkPos.getZ(chunkPos), false, forceTicks);
                 if (!success) {
                     LOGGER.warn("Failed to release chunk ticket for {}", chunkPos);
                 }
@@ -85,7 +85,7 @@ public class TileComponentChunkLoader<T extends TileEntityMekanism & IChunkLoade
         LOGGER.debug("Attempting to add {} chunk tickets. Pos: {} World: {}", tickets, prevPos, world.dimension().location());
         if (tickets > 0) {
             for (ChunkPos chunkPos : chunks) {
-                boolean success = ChunkLoaderTickets.setTicket(world, prevPos, chunkPos.x, chunkPos.z, true);
+                boolean success = ChunkLoaderTickets.setTicket(world, prevPos, chunkPos.x, chunkPos.z, true, forceTicks);
                 chunkSet.add(chunkPos.toLong());
                 if (!success) {
                     LOGGER.error("Failed to force chunk during registration {}", chunkPos);
@@ -154,7 +154,7 @@ public class TileComponentChunkLoader<T extends TileEntityMekanism & IChunkLoade
                             if (!newChunks.contains(chunkPos)) {
                                 //If the chunk is no longer in our chunks we want loaded
                                 // then we need to unforce the chunk and remove it
-                                boolean success = ChunkLoaderTickets.setTicket(world, pos, ChunkPos.getX(chunkPos), ChunkPos.getZ(chunkPos), false);
+                                boolean success = ChunkLoaderTickets.setTicket(world, pos, ChunkPos.getX(chunkPos), ChunkPos.getZ(chunkPos), false, forceTicks);
                                 if (!success) {
                                     LOGGER.warn("Failed to remove forced chunk {}", chunkPos);
                                 }
@@ -167,7 +167,7 @@ public class TileComponentChunkLoader<T extends TileEntityMekanism & IChunkLoade
                             if (chunkSet.add(chunkPos)) {
                                 //If we didn't already have it in our chunk set and added actually added it as it is new
                                 // then we also need to force the chunk
-                                boolean success = ChunkLoaderTickets.setTicket(world, pos, ChunkPos.getX(chunkPos), ChunkPos.getZ(chunkPos), true);
+                                boolean success = ChunkLoaderTickets.setTicket(world, pos, ChunkPos.getX(chunkPos), ChunkPos.getZ(chunkPos), true, forceTicks);
                                 if (!success) {
                                     LOGGER.error("Failed to force chunk during refresh {}", chunkPos);
                                 }

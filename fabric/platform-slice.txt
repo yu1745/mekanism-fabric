@@ -121,3 +121,9 @@ mekanism/fabric/robit/RobitSkinMappedRegistry.java
 mekanism/fabric/tile/FabricCapabilityTileLifecycle.java
 mekanism/fabric/tile/MekanismBlockLookups.java
 # Task052 canonical robit serializer and native dynamic load owner
+
+# Review: real chunk ticket ticking and Robit damage boundaries
+mekanism/fabric/mixin/server/ChunkLoaderTickMixin.java
+mekanism/fabric/mixin/entity/RobitDamageMixin.java
+mekanism/fabric/mixin/server/ChunkGenVersionMixin.java
+mekanism/fabric/mixin/player/PlayerFlightSaveMixin.java

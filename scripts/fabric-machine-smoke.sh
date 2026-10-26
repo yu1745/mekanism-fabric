@@ -64,9 +64,12 @@ fetch() {
 }
 
 #Newest artifact wins: a stale dist/ jar from an earlier release build must not mask the current remap output.
-MOD_JAR=$(find "$ROOT/dist" "$ROOT/fabric/build/libs" -maxdepth 1 -name '*.jar' \
-  ! -name '*-sources.jar' ! -name '*-dev.jar' ! -name '*fixture*' -printf '%T@ %p\n' 2>/dev/null \
-  | sort -rn | head -1 | cut -d' ' -f2-)
+MOD_JAR=
+for candidate in "$ROOT/dist/"*.jar "$ROOT/fabric/build/libs/"*.jar; do
+  [[ -f "$candidate" ]] || continue
+  [[ "$candidate" == *-sources.jar || "$candidate" == *-dev.jar || "$candidate" == *fixture* ]] && continue
+  if [[ -z "$MOD_JAR" || "$candidate" -nt "$MOD_JAR" ]]; then MOD_JAR=$candidate; fi
+done
 if [[ -z "$MOD_JAR" ]]; then
   echo "fabric-machine-smoke: no packaged jar; run ./fabric-build.sh remapJar first" >&2
   exit 2
@@ -84,6 +87,14 @@ SERVER_DIR=$(mktemp -d "${TMPDIR:-/tmp}/mekanism-machine-smoke.XXXXXX")
 LOG_FILE="$SERVER_DIR/server.log"
 mkdir -p "$SERVER_DIR/mods"
 cp "$LAUNCHER_JAR" "$SERVER_DIR/fabric-server-launch.jar"
+# Reuse only cached runtime binaries when installer metadata is unavailable; each test still gets a fresh world/mod set.
+if [[ -n ${FABRIC_SMOKE_RUNTIME_CACHE_DIR:-} ]]; then
+  for part in libraries versions .fabric/server; do
+    [[ -d "$FABRIC_SMOKE_RUNTIME_CACHE_DIR/$part" ]] || continue
+    mkdir -p "$(dirname "$SERVER_DIR/$part")"
+    cp -a --reflink=auto "$FABRIC_SMOKE_RUNTIME_CACHE_DIR/$part" "$SERVER_DIR/$part"
+  done
+fi
 cp "$FABRIC_API_JAR" "$ENERGY_JAR" "$MOD_JAR" "$SERVER_DIR/mods/"
 printf 'eula=true\n' > "$SERVER_DIR/eula.txt"
 printf 'online-mode=false\nserver-port=0\nspawn-protection=0\nmax-players=1\nview-distance=4\nsync-chunk-writes=false\n' > "$SERVER_DIR/server.properties"
@@ -192,7 +203,7 @@ check() {
 }
 
 check "dedicated server reached Done" 'Done \([0-9.]+s\)!'
-check "server play channel registered all 25 payloads" 'MEKANISM_FABRIC_SERVER_PLAY_PROOF payloads=25'
+check "server play channel registered all 26 payloads" 'MEKANISM_FABRIC_SERVER_PLAY_PROOF payloads=26'
 if grep -q 'Parsing error' "$LOG_FILE"; then
   printf 'FAIL no recipe parsing errors\n'
   failures=$((failures + 1))

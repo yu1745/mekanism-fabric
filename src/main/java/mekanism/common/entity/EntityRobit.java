@@ -527,22 +527,11 @@ public class EntityRobit extends PathfinderMob implements IRobit, IMekanismInven
               () -> setSkin(MekanismRobitSkins.BASE, null));
     }
 
-    @Override
-    public boolean hurt(@NotNull DamageSource source, float amount) {
-        //Fabric port delta: the upstream override hooked NeoForge's DamageContainer pipeline (onDamageTaken) to drain energy for the mitigated damage
-        // while never losing health. The vanilla pipeline exposes the same observable outcome through the applied health delta: drain energy for what the
-        // pipeline actually applied, then keep the robit at full health
-        float healthBefore = getHealth();
-        boolean hurt = super.hurt(source, amount);
-        if (hurt) {
-            float applied = healthBefore - getHealth();
-            if (applied > 0) {
-                energyContainer.extract(MathUtils.clampToLong(1_000D * applied), Action.EXECUTE, AutomationType.INTERNAL);
-            }
-            //Don't actually allow taking damage to reduce the robit's health
-            setHealth(getMaxHealth());
+    /** Called at vanilla's post-mitigation health write, before hurt can enter the death path. */
+    public void onDamageTaken(float damage) {
+        if (damage > 0) {
+            energyContainer.extract(MathUtils.clampToLong(1_000D * damage), Action.EXECUTE, AutomationType.INTERNAL);
         }
-        return hurt;
     }
 
     @Override

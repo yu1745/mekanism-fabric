@@ -51,6 +51,12 @@ public final class MekanismFabricBootstrap implements ModInitializer {
         //Task052 Q4 lifecycle owner: capture the starting server (no overworld access here), and on the post-save SERVER_STOPPED tail run the domain
         // cleanup in the original Mekanism.serverStopped order before releasing the shared server reference for the same server instance only
         ServerLifecycleEvents.SERVER_STARTING.register(MekanismServerLifecycle::captureStartingServer);
+        net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
+            net.minecraft.server.level.ServerPlayer disconnected = handler.player;
+            server.execute(() -> mekanism.common.content.gear.mekasuit.MekaSuitFlight.release(disconnected));
+        });
+        net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) ->
+              mekanism.common.content.gear.mekasuit.MekaSuitFlight.respawn(oldPlayer, newPlayer));
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
             //Guard BOTH the domain cleanup and the release by same-server identity: a stale stop event belonging to a different (older)
             // server instance must not wipe state owned by the live server. Cleanup still runs before release, and release happens even

@@ -392,7 +392,7 @@ public class GuiTextField extends GuiElement {
                 String value = getValue();
                 int spaceLeft = this.maxLength - value.length() - (startIndex - highlightEndIndex);
                 if (spaceLeft > 0) {
-                    String filtered = StringUtil.filterText(text);
+                    String filtered = filterColoredText(text);
                     int length = filtered.length();
                     if (spaceLeft < length) {
                         if (Character.isHighSurrogate(filtered.charAt(spaceLeft - 1))) {
@@ -411,7 +411,7 @@ public class GuiTextField extends GuiElement {
             }
         }
 
-        private static String filterText(String text) {
+        private static String filterColoredText(String text) {
             StringBuilder builder = new StringBuilder();
             for (char c : text.toCharArray()) {
                 if (StringUtil.isAllowedChatCharacter(c) || c == 167) {

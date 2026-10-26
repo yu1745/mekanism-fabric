@@ -74,7 +74,12 @@ public final class ItemEnergyContainer {
      * outlive the slot installation. No physical-side exposure is forged for this internal machine container.
      */
     public long transfer(IEnergyContainer machine, boolean fromItem) {
-        if (Transaction.getLifecycle() != Transaction.Lifecycle.NONE) return 0;
+        return transfer(machine, fromItem, Long.MAX_VALUE, AutomationType.INTERNAL);
+    }
+
+    /** Same owned transfer with the caller's actual per-tick limit and domain automation policy. */
+    public long transfer(IEnergyContainer machine, boolean fromItem, long limit, AutomationType automation) {
+        if (limit <= 0 || Transaction.getLifecycle() != Transaction.Lifecycle.NONE) return 0;
         SnapshotParticipant<TransferSnapshot> snapshot = new SnapshotParticipant<>() {
             @Override
             protected TransferSnapshot createSnapshot() {
@@ -93,27 +98,27 @@ public final class ItemEnergyContainer {
         long moved;
         try (Transaction transaction = Transaction.openOuter()) {
             if (fromItem) {
-                long available = extract(machine.getNeeded(), Action.SIMULATE);
+                long available = extract(Math.min(limit, machine.getNeeded()), Action.SIMULATE);
                 if (available <= 0) return 0;
-                long remainder = machine.insert(available, Action.SIMULATE, AutomationType.INTERNAL);
+                long remainder = machine.insert(available, Action.SIMULATE, automation);
                 if (remainder < 0 || remainder >= available) return 0;
                 moved = available - remainder;
-                if (machine.insert(moved, Action.SIMULATE, AutomationType.INTERNAL) != 0) return 0;
+                if (machine.insert(moved, Action.SIMULATE, automation) != 0) return 0;
                 //The native strict adapter joins this transaction, so an execute mismatch rolls it back as well.
                 snapshot.updateSnapshots(transaction);
                 if (extract(moved, Action.EXECUTE) != moved) return 0;
-                if (machine.insert(moved, Action.EXECUTE, AutomationType.INTERNAL) != 0) return 0;
+                if (machine.insert(moved, Action.EXECUTE, automation) != 0) return 0;
             } else {
-                long available = machine.extract(machine.getEnergy(), Action.SIMULATE, AutomationType.INTERNAL);
+                long available = machine.extract(Math.min(limit, machine.getEnergy()), Action.SIMULATE, automation);
                 if (available <= 0) return 0;
                 long remainder = insert(available, Action.SIMULATE);
                 if (remainder < 0 || remainder >= available) return 0;
                 moved = available - remainder;
-                if (insert(moved, Action.SIMULATE) != 0 || machine.extract(moved, Action.SIMULATE, AutomationType.INTERNAL) != moved) return 0;
+                if (insert(moved, Action.SIMULATE) != 0 || machine.extract(moved, Action.SIMULATE, automation) != moved) return 0;
                 //Do not drain the machine before knowing that the native item accepted the exact quantity.
                 snapshot.updateSnapshots(transaction);
                 if (insert(moved, Action.EXECUTE) != 0) return 0;
-                if (machine.extract(moved, Action.EXECUTE, AutomationType.INTERNAL) != moved) return 0;
+                if (machine.extract(moved, Action.EXECUTE, automation) != moved) return 0;
             }
             transaction.commit();
         }

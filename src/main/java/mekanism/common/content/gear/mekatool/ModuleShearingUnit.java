@@ -16,6 +16,7 @@ import net.minecraft.advancements.CriteriaTriggers;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.dispenser.BlockSource;
+import net.minecraft.core.dispenser.ShearsDispenseItemBehavior;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
@@ -114,9 +115,8 @@ public class ModuleShearingUnit implements ICustomModule<ModuleShearingUnit> {
         ServerLevel world = source.level();
         Direction facing = source.state().getValue(DispenserBlock.FACING);
         BlockPos pos = source.pos().relative(facing);
-        //Fabric port delta: vanilla's dispenser shears only harvest beehives (the NeoForge hook is what extended block shearing),
-        // so the module handles living-entity shearing; block trimming stays on the direct-use path.
-        if (tryShearLivingEntity(module.getEnergyContainer(stack), world, pos, stack)) {
+        //Use the actual vanilla hive harvest, then the existing energy-aware entity shear path.
+        if (ShearsDispenseItemBehavior.tryShearBeehive(world, pos) || tryShearLivingEntity(module.getEnergyContainer(stack), world, pos, stack)) {
             return ModuleDispenseResult.HANDLED;
         }
         return ModuleDispenseResult.FAIL_PREVENT_DROP;

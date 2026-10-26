@@ -122,9 +122,11 @@ public class MekFakePlayer extends ServerPlayer {
     @SuppressWarnings("WeakerAccess")
     public static <R> R withFakePlayer(ServerLevel world, Function<MekFakePlayer, R> fakePlayerConsumer) {
         MekFakePlayer player = setupFakePlayer(world);
-        R result = fakePlayerConsumer.apply(player);
-        player.cleanupFakePlayer(world);
-        return result;
+        try {
+            return fakePlayerConsumer.apply(player);
+        } finally {
+            player.cleanupFakePlayer(world);
+        }
     }
 
     /**
@@ -142,9 +144,11 @@ public class MekFakePlayer extends ServerPlayer {
      */
     public static <R> R withFakePlayer(ServerLevel world, double x, double y, double z, Function<MekFakePlayer, R> fakePlayerConsumer) {
         MekFakePlayer player = setupFakePlayer(world, x, y, z);
-        R result = fakePlayerConsumer.apply(player);
-        player.cleanupFakePlayer(world);
-        return result;
+        try {
+            return fakePlayerConsumer.apply(player);
+        } finally {
+            player.cleanupFakePlayer(world);
+        }
     }
 
     public static void releaseInstance(ServerLevel world) {

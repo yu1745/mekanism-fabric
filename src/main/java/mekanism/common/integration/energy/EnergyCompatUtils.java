@@ -3,6 +3,7 @@ package mekanism.common.integration.energy;
 import java.util.List;
 import java.util.function.BiFunction;
 import mekanism.api.energy.IStrictEnergyHandler;
+import mekanism.common.attachments.containers.ContainerType;
 import mekanism.common.integration.energy.forgeenergy.ForgeEnergyCompat;
 import net.fabricmc.fabric.api.lookup.v1.block.BlockApiLookup;
 import net.minecraft.core.BlockPos;
@@ -62,13 +63,25 @@ public class EnergyCompatUtils {
     }
 
     public static boolean hasStrictEnergyHandler(@NotNull ItemStack stack) {
-        return getStrictEnergyHandler(stack) != null;
+        return mekanism.fabric.energy.ItemEnergyContainer.hasHandler(stack);
     }
 
+    /** Internal access for an owned Mekanism stack. External replacement needs the context overload or ItemEnergyContainer. */
     @Nullable
     public static IStrictEnergyHandler getStrictEnergyHandler(@NotNull ItemStack stack) {
-        if (!stack.isEmpty()) {
-            return getStrictEnergyHandler(stack, IEnergyCompat::getStrictEnergyHandler);
+        return ContainerType.ENERGY.getRegisteredHandler(stack);
+    }
+
+    /** Resolves external native storage against its real inventory owner. */
+    @Nullable
+    public static IStrictEnergyHandler getStrictEnergyHandler(net.fabricmc.fabric.api.transfer.v1.context.ContainerItemContext context) {
+        for (IEnergyCompat energyCompat : energyCompats) {
+            if (energyCompat.isUsable()) {
+                IStrictEnergyHandler handler = energyCompat.getStrictEnergyHandler(context);
+                if (handler != null) {
+                    return handler;
+                }
+            }
         }
         return null;
     }

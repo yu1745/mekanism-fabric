@@ -49,11 +49,8 @@ public class ItemBlockCardboardBox extends ItemBlockMekanism<BlockCardboardBox> 
     }
 
     private static boolean canReplace(Level world, Player player, BlockPos pos, Direction sideClicked, BlockState state, ItemStack stack) {
-        //Check if the player is allowed to use the cardboard box in the given position
-        //Fabric port delta: the upstream probe posted a cancellable BreakEvent so protection mods could veto the box; Fabric's
-        // protection pipeline runs on real player break events upstream of this path, and no postable equivalent exists.
-        //Only the vanilla interaction checks remain (see docs/TASK052_RESUME_2026-10-26.md).
-        return world.mayInteract(player, pos) && player.mayUseItemAt(pos.relative(sideClicked), sideClicked, stack);
+        return world.mayInteract(player, pos) && player.mayUseItemAt(pos.relative(sideClicked), sideClicked, stack)
+              && WorldUtils.canBreakBlock(world, player, pos, state);
     }
 
     @NotNull

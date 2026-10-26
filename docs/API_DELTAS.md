@@ -580,3 +580,18 @@ gate）BUILD SUCCESSFUL。未运行（按完成度优先策略）：全量测试
 - 运行时放置的端点只有在 `CapabilityTileEntity#setLevel` 开启 exposure 后才可被发现（与能量网络同一条修复）；否则传输器看到的邻居能力为 null。
 - 传输器侧面连接类型由 `connection` int 数组持久化（Direction 序：down/up/north/south/west/east；ConnectionType：normal=0, push=1, pull=2, none=3）。真实玩家通过 GUI/配置器设置，测试用 `data merge block` 写入。
 - `scripts/fabric-machine-smoke.sh` 覆盖 storage→storage 与 transmitter→machine 两条链，且必须显式 forceload 场景跨的三个区块（仅靠出生点区块覆盖会造成偶发失败）。
+
+### 深审修正的平台边界（2026-10-26）
+
+完整来源与验收见 `PORT_DEEP_REVIEW_2026-10-26.md`。本批保持既有官方 owner，不增加通用兼容层。
+
+- Chunk loader 用独立 `TicketType<BlockPos>` 的 region ticket（distance 2 / level 31），不再修改全局 `/forceload`。普通票据也允许 entity/BE tick；`forceTicks` 的额外语义是绕过附近玩家对 random tick/spawn 的门控。保存仍使用 `owners`/`pos`/`chunks`，增加 `force_ticks`（缺失默认 false，启动按真实 component 重新裁定）；恢复所有有效票据，清空也必须保存。旧错误实现写进全局 forced 标记的来源不可区分，不自动删除。
+- 数字矿机和纸箱的 speculative break probe 走真实 `PlayerBlockBreakEvents.BEFORE`，加 Mekanism 安全检查；不发送 AFTER，不把 probe 当实际破坏。矿机回调使用 owner UUID 的假玩家并 finally 清理。
+- Robit 的 damage→energy 发生在 vanilla actuallyHurt 的未 clamp health 写入处；外层 hurt 尚未判断死亡。伤害吸收在原版拒绝 guards 后，双注入共享本次 invocation 的结果（Loader 自带 MixinExtras Share），不使用跨调用 ThreadLocal 缓存。
+- Flight 授权按玩家实例管理，在服务端 executor 清理；保存时仅从输出 NBT 排除自身临时 mayfly/flying，避免 stopServer 先 saveAll 后 disconnect 留下权限。创造/旁观保留原生权限。没有宣称可仲裁其他模组同时写同一 vanilla boolean 的授权，也不能自动辨认旧版本已经保存的错误权限。
+- `ItemStack.is(Holder)` 在 vanilla 比较引用，NeoForge 曾改为 value；Mekanism deferred item 的直接调用改为 `.is(holder.get())`。Module 在构造时从模块 registry 的真实 value identity 捕获 canonical holder，供原有 NBT/stream codecs 使用，不改变 wire/schema 顺序。
+- 数据映射查询同时接受同一服务器的 base/world registry access 和当前 reloadable view，校验底层 DamageType registry identity 与线程；未引入任意 equivalent-registry fallback。
+- 裸 ItemStack 不能承接外部 provider 改 item/count 的结果；strict getter 仅提供 registered Mekanism 内部 handler，外部执行须给真实 `ContainerItemContext` 或使用既有 `ItemEnergyContainer` 并由实际 inventory/slot 安装结果。充电板和模块保留原速率、automation policy 与事务回滚。
+- NeoForge 21.1.200 mod-fluid 默认不生成无限源，爆炸抗性为1，向下替换还需异族流体。Mekanism 注册没有覆盖这些值。
+- Chunk generation version 恢复原 root `mek_world_gen_version`：旧文件缺失为0；尚待 retrogen 的版本由 transient chunk attachment 承载，完成后显式保存当前版本。这不代表矿物生物群系注入已完成。
+- C2S catalog 现为26个，补上三个已注册 GUI 实际使用的 `PacketGuiInteract`；日志计数来自成功注册次数。彩色文本恢复原专用 filter，蜂巢剪切调用实际 vanilla harvest，电弓用 detached enchanted bow 调用原 projectile 创建流程。

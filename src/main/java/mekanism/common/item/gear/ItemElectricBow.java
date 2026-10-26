@@ -1,7 +1,6 @@
 package mekanism.common.item.gear;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.function.Consumer;
 import javax.annotation.Nullable;
 import mekanism.api.Action;
@@ -17,8 +16,6 @@ import mekanism.common.registries.MekanismDataComponents;
 import mekanism.common.util.StorageUtils;
 import mekanism.common.util.text.BooleanStateDisplay.OnOff;
 import net.minecraft.core.Holder;
-import net.minecraft.core.Holder.Reference;
-import net.minecraft.core.HolderLookup.RegistryLookup;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -33,7 +30,9 @@ import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.Enchantments;
-import net.minecraft.world.item.enchantment.ItemEnchantments;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
 
@@ -73,6 +72,22 @@ public class ItemElectricBow extends BowItem implements IItemHUDProvider, ICusto
                 energyContainer.extract(energyNeeded, Action.EXECUTE, AutomationType.MANUAL);
             }
         }
+    }
+
+    @NotNull
+    @Override
+    protected Projectile createProjectile(Level level, LivingEntity shooter, ItemStack bow, ItemStack ammo, boolean critical) {
+        if (getMode(bow)) {
+            //Preserve the virtual Flame enchantment at the real projectile owner. Resolve the live enchantment,
+            //so datapack-defined effects still apply, without mutating the player's bow or its stored enchantments.
+            var flame = level.registryAccess().registryOrThrow(Registries.ENCHANTMENT).getHolder(Enchantments.FLAME);
+            if (flame.isPresent() && EnchantmentHelper.getItemEnchantmentLevel(flame.get(), bow) == 0) {
+                ItemStack enchanted = bow.copy();
+                enchanted.enchant(flame.get(), 1);
+                return super.createProjectile(level, shooter, enchanted, ammo, critical);
+            }
+        }
+        return super.createProjectile(level, shooter, bow, ammo, critical);
     }
 
     @NotNull

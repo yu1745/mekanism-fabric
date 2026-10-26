@@ -109,13 +109,13 @@ public class ItemSlotsBuilder {
             return true;
         }
         //Inversion of the insert check
-        IStrictEnergyHandler itemEnergyHandler = EnergyCompatUtils.getStrictEnergyHandler(stack);
-        return itemEnergyHandler == null || itemEnergyHandler.insertEnergy(Long.MAX_VALUE, Action.SIMULATE) == Long.MAX_VALUE;
+        mekanism.fabric.energy.ItemEnergyContainer itemEnergy = mekanism.fabric.energy.ItemEnergyContainer.find(stack);
+        return itemEnergy == null || itemEnergy.insert(Long.MAX_VALUE, Action.SIMULATE) == Long.MAX_VALUE;
     };
     private static final BiPredicate<@NotNull ItemStack, @NotNull AutomationType> DRAIN_ENERGY_SLOT_CAN_INSERT = (stack, automationType) -> {
-        IStrictEnergyHandler itemEnergyHandler = EnergyCompatUtils.getStrictEnergyHandler(stack);
+        mekanism.fabric.energy.ItemEnergyContainer itemEnergy = mekanism.fabric.energy.ItemEnergyContainer.find(stack);
         //if we can accept any energy that is currently stored in the container, then we allow inserting the item
-        return itemEnergyHandler != null && itemEnergyHandler.insertEnergy(Long.MAX_VALUE, Action.SIMULATE) < Long.MAX_VALUE;
+        return itemEnergy != null && itemEnergy.insert(Long.MAX_VALUE, Action.SIMULATE) < Long.MAX_VALUE;
     };
     private static final IBasicContainerCreator<ComponentBackedInventorySlot> DRAIN_ENERGY_SLOT_CREATOR = (type, attachedTo, containerIndex) -> new ComponentBackedInventorySlot(attachedTo,
           containerIndex, DRAIN_ENERGY_SLOT_CAN_EXTRACT, DRAIN_ENERGY_SLOT_CAN_INSERT, EnergyInventorySlot.DRAIN_VALIDATOR);

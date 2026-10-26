@@ -1,5 +1,6 @@
 package mekanism.common.content.gear.mekasuit;
 
+import java.util.function.Consumer;
 import mekanism.api.Action;
 import mekanism.api.AutomationType;
 import mekanism.api.annotations.ParametersAreNotNullByDefault;
@@ -13,9 +14,10 @@ import mekanism.common.content.network.EnergyNetwork;
 import mekanism.common.content.network.distribution.EnergySaveTarget;
 import mekanism.common.content.network.distribution.EnergySaveTarget.DelegateSaveHandler;
 import mekanism.common.integration.curios.CuriosIntegration;
-import mekanism.common.integration.energy.EnergyCompatUtils;
 import mekanism.common.util.EmitUtils;
 import mekanism.common.util.StorageUtils;
+import mekanism.fabric.energy.ItemEnergyContainer;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -70,12 +72,23 @@ public record ModuleChargeDistributionUnit(boolean chargeSuit, boolean chargeInv
         // first try to charge mainhand/offhand item
         ItemStack mainHand = player.getMainHandItem();
         ItemStack offHand = player.getOffhandItem();
-        toCharge = charge(energyContainer, mainHand, toCharge);
-        toCharge = charge(energyContainer, offHand, toCharge);
+        toCharge = charge(energyContainer, mainHand, toCharge, result -> {
+            player.setItemInHand(InteractionHand.MAIN_HAND, result);
+            player.getInventory().setChanged();
+        });
+        toCharge = charge(energyContainer, offHand, toCharge, result -> {
+            player.setItemInHand(InteractionHand.OFF_HAND, result);
+            player.getInventory().setChanged();
+        });
         if (toCharge > 0L) {
-            for (ItemStack stack : player.getInventory().items) {
-                if (stack != mainHand && stack != offHand) {
-                    toCharge = charge(energyContainer, stack, toCharge);
+            for (int slot = 0; slot < player.getInventory().items.size(); slot++) {
+                ItemStack stack = player.getInventory().items.get(slot);
+                if (slot != player.getInventory().selected) {
+                    int ownedSlot = slot;
+                    toCharge = charge(energyContainer, stack, toCharge, result -> {
+                        player.getInventory().setItem(ownedSlot, result);
+                        player.getInventory().setChanged();
+                    });
                     if (toCharge == 0L) {
                         return;
                     }
@@ -92,10 +105,22 @@ public record ModuleChargeDistributionUnit(boolean chargeSuit, boolean chargeInv
         }
     }
 
-    /** return rejects */
+    private long charge(IEnergyContainer energyContainer, ItemStack stack, long amount, Consumer<ItemStack> install) {
+        ItemEnergyContainer itemEnergy = ItemEnergyContainer.find(stack);
+        if (itemEnergy == null) {
+            return amount;
+        }
+        long moved = itemEnergy.transfer(energyContainer, false, amount, AutomationType.MANUAL);
+        if (moved > 0) {
+            install.accept(itemEnergy.getContainer());
+        }
+        return amount - moved;
+    }
+
+    /** The unbound Curios seam has no native replacement-slot owner yet; this guarded path only uses registered strict Mekanism stacks. */
     private long charge(IEnergyContainer energyContainer, ItemStack stack, long amount) {
         if (!stack.isEmpty() && amount > 0L) {
-            IStrictEnergyHandler handler = EnergyCompatUtils.getStrictEnergyHandler(stack);
+            IStrictEnergyHandler handler = mekanism.common.attachments.containers.ContainerType.ENERGY.getRegisteredHandler(stack);
             if (handler != null) {
                 long remaining = handler.insertEnergy(amount, Action.SIMULATE);
                 if (remaining < amount) {

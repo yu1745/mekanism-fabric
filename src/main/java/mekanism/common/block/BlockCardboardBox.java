@@ -56,18 +56,7 @@ public class BlockCardboardBox extends BlockMekanism implements IStateStorage, I
     }
 
     private static boolean canReplace(Level world, Player player, BlockPos pos, BlockState state) {
-        //Check if the player is allowed to use the cardboard box in the given position
-        if (world.mayInteract(player, pos)) {
-            //If they are then check if they can "break" the cardboard block that is in that spot
-            //Fabric port delta: the upstream speculative BreakEvent veto probe has no postable Fabric equivalent (protection mods integrate through the
-            // Fabric break-event pipeline upstream of these paths), so the check reduces to the vanilla interaction guard (docs/TASK052_RESUME_2026-10-26.md)
-            if (true) {
-                //If they can then we need to see if they are allowed to "place" the unboxed block in the given position
-                //TODO: use block snapshots and fire a place event to see if the player is able to "place" the cardboard box
-                return true;
-            }
-        }
-        return false;
+        return world.mayInteract(player, pos) && WorldUtils.canBreakBlock(world, player, pos, state);
     }
 
     @Nullable

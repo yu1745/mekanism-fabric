@@ -5,6 +5,7 @@ import mekanism.common.network.IMekanismPacket;
 import mekanism.common.network.to_server.PacketAddTrusted;
 import mekanism.common.network.to_server.PacketDropperUse;
 import mekanism.common.network.to_server.PacketGuiSetEnergy;
+import mekanism.common.network.to_server.PacketGuiInteract;
 import mekanism.common.network.to_server.PacketKey;
 import mekanism.common.network.to_server.PacketModeChange;
 import mekanism.common.network.to_server.PacketOpenGui;
@@ -45,7 +46,7 @@ import org.slf4j.LoggerFactory;
 public final class FabricServerPlayNetworking {
 
     private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism/FabricNetwork");
-    private static final int PAYLOAD_COUNT = 25;
+    private static int payloadCount;
 
     private static boolean initialized;
 
@@ -74,6 +75,7 @@ public final class FabricServerPlayNetworking {
         register(PacketRemoveModule.TYPE, PacketRemoveModule.STREAM_CODEC);
         register(PacketUpdateModuleSettings.TYPE, PacketUpdateModuleSettings.STREAM_CODEC);
         register(PacketGuiSetEnergy.TYPE, PacketGuiSetEnergy.STREAM_CODEC);
+        register(PacketGuiInteract.TYPE, PacketGuiInteract.STREAM_CODEC);
         register(PacketRadialModeChange.TYPE, PacketRadialModeChange.STREAM_CODEC);
         register(PacketModeChange.TYPE, PacketModeChange.STREAM_CODEC);
         register(PacketKey.TYPE, PacketKey.STREAM_CODEC);
@@ -82,7 +84,7 @@ public final class FabricServerPlayNetworking {
         register(PacketRobitName.TYPE, PacketRobitName.STREAM_CODEC);
         register(PacketRobitSkin.TYPE, PacketRobitSkin.STREAM_CODEC);
         initialized = true;
-        LOGGER.info("MEKANISM_FABRIC_SERVER_PLAY_PROOF payloads={} direction=C2S thread=server", PAYLOAD_COUNT);
+        LOGGER.info("MEKANISM_FABRIC_SERVER_PLAY_PROOF payloads={} direction=C2S thread=server", payloadCount);
     }
 
     private static <T extends IMekanismPacket> void register(CustomPacketPayload.Type<T> type, StreamCodec<? super RegistryFriendlyByteBuf, T> codec) {
@@ -90,5 +92,6 @@ public final class FabricServerPlayNetworking {
         if (!ServerPlayNetworking.registerGlobalReceiver(type, (payload, context) -> payload.handle(context.player()))) {
             throw new IllegalStateException("A server play receiver is already registered for " + type.id());
         }
+        payloadCount++;
     }
 }

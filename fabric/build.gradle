@@ -26,6 +26,7 @@ sourceSets {
     chemicalRuntimeFixture
     recipeRuntimeFixture
     tileUpdateRuntimeFixture
+    portReviewFixture
 }
 
 loom {
@@ -37,6 +38,7 @@ loom {
     createRemapConfigurations(sourceSets.chemicalRuntimeFixture)
     createRemapConfigurations(sourceSets.recipeRuntimeFixture)
     createRemapConfigurations(sourceSets.tileUpdateRuntimeFixture)
+    createRemapConfigurations(sourceSets.portReviewFixture)
 
     mods {
         mekanism {
@@ -194,7 +196,7 @@ def platformSlice = loadSlice('platform-slice.txt')
 def apiSliceFiles = apiSlice.collect { file("../src/api/java/${it}") }
 def commonSliceFiles = commonSlice.collect { file("../src/main/java/${it}") }
 def platformSliceFiles = platformSlice.collect { file("src/main/java/${it}") }
-if (apiSlice.size() != 262 || commonSlice.size() != 1389 || platformSlice.size() != 121) {
+if (apiSlice.size() != 262 || commonSlice.size() != 1389 || platformSlice.size() != 125) {
     throw new GradleException("Unexpected Fabric source slice counts: api=${apiSlice.size()} common=${commonSlice.size()} platform=${platformSlice.size()}")
 }
 
@@ -276,6 +278,10 @@ sourceSets {
         // The real-client probe sees production, but production never sees fixture output.
         compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
         runtimeClasspath += sourceSets.main.output.classesDirs + (sourceSets.main.runtimeClasspath - sourceSets.main.output)
+    }
+    portReviewFixture {
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.runtimeClasspath
     }
     fabricTransferTest {
         // Keep Knot and its TCCL out of the ordinary jqwik/Jupiter suite. This source set
@@ -1024,4 +1030,20 @@ jar {
     from('../LICENSE') {
         rename { "${it}_${licenseSuffix}" }
     }
+}
+
+// Explicit, isolated regression fixture for the reviewed platform boundaries; never enters the production JAR.
+def portReviewFixtureJar = tasks.register('portReviewFixtureJar', Jar) {
+    dependsOn tasks.named('portReviewFixtureClasses')
+    archiveFileName = 'mekanism-port-review-fixture-dev.jar'
+    destinationDirectory = layout.buildDirectory.dir('port-review-fixture/dev')
+    from sourceSets.portReviewFixture.output
+}
+tasks.register('remapPortReviewFixtureJar', RemapJarTask) {
+    dependsOn portReviewFixtureJar
+    classpath.from(sourceSets.main.output, sourceSets.main.compileClasspath)
+    inputFile = portReviewFixtureJar.flatMap { it.archiveFile }
+    archiveFileName = 'mekanism-port-review-fixture.jar'
+    destinationDirectory = layout.buildDirectory.dir('port-review-fixture/remapped')
+    addNestedDependencies = false
 }

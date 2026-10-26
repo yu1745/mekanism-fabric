@@ -31,7 +31,11 @@
     "entity.PiglinOffHandMixin",
     "entity.PiglinNeutralityMixin",
     "item.ItemStackMekaSuitDamageMixin",
-    "item.ResultSlotCraftingMixin"
+    "item.ResultSlotCraftingMixin",
+    "server.ChunkLoaderTickMixin",
+    "entity.RobitDamageMixin",
+    "server.ChunkGenVersionMixin",
+    "player.PlayerFlightSaveMixin"
   ],
   "client": [
     "client.TextureAtlasMixin",

@@ -51,12 +51,18 @@ public final class FabricMekanismDataMaps {
         return session.query(registry, damageType);
     }
 
-    /** Complete service delegation for the current server thread and exact reloadable registry access. */
+    /** Resolve the actual server's base/world view or current reloadable view, on its owner thread only. */
     static synchronized @Nullable MekaSuitAbsorption getCurrent(net.minecraft.core.RegistryAccess access, Holder<DamageType> damageType) {
         for (Map.Entry<MinecraftServer, Session> entry : SESSIONS.entrySet()) {
             MinecraftServer server = entry.getKey();
-            if (server.isSameThread() && server.reloadableRegistries().get() == access) {
-                return entry.getValue().query(access.registryOrThrow(Registries.DAMAGE_TYPE), damageType);
+            if (server.isSameThread() && (server.reloadableRegistries().get() == access || server.registryAccess() == access)) {
+                //Entities expose the base/world view, not ReloadableServerRegistries.Holder#get(). They must
+                //still resolve this exact server's damage registry, never an equivalent or foreign owner.
+                Registry<DamageType> registry = server.reloadableRegistries().get().registryOrThrow(Registries.DAMAGE_TYPE);
+                if (access.registryOrThrow(Registries.DAMAGE_TYPE) != registry) {
+                    throw new IllegalStateException("Damage registry view does not belong to the current server");
+                }
+                return entry.getValue().query(registry, damageType);
             }
         }
         throw new IllegalStateException("No current server data-map context for registry access");
