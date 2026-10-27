@@ -5,7 +5,7 @@ import mekanism.common.lib.frequency.Frequency.FrequencyIdentity;
 import mekanism.common.lib.frequency.FrequencyType;
 import mekanism.common.lib.frequency.IFrequencyHandler;
 import mekanism.common.network.IMekanismPacket;
-import mekanism.common.util.WorldUtils;
+import mekanism.common.network.PacketUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -38,7 +38,7 @@ public record PacketSetTileFrequency(boolean set, TypedIdentity data, BlockPos p
 
     @Override
     public void handle(Player player) {
-        BlockEntity tile = WorldUtils.getTileEntity(player.level(), pos);
+        BlockEntity tile = PacketUtils.guiTile(player, pos);
         if (tile instanceof IFrequencyHandler frequencyHandler && IBlockSecurityUtils.INSTANCE.canAccess(player, player.level(), pos, tile)) {
             if (set) {
                 frequencyHandler.setFrequency(data.type(), data.data(), player.getUUID());

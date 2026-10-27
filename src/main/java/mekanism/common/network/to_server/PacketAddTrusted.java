@@ -31,7 +31,8 @@ public record PacketAddTrusted(BlockPos pos, String name) implements IMekanismPa
 
     @Override
     public void handle(Player player) {
-        if (!name.isEmpty() && InputValidator.test(name, InputValidator.USERNAME) && PacketUtils.blockEntity(player, pos) instanceof TileEntitySecurityDesk desk) {
+        if (!name.isEmpty() && InputValidator.test(name, InputValidator.USERNAME) && PacketUtils.guiTile(player, pos) instanceof TileEntitySecurityDesk desk
+              && desk.getFreq() != null && desk.getFreq().ownerMatches(player.getUUID())) {
             desk.addTrusted(name);
         }
     }

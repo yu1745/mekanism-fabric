@@ -5,6 +5,7 @@ import mekanism.api.MekanismAPI;
 import mekanism.api.robit.RobitSkin;
 import mekanism.common.entity.EntityRobit;
 import mekanism.common.network.IMekanismPacket;
+import mekanism.common.network.PacketUtils;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -35,7 +36,7 @@ public record PacketRobitSkin(int entityId, ResourceKey<RobitSkin> skin) impleme
 
     @Override
     public void handle(Player player) {
-        Entity entity = player.level().getEntity(entityId);
+        Entity entity = PacketUtils.guiEntity(player, entityId);
         if (entity instanceof EntityRobit robit) {//Note: setSkin will validate that the player can access the robit
             robit.setSkin(skin, player);
         }

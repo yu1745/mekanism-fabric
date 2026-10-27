@@ -3,8 +3,8 @@ package mekanism.common.network.to_server;
 import mekanism.api.MekanismAPI;
 import mekanism.api.gear.ModuleData;
 import mekanism.common.network.IMekanismPacket;
+import mekanism.common.network.PacketUtils;
 import mekanism.common.tile.TileEntityModificationStation;
-import mekanism.common.util.WorldUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -33,8 +33,7 @@ public record PacketRemoveModule(BlockPos pos, Holder<ModuleData<?>> moduleType,
 
     @Override
     public void handle(Player player) {
-        TileEntityModificationStation tile = WorldUtils.getTileEntity(TileEntityModificationStation.class, player.level(), pos);
-        if (tile != null) {
+        if (PacketUtils.guiTile(player, pos) instanceof TileEntityModificationStation tile) {
             tile.removeModule(player, moduleType, removeAll);
         }
     }

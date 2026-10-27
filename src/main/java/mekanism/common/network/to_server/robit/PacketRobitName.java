@@ -13,6 +13,7 @@ import mekanism.api.text.TextComponentUtil;
 import mekanism.common.entity.EntityRobit;
 import mekanism.common.entity.RobitPrideSkinData;
 import mekanism.common.network.IMekanismPacket;
+import mekanism.common.network.PacketUtils;
 import mekanism.common.registries.MekanismRobitSkins;
 import net.minecraft.Util;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -62,7 +63,7 @@ public record PacketRobitName(int entityId, String name) implements IMekanismPac
         if (!hasContent(name)) {//Ensure the client sent a valid string
             return;
         }
-        Entity entity = player.level().getEntity(entityId);
+        Entity entity = PacketUtils.guiEntity(player, entityId);
         //Validate the player can access the robit before changing the robit's name
         if (entity instanceof EntityRobit robit && IEntitySecurityUtils.INSTANCE.canAccess(player, robit)) {
             robit.setCustomName(TextComponentUtil.getString(name));

@@ -15,6 +15,7 @@ import mekanism.common.inventory.container.entity.robit.MainRobitContainer;
 import mekanism.common.lib.inventory.IAdvancedTransportEjector;
 import mekanism.common.lib.security.SecurityUtils;
 import mekanism.common.network.IMekanismPacket;
+import mekanism.common.network.PacketUtils;
 import mekanism.common.tile.TileEntityLogisticalSorter;
 import mekanism.common.tile.TileEntitySecurityDesk;
 import mekanism.common.tile.base.TileEntityMekanism;
@@ -35,7 +36,6 @@ import mekanism.common.tile.qio.TileEntityQIOExporter;
 import mekanism.common.tile.qio.TileEntityQIOImporter;
 import mekanism.common.tile.qio.TileEntityQIORedstoneAdapter;
 import mekanism.common.util.TransporterUtils;
-import mekanism.common.util.WorldUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -143,12 +143,12 @@ public class PacketGuiInteract implements IMekanismPacket {
     @Override
     public void handle(Player player) {
         if (interactionType == InteractionType.ENTITY) {
-            Entity entity = player.level().getEntity(entityID);
+            Entity entity = PacketUtils.guiEntity(player, entityID);
             if (entity != null) {
                 entityInteraction.consume(entity, player, extra);
             }
         } else {
-            TileEntityMekanism tile = WorldUtils.getTileEntity(TileEntityMekanism.class, player.level(), tilePosition);
+            TileEntityMekanism tile = PacketUtils.guiTile(player, tilePosition);
             if (tile != null) {
                 if (interactionType == InteractionType.INT) {
                     interaction.consume(tile, player, extra);
@@ -356,7 +356,7 @@ public class PacketGuiInteract implements IMekanismPacket {
         }),
 
         SECURITY_DESK_MODE((tile, player, extra) -> {
-            if (tile instanceof TileEntitySecurityDesk desk) {
+            if (tile instanceof TileEntitySecurityDesk desk && desk.getFreq() != null && desk.getFreq().ownerMatches(player.getUUID())) {
                 desk.setSecurityDeskMode(SecurityMode.BY_ID.apply(extra));
             }
         }),
@@ -428,12 +428,12 @@ public class PacketGuiInteract implements IMekanismPacket {
         }),
 
         OVERRIDE_BUTTON((tile, player, extra) -> {
-            if (tile instanceof TileEntitySecurityDesk desk) {
+            if (tile instanceof TileEntitySecurityDesk desk && desk.getFreq() != null && desk.getFreq().ownerMatches(player.getUUID())) {
                 desk.toggleOverride();
             }
         }),
         REMOVE_TRUSTED((tile, player, extra) -> {
-            if (tile instanceof TileEntitySecurityDesk desk) {
+            if (tile instanceof TileEntitySecurityDesk desk && desk.getFreq() != null && desk.getFreq().ownerMatches(player.getUUID())) {
                 desk.removeTrusted(extra);
             }
         }),

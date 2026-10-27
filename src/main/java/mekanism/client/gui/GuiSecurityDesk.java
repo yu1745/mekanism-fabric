@@ -147,8 +147,8 @@ public class GuiSecurityDesk extends GuiMekanismTile<TileEntitySecurityDesk, Mek
         SecurityFrequency freq = tile.getFreq();
         if (tile.getOwnerUUID() != null) {
             scrollList.setText(freq == null ? Collections.emptyList() : freq.getTrustedUsernameCache());
-            removeButton.active = scrollList.hasSelection();
         }
+        removeButton.active = isOwner(freq) && scrollList.hasSelection();
 
         if (isOwner(freq)) {
             publicButton.active = freq.getSecurity() != SecurityMode.PUBLIC;

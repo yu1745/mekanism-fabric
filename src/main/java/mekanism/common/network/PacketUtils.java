@@ -10,6 +10,11 @@ import java.util.function.Function;
 import mekanism.api.MekanismServerLifecycle;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.content.filter.FilterManager;
+import mekanism.common.inventory.container.ISecurityContainer;
+import mekanism.common.inventory.container.entity.IEntityContainer;
+import mekanism.common.inventory.container.tile.MekanismTileContainer;
+import mekanism.common.inventory.container.tile.QIODashboardContainer;
+import mekanism.common.tile.base.TileEntityMekanism;
 import mekanism.common.lib.math.Range3D;
 import mekanism.common.lib.transmitter.DynamicBufferedNetwork;
 import mekanism.common.tile.component.TileComponentConfig;
@@ -139,7 +144,7 @@ public class PacketUtils {
 
     @Nullable
     public static TileComponentEjector ejector(Player player, BlockPos pos) {
-        if (blockEntity(player, pos) instanceof ISideConfiguration sideConfig) {
+        if (guiTile(player, pos) instanceof ISideConfiguration sideConfig) {
             return sideConfig.getEjector();
         }
         return null;
@@ -147,7 +152,7 @@ public class PacketUtils {
 
     @Nullable
     public static TileComponentConfig config(Player player, BlockPos pos) {
-        if (blockEntity(player, pos) instanceof ISideConfiguration sideConfig) {
+        if (guiTile(player, pos) instanceof ISideConfiguration sideConfig) {
             return sideConfig.getConfig();
         }
         return null;
@@ -155,8 +160,38 @@ public class PacketUtils {
 
     @Nullable
     public static FilterManager<?> filterManager(Player player, BlockPos pos) {
-        if (blockEntity(player, pos) instanceof ITileFilterHolder<?> filterHolder) {
+        if (guiTile(player, pos) instanceof ITileFilterHolder<?> filterHolder) {
             return filterHolder.getFilterManager();
+        }
+        return null;
+    }
+
+    /** Resolves a GUI action only against the player's current, still-valid and authorized tile menu. */
+    @Nullable
+    public static TileEntityMekanism guiTile(Player player, BlockPos pos) {
+        TileEntityMekanism tile;
+        boolean valid;
+        if (player.containerMenu instanceof MekanismTileContainer<?> container) {
+            tile = container.getTileEntity();
+            valid = container.stillValid(player) && container.canPlayerAccess(player);
+        } else if (player.containerMenu instanceof QIODashboardContainer container) {
+            tile = container.getTileEntity();
+            valid = container.stillValid(player) && container.canPlayerAccess(player);
+        } else {
+            return null;
+        }
+        return valid && tile.getLevel() == player.level() && tile.getBlockPos().equals(pos) ? tile : null;
+    }
+
+    /** Resolves entity GUI actions against the entity held by the player's authorized current menu. */
+    @Nullable
+    public static Entity guiEntity(Player player, int entityId) {
+        if (player.containerMenu instanceof IEntityContainer<?> container && player.containerMenu instanceof ISecurityContainer security
+              && player.containerMenu.stillValid(player) && security.canPlayerAccess(player)) {
+            Entity entity = container.getEntity();
+            if (entity.getId() == entityId && entity.level() == player.level()) {
+                return entity;
+            }
         }
         return null;
     }

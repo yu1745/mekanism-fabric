@@ -6,6 +6,7 @@ import java.util.function.Function;
 import java.util.function.IntFunction;
 import mekanism.common.MekanismLang;
 import mekanism.common.network.IMekanismPacket;
+import mekanism.common.network.PacketUtils;
 import mekanism.common.registries.MekanismContainerTypes;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -48,7 +49,7 @@ public record PacketEntityButtonPress(ClickedEntityButton buttonClicked, int ent
         if (!(sender instanceof ServerPlayer player)) {
             return;
         }
-        Entity entity = player.level().getEntity(entityID);
+        Entity entity = PacketUtils.guiEntity(player, entityID);
         MenuProvider provider = buttonClicked.getProvider(entity);
         if (provider != null) {
             mekanism.common.inventory.container.ContainerProvider.open(player, provider, buf -> {

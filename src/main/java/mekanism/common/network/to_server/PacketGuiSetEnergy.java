@@ -35,7 +35,8 @@ public record PacketGuiSetEnergy(GuiEnergyValue interaction, BlockPos pos, long 
 
     @Override
     public void handle(Player player) {
-        if (PacketUtils.blockEntity(player, pos) instanceof TileEntityMekanism tile) {
+        TileEntityMekanism tile = PacketUtils.guiTile(player, pos);
+        if (tile != null) {
             interaction.consume(tile, value);
         }
     }

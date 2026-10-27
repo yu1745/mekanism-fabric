@@ -21,10 +21,10 @@ import mekanism.common.capabilities.Capabilities;
 import mekanism.common.item.ItemGaugeDropper;
 import mekanism.common.lib.multiblock.MultiblockData;
 import mekanism.common.network.IMekanismPacket;
+import mekanism.common.network.PacketUtils;
 import mekanism.common.tile.base.TileEntityMekanism;
 import mekanism.common.tile.prefab.TileEntityMultiblock;
 import mekanism.common.util.MekanismUtils;
-import mekanism.common.util.WorldUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -59,7 +59,7 @@ public record PacketDropperUse(BlockPos pos, DropperAction action, TankType tank
         if (tankId >= 0 && sender instanceof ServerPlayer player) {
             ItemStack stack = player.containerMenu.getCarried();
             if (!stack.isEmpty() && stack.getItem() instanceof ItemGaugeDropper) {
-                TileEntityMekanism tile = WorldUtils.getTileEntity(TileEntityMekanism.class, player.level(), pos);
+                TileEntityMekanism tile = PacketUtils.guiTile(player, pos);
                 if (tile != null) {
                     if (tile instanceof TileEntityMultiblock<?> multiblock) {
                         MultiblockData structure = multiblock.getMultiblock();
