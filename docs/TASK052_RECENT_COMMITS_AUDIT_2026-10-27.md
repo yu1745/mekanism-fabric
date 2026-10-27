@@ -55,6 +55,7 @@
 | `fb65b9b7`、`7b70f56d` | 主代理完整读取真实 diff，均为原审查记录，缓存等价的历史说法已由 F27 更正，不引入生产代码。 |
 | `fa1396a0`、`0702ce4c` | 已读完整真实 diff，均为工作纪律与兼容条件记录文档；其 tag 差异判断不正确，见 F42。 |
 | `011356e0` | 主代理完整读取真实 diff 与官方、Fabric 条件实现：修复 64 个兼容配方标签条件取反错误，见 F42；实际第三方模组兼容正路径及版本比较器差异仍未实测。 |
+| `d04c73d0`、`673d8768` | 主代理已读两项完整 diff 并对照固定 NeoForge GUI 列高度实现；确认坐骑血条被错误计入左列，见 F43。Curios 和模式文字的既有布局 delta 未由启动 proof 证明。 |
 
 ## 审查发现与待复核
 
@@ -252,9 +253,13 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 `ItemStackIngredient` 新增 `subtracted` 和 `intersectionChildren` 后，`equals`/`hashCode` 仍只看主 ingredient、count、components 和 compound children；共享同一 base 对象的普通配料、不同差集或不同交集会误判相等，违反公开值对象语义，集合/映射消费者可能合并不同谓词。未发现本次审计范围内直接以该类型作 Map 键的内部调用，不能据此声称机器配方已复现错误。`ad25b1b4` 将两个字段加入相等性和哈希，复用真实 Ingredient 子对象的既有相等性；扩展既有 focused 测试覆盖不同差集/交集、普通与差集的区分以及相等对象哈希一致。`NeoForgeTypedIngredientTest` 和 API slice gate 通过；完整真实 diff 已按 prompt 复审，未发现该局部边界的新增偏离。
 
-### F42 — compat 配方标签非空条件被反转（`011356e0`，修复待提交复审）
+### F42 — compat 配方标签非空条件被反转（`011356e0`，已修，第三方实测待验）
 
-64 个 BSWG 配方的官方条件为 `neoforge:not(neoforge:tag_empty)`，但变换把内部 `tag_empty` 直接映射为 `fabric:tags_populated` 并保留外层 not，导致非空/存在标签时被跳过，缺失标签时反而通过；原文档“仅存在空标签差异”错误。固定 NeoForge `TagEmptyCondition` 真实检查 `context.getTag(tag).isEmpty()`；固定 Fabric `tags_populated` 仅检查重载标签 ID 是否存在。修复在 Fabric 同一 tag 加载边界捕获 item tag 实际非空 ID，用 `mekanism:tag_empty` 保留官方条件本身及任意嵌套 not，重载结束按 Fabric 同一边界清理。focused 测试覆盖缺失、存在但空、非空和作用域清理；完整测试契约 111/507 及 API/platform slice gate 通过；实际 remapped JAR 隔离服务端用四个真实 datapack 配方测试空、缺失、非空及非空取反，加载数量由无测试包的 2868 变为 2871，启动 proof 和正常停服成功，未安装真实 BSWG、未验证这些配方的全部实际产物。
+64 个 BSWG 配方的官方条件为 `neoforge:not(neoforge:tag_empty)`，但变换把内部 `tag_empty` 直接映射为 `fabric:tags_populated` 并保留外层 not，导致非空/存在标签时被跳过，缺失标签时反而通过；原文档“仅存在空标签差异”错误。固定 NeoForge `TagEmptyCondition` 真实检查 `context.getTag(tag).isEmpty()`；固定 Fabric `tags_populated` 仅检查重载标签 ID 是否存在。修复在 Fabric 同一 tag 加载边界捕获 item tag 实际非空 ID，用 `mekanism:tag_empty` 保留官方条件本身及任意嵌套 not，重载结束按 Fabric 同一边界清理。focused 测试覆盖缺失、存在但空、非空和作用域清理；完整测试契约 111/507 及 API/platform slice gate 通过；实际 remapped JAR 隔离服务端用四个真实 datapack 配方测试空、缺失、非空及非空取反，加载数量由无测试包的 2868 变为 2871，启动 proof 和正常停服成功，未安装真实 BSWG、未验证这些配方的全部实际产物。`d76188c9` 的完整真实 diff 已按 prompt 复审：未发现已支持配方条件路径的其他具体偏离；监听依赖固定 Fabric API 内部标签快照时序，失败重载时 thread-local 与 Fabric 自身类似可保留到下次重载，后续版本升级须复核。
+
+### F43 — 骑乘时 MekaSuit 能量条使用错误左列高度（`d04c73d0`，代码已修，画面待验）
+
+`FabricHudHeights.leftColumnHeight` 将坐骑血条加到左列；固定 NeoForge GUI 的生命值和护甲修改 `leftHeight`，而坐骑血条修改 `rightHeight`，MekaSuit 能量条使用的是前者。因此骑乘具有血量的实体时原移植计算值偏高 10 像素。`c714b385` 移除此项，保留左列生命和护甲计算；已读完整真实 diff，按 prompt 对照固定 GUI 复审，未发现该限定计算范围新增偏离。编译和平台 slice gate 通过；尚未用 mcdebug 进入真实世界检查坐骑、MekaSuit 条和模式文字叠层，原模式文字 8px 共享高度差异仍未闭合。
 
 ### 并行初审待主代理核验
 
