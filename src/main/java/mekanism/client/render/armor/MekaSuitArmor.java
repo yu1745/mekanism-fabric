@@ -35,7 +35,6 @@ import mekanism.client.model.BaseModelCache.MekanismModelData;
 import mekanism.client.model.BaseModelCache.OBJModelData;
 import mekanism.client.model.MekanismModelCache;
 import mekanism.client.render.MekanismRenderType;
-import mekanism.client.render.lib.Quad;
 import mekanism.client.render.lib.QuadTransformation;
 import mekanism.client.render.lib.QuadUtils;
 import mekanism.client.render.lib.QuickHash;
@@ -198,15 +197,29 @@ public class MekaSuitArmor implements ICustomArmor {
     static void putQuads(List<BakedQuad> quads, VertexConsumer builder, PoseStack.Pose pose, int light, int overlayLight, Color color) {
         int packedColor = net.minecraft.util.FastColor.ARGB32.color((int) (color.af() * 255), (int) (color.rf() * 255),
               (int) (color.gf() * 255), (int) (color.bf() * 255));
+        // NeoForge's bulk draw merges baked light and applies baked normals; vanilla's does neither.
+        // Read the vanilla BLOCK layout directly and reuse the scratch objects for this draw.
+        var bytes = java.nio.ByteBuffer.allocate(32).order(java.nio.ByteOrder.nativeOrder());
+        var position = new org.joml.Vector3f();
+        var normal = new org.joml.Vector3f();
         for (BakedQuad quad : quads) {
-            // NeoForge's bulk draw merges the baked light and applies baked normals; vanilla's does neither.
-            // Use the existing Mekanism quad representation so LED and rotated suit geometry keep those attributes.
-            for (var vertex : new Quad(quad).getVertices()) {
-                var position = pose.pose().transformPosition(vertex.getPos(), new org.joml.Vector3f());
-                var normal = pose.transformNormal(vertex.getNormal().x(), vertex.getNormal().y(), vertex.getNormal().z(), new org.joml.Vector3f());
-                int blockLight = Math.max(light & 0xFFFF, vertex.getRawLightU());
-                int skyLight = Math.max((light >>> 16) & 0xFFFF, vertex.getRawLightV());
-                builder.addVertex(position.x(), position.y(), position.z(), packedColor, vertex.getTexU(), vertex.getTexV(), overlayLight,
+            int[] data = quad.getVertices();
+            var faceNormal = quad.getDirection().getNormal();
+            for (int i = 0; i < 4; i++) {
+                bytes.clear();
+                for (int j = 0; j < 8; j++) {
+                    bytes.putInt(data[i * 8 + j]);
+                }
+                pose.pose().transformPosition(bytes.getFloat(0), bytes.getFloat(4), bytes.getFloat(8), position);
+                byte nx = bytes.get(28), ny = bytes.get(29), nz = bytes.get(30);
+                if (nx != 0 || ny != 0 || nz != 0) {
+                    pose.normal().transform(nx / 127F, ny / 127F, nz / 127F, normal);
+                } else {
+                    pose.transformNormal(faceNormal.getX(), faceNormal.getY(), faceNormal.getZ(), normal);
+                }
+                int blockLight = Math.max(light & 0xFFFF, bytes.getShort(24) & 0xFFFF);
+                int skyLight = Math.max((light >>> 16) & 0xFFFF, bytes.getShort(26) & 0xFFFF);
+                builder.addVertex(position.x(), position.y(), position.z(), packedColor, bytes.getFloat(16), bytes.getFloat(20), overlayLight,
                       blockLight | skyLight << 16, normal.x(), normal.y(), normal.z());
             }
         }

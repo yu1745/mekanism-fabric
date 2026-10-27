@@ -30,10 +30,12 @@ class MekaSuitBakedLightClientTest {
         }
         CapturingConsumer consumer = new CapturingConsumer();
         int environment = 48 | (64 << 16);
-        MekaSuitArmor.putQuads(List.of(new BakedQuad(data, -1, Direction.NORTH, null, false)), consumer, new PoseStack().last(),
+        PoseStack pose = new PoseStack();
+        pose.scale(2, 1, 1);
+        MekaSuitArmor.putQuads(List.of(new BakedQuad(data, -1, Direction.NORTH, null, false)), consumer, pose.last(),
               environment, 0, Color.WHITE);
         assertEquals(List.of(240 | (64 << 16), 48 | (240 << 16), environment, environment), consumer.lights);
-        assertEquals(List.of(1F, 1F, 1F, 1F), consumer.normalX);
+        assertEquals(List.of(0.5F, 0.5F, 0.5F, 0.5F), consumer.normalX);
     }
 
     private static class CapturingConsumer implements VertexConsumer {
