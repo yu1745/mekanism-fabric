@@ -20,17 +20,17 @@ final class FabricEnergyCubeUnbakedModel implements net.minecraft.client.resourc
     private final ResourceLocation id;
     private final JsonObject root;
     @Nullable
-    private final JsonObject parentTextures;
+    private final JsonObject parentRoot;
 
-    FabricEnergyCubeUnbakedModel(ResourceLocation id, JsonObject root, @Nullable JsonObject parentTextures) {
+    FabricEnergyCubeUnbakedModel(ResourceLocation id, JsonObject root, @Nullable JsonObject parentRoot) {
         this.id = id;
         this.root = root;
-        this.parentTextures = parentTextures;
+        this.parentRoot = parentRoot;
     }
 
     @Override
     public @NotNull BakedModel bake(@NotNull ModelBaker baker, @NotNull Function<Material, TextureAtlasSprite> spriteGetter, @NotNull ModelState modelState) {
-        return FabricEnergyCubeModel.bake(id, root, parentTextures, spriteGetter);
+        return FabricEnergyCubeModel.bake(id, root, parentRoot, spriteGetter, modelState);
     }
 
     @Override

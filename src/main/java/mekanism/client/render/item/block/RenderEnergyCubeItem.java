@@ -17,6 +17,7 @@ import mekanism.common.tile.component.config.DataType;
 import mekanism.common.tile.component.config.IPersistentConfigInfo;
 import mekanism.common.util.EnumUtils;
 import mekanism.common.util.StorageUtils;
+import mekanism.fabric.client.model.FabricEnergyCubeModel;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -50,9 +51,15 @@ public class RenderEnergyCubeItem extends MekanismISTER {
             }
             sideStates[side.ordinal()] = state;
         }
-        //The port's vanilla-quad render path has no model-data channel; the shell side states are the
-        //deferred energy_cube loader family, so the item shell renders via the vanilla quads that exist.
+        //The block model supplies the frame; side data must be drawn separately because Fabric has no model-data channel.
         renderBlockItem(stack, displayContext, matrix, renderer, light, overlayLight);
+        var block = ((ItemBlockEnergyCube) stack.getItem()).getBlock();
+        var baked = Minecraft.getInstance().getBlockRenderer().getBlockModel(block.defaultBlockState());
+        if (baked instanceof FabricEnergyCubeModel cube) {
+            var buffer = net.minecraft.client.renderer.entity.ItemRenderer.getFoilBufferDirect(renderer,
+                  net.minecraft.client.renderer.RenderType.cutout(), true, stack.hasFoil());
+            FabricEnergyCubeModel.FabricEnergyCubeModels.renderSides(cube.dynamic(), matrix, buffer, sideStates, light, overlayLight);
+        }
         double energyPercentage = StorageUtils.getEnergyRatio(stack);
         if (energyPercentage > 0) {
             float ticks = Minecraft.getInstance().levelRenderer.ticks + MekanismRenderer.getPartialTick();

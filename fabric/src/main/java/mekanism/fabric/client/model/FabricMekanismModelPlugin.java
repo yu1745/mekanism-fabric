@@ -105,7 +105,7 @@ public final class FabricMekanismModelPlugin {
                         JsonElement parent = childRoot.get("parent");
                         if (parent != null && parent.getAsString().equals("mekanism:block/energy_cube/base")) {
                             ResourceLocation id = modelId(entry.getKey());
-                            prepared.put(id, new FabricEnergyCubeUnbakedModel(id, childRoot, energyCubeBaseTextures(resources)));
+                            prepared.put(id, new FabricEnergyCubeUnbakedModel(id, childRoot, energyCubeBaseModel(resources)));
                             energyCubeBaked++;
                         }
                     }
@@ -171,11 +171,11 @@ public final class FabricMekanismModelPlugin {
         }, executor);
     }
 
-    /** The geometry carrier's texture map, which the tier children's references resolve against. */
-    private static JsonObject energyCubeBaseTextures(ResourceManager resources) {
+    /** The geometry carrier, whose geometry and textures are inherited by each tier child. */
+    private static JsonObject energyCubeBaseModel(ResourceManager resources) {
         ResourceLocation fileId = ResourceLocation.fromNamespaceAndPath("mekanism", "models/block/energy_cube/base.json");
         Resource resource = resources.getResource(fileId).orElseThrow();
-        return JsonParser.parseString(read(resource)).getAsJsonObject().getAsJsonObject("textures");
+        return JsonParser.parseString(read(resource)).getAsJsonObject();
     }
 
     private static String loaderOf(ResourceLocation id, JsonObject root) {

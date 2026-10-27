@@ -2,26 +2,34 @@ package mekanism.fabric.client.model;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import mekanism.client.model.energycube.EnergyCubeBakedModel;
 import mekanism.client.model.energycube.EnergyCubeGeometry;
 import mekanism.client.model.energycube.EnergyCubeModelLoader;
 import mekanism.common.tile.TileEntityEnergyCube;
+import net.fabricmc.fabric.api.blockview.v2.FabricBlockView;
+import net.fabricmc.fabric.api.renderer.v1.RendererAccess;
+import net.fabricmc.fabric.api.renderer.v1.material.BlendMode;
+import net.fabricmc.fabric.api.renderer.v1.material.RenderMaterial;
+import net.fabricmc.fabric.api.renderer.v1.model.FabricBakedModel;
+import net.fabricmc.fabric.api.renderer.v1.render.RenderContext;
 import net.minecraft.client.renderer.LightTexture;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.block.model.BlockElement;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.client.resources.model.Material;
 import net.minecraft.client.resources.model.ModelState;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -32,38 +40,69 @@ import org.jetbrains.annotations.Nullable;
  * textures. The plugin parses each tier's merged texture map through the reshaped official loader/geometry, then:
  *
  * <ul>
- * <li>the baked block model carries the static frame plus the all-inactive LED set (the official default state) -
- * the ports and the lit LEDs draw from {@link mekanism.client.render.tileentity.RenderEnergyCube} driven by the
- * tile's render data, because the per-instance side selection has no fabric model-data counterpart;</li>
- * <li>the same geometry instance feeds the BER's dynamic split (lit LEDs + active ports at full brightness, unlit
- * LEDs and input ports at world light).</li>
+ * <li>Fabric chunk meshing reads the block entity's side-data snapshot and emits the frame and LEDs/ports;</li>
+ * <li>the item renderer uses the same geometry split with the item's side configuration.</li>
  * </ul>
  */
-public final class FabricEnergyCubeModel implements BakedModel {
+public final class FabricEnergyCubeModel implements BakedModel, FabricBakedModel {
 
     private static final ResourceLocation ATLAS = ResourceLocation.withDefaultNamespace("textures/atlas/blocks.png");
-    /** Identity rotation, matching the shipped JSONs (no root transform). */
-    private static final ModelState IDENTITY = new ModelState() {
-    };
-
     private final EnergyCubeBakedModel dynamic;
-    private final List<BakedQuad> staticQuads;
     private final TextureAtlasSprite particle;
 
-    private FabricEnergyCubeModel(EnergyCubeBakedModel dynamic, List<BakedQuad> staticQuads, TextureAtlasSprite particle) {
+    private FabricEnergyCubeModel(EnergyCubeBakedModel dynamic, TextureAtlasSprite particle) {
         this.dynamic = dynamic;
-        this.staticQuads = staticQuads;
         this.particle = particle;
     }
 
-    @Nullable
     public EnergyCubeBakedModel dynamic() {
         return dynamic;
     }
 
     @Override
+    public boolean isVanillaAdapter() {
+        return false;
+    }
+
+    @Override
+    public void emitBlockQuads(BlockAndTintGetter view, BlockState state, BlockPos pos, Supplier<RandomSource> random, RenderContext context) {
+        Object data = view instanceof FabricBlockView fabricView ? fabricView.getBlockEntityRenderData(pos) : null;
+        TileEntityEnergyCube.CubeSideState[] states = data instanceof TileEntityEnergyCube.CubeSideState[] sideStates ? sideStates : null;
+        emitGeometry(context, states, true);
+    }
+
+    @Override
+    public void emitItemQuads(ItemStack stack, Supplier<RandomSource> random, RenderContext context) {
+        emitGeometry(context, null, false);
+    }
+
+    private void emitGeometry(RenderContext context, @Nullable TileEntityEnergyCube.CubeSideState[] states, boolean cull) {
+        var finder = RendererAccess.INSTANCE.getRenderer().materialFinder().blendMode(BlendMode.CUTOUT);
+        RenderMaterial unlit = finder.emissive(false).find();
+        RenderMaterial lit = finder.emissive(true).find();
+        for (Direction side : Direction.values()) {
+            emit(context, dynamic.getFrameQuads(side), unlit, cull ? side : null);
+            EnergyCubeBakedModel.QuadSplits split = dynamic.getSplitQuads(side, states);
+            emit(context, split.unlit(), unlit, cull ? side : null);
+            emit(context, split.lit(), lit, cull ? side : null);
+        }
+        emit(context, dynamic.getFrameQuads(null), unlit, null);
+        EnergyCubeBakedModel.QuadSplits split = dynamic.getSplitQuads(null, states);
+        emit(context, split.unlit(), unlit, null);
+        emit(context, split.lit(), lit, null);
+    }
+
+    private static void emit(RenderContext context, List<BakedQuad> quads, RenderMaterial material, @Nullable Direction cullFace) {
+        var emitter = context.getEmitter();
+        for (BakedQuad quad : quads) {
+            emitter.fromVanilla(quad, material, cullFace);
+            emitter.emit();
+        }
+    }
+
+    @Override
     public @NotNull List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side, @NotNull RandomSource rand) {
-        return staticQuads;
+        return dynamic.getFrameQuads(side);
     }
 
     @Override
@@ -103,15 +142,14 @@ public final class FabricEnergyCubeModel implements BakedModel {
 
     /**
      * Parses one energy cube model JSON (the geometry carrier or a tier child) against the merged parent+child
-     * texture map and bakes it once sprites are stitched. Returns the baked model and registers the dynamic quad
-     * source under {@code id} for the BER.
+     * texture map and bakes it once sprites are stitched, using the current block-state rotation.
      */
-    public static FabricEnergyCubeModel bake(ResourceLocation id, JsonObject root, @Nullable JsonObject parentTextures,
-          Function<Material, TextureAtlasSprite> spriteGetter) {
-        EnergyCubeGeometry geometry = EnergyCubeModelLoader.INSTANCE.read(root);
+    public static FabricEnergyCubeModel bake(ResourceLocation id, JsonObject root, @Nullable JsonObject parentRoot,
+          Function<Material, TextureAtlasSprite> spriteGetter, ModelState modelState) {
+        EnergyCubeGeometry geometry = EnergyCubeModelLoader.INSTANCE.read(parentRoot == null ? root : parentRoot);
         Map<String, String> textures = new HashMap<>();
-        if (parentTextures != null) {
-            for (Map.Entry<String, JsonElement> entry : parentTextures.getAsJsonObject().entrySet()) {
+        if (parentRoot != null && parentRoot.has("textures")) {
+            for (Map.Entry<String, JsonElement> entry : parentRoot.getAsJsonObject("textures").entrySet()) {
                 textures.put(entry.getKey(), entry.getValue().getAsString());
             }
         }
@@ -130,56 +168,17 @@ public final class FabricEnergyCubeModel implements BakedModel {
         String particleRef = textures.getOrDefault("particle", "missing");
         TextureAtlasSprite particle = spriteGetter.apply(new Material(ATLAS, ResourceLocation.parse(particleRef)));
 
-        EnergyCubeBakedModel dynamic = geometry.bake(rawSpriteGetter, IDENTITY, particle);
-        //The static block model: the frame plus the all-inactive LED set - the official default selection.
-        List<BakedQuad> staticQuads = new ArrayList<>(dynamic.getFrameQuads(null));
-        for (Direction side : Direction.values()) {
-            staticQuads.addAll(dynamic.getFrameQuads(side));
-        }
-        EnergyCubeBakedModel.QuadSplits inactive = dynamic.getInactiveQuads(null);
-        staticQuads.addAll(inactive.unlit());
-        for (Direction side : Direction.values()) {
-            staticQuads.addAll(dynamic.getInactiveQuads(side).unlit());
-        }
-        FabricEnergyCubeModels.register(id, dynamic);
-        return new FabricEnergyCubeModel(dynamic, staticQuads, particle);
+        EnergyCubeBakedModel dynamic = geometry.bake(rawSpriteGetter, modelState, particle);
+        return new FabricEnergyCubeModel(dynamic, particle);
     }
 
-    /** Registry the BER reads; keyed by the tier model id ({@code block/energy_cube/<tier>}). */
+    /** Renders the side geometry belonging to the exact baked block-state model. */
     public static final class FabricEnergyCubeModels {
-
-        private static final Map<ResourceLocation, EnergyCubeBakedModel> BAKED = new HashMap<>();
-
         private FabricEnergyCubeModels() {
         }
 
-        static void register(ResourceLocation id, EnergyCubeBakedModel model) {
-            BAKED.put(id, model);
-        }
-
-        @Nullable
-        public static EnergyCubeBakedModel byId(@NotNull ResourceLocation modelId) {
-            return BAKED.get(modelId);
-        }
-
-        /** Renders the sides for one tile by resolving its tier's model id. */
-        public static void renderTier(@NotNull TileEntityEnergyCube tile, @NotNull com.mojang.blaze3d.vertex.PoseStack poseStack,
-              @NotNull net.minecraft.client.renderer.MultiBufferSource renderer, int light, int overlay) {
-            String tier = tile.getTier().getBaseTier().name().toLowerCase(java.util.Locale.ROOT);
-            EnergyCubeBakedModel model = byId(ResourceLocation.fromNamespaceAndPath(mekanism.api.MekanismAPI.MEKANISM_MODID, "block/energy_cube/" + tier));
-            if (model != null) {
-                renderSides(model, poseStack, renderer.getBuffer(RenderType.cutout()), tile, light, overlay);
-            }
-        }
-
-        public static int count() {
-            return BAKED.size();
-        }
-
-        /** Renders the dynamic sides of one energy cube into the cutout buffer, per the tile's render data. */
         public static void renderSides(@NotNull EnergyCubeBakedModel model, @NotNull com.mojang.blaze3d.vertex.PoseStack poseStack,
-              @NotNull com.mojang.blaze3d.vertex.VertexConsumer buffer, @NotNull TileEntityEnergyCube tile, int light, int overlay) {
-            TileEntityEnergyCube.CubeSideState[] states = tile.getRenderData();
+              @NotNull com.mojang.blaze3d.vertex.VertexConsumer buffer, @Nullable TileEntityEnergyCube.CubeSideState[] states, int light, int overlay) {
             for (Direction side : Direction.values()) {
                 draw(buffer, poseStack, model.getSplitQuads(side, states).unlit(), light, overlay);
                 draw(buffer, poseStack, model.getSplitQuads(side, states).lit(), LightTexture.FULL_BRIGHT, overlay);
@@ -193,11 +192,6 @@ public final class FabricEnergyCubeModel implements BakedModel {
             for (BakedQuad quad : quads) {
                 buffer.putBulkData(poseStack.last(), quad, 1.0F, 1.0F, 1.0F, 1.0F, light, overlay);
             }
-        }
-
-        static {
-            //Ties this lane to the shipped JSON's cutout declaration; the BER draws on it.
-            RenderType.cutout();
         }
     }
 }
