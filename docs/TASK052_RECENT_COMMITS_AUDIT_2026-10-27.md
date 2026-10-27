@@ -279,7 +279,7 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 ### F46 — MekaSuit 逐面全亮光值在 vanilla 绘制中被忽略（`601da1af` 后续装备模型路径，代码已修，画面待验）
 
-`MekaSuitArmor.getQuads` 对 LED 四边形施加 `QuadTransformation.fullbright`，但 `putQuads` 使用 vanilla `VertexConsumer.putBulkData` 简化重载：固定 Fabric Minecraft 实现将同一个调用方 `light` 传给全部顶点，不读取 `BakedQuad` 的光位。因此单独修正 F45 的打包仍不能使这条实际装备渲染路径尊重 LED 自发光。对照固定 NeoForge `IVertexConsumerExtension.applyBakedLighting`：逐顶点取 baked 光和环境光各通道最大值，非零 baked normal 经 pose 法线变换。修复在既有装备 renderer 执行此合并，仍按官方传入着色、overlay，未将整个装备强制全亮。复审 `132da13a` 发现其对非均匀变换下的 baked normal 调用 `Pose.transformNormal` 会多做归一化，不完全符合固定 NeoForge extension 的直接法线矩阵乘法；后续修正按 baked normal 是否非零区分两个路径，并复用 scratch buffer 而非每面重新分配 Quad/顶点。隔离客户端 Knot focused 测试调用真实 `MekaSuitArmor.putQuads`，验证不同顶点环境/baked 光合并和非均匀缩放后的 baked normal；首次 fixture 未 bootstrap 原文报 `Not bootstrapped ... game_event`，补 vanilla bootstrap 后通过。实际世界中装备画面、性能及资源重载未验证。
+`MekaSuitArmor.getQuads` 对 LED 四边形施加 `QuadTransformation.fullbright`，但 `putQuads` 使用 vanilla `VertexConsumer.putBulkData` 简化重载：固定 Fabric Minecraft 实现将同一个调用方 `light` 传给全部顶点，不读取 `BakedQuad` 的光位。因此单独修正 F45 的打包仍不能使这条实际装备渲染路径尊重 LED 自发光。对照固定 NeoForge `IVertexConsumerExtension.applyBakedLighting`：逐顶点取 baked 光和环境光各通道最大值，非零 baked normal 经 pose 法线变换。修复在既有装备 renderer 执行此合并，仍按官方传入着色、overlay，未将整个装备强制全亮。复审 `132da13a` 发现其对非均匀变换下的 baked normal 调用 `Pose.transformNormal` 会多做归一化，不完全符合固定 NeoForge extension 的直接法线矩阵乘法；`2f352450` 修正按 baked normal 是否非零区分两个路径，并复用 scratch buffer 而非每面重新分配 Quad/顶点；其完整 diff 已按移植风格 prompt 复审，未发现此限定边界新的偏离。隔离客户端 Knot focused 测试调用真实 `MekaSuitArmor.putQuads`，验证不同顶点环境/baked 光合并和非均匀缩放后的 baked normal；首次 fixture 未 bootstrap 原文报 `Not bootstrapped ... game_event`，补 vanilla bootstrap 后通过。实际世界中装备画面、性能及资源重载未验证。
 
 ### F47 — 普通鞘翅被额外绘制一次（`254afa6b`，代码已修，画面待验）
 
