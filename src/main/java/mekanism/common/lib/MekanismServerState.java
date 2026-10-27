@@ -35,6 +35,7 @@ public final class MekanismServerState {
         activeVibrators.clear();
         mekanism.common.content.gear.mekasuit.MekaSuitFlight.clear();
         mekanism.common.CommonWorldTickHandler.INSTANCE.resetChunkData();
+        mekanism.common.world.GenHandler.reset();
         mekanism.common.lib.frequency.FrequencyType.clear();
         mekanism.common.content.qio.QIOGlobalItemLookup.INSTANCE.reset();
         mekanism.common.lib.radiation.PlayerExposure.clear();
