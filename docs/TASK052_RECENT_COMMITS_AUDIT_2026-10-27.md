@@ -34,15 +34,19 @@
 
 仍需核实的较窄问题：缓冲区为空时 `onUpdate()` 不调用 `tickEmit()`，而 `TileComponentConfig.sideChangedBasic()` 的 `invalidateCapability()` 只撤销本地缓存、不通知邻居；此时传输实际不受影响，但连接位和外观是否会一直保持旧状态，需进一步查其他生命周期/网络读取路径并做实机验证。历史提交自身的推送失效语义与现状态应分开评估。
 
-### F2 — 客户端键绑定行为被移除后仍未接回（`6b6bcb0f`，静态代码确认；运行复现及修复待完成）
+### F2 — 客户端键绑定回调缺失（`6b6bcb0f`，核心接线已修复；兼容与实机验证待完成）
 
-此提交将官方模式切换、模块调节器、HUD 开关和 boost 按下/释放回调从 `MekanismKeyHandler` 移除，仅声明并注册 vanilla KeyMapping，承诺留待 client input vertical。当前 `src/main/java/mekanism/client` 与 `fabric/src/main/java` 中对这些绑定的检索显示，手部绑定仅另由 `MekKeyHandler.isRadialPressed()` 查询，其他绑定仅声明和注册；当前 `FabricClientTickRegistration` 只注册 `ClientTickHandler.onTick()` 及实体载入声音事件，没有模式切换/HUD/模块按键消费。`MekanismClient.updateKey` 有定义但在上述客户端路径未发现调用。故不能继续声称该已完成客户端输入面等同官方；快捷键的上下文、modifier、重复按下及服务端同步须在原行为边界内复现并修复。尚未进行实机 GUI 验证。
+原提交将官方模式切换、模块调节器、HUD 开关和 boost 按下/释放回调从 `MekanismKeyHandler` 移除，仅声明并注册 vanilla KeyMapping；审查时确认这些回调并未重新接入。用户后续明确要求补修此前发现的问题。
+
+修复 `b876af80` 按历史 `MekanismKeyHandler` 恢复装备/手持模式包、模块调节器包、HUD 保存和 boost 同步；增加键盘/鼠标输入 mixin，同一 N 键在 GUI 与游戏上下文分别处理，并在 tick 中处理打开 GUI 后的 boost 释放。description 在 GUI 中恢复默认 SHIFT 条件。已逐段复审完整 diff，三个切片 gate 与两个键盘/扫描码/鼠标绑定匹配测试通过；客户端真实启动 smoke 15/15，但 smoke 未模拟按键，且运行后额外补了 overlay 一行保护并重新通过编译和测试。因此不能称为真实按键端到端验收。
+
+剩余偏离：Curios 位置的模式切换仍未接入；vanilla 设置界面无法表示/自定义组合键 modifier，描述键的显示不一定体现 SHIFT；`MekKeyHandler` 在 GUI 原始轮询不支持扫描码；鼠标 mixin 在 vanilla macOS control-click 归一化之前触发，可能与官方不同。还需在 mcdebug/真实客户端验证 GUI、重绑、重复、按下释放、远程同步与上述边界，不得将 F2 标成完全闭环。
 
 ### F3 — Robit 无法通过充电板的实体能量路径充电（`5d2c9182`，代码修复已提交；端到端验证待完成）
 
 `TileEntityChargepad.onUpdateServer()` 对非玩家生物调用 `EnergyCompatUtils.getStrictEnergyHandler(entity)`，并明确注明 Robit 走此分支；`EntityRobit` 实现 `IMekanismStrictEnergyHandler` 并持有真实能量容器。修复前的 `EnergyCompatUtils` 对实体只遍历外部能量 compat，最终查询 `FabricEnergyLookup.ENTITY_ENERGY`。整个已纳源码中对该 lookup 只有定义和查询，没有注册任何实体 provider；因此 Robit 查到 null，`provideEnergy(null)` 返回 false。此缺口独立于是否启用外部能量转换：官方原先将自身 strict capability 列为第一优先，不能用 Team Reborn 是否启用来替代。修复提交 `6ebdda4f` 在实体查询处先返回可处理能量的真实 Robit handler，再保留其他实体的原 Fabric 外部查询。历史基线 `Capabilities.registerCapabilities` 对 ROBIT 注册的实体能源 provider 正是 `(robit, ctx) -> robit`，且官方 strict compat 在外部 compat 前查询。已重审该提交真实 diff：仅改这一入口，不改能量容器、转换或注册 ID；未发现该范围内新增偏离。`compileJava` 及 `FabricEnergyLookupTest`、`FabricStrictEnergyHandlerTest`、`FabricEnergyStorageTest` 通过，但这些现有测试不直接覆盖 Robit/充电板，尚未完成真实世界复现与修复后端到端验证。
 
-F2 尚需按原有按键上下文、组合键、repeat 与 GUI/联机语义实现和验证，不能通过仅注册静态键绑定宣布完成。额外风险：`handModeSwitchKey` 和 `descriptionKey` 默认都绑定 N，而 1.21.1 vanilla 的 `KeyMapping.click` 通过单值 MAP 分派；必须结合 Fabric 的实际处理和按键重绑定验证，不能假定普通 `consumeClick` 自然保留两个上下文。
+F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`handModeSwitchKey` 和 `descriptionKey` 默认都绑定 N，而 1.21.1 vanilla 的 `KeyMapping.click` 使用单值 MAP；修复绕过该单值分派独立检查 in-game 绑定，仍须实测两个上下文。
 
 ### F4 — 火焰弹点燃目标能力被误拒绝（`dba8824e`，已修复，端到端待验）
 

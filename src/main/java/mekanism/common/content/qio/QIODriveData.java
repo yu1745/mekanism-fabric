@@ -22,8 +22,8 @@ public class QIODriveData {
      * Stable real-owner participant (Task052 R4 correction): the drive's itemMap/itemCount and the physical DRIVE_METADATA
      * component on the <b>captured actual drive stack</b> are transactional. A snapshot is taken before the first
      * mutation at each nesting depth; the real {@link SnapshotParticipant} nesting promotion makes an enclosing abort
-     * after a committed nested removal roll the drive data back exactly. The holder {@code dataUpdate}
-     * (DriveArray markForSave) notification is commit-only ({@code onFinalCommit}) and only fires for removals that
+     * after a committed nested mutation roll the drive data back exactly. The holder {@code dataUpdate}
+     * (DriveArray markForSave) notification is commit-only ({@code onFinalCommit}) and only fires for mutations that
      * survived every nesting level.
      */
     private final DriveStateParticipant driveStateTx = new DriveStateParticipant();
@@ -52,6 +52,11 @@ public class QIODriveData {
     }
 
     public long add(HashedItem type, long amount, Action action) {
+        return add(type, amount, action, null);
+    }
+
+    /** Joins insertion to the real drive's existing nested transaction journal when a transaction is supplied. */
+    public long add(HashedItem type, long amount, Action action, @Nullable TransactionContext tx) {
         long stored = getStored(type);
         // fail if we've reached item count capacity or adding this item would make us exceed type capacity
         if (itemCount == countCapacity || (stored == 0 && itemMap.size() == typeCapacity)) {
@@ -59,10 +64,18 @@ public class QIODriveData {
         }
         long toAdd = Math.min(amount, countCapacity - itemCount);
         if (action.execute()) {
+            if (tx != null) {
+                if (key.getDriveStack() != boundDriveStack) {
+                    throw new IllegalStateException("QIO drive owner no longer matches its physical stack");
+                }
+                driveStateTx.updateSnapshots(tx);
+            }
             itemMap.put(type, stored + toAdd);
             itemCount += toAdd;
             key.updateMetadata(this);
-            key.dataUpdate();
+            if (tx == null) {
+                key.dataUpdate();
+            }
         }
         return amount - toAdd;
     }
@@ -135,7 +148,7 @@ public class QIODriveData {
 
         @Override
         protected void onFinalCommit() {
-            //Commit-only holder notification: the removal survived every nesting level
+            //Commit-only holder notification: the mutation survived every nesting level
             key.dataUpdate();
         }
     }
