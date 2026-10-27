@@ -1,6 +1,7 @@
 package mekanism.fabric.client.render.armor;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import mekanism.client.render.armor.FreeRunnerArmor;
 import mekanism.client.render.armor.JetpackArmor;
@@ -79,7 +80,8 @@ public final class FabricArmorLayerRegistration {
           LivingEntityFeatureRendererRegistrationCallback.RegistrationHelper registrationHelper, EntityRendererProvider.Context context) {
         boolean addedArmor = false;
         boolean addedElytra = false;
-        for (Object layerRenderer : renderer.layers) {
+        //register() appends to renderer.layers synchronously; iterate the original layer snapshot instead.
+        for (Object layerRenderer : new ArrayList<>(renderer.layers)) {
             if (layerRenderer == null) {
                 continue;
             }
