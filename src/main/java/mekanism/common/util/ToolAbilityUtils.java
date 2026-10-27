@@ -39,7 +39,11 @@ public final class ToolAbilityUtils {
     @Nullable
     public static BlockState getToolModifiedState(BlockState state, UseOnContext context, ItemAbility itemAbility, boolean simulate) {
         ItemStack itemStack = context.getItemInHand();
-        if (!MekanismItemAbilities.canPerformAction(itemStack, itemAbility)) {
+        // NeoForge's vanilla FireChargeItem and FlintAndSteelItem expose this action; they do not implement
+        // Mekanism's Fabric-only provider interface. EntityFlame supplies a real fire charge in its context.
+        boolean vanillaFirestarter = itemAbility == ItemAbilities.FIRESTARTER_LIGHT && !itemStack.isEmpty()
+              && (itemStack.is(Items.FIRE_CHARGE) || itemStack.is(Items.FLINT_AND_STEEL));
+        if (!vanillaFirestarter && !MekanismItemAbilities.canPerformAction(itemStack, itemAbility)) {
             return null;
         }
         if (ItemAbilities.AXE_STRIP == itemAbility) {
