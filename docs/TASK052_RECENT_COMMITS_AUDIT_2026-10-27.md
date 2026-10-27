@@ -101,7 +101,7 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 原版 `MekanismAttachmentTypes.FLAMETHROWER_MODE` 以 `FlamethrowerMode.CODEC` 持久化非 `COMBAT` 模式；固定 NeoForge 21.1.200 的 `AttachmentHolder` 将注册名序列化在实体 NBT 的 `neoforge:attachments` 下，对应键 `mekanism:flamethrower_mode`。`12ebbcf6` 改用同步数据但没有读写保存，短生命周期实体在存盘/区块加载后会恢复默认 `COMBAT`，不能仅凭 spawn packet 同步认定保留持久语义。
 
-修复 `205ecb43` 在真实 `EntityFlame` 的读写方法中沿用这两个官方 NBT 键和原枚举 codec/default，保留 superclass 的 owner 数据，写入已存在的附件 compound 时不覆盖其其他键；已复审完整 diff。Knot 下 `EntityFlamePersistenceTest` 两项通过，使用真实实体和模拟 Level 验证 heat 回环、缺失/无效默认以及已有 compound 中其他键不被覆盖。该测试并未证明实际世界区块卸载/重新加载，也不承诺 Fabric 自动保存其他 mod 的未知 NeoForge 附件。
+修复 `205ecb43` 在真实 `EntityFlame` 的读写方法中沿用这两个官方 NBT 键和原枚举 codec/default，保留 superclass 的 owner 数据，写入已存在的附件 compound 时不覆盖其其他键；已复审完整 diff。Knot 下 `EntityFlamePersistenceTest` 两项通过，使用真实实体和模拟 Level 验证 heat 回环、缺失/无效默认以及已有 compound 中其他键不被覆盖。初次单独运行通过，但整个 `fabricTransferTest` 执行时此前测试已安装不同 chemical registry，导致初始化失败 `IllegalStateException: Chemical registry already installed`；不是生产功能通过的证据。修复测试隔离 `a7f0e1a4`（已审阅完整 diff）将该测试移至每类独立 Knot worker 的现有 source set，保留真实 registry 初始化；随后 `qioTransactionTest` 和整个 `fabricTransferTest` 均通过。该测试并未证明实际世界区块卸载/重新加载，也不承诺 Fabric 自动保存其他 mod 的未知 NeoForge 附件。
 
 ## 恢复位置
 
