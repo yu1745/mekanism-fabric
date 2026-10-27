@@ -64,6 +64,12 @@ public class QIODriveData {
         }
         long toAdd = Math.min(amount, countCapacity - itemCount);
         if (action.execute()) {
+            if (tx == null) {
+                QIOFrequency frequency = key.holder().getQIOFrequency();
+                if (frequency != null) {
+                    frequency.requireNoInsertionTransaction();
+                }
+            }
             if (tx != null) {
                 if (key.getDriveStack() != boundDriveStack) {
                     throw new IllegalStateException("QIO drive owner no longer matches its physical stack");
@@ -97,6 +103,12 @@ public class QIODriveData {
         long stored = getStored(type);
         long removed = Math.min(amount, stored);
         if (action.execute()) {
+            if (tx == null) {
+                QIOFrequency frequency = key.holder().getQIOFrequency();
+                if (frequency != null) {
+                    frequency.requireNoInsertionTransaction();
+                }
+            }
             if (tx != null) {
                 if (key.getDriveStack() != boundDriveStack) {
                     throw new IllegalStateException("QIO drive owner no longer matches its physical stack");

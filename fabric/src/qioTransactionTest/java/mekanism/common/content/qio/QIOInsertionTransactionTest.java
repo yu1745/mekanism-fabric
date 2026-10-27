@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import mekanism.api.Action;
 import mekanism.api.security.SecurityMode;
 import mekanism.common.inventory.slot.QIODriveSlot;
 import mekanism.common.item.ItemQIODrive;
@@ -177,6 +178,25 @@ class QIOInsertionTransactionTest {
         });
         assertSame(actualReplacement[0], holder.slots.getFirst().getStack());
         assertEquals(0, actualReplacement[0].get(MekanismDataComponents.DRIVE_METADATA.get()).count());
+    }
+
+    @Test
+    void nonTransactionalReentryCannotBeLostByOuterRollback() {
+        Holder holder = new Holder();
+        ItemStack first = new ItemStack(Items.STONE, 3);
+        ItemStack second = new ItemStack(Items.DIRT, 4);
+        try (Transaction tx = Transaction.openOuter()) {
+            assertEquals(3, holder.frequency.insertItem(first, 3, tx));
+            assertThrows(IllegalStateException.class, () -> holder.frequency.addItem(second));
+            QIODriveData drive = holder.frequency.getAllDrives().iterator().next();
+            assertThrows(IllegalStateException.class, () -> drive.add(HashedItem.create(second), 4, Action.EXECUTE));
+            assertThrows(IllegalStateException.class, () -> holder.frequency.removeDrive(holder.slots.getFirst().getKey(), true));
+        }
+        assertEquals(0, holder.frequency.getStored(first));
+        assertEquals(0, holder.frequency.getStored(second));
+        //The abort also releases the guard, so normal legacy insertion is still available.
+        assertEquals(0, holder.frequency.addItem(second).getCount());
+        assertEquals(4, holder.frequency.getStored(second));
     }
 
     private static final class Holder implements IQIODriveHolder {

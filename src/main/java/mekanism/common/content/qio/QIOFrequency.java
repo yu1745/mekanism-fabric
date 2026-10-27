@@ -93,6 +93,7 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
     private final SequencedMap<HashedItem, QIOItemTypeData> itemDataMap = new LinkedHashMap<>();
     // New types in an open insertion transaction get their globally persistent UUID only after the outer commit.
     private final Set<QIOItemTypeData> pendingInsertionUUIDs = new HashSet<>();
+    private boolean insertionTransactionActive;
 
     /**
      * Stable frequency-level participant (Task052 R4 correction) for transaction-aware removal: snapshots the
@@ -122,7 +123,7 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
             }
             return new FrequencyRemoveSnapshot(items, tags, mods, fuzzy, totalCount, isDirty, needsUpdate,
                   new HashSet<>(updatedItems), HashMultimap.create(tagWildcardCache), HashMultimap.create(modIDWildcardCache),
-                  new HashSet<>(failedWildcardTags), new HashSet<>(failedWildcardModIDs), new HashSet<>(pendingInsertionUUIDs));
+                  new HashSet<>(failedWildcardTags), new HashSet<>(failedWildcardModIDs), new HashSet<>(pendingInsertionUUIDs), insertionTransactionActive);
         }
 
         @Override
@@ -150,10 +151,12 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
             failedWildcardModIDs.addAll(snapshot.failedMods);
             pendingInsertionUUIDs.clear();
             pendingInsertionUUIDs.addAll(snapshot.pendingUUIDs);
+            insertionTransactionActive = snapshot.insertionTransactionActive;
         }
 
         @Override
         protected void onFinalCommit() {
+            insertionTransactionActive = false;
             for (QIOItemTypeData data : pendingInsertionUUIDs) {
                 if (itemDataMap.get(data.itemType) == data) {
                     data.itemUUID = QIOGlobalItemLookup.INSTANCE.getOrTrackUUID(data.itemType);
@@ -168,7 +171,7 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
           Map<String, Set<HashedItem>> mods, Map<Item, Set<HashedItem>> fuzzy, long totalCount, boolean isDirty,
           boolean needsUpdate, Set<UUID> updatedItems, SetMultimap<String, String> tagWildcards,
           SetMultimap<String, String> modWildcards, Set<String> failedTags, Set<String> failedMods,
-          Set<QIOItemTypeData> pendingUUIDs) {
+          Set<QIOItemTypeData> pendingUUIDs, boolean insertionTransactionActive) {
     }
 
     private final Set<IQIODriveHolder> driveHolders = new HashSet<>();
@@ -236,6 +239,9 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
 
     @Override
     public long massInsert(ItemStack stack, long amount, Action action) {
+        if (action.execute()) {
+            requireNoInsertionTransaction();
+        }
         if (stack.isEmpty() || amount <= 0) {
             return 0;
         }
@@ -269,6 +275,7 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
         }
         HashedItem type = HashedItem.create(stack);
         frequencyRemoveTx.updateSnapshots(transaction);
+        insertionTransactionActive = true;
         QIOItemTypeData data = itemDataMap.get(type);
         if (data == null) {
             data = createTypeDataForAbsent(type, true);
@@ -277,7 +284,14 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
         return accepted - data.add(accepted, Action.EXECUTE, transaction);
     }
 
+    void requireNoInsertionTransaction() {
+        if (insertionTransactionActive) {
+            throw new IllegalStateException("Cannot mutate QIO frequency outside its active insertion transaction");
+        }
+    }
+
     public ItemStack addItem(ItemStack stack) {
+        requireNoInsertionTransaction();
         if (stack.isEmpty()) {
             return ItemStack.EMPTY;
         } else if (totalCount == totalCountCapacity) {
@@ -346,6 +360,9 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
 
     @Override
     public long massExtract(ItemStack stack, long amount, Action action) {
+        if (action.execute()) {
+            requireNoInsertionTransaction();
+        }
         if (amount <= 0 || stack.isEmpty() || itemDataMap.isEmpty()) {
             return 0;
         }
@@ -387,6 +404,9 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
      * by removal. There is no remove-then-add compensation: rollback restores the exact prior state.
      */
     public ItemStack removeByType(@Nullable HashedItem itemType, int amount, @Nullable TransactionContext tx) {
+        if (tx == null) {
+            requireNoInsertionTransaction();
+        }
         if (itemDataMap.isEmpty() || amount <= 0) {
             return ItemStack.EMPTY;
         }
@@ -614,6 +634,7 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
 
     @Override
     public boolean tick(boolean tickingNormally) {
+        requireNoInsertionTransaction();
         boolean superDirty = super.tick(tickingNormally);
 
         if (getSecurity() == SecurityMode.TRUSTED && !playersViewingItems.isEmpty()) {
@@ -682,6 +703,9 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
 
     @Override
     public boolean onDeactivate(BlockEntity tile) {
+        if (tile instanceof IQIODriveHolder) {
+            requireNoInsertionTransaction();
+        }
         boolean changedData = super.onDeactivate(tile);
         if (tile instanceof IQIODriveHolder holder) {
             for (int i = 0, size = holder.getDriveSlots().size(); i < size; i++) {
@@ -696,6 +720,9 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
 
     @Override
     public boolean update(BlockEntity tile) {
+        if (tile instanceof IQIODriveHolder) {
+            requireNoInsertionTransaction();
+        }
         boolean changedData = super.update(tile);
         if (tile instanceof IQIODriveHolder holder && driveHolders.add(holder)) {
             for (int i = 0, slots = holder.getDriveSlots().size(); i < slots; i++) {
@@ -707,6 +734,7 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
 
     @Override
     public void onRemove() {
+        requireNoInsertionTransaction();
         super.onRemove();
         // copy keys to avoid CME
         Set<QIODriveKey> keys = new HashSet<>(driveMap.keySet());
@@ -733,6 +761,7 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
     }
 
     public void addDrive(QIODriveKey key) {
+        requireNoInsertionTransaction();
         if (key.getDriveStack().getItem() instanceof IQIODriveItem) {
             // if a drive in this position is already in the system, we remove it before adding this one
             if (driveMap.containsKey(key)) {
@@ -754,6 +783,7 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
     }
 
     public void removeDrive(QIODriveKey key, boolean updateItemMap) {
+        requireNoInsertionTransaction();
         if (!driveMap.containsKey(key)) {
             return;
         }
