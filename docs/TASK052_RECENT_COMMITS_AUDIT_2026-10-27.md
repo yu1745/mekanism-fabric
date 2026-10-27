@@ -66,9 +66,18 @@
 | `f45d2bd7` | 主代理已读完整 diff，仅为 MekaSuit OBJ 下一轮边界记录，不直接改变生产逻辑。 |
 | `7765313e` | 主代理已读完整真实 diff、追踪模块注册、分类与重载；确认模块规格未注册、模型数据类型转换崩溃和重载分类失效，见 F51。模型启动 proof 只证 handler 安装，不证明穿戴或模块渲染；方块图集清单缺失另见 F52。 |
 | `91fbebef` | 已读完整 diff，仅为原审查记录；其通过结论被 F51/F52 的证据更正，不改变生产代码。 |
-| `ab5f7ad0` | 已读完整 diff、对照固定 NeoForge 动态桶模型和客户端实际缺纹理日志；缺失图集资源、缺默认 display transform 等问题见待修 F52。启动计数不证明模型完成。 |
+| `ab5f7ad0` | 已读完整 diff、对照固定 NeoForge 动态桶模型和客户端实际缺纹理日志；缺失图集资源、缺默认 display transform 等问题已按 F52 修复核心部分。启动计数不证明模型完成。 |
+| `b1b97518`、`c34a60af` | 已读完整 diff，均为历史审查文档；原称 z 平移等价、从本地 jar 运行时读纹理及已闭环均不成立，见 F52。 |
+| `9876fe84` | 已读完整 diff，仅删除误放仓库根目录的两项资源；原构建不包含该根目录，删除并未造成运行时新增变化，但没有在真实资源树补 mask，相关缺失已按 F52 修复。 |
+| `1f3283dd` | 已读完整 diff、查 Fabric 固定事件 mixin 与实际 owner；首次登录也触发 dimension reset，与官方仅跨世界 clone 不符，见 F53。addon 模块生命周期列表目前未见注册者，跨模组行为仍未验。 |
 
 ## 审查发现与待复核
+
+### F53 — 首次登录被当作跨维度克隆（`1f3283dd`，修复已提交；实际转换待验）
+
+固定 Fabric lifecycle API 的 `MinecraftClientMixin` 在 `Minecraft.setLevel` 尾部对所有非空新世界触发 `AFTER_CLIENT_WORLD_CHANGE`，包含首次登录；该提交无条件调用 `resetDimensionChange`。官方 `onCloneRespawn` 仅当旧、新玩家 level 不同才调用，登录本身由 `launchClient` 处理。额外清理会清空 `PlayerState`、振动器及客户端辐射等；集成服中共享的 state/map 还可能影响其他玩家状态。
+
+修复 `21b0d740` 跟踪非空旧世界，仅在不同世界间切换时调用 dimension reset，断线清除引用，保留原网络清理。已重读该提交完整 diff，对照 Fabric 注入点和 `ClientPacketListener.handleRespawn`：后者只在维度不同创建新 ClientLevel 并 setLevel，同维度重生不触发 world change；未发现该范围新增偏离。`compileJava` 通过。尚未实机验证登录、断线重连及跨维度时序：Fabric 回调早于创建新玩家，而官方 clone 回调在新玩家建立后，不能声明时序完全等价；集成服实际影响与 addon 生命周期仍待验证。
 
 ### F52 — 化学桶及装备图集资源与桶变换缺失（`ab5f7ad0`，核心修复已提交；实际画面待验）
 
