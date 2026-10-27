@@ -97,7 +97,7 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
      * ordered {@code itemDataMap} membership and the tag/mod/fuzzy lookup memberships that a removal can touch.
      * Nested propagation is the real {@link SnapshotParticipant} promotion, so an enclosing abort after a committed
      * nested removal restores the exact ordered identity/membership and shared totals/publication state.
-     * Failed-wildcard sets are never touched by removal.
+     * Failed-wildcard sets are included because creating a type during transactional insertion clears them.
      */
     private final FrequencyRemoveParticipant frequencyRemoveTx = new FrequencyRemoveParticipant();
 
@@ -119,7 +119,8 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
                 fuzzy.put(entry.getKey(), new HashSet<>(entry.getValue()));
             }
             return new FrequencyRemoveSnapshot(items, tags, mods, fuzzy, totalCount, isDirty, needsUpdate,
-                  new HashSet<>(updatedItems), HashMultimap.create(tagWildcardCache), HashMultimap.create(modIDWildcardCache));
+                  new HashSet<>(updatedItems), HashMultimap.create(tagWildcardCache), HashMultimap.create(modIDWildcardCache),
+                  new HashSet<>(failedWildcardTags), new HashSet<>(failedWildcardModIDs));
         }
 
         @Override
@@ -141,13 +142,17 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
             tagWildcardCache.putAll(snapshot.tagWildcards);
             modIDWildcardCache.clear();
             modIDWildcardCache.putAll(snapshot.modWildcards);
+            failedWildcardTags.clear();
+            failedWildcardTags.addAll(snapshot.failedTags);
+            failedWildcardModIDs.clear();
+            failedWildcardModIDs.addAll(snapshot.failedMods);
         }
     }
 
     private record FrequencyRemoveSnapshot(Map<HashedItem, QIOItemTypeData> items, Map<String, Set<HashedItem>> tags,
           Map<String, Set<HashedItem>> mods, Map<Item, Set<HashedItem>> fuzzy, long totalCount, boolean isDirty,
           boolean needsUpdate, Set<UUID> updatedItems, SetMultimap<String, String> tagWildcards,
-          SetMultimap<String, String> modWildcards) {
+          SetMultimap<String, String> modWildcards, Set<String> failedTags, Set<String> failedMods) {
     }
 
     private final Set<IQIODriveHolder> driveHolders = new HashSet<>();
@@ -896,7 +901,7 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
 
             @Override
             protected TypeRemoveSnapshot createSnapshot() {
-                return new TypeRemoveSnapshot(count, new HashSet<>(containingDrives));
+                return new TypeRemoveSnapshot(count, new HashSet<>(containingDrives), itemUUID);
             }
 
             @Override
@@ -904,10 +909,11 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
                 count = snapshot.count;
                 containingDrives.clear();
                 containingDrives.addAll(snapshot.containingDrives);
+                itemUUID = snapshot.itemUUID;
             }
         }
 
-        private record TypeRemoveSnapshot(long count, Set<QIODriveKey> containingDrives) {
+        private record TypeRemoveSnapshot(long count, Set<QIODriveKey> containingDrives, @Nullable UUID itemUUID) {
         }
 
         private ItemStack remove(int amount) {
