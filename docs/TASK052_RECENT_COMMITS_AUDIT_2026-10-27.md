@@ -70,11 +70,13 @@
 
 ## 审查发现与待复核
 
-### F52 — 化学桶及装备图集资源与桶变换缺失（`ab5f7ad0`，待修）
+### F52 — 化学桶及装备图集资源与桶变换缺失（`ab5f7ad0`，核心修复已提交；实际画面待验）
 
 真实客户端 `fabric/run/logs/latest.log` 在 18 个桶报告缺少 `neoforge:item/mask/bucket_fluid`，并在大多数桶和流体方块报告缺少 `mekanism:liquid/liquid` / `mekanism:liquid/steam`。`processResources` 未打包官方生成的 `assets/minecraft/atlases/blocks.json`，而根目录中误提交的 NeoForge mask 随 `9876fe84` 删除且未在 Fabric 资源中补回；已检查当前构建 jar 中两者均不存在。缺失图集清单也影响其中列出的 MekaSuit 纹理和其他 Mekanism 精灵。修复需在可分发许可范围内提供真实 mask 与官方 atlas 源，不能依赖未纳入构建的本地参考 jar；随后验证烘焙真实 sprite 而非 missingno。
 
-桶模型另硬编码 `ItemTransforms.NO_TRANSFORMS` 和 identity bake，而固定 NeoForge `assets/neoforge/models/item/default.json` 给出 ground/head/firstperson/thirdperson/fixed 变换，`DynamicFluidContainerModel` 使用 context transforms、incoming model state 和以中心缩放的 fluid transform；当前将 fluid 两面统一平移也不等价。遮罩矩形扫描、模型重载、粒子及第三方资源覆盖仍需对照官方 helper。先完成所属桶模型和图集的最小真实闭包，记录许可来源，再用实际加载日志及模型行为验证；启动 proof 不足以声称通过。
+桶模型另硬编码 `ItemTransforms.NO_TRANSFORMS` 和 identity bake，而固定 NeoForge `assets/neoforge/models/item/default.json` 给出 ground/head/firstperson/thirdperson/fixed 变换，`DynamicFluidContainerModel` 使用 context transforms、incoming model state 和以中心缩放的 fluid transform；原实现将 fluid 两面统一平移也不等价。
+
+修复 `67e27f60` 打包官方生成的方块图集清单及固定 NeoForge 21.1.200 的 mask/父模型（LGPL-2.1 许可证和来源、hash 随产物提供）；桶模型通过 vanilla 父模型解析纹理/变换，恢复 incoming state、fluid 中心缩放、mask 边缘与官方 seam 处理，粒子默认取 fluid。已依 prompt 重读该提交真实 diff、对照固定 NeoForge `DynamicFluidContainerModel`、`UnbakedGeometryHelper` 和 `ClientHooks`；二进制资源核对 hash、许可证文件逐字匹配系统 LGPL-2.1 原文，未在修复范围内发现新偏离。`build` 和 focused 测试通过；后者验证父模型显示变换、烘焙方向和流体 tint quad，使用合成 sprite 而非真实画面。实际客户端 smoke 16/16，重载后先前缺纹理日志消失，包内检查确认 atlas、三个 NeoForge 资源及许可证存在；client exit 124 为脚本预设超时。真实桶持握/GUI、MekaSuit 外观、资源包重载及第三方纹理覆盖仍未视觉验收；官方动态 contained-fluid override 和非本模组通用流体语义未声明完成。
 
 ### F51 — MekaSuit 模块模型接线与重载失效（`7765313e`，修复已提交；实机画面待验）
 
