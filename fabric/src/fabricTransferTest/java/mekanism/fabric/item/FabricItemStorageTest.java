@@ -44,6 +44,32 @@ class FabricItemStorageTest {
     }
 
     @Test
+    void hopperTriesLaterMachineSlotsAfterBlockedVariant() {
+        TestSlot first = new TestSlot(64, new ItemStack(Items.GOLD_INGOT, 3));
+        TestSlot second = new TestSlot(64, new ItemStack(Items.IRON_INGOT, 3));
+        FabricItemStorage machine = FabricItemLookup.expose(new MutableInventory(List.of(first, second)), Direction.DOWN, null);
+        var level = mekanism.test.TileLevelStub.create();
+        var pos = net.minecraft.core.BlockPos.ZERO;
+        level.installChunk(0, 0);
+        level.installTile(new net.minecraft.world.level.block.entity.FurnaceBlockEntity(pos,
+              net.minecraft.world.level.block.Blocks.FURNACE.defaultBlockState()));
+        net.fabricmc.fabric.api.transfer.v1.item.ItemStorage.SIDED.registerForBlockEntity(
+              (tile, side) -> side == Direction.DOWN ? machine : null, net.minecraft.world.level.block.entity.BlockEntityType.FURNACE);
+        var hopper = new net.minecraft.world.SimpleContainer(5);
+        hopper.setItem(0, new ItemStack(Items.IRON_INGOT, 63));
+        for (int i = 1; i < 5; i++) {
+            hopper.setItem(i, new ItemStack(Items.DIAMOND, 64));
+        }
+        assertTrue(FabricHopperTransfer.moveOneItem(level, pos, Direction.DOWN, hopper, false));
+        assertEquals(3, first.getStack().getCount());
+        assertEquals(2, second.getStack().getCount());
+        assertEquals(64, hopper.getItem(0).getCount());
+        assertFalse(FabricHopperTransfer.moveOneItem(level, pos, Direction.DOWN, hopper, false));
+        assertEquals(3, first.getStack().getCount());
+        assertEquals(2, second.getStack().getCount());
+    }
+
+    @Test
     void exposureViewsPreserveVariantComponentsBlankZeroCapacityAndRejectInvalidBoundaries() {
         ItemStack namedStack = new ItemStack(Items.DIAMOND, 7);
         namedStack.set(DataComponents.CUSTOM_NAME, Component.literal("component-identity"));

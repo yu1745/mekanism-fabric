@@ -88,7 +88,7 @@ public final class FabricHopperTransfer {
                         transaction.commit();
                         return true;
                     }
-                    return false;
+                    //Abort this extraction and try the next exposed slot, as vanilla does for blocked variants.
                 }
             }
         }
