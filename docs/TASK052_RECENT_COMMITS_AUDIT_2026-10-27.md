@@ -43,6 +43,8 @@
 | `985137ff`、`9ed83dea`、`b626904b`、`d9c291e9` | 子代理固定 `8e8b0a9b` 完整读取 diff，四者均是文档，没有生产代码变更；历史文档提及的已修问题不等于当前仍有同样缺陷。 |
 | `f787cad7` | 子代理固定 `8e8b0a9b` 完整读取 diff、复核分离机与 ejector 调用链：只改文档/机器 smoke；原失败探针用错输出槽和自动输出开关。目标氧标签断言不证明精确数量、源扣量、GUI 或全部方向。 |
 | `ffbcb655` | 子代理固定 `8e8b0a9b` 完整读取 diff 并追踪后续注册和渲染，主代理复核修复字典流体、非 Mekanism 发光及喷气背包上升同步，见 F31–F33；真实 GUI/亮度及按键尚待实测。 |
+| `5ee61549` | 子代理固定 `0c15b485` 完整读取该提交相对父提交的 diff，重点追踪区块票据、版本附件及假玩家保护，未证实新的具体缺陷；Fabric attachment 的 ProtoChunk 转移和脏标记已核查，不能误判丢失。 |
+| `5c0fcb1f` | 子代理固定 `0c15b485` 完整读取 diff 和当前 worldgen 路径，主代理初核固定 jar 路径问题，见待修 F34；旧 smoke 不能证明 datapack 覆盖或配置开关。 |
 
 ## 审查发现与待复核
 
@@ -198,7 +200,7 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 ### F31 — 上升键同步与按键包生命周期（`ffbcb655`、`53fda9e5`，已修；真实按键待验）
 
-`ffbcb655` 将官方 `ClientTickHandler` 中喷气背包持有时的 `MekanismClient.updateKey(..., KeySync.ASCEND)` 留为 deferred 注释；但服务器 `CommonPlayerTickHandler` 仍凭 ASCEND 状态处理飞行，导致客户端上升输入未同步。`1141ee82` 恢复官方原位置的调用；同时收紧已注册 `PacketKey` 的任意整数输入，只接受现有 ASCEND/BOOST，避免单个玩家无限增长 key 集合，并在服务器断连、停止及客户端 reset 释放对应状态。已审完整 143 行 diff；真实 Knot handler 测试验证非法 key 被拒、两个合法 key 的加减通过，原 GUI 授权测试通过。该安全防护属于原版继承的无界输入问题，不要求 GUI。没有真实客户端跳跃/喷气背包/断线重连演练，尤其集成服务端共享静态状态的时序仍需验证；F2 其他输入边界未关闭。
+`ffbcb655` 将官方 `ClientTickHandler` 中喷气背包持有时的 `MekanismClient.updateKey(..., KeySync.ASCEND)` 留为 deferred 注释；但服务器 `CommonPlayerTickHandler` 仍凭 ASCEND 状态处理飞行，导致客户端上升输入未同步。`1141ee82` 恢复官方原位置的调用；同时收紧已注册 `PacketKey` 的任意整数输入，只接受现有 ASCEND/BOOST，避免单个玩家无限增长 key 集合，并在服务器断连、停止及客户端 reset 释放对应状态。已审完整 143 行 diff；真实 Knot handler 测试验证非法 key 被拒、两个合法 key 的加减通过，原 GUI 授权测试通过。该安全防护属于原版继承的无界输入问题，不要求 GUI。复审发现集成服务器与客户端跨线程共享该静态 map，后续 `1d5edb40` 改用并发 map 与同步集合、消除 contains/get 的删除竞争；完整 diff 已复审、focused handler 测试通过。没有真实客户端跳跃/喷气背包/断线重连演练，特别是集成服务端断线时序仍需验证；F2 其他输入边界未关闭。
 
 ### F32 — 字典不读取普通物品内流体标签（`ffbcb655`，已修；真实 GUI 待验）
 
@@ -208,10 +210,14 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 原 `MekanismRenderer.calculateGlowLight` 只处理本 mod 流体，其余直接用环境光，熔岩在罐、机械管和罐物品内因此可能偏暗；这不同于 F28 的方块照明。`2d630147` 保留本 mod 精确元数据，其他流体使用默认状态对应方块的发光值，与 F28 的平台 fallback 一致；编译通过、完整 diff 已复审。非 vanilla 动态流体亮度和真实暗处画面均未验证。
 
+### F34 — 矿石 biome modifier 未读取活动 datapack（`5c0fcb1f`，待修）
+
+子代理核验、主代理初核：`FabricBiomeModifiers.initialize()` 在 mod 初始化时用 `FabricLoader.getModContainer(...).findPath(...)` 固定读取 jar 中 6 个 JSON，再固定注册 Fabric biome modification；不会读取世界启用的数据包对同名 `neoforge/biome_modifier` 的覆盖、禁用或额外条目。`#mekanism:spawn_ores` tag 本身在选择器执行时动态查询，不能混同为 tag 覆盖失效。活动资源必须在 biome registry 装载/修改前按世界取到；当前 Fabric `BiomeSelectionContext` 未直接提供 ResourceManager，必须继续追踪 `RegistryDataLoader.load(ResourceManager, ...)` 与 Fabric biome 修改 hook 的同一世界装载时序、pack priority、codec/type 和客户端网络加载边界，再选择可靠实现；不能只把启动期读取改为另一处全局缓存。先保留为明确生产缺陷，不把默认世界 smoke 当 datapack 测试。
+
 ### 并行初审待主代理核验
 
 尚待主代理核验：`1af82201` 官方历史 registry alias 是否影响固定官方存档；`38b8b1af` 创造标签内搜索；`2529dca8` 纳入的 11 个既有 mixin 调用链；以及 F29 尚未复核的非 GUI 网络包边界。`a1f1c46f` 发现 shift 合成 bin 可能丢额外物品，但只读子代理对照 NeoForge `ResultSlot` 发现官方在同一点触发回调，属于上游共享问题，暂不认定为移植偏差；也未实机验证。不能将只读初审自动计为全部关闭。
 
 ## 恢复位置
 
-优先研究 F8 的 QIO 真实 owner 插入事务闭包，并补验 F9 的 sided inventory 场景；`a147116b` 已读完整 2180 行 diff；`12ebbcf6` 和 `76f790ce` 已读完整 diff，F14 已修，F15 附魔适用/手持/选槽及电弓虚拟 Flame 已接线但部分实机待验；`1d4c4027` 已读完整 diff 并修 F17 普通水下路径；`7785a9c1` 已读完整 diff，F19/F20 已修，不要求旧开发版握手兼容，双进程实体同步仍待实测；`4e5a4232` 已读完整 diff，F21 旧票据迁移已按用户决策退出范围。子代理已并行读完 `b6e5c54d`、`509afc1b`、`1af82201`、`2529dca8`、`38b8b1af`、`a1f1c46f` 的真实 diff；部分问题已由主代理复核修复，剩余候选见上，不把初审直接计为全部关闭。`53fda9e5` 至 `ffbcb655` 的相邻提交已由子代理读完真实 diff，F29 已部分修复，F30–F33 已修且保留各自验证边界；下一未读历史提交 `5ee61549`。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。
+优先研究 F8 的 QIO 真实 owner 插入事务闭包，并补验 F9 的 sided inventory 场景；`a147116b` 已读完整 2180 行 diff；`12ebbcf6` 和 `76f790ce` 已读完整 diff，F14 已修，F15 附魔适用/手持/选槽及电弓虚拟 Flame 已接线但部分实机待验；`1d4c4027` 已读完整 diff 并修 F17 普通水下路径；`7785a9c1` 已读完整 diff，F19/F20 已修，不要求旧开发版握手兼容，双进程实体同步仍待实测；`4e5a4232` 已读完整 diff，F21 旧票据迁移已按用户决策退出范围。子代理已并行读完 `b6e5c54d`、`509afc1b`、`1af82201`、`2529dca8`、`38b8b1af`、`a1f1c46f` 的真实 diff；部分问题已由主代理复核修复，剩余候选见上，不把初审直接计为全部关闭。`53fda9e5` 至 `ffbcb655` 的相邻提交已由子代理读完真实 diff，F29 已部分修复，F30–F33 已修且保留各自验证边界；`5ee61549` 与 `5c0fcb1f` 也已读真实 diff；最早未读为其间文档提交 `519e1132`，随后 `257b9d05`；F34 的 datapack 生物群系修复仍待完成。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。
