@@ -17,6 +17,7 @@
 | `59e389a0` | 已读整个 diff：线程组查询、server spin mixin、四个调用方、清单和文档。调用点保留 server/client 判断形状；mixin 和切片同步登记。未在本次静态检查确认生产缺陷；服务端 IO 线程继承组这一环境假设尚未独立验证，不能等同于完整运行时审查。 |
 | `5d2c9182` | 已读整个 diff，检查后续能源查询与事务适配：F3 已提交修复但仍需端到端验证；F1 前次判断已更正，剩空网络外观疑点。现有能源测试覆盖 simulate 回滚、嵌套事务回滚和执行提交，但不证明所有能力生命周期语义。 |
 | `6b6bcb0f` | 已读整个 diff：节日初始化、key 注册与按键轮询、tooltip 流体类型、切片和记录；F2 为当前仍缺失的原快捷键回调及 modifier/context 语义。holiday 和 tooltip 尚未独立做实机语义验证。 |
+| `dba8824e` | 已读整个 diff：能力 catalog、工具状态助手、三处调用迁移、drop-rule override、AW 与裁定文档。确认 F4（下述，修复 `8cfc8d79`）；自定义 TOOL 组件兜底问题在后续修复后需复审其测试与两个工具。NeoForge 工具修改事件和数据映射差异原提交已有明确记录，未证明等价。 |
 
 ## 审查发现与待复核
 
@@ -36,6 +37,12 @@
 
 F2 尚需按原有按键上下文、组合键、repeat 与 GUI/联机语义实现和验证，不能通过仅注册静态键绑定宣布完成。额外风险：`handModeSwitchKey` 和 `descriptionKey` 默认都绑定 N，而 1.21.1 vanilla 的 `KeyMapping.click` 通过单值 MAP 分派；必须结合 Fabric 的实际处理和按键重绑定验证，不能假定普通 `consumeClick` 自然保留两个上下文。
 
+### F4 — 火焰弹点燃目标能力被误拒绝（`dba8824e`，已修复，端到端待验）
+
+`EntityFlame` 对命中方块以 `Items.FIRE_CHARGE` 的真实上下文调用 `ToolAbilityUtils.getToolModifiedState(..., FIRESTARTER_LIGHT, false)`；移植助手只接受 `IItemAbilityProvider`，原版火焰弹不实现该 Mekanism 专用接口，导致该分支一律返回 null，不能按官方路径点燃未点燃的营火或蜡烛。对照本地 `build/moddev/artifacts/neoforge-21.1.200-sources.jar` 中 `FireChargeItem.canPerformAction()` 和 `ItemAbilities.DEFAULT_FIRECHARGE_ACTIONS`，原版火焰弹确实具有此能力；打火石也同理。
+
+修复 `8cfc8d79` 仅对非空原版火焰弹/打火石和 `FIRESTARTER_LIGHT` 恢复此入口，其余动作依旧走原有能力提供方；已按审查 prompt 阅读该提交完整 diff，未发现该限定行为边界内新增偏离。`ToolAbilityUtilsFirestarterTest` 三项通过：火焰弹/未点燃营火，打火石/蜡烛及已点燃情况，空物品/木棍/错误动作拒绝；单元测试显式绑定并恢复 vanilla 标签，不是运行中世界或投射物端到端验证。首次测试失败原因是普通 JVM bootstrap 未加载数据包标签，补充标签后重跑通过。
+
 ## 恢复位置
 
-正在审查 `dba8824e`：已查看物品能力 catalog、工具修改助手及两个工具的核心 diff；需继续核对余下文件及真实调用链。初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。随后依次审查 `073e10ff` 等提交，同时跟进 F1 空网络外观、F2 快捷键恢复及 F3 端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。
+依次审查 `073e10ff` 等后续提交。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。
