@@ -144,9 +144,12 @@ public class BaseModelCache {
 
         private TransmitterObjGeometry geometry;
         private TransmitterQuadBaker quadBaker;
+        private java.util.function.Function<String, TextureAtlasSprite> sprites;
         private final Map<Set<String>, List<BakedQuad>> bakedParts = new Object2ObjectOpenHashMap<>();
 
-        protected OBJModelData(ResourceLocation rl) {
+        //Fabric port delta: the official entries lived in BaseModelCache subclasses; the transmitter contents
+        //holder instantiates directly, so the constructor is public.
+        public OBJModelData(ResourceLocation rl) {
             super(rl);
         }
 
@@ -179,6 +182,7 @@ public class BaseModelCache {
             //The obj texture aliases resolve on the blocks atlas (the official ObjModel baked them the same way).
             TextureAtlas atlas = Minecraft.getInstance().getModelManager().getAtlas(TextureAtlas.LOCATION_BLOCKS);
             Function<String, TextureAtlasSprite> sprites = alias -> atlas.getSprite(ResourceLocation.parse(alias));
+            this.sprites = sprites;
             quadBaker = new TransmitterQuadBaker(geometry, sprites, IDENTITY);
         }
 
@@ -192,17 +196,30 @@ public class BaseModelCache {
         public void clearCached() {
             geometry = null;
             quadBaker = null;
+            sprites = null;
             bakedParts.clear();
         }
 
         /** Re-bakes the visible parts' quads (the official per-configuration OBJ bake). */
         public List<BakedQuad> getQuads(java.util.Set<String> parts, RandomSource random) {
+            return getQuads(parts, random, null);
+        }
+
+        /**
+         * Re-bake with every material overridden by the given sprite - the official contents bake passed
+         * {@code material -> icon} so the transmitter contents show the network's fluid/gas/heat icon.
+         */
+        public List<BakedQuad> getQuads(java.util.Set<String> parts, RandomSource random, @Nullable TextureAtlasSprite iconOverride) {
             ensureGeometry();
-            return bakedParts.computeIfAbsent(parts, visible -> {
+            java.util.function.Function<String, TextureAtlasSprite> sprites = iconOverride != null
+                  ? alias -> iconOverride : this.sprites;
+            TransmitterQuadBaker baker = iconOverride != null ? new TransmitterQuadBaker(geometry, sprites, IDENTITY) : quadBaker;
+            Map<java.util.Set<String>, List<BakedQuad>> cache = iconOverride != null ? new Object2ObjectOpenHashMap<>() : bakedParts;
+            return cache.computeIfAbsent(parts, visible -> {
                 List<BakedQuad> quads = new java.util.ArrayList<>();
                 for (String group : geometry.groups().keySet()) {
                     if (visible.contains(group)) {
-                        quads.addAll(quadBaker.bakeGroup(group, null));
+                        quads.addAll(baker.bakeGroup(group, null));
                     }
                 }
                 return List.copyOf(quads);

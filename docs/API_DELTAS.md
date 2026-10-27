@@ -721,3 +721,11 @@ gate）BUILD SUCCESSFUL。未运行（按完成度优先策略）：全量测试
 - miner 包裹:插件 modifyModelAfterBake 按 block/digital_miner 模型 id 包 DigitalMinerBakedModel(官方 addCustomModel 同语义)。
 - **drive array 定裁定**:官方 wrapper 的 createKey 读 ModelData(DRIVE_STATUS_PROPERTY)——移植侧 tile `getRenderData()` 返回同一 byte[],走 `RenderQIODriveArray` BER 叠绘(DRIVE_PLACEMENTS/Attribute.getFacing/quad-lib translate+rotate 逐行保留;空仓=外壳静态模型,drive 四元组为纯增量);DriveArrayBakedModel/ExtensionOverrideBakedModel/ModelDataBakedModel(覆盖机制件)随 BER 裁定延后。
 - 验收:BER proof `tile_types=32 renderers=17`;15/15 冒烟×2。drive 视觉留 mcdebug/观察。
+
+### transmitter contents 半(四静态管/管缆/导线)(Task052,2026-10-27)
+
+- `OBJModelData` 图标覆盖烘焙:`getQuads(parts, random, icon)`——官方 contents 烘焙传 `material -> icon`(全部面用网络流体/气体/热图标),缓存键扩(parts, icon);`BaseModelCache.OBJModelData` 构造器 public 化(transmitter 基类直例,官方 TRANSMITTER_CONTENTS 亦为注册件)。
+- `RenderTransmitterBase` 重塑:NeoForge ModelBaker 内部/StandaloneGeometryBakingContext/ContentsModelData 全部由端口 OBJModelData 路径替代;平面法线(消漫反射)逐行保留。
+- 四渲染器纳片(机械管/加压管/热导线/ universal 缆;pressurized/thermo/cable 0 neoforge 直纳):机械管 FluidStack→`mekanism.api.fluid.FluidStack` + LinkedSet→plain map(RenderFluidTank 先例:端口类型自带组件等值)。
+- 注册:4 渲染器 × 4 tier(BASIC/ADVANCED/ELITE/ULTIMATE,官方 transmitter 无 creative tier)= 16 类型;BER proof `tile_types=48 renderers=21`;MekanismRenderer.onStitch 恢复两处 contents 清缓存。
+- 验收:15/15 冒烟×2。管内流体视觉留 mcdebug/观察;logistical transporter(物品动画车道)与物品形态 drive 阵列继续延后。

@@ -332,6 +332,11 @@ mekanism/client/render/tileentity/RenderSeismicVibrator.java
 mekanism/client/render/tileentity/RenderTeleporter.java
 mekanism/client/render/tileentity/RenderThermalEvaporationPlant.java
 mekanism/client/render/tileentity/RenderThermoelectricBoiler.java
+mekanism/client/render/transmitter/RenderMechanicalPipe.java
+mekanism/client/render/transmitter/RenderPressurizedTube.java
+mekanism/client/render/transmitter/RenderThermodynamicConductor.java
+mekanism/client/render/transmitter/RenderTransmitterBase.java
+mekanism/client/render/transmitter/RenderUniversalCable.java
 mekanism/client/sound/FlamethrowerSoundActive.java
 mekanism/client/sound/FlamethrowerSoundIdle.java
 mekanism/client/sound/GeigerSound.java

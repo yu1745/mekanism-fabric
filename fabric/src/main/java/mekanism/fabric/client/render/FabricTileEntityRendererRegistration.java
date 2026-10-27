@@ -87,8 +87,22 @@ public final class FabricTileEntityRendererRegistration {
         renderers += bind(mekanism.client.render.tileentity.RenderQIORedstoneAdapter::new, MekanismTileEntityTypes.QIO_REDSTONE_ADAPTER);
         //The port-only drive-array replacement BER (the official wrapper read the drive states from model data).
         renderers += bind(mekanism.client.render.tileentity.RenderQIODriveArray::new, MekanismTileEntityTypes.QIO_DRIVE_ARRAY);
+        //The transmitter contents half: the four static-content renderers (the shell visual stays on the baked-model
+        //seam; the transporter animation lane stays deferred).
+        renderers += bind(mekanism.client.render.transmitter.RenderMechanicalPipe::new, MekanismTileEntityTypes.BASIC_MECHANICAL_PIPE,
+              MekanismTileEntityTypes.ADVANCED_MECHANICAL_PIPE, MekanismTileEntityTypes.ELITE_MECHANICAL_PIPE,
+              MekanismTileEntityTypes.ULTIMATE_MECHANICAL_PIPE);
+        renderers += bind(mekanism.client.render.transmitter.RenderPressurizedTube::new, MekanismTileEntityTypes.BASIC_PRESSURIZED_TUBE,
+              MekanismTileEntityTypes.ADVANCED_PRESSURIZED_TUBE, MekanismTileEntityTypes.ELITE_PRESSURIZED_TUBE,
+              MekanismTileEntityTypes.ULTIMATE_PRESSURIZED_TUBE);
+        renderers += bind(mekanism.client.render.transmitter.RenderThermodynamicConductor::new, MekanismTileEntityTypes.BASIC_THERMODYNAMIC_CONDUCTOR,
+              MekanismTileEntityTypes.ADVANCED_THERMODYNAMIC_CONDUCTOR, MekanismTileEntityTypes.ELITE_THERMODYNAMIC_CONDUCTOR,
+              MekanismTileEntityTypes.ULTIMATE_THERMODYNAMIC_CONDUCTOR);
+        renderers += bind(mekanism.client.render.transmitter.RenderUniversalCable::new, MekanismTileEntityTypes.BASIC_UNIVERSAL_CABLE,
+              MekanismTileEntityTypes.ADVANCED_UNIVERSAL_CABLE, MekanismTileEntityTypes.ELITE_UNIVERSAL_CABLE,
+              MekanismTileEntityTypes.ULTIMATE_UNIVERSAL_CABLE);
         org.slf4j.LoggerFactory.getLogger("Mekanism/FabricTileEntityRenderers")
-              .info("MEKANISM_FABRIC_BER_PROOF tile_types={} renderers=17 layers=10", renderers);
+              .info("MEKANISM_FABRIC_BER_PROOF tile_types={} renderers=21 layers=10", renderers);
     }
 
     @SafeVarargs
