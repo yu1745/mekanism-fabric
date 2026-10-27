@@ -80,4 +80,4 @@ F2 尚需按原有按键上下文、组合键、repeat 与 GUI/联机语义实�
 
 ## 恢复位置
 
-优先研究 F8 的 QIO 真实 owner 插入事务闭包，并补验 F9 的 sided inventory 场景；`a147116b` 的完整 diff 共 2180 行、52 文件，已阅读前 359 行（切片、fluid tint、BlockData 和 Capabilities 入口），余下未审查，继续时从 `/tmp/mek-a147-review.diff` 第 360 行或重新生成相同 git diff 开始，不得将其标记为已完整审查。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。
+优先研究 F8 的 QIO 真实 owner 插入事务闭包，并补验 F9 的 sided inventory 场景；`a147116b` 的完整 diff 共 2180 行、52 文件，已阅读前 559 行（切片、fluid tint、BlockData、Capabilities 组合及外部 storage 常量 context 查询入口），余下未审查，继续时从 `/tmp/mek-a147-review.diff` 第 560 行或重新生成相同 git diff 开始，不得将其标记为已完整审查。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。
