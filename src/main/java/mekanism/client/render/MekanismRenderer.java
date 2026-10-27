@@ -252,8 +252,8 @@ public class MekanismRenderer {
         if (fluid.getFluid() instanceof FluidDeferredRegister.MekanismFlowingFluid mekFluid) {
             return calculateGlowLight(combinedLight, mekFluid.getMekanismFluidType().getLightLevel(fluid));
         }
-        //Non-Mekanism fluids carry no FluidType metadata in this port; NeoForge defaulted their light level to 0
-        return combinedLight;
+        //Vanilla and other Fabric fluids expose their ordinary light through the fluid's legacy block state.
+        return calculateGlowLight(combinedLight, fluid.getFluid().defaultFluidState().createLegacyBlock().getLightEmission());
     }
 
     public static int calculateGlowLight(int combinedLight, int glow) {

@@ -10,6 +10,7 @@ import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
+import java.util.stream.StreamSupport;
 import mekanism.api.chemical.ChemicalStack;
 import mekanism.api.chemical.IChemicalHandler;
 import mekanism.api.text.TextComponentUtil;
@@ -25,6 +26,8 @@ import mekanism.common.base.TagCache;
 import mekanism.common.block.interfaces.IHasTileEntity;
 import mekanism.common.capabilities.Capabilities;
 import mekanism.common.util.EnumUtils;
+import net.fabricmc.fabric.api.transfer.v1.context.ContainerItemContext;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidStorage;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
@@ -173,15 +176,21 @@ public class GuiDictionaryTarget extends GuiElement implements IRecipeViewerGhos
                         ));
                     }
                     //Get tags of any contained fluids
-                    //Fabric port delta: NeoForge's IFluidHandlerItem becomes the port's attachment container seam
-                    List<IExtendedFluidTank> fluidTanks = ContainerType.FLUID.getAttachmentContainersIfPresent(stack);
-                    if (!fluidTanks.isEmpty()) {
-                        tags.put(DictionaryTagType.FLUID, TagCache.getTagsAsStrings(fluidTanks.stream()
-                              .map(IExtendedFluidTank::getFluid)
-                              .filter(fluidInTank -> !fluidInTank.isEmpty())
-                              .flatMap(FluidStack::getTags)
-                              .distinct()
-                        ));
+                    //Use the ecosystem lookup as well as Mekanism's own attachment-backed containers.
+                    var fluidStorage = ContainerItemContext.withConstant(stack).find(FluidStorage.ITEM);
+                    if (fluidStorage != null) {
+                        tags.put(DictionaryTagType.FLUID, TagCache.getTagsAsStrings(StreamSupport.stream(fluidStorage.nonEmptyViews().spliterator(), false)
+                              .flatMap(view -> view.getResource().getFluid().builtInRegistryHolder().tags())
+                              .distinct()));
+                    } else {
+                        List<IExtendedFluidTank> fluidTanks = ContainerType.FLUID.getAttachmentContainersIfPresent(stack);
+                        if (!fluidTanks.isEmpty()) {
+                            tags.put(DictionaryTagType.FLUID, TagCache.getTagsAsStrings(fluidTanks.stream()
+                                  .map(IExtendedFluidTank::getFluid)
+                                  .filter(fluidInTank -> !fluidInTank.isEmpty())
+                                  .flatMap(FluidStack::getTags)
+                                  .distinct()));
+                        }
                     }
                     //Get tags of any contained chemicals
                     IChemicalHandler chemicalHandler = Capabilities.CHEMICAL.getCapability(stack);
