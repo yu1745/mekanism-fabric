@@ -653,6 +653,7 @@ dependencies {
     fabricRegistryTestRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.13.4'
     fabricRegistryTestRuntimeOnly "net.fabricmc:fabric-loader-junit:${loader_version}"
 
+    qioTransactionTestImplementation sourceSets.test.output
     qioTransactionTestImplementation 'org.junit.jupiter:junit-jupiter:5.13.4'
     qioTransactionTestRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.13.4'
     qioTransactionTestRuntimeOnly "net.fabricmc:fabric-loader-junit:${loader_version}"
@@ -901,7 +902,7 @@ def fabricRegistryTest = tasks.register('fabricRegistryTest', Test) {
 def qioTransactionWorkingDirectory = layout.buildDirectory.dir('qio-transaction-test-working')
 tasks.register('qioTransactionTest', Test) {
     group = 'verification'
-    description = 'Tests real QIO frequency and drive transaction owners in an isolated Fabric loader.'
+    description = 'Tests QIO transactions and entity persistence in isolated Fabric loader workers.'
     testClassesDirs = sourceSets.qioTransactionTest.output.classesDirs
     classpath = sourceSets.qioTransactionTest.runtimeClasspath
     maxParallelForks = 1
