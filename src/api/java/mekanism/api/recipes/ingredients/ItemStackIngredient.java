@@ -403,7 +403,8 @@ public final class ItemStackIngredient implements InputIngredient<@NotNull ItemS
         }
         ItemStackIngredient other = (ItemStackIngredient) o;
         return count == other.count && ingredient.equals(other.ingredient) && Objects.equals(components, other.components)
-              && Objects.equals(compoundChildren, other.compoundChildren);
+              && Objects.equals(compoundChildren, other.compoundChildren) && Objects.equals(subtracted, other.subtracted)
+              && Objects.equals(intersectionChildren, other.intersectionChildren);
     }
 
     @Override
@@ -412,6 +413,8 @@ public final class ItemStackIngredient implements InputIngredient<@NotNull ItemS
         result = 31 * result + count;
         result = 31 * result + (components == null ? 0 : components.hashCode());
         result = 31 * result + (compoundChildren == null ? 0 : compoundChildren.hashCode());
+        result = 31 * result + (subtracted == null ? 0 : subtracted.hashCode());
+        result = 31 * result + (intersectionChildren == null ? 0 : intersectionChildren.hashCode());
         return result;
     }
 

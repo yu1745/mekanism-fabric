@@ -2,6 +2,7 @@ package mekanism.common.recipe;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonParser;
@@ -99,5 +100,21 @@ class NeoForgeTypedIngredientTest {
               """;
         assertEquals(2, decode(intersectionJson).count());
         assertEquals(2, intersection.ingredients().size());
+
+        //Different predicates may share the same base Ingredient object but must not compare as equal.
+        Ingredient base = Ingredient.of(Items.RED_BANNER, Items.BLACK_BANNER);
+        Ingredient black = Ingredient.of(Items.BLACK_BANNER);
+        Ingredient red = Ingredient.of(Items.RED_BANNER);
+        ItemStackIngredient exceptBlack = ItemStackIngredient.ofDifference(base, black, 1);
+        ItemStackIngredient exceptRed = ItemStackIngredient.ofDifference(base, red, 1);
+        ItemStackIngredient bothBlack = ItemStackIngredient.ofIntersection(List.of(base, black), 1);
+        ItemStackIngredient bothRed = ItemStackIngredient.ofIntersection(List.of(base, red), 1);
+        assertNotEquals(exceptBlack, exceptRed);
+        assertNotEquals(bothBlack, bothRed);
+        assertNotEquals(ItemStackIngredient.of(base, 1), exceptBlack);
+        assertNotEquals(exceptBlack, bothBlack);
+        ItemStackIngredient same = ItemStackIngredient.ofDifference(base, black, 1);
+        assertEquals(exceptBlack, same);
+        assertEquals(exceptBlack.hashCode(), same.hashCode());
     }
 }
