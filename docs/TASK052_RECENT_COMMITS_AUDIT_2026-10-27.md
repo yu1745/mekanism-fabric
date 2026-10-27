@@ -150,7 +150,7 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 ### F22 — 传送速度与激光命中特效客户端包未注册（`b6e5c54d`，已接线）
 
-只读子代理固定 `b6acf106` 审阅真实 diff 并报告；主代理复核实际发送方 `TileEntityTeleporter`、`TileEntityBasicLaser` 及 Fabric common/client 注册 owner，确认两个包没有 S2C codec/receiver。`8c478972`（已审阅完整 118 行 diff）接回两个包的原 TYPE/codec 与客户端 handler，并将激光命中特效从整块破碎粒子 `destroy` 改为 vanilla 朝命中面 `crack`。Knot focused 测试通过：注册、幂等及实际 codec 往返；客户端真实传送速度、激光粒子视觉及多人 E2E 未验证。
+只读子代理固定 `b6acf106` 审阅真实 diff 并报告；主代理复核实际发送方 `TileEntityTeleporter`、`TileEntityBasicLaser` 及 Fabric common/client 注册 owner，确认两个包没有 S2C codec/receiver。`8c478972`（已审阅完整 118 行 diff）接回两个包的原 TYPE/codec 与客户端 handler，并将激光命中特效从整块破碎粒子 `destroy` 改为 vanilla 朝命中面 `crack`。Knot focused 测试通过：注册、幂等及实际 codec 往返；客户端真实传送速度、激光粒子视觉及多人 E2E 未验证。打包 smoke 先因过期的测试总数门禁失败，`724b01c2`（完整 diff 已审阅）按实际 XML 更新总数，重试时 Gradle `build` 全部通过；随后 smoke 因脚本中预期 access widener 清单过时而在启动服务器前失败，故不能以该次运行证明 dedicated 启动。
 
 ### F23 — retrogen 特征缓存未随服务器停止清理（`509afc1b`，已修）
 
