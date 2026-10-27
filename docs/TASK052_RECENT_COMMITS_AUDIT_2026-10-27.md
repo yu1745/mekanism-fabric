@@ -28,6 +28,7 @@
 | `a147116b` | 已分段读完整 2180 行 diff：能力 catalog、物品流体、armor/BE 注册、multiblock manager 和个人存储，检查真实上下文及后续状态。确认整叠流体能力检查遗漏 F10 并修复；Curios 一直返回 false/empty 的假兼容边界为 F11。BlockData 的非原版流体蒸发 hook、客户端 tint 和具体 registry 生命周期仍未证明与官方等价；当时记录仍有编译错误，不作为可运行闭包。 |
 | `12ebbcf6` | 已分段读完整 1478 行 diff：component holder 迁移、喷火实体同步、激光破坏/盾牌处理和 10 项纳片。确认并修复喷火存档 F12、激光与喷火熔炼破坏保护 F13；同步 spawn、盾牌事件扩展和 INFERNO 放置事件等价尚未实机证明。当时仍是编译未闭合的中间状态。 |
 | `76f790ce` | 已分段读完整 594 行 diff：物品扩展删除、附魔、重装备/挖掘、pick-block 和 TNT。当前实际缺失模块附魔在游戏查询的合并，已按 F14 修复；附魔适用/书、装备动画和 pick-block 等剩余官方 hook 单独列 F15，不把此前注明 deferred 当已实现。当前电弓射弹模式已有后续实现在 `createProjectile`，但未证明官方全部虚拟附魔查询一致。 |
+| `1d4c4027` | 已分段读完整 316 行 diff：blockview v2、工厂纳片、充电与水下模块、三元谓词及重复注解。Curios 充电属于已记录的 F11；水下加速将两种不同属性错误合一、流体能耗只检查脚部位置，且追查发现真实装备属性桥未注册，见 F17；已修普通水中推进和桥接，实机及非原版流体仍待验证。render-data v2 及 factory 行为未凭导入改名判为全面等价。 |
 
 ## 审查发现与待复核
 
@@ -121,6 +122,14 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 本轮客户端启动日志出现 `Caught error loading resourcepacks` → `Failed to create model for minecraft:piglin` → `ConcurrentModificationException`，实际栈指向 `FabricArmorLayerRegistration.addCustomLayers`；原实现在遍历 `renderer.layers` 时调用会同步添加该列表的 `registrationHelper.register`。`git blame` 将该循环追至尚未按时间顺序审查的 `254afa6b`，不是将该提交其他内容当作已审。修复 `deb6c79e` 对原 layers 做 `ArrayList` 快照后遍历，保留 null 过滤、精确类匹配和各类最多添加一层；已审阅完整 diff。再次运行客户端 smoke 到达标题，日志中未再出现上述资源重载异常；旧有能源方块模型 bake 警告仍存在，视觉装备、资源重载及第三方渲染器兼容未做实机验收。
 
+### F17 — 装备属性桥未启用，水下推进与耗能条件失真（`1d4c4027`）
+
+追查水下模块调用链时发现 `ItemStackAttributesMixin` 源码由较早的 `1efaff7f` 建立，但当前切片与 mixin 配置均未纳入，故自由跑鞋、MekaTool 及模块的条件属性并未进入 `ItemStack.forEachModifier`。同时 `1d4c4027` 将 NeoForge `SWIM_SPEED` +1 错加到上限为 1 的 `WATER_MOVEMENT_EFFICIENCY`：四模块已有 1 点水中移动效率，额外值被截断，不会达到官方对水中 `moveRelative` 和水中上下移动乘 2 的效果；以脚部方块是否含流体替代实体相交流体缓存也会漏掉碰到身体上部的流体。
+
+修复 `9e063837`（已审阅完整 301 行 diff）纳入/注册已有装备属性桥，保留官方原有水中移动效率修饰，在玩家穿戴启用且有能量的四级模块时于 vanilla 水中推进与上下运动 owner 实施对应 2 倍，不再添加错误属性。能耗检测改为遍历实际实体包围盒相交的非空流体面，并先检查周边区块已加载。真实自由跑鞋 ItemStack 的两种属性查询和模式切换测试、水面部分相交及不加载区块测试通过；首次两次测试失败分别来自 fixture 的光照及 `hasChunk` 未建模，改用真实 chunk section 和 fixture 的已安装区块映射后通过。完整事务/转移测试、三项 slice gate 及客户端标题 smoke 通过。
+
+**仍有限制：** 未用实际穿戴满级且有电的模块实测水中行进、耗电、服务端同步；该补丁只接 vanilla 水的移动 owner，NeoForge 的非原版 `FluidType` 可参与水式移动、`isAir` 和自定义运动，Fabric 没有相同通用语义，不能声称此部分等价；包围盒重查与 NeoForge 已缓存 fluid type 的时点亦可能不同。已记录，不用测试通过关闭这些边界。
+
 ## 恢复位置
 
-优先研究 F8 的 QIO 真实 owner 插入事务闭包，并补验 F9 的 sided inventory 场景；`a147116b` 已读完整 2180 行 diff；`12ebbcf6` 和 `76f790ce` 已读完整 diff，F14 已修，F15 附魔适用/手持/选槽及电弓虚拟 Flame 已接线但部分实机待验；下一提交从 `1d4c4027` 开始。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。
+优先研究 F8 的 QIO 真实 owner 插入事务闭包，并补验 F9 的 sided inventory 场景；`a147116b` 已读完整 2180 行 diff；`12ebbcf6` 和 `76f790ce` 已读完整 diff，F14 已修，F15 附魔适用/手持/选槽及电弓虚拟 Flame 已接线但部分实机待验；`1d4c4027` 已读完整 diff 并修 F17 普通水下路径，下一提交从 `7785a9c1` 开始。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。
