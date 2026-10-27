@@ -1,7 +1,6 @@
 package mekanism.common.tile.qio;
 
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Set;
 import java.util.function.Predicate;
 import mekanism.api.SerializationConstants;
@@ -11,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import net.fabricmc.fabric.api.lookup.v1.block.BlockApiCache;
 import net.fabricmc.fabric.api.transfer.v1.item.ItemStorage;
 import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
+import net.fabricmc.fabric.api.transfer.v1.storage.SlottedStorage;
 import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
 import net.fabricmc.fabric.api.transfer.v1.storage.StorageView;
 import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
@@ -99,10 +99,9 @@ public class TileEntityQIOImporter extends TileEntityQIOFilterHandler {
         Set<HashedItem> typesAdded = new HashSet<>();
         int maxTypes = getMaxTransitTypes(), maxCount = getMaxTransitCount(), countAdded = 0;
 
-        //Fabric port delta: the upstream loop indexed an IItemHandler by slot; the Fabric storage is a slot-view iterable with transactional extraction,
-        // so the simulate/execute pair becomes two extractions over the same view (the second committed only after the QIO frequency accepted the item)
-        for (Iterator<StorageView<ItemVariant>> iterator = inventory.iterator(); iterator.hasNext(); ) {
-            StorageView<ItemVariant> view = iterator.next();
+        //Indexed storages preserve the upstream reverse-slot priority; a general storage has no slot indices and
+        //therefore retains its provider-defined view order.
+        for (StorageView<ItemVariant> view : importViews(inventory)) {
             if (view.isResourceBlank()) {
                 continue;
             }
@@ -138,6 +137,13 @@ public class TileEntityQIOImporter extends TileEntityQIOFilterHandler {
             typesAdded.add(type);
             countAdded += used.getCount();
         }
+    }
+
+    static Iterable<? extends StorageView<ItemVariant>> importViews(Storage<ItemVariant> inventory) {
+        if (inventory instanceof SlottedStorage<ItemVariant> slotted) {
+            return slotted.getSlots().reversed();
+        }
+        return inventory;
     }
 
     @ComputerMethod
