@@ -15,6 +15,7 @@ import mekanism.client.render.RenderResizableCuboid.FaceDisplay;
 import mekanism.common.base.ProfilerConstants;
 import mekanism.common.tile.TileEntityFluidTank;
 import mekanism.common.util.MekanismUtils;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
@@ -26,10 +27,9 @@ import org.jetbrains.annotations.NotNull;
 @NothingNullByDefault
 public class RenderFluidTank extends MekanismTileEntityRenderer<TileEntityFluidTank> {
 
-    //The port FluidStack implements component-aware equality (the official FluidStackLinkedSet strategy), so a
-    //plain open-addressed map preserves the official cache keying.
-    private static final Map<FluidStack, Int2ObjectMap<Model3D>> cachedCenterFluids = new Object2ObjectOpenHashMap<>();
-    private static final Map<FluidStack, Int2ObjectMap<Model3D>> cachedValveFluids = new Object2ObjectOpenHashMap<>();
+    //FluidStack is mutable and identity-equal; immutable variants preserve fluid + component identity without retaining stack instances.
+    private static final Map<FluidVariant, Int2ObjectMap<Model3D>> cachedCenterFluids = new Object2ObjectOpenHashMap<>();
+    private static final Map<FluidVariant, Int2ObjectMap<Model3D>> cachedValveFluids = new Object2ObjectOpenHashMap<>();
 
     private static final int stages = 1_400;
 
@@ -68,7 +68,7 @@ public class RenderFluidTank extends MekanismTileEntityRenderer<TileEntityFluidT
     }
 
     private Model3D getValveModel(@NotNull FluidStack fluid, float fluidScale) {
-        Int2ObjectMap<Model3D> modelMap = cachedValveFluids.computeIfAbsent(fluid, f -> new Int2ObjectOpenHashMap<>());
+        Int2ObjectMap<Model3D> modelMap = cachedValveFluids.computeIfAbsent(FluidVariant.of(fluid.getFluid(), fluid.getComponentsPatch()), f -> new Int2ObjectOpenHashMap<>());
         int stage = Math.min(stages - 1, (int) (fluidScale * (stages - 1)));
         Model3D model = modelMap.get(stage);
         if (model == null) {
@@ -84,7 +84,7 @@ public class RenderFluidTank extends MekanismTileEntityRenderer<TileEntityFluidT
     }
 
     public static Model3D getFluidModel(@NotNull FluidStack fluid, float fluidScale) {
-        Int2ObjectMap<Model3D> modelMap = cachedCenterFluids.computeIfAbsent(fluid, f -> new Int2ObjectOpenHashMap<>());
+        Int2ObjectMap<Model3D> modelMap = cachedCenterFluids.computeIfAbsent(FluidVariant.of(fluid.getFluid(), fluid.getComponentsPatch()), f -> new Int2ObjectOpenHashMap<>());
         int stage = ModelRenderer.getStage(fluid, stages, fluidScale);
         Model3D model = modelMap.get(stage);
         if (model == null) {

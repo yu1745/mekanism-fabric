@@ -6,7 +6,6 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.objects.Object2ObjectOpenCustomHashMap;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -24,6 +23,7 @@ import mekanism.common.content.network.transmitter.MechanicalPipe;
 import mekanism.common.lib.transmitter.ConnectionType;
 import mekanism.common.tile.transmitter.TileEntityMechanicalPipe;
 import mekanism.common.util.EnumUtils;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
 import net.minecraft.client.Camera;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.Sheets;
@@ -44,7 +44,7 @@ public class RenderMechanicalPipe extends RenderTransmitterBase<TileEntityMechan
     private static final float offset = 0.02F;
     //Note: this is basically used as an enum map (Direction), but null key is possible, which EnumMap doesn't support.
     // 6 is used for null side, and 7 is used for null side but flowing vertically
-    private static final Int2ObjectMap<Map<FluidStack, Int2ObjectMap<Model3D>>> cachedLiquids = new Int2ObjectArrayMap<>(8);
+    private static final Int2ObjectMap<Map<FluidVariant, Int2ObjectMap<Model3D>>> cachedLiquids = new Int2ObjectArrayMap<>(8);
 
     public RenderMechanicalPipe(BlockEntityRendererProvider.Context context) {
         super(context);
@@ -146,7 +146,7 @@ public class RenderMechanicalPipe extends RenderTransmitterBase<TileEntityMechan
             sideOrdinal = side.ordinal();
         }
         Int2ObjectMap<Model3D> modelMap = cachedLiquids.computeIfAbsent(sideOrdinal, s -> new Object2ObjectOpenHashMap<>())
-              .computeIfAbsent(fluid, f -> new Int2ObjectOpenHashMap<>());
+              .computeIfAbsent(FluidVariant.of(fluid.getFluid(), fluid.getComponentsPatch()), f -> new Int2ObjectOpenHashMap<>());
         Model3D model = modelMap.get(stage);
         if (model == null) {
             model = new Model3D().setTexture(MekanismRenderer.getFluidTexture(fluid, FluidTextureType.STILL));
