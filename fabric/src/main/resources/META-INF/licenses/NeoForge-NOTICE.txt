@@ -1,0 +1,17 @@
+NeoForge bucket mask and geometry attribution
+
+The file assets/neoforge/textures/item/mask/bucket_fluid.png is unchanged from
+NeoForge 21.1.200 (https://github.com/neoforged/NeoForge), whose mod metadata
+identifies LGPL v2.1. Its SHA-256 is
+fd11e62b86627858bbf1a1a7a2296d8f00311b1a49a3652f7e90f7a45347f272.
+The unchanged assets/neoforge/models/item/bucket.json and default.json are
+from the same artifact; their SHA-256 values are respectively
+e7fb62d5e792168f6530860769e4745e4f77a0964c4acbcbedfa71750d189352 and
+c0d3d338fe6cc6ab5986e0be9b94677c36d40d0f8d4bd982e5e3999b612e6683.
+
+The mask rectangle scanning logic in FabricFluidContainerModel derives from
+net/neoforged/neoforge/client/model/geometry/UnbakedGeometryHelper.java and
+net/neoforged/neoforge/client/ClientHooks.java in NeoForge 21.1.200,
+Copyright (c) Forge Development LLC and contributors,
+SPDX-License-Identifier: LGPL-2.1-only. The adaptation is provided in this
+project's corresponding source file. The license text is in NeoForge-LGPL-2.1.txt.

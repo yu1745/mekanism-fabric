@@ -154,9 +154,8 @@ public final class FabricMekanismModelPlugin {
                         robitBaked++;
                     }
                     case LOADER_FLUID_CONTAINER -> {
-                        //The chemical buckets: the neoforge base model (parent neoforge:item/bucket) exists only in
-                        //the NeoForge jar, so the model rebuilds the whole stack - the vanilla bucket sheath plus
-                        //the mask-scanned fluid surface with the still texture and the fluid's tint on index 1.
+                        //Bake the chemical bucket geometry while retaining the supplied parent model's texture and
+                        //display properties. The fluid surface uses the still texture and tint index 1.
                         prepared.put(id, new FabricFluidContainerModel(id, root));
                         bakedFluidContainers++;
                     }

@@ -70,6 +70,12 @@ check "armor layers registered" 'MEKANISM_FABRIC_ARMOR_LAYER_PROOF callback=regi
 check "data based model baked" 'MEKANISM_FABRIC_DATA_BASED_PROOF baked=1'
 check "mekasuit obj cache wired" 'MEKANISM_FABRIC_MEKASUIT_PROOF handler=installed'
 check "chemical bucket colors registered" 'MEKANISM_FABRIC_FLUID_BUCKET_PROOF buckets=18'
+if grep -Eq 'minecraft:textures/atlas/blocks\.png:(neoforge:item/mask/bucket_fluid|mekanism:liquid/(liquid|steam))' "${LOG_FILE}.latest.log"; then
+  echo "FAIL bucket mask or fluid sprites missing from block atlas"
+  failures=$((failures + 1))
+else
+  echo "PASS no missing bucket mask or fluid sprite warnings"
+fi
 if grep -E 'Missing model|Failed to load model|Exception loading model' "${LOG_FILE}.latest.log" | grep -Ev 'energy_cube|qio_redstone_adapter|/robit|fluid_(tank|container)|neoforge:item/bucket' | grep -q .; then
   echo "FAIL no missing-model errors"
   grep -E 'Missing model|Failed to load model|Exception loading model' "${LOG_FILE}.latest.log" | head -5

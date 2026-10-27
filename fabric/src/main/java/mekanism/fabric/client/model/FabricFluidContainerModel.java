@@ -1,6 +1,7 @@
 package mekanism.fabric.client.model;
 
 import com.google.gson.JsonObject;
+import com.mojang.math.Transformation;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collection;
@@ -34,27 +35,25 @@ import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
 
 /**
- * Fabric port of the official {@code neoforge:fluid_container} model (the chemical buckets). The neoforge base model
- * {@code neoforge:item/bucket} exists solely in the NeoForge jar, so this model rebuilds the whole stack: the flat
- * item sheath from the vanilla bucket sprite (the official base layer) plus the fluid surface - rectangular elements
- * scanned from the bucket mask texture, baked against the fluid's still texture with the depth nudge of the official
- * FLUID_TRANSFORM, and tint index 1 for the fluid color (the official {@code Colors} item color handles the tint).
+ * Fabric port of the official chemical bucket geometry. Vanilla resolves the supplied NeoForge bucket parent for
+ * texture and display properties; this model bakes the base sheath and the mask-shaped, tinted fluid layer. The mask
+ * scan is adapted from NeoForge's LGPL-2.1-only UnbakedGeometryHelper; see META-INF/licenses/NeoForge-NOTICE.txt.
  */
 public final class FabricFluidContainerModel implements UnbakedModel {
 
-    private static final ResourceLocation BUCKET_BASE = ResourceLocation.withDefaultNamespace("item/bucket");
-    private static final ResourceLocation BUCKET_FLUID_MASK = ResourceLocation.fromNamespaceAndPath("neoforge", "item/mask/bucket_fluid");
-    //The official FLUID_TRANSFORM scales depth by 1.002 to keep the fluid surface off the base sheath (z 7.5..8.5).
-    private static final float FLUID_DEPTH_OFFSET = 0.017F;
+    //NeoForge composes this scale with the incoming state; FaceBakery applies it around the model center.
+    private static final Transformation FLUID_TRANSFORM = new Transformation(null, null, new Vector3f(1, 1, 1.002F), null);
     private static final net.minecraft.client.renderer.block.model.ItemModelGenerator ITEM_MODEL_GENERATOR =
           new net.minecraft.client.renderer.block.model.ItemModelGenerator();
 
     private final ResourceLocation id;
     private final ResourceLocation fluidId;
+    private final BlockModel properties;
 
     FabricFluidContainerModel(ResourceLocation id, JsonObject root) {
         this.id = id;
         this.fluidId = ResourceLocation.parse(root.get("fluid").getAsString());
+        this.properties = BlockModel.fromString(root.toString());
     }
 
     private TextureAtlasSprite stillSprite(Function<Material, TextureAtlasSprite> spriteGetter) {
@@ -69,41 +68,51 @@ public final class FabricFluidContainerModel implements UnbakedModel {
 
     @Override
     public @NotNull BakedModel bake(@NotNull ModelBaker baker, @NotNull Function<Material, TextureAtlasSprite> spriteGetter, @NotNull ModelState modelState) {
-        Function<Material, TextureAtlasSprite> blocks = mat -> spriteGetter.apply(new Material(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS, mat.texture()));
-        TextureAtlasSprite baseSprite = blocks.apply(new Material(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS, BUCKET_BASE));
+        TextureAtlasSprite baseSprite = spriteGetter.apply(properties.getMaterial("base"));
         TextureAtlasSprite still = stillSprite(spriteGetter);
-        TextureAtlasSprite mask = blocks.apply(new Material(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS, BUCKET_FLUID_MASK));
+        TextureAtlasSprite mask = spriteGetter.apply(properties.getMaterial("fluid"));
 
         List<BakedQuad> quads = new ArrayList<>();
-        //Base layer: the flat item sheath from the vanilla bucket sprite (tint index 0).
         List<BlockElement> baseElements = ITEM_MODEL_GENERATOR.processFrames(0, "layer0", baseSprite.contents());
-        bakeElements(quads, baseElements, baseSprite, blocks, 0.0F);
-        //Fluid layer: rectangles scanned from the mask, baked with the still texture, tint index 1.
-        List<BlockElement> maskElements = maskElements(mask.contents());
-        bakeElements(quads, maskElements, still, blocks, FLUID_DEPTH_OFFSET);
+        fixItemSeams(baseElements, baseSprite);
+        bakeElements(quads, baseElements, baseSprite, modelState);
+        List<BlockElement> maskElements = maskElements(mask);
+        ModelState fluidState = new ModelState() {
+            @Override public Transformation getRotation() { return modelState.getRotation().compose(FLUID_TRANSFORM); }
+            @Override public boolean isUvLocked() { return modelState.isUvLocked(); }
+        };
+        bakeElements(quads, maskElements, still, fluidState);
 
+        TextureAtlasSprite particle = properties.hasTexture("particle") ? spriteGetter.apply(properties.getMaterial("particle")) : still;
         //The official context forces gui3d=false and useBlockLight=false for the fluid containers.
-        return new FabricMergedQuadsModel(id, quads, baseSprite, ItemTransforms.NO_TRANSFORMS, false, false, false);
+        return new FabricMergedQuadsModel(id, quads, particle, properties.getTransforms(), false, false, false);
     }
 
     /** The port of the shared face bakery: bakes each element face against the given sprite (BlockModel.bakeFace). */
-    private static void bakeElements(List<BakedQuad> quads, List<BlockElement> elements, TextureAtlasSprite sprite,
-          Function<Material, TextureAtlasSprite> spriteGetter, float depthOffset) {
+    private static void bakeElements(List<BakedQuad> quads, List<BlockElement> elements, TextureAtlasSprite sprite, ModelState state) {
         for (BlockElement element : elements) {
             for (Direction direction : element.faces.keySet()) {
-                BlockElementFace original = element.faces.get(direction);
-                if (depthOffset != 0.0F) {
-                    //Nudge the depth axis only (the official FLUID_TRANSFORM's scale(1, 1, 1.002) port).
-                    Vector3f from = new Vector3f(element.from);
-                    Vector3f to = new Vector3f(element.to);
-                    from.z += depthOffset;
-                    to.z += depthOffset;
-                    BlockElement shifted = new BlockElement(from, to, element.faces, element.rotation, element.shade);
-                    quads.add(BlockModel.bakeFace(shifted, original, sprite, direction, net.minecraft.client.resources.model.BlockModelRotation.X0_Y0));
-                } else {
-                    quads.add(BlockModel.bakeFace(element, original, sprite, direction, net.minecraft.client.resources.model.BlockModelRotation.X0_Y0));
-                }
+                quads.add(BlockModel.bakeFace(element, element.faces.get(direction), sprite, direction, state));
             }
+        }
+    }
+
+    /** Adapts NeoForge ClientHooks.fixItemModelSeams to the generated bucket edges. */
+    private static void fixItemSeams(List<BlockElement> elements, TextureAtlasSprite sprite) {
+        float expand = -sprite.uvShrinkRatio();
+        for (BlockElement element : elements) {
+            if (element.faces.size() != 1) continue;
+            var face = element.faces.entrySet().iterator().next();
+            if (face.getKey().getAxis() == Direction.Axis.Z) continue;
+            element.from.x = net.minecraft.util.Mth.clamp(net.minecraft.util.Mth.lerp(expand, element.from.x, 8F), 0F, 16F);
+            element.from.y = net.minecraft.util.Mth.clamp(net.minecraft.util.Mth.lerp(expand, element.from.y, 8F), 0F, 16F);
+            element.to.x = net.minecraft.util.Mth.clamp(net.minecraft.util.Mth.lerp(expand, element.to.x, 8F), 0F, 16F);
+            element.to.y = net.minecraft.util.Mth.clamp(net.minecraft.util.Mth.lerp(expand, element.to.y, 8F), 0F, 16F);
+            float[] uv = face.getValue().uv().uvs;
+            int first = face.getKey().getAxis() == Direction.Axis.Y ? 0 : 1;
+            float center = (uv[first] + uv[first + 2]) / 2F;
+            uv[first] = net.minecraft.util.Mth.clamp(net.minecraft.util.Mth.lerp(expand, uv[first], center), 0F, 16F);
+            uv[first + 2] = net.minecraft.util.Mth.clamp(net.minecraft.util.Mth.lerp(expand, uv[first + 2], center), 0F, 16F);
         }
     }
 
@@ -111,8 +120,12 @@ public final class FabricFluidContainerModel implements UnbakedModel {
      * The port of the official mask element scan: the mask texture's opaque rectangles become block elements at the
      * item depth, tint index 1, all faces present.
      */
-    private static List<BlockElement> maskElements(SpriteContents contents) {
-        List<BlockElement> elements = new ArrayList<>();
+    private static List<BlockElement> maskElements(TextureAtlasSprite mask) {
+        SpriteContents contents = mask.contents();
+        //Keep the generated edge faces; only the full front/back slab is replaced by mask rectangles.
+        List<BlockElement> elements = new ArrayList<>(ITEM_MODEL_GENERATOR.processFrames(1, "layer1", contents));
+        fixItemSeams(elements, mask);
+        elements.remove(0);
         int width = contents.width(), height = contents.height();
         BitSet bits = new BitSet(width * height);
         contents.getUniqueFrames().forEach(frame -> {
@@ -164,11 +177,11 @@ public final class FabricFluidContainerModel implements UnbakedModel {
 
     @Override
     public @NotNull Collection<ResourceLocation> getDependencies() {
-        //The neoforge parent chain is reconstructed here, nothing to resolve.
-        return List.of();
+        return properties.getDependencies();
     }
 
     @Override
     public void resolveParents(@NotNull Function<ResourceLocation, UnbakedModel> resolver) {
+        properties.resolveParents(resolver);
     }
 }

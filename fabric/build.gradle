@@ -773,6 +773,8 @@ processResources {
         include 'assets/mekanism/models/**'
         include 'assets/mekanism/textures/**'
         include 'assets/mekanism/atlases/**'
+        //The official block atlas also registers non-block/item sprites used by fluids and MekaSuit OBJ models.
+        include 'assets/minecraft/atlases/blocks.json'
         include 'assets/mekanism/sounds.json'
         include 'data/mekanism/data_maps/damage_type/mekasuit_absorption.json'
         include 'data/mekanism/tags/damage_type/mekasuit_always_supported.json'
