@@ -232,7 +232,7 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 ### F38 — 方块高亮监听移除（`d77c3252`，代码已恢复，画面待验）
 
-主代理对照 `d77c3252^` 的官方 `onBlockHover` 和当前调用链，确认自定义 Java/JSON 选框、配置器侧面叠色、MekaTool 范围挖掘附加选框均无当前事件入口。修复将原 handler 接至 Fabric `BLOCK_OUTLINE`，保持默认选框替换与 bounding block 主方块重定向；附加目标逐一分发 Fabric outline 事件，再用访问放宽的 vanilla voxel 轮廓方法绘制，递归保护只抑制重新计算挖掘范围。Fabric 事件与 NeoForge 事件机制不同，其他模组无法在 Fabric 事件中取得模拟的 BlockHitResult（仅有附加目标位置/状态）；这一互操作差异以及真实世界的叠色、线框和挖掘范围画面尚未验证。`compileJava`、`verifyPlatformSliceNoNeoForge` 和现有 `fabricClientModelTest` 通过；模型测试不覆盖轮廓事件。大型 BER 一律被 section 裁剪的初判已撤回，因为相关渲染器通过 shouldRenderOffScreen 列入 globalBlockEntities。
+主代理对照 `d77c3252^` 的官方 `onBlockHover` 和当前调用链，确认自定义 Java/JSON 选框、配置器侧面叠色、MekaTool 范围挖掘附加选框均无当前事件入口。修复将原 handler 接至 Fabric `BLOCK_OUTLINE`，保持默认选框替换与 bounding block 主方块重定向；附加目标逐一分发 Fabric outline 事件，再用访问放宽的 vanilla voxel 轮廓方法绘制，递归保护只抑制重新计算挖掘范围。Fabric 事件与 NeoForge 事件机制不同，其他模组无法在 Fabric 事件中取得模拟的 BlockHitResult（仅有附加目标位置/状态）；这一互操作差异以及真实世界的叠色、线框和挖掘范围画面尚未验证。`2fba1d15` 的完整真实 diff 已按移植风格 prompt 复审，未发现该边界内其他已证实偏离；`compileJava`、`verifyPlatformSliceNoNeoForge` 和现有 `fabricClientModelTest` 通过，模型测试不覆盖轮廓事件。大型 BER 一律被 section 裁剪的初判已撤回，因为相关渲染器通过 shouldRenderOffScreen 列入 globalBlockEntities。
 
 ### F39 — 能量立方几何烘焙与动态端口（相关客户端模型闭包，代码已修；实机画面待验）
 
