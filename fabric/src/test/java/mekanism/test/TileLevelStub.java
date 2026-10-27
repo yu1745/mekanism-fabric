@@ -1,5 +1,6 @@
 package mekanism.test;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -9,6 +10,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.MappedRegistry;
 import net.minecraft.core.RegistrationInfo;
+import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.SectionPos;
 import net.minecraft.core.registries.Registries;
@@ -61,12 +63,23 @@ public final class TileLevelStub extends RecipeLevelStub {
     }
 
     public static TileLevelStub create(ResourceKey<Level> dimension) {
+        return create(dimension, null);
+    }
+
+    public static TileLevelStub createWithRegistry(Registry<?> registry) {
+        return create(Level.OVERWORLD, registry);
+    }
+
+    private static TileLevelStub create(ResourceKey<Level> dimension, @Nullable Registry<?> extraRegistry) {
         MappedRegistry<Biome> biomes = new MappedRegistry<>(Registries.BIOME, com.mojang.serialization.Lifecycle.stable());
         biomes.register(Biomes.PLAINS, plains(), RegistrationInfo.BUILT_IN);
         biomes.register(Biomes.THE_VOID, plains(), RegistrationInfo.BUILT_IN);
         RegistryAccess damageTypes = damageTypeAccess();
-        RegistryAccess access = new RegistryAccess.ImmutableRegistryAccess(List.of(
-              damageTypes.registryOrThrow(Registries.DAMAGE_TYPE), biomes));
+        List<Registry<?>> registries = new ArrayList<>();
+        registries.add(damageTypes.registryOrThrow(Registries.DAMAGE_TYPE));
+        registries.add(biomes);
+        if (extraRegistry != null) registries.add(extraRegistry);
+        RegistryAccess access = new RegistryAccess.ImmutableRegistryAccess(registries);
         return new TileLevelStub(dimension, access, Holder.direct(new DimensionType(
               java.util.OptionalLong.empty(), true, false, false, true, 1.0D, true, false,
               DimensionType.MIN_Y, DimensionType.Y_SIZE, DimensionType.Y_SIZE,

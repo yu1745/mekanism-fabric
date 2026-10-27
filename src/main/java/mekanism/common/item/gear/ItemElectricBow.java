@@ -17,6 +17,7 @@ import mekanism.common.util.StorageUtils;
 import mekanism.common.util.text.BooleanStateDisplay.OnOff;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentType;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
@@ -30,7 +31,7 @@ import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.Enchantments;
-import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.item.enchantment.ItemEnchantments;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.Level;
@@ -81,7 +82,7 @@ public class ItemElectricBow extends BowItem implements IItemHUDProvider, ICusto
             //Preserve the virtual Flame enchantment at the real projectile owner. Resolve the live enchantment,
             //so datapack-defined effects still apply, without mutating the player's bow or its stored enchantments.
             var flame = level.registryAccess().registryOrThrow(Registries.ENCHANTMENT).getHolder(Enchantments.FLAME);
-            if (flame.isPresent() && EnchantmentHelper.getItemEnchantmentLevel(flame.get(), bow) == 0) {
+            if (flame.isPresent() && bow.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY).getLevel(flame.get()) == 0) {
                 ItemStack enchanted = bow.copy();
                 enchanted.enchant(flame.get(), 1);
                 return super.createProjectile(level, shooter, enchanted, ammo, critical);

@@ -64,6 +64,7 @@ mekanism/fabric/fluid/FabricFluidConversions.java
 mekanism/fabric/fluid/FabricFluidLookup.java
 mekanism/fabric/fluid/FabricFluidStorage.java
 mekanism/fabric/fluid/ItemFluidContainer.java
+mekanism/fabric/gear/FabricEnchantmentLookup.java
 mekanism/fabric/gear/FabricEnchantmentRules.java
 mekanism/fabric/gear/FabricModuleRegistry.java
 mekanism/fabric/gear/GearItemLookups.java

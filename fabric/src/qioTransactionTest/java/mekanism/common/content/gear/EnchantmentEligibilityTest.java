@@ -10,8 +10,11 @@ import com.mojang.authlib.GameProfile;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.serialization.Lifecycle;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Proxy;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Stream;
 import mekanism.common.item.gear.ItemElectricBow;
@@ -26,6 +29,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.HolderSet;
 import net.minecraft.core.MappedRegistry;
 import net.minecraft.core.Registry;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -33,9 +37,13 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.Bootstrap;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.EquipmentSlotGroup;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.inventory.AnvilMenu;
+import net.minecraft.world.item.ArrowItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -43,6 +51,7 @@ import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.item.enchantment.ItemEnchantments;
+import net.minecraft.world.level.Level;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -53,6 +62,7 @@ class EnchantmentEligibilityTest {
     private static Holder<Enchantment> aqua;
     private static Holder<Enchantment> flame;
     private static Holder<Enchantment> compatible;
+    private static RegistryAccess registryAccess;
 
     @BeforeAll
     static void bootstrap() throws Exception {
@@ -68,6 +78,7 @@ class EnchantmentEligibilityTest {
         aqua = register(enchantments, Enchantments.AQUA_AFFINITY, HolderSet.direct(Items.IRON_HELMET.builtInRegistryHolder()));
         flame = register(enchantments, Enchantments.FLAME, HolderSet.direct(bow.builtInRegistryHolder()));
         compatible = register(enchantments, Enchantments.UNBREAKING, HolderSet.direct(tool.builtInRegistryHolder(), bow.builtInRegistryHolder()));
+        registryAccess = new RegistryAccess.ImmutableRegistryAccess(List.of(enchantments));
         // Exercise transformation of the other real owner classes even where this test does not invoke their full runtime.
         Class.forName("net.minecraft.server.commands.EnchantCommand");
         Class.forName("net.minecraft.world.level.storage.loot.functions.EnchantRandomlyFunction");
@@ -88,6 +99,62 @@ class EnchantmentEligibilityTest {
         assertFalse(offered(new ItemStack(bow), flame));
         assertTrue(offered(new ItemStack(bow), compatible));
         assertFalse(offered(new ItemStack(tool), compatible));
+    }
+
+    @Test
+    void fireModeAddsVirtualFlameToLevelAndEquipmentQueriesWithoutChangingStoredEnchantments() throws Exception {
+        ItemStack stack = new ItemStack(bow);
+        assertEquals(0, EnchantmentHelper.getItemEnchantmentLevel(flame, stack));
+        stack.set(MekanismDataComponents.ELECTRIC_BOW_MODE.get(), true);
+        assertEquals(1, EnchantmentHelper.getItemEnchantmentLevel(flame, stack));
+        assertEquals(0, stack.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY).getLevel(flame));
+        Player player = new Player(TileLevelStub.create(), net.minecraft.core.BlockPos.ZERO, 0, new GameProfile(UUID.randomUUID(), "test")) {
+            @Override public boolean isSpectator() { return false; }
+            @Override public boolean isCreative() { return false; }
+            @Override public RegistryAccess registryAccess() { return registryAccess; }
+        };
+        Class<?> visitorType = Class.forName("net.minecraft.world.item.enchantment.EnchantmentHelper$EnchantmentInSlotVisitor");
+        Map<Holder<Enchantment>, Integer> observed = new LinkedHashMap<>();
+        Object visitor = Proxy.newProxyInstance(visitorType.getClassLoader(), new Class<?>[]{visitorType}, (proxy, method, args) -> {
+            if (method.getName().equals("accept")) observed.put((Holder<Enchantment>) args[0], (Integer) args[1]);
+            return null;
+        });
+        var method = EnchantmentHelper.class.getDeclaredMethod("runIterationOnItem", ItemStack.class, EquipmentSlot.class, LivingEntity.class, visitorType);
+        method.setAccessible(true);
+        method.invoke(null, stack, EquipmentSlot.MAINHAND, player, visitor);
+        assertEquals(Map.of(flame, 1), observed);
+        ItemEnchantments.Mutable stored = new ItemEnchantments.Mutable(ItemEnchantments.EMPTY);
+        stored.set(flame, 2);
+        stack.set(DataComponents.ENCHANTMENTS, stored.toImmutable());
+        assertEquals(2, EnchantmentHelper.getItemEnchantmentLevel(flame, stack));
+        observed.clear();
+        method.invoke(null, stack, EquipmentSlot.MAINHAND, player, visitor);
+        assertEquals(Map.of(flame, 2), observed);
+    }
+
+    @Test
+    void fireModeProjectileReceivesFlameDespiteVirtualLevelQuery() throws Exception {
+        TileLevelStub level = TileLevelStub.createWithRegistry(registryAccess.registryOrThrow(Registries.ENCHANTMENT));
+        Player player = new Player(level, net.minecraft.core.BlockPos.ZERO, 0, new GameProfile(UUID.randomUUID(), "test")) {
+            @Override public boolean isSpectator() { return false; }
+            @Override public boolean isCreative() { return false; }
+        };
+        class CapturingArrow extends ArrowItem {
+            ItemStack weapon;
+            CapturingArrow() { super(new Item.Properties()); }
+            @Override public AbstractArrow createArrow(Level world, ItemStack ammo, LivingEntity shooter, ItemStack weapon) {
+                this.weapon = weapon.copy();
+                return super.createArrow(world, ammo, shooter, weapon);
+            }
+        }
+        CapturingArrow arrow = new CapturingArrow();
+        ItemStack stack = new ItemStack(bow);
+        stack.set(MekanismDataComponents.ELECTRIC_BOW_MODE.get(), true);
+        var method = ItemElectricBow.class.getDeclaredMethod("createProjectile", Level.class, LivingEntity.class, ItemStack.class, ItemStack.class, boolean.class);
+        method.setAccessible(true);
+        method.invoke(bow, level, player, stack, new ItemStack(arrow), false);
+        assertEquals(1, arrow.weapon.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY).getLevel(flame));
+        assertEquals(0, stack.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY).getLevel(flame));
     }
 
     @Test
