@@ -42,6 +42,7 @@
     "item.ResultSlotCraftingMixin",
     "server.ChunkLoaderTickMixin",
     "entity.RobitDamageMixin",
+    "entity.SPSLightningDamageMixin",
     "server.ChunkGenVersionMixin",
     "server.HopperTransferMixin",
     "player.PlayerFlightSaveMixin"

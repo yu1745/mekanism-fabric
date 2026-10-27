@@ -207,8 +207,7 @@ public class SPSMultiblockData extends MultiblockData implements IValveHandler {
                         EntityType<?> type = entity.getType();
                         if (type.is(MekanismTags.Entities.VALID_SPS_EXPERIMENT)) {
                             if (lightningBolt == null) {
-                                lightningBolt = new LightningBolt(EntityType.LIGHTNING_BOLT, world);
-                                lightningBolt.setVisualOnly(true);
+                                lightningBolt = new ExperimentLightning(world);
                             }
                             //Fabric port delta: upstream consulted the NeoForge lightning-strike hook so mods could veto the SPS's synthetic strike;
                             // Fabric has no such veto pipeline, so the vanilla strike path runs unconditionally
@@ -234,6 +233,14 @@ public class SPSMultiblockData extends MultiblockData implements IValveHandler {
                     }
                 }
             }
+        }
+    }
+
+    /** A synthetic strike used only for the SPS experiment; it must not inflict lightning damage. */
+    public static final class ExperimentLightning extends LightningBolt {
+        public ExperimentLightning(Level level) {
+            super(EntityType.LIGHTNING_BOLT, level);
+            setVisualOnly(true);
         }
     }
 
