@@ -12,9 +12,8 @@ import org.slf4j.LoggerFactory;
  * ({@code ClientMouseScrollMixin}, {@code FogColorMixin}, {@code FogSetupMixin}, {@code LivingEntityVisibilityMixin}),
  * and the recipe-cache reset rides {@code ClientRecipeCacheMixin} on the recipe-sync packet.
  *
- * <p>The connection-lifecycle handlers (MekanismClient.launchClient/reset), the flamethrower/geiger sounds
- * (SoundHandler), the holiday notifications (HolidayManager) and the KeySync update stay deferred with their lanes;
- * the deferral points are documented in place in ClientTickHandler.</p>
+ * <p>Connection lifecycle and entity sounds are wired by their Fabric event owners. Boost synchronization is
+ * refreshed here, including when a GUI opens without a physical release event.</p>
  */
 public final class FabricClientTickRegistration {
 
@@ -26,7 +25,12 @@ public final class FabricClientTickRegistration {
     }
 
     public static void register() {
-        ClientTickEvents.START_CLIENT_TICK.register(minecraft -> HANDLER.onTick());
+        ClientTickEvents.START_CLIENT_TICK.register(minecraft -> {
+            // Also release boost when a screen opens, even if no physical key-release event is delivered.
+            mekanism.client.MekanismClient.updateKey(mekanism.client.key.MekKeyHandler.isKeyPressed(mekanism.client.key.MekanismKeyHandler.boostKey),
+                  mekanism.common.base.KeySync.BOOST);
+            HANDLER.onTick();
+        });
         if (PROOF.compareAndSet(false, true)) {
             //The official ClientTickHandler.onStartTracking rode EntityJoinLevelEvent(client side): an entity that
         //joins the client level - including newly tracked players - restarts their flamethrower sound.

@@ -3,13 +3,13 @@ package mekanism.client.key;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Screen;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * Fabric port delta: NeoForge's {@code IKeyConflictContext}/{@code KeyModifier} tracking has no Fabric equivalent, and vanilla {@link KeyMapping} state
- * does not update while a screen is open — which is exactly where tooltips (and the radial menu) query pressed keys. The context/modifier branches are
- * therefore replaced by an unconditional raw-input poll of the bound key, which keeps the observable behavior (the key answers while held, in game and
- * in screens) at the cost of vanilla's flat binding model without modifier-qualified defaults.
+ * Fabric port delta: vanilla key state does not update inside screens, so GUI-only tooltip bindings poll raw input.
+ * The description binding retains its official SHIFT modifier; vanilla's binding editor cannot encode arbitrary
+ * modifiers, so modifier rebinding remains a platform limitation.
  */
 public class MekKeyHandler {
 
@@ -17,6 +17,13 @@ public class MekKeyHandler {
     }
 
     public static boolean isKeyPressed(KeyMapping keyBinding) {
+        if ((keyBinding == MekanismKeyHandler.detailsKey || keyBinding == MekanismKeyHandler.descriptionKey)
+              && Minecraft.getInstance().screen == null) {
+            return false;
+        }
+        if (keyBinding == MekanismKeyHandler.descriptionKey && !Screen.hasShiftDown()) {
+            return false;
+        }
         if (keyBinding.isDown()) {
             return true;
         }

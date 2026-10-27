@@ -87,7 +87,9 @@ mekanism/fabric/mixin/client/FabricHudLayersMixin.java
 mekanism/fabric/mixin/client/FogColorMixin.java
 mekanism/fabric/mixin/client/FogSetupMixin.java
 mekanism/fabric/mixin/client/GuiGraphicsMixin.java
+mekanism/fabric/mixin/client/KeyboardInputMixin.java
 mekanism/fabric/mixin/client/LivingEntityVisibilityMixin.java
+mekanism/fabric/mixin/client/MouseInputMixin.java
 mekanism/fabric/mixin/client/TextureAtlasMixin.java
 mekanism/fabric/mixin/entity/BlockStateDestroyProgressMixin.java
 mekanism/fabric/mixin/entity/EnderManMaskMixin.java
