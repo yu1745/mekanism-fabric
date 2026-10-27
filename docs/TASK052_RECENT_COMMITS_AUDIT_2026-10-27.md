@@ -26,9 +26,9 @@
 
 此提交将官方模式切换、模块调节器、HUD 开关和 boost 按下/释放回调从 `MekanismKeyHandler` 移除，仅声明并注册 vanilla KeyMapping，承诺留待 client input vertical。当前 `src/main/java/mekanism/client` 与 `fabric/src/main/java` 中对这些绑定的检索显示，手部绑定仅另由 `MekKeyHandler.isRadialPressed()` 查询，其他绑定仅声明和注册；当前 `FabricClientTickRegistration` 只注册 `ClientTickHandler.onTick()` 及实体载入声音事件，没有模式切换/HUD/模块按键消费。`MekanismClient.updateKey` 有定义但在上述客户端路径未发现调用。故不能继续声称该已完成客户端输入面等同官方；快捷键的上下文、modifier、重复按下及服务端同步须在原行为边界内复现并修复。尚未进行实机 GUI 验证。
 
-### F3 — Robit 无法通过充电板的实体能量路径充电（`5d2c9182`，静态代码确认；运行复现及修复待完成）
+### F3 — Robit 无法通过充电板的实体能量路径充电（`5d2c9182`，代码修复已提交；端到端验证待完成）
 
-`TileEntityChargepad.onUpdateServer()` 对非玩家生物调用 `EnergyCompatUtils.getStrictEnergyHandler(entity)`，并明确注明 Robit 走此分支；`EntityRobit` 实现 `IMekanismStrictEnergyHandler` 并持有真实能量容器。当前 `EnergyCompatUtils` 对实体只遍历外部能量 compat，最终查询 `FabricEnergyLookup.ENTITY_ENERGY`。整个已纳源码中对该 lookup 只有定义和查询，没有注册任何实体 provider；因此 Robit 查到 null，`provideEnergy(null)` 返回 false。此缺口独立于是否启用外部能量转换：官方原先将自身 strict capability 列为第一优先，不能用 Team Reborn 是否启用来替代。修复应保留真实 Robit 能量 owner、外部查询以及官方优先级和自动化语义；尚未完成运行复现。
+`TileEntityChargepad.onUpdateServer()` 对非玩家生物调用 `EnergyCompatUtils.getStrictEnergyHandler(entity)`，并明确注明 Robit 走此分支；`EntityRobit` 实现 `IMekanismStrictEnergyHandler` 并持有真实能量容器。当前 `EnergyCompatUtils` 对实体只遍历外部能量 compat，最终查询 `FabricEnergyLookup.ENTITY_ENERGY`。整个已纳源码中对该 lookup 只有定义和查询，没有注册任何实体 provider；因此 Robit 查到 null，`provideEnergy(null)` 返回 false。此缺口独立于是否启用外部能量转换：官方原先将自身 strict capability 列为第一优先，不能用 Team Reborn 是否启用来替代。修复提交 `6ebdda4f` 在实体查询处先返回可处理能量的真实 Robit handler，再保留其他实体的原 Fabric 外部查询。历史基线 `Capabilities.registerCapabilities` 对 ROBIT 注册的实体能源 provider 正是 `(robit, ctx) -> robit`，且官方 strict compat 在外部 compat 前查询。已重审该提交真实 diff：仅改这一入口，不改能量容器、转换或注册 ID；未发现该范围内新增偏离。`compileJava` 及 `FabricEnergyLookupTest`、`FabricStrictEnergyHandlerTest`、`FabricEnergyStorageTest` 通过，但这些现有测试不直接覆盖 Robit/充电板，尚未完成真实世界复现与修复后端到端验证。
 
 `5d2c9182` 的 Team Reborn 单位转换、事务和实体注册仍需逐项审查；`6b6bcb0f` 的 holiday 和 tooltip 差异已读取，尚需核对后续实现和调用顺序。两提交均不标记为完整通过。
 
