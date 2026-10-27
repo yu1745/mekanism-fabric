@@ -79,7 +79,7 @@ scripts/scan-platform-deps.py
 
 ### 当前 P0 network 落点
 
-configuration phase 的双向 payload 和服务端 `ConfigurationTask` gate 使用精确协商；自实体同步数据 wire schema 修复起，Fabric 握手版本改为 `10.7.19-fabric.1`，以拒绝先前的裸 `10.7.19`。隔离 Loom server + 两个顺序启动的独立 Xvfb client JVM 已验证新版本 matching round-trip 与每连接重新协商。此前错版、显式拒绝及缺失 receiver 的隔离 fixture 是旧范围证据：现有 fixture 缺少新增的内容注册，当前在 Fabric 注册表同步时先断开，尚不能证明新版配置握手的真实拒绝路径。common/client 注册类继续分离；同一 client 进程 reconnect 和 withheld-response timeout 策略仍未验证，详见 `FABRIC_NETWORK.md`。
+configuration phase 的双向 payload 和服务端 `ConfigurationTask` gate 使用官方版本 `10.7.19` 精确协商。此前双客户端 smoke 在临时 Fabric 版本后缀上通过，并不直接证明恢复官方版本后的运行结果；当前旧隔离 rejection fixture 缺少新增内容注册，会在 Fabric 注册表同步时先断开，尚不能证明配置握手的真实拒绝路径。common/client 注册类继续分离；同一 client 进程 reconnect 和 withheld-response timeout 策略仍未验证，详见 `FABRIC_NETWORK.md`。
 
 ### 当前 platform-neutral utility 落点
 

@@ -244,7 +244,7 @@ printf '%s\n' "port=$PORT" "username=$USERNAME" "overall_timeout=$TIMEOUT" > "$D
 
 start_client 1
 wait_for_join_count 1
-if ! grep -Fq 'MEKANISM_FABRIC_NETWORK_CLIENT_PROOF protocol=10.7.19-fabric.1 receiver=true' "$RUN_ROOT/client-1/logs/latest.log"; then
+if ! grep -Fq 'MEKANISM_FABRIC_NETWORK_CLIENT_PROOF protocol=10.7.19 receiver=true' "$RUN_ROOT/client-1/logs/latest.log"; then
   fail_with_logs 'first client did not initialize the network receiver'
 fi
 terminate_scope "$CLIENT_SCOPE" "$CLIENT_PID"
@@ -254,15 +254,15 @@ wait_for_leave_count 1
 
 start_client 2
 wait_for_join_count 2
-if ! grep -Fq 'MEKANISM_FABRIC_NETWORK_CLIENT_PROOF protocol=10.7.19-fabric.1 receiver=true' "$RUN_ROOT/client-2/logs/latest.log"; then
+if ! grep -Fq 'MEKANISM_FABRIC_NETWORK_CLIENT_PROOF protocol=10.7.19 receiver=true' "$RUN_ROOT/client-2/logs/latest.log"; then
   fail_with_logs 'second client did not initialize the network receiver'
 fi
 for session in 1 2; do
-  if ! grep -Fq "MEKANISM_FABRIC_NETWORK_HANDSHAKE_START session=$session protocol=10.7.19-fabric.1 thread=Netty" \
+  if ! grep -Fq "MEKANISM_FABRIC_NETWORK_HANDSHAKE_START session=$session protocol=10.7.19 thread=Netty" \
       "$SERVER_DIR/logs/latest.log"; then
     fail_with_logs "session $session did not start on a Netty event-loop thread"
   fi
-  if ! grep -Fq "MEKANISM_FABRIC_NETWORK_HANDSHAKE_COMPLETE session=$session protocol=10.7.19-fabric.1 thread=Netty" \
+  if ! grep -Fq "MEKANISM_FABRIC_NETWORK_HANDSHAKE_COMPLETE session=$session protocol=10.7.19 thread=Netty" \
       "$SERVER_DIR/logs/latest.log"; then
     fail_with_logs "session $session did not complete on a Netty event-loop thread"
   fi

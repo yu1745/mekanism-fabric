@@ -30,7 +30,7 @@
 | `76f790ce` | 已分段读完整 594 行 diff：物品扩展删除、附魔、重装备/挖掘、pick-block 和 TNT。当前实际缺失模块附魔在游戏查询的合并，已按 F14 修复；附魔适用/书、装备动画和 pick-block 等剩余官方 hook 单独列 F15，不把此前注明 deferred 当已实现。当前电弓射弹模式已有后续实现在 `createProjectile`，但未证明官方全部虚拟附魔查询一致。 |
 | `1d4c4027` | 已分段读完整 316 行 diff：blockview v2、工厂纳片、充电与水下模块、三元谓词及重复注解。Curios 充电属于已记录的 F11；水下加速将两种不同属性错误合一、流体能耗只检查脚部位置，且追查发现真实装备属性桥未注册，见 F17；已修普通水中推进和桥接，实机及非原版流体仍待验证。render-data v2 及 factory 行为未凭导入改名判为全面等价。 |
 | `7785a9c1` | 已分段读完整 454 行 diff：实体注册、数据序列化、网络形参、工厂/容器纳片与日志。当前传送粒子包缺失 S2C codec/receiver，已按 F18 接回；追查实体数据 wire id 发现本地递增注册在客户端/服务端额外 serializer 的顺序不同会错解，F19 已改为稳定原版类型并更新握手版本，实际异模组双端和旧客户端拒绝仍待验。 |
-| `4e5a4232` | 已分段读完整 625 行 diff：配方查看器、模拟玩家与量子纠缠的导入调整、chunk loader 持久票据替代。后续 `5ee61549` 已修共享所有权及空数据持久化，但未处理旧版 vanilla forced-chunk 数据迁移；旧记录无法区分 Mekanism 与 `/forceload` 共享所有权，见 F21，安全迁移策略待裁决。 |
+| `4e5a4232` | 已分段读完整 625 行 diff：配方查看器、模拟玩家与量子纠缠的导入调整、chunk loader 持久票据替代。后续 `5ee61549` 已修共享所有权及空数据持久化；旧 Fabric 开发版存档迁移不在用户要求范围，见 F21。 |
 
 ## 审查发现与待复核
 
@@ -138,16 +138,16 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 ### F19 — 实体同步数据 serializer 数字 ID 依赖本地注册顺序（`7785a9c1`，已改用稳定原版类型）
 
-原 `MekanismDataSerializers` 将 Robit UUID、安全模式、皮肤和 Flame 模式注册到 vanilla `EntityDataSerializers` 本地递增表；`SynchedEntityData.DataValue.write/read` 在线路只写数字 ID 并按接收端该数字查 serializer。若其他 mod 仅在一端或以不同顺序注册，同一数字可对应不同类型或不存在，触发实体数据解码/赋值错误。修复 `88edd27a`（已审阅完整 531 行 diff）让两个真实实体的数据使用 vanilla 固定编号的 OPTIONAL_UUID、INT 和 STRING，枚举仍使用原 ordinal/BY_ID、skin 仍还原 canonical ResourceKey，NBT 字段未改；保留原 serializer 注册以免静默移除已有公开 holder。因为 Fabric wire schema 已变化，配置握手版本从裸 `10.7.19` 改为 `10.7.19-fabric.1`，明确拒绝旧版，独立于官方 artifact 版本。隔离 Knot 测试在先注册额外 serializer 后用真实 Robit/Flame 数据写入、解码、赋值和 NBT 回环；协议单测拒绝裸旧版本，完整普通/事务/转移测试及切片 gate 通过；真实两客户端顺序握手 smoke 通过。旧版拒绝 smoke **未通过**：隔离 fixture 未带当前完整内容注册，先被 FabricRegistrySync 的 missing registry entries 拒绝，超时前没有到达 Mekanism 协议握手；因此真实旧完整客户端拒绝及不同模组集合的双进程实体同步尚未证明。
+原 `MekanismDataSerializers` 将 Robit UUID、安全模式、皮肤和 Flame 模式注册到 vanilla `EntityDataSerializers` 本地递增表；`SynchedEntityData.DataValue.write/read` 在线路只写数字 ID 并按接收端该数字查 serializer。若其他 mod 仅在一端或以不同顺序注册，同一数字可对应不同类型或不存在，触发实体数据解码/赋值错误。修复 `88edd27a`（已审阅完整 531 行 diff）让两个真实实体的数据使用 vanilla 固定编号的 OPTIONAL_UUID、INT 和 STRING，枚举仍使用原 ordinal/BY_ID、skin 仍还原 canonical ResourceKey，NBT 字段未改；保留原 serializer 注册以免静默移除已有公开 holder。曾为拒绝旧开发版而增加 Fabric 握手后缀；用户明确本移植尚未发布，不要求跨开发提交兼容或拒绝旧开发版，故撤去后缀并恢复官方 `10.7.19`。隔离 Knot 测试在先注册额外 serializer 后用真实 Robit/Flame 数据写入、解码、赋值和 NBT 回环；完整普通/事务/转移测试及切片 gate 通过。此前两客户端 smoke 使用的是现已移除的后缀，不能作为恢复官方版本后的运行证据。不同模组集合的双进程实体同步尚未证明。
 
 ### F20 — Robit 实体安全服务声明未打包（调用 F19 测试时发现）
 
 首次执行真实 Robit `setSecurityMode` 的测试抛出 `No provider found for Mekanism service mekanism.api.security.IEntitySecurityUtils`：`EntitySecurityUtils` 已纳入 common slice，官方 service 文件也存在，但 Fabric `processResources` 白名单漏了该文件，因此生产包同样无法通过 ServiceLoader 初始化安全工具。修复 `c8b07b97` 已审阅完整 diff，将原始服务声明纳入 Fabric 资源，不替换为假实现。重跑真实实体安全模式、同步和存档回环通过；实际游戏中 Robit 安全 GUI 与权限状态联动仍待验证。
 
-### F21 — 早期 Fabric 区块加载数据迁移缺少所有权信息（`4e5a4232` → `5ee61549`，待策略裁决）
+### F21 — 早期 Fabric 区块加载数据迁移（不在要求范围）
 
-`4e5a4232` 的 `ChunkLoaderTickets.setTicket` 调用 `ServerLevel.setChunkForced`，无论该方法是否因区块已被强加载返回 false，均把该区块记入 Mekanism `owners`，且旧保存项没有 `force_ticks` 字段。`1af82201` 在后续修复之前已达到可编译状态；不能假设没有旧开发版存档。`5ee61549` 改为独立的 owner region ticket，不再操作 vanilla `/forceload` 列表，读取旧 `owners` 后重放新票据，但没有清理旧的 vanilla forced-chunk 条目。因旧数据没有记录该区块原先是否由 `/forceload` 或其他代码强制，自动 unforce 可能误解除玩家既有强加载；一律保留则移除 Mekanism anchor 后旧 vanilla 强加载可能残留。`force_ticks` 缺席可识别旧格式，但不能恢复失去的所有权。需在修改存档前裁决保守保留并提供明细/人工处理，还是明确授权清理有潜在共享的条目；不能静默做不可逆清理。当前无生产迁移补丁，现代 owner ticket 的实际多维重启、崩溃及迁移仍需后续复核。
+此前将 `4e5a4232` 早期 Fabric 强加载存档与 `5ee61549` 后 region ticket 之间的迁移列为待决。用户明确本移植未向玩家发布，不要求旧 Fabric 开发版间存档兼容，旧移植数据可丢弃、不编写迁移代码，因此该问题撤出修复范围，不再等待选择。此裁定不改变固定官方 Mekanism 的存档语义要求；当前 owner ticket 的多维重启、崩溃行为仍需与官方实现分别核对。
 
 ## 恢复位置
 
-优先研究 F8 的 QIO 真实 owner 插入事务闭包，并补验 F9 的 sided inventory 场景；`a147116b` 已读完整 2180 行 diff；`12ebbcf6` 和 `76f790ce` 已读完整 diff，F14 已修，F15 附魔适用/手持/选槽及电弓虚拟 Flame 已接线但部分实机待验；`1d4c4027` 已读完整 diff 并修 F17 普通水下路径；`7785a9c1` 已读完整 diff，F19/F20 已修，旧版握手与双进程实体同步仍待实测；`4e5a4232` 已读完整 diff，F21 旧票据迁移所有权丢失待用户裁决；下一提交从 `b6e5c54d` 开始。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。
+优先研究 F8 的 QIO 真实 owner 插入事务闭包，并补验 F9 的 sided inventory 场景；`a147116b` 已读完整 2180 行 diff；`12ebbcf6` 和 `76f790ce` 已读完整 diff，F14 已修，F15 附魔适用/手持/选槽及电弓虚拟 Flame 已接线但部分实机待验；`1d4c4027` 已读完整 diff 并修 F17 普通水下路径；`7785a9c1` 已读完整 diff，F19/F20 已修，不要求旧开发版握手兼容，双进程实体同步仍待实测；`4e5a4232` 已读完整 diff，F21 旧票据迁移已按用户决策退出范围。子代理已并行只读初审 `b6e5c54d`、`509afc1b`、`1af82201`，其候选发现须由主代理结合当前代码逐项复核并串行修复，不把初审直接计为修复完成。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。

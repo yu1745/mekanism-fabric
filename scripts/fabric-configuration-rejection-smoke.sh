@@ -184,12 +184,12 @@ done
 [[ $server_ready -eq 1 ]] || fail_with_logs 'failed to bind a loopback port after three attempts'
 printf '%s\n' "port=$PORT" "overall_timeout=$TIMEOUT" "mismatch_username=$MISMATCH_USERNAME" "client_rejected_username=$REJECTED_USERNAME" "missing_receiver_username=$MISSING_USERNAME" > "$DIAGNOSTIC_DIR/run-info.txt"
 
-MISMATCH_READY='MEKANISM_FIXTURE_MISMATCH_READY mode=version_mismatch local=10.7.19 registry_entries=4'
-MISMATCH_RESPONSE='MEKANISM_FIXTURE_MISMATCH_RESPONSE mode=version_mismatch local=10.7.19 remote=10.7.19-fabric.1 accepted=false'
-MISMATCH_REASON='Mekanism protocol mismatch: local 10.7.19-fabric.1, remote 10.7.19'
+MISMATCH_READY='MEKANISM_FIXTURE_MISMATCH_READY mode=version_mismatch local=fixture-mismatch-0 registry_entries=4'
+MISMATCH_RESPONSE='MEKANISM_FIXTURE_MISMATCH_RESPONSE mode=version_mismatch local=fixture-mismatch-0 remote=10.7.19 accepted=false'
+MISMATCH_REASON='Mekanism protocol mismatch: local 10.7.19, remote fixture-mismatch-0'
 MISMATCH_DISCONNECT="Client disconnected with reason: $MISMATCH_REASON"
-MISMATCH_START='MEKANISM_FABRIC_NETWORK_HANDSHAKE_START session=1 protocol=10.7.19-fabric.1 thread=Netty Server IO #1'
-MISMATCH_REJECT="MEKANISM_FABRIC_NETWORK_HANDSHAKE_REJECT kind=version_mismatch player=$MISMATCH_USERNAME session=1 local=10.7.19-fabric.1 remote=10.7.19 reason=$MISMATCH_REASON"
+MISMATCH_START='MEKANISM_FABRIC_NETWORK_HANDSHAKE_START session=1 protocol=10.7.19 thread=Netty Server IO #1'
+MISMATCH_REJECT="MEKANISM_FABRIC_NETWORK_HANDSHAKE_REJECT kind=version_mismatch player=$MISMATCH_USERNAME session=1 local=10.7.19 remote=fixture-mismatch-0 reason=$MISMATCH_REASON"
 start_client mismatch "$MISMATCH_USERNAME"
 wait_for_evidence "$MISMATCH_REJECT" "$MISMATCH_DISCONNECT"
 MISMATCH_CLIENT_LOG="$RUN_ROOT/mismatch-client/logs/latest.log"; SERVER_LOG="$SERVER_DIR/logs/latest.log"
@@ -204,11 +204,11 @@ require_username_disconnect "$SERVER_LOG" "$MISMATCH_USERNAME" "$MISMATCH_REASON
 [[ $(marker_count "$MISMATCH_CLIENT_LOG" 'MEKANISM_FABRIC_NETWORK_CLIENT_PROOF') -eq 0 ]] || fail_with_logs 'mismatch client leaked production entrypoint'
 terminate_scope "$CLIENT_SCOPE" "$CLIENT_PID"; CLIENT_SCOPE=; CLIENT_PID=
 
-REJECTED_READY='MEKANISM_FIXTURE_MISMATCH_READY mode=same_version_reject local=10.7.19-fabric.1 registry_entries=4'
-REJECTED_RESPONSE='MEKANISM_FIXTURE_MISMATCH_RESPONSE mode=same_version_reject local=10.7.19-fabric.1 remote=10.7.19-fabric.1 accepted=false'
-REJECTED_REASON='Remote client rejected Mekanism protocol 10.7.19-fabric.1'
+REJECTED_READY='MEKANISM_FIXTURE_MISMATCH_READY mode=same_version_reject local=10.7.19 registry_entries=4'
+REJECTED_RESPONSE='MEKANISM_FIXTURE_MISMATCH_RESPONSE mode=same_version_reject local=10.7.19 remote=10.7.19 accepted=false'
+REJECTED_REASON='Remote client rejected Mekanism protocol 10.7.19'
 REJECTED_DISCONNECT="Client disconnected with reason: $REJECTED_REASON"
-REJECTED_REJECT="MEKANISM_FABRIC_NETWORK_HANDSHAKE_REJECT kind=client_rejected player=$REJECTED_USERNAME session=2 local=10.7.19-fabric.1 remote=10.7.19-fabric.1 reason=$REJECTED_REASON"
+REJECTED_REJECT="MEKANISM_FABRIC_NETWORK_HANDSHAKE_REJECT kind=client_rejected player=$REJECTED_USERNAME session=2 local=10.7.19 remote=10.7.19 reason=$REJECTED_REASON"
 start_client client_rejected "$REJECTED_USERNAME"
 wait_for_evidence "$REJECTED_REJECT" "$REJECTED_DISCONNECT"
 REJECTED_CLIENT_LOG="$RUN_ROOT/client_rejected-client/logs/latest.log"
@@ -223,9 +223,9 @@ require_username_disconnect "$SERVER_LOG" "$REJECTED_USERNAME" "$REJECTED_REASON
 terminate_scope "$CLIENT_SCOPE" "$CLIENT_PID"; CLIENT_SCOPE=; CLIENT_PID=
 
 MISSING_READY='MEKANISM_FIXTURE_MISSING_RECEIVER_READY registry_entries=4 payloads=0'
-MISSING_REASON='This server requires Mekanism protocol 10.7.19-fabric.1'
+MISSING_REASON='This server requires Mekanism protocol 10.7.19'
 MISSING_DISCONNECT="Client disconnected with reason: $MISSING_REASON"
-MISSING_REJECT="MEKANISM_FABRIC_NETWORK_HANDSHAKE_REJECT kind=missing_receiver player=$MISSING_USERNAME protocol=10.7.19-fabric.1 reason=$MISSING_REASON"
+MISSING_REJECT="MEKANISM_FABRIC_NETWORK_HANDSHAKE_REJECT kind=missing_receiver player=$MISSING_USERNAME protocol=10.7.19 reason=$MISSING_REASON"
 start_client missing_receiver "$MISSING_USERNAME"
 wait_for_evidence "$MISSING_REJECT" "$MISSING_DISCONNECT"
 MISSING_CLIENT_LOG="$RUN_ROOT/missing_receiver-client/logs/latest.log"

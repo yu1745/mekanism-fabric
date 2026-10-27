@@ -4,7 +4,7 @@
 
 The first networking slice is a mandatory, Mekanism-owned protocol negotiation during Minecraft's configuration phase. Task 040 adds an ordered Chemical snapshot/ACK task and play reload publication after that compatibility owner. Neither slice imports the official `BasePacketHandler`, `PacketHandler`, `IMekanismPacket`, or packet catalog: those classes still close over NeoForge registration/context APIs and large gameplay/client subsystems.
 
-The upstream Mekanism version remains `10.7.19` (artifact `10.7.19.85`), while the Fabric configuration handshake now uses `10.7.19-fabric.1`. The Fabric suffix identifies the revised entity-data wire schema and deliberately rejects earlier Fabric builds that advertised `10.7.19`; otherwise the same version string would permit incompatible tracked-data serializers. It does not change item, block, or save identifiers. Compatibility remains exact.
+The configuration handshake uses the official Mekanism `Version#toString()` value `10.7.19` (artifact `10.7.19.85`). Compatibility is exact. The unreleased intermediate Fabric implementations are not a compatibility target; their entity-data wire schema is not negotiated separately.
 
 Payloads use configuration `FriendlyByteBuf` codecs:
 
@@ -13,7 +13,7 @@ Payloads use configuration `FriendlyByteBuf` codecs:
 | server to client | `mekanism:network_version` | bounded protocol-version string |
 | client to server | `mekanism:network_version_response` | bounded protocol-version string, accepted boolean |
 
-The previous isolated rejection fixture no longer reaches this handshake against the current full content registry: Fabric rejects its missing registry entries first. Legacy-version rejection is covered by the protocol unit test, but an actual old full-content client rejection remains unverified.
+The isolated rejection fixture no longer reaches this handshake against the current full content registry: Fabric rejects its missing registry entries first. End-to-end mismatched-protocol rejection therefore remains unverified.
 
 ## Connection flow
 
@@ -21,7 +21,7 @@ The previous isolated rejection fixture no longer reaches this handshake against
 2. Client initialization is isolated in `MekanismFabricClientBootstrap` and registers only the client request receiver.
 3. During `ServerConfigurationConnectionEvents.CONFIGURE`, the server rejects clients that did not advertise the request receiver.
 4. The server queues a Fabric `ConfigurationTask` keyed by `mekanism:network_version`. The task records per-handler pending state and sends the request through the task-provided packet consumer.
-5. The client compares the server protocol with `10.7.19-fabric.1` and replies with its own protocol plus the acceptance result.
+5. The client compares the server protocol with `10.7.19` and replies with its own protocol plus the acceptance result.
 6. The server rejects mismatches/rejections. Only an exact accepted response removes pending state and calls Fabric's `completeTask`; play cannot begin through this task before negotiation succeeds.
 7. Disconnect cleanup removes pending state. Duplicate or out-of-phase responses are rejected instead of completing an unrelated task.
 
@@ -97,7 +97,7 @@ The common bootstrap has no static reference to the client bootstrap or client n
   - a clean dedicated server reaches `Done` without linking client classes.
 - `scripts/fabric-paired-network-smoke.sh`
   - launches an isolated Loom server and two sequential fresh Xvfb client JVMs through Quick Play;
-  - requires each client to advertise its receiver, start and complete the current `10.7.19-fabric.1` negotiation, and enter play;
+  - requires each client to advertise its receiver, start and complete the current `10.7.19` negotiation, and enter play;
   - requires the first disconnect to be observed before launching the second client;
   - pairs structured session IDs and requires every server start/complete marker to report a Netty event-loop thread;
   - removes disposable run directories and retains diagnostic logs.
