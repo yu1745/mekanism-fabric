@@ -15,10 +15,10 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.client.IItemDecorator;
-import net.neoforged.neoforge.fluids.FluidStack;
+import mekanism.client.render.item.ItemDecorators.ItemDecorator;
+import mekanism.api.fluid.FluidStack;
 
-public class ChemicalFluidBarDecorator implements IItemDecorator {
+public class ChemicalFluidBarDecorator implements ItemDecorator {
 
     private final ContainerType<IChemicalTank, ?, ?>[] chemicalContainerTypes;
     private final boolean showFluid;

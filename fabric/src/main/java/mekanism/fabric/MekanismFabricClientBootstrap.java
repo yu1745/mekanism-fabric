@@ -65,6 +65,19 @@ public final class MekanismFabricClientBootstrap implements ClientModInitializer
         mekanism.fabric.client.hud.FabricClientTickRegistration.register();
         mekanism.fabric.client.render.armor.FabricArmorLayerRegistration.register();
         mekanism.fabric.client.render.item.FabricFluidBucketRegistration.register(mekanism.common.registries.MekanismFluids.FLUIDS);
+        mekanism.fabric.client.render.item.FabricMekaSuitItemColor.register();
+        //The item decorations (the official RegisterItemDecorationsEvent registrations).
+        mekanism.client.render.item.ItemDecorators.register(mekanism.common.registries.MekanismItems.MEKASUIT_HELMET.asItem(),
+              mekanism.client.render.item.MekaSuitBarDecorator.INSTANCE);
+        mekanism.client.render.item.ItemDecorators.register(mekanism.common.registries.MekanismItems.MEKASUIT_BODYARMOR.asItem(),
+              mekanism.client.render.item.MekaSuitBarDecorator.INSTANCE);
+        mekanism.client.render.item.TransmitterTypeDecorator.registerDecorators(mekanism.common.registries.MekanismBlocks.BASIC_PRESSURIZED_TUBE,
+              mekanism.common.registries.MekanismBlocks.ADVANCED_PRESSURIZED_TUBE, mekanism.common.registries.MekanismBlocks.ELITE_PRESSURIZED_TUBE,
+              mekanism.common.registries.MekanismBlocks.ULTIMATE_PRESSURIZED_TUBE, mekanism.common.registries.MekanismBlocks.BASIC_THERMODYNAMIC_CONDUCTOR,
+              mekanism.common.registries.MekanismBlocks.ADVANCED_THERMODYNAMIC_CONDUCTOR, mekanism.common.registries.MekanismBlocks.ELITE_THERMODYNAMIC_CONDUCTOR,
+              mekanism.common.registries.MekanismBlocks.ULTIMATE_THERMODYNAMIC_CONDUCTOR, mekanism.common.registries.MekanismBlocks.BASIC_UNIVERSAL_CABLE,
+              mekanism.common.registries.MekanismBlocks.ADVANCED_UNIVERSAL_CABLE, mekanism.common.registries.MekanismBlocks.ELITE_UNIVERSAL_CABLE,
+              mekanism.common.registries.MekanismBlocks.ULTIMATE_UNIVERSAL_CABLE);
         net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.AFTER_TRANSLUCENT.register(context ->
               mekanism.client.render.RenderTickHandler.renderTransparentLayer(context.camera(),
                     context.matrixStack(),

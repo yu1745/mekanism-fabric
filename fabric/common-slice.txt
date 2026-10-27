@@ -291,7 +291,11 @@ mekanism/client/render/hud/MekaSuitEnergyLevel.java
 mekanism/client/render/hud/MekanismHUD.java
 mekanism/client/render/hud/MekanismStatusOverlay.java
 mekanism/client/render/hud/RadiationOverlay.java
+mekanism/client/render/item/ChemicalFluidBarDecorator.java
+mekanism/client/render/item/ItemDecorators.java
+mekanism/client/render/item/MekaSuitBarDecorator.java
 mekanism/client/render/item/MekanismISTER.java
+mekanism/client/render/item/TransmitterTypeDecorator.java
 mekanism/client/render/item/block/RenderEnergyCubeItem.java
 mekanism/client/render/item/block/RenderFluidTankItem.java
 mekanism/client/render/item/gear/RenderAtomicDisassembler.java

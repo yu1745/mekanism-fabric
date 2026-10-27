@@ -30,6 +30,7 @@ mekanism/fabric/client/render/armor/FabricArmorLayerRegistration.java
 mekanism/fabric/client/render/armor/FabricGearModels.java
 mekanism/fabric/client/render/item/FabricFluidBucketRegistration.java
 mekanism/fabric/client/render/item/FabricItemRendererRegistration.java
+mekanism/fabric/client/render/item/FabricMekaSuitItemColor.java
 mekanism/fabric/client/render/item/FabricRobitItemRenderer.java
 mekanism/fabric/client/render/obj/FabricObjGeometryReader.java
 mekanism/fabric/client/render/obj/FabricTransmitterAssets.java
@@ -85,6 +86,7 @@ mekanism/fabric/mixin/client/ClientRecipeCacheMixin.java
 mekanism/fabric/mixin/client/FabricHudLayersMixin.java
 mekanism/fabric/mixin/client/FogColorMixin.java
 mekanism/fabric/mixin/client/FogSetupMixin.java
+mekanism/fabric/mixin/client/GuiGraphicsMixin.java
 mekanism/fabric/mixin/client/LivingEntityVisibilityMixin.java
 mekanism/fabric/mixin/client/TextureAtlasMixin.java
 mekanism/fabric/mixin/entity/BlockStateDestroyProgressMixin.java

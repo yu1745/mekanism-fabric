@@ -39,13 +39,14 @@
     "player.PlayerFlightSaveMixin"
   ],
   "client": [
-    "client.TextureAtlasMixin",
-    "client.FabricHudLayersMixin",
     "client.ClientMouseScrollMixin",
+    "client.ClientRecipeCacheMixin",
+    "client.FabricHudLayersMixin",
     "client.FogColorMixin",
     "client.FogSetupMixin",
+    "client.GuiGraphicsMixin",
     "client.LivingEntityVisibilityMixin",
-    "client.ClientRecipeCacheMixin",
+    "client.TextureAtlasMixin",
     "item.ClientConfiguratorUseMixin",
     "item.ClientElytraStartMixin",
     "item.ModeStatusOverlayMixin",

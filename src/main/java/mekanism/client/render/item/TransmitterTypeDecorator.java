@@ -8,14 +8,15 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.client.IItemDecorator;
-import net.neoforged.neoforge.client.event.RegisterItemDecorationsEvent;
+import mekanism.client.render.item.ItemDecorators.ItemDecorator;
+import net.minecraft.world.item.Item;
 
-public class TransmitterTypeDecorator implements IItemDecorator {
+public class TransmitterTypeDecorator implements ItemDecorator {
 
-    public static void registerDecorators(RegisterItemDecorationsEvent event, BlockRegistryObject<?, ?>... blocks) {
+    public static void registerDecorators(BlockRegistryObject<?, ?>... blocks) {
         for (BlockRegistryObject<?, ?> block : blocks) {
-            event.register(block, new TransmitterTypeDecorator(block.getId()));
+            Item item = block.asItem();
+            ItemDecorators.register(item, new TransmitterTypeDecorator(block.getId()));
         }
     }
 
