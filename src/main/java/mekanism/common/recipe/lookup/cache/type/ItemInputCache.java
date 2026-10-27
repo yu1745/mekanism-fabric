@@ -9,7 +9,7 @@ import net.minecraft.world.item.crafting.Ingredient;
 
 /**
  * @implNote The Fabric port introspects {@link ItemStackIngredient}'s vanilla ingredients directly: compound union children are mapped as far as possible the same way
- * the platform's compound ingredient was, and non-strict component predicates are marked complex because quick per-item lookup is not valid for them.
+ * the platform's compound ingredient was. Component, difference and intersection predicates use the full complex-ingredient path.
  */
 public class ItemInputCache<RECIPE extends MekanismRecipe<?>> extends ComponentSensitiveInputCache<Item, ItemStack, ItemStackIngredient, RECIPE> {
 
@@ -32,8 +32,8 @@ public class ItemInputCache<RECIPE extends MekanismRecipe<?>> extends ComponentS
 
     @Override
     public boolean mapInputs(RECIPE recipe, ItemStackIngredient inputIngredient) {
-        if (inputIngredient.hasComponentPredicate()) {
-            //Special handling for component matching ingredients: there is no valid quick lookup key, so mark it as complex
+        if (inputIngredient.requiresComplexItemLookup()) {
+            //Component, difference and intersection predicates cannot use their child items as exact lookup keys.
             return true;
         }
         boolean result = false;

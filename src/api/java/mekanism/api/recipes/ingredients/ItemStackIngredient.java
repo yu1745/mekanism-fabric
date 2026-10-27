@@ -270,15 +270,25 @@ public final class ItemStackIngredient implements InputIngredient<@NotNull ItemS
             return true;
         }
         if (intersectionChildren != null) {
-            //An intersection matches nothing as soon as one of its members matches nothing
             for (Ingredient child : intersectionChildren) {
                 if (hasNoItems(child)) {
                     return true;
                 }
             }
-            return false;
         }
-        return hasNoItems(ingredient);
+        if (hasNoItems(ingredient)) {
+            return true;
+        }
+        if (subtracted != null || intersectionChildren != null) {
+            //A nonempty base does not guarantee a nonempty difference or intersection.
+            for (ItemStack stack : ingredient.getItems()) {
+                if (!stack.isEmpty() && matchesType(stack)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -318,7 +328,7 @@ public final class ItemStackIngredient implements InputIngredient<@NotNull ItemS
             List<ItemStack> stacks = new ArrayList<>();
             for (Ingredient unsized : ingredients()) {
                 for (ItemStack item : unsized.getItems()) {
-                    if (!item.isEmpty() && stacks.stream().noneMatch(existing -> ItemStack.isSameItemSameComponents(existing, item))) {
+                    if (!item.isEmpty() && matchesType(item) && stacks.stream().noneMatch(existing -> ItemStack.isSameItemSameComponents(existing, item))) {
                         stacks.add(item.copyWithCount(count));
                     }
                 }
@@ -356,6 +366,12 @@ public final class ItemStackIngredient implements InputIngredient<@NotNull ItemS
             return intersectionChildren;
         }
         return List.of(ingredient);
+    }
+
+    /** Whether cache candidates require a full type check rather than per-item membership. */
+    @Internal
+    public boolean requiresComplexItemLookup() {
+        return components != null || subtracted != null || intersectionChildren != null;
     }
 
     /**

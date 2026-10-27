@@ -18,6 +18,7 @@ import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeInput;
 import net.minecraft.world.item.crafting.RecipeManager;
@@ -122,6 +123,31 @@ class GenericInputCacheContextTest {
         assertFalse(cache.containsInput(null, new ItemStack(Items.STICK)));
         assertNull(cache.findFirstRecipe(null, new ItemStack(Items.STICK)));
         assertSame(componentRecipe, cache.findTypeBasedRecipe(null, named));
+
+        ItemStackIngredient difference = ItemStackIngredient.ofDifference(Ingredient.of(Items.WHITE_WOOL, Items.RED_WOOL), Ingredient.of(Items.RED_WOOL), 1);
+        DoubleItemChemicalRecipe painting = new DoubleItemChemicalRecipe(difference,
+              IngredientCreatorAccess.chemicalStack().from(IngredientCreatorAccess.chemical().of(MekanismChemicals.HYDROGEN.get().getAsHolder()), 100));
+        replaceRecipes(holder("difference", painting));
+        RecipeCacheContext.bind(manager, 2);
+        InputRecipeCache.ItemChemical<DoubleItemChemicalRecipe> pairCache = new InputRecipeCache.ItemChemical<>(RecipeCacheSource.forType(DoubleItemChemicalRecipe.TYPE),
+              DoubleItemChemicalRecipe::getItemInput, DoubleItemChemicalRecipe::getChemicalInput);
+        ChemicalStack hydrogen = new ChemicalStack(MekanismChemicals.HYDROGEN, 100);
+        assertFalse(pairCache.containsInputA(null, new ItemStack(Items.RED_WOOL)));
+        assertFalse(pairCache.containsInputAB(null, new ItemStack(Items.RED_WOOL), hydrogen));
+        assertTrue(pairCache.containsInputAB(null, new ItemStack(Items.WHITE_WOOL), hydrogen));
+        assertEquals(List.of(new ItemStack(Items.WHITE_WOOL).getItem()), difference.getRepresentations().stream().map(ItemStack::getItem).toList());
+
+        ItemStackIngredient intersection = ItemStackIngredient.ofIntersection(List.of(Ingredient.of(Items.WHITE_WOOL, Items.RED_WOOL),
+              Ingredient.of(Items.WHITE_WOOL, Items.BLACK_WOOL)), 1);
+        SingleItemRecipe intersectionRecipe = new SingleItemRecipe(intersection);
+        replaceRecipes(holder("intersection", intersectionRecipe));
+        RecipeCacheContext.bind(manager, 3);
+        assertTrue(cache.containsInput(null, new ItemStack(Items.WHITE_WOOL)));
+        assertFalse(cache.containsInput(null, new ItemStack(Items.RED_WOOL)));
+        assertFalse(cache.containsInput(null, new ItemStack(Items.BLACK_WOOL)));
+        assertEquals(List.of(Items.WHITE_WOOL), intersection.getRepresentations().stream().map(ItemStack::getItem).toList());
+        assertTrue(ItemStackIngredient.ofIntersection(List.of(Ingredient.of(Items.WHITE_WOOL), Ingredient.of(Items.RED_WOOL)), 1).hasNoMatchingInstances());
+        assertTrue(ItemStackIngredient.ofDifference(Ingredient.of(Items.RED_WOOL), Ingredient.of(Items.RED_WOOL), 1).hasNoMatchingInstances());
     }
 
     @Test
