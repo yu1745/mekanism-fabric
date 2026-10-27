@@ -230,9 +230,9 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 原合并模型所有 side 返回同一列表，且合并 child 时只取 null 面，造成重复绘制与 cullface 几何缺失。`88abcebf` 按方向收集 child 面、仅 null 返回无剔除面；普通 JVM 分桶测试和完整测试契约通过，完整 diff 已复审。首次把测试放在 Knot server 失败：环境禁止装载 BakedQuad，转普通 JVM 后通过；不构成实际客户端画面验收。独立缺陷：普通子 BlockModel 继承 `FabricCompositeModel` 时 vanilla bake 不调用父类自定义 bake，工厂物品和营养液化器内部 composite 子模型丢几何。`8babd36b` 用客户端 mixin 追踪已解析父链（遇到自身 elements 即停止），解析 composite 子模型并以真实后代为属性与 item override owner 执行其几何烘焙；子模型仍按官方自身 parent/texture 解析。完整 383 行 diff 已复审；隔离的 client Knot 测试实际执行 mixin、检查普通物品和嵌套子模型继承/侧面，以及所有者 AO，服务端 QIO 测试也通过。原临时放在 server Knot 的客户端测试发现 discovery 阶段即拒绝 client 类，已移入独立 client 测试任务；真实客户端 Xvfb 可达标题屏，但没有进入游戏检查实际工厂物品及液化器画面。
 
-### F38 — 方块高亮监听移除（`d77c3252`，待主代理核验）
+### F38 — 方块高亮监听移除（`d77c3252`，代码已恢复，画面待验）
 
-子代理报告原 `RenderTickHandler.onBlockHover` 无 Fabric 接线，配置器侧面颜色、自定义方块选框等可能缺失；需对照真实事件、调用者及当前源码并就地补修，报告不等于已验。大型 BER 一律被 section 裁剪的报告已撤回，因为相关渲染器通过 shouldRenderOffScreen 列入 globalBlockEntities。
+主代理对照 `d77c3252^` 的官方 `onBlockHover` 和当前调用链，确认自定义 Java/JSON 选框、配置器侧面叠色、MekaTool 范围挖掘附加选框均无当前事件入口。修复将原 handler 接至 Fabric `BLOCK_OUTLINE`，保持默认选框替换与 bounding block 主方块重定向；附加目标逐一分发 Fabric outline 事件，再用访问放宽的 vanilla voxel 轮廓方法绘制，递归保护只抑制重新计算挖掘范围。Fabric 事件与 NeoForge 事件机制不同，其他模组无法在 Fabric 事件中取得模拟的 BlockHitResult（仅有附加目标位置/状态）；这一互操作差异以及真实世界的叠色、线框和挖掘范围画面尚未验证。`compileJava`、`verifyPlatformSliceNoNeoForge` 和现有 `fabricClientModelTest` 通过；模型测试不覆盖轮廓事件。大型 BER 一律被 section 裁剪的初判已撤回，因为相关渲染器通过 shouldRenderOffScreen 列入 globalBlockEntities。
 
 ### F39 — 能量立方几何烘焙与动态端口（相关客户端模型闭包，代码已修；实机画面待验）
 

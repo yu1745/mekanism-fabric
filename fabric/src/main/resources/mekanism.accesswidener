@@ -124,6 +124,8 @@ accessible method net/minecraft/core/dispenser/ShearsDispenseItemBehavior tryShe
 
 # Tile BER lane: the NeoForge trees expose these to Mekanism's renderers (official RenderLevelStageEvent
 # render-tick source and MekanismJavaModel's part walks); both upstream accesstransformer.cfg files mirror them.
+# Area mining draws each additional target with vanilla's actual voxel-outline renderer after the Fabric event.
+accessible method net/minecraft/client/renderer/LevelRenderer renderShape (Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;Lnet/minecraft/world/phys/shapes/VoxelShape;DDDFFFF)V
 accessible field net/minecraft/client/renderer/LevelRenderer ticks I
 accessible field net/minecraft/client/Minecraft levelRenderer Lnet/minecraft/client/renderer/LevelRenderer;
 accessible field net/minecraft/client/model/geom/ModelPart cubes Ljava/util/List;

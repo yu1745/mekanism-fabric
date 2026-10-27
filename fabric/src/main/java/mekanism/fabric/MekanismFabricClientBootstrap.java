@@ -80,6 +80,8 @@ public final class MekanismFabricClientBootstrap implements ClientModInitializer
               mekanism.common.registries.MekanismBlocks.ULTIMATE_THERMODYNAMIC_CONDUCTOR, mekanism.common.registries.MekanismBlocks.BASIC_UNIVERSAL_CABLE,
               mekanism.common.registries.MekanismBlocks.ADVANCED_UNIVERSAL_CABLE, mekanism.common.registries.MekanismBlocks.ELITE_UNIVERSAL_CABLE,
               mekanism.common.registries.MekanismBlocks.ULTIMATE_UNIVERSAL_CABLE);
+        net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.BLOCK_OUTLINE.register(
+              new mekanism.client.render.RenderTickHandler()::onBlockHover);
         net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.AFTER_TRANSLUCENT.register(context ->
               mekanism.client.render.RenderTickHandler.renderTransparentLayer(context.camera(),
                     context.matrixStack(),
