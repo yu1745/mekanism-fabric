@@ -30,6 +30,7 @@
     "entity.PiglinAiCurrencyMixin",
     "entity.PiglinOffHandMixin",
     "entity.PiglinNeutralityMixin",
+    "gear.GameplayEnchantmentsMixin",
     "item.ItemStackMekaSuitDamageMixin",
     "item.ResultSlotCraftingMixin",
     "server.ChunkLoaderTickMixin",

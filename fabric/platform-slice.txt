@@ -102,6 +102,7 @@ mekanism/fabric/mixin/entity/PiglinOffHandMixin.java
 mekanism/fabric/mixin/entity/PlayerElytraStartMixin.java
 mekanism/fabric/mixin/entity/PlayerGearTickMixin.java
 mekanism/fabric/mixin/entity/RobitDamageMixin.java
+mekanism/fabric/mixin/gear/GameplayEnchantmentsMixin.java
 mekanism/fabric/mixin/gear/GearBoltRenderMixin.java
 mekanism/fabric/mixin/item/ClientConfiguratorUseMixin.java
 mekanism/fabric/mixin/item/ClientElytraStartMixin.java
