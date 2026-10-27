@@ -29,7 +29,7 @@
 | `12ebbcf6` | 已分段读完整 1478 行 diff：component holder 迁移、喷火实体同步、激光破坏/盾牌处理和 10 项纳片。确认并修复喷火存档 F12、激光与喷火熔炼破坏保护 F13；同步 spawn、盾牌事件扩展和 INFERNO 放置事件等价尚未实机证明。当时仍是编译未闭合的中间状态。 |
 | `76f790ce` | 已分段读完整 594 行 diff：物品扩展删除、附魔、重装备/挖掘、pick-block 和 TNT。当前实际缺失模块附魔在游戏查询的合并，已按 F14 修复；附魔适用/书、装备动画和 pick-block 等剩余官方 hook 单独列 F15，不把此前注明 deferred 当已实现。当前电弓射弹模式已有后续实现在 `createProjectile`，但未证明官方全部虚拟附魔查询一致。 |
 | `1d4c4027` | 已分段读完整 316 行 diff：blockview v2、工厂纳片、充电与水下模块、三元谓词及重复注解。Curios 充电属于已记录的 F11；水下加速将两种不同属性错误合一、流体能耗只检查脚部位置，且追查发现真实装备属性桥未注册，见 F17；已修普通水中推进和桥接，实机及非原版流体仍待验证。render-data v2 及 factory 行为未凭导入改名判为全面等价。 |
-| `7785a9c1` | 已分段读完整 454 行 diff：实体注册、数据序列化、网络形参、工厂/容器纳片与日志。当前传送粒子包缺失 S2C codec/receiver，已按 F18 接回；追查实体数据 wire id 发现本地递增注册在客户端/服务端额外 serializer 的顺序不同会错解，F19 尚待修复，不以加载通过关闭。 |
+| `7785a9c1` | 已分段读完整 454 行 diff：实体注册、数据序列化、网络形参、工厂/容器纳片与日志。当前传送粒子包缺失 S2C codec/receiver，已按 F18 接回；追查实体数据 wire id 发现本地递增注册在客户端/服务端额外 serializer 的顺序不同会错解，F19 已改为稳定原版类型并更新握手版本，实际异模组双端和旧客户端拒绝仍待验。 |
 
 ## 审查发现与待复核
 
@@ -135,10 +135,14 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 该提交保留 `PacketPortalFX` 的 payload 和 handler；当前传送器、便携传送器及 MekaTool 原有路径通过 `PacketUtils.sendToAllTracking` 发送，但 Fabric S2C codec 与客户端 receiver 原来均未注册。`PacketHandler` 的旧声明不在当前 common slice，不能当作现有注册；真实有追踪玩家时发送未注册 payload 存在失败风险。修复 `791a227c`（已审阅完整 138 行 diff）在 common bootstrap 注册原 TYPE/STREAM_CODEC、在 client bootstrap 将原 handler 接到本地玩家，保留同样的发送位置及粒子逻辑。Knot 测试验证注册、重复初始化与原包 codec 往返，客户端标题 smoke 通过；尚未进行两进程传送/粒子显示端到端测试。
 
-### F19 — 实体同步数据 serializer 数字 ID 依赖本地注册顺序（`7785a9c1`，待立即修复）
+### F19 — 实体同步数据 serializer 数字 ID 依赖本地注册顺序（`7785a9c1`，已改用稳定原版类型）
 
-当前 `MekanismDataSerializers` 将 Robit UUID、安全模式、皮肤和 Flame 模式注册到 vanilla `EntityDataSerializers` 的本地递增表；`SynchedEntityData.DataValue.write/read` 在网络上只写本地数字 ID 后按接收端该数字查 serializer。若另一 mod 仅在一端、或两端以不同顺序注册 serializer，同一个数字可对应不同类型或不存在，导致实体数据解码/赋值失败或错误；现有 Mekanism 版本握手只核对版本字符串，不同步这张表。该缺陷随实际模组集触发，不将双方只有 Mekanism 的正常启动当作覆盖。需在原实体 owner 内改用双方稳定的 vanilla serializer 或建立真实同步映射，并同时处理新旧 Fabric 客户端的协议拒绝，不能保留同版本却变更 wire schema；UUID/安全模式/皮肤和喷火模式的存档及客户端状态须保持官方语义。当前尚未实作，不标为已修。
+原 `MekanismDataSerializers` 将 Robit UUID、安全模式、皮肤和 Flame 模式注册到 vanilla `EntityDataSerializers` 本地递增表；`SynchedEntityData.DataValue.write/read` 在线路只写数字 ID 并按接收端该数字查 serializer。若其他 mod 仅在一端或以不同顺序注册，同一数字可对应不同类型或不存在，触发实体数据解码/赋值错误。修复 `88edd27a`（已审阅完整 531 行 diff）让两个真实实体的数据使用 vanilla 固定编号的 OPTIONAL_UUID、INT 和 STRING，枚举仍使用原 ordinal/BY_ID、skin 仍还原 canonical ResourceKey，NBT 字段未改；保留原 serializer 注册以免静默移除已有公开 holder。因为 Fabric wire schema 已变化，配置握手版本从裸 `10.7.19` 改为 `10.7.19-fabric.1`，明确拒绝旧版，独立于官方 artifact 版本。隔离 Knot 测试在先注册额外 serializer 后用真实 Robit/Flame 数据写入、解码、赋值和 NBT 回环；协议单测拒绝裸旧版本，完整普通/事务/转移测试及切片 gate 通过；真实两客户端顺序握手 smoke 通过。旧版拒绝 smoke **未通过**：隔离 fixture 未带当前完整内容注册，先被 FabricRegistrySync 的 missing registry entries 拒绝，超时前没有到达 Mekanism 协议握手；因此真实旧完整客户端拒绝及不同模组集合的双进程实体同步尚未证明。
+
+### F20 — Robit 实体安全服务声明未打包（调用 F19 测试时发现）
+
+首次执行真实 Robit `setSecurityMode` 的测试抛出 `No provider found for Mekanism service mekanism.api.security.IEntitySecurityUtils`：`EntitySecurityUtils` 已纳入 common slice，官方 service 文件也存在，但 Fabric `processResources` 白名单漏了该文件，因此生产包同样无法通过 ServiceLoader 初始化安全工具。修复 `c8b07b97` 已审阅完整 diff，将原始服务声明纳入 Fabric 资源，不替换为假实现。重跑真实实体安全模式、同步和存档回环通过；实际游戏中 Robit 安全 GUI 与权限状态联动仍待验证。
 
 ## 恢复位置
 
-优先研究 F8 的 QIO 真实 owner 插入事务闭包，并补验 F9 的 sided inventory 场景；`a147116b` 已读完整 2180 行 diff；`12ebbcf6` 和 `76f790ce` 已读完整 diff，F14 已修，F15 附魔适用/手持/选槽及电弓虚拟 Flame 已接线但部分实机待验；`1d4c4027` 已读完整 diff 并修 F17 普通水下路径；`7785a9c1` 已读完整 diff，优先修复实体数据 serializer 顺序风险 F19，再从 `4e5a4232` 继续。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。
+优先研究 F8 的 QIO 真实 owner 插入事务闭包，并补验 F9 的 sided inventory 场景；`a147116b` 已读完整 2180 行 diff；`12ebbcf6` 和 `76f790ce` 已读完整 diff，F14 已修，F15 附魔适用/手持/选槽及电弓虚拟 Flame 已接线但部分实机待验；`1d4c4027` 已读完整 diff 并修 F17 普通水下路径；`7785a9c1` 已读完整 diff，F19/F20 已修，旧版握手与双进程实体同步仍待实测；从 `4e5a4232` 继续。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。
