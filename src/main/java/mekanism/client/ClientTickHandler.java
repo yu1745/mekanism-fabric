@@ -144,15 +144,9 @@ public class ClientTickHandler {
             return;
         }
         boolean tickingNormally = MekanismRenderer.isRunningNormally();
-        //Holiday greetings once a day, refreshed every 1_200 ticks (the official notify cadence).
-        if (!initHoliday || MekanismClient.ticksPassed % 1_200 == 0) {
-            HolidayManager.notify(minecraft.player);
-            initHoliday = true;
-        }
+        HolidayManager.notify(minecraft.player);
         SoundHandler.restartSounds();
         //Radiation pre-tick particles are owned by FabricRadiationClientLifecycle.
-
-        MekanismClient.ticksPassed++;
 
         UUID playerUUID = minecraft.player.getUUID();
         // Update player's state for various items; this also automatically notifies server if something changed and
@@ -237,8 +231,6 @@ public class ClientTickHandler {
             }
         }
     }
-
-    private boolean initHoliday;
 
     private boolean updateSelectorRenderer(EquipmentSlot slot) {
         if (minecraft.player != null) {
