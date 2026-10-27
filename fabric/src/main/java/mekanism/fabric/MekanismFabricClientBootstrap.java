@@ -71,10 +71,19 @@ public final class MekanismFabricClientBootstrap implements ClientModInitializer
                     mekanism.client.render.RenderTickHandler.minecraft.levelRenderer.ticks,
                     context.tickCounter().getGameTimeDeltaPartialTick(false),
                     context.profiler()));
-        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientWorldEvents.AFTER_CLIENT_WORLD_CHANGE.register((client, world) ->
-              mekanism.common.lib.transmitter.TransmitterNetworkRegistry.clearClientNetworks());
-        net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((handler, client) ->
-              mekanism.common.lib.transmitter.TransmitterNetworkRegistry.clearClientNetworks());
-        LOGGER.info("MEKANISM_FABRIC_NETWORK_CLIENT_PROOF protocol={} receiver=true recipe_mixin_client_only=true", MekanismNetworkProtocol.CURRENT);
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientWorldEvents.AFTER_CLIENT_WORLD_CHANGE.register((client, world) -> {
+            //The official ClientPlayerNetworkEvent.Clone handler (dimension change / respawn)
+            mekanism.client.MekanismClient.resetDimensionChange();
+            mekanism.common.lib.transmitter.TransmitterNetworkRegistry.clearClientNetworks();
+        });
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+            //The official ClientPlayerNetworkEvent.LoggingOut handler
+            mekanism.client.MekanismClient.reset();
+            mekanism.common.lib.transmitter.TransmitterNetworkRegistry.clearClientNetworks();
+        });
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.JOIN.register((handler, sender, client) ->
+              //The official ClientPlayerNetworkEvent.LoggingIn handler
+              mekanism.client.MekanismClient.launchClient(handler.getConnection()));
+        LOGGER.info("MEKANISM_FABRIC_NETWORK_CLIENT_PROOF protocol={} receiver=true recipe_mixin_client_only=true lifecycle=join,disconnect,world_change", MekanismNetworkProtocol.CURRENT);
     }
 }

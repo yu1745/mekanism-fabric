@@ -700,3 +700,10 @@ gate）BUILD SUCCESSFUL。未运行（按完成度优先策略）：全量测试
 - 移植:`FabricFluidContainerModel` 重建全栈(neoforge 父链不存在于 fabric,父链忽略、依赖自含);`ItemModelGenerator.processFrames` 与 `BucketItem.content` 走访问放宽;流体色/still 纹理取自已纳片 `FluidDeferredRegister.MekanismFluidType`(getMekanismFluidType);`FabricFluidBucketRegistration` 按官方 Colors 绑定 18 桶。
 - 亮度:官方 applyFluidLuminosity 默认 true(lightLevel>0 全亮);本批 18 化学桶 lightLevel 全 0,记录后未携带全亮路径。
 - 验收:smoke 第 15 检查 `MEKANISM_FABRIC_FLUID_BUCKET_PROOF buckets=18` + proof `fluid_container_baked=18`;两次连续 15/15。桶内流体视觉(着色/轮廓)留 mcdebug/观察。
+
+### 客户端生命周期 hub(MekanismClient)(Task052,2026-10-27)
+
+- 官方 MekanismClient = @Mod(dist=CLIENT) 入口类:neoforge 头(注解/构造器/配置屏工厂)去除(fabric 入口为 bootstrap;配置屏走 fabric 配置车道,未接不记绿);hub 方法全保留。
+- 别名三件:`Mekanism.playerState`→`PlayerState.INSTANCE`(先例)、`Mekanism.activeVibrators`→`MekanismServerState.activeVibrators()`(既有)、`Mekanism.modulesLoaded`→新 `ModModuleState`(IModModule/Version 随纳;Version 的 maven-artifact 构造器改为字符串解析——fabric classpath 无该库,neoforge 内置)。
+- 生命周期缝:`ClientPlayNetworkEvent.Clone/LoggingIn/LoggingOut`→fabric `ClientWorldEvents.AFTER_CLIENT_WORLD_CHANGE`/`ClientPlayConnectionEvents.JOIN/DISCONNECT`(resetDimensionChange/launchClient/reset 全接;transmitter 清理保持既有钩子)。
+- 验收:15/15 冒烟×2;network proof 扩 `lifecycle=join,disconnect,world_change`。切片 api 262 / common 1478 / platform 160。

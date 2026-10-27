@@ -1,5 +1,6 @@
 mekanism/client/ClientPlayerAccess.java
 mekanism/client/ClientTickHandler.java
+mekanism/client/MekanismClient.java
 mekanism/client/RobitSpriteUploader.java
 mekanism/client/SparkleAnimation.java
 mekanism/client/SpecialColors.java
@@ -405,9 +406,11 @@ mekanism/common/attachments/qio/DriveMetadata.java
 mekanism/common/attachments/qio/PortableDashboardContents.java
 mekanism/common/base/IChemicalConstant.java
 mekanism/common/base/ILevelProvider.java
+mekanism/common/base/IModModule.java
 mekanism/common/base/KeySync.java
 mekanism/common/base/MekFakePlayer.java
 mekanism/common/base/MekanismPermissions.java
+mekanism/common/base/ModModuleState.java
 mekanism/common/base/PlayerState.java
 mekanism/common/base/ProfilerConstants.java
 mekanism/common/base/TagCache.java
@@ -953,6 +956,7 @@ mekanism/common/lib/LastEnergyTracker.java
 mekanism/common/lib/MekanismSavedData.java
 mekanism/common/lib/MekanismServerState.java
 mekanism/common/lib/SidedBlockPos.java
+mekanism/common/lib/Version.java
 mekanism/common/lib/WildcardMatcher.java
 mekanism/common/lib/chunkloading/ChunkLoaderTickets.java
 mekanism/common/lib/chunkloading/IChunkLoader.java

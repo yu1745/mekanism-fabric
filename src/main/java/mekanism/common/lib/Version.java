@@ -1,8 +1,5 @@
 package mekanism.common.lib;
 
-import net.neoforged.fml.ModContainer;
-import org.apache.maven.artifact.versioning.ArtifactVersion;
-
 /**
  * Version v2.0.0. Simple version handling for Mekanism.
  *
@@ -14,22 +11,19 @@ import org.apache.maven.artifact.versioning.ArtifactVersion;
  */
 public record Version(int major, int minor, int build) implements Comparable<Version> {
 
-    /**
-     * Builds a Version object from an Artifact Version
-     *
-     * @implNote We don't currently include the artifact version's build number as we classify our version by major, minor, build
-     */
-    public Version(ArtifactVersion artifactVersion) {
-        this(artifactVersion.getMajorVersion(), artifactVersion.getMinorVersion(), artifactVersion.getIncrementalVersion());
+    //Fabric port delta: the maven-artifact dependency is absent from the fabric classpath (neoforge bundled it);
+    //the artifact constructor parses the equivalent "major.minor.incremental" string instead. The excluded
+    //entrypoint was its only caller.
+    public Version(String artifactVersion) {
+        this(java.util.Arrays.stream(artifactVersion.split("\\.")).mapToInt(Integer::parseInt).toArray());
     }
 
-    /**
-     * Helper to make it so this is the only class with weird errors in IntelliJ (that don't actually exist), instead of having our main class also have "errors"
-     */
-    public Version(ModContainer container) {
-        this(container.getModInfo().getVersion());
+    private Version(int[] digits) {
+        this(digits[0], digits[1], digits[2]);
     }
 
+    //Fabric port delta: the ModContainer convenience constructor dropped with its loader type; the excluded
+    //entrypoint was its only caller.
     /**
      * Gets a version object from a string.
      *
