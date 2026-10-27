@@ -72,10 +72,10 @@ F2 尚需按原有按键上下文、组合键、repeat 与 GUI/联机语义实�
 
 最小真实修复边界不是简单倒换调用或 remove-then-add 补偿：`QIOFrequency.addItem`/`massInsert` 和 `QIOItemTypeData.add` 未接受 `TransactionContext`，`QIODriveData.add` 会立即写驱动 metadata 并通知 holder；现存事务日志只覆盖 removal。应先审计并设计频率共享索引、类型状态、各驱动实际 stack/metadata、全局 UUID 分配及提交通知的插入侧事务参与，再让外部提取和频率插入参与同一事务；涵盖嵌套 abort、短提取、异常、已有/新类型、多个驱动和 drive 替换身份。此数据风险未修复，待下一轮优先处理；不要仅根据日志将问题宣称闭环。
 
-### F9 — QIO 导入槽顺序变化（`a03c1888`，静态确认，修复待完成）
+### F9 — QIO 导入槽顺序变化（`a03c1888`，有槽存储已修复）
 
-上游 `IItemHandler` 自最后一个槽递减到第一个；移植版对 `Storage.iterator()` 正向遍历。不同类型超过单次类型数或数量上限时，可能优先导入不同物品。Fabric 的 `SlottedStorage` 提供 `getSlotCount()`/`getSlot(index)`，可在有槽场景恢复逆序；非槽存储没有官方一对一槽顺序，需保留有据的 Fabric 处理并验证。该行为与 F8 同属 QIO 导入边界，但独立于事务一致性。
+上游 `IItemHandler` 自最后一个槽递减到第一个；移植版对 `Storage.iterator()` 正向遍历。不同类型超过单次类型数或数量上限时，可能优先导入不同物品。Fabric 的 `SlottedStorage` 提供 `getSlots()`；修复 `61621cd9` 对其倒序遍历，无槽存储保持 provider 自身顺序。已审阅修复提交的完整 diff：仅调整取视图的顺序，不声称改变事务语义。两项 `QIOImporterSlotOrderTest` 用真实 vanilla `SimpleContainer` 的 Fabric `InventoryStorage` 验证索引和空槽的逆序；首次按 item variant 断言时普通 JVM 缺 Fabric mixin 导致 `ClassCastException`，改用真实槽 view 对象身份断言后通过。尚未在运行中游戏验证 sided inventory 的槽映射和导入上限。该修复不解决 F8 事务风险。
 
 ## 恢复位置
 
-优先研究 F8/F9 的同一 QIO 真实 owner 事务与槽顺序闭包；继续逐提交审查时从 `d6af1549` 开始。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。
+优先研究 F8 的 QIO 真实 owner 插入事务闭包，并补验 F9 的 sided inventory 场景；继续逐提交审查时从 `d6af1549` 开始。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。
