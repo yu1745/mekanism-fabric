@@ -3,6 +3,7 @@ package mekanism.fabric.client.render.armor;
 import com.mojang.blaze3d.vertex.PoseStack;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
+import mekanism.api.gear.IModuleHelper;
 import mekanism.client.render.armor.FreeRunnerArmor;
 import mekanism.client.render.armor.JetpackArmor;
 import mekanism.client.render.armor.ScubaMaskArmor;
@@ -11,6 +12,7 @@ import mekanism.client.render.armor.ScubaTankArmor;
 import mekanism.client.render.layer.MekanismArmorLayer;
 import mekanism.client.render.layer.MekanismElytraLayer;
 import mekanism.common.registries.MekanismItems;
+import mekanism.common.registries.MekanismModules;
 import net.fabricmc.fabric.api.client.rendering.v1.LivingEntityFeatureRendererRegistrationCallback;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.model.HumanoidModel;
@@ -22,6 +24,7 @@ import net.minecraft.client.renderer.entity.layers.ElytraLayer;
 import net.minecraft.client.renderer.entity.layers.HumanoidArmorLayer;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,6 +74,11 @@ public final class FabricArmorLayerRegistration {
         //here, mirroring that line, before the retained specs replay into the cache and renderer.
         mekanism.common.content.gear.MekaSuitModuleRenderRegistry.addModuleModel(
               net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(mekanism.api.MekanismAPI.MEKANISM_MODID, "models/entity/mekasuit_modules.obj"));
+        IModuleHelper moduleHelper = IModuleHelper.INSTANCE;
+        moduleHelper.addMekaSuitModuleModelSpec("jetpack", MekanismModules.JETPACK_UNIT, EquipmentSlot.CHEST);
+        moduleHelper.addMekaSuitModuleModelSpec("modulator", MekanismModules.GRAVITATIONAL_MODULATING_UNIT, EquipmentSlot.CHEST);
+        moduleHelper.addMekaSuitModuleModelSpec("elytra", MekanismModules.ELYTRA_UNIT, EquipmentSlot.CHEST,
+              LivingEntity::isFallFlying);
         mekanism.client.model.MekanismModelCache.INSTANCE.installMekaSuitModuleModelHandler();
     }
 

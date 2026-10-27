@@ -1,6 +1,7 @@
 package mekanism.client.model;
 
 import mekanism.api.MekanismAPI;
+import mekanism.client.render.armor.MekaSuitArmor.ModuleOBJModelData;
 import mekanism.common.registries.MekanismRobitSkins;
 import net.minecraft.client.resources.model.BakedModel;
 import mekanism.common.tile.qio.TileEntityQIODriveArray.DriveStatus;
@@ -22,11 +23,9 @@ public class MekanismModelCache extends BaseModelCache {
     public final OBJModelData MEKASUIT = registerOBJ("models/entity/mekasuit.obj");
     public final OBJModelData MEKATOOL_LEFT_HAND = registerOBJ("models/entity/mekatool_left.obj");
     public final OBJModelData MEKATOOL_RIGHT_HAND = registerOBJ("models/entity/mekatool_right.obj");
-    private final java.util.Set<OBJModelData> mekaSuitModules = new java.util.HashSet<>();
-    public final java.util.Set<OBJModelData> MEKASUIT_MODULES = java.util.Collections.unmodifiableSet(mekaSuitModules);
+    private final java.util.Set<ModuleOBJModelData> mekaSuitModules = new java.util.HashSet<>();
+    public final java.util.Set<ModuleOBJModelData> MEKASUIT_MODULES = java.util.Collections.unmodifiableSet(mekaSuitModules);
     private final java.util.Set<Runnable> callbacks = new java.util.HashSet<>();
-
-    private final java.util.Set<ResourceLocation> retainedModuleModels = new java.util.LinkedHashSet<>();
 
     /** The renderer-side install of the module render registry seam (retained registrations replay here). */
     public void installMekaSuitModuleModelHandler() {
@@ -39,6 +38,8 @@ public class MekanismModelCache extends BaseModelCache {
             @Override
             public void addModuleModelSpec(mekanism.common.content.gear.MekaSuitModuleRenderRegistry.ModelSpec spec) {
                 mekanism.client.render.armor.MekaSuitArmor.registerModule(spec.name(), spec.moduleData(), spec.slotType(), spec.isActive());
+                mekaSuitModules.forEach(ModuleOBJModelData::clearClassification);
+                callbacks.forEach(Runnable::run);
             }
         });
         for (Runnable callback : callbacks) {
@@ -62,12 +63,12 @@ public class MekanismModelCache extends BaseModelCache {
         callbacks.forEach(Runnable::run);
     }
 
-    public OBJModelData registerMekaSuitModuleModel(ResourceLocation rl) {
-        retainedModuleModels.add(rl);
-        OBJModelData data = mekaSuitModules.stream().filter(m -> m.modelId().equals(rl)).findFirst().orElse(null);
+    public ModuleOBJModelData registerMekaSuitModuleModel(ResourceLocation rl) {
+        var data = mekaSuitModules.stream().filter(m -> m.modelId().equals(rl)).findFirst().orElse(null);
         if (data == null) {
-            data = new OBJModelData(rl);
+            data = new ModuleOBJModelData(rl);
             mekaSuitModules.add(data);
+            callbacks.forEach(Runnable::run);
         }
         return data;
     }

@@ -379,10 +379,7 @@ public class MekaSuitArmor implements ICustomArmor {
 
         if (!modules.isEmpty()) {
             Map<OBJModelData, Set<String>> allMatchedParts = new Object2ObjectOpenHashMap<>();
-            //Fabric port: the module set carries the shared OBJModelData entries; only module-classified models
-            //have part specs, and every MEKASUIT_MODULES entry is a ModuleOBJModelData on this port.
-            for (ModuleOBJModelData modelData : MekanismModelCache.INSTANCE.MEKASUIT_MODULES.stream()
-                  .map(d -> (ModuleOBJModelData) d).toList()) {
+            for (ModuleOBJModelData modelData : MekanismModelCache.INSTANCE.MEKASUIT_MODULES) {
                 Set<String> matchedParts = allMatchedParts.computeIfAbsent(modelData, d -> new HashSet<>());
                 for (ObjectIterator<Object2BooleanMap.Entry<ModuleModelSpec>> iterator = Object2BooleanMaps.fastIterator(modules); iterator.hasNext(); ) {
                     Object2BooleanMap.Entry<ModuleModelSpec> entry = iterator.next();
@@ -602,10 +599,21 @@ public class MekaSuitArmor implements ICustomArmor {
             super(rl);
         }
 
+        @Override
+        public void clearCached() {
+            super.clearCached();
+            clearClassification();
+        }
+
+        public void clearClassification() {
+            classified = false;
+            specParts.clear();
+        }
+
         private Set<String> getPartsForSpec(ModuleModelSpec spec, boolean active) {
             if (!classified) {
-                classified = true;
                 classifySpecs();
+                classified = true;
             }
             SpecData specData = specParts.get(spec);
             if (specData == null) {
