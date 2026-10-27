@@ -106,6 +106,11 @@ public final class FluidUtils {
      * replacement/shrink/drop rules are unchanged.
      */
     public static boolean handleTankInteraction(Player player, InteractionHand hand, ItemStack itemStack, IExtendedFluidTank fluidTank) {
+        // Match the official initial capability check on the original stack, before operating on a single-item copy.
+        // Some providers deliberately expose a handler only when the actual container count is one.
+        if (ItemFluidContainer.find(itemStack) == null) {
+            return false;
+        }
         ItemStack copyStack = itemStack.copyWithCount(1);
         ItemFluidContainer container = ItemFluidContainer.find(copyStack);
         if (container == null) {
