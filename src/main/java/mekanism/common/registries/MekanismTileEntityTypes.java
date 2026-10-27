@@ -558,10 +558,9 @@ public class MekanismTileEntityTypes {
     }
 
     private static TileEntityTypeRegistryObject<TileEntityUniversalCable> registerCable(MekanismDeferredHolder<Block, ?> block) {
-        //Fabric port delta: the official EnergyCompatUtils.addBlockCapabilities(builder) registered the energy capability for the cable; on Fabric the
-        //single external identity is Team Reborn's EnergyStorage.SIDED, so the canonical eager provider must be attached here or no cube/generator can
-        //ever insert into a cable (and therefore no network can carry energy).
+        //Expose both the exact Mekanism Joules domain and the converted external Team Reborn domain.
         BlockEntityTypeBuilder<TileEntityUniversalCable> builder = transmitterBuilder(block, TileEntityUniversalCable::new)
+              .with(mekanism.common.capabilities.resolver.manager.EnergyHandlerManager.STRICT_ENERGY, CapabilityTileEntity::basicCapabilityProvider)
               .with(EnergyStorage.SIDED, CapabilityTileEntity::basicCapabilityProvider);
         if (ComputerCapabilityHelper.isEnabled()) {
             ComputerCapabilityHelper.addComputerCapabilities(builder, ConstantPredicates.ALWAYS_TRUE);

@@ -83,7 +83,7 @@ public abstract class CapabilityTileEntity extends TileEntityUpdateable {
 
     /**
      * Lazy provider factory registering the resolver on first successful query. Typed as the {@link BiFunction} shape accepted by
-     * {@link BlockApiLookup#registerForBlockEntity(BiFunction, BlockEntityType)}. Energy uses this generic factory on the single loaded external energy identity.
+     * {@link BlockApiLookup#registerForBlockEntity(BiFunction, BlockEntityType)}.
      */
     public static <TILE extends CapabilityTileEntity, CAP> BiFunction<TILE, @Nullable Direction, CAP> capabilityProvider(
           BlockApiLookup<CAP, @Nullable Direction> capability, BiFunction<TILE, BlockApiLookup<CAP, @Nullable Direction>, ICapabilityResolver<@Nullable Direction>> resolverGetter) {

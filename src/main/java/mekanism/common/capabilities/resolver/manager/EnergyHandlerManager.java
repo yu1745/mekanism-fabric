@@ -16,26 +16,29 @@ import mekanism.fabric.energy.FabricEnergyLookup;
 import mekanism.fabric.energy.FabricEnergyStorage;
 import net.fabricmc.fabric.api.lookup.v1.block.BlockApiLookup;
 import net.minecraft.core.Direction;
+import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 import team.reborn.energy.api.EnergyStorage;
 
 /**
  * Fabric port notes:
  * <ul>
- * <li>The only loaded external energy identity is Team Reborn's {@link EnergyStorage#SIDED}; Joules-domain strict-energy exposure has no external consumer or
- * provider in this port yet, so no strict-energy lookup identity is invented here. The Joules domain remains authoritative in {@link #getContainers(Direction)}
- * and on the internal base handler, and the external view converts through the configured
+ * <li>The Mekanism-owned strict-energy lookup preserves exact Joules transfers independently of external compatibility; Team Reborn's
+ * {@link EnergyStorage#SIDED} is the external view and converts through the configured
  * {@link UnitDisplayUtils.EnergyUnit#FORGE_ENERGY FORGE_ENERGY} conversion.</li>
  * <li>The base handler surface is narrowed from the official {@code ISidedStrictEnergyHandler} to {@link IMekanismStrictEnergyHandler}, which the audited deferred
  * consumers ({@code TileEntityMekanism} and {@code TileEntityUniversalCable} with its {@code DynamicStrictEnergyHandler}) implement.</li>
- * <li>The null side is internal and deliberately exposes no external EnergyStorage; the official null-side read-only domain access is kept explicit through
- * {@link #getReadOnlyHandler()} instead of an external null-side cache. Internal mutable Joules access stays on the base handler itself.</li>
+ * <li>The null side exposes no external EnergyStorage; the strict-energy identity returns the official read-only domain view from
+ * {@link #getReadOnlyHandler()}. Internal mutable Joules access stays on the base handler itself.</li>
  * <li>Cached external views are revoked (permanently fail closed, including the reverse stableHandler unwrap route) before their cache entries are removed;
  * transaction rollback captured before invalidation still restores through the view itself.</li>
  * </ul>
  */
 @NothingNullByDefault
 public class EnergyHandlerManager implements ICapabilityHandlerManager<IEnergyContainer> {
+
+    public static final BlockApiLookup<IStrictEnergyHandler, Direction> STRICT_ENERGY = BlockApiLookup.get(
+          ResourceLocation.fromNamespaceAndPath("mekanism", "strict_energy_handler"), IStrictEnergyHandler.class, Direction.class);
 
     private final Map<Direction, Map<BlockApiLookup<?, @Nullable Direction>, Object>> cachedCapabilities;
     private final IMekanismStrictEnergyHandler baseHandler;
@@ -68,9 +71,7 @@ public class EnergyHandlerManager implements ICapabilityHandlerManager<IEnergyCo
 
     @Override
     public List<BlockApiLookup<?, @Nullable Direction>> getSupportedCapabilities() {
-        //Return all loaded energy caps so that we get attached and then just handle config checks in the actual lookup.
-        // On Fabric, Team Reborn's EnergyStorage.SIDED is the single loaded external energy identity.
-        return List.of(EnergyStorage.SIDED);
+        return List.of(STRICT_ENERGY, EnergyStorage.SIDED);
     }
 
     /**
@@ -82,13 +83,12 @@ public class EnergyHandlerManager implements ICapabilityHandlerManager<IEnergyCo
     @Override
     @SuppressWarnings("unchecked")
     public <T> T resolve(BlockApiLookup<T, @Nullable Direction> capability, @Nullable Direction side) {
-        if (capability != EnergyStorage.SIDED) {
-            //An unsupported lookup identity must never be cast into a different API
+        if (capability != EnergyStorage.SIDED && capability != STRICT_ENERGY) {
             return null;
         }
         if (side == null) {
-            //The null side is internal Mekanism access and deliberately never exposes an external converted EnergyStorage
-            return null;
+            //Only the strict domain has the official read-only unsided view.
+            return capability == STRICT_ENERGY && canHandle ? (T) getReadOnlyHandler() : null;
         }
         if (getContainers(side).isEmpty()) {
             //If we don't have any containers accessible from that side, don't return a handler
@@ -98,7 +98,8 @@ public class EnergyHandlerManager implements ICapabilityHandlerManager<IEnergyCo
         Map<BlockApiLookup<?, @Nullable Direction>, Object> cache = cachedCapabilities.computeIfAbsent(side, key -> new IdentityHashMap<>());
         Object result = cache.get(capability);
         if (result == null) {
-            result = FabricEnergyLookup.expose(baseHandler, side, holder, UnitDisplayUtils.EnergyUnit.FORGE_ENERGY);
+            result = capability == STRICT_ENERGY ? new ProxyStrictEnergyHandler(baseHandler, side, holder)
+                  : FabricEnergyLookup.expose(baseHandler, side, holder, UnitDisplayUtils.EnergyUnit.FORGE_ENERGY);
             if (result == null) {
                 //No external view (for example the conversion is disabled by config), don't cache null
                 return null;
@@ -127,7 +128,7 @@ public class EnergyHandlerManager implements ICapabilityHandlerManager<IEnergyCo
     public void invalidate(BlockApiLookup<?, @Nullable Direction> capability, @Nullable Direction side) {
         //Note: We don't invalidate the base handler as it is still valid regardless and is just a wrapper with the holder
         // removing containers when they shouldn't be accessible, so we only revoke the cached exposed views
-        if (capability != EnergyStorage.SIDED) {
+        if (capability != EnergyStorage.SIDED && capability != STRICT_ENERGY) {
             //An invalidation for an identity this manager does not support must never revoke unrelated cached views
             return;
         }
@@ -164,6 +165,8 @@ public class EnergyHandlerManager implements ICapabilityHandlerManager<IEnergyCo
     private static void revokeCached(@Nullable Object view) {
         if (view instanceof FabricEnergyStorage storage) {
             storage.invalidate();
+        } else if (view instanceof ProxyStrictEnergyHandler proxy) {
+            proxy.revoke();
         }
     }
 }

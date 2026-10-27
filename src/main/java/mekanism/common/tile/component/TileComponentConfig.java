@@ -86,10 +86,12 @@ public class TileComponentConfig implements ITileComponent, ISpecificContainerTr
     }
 
     private void sideChangedBasic(TransmissionType transmissionType, Direction direction) {
-        //Fabric port: invalidate on the five real Fabric lookup identities instead of the NeoForge capability tokens. Energy has exactly one loaded external
-        // identity in this port, so the loaded-energy-capability collection lookup collapses to that single identity.
+        //Invalidate both exact Mekanism energy and external energy views when the side changes.
         switch (transmissionType) {
-            case ENERGY -> tile.invalidateCapability(EnergyStorage.SIDED, direction);
+            case ENERGY -> {
+                tile.invalidateCapability(mekanism.common.capabilities.resolver.manager.EnergyHandlerManager.STRICT_ENERGY, direction);
+                tile.invalidateCapability(EnergyStorage.SIDED, direction);
+            }
             case FLUID -> tile.invalidateCapability(FluidStorage.SIDED, direction);
             case CHEMICAL -> tile.invalidateCapability(ChemicalHandlerManager.CHEMICAL_HANDLER, direction);
             case ITEM -> tile.invalidateCapability(ItemStorage.SIDED, direction);
@@ -122,7 +124,7 @@ public class TileComponentConfig implements ITileComponent, ISpecificContainerTr
             type = TransmissionType.HEAT;
         } else if (capability == FluidStorage.SIDED) {
             type = TransmissionType.FLUID;
-        } else if (capability == EnergyStorage.SIDED) {
+        } else if (capability == EnergyStorage.SIDED || capability == mekanism.common.capabilities.resolver.manager.EnergyHandlerManager.STRICT_ENERGY) {
             type = TransmissionType.ENERGY;
         }
         if (type != null) {

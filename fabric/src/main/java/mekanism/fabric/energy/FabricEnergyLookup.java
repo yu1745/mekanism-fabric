@@ -14,7 +14,7 @@ import org.jetbrains.annotations.Nullable;
 import team.reborn.energy.api.EnergyStorage;
 
 /**
- * The sole lookup and exposure seam for the Fabric energy boundary.
+ * Lookup and exposure seam for the external Fabric energy boundary.
  */
 public final class FabricEnergyLookup {
 

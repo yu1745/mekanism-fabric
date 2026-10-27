@@ -16,10 +16,8 @@ import team.reborn.energy.api.EnergyStorage;
 
 /**
  * Fabric port delta: the Forge Energy integration identity is Team Reborn's {@link EnergyStorage}, the Fabric ecosystem's Forge-energy analog that
- * this port already bridges through the exact {@code 1.0D} conversion contract. The official {@code StrictEnergyCompat}/{@code GPEnergyCompat}/
- * {@code FNEnergyCompat} entries have no Fabric counterpart here: Mekanism's strict-energy domain stays internal (no external strict-energy lookup
- * identity is invented, per the {@code EnergyHandlerManager} decision), and Grand Power/Flux Networks have no pinned 1.21.1 Fabric ports, which is a
- * platform support boundary rather than an implemented binding.
+ * this port bridges through the configured conversion. The Mekanism strict-energy identity is resolved separately before this external adapter;
+ * Grand Power/Flux Networks have no pinned 1.21.1 Fabric bindings here.
  */
 @NothingNullByDefault
 public class ForgeEnergyCompat implements IEnergyCompat {

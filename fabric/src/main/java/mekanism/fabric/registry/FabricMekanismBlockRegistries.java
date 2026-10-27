@@ -53,6 +53,7 @@ public final class FabricMekanismBlockRegistries {
         TileEntityBoundingBlock.alwaysProxyCapability(IBlockSecurityUtils.INSTANCE.securityCapability());
         ComputerCapabilityHelper.addBoundingComputerCapabilities();
         TileEntityBoundingBlock.proxyCapability(ItemStorage.SIDED);
+        TileEntityBoundingBlock.proxyCapability(mekanism.common.capabilities.resolver.manager.EnergyHandlerManager.STRICT_ENERGY);
         TileEntityBoundingBlock.proxyCapability(EnergyStorage.SIDED);
         TileEntityBoundingBlock.proxyCapability(FluidStorage.SIDED);
         TileEntityBoundingBlock.proxyCapability(ChemicalHandlerManager.CHEMICAL_HANDLER);

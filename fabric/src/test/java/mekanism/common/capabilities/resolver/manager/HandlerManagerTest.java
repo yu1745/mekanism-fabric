@@ -198,6 +198,26 @@ class HandlerManagerTest {
         assertEquals(List.of(tile.container), manager.getContainers(Direction.NORTH));
         assertTrue(manager.getContainers(Direction.SOUTH).isEmpty());
 
+        //Native strict transfer must work at exact Joule precision even when external FE is disabled.
+        var oldPolicy = mekanism.common.config.ChemicalConfigAccess.serverPolicy();
+        try {
+            mekanism.common.config.ChemicalConfigAccess.publishServerPolicy(new mekanism.common.config.ChemicalConfigAccess.ServerPolicy(true, 2.5, true));
+            assertFalse(UnitDisplayUtils.EnergyUnit.FORGE_ENERGY.isEnabled());
+            assertNull(manager.resolve(EnergyStorage.SIDED, Direction.NORTH));
+            IStrictEnergyHandler strict = manager.resolve(EnergyHandlerManager.STRICT_ENERGY, Direction.NORTH);
+            assertNotSame(null, strict);
+            assertSame(strict, manager.resolve(EnergyHandlerManager.STRICT_ENERGY, Direction.NORTH));
+            assertNull(manager.resolve(EnergyHandlerManager.STRICT_ENERGY, Direction.SOUTH));
+            assertEquals(0, strict.insertEnergy(1, Action.EXECUTE));
+            assertEquals(1, tile.container.getEnergy());
+            manager.invalidate(EnergyHandlerManager.STRICT_ENERGY, Direction.NORTH);
+            assertEquals(1, strict.insertEnergy(1, Action.EXECUTE));
+            assertEquals(1, tile.container.getEnergy());
+            tile.container.setEnergy(0);
+        } finally {
+            mekanism.common.config.ChemicalConfigAccess.publishServerPolicy(oldPolicy);
+        }
+
         EnergyStorage view = manager.resolve(EnergyStorage.SIDED, Direction.NORTH);
         assertInstanceOf(FabricEnergyStorage.class, view);
         assertSame(view, manager.resolve(EnergyStorage.SIDED, Direction.NORTH));

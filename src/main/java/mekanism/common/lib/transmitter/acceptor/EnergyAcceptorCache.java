@@ -1,11 +1,7 @@
 package mekanism.common.lib.transmitter.acceptor;
 
-import java.util.ArrayList;
-import java.util.List;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.energy.IStrictEnergyHandler;
-import mekanism.common.integration.energy.EnergyCompatUtils;
-import mekanism.common.integration.energy.IEnergyCompat;
 import mekanism.common.integration.energy.BlockEnergyCapabilityCache;
 import mekanism.common.lib.transmitter.acceptor.EnergyAcceptorCache.EnergyAcceptorInfo;
 import mekanism.common.tile.transmitter.TileEntityTransmitter;
@@ -23,45 +19,22 @@ public class EnergyAcceptorCache extends AbstractAcceptorCache<IStrictEnergyHand
 
     @Override
     protected EnergyAcceptorInfo initializeCache(ServerLevel level, BlockPos pos, Direction opposite, RefreshListener refreshListener) {
-        EnergyAcceptorInfo acceptorInfo = new EnergyAcceptorInfo();
-        for (IEnergyCompat energyCompat : EnergyCompatUtils.getCompats()) {
-            if (energyCompat.capabilityExists()) {
-                acceptorInfo.addCapability(energyCompat, level, pos, opposite, refreshListener);
-            }
-        }
-        return acceptorInfo;
+        return new EnergyAcceptorInfo(BlockEnergyCapabilityCache.create(level, pos, opposite, refreshListener, refreshListener));
     }
 
     public static class EnergyAcceptorInfo implements AcceptorInfo<IStrictEnergyHandler> {
 
-        private record CacheInfo(IEnergyCompat energyCompat, BlockEnergyCapabilityCache cache) {
-        }
+        private final BlockEnergyCapabilityCache cache;
 
-        private final List<CacheInfo> capabilities = new ArrayList<>();
-
-        EnergyAcceptorInfo() {
-        }
-
-        void addCapability(IEnergyCompat energyCompat, ServerLevel level, BlockPos pos, Direction opposite, RefreshListener refreshListener) {
-            capabilities.add(new CacheInfo(energyCompat, BlockEnergyCapabilityCache.create(level, pos, opposite, refreshListener, refreshListener)));
+        EnergyAcceptorInfo(BlockEnergyCapabilityCache cache) {
+            this.cache = cache;
         }
 
         @Nullable
         @Override
         public IStrictEnergyHandler acceptor() {
-            for (CacheInfo cacheInfo : capabilities) {
-                IEnergyCompat energyCompat = cacheInfo.energyCompat();
-                //Validate that the energy compat is actually usable
-                if (energyCompat.isUsable()) {
-                    //Fabric port delta: BlockEnergyCapabilityCache already resolves and wraps the external Team Reborn storage into the
-                    //Joules-domain handler, so this must not wrap the result a second time (the official NeoForge cache held the raw capability).
-                    IStrictEnergyHandler handler = cacheInfo.cache().getCapability();
-                    if (handler != null) {
-                        return handler;
-                    }
-                }
-            }
-            return null;
+            //The cache resolves native strict energy first and consults enabled external integrations only as fallback.
+            return cache.getCapability();
         }
     }
 }

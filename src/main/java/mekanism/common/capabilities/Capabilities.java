@@ -41,10 +41,9 @@ import net.minecraft.resources.ResourceLocation;
  * interns lookups by {@code (id, apiClass, contextClass)}, so members that name an id owned elsewhere in the port resolve
  * to that exact same instance instead of a duplicate identity.</p>
  *
- * <p>There is no {@code ENERGY} member: the external energy domain is Team Reborn's {@code EnergyStorage} and every
- * consumer resolves it through {@code FabricEnergyLookup}, which also owns the Mekanism entity leg; no strict-energy
- * external identity is invented (see {@code EnergyHandlerManager}). Capability provider registration is owned by the
- * platform bootstrap ({@code FabricMekanismBlockRegistries} and the item/energy lookup owners), not by this catalog.</p>
+ * <p>The external energy domain is Team Reborn's {@code EnergyStorage}; the existing Mekanism {@code STRICT_ENERGY}
+ * block identity provides exact Joules-domain transfer independently of external compatibility settings. Capability provider
+ * registration is owned by the platform bootstrap, not by this catalog.</p>
  */
 public final class Capabilities {
 

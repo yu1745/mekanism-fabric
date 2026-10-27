@@ -1156,7 +1156,8 @@ public class TileEntityDigitalMiner extends TileEntityMekanism implements IChunk
     public boolean isOffsetCapabilityDisabled(@NotNull BlockApiLookup<?, @Nullable Direction> capability, Direction side, @NotNull Vec3i offset) {
         if (capability == ItemStorage.SIDED) {
             return notItemPort(side, offset);
-        } else if (capability == team.reborn.energy.api.EnergyStorage.SIDED) {
+        } else if (capability == team.reborn.energy.api.EnergyStorage.SIDED
+              || capability == mekanism.common.capabilities.resolver.manager.EnergyHandlerManager.STRICT_ENERGY) {
             return notEnergyPort(side, offset);
         }
         //If we are not an item handler or energy capability, and it is a capability that we can support,

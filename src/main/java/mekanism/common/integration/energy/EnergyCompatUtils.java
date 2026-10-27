@@ -2,8 +2,10 @@ package mekanism.common.integration.energy;
 
 import java.util.List;
 import java.util.function.BiFunction;
+import java.util.stream.Stream;
 import mekanism.api.energy.IStrictEnergyHandler;
 import mekanism.common.attachments.containers.ContainerType;
+import mekanism.common.capabilities.resolver.manager.EnergyHandlerManager;
 import mekanism.common.entity.EntityRobit;
 import mekanism.common.integration.energy.forgeenergy.ForgeEnergyCompat;
 import net.fabricmc.fabric.api.lookup.v1.block.BlockApiLookup;
@@ -18,7 +20,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Fabric port delta: the compat catalog collapses to the single Fabric external energy identity (Team Reborn, the Forge-energy analog), and the
+ * Fabric port delta: the external compat catalog uses the Fabric Team Reborn energy identity; Mekanism's own strict-energy lookup is resolved first. The
  * NeoForge {@code RegisterCapabilitiesEvent} registration helpers ({@code registerItemCapabilities}, {@code registerEntityCapabilities},
  * {@code addBlockCapabilities}, {@code getProviderAs}-based wrapping) are superseded by the platform exposure seam ({@code FabricEnergyLookup.expose})
  * together with the deferred provider registration; they are removed rather than stubbed. {@link #initLoadedCache()} is invoked by the Fabric bootstrap
@@ -31,14 +33,14 @@ public class EnergyCompatUtils {
 
     private static final List<IEnergyCompat> energyCompats = List.of(new ForgeEnergyCompat());
 
-    //Default the list of loaded caps to our single external energy identity
-    private static List<BlockApiLookup<?, @Nullable Direction>> LOADED_ENERGY_CAPS = List.of(new ForgeEnergyCompat().getCapability());
+    private static List<BlockApiLookup<?, @Nullable Direction>> LOADED_ENERGY_CAPS = List.of(EnergyHandlerManager.STRICT_ENERGY, new ForgeEnergyCompat().getCapability());
 
     /**
      * @apiNote For internal uses, only call this after mods have loaded so that we can properly assume all {@link IEnergyCompat#capabilityExists()} are present.
      */
     public static void initLoadedCache() {
-        LOADED_ENERGY_CAPS = energyCompats.stream().filter(IEnergyCompat::capabilityExists).map(IEnergyCompat::getCapability).toList();
+        LOADED_ENERGY_CAPS = Stream.concat(Stream.of(EnergyHandlerManager.STRICT_ENERGY),
+              energyCompats.stream().filter(IEnergyCompat::capabilityExists).map(IEnergyCompat::getCapability)).toList();
     }
 
     public static List<IEnergyCompat> getCompats() {
@@ -49,6 +51,9 @@ public class EnergyCompatUtils {
      * Checks if it is a known and enabled energy capability
      */
     public static boolean isEnergyCapability(@NotNull BlockApiLookup<?, @Nullable Direction> capability) {
+        if (capability == EnergyHandlerManager.STRICT_ENERGY) {
+            return true;
+        }
         for (IEnergyCompat energyCompat : energyCompats) {
             //Note: We check the capability exists and usability states separately, given while it does duplicate
             // the exists check it allows us to skip the more complex usability checks if the capability doesn't actually match
@@ -116,8 +121,11 @@ public class EnergyCompatUtils {
 
     @Nullable
     public static IStrictEnergyHandler getStrictEnergyHandler(Level level, BlockPos pos, @Nullable BlockState state, @Nullable BlockEntity tile, Direction side) {
-        //TODO: Eventually look into making it so that we cache the handler we get back. Maybe by passing a listener
-        // to this that we can give to the capability as we wrap the result into
+        //Owned strict handlers preserve exact Joules and do not depend on an external conversion being enabled.
+        IStrictEnergyHandler strict = EnergyHandlerManager.STRICT_ENERGY.find(level, pos, state, tile, side);
+        if (strict != null) {
+            return strict;
+        }
         for (IEnergyCompat energyCompat : energyCompats) {
             if (energyCompat.isUsable()) {
                 IStrictEnergyHandler handler = energyCompat.getAsStrictEnergyHandler(level, pos, state, tile, side);

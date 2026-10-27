@@ -51,6 +51,7 @@ public class TileEntityTypeDeferredRegister extends MekanismDeferredRegister<Blo
               .with(HeatHandlerManager.HEAT_HANDLER, CapabilityTileEntity.HEAT_HANDLER_PROVIDER)
               .with(ItemStorage.SIDED, CapabilityTileEntity.ITEM_HANDLER_PROVIDER)
               .with(FluidStorage.SIDED, CapabilityTileEntity.FLUID_HANDLER_PROVIDER)
+              .with(mekanism.common.capabilities.resolver.manager.EnergyHandlerManager.STRICT_ENERGY, CapabilityTileEntity::basicCapabilityProvider)
               .with(EnergyStorage.SIDED, CapabilityTileEntity::basicCapabilityProvider);
         ComputerCapabilityHelper.addComputerCapabilities(builder, () -> Attribute.has(block, AttributeComputerIntegration.class));
         return builder;

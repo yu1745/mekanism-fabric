@@ -14,7 +14,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A cache for external energy handlers, to be used to track the energy exposure at a specific position, with a specific context.
+ * A cache for native strict and external energy handlers at a specific position and side.
  *
  * <p>Fabric port delta: this remains a Mekanism-owned cache, but the NeoForge transport ({@code Level#registerCapabilityListener} driven by
  * {@code Level#invalidateCapabilities}) has no Fabric equivalent — Fabric performs no push invalidation for per-position lookup changes, and the

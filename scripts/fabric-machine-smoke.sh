@@ -98,6 +98,10 @@ fi
 cp "$FABRIC_API_JAR" "$ENERGY_JAR" "$MOD_JAR" "$SERVER_DIR/mods/"
 printf 'eula=true\n' > "$SERVER_DIR/eula.txt"
 printf 'online-mode=false\nserver-port=0\nspawn-protection=0\nmax-players=1\nview-distance=4\nsync-chunk-writes=false\n' > "$SERVER_DIR/server.properties"
+if [[ ${FABRIC_MACHINE_BLACKLIST_FE:-0} == 1 ]]; then
+  mkdir -p "$SERVER_DIR/world/serverconfig/Mekanism"
+  printf '[energy_conversion]\nblacklistForge = true\n' > "$SERVER_DIR/world/serverconfig/Mekanism/general.toml"
+fi
 
 cd "$SERVER_DIR"
 (
