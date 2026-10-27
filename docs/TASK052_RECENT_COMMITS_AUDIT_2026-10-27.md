@@ -48,7 +48,7 @@
 | `519e1132`、`257b9d05` | 子代理固定 `b452ba25` 完整读取真实 diff：均为审查规范/记录文档，无生产行为变更。 |
 | `b3b87ec3`、`7da81542` | 子代理固定 `b452ba25` 完整读取各自 diff；主代理复核并修复多输出机器漏斗抽取饥饿，见 F35。后者补矿车入口但原 smoke 未实测矿车。 |
 | `9bb884a3`、`1e08c1e5` | 子代理固定 `b452ba25` 完整读取 diff，主代理复核并修复方向面分桶及普通模型继承 composite 几何，见 F37；启动日志不能证明画面。 |
-| `d77c3252` | 子代理固定 `b452ba25` 完整读取大部分行为 diff，common-slice 649 行重排及文档小改未逐行阅读，尚不计完整 diff；主代理已修流体缓存 F36，高亮缺失 F38 尚待主代理复核。大型 renderer 因 `shouldRenderOffScreen` 全局注册而必然被 section 剔除的初判已撤回。 |
+| `d77c3252` | 子代理固定 `b452ba25` 完整读取大部分行为 diff，common-slice 649 行重排及文档小改未逐行阅读，尚不计完整 diff；主代理已修流体缓存 F36，并恢复高亮 F38（真实画面仍待验）。大型 renderer 因 `shouldRenderOffScreen` 全局注册而必然被 section 剔除的初判已撤回。 |
 
 ## 审查发现与待复核
 
@@ -216,7 +216,7 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 ### F34 — 矿石 biome modifier 未读取活动 datapack（`5c0fcb1f`，待修）
 
-子代理核验、主代理初核：`FabricBiomeModifiers.initialize()` 在 mod 初始化时用 `FabricLoader.getModContainer(...).findPath(...)` 固定读取 jar 中 6 个 JSON，再固定注册 Fabric biome modification；不会读取世界启用的数据包对同名 `neoforge/biome_modifier` 的覆盖、禁用或额外条目。`#mekanism:spawn_ores` tag 本身在选择器执行时动态查询，不能混同为 tag 覆盖失效。活动资源必须在 biome registry 装载/修改前按世界取到；当前 Fabric `BiomeSelectionContext` 未直接提供 ResourceManager，必须继续追踪 `RegistryDataLoader.load(ResourceManager, ...)` 与 Fabric biome 修改 hook 的同一世界装载时序、pack priority、codec/type 和客户端网络加载边界，再选择可靠实现；不能只把启动期读取改为另一处全局缓存。先保留为明确生产缺陷，不把默认世界 smoke 当 datapack 测试。
+子代理核验、主代理初核：`FabricBiomeModifiers.initialize()` 在 mod 初始化时用 `FabricLoader.getModContainer(...).findPath(...)` 固定读取 jar 中 6 个 JSON，再固定注册 Fabric biome modification；不会读取世界启用的数据包对同名 `neoforge/biome_modifier` 的覆盖、禁用或额外条目。`#mekanism:spawn_ores` tag 本身在选择器执行时动态查询，不能混同为 tag 覆盖失效。活动资源必须在 biome registry 装载/修改前按世界取到；当前 Fabric `BiomeSelectionContext` 未直接提供 ResourceManager，必须继续追踪 `RegistryDataLoader.load(ResourceManager, ...)` 与 Fabric biome 修改 hook 的同一世界装载时序、pack priority、codec/type 和客户端网络加载边界，再选择可靠实现；不能只把启动期读取改为另一处全局缓存。固定 Fabric biome API 源码显示仅在 `MinecraftServer` 构造器 RETURN 注入 `BiomeModificationImpl.finalizeWorldGen`；在此之前构造器已由 `WorldStem` 设置资源管理器。该方法依次遍历 biome 和已注册修改器，标记 registry 只修改一次，因此每个世界使用资源作用域而不是在启动时或每次建档累计注册；涉及注入顺序、异常清理及第三方 modifier 类型，仍须证明。先保留为明确生产缺陷，不把默认世界 smoke 当 datapack 测试。
 
 ### F35 — 多输出机器被漏斗首槽阻塞（`b3b87ec3`，已修）
 
