@@ -83,6 +83,7 @@ mekanism/fabric/mixin/block/MachineExplosionMixin.java
 mekanism/fabric/mixin/block/MachinePathTypeMixin.java
 mekanism/fabric/mixin/block/MachinePistonReactionMixin.java
 mekanism/fabric/mixin/block/MachineRedstoneConnectionMixin.java
+mekanism/fabric/mixin/block/PortalFrameMixin.java
 mekanism/fabric/mixin/block/PowderSnowWalkMixin.java
 mekanism/fabric/mixin/client/BlockBreakResetMixin.java
 mekanism/fabric/mixin/client/ClientMouseScrollMixin.java

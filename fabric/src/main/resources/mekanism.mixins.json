@@ -12,6 +12,7 @@
     "block.MachineExplosionMixin",
     "block.MachinePistonReactionMixin",
     "block.MachineRedstoneConnectionMixin",
+    "block.PortalFrameMixin",
     "block.MachinePathTypeMixin",
     "item.ConfiguratorUseMixin",
     "radiation.RadiationEntityTickMixin",
