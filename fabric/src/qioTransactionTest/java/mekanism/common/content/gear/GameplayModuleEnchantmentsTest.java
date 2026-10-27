@@ -7,6 +7,7 @@ import java.lang.reflect.Proxy;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
+import mekanism.api.MekanismIMC;
 import mekanism.common.item.gear.ItemMekaSuitArmor;
 import mekanism.common.item.gear.ItemMekaTool;
 import mekanism.common.registries.MekanismArmorMaterials;
@@ -35,6 +36,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 class GameplayModuleEnchantmentsTest {
+    private static ItemMekaTool tool;
+    private static ItemMekaSuitArmor suit;
 
     @BeforeAll
     static void bootstrap() {
@@ -43,6 +46,11 @@ class GameplayModuleEnchantmentsTest {
         FabricChemicalRegistryLifecycle.initialize();
         MekanismDataComponents.DATA_COMPONENTS.registerAll(BuiltInRegistries.DATA_COMPONENT_TYPE);
         MekanismArmorMaterials.ARMOR_MATERIALS.registerAll(BuiltInRegistries.ARMOR_MATERIAL);
+        tool = new ItemMekaTool(new Item.Properties());
+        suit = new ItemMekaSuitArmor(ArmorItem.Type.BOOTS, new Item.Properties());
+        MekanismIMC.addModuleContainer(Holder.direct(tool), "enchantment_test_tool");
+        MekanismIMC.addModuleContainer(Holder.direct(suit), "enchantment_test_suit");
+        ModuleHelper.get().processIMC(MekanismIMC.finishModuleRegistration());
     }
 
     private static Holder<Enchantment> enchantment(String name) {
@@ -61,7 +69,7 @@ class GameplayModuleEnchantmentsTest {
         ItemEnchantments.Mutable virtual = new ItemEnchantments.Mutable(ItemEnchantments.EMPTY);
         virtual.set(shared, 4);
         virtual.set(moduleOnly, 3);
-        ItemStack stack = new ItemStack(new ItemMekaTool(new Item.Properties()));
+        ItemStack stack = new ItemStack(tool);
         stack.set(DataComponents.ENCHANTMENTS, actual.toImmutable());
         stack.set(MekanismDataComponents.MODULE_CONTAINER.get(), new ModuleContainer(new LinkedHashMap<>(), virtual.toImmutable()));
 
@@ -106,9 +114,12 @@ class GameplayModuleEnchantmentsTest {
         unrelated.set(MekanismDataComponents.MODULE_CONTAINER.get(), new ModuleContainer(new LinkedHashMap<>(), virtual.toImmutable()));
         assertEquals(2, EnchantmentHelper.getItemEnchantmentLevel(shared, unrelated));
         assertEquals(0, EnchantmentHelper.getItemEnchantmentLevel(moduleOnly, unrelated));
-        ItemStack suit = new ItemStack(new ItemMekaSuitArmor(ArmorItem.Type.BOOTS, new Item.Properties()));
-        suit.set(MekanismDataComponents.MODULE_CONTAINER.get(), new ModuleContainer(new LinkedHashMap<>(), virtual.toImmutable()));
-        assertEquals(4, EnchantmentHelper.getItemEnchantmentLevel(shared, suit));
-        assertEquals(3, EnchantmentHelper.getItemEnchantmentLevel(moduleOnly, suit));
+        ItemStack suitStack = new ItemStack(suit);
+        suitStack.set(MekanismDataComponents.MODULE_CONTAINER.get(), new ModuleContainer(new LinkedHashMap<>(), virtual.toImmutable()));
+        assertEquals(4, EnchantmentHelper.getItemEnchantmentLevel(shared, suitStack));
+        assertEquals(3, EnchantmentHelper.getItemEnchantmentLevel(moduleOnly, suitStack));
+        ItemStack unregisteredTool = new ItemStack(new ItemMekaTool(new Item.Properties()));
+        unregisteredTool.set(MekanismDataComponents.MODULE_CONTAINER.get(), new ModuleContainer(new LinkedHashMap<>(), virtual.toImmutable()));
+        assertEquals(0, EnchantmentHelper.getItemEnchantmentLevel(shared, unregisteredTool));
     }
 }

@@ -1,10 +1,10 @@
 package mekanism.fabric.mixin.gear;
 
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
-import mekanism.common.content.gear.ModuleContainer;
+import mekanism.api.gear.IModuleContainer;
+import mekanism.api.gear.IModuleHelper;
 import mekanism.common.item.gear.ItemMekaSuitArmor;
 import mekanism.common.item.gear.ItemMekaTool;
-import mekanism.common.registries.MekanismDataComponents;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.world.item.ItemStack;
@@ -24,7 +24,7 @@ abstract class GameplayEnchantmentsMixin {
     @Inject(method = "getItemEnchantmentLevel", at = @At("RETURN"), cancellable = true)
     private static void mekanism$moduleEnchantmentLevel(Holder<Enchantment> enchantment, ItemStack stack,
           CallbackInfoReturnable<Integer> result) {
-        ModuleContainer modules = mekanism$modules(stack);
+        IModuleContainer modules = mekanism$modules(stack);
         if (modules != null) {
             result.setReturnValue(Math.max(result.getReturnValueI(), modules.moduleBasedEnchantments().getLevel(enchantment)));
         }
@@ -42,15 +42,15 @@ abstract class GameplayEnchantmentsMixin {
         return mekanism$merge(stack, stack.get(type));
     }
 
-    private static ModuleContainer mekanism$modules(ItemStack stack) {
+    private static IModuleContainer mekanism$modules(ItemStack stack) {
         if (stack.isEmpty() || !(stack.getItem() instanceof ItemMekaTool || stack.getItem() instanceof ItemMekaSuitArmor)) {
             return null;
         }
-        return stack.get(MekanismDataComponents.MODULE_CONTAINER.get());
+        return IModuleHelper.INSTANCE.getModuleContainer(stack);
     }
 
     private static ItemEnchantments mekanism$merge(ItemStack stack, ItemEnchantments stored) {
-        ModuleContainer modules = mekanism$modules(stack);
+        IModuleContainer modules = mekanism$modules(stack);
         if (modules == null || modules.moduleBasedEnchantments().isEmpty()) {
             return stored;
         }
