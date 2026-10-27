@@ -693,3 +693,10 @@ gate）BUILD SUCCESSFUL。未运行（按完成度优先策略）：全量测试
 - `MekaSuitArmor`(691 行)三锚重塑:BakingCompleted→懒解析+classifySpecs 惰性化;ModelData→parts 集直查;IGeometryBakingContext→删除(配置 record 被 parts 集替代);`ISpecialGear`/`gearModel()` 移植侧无调用方(注册表持 ICustomArmor),drop 有记录;泛型 MekanismModelData→OBJModelData 收窄。
 - FabricGearModels 四件注册(MEKASUIT_HELMET/BODYARMOR/PANTS/BOOTS)+ 实体穿戴走第 16 轮 armor 层路径;物品栏渲染(ISBER/RenderMekaSuit 物件)留 gear 物件渲染车道。
 - 验收:smoke 第 14 检查 `MEKANISM_FABRIC_MEKASUIT_PROOF handler=installed`;两次连续 14/14。穿着视觉留 mcdebug/观察(与其它渲染车道同)。
+
+### fluid_container 模型族(18 个化学桶)(Task052,2026-10-27)
+
+- 官方基础模型核对源:`build/moddev/artifacts/neoforge-21.1.200.jar`(本仓库 ModDev 产物,精确版本)提取 `assets/neoforge/models/item/bucket.json` + `DynamicFluidContainerModel` 源——base 平面层(vanilla bucket 精灵的 item sheath)+ mask 扫描矩形元素(mask=bucket_fluid 轮廓,烘焙时换 still 纹理)+ FLUID_TRANSFORM 深度 1.002(移植为元素 z+0.017)+ tintIndex 1 由官方 `Colors` ItemColor 提供流体色。
+- 移植:`FabricFluidContainerModel` 重建全栈(neoforge 父链不存在于 fabric,父链忽略、依赖自含);`ItemModelGenerator.processFrames` 与 `BucketItem.content` 走访问放宽;流体色/still 纹理取自已纳片 `FluidDeferredRegister.MekanismFluidType`(getMekanismFluidType);`FabricFluidBucketRegistration` 按官方 Colors 绑定 18 桶。
+- 亮度:官方 applyFluidLuminosity 默认 true(lightLevel>0 全亮);本批 18 化学桶 lightLevel 全 0,记录后未携带全亮路径。
+- 验收:smoke 第 15 检查 `MEKANISM_FABRIC_FLUID_BUCKET_PROOF buckets=18` + proof `fluid_container_baked=18`;两次连续 15/15。桶内流体视觉(着色/轮廓)留 mcdebug/观察。

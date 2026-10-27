@@ -90,7 +90,7 @@ public final class FabricMekanismModelPlugin {
             int energyCubeBaked = 0;
             int dataBasedBaked = 0;
             int robitBaked = 0;
-            int deferredFluidContainers = 0;
+            int bakedFluidContainers = 0;
             int transmitterOwned = 0;
             for (Map.Entry<ResourceLocation, Resource> entry : resources.listResources("models", id -> id.getPath().endsWith(".json")).entrySet()) {
                 if (!entry.getKey().getNamespace().equals("mekanism")) {
@@ -155,19 +155,18 @@ public final class FabricMekanismModelPlugin {
                         robitBaked++;
                     }
                     case LOADER_FLUID_CONTAINER -> {
-                        //The only deferred family whose vanilla parse crashes the reload: its parent
-                        //neoforge:item/bucket exists solely in the NeoForge jar. The explicit deferred model cuts
-                        //that chain and bakes the vanilla missing marker; the others stay vanilla-parsed because
-                        //tier models parent onto them and would trip the BlockModel parent cast otherwise.
-                        prepared.put(id, FabricDeferredLoaderModel.INSTANCE);
-                        deferredFluidContainers++;
+                        //The chemical buckets: the neoforge base model (parent neoforge:item/bucket) exists only in
+                        //the NeoForge jar, so the model rebuilds the whole stack - the vanilla bucket sheath plus
+                        //the mask-scanned fluid surface with the still texture and the fluid's tint on index 1.
+                        prepared.put(id, new FabricFluidContainerModel(id, root));
+                        bakedFluidContainers++;
                     }
                     default -> throw new IllegalStateException("Mekanism model " + id + " declares an unhandled loader: " + loader);
                 }
             }
-            LOGGER.info("MEKANISM_FABRIC_MODELS_PROOF composite={} separate_transforms={} item_layers={} obj={} energy_cube_baked={} data_based_baked={} robit_baked={} fluid_container_deferred={} transmitter_owned={}",
+            LOGGER.info("MEKANISM_FABRIC_MODELS_PROOF composite={} separate_transforms={} item_layers={} obj={} energy_cube_baked={} data_based_baked={} robit_baked={} fluid_container_baked={} transmitter_owned={}",
                   composites, separateTransforms, itemLayers, objModels, energyCubeBaked, dataBasedBaked,
-                  robitBaked, deferredFluidContainers, transmitterOwned);
+                  robitBaked, bakedFluidContainers, transmitterOwned);
             return prepared;
         }, executor);
     }

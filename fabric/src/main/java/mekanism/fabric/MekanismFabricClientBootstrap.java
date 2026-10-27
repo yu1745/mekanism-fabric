@@ -64,6 +64,7 @@ public final class MekanismFabricClientBootstrap implements ClientModInitializer
         mekanism.fabric.client.render.FabricEntityRendererRegistration.register();
         mekanism.fabric.client.hud.FabricClientTickRegistration.register();
         mekanism.fabric.client.render.armor.FabricArmorLayerRegistration.register();
+        mekanism.fabric.client.render.item.FabricFluidBucketRegistration.register(mekanism.common.registries.MekanismFluids.FLUIDS);
         net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.AFTER_TRANSLUCENT.register(context ->
               mekanism.client.render.RenderTickHandler.renderTransparentLayer(context.camera(),
                     context.matrixStack(),

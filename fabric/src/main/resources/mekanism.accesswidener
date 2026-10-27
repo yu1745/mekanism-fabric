@@ -165,3 +165,7 @@ accessible field net/minecraft/client/model/AgeableListModel babyHeadScale F
 accessible field net/minecraft/client/model/AgeableListModel babyYHeadOffset F
 accessible field net/minecraft/client/model/AgeableListModel babyZHeadOffset F
 accessible field net/minecraft/client/renderer/entity/layers/ElytraLayer elytraModel Lnet/minecraft/client/model/ElytraModel;
+#Fluid container lane: the port reuses the vanilla item-layer frame scan for the base sheath, and reads the
+#chemical bucket's contained fluid for the official Colors item-color half.
+accessible method net/minecraft/client/renderer/block/model/ItemModelGenerator processFrames (ILjava/lang/String;Lnet/minecraft/client/renderer/texture/SpriteContents;)Ljava/util/List;
+accessible field net/minecraft/world/item/BucketItem content Lnet/minecraft/world/level/material/Fluid;
