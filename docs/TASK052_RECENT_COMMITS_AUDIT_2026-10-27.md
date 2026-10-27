@@ -29,6 +29,7 @@
 | `12ebbcf6` | 已分段读完整 1478 行 diff：component holder 迁移、喷火实体同步、激光破坏/盾牌处理和 10 项纳片。确认并修复喷火存档 F12、激光与喷火熔炼破坏保护 F13；同步 spawn、盾牌事件扩展和 INFERNO 放置事件等价尚未实机证明。当时仍是编译未闭合的中间状态。 |
 | `76f790ce` | 已分段读完整 594 行 diff：物品扩展删除、附魔、重装备/挖掘、pick-block 和 TNT。当前实际缺失模块附魔在游戏查询的合并，已按 F14 修复；附魔适用/书、装备动画和 pick-block 等剩余官方 hook 单独列 F15，不把此前注明 deferred 当已实现。当前电弓射弹模式已有后续实现在 `createProjectile`，但未证明官方全部虚拟附魔查询一致。 |
 | `1d4c4027` | 已分段读完整 316 行 diff：blockview v2、工厂纳片、充电与水下模块、三元谓词及重复注解。Curios 充电属于已记录的 F11；水下加速将两种不同属性错误合一、流体能耗只检查脚部位置，且追查发现真实装备属性桥未注册，见 F17；已修普通水中推进和桥接，实机及非原版流体仍待验证。render-data v2 及 factory 行为未凭导入改名判为全面等价。 |
+| `7785a9c1` | 已分段读完整 454 行 diff：实体注册、数据序列化、网络形参、工厂/容器纳片与日志。当前传送粒子包缺失 S2C codec/receiver，已按 F18 接回；追查实体数据 wire id 发现本地递增注册在客户端/服务端额外 serializer 的顺序不同会错解，F19 尚待修复，不以加载通过关闭。 |
 
 ## 审查发现与待复核
 
@@ -130,6 +131,14 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 **仍有限制：** 未用实际穿戴满级且有电的模块实测水中行进、耗电、服务端同步；该补丁只接 vanilla 水的移动 owner，NeoForge 的非原版 `FluidType` 可参与水式移动、`isAir` 和自定义运动，Fabric 没有相同通用语义，不能声称此部分等价；包围盒重查与 NeoForge 已缓存 fluid type 的时点亦可能不同。已记录，不用测试通过关闭这些边界。
 
+### F18 — 传送粒子包没有 Fabric S2C 注册（`7785a9c1`，已接线）
+
+该提交保留 `PacketPortalFX` 的 payload 和 handler；当前传送器、便携传送器及 MekaTool 原有路径通过 `PacketUtils.sendToAllTracking` 发送，但 Fabric S2C codec 与客户端 receiver 原来均未注册。`PacketHandler` 的旧声明不在当前 common slice，不能当作现有注册；真实有追踪玩家时发送未注册 payload 存在失败风险。修复 `791a227c`（已审阅完整 138 行 diff）在 common bootstrap 注册原 TYPE/STREAM_CODEC、在 client bootstrap 将原 handler 接到本地玩家，保留同样的发送位置及粒子逻辑。Knot 测试验证注册、重复初始化与原包 codec 往返，客户端标题 smoke 通过；尚未进行两进程传送/粒子显示端到端测试。
+
+### F19 — 实体同步数据 serializer 数字 ID 依赖本地注册顺序（`7785a9c1`，待立即修复）
+
+当前 `MekanismDataSerializers` 将 Robit UUID、安全模式、皮肤和 Flame 模式注册到 vanilla `EntityDataSerializers` 的本地递增表；`SynchedEntityData.DataValue.write/read` 在网络上只写本地数字 ID 后按接收端该数字查 serializer。若另一 mod 仅在一端、或两端以不同顺序注册 serializer，同一个数字可对应不同类型或不存在，导致实体数据解码/赋值失败或错误；现有 Mekanism 版本握手只核对版本字符串，不同步这张表。该缺陷随实际模组集触发，不将双方只有 Mekanism 的正常启动当作覆盖。需在原实体 owner 内改用双方稳定的 vanilla serializer 或建立真实同步映射，并同时处理新旧 Fabric 客户端的协议拒绝，不能保留同版本却变更 wire schema；UUID/安全模式/皮肤和喷火模式的存档及客户端状态须保持官方语义。当前尚未实作，不标为已修。
+
 ## 恢复位置
 
-优先研究 F8 的 QIO 真实 owner 插入事务闭包，并补验 F9 的 sided inventory 场景；`a147116b` 已读完整 2180 行 diff；`12ebbcf6` 和 `76f790ce` 已读完整 diff，F14 已修，F15 附魔适用/手持/选槽及电弓虚拟 Flame 已接线但部分实机待验；`1d4c4027` 已读完整 diff 并修 F17 普通水下路径，下一提交从 `7785a9c1` 开始。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。
+优先研究 F8 的 QIO 真实 owner 插入事务闭包，并补验 F9 的 sided inventory 场景；`a147116b` 已读完整 2180 行 diff；`12ebbcf6` 和 `76f790ce` 已读完整 diff，F14 已修，F15 附魔适用/手持/选槽及电弓虚拟 Flame 已接线但部分实机待验；`1d4c4027` 已读完整 diff 并修 F17 普通水下路径；`7785a9c1` 已读完整 diff，优先修复实体数据 serializer 顺序风险 F19，再从 `4e5a4232` 继续。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。
