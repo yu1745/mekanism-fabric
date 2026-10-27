@@ -47,7 +47,7 @@
 | `5c0fcb1f` | 子代理固定 `0c15b485` 完整读取 diff 和当前 worldgen 路径，主代理初核固定 jar 路径问题，见待修 F34；旧 smoke 不能证明 datapack 覆盖或配置开关。 |
 | `519e1132`、`257b9d05` | 子代理固定 `b452ba25` 完整读取真实 diff：均为审查规范/记录文档，无生产行为变更。 |
 | `b3b87ec3`、`7da81542` | 子代理固定 `b452ba25` 完整读取各自 diff；主代理复核并修复多输出机器漏斗抽取饥饿，见 F35。后者补矿车入口但原 smoke 未实测矿车。 |
-| `9bb884a3`、`1e08c1e5` | 子代理固定 `b452ba25` 完整读取 diff，主代理复核方向面分桶已修，但普通模型继承 composite 几何丢失待修，见 F37；启动日志不能证明画面。 |
+| `9bb884a3`、`1e08c1e5` | 子代理固定 `b452ba25` 完整读取 diff，主代理复核并修复方向面分桶及普通模型继承 composite 几何，见 F37；启动日志不能证明画面。 |
 | `d77c3252` | 子代理固定 `b452ba25` 完整读取大部分行为 diff，common-slice 649 行重排及文档小改未逐行阅读，尚不计完整 diff；主代理已修流体缓存 F36，高亮缺失 F38 尚待主代理复核。大型 renderer 因 `shouldRenderOffScreen` 全局注册而必然被 section 剔除的初判已撤回。 |
 
 ## 审查发现与待复核
@@ -196,7 +196,7 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 ### F29 — GUI 客户端包缺少服务端目标与权限绑定（`53fda9e5`，部分已收紧）
 
-只读子代理检查全部 26 个 C2S 注册及调用方，主代理复核确认原官方 handler 允许通过客户端提供坐标，绕过 GUI 入口访问已加载的他人安全桌、改装站或储罐；安全桌模式/override/可信名单操作也缺少服务端 frequency-owner 校验。这是上游共享的安全问题，不伪称由本移植独自引入。`88ef07e9`（已审阅完整 420 行 diff）对机器配置、过滤、频率、能量、滴管、模块移除和切页等 GUI 包要求当前菜单对象、仍有效及实时 canAccess，兼容普通 tile 与 QIO dashboard；Robit GUI 包绑定当前实体菜单；安全桌可信名单、模式及 override 限定真实 frequency owner，客户端删除按钮同步显示 owner 权限。全套普通、Knot、转移测试和三个 slice gate 通过；focused 测试验证无菜单、实体菜单目标不符、权限撤销及失效菜单，但**未验证真实 tile 菜单正向交互、QIO、多方块、实际网络攻击或 GUI**。子代理指出的 PacketKey 可发送任意 int 造成自身 key 集增长、装备设置的菜单约束及便携传送延迟属于独立候选，尚未复核，不声称全网络已加固；无菜单热键与便携传送未强行套 GUI 限制。
+只读子代理检查全部 26 个 C2S 注册及调用方，主代理复核确认原官方 handler 允许通过客户端提供坐标，绕过 GUI 入口访问已加载的他人安全桌、改装站或储罐；安全桌模式/override/可信名单操作也缺少服务端 frequency-owner 校验。这是上游共享的安全问题，不伪称由本移植独自引入。`88ef07e9`（已审阅完整 420 行 diff）对机器配置、过滤、频率、能量、滴管、模块移除和切页等 GUI 包要求当前菜单对象、仍有效及实时 canAccess，兼容普通 tile 与 QIO dashboard；Robit GUI 包绑定当前实体菜单；安全桌可信名单、模式及 override 限定真实 frequency owner，客户端删除按钮同步显示 owner 权限。全套普通、Knot、转移测试和三个 slice gate 通过；focused 测试验证无菜单、实体菜单目标不符、权限撤销及失效菜单，但**未验证真实 tile 菜单正向交互、QIO、多方块、实际网络攻击或 GUI**。PacketKey 任意 int 导致无界 key 集的问题已在 F31 复核修复；装备设置的菜单约束及便携传送延迟仍是独立候选，不声称全网络已加固；无菜单热键与便携传送未强行套 GUI 限制。
 
 ### F30 — Mekanism 内部能源错误依赖外部 FE 开关及换算（`b0f7e13d`，已修）
 
@@ -226,13 +226,17 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 端口 `FluidStack` 不重写 equals/hashCode；渲染缓存用普通 map 会按每次同步生成的对象身份永久累积相同流体模型。`d8c86ce4` 将流体罐中心、阀门和机械管缓存键改为不可变 `FluidVariant`（流体+组件，不含数量），保留材质重载清理，并更正原文档误述；编译通过，完整 diff 已复审。未进行客户端长期同步内存/视觉实测。
 
-### F37 — composite 方向面与继承几何（`9bb884a3`，部分已修）
+### F37 — composite 方向面与继承几何（`9bb884a3`，代码已修；实机画面待验）
 
-原合并模型所有 side 返回同一列表，且合并 child 时只取 null 面，造成重复绘制与 cullface 几何缺失。`88abcebf` 按方向收集 child 面、仅 null 返回无剔除面；普通 JVM 分桶测试和完整测试契约通过，完整 diff 已复审。首次把测试放在 Knot server 失败：环境禁止装载 BakedQuad，转普通 JVM 后通过；不构成实际客户端画面验收。独立遗留：普通子 BlockModel 继承 `FabricCompositeModel` 时 vanilla bake 不调用父类自定义 bake，工厂物品和营养液化器内部 composite 子模型会丢几何；下一轮需处理父链及 texture override，不能称整个 composite 修复完成。
+原合并模型所有 side 返回同一列表，且合并 child 时只取 null 面，造成重复绘制与 cullface 几何缺失。`88abcebf` 按方向收集 child 面、仅 null 返回无剔除面；普通 JVM 分桶测试和完整测试契约通过，完整 diff 已复审。首次把测试放在 Knot server 失败：环境禁止装载 BakedQuad，转普通 JVM 后通过；不构成实际客户端画面验收。独立缺陷：普通子 BlockModel 继承 `FabricCompositeModel` 时 vanilla bake 不调用父类自定义 bake，工厂物品和营养液化器内部 composite 子模型丢几何。`8babd36b` 用客户端 mixin 追踪已解析父链（遇到自身 elements 即停止），解析 composite 子模型并以真实后代为属性与 item override owner 执行其几何烘焙；子模型仍按官方自身 parent/texture 解析。完整 383 行 diff 已复审；隔离的 client Knot 测试实际执行 mixin、检查普通物品和嵌套子模型继承/侧面，以及所有者 AO，服务端 QIO 测试也通过。原临时放在 server Knot 的客户端测试发现 discovery 阶段即拒绝 client 类，已移入独立 client 测试任务；真实客户端 Xvfb 可达标题屏，但没有进入游戏检查实际工厂物品及液化器画面。
 
 ### F38 — 方块高亮监听移除（`d77c3252`，待主代理核验）
 
 子代理报告原 `RenderTickHandler.onBlockHover` 无 Fabric 接线，配置器侧面颜色、自定义方块选框等可能缺失；需对照真实事件、调用者及当前源码并就地补修，报告不等于已验。大型 BER 一律被 section 裁剪的报告已撤回，因为相关渲染器通过 shouldRenderOffScreen 列入 globalBlockEntities。
+
+### F39 — 能量立方几何烘焙与动态端口（相关客户端模型闭包，代码已修；实机画面待验）
+
+真实 Xvfb 客户端启动发现 90 条 `Unable to bake model ... energy_cube` / `Missing frame`：tier JSON 仅覆盖 texture，原适配器却把 tier 自身而非 parent carrier 送进 geometry parser。子代理另指出物品计算 sideStates 后丢弃，主代理核实；既有静态模型还对每个方向重复整套 quads、忽视 blockstate 旋转，并将默认 inactive 与动态 LED 重叠。`59cd9d3f` 从活动资源的 base 模型继承几何和 texture、应用真实 ModelState，按面分桶；区块侧将现有 `RenderDataBlockEntity` 的 side 状态交给 Fabric 渲染网格，正常与 fullbright 材质分层，避免依赖 BER 距离或空能量时的缺失；物品 renderer 用自己的 sideStates 画动态分层，BER 只保留透明核心。真实 client Knot 用官方 base/basic JSON 实际烘焙，验证北/东旋转、frame 分桶和 active/inactive split；客户端 Xvfb 在修改前重现 90 条错误、修改后相关错误消失且到达标题屏（两次 85–100 秒超时终止属主动限定，非自然退出）。完整 394 行 diff 已复审。**未进入存档或物品界面验证 FRAPI 网格、亮度、方向、材质叠层、侧配置同步及物品画面**；不得把启动或单元测试当作最终视觉验收。
 
 ### 并行初审待主代理核验
 
@@ -240,4 +244,4 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 ## 恢复位置
 
-优先研究 F8 的 QIO 真实 owner 插入事务闭包，并补验 F9 的 sided inventory 场景；`a147116b` 已读完整 2180 行 diff；`12ebbcf6` 和 `76f790ce` 已读完整 diff，F14 已修，F15 附魔适用/手持/选槽及电弓虚拟 Flame 已接线但部分实机待验；`1d4c4027` 已读完整 diff 并修 F17 普通水下路径；`7785a9c1` 已读完整 diff，F19/F20 已修，不要求旧开发版握手兼容，双进程实体同步仍待实测；`4e5a4232` 已读完整 diff，F21 旧票据迁移已按用户决策退出范围。子代理已并行读完 `b6e5c54d`、`509afc1b`、`1af82201`、`2529dca8`、`38b8b1af`、`a1f1c46f` 的真实 diff；部分问题已由主代理复核修复，剩余候选见上，不把初审直接计为全部关闭。`53fda9e5` 至 `ffbcb655` 的相邻提交已由子代理读完真实 diff，F29 已部分修复，F30–F33 已修且保留各自验证边界；`5ee61549`、`519e1132`、`5c0fcb1f`、`257b9d05`、`b3b87ec3`、`7da81542`、`9bb884a3`、`1e08c1e5` 已读完整真实 diff；`d77c3252` 尚缺大块切片重排逐行审查。F34 的 datapack 生物群系修复及 F37 composite 父链仍待完成。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。
+优先研究 F8 的 QIO 真实 owner 插入事务闭包，并补验 F9 的 sided inventory 场景；`a147116b` 已读完整 2180 行 diff；`12ebbcf6` 和 `76f790ce` 已读完整 diff，F14 已修，F15 附魔适用/手持/选槽及电弓虚拟 Flame 已接线但部分实机待验；`1d4c4027` 已读完整 diff 并修 F17 普通水下路径；`7785a9c1` 已读完整 diff，F19/F20 已修，不要求旧开发版握手兼容，双进程实体同步仍待实测；`4e5a4232` 已读完整 diff，F21 旧票据迁移已按用户决策退出范围。子代理已并行读完 `b6e5c54d`、`509afc1b`、`1af82201`、`2529dca8`、`38b8b1af`、`a1f1c46f` 的真实 diff；部分问题已由主代理复核修复，剩余候选见上，不把初审直接计为全部关闭。`53fda9e5` 至 `ffbcb655` 的相邻提交已由子代理读完真实 diff，F29 已部分修复，F30–F33 已修且保留各自验证边界；`5ee61549`、`519e1132`、`5c0fcb1f`、`257b9d05`、`b3b87ec3`、`7da81542`、`9bb884a3`、`1e08c1e5` 已读完整真实 diff；`d77c3252` 尚缺大块切片重排逐行审查。F34 的 datapack 生物群系修复仍待完成；F37 composite 父链代码已修、真实画面待验，F39 能量立方相关代码已修但 FRAPI 及物品画面待实机验证。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。
