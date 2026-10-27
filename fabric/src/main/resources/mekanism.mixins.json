@@ -18,6 +18,7 @@
     "radiation.RadiationPlayerTickMixin",
     "transmitter.TransmitterTicketLevelMixin",
     "player.ServerPlayerGameModeMixin",
+    "player.PickBlockModuleProtectionMixin",
     "entity.LivingEntityGameplayMixin",
     "entity.BlockStateDestroyProgressMixin",
     "entity.PlayerGearTickMixin",

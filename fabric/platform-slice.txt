@@ -110,6 +110,7 @@ mekanism/fabric/mixin/item/ConfiguratorUseMixin.java
 mekanism/fabric/mixin/item/ItemStackMekaSuitDamageMixin.java
 mekanism/fabric/mixin/item/ModeStatusOverlayMixin.java
 mekanism/fabric/mixin/item/ResultSlotCraftingMixin.java
+mekanism/fabric/mixin/player/PickBlockModuleProtectionMixin.java
 mekanism/fabric/mixin/player/PlayerFlightSaveMixin.java
 mekanism/fabric/mixin/player/ServerPlayerGameModeMixin.java
 mekanism/fabric/mixin/radiation/RadiationEntityTickMixin.java
