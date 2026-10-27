@@ -50,8 +50,6 @@ public class MekanismElytraLayer<ENTITY extends LivingEntity, MODEL extends Enti
             VertexConsumer vertexConsumer = ItemRenderer.getArmorFoilBuffer(multiBufferSource, RenderType.armorCutoutNoCull(HDPE_ELYTRA), chest.hasFoil());
             elytraModel.renderToBuffer(poseStack, vertexConsumer, packedLight, OverlayTexture.NO_OVERLAY);
             poseStack.popPose();
-        } else {
-            super.render(poseStack, multiBufferSource, packedLight, livingEntity, limbSwing, limbSwingAmount, partialTicks, ageInTicks, netHeadYaw, headPitch);
         }
     }
 }
