@@ -14,9 +14,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(MouseHandler.class)
 abstract class ClientMouseScrollMixin {
 
-    @Inject(method = "onScroll(JDD)V", at = @At("HEAD"), cancellable = true)
+    // Match NeoForge's in-world scroll hook: after window/overlay/screen checks and vanilla accumulation,
+    // immediately before spectator or hotbar handling. The event receives the adjusted, not raw, Y delta.
+    @Inject(method = "onScroll(JDD)V", at = @At(value = "INVOKE",
+          target = "Lnet/minecraft/client/player/LocalPlayer;isSpectator()Z"), cancellable = true)
     private void mekanism$modeScroll(long window, double scrollX, double scrollY, CallbackInfo ci) {
-        if (ClientTickHandler.INSTANCE.onMouseEvent(scrollY)) {
+        var options = net.minecraft.client.Minecraft.getInstance().options;
+        double adjustedY = (options.discreteMouseScroll().get() ? Math.signum(scrollY) : scrollY) * options.mouseWheelSensitivity().get();
+        if (ClientTickHandler.INSTANCE.onMouseEvent(adjustedY)) {
             ci.cancel();
         }
     }

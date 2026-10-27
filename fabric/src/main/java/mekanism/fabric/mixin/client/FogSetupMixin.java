@@ -18,10 +18,15 @@ abstract class FogSetupMixin {
 
     @Inject(method = "setupFog", at = @At("TAIL"))
     private static void mekanism$fogOverride(CallbackInfo ci) {
-        float end = ClientTickHandler.onFogEnd(com.mojang.blaze3d.systems.RenderSystem.getShaderFogEnd());
-        if (end != com.mojang.blaze3d.systems.RenderSystem.getShaderFogEnd()) {
-            com.mojang.blaze3d.systems.RenderSystem.setShaderFogStart(ClientTickHandler.onFogStart(com.mojang.blaze3d.systems.RenderSystem.getShaderFogStart()));
-            com.mojang.blaze3d.systems.RenderSystem.setShaderFogEnd(end);
+        float start = com.mojang.blaze3d.systems.RenderSystem.getShaderFogStart();
+        float end = com.mojang.blaze3d.systems.RenderSystem.getShaderFogEnd();
+        float updatedStart = ClientTickHandler.onFogStart(start);
+        float updatedEnd = ClientTickHandler.onFogEnd(end);
+        if (updatedStart != start) {
+            com.mojang.blaze3d.systems.RenderSystem.setShaderFogStart(updatedStart);
+        }
+        if (updatedEnd != end) {
+            com.mojang.blaze3d.systems.RenderSystem.setShaderFogEnd(updatedEnd);
         }
     }
 }
