@@ -5,17 +5,19 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.io.Reader;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Predicate;
-import java.util.stream.Stream;
 import mekanism.api.MekanismAPI;
 import net.fabricmc.fabric.api.biome.v1.BiomeModifications;
 import net.fabricmc.fabric.api.biome.v1.BiomeSelectionContext;
-import net.fabricmc.loader.api.FabricLoader;
+import net.fabricmc.fabric.api.biome.v1.ModificationPhase;
+import net.minecraft.resources.FileToIdConverter;
+import net.minecraft.server.packs.resources.Resource;
+import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
@@ -27,20 +29,19 @@ import org.slf4j.LoggerFactory;
 /**
  * Applies the official NeoForge biome modifiers that decide where Mekanism's ores generate.
  *
- * <p>Fabric has no counterpart for NeoForge's {@code neoforge/biome_modifier} datapack registry, so the official
- * {@code data/mekanism/neoforge/biome_modifier/*.json} files stay packaged unchanged (they remain the source of truth)
- * and this adapter parses exactly the {@code neoforge:add_features} entries at startup, re-registering every referenced
- * placed feature for its declared decoration step through Fabric's sanctioned {@link BiomeModifications} path. The
- * {@code biomes} field keeps official {@code HolderSet<Biome>} semantics: a {@code #tag} reference or a list of biome
- * IDs, matched lazily against the selection context (biome tags are only resolvable when the worlds load).</p>
- *
- * <p>Other official modifier types (currently the Additions-only {@code mekanismadditions:baby_mob_spawn}) are a
- * separate vertical and are rejected here rather than silently ignored, so a future type cannot be dropped by accident.</p>
+ * <p>Fabric has no NeoForge biome-modifier registry. A single Fabric biome modification consumes the active world's
+ * winning Mekanism-namespace modifier resources during Fabric's synchronous worldgen finalization, rather than reading
+ * the mod jar during initialization or registering callbacks again for every world. Supports the official ore
+ * {@code neoforge:add_features} form and {@code neoforge:none}; other types are rejected, not silently discarded.
+ * Biome tag matching occurs against the world's resolved tags.</p>
  */
 public final class FabricBiomeModifiers {
     private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism/Fabric");
-    private static final String RESOURCE_DIR = "data/mekanism/neoforge/biome_modifier";
+    private static final FileToIdConverter MODIFIERS = FileToIdConverter.json("neoforge/biome_modifier");
     private static final String TYPE_ADD_FEATURES = "neoforge:add_features";
+    // A constructor that fails before Fabric's finalization must not retain its resource manager on the launch thread.
+    private static final ThreadLocal<WeakReference<ResourceManager>> PENDING_RESOURCES = new ThreadLocal<>();
+    private static final ThreadLocal<List<OreModifier>> ACTIVE_MODIFIERS = new ThreadLocal<>();
 
     private FabricBiomeModifiers() {
     }
@@ -54,35 +55,69 @@ public final class FabricBiomeModifiers {
     }
 
     public static void initialize() {
-        Path dir = FabricLoader.getInstance().getModContainer(MekanismAPI.MEKANISM_MODID)
-              .orElseThrow(() -> new IllegalStateException("Mekanism mod container is missing"))
-              .findPath(RESOURCE_DIR)
-              .orElseThrow(() -> new IllegalStateException("Packaged Mekanism jar is missing " + RESOURCE_DIR));
-        List<Path> files;
-        try (Stream<Path> stream = Files.list(dir)) {
-            files = stream.filter(path -> path.getFileName().toString().endsWith(".json")).sorted().toList();
-        } catch (IOException failure) {
-            throw new UncheckedIOException("Failed to enumerate " + RESOURCE_DIR, failure);
+        BiomeModifications.create(ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, "datapack_ore_features"))
+              .add(ModificationPhase.ADDITIONS, context -> activeModifiers().stream().anyMatch(modifier -> matches(context, modifier.biomes())),
+                    (selection, modification) -> {
+                  for (OreModifier modifier : activeModifiers()) {
+                      if (matches(selection, modifier.biomes())) {
+                          for (ResourceLocation feature : modifier.features()) {
+                              modification.getGenerationSettings().addFeature(modifier.step(), ResourceKey.create(Registries.PLACED_FEATURE, feature));
+                          }
+                      }
+                  }
+              });
+    }
+
+    private static List<OreModifier> activeModifiers() {
+        List<OreModifier> modifiers = ACTIVE_MODIFIERS.get();
+        if (modifiers == null) {
+            throw new IllegalStateException("Mekanism biome modification ran outside world resource scope");
         }
-        if (files.isEmpty()) {
-            throw new IllegalStateException("No official biome modifiers found in " + RESOURCE_DIR);
+        return modifiers;
+    }
+
+    /** Called when the server has obtained this world's active pack resources. */
+    public static void captureWorldResources(ResourceManager resources) {
+        PENDING_RESOURCES.set(new WeakReference<>(resources));
+    }
+
+    /** Runs Fabric's synchronous worldgen finalization with this world's resources, never a process-wide callback list. */
+    public static void withWorldModifiers(Runnable finalizeWorldGen) {
+        WeakReference<ResourceManager> pending = PENDING_RESOURCES.get();
+        ResourceManager resources = pending == null ? null : pending.get();
+        PENDING_RESOURCES.remove();
+        if (resources == null || ACTIVE_MODIFIERS.get() != null) {
+            throw new IllegalStateException("Missing or nested Mekanism worldgen resource scope");
         }
-        int features = 0;
-        for (Path file : files) {
-            OreModifier modifier;
-            try {
-                modifier = parse(JsonParser.parseString(Files.readString(file)).getAsJsonObject());
-            } catch (IOException failure) {
-                throw new UncheckedIOException("Failed to read official biome modifier " + file, failure);
+        List<OreModifier> modifiers = load(resources);
+        ACTIVE_MODIFIERS.set(modifiers);
+        try {
+            finalizeWorldGen.run();
+        } finally {
+            ACTIVE_MODIFIERS.remove();
+        }
+    }
+
+    static List<OreModifier> load(ResourceManager resources) {
+        List<OreModifier> modifiers = new ArrayList<>();
+        Map<ResourceLocation, Resource> files = MODIFIERS.listMatchingResources(resources);
+        for (var entry : files.entrySet().stream().sorted(Map.Entry.comparingByKey()).toList()) {
+            ResourceLocation id = MODIFIERS.fileToId(entry.getKey());
+            if (!id.getNamespace().equals(MekanismAPI.MEKANISM_MODID)) {
+                continue;
             }
-            for (ResourceLocation feature : modifier.features()) {
-                BiomeModifications.addFeature(
-                      context -> matches(context, modifier.biomes()),
-                      modifier.step(), ResourceKey.create(Registries.PLACED_FEATURE, feature));
-                features++;
+            try (Reader reader = entry.getValue().openAsReader()) {
+                JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
+                if (!"neoforge:none".equals(json.get("type").getAsString())) {
+                    modifiers.add(parse(json));
+                }
+            } catch (IOException | RuntimeException failure) {
+                throw new IllegalStateException("Failed to load biome modifier " + id, failure);
             }
         }
-        LOGGER.info("MEKANISM_FABRIC_WORLDGEN_PROOF modifiers={} features={}", files.size(), features);
+        int featureCount = modifiers.stream().mapToInt(modifier -> modifier.features().size()).sum();
+        LOGGER.info("MEKANISM_FABRIC_WORLDGEN_PROOF modifiers={} features={} source=active_datapacks", modifiers.size(), featureCount);
+        return List.copyOf(modifiers);
     }
 
     /** Strict parser for one official {@code neoforge:add_features} JSON object. */

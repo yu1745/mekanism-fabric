@@ -49,6 +49,8 @@
 | `b3b87ec3`、`7da81542` | 子代理固定 `b452ba25` 完整读取各自 diff；主代理复核并修复多输出机器漏斗抽取饥饿，见 F35。后者补矿车入口但原 smoke 未实测矿车。 |
 | `9bb884a3`、`1e08c1e5` | 子代理固定 `b452ba25` 完整读取 diff，主代理复核并修复方向面分桶及普通模型继承 composite 几何，见 F37；启动日志不能证明画面。 |
 | `d77c3252` | 子代理固定 `b452ba25` 完整读取大部分行为 diff，common-slice 649 行重排及文档小改未逐行阅读，尚不计完整 diff；主代理已修流体缓存 F36，并恢复高亮 F38（真实画面仍待验）。大型 renderer 因 `shouldRenderOffScreen` 全局注册而必然被 section 剔除的初判已撤回。 |
+| `ae208105`、`4bdbcdac`、`6928d67c` | 子代理完整读取各自 diff，均为审查记录文档，不改生产行为。 |
+| `afd1e77b`、`46f62053` | 子代理完整读取各自 diff 并追踪当前资源重载链：历史模型自引用问题已被 `e0dee5bd` 修复；实际物品及装备 renderer 缺重载回调，见 F40。关于 transporter 层提前缺失的初判已撤回，该时点尚未注册 transporter renderer。 |
 
 ## 审查发现与待复核
 
@@ -214,9 +216,9 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 原 `MekanismRenderer.calculateGlowLight` 只处理本 mod 流体，其余直接用环境光，熔岩在罐、机械管和罐物品内因此可能偏暗；这不同于 F28 的方块照明。`2d630147` 保留本 mod 精确元数据，其他流体使用默认状态对应方块的发光值，与 F28 的平台 fallback 一致；编译通过、完整 diff 已复审。非 vanilla 动态流体亮度和真实暗处画面均未验证。
 
-### F34 — 矿石 biome modifier 未读取活动 datapack（`5c0fcb1f`，待修）
+### F34 — 矿石 biome modifier 未读取活动 datapack（`5c0fcb1f`，修复进行中）
 
-子代理核验、主代理初核：`FabricBiomeModifiers.initialize()` 在 mod 初始化时用 `FabricLoader.getModContainer(...).findPath(...)` 固定读取 jar 中 6 个 JSON，再固定注册 Fabric biome modification；不会读取世界启用的数据包对同名 `neoforge/biome_modifier` 的覆盖、禁用或额外条目。`#mekanism:spawn_ores` tag 本身在选择器执行时动态查询，不能混同为 tag 覆盖失效。活动资源必须在 biome registry 装载/修改前按世界取到；当前 Fabric `BiomeSelectionContext` 未直接提供 ResourceManager，必须继续追踪 `RegistryDataLoader.load(ResourceManager, ...)` 与 Fabric biome 修改 hook 的同一世界装载时序、pack priority、codec/type 和客户端网络加载边界，再选择可靠实现；不能只把启动期读取改为另一处全局缓存。固定 Fabric biome API 源码显示仅在 `MinecraftServer` 构造器 RETURN 注入 `BiomeModificationImpl.finalizeWorldGen`；在此之前构造器已由 `WorldStem` 设置资源管理器。该方法依次遍历 biome 和已注册修改器，标记 registry 只修改一次，因此每个世界使用资源作用域而不是在启动时或每次建档累计注册；涉及注入顺序、异常清理及第三方 modifier 类型，仍须证明。先保留为明确生产缺陷，不把默认世界 smoke 当 datapack 测试。
+子代理核验、主代理初核：`FabricBiomeModifiers.initialize()` 在 mod 初始化时用 `FabricLoader.getModContainer(...).findPath(...)` 固定读取 jar 中 6 个 JSON，再固定注册 Fabric biome modification；不会读取世界启用的数据包对同名 `neoforge/biome_modifier` 的覆盖、禁用或额外条目。`#mekanism:spawn_ores` tag 本身在选择器执行时动态查询，不能混同为 tag 覆盖失效。活动资源必须在 biome registry 装载/修改前按世界取到；当前 Fabric `BiomeSelectionContext` 未直接提供 ResourceManager，必须继续追踪 `RegistryDataLoader.load(ResourceManager, ...)` 与 Fabric biome 修改 hook 的同一世界装载时序、pack priority、codec/type 和客户端网络加载边界，再选择可靠实现；不能只把启动期读取改为另一处全局缓存。固定 Fabric biome API 源码显示仅在 `MinecraftServer` 构造器 RETURN 注入 `BiomeModificationImpl.finalizeWorldGen`；在此之前构造器已由 `WorldStem` 设置资源管理器。该方法依次遍历 biome 和已注册修改器，标记 registry 只修改一次，因此每个世界使用资源作用域而不是在启动时或每次建档累计注册；涉及注入顺序、异常清理及第三方 modifier 类型，仍须证明。当前 WIP 在世界构造时捕获活动 ResourceManager，以 Fabric biome finalize 的同步作用域读取 pack 优先级胜出的 Mekanism 命名空间资源；单个固定 Fabric modifier 不随世界累积，并支持 `neoforge:none`。实际 remapped JAR 隔离服务端放置 datapack 覆盖 `fluorite` 为 none，日志出现 `modifiers=5 features=9 source=active_datapacks`（默认资源为 6/11），进程由 55 秒 timeout 主动结束，退出码 124 非自然退出。该证据只验证覆盖和该版本实际 mixin 链，不证明不同世界接续、datapack 新增条目、真实生成量或所有 codec 语义。当前适配限 Mekanism 命名空间的 add_features/none，placed feature tag、其他 modifier 类型/其他命名空间及完整官方 datapack registry 仍未实现；不能将全部 F34 标为闭环。
 
 ### F35 — 多输出机器被漏斗首槽阻塞（`b3b87ec3`，已修）
 
@@ -237,6 +239,10 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 ### F39 — 能量立方几何烘焙与动态端口（相关客户端模型闭包，代码已修；实机画面待验）
 
 真实 Xvfb 客户端启动发现 90 条 `Unable to bake model ... energy_cube` / `Missing frame`：tier JSON 仅覆盖 texture，原适配器却把 tier 自身而非 parent carrier 送进 geometry parser。子代理另指出物品计算 sideStates 后丢弃，主代理核实；既有静态模型还对每个方向重复整套 quads、忽视 blockstate 旋转，并将默认 inactive 与动态 LED 重叠。`59cd9d3f` 从活动资源的 base 模型继承几何和 texture、应用真实 ModelState，按面分桶；区块侧将现有 `RenderDataBlockEntity` 的 side 状态交给 Fabric 渲染网格，正常与 fullbright 材质分层，避免依赖 BER 距离或空能量时的缺失；物品 renderer 用自己的 sideStates 画动态分层，BER 只保留透明核心。真实 client Knot 用官方 base/basic JSON 实际烘焙，验证北/东旋转、frame 分桶和 active/inactive split；客户端 Xvfb 在修改前重现 90 条错误、修改后相关错误消失且到达标题屏（两次 85–100 秒超时终止属主动限定，非自然退出）。完整 394 行 diff 已复审。**未进入存档或物品界面验证 FRAPI 网格、亮度、方向、材质叠层、侧配置同步及物品画面**；不得把启动或单元测试当作最终视觉验收。
+
+### F40 — 物品与装备渲染模型缺资源重载（`afd1e77b`、`46f62053`，代码已修，画面待验）
+
+当前已纳 `RenderJetpack`、`RenderFreeRunners`、`RenderScubaMask`、`RenderScubaTank`、`RenderAtomicDisassembler`、`RenderFlameThrower` 和 `RenderEnergyCubeItem` 的模型字段只在 `onResourceManagerReload` 初始化，而 Fabric 物品 renderer 直接调用它们，原端口没有客户端重载监听；两个 armored 物品是独立实例。主代理也核实装备侧的 `JetpackArmor`、`FreeRunnerArmor`、`ScubaMaskArmor`、`ScubaTankArmor` 同样只在重载时初始化，却已接入 `FabricGearModels`。因此首次实际渲染时有确定的 null 解引用调用链（能源立方核心仅在渲染核心时触发），不是标题屏通过所能覆盖。`db3c69db` 通过 Fabric 客户端资源重载注册这 15 个真实 owner，Fabric 资源加载器将自定义监听排在 vanilla `EntityModelSet` 之后；该提交完整真实 diff 已按移植风格 prompt 复审，未发现该行为边界内新增偏离。真实 Knot 客户端启动时日志出现 `MEKANISM_FABRIC_GEAR_MODEL_RELOAD_PROOF listeners=15`，标记后主动停止进程；此证据证明所有回调成功执行，不证明物品/装备画面或后续资源包重载。`RenderFluidTankItem` 的重载是官方空方法，无模型需初始化。旧 proof 的部分计数为字面量，不能证明模型初始化成功。
 
 ### 并行初审待主代理核验
 

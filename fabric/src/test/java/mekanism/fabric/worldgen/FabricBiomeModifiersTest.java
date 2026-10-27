@@ -9,10 +9,22 @@ import com.google.gson.JsonParser;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Stream;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.packs.PackLocationInfo;
+import net.minecraft.server.packs.PackResources;
+import net.minecraft.server.packs.PackType;
+import net.minecraft.server.packs.PathPackResources;
+import net.minecraft.server.packs.repository.PackSource;
+import net.minecraft.server.packs.resources.MultiPackResourceManager;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.levelgen.GenerationStep;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 /**
  * Focused contracts for the official {@code neoforge:add_features} biome modifier adapter: the six packaged official
@@ -20,6 +32,36 @@ import org.junit.jupiter.api.Test;
  * must keep official tag/biome-ID match semantics.
  */
 class FabricBiomeModifiersTest {
+
+    @TempDir Path temporary;
+
+    @Test
+    void activePackPriorityAndWorldScopesDoNotLeak() throws IOException {
+        Path low = temporary.resolve("low");
+        Path high = temporary.resolve("high");
+        Path lowFile = low.resolve("data/mekanism/neoforge/biome_modifier/fluorite.json");
+        Path highFile = high.resolve("data/mekanism/neoforge/biome_modifier/fluorite.json");
+        Files.createDirectories(lowFile.getParent());
+        Files.createDirectories(highFile.getParent());
+        Files.writeString(lowFile, official("fluorite"));
+        Files.writeString(highFile, "{\"type\":\"neoforge:none\"}");
+        try (MultiPackResourceManager defaults = resources(low); MultiPackResourceManager overridden = resources(low, high)) {
+            assertEquals(1, FabricBiomeModifiers.load(defaults).size());
+            assertTrue(FabricBiomeModifiers.load(overridden).isEmpty());
+            FabricBiomeModifiers.captureWorldResources(overridden);
+            assertThrows(IllegalArgumentException.class, () -> FabricBiomeModifiers.withWorldModifiers(() -> {
+                throw new IllegalArgumentException("fixture");
+            }));
+            FabricBiomeModifiers.captureWorldResources(defaults);
+            FabricBiomeModifiers.withWorldModifiers(() -> assertEquals(1, FabricBiomeModifiers.load(defaults).size()));
+        }
+    }
+
+    private static MultiPackResourceManager resources(Path... roots) {
+        List<PackResources> packs = Stream.of(roots).map(root -> (PackResources) new PathPackResources(
+              new PackLocationInfo(root.getFileName().toString(), Component.literal(root.getFileName().toString()), PackSource.DEFAULT, Optional.empty()), root)).toList();
+        return new MultiPackResourceManager(PackType.SERVER_DATA, packs);
+    }
 
     private static String official(String name) {
         try (InputStream input = FabricBiomeModifiersTest.class.getResourceAsStream("/mekanism/fabric/worldgen/" + name + ".json")) {
