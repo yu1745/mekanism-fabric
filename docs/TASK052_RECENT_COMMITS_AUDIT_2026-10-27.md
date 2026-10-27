@@ -20,6 +20,7 @@
 | `dba8824e` | 已读整个 diff：能力 catalog、工具状态助手、三处调用迁移、drop-rule override、AW 与裁定文档。确认 F4（下述，修复 `8cfc8d79`）；自定义 TOOL 组件兜底问题在后续修复后需复审其测试与两个工具。NeoForge 工具修改事件和数据映射差异原提交已有明确记录，未证明等价。 |
 | `073e10ff` | 已读完整 diff，仅记录已裁定事项和目录接入顺序，不直接改变运行逻辑；相关语义仍需以后续生产提交及实际 owner 为准。 |
 | `22e74220` | 已读完整 diff：156 个目录/工厂源文件被纳入，明确记录当时 gate 未通过，不应将该中间提交视作可运行闭包。CreativeTab 注册 seam 的行为及完整目录注册继续在后续提交审查。 |
+| `fd92051e` | 已分段读完整 diff：逐项替换桶常量、FluidStack 类型、工厂物品映射、Lazy 和技术伤害标签。固定 NeoForge 参考确认桶值为 1000、物品映射使用相同 fastutil 策略；发现 F5/F6 并分别修复。FluidStack 跨平台存储/转换语义尚需在相关后续 owner 提交中继续核对，不能仅凭 import 替换断言完整等价。 |
 
 ## 审查发现与待复核
 
@@ -51,6 +52,12 @@ F2 尚需按原有按键上下文、组合键、repeat 与 GUI/联机语义实�
 
 修复 `521a373b` 在 Fabric 自有资源路径补上与固定参考 JSON 语义完全相同的合并标签，保留可选扩展，不改原伤害判断。已阅读提交完整 diff 并复查：资源与固定参考经 JSON 解析比较一致；`TechnicalDamageTagResourceTest` 验证处理后测试运行时资源路径和所有条目，通过。尚未以真实服务器 datapack reload 或发布 jar 单独验证。
 
+### F6 — Lazy 跨线程发布和 null 语义偏离（`fd92051e`，已修复）
+
+原提交称 NeoForge `Lazy` 非线程安全并缓存 null；固定 `neoforge-21.1.200-sources.jar` 的 `Lazy` 实际使用 volatile 与同步保护、拒绝 null、支持失效。端口版原先无同步并缓存 null。实际 `ItemAtomicDisassembler.LAZY_RADIAL_DATA` 由客户端模式 UI 和服务端 `PacketRadialModeChange` 路径共用，而 `IRadialModeItem` 比较对象引用；集成服并发初始化可能得到不同引用，属于有真实调用链的竞态风险，但尚未实际复现游戏中故障。
+
+修复 `932a7f6e` 保留已有 owner，使用同步读取/失效、拒绝 null 并允许失败后重试；无新 registry 或 adapter。按审查 prompt 已读该提交完整 diff，与固定 NeoForge 参考的行为契约核对；三项 `LazyTest` 通过，覆盖并发调用共享实例、null 后重试、失效后重新计算。实现使用更简单的同步方式，不声称性能与上游的 volatile 快路径相同。
+
 ## 恢复位置
 
-继续审查 `fd92051e` 的完整 diff（首次输出被截断，须分文件补读），接着按序审查 `5138fd15` 等后续提交。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。
+按序从 `5138fd15` 开始审查后续提交。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。
