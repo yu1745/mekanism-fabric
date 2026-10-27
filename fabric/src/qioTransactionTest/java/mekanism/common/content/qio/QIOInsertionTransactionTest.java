@@ -199,10 +199,34 @@ class QIOInsertionTransactionTest {
         assertEquals(4, holder.frequency.getStored(second));
     }
 
+    @Test
+    void finalCommitNotificationFailureDoesNotUndoOnlyOneSide() {
+        Holder holder = new Holder();
+        ItemStack item = new ItemStack(Items.IRON_INGOT, 5);
+        SimpleContainer inventory = new SimpleContainer(item.copy());
+        var view = InventoryStorage.of(inventory, null).getSlot(0);
+        ItemVariant variant = ItemVariant.of(item);
+        holder.failNotification = true;
+        assertThrows(RuntimeException.class, () -> {
+            try (Transaction tx = Transaction.openOuter()) {
+                long extracted = view.extract(variant, 5, tx);
+                assertEquals(5, extracted);
+                assertEquals(extracted, holder.frequency.insertItem(item, extracted, tx));
+                tx.commit();
+            }
+        });
+        assertEquals(0, inventory.getItem(0).getCount());
+        assertEquals(5, holder.frequency.getStored(item));
+        assertNotNull(QIOGlobalItemLookup.INSTANCE.getUUIDForType(HashedItem.create(item)));
+        holder.failNotification = false;
+        assertEquals(0, holder.frequency.addItem(new ItemStack(Items.DIRT)).getCount());
+    }
+
     private static final class Holder implements IQIODriveHolder {
         private final QIOFrequency frequency = new QIOFrequency("test", UUID.randomUUID(), SecurityMode.PUBLIC);
         private final List<QIODriveSlot> slots = new ArrayList<>();
         private int updates;
+        private boolean failNotification;
 
         private Holder() {
             addDrive();
@@ -216,7 +240,12 @@ class QIOInsertionTransactionTest {
         }
 
         @Override public List<QIODriveSlot> getDriveSlots() { return slots; }
-        @Override public void onDataUpdate() { updates++; }
+        @Override public void onDataUpdate() {
+            updates++;
+            if (failNotification) {
+                throw new IllegalStateException("holder notification failed");
+            }
+        }
         @Override public QIOFrequency getQIOFrequency() { return frequency; }
         @Override public TileComponentFrequency getFrequencyComponent() { throw new UnsupportedOperationException(); }
         @Override public @Nullable Level getLevel() { return null; }
