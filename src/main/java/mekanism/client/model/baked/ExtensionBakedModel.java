@@ -15,19 +15,25 @@ import mekanism.client.render.lib.QuadTransformation;
 import mekanism.client.render.lib.QuadUtils;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.renderer.block.model.ItemOverrides;
+import net.minecraft.client.renderer.block.model.ItemTransforms;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.item.ItemDisplayContext;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.client.model.BakedModelWrapper;
-import net.neoforged.neoforge.client.model.data.ModelData;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * Fabric port of the official extension baked model: the BakedModelWrapper parent and the model-data plumbing drop
+ * (no fabric equivalent and no data-dependent users on this port), leaving the keyed quad cache the miner and drive
+ * wrappers build on. Vanilla's transform handling rides getTransforms(), so the applyTransform hook goes too.
+ */
 @NothingNullByDefault
-public class ExtensionBakedModel<T> extends BakedModelWrapper<BakedModel> {
+public class ExtensionBakedModel<T> implements BakedModel {
+
+    protected final BakedModel original;
 
     private final LoadingCache<QuadsKey<T>, List<BakedQuad>> cache = CacheBuilder.newBuilder().build(new CacheLoader<>() {
         @Override
@@ -35,19 +41,13 @@ public class ExtensionBakedModel<T> extends BakedModelWrapper<BakedModel> {
             return createQuads(key);
         }
     });
-    //Note: While we may have a bit better memory usage if we cache individual models and their transformations,
-    // for now we are not as the input lists are immutable, and we don't want to add the overhead of looping and
-    // creating a new list each time it is rendered and getRenderPasses is called. If at some point this gets
-    // profiled in detail, and we find out that doesn't cause any major performance impact we should consider
-    // switching this to a Map<BakedModel, BakedModel>
-    private final Map<List<BakedModel>, List<BakedModel>> cachedRenderPasses = new Object2ObjectOpenHashMap<>();
 
-    public ExtensionBakedModel(BakedModel original) {
-        super(original);
+    protected ExtensionBakedModel(BakedModel original) {
+        this.original = original;
     }
 
     @Nullable
-    protected QuadsKey<T> createKey(QuadsKey<T> key, ModelData data) {
+    protected QuadsKey<T> createKey(QuadsKey<T> key) {
         return key;
     }
 
@@ -59,11 +59,10 @@ public class ExtensionBakedModel<T> extends BakedModelWrapper<BakedModel> {
         return ret;
     }
 
-    @NotNull
     @Override
-    public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side, RandomSource rand, ModelData data, @Nullable RenderType renderType) {
-        List<BakedQuad> quads = super.getQuads(state, side, rand, data, renderType);
-        QuadsKey<T> key = createKey(new QuadsKey<>(state, side, rand, renderType, quads), data);
+    public @NotNull List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side, @NotNull RandomSource rand) {
+        List<BakedQuad> quads = original.getQuads(state, side, rand);
+        QuadsKey<T> key = createKey(new QuadsKey<>(state, side, rand, null, quads));
         if (key == null) {
             return quads;
         }
@@ -71,30 +70,44 @@ public class ExtensionBakedModel<T> extends BakedModelWrapper<BakedModel> {
     }
 
     @Override
-    public List<BakedModel> getRenderPasses(ItemStack stack, boolean fabulous) {
-        //Cache the remappings so then the inner wrapped ones can cache their quads
-        List<BakedModel> superPasses = super.getRenderPasses(stack, fabulous);
-        List<BakedModel> passes = cachedRenderPasses.get(superPasses);
-        if (passes == null) {
-            passes = superPasses.stream().<BakedModel>map(this::wrapModel).toList();
-            cachedRenderPasses.put(superPasses, passes);
-        }
-        return passes;
+    public boolean useAmbientOcclusion() {
+        return original.useAmbientOcclusion();
     }
 
-    protected ExtensionBakedModel<T> wrapModel(BakedModel model) {
-        return new ExtensionBakedModel<>(model);
+    @Override
+    public boolean isGui3d() {
+        return original.isGui3d();
+    }
+
+    @Override
+    public boolean usesBlockLight() {
+        return original.usesBlockLight();
+    }
+
+    @Override
+    public boolean isCustomRenderer() {
+        return false;
+    }
+
+    @Override
+    public @NotNull TextureAtlasSprite getParticleIcon() {
+        return original.getParticleIcon();
+    }
+
+    @Override
+    public @NotNull ItemOverrides getOverrides() {
+        return original.getOverrides();
+    }
+
+    @Override
+    public @NotNull ItemTransforms getTransforms() {
+        return original.getTransforms();
     }
 
     public static class LightedBakedModel extends TransformedBakedModel<Void> {
 
         public LightedBakedModel(BakedModel original) {
             super(original, QuadTransformation.filtered_fullbright);
-        }
-
-        @Override
-        protected LightedBakedModel wrapModel(BakedModel model) {
-            return new LightedBakedModel(model);
         }
     }
 
@@ -107,29 +120,10 @@ public class ExtensionBakedModel<T> extends BakedModelWrapper<BakedModel> {
             this.transform = transform;
         }
 
-        @Override
-        @Deprecated
-        public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side, @NotNull RandomSource rand) {
-            return QuadUtils.transformBakedQuads(super.getQuads(state, side, rand), transform);
-        }
-
-        @Override
-        public BakedModel applyTransform(ItemDisplayContext displayContext, PoseStack mat, boolean applyLeftHandTransform) {
-            // have the original model apply any perspective transforms onto the MatrixStack
-            super.applyTransform(displayContext, mat, applyLeftHandTransform);
-            // return this model, as we want to draw the item variant quads ourselves
-            return this;
-        }
-
         @Nullable
         @Override
-        protected QuadsKey<T> createKey(QuadsKey<T> key, ModelData data) {
+        protected QuadsKey<T> createKey(QuadsKey<T> key) {
             return key.transform(transform);
-        }
-
-        @Override
-        protected TransformedBakedModel<T> wrapModel(BakedModel model) {
-            return new TransformedBakedModel<>(model, transform);
         }
     }
 

@@ -714,3 +714,10 @@ gate）BUILD SUCCESSFUL。未运行（按完成度优先策略）：全量测试
 - tick 缝两处:`MekanismClient.ticksPassed`(恢复官方字段,onTick 自增)+ HolidayManager.notify(每日一次、每 1_200 tick 刷新,官方节奏);`initHoliday` 标志随迁移。
 - miner 屏纹理变换(AF/5月4日)走 stitch 后 QuadTransformation;`hasRobitSkinsToday`(EntityRobit:356 已引用)接通。
 - 验收:15/15 冒烟×2(假期消息为 in-world 路径,标题屏不可达——与声车道同裁定)。切片 api 262 / common 1490 / platform 160。
+
+### ExtensionBakedModel 族(miner 假期变换 + drive array BER)(Task052,2026-10-27)
+
+- `ExtensionBakedModel` 重塑纳片:BakedModelWrapper→直接实现 BakedModel(delegate);ModelData 路径、getRenderPasses 重映射、applyTransform(均 neoforge 面)去除;QuadsKey 逐行保留;LightedBakedModel/TransformedBakedModel 内件保留。`DigitalMinerBakedModel` 随纳(holiday 变换经 ClientHolidayInfo.getMinerTransform,接第 24 轮 stitch 钩)。
+- miner 包裹:插件 modifyModelAfterBake 按 block/digital_miner 模型 id 包 DigitalMinerBakedModel(官方 addCustomModel 同语义)。
+- **drive array 定裁定**:官方 wrapper 的 createKey 读 ModelData(DRIVE_STATUS_PROPERTY)——移植侧 tile `getRenderData()` 返回同一 byte[],走 `RenderQIODriveArray` BER 叠绘(DRIVE_PLACEMENTS/Attribute.getFacing/quad-lib translate+rotate 逐行保留;空仓=外壳静态模型,drive 四元组为纯增量);DriveArrayBakedModel/ExtensionOverrideBakedModel/ModelDataBakedModel(覆盖机制件)随 BER 裁定延后。
+- 验收:BER proof `tile_types=32 renderers=17`;15/15 冒烟×2。drive 视觉留 mcdebug/观察。

@@ -85,8 +85,10 @@ public final class FabricTileEntityRendererRegistration {
               MekanismTileEntityTypes.ELITE_FLUID_TANK, MekanismTileEntityTypes.ULTIMATE_FLUID_TANK, MekanismTileEntityTypes.CREATIVE_FLUID_TANK);
         //The port-only data-based replacement BER (the official qio adapter switches models through NeoForge model data).
         renderers += bind(mekanism.client.render.tileentity.RenderQIORedstoneAdapter::new, MekanismTileEntityTypes.QIO_REDSTONE_ADAPTER);
+        //The port-only drive-array replacement BER (the official wrapper read the drive states from model data).
+        renderers += bind(mekanism.client.render.tileentity.RenderQIODriveArray::new, MekanismTileEntityTypes.QIO_DRIVE_ARRAY);
         org.slf4j.LoggerFactory.getLogger("Mekanism/FabricTileEntityRenderers")
-              .info("MEKANISM_FABRIC_BER_PROOF tile_types={} renderers=16 layers=10", renderers);
+              .info("MEKANISM_FABRIC_BER_PROOF tile_types={} renderers=17 layers=10", renderers);
     }
 
     @SafeVarargs

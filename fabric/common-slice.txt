@@ -243,6 +243,8 @@ mekanism/client/model/ModelJetpack.java
 mekanism/client/model/ModelPartData.java
 mekanism/client/model/ModelScubaMask.java
 mekanism/client/model/ModelScubaTank.java
+mekanism/client/model/baked/DigitalMinerBakedModel.java
+mekanism/client/model/baked/ExtensionBakedModel.java
 mekanism/client/model/data/TransmitterModelData.java
 mekanism/client/model/energycube/EnergyCubeBakedModel.java
 mekanism/client/model/energycube/EnergyCubeGeometry.java
@@ -323,6 +325,7 @@ mekanism/client/render/tileentity/RenderIndustrialAlarm.java
 mekanism/client/render/tileentity/RenderNutritionalLiquifier.java
 mekanism/client/render/tileentity/RenderPersonalChest.java
 mekanism/client/render/tileentity/RenderPigmentMixer.java
+mekanism/client/render/tileentity/RenderQIODriveArray.java
 mekanism/client/render/tileentity/RenderQIORedstoneAdapter.java
 mekanism/client/render/tileentity/RenderSPS.java
 mekanism/client/render/tileentity/RenderSeismicVibrator.java
