@@ -23,6 +23,8 @@
 | `fd92051e` | 已分段读完整 diff：逐项替换桶常量、FluidStack 类型、工厂物品映射、Lazy 和技术伤害标签。固定 NeoForge 参考确认桶值为 1000、物品映射使用相同 fastutil 策略；发现 F5/F6 并分别修复。FluidStack 跨平台存储/转换语义尚需在相关后续 owner 提交中继续核对，不能仅凭 import 替换断言完整等价。 |
 | `5138fd15` | 已分段读完整 diff：事件基类和派发、fake player、纸箱/矿机破坏保护、Robit 伤害、传送与渲染数据。F7 已修复；该提交的无条件破坏许可及 Robit 先死亡后恢复在后续 `5ee61549` 被替换，当前看到的调用链需在审查该提交时进一步验证，不能把历史实现视为当前行为。fake player 与第三方保护事件互操作尚未实机验证。 |
 | `a03c1888` | 已分段读完整 diff，检查 GaugeDropper、容器流体、充电板、传送器、量子纠缠和 QIO 导入器。确认 QIO 写入与提取未组成原子事务的风险 F8，以及槽位遍历顺序变化 F9；完整修复和真实 owner 回归验证尚未完成，不标记通过。 |
+| `d6af1549` | 已读完整 diff：第二环纳片、罐规格谓词、蒸发太阳能查询、SPS lightning、个人存储侧查询等。该时点仍有大量编译错误，不作为运行闭包；`EVAPORATION_SOLAR` lookup 只定义和查询，未发现 Fabric provider，官方 provider 在尚未移植的 Generators advanced solar 源树，跨模组接入未验证且不能声称有效。SPS 原事件 veto 差异有原提交记录，交互兼容性尚未实测。 |
+| `e39d256f` | 已读完整 diff：机器基类/upgrade 纳片、GUI packet 由 context 取 player 改为直接传入、FluidStack 类型迁移。当前 Fabric 服务端注册将 `context.player()` 传给同一 handler；单靠签名替换不能证明所有 packet 的权限和时序安全，需在网络注册提交处继续审查。当时仍未整体编译成功。 |
 
 ## 审查发现与待复核
 
@@ -78,4 +80,4 @@ F2 尚需按原有按键上下文、组合键、repeat 与 GUI/联机语义实�
 
 ## 恢复位置
 
-优先研究 F8 的 QIO 真实 owner 插入事务闭包，并补验 F9 的 sided inventory 场景；继续逐提交审查时从 `d6af1549` 开始。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。
+优先研究 F8 的 QIO 真实 owner 插入事务闭包，并补验 F9 的 sided inventory 场景；继续逐提交审查时从 `a147116b` 开始。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。
