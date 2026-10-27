@@ -45,6 +45,10 @@
 | `ffbcb655` | 子代理固定 `8e8b0a9b` 完整读取 diff 并追踪后续注册和渲染，主代理复核修复字典流体、非 Mekanism 发光及喷气背包上升同步，见 F31–F33；真实 GUI/亮度及按键尚待实测。 |
 | `5ee61549` | 子代理固定 `0c15b485` 完整读取该提交相对父提交的 diff，重点追踪区块票据、版本附件及假玩家保护，未证实新的具体缺陷；Fabric attachment 的 ProtoChunk 转移和脏标记已核查，不能误判丢失。 |
 | `5c0fcb1f` | 子代理固定 `0c15b485` 完整读取 diff 和当前 worldgen 路径，主代理初核固定 jar 路径问题，见待修 F34；旧 smoke 不能证明 datapack 覆盖或配置开关。 |
+| `519e1132`、`257b9d05` | 子代理固定 `b452ba25` 完整读取真实 diff：均为审查规范/记录文档，无生产行为变更。 |
+| `b3b87ec3`、`7da81542` | 子代理固定 `b452ba25` 完整读取各自 diff；主代理复核并修复多输出机器漏斗抽取饥饿，见 F35。后者补矿车入口但原 smoke 未实测矿车。 |
+| `9bb884a3`、`1e08c1e5` | 子代理固定 `b452ba25` 完整读取 diff，主代理复核方向面分桶已修，但普通模型继承 composite 几何丢失待修，见 F37；启动日志不能证明画面。 |
+| `d77c3252` | 子代理固定 `b452ba25` 完整读取大部分行为 diff，common-slice 649 行重排及文档小改未逐行阅读，尚不计完整 diff；主代理已修流体缓存 F36，高亮缺失 F38 尚待主代理复核。大型 renderer 因 `shouldRenderOffScreen` 全局注册而必然被 section 剔除的初判已撤回。 |
 
 ## 审查发现与待复核
 
@@ -214,10 +218,26 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 子代理核验、主代理初核：`FabricBiomeModifiers.initialize()` 在 mod 初始化时用 `FabricLoader.getModContainer(...).findPath(...)` 固定读取 jar 中 6 个 JSON，再固定注册 Fabric biome modification；不会读取世界启用的数据包对同名 `neoforge/biome_modifier` 的覆盖、禁用或额外条目。`#mekanism:spawn_ores` tag 本身在选择器执行时动态查询，不能混同为 tag 覆盖失效。活动资源必须在 biome registry 装载/修改前按世界取到；当前 Fabric `BiomeSelectionContext` 未直接提供 ResourceManager，必须继续追踪 `RegistryDataLoader.load(ResourceManager, ...)` 与 Fabric biome 修改 hook 的同一世界装载时序、pack priority、codec/type 和客户端网络加载边界，再选择可靠实现；不能只把启动期读取改为另一处全局缓存。先保留为明确生产缺陷，不把默认世界 smoke 当 datapack 测试。
 
+### F35 — 多输出机器被漏斗首槽阻塞（`b3b87ec3`，已修）
+
+原 `FabricHopperTransfer.suckOneItem` 第一可抽物品不能放入漏斗时立即失败，不尝试后续输出；例如锯木机首输出和漏斗不兼容，第二输出可合并时会饥饿。`224db75d` 事务回滚后继续扫描后续 view，维持每次一物品与 vanilla 插入；真实 FabricItemStorage lookup + SimpleContainer focused 测试覆盖首槽回滚、第二槽成功和全满失败。完整 `verifyFabricTestContract` 通过；首次失败为增加测试后固定方法计数未更新，调整后通过。该测试不是实机矿车验证。完整 diff 已复审。
+
+### F36 — 流体罐和管渲染缓存按可变对象身份积累（`d77c3252`，已修）
+
+端口 `FluidStack` 不重写 equals/hashCode；渲染缓存用普通 map 会按每次同步生成的对象身份永久累积相同流体模型。`d8c86ce4` 将流体罐中心、阀门和机械管缓存键改为不可变 `FluidVariant`（流体+组件，不含数量），保留材质重载清理，并更正原文档误述；编译通过，完整 diff 已复审。未进行客户端长期同步内存/视觉实测。
+
+### F37 — composite 方向面与继承几何（`9bb884a3`，部分已修）
+
+原合并模型所有 side 返回同一列表，且合并 child 时只取 null 面，造成重复绘制与 cullface 几何缺失。`88abcebf` 按方向收集 child 面、仅 null 返回无剔除面；普通 JVM 分桶测试和完整测试契约通过，完整 diff 已复审。首次把测试放在 Knot server 失败：环境禁止装载 BakedQuad，转普通 JVM 后通过；不构成实际客户端画面验收。独立遗留：普通子 BlockModel 继承 `FabricCompositeModel` 时 vanilla bake 不调用父类自定义 bake，工厂物品和营养液化器内部 composite 子模型会丢几何；下一轮需处理父链及 texture override，不能称整个 composite 修复完成。
+
+### F38 — 方块高亮监听移除（`d77c3252`，待主代理核验）
+
+子代理报告原 `RenderTickHandler.onBlockHover` 无 Fabric 接线，配置器侧面颜色、自定义方块选框等可能缺失；需对照真实事件、调用者及当前源码并就地补修，报告不等于已验。大型 BER 一律被 section 裁剪的报告已撤回，因为相关渲染器通过 shouldRenderOffScreen 列入 globalBlockEntities。
+
 ### 并行初审待主代理核验
 
 尚待主代理核验：`1af82201` 官方历史 registry alias 是否影响固定官方存档；`38b8b1af` 创造标签内搜索；`2529dca8` 纳入的 11 个既有 mixin 调用链；以及 F29 尚未复核的非 GUI 网络包边界。`a1f1c46f` 发现 shift 合成 bin 可能丢额外物品，但只读子代理对照 NeoForge `ResultSlot` 发现官方在同一点触发回调，属于上游共享问题，暂不认定为移植偏差；也未实机验证。不能将只读初审自动计为全部关闭。
 
 ## 恢复位置
 
-优先研究 F8 的 QIO 真实 owner 插入事务闭包，并补验 F9 的 sided inventory 场景；`a147116b` 已读完整 2180 行 diff；`12ebbcf6` 和 `76f790ce` 已读完整 diff，F14 已修，F15 附魔适用/手持/选槽及电弓虚拟 Flame 已接线但部分实机待验；`1d4c4027` 已读完整 diff 并修 F17 普通水下路径；`7785a9c1` 已读完整 diff，F19/F20 已修，不要求旧开发版握手兼容，双进程实体同步仍待实测；`4e5a4232` 已读完整 diff，F21 旧票据迁移已按用户决策退出范围。子代理已并行读完 `b6e5c54d`、`509afc1b`、`1af82201`、`2529dca8`、`38b8b1af`、`a1f1c46f` 的真实 diff；部分问题已由主代理复核修复，剩余候选见上，不把初审直接计为全部关闭。`53fda9e5` 至 `ffbcb655` 的相邻提交已由子代理读完真实 diff，F29 已部分修复，F30–F33 已修且保留各自验证边界；`5ee61549` 与 `5c0fcb1f` 也已读真实 diff；最早未读为其间文档提交 `519e1132`，随后 `257b9d05`；F34 的 datapack 生物群系修复仍待完成。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。
+优先研究 F8 的 QIO 真实 owner 插入事务闭包，并补验 F9 的 sided inventory 场景；`a147116b` 已读完整 2180 行 diff；`12ebbcf6` 和 `76f790ce` 已读完整 diff，F14 已修，F15 附魔适用/手持/选槽及电弓虚拟 Flame 已接线但部分实机待验；`1d4c4027` 已读完整 diff 并修 F17 普通水下路径；`7785a9c1` 已读完整 diff，F19/F20 已修，不要求旧开发版握手兼容，双进程实体同步仍待实测；`4e5a4232` 已读完整 diff，F21 旧票据迁移已按用户决策退出范围。子代理已并行读完 `b6e5c54d`、`509afc1b`、`1af82201`、`2529dca8`、`38b8b1af`、`a1f1c46f` 的真实 diff；部分问题已由主代理复核修复，剩余候选见上，不把初审直接计为全部关闭。`53fda9e5` 至 `ffbcb655` 的相邻提交已由子代理读完真实 diff，F29 已部分修复，F30–F33 已修且保留各自验证边界；`5ee61549`、`519e1132`、`5c0fcb1f`、`257b9d05`、`b3b87ec3`、`7da81542`、`9bb884a3`、`1e08c1e5` 已读完整真实 diff；`d77c3252` 尚缺大块切片重排逐行审查。F34 的 datapack 生物群系修复及 F37 composite 父链仍待完成。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。
