@@ -60,6 +60,7 @@
 | `1d44ca1f`、`2cc11b1e` | 主代理已读完整 diff，并对照固定两份 Minecraft 的滚轮与雾调用点；发现滚轮触发时机及近雾设置错误，见 F44。其他视觉、输入和声音实际交互尚未全面验证。 |
 | `601da1af`、`5d074d11` | 主代理已读完整 diff；原静态模型/BER 分割已有后续真实 FRAPI 模型修复，见 F39。Quad 的顶点重编码问题已修，见 F45；能量方块、装备及节日模型画面仍待实机验证。 |
 | `254afa6b`、`bc13ab39` | 主代理已读完整 diff，对照官方附加层和 vanilla 鞘翅绘制；修正普通鞘翅被附加层重复绘制，见 F47。装备模型资源重载已在 F40 修复，实际穿戴画面仍未验证。 |
+| `3cedf196`、`3833f46f` | 主代理已读完整 diff 并追查皮肤注册与物品、实体模型选择；物品忽略皮肤自定义模型，见待修 F48；实体与物品在真实世界、资源重载及自定义皮肤的渲染尚未验。 |
 
 ## 审查发现与待复核
 
@@ -279,12 +280,18 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 ### F47 — 普通鞘翅被额外绘制一次（`254afa6b`，代码已修，画面待验）
 
-`FabricArmorLayerRegistration` 是在已有 vanilla `ElytraLayer` 的渲染器上**追加** `MekanismElytraLayer`，而端口对非 HDPE 物品调用 `super.render`，因此普通 vanilla 鞘翅先后由原层和附加层各绘一次。官方附加层的 `shouldRender` 只接受 HDPE；原提交审查中声称普通物品走 super 是正确行为，忽略了原层仍存在。修复移除非 HDPE 分支，让 vanilla 层独自处理普通鞘翅，HDPE 绘制保持原路径。`compileJava` 和 platform slice gate 通过；未在真实客户端观察附魔 glint、皮肤/披风及 HDPE 画面。
+`FabricArmorLayerRegistration` 是在已有 vanilla `ElytraLayer` 的渲染器上**追加** `MekanismElytraLayer`，而端口对非 HDPE 物品调用 `super.render`，因此普通 vanilla 鞘翅先后由原层和附加层各绘一次。官方附加层的 `shouldRender` 只接受 HDPE；原提交审查中声称普通物品走 super 是正确行为，忽略了原层仍存在。修复移除非 HDPE 分支，让 vanilla 层独自处理普通鞘翅，HDPE 绘制保持原路径。`cb083cba` 的完整真实 diff 已按移植风格 prompt 复审，未发现该限定行为边界新增偏离；`compileJava` 和 platform slice gate 通过。未在真实客户端观察附魔 glint、皮肤/披风及 HDPE 画面。
+
+### F48 — Robit 物品未使用皮肤定义的自定义模型（`3cedf196`，待修）
+
+官方 `RobitItemOverrideList` 从当前 registry 取得 `RobitSkin.customModel()`，指定时查询该模型并解析其 item overrides；Fabric `FabricRobitItemRenderer.modelFor` 不查询皮肤，仅看 resource key 的路径是否恰为 `allay`，其他一律用默认模型。数据包自定义皮肤的公共 `custom_model` 因此对物品无效，名字为 `allay` 但命名空间不同或皮肤已回退时也会误选 allay 模型。当前实体渲染与皮肤选择 GUI 已经走 `MekanismModelCache.getRobitSkin`，但该 owner 也有按路径特判 fallback 的偏差；custom model 是否被模型加载器作为 top-level 注册、物品 builtin 抑制及其覆盖模型语义尚需验证，不能只换一行 getter 就宣称闭环。标题屏 proof 不证明 Robit 物品或实体实际绘制。
 
 ### 并行初审待主代理核验
 
 尚待主代理核验：`1af82201` 官方历史 registry alias 是否影响固定官方存档；`38b8b1af` 创造标签内搜索；`2529dca8` 纳入的 11 个既有 mixin 调用链；以及 F29 尚未复核的非 GUI 网络包边界。`a1f1c46f` 发现 shift 合成 bin 可能丢额外物品，但只读子代理对照 NeoForge `ResultSlot` 发现官方在同一点触发回调，属于上游共享问题，暂不认定为移植偏差；也未实机验证。不能将只读初审自动计为全部关闭。
 
 ## 恢复位置
+
+本轮固定 101 项已读至第 69 项 `3833f46f`；下一项为 `a634adff`。当前 F46（MekaSuit baked light 的消费）和 F48（Robit 自定义皮肤模型/加载及 builtin 实际路径）是新发现的待修调用链，先复核真实 owner 和固定上游，再在边界内修复与复审；F44/F45/F47 代码已提交，画面与真实输入未验。`1f3283dd`、`205a67fd`、`1b770d06`、`7bb720c7` 的完整 diff 已预读，但还须按顺序追查生命周期和节日 owner 后登记，不算已审完。两次只读子代理启动均失败，无结果且不得计入审查。
 
 优先研究 F8 的 QIO 真实 owner 插入事务闭包，并补验 F9 的 sided inventory 场景；`a147116b` 已读完整 2180 行 diff；`12ebbcf6` 和 `76f790ce` 已读完整 diff，F14 已修，F15 附魔适用/手持/选槽及电弓虚拟 Flame 已接线但部分实机待验；`1d4c4027` 已读完整 diff 并修 F17 普通水下路径；`7785a9c1` 已读完整 diff，F19/F20 已修，不要求旧开发版握手兼容，双进程实体同步仍待实测；`4e5a4232` 已读完整 diff，F21 旧票据迁移已按用户决策退出范围。子代理已并行读完 `b6e5c54d`、`509afc1b`、`1af82201`、`2529dca8`、`38b8b1af`、`a1f1c46f` 的真实 diff；部分问题已由主代理复核修复，剩余候选见上，不把初审直接计为全部关闭。`53fda9e5` 至 `ffbcb655` 的相邻提交已由子代理读完真实 diff，F29 已部分修复，F30–F33 已修且保留各自验证边界；`5ee61549`、`519e1132`、`5c0fcb1f`、`257b9d05`、`b3b87ec3`、`7da81542`、`9bb884a3`、`1e08c1e5` 已读完整真实 diff；`d77c3252` 已补读完整切片重排及文档，五个后续 ISBER 提交亦已读完整 diff。F34 的 datapack 生物群系修复仍待完成；F37 composite 父链代码已修、真实画面待验，F39 能量立方相关代码已修但 FRAPI 及物品画面待实机验证。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。
