@@ -416,6 +416,7 @@ mekanism/common/base/ProfilerConstants.java
 mekanism/common/base/TagCache.java
 mekanism/common/base/holiday/AprilFools.java
 mekanism/common/base/holiday/Christmas.java
+mekanism/common/base/holiday/ClientHolidayInfo.java
 mekanism/common/base/holiday/Holiday.java
 mekanism/common/base/holiday/HolidayManager.java
 mekanism/common/base/holiday/HolidayMessage.java

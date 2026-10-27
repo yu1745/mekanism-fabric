@@ -32,6 +32,8 @@ public class MekanismClient {
     public static final Map<UUID, SecurityData> clientSecurityMap = ClientSecurityData.securityMap();
     public static final Map<UUID, String> clientUUIDMap = ClientSecurityData.usernameMap();
 
+    public static long ticksPassed = 0;
+
     public static void updateKey(KeyMapping key, int type) {
         updateKey(key.isDown(), type);
     }

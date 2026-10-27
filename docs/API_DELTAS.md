@@ -707,3 +707,10 @@ gate）BUILD SUCCESSFUL。未运行（按完成度优先策略）：全量测试
 - 别名三件:`Mekanism.playerState`→`PlayerState.INSTANCE`(先例)、`Mekanism.activeVibrators`→`MekanismServerState.activeVibrators()`(既有)、`Mekanism.modulesLoaded`→新 `ModModuleState`(IModModule/Version 随纳;Version 的 maven-artifact 构造器改为字符串解析——fabric classpath 无该库,neoforge 内置)。
 - 生命周期缝:`ClientPlayNetworkEvent.Clone/LoggingIn/LoggingOut`→fabric `ClientWorldEvents.AFTER_CLIENT_WORLD_CHANGE`/`ClientPlayConnectionEvents.JOIN/DISCONNECT`(resetDimensionChange/launchClient/reset 全接;transmitter 清理保持既有钩子)。
 - 验收:15/15 冒烟×2;network proof 扩 `lifecycle=join,disconnect,world_change`。切片 api 262 / common 1478 / platform 160。
+
+### 假期车道(HolidayManager 家族)(Task052,2026-10-27)
+
+- 12 件家族纳片(HolidayManager 0 neoforge 直纳;ClientHolidayInfo 三锚重塑:@EventBusSubscriber→mixin 调用点(TextureAtlasMixin.upload RETURN→blocks 图集 onStitch(atlas),与渲染纹理收集同钩)、TextureAtlasStitchedEvent→直参、Mekanism.rl→MekanismAPI)。
+- tick 缝两处:`MekanismClient.ticksPassed`(恢复官方字段,onTick 自增)+ HolidayManager.notify(每日一次、每 1_200 tick 刷新,官方节奏);`initHoliday` 标志随迁移。
+- miner 屏纹理变换(AF/5月4日)走 stitch 后 QuadTransformation;`hasRobitSkinsToday`(EntityRobit:356 已引用)接通。
+- 验收:15/15 冒烟×2(假期消息为 in-world 路径,标题屏不可达——与声车道同裁定)。切片 api 262 / common 1490 / platform 160。

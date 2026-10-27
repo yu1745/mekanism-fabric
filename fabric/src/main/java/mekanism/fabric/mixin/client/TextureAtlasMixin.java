@@ -26,6 +26,7 @@ abstract class TextureAtlasMixin {
     private void mekanism$afterStitch(SpriteLoader.Preparations preparations, CallbackInfo ci) {
         if (TextureAtlas.LOCATION_BLOCKS.equals(this.location)) {
             MekanismRenderer.onStitch((TextureAtlas) (Object) this);
+            mekanism.common.base.holiday.ClientHolidayInfo.onStitch((TextureAtlas) (Object) this);
         }
     }
 }

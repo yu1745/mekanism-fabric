@@ -5,33 +5,29 @@ import java.util.Map;
 import java.util.function.Predicate;
 import mekanism.client.render.lib.QuadTransformation;
 import mekanism.client.render.lib.QuadTransformation.TextureFilteredTransformation;
-import mekanism.common.Mekanism;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.resources.ResourceLocation;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.TextureAtlasStitchedEvent;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * @apiNote Only reference this class from the client side. It is in the common package to allow for keeping holidays package private
  */
-@EventBusSubscriber(modid = Mekanism.MODID, value = Dist.CLIENT)
 public final class ClientHolidayInfo {
 
     private ClientHolidayInfo() {
     }
 
-    private static final ResourceLocation MINER_SCREEN = Mekanism.rl("block/models/digital_miner_screen_");
+    private static final ResourceLocation MINER_SCREEN = ResourceLocation.fromNamespaceAndPath(mekanism.api.MekanismAPI.MEKANISM_MODID, "block/models/digital_miner_screen_");
     private static final Predicate<ResourceLocation> IS_HELLO_SCREEN = s -> s.getPath().contains("screen_hello");
     private static final Predicate<ResourceLocation> IS_CMD_SCREEN = s -> s.getPath().contains("screen_cmd");
     private static final Predicate<ResourceLocation> IS_BLANK_SCREEN = s -> s.getPath().contains("screen_blank");
     private static Map<Holiday, QuadTransformation> HOLIDAY_MINER_TRANSFORMS = Collections.emptyMap();
 
-    @SubscribeEvent
-    public static void onStitch(TextureAtlasStitchedEvent event) {
-        TextureAtlas atlas = event.getAtlas();
+    /**
+     * Fabric port: the official TextureAtlasStitchedEvent handler; the atlas mixin calls this for the blocks atlas
+     * (the same stitch hook the renderer's texture gather rides).
+     */
+    public static void onStitch(TextureAtlas atlas) {
         if (!atlas.location().equals(TextureAtlas.LOCATION_BLOCKS)) {
             return;
         }

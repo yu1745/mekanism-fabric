@@ -20,6 +20,7 @@ import mekanism.common.content.gear.mekasuit.ModuleVisionEnhancementUnit;
 import mekanism.common.item.gear.ItemHDPEElytra;
 import mekanism.client.sound.GeigerSound;
 import mekanism.client.sound.SoundHandler;
+import mekanism.common.base.holiday.HolidayManager;
 import mekanism.common.base.PlayerState;
 import mekanism.common.item.gear.ItemJetpack;
 import mekanism.common.item.gear.ItemMekaSuitArmor;
@@ -142,9 +143,15 @@ public class ClientTickHandler {
             return;
         }
         boolean tickingNormally = MekanismRenderer.isRunningNormally();
-        //HolidayManager.notify belongs to the holiday lane and stays deferred with it.
+        //Holiday greetings once a day, refreshed every 1_200 ticks (the official notify cadence).
+        if (!initHoliday || MekanismClient.ticksPassed % 1_200 == 0) {
+            HolidayManager.notify(minecraft.player);
+            initHoliday = true;
+        }
         //SoundHandler.restartSounds belongs to the sound lane (flamethrower/geiger sounds) and stays deferred with it.
         //Radiation pre-tick particles are owned by FabricRadiationClientLifecycle.
+
+        MekanismClient.ticksPassed++;
 
         UUID playerUUID = minecraft.player.getUUID();
         // Update player's state for various items; this also automatically notifies server if something changed and
@@ -231,6 +238,8 @@ public class ClientTickHandler {
             }
         }
     }
+
+    private boolean initHoliday;
 
     private boolean updateSelectorRenderer(EquipmentSlot slot) {
         if (minecraft.player != null) {
