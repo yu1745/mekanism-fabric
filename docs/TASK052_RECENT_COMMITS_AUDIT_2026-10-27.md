@@ -72,13 +72,15 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 修复 `a4cfb58b` 添加同语义访问器，并将现有单一项目事件总线改为按注册类型与子类派发，保持同步调用和注册顺序；已审阅该提交完整 diff。`MekanismEventBusTest` 通过，覆盖父类/子类接收、兄弟类不接收、取消状态和返回同一事件。测试未覆盖实际传送或 `getPrev()` 实体坐标。事件优先级、取消后监听者过滤、线程与第三方互操作未证明等价，该修复不宣称完整复刻 NeoForge 总线。
 
-### F8 — QIO 导入的频率写入和存储提取不是原子操作（`a03c1888`，数据完整性风险，修复待设计及验证）
+### F8 — QIO 导入的频率写入和存储提取不是原子操作（`a03c1888`，候选修复待验证）
 
-当前 `TileEntityQIOImporter.tryImport()` 先对外部 `StorageView` 在独立事务中模拟提取，随后 `freq.addItem(stack)` 立即更改 QIO 频率/驱动，再开启另一个事务实际提取。若实际提取数量少于模拟值、提取或开事务抛错，或者提交失败，频率的先前写入没有加入提取事务；短提取只记录错误并提交提取，已写入 QIO 的数量不撤销，存在物品复制/状态不一致。正常稳定 provider 运行时不必然出现差异，此处是静态确认的异常及状态变化路径，不声称已在实机复现。上游也是先写入后执行抽取并依赖处理器的一致性；Fabric 迁移后的事务边界仍必须真实处理失败，不能把“采用了 Transaction”当作原子性证明。
+原版移植的 `TileEntityQIOImporter.tryImport()` 先对外部 `StorageView` 在独立事务中模拟提取，随后 `freq.addItem(stack)` 立即更改 QIO 频率/驱动，再开启另一个事务实际提取。若实际提取数量少于模拟值、提取或开事务抛错，或者提交失败，频率的先前写入没有加入提取事务；短提取只记录错误并提交提取，已写入 QIO 的数量不撤销，存在物品复制/状态不一致。正常稳定 provider 运行时不必然出现差异，此处是静态确认的异常及状态变化路径，不声称已在实机复现。上游也是先写入后执行抽取并依赖处理器的一致性；Fabric 迁移后的事务边界仍必须真实处理失败，不能把“采用了 Transaction”当作原子性证明。
 
-最小真实修复边界不是简单倒换调用或 remove-then-add 补偿：`QIOFrequency.addItem`/`massInsert` 和 `QIOItemTypeData.add` 尚未接受 `TransactionContext`，原 `QIODriveData.add` 会立即写驱动 metadata 并通知 holder；原有事务日志只覆盖 removal。进一步核对：已有 `FrequencyRemoveParticipant` 快照频率索引与计数，但不覆盖插入清理的 failed-wildcard 集合；`TypeRemoveParticipant` 快照类型计数与驱动成员但不含 `itemUUID`；现有 `DriveStateParticipant` 快照实际 stack 身份、metadata、itemMap 并在最终提交通知 holder，可以作为插入侧真实 owner 的基础。新类型 `createTypeDataForAbsent` 会调用全局 `QIOGlobalItemLookup.getOrTrackUUID`，它立即修改全局双向映射及 saved-data dirty 标志；仅复用 removal 快照会留下全局副作用。应先设计频率共享索引、类型状态、各驱动实际 stack/metadata、全局 UUID 分配及提交通知的插入侧事务参与，再让外部提取和频率插入参与同一事务；涵盖嵌套 abort、短提取、异常、已有/新类型、多个驱动和 drive 替换身份。此数据风险未修复；不要仅根据日志将问题宣称闭环。
+最小真实修复边界不是简单倒换调用或 remove-then-add 补偿：原 `QIOFrequency.addItem`/`massInsert` 和 `QIOItemTypeData.add` 未接受 `TransactionContext`，原 `QIODriveData.add` 会立即写驱动 metadata 并通知 holder；原有事务日志只覆盖 removal。进一步核对：已有 `FrequencyRemoveParticipant` 快照频率索引与计数，但不覆盖插入清理的 failed-wildcard 集合；`TypeRemoveParticipant` 快照类型计数与驱动成员但不含 `itemUUID`；现有 `DriveStateParticipant` 快照实际 stack 身份、metadata、itemMap 并在最终提交通知 holder，可以作为插入侧真实 owner 的基础。新类型 `createTypeDataForAbsent` 会调用全局 `QIOGlobalItemLookup.getOrTrackUUID`，它立即修改全局双向映射及 saved-data dirty 标志；仅复用 removal 快照会留下全局副作用。应先设计频率共享索引、类型状态、各驱动实际 stack/metadata、全局 UUID 分配及提交通知的插入侧事务参与，再让外部提取和频率插入参与同一事务；涵盖嵌套 abort、短提取、异常、已有/新类型、多个驱动和 drive 替换身份。下述候选已开始实现同一事务，但尚未经过真实 owner 的故障路径验证；不要仅根据编译或日志将数据风险宣称闭环。
 
 **阶段性 WIP `b8fe2c31` 的提交复审**：已阅读完整 diff。驱动 owner 新增带事务的 `add` 重载，复用原 `DriveStateParticipant` 在修改前核对真实 stack 身份并采集快照，holder 通知推迟至最终提交；现有三参 `add` 继续原先非事务行为。该重载目前尚无生产调用，因此 importer 原子性风险仍原样存在；只有 `compileJava` 成功，未证明驱动插入回滚，尚需同一闭包的真实 owner 集成测试。接续阶段性 WIP `bc9f5aeb` 已扩展同一频率快照以包含 failed-wildcard 集合、类型快照以包含 `itemUUID`；其完整 diff 已复审，`compileJava` 成功。它也改变原有移除事务回滚覆盖面，尚无真实 owner 的嵌套 abort/交错写入测试，不能据此断言无回归。全局 UUID、插入时注册快照、旧状态 dirty、提交发布以及 importer 的同一事务连接仍未完成；两阶段均不能单独交付当作修复。
+
+**候选 WIP `f8df4ccc` 的完整 diff 复审**：导入先模拟 QIO 容量，实际提取与频率插入使用同一外层事务；短提取以实际数插入，超出请求和频率无法容纳全部实际提取时 abort。频率和真实驱动都登记快照；新类型的全局 UUID 推迟至外层最终提交，提交前读取该暂存 UUID 明确抛错而不是提前污染全局索引。`compileJava`、槽顺序测试与三个切片 gate 通过，但槽顺序测试未覆盖事务。试图在普通 JVM 创建真实频率/驱动 fixture 时，`MekanismDataComponents` 初始化触发自定义 chemical 根注册，因 vanilla registry 尚未 bootstrap 抛出 `IllegalArgumentException: Not bootstrapped (called from registry ResourceKey[minecraft:root / minecraft:game_event])`；未通过设置假 holder/跳过注册来掩盖，实验测试已移除。须在带 Fabric loader 与实际注册生命周期的运行中测试真实 frequency/drive：正常、短提取、异常、嵌套 abort、已有/新类型、多驱动、holder 替换和最终通知，并审查在开放事务中发生非事务性重入以及 `onFinalCommit` 异常的语义；候选当前不可视为已验收修复。
 
 ### F9 — QIO 导入槽顺序变化（`a03c1888`，有槽存储已修复）
 
