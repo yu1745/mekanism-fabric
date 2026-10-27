@@ -147,6 +147,8 @@ mekanism/fabric/network/FabricContainerNetworking.java
 mekanism/fabric/network/FabricGearEffectsNetworking.java
 mekanism/fabric/network/FabricMekanismClientNetworking.java
 mekanism/fabric/network/FabricMekanismNetworking.java
+mekanism/fabric/network/FabricPortalClientNetworking.java
+mekanism/fabric/network/FabricPortalNetworking.java
 mekanism/fabric/network/FabricSecurityClientNetworking.java
 mekanism/fabric/network/FabricSecurityNetworking.java
 mekanism/fabric/network/FabricServerPlayNetworking.java

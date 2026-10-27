@@ -43,6 +43,7 @@ public final class MekanismFabricClientBootstrap implements ClientModInitializer
         FabricContainerClientNetworking.initializeClient();
         mekanism.fabric.network.FabricTransmitterClientNetworking.initialize();
         mekanism.fabric.client.render.FabricBoltRendering.initialize();
+        mekanism.fabric.network.FabricPortalClientNetworking.initialize();
         mekanism.fabric.network.FabricSecurityClientNetworking.initialize();
         mekanism.fabric.radiation.FabricRadiationClientLifecycle.initialize();
         //Real model-loading owner for the shipped "mekanism:transmitter" OBJ/MTL models, plus the logistical
