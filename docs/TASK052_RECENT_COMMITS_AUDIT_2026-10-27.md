@@ -72,7 +72,7 @@ F2 尚需按原有按键上下文、组合键、repeat 与 GUI/联机语义实�
 
 当前 `TileEntityQIOImporter.tryImport()` 先对外部 `StorageView` 在独立事务中模拟提取，随后 `freq.addItem(stack)` 立即更改 QIO 频率/驱动，再开启另一个事务实际提取。若实际提取数量少于模拟值、提取或开事务抛错，或者提交失败，频率的先前写入没有加入提取事务；短提取只记录错误并提交提取，已写入 QIO 的数量不撤销，存在物品复制/状态不一致。正常稳定 provider 运行时不必然出现差异，此处是静态确认的异常及状态变化路径，不声称已在实机复现。上游也是先写入后执行抽取并依赖处理器的一致性；Fabric 迁移后的事务边界仍必须真实处理失败，不能把“采用了 Transaction”当作原子性证明。
 
-最小真实修复边界不是简单倒换调用或 remove-then-add 补偿：`QIOFrequency.addItem`/`massInsert` 和 `QIOItemTypeData.add` 未接受 `TransactionContext`，`QIODriveData.add` 会立即写驱动 metadata 并通知 holder；现存事务日志只覆盖 removal。应先审计并设计频率共享索引、类型状态、各驱动实际 stack/metadata、全局 UUID 分配及提交通知的插入侧事务参与，再让外部提取和频率插入参与同一事务；涵盖嵌套 abort、短提取、异常、已有/新类型、多个驱动和 drive 替换身份。此数据风险未修复，待下一轮优先处理；不要仅根据日志将问题宣称闭环。
+最小真实修复边界不是简单倒换调用或 remove-then-add 补偿：`QIOFrequency.addItem`/`massInsert` 和 `QIOItemTypeData.add` 未接受 `TransactionContext`，`QIODriveData.add` 会立即写驱动 metadata 并通知 holder；现存事务日志只覆盖 removal。进一步核对：已有 `FrequencyRemoveParticipant` 快照频率索引与计数，但不覆盖插入清理的 failed-wildcard 集合；`TypeRemoveParticipant` 快照类型计数与驱动成员但不含 `itemUUID`；现有 `DriveStateParticipant` 快照实际 stack 身份、metadata、itemMap 并在最终提交通知 holder，可以作为插入侧真实 owner 的基础。新类型 `createTypeDataForAbsent` 会调用全局 `QIOGlobalItemLookup.getOrTrackUUID`，它立即修改全局双向映射及 saved-data dirty 标志；仅复用 removal 快照会留下全局副作用。应先设计频率共享索引、类型状态、各驱动实际 stack/metadata、全局 UUID 分配及提交通知的插入侧事务参与，再让外部提取和频率插入参与同一事务；涵盖嵌套 abort、短提取、异常、已有/新类型、多个驱动和 drive 替换身份。此数据风险未修复；不要仅根据日志将问题宣称闭环。
 
 ### F9 — QIO 导入槽顺序变化（`a03c1888`，有槽存储已修复）
 
@@ -80,4 +80,4 @@ F2 尚需按原有按键上下文、组合键、repeat 与 GUI/联机语义实�
 
 ## 恢复位置
 
-优先研究 F8 的 QIO 真实 owner 插入事务闭包，并补验 F9 的 sided inventory 场景；继续逐提交审查时从 `a147116b` 开始。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。
+优先研究 F8 的 QIO 真实 owner 插入事务闭包，并补验 F9 的 sided inventory 场景；`a147116b` 的完整 diff 共 2180 行、52 文件，已阅读前 359 行（切片、fluid tint、BlockData 和 Capabilities 入口），余下未审查，继续时从 `/tmp/mek-a147-review.diff` 第 360 行或重新生成相同 git diff 开始，不得将其标记为已完整审查。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。
