@@ -733,6 +733,7 @@ processResources {
         include 'META-INF/services/mekanism.api.radial.IRadialDataHelper'
         include 'META-INF/services/mekanism.api.security.IBlockSecurityUtils'
         include 'META-INF/services/mekanism.api.security.IItemSecurityUtils'
+        include 'META-INF/services/mekanism.api.security.IEntitySecurityUtils'
         include 'META-INF/services/mekanism.api.security.ISecurityUtils'
         include 'META-INF/services/mekanism.api.radiation.IRadiationManager'
         include 'assets/mekanism/particles/radiation.json'
