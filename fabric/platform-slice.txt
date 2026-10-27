@@ -64,6 +64,7 @@ mekanism/fabric/fluid/FabricFluidConversions.java
 mekanism/fabric/fluid/FabricFluidLookup.java
 mekanism/fabric/fluid/FabricFluidStorage.java
 mekanism/fabric/fluid/ItemFluidContainer.java
+mekanism/fabric/gear/FabricEnchantmentRules.java
 mekanism/fabric/gear/FabricModuleRegistry.java
 mekanism/fabric/gear/GearItemLookups.java
 mekanism/fabric/item/ComponentItemContext.java
@@ -106,6 +107,10 @@ mekanism/fabric/mixin/entity/PiglinOffHandMixin.java
 mekanism/fabric/mixin/entity/PlayerElytraStartMixin.java
 mekanism/fabric/mixin/entity/PlayerGearTickMixin.java
 mekanism/fabric/mixin/entity/RobitDamageMixin.java
+mekanism/fabric/mixin/gear/AnvilEnchantmentMixin.java
+mekanism/fabric/mixin/gear/EnchantCommandMixin.java
+mekanism/fabric/mixin/gear/EnchantRandomlyMixin.java
+mekanism/fabric/mixin/gear/EnchantmentSelectionMixin.java
 mekanism/fabric/mixin/gear/GameplayEnchantmentsMixin.java
 mekanism/fabric/mixin/gear/GearBoltRenderMixin.java
 mekanism/fabric/mixin/item/ClientConfiguratorUseMixin.java
