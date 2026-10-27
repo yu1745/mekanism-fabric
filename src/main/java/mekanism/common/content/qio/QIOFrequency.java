@@ -91,6 +91,8 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
 
     private final SequencedMap<QIODriveKey, QIODriveData> driveMap = new LinkedHashMap<>();
     private final SequencedMap<HashedItem, QIOItemTypeData> itemDataMap = new LinkedHashMap<>();
+    // New types in an open insertion transaction get their globally persistent UUID only after the outer commit.
+    private final Set<QIOItemTypeData> pendingInsertionUUIDs = new HashSet<>();
 
     /**
      * Stable frequency-level participant (Task052 R4 correction) for transaction-aware removal: snapshots the
@@ -120,7 +122,7 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
             }
             return new FrequencyRemoveSnapshot(items, tags, mods, fuzzy, totalCount, isDirty, needsUpdate,
                   new HashSet<>(updatedItems), HashMultimap.create(tagWildcardCache), HashMultimap.create(modIDWildcardCache),
-                  new HashSet<>(failedWildcardTags), new HashSet<>(failedWildcardModIDs));
+                  new HashSet<>(failedWildcardTags), new HashSet<>(failedWildcardModIDs), new HashSet<>(pendingInsertionUUIDs));
         }
 
         @Override
@@ -146,13 +148,27 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
             failedWildcardTags.addAll(snapshot.failedTags);
             failedWildcardModIDs.clear();
             failedWildcardModIDs.addAll(snapshot.failedMods);
+            pendingInsertionUUIDs.clear();
+            pendingInsertionUUIDs.addAll(snapshot.pendingUUIDs);
+        }
+
+        @Override
+        protected void onFinalCommit() {
+            for (QIOItemTypeData data : pendingInsertionUUIDs) {
+                if (itemDataMap.get(data.itemType) == data) {
+                    data.itemUUID = QIOGlobalItemLookup.INSTANCE.getOrTrackUUID(data.itemType);
+                    setNeedsUpdate(data.itemType);
+                }
+            }
+            pendingInsertionUUIDs.clear();
         }
     }
 
     private record FrequencyRemoveSnapshot(Map<HashedItem, QIOItemTypeData> items, Map<String, Set<HashedItem>> tags,
           Map<String, Set<HashedItem>> mods, Map<Item, Set<HashedItem>> fuzzy, long totalCount, boolean isDirty,
           boolean needsUpdate, Set<UUID> updatedItems, SetMultimap<String, String> tagWildcards,
-          SetMultimap<String, String> modWildcards, Set<String> failedTags, Set<String> failedMods) {
+          SetMultimap<String, String> modWildcards, Set<String> failedTags, Set<String> failedMods,
+          Set<QIOItemTypeData> pendingUUIDs) {
     }
 
     private final Set<IQIODriveHolder> driveHolders = new HashSet<>();
@@ -244,6 +260,23 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
         return amount - data.add(amount, action);
     }
 
+    /** Inserts into the real QIO drives under the caller's transfer transaction. */
+    public long insertItem(ItemStack stack, long amount, TransactionContext transaction) {
+        java.util.Objects.requireNonNull(transaction, "transaction");
+        long accepted = massInsert(stack, amount, Action.SIMULATE);
+        if (accepted <= 0) {
+            return 0;
+        }
+        HashedItem type = HashedItem.create(stack);
+        frequencyRemoveTx.updateSnapshots(transaction);
+        QIOItemTypeData data = itemDataMap.get(type);
+        if (data == null) {
+            data = createTypeDataForAbsent(type, true);
+            itemDataMap.put(type, data);
+        }
+        return accepted - data.add(accepted, Action.EXECUTE, transaction);
+    }
+
     public ItemStack addItem(ItemStack stack) {
         if (stack.isEmpty()) {
             return ItemStack.EMPTY;
@@ -270,6 +303,10 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
     }
 
     private QIOItemTypeData createTypeDataForAbsent(HashedItem type) {
+        return createTypeDataForAbsent(type, false);
+    }
+
+    private QIOItemTypeData createTypeDataForAbsent(HashedItem type, boolean deferUUID) {
         ItemStack stack = type.getInternalStack();
         List<String> tags = TagCache.getItemTags(stack);
         if (!tags.isEmpty()) {
@@ -295,8 +332,15 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
         //Fuzzy item lookup has no wildcard cache related to it
         fuzzyItemLookupMap.computeIfAbsent(stack.getItem(), item -> new HashSet<>()).add(type);
         QIOItemTypeData data = new QIOItemTypeData(type);
-        //Ensure we have a matching uuid for this item
-        data.getItemUUID();
+        // Global UUID allocation persists across worlds; an aborted insertion must not publish a new one.
+        if (deferUUID) {
+            data.itemUUID = QIOGlobalItemLookup.INSTANCE.getUUIDForType(type);
+            if (data.itemUUID == null) {
+                pendingInsertionUUIDs.add(data);
+            }
+        } else {
+            data.getItemUUID();
+        }
         return data;
     }
 
@@ -814,10 +858,18 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
         }
 
         private long add(long amount, Action action) {
+            return add(amount, action, null);
+        }
+
+        private long add(long amount, Action action, @Nullable TransactionContext tx) {
+            if (action.execute() && tx != null) {
+                frequencyRemoveTx.updateSnapshots(tx);
+                typeRemoveTx.updateSnapshots(tx);
+            }
             long toAdd = amount;
             // first we try to add the items to an already-containing drive
             for (QIODriveKey key : containingDrives) {
-                toAdd = addItemsToDrive(toAdd, driveMap.get(key), action);
+                toAdd = addItemsToDrive(toAdd, driveMap.get(key), action, tx);
                 if (toAdd == 0) {
                     break;
                 }
@@ -826,7 +878,7 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
             if (toAdd > 0) {
                 for (QIODriveData data : driveMap.values()) {
                     if (!containingDrives.contains(data.getKey())) {
-                        toAdd = addItemsToDrive(toAdd, data, action);
+                        toAdd = addItemsToDrive(toAdd, data, action, tx);
                         if (toAdd == 0) {
                             break;
                         }
@@ -842,8 +894,8 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
             return toAdd;
         }
 
-        private long addItemsToDrive(long toAdd, QIODriveData data, Action action) {
-            long rejects = data.add(itemType, toAdd, action);
+        private long addItemsToDrive(long toAdd, QIODriveData data, Action action, @Nullable TransactionContext tx) {
+            long rejects = data.add(itemType, toAdd, action, tx);
             if (action.execute() && rejects < toAdd) {
                 containingDrives.add(data.getKey());
             }
@@ -927,6 +979,9 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
 
         public UUID getItemUUID() {
             if (itemUUID == null) {
+                if (pendingInsertionUUIDs.contains(this)) {
+                    throw new IllegalStateException("Cannot publish a provisional QIO item UUID before the transaction commits");
+                }
                 //Lazily cache what the uuid for the stack is
                 itemUUID = QIOGlobalItemLookup.INSTANCE.getOrTrackUUID(itemType);
             }

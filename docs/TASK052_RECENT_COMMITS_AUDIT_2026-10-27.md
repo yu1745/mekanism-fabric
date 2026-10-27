@@ -78,7 +78,7 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 最小真实修复边界不是简单倒换调用或 remove-then-add 补偿：`QIOFrequency.addItem`/`massInsert` 和 `QIOItemTypeData.add` 尚未接受 `TransactionContext`，原 `QIODriveData.add` 会立即写驱动 metadata 并通知 holder；原有事务日志只覆盖 removal。进一步核对：已有 `FrequencyRemoveParticipant` 快照频率索引与计数，但不覆盖插入清理的 failed-wildcard 集合；`TypeRemoveParticipant` 快照类型计数与驱动成员但不含 `itemUUID`；现有 `DriveStateParticipant` 快照实际 stack 身份、metadata、itemMap 并在最终提交通知 holder，可以作为插入侧真实 owner 的基础。新类型 `createTypeDataForAbsent` 会调用全局 `QIOGlobalItemLookup.getOrTrackUUID`，它立即修改全局双向映射及 saved-data dirty 标志；仅复用 removal 快照会留下全局副作用。应先设计频率共享索引、类型状态、各驱动实际 stack/metadata、全局 UUID 分配及提交通知的插入侧事务参与，再让外部提取和频率插入参与同一事务；涵盖嵌套 abort、短提取、异常、已有/新类型、多个驱动和 drive 替换身份。此数据风险未修复；不要仅根据日志将问题宣称闭环。
 
-**阶段性 WIP `b8fe2c31` 的提交复审**：已阅读完整 diff。驱动 owner 新增带事务的 `add` 重载，复用原 `DriveStateParticipant` 在修改前核对真实 stack 身份并采集快照，holder 通知推迟至最终提交；现有三参 `add` 继续原先非事务行为。该重载目前尚无生产调用，因此 importer 原子性风险仍原样存在；只有 `compileJava` 成功，未证明驱动插入回滚，尚需同一闭包的真实 owner 集成测试。频率 failed-wildcard、类型 `itemUUID`、全局 UUID 及旧状态 dirty 的快照/嵌套语义和提交发布仍未完成，不能单独交付此阶段当作修复。
+**阶段性 WIP `b8fe2c31` 的提交复审**：已阅读完整 diff。驱动 owner 新增带事务的 `add` 重载，复用原 `DriveStateParticipant` 在修改前核对真实 stack 身份并采集快照，holder 通知推迟至最终提交；现有三参 `add` 继续原先非事务行为。该重载目前尚无生产调用，因此 importer 原子性风险仍原样存在；只有 `compileJava` 成功，未证明驱动插入回滚，尚需同一闭包的真实 owner 集成测试。接续阶段性 WIP `bc9f5aeb` 已扩展同一频率快照以包含 failed-wildcard 集合、类型快照以包含 `itemUUID`；其完整 diff 已复审，`compileJava` 成功。它也改变原有移除事务回滚覆盖面，尚无真实 owner 的嵌套 abort/交错写入测试，不能据此断言无回归。全局 UUID、插入时注册快照、旧状态 dirty、提交发布以及 importer 的同一事务连接仍未完成；两阶段均不能单独交付当作修复。
 
 ### F9 — QIO 导入槽顺序变化（`a03c1888`，有槽存储已修复）
 

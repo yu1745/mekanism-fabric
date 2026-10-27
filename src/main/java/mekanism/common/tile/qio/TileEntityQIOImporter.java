@@ -3,6 +3,7 @@ package mekanism.common.tile.qio;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Predicate;
+import mekanism.api.Action;
 import mekanism.api.SerializationConstants;
 import mekanism.api.functions.ConstantPredicates;
 import org.slf4j.Logger;
@@ -15,7 +16,6 @@ import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
 import net.fabricmc.fabric.api.transfer.v1.storage.StorageView;
 import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
 import mekanism.common.content.qio.QIOFrequency;
-import mekanism.common.content.transporter.TransporterManager;
 import mekanism.common.integration.computer.ComputerException;
 import mekanism.common.integration.computer.annotation.ComputerMethod;
 import mekanism.common.inventory.container.MekanismContainer;
@@ -23,7 +23,6 @@ import mekanism.common.inventory.container.sync.SyncableBoolean;
 import mekanism.common.lib.inventory.HashedItem;
 import mekanism.common.registries.MekanismBlocks;
 import mekanism.common.registries.MekanismDataComponents;
-import mekanism.common.util.InventoryUtils;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.NBTUtils;
 import net.minecraft.core.BlockPos;
@@ -123,19 +122,31 @@ public class TileEntityQIOImporter extends TileEntityQIOFilterHandler {
             if (!canFilter.test(stack)) {
                 continue;
             }
-            ItemStack used = TransporterManager.getToUse(stack, freq.addItem(stack));
-            ItemStack ret;
-            try (Transaction transfer = Transaction.openOuter()) {
-                long extracted = view.extract(variant, used.getCount(), transfer);
-                transfer.commit();
-                ret = extracted <= 0 ? ItemStack.EMPTY : variant.toStack((int) extracted);
+            long capacity = freq.massInsert(stack, stack.getCount(), Action.SIMULATE);
+            if (capacity <= 0) {
+                continue;
             }
-            if (!InventoryUtils.areItemsStackable(used, ret) || used.getCount() != ret.getCount()) {
-                LOGGER.error("QIO insertion error: item storage at {} in {} returned {} during simulated extraction, but returned {} during execution. This is wrong!",
-                      worldPosition.relative(getOppositeDirection()), level.dimension().location(), stack, ret);
+            long extracted;
+            try (Transaction transfer = Transaction.openOuter()) {
+                extracted = view.extract(variant, capacity, transfer);
+                if (extracted < 0 || extracted > capacity) {
+                    LOGGER.error("QIO insertion error: item storage at {} in {} extracted {} items after a request for {}",
+                          worldPosition.relative(getOppositeDirection()), level.dimension().location(), extracted, capacity);
+                    continue;
+                }
+                if (extracted == 0) {
+                    continue;
+                }
+                long inserted = freq.insertItem(stack, extracted, transfer);
+                if (inserted != extracted) {
+                    LOGGER.error("QIO insertion error: frequency accepted {} of {} extracted items at {} in {}; rolling back",
+                          inserted, extracted, worldPosition.relative(getOppositeDirection()), level.dimension().location());
+                    continue;
+                }
+                transfer.commit();
             }
             typesAdded.add(type);
-            countAdded += used.getCount();
+            countAdded += (int) extracted;
         }
     }
 
