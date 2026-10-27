@@ -2,7 +2,6 @@ package mekanism.fabric.client.hud;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.Mth;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 
 /**
@@ -34,12 +33,7 @@ public final class FabricHudHeights {
                 left += 10;
             }
         }
-        LivingEntity vehicle = player.getVehicle() instanceof LivingEntity living ? living : null;
-        int vehicleHearts = minecraft.gui.getVehicleMaxHearts(vehicle);
-        if (vehicleHearts > 0) {
-            //Vehicle hearts render on the left column and push the jump bar/health stack up in vanilla's layout.
-            left += 10;
-        }
+        //Vehicle hearts occupy the right column, not NeoForge's leftHeight used by the energy bar.
         return left;
     }
 }
