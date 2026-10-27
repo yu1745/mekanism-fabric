@@ -17,6 +17,8 @@ import org.slf4j.LoggerFactory;
 /** Client-only entrypoint kept separate from the dedicated-server-safe common bootstrap. */
 public final class MekanismFabricClientBootstrap implements ClientModInitializer {
     private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism/FabricClient");
+    @org.jetbrains.annotations.Nullable
+    private static net.minecraft.client.multiplayer.ClientLevel previousWorld;
 
     @Override
     public void onInitializeClient() {
@@ -97,12 +99,16 @@ public final class MekanismFabricClientBootstrap implements ClientModInitializer
                     context.tickCounter().getGameTimeDeltaPartialTick(false),
                     context.profiler()));
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientWorldEvents.AFTER_CLIENT_WORLD_CHANGE.register((client, world) -> {
-            //The official ClientPlayerNetworkEvent.Clone handler (dimension change / respawn)
-            mekanism.client.MekanismClient.resetDimensionChange();
+            //Fabric also fires for the initial world; the official clone handler only resets when worlds differ.
+            if (previousWorld != null && previousWorld != world) {
+                mekanism.client.MekanismClient.resetDimensionChange();
+            }
+            previousWorld = world;
             mekanism.common.lib.transmitter.TransmitterNetworkRegistry.clearClientNetworks();
         });
         net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             //The official ClientPlayerNetworkEvent.LoggingOut handler
+            previousWorld = null;
             mekanism.client.MekanismClient.reset();
             mekanism.common.lib.transmitter.TransmitterNetworkRegistry.clearClientNetworks();
         });
