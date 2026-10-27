@@ -1,8 +1,12 @@
 package mekanism.fabric.client;
 
 import mekanism.api.fluid.FluidStack;
+import mekanism.common.registration.impl.FluidDeferredRegister;
+import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap;
 import net.fabricmc.fabric.api.client.render.fluid.v1.FluidRenderHandler;
 import net.fabricmc.fabric.api.client.render.fluid.v1.FluidRenderHandlerRegistry;
+import net.fabricmc.fabric.api.client.render.fluid.v1.SimpleFluidRenderHandler;
+import net.minecraft.client.renderer.RenderType;
 
 /**
  * Client-only fluid tint lookup. NeoForge exposes per-fluid client extensions ({@code IClientFluidTypeExtensions}) that the
@@ -16,6 +20,18 @@ public final class FabricFluidColors {
     public static final int NO_TINT = -1;
 
     private FabricFluidColors() {
+    }
+
+    /** Registers the official textures, tint and translucent layer for each still/flowing fluid pair. */
+    public static void register(FluidDeferredRegister fluids) {
+        for (var fluid : fluids.getFluidRegistryObjects()) {
+            var type = fluid.getFluidType();
+            var still = fluid.get();
+            var flowing = fluid.getFlowingFluid().get();
+            FluidRenderHandlerRegistry.INSTANCE.register(still, flowing,
+                  new SimpleFluidRenderHandler(type.stillTexture, type.flowingTexture, type.overlayTexture, type.color));
+            BlockRenderLayerMap.INSTANCE.putFluids(RenderType.translucent(), still, flowing);
+        }
     }
 
     public static int getTintColor(FluidStack stack) {

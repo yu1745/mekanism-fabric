@@ -65,6 +65,7 @@ public final class MekanismFabricClientBootstrap implements ClientModInitializer
         mekanism.fabric.client.render.FabricEntityRendererRegistration.register();
         mekanism.fabric.client.hud.FabricClientTickRegistration.register();
         mekanism.fabric.client.render.armor.FabricArmorLayerRegistration.register();
+        mekanism.fabric.client.FabricFluidColors.register(mekanism.common.registries.MekanismFluids.FLUIDS);
         mekanism.fabric.client.render.item.FabricFluidBucketRegistration.register(mekanism.common.registries.MekanismFluids.FLUIDS);
         mekanism.fabric.client.render.item.FabricMekaSuitItemColor.register();
         //The item decorations (the official RegisterItemDecorationsEvent registrations).

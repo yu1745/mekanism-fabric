@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.UnaryOperator;
 import mekanism.api.fluid.FluidStack;
 import mekanism.api.MekanismAPI;
@@ -20,6 +21,8 @@ import net.minecraft.core.dispenser.DispenseItemBehavior;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.FastColor;
 import net.minecraft.world.item.BucketItem;
 import net.minecraft.world.item.DispensibleContainerItem;
@@ -43,8 +46,7 @@ import org.jetbrains.annotations.NotNull;
  * Fabric port of the official fluid registry owner. NeoForge registers a {@code FluidType} per fluid and derives the
  * flowing implementation from {@code BaseFlowingFluid}; vanilla has neither concept, so this class owns the fluid
  * metadata ({@link MekanismFluidType}) as a plain Mekanism value and provides the {@link FlowingFluid} implementation
- * that vanilla expects. Bucket fill/empty sound actions from the NeoForge builder have no vanilla equivalent and are
- * dropped here; bucket pickup sounds come from {@link Fluid#getPickupSound()}.
+ * that vanilla expects. Bucket pickup uses the official water-bucket fill sound through {@link Fluid#getPickupSound()}.
  */
 public class FluidDeferredRegister {
 
@@ -261,6 +263,11 @@ public class FluidDeferredRegister {
         @Override
         public Item getBucket() {
             return definition.bucket.get();
+        }
+
+        @Override
+        public Optional<SoundEvent> getPickupSound() {
+            return Optional.of(SoundEvents.BUCKET_FILL);
         }
 
         @Override
