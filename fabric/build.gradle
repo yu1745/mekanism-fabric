@@ -20,6 +20,7 @@ sourceSets {
     clientWindowFixture
     fabricTransferTest
     fabricRegistryTest
+    qioTransactionTest
     fabricDataMapTest
     fabricRecipeRegistryTest
     dataMapReloadFixture
@@ -293,6 +294,11 @@ sourceSets {
     fabricRegistryTest {
         // The sole root-registry integration test gets its own Knot worker and never sees
         // ordinary or transfer-test output.
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.runtimeClasspath
+    }
+    qioTransactionTest {
+        // Real QIO component registration requires its own fresh loader and mutable registry window.
         compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
         runtimeClasspath += sourceSets.main.runtimeClasspath
     }
@@ -647,6 +653,10 @@ dependencies {
     fabricRegistryTestRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.13.4'
     fabricRegistryTestRuntimeOnly "net.fabricmc:fabric-loader-junit:${loader_version}"
 
+    qioTransactionTestImplementation 'org.junit.jupiter:junit-jupiter:5.13.4'
+    qioTransactionTestRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.13.4'
+    qioTransactionTestRuntimeOnly "net.fabricmc:fabric-loader-junit:${loader_version}"
+
     fabricDataMapTestImplementation 'org.junit.jupiter:junit-jupiter:5.13.4'
     fabricDataMapTestRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.13.4'
     fabricDataMapTestRuntimeOnly "net.fabricmc:fabric-loader-junit:${loader_version}"
@@ -861,7 +871,7 @@ def fabricTransferTest = tasks.register('fabricTransferTest', Test) {
     mustRunAfter tasks.named('test')
 }
 tasks.named('check') {
-    dependsOn fabricTransferTest
+    dependsOn fabricTransferTest, 'qioTransactionTest'
 }
 
 def testWorkingDirectory = layout.buildDirectory.dir('test-working')
@@ -887,6 +897,20 @@ def fabricRegistryTest = tasks.register('fabricRegistryTest', Test) {
         fabricRegistryWorkingDirectory.get().asFile.mkdirs()
     }
     mustRunAfter tasks.named('test'), fabricTransferTest
+}
+def qioTransactionWorkingDirectory = layout.buildDirectory.dir('qio-transaction-test-working')
+tasks.register('qioTransactionTest', Test) {
+    group = 'verification'
+    description = 'Tests real QIO frequency and drive transaction owners in an isolated Fabric loader.'
+    testClassesDirs = sourceSets.qioTransactionTest.output.classesDirs
+    classpath = sourceSets.qioTransactionTest.runtimeClasspath
+    maxParallelForks = 1
+    forkEvery = 1
+    systemProperty 'fabric.side', 'server'
+    workingDir qioTransactionWorkingDirectory
+    doFirst {
+        qioTransactionWorkingDirectory.get().asFile.mkdirs()
+    }
 }
 def fabricDataMapWorkingDirectory = layout.buildDirectory.dir('fabric-datamap-test-working')
 def fabricDataMapTest = tasks.register('fabricDataMapTest', Test) {
