@@ -64,8 +64,23 @@
 | `a634adff`、`a7369797` | 主代理已读完整 diff，对照模型 JSON、六方向 blockstate 与 tile 同步；原 BER 叠绘并未实现官方状态切换，见待修 F49；实际视觉未验。 |
 | `a64dca8b`、`9941f867` | 主代理已读完整 diff，对照原始 tick 声音守卫；暂停时声音更新时机不一致，见 F50，真实声音未验。 |
 | `f45d2bd7` | 主代理已读完整 diff，仅为 MekaSuit OBJ 下一轮边界记录，不直接改变生产逻辑。 |
+| `7765313e` | 主代理已读完整真实 diff、追踪模块注册、分类与重载；确认模块规格未注册、模型数据类型转换崩溃和重载分类失效，见 F51。模型启动 proof 只证 handler 安装，不证明穿戴或模块渲染；方块图集清单缺失另见 F52。 |
+| `91fbebef` | 已读完整 diff，仅为原审查记录；其通过结论被 F51/F52 的证据更正，不改变生产代码。 |
+| `ab5f7ad0` | 已读完整 diff、对照固定 NeoForge 动态桶模型和客户端实际缺纹理日志；缺失图集资源、缺默认 display transform 等问题见待修 F52。启动计数不证明模型完成。 |
 
 ## 审查发现与待复核
+
+### F52 — 化学桶及装备图集资源与桶变换缺失（`ab5f7ad0`，待修）
+
+真实客户端 `fabric/run/logs/latest.log` 在 18 个桶报告缺少 `neoforge:item/mask/bucket_fluid`，并在大多数桶和流体方块报告缺少 `mekanism:liquid/liquid` / `mekanism:liquid/steam`。`processResources` 未打包官方生成的 `assets/minecraft/atlases/blocks.json`，而根目录中误提交的 NeoForge mask 随 `9876fe84` 删除且未在 Fabric 资源中补回；已检查当前构建 jar 中两者均不存在。缺失图集清单也影响其中列出的 MekaSuit 纹理和其他 Mekanism 精灵。修复需在可分发许可范围内提供真实 mask 与官方 atlas 源，不能依赖未纳入构建的本地参考 jar；随后验证烘焙真实 sprite 而非 missingno。
+
+桶模型另硬编码 `ItemTransforms.NO_TRANSFORMS` 和 identity bake，而固定 NeoForge `assets/neoforge/models/item/default.json` 给出 ground/head/firstperson/thirdperson/fixed 变换，`DynamicFluidContainerModel` 使用 context transforms、incoming model state 和以中心缩放的 fluid transform；当前将 fluid 两面统一平移也不等价。遮罩矩形扫描、模型重载、粒子及第三方资源覆盖仍需对照官方 helper。先完成所属桶模型和图集的最小真实闭包，记录许可来源，再用实际加载日志及模型行为验证；启动 proof 不足以声称通过。
+
+### F51 — MekaSuit 模块模型接线与重载失效（`7765313e`，修复已提交；实机画面待验）
+
+原官方 `ClientRegistration.init` 注册 jetpack、modulator、elytra 三个规格；Fabric 仅注册 OBJ 模型而未注册规格，故这些模块无法参与外观选择。`registerMekaSuitModuleModel` 创建普通 `OBJModelData`，而 `createQuads` 在规格非空时将所有条目强转为 `ModuleOBJModelData`，第三方注册规格或恢复官方规格后会抛 ClassCastException。即便修正类型，原 `clearCached()` 只清几何和烘焙缓存，`ModuleOBJModelData` 的 `classified` 和 `specParts` 不重置，资源包重载更换组名后仍使用旧分类。
+
+修复 `a17f3df7` 恢复三个官方规格及飞行谓词，使用有类型的 `ModuleOBJModelData`，资源重载和迟到规格注册清分类与 armor quad 缓存；保留注册去重。已按审查 prompt 重读该提交完整真实 diff，对照官方规格与当前重载/注册调用链，未发现此范围新增偏离。最终 `compileJava` 和两个 focused 测试通过，分别验证模型类型/去重及模拟组名变化后的活动/不活动分类；既有客户端模型测试亦通过。真实客户端启动 15/15，达到标题屏后主动终止客户端，脚本零失败（client exit 1 为主动终止），只证明初始化而非穿戴渲染。第三方纹理图集/OBJ 支持、真实模块切换和资源包重载画面尚未验证。
 
 ### F1 — 能源接收侧失效（`5d2c9182`，前次判断更正；空网络外观待验证）
 
