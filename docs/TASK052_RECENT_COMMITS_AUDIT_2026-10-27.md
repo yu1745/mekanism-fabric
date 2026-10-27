@@ -111,11 +111,11 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 ### F14 — 模块附魔未进入原版游戏效果（`76f790ce`，游戏查询已修复）
 
-该提交删除 MekaTool/MekaSuit 的 `getEnchantmentLevel` 和 `getAllEnchantments`；固定 NeoForge patched `EnchantmentHelper` 的等级查询委托 stack，两个 `runIterationOnItem` 也使用 gameplay 附魔，Fabric 原版只读 `DataComponents.ENCHANTMENTS`。`ModuleContainer.moduleBasedEnchantments()` 保存的模块附魔因此不参与上述原版游戏效果。修复 `3b945464` 只针对真实 MekaTool/MekaSuit，在原版等级查询及两个游戏效果遍历入口按官方 `max(stored,module)` 合并，不修改物品真实附魔组件，也不把虚拟附魔写进合成/存档。已审阅提交完整 diff：隔离 Knot 的 `GameplayModuleEnchantmentsTest` 对真实 MekaTool 和 MekaSuit 构造真实 module component，验证重叠取最大值、仅模块等级、原组件不变、两类原版迭代和无物理附魔组件及其他物品不受影响；完整 `qioTransactionTest`、`fabricTransferTest` 和三项切片 gate 均通过。未做实际玩家受伤/采掘和 remapped JAR 验证，其他模组对同一原版方法的 mixin 兼容性未证明。
+该提交删除 MekaTool/MekaSuit 的 `getEnchantmentLevel` 和 `getAllEnchantments`；固定 NeoForge patched `EnchantmentHelper` 的等级查询委托 stack，两个 `runIterationOnItem` 也使用 gameplay 附魔，Fabric 原版只读 `DataComponents.ENCHANTMENTS`。`ModuleContainer.moduleBasedEnchantments()` 保存的模块附魔因此不参与上述原版游戏效果。修复 `3b945464` 只针对真实 MekaTool/MekaSuit，在原版等级查询及两个游戏效果遍历入口按官方 `max(stored,module)` 合并，不修改物品真实附魔组件，也不把虚拟附魔写进合成/存档。已审阅提交完整 diff：隔离 Knot 的 `GameplayModuleEnchantmentsTest` 对真实 MekaTool 和 MekaSuit 构造真实 module component，验证重叠取最大值、仅模块等级、原组件不变、两类原版迭代和无物理附魔组件及其他物品不受影响；完整 `qioTransactionTest`、`fabricTransferTest` 和三项切片 gate 均通过。后续 `8de19d7d`（已审阅完整 diff）修正过宽的直接 component 查询：原版实际通过 `IModuleHelper.INSTANCE.getModuleContainer`，因此未登记为模块容器的 Meka 物品即使携带组件也不应生效；测试现在使用真实支持注册，并验证未登记物品无虚拟等级。两个装备聚焦测试通过。未做实际玩家受伤/采掘和 remapped JAR 验证，其他模组对同一原版方法的 mixin 兼容性未证明。
 
 ### F15 — 附魔适用、物品重装备和 pick-block 行为仍待恢复（`76f790ce`）
 
-同一提交还删去官方 `isBookEnchantable`、`isPrimaryItemFor`、`supportsEnchantment`、`shouldCauseReequipAnimation`、`shouldCauseBlockBreakReset` 和带模块装备的 `isNotReplaceableByPickAction`；本次静态检查尚未发现等价的通用调用链。不能把 F14 的游戏等级/效果遍历修复当作这些不同 owner 的修复。需逐项核对 vanilla 的附魔台/铁砧、客户端手持渲染和挖掘状态及服务端 pick-block 的真实入口，按装备类别和官方返回条件恢复；电弓的 `createProjectile` 只覆盖射弹，不证明其他虚拟 Flame 查询。先在原行为范围处理，不默认扩到其他模组的通用兼容框架。
+同一提交还删去官方 `isBookEnchantable`、`isPrimaryItemFor`、`supportsEnchantment`、`shouldCauseReequipAnimation`、`shouldCauseBlockBreakReset` 和带模块装备的 `isNotReplaceableByPickAction`。pick-block 部分修复 `b7d2830d` 已审阅完整 diff：在原版 `Inventory.getSuitableHotbarSlot` 的原 `isEnchanted` 判断追加已登记 MekaTool/MekaSuit 的真实 `hasInstalledModules`，同一原版 Inventory 同时供客户端挑选与服务端 `handlePickItem` 调用；仍保留空槽优先与全部受保护时返回当前槽的官方回退，不承诺绝对不能替换。隔离 Knot 的 `PickBlockModuleProtectionTest` 使用真实注册模块、装备和库存，验证工具/护甲、空槽、全部受保护及无模块回退。首次测试因未通过实际 ModuleHelper 注册测试装备而失败，按真实支持注册后重跑通过；不声称真实客户端/服务端网络已验证。附魔台/铁砧、客户端手持渲染和挖掘状态仍需按官方各装备条件恢复；电弓 `createProjectile` 仅覆盖射弹，不证明其他虚拟 Flame 查询。
 
 ## 恢复位置
 
