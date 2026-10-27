@@ -51,6 +51,8 @@
 | `d77c3252` | 子代理固定 `b452ba25` 已读行为 diff；主代理补读完整 common-slice diff 及文档，按前后集合核对新增 30 个真实渲染/直接前置文件、无移除，余下为重排。该提交现已读完整 diff。已修流体缓存 F36 并恢复高亮 F38（真实画面仍待验）；大型 renderer 因 `shouldRenderOffScreen` 全局注册而必然被 section 剔除的初判已撤回。 |
 | `ae208105`、`4bdbcdac`、`6928d67c` | 子代理完整读取各自 diff，均为审查记录文档，不改生产行为。 |
 | `afd1e77b`、`46f62053` | 子代理完整读取各自 diff 并追踪当前资源重载链：历史模型自引用问题已被 `e0dee5bd` 修复；实际物品及装备 renderer 缺重载回调，见 F40。关于 transporter 层提前缺失的初判已撤回，该时点尚未注册 transporter renderer。 |
+| `347e5803` | 主代理完整读 873 行真实 diff（含删除的 320 条排除清单）、核对当前类型化配料与缓存：F27 已修；新确认相等性缺少差集/交集字段并按 F41 修复。嵌套类型化配料及第三方数据包语义未全面验证。 |
+| `fb65b9b7`、`7b70f56d` | 主代理完整读取真实 diff，均为原审查记录，缓存等价的历史说法已由 F27 更正，不引入生产代码。 |
 
 ## 审查发现与待复核
 
@@ -243,6 +245,10 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 ### F40 — 物品与装备渲染模型缺资源重载（`afd1e77b`、`46f62053`，代码已修，画面待验）
 
 当前已纳 `RenderJetpack`、`RenderFreeRunners`、`RenderScubaMask`、`RenderScubaTank`、`RenderAtomicDisassembler`、`RenderFlameThrower` 和 `RenderEnergyCubeItem` 的模型字段只在 `onResourceManagerReload` 初始化，而 Fabric 物品 renderer 直接调用它们，原端口没有客户端重载监听；两个 armored 物品是独立实例。主代理也核实装备侧的 `JetpackArmor`、`FreeRunnerArmor`、`ScubaMaskArmor`、`ScubaTankArmor` 同样只在重载时初始化，却已接入 `FabricGearModels`。因此首次实际渲染时有确定的 null 解引用调用链（能源立方核心仅在渲染核心时触发），不是标题屏通过所能覆盖。`db3c69db` 通过 Fabric 客户端资源重载注册这 15 个真实 owner，Fabric 资源加载器将自定义监听排在 vanilla `EntityModelSet` 之后；该提交完整真实 diff 已按移植风格 prompt 复审，未发现该行为边界内新增偏离。真实 Knot 客户端启动时日志出现 `MEKANISM_FABRIC_GEAR_MODEL_RELOAD_PROOF listeners=15`，标记后主动停止进程；此证据证明所有回调成功执行，不证明物品/装备画面或后续资源包重载。`RenderFluidTankItem` 的重载是官方空方法，无模型需初始化。旧 proof 的部分计数为字面量，不能证明模型初始化成功。
+
+### F41 — 差集和交集配料的相等性忽略谓词（`347e5803`，已修）
+
+`ItemStackIngredient` 新增 `subtracted` 和 `intersectionChildren` 后，`equals`/`hashCode` 仍只看主 ingredient、count、components 和 compound children；共享同一 base 对象的普通配料、不同差集或不同交集会误判相等，违反公开值对象语义，集合/映射消费者可能合并不同谓词。未发现本次审计范围内直接以该类型作 Map 键的内部调用，不能据此声称机器配方已复现错误。`ad25b1b4` 将两个字段加入相等性和哈希，复用真实 Ingredient 子对象的既有相等性；扩展既有 focused 测试覆盖不同差集/交集、普通与差集的区分以及相等对象哈希一致。`NeoForgeTypedIngredientTest` 和 API slice gate 通过；完整真实 diff 已按 prompt 复审，未发现该局部边界的新增偏离。
 
 ### 并行初审待主代理核验
 
