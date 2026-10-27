@@ -4,13 +4,12 @@ import java.util.function.Supplier;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Fabric port delta: project-owned replacement for the NeoForge {@code Lazy} utility. Single-thread lazy memoization with the same observable contract:
- * the supplier runs at most once, on first {@link #getValue()}, and the same instance is returned afterwards. Not thread-safe, matching upstream.
+ * Fabric port replacement for NeoForge's {@code Lazy}: memoizes a non-null value across threads until invalidated.
+ * A failed or null-producing supplier leaves the lazy unresolved so a later call may retry.
  */
 public final class Lazy<T> implements Supplier<T> {
 
     private final Supplier<T> supplier;
-    private boolean resolved;
     private T value;
 
     private Lazy(Supplier<T> supplier) {
@@ -26,11 +25,18 @@ public final class Lazy<T> implements Supplier<T> {
         return getValue();
     }
 
-    public T getValue() {
-        if (!resolved) {
-            value = supplier.get();
-            resolved = true;
+    public synchronized T getValue() {
+        if (value == null) {
+            T computed = supplier.get();
+            if (computed == null) {
+                throw new IllegalStateException("Lazy value cannot be null, but supplier returned null: " + supplier);
+            }
+            value = computed;
         }
         return value;
+    }
+
+    public synchronized void invalidate() {
+        value = null;
     }
 }
