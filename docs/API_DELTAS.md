@@ -648,9 +648,9 @@ gate）BUILD SUCCESSFUL。未运行（按完成度优先策略）：全量测试
 
 ### compat 配方条件包装变换（Task052 datagen 车道第二段，2026-10-27）
 
-- 637 个官方 `compat/**` 配方以 NeoForge `neoforge:conditions` 包装门控其他模组,该包装键在 Fabric 条件系统（固定 `fabric:load_conditions`）无对应物。采用**打包期变换**（`transformCompatRecipes`，groovy JsonSlurper）:官方源文件 byte 不变,仅打包形态转换——wrapper→`fabric:load_conditions`、`mod_loaded`→`fabric:all_mods_loaded`（注意复数 s,首版误写单数被真实服务端 455 条解析错误暴露）、`not`→`fabric:not`、`tag_empty`→`fabric:tags_populated` 包 `fabric:not`。
+- 637 个官方 `compat/**` 配方以 NeoForge `neoforge:conditions` 包装门控其他模组,该包装键在 Fabric 条件系统（固定 `fabric:load_conditions`）无对应物。采用**打包期变换**（`transformCompatRecipes`，groovy JsonSlurper）:官方源文件 byte 不变,仅打包形态转换——wrapper→`fabric:load_conditions`、`mod_loaded`→`fabric:all_mods_loaded`（注意复数 s,首版误写单数被真实服务端 455 条解析错误暴露）、`not`→`fabric:not`、`tag_empty`→`mekanism:tag_empty`（读取重载时真实 item tag 内容）。
 - `mekanism:mod_version_loaded`（118 个）为 Mekanism 自定义条件,Fabric 无内建版本区间条件→移植 `FabricModVersionLoadedCondition` 注册同 id 的 fabric ResourceConditionType,语义对齐官方 `ModVersionLoadedCondition`（mod 存在且版本≥下限）。**比较器 delta（记录）**:官方用 Maven `ComparableVersion`,Fabric loader `Version` 为 semver 形;现有 compat 下限均为简单三元版本,两种序一致。
-- **tag 存在性 delta（记录）**:NeoForge `tag_empty` 检查空,Fabric `tags_populated` 只检查存在——仅对"存在但为空"的标签可见,此时配方会加载但匹配不到任何物品（惰性配方）。
+- **标签条件修正（2026-10-27）**：原变换将 `tag_empty` 误映射为 `tags_populated`，外层 `not` 未被抵消，64 个官方兼容配方的条件因此反向；旧文档称只有空标签差异是错误的。现用真实 reload tag 快照实现 `mekanism:tag_empty`，区分不存在、存在但空和非空；作用域跟随 Fabric 条件加载清理。已在隔离服务端以 4 个测试配方验证三条条件通过、一条拒绝（2868→2871），未实测安装 BSWG 的完整配方。
 - 验收:jar 内 637 个 compat 配方全部为变换形态;真实服务端条件注册 proof + 零解析错误 + "Loaded 2868 recipes"(与无 compat 时相同——ae2/BSWG 缺席时 637 全部被条件正确跳过,即门控生效的直接证据)。
 
 ### HUD 车道（Task052 client 渲染弧 (d) 段,2026-10-27）

@@ -198,7 +198,7 @@ def platformSlice = loadSlice('platform-slice.txt')
 def apiSliceFiles = apiSlice.collect { file("../src/api/java/${it}") }
 def commonSliceFiles = commonSlice.collect { file("../src/main/java/${it}") }
 def platformSliceFiles = platformSlice.collect { file("src/main/java/${it}") }
-if (apiSlice.size() != 262 || commonSlice.size() != 1501 || platformSlice.size() != 185) {
+if (apiSlice.size() != 262 || commonSlice.size() != 1501 || platformSlice.size() != 188) {
     throw new GradleException("Unexpected Fabric source slice counts: api=${apiSlice.size()} common=${commonSlice.size()} platform=${platformSlice.size()}")
 }
 
@@ -680,9 +680,8 @@ def resolvedModVersion = project.version.toString()
 //The 637 official compat recipes gate themselves on other mods via the NeoForge `neoforge:conditions`
 //wrapper, which has no Fabric equivalent. The packaging transform is mechanical and documented:
 //the wrapper key becomes `fabric:load_conditions`, `neoforge:mod_loaded` becomes
-//`fabric:all_mods_loaded`, `neoforge:not` maps one-to-one, and `neoforge:tag_empty` becomes
-//`fabric:tags_populated` under a `fabric:not` (delta: Fabric checks tag existence, not emptiness -
-//only visible for a tag that exists while empty, where the recipe loads but matches nothing).
+//`fabric:all_mods_loaded`, `neoforge:not` maps one-to-one, and `neoforge:tag_empty` uses
+//Mekanism's Fabric condition over the actual item tag contents captured during reload.
 //Official sources stay byte-unchanged; only the packaged form is transformed.
 tasks.register('transformCompatRecipes') {
     def srcDir = file('../src/datagen/generated/mekanism/data/mekanism/recipe/compat')
@@ -700,7 +699,7 @@ tasks.register('transformCompatRecipes') {
                 return [condition: 'fabric:not', value: mapCondition(condition['value'])]
             }
             if (type == 'neoforge:tag_empty') {
-                return [condition: 'fabric:tags_populated', registry: 'minecraft:item', values: [condition['tag']]]
+                return [condition: 'mekanism:tag_empty', tag: condition['tag']]
             }
             if (type == 'mekanism:mod_version_loaded') {
                 //Handled by the port's FabricModVersionLoadedCondition: same mekanism id, same fields.
@@ -1089,13 +1088,13 @@ def verifyFabricTestContract = tasks.register('verifyFabricTestContract') {
             }
             [reports.length, tests]
         }
-        def ordinary = readTotals(ordinaryXmlResults, 'ordinary', 94, 446)
+        def ordinary = readTotals(ordinaryXmlResults, 'ordinary', 95, 447)
         def transfer = readTotals(transferXmlResults, 'transfer', 10, 45)
         def registry = readTotals(registryXmlResults, 'root-registry', 1, 3)
         def dataMap = readTotals(dataMapXmlResults, 'data-map', 2, 4)
         def recipeRegistry = readTotals(recipeRegistryXmlResults, 'recipe-registry', 3, 8)
-        if (ordinary[0] + transfer[0] + registry[0] + dataMap[0] + recipeRegistry[0] != 110
-              || ordinary[1] + transfer[1] + registry[1] + dataMap[1] + recipeRegistry[1] != 506) {
+        if (ordinary[0] + transfer[0] + registry[0] + dataMap[0] + recipeRegistry[0] != 111
+              || ordinary[1] + transfer[1] + registry[1] + dataMap[1] + recipeRegistry[1] != 507) {
             throw new GradleException('Unexpected aggregate Fabric test totals')
         }
     }

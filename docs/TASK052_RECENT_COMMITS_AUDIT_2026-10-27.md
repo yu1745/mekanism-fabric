@@ -53,6 +53,8 @@
 | `afd1e77b`、`46f62053` | 子代理完整读取各自 diff 并追踪当前资源重载链：历史模型自引用问题已被 `e0dee5bd` 修复；实际物品及装备 renderer 缺重载回调，见 F40。关于 transporter 层提前缺失的初判已撤回，该时点尚未注册 transporter renderer。 |
 | `347e5803` | 主代理完整读 873 行真实 diff（含删除的 320 条排除清单）、核对当前类型化配料与缓存：F27 已修；新确认相等性缺少差集/交集字段并按 F41 修复。嵌套类型化配料及第三方数据包语义未全面验证。 |
 | `fb65b9b7`、`7b70f56d` | 主代理完整读取真实 diff，均为原审查记录，缓存等价的历史说法已由 F27 更正，不引入生产代码。 |
+| `fa1396a0`、`0702ce4c` | 已读完整真实 diff，均为工作纪律与兼容条件记录文档；其 tag 差异判断不正确，见 F42。 |
+| `011356e0` | 主代理完整读取真实 diff 与官方、Fabric 条件实现：修复 64 个兼容配方标签条件取反错误，见 F42；实际第三方模组兼容正路径及版本比较器差异仍未实测。 |
 
 ## 审查发现与待复核
 
@@ -249,6 +251,10 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 ### F41 — 差集和交集配料的相等性忽略谓词（`347e5803`，已修）
 
 `ItemStackIngredient` 新增 `subtracted` 和 `intersectionChildren` 后，`equals`/`hashCode` 仍只看主 ingredient、count、components 和 compound children；共享同一 base 对象的普通配料、不同差集或不同交集会误判相等，违反公开值对象语义，集合/映射消费者可能合并不同谓词。未发现本次审计范围内直接以该类型作 Map 键的内部调用，不能据此声称机器配方已复现错误。`ad25b1b4` 将两个字段加入相等性和哈希，复用真实 Ingredient 子对象的既有相等性；扩展既有 focused 测试覆盖不同差集/交集、普通与差集的区分以及相等对象哈希一致。`NeoForgeTypedIngredientTest` 和 API slice gate 通过；完整真实 diff 已按 prompt 复审，未发现该局部边界的新增偏离。
+
+### F42 — compat 配方标签非空条件被反转（`011356e0`，修复待提交复审）
+
+64 个 BSWG 配方的官方条件为 `neoforge:not(neoforge:tag_empty)`，但变换把内部 `tag_empty` 直接映射为 `fabric:tags_populated` 并保留外层 not，导致非空/存在标签时被跳过，缺失标签时反而通过；原文档“仅存在空标签差异”错误。固定 NeoForge `TagEmptyCondition` 真实检查 `context.getTag(tag).isEmpty()`；固定 Fabric `tags_populated` 仅检查重载标签 ID 是否存在。修复在 Fabric 同一 tag 加载边界捕获 item tag 实际非空 ID，用 `mekanism:tag_empty` 保留官方条件本身及任意嵌套 not，重载结束按 Fabric 同一边界清理。focused 测试覆盖缺失、存在但空、非空和作用域清理；完整测试契约 111/507 及 API/platform slice gate 通过；实际 remapped JAR 隔离服务端用四个真实 datapack 配方测试空、缺失、非空及非空取反，加载数量由无测试包的 2868 变为 2871，启动 proof 和正常停服成功，未安装真实 BSWG、未验证这些配方的全部实际产物。
 
 ### 并行初审待主代理核验
 
