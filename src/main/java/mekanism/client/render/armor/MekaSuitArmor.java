@@ -35,6 +35,7 @@ import mekanism.client.model.BaseModelCache.MekanismModelData;
 import mekanism.client.model.BaseModelCache.OBJModelData;
 import mekanism.client.model.MekanismModelCache;
 import mekanism.client.render.MekanismRenderType;
+import mekanism.client.render.lib.Quad;
 import mekanism.client.render.lib.QuadTransformation;
 import mekanism.client.render.lib.QuadUtils;
 import mekanism.client.render.lib.QuickHash;
@@ -194,9 +195,20 @@ public class MekaSuitArmor implements ICustomArmor {
         }
     }
 
-    private void putQuads(List<BakedQuad> quads, VertexConsumer builder, PoseStack.Pose pose, int light, int overlayLight, Color color) {
+    static void putQuads(List<BakedQuad> quads, VertexConsumer builder, PoseStack.Pose pose, int light, int overlayLight, Color color) {
+        int packedColor = net.minecraft.util.FastColor.ARGB32.color((int) (color.af() * 255), (int) (color.rf() * 255),
+              (int) (color.gf() * 255), (int) (color.bf() * 255));
         for (BakedQuad quad : quads) {
-            builder.putBulkData(pose, quad, color.rf(), color.gf(), color.bf(), color.af(), light, overlayLight);
+            // NeoForge's bulk draw merges the baked light and applies baked normals; vanilla's does neither.
+            // Use the existing Mekanism quad representation so LED and rotated suit geometry keep those attributes.
+            for (var vertex : new Quad(quad).getVertices()) {
+                var position = pose.pose().transformPosition(vertex.getPos(), new org.joml.Vector3f());
+                var normal = pose.transformNormal(vertex.getNormal().x(), vertex.getNormal().y(), vertex.getNormal().z(), new org.joml.Vector3f());
+                int blockLight = Math.max(light & 0xFFFF, vertex.getRawLightU());
+                int skyLight = Math.max((light >>> 16) & 0xFFFF, vertex.getRawLightV());
+                builder.addVertex(position.x(), position.y(), position.z(), packedColor, vertex.getTexU(), vertex.getTexV(), overlayLight,
+                      blockLight | skyLight << 16, normal.x(), normal.y(), normal.z());
+            }
         }
     }
 

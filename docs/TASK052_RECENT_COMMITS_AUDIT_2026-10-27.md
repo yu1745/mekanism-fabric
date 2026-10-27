@@ -61,6 +61,9 @@
 | `601da1af`、`5d074d11` | 主代理已读完整 diff；原静态模型/BER 分割已有后续真实 FRAPI 模型修复，见 F39。Quad 的顶点重编码问题已修，见 F45；能量方块、装备及节日模型画面仍待实机验证。 |
 | `254afa6b`、`bc13ab39` | 主代理已读完整 diff，对照官方附加层和 vanilla 鞘翅绘制；修正普通鞘翅被附加层重复绘制，见 F47。装备模型资源重载已在 F40 修复，实际穿戴画面仍未验证。 |
 | `3cedf196`、`3833f46f` | 主代理已读完整 diff 并追查皮肤注册与物品、实体模型选择；物品忽略皮肤自定义模型，见待修 F48；实体与物品在真实世界、资源重载及自定义皮肤的渲染尚未验。 |
+| `a634adff`、`a7369797` | 主代理已读完整 diff，对照模型 JSON、六方向 blockstate 与 tile 同步；原 BER 叠绘并未实现官方状态切换，见待修 F49；实际视觉未验。 |
+| `a64dca8b`、`9941f867` | 主代理已读完整 diff，对照原始 tick 声音守卫；暂停时声音更新时机不一致，见 F50，真实声音未验。 |
+| `f45d2bd7` | 主代理已读完整 diff，仅为 MekaSuit OBJ 下一轮边界记录，不直接改变生产逻辑。 |
 
 ## 审查发现与待复核
 
@@ -274,9 +277,9 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 `Quad(BakedQuad)` 使用 vanilla `putBulkData` 默认重载，它丢弃原始颜色、光值和法线并以调用参数及 quad 方向重建；`Quad.bake()` 又将 overlay 写入 BLOCK 格式实际的光位，将 light 写入法线位，颜色的整数高低位也与 native 内存中的 RGBA 字节顺序不符。此代码被能量方块 `FaceData.transform`、Robit、MekaSuit 和 transmitter 的模型变换路径调用。Fabric 当前部分能量灯使用显式 emissive 材质，不能仅据此断言每种画面都错误；但可确认通用 quad 的颜色、光和法线往返不保真。修复按 native byte order 的 BLOCK 顶点格式读取和写回 RGBA、光与法线；未设置法线的 vanilla 面回退至 face 方向，BLOCK 没有 overlay 字段。`30fd10f3` 的完整真实 diff 已按移植风格 prompt 复审，未发现该局部编码边界新增偏离。两个隔离客户端 Knot 测试以非白色/非零光及法线验证往返和 fullbright 只改变光位，platform slice gate 通过；尚未实测实际模型画面。消费者是否采纳逐顶点光值是独立问题，见 F46。
 
-### F46 — MekaSuit 逐面全亮光值在 vanilla 绘制中被忽略（`601da1af` 后续装备模型路径，待修）
+### F46 — MekaSuit 逐面全亮光值在 vanilla 绘制中被忽略（`601da1af` 后续装备模型路径，代码已修，画面待验）
 
-`MekaSuitArmor.getQuads` 对 LED 四边形施加 `QuadTransformation.fullbright`，但 `putQuads` 使用 vanilla `VertexConsumer.putBulkData` 简化重载：固定 Fabric Minecraft 实现将同一个调用方 `light` 传给全部顶点，不读取 `BakedQuad` 的光位。因此单独修正 F45 的打包仍不能使这条实际装备渲染路径尊重 LED 自发光。应对照固定 NeoForge `putBulkData` 的光合并规则并在既有真实装备 renderer 的消费点恢复，不假设整个 MekaSuit 使用全亮；世界中装备画面尚未验证。
+`MekaSuitArmor.getQuads` 对 LED 四边形施加 `QuadTransformation.fullbright`，但 `putQuads` 使用 vanilla `VertexConsumer.putBulkData` 简化重载：固定 Fabric Minecraft 实现将同一个调用方 `light` 传给全部顶点，不读取 `BakedQuad` 的光位。因此单独修正 F45 的打包仍不能使这条实际装备渲染路径尊重 LED 自发光。对照固定 NeoForge `IVertexConsumerExtension.applyBakedLighting`：逐顶点取 baked 光和环境光各通道最大值，非零 baked normal 经 pose 法线变换。修复在既有装备 renderer 使用 F45 的 Quad 顶点执行此合并，仍按官方传入着色、overlay，未将整个装备强制全亮。隔离客户端 Knot focused 测试调用真实 `MekaSuitArmor.putQuads`，验证不同顶点环境/baked 光合并和非 face 法线；首次 fixture 未 bootstrap 原文报 `Not bootstrapped ... game_event`，补 vanilla bootstrap 后通过。实际世界中装备画面、性能及资源重载未验证。
 
 ### F47 — 普通鞘翅被额外绘制一次（`254afa6b`，代码已修，画面待验）
 
@@ -286,12 +289,20 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 官方 `RobitItemOverrideList` 从当前 registry 取得 `RobitSkin.customModel()`，指定时查询该模型并解析其 item overrides；Fabric `FabricRobitItemRenderer.modelFor` 不查询皮肤，仅看 resource key 的路径是否恰为 `allay`，其他一律用默认模型。数据包自定义皮肤的公共 `custom_model` 因此对物品无效，名字为 `allay` 但命名空间不同或皮肤已回退时也会误选 allay 模型。当前实体渲染与皮肤选择 GUI 已经走 `MekanismModelCache.getRobitSkin`，但该 owner 也有按路径特判 fallback 的偏差；custom model 是否被模型加载器作为 top-level 注册、物品 builtin 抑制及其覆盖模型语义尚需验证，不能只换一行 getter 就宣称闭环。标题屏 proof 不证明 Robit 物品或实体实际绘制。
 
+### F49 — QIO 红石适配器未按状态替换完整模型（`a634adff`，待修）
+
+当前 `FabricDataBasedUnbakedModel` 固定返回 unlit chunk 模型，emitting 时 `RenderQIORedstoneAdapter` 再绘制 lit 全模型；两套资源的非 torch 几何在同一位置重合，不能视为官方按 model data 选择其中一个模型。全局 lit 模型 map 还只按资源 ID 保存：同一模型按六种 blockstate 方向多次烘焙，后一次覆盖之前结果，BER 对所有朝向都取同一结果；只绘制 null 方向 quads，遗漏有 cullface 的底面，并忽略 tinted 面的 block color。JSON 的 `neoforge_data` 指定 LED 和 lit torch 全亮，vanilla 解析未证明保留。应像 F39 一样以实际方块态对应烘焙模型和 block-entity render data 在 chunk meshing 选 lit/unlit，正确处理逐面剔除、色调与 emissive；不能用标题屏 proof 或凭空推演画面当作验证，真实游戏画面未测。
+
+### F50 — 声音 tick 守卫与官方相反（`a64dca8b`，代码已修，声音待验）
+
+`1d44ca1f^` 的官方 tick 在有效世界/玩家时每次调用 `restartSounds()`，而 Geiger 新建有 `tickingNormally` 守卫；后续移植把 restart 放进该守卫，同时去掉 Geiger 的守卫，故暂停/非正常 tick 时的配置重启及 Geiger 建立时机发生变化。修复在现有 tick handler 恢复原守卫与位置；`compileJava` 和平台 slice gate 通过，未进行真实音频验证。
+
 ### 并行初审待主代理核验
 
 尚待主代理核验：`1af82201` 官方历史 registry alias 是否影响固定官方存档；`38b8b1af` 创造标签内搜索；`2529dca8` 纳入的 11 个既有 mixin 调用链；以及 F29 尚未复核的非 GUI 网络包边界。`a1f1c46f` 发现 shift 合成 bin 可能丢额外物品，但只读子代理对照 NeoForge `ResultSlot` 发现官方在同一点触发回调，属于上游共享问题，暂不认定为移植偏差；也未实机验证。不能将只读初审自动计为全部关闭。
 
 ## 恢复位置
 
-本轮固定 101 项已读至第 69 项 `3833f46f`；下一项为 `a634adff`。当前 F46（MekaSuit baked light 的消费）和 F48（Robit 自定义皮肤模型/加载及 builtin 实际路径）是新发现的待修调用链，先复核真实 owner 和固定上游，再在边界内修复与复审；F44/F45/F47 代码已提交，画面与真实输入未验。`1f3283dd`、`205a67fd`、`1b770d06`、`7bb720c7` 的完整 diff 已预读，但还须按顺序追查生命周期和节日 owner 后登记，不算已审完。两次只读子代理启动均失败，无结果且不得计入审查。
+本轮固定 101 项已读至第 74 项 `f45d2bd7`；下一项为 `7765313e`。F48（Robit 自定义皮肤模型/加载及 builtin 实际路径）与 F49（QIO 红石适配器状态模型）仍待修，应先复核真实 owner 和固定上游，再在边界内修复与复审；F44–F47 与 F50 代码已修，画面、真实声音与输入未验。`1f3283dd`、`205a67fd`、`1b770d06`、`7bb720c7` 的完整 diff 已预读，但还须按顺序追查生命周期和节日 owner 后登记，不算已审完。两次只读子代理启动均失败，无结果且不得计入审查。
 
 优先研究 F8 的 QIO 真实 owner 插入事务闭包，并补验 F9 的 sided inventory 场景；`a147116b` 已读完整 2180 行 diff；`12ebbcf6` 和 `76f790ce` 已读完整 diff，F14 已修，F15 附魔适用/手持/选槽及电弓虚拟 Flame 已接线但部分实机待验；`1d4c4027` 已读完整 diff 并修 F17 普通水下路径；`7785a9c1` 已读完整 diff，F19/F20 已修，不要求旧开发版握手兼容，双进程实体同步仍待实测；`4e5a4232` 已读完整 diff，F21 旧票据迁移已按用户决策退出范围。子代理已并行读完 `b6e5c54d`、`509afc1b`、`1af82201`、`2529dca8`、`38b8b1af`、`a1f1c46f` 的真实 diff；部分问题已由主代理复核修复，剩余候选见上，不把初审直接计为全部关闭。`53fda9e5` 至 `ffbcb655` 的相邻提交已由子代理读完真实 diff，F29 已部分修复，F30–F33 已修且保留各自验证边界；`5ee61549`、`519e1132`、`5c0fcb1f`、`257b9d05`、`b3b87ec3`、`7da81542`、`9bb884a3`、`1e08c1e5` 已读完整真实 diff；`d77c3252` 已补读完整切片重排及文档，五个后续 ISBER 提交亦已读完整 diff。F34 的 datapack 生物群系修复仍待完成；F37 composite 父链代码已修、真实画面待验，F39 能量立方相关代码已修但 FRAPI 及物品画面待实机验证。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。

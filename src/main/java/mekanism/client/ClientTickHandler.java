@@ -149,7 +149,7 @@ public class ClientTickHandler {
             HolidayManager.notify(minecraft.player);
             initHoliday = true;
         }
-        //SoundHandler.restartSounds belongs to the sound lane (flamethrower/geiger sounds) and stays deferred with it.
+        SoundHandler.restartSounds();
         //Radiation pre-tick particles are owned by FabricRadiationClientLifecycle.
 
         MekanismClient.ticksPassed++;
@@ -166,8 +166,6 @@ public class ClientTickHandler {
 
         if (tickingNormally) {
             //Note: If we aren't ticking normally we can skip adding the particles or checking if the time matches as we know the time hasn't changed
-            //Reboot player sounds if needed (the holiday notify above stays deferred with the holiday lane)
-            SoundHandler.restartSounds();
             for (Iterator<Entry<Player, TeleportData>> iter = portableTeleports.entrySet().iterator(); iter.hasNext(); ) {
                 Entry<Player, TeleportData> entry = iter.next();
                 Player player = entry.getKey();
@@ -230,7 +228,7 @@ public class ClientTickHandler {
             }
         }
 
-        if (MekanismConfig.client.enablePlayerSounds.get()) {
+        if (tickingNormally && MekanismConfig.client.enablePlayerSounds.get()) {
             RadiationScale scale = ClientRadiation.getClientScale();
             if (scale != RadiationScale.NONE && !SoundHandler.radiationSoundMap.containsKey(scale)) {
                 GeigerSound sound = GeigerSound.create(minecraft.player, scale);
