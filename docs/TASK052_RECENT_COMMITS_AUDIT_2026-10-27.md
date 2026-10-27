@@ -115,7 +115,11 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 ### F15 — 附魔适用、物品重装备和 pick-block 行为仍待恢复（`76f790ce`）
 
-同一提交还删去官方 `isBookEnchantable`、`isPrimaryItemFor`、`supportsEnchantment`、`shouldCauseReequipAnimation`、`shouldCauseBlockBreakReset` 和带模块装备的 `isNotReplaceableByPickAction`。pick-block 部分修复 `b7d2830d` 已审阅完整 diff：在原版 `Inventory.getSuitableHotbarSlot` 的原 `isEnchanted` 判断追加已登记 MekaTool/MekaSuit 的真实 `hasInstalledModules`，同一原版 Inventory 同时供客户端挑选与服务端 `handlePickItem` 调用；仍保留空槽优先与全部受保护时返回当前槽的官方回退，不承诺绝对不能替换。隔离 Knot 的 `PickBlockModuleProtectionTest` 使用真实注册模块、装备和库存，验证工具/护甲、空槽、全部受保护及无模块回退。首次测试因未通过实际 ModuleHelper 注册测试装备而失败，按真实支持注册后重跑通过；不声称真实客户端/服务端网络已验证。附魔台/铁砧、客户端手持渲染和挖掘状态仍需按官方各装备条件恢复；电弓 `createProjectile` 仅覆盖射弹，不证明其他虚拟 Flame 查询。
+同一提交还删去官方 `isBookEnchantable`、`isPrimaryItemFor`、`supportsEnchantment`、`shouldCauseReequipAnimation`、`shouldCauseBlockBreakReset` 和带模块装备的 `isNotReplaceableByPickAction`。pick-block 部分修复 `b7d2830d` 已审阅完整 diff：在原版 `Inventory.getSuitableHotbarSlot` 的原 `isEnchanted` 判断追加已登记 MekaTool/MekaSuit 的真实 `hasInstalledModules`，同一原版 Inventory 同时供客户端挑选与服务端 `handlePickItem` 调用；仍保留空槽优先与全部受保护时返回当前槽的官方回退，不承诺绝对不能替换。隔离 Knot 的 `PickBlockModuleProtectionTest` 使用真实注册模块、装备和库存，验证工具/护甲、空槽、全部受保护及无模块回退。首次测试因未通过实际 ModuleHelper 注册测试装备而失败，按真实支持注册后重跑通过；不声称真实客户端/服务端网络已验证。手持重装备与挖掘重置修复 `72ce9a66`（已审阅完整 diff）按官方不同物品类别，在客户端 `ItemInHandRenderer.tick` 和 `MultiPlayerGameMode.sameDestroyTarget` 恢复忽略同物品组件变化，保留主手槽位变化、空栈、不同物品以及普通物品的原比较；能源方块使用 mixin invoker 调用原有可覆写的 `exposesEnergyCapOrTooltips`。隔离 Knot 分类测试、全部 `qioTransactionTest`/`fabricTransferTest` 与三项 slice gate 通过；客户端 smoke 到达标题并无 mixin 启动错误，但未用 mcdebug 实际验证动画或挖掘进度，能源方块 invoker 在实机变更组件时也未验证。附魔台/铁砧规则仍待恢复；电弓 `createProjectile` 仅覆盖射弹，不证明其他虚拟 Flame 查询。
+
+### F16 — 客户端护甲层注册修改遍历中的列表（`254afa6b`，已修复，渲染效果待验）
+
+本轮客户端启动日志出现 `Caught error loading resourcepacks` → `Failed to create model for minecraft:piglin` → `ConcurrentModificationException`，实际栈指向 `FabricArmorLayerRegistration.addCustomLayers`；原实现在遍历 `renderer.layers` 时调用会同步添加该列表的 `registrationHelper.register`。`git blame` 将该循环追至尚未按时间顺序审查的 `254afa6b`，不是将该提交其他内容当作已审。修复 `deb6c79e` 对原 layers 做 `ArrayList` 快照后遍历，保留 null 过滤、精确类匹配和各类最多添加一层；已审阅完整 diff。再次运行客户端 smoke 到达标题，日志中未再出现上述资源重载异常；旧有能源方块模型 bake 警告仍存在，视觉装备、资源重载及第三方渲染器兼容未做实机验收。
 
 ## 恢复位置
 
