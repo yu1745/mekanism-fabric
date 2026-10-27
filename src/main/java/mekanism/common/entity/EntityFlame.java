@@ -241,8 +241,10 @@ public class EntityFlame extends Projectile {
         }
         if (recipe.isPresent()) {
             if (!level().isClientSide) {
-                //Fabric port delta: the NeoForge break-event veto probe is dropped (same adjudication as the cardboard box,
-                // miner and laser probes); Fabric's protection pipeline guards real player breaks instead.
+                //Check the same Fabric break veto as other Mekanism world-changing operations before replacement or drops.
+                if (!WorldUtils.canBreakBlock(level(), shooter, blockPos, hitState)) {
+                    return;
+                }
                 ItemStack result = recipe.get().value().getResultItem(level().registryAccess());
                 if (!(result.getItem() instanceof BlockItem) || !tryPlace(shooter, blockPos, hitSide, Block.byItem(result.getItem()).defaultBlockState())) {
                     level().removeBlock(blockPos, false);

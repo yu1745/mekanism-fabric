@@ -320,20 +320,23 @@ public abstract class TileEntityBasicLaser extends TileEntityMekanism {
 
     private void withFakePlayer(ServerLevel level, double x, double y, double z, BlockPos hitPos, BlockState hitState, Direction hitSide) {
         MekFakePlayer dummy = MekFakePlayer.setupFakePlayer(level, x, y, z);
-        dummy.setEmulatingUUID(getOwnerUUID());//pretend to be the owner
-        //Fabric port delta: the NeoForge break-event veto probe is dropped (same adjudication as the cardboard box and miner
-        // probes): Fabric has no postable cancellable break event, and its protection pipeline guards real player breaks.
-        if (hitState.getBlock() instanceof TntBlock && WorldUtils.isFlammable(hitState)) {
-            //Convert TNT that can be lit on fire into a tnt entity
-            //Note: We don't mark the fake player as the igniter as then when the tnt explodes if it hits a player
-            // there will be a crash as our fake player's level will be null
-            WorldUtils.igniteTnt(level, hitPos, null);
-            level.removeBlock(hitPos, false);
-        } else {
-            //Use the disassembler as the item to break the block with as that is marked as being the correct tool for drops
-            handleBreakBlock(hitState, level, hitPos, dummy, ItemAtomicDisassembler.fullyChargedStack());
+        try {
+            dummy.setEmulatingUUID(getOwnerUUID());//pretend to be the owner
+            //Use the same Fabric protection veto as the miner before either TNT priming or normal block breaking.
+            if (!WorldUtils.canBreakBlock(level, dummy, hitPos, hitState)) {
+                return;
+            }
+            if (hitState.getBlock() instanceof TntBlock && WorldUtils.isFlammable(hitState)) {
+                //Do not keep the temporary fake player as the TNT igniter after its level is cleared.
+                WorldUtils.igniteTnt(level, hitPos, null);
+                level.removeBlock(hitPos, false);
+            } else {
+                //Use the disassembler as the item to break the block with as that is marked as being the correct tool for drops
+                handleBreakBlock(hitState, level, hitPos, dummy, ItemAtomicDisassembler.fullyChargedStack());
+            }
+        } finally {
+            dummy.cleanupFakePlayer(level);
         }
-        dummy.cleanupFakePlayer(level);
     }
 
     /**
