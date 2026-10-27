@@ -289,9 +289,9 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 官方 `RobitItemOverrideList` 从当前 registry 取得 `RobitSkin.customModel()`，指定时查询该模型并解析其 item overrides；Fabric `FabricRobitItemRenderer.modelFor` 不查询皮肤，仅看 resource key 的路径是否恰为 `allay`，其他一律用默认模型。数据包自定义皮肤的公共 `custom_model` 因此对物品无效，名字为 `allay` 但命名空间不同或皮肤已回退时也会误选 allay 模型。当前实体渲染与皮肤选择 GUI 已经走 `MekanismModelCache.getRobitSkin`，但该 owner 也有按路径特判 fallback 的偏差；custom model 是否被模型加载器作为 top-level 注册、物品 builtin 抑制及其覆盖模型语义尚需验证，不能只换一行 getter 就宣称闭环。标题屏 proof 不证明 Robit 物品或实体实际绘制。
 
-### F49 — QIO 红石适配器未按状态替换完整模型（`a634adff`，待修）
+### F49 — QIO 红石适配器未按状态替换完整模型（`a634adff`，候选修复，画面与 FRAPI 连接待验）
 
-当前 `FabricDataBasedUnbakedModel` 固定返回 unlit chunk 模型，emitting 时 `RenderQIORedstoneAdapter` 再绘制 lit 全模型；两套资源的非 torch 几何在同一位置重合，不能视为官方按 model data 选择其中一个模型。全局 lit 模型 map 还只按资源 ID 保存：同一模型按六种 blockstate 方向多次烘焙，后一次覆盖之前结果，BER 对所有朝向都取同一结果；只绘制 null 方向 quads，遗漏有 cullface 的底面，并忽略 tinted 面的 block color。JSON 的 `neoforge_data` 指定 LED 和 lit torch 全亮，vanilla 解析未证明保留。应像 F39 一样以实际方块态对应烘焙模型和 block-entity render data 在 chunk meshing 选 lit/unlit，正确处理逐面剔除、色调与 emissive；不能用标题屏 proof 或凭空推演画面当作验证，真实游戏画面未测。
+当前 `FabricDataBasedUnbakedModel` 固定返回 unlit chunk 模型，emitting 时 `RenderQIORedstoneAdapter` 再绘制 lit 全模型；两套资源的非 torch 几何在同一位置重合，不能视为官方按 model data 选择其中一个模型。全局 lit 模型 map 还只按资源 ID 保存：同一模型按六种 blockstate 方向多次烘焙，后一次覆盖之前结果，BER 对所有朝向都取同一结果；只绘制 null 方向 quads，遗漏有 cullface 的底面，并忽略 tinted 面的 block color。JSON 的 `neoforge_data` 指定 LED 和 lit torch 全亮，vanilla 解析未证明保留。候选改为每个方块态 bake 同时保存两个模型，tile 显式提供 Fabric render data，FRAPI 网格按 Boolean 选择完整模型、逐面分桶并以官方频率颜色注册 adapter block tint；移除多余的全局 lit map 与叠绘 BER。对原 JSON 的元素 `neoforge_data` 重新按同一 state 烘焙对应面，完整亮度映射 emissive、部分亮度写 lightmap。隔离 client Knot 测试以原始 unlit/lit 资源验证两种状态、上下旋转、剔除面和灯 metadata 确实参与烘焙；编译及平台 gate 通过，真实客户端标题屏模型 smoke 15/15。首次编译因误用 block registry 的 `getBlock()` 报找不到符号，改成 `.get()` 后通过。测试未执行实际 FRAPI 网格、色调或运行中状态切换，故不能证明画面；逐 face/inherited `neoforge_data`、几何完全相同但 metadata 不同的第三方资源包仍未覆盖，需继续复核与 mcdebug 实测，不能记全面等价。
 
 ### F50 — 声音 tick 守卫与官方相反（`a64dca8b`，代码已修，声音待验）
 

@@ -28,7 +28,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class TileEntityQIORedstoneAdapter extends TileEntityQIOComponent {
+public class TileEntityQIORedstoneAdapter extends TileEntityQIOComponent implements net.fabricmc.fabric.api.blockview.v2.RenderDataBlockEntity {
 
     @Nullable
     private HashedItem itemType = null;

@@ -85,8 +85,6 @@ public final class FabricTileEntityRendererRegistration {
               MekanismTileEntityTypes.ELITE_ENERGY_CUBE, MekanismTileEntityTypes.ULTIMATE_ENERGY_CUBE, MekanismTileEntityTypes.CREATIVE_ENERGY_CUBE);
         renderers += bind(RenderFluidTank::new, MekanismTileEntityTypes.BASIC_FLUID_TANK, MekanismTileEntityTypes.ADVANCED_FLUID_TANK,
               MekanismTileEntityTypes.ELITE_FLUID_TANK, MekanismTileEntityTypes.ULTIMATE_FLUID_TANK, MekanismTileEntityTypes.CREATIVE_FLUID_TANK);
-        //The port-only data-based replacement BER (the official qio adapter switches models through NeoForge model data).
-        renderers += bind(mekanism.client.render.tileentity.RenderQIORedstoneAdapter::new, MekanismTileEntityTypes.QIO_REDSTONE_ADAPTER);
         //The port-only drive-array replacement BER (the official wrapper read the drive states from model data).
         renderers += bind(mekanism.client.render.tileentity.RenderQIODriveArray::new, MekanismTileEntityTypes.QIO_DRIVE_ARRAY);
         //The transmitter contents half: the four static-content renderers (the shell visual stays on the baked-model
@@ -109,7 +107,7 @@ public final class FabricTileEntityRendererRegistration {
               MekanismTileEntityTypes.ADVANCED_LOGISTICAL_TRANSPORTER, MekanismTileEntityTypes.ELITE_LOGISTICAL_TRANSPORTER,
               MekanismTileEntityTypes.ULTIMATE_LOGISTICAL_TRANSPORTER);
         org.slf4j.LoggerFactory.getLogger("Mekanism/FabricTileEntityRenderers")
-              .info("MEKANISM_FABRIC_BER_PROOF tile_types={} renderers=22 layers=11", renderers);
+              .info("MEKANISM_FABRIC_BER_PROOF tile_types={} renderers=21 layers=11", renderers);
     }
 
     @SafeVarargs

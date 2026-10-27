@@ -142,9 +142,8 @@ public final class FabricMekanismModelPlugin {
                         energyCubeBaked++;
                     }
                     case LOADER_DATA_BASED -> {
-                        //The official data-based switch rides NeoForge model data; the port bakes the no-data
-                        //model as the static bake and hands the lit half to the tile renderer registry.
-                        prepared.put(id, new FabricDataBasedUnbakedModel(id, root));
+                        //Bake both variants per block-state rotation; Fabric render data selects the chunk model.
+                        prepared.put(id, new FabricDataBasedUnbakedModel(id, root, resources));
                         dataBasedBaked++;
                     }
                     case LOADER_ROBIT -> {

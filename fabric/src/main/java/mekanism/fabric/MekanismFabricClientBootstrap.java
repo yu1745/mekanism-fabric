@@ -50,6 +50,14 @@ public final class MekanismFabricClientBootstrap implements ClientModInitializer
         //transporter tint. Model registration needs no block instance: it keys off the model ids in the resource pack.
         FabricTransmitterModelPlugin.initialize();
         FabricTransmitterColorProvider.initialize();
+        //The official QIO adapter block tint follows its frequency color.
+        net.fabricmc.fabric.api.client.rendering.v1.ColorProviderRegistry.BLOCK.register((state, world, pos, tint) -> {
+            if (world != null && pos != null && world.getBlockEntity(pos) instanceof mekanism.common.tile.qio.TileEntityQIOComponent tile) {
+                var color = tile.getColor();
+                return color == null ? -1 : color.getPackedColor();
+            }
+            return -1;
+        }, mekanism.common.registries.MekanismBlocks.QIO_REDSTONE_ADAPTER.get());
         //Loader-closure owner for the shipped NeoForge-loader models (composite factories, the Meka-Tool OBJs, the
         //QIO dashboard layers); the energy-cube geometry loader stays deferred to the BE-aware render seam.
         mekanism.fabric.client.model.FabricMekanismModelPlugin.initialize();
