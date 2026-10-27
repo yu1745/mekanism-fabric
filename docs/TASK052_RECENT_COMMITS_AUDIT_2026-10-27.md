@@ -38,6 +38,8 @@
 | `a1f1c46f` | 子代理固定 `3b5301c3` 已读完整 diff，主代理复核并修复后续提交引入的差集/交集输入缓存错误，见 F27；第三方兼容配方及升级物品端到端未验。 |
 | `53fda9e5` | 子代理固定 `ddbbdb99` 完整审查注册与 26 包调用链；原官方 handler 的 GUI 操作存在未鉴权风险，主代理复核并分组修复，见 F29；未声明所有网络授权问题均已关闭。 |
 | `55c59a0c` | 子代理固定 `ddbbdb99` 完整读取 diff 并追踪当前机器 tick、能力与能量入口，未发现已证实当前缺陷；历史 smoke 仅匹配产物 ID，不能单独证明文档记载的产量或能耗。 |
+| `b0f7e13d` | 子代理固定 `07b7e6ba` 完整读取父提交真实 diff；主代理复核并修复内部能源错误依赖外部 FE 开关和转换精度，见 F30。历史 smoke 不能证明精确能量数值。 |
+| `9cabfea9` | 子代理固定 `07b7e6ba` 完整读取真实 diff：只改运输 smoke/文档，不改生产源码；后续物品、流体、化学调用链已追踪，未证实该提交引入的当前生产缺陷，历史 smoke 数量断言不足。 |
 
 ## 审查发现与待复核
 
@@ -187,10 +189,14 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 只读子代理检查全部 26 个 C2S 注册及调用方，主代理复核确认原官方 handler 允许通过客户端提供坐标，绕过 GUI 入口访问已加载的他人安全桌、改装站或储罐；安全桌模式/override/可信名单操作也缺少服务端 frequency-owner 校验。这是上游共享的安全问题，不伪称由本移植独自引入。`88ef07e9`（已审阅完整 420 行 diff）对机器配置、过滤、频率、能量、滴管、模块移除和切页等 GUI 包要求当前菜单对象、仍有效及实时 canAccess，兼容普通 tile 与 QIO dashboard；Robit GUI 包绑定当前实体菜单；安全桌可信名单、模式及 override 限定真实 frequency owner，客户端删除按钮同步显示 owner 权限。全套普通、Knot、转移测试和三个 slice gate 通过；focused 测试验证无菜单、实体菜单目标不符、权限撤销及失效菜单，但**未验证真实 tile 菜单正向交互、QIO、多方块、实际网络攻击或 GUI**。子代理指出的 PacketKey 可发送任意 int 造成自身 key 集增长、装备设置的菜单约束及便携传送延迟属于独立候选，尚未复核，不声称全网络已加固；无菜单热键与便携传送未强行套 GUI 限制。
 
+### F30 — Mekanism 内部能源错误依赖外部 FE 开关及换算（`b0f7e13d`，已修）
+
+子代理固定 `07b7e6ba` 追踪实际 cube→cable→machine 调用链，主代理复核确认 `EnergyAcceptorCache` 只在外部 Forge/Team Reborn compat 启用时查询，且内部 strict handler 经 `2.5 J/FE` 转换，设置 `blacklistForge=true` 会切断内部能源，1 J 可能卡住而非被转移。`d0d6ed9c`（已审阅完整 511 行 diff）接回已有 `mekanism:strict_energy_handler` Fabric lookup：真实机器、电缆及 bounding 端口优先提供精确 Joules，保持侧配置检查、实体生命周期与代理撤销；外部 Team Reborn 保留原开关/换算后备。普通 manager 测试在 `blacklistForge=true` 与 2.5 配置下验证 1 J、错误侧及旧代理失效；独立 Knot 测试验证真实 Fabric lookup 命中 strict 身份和侧向解析；完整普通/Knot/转移测试及三项 slice gate 通过。使用实际 remapped 包的 dedicated machine smoke 在 `<world>/serverconfig/Mekanism/general.toml` 明确写入 `blacklistForge=true`、`feConversionRate=2.5` 后达到 cable-powered 机器产物与电池放电 PASS；脚本断言不证明精确产量或世界中的 1 J 端到端迁移，动态相邻变化、其他 mod 互操作仍待验证。首次普通测试因直接初始化完整 `Capabilities` 触及非 Knot 环境 FabricLoader 而失败，后将身份断言移到真正 Knot 测试后通过。
+
 ### 并行初审待主代理核验
 
 尚待主代理核验：`1af82201` 官方历史 registry alias 是否影响固定官方存档；`38b8b1af` 创造标签内搜索；`2529dca8` 纳入的 11 个既有 mixin 调用链；以及 F29 尚未复核的非 GUI 网络包边界。`a1f1c46f` 发现 shift 合成 bin 可能丢额外物品，但只读子代理对照 NeoForge `ResultSlot` 发现官方在同一点触发回调，属于上游共享问题，暂不认定为移植偏差；也未实机验证。不能将只读初审自动计为全部关闭。
 
 ## 恢复位置
 
-优先研究 F8 的 QIO 真实 owner 插入事务闭包，并补验 F9 的 sided inventory 场景；`a147116b` 已读完整 2180 行 diff；`12ebbcf6` 和 `76f790ce` 已读完整 diff，F14 已修，F15 附魔适用/手持/选槽及电弓虚拟 Flame 已接线但部分实机待验；`1d4c4027` 已读完整 diff 并修 F17 普通水下路径；`7785a9c1` 已读完整 diff，F19/F20 已修，不要求旧开发版握手兼容，双进程实体同步仍待实测；`4e5a4232` 已读完整 diff，F21 旧票据迁移已按用户决策退出范围。子代理已并行读完 `b6e5c54d`、`509afc1b`、`1af82201`、`2529dca8`、`38b8b1af`、`a1f1c46f` 的真实 diff；部分问题已由主代理复核修复，剩余候选见上，不把初审直接计为全部关闭。`53fda9e5`、`55c59a0c` 已由子代理读完真实 diff，F29 已部分修复；下一未读历史提交 `b0f7e13d`。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。
+优先研究 F8 的 QIO 真实 owner 插入事务闭包，并补验 F9 的 sided inventory 场景；`a147116b` 已读完整 2180 行 diff；`12ebbcf6` 和 `76f790ce` 已读完整 diff，F14 已修，F15 附魔适用/手持/选槽及电弓虚拟 Flame 已接线但部分实机待验；`1d4c4027` 已读完整 diff 并修 F17 普通水下路径；`7785a9c1` 已读完整 diff，F19/F20 已修，不要求旧开发版握手兼容，双进程实体同步仍待实测；`4e5a4232` 已读完整 diff，F21 旧票据迁移已按用户决策退出范围。子代理已并行读完 `b6e5c54d`、`509afc1b`、`1af82201`、`2529dca8`、`38b8b1af`、`a1f1c46f` 的真实 diff；部分问题已由主代理复核修复，剩余候选见上，不把初审直接计为全部关闭。`53fda9e5`、`55c59a0c`、`b0f7e13d`、`9cabfea9` 已由子代理读完真实 diff，F29 已部分修复、F30 已修；下一未读历史提交 `985137ff`。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。
