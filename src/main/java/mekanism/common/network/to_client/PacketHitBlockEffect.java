@@ -26,10 +26,9 @@ public record PacketHitBlockEffect(BlockHitResult result) implements IMekanismPa
 
     @Override
     public void handle(Player player) {
-        //Fabric port delta: NeoForge adds a positional addBlockHitEffects overload; vanilla exposes the same particle
-        // burst through ParticleEngine#destroy with the local block state.
+        //Vanilla's crack effect is the directional block-hit particle, unlike the full block-destroy burst.
         if (Minecraft.getInstance().level != null) {
-            Minecraft.getInstance().particleEngine.destroy(result.getBlockPos(), Minecraft.getInstance().level.getBlockState(result.getBlockPos()));
+            Minecraft.getInstance().particleEngine.crack(result.getBlockPos(), result.getDirection());
         }
     }
 }
