@@ -16,7 +16,7 @@
 | `27ddfddf` | 第一父提交 diff 对应上述约束和文档修改；未发现额外 merge 修改。 |
 | `59e389a0` | 已读整个 diff：线程组查询、server spin mixin、四个调用方、清单和文档。调用点保留 server/client 判断形状；mixin 和切片同步登记。未在本次静态检查确认生产缺陷；服务端 IO 线程继承组这一环境假设尚未独立验证，不能等同于完整运行时审查。 |
 | `5d2c9182` | 已读整个 diff，检查后续能源查询与事务适配：F3 已提交修复但仍需端到端验证；F1 前次判断已更正，剩空网络外观疑点。现有能源测试覆盖 simulate 回滚、嵌套事务回滚和执行提交，但不证明所有能力生命周期语义。 |
-| `6b6bcb0f` | 已读整个 diff：节日初始化、key 注册与按键轮询、tooltip 流体类型、切片和记录；F2 为当前仍缺失的原快捷键回调及 modifier/context 语义。holiday 和 tooltip 尚未独立做实机语义验证。 |
+| `6b6bcb0f` | 已读整个 diff：节日初始化、key 注册与按键轮询、tooltip 流体类型、切片和记录；F2 核心回调已接回，modifier/Curios 和真实按键语义仍未闭环。holiday 和 tooltip 尚未独立做实机语义验证。 |
 | `dba8824e` | 已读整个 diff：能力 catalog、工具状态助手、三处调用迁移、drop-rule override、AW 与裁定文档。确认 F4（下述，修复 `8cfc8d79`）；自定义 TOOL 组件兜底问题在后续修复后需复审其测试与两个工具。NeoForge 工具修改事件和数据映射差异原提交已有明确记录，未证明等价。 |
 | `073e10ff` | 已读完整 diff，仅记录已裁定事项和目录接入顺序，不直接改变运行逻辑；相关语义仍需以后续生产提交及实际 owner 为准。 |
 | `22e74220` | 已读完整 diff：156 个目录/工厂源文件被纳入，明确记录当时 gate 未通过，不应将该中间提交视作可运行闭包。CreativeTab 注册 seam 的行为及完整目录注册继续在后续提交审查。 |
@@ -25,6 +25,7 @@
 | `a03c1888` | 已分段读完整 diff，检查 GaugeDropper、容器流体、充电板、传送器、量子纠缠和 QIO 导入器。确认 QIO 写入与提取未组成原子事务的风险 F8，以及槽位遍历顺序变化 F9；完整修复和真实 owner 回归验证尚未完成，不标记通过。 |
 | `d6af1549` | 已读完整 diff：第二环纳片、罐规格谓词、蒸发太阳能查询、SPS lightning、个人存储侧查询等。该时点仍有大量编译错误，不作为运行闭包；`EVAPORATION_SOLAR` lookup 只定义和查询，未发现 Fabric provider，官方 provider 在尚未移植的 Generators advanced solar 源树，跨模组接入未验证且不能声称有效。SPS 原事件 veto 差异有原提交记录，交互兼容性尚未实测。 |
 | `e39d256f` | 已读完整 diff：机器基类/upgrade 纳片、GUI packet 由 context 取 player 改为直接传入、FluidStack 类型迁移。当前 Fabric 服务端注册将 `context.player()` 传给同一 handler；单靠签名替换不能证明所有 packet 的权限和时序安全，需在网络注册提交处继续审查。当时仍未整体编译成功。 |
+| `a147116b` | 已分段读完整 2180 行 diff：能力 catalog、物品流体、armor/BE 注册、multiblock manager 和个人存储，检查真实上下文及后续状态。确认整叠流体能力检查遗漏 F10 并修复；Curios 一直返回 false/empty 的假兼容边界为 F11。BlockData 的非原版流体蒸发 hook、客户端 tint 和具体 registry 生命周期仍未证明与官方等价；当时记录仍有编译错误，不作为可运行闭包。 |
 
 ## 审查发现与待复核
 
@@ -88,6 +89,14 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 上游 `IItemHandler` 自最后一个槽递减到第一个；移植版对 `Storage.iterator()` 正向遍历。不同类型超过单次类型数或数量上限时，可能优先导入不同物品。Fabric 的 `SlottedStorage` 提供 `getSlots()`；修复 `61621cd9` 对其倒序遍历，无槽存储保持 provider 自身顺序。已审阅修复提交的完整 diff：仅调整取视图的顺序，不声称改变事务语义。两项 `QIOImporterSlotOrderTest` 用真实 vanilla `SimpleContainer` 的 Fabric `InventoryStorage` 验证索引和空槽的逆序；首次按 item variant 断言时普通 JVM 缺 Fabric mixin 导致 `ClassCastException`，改用真实槽 view 对象身份断言后通过。尚未在运行中游戏验证 sided inventory 的槽映射和导入上限。该修复不解决 F8 事务风险。
 
+### F10 — 流体交互漏掉原物品堆能力检查（`a147116b`，已修复）
+
+官方 `FluidUtils.handleTankInteraction` 先对原始整叠查询流体能力，只有存在 provider 才复制单件；该提交删除原始检查，直接对单件副本查询，致使刻意只对 count=1 暴露 handler 的物品堆也被处理。当前 Mekanism `ContainerType` 创建组件 handler 明确以 `stack.getCount() == 1` 为条件，`ComponentItemContext.read` 把 Fabric context 的实际 count 传给 provider，故这是实际调用链上的差异，不仅是表面 import。修复 `086ad4ed` 在复制前用相同 `ItemFluidContainer` lookup 检查原堆，不更改后续流体移动或创造成分。已复审完整 diff；Knot 下 `FluidTankInteractionEligibilityTest` 使用按真实 context count 决定是否提供 storage 的测试 provider，验证两件不被操作、单件可识别，另确认两个 vanilla 空桶仍可查询。此检查未验证真实世界 GUI、带组件的数据包或所有第三方 provider。
+
+### F11 — Curios 可选集成被固定禁用（`a147116b`，未修复）
+
+当前 `CuriosIntegration.isLoaded()` 无条件 false，查找返回空；即使安装兼容的 Fabric Curios 也不会使用原有喷气背包/自由奔跑靴、辐射屏蔽或对应模式键。该 no-op 是明确遗留，不等同于“无 Curios 环境正确”即可关闭，也不符合以假实现充当闭包的规则。历史裁定称 `curios-fabric 9.5.1+1.21.1` 的 Maven 当时无法访问；尚未重新验证依赖可取得性与其 Fabric slot/render API。真实修复涉及新增第三方可选模块及客户端渲染，超出当前已纳机器 owner，依 AGENTS 的范围规则先记录具体边界，不用永久 false 假称兼容；在获得范围裁决并核实依赖后实现，不以此阻塞同范围内其他审查和修复。
+
 ## 恢复位置
 
-优先研究 F8 的 QIO 真实 owner 插入事务闭包，并补验 F9 的 sided inventory 场景；`a147116b` 的完整 diff 共 2180 行、52 文件，已阅读前 919 行（切片、fluid tint、BlockData、Capabilities 组合、外部 storage 常量 context 查询、Curios 边界及部分物品调用），余下未审查，继续时从 `/tmp/mek-a147-review.diff` 第 920 行或重新生成相同 git diff 开始，不得将其标记为已完整审查。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。
+优先研究 F8 的 QIO 真实 owner 插入事务闭包，并补验 F9 的 sided inventory 场景；`a147116b` 已读完整 2180 行 diff；下一项从 `12ebbcf6` 开始。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。
