@@ -4,12 +4,14 @@ import com.mojang.datafixers.util.Pair;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumMap;
-import java.util.Map;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.block.model.BlockElement;
 import net.minecraft.client.renderer.block.model.BlockModel;
+import net.minecraft.client.renderer.block.model.ItemOverrides;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.client.resources.model.Material;
@@ -35,6 +37,7 @@ public final class FabricCompositeModel extends BlockModel {
 
     private final ResourceLocation id;
     private final List<Pair<String, BlockModel>> children;
+    private boolean resolvingParents;
 
     FabricCompositeModel(ResourceLocation id, String rootJson, List<Pair<String, BlockModel>> children) {
         super(FabricModelJson.parentId(rootJson), List.<BlockElement>of(), FabricModelJson.textures(rootJson),
@@ -57,14 +60,27 @@ public final class FabricCompositeModel extends BlockModel {
 
     @Override
     public void resolveParents(Function<ResourceLocation, UnbakedModel> resolver) {
-        super.resolveParents(resolver);
-        for (Pair<String, BlockModel> child : children) {
-            child.getSecond().resolveParents(resolver);
+        if (resolvingParents) {
+            throw new IllegalStateException("Composite model child cycle at " + id);
+        }
+        resolvingParents = true;
+        try {
+            super.resolveParents(resolver);
+            for (Pair<String, BlockModel> child : children) {
+                child.getSecond().resolveParents(resolver);
+            }
+        } finally {
+            resolvingParents = false;
         }
     }
 
     @Override
     public BakedModel bake(@Nullable ModelBaker baker, Function<Material, TextureAtlasSprite> spriteGetter, ModelState state) {
+        return bakeInherited(this, baker, spriteGetter, state);
+    }
+
+    /** Bake this geometry with the actual descendant model as the property and override owner. */
+    public BakedModel bakeInherited(BlockModel owner, @Nullable ModelBaker baker, Function<Material, TextureAtlasSprite> spriteGetter, ModelState state) {
         //Each child bakes through the vanilla pipeline with its own parent chain and texture aliases (the official
         //active variants override a child texture); the union of their quads is the composite.
         RandomSource random = RandomSource.create();
@@ -77,8 +93,10 @@ public final class FabricCompositeModel extends BlockModel {
                 culledQuads.computeIfAbsent(direction, ignored -> new ArrayList<>()).addAll(baked.getQuads(null, direction, random));
             }
         }
-        //All property accessors walk the resolved parent chain, so block/block defaults apply when the JSON is silent.
-        return new FabricMergedQuadsModel(id, quads, culledQuads, spriteGetter.apply(getMaterial("particle")), getTransforms(),
-              hasAmbientOcclusion(), true, getGuiLight() == BlockModel.GuiLight.SIDE);
+        //The descendant's properties and item overrides remain authoritative even when geometry is inherited.
+        ItemOverrides overrides = owner.getOverrides().isEmpty() ? ItemOverrides.EMPTY
+              : new ItemOverrides(Objects.requireNonNull(baker, "baker required for item overrides"), owner, owner.getOverrides());
+        return new FabricMergedQuadsModel(id, quads, culledQuads, spriteGetter.apply(owner.getMaterial("particle")), owner.getTransforms(), overrides,
+              owner.hasAmbientOcclusion(), true, owner.getGuiLight() == BlockModel.GuiLight.SIDE);
     }
 }

@@ -10,6 +10,7 @@ mekanism/fabric/client/FabricScreenRegistration.java
 mekanism/fabric/client/GearInteractionPolicy.java
 mekanism/fabric/client/hud/FabricClientTickRegistration.java
 mekanism/fabric/client/hud/FabricHudHeights.java
+mekanism/fabric/client/model/CompositeModelParentAccess.java
 mekanism/fabric/client/model/FabricCompositeModel.java
 mekanism/fabric/client/model/FabricDataBasedModels.java
 mekanism/fabric/client/model/FabricDataBasedUnbakedModel.java
@@ -86,6 +87,7 @@ mekanism/fabric/mixin/block/MachineRedstoneConnectionMixin.java
 mekanism/fabric/mixin/block/PortalFrameMixin.java
 mekanism/fabric/mixin/block/PowderSnowWalkMixin.java
 mekanism/fabric/mixin/client/BlockBreakResetMixin.java
+mekanism/fabric/mixin/client/BlockModelCompositeMixin.java
 mekanism/fabric/mixin/client/ClientMouseScrollMixin.java
 mekanism/fabric/mixin/client/ClientRecipeCacheMixin.java
 mekanism/fabric/mixin/client/FabricHudLayersMixin.java

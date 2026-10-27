@@ -27,6 +27,7 @@ public final class FabricMergedQuadsModel implements BakedModel {
     private final Map<Direction, List<BakedQuad>> culledQuads;
     private final TextureAtlasSprite particle;
     private final ItemTransforms transforms;
+    private final ItemOverrides overrides;
     private final boolean ambientOcclusion;
     private final boolean gui3d;
     private final boolean usesBlockLight;
@@ -38,6 +39,11 @@ public final class FabricMergedQuadsModel implements BakedModel {
 
     FabricMergedQuadsModel(ResourceLocation id, List<BakedQuad> quads, Map<Direction, List<BakedQuad>> culledQuads,
           TextureAtlasSprite particle, ItemTransforms transforms, boolean ambientOcclusion, boolean gui3d, boolean usesBlockLight) {
+        this(id, quads, culledQuads, particle, transforms, ItemOverrides.EMPTY, ambientOcclusion, gui3d, usesBlockLight);
+    }
+
+    FabricMergedQuadsModel(ResourceLocation id, List<BakedQuad> quads, Map<Direction, List<BakedQuad>> culledQuads,
+          TextureAtlasSprite particle, ItemTransforms transforms, ItemOverrides overrides, boolean ambientOcclusion, boolean gui3d, boolean usesBlockLight) {
         this.id = id;
         this.quads = List.copyOf(quads);
         Map<Direction, List<BakedQuad>> copied = new EnumMap<>(Direction.class);
@@ -45,6 +51,7 @@ public final class FabricMergedQuadsModel implements BakedModel {
         this.culledQuads = Map.copyOf(copied);
         this.particle = particle;
         this.transforms = transforms;
+        this.overrides = overrides;
         this.ambientOcclusion = ambientOcclusion;
         this.gui3d = gui3d;
         this.usesBlockLight = usesBlockLight;
@@ -87,6 +94,6 @@ public final class FabricMergedQuadsModel implements BakedModel {
 
     @Override
     public ItemOverrides getOverrides() {
-        return ItemOverrides.EMPTY;
+        return overrides;
     }
 }

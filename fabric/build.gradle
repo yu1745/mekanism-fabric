@@ -21,6 +21,7 @@ sourceSets {
     fabricTransferTest
     fabricRegistryTest
     qioTransactionTest
+    fabricClientModelTest
     fabricDataMapTest
     fabricRecipeRegistryTest
     dataMapReloadFixture
@@ -197,7 +198,7 @@ def platformSlice = loadSlice('platform-slice.txt')
 def apiSliceFiles = apiSlice.collect { file("../src/api/java/${it}") }
 def commonSliceFiles = commonSlice.collect { file("../src/main/java/${it}") }
 def platformSliceFiles = platformSlice.collect { file("src/main/java/${it}") }
-if (apiSlice.size() != 262 || commonSlice.size() != 1501 || platformSlice.size() != 182) {
+if (apiSlice.size() != 262 || commonSlice.size() != 1501 || platformSlice.size() != 184) {
     throw new GradleException("Unexpected Fabric source slice counts: api=${apiSlice.size()} common=${commonSlice.size()} platform=${platformSlice.size()}")
 }
 
@@ -299,6 +300,11 @@ sourceSets {
     }
     qioTransactionTest {
         // Real QIO component registration requires its own fresh loader and mutable registry window.
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.runtimeClasspath
+    }
+    fabricClientModelTest {
+        // Client-only Knot worker for actual model mixin execution, isolated from server-side tests.
         compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
         runtimeClasspath += sourceSets.main.runtimeClasspath
     }
@@ -658,6 +664,10 @@ dependencies {
     qioTransactionTestRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.13.4'
     qioTransactionTestRuntimeOnly "net.fabricmc:fabric-loader-junit:${loader_version}"
 
+    fabricClientModelTestImplementation 'org.junit.jupiter:junit-jupiter:5.13.4'
+    fabricClientModelTestRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.13.4'
+    fabricClientModelTestRuntimeOnly "net.fabricmc:fabric-loader-junit:${loader_version}"
+
     fabricDataMapTestImplementation 'org.junit.jupiter:junit-jupiter:5.13.4'
     fabricDataMapTestRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.13.4'
     fabricDataMapTestRuntimeOnly "net.fabricmc:fabric-loader-junit:${loader_version}"
@@ -873,7 +883,7 @@ def fabricTransferTest = tasks.register('fabricTransferTest', Test) {
     mustRunAfter tasks.named('test')
 }
 tasks.named('check') {
-    dependsOn fabricTransferTest, 'qioTransactionTest'
+    dependsOn fabricTransferTest, 'qioTransactionTest', 'fabricClientModelTest'
 }
 
 def testWorkingDirectory = layout.buildDirectory.dir('test-working')
@@ -914,6 +924,16 @@ tasks.register('qioTransactionTest', Test) {
         qioTransactionWorkingDirectory.get().asFile.mkdirs()
     }
 }
+tasks.register('fabricClientModelTest', Test) {
+    group = 'verification'
+    description = 'Exercises client-only model mixins in an isolated Fabric Knot worker.'
+    testClassesDirs = sourceSets.fabricClientModelTest.output.classesDirs
+    classpath = sourceSets.fabricClientModelTest.runtimeClasspath
+    maxParallelForks = 1
+    forkEvery = 1
+    systemProperty 'fabric.side', 'client'
+}
+
 def fabricDataMapWorkingDirectory = layout.buildDirectory.dir('fabric-datamap-test-working')
 def fabricDataMapTest = tasks.register('fabricDataMapTest', Test) {
     group = 'verification'
