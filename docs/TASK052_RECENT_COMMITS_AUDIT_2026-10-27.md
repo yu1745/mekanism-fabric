@@ -18,6 +18,8 @@
 | `5d2c9182` | 已读整个 diff，检查后续能源查询与事务适配：F3 已提交修复但仍需端到端验证；F1 前次判断已更正，剩空网络外观疑点。现有能源测试覆盖 simulate 回滚、嵌套事务回滚和执行提交，但不证明所有能力生命周期语义。 |
 | `6b6bcb0f` | 已读整个 diff：节日初始化、key 注册与按键轮询、tooltip 流体类型、切片和记录；F2 为当前仍缺失的原快捷键回调及 modifier/context 语义。holiday 和 tooltip 尚未独立做实机语义验证。 |
 | `dba8824e` | 已读整个 diff：能力 catalog、工具状态助手、三处调用迁移、drop-rule override、AW 与裁定文档。确认 F4（下述，修复 `8cfc8d79`）；自定义 TOOL 组件兜底问题在后续修复后需复审其测试与两个工具。NeoForge 工具修改事件和数据映射差异原提交已有明确记录，未证明等价。 |
+| `073e10ff` | 已读完整 diff，仅记录已裁定事项和目录接入顺序，不直接改变运行逻辑；相关语义仍需以后续生产提交及实际 owner 为准。 |
+| `22e74220` | 已读完整 diff：156 个目录/工厂源文件被纳入，明确记录当时 gate 未通过，不应将该中间提交视作可运行闭包。CreativeTab 注册 seam 的行为及完整目录注册继续在后续提交审查。 |
 
 ## 审查发现与待复核
 
@@ -43,6 +45,12 @@ F2 尚需按原有按键上下文、组合键、repeat 与 GUI/联机语义实�
 
 修复 `8cfc8d79` 仅对非空原版火焰弹/打火石和 `FIRESTARTER_LIGHT` 恢复此入口，其余动作依旧走原有能力提供方；已按审查 prompt 阅读该提交完整 diff，未发现该限定行为边界内新增偏离。`ToolAbilityUtilsFirestarterTest` 三项通过：火焰弹/未点燃营火，打火石/蜡烛及已点燃情况，空物品/木棍/错误动作拒绝；单元测试显式绑定并恢复 vanilla 标签，不是运行中世界或投射物端到端验证。首次测试失败原因是普通 JVM bootstrap 未加载数据包标签，补充标签后重跑通过。
 
+### F5 — 技术伤害标签未按承诺随数据包提供（`fd92051e`，资源已修复，实际世界载入待验）
+
+该提交让 MekaSuit 通过 `neoforge:is_technical` 过滤技术伤害，并声明标签内容会随数据包提供；但此前源资源及生成资源中均不存在该标签。固定参考 `build/moddev/artifacts/neoforge-21.1.200-sources.jar` 的 `data/neoforge/tags/damage_type/is_technical.json` 包含 generic_kill、outside_border、out_of_world 和可选 `#forge:is_technical`。缺少文件会使该标签的官方默认成员及 forge 扩展成员在本模组数据包中不可用；其他 datapack 可能另行补充，且某些默认伤害也可能被已有绕过盔甲规则挡住，因此不能仅由静态检查推断每种伤害的最终实际效果。
+
+修复 `521a373b` 在 Fabric 自有资源路径补上与固定参考 JSON 语义完全相同的合并标签，保留可选扩展，不改原伤害判断。已阅读提交完整 diff 并复查：资源与固定参考经 JSON 解析比较一致；`TechnicalDamageTagResourceTest` 验证处理后测试运行时资源路径和所有条目，通过。尚未以真实服务器 datapack reload 或发布 jar 单独验证。
+
 ## 恢复位置
 
-依次审查 `073e10ff` 等后续提交。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。
+继续审查 `fd92051e` 的完整 diff（首次输出被截断，须分文件补读），接着按序审查 `5138fd15` 等后续提交。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。
