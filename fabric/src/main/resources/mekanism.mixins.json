@@ -36,6 +36,8 @@
     "gear.EnchantRandomlyMixin",
     "gear.EnchantmentSelectionMixin",
     "gear.GameplayEnchantmentsMixin",
+    "gear.HydrostaticSwimMixin",
+    "gear.ItemStackAttributesMixin",
     "item.ItemStackMekaSuitDamageMixin",
     "item.ResultSlotCraftingMixin",
     "server.ChunkLoaderTickMixin",

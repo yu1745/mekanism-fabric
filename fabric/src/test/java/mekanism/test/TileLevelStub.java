@@ -112,6 +112,11 @@ public final class TileLevelStub extends RecipeLevelStub {
         return chunks.containsKey(ChunkPos.asLong(chunkX, chunkZ));
     }
 
+    @Override
+    public boolean hasChunk(int chunkX, int chunkZ) {
+        return hasChunkInstalled(chunkX, chunkZ);
+    }
+
     public boolean isChunkUnsaved(int chunkX, int chunkZ) {
         LevelChunk chunk = chunks.get(ChunkPos.asLong(chunkX, chunkZ));
         if (chunk == null) {

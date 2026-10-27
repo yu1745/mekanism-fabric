@@ -114,6 +114,8 @@ mekanism/fabric/mixin/gear/EnchantRandomlyMixin.java
 mekanism/fabric/mixin/gear/EnchantmentSelectionMixin.java
 mekanism/fabric/mixin/gear/GameplayEnchantmentsMixin.java
 mekanism/fabric/mixin/gear/GearBoltRenderMixin.java
+mekanism/fabric/mixin/gear/HydrostaticSwimMixin.java
+mekanism/fabric/mixin/gear/ItemStackAttributesMixin.java
 mekanism/fabric/mixin/item/ClientConfiguratorUseMixin.java
 mekanism/fabric/mixin/item/ClientElytraStartMixin.java
 mekanism/fabric/mixin/item/ConfiguratorUseMixin.java
