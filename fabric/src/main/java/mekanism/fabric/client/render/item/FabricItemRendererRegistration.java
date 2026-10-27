@@ -50,8 +50,40 @@ public final class FabricItemRendererRegistration implements ModelLoadingPlugin 
         return ids;
     }
 
-    /** Registers the two shared ISBER singletons per cube/tank tier item, mirroring the official extension wiring. */
+    /** Registers the shared ISBER singletons, and rebuilds their model layers after vanilla's entity model set. */
     public static void registerRenderers() {
+        net.fabricmc.fabric.api.resource.ResourceManagerHelper.get(net.minecraft.server.packs.PackType.CLIENT_RESOURCES)
+              .registerReloadListener(new net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener() {
+                  @Override
+                  public ResourceLocation getFabricId() {
+                      return ResourceLocation.fromNamespaceAndPath("mekanism", "item_renderers");
+                  }
+
+                  @Override
+                  public void onResourceManagerReload(net.minecraft.server.packs.resources.ResourceManager resources) {
+                      int reloaded = 0;
+                      for (var itemRenderer : List.<net.minecraft.server.packs.resources.ResourceManagerReloadListener>of(
+                            mekanism.client.render.armor.JetpackArmor.JETPACK,
+                            mekanism.client.render.armor.JetpackArmor.ARMORED_JETPACK,
+                            mekanism.client.render.armor.FreeRunnerArmor.FREE_RUNNERS,
+                            mekanism.client.render.armor.FreeRunnerArmor.ARMORED_FREE_RUNNERS,
+                            mekanism.client.render.armor.ScubaMaskArmor.SCUBA_MASK,
+                            mekanism.client.render.armor.ScubaTankArmor.SCUBA_TANK,
+                            mekanism.client.render.item.block.RenderEnergyCubeItem.RENDERER,
+                            mekanism.client.render.item.gear.RenderJetpack.RENDERER,
+                            mekanism.client.render.item.gear.RenderJetpack.ARMORED_RENDERER,
+                            mekanism.client.render.item.gear.RenderFreeRunners.RENDERER,
+                            mekanism.client.render.item.gear.RenderFreeRunners.ARMORED_RENDERER,
+                            mekanism.client.render.item.gear.RenderScubaMask.RENDERER,
+                            mekanism.client.render.item.gear.RenderScubaTank.RENDERER,
+                            mekanism.client.render.item.gear.RenderAtomicDisassembler.RENDERER,
+                            mekanism.client.render.item.gear.RenderFlameThrower.RENDERER)) {
+                          itemRenderer.onResourceManagerReload(resources);
+                          reloaded++;
+                      }
+                      LOGGER.info("MEKANISM_FABRIC_GEAR_MODEL_RELOAD_PROOF listeners={}", reloaded);
+                  }
+              });
         BuiltinItemRendererRegistry.INSTANCE.register(MekanismBlocks.BASIC_ENERGY_CUBE.asItem(), (stack, context, matrices, vertexConsumers, light, overlay) ->
               mekanism.client.render.item.block.RenderEnergyCubeItem.RENDERER.renderByItem(stack, context, matrices, vertexConsumers, light, overlay));
         BuiltinItemRendererRegistry.INSTANCE.register(MekanismBlocks.ADVANCED_ENERGY_CUBE.asItem(), (stack, context, matrices, vertexConsumers, light, overlay) ->
