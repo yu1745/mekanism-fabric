@@ -6,7 +6,6 @@ import mekanism.common.item.gear.ItemFlamethrower.FlamethrowerMode;
 import mekanism.common.lib.math.Pos3D;
 import mekanism.common.recipe.MekanismRecipeType;
 import mekanism.common.registries.MekanismDamageTypes;
-import mekanism.common.registries.MekanismDataSerializers;
 import mekanism.common.registries.MekanismEntityTypes;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.WorldUtils;
@@ -19,6 +18,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
@@ -62,8 +62,7 @@ public class EntityFlame extends Projectile {
     private static final String NEOFORGE_ATTACHMENTS = "neoforge:attachments";
     private static final String FLAMETHROWER_MODE_ATTACHMENT = "mekanism:flamethrower_mode";
     /** Fabric port delta: synched entity data replaces the official complex-spawn-data hook, so the mode reaches the client through the vanilla spawn packet. */
-    private static final EntityDataAccessor<FlamethrowerMode> MODE = SynchedEntityData.defineId(EntityFlame.class,
-          MekanismDataSerializers.FLAMETHROWER_MODE.value());
+    private static final EntityDataAccessor<Integer> MODE = SynchedEntityData.defineId(EntityFlame.class, EntityDataSerializers.INT);
 
     public EntityFlame(EntityType<EntityFlame> type, Level world) {
         super(type, world);
@@ -87,7 +86,7 @@ public class EntityFlame extends Projectile {
         Vec3 mergedVec = ownerPos.add(flameVec);
         flame.setPos(mergedVec.x, mergedVec.y, mergedVec.z);
         flame.setOwner(owner);
-        flame.getEntityData().set(MODE, mode);
+        flame.getEntityData().set(MODE, mode.ordinal());
         flame.shootFromRotation(owner, owner.getXRot(), owner.getYRot(), 0, 0.5F, 1);
         //Attempt to ray trace the area between the owner and where the flame would actually start
         // if it hits a block instead just have the flame hit the block directly to avoid being able
@@ -97,6 +96,10 @@ public class EntityFlame extends Projectile {
             flame.onHit(blockRayTrace);
         }
         return flame;
+    }
+
+    private FlamethrowerMode getMode() {
+        return FlamethrowerMode.BY_ID.apply(getEntityData().get(MODE));
     }
 
     @Override
@@ -140,7 +143,7 @@ public class EntityFlame extends Projectile {
             }
         }
         if (!entity.fireImmune()) {
-            if (entity instanceof ItemEntity item && getEntityData().get(MODE) == FlamethrowerMode.HEAT) {
+            if (entity instanceof ItemEntity item && getMode() == FlamethrowerMode.HEAT) {
                 if (entity.tickCount > 5 * SharedConstants.TICKS_PER_SECOND && !smeltItem(item)) {
                     burn(entity);
                 }
@@ -159,7 +162,7 @@ public class EntityFlame extends Projectile {
         BlockState hitState = level().getBlockState(hitPos);
         boolean hitFluid = !hitState.getFluidState().isEmpty();
         if (!level().isClientSide && MekanismConfig.general.aestheticWorldDamage.get() && !hitFluid) {
-            FlamethrowerMode mode = getEntityData().get(MODE);
+            FlamethrowerMode mode = getMode();
             if (mode == FlamethrowerMode.HEAT) {
                 Entity owner = getOwner();
                 if (owner instanceof Player player) {
@@ -285,7 +288,7 @@ public class EntityFlame extends Projectile {
     @Override
     protected void addAdditionalSaveData(@NotNull CompoundTag tag) {
         super.addAdditionalSaveData(tag);
-        FlamethrowerMode mode = getEntityData().get(MODE);
+        FlamethrowerMode mode = getMode();
         if (mode != FlamethrowerMode.COMBAT) {
             CompoundTag attachments = tag.getCompound(NEOFORGE_ATTACHMENTS);
             attachments.putString(FLAMETHROWER_MODE_ATTACHMENT, mode.getSerializedName());
@@ -309,13 +312,13 @@ public class EntityFlame extends Projectile {
                 mode = FlamethrowerMode.CODEC.parse(NbtOps.INSTANCE, saved).result().orElse(FlamethrowerMode.COMBAT);
             }
         }
-        getEntityData().set(MODE, mode);
+        getEntityData().set(MODE, mode.ordinal());
     }
 
     @Override
     protected void defineSynchedData(@NotNull SynchedEntityData.Builder builder) {
         //Fabric port delta: Entity#defineSynchedData is abstract and Projectile does not implement it, so subclasses
         // cannot chain to a super implementation.
-        builder.define(MODE, FlamethrowerMode.COMBAT);
+        builder.define(MODE, FlamethrowerMode.COMBAT.ordinal());
     }
 }

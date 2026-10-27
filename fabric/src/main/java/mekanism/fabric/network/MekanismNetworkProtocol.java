@@ -7,8 +7,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /** Version contract shared by the Fabric configuration-phase handshake. */
 public final class MekanismNetworkProtocol {
-    /** Matches the official Mekanism {@code Version#toString()} value for 10.7.19.85. */
-    public static final String CURRENT = "10.7.19";
+    /** Official version plus a Fabric wire revision; the latter rejects peers using the old entity-data schema. */
+    public static final String CURRENT = "10.7.19-fabric.1";
     public static final int MAX_VERSION_LENGTH = 32;
 
     private MekanismNetworkProtocol() {

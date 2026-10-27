@@ -67,7 +67,6 @@ import mekanism.common.recipe.lookup.cache.InputRecipeCache.SingleItem;
 import mekanism.common.recipe.lookup.monitor.RecipeCacheLookupMonitor;
 import mekanism.common.registries.MekanismContainerTypes;
 import mekanism.common.registries.MekanismDataComponents;
-import mekanism.common.registries.MekanismDataSerializers;
 import mekanism.common.registries.MekanismEntityTypes;
 import mekanism.common.registries.MekanismItems;
 import mekanism.common.registries.MekanismRobitSkins;
@@ -142,15 +141,16 @@ public class EntityRobit extends PathfinderMob implements IRobit, IMekanismInven
     }
 
     private static final TicketType<Integer> ROBIT_CHUNK_UNLOAD = TicketType.create("robit_chunk_unload", Integer::compareTo, SharedConstants.TICKS_PER_SECOND);
-    private static final EntityDataAccessor<UUID> OWNER_UUID = define(MekanismDataSerializers.UUID.value());
+    //Vanilla serializers have stable wire ids even when another mod registers its own serializers in a different order.
+    private static final EntityDataAccessor<Optional<UUID>> OWNER_UUID = define(EntityDataSerializers.OPTIONAL_UUID);
     //TODO: Ensure this properly updates if the user's name changes but uuid is the same
     private static final EntityDataAccessor<String> OWNER_NAME = define(EntityDataSerializers.STRING);
-    private static final EntityDataAccessor<SecurityMode> SECURITY = define(MekanismDataSerializers.SECURITY.value());
+    private static final EntityDataAccessor<Integer> SECURITY = define(EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> FOLLOW = define(EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> DROP_PICKUP = define(EntityDataSerializers.BOOLEAN);
     //Note: We sync the default skin part, so that pick item on the robit will properly persist this
     private static final EntityDataAccessor<Boolean> DEFAULT_SKIN_MANUALLY_SELECTED = define(EntityDataSerializers.BOOLEAN);
-    private static final EntityDataAccessor<ResourceKey<RobitSkin>> SKIN = define(MekanismDataSerializers.ROBIT_SKIN.value());
+    private static final EntityDataAccessor<String> SKIN = define(EntityDataSerializers.STRING);
 
     private static final List<RecipeError> TRACKED_ERROR_TYPES = List.of(
           RecipeError.NOT_ENOUGH_ENERGY,
@@ -275,13 +275,13 @@ public class EntityRobit extends PathfinderMob implements IRobit, IMekanismInven
     protected void defineSynchedData(@NotNull SynchedEntityData.Builder builder) {
         super.defineSynchedData(builder);
         //Default before it has a brief chance to get set the owner to mekanism's fake player
-        builder.define(OWNER_UUID, MekFakePlayer.GAME_PROFILE.getId());
+        builder.define(OWNER_UUID, Optional.of(MekFakePlayer.GAME_PROFILE.getId()));
         builder.define(OWNER_NAME, "");
-        builder.define(SECURITY, SecurityMode.PUBLIC);
+        builder.define(SECURITY, SecurityMode.PUBLIC.ordinal());
         builder.define(FOLLOW, false);
         builder.define(DROP_PICKUP, false);
         builder.define(DEFAULT_SKIN_MANUALLY_SELECTED, false);
-        builder.define(SKIN, MekanismRobitSkins.BASE);
+        builder.define(SKIN, MekanismRobitSkins.BASE.location().toString());
     }
 
     private long getRoundedTravelEnergy() {
@@ -566,20 +566,20 @@ public class EntityRobit extends PathfinderMob implements IRobit, IMekanismInven
     @NotNull
     @Override
     public UUID getOwnerUUID() {
-        return entityData.get(OWNER_UUID);
+        return entityData.get(OWNER_UUID).orElseThrow(() -> new IllegalStateException("Robit owner UUID is missing"));
     }
 
     @NotNull
     @Override
     public SecurityMode getSecurityMode() {
-        return entityData.get(SECURITY);
+        return SecurityMode.BY_ID.apply(entityData.get(SECURITY));
     }
 
     @Override
     public void setSecurityMode(@NotNull SecurityMode mode) {
         SecurityMode current = getSecurityMode();
         if (current != mode) {
-            entityData.set(SECURITY, mode);
+            entityData.set(SECURITY, mode.ordinal());
             onSecurityChanged(current, mode);
         }
     }
@@ -601,7 +601,7 @@ public class EntityRobit extends PathfinderMob implements IRobit, IMekanismInven
 
     @Override
     public void setOwnerUUID(UUID uuid) {
-        entityData.set(OWNER_UUID, uuid);
+        entityData.set(OWNER_UUID, Optional.of(uuid));
         entityData.set(OWNER_NAME, MekanismUtils.getLastKnownUsername(uuid));
     }
 
@@ -746,7 +746,7 @@ public class EntityRobit extends PathfinderMob implements IRobit, IMekanismInven
     @NotNull
     @Override
     public ResourceKey<RobitSkin> getSkin() {
-        return entityData.get(SKIN);
+        return ResourceKey.create(MekanismAPI.ROBIT_SKIN_REGISTRY_NAME, ResourceLocation.parse(entityData.get(SKIN)));
     }
 
     @Override
@@ -772,7 +772,7 @@ public class EntityRobit extends PathfinderMob implements IRobit, IMekanismInven
                 MekanismCriteriaTriggers.CHANGE_ROBIT_SKIN.value().trigger(serverPlayer, skinKey);
             }
         }
-        entityData.set(SKIN, skinKey);
+        entityData.set(SKIN, skinKey.location().toString());
         if (skinKey == MekanismRobitSkins.BASE) {
             setDefaultSkinManuallySelected(true);
         }

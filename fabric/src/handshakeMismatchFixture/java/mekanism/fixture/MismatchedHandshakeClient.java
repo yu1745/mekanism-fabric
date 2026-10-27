@@ -17,8 +17,9 @@ import org.slf4j.LoggerFactory;
 /** Independent client fixture that deliberately rejects Mekanism's configuration protocol. */
 public final class MismatchedHandshakeClient implements ClientModInitializer {
     private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism/HandshakeMismatchFixture");
-    private static final String CURRENT_PROTOCOL = "10.7.19";
-    private static final String MISMATCH_PROTOCOL = "fixture-mismatch-0";
+    private static final String CURRENT_PROTOCOL = "10.7.19-fabric.1";
+    //The previous Fabric wire schema used the bare upstream version.
+    private static final String MISMATCH_PROTOCOL = "10.7.19";
     private static final String MODE_PROPERTY = "mekanism.handshake.fixtureMode";
     private static final FixtureMode MODE = FixtureMode.parse(System.getProperty(MODE_PROPERTY, "version_mismatch"));
     private static final int MAX_VERSION_LENGTH = 32;

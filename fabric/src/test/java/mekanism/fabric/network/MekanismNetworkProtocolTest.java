@@ -14,18 +14,18 @@ import org.junit.jupiter.api.Test;
 
 class MekanismNetworkProtocolTest {
     @Test
-    void canonicalProtocolMatchesOfficialThreePartVersion() {
-        assertEquals("10.7.19", MekanismNetworkProtocol.CURRENT);
-        assertTrue(MekanismNetworkProtocol.checkRemote("10.7.19").compatible());
+    void protocolIncludesFabricEntityDataRevision() {
+        assertEquals("10.7.19-fabric.1", MekanismNetworkProtocol.CURRENT);
+        assertTrue(MekanismNetworkProtocol.checkRemote("10.7.19-fabric.1").compatible());
     }
 
     @Test
     void compatibilityIsExactAndRejectsArtifactOrAlternateVersions() {
-        for (String remote : List.of("10.7.18", "10.8.19", "11.7.19", "10:7:19", "10.7.19.85",
+        for (String remote : List.of("10.7.19", "10.7.18", "10.8.19", "11.7.19", "10:7:19", "10.7.19.85",
               "10.7.19.85-fabric-bootstrap", "", "invalid")) {
             MekanismNetworkProtocol.Compatibility compatibility = MekanismNetworkProtocol.checkRemote(remote);
             assertFalse(compatibility.compatible(), remote);
-            assertEquals("Mekanism protocol mismatch: local 10.7.19, remote " + remote, compatibility.disconnectReason());
+            assertEquals("Mekanism protocol mismatch: local 10.7.19-fabric.1, remote " + remote, compatibility.disconnectReason());
         }
     }
 
@@ -53,7 +53,7 @@ class MekanismNetworkProtocolTest {
         MekanismNetworkProtocol.Handshake handshake = new MekanismNetworkProtocol.Handshake();
         MekanismNetworkProtocol.Compatibility compatibility = handshake.acknowledge(MekanismNetworkProtocol.CURRENT, false);
         assertFalse(compatibility.compatible());
-        assertEquals("Remote client rejected Mekanism protocol 10.7.19", compatibility.disconnectReason());
+        assertEquals("Remote client rejected Mekanism protocol 10.7.19-fabric.1", compatibility.disconnectReason());
     }
 
     @Test
@@ -84,11 +84,11 @@ class MekanismNetworkProtocolTest {
         FriendlyByteBuf requestBuffer = new FriendlyByteBuf(Unpooled.buffer());
         FriendlyByteBuf responseBuffer = new FriendlyByteBuf(Unpooled.buffer());
         try {
-            FabricMekanismNetworking.VersionRequest request = new FabricMekanismNetworking.VersionRequest("10.7.19");
+            FabricMekanismNetworking.VersionRequest request = new FabricMekanismNetworking.VersionRequest(MekanismNetworkProtocol.CURRENT);
             FabricMekanismNetworking.REQUEST_CODEC.encode(requestBuffer, request);
             assertEquals(request, FabricMekanismNetworking.REQUEST_CODEC.decode(requestBuffer));
 
-            FabricMekanismNetworking.VersionResponse response = new FabricMekanismNetworking.VersionResponse("10.7.19", true);
+            FabricMekanismNetworking.VersionResponse response = new FabricMekanismNetworking.VersionResponse(MekanismNetworkProtocol.CURRENT, true);
             FabricMekanismNetworking.RESPONSE_CODEC.encode(responseBuffer, response);
             assertEquals(response, FabricMekanismNetworking.RESPONSE_CODEC.decode(responseBuffer));
         } finally {
