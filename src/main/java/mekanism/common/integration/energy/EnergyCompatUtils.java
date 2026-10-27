@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.function.BiFunction;
 import mekanism.api.energy.IStrictEnergyHandler;
 import mekanism.common.attachments.containers.ContainerType;
+import mekanism.common.entity.EntityRobit;
 import mekanism.common.integration.energy.forgeenergy.ForgeEnergyCompat;
 import net.fabricmc.fabric.api.lookup.v1.block.BlockApiLookup;
 import net.minecraft.core.BlockPos;
@@ -88,6 +89,12 @@ public class EnergyCompatUtils {
 
     @Nullable
     public static IStrictEnergyHandler getStrictEnergyHandler(@Nullable Entity entity) {
+        // Upstream registers the Robit itself as its strict-energy entity capability and checks that capability
+        // before external energy integrations. Preserve its real handler without routing it through an optional
+        // external conversion or an unregistered Fabric entity lookup.
+        if (entity instanceof EntityRobit robit && robit.canHandleEnergy()) {
+            return robit;
+        }
         if (entity != null) {
             return getStrictEnergyHandler(entity, IEnergyCompat::getStrictEnergyHandler);
         }
