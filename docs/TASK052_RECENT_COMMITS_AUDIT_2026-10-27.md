@@ -73,8 +73,15 @@
 | `205a67fd` | 已读完整 diff，仅为历史审查文档；其事件等价的结论需按 F53 更正。 |
 | `1b770d06`、`7bb720c7` | 已读完整实现及文档 diff，对照固定官方 ClientTickHandler；原审查误称官方每 1200 tick 通知，实际上每 tick 调用，见 F54。图集回调和节日消息尚未实际画面/日期验证。 |
 | `64fedbc7` | 已读完整 diff，对照固定官方实体加入时声音守卫：客户端实体加载 Player 与 enablePlayerSounds 守卫一致；真实追踪、静音及音频尚未实机验证。 |
+| `fe375103`、`ae350c7c` | 已读完整实现和原审查 diff，对照官方 DriveArrayBakedModel、资源及物品组件；物品驱动器显示完全缺失、方块驱动器 LED 的 NeoForge 顶点亮度未生效，见 F55。miner 变换实机及第三方模型尚未验。 |
 
 ## 审查发现与待复核
+
+### F55 — QIO 驱动阵列的物品外观和发光（`fe375103`，待修）
+
+原 `DriveArrayBakedModel.DriveArrayOverrideList` 从阵列物品的 12 个附件槽、drive metadata 和频率推导 OFFLINE/READY/NEAR_FULL/FULL，并将相应驱动器几何添加到物品模型；Fabric 仅注册方块实体渲染器，物品模型无 override，因此带驱动器的阵列在手中/物品栏仍显示空架。原审查已明确延后，但这属于已接入模型的官方公共视觉行为，不能以启动 proof 算闭环。
+
+四种 drive 模型的 LED 使用 `neoforge_data` 的 block/sky 15；当前缓存走 vanilla JSON 烘焙忽略此字段，且 BER 使用 vanilla `putBulkData` 不读取 baked light，故暗处发光语义未实现。相关 QIO shell 的频率/状态 LED 也有同类声明，应以实际模型/owner 分层修复，不将整个壳体设为全亮。修复需复用同一驱动器几何与官方状态推导，保留物品基础模型和透明度、重载缓存及方向，不凭标题屏 proof 判定画面。
 
 ### F54 — 节日通知频率偏离官方（`1b770d06`，代码修复已提交）
 
