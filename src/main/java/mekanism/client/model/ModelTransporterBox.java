@@ -3,7 +3,6 @@ package mekanism.client.model;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import mekanism.api.text.EnumColor;
-import mekanism.common.Mekanism;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.MekanismUtils.ResourceType;
 import net.minecraft.client.model.geom.EntityModelSet;
@@ -20,7 +19,7 @@ import org.jetbrains.annotations.NotNull;
 
 public class ModelTransporterBox extends MekanismJavaModel {
 
-    public static final ModelLayerLocation BOX_LAYER = new ModelLayerLocation(Mekanism.rl("transporter_box"), "main");
+    public static final ModelLayerLocation BOX_LAYER = new ModelLayerLocation(ResourceLocation.fromNamespaceAndPath(mekanism.api.MekanismAPI.MEKANISM_MODID, "transporter_box"), "main");
     private static final ResourceLocation BOX_TEXTURE = MekanismUtils.getResource(ResourceType.RENDER, "transporter_box.png");
 
     private static final ModelPartData BOX = new ModelPartData("box", CubeListBuilder.create()

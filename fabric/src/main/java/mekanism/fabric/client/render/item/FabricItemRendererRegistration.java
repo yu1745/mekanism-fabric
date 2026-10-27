@@ -99,12 +99,24 @@ public final class FabricItemRendererRegistration implements ModelLoadingPlugin 
     @Override
     public void onInitializeModelLoader(Context context) {
         Set<ResourceLocation> suppressed = suppressedItemModels();
-        context.resolveModel().register(ctx -> suppressed.contains(ctx.id()) ? new QuadsEmptyModel(ctx.getOrLoadModel(ctx.id())) : null);
+        //The suppression wraps the model at LOAD time: the loaded unbaked (the vanilla-parsed item json, whose
+        //parents resolve through the model plugin's prepared models) is returned inside QuadsEmptyModel, which
+        //bakes the official model but emits empty quads. The original resolveModel self-reference
+        //(ctx.getOrLoadModel(ctx.id())) stopped being tolerated by the model-loading api's recursion guard, and a
+        //post-bake wrap breaks the item models that parent onto geometry-carrier blocks (vanilla would run its
+        //item generator over the carrier's animated textures).
+        context.modifyModelOnLoad().register((model, loadContext) -> {
+            net.minecraft.resources.ResourceLocation resourceId = loadContext.resourceId();
+            if (resourceId != null && suppressed.contains(resourceId) && model instanceof net.minecraft.client.renderer.block.model.BlockModel blockModel) {
+                return new QuadsEmptyModel(blockModel);
+            }
+            return model;
+        });
         LOGGER.info("MEKANISM_FABRIC_ITEM_RENDERER_PROOF suppressed_models={} builtin_renderers=19", suppressed.size());
     }
 
     /** Keeps the official unbaked model for dependencies/parents; the bake only suppresses the quads. */
-    private record QuadsEmptyModel(UnbakedModel official) implements UnbakedModel {
+    private record QuadsEmptyModel(net.minecraft.client.renderer.block.model.BlockModel official) implements UnbakedModel {
 
         @Override
         public Collection<ResourceLocation> getDependencies() {

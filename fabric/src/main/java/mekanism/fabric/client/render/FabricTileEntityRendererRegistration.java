@@ -63,6 +63,8 @@ public final class FabricTileEntityRendererRegistration {
         registerLayer(ModelArmoredFreeRunners.ARMORED_FREE_RUNNER_LAYER, ModelArmoredFreeRunners::createLayerDefinition);
         registerLayer(ModelScubaMask.MASK_LAYER, ModelScubaMask::createLayerDefinition);
         registerLayer(ModelScubaTank.TANK_LAYER, ModelScubaTank::createLayerDefinition);
+        //The transporter box rides the transporter BER lane (the official registerLayerDefinition at ClientRegistration:373).
+        registerLayer(mekanism.client.model.ModelTransporterBox.BOX_LAYER, mekanism.client.model.ModelTransporterBox::createLayerDefinition);
 
         int renderers = 0;
         renderers += bind(RenderThermoelectricBoiler::new, MekanismTileEntityTypes.BOILER_CASING, MekanismTileEntityTypes.BOILER_VALVE);
@@ -101,8 +103,13 @@ public final class FabricTileEntityRendererRegistration {
         renderers += bind(mekanism.client.render.transmitter.RenderUniversalCable::new, MekanismTileEntityTypes.BASIC_UNIVERSAL_CABLE,
               MekanismTileEntityTypes.ADVANCED_UNIVERSAL_CABLE, MekanismTileEntityTypes.ELITE_UNIVERSAL_CABLE,
               MekanismTileEntityTypes.ULTIMATE_UNIVERSAL_CABLE);
+        //The transporter animation lane: in-transit stacks, the color box, and the diversion overlay.
+        renderers += bind(mekanism.client.render.transmitter.RenderLogisticalTransporter::new, MekanismTileEntityTypes.DIVERSION_TRANSPORTER,
+              MekanismTileEntityTypes.RESTRICTIVE_TRANSPORTER, MekanismTileEntityTypes.BASIC_LOGISTICAL_TRANSPORTER,
+              MekanismTileEntityTypes.ADVANCED_LOGISTICAL_TRANSPORTER, MekanismTileEntityTypes.ELITE_LOGISTICAL_TRANSPORTER,
+              MekanismTileEntityTypes.ULTIMATE_LOGISTICAL_TRANSPORTER);
         org.slf4j.LoggerFactory.getLogger("Mekanism/FabricTileEntityRenderers")
-              .info("MEKANISM_FABRIC_BER_PROOF tile_types={} renderers=21 layers=10", renderers);
+              .info("MEKANISM_FABRIC_BER_PROOF tile_types={} renderers=22 layers=11", renderers);
     }
 
     @SafeVarargs

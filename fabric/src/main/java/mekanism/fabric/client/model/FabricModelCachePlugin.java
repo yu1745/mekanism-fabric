@@ -44,7 +44,8 @@ public final class FabricModelCachePlugin implements ModelLoadingPlugin {
                 json.acceptBakedModel(model);
             }
             //The official addCustomModel wrappers: the miner's holiday texture transform rides the keyed cache.
-            if (bakeContext.resourceId().equals(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("mekanism", "block/digital_miner"))) {
+            if (model != null && net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("mekanism", "block/digital_miner")
+                  .equals(bakeContext.resourceId())) {
                 return new mekanism.client.model.baked.DigitalMinerBakedModel(model);
             }
             return model;

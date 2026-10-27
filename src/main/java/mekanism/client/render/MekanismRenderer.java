@@ -315,10 +315,10 @@ public class MekanismRenderer {
         teleporterPortal = map.getSprite(rl("block/teleporter_portal"));
 
         //Note: These are called in post rather than pre to make sure the icons have properly been stitched/attached
-        //The tile-lane resets are live; the transmitter-lane contents resets join here
-        //(RenderLogisticalTransporter stays deferred with the transporter animation lane).
+        //The tile-lane resets are live; the transmitter-lane resets are all wired now.
         mekanism.client.render.transmitter.RenderTransmitterBase.onStitch();
         mekanism.client.render.transmitter.RenderMechanicalPipe.onStitch();
+        mekanism.client.render.transmitter.RenderLogisticalTransporter.onStitch(map);
         RenderDigitalMiner.resetCachedVisuals();
         RenderDimensionalStabilizer.resetCachedVisuals();
         RenderFluidTank.resetCachedModels();

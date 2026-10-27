@@ -243,6 +243,7 @@ mekanism/client/model/ModelJetpack.java
 mekanism/client/model/ModelPartData.java
 mekanism/client/model/ModelScubaMask.java
 mekanism/client/model/ModelScubaTank.java
+mekanism/client/model/ModelTransporterBox.java
 mekanism/client/model/baked/DigitalMinerBakedModel.java
 mekanism/client/model/baked/ExtensionBakedModel.java
 mekanism/client/model/data/TransmitterModelData.java
@@ -332,6 +333,7 @@ mekanism/client/render/tileentity/RenderSeismicVibrator.java
 mekanism/client/render/tileentity/RenderTeleporter.java
 mekanism/client/render/tileentity/RenderThermalEvaporationPlant.java
 mekanism/client/render/tileentity/RenderThermoelectricBoiler.java
+mekanism/client/render/transmitter/RenderLogisticalTransporter.java
 mekanism/client/render/transmitter/RenderMechanicalPipe.java
 mekanism/client/render/transmitter/RenderPressurizedTube.java
 mekanism/client/render/transmitter/RenderThermodynamicConductor.java
