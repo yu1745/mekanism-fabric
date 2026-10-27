@@ -4,6 +4,7 @@ import mekanism.api.security.IBlockSecurityUtils;
 import mekanism.common.block.prefab.BlockTile.BlockTileModel;
 import mekanism.common.content.blocktype.Machine;
 import mekanism.common.resource.BlockResourceInfo;
+import mekanism.common.registration.impl.FluidDeferredRegister.MekanismFlowingFluid;
 import mekanism.common.tile.TileEntityFluidTank;
 import mekanism.common.util.FluidUtils;
 import mekanism.common.util.WorldUtils;
@@ -15,20 +16,39 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import mekanism.api.fluid.FluidStack;
 import org.jetbrains.annotations.NotNull;
 
 public class BlockFluidTank extends BlockTileModel<TileEntityFluidTank, Machine<TileEntityFluidTank>> {
 
+    //Vanilla's light engine indexes sources by block state, unlike NeoForge's positional light hook.
+    public static final IntegerProperty FLUID_LIGHT = IntegerProperty.create("fluid_light", 0, 15);
+
     public BlockFluidTank(Machine<TileEntityFluidTank> type) {
-        super(type, properties -> properties.mapColor(BlockResourceInfo.STEEL.getMapColor()));
+        super(type, properties -> properties.mapColor(BlockResourceInfo.STEEL.getMapColor()).lightLevel(state -> state.getValue(FLUID_LIGHT)));
     }
 
-    //Fabric port delta: NeoForge's positional IBlockStateExtension#getLightEmission(BlockState, BlockGetter, BlockPos)
-    // hook let the tank emit light from its stored fluid. Vanilla light emission is per block state only, so the
-    // fluid-driven emission is not available until a positional light hook exists.
+    @Override
+    protected void createBlockStateDefinition(@NotNull StateDefinition.Builder<Block, BlockState> builder) {
+        super.createBlockStateDefinition(builder);
+        builder.add(FLUID_LIGHT);
+    }
+
+    /** The official tank uses the stored fluid's luminosity, not the amount stored. */
+    public static int fluidLight(FluidStack fluid) {
+        if (fluid.isEmpty()) {
+            return 0;
+        }
+        if (fluid.getFluid() instanceof MekanismFlowingFluid mekanismFluid) {
+            return Math.clamp(mekanismFluid.getMekanismFluidType().getLightLevel(fluid), 0, 15);
+        }
+        return Math.clamp(fluid.getFluid().defaultFluidState().createLegacyBlock().getLightEmission(), 0, 15);
+    }
 
     @NotNull
     @Override

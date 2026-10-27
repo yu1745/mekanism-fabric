@@ -13,6 +13,7 @@ import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
 import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
 import mekanism.common.attachments.containers.ContainerType;
 import mekanism.common.block.attribute.Attribute;
+import mekanism.common.block.basic.BlockFluidTank;
 import mekanism.common.capabilities.fluid.FluidTankFluidTank;
 import mekanism.common.capabilities.holder.fluid.FluidTankHelper;
 import mekanism.common.capabilities.holder.fluid.IFluidTankHolder;
@@ -93,7 +94,6 @@ public class TileEntityFluidTank extends TileEntityMekanism implements IConfigur
     @WrappingComputerMethod(wrapper = ComputerIInventorySlotWrapper.class, methodNames = "getOutputItem", docPlaceholder = "output slot")
     OutputInventorySlot outputSlot;
 
-    private int lastLightLevel;
     private int lightUpdateDelay;
 
     public TileEntityFluidTank(Holder<Block> blockProvider, BlockPos pos, BlockState state) {
@@ -135,11 +135,12 @@ public class TileEntityFluidTank extends TileEntityMekanism implements IConfigur
     private void checkLight() {
         if (lightUpdateDelay > 0) {
             lightUpdateDelay--;
-            if (lightUpdateDelay == 0) {
-                int lightLevel = getBlockState().getLightEmission();
-                if (lightLevel != lastLightLevel) {
-                    lastLightLevel = lightLevel;
-                    level.getLightEngine().checkBlock(worldPosition);
+            if (lightUpdateDelay == 0 && level != null && !level.isClientSide) {
+                BlockState state = getBlockState();
+                int lightLevel = BlockFluidTank.fluidLight(fluidTank.getFluid());
+                if (state.hasProperty(BlockFluidTank.FLUID_LIGHT) && state.getValue(BlockFluidTank.FLUID_LIGHT) != lightLevel) {
+                    //The state update is saved and sent to clients; vanilla detects the changed emission on both sides.
+                    level.setBlock(worldPosition, state.setValue(BlockFluidTank.FLUID_LIGHT, lightLevel), Block.UPDATE_CLIENTS);
                 }
             }
         }
@@ -156,6 +157,13 @@ public class TileEntityFluidTank extends TileEntityMekanism implements IConfigur
             }
         }
         checkLight();
+        BlockState state = getBlockState();
+        if (lightUpdateDelay == 0 && state.hasProperty(BlockFluidTank.FLUID_LIGHT)) {
+            int lightLevel = BlockFluidTank.fluidLight(fluidTank.getFluid());
+            if (state.getValue(BlockFluidTank.FLUID_LIGHT) != lightLevel) {
+                lightUpdateDelay = lightLevel > 0 ? 1 : Math.max(1, MekanismConfig.general.blockDeactivationDelay.get());
+            }
+        }
 
         float scale = MekanismUtils.getScale(prevScale, fluidTank);
         //TODO - 1.21: Figure out handling of stacked tanks where it may be going back and forth between being full and not?
@@ -165,7 +173,7 @@ public class TileEntityFluidTank extends TileEntityMekanism implements IConfigur
                 //If it was empty and no longer is, or wasn't empty and now is empty we want to recheck the block lighting
                 // as the fluid may have changed and have a light value
                 if (lightUpdateDelay == 0) {
-                    lightUpdateDelay = prevScale == 0 ? 1 : MekanismConfig.general.blockDeactivationDelay.get();
+                    lightUpdateDelay = prevScale == 0 ? 1 : Math.max(1, MekanismConfig.general.blockDeactivationDelay.get());
                 }
             }
             prevScale = scale;
@@ -383,7 +391,7 @@ public class TileEntityFluidTank extends TileEntityMekanism implements IConfigur
                     //If it was empty and no longer is, or wasn't empty and now is empty we want to recheck the block lighting
                     // as the fluid may have changed and have a light value, mark that the client should update the light value
                     //Note: If we previously had no fluid, we queue the lighting for the next client tick
-                    lightUpdateDelay = prevScale == 0 ? 1 : MekanismConfig.general.blockDeactivationDelay.get();
+                    lightUpdateDelay = prevScale == 0 ? 1 : Math.max(1, MekanismConfig.general.blockDeactivationDelay.get());
                 }
             }
             prevScale = scale;
