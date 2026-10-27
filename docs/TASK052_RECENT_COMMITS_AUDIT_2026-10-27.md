@@ -97,6 +97,12 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 当前 `CuriosIntegration.isLoaded()` 无条件 false，查找返回空；即使安装兼容的 Fabric Curios 也不会使用原有喷气背包/自由奔跑靴、辐射屏蔽或对应模式键。该 no-op 是明确遗留，不等同于“无 Curios 环境正确”即可关闭，也不符合以假实现充当闭包的规则。历史裁定称 `curios-fabric 9.5.1+1.21.1` 的 Maven 当时无法访问；尚未重新验证依赖可取得性与其 Fabric slot/render API。真实修复涉及新增第三方可选模块及客户端渲染，超出当前已纳机器 owner，依 AGENTS 的范围规则先记录具体边界，不用永久 false 假称兼容；在获得范围裁决并核实依赖后实现，不以此阻塞同范围内其他审查和修复。
 
+### F12 — 喷火实体模式未保存（`12ebbcf6`，已修复，实际世界加载待验）
+
+原版 `MekanismAttachmentTypes.FLAMETHROWER_MODE` 以 `FlamethrowerMode.CODEC` 持久化非 `COMBAT` 模式；固定 NeoForge 21.1.200 的 `AttachmentHolder` 将注册名序列化在实体 NBT 的 `neoforge:attachments` 下，对应键 `mekanism:flamethrower_mode`。`12ebbcf6` 改用同步数据但没有读写保存，短生命周期实体在存盘/区块加载后会恢复默认 `COMBAT`，不能仅凭 spawn packet 同步认定保留持久语义。
+
+修复 `205ecb43` 在真实 `EntityFlame` 的读写方法中沿用这两个官方 NBT 键和原枚举 codec/default，保留 superclass 的 owner 数据，写入已存在的附件 compound 时不覆盖其其他键；已复审完整 diff。Knot 下 `EntityFlamePersistenceTest` 两项通过，使用真实实体和模拟 Level 验证 heat 回环、缺失/无效默认以及已有 compound 中其他键不被覆盖。该测试并未证明实际世界区块卸载/重新加载，也不承诺 Fabric 自动保存其他 mod 的未知 NeoForge 附件。
+
 ## 恢复位置
 
-优先研究 F8 的 QIO 真实 owner 插入事务闭包，并补验 F9 的 sided inventory 场景；`a147116b` 已读完整 2180 行 diff；下一项从 `12ebbcf6` 开始。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。
+优先研究 F8 的 QIO 真实 owner 插入事务闭包，并补验 F9 的 sided inventory 场景；`a147116b` 已读完整 2180 行 diff；`12ebbcf6` 已读前 240/1478 行、发现并修复 F12，剩余部分未审查，继续从 `/tmp/mek-12eb-review.diff` 第 241 行或重新生成相同 git diff 开始。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。
