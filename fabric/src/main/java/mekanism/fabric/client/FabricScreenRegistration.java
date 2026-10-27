@@ -32,10 +32,17 @@ public final class FabricScreenRegistration {
         MenuScreens.register(MekanismContainerTypes.ENERGIZED_SMELTER.get(),
               GuiElectricMachine<TileEntityEnergizedSmelter, MekanismTileContainer<TileEntityEnergizedSmelter>>::new);
         MenuScreens.register(MekanismContainerTypes.ELECTROLYTIC_SEPARATOR.get(), GuiElectrolyticSeparator::new);
+        //The robit GUI family: the main panel plus the four switchable panels (the skin select opens from the main).
+        MenuScreens.register(MekanismContainerTypes.MAIN_ROBIT.get(), mekanism.client.gui.robit.GuiRobitMain::new);
+        MenuScreens.register(MekanismContainerTypes.INVENTORY_ROBIT.get(), mekanism.client.gui.robit.GuiRobitInventory::new);
+        MenuScreens.register(MekanismContainerTypes.SMELTING_ROBIT.get(), mekanism.client.gui.robit.GuiRobitSmelting::new);
+        MenuScreens.register(MekanismContainerTypes.CRAFTING_ROBIT.get(), mekanism.client.gui.robit.GuiRobitCrafting::new);
+        MenuScreens.register(MekanismContainerTypes.REPAIR_ROBIT.get(), mekanism.client.gui.robit.GuiRobitRepair::new);
         List<String> menuIds = new ArrayList<>();
         menuIds.add(String.valueOf(BuiltInRegistries.MENU.getKey(MekanismContainerTypes.ENRICHMENT_CHAMBER.get())));
         menuIds.add(String.valueOf(BuiltInRegistries.MENU.getKey(MekanismContainerTypes.ENERGIZED_SMELTER.get())));
         menuIds.add(String.valueOf(BuiltInRegistries.MENU.getKey(MekanismContainerTypes.ELECTROLYTIC_SEPARATOR.get())));
+        menuIds.add(String.valueOf(BuiltInRegistries.MENU.getKey(MekanismContainerTypes.MAIN_ROBIT.get())));
         LOGGER.info("MEKANISM_FABRIC_SCREEN_REGISTRATION_PROOF menus={}", String.join(",", menuIds));
     }
 }

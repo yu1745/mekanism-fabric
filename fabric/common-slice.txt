@@ -114,6 +114,7 @@ mekanism/client/gui/element/progress/IProgressInfoHandler.java
 mekanism/client/gui/element/progress/ProgressType.java
 mekanism/client/gui/element/scroll/GuiInstallableScrollList.java
 mekanism/client/gui/element/scroll/GuiModuleScrollList.java
+mekanism/client/gui/element/scroll/GuiRobitSkinSelectScroll.java
 mekanism/client/gui/element/scroll/GuiScrollBar.java
 mekanism/client/gui/element/scroll/GuiScrollList.java
 mekanism/client/gui/element/scroll/GuiScrollableElement.java
@@ -156,6 +157,7 @@ mekanism/client/gui/element/window/GuiConfirmationDialog.java
 mekanism/client/gui/element/window/GuiCraftingWindow.java
 mekanism/client/gui/element/window/GuiMekaSuitHelmetOptions.java
 mekanism/client/gui/element/window/GuiRobitRename.java
+mekanism/client/gui/element/window/GuiRobitSkinSelect.java
 mekanism/client/gui/element/window/GuiSideConfiguration.java
 mekanism/client/gui/element/window/GuiTransporterConfig.java
 mekanism/client/gui/element/window/GuiUpgradeWindow.java
@@ -225,6 +227,12 @@ mekanism/client/gui/qio/GuiQIOItemFrequencySelect.java
 mekanism/client/gui/qio/GuiQIOItemViewer.java
 mekanism/client/gui/qio/GuiQIORedstoneAdapter.java
 mekanism/client/gui/qio/GuiQIOTileFrequencySelect.java
+mekanism/client/gui/robit/GuiRobit.java
+mekanism/client/gui/robit/GuiRobitCrafting.java
+mekanism/client/gui/robit/GuiRobitInventory.java
+mekanism/client/gui/robit/GuiRobitMain.java
+mekanism/client/gui/robit/GuiRobitRepair.java
+mekanism/client/gui/robit/GuiRobitSmelting.java
 mekanism/client/gui/tooltip/MultiLineTooltip.java
 mekanism/client/gui/tooltip/TooltipUtils.java
 mekanism/client/key/MekKeyHandler.java

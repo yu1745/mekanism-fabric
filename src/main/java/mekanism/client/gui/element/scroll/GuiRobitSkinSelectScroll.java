@@ -9,6 +9,7 @@ import java.util.function.Supplier;
 import mekanism.api.math.MathUtils;
 import mekanism.api.robit.RobitSkin;
 import mekanism.client.RobitSpriteUploader;
+import mekanism.client.model.robit.RobitBakedModel;
 import mekanism.client.gui.GuiUtils;
 import mekanism.client.gui.IGuiWrapper;
 import mekanism.client.gui.element.GuiElement;
@@ -16,7 +17,6 @@ import mekanism.client.gui.element.GuiElementHolder;
 import mekanism.client.gui.element.GuiInnerScreen;
 import mekanism.client.gui.tooltip.TooltipUtils;
 import mekanism.client.model.MekanismModelCache;
-import mekanism.common.Mekanism;
 import mekanism.common.MekanismLang;
 import mekanism.common.entity.EntityRobit;
 import mekanism.common.registries.MekanismRobitSkins;
@@ -34,7 +34,6 @@ import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
-import net.neoforged.neoforge.client.model.data.ModelData;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Quaternionf;
@@ -195,12 +194,12 @@ public class GuiRobitSkinSelectScroll extends GuiElement {
         SkinLookup skinLookup = MekanismRobitSkins.lookup(robit.level().registryAccess(), skinKey);
         List<ResourceLocation> textures = skinLookup.skin().textures();
         if (textures.isEmpty()) {
-            Mekanism.logger.error("Failed to render skin: {}, as it has no textures.", skinLookup.location());
+            org.slf4j.LoggerFactory.getLogger("Mekanism/GuiRobitSkinSelect").error("Failed to render skin: {}, as it has no textures.", skinLookup.location());
             return;
         }
         BakedModel model = MekanismModelCache.INSTANCE.getRobitSkin(skinLookup);
         if (model == null) {
-            Mekanism.logger.warn("Failed to render skin: {} as it does not have a model.", skinLookup.location());
+            org.slf4j.LoggerFactory.getLogger("Mekanism/GuiRobitSkinSelect").warn("Failed to render skin: {} as it does not have a model.", skinLookup.location());
             return;
         }
         MultiBufferSource.BufferSource buffer = guiGraphics.bufferSource();
@@ -213,8 +212,10 @@ public class GuiRobitSkinSelectScroll extends GuiElement {
         pose.mulPose(Axis.ZP.rotationDegrees(180));
         pose.rotateAround(rotation,  0.5F, 0.0F, 0.5F);
         PoseStack.Pose matrixEntry = pose.last();
-        ModelData modelData = ModelData.of(EntityRobit.SKIN_TEXTURE_PROPERTY, MathUtils.getByIndexMod(textures, index));
-        for (BakedQuad quad : model.getQuads(null, null, robit.level().random, modelData, null)) {
+        //Fabric port: the official model-data side selection collapses to the reshaped RobitBakedModel's
+        //static per-skin transform (the same helper the entity renderer and the builtin item renderer use).
+        for (BakedQuad quad : RobitBakedModel.transformForSkin(model.getQuads(null, null, robit.level().random),
+              MathUtils.getByIndexMod(textures, index))) {
             builder.putBulkData(matrixEntry, quad, 1, 1, 1, 1, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
         }
         buffer.endBatch(RobitSpriteUploader.RENDER_TYPE);
