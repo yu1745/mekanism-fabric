@@ -27,6 +27,7 @@
 | `e39d256f` | 已读完整 diff：机器基类/upgrade 纳片、GUI packet 由 context 取 player 改为直接传入、FluidStack 类型迁移。当前 Fabric 服务端注册将 `context.player()` 传给同一 handler；单靠签名替换不能证明所有 packet 的权限和时序安全，需在网络注册提交处继续审查。当时仍未整体编译成功。 |
 | `a147116b` | 已分段读完整 2180 行 diff：能力 catalog、物品流体、armor/BE 注册、multiblock manager 和个人存储，检查真实上下文及后续状态。确认整叠流体能力检查遗漏 F10 并修复；Curios 一直返回 false/empty 的假兼容边界为 F11。BlockData 的非原版流体蒸发 hook、客户端 tint 和具体 registry 生命周期仍未证明与官方等价；当时记录仍有编译错误，不作为可运行闭包。 |
 | `12ebbcf6` | 已分段读完整 1478 行 diff：component holder 迁移、喷火实体同步、激光破坏/盾牌处理和 10 项纳片。确认并修复喷火存档 F12、激光与喷火熔炼破坏保护 F13；同步 spawn、盾牌事件扩展和 INFERNO 放置事件等价尚未实机证明。当时仍是编译未闭合的中间状态。 |
+| `76f790ce` | 已分段读完整 594 行 diff：物品扩展删除、附魔、重装备/挖掘、pick-block 和 TNT。当前实际缺失模块附魔在游戏查询的合并，已按 F14 修复；附魔适用/书、装备动画和 pick-block 等剩余官方 hook 单独列 F15，不把此前注明 deferred 当已实现。当前电弓射弹模式已有后续实现在 `createProjectile`，但未证明官方全部虚拟附魔查询一致。 |
 
 ## 审查发现与待复核
 
@@ -108,6 +109,14 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 该提交去掉激光假玩家破坏/TNT 激活和喷火 HEAT 熔炼的 NeoForge `BlockEvent.BreakEvent`，直接修改世界；之后虽然矿机和纸箱已调用 `WorldUtils.canBreakBlock`，这两个入口仍未接入，因而不会触发 Mekanism 方块安全与 Fabric `PlayerBlockBreakEvents.BEFORE` 拒绝。修复 `8aa8f7dd` 在激光 TNT/普通破坏之前以仿真 owner 的真实假玩家检查，在 HEAT 有熔炼配方且服务器侧以射手检查，拒绝即不破坏；激光假玩家清理改为 `finally`。已复审完整 diff；隔离 Knot 的 `AutomaticBreakProtectionTest` 验证真实 Fabric BEFORE listener 的拒绝确实进入共享检查，`qioTransactionTest` 和整个 `fabricTransferTest` 通过。该测试不调用激光或真实喷火实体的世界修改，不能证明实机保护插件兼容；INFERNO 的放置事件/点火及第三方 NeoForge 事件不在此 break-event 修复覆盖范围。
 
+### F14 — 模块附魔未进入原版游戏效果（`76f790ce`，游戏查询已修复）
+
+该提交删除 MekaTool/MekaSuit 的 `getEnchantmentLevel` 和 `getAllEnchantments`；固定 NeoForge patched `EnchantmentHelper` 的等级查询委托 stack，两个 `runIterationOnItem` 也使用 gameplay 附魔，Fabric 原版只读 `DataComponents.ENCHANTMENTS`。`ModuleContainer.moduleBasedEnchantments()` 保存的模块附魔因此不参与上述原版游戏效果。修复 `3b945464` 只针对真实 MekaTool/MekaSuit，在原版等级查询及两个游戏效果遍历入口按官方 `max(stored,module)` 合并，不修改物品真实附魔组件，也不把虚拟附魔写进合成/存档。已审阅提交完整 diff：隔离 Knot 的 `GameplayModuleEnchantmentsTest` 对真实 MekaTool 和 MekaSuit 构造真实 module component，验证重叠取最大值、仅模块等级、原组件不变、两类原版迭代和无物理附魔组件及其他物品不受影响；完整 `qioTransactionTest`、`fabricTransferTest` 和三项切片 gate 均通过。未做实际玩家受伤/采掘和 remapped JAR 验证，其他模组对同一原版方法的 mixin 兼容性未证明。
+
+### F15 — 附魔适用、物品重装备和 pick-block 行为仍待恢复（`76f790ce`）
+
+同一提交还删去官方 `isBookEnchantable`、`isPrimaryItemFor`、`supportsEnchantment`、`shouldCauseReequipAnimation`、`shouldCauseBlockBreakReset` 和带模块装备的 `isNotReplaceableByPickAction`；本次静态检查尚未发现等价的通用调用链。不能把 F14 的游戏等级/效果遍历修复当作这些不同 owner 的修复。需逐项核对 vanilla 的附魔台/铁砧、客户端手持渲染和挖掘状态及服务端 pick-block 的真实入口，按装备类别和官方返回条件恢复；电弓的 `createProjectile` 只覆盖射弹，不证明其他虚拟 Flame 查询。先在原行为范围处理，不默认扩到其他模组的通用兼容框架。
+
 ## 恢复位置
 
-优先研究 F8 的 QIO 真实 owner 插入事务闭包，并补验 F9 的 sided inventory 场景；`a147116b` 已读完整 2180 行 diff；`12ebbcf6` 已读完整 1478 行并修复 F12/F13；下一提交从 `76f790ce` 开始。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。
+优先研究 F8 的 QIO 真实 owner 插入事务闭包，并补验 F9 的 sided inventory 场景；`a147116b` 已读完整 2180 行 diff；`12ebbcf6` 和 `76f790ce` 已读完整 diff，F14 已修，优先收敛同提交剩余 F15；下一提交从 `1d4c4027` 开始。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。
