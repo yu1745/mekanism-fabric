@@ -33,6 +33,8 @@ public class MekanismClient {
     public static final Map<UUID, String> clientUUIDMap = ClientSecurityData.usernameMap();
 
     public static long ticksPassed = 0;
+    @Nullable
+    private static UUID localKeyOwner;
 
     public static void updateKey(KeyMapping key, int type) {
         updateKey(key.isDown(), type);
@@ -41,6 +43,7 @@ public class MekanismClient {
     public static void updateKey(boolean pressed, int type) {
         if (Minecraft.getInstance().player != null) {
             UUID playerUUID = Minecraft.getInstance().player.getUUID();
+            localKeyOwner = playerUUID;
             boolean down = Minecraft.getInstance().screen == null && pressed;
             if (down != KeySync.INSTANCE.has(playerUUID, type)) {
                 PacketUtils.sendToServer(new PacketKey(type, down));
@@ -66,6 +69,10 @@ public class MekanismClient {
     }
 
     public static void reset() {
+        if (localKeyOwner != null) {
+            KeySync.INSTANCE.keys.remove(localKeyOwner);
+            localKeyOwner = null;
+        }
         ClientSecurityData.clear();
 
         ClientTickHandler.reset();

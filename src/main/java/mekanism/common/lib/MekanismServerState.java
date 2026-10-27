@@ -33,6 +33,7 @@ public final class MekanismServerState {
     /** Clears server-scoped game state. Called from the post-save server-stopped domain cleanup only for the server instance that is stopping (same-server identity guarded by the bootstrap). */
     public static void clearServerState() {
         activeVibrators.clear();
+        mekanism.common.base.KeySync.INSTANCE.keys.clear();
         mekanism.common.content.gear.mekasuit.MekaSuitFlight.clear();
         mekanism.common.CommonWorldTickHandler.INSTANCE.resetChunkData();
         mekanism.common.world.GenHandler.reset();

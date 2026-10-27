@@ -1,11 +1,15 @@
 package mekanism.common.network;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 import com.mojang.authlib.GameProfile;
 import java.util.UUID;
+import mekanism.common.base.KeySync;
 import mekanism.common.inventory.container.ISecurityContainer;
+import mekanism.common.network.to_server.PacketKey;
 import mekanism.common.inventory.container.entity.IEntityContainer;
 import mekanism.test.TileLevelStub;
 import net.minecraft.SharedConstants;
@@ -46,6 +50,27 @@ class GuiPacketAuthorizationTest {
         menu.valid = false;
         assertNull(PacketUtils.guiEntity(player, entity.getId()));
         assertNull(PacketUtils.guiTile(player, BlockPos.ZERO));
+    }
+
+    @Test
+    void packetOnlyAcceptsTheTwoDeclaredSynchronizedKeys() {
+        TestPlayer player = new TestPlayer(TileLevelStub.create());
+        UUID id = player.getUUID();
+        try {
+            new PacketKey(-1, true).handle(player);
+            new PacketKey(2, true).handle(player);
+            new PacketKey(Integer.MAX_VALUE, true).handle(player);
+            assertNull(KeySync.INSTANCE.getPlayerKeys(id));
+            new PacketKey(KeySync.ASCEND, true).handle(player);
+            new PacketKey(KeySync.BOOST, true).handle(player);
+            assertTrue(KeySync.INSTANCE.has(id, KeySync.ASCEND));
+            assertTrue(KeySync.INSTANCE.has(id, KeySync.BOOST));
+            new PacketKey(KeySync.ASCEND, false).handle(player);
+            assertFalse(KeySync.INSTANCE.has(id, KeySync.ASCEND));
+            assertTrue(KeySync.INSTANCE.has(id, KeySync.BOOST));
+        } finally {
+            KeySync.INSTANCE.keys.remove(id);
+        }
     }
 
     private static final class TestMenu extends AbstractContainerMenu implements IEntityContainer<Entity>, ISecurityContainer {

@@ -28,6 +28,9 @@ public record PacketKey(int key, boolean add) implements IMekanismPacket {
 
     @Override
     public void handle(Player player) {
+        if (key != KeySync.ASCEND && key != KeySync.BOOST) {
+            return;
+        }
         UUID playerId = player.getUUID();
         if (add) {
             KeySync.INSTANCE.add(playerId, key);

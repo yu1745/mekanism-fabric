@@ -56,7 +56,10 @@ public final class MekanismFabricBootstrap implements ModInitializer {
         ServerLifecycleEvents.SERVER_STARTING.register(MekanismServerLifecycle::captureStartingServer);
         net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
             net.minecraft.server.level.ServerPlayer disconnected = handler.player;
-            server.execute(() -> mekanism.common.content.gear.mekasuit.MekaSuitFlight.release(disconnected));
+            server.execute(() -> {
+                mekanism.common.content.gear.mekasuit.MekaSuitFlight.release(disconnected);
+                mekanism.common.base.KeySync.INSTANCE.keys.remove(disconnected.getUUID());
+            });
         });
         net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) ->
               mekanism.common.content.gear.mekasuit.MekaSuitFlight.respawn(oldPlayer, newPlayer));

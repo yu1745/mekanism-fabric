@@ -22,6 +22,7 @@ import mekanism.client.sound.GeigerSound;
 import mekanism.client.sound.SoundHandler;
 import mekanism.common.base.holiday.HolidayManager;
 import mekanism.common.base.PlayerState;
+import mekanism.common.base.KeySync;
 import mekanism.common.item.gear.ItemJetpack;
 import mekanism.common.item.gear.ItemMekaSuitArmor;
 import mekanism.common.item.gear.ItemScubaTank;
@@ -189,7 +190,7 @@ public class ClientTickHandler {
             if (!primaryJetpack.isEmpty()) {
                 JetpackMode primaryMode = ((IJetpackItem) primaryJetpack.getItem()).getJetpackMode(primaryJetpack);
                 JetpackMode mode = IJetpackItem.getPlayerJetpackMode(minecraft.player, primaryMode, p -> p.input.jumping);
-                //MekanismClient.updateKey (KeySync) belongs to the client-hub lane and stays deferred with it.
+                MekanismClient.updateKey(minecraft.player.input.jumping, KeySync.ASCEND);
                 double jetpackThrust = ((IJetpackItem) primaryJetpack.getItem()).getJetpackThrust(primaryJetpack);
                 if (jetpackInUse && IJetpackItem.handleJetpackMotion(minecraft.player, mode, jetpackThrust, p -> p.input.jumping)) {
                     minecraft.player.resetFallDistance();
