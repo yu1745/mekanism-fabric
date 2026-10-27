@@ -103,6 +103,10 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 修复 `205ecb43` 在真实 `EntityFlame` 的读写方法中沿用这两个官方 NBT 键和原枚举 codec/default，保留 superclass 的 owner 数据，写入已存在的附件 compound 时不覆盖其其他键；已复审完整 diff。Knot 下 `EntityFlamePersistenceTest` 两项通过，使用真实实体和模拟 Level 验证 heat 回环、缺失/无效默认以及已有 compound 中其他键不被覆盖。初次单独运行通过，但整个 `fabricTransferTest` 执行时此前测试已安装不同 chemical registry，导致初始化失败 `IllegalStateException: Chemical registry already installed`；不是生产功能通过的证据。修复测试隔离 `a7f0e1a4`（已审阅完整 diff）将该测试移至每类独立 Knot worker 的现有 source set，保留真实 registry 初始化；随后 `qioTransactionTest` 和整个 `fabricTransferTest` 均通过。该测试并未证明实际世界区块卸载/重新加载，也不承诺 Fabric 自动保存其他 mod 的未知 NeoForge 附件。
 
+### F13 — 激光与喷火熔炼绕过破坏权限（`12ebbcf6`，已接入 Fabric veto，实机待验）
+
+该提交去掉激光假玩家破坏/TNT 激活和喷火 HEAT 熔炼的 NeoForge `BlockEvent.BreakEvent`，直接修改世界；之后虽然矿机和纸箱已调用 `WorldUtils.canBreakBlock`，这两个入口仍未接入，因而不会触发 Mekanism 方块安全与 Fabric `PlayerBlockBreakEvents.BEFORE` 拒绝。修复 `8aa8f7dd` 在激光 TNT/普通破坏之前以仿真 owner 的真实假玩家检查，在 HEAT 有熔炼配方且服务器侧以射手检查，拒绝即不破坏；激光假玩家清理改为 `finally`。已复审完整 diff；隔离 Knot 的 `AutomaticBreakProtectionTest` 验证真实 Fabric BEFORE listener 的拒绝确实进入共享检查，`qioTransactionTest` 和整个 `fabricTransferTest` 通过。该测试不调用激光或真实喷火实体的世界修改，不能证明实机保护插件兼容；INFERNO 的放置事件/点火及第三方 NeoForge 事件不在此 break-event 修复覆盖范围。
+
 ## 恢复位置
 
-优先研究 F8 的 QIO 真实 owner 插入事务闭包，并补验 F9 的 sided inventory 场景；`a147116b` 已读完整 2180 行 diff；`12ebbcf6` 已读前 240/1478 行、发现并修复 F12，剩余部分未审查，继续从 `/tmp/mek-12eb-review.diff` 第 241 行或重新生成相同 git diff 开始。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。
+优先研究 F8 的 QIO 真实 owner 插入事务闭包，并补验 F9 的 sided inventory 场景；`a147116b` 已读完整 2180 行 diff；`12ebbcf6` 已读前 1200/1478 行，发现并修复 F12/F13；剩余部分未审查，继续从 `/tmp/mek-12eb-review.diff` 第 1201 行或重新生成相同 git diff 开始。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。
