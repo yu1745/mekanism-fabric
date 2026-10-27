@@ -85,6 +85,11 @@ public class MekanismTeleportEvent extends MekanismEvent {
         return getEntity().getZ();
     }
 
+    /** Returns the entity's current position, matching the upstream teleport event's inherited accessor. */
+    public Vec3 getPrev() {
+        return getEntity().position();
+    }
+
     /**
      * This event is fired before a player teleports using the Meka-Tool's Teleportation Unit.
      * <br>
