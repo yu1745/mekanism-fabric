@@ -53,6 +53,9 @@ class QIODataBasedModelClientTest {
             var rotated = (FabricDataBasedUnbakedModel.DataBasedModel) source.bake(null, material -> sprite, BlockModelRotation.X90_Y0);
             assertFalse(upright.noDataLight().isEmpty());
             assertTrue(upright.emittingLight().size() > upright.noDataLight().size());
+            var emittingQuads = upright.emitting().getQuads(null, null, RandomSource.create());
+            assertTrue(upright.emittingLight().stream().allMatch(entry -> emittingQuads.stream().anyMatch(entry::matches)));
+            assertTrue(upright.emittingLight().stream().allMatch(entry -> entry.light() == 0xF000F0));
             assertFalse(upright.noData().getQuads(null, Direction.DOWN, RandomSource.create()).isEmpty());
             var uprightQuad = upright.emitting().getQuads(null, null, RandomSource.create()).getFirst();
             var rotatedQuad = rotated.emitting().getQuads(null, null, RandomSource.create()).getFirst();

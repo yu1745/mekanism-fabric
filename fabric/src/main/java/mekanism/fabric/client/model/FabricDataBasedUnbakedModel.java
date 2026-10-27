@@ -148,7 +148,7 @@ final class FabricDataBasedUnbakedModel implements UnbakedModel {
         return result;
     }
 
-    private record LitQuad(int[] vertices, int light) {
+    record LitQuad(int[] vertices, int light) {
         boolean matches(BakedQuad quad) {
             return java.util.Arrays.equals(vertices, quad.getVertices());
         }

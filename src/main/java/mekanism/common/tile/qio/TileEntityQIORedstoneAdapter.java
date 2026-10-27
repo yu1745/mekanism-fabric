@@ -128,7 +128,7 @@ public class TileEntityQIORedstoneAdapter extends TileEntityQIOComponent impleme
         NBTUtils.setBooleanIfPresent(dataMap, SerializationConstants.INVERSE, value -> inverted = value);
     }
 
-    @NotNull
+    @Nullable
     @Override
     public Boolean getRenderData() {
         return isEmitting ? Boolean.TRUE : null;
