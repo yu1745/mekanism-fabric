@@ -58,7 +58,7 @@
 | `d04c73d0`、`673d8768` | 主代理已读两项完整 diff 并对照固定 NeoForge GUI 列高度实现；确认坐骑血条被错误计入左列，见 F43。Curios 和模式文字的既有布局 delta 未由启动 proof 证明。 |
 | `a4516503`、`a0506c12` | 主代理已读完整 diff：Flame 渲染器按 Fabric 实体类型注册，文档提交仅作记录。标题屏 proof 不证明世界内火舌实际渲染。 |
 | `1d44ca1f`、`2cc11b1e` | 主代理已读完整 diff，并对照固定两份 Minecraft 的滚轮与雾调用点；发现滚轮触发时机及近雾设置错误，见 F44。其他视觉、输入和声音实际交互尚未全面验证。 |
-| `601da1af`、`5d074d11` | 主代理已读完整 diff；原静态模型/BER 分割已有后续真实 FRAPI 模型修复，见 F39。Quad 的顶点重编码另有待修问题，见 F45；能量方块、装备及节日模型画面仍待实机验证。 |
+| `601da1af`、`5d074d11` | 主代理已读完整 diff；原静态模型/BER 分割已有后续真实 FRAPI 模型修复，见 F39。Quad 的顶点重编码问题已修，见 F45；能量方块、装备及节日模型画面仍待实机验证。 |
 
 ## 审查发现与待复核
 
@@ -266,11 +266,15 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 ### F44 — 滚轮 hook 上下文与雾近裁剪距离（`1d44ca1f`，代码已修，实机交互待验）
 
-固定 NeoForge `MouseHandler.onScroll` 在有效窗口、无 overlay、无 screen、有玩家且原版滚动累计达到整数后才派发游戏内 `MouseScrollingEvent`，传入离散滚轮设置及灵敏度处理后的 Y 值。原 Fabric mixin 在方法 HEAD 使用原始值：打开界面并按住潜行时可能错误切换手持工具模式并吞掉界面滚动，且灵敏度/分数累计行为不同。修复将注入点移至同一原版游戏内分支的 spectator 判断前，并按相同选项计算事件 Y 值。另一个独立错误是雾 mixin 仅在远裁剪距离变化时才设置近裁剪距离；上游启用模块时无条件设置 -8，即使远距离变换结果恰巧相等。修复独立更新两者。真实客户端 Xvfb 标题屏模型 smoke 15/15，说明 mixin 可应用并到达启动，不证明世界内滚轮、屏幕、灵敏度或雾画面；尚需 mcdebug 实测。
+固定 NeoForge `MouseHandler.onScroll` 在有效窗口、无 overlay、无 screen、有玩家且原版滚动累计达到整数后才派发游戏内 `MouseScrollingEvent`，传入离散滚轮设置及灵敏度处理后的 Y 值。原 Fabric mixin 在方法 HEAD 使用原始值：打开界面并按住潜行时可能错误切换手持工具模式并吞掉界面滚动，且灵敏度/分数累计行为不同。修复将注入点移至同一原版游戏内分支的 spectator 判断前，并按相同选项计算事件 Y 值。另一个独立错误是雾 mixin 仅在远裁剪距离变化时才设置近裁剪距离；上游启用模块时无条件设置 -8，即使远距离变换结果恰巧相等。修复独立更新两者。`be0b7242` 完整真实 diff 已按移植风格 prompt 复审，未发现该边界内新增偏离。真实客户端 Xvfb 标题屏模型 smoke 15/15，说明 mixin 可应用并到达启动，不证明世界内滚轮、屏幕、灵敏度或雾画面；尚需 mcdebug 实测。
 
-### F45 — Quad 重编码丢失或错放顶点属性（`601da1af`，已确认，待修）
+### F45 — Quad 重编码丢失或错放顶点属性（`601da1af`，代码已修，实机画面待验）
 
-`Quad(BakedQuad)` 使用 vanilla `putBulkData` 默认重载，它丢弃原始颜色、光值和法线并以调用参数及 quad 方向重建；`Quad.bake()` 又将 overlay 写入 BLOCK 格式实际的光位，将 light 写入法线位，颜色的整数高低位也与 native 内存中的 RGBA 字节顺序不符。此代码被能量方块 `FaceData.transform`、Robit、MekaSuit 和 transmitter 的模型变换路径调用。Fabric 当前部分能量灯使用显式 emissive 材质，不能仅据此断言每种画面都错误；但可确认通用 quad 的颜色、光和法线往返不保真。应按真实 BLOCK 顶点格式恢复解析与编码，并以非白色/非零光及法线输入验证；不能以标题屏或纯白测试证明等价。
+`Quad(BakedQuad)` 使用 vanilla `putBulkData` 默认重载，它丢弃原始颜色、光值和法线并以调用参数及 quad 方向重建；`Quad.bake()` 又将 overlay 写入 BLOCK 格式实际的光位，将 light 写入法线位，颜色的整数高低位也与 native 内存中的 RGBA 字节顺序不符。此代码被能量方块 `FaceData.transform`、Robit、MekaSuit 和 transmitter 的模型变换路径调用。Fabric 当前部分能量灯使用显式 emissive 材质，不能仅据此断言每种画面都错误；但可确认通用 quad 的颜色、光和法线往返不保真。修复按 native byte order 的 BLOCK 顶点格式读取和写回 RGBA、光与法线；未设置法线的 vanilla 面回退至 face 方向，BLOCK 没有 overlay 字段。两个隔离客户端 Knot 测试以非白色/非零光及法线验证往返和 fullbright 只改变光位，platform slice gate 通过；尚未实测实际模型画面。消费者是否采纳逐顶点光值是独立问题，见 F46。
+
+### F46 — MekaSuit 逐面全亮光值在 vanilla 绘制中被忽略（`601da1af` 后续装备模型路径，待修）
+
+`MekaSuitArmor.getQuads` 对 LED 四边形施加 `QuadTransformation.fullbright`，但 `putQuads` 使用 vanilla `VertexConsumer.putBulkData` 简化重载：固定 Fabric Minecraft 实现将同一个调用方 `light` 传给全部顶点，不读取 `BakedQuad` 的光位。因此单独修正 F45 的打包仍不能使这条实际装备渲染路径尊重 LED 自发光。应对照固定 NeoForge `putBulkData` 的光合并规则并在既有真实装备 renderer 的消费点恢复，不假设整个 MekaSuit 使用全亮；世界中装备画面尚未验证。
 
 ### 并行初审待主代理核验
 

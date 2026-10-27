@@ -1,11 +1,8 @@
 package mekanism.client.render.lib;
 
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.blaze3d.vertex.VertexFormatElement;
-import java.util.Arrays;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.function.Consumer;
-import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.common.lib.Color;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.block.model.BakedQuad;
@@ -45,9 +42,31 @@ public class Quad {
         shade = quad.isShade();
         //Fabric port: vanilla 1.21.1 BakedQuad carries no per-quad ambient occlusion flag; the port models treat
         //it as absent (the energy cube draws with the block AO of its render layer).
-        BakedQuadUnpacker unpacker = new BakedQuadUnpacker();
-        unpacker.putBulkData(new PoseStack().last(), quad, 1, 1, 1, 1, 0, OverlayTexture.NO_OVERLAY);
-        vertices = unpacker.getVertices();
+        // BLOCK vertices contain RGBA bytes, UV, light shorts and a packed normal in native byte order.
+        // VertexConsumer.putBulkData substitutes draw-time colour/light and therefore cannot unpack them.
+        int[] data = quad.getVertices();
+        vertices = new Vertex[4];
+        ByteBuffer bytes = ByteBuffer.allocate(32).order(ByteOrder.nativeOrder());
+        Vec3i faceNormal = side.getNormal();
+        for (int i = 0; i < vertices.length; i++) {
+            bytes.clear();
+            for (int j = 0; j < 8; j++) {
+                bytes.putInt(data[i * 8 + j]);
+            }
+            float nx = bytes.get(28) / 127.0F, ny = bytes.get(29) / 127.0F, nz = bytes.get(30) / 127.0F;
+            if (nx == 0 && ny == 0 && nz == 0) {
+                // Vanilla baked faces commonly leave normals unset; the face direction is their draw normal.
+                nx = faceNormal.getX();
+                ny = faceNormal.getY();
+                nz = faceNormal.getZ();
+            }
+            vertices[i] = new Vertex().pos(new Vector3f(bytes.getFloat(0), bytes.getFloat(4), bytes.getFloat(8)))
+                  .color(bytes.get(12) & 0xFF, bytes.get(13) & 0xFF, bytes.get(14) & 0xFF, bytes.get(15) & 0xFF)
+                  .texRaw(bytes.getFloat(16), bytes.getFloat(20))
+                  .overlay(OverlayTexture.NO_OVERLAY & 0xFFFF, OverlayTexture.NO_OVERLAY >>> 16)
+                  .lightRaw(bytes.getShort(24) & 0xFFFF, bytes.getShort(26) & 0xFFFF)
+                  .normal(nx, ny, nz);
+        }
     }
 
     public TextureAtlasSprite getTexture() {
@@ -110,21 +129,22 @@ public class Quad {
 
     @SuppressWarnings("unused")
     public BakedQuad bake() {
-        //Fabric port: NeoForge's QuadBakingVertexConsumer is replaced by the vanilla quad vertex encoding -
-        //8 ints per vertex (position, color, texture uv, then overlay and light packed the way the official
-        //pipeline stored them). The draw sites pass light explicitly, matching the official armor/HUD paths.
+        // Vanilla BLOCK has no overlay element: position, RGBA, UV, light, normal and padding.
         int[] vertexData = new int[32];
+        ByteBuffer bytes = ByteBuffer.allocate(32).order(ByteOrder.nativeOrder());
         for (int i = 0; i < 4; i++) {
             Vertex vertex = vertices[i];
-            int j = i * 8;
-            vertexData[j] = Float.floatToRawIntBits(vertex.getPos().x());
-            vertexData[j + 1] = Float.floatToRawIntBits(vertex.getPos().y());
-            vertexData[j + 2] = Float.floatToRawIntBits(vertex.getPos().z());
-            vertexData[j + 3] = (vertex.getRed() & 0xFF) << 24 | (vertex.getGreen() & 0xFF) << 16 | (vertex.getBlue() & 0xFF) << 8 | vertex.getAlpha() & 0xFF;
-            vertexData[j + 4] = Float.floatToRawIntBits(vertex.getTexU());
-            vertexData[j + 5] = Float.floatToRawIntBits(vertex.getTexV());
-            vertexData[j + 6] = (vertex.getOverlayU() & 0xFFFF) | (vertex.getOverlayV() & 0xFFFF) << 16;
-            vertexData[j + 7] = (vertex.getRawLightU() & 0xFFFF) | (vertex.getRawLightV() & 0xFFFF) << 16;
+            bytes.clear();
+            bytes.putFloat(vertex.getPos().x()).putFloat(vertex.getPos().y()).putFloat(vertex.getPos().z());
+            bytes.put((byte) vertex.getRed()).put((byte) vertex.getGreen()).put((byte) vertex.getBlue()).put((byte) vertex.getAlpha());
+            bytes.putFloat(vertex.getTexU()).putFloat(vertex.getTexV());
+            bytes.putShort((short) vertex.getRawLightU()).putShort((short) vertex.getRawLightV());
+            Vector3f normal = vertex.getNormal();
+            bytes.put(packNormal(normal.x())).put(packNormal(normal.y())).put(packNormal(normal.z())).put((byte) 0);
+            bytes.rewind();
+            for (int j = 0; j < 8; j++) {
+                vertexData[i * 8 + j] = bytes.getInt();
+            }
         }
         return new BakedQuad(vertexData, tintIndex, side, sprite, shade);
     }
@@ -145,64 +165,8 @@ public class Quad {
         return new Quad(sprite, side.getOpposite(), flipped, tintIndex, shade, hasAmbientOcclusion);
     }
 
-    @NothingNullByDefault
-    private static class BakedQuadUnpacker implements VertexConsumer {
-
-        private final Vertex[] vertices = new Vertex[4];
-        private boolean building = false;
-        private int vertexIndex = 0;
-
-        public Vertex[] getVertices() {
-            if (!building || ++vertexIndex != 4) {
-                throw new IllegalStateException("Not enough vertices available. Vertices in buffer: " + vertexIndex);
-            }
-            return vertices;
-        }
-
-        @Override
-        public VertexConsumer addVertex(float x, float y, float z) {
-            if (building) {
-                if (++vertexIndex > 4) {
-                    throw new IllegalStateException("Expected quad export after fourth vertex");
-                }
-            }
-            building = true;
-            vertices[vertexIndex] = new Vertex().pos(new Vector3f(x, y, z));
-            return this;
-        }
-
-        @Override
-        public VertexConsumer setColor(int red, int green, int blue, int alpha) {
-            vertices[vertexIndex].color(red, green, blue, alpha);
-            return this;
-        }
-
-        @Override
-        public VertexConsumer setUv(float u, float v) {
-            vertices[vertexIndex].texRaw(u, v);
-            return this;
-        }
-
-        @Override
-        public VertexConsumer setUv1(int u, int v) {
-            vertices[vertexIndex].overlay(u, v);
-            return this;
-        }
-
-        @Override
-        public VertexConsumer setUv2(int u, int v) {
-            vertices[vertexIndex].lightRaw(u, v);
-            return this;
-        }
-
-        @Override
-        public VertexConsumer setNormal(float x, float y, float z) {
-            vertices[vertexIndex].normal(x, y, z);
-            return this;
-        }
-
-        //Fabric port: the vanilla 1.21.1 VertexConsumer has no misc() extension point; the unpacker keeps only
-        //the standard element set (the official misc data rode NeoForge's extended consumer).
+    private static byte packNormal(float value) {
+        return (byte) Math.round(Math.max(-1.0F, Math.min(1.0F, value)) * 127.0F);
     }
 
     public static class Builder {
