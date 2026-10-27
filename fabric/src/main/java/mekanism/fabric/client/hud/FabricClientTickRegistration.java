@@ -28,7 +28,15 @@ public final class FabricClientTickRegistration {
     public static void register() {
         ClientTickEvents.START_CLIENT_TICK.register(minecraft -> HANDLER.onTick());
         if (PROOF.compareAndSet(false, true)) {
-            LOGGER.info("MEKANISM_FABRIC_CLIENT_TICK_PROOF handler=registered seams=mouse,fog_color,fog_setup,living_visibility,recipe_cache");
+            //The official ClientTickHandler.onStartTracking rode EntityJoinLevelEvent(client side): an entity that
+        //joins the client level - including newly tracked players - restarts their flamethrower sound.
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientEntityEvents.ENTITY_LOAD.register((entity, world) -> {
+            if (entity instanceof net.minecraft.world.entity.player.Player player
+                  && mekanism.common.config.MekanismConfig.client.enablePlayerSounds.get()) {
+                mekanism.client.sound.SoundHandler.startFlamethrowerSound(player);
+            }
+        });
+        LOGGER.info("MEKANISM_FABRIC_CLIENT_TICK_PROOF handler=registered seams=mouse,fog_color,fog_setup,living_visibility,recipe_cache,entity_tracking");
         }
     }
 }

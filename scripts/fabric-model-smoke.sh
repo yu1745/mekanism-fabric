@@ -65,7 +65,7 @@ check "tile entity renderers registered" 'MEKANISM_FABRIC_BER_PROOF tile_types=3
 check "block-item ISBERs wired" 'MEKANISM_FABRIC_ITEM_RENDERER_PROOF suppressed_models=12 builtin_renderers=19'
 check "HUD layers inserted into the vanilla draw" 'MEKANISM_FABRIC_HUD_PROOF layers=2'
 check "entity renderers registered" 'MEKANISM_FABRIC_ENTITY_RENDERER_PROOF entities=2'
-check "gear client tick handler wired" 'MEKANISM_FABRIC_CLIENT_TICK_PROOF handler=registered seams=mouse,fog_color,fog_setup,living_visibility,recipe_cache'
+check "gear client tick handler wired" 'MEKANISM_FABRIC_CLIENT_TICK_PROOF handler=registered seams=mouse,fog_color,fog_setup,living_visibility,recipe_cache,entity_tracking'
 check "armor layers registered" 'MEKANISM_FABRIC_ARMOR_LAYER_PROOF callback=registered'
 check "data based model baked" 'MEKANISM_FABRIC_DATA_BASED_PROOF baked=1'
 check "mekasuit obj cache wired" 'MEKANISM_FABRIC_MEKASUIT_PROOF handler=installed'

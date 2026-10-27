@@ -135,8 +135,8 @@ public class ClientTickHandler {
         }
     }
 
-    //Fabric port: the connection lifecycle handlers (MekanismClient.launchClient/reset) and the entity-tracking
-    //handler (SoundHandler.startFlamethrowerSound) belong to the client-hub and sound lanes and stay deferred with them.
+    //Fabric port: the connection lifecycle handlers moved to the fabric bootstrap events (JOIN/DISCONNECT/world
+    //change) and the entity-tracking handler to ClientEntityEvents.ENTITY_LOAD - all three wired.
 
     public void onTick() {
         if (minecraft.level == null || minecraft.player == null) {
