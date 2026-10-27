@@ -41,12 +41,15 @@
     "player.PlayerFlightSaveMixin"
   ],
   "client": [
+    "client.BlockBreakResetMixin",
     "client.ClientMouseScrollMixin",
     "client.ClientRecipeCacheMixin",
     "client.FabricHudLayersMixin",
     "client.FogColorMixin",
     "client.FogSetupMixin",
     "client.GuiGraphicsMixin",
+    "client.ItemBlockTooltipAccessor",
+    "client.ItemInHandReequipMixin",
     "client.KeyboardInputMixin",
     "client.LivingEntityVisibilityMixin",
     "client.MouseInputMixin",
