@@ -3,6 +3,8 @@ package mekanism.fabric.client.model;
 import com.mojang.datafixers.util.Pair;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.EnumMap;
+import java.util.Map;
 import java.util.List;
 import java.util.function.Function;
 import net.minecraft.client.renderer.block.model.BakedQuad;
@@ -67,11 +69,16 @@ public final class FabricCompositeModel extends BlockModel {
         //active variants override a child texture); the union of their quads is the composite.
         RandomSource random = RandomSource.create();
         List<BakedQuad> quads = new ArrayList<>();
+        Map<Direction, List<BakedQuad>> culledQuads = new EnumMap<>(Direction.class);
         for (Pair<String, BlockModel> child : children) {
-            quads.addAll(child.getSecond().bake(baker, spriteGetter, state).getQuads(null, null, random));
+            BakedModel baked = child.getSecond().bake(baker, spriteGetter, state);
+            quads.addAll(baked.getQuads(null, null, random));
+            for (Direction direction : Direction.values()) {
+                culledQuads.computeIfAbsent(direction, ignored -> new ArrayList<>()).addAll(baked.getQuads(null, direction, random));
+            }
         }
         //All property accessors walk the resolved parent chain, so block/block defaults apply when the JSON is silent.
-        return new FabricMergedQuadsModel(id, quads, spriteGetter.apply(getMaterial("particle")), getTransforms(),
+        return new FabricMergedQuadsModel(id, quads, culledQuads, spriteGetter.apply(getMaterial("particle")), getTransforms(),
               hasAmbientOcclusion(), true, getGuiLight() == BlockModel.GuiLight.SIDE);
     }
 }

@@ -1,6 +1,8 @@
 package mekanism.fabric.client.model;
 
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.block.model.ItemOverrides;
 import net.minecraft.client.renderer.block.model.ItemTransforms;
@@ -16,14 +18,13 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * The shared baked form of every adapter loader model: one immutable quad list (composite union or OBJ geometry)
- * with the official transform/particle/lighting properties. Chunk and item rendering both request quads with a null
- * side, and cull faces are carried per-quad, so the list is returned verbatim for every query.
+ * Shared baked form of loader models, with separate unculled and direction-culled quad lists.
  */
 public final class FabricMergedQuadsModel implements BakedModel {
 
     private final ResourceLocation id;
     private final List<BakedQuad> quads;
+    private final Map<Direction, List<BakedQuad>> culledQuads;
     private final TextureAtlasSprite particle;
     private final ItemTransforms transforms;
     private final boolean ambientOcclusion;
@@ -32,8 +33,16 @@ public final class FabricMergedQuadsModel implements BakedModel {
 
     FabricMergedQuadsModel(ResourceLocation id, List<BakedQuad> quads, TextureAtlasSprite particle, ItemTransforms transforms,
           boolean ambientOcclusion, boolean gui3d, boolean usesBlockLight) {
+        this(id, quads, Map.of(), particle, transforms, ambientOcclusion, gui3d, usesBlockLight);
+    }
+
+    FabricMergedQuadsModel(ResourceLocation id, List<BakedQuad> quads, Map<Direction, List<BakedQuad>> culledQuads,
+          TextureAtlasSprite particle, ItemTransforms transforms, boolean ambientOcclusion, boolean gui3d, boolean usesBlockLight) {
         this.id = id;
         this.quads = List.copyOf(quads);
+        Map<Direction, List<BakedQuad>> copied = new EnumMap<>(Direction.class);
+        culledQuads.forEach((direction, faces) -> copied.put(direction, List.copyOf(faces)));
+        this.culledQuads = Map.copyOf(copied);
         this.particle = particle;
         this.transforms = transforms;
         this.ambientOcclusion = ambientOcclusion;
@@ -43,7 +52,7 @@ public final class FabricMergedQuadsModel implements BakedModel {
 
     @Override
     public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side, RandomSource random) {
-        return quads;
+        return side == null ? quads : culledQuads.getOrDefault(side, List.of());
     }
 
     @Override
