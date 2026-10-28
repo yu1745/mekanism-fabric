@@ -70,6 +70,8 @@ mekanism/fabric/fluid/ItemFluidContainer.java
 mekanism/fabric/gear/FabricEnchantmentLookup.java
 mekanism/fabric/gear/FabricEnchantmentRules.java
 mekanism/fabric/gear/FabricModuleRegistry.java
+mekanism/fabric/gear/BlockToolAnySet.java
+mekanism/fabric/gear/BlockToolRuleCodecs.java
 mekanism/fabric/gear/GearItemLookups.java
 mekanism/fabric/item/ComponentItemContext.java
 mekanism/fabric/item/DetachedItemContext.java
@@ -123,6 +125,7 @@ mekanism/fabric/mixin/gear/GameplayEnchantmentsMixin.java
 mekanism/fabric/mixin/gear/GearBoltRenderMixin.java
 mekanism/fabric/mixin/gear/HydrostaticSwimMixin.java
 mekanism/fabric/mixin/gear/ItemStackAttributesMixin.java
+mekanism/fabric/mixin/gear/ToolRuleCodecMixin.java
 mekanism/fabric/mixin/item/ClientConfiguratorUseMixin.java
 mekanism/fabric/mixin/item/ClientElytraStartMixin.java
 mekanism/fabric/mixin/item/ConfiguratorUseMixin.java

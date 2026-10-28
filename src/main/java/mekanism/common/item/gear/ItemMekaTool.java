@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import mekanism.api.Action;
 import mekanism.api.AutomationType;
@@ -41,10 +42,12 @@ import mekanism.common.registries.MekanismModules;
 import mekanism.common.tags.MekanismTags;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.StorageUtils;
+import mekanism.fabric.gear.BlockToolAnySet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.RegistryLookup;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -89,23 +92,10 @@ public class ItemMekaTool extends ItemEnergized implements IRadialModuleContaine
     public ItemMekaTool(Properties properties) {
         super(IModuleHelper.INSTANCE.applyModuleContainerProperties(properties.rarity(Rarity.EPIC).stacksTo(1)
               .component(DataComponents.TOOL, new Tool(List.of(
-                    Tool.Rule.deniesDrops(MekanismTags.Blocks.INCORRECT_FOR_MEKA_TOOL)
+                    Tool.Rule.deniesDrops(MekanismTags.Blocks.INCORRECT_FOR_MEKA_TOOL),
+                    new Tool.Rule(new BlockToolAnySet(BuiltInRegistries.BLOCK.asLookup()), Optional.empty(), Optional.of(true))
               ), 1, 0))
         ));
-    }
-
-    @Override
-    public boolean isCorrectToolForDrops(@NotNull ItemStack stack, @NotNull BlockState state) {
-        Tool tool = stack.get(DataComponents.TOOL);
-        if (tool == null) {
-            return false;
-        }
-        //Only the item's default component needs the missing AnyHolderSet catch-all adaptation.
-        //A replacement component is authoritative, including an empty rule list or explicit removal.
-        if (!tool.equals(components().get(DataComponents.TOOL))) {
-            return tool.isCorrectForDrops(state);
-        }
-        return !state.is(MekanismTags.Blocks.INCORRECT_FOR_MEKA_TOOL);
     }
 
     @Override

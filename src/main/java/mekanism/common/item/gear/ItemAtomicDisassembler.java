@@ -8,6 +8,7 @@ import it.unimi.dsi.fastutil.objects.Reference2BooleanMaps;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
 import java.util.function.Function;
@@ -41,10 +42,12 @@ import mekanism.common.registries.MekanismItems;
 import mekanism.common.tags.MekanismTags;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.StorageUtils;
+import mekanism.fabric.gear.BlockToolAnySet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -93,23 +96,10 @@ public class ItemAtomicDisassembler extends ItemEnergized implements IItemHUDPro
         super(properties.rarity(Rarity.RARE).stacksTo(1)
               .component(MekanismDataComponents.DISASSEMBLER_MODE.get(), DisassemblerMode.NORMAL)
               .component(DataComponents.TOOL, new Tool(List.of(
-                    Tool.Rule.deniesDrops(MekanismTags.Blocks.INCORRECT_FOR_DISASSEMBLER)
+                    Tool.Rule.deniesDrops(MekanismTags.Blocks.INCORRECT_FOR_DISASSEMBLER),
+                    new Tool.Rule(new BlockToolAnySet(BuiltInRegistries.BLOCK.asLookup()), Optional.empty(), Optional.of(true))
               ), 1, 0))
         );
-    }
-
-    @Override
-    public boolean isCorrectToolForDrops(@NotNull ItemStack stack, @NotNull BlockState state) {
-        Tool tool = stack.get(DataComponents.TOOL);
-        if (tool == null) {
-            return false;
-        }
-        //Only the item's default component needs the missing AnyHolderSet catch-all adaptation.
-        //A replacement component is authoritative, including an empty rule list or explicit removal.
-        if (!tool.equals(components().get(DataComponents.TOOL))) {
-            return tool.isCorrectForDrops(state);
-        }
-        return !state.is(MekanismTags.Blocks.INCORRECT_FOR_DISASSEMBLER);
     }
 
     @Override
