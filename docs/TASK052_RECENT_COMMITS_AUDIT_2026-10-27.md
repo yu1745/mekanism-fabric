@@ -416,7 +416,7 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 候选实现使两个真实工具的默认组件包含动态全方块规则，并移除按截断默认值相等判断的兜底；`Tool.Rule` 初始化尾部只扩展该特定规则的持久化及网络 codec，其他普通规则沿原 codec 或原线格式处理。真实 Knot 测试 4 项通过：Atomic Disassembler 显式 deny-only 与移除组件、构造后 registry 增长、普通规则与 vanilla 网络字节相同、`DataComponents.TOOL` 持久化和网络往返保留动态集合；`remapJar` 和三个 slice gate 通过。首次测试编译因误导入 `JsonOps`，修正后通过。该实现不实现其他 NeoForge 自定义 HolderSet 类型，不证明其他模组对同一 codec 的 mixin 互操作、不同客户端的跨平台协议或实际服务器联机；负值标记只供本 Fabric 实现的双端使用。MekaTool 的构造和真实游戏存档尚未在此 focused test 中运行。对 `9c655d20` 的完整真实 diff 按移植风格 prompt 复审时，发现网络规则 codec 虽对 vanilla 普通规则重建出相同字节，却完全丢弃初始化前已有的原 `Rule.STREAM_CODEC`；后续修正改为非本集合路径委托捕获的原 codec，并增加独立测试验证委托。`bfade0f2` 的完整 diff 已复审：非自定义规则回退到捕获的原网络 codec，自定义规则按标记选择局部 codec；5 项 focused Knot 测试、remapJar 与平台 slice gate 通过。只读复核随后对照固定官方、当前源码和两次真实提交，未找到其他已证实可触发的偏差；未在该复核中重新运行测试。自定义标记与其他模组冲突的可能性仍未消除。
 
-### F65 — MekaSuit 自定义耐久组件的另一伤害入口（`2529dca8`，待修复）
+### F65 — MekaSuit 自定义耐久组件的另一伤害入口（`2529dca8`，代码已修；真实附魔路径待验）
 
 只读子代理指出并由主代理对照固定官方 `4646f509`、固定 NeoForge/ Fabric Minecraft 确认：官方 `ItemMekaSuitArmor.damageItem` 对任意损耗返回 0，NeoForge `ItemStack.hurtAndBreak` 的 ServerLevel 路径调用此 hook；当前 Fabric mixin 只取消 LivingEntity/EquipmentSlot 重载，而 vanilla 附魔效果 `DamageItem.apply` 直接调用 ServerLevel/ServerPlayer 重载，绕过保护。默认 MekaSuit 不带耐久，普通默认装备不会因此受损；但有效的物品组件可通过命令或数据包给装备配置 `MAX_DAMAGE` 和 `DAMAGE`，此时该路径可磨损或毁掉装备，是已纳装备行为对固定官方的具体差异，不是声称普通默认装备已损坏。`7b05e938` 在同一 `ItemStack` owner 的共享服务端重载把 MekaSuit 传入损耗改为 0，保留 vanilla 后续零损耗分支、其他物品及客户端行为；不扩展新模块。已依 prompt 审阅完整提交 diff，核对两个 vanilla 重载委派和固定 NeoForge 先调用 `damageItem` 再按结果继续执行的顺序。真实 Knot mixin 测试使用带 `MAX_DAMAGE=100`、`DAMAGE=99` 的真实 MekaSuit 调服务端重载，检查不损耗且未破碎；铁剑负对照正常增加 1 点损耗，4 项 focused 测试及 compile/slice gate 通过。测试为无附魔、null ServerLevel 的隔离路径，不代表真实附魔效果或世界服务器已实测。首次测试错误地假设无附魔铁剑在 null level 会抛异常，实际没有；据错误报告改为断言真实耐久变化后通过。
 
