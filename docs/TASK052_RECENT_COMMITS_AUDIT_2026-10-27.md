@@ -75,7 +75,13 @@
 | `64fedbc7` | 已读完整 diff，对照固定官方实体加入时声音守卫：客户端实体加载 Player 与 enablePlayerSounds 守卫一致；真实追踪、静音及音频尚未实机验证。 |
 | `fe375103`、`ae350c7c` | 已读完整实现和原审查 diff，对照官方 DriveArrayBakedModel、资源及物品组件；物品驱动器显示完全缺失、方块驱动器 LED 的 NeoForge 顶点亮度未生效，见 F55。miner 变换实机及第三方模型尚未验。 |
 
+| `c4c4dc0f`、`20aaec89` | 已读完整实现及原审查 diff；机械管流体缓存原错误已在 F36 修复。传输器 contents 每帧重新烘焙而非按模型/图标缓存，已按 F56 恢复；实际管线画面和第三方模型未验。 |
+
 ## 审查发现与待复核
+
+### F56 — 传输器内容几何缓存丢失（`c4c4dc0f`，已修复）
+
+官方 `RenderTransmitterBase` 用 `ContentsModelData(visible, icon)` 缓存最终平面法线 quad，纹理重缝时清空；移植版每次渲染均调用 OBJ 逐组重新烘焙、解包和重编码。`BaseModelCache.OBJModelData.getQuads(..., iconOverride)` 对非空 icon 每次新建临时 map，不能像原审查称的那样按 `(visible, icon)` 缓存。四个真实传输器 BER 每帧走此路径，会随可见管线数量重复分配和烘焙；静态调用链能确认工作量差异，但没有量化实机帧率。修复 `e72ac0f2` 恢复原 renderer owner 的最终 quad 缓存，复制 visible 列表作不可变键并在 `onStitch` 同时清空缓存与 OBJ 几何。已按审查 prompt 读取该提交完整真实 diff、对照原缓存键和当前纹理重载调用链，未发现该限定行为新增偏离；`compileJava` 和三项 slice gate 通过。未做游戏内帧率或资源包热重载实测。
 
 ### F55 — QIO 驱动阵列的物品外观和发光（`fe375103`，代码修复已提交；实机画面待验）
 
