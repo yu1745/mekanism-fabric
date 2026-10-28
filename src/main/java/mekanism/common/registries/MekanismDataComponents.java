@@ -90,8 +90,7 @@ public class MekanismDataComponents {
                 .cacheEncoding()
     );
 
-    //Fabric port delta: NeoForge's data-component registry aliases (gases/infuse_types/pigments/slurries) have no
-    //vanilla registry equivalent, so the legacy ids are not remapped on Fabric.
+    //Fabric port: the four official legacy IDs are resolved by LegacyRegistryAliasMixin without changing the canonical registry key.
 
     public static final MekanismDeferredHolder<DataComponentType<?>, DataComponentType<AttachedHeat>> ATTACHED_HEAT = DATA_COMPONENTS.simple("heat_data",
           builder -> builder.persistent(AttachedHeat.CODEC)

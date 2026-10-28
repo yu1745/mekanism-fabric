@@ -138,6 +138,7 @@ mekanism/fabric/mixin/radiation/RadiationPlayerTickMixin.java
 mekanism/fabric/mixin/recipe/ClientPacketListenerMixin.java
 mekanism/fabric/mixin/recipe/FabricConditionTagCaptureMixin.java
 mekanism/fabric/mixin/recipe/RecipeTagScopeCleanupMixin.java
+mekanism/fabric/mixin/registry/LegacyRegistryAliasMixin.java
 mekanism/fabric/mixin/robit/RegistryDataMixin.java
 mekanism/fabric/mixin/server/BiomeModificationScopeMixin.java
 mekanism/fabric/mixin/server/ChunkGenVersionMixin.java

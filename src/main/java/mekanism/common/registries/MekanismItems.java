@@ -236,9 +236,7 @@ public class MekanismItems {
     public static final ItemRegistryObject<ItemUpgrade> MUFFLING_UPGRADE = registerUpgrade(Upgrade.MUFFLING);
     public static final ItemRegistryObject<ItemUpgrade> CHEMICAL_UPGRADE = registerUpgrade(Upgrade.CHEMICAL);
 
-    static {//TODO - 1.22: remove backcompat
-    //Fabric port delta: the NeoForge item registry alias for the legacy upgrade_gas id has no vanilla counterpart.
-    }
+    //Fabric port: the official upgrade_gas alias is resolved by LegacyRegistryAliasMixin.
 
     public static final ItemRegistryObject<ItemUpgrade> ANCHOR_UPGRADE = registerUpgrade(Upgrade.ANCHOR);
     public static final ItemRegistryObject<ItemUpgrade> STONE_GENERATOR_UPGRADE = registerUpgrade(Upgrade.STONE_GENERATOR);

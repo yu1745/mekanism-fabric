@@ -9,6 +9,7 @@
     "recipe.FabricConditionTagCaptureMixin",
     "recipe.RecipeTagScopeCleanupMixin",
     "robit.RegistryDataMixin",
+    "registry.LegacyRegistryAliasMixin",
     "block.BucketItemMixin",
     "block.BoundingDestroyMixin",
     "block.BoundingExplosionMixin",
