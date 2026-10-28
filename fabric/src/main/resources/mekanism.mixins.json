@@ -64,6 +64,7 @@
     "client.KeyboardInputMixin",
     "client.LivingEntityVisibilityMixin",
     "client.MouseInputMixin",
+    "client.RobitItemRendererMixin",
     "client.TextureAtlasMixin",
     "item.ClientConfiguratorUseMixin",
     "item.ClientElytraStartMixin",

@@ -173,6 +173,18 @@ public final class FabricItemRendererRegistration implements ModelLoadingPlugin 
         }
     }
 
+    /** Unwrap the exact model selected for a Robit item by vanilla's override resolution. */
+    @Nullable
+    public static BakedModel robitGeometry(BakedModel model) {
+        if (model instanceof RobitItemBakedModel robit) {
+            return robit.official();
+        }
+        if (model instanceof EmptyQuadsBakedModel suppressed) {
+            return suppressed.official();
+        }
+        return null;
+    }
+
     private record RobitItemBakedModel(BakedModel official) implements BakedModel {
         @Override public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side, RandomSource random) { return List.of(); }
         @Override public boolean useAmbientOcclusion() { return official.useAmbientOcclusion(); }

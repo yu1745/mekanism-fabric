@@ -30,6 +30,12 @@ public final class FabricRobitItemRenderer {
           @NotNull MultiBufferSource vertexConsumers, int light, int overlay) {
         Minecraft minecraft = Minecraft.getInstance();
         BakedModel model = resolveModel(stack, minecraft.level, null, 0, mekanism.client.model.MekanismModelCache.INSTANCE.getBaseRobit());
+        renderResolved(stack, matrices, vertexConsumers, light, overlay, model);
+    }
+
+    /** Render the same model already selected by ItemRenderer, without re-running its overrides. */
+    public static void renderResolved(ItemStack stack, com.mojang.blaze3d.vertex.PoseStack matrices, MultiBufferSource vertexConsumers,
+          int light, int overlay, BakedModel model) {
         ResourceLocation skinTexture = skinTexture(stack);
         com.mojang.blaze3d.vertex.PoseStack poseStack = matrices;
         List<BakedQuad> quads = RobitBakedModel.transformForSkin(model.getQuads(null, null, Minecraft.getInstance().level != null
