@@ -246,7 +246,7 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 ### F13 — 激光与喷火熔炼绕过破坏权限（`12ebbcf6`，已接入 Fabric veto，实机待验）
 
-该提交去掉激光假玩家破坏/TNT 激活和喷火 HEAT 熔炼的 NeoForge `BlockEvent.BreakEvent`，直接修改世界；之后虽然矿机和纸箱已调用 `WorldUtils.canBreakBlock`，这两个入口仍未接入，因而不会触发 Mekanism 方块安全与 Fabric `PlayerBlockBreakEvents.BEFORE` 拒绝。修复 `8aa8f7dd` 在激光 TNT/普通破坏之前以仿真 owner 的真实假玩家检查，在 HEAT 有熔炼配方且服务器侧以射手检查，拒绝即不破坏；激光假玩家清理改为 `finally`。已复审完整 diff；隔离 Knot 的 `AutomaticBreakProtectionTest` 验证真实 Fabric BEFORE listener 的拒绝确实进入共享检查，`qioTransactionTest` 和整个 `fabricTransferTest` 通过。该测试不调用激光或真实喷火实体的世界修改，不能证明实机保护插件兼容；INFERNO 的放置事件/点火及第三方 NeoForge 事件不在此 break-event 修复覆盖范围。
+该提交去掉激光假玩家破坏/TNT 激活和喷火 HEAT 熔炼的 NeoForge `BlockEvent.BreakEvent`，直接修改世界；之后虽然矿机和纸箱已调用 `WorldUtils.canBreakBlock`，这两个入口仍未接入，因而不会触发 Mekanism 方块安全与 Fabric `PlayerBlockBreakEvents.BEFORE` 拒绝。修复 `8aa8f7dd` 在激光 TNT/普通破坏之前以仿真 owner 的真实假玩家检查，在 HEAT 有熔炼配方且服务器侧以射手检查，拒绝即不破坏；激光假玩家清理改为 `finally`。已复审完整 diff；隔离 Knot 的 `AutomaticBreakProtectionTest` 验证真实 Fabric BEFORE listener 的拒绝确实进入共享检查，`qioTransactionTest` 和整个 `fabricTransferTest` 通过。该测试不调用激光或真实喷火实体的世界修改，不能证明实机保护插件兼容；INFERNO 的放置事件/点火及第三方 NeoForge 事件不在此 break-event 修复覆盖范围。续审固定 `210ae3cb`：只读子代理核对原提交和修复真实 diff，主代理核对现行 HEAT、激光及共享 veto：未证实修复范围内新增生产缺陷。INFERNO 仍有直接放置/点火路径，HEAT 的替换也未恢复官方独立 placement veto；Fabric 并无已核实的等价通用可取消 placement 事件，具体第三方保护绕过尚无证据，不将其静态推定为已复现缺陷。本次未运行游戏或测试。
 
 ### F14 — 模块附魔未进入原版游戏效果（`76f790ce`，游戏查询已修复）
 
@@ -352,7 +352,7 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 ### F38 — 方块高亮监听移除（`d77c3252`，代码已恢复，画面待验）
 
-主代理对照 `d77c3252^` 的官方 `onBlockHover` 和当前调用链，确认自定义 Java/JSON 选框、配置器侧面叠色、MekaTool 范围挖掘附加选框均无当前事件入口。修复将原 handler 接至 Fabric `BLOCK_OUTLINE`，保持默认选框替换与 bounding block 主方块重定向；附加目标逐一分发 Fabric outline 事件，再用访问放宽的 vanilla voxel 轮廓方法绘制，递归保护只抑制重新计算挖掘范围。Fabric 事件与 NeoForge 事件机制不同，其他模组无法在 Fabric 事件中取得模拟的 BlockHitResult（仅有附加目标位置/状态）；这一互操作差异以及真实世界的叠色、线框和挖掘范围画面尚未验证。`2fba1d15` 的完整真实 diff 已按移植风格 prompt 复审，未发现该边界内其他已证实偏离；`compileJava`、`verifyPlatformSliceNoNeoForge` 和现有 `fabricClientModelTest` 通过，模型测试不覆盖轮廓事件。大型 BER 一律被 section 裁剪的初判已撤回，因为相关渲染器通过 shouldRenderOffScreen 列入 globalBlockEntities。
+主代理对照 `d77c3252^` 的官方 `onBlockHover` 和当前调用链，确认自定义 Java/JSON 选框、配置器侧面叠色、MekaTool 范围挖掘附加选框均无当前事件入口。修复将原 handler 接至 Fabric `BLOCK_OUTLINE`，保持默认选框替换与 bounding block 主方块重定向；附加目标逐一分发 Fabric outline 事件，再用访问放宽的 vanilla voxel 轮廓方法绘制，递归保护只抑制重新计算挖掘范围。Fabric 事件与 NeoForge 事件机制不同，其他模组无法在 Fabric 事件中取得模拟的 BlockHitResult（仅有附加目标位置/状态）；这一互操作差异以及真实世界的叠色、线框和挖掘范围画面尚未验证。`2fba1d15` 的完整真实 diff 已按移植风格 prompt 复审，未发现该边界内其他已证实偏离；`compileJava`、`verifyPlatformSliceNoNeoForge` 和现有 `fabricClientModelTest` 通过，模型测试不覆盖轮廓事件。大型 BER 一律被 section 裁剪的初判已撤回，因为相关渲染器通过 shouldRenderOffScreen 列入 globalBlockEntities。续审固定 `210ae3cb`，只读子代理对照原提交、修复 diff 和 Fabric 事件调用，主代理复核当前附加目标分派及轮廓绘制：未证实新增生产缺陷。事件上下文仍保留原准星 hit；未真实验证第三方互操作或选框画面。
 
 ### F39 — 能量立方几何烘焙与动态端口（相关客户端模型闭包，代码已修；实机画面待验）
 
