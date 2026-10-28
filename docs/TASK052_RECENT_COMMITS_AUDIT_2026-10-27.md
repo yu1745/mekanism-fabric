@@ -84,9 +84,17 @@
 
 ## 审查发现与待复核
 
-### F60 — Mekanism 创造标签内搜索缺失（`38b8b1af`，待修）
+### F62 — Robit 专用图集从未注册（`3cedf196`，代码已修；物品及重载已实测）
 
-原官方 `MekanismCreativeTabs` 调用 `withSearchBar()`；固定 NeoForge 创造界面对每个启用搜索的标签显示输入框，并基于该标签 `getDisplayItems()` 独立构建名称与标签搜索树，包含只在父标签显示的变体。移植移除该调用后，原版界面仅对全局 SEARCH 标签显示搜索框：全局搜索能找到部分 Mekanism 物品不等于在本标签内搜索，且可能遗漏 `PARENT_TAB_ONLY` 变体。Fabric ItemGroup API 没有对应 builder 接口；修复应限定 Mekanism 标签，使用真实 vanilla 查询语义和该标签显示项，不能简单把全部类型变成全局 SEARCH 或只过滤全局搜索结果。UI 的输入、标签查询、语言/数据重载和滚动需实测。
+在本地 mcdebug 隔离世界的创造物品栏搜索 Robit 后，实际截图显示物品紫黑贴图；客户端日志明确报 `Failed to load texture: mekanism:textures/atlas/robit.png`。`RobitSpriteUploader` 已定义并由实体/GUI/物品绘制引用，但 Fabric 侧没有创建或注册此 `TextureAtlasHolder` 的资源重载监听；生成的 atlas 清单确实已被打包，因此缺的是实际生命周期 owner 而不是凭空补模型。修复 `59c7c914` 在客户端注册真实 uploader 的 Fabric 资源重载 listener：首次 reload 已在 render thread 且 GL/TextureManager 就绪时创建原 holder，后续复用同一图集。初次尝试在客户端 entrypoint 直接构造曾使 JVM 因 GL context 未初始化而 native abort；读取完整 native 栈后改为 reload 时机，重新编译并真实启动。已按 prompt 重读该提交完整 41 行 diff、核对固定 vanilla `TextureAtlasHolder` 和实际 reload 时序，未发现限定路径新增偏离。mcdebug 隔离世界中日志出现 `Created: 512x256x0 mekanism:textures/atlas/robit.png-atlas`，创造标签 Robit 物品由紫黑恢复实际灰色贴图（截图 SHA-256 `7e5b66a1d18ea00e6e2ae66aeac38cc5329542c44392002311b044f6e09730f0`）；同一客户端执行 `gui.reload-resources` 返回成功后截图仍显示正确贴图（`1f4b13b7f51ad521761b7d436d66126208cb60736833eefe57dee2a516257806`）。该实际验证只覆盖基础物品与一次重载；实体、皮肤预览、自定义第三方贴图及其他 reload 顺序仍未验证。
+
+### F61 — 实际进世界时挖掘 reset mixin 与 Fabric API 冲突（`72ce9a66`，已修；挖掘过程待验）
+
+使用本地 mcdebug 1.21.1 启动真实客户端并创建隔离创造世界时，配置握手成功但登录失败。`fabric/run/logs/latest.log` 原始错误显示：`BlockBreakResetMixin` 与 Fabric Item API `ClientPlayerInteractionManagerMixin` 同时 `@Redirect` `MultiPlayerGameMode.sameDestroyTarget` 的同一 `ItemStack.isSameItemSameComponents` 调用；Fabric redirect 被跳过后 required injection 失败，导致 `MultiPlayerGameMode` 类转换错误和 `Network Protocol Error`。此前标题屏 smoke 从未装载该世界路径，不能证明客户端可以入世界。固定 Fabric Item API 已提供真实 `allowContinuingBlockBreaking`；修复 `5e1f87ff` 删除冲突 redirect，在真实 `ItemEnergized`、`ItemElectricBow`、`ItemMekaSuitArmor` 与能源型 `ItemBlockTooltip` owner 实现原规则，非目标物品仍走 Fabric 默认。隔离 client Knot 测试实际装载 `MultiPlayerGameMode`，gear 测试检查目标/普通物品的实际 Fabric hook；编译和切片 gate 通过。本地 mcdebug 重启同一隔离世界后完成握手，`gui.status` 确认 `inWorld=true`、integrated server 和真实玩家，并通过 `gui.open-block` 在世界打开 Crusher（`GuiElectricMachine`、41 slots）。这证明此前登录阻断已解除及该 GUI 打开，不证明持续挖掘动画或其他物品细节。日志中随后 player-null 是原登录失败引发的次生异常，不能先把它当根因。该提交完整 468 行真实 diff 已按 prompt 对照 Fabric redirect、目标物品和官方分类复审，未发现该限定边界新增偏离。
+
+### F60 — Mekanism 创造标签内搜索缺失（`38b8b1af`，代码及基本交互已验）
+
+原官方 `MekanismCreativeTabs` 调用 `withSearchBar()`；固定 NeoForge 创造界面对每个启用搜索的标签显示输入框，并基于该标签 `getDisplayItems()` 独立构建名称与标签搜索树，包含只在父标签显示的变体。移植移除该调用后，原版界面仅对全局 SEARCH 标签显示搜索框：全局搜索能找到部分 Mekanism 物品不等于在本标签内搜索，且可能遗漏 `PARENT_TAB_ONLY` 变体。Fabric ItemGroup API 没有对应 builder 接口；修复 `5e1f87ff` 仅对 Mekanism 标签接入原版输入框和 search 背景，使用该标签所有 display stacks 构造 vanilla `FullTextSearchTree`/`IdSearchTree`，不修改真实 tab 类型或过滤全局索引；刷新标签/重新初始化时清缓存。已按 prompt 完整复审该提交 468 行 diff，对照固定 NeoForge 局部搜索与 vanilla 4 个调用点，未发现本限定路径新增偏离。两个隔离 client Knot 测试验证 screen mixin 装载以及大小写、物品 ID、tag 与同物品不同组件变体的本地索引；首次索引测试缺动态 enchantment registry 报错，补充真实 registry 后通过。本地 mcdebug 实际创造界面显示 Mekanism 标签和搜索框；输入 `crusher` 仅得到 Crusher，输入 `#c:ingots/osmium` 得到 osmium ingot，`robit` 保留两个已显示变体。同一客户端执行一次资源重载后再次输入 `crusher` 仍得到 Crusher；语言切换、数据包重新同步、长列表滚动和其他模组 UI 注入仍未覆盖。
 
 ### F59 — MekaSuit 滑翔维持和 HDPE 鞘翅入口失效（`2529dca8` 纳入的既有 mixin，代码已修；实机待验）
 
@@ -94,7 +102,7 @@
 
 ### F58 — 四种机器和两种物品缺失客户端屏幕（`e5f41424`，代码已修；实机待验）
 
-逐项核对 `ClientRegistration.registerScreens` 发现，`CRUSHER`、`CHEMICAL_INJECTION_CHAMBER`、`OSMIUM_COMPRESSOR`、`PURIFICATION_CHAMBER` 四个通过官方泛型 helper 注册的机器被该批次遗漏，尽管真实方块和菜单已经注册，直接影响 Crusher 等已纳机器的 GUI。另两个物品、对应容器和服务器使用入口均已纳入并注册：`ItemPortableTeleporter.use` 触发 `PORTABLE_TELEPORTER` 菜单，`ItemSeismicReader.use` 在振动和能源满足时触发 `SEISMIC_READER` 菜单；但两份官方 GUI 不在 common slice，`FabricScreenRegistration` 也没有对应 MenuScreens 映射。历史将其整体延后会使现有公开物品无法正常显示对应菜单，而非仅是尚未纳入的孤立新功能。修复 `0bed7f36` 纳入两份现有 GUI 并注册六个原菜单，机器使用原 electric/advanced electric 屏幕；地震 GUI 使用 vanilla block clone、按 flowing/source 归一化流体、现有 Fabric fluid render handler 与 FluidStack 名称。已按审查 prompt 重读该提交完整 205 行 diff，对照六项官方注册和两物品使用路径，未发现额外限定范围缺陷。初次编译因四个泛型构造引用无法推断而失败，补全真实 tile/container 类型后编译与三个 slice gate 通过；Knot 聚焦测试覆盖水/岩浆流动与源归一化。真实客户端启动 smoke 19/19，日志含六个准确菜单 ID，客户端 timeout 124；未打开实际菜单，因此不证明交互与显示。Fabric 不提供 NeoForge 的通用 FluidType：多个不相关源 fluid 共享同一 NeoForge type、自定义 type 显示名、带玩家/命中信息的第三方 pick-block 扩展仍可能不同；必须用 mcdebug/真实客户端验证 Crusher、便携传送器、地震列显示以及第三方流体，不能将启动 proof 当交互验收。
+逐项核对 `ClientRegistration.registerScreens` 发现，`CRUSHER`、`CHEMICAL_INJECTION_CHAMBER`、`OSMIUM_COMPRESSOR`、`PURIFICATION_CHAMBER` 四个通过官方泛型 helper 注册的机器被该批次遗漏，尽管真实方块和菜单已经注册，直接影响 Crusher 等已纳机器的 GUI。另两个物品、对应容器和服务器使用入口均已纳入并注册：`ItemPortableTeleporter.use` 触发 `PORTABLE_TELEPORTER` 菜单，`ItemSeismicReader.use` 在振动和能源满足时触发 `SEISMIC_READER` 菜单；但两份官方 GUI 不在 common slice，`FabricScreenRegistration` 也没有对应 MenuScreens 映射。历史将其整体延后会使现有公开物品无法正常显示对应菜单，而非仅是尚未纳入的孤立新功能。修复 `0bed7f36` 纳入两份现有 GUI 并注册六个原菜单，机器使用原 electric/advanced electric 屏幕；地震 GUI 使用 vanilla block clone、按 flowing/source 归一化流体、现有 Fabric fluid render handler 与 FluidStack 名称。已按审查 prompt 重读该提交完整 205 行 diff，对照六项官方注册和两物品使用路径，未发现额外限定范围缺陷。初次编译因四个泛型构造引用无法推断而失败，补全真实 tile/container 类型后编译与三个 slice gate 通过；Knot 聚焦测试覆盖水/岩浆流动与源归一化。真实客户端启动 smoke 19/19，日志含六个准确菜单 ID，客户端 timeout 124；未打开实际菜单，因此不证明交互与显示。Fabric 不提供 NeoForge 的通用 FluidType：多个不相关源 fluid 共享同一 NeoForge type、自定义 type 显示名、带玩家/命中信息的第三方 pick-block 扩展仍可能不同；后续本地 mcdebug 隔离世界已通过真实点击成功打开 Crusher（`GuiElectricMachine`、41 slots）；便携传送器、地震列显示以及第三方流体仍须真实客户端验证，不能将启动 proof 当交互验收。
 
 ### F57 — Robit 模型元素自发光丢失（`3cedf196`，代码已修；实机画面待验）
 
