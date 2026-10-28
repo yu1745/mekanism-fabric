@@ -84,9 +84,9 @@
 
 ## 审查发现与待复核
 
-### F58 — 四种机器和两种物品缺失客户端屏幕（`e5f41424`，待修）
+### F58 — 四种机器和两种物品缺失客户端屏幕（`e5f41424`，代码已修；实机待验）
 
-逐项核对 `ClientRegistration.registerScreens` 发现，`CRUSHER`、`CHEMICAL_INJECTION_CHAMBER`、`OSMIUM_COMPRESSOR`、`PURIFICATION_CHAMBER` 四个通过官方泛型 helper 注册的机器被该批次遗漏，尽管真实方块和菜单已经注册，直接影响 Crusher 等已纳机器的 GUI。另两个物品、对应容器和服务器使用入口均已纳入并注册：`ItemPortableTeleporter.use` 触发 `PORTABLE_TELEPORTER` 菜单，`ItemSeismicReader.use` 在振动和能源满足时触发 `SEISMIC_READER` 菜单；但两份官方 GUI 不在 common slice，`FabricScreenRegistration` 也没有对应 MenuScreens 映射。历史将其整体延后会使现有公开物品无法正常显示对应菜单，而非仅是尚未纳入的孤立新功能。可见直接边界是两份现有 GUI、注册及地震 GUI 的 Fabric 流体显示平台映射；应保留真实频率、能耗、振动、列统计和纹理行为，不造替代界面。真实客户端打开和第三方流体颜色仍需实测。
+逐项核对 `ClientRegistration.registerScreens` 发现，`CRUSHER`、`CHEMICAL_INJECTION_CHAMBER`、`OSMIUM_COMPRESSOR`、`PURIFICATION_CHAMBER` 四个通过官方泛型 helper 注册的机器被该批次遗漏，尽管真实方块和菜单已经注册，直接影响 Crusher 等已纳机器的 GUI。另两个物品、对应容器和服务器使用入口均已纳入并注册：`ItemPortableTeleporter.use` 触发 `PORTABLE_TELEPORTER` 菜单，`ItemSeismicReader.use` 在振动和能源满足时触发 `SEISMIC_READER` 菜单；但两份官方 GUI 不在 common slice，`FabricScreenRegistration` 也没有对应 MenuScreens 映射。历史将其整体延后会使现有公开物品无法正常显示对应菜单，而非仅是尚未纳入的孤立新功能。修复 `0bed7f36` 纳入两份现有 GUI 并注册六个原菜单，机器使用原 electric/advanced electric 屏幕；地震 GUI 使用 vanilla block clone、按 flowing/source 归一化流体、现有 Fabric fluid render handler 与 FluidStack 名称。已按审查 prompt 重读该提交完整 205 行 diff，对照六项官方注册和两物品使用路径，未发现额外限定范围缺陷。初次编译因四个泛型构造引用无法推断而失败，补全真实 tile/container 类型后编译与三个 slice gate 通过；Knot 聚焦测试覆盖水/岩浆流动与源归一化。真实客户端启动 smoke 19/19，日志含六个准确菜单 ID，客户端 timeout 124；未打开实际菜单，因此不证明交互与显示。Fabric 不提供 NeoForge 的通用 FluidType：多个不相关源 fluid 共享同一 NeoForge type、自定义 type 显示名、带玩家/命中信息的第三方 pick-block 扩展仍可能不同；必须用 mcdebug/真实客户端验证 Crusher、便携传送器、地震列显示以及第三方流体，不能将启动 proof 当交互验收。
 
 ### F57 — Robit 模型元素自发光丢失（`3cedf196`，代码已修；实机画面待验）
 
@@ -372,6 +372,6 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 ## 恢复位置
 
-固定 101 项已逐项读取并记录至第 95 项 `c67d838f`；下一项为 `e5f41424`，其后依序还有 `d4d34fcd`、`f3c7947b`、`07eb2698`、`4858ee35`、`a02d7298`。上述已读不等于所有疑点已关闭；F48/F49 的实际画面与平台交互、F57 的实体光照及其他待核验事项按各节限定继续跟进。
+固定范围的 101 项均已逐项读取并登记至末项 `a02d7298`。已读不等于所有疑点已关闭：继续复核 F8/F11/F34/F48/F49 及“并行初审待主代理核验”中尚未关闭的真实调用链；F48/F49/F57/F58 的实际画面与平台交互按各节限定验证，不把启动 proof 当端到端证据。完成必要缺陷修复和审查收尾后，才可恢复原持续移植目标。
 
 此前检查点的开放事项（状态以各发现小节及上方记录为准）：F8 的 QIO 真实 owner 插入事务闭包及 F9 的 sided inventory 场景；`a147116b` 已读完整 2180 行 diff；`12ebbcf6` 和 `76f790ce` 已读完整 diff，F14 已修，F15 附魔适用/手持/选槽及电弓虚拟 Flame 已接线但部分实机待验；`1d4c4027` 已读完整 diff 并修 F17 普通水下路径；`7785a9c1` 已读完整 diff，F19/F20 已修，不要求旧开发版握手兼容，双进程实体同步仍待实测；`4e5a4232` 已读完整 diff，F21 旧票据迁移已按用户决策退出范围。子代理已并行读完 `b6e5c54d`、`509afc1b`、`1af82201`、`2529dca8`、`38b8b1af`、`a1f1c46f` 的真实 diff；部分问题已由主代理复核修复，剩余候选见上，不把初审直接计为全部关闭。`53fda9e5` 至 `ffbcb655` 的相邻提交已由子代理读完真实 diff，F29 已部分修复，F30–F33 已修且保留各自验证边界；`5ee61549`、`519e1132`、`5c0fcb1f`、`257b9d05`、`b3b87ec3`、`7da81542`、`9bb884a3`、`1e08c1e5` 已读完整真实 diff；`d77c3252` 已补读完整切片重排及文档，五个后续 ISBER 提交亦已读完整 diff。F34 的 datapack 生物群系修复仍待完成；F37 composite 父链代码已修、真实画面待验，F39 能量立方相关代码已修但 FRAPI 及物品画面待实机验证。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。
