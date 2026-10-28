@@ -78,8 +78,15 @@
 | `e0dee5bd`、`1726b774` | 已读完整 diff、相关 renderer 及同步路径；transit 更新标签和 S2C batch 的 Fabric 注册均存在，重载时 block entity renderer 重建，原模型抑制自引用已有本提交修复。未证实新的具体生产缺陷；在途物品、分流覆盖和第三方渲染器画面尚未实测。 |
 | `83cd82f1`、`6647ec72` | 已读完整 diff，对照两份固定 Minecraft 的 GuiGraphics 调用点及 NeoForge 装饰器 handler；调用在 vanilla 绘制和 pose pop 之后、空栈被过滤，MekaSuit 色值与官方一致。但 NeoForge 对每个装饰器显式备份/复位 GL 状态并支持多个装饰器，Fabric 单个注册表没有这些平台保证；普通 vanilla 物品绘制会 flush 并启用深度，不能仅凭差异断言实际损坏，特殊 GUI/第三方交互及画面仍待验证。 |
 | `95b025ae`、`c67d838f` | 已读完整 diff，确认五屏与原实体容器匹配。皮肤预览与实体/物品共享模型接线还存在普通模型未注册及物品 builtin 不触发的问题，扩充 F48；旧审查“全闭环”和标题屏 proof 均不证明皮肤 GUI 画面。 |
+| `e5f41424`、`d4d34fcd` | 已读完整 diff，与官方屏幕注册逐项对照；历史声明故意延后的两个物品 GUI 实际已有注册物品、容器和使用入口；原提交还遗漏四个官方 helper 注册的机器屏幕（包括 Crusher），均见 F58。其余注册对照不代替真实交互验证。 |
+| `f3c7947b`、`07eb2698` | 已读完整脚本和文档 diff，仅改验证、不改生产代码。脚本以再生日志证明触发，不证明源矿石/盐数量、目标版本持久化或全部区块；第一阶段等待错误日志名且两个固定 sleep 不符合当前长任务纪律，不能将旧 smoke 当作这些性质的完整证明。 |
+| `4858ee35`、`a02d7298` | 已读完整脚本和文档 diff；扫描器仅检查显式 import，不涵盖同包、通配、完全限定名及反射，也不检查 entrypoint 是否纳片，故“0 边/系统审查通过”只能解释为该正则范围内的结果，不能替代本轮真实 diff/调用链审查。原文档未改变生产代码。 |
 
 ## 审查发现与待复核
+
+### F58 — 四种机器和两种物品缺失客户端屏幕（`e5f41424`，待修）
+
+逐项核对 `ClientRegistration.registerScreens` 发现，`CRUSHER`、`CHEMICAL_INJECTION_CHAMBER`、`OSMIUM_COMPRESSOR`、`PURIFICATION_CHAMBER` 四个通过官方泛型 helper 注册的机器被该批次遗漏，尽管真实方块和菜单已经注册，直接影响 Crusher 等已纳机器的 GUI。另两个物品、对应容器和服务器使用入口均已纳入并注册：`ItemPortableTeleporter.use` 触发 `PORTABLE_TELEPORTER` 菜单，`ItemSeismicReader.use` 在振动和能源满足时触发 `SEISMIC_READER` 菜单；但两份官方 GUI 不在 common slice，`FabricScreenRegistration` 也没有对应 MenuScreens 映射。历史将其整体延后会使现有公开物品无法正常显示对应菜单，而非仅是尚未纳入的孤立新功能。可见直接边界是两份现有 GUI、注册及地震 GUI 的 Fabric 流体显示平台映射；应保留真实频率、能耗、振动、列统计和纹理行为，不造替代界面。真实客户端打开和第三方流体颜色仍需实测。
 
 ### F57 — Robit 模型元素自发光丢失（`3cedf196`，代码已修；实机画面待验）
 
