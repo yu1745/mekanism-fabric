@@ -81,6 +81,10 @@
 
 ## 审查发现与待复核
 
+### F57 — Robit 模型元素自发光丢失（`3cedf196`，代码已修；实机画面待验）
+
+官方 Robit 两种模型 JSON 为眼睛和部分 allay 几何设置 `neoforge_data` 的 block/sky 最低亮度；Fabric `FabricRobitUnbakedModel` 使用 vanilla `BlockElement` 解析、烘焙时忽略此字段，实体和物品绘制又用 vanilla `putBulkData` 只传环境亮度。即使模型加载修复，暗处这些指定的面仍不会按原设定发光；GUI 预览本身传 FULL_BRIGHT，不足以证明实体光照。修复 `e854c16a` 将元素最低亮度写入对应烘焙顶点，实体与物品绘制时按 block/sky 分量与环境光合并；不会将整个模型设为全亮。Knot 测试使用官方 allay JSON 和合成 sprite 验证暗、3 级、全亮及较亮环境四类输出；GUI 本身全亮，未测真实世界眼睛外观。该 helper 在一个 quad 的四顶点间取最大值，不能声称保留第三方逐顶点不同亮度；面级或继承的 NeoForge 数据亦未全面验证。
+
 ### F56 — 传输器内容几何缓存丢失（`c4c4dc0f`，已修复）
 
 官方 `RenderTransmitterBase` 用 `ContentsModelData(visible, icon)` 缓存最终平面法线 quad，纹理重缝时清空；移植版每次渲染均调用 OBJ 逐组重新烘焙、解包和重编码。`BaseModelCache.OBJModelData.getQuads(..., iconOverride)` 对非空 icon 每次新建临时 map，不能像原审查称的那样按 `(visible, icon)` 缓存。四个真实传输器 BER 每帧走此路径，会随可见管线数量重复分配和烘焙；静态调用链能确认工作量差异，但没有量化实机帧率。修复 `e72ac0f2` 恢复原 renderer owner 的最终 quad 缓存，复制 visible 列表作不可变键并在 `onStitch` 同时清空缓存与 OBJ 几何。已按审查 prompt 读取该提交完整真实 diff、对照原缓存键和当前纹理重载调用链，未发现该限定行为新增偏离；`compileJava` 和三项 slice gate 通过。未做游戏内帧率或资源包热重载实测。
@@ -339,11 +343,13 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 `FabricArmorLayerRegistration` 是在已有 vanilla `ElytraLayer` 的渲染器上**追加** `MekanismElytraLayer`，而端口对非 HDPE 物品调用 `super.render`，因此普通 vanilla 鞘翅先后由原层和附加层各绘一次。官方附加层的 `shouldRender` 只接受 HDPE；原提交审查中声称普通物品走 super 是正确行为，忽略了原层仍存在。修复移除非 HDPE 分支，让 vanilla 层独自处理普通鞘翅，HDPE 绘制保持原路径。`cb083cba` 的完整真实 diff 已按移植风格 prompt 复审，未发现该限定行为边界新增偏离；`compileJava` 和 platform slice gate 通过。未在真实客户端观察附魔 glint、皮肤/披风及 HDPE 画面。
 
-### F48 — Robit 实体、物品和皮肤预览的模型加载及选择（`3cedf196`、`95b025ae`，待修）
+### F48 — Robit 实体、物品和皮肤预览的模型加载及选择（`3cedf196`、`95b025ae`，核心代码已修；运行验证待完成）
 
 官方 `RobitItemOverrideList` 从当前 registry 取得 `RobitSkin.customModel()`，指定时查询该模型并解析其 item overrides；Fabric `FabricRobitItemRenderer.modelFor` 不查询皮肤，仅看 resource key 的路径是否恰为 `allay`，其他一律用默认模型。数据包自定义皮肤的公共 `custom_model` 因此对物品无效，名字为 `allay` 但命名空间不同或皮肤已回退时也会误选 allay 模型。当前实体渲染与皮肤选择 GUI 已经走 `MekanismModelCache.getRobitSkin`，但该 owner 也有按路径特判 fallback 的偏差；custom model 是否被模型加载器作为 top-level 注册、物品 builtin 抑制及其覆盖模型语义尚需验证，不能只换一行 getter 就宣称闭环。标题屏 proof 不证明 Robit 物品或实体实际绘制。
 
-进一步对照固定 Fabric API `BakedModelManagerMixin` 与 vanilla 顶层物品加载：`getModel(ResourceLocation)` 只查 `Context.addModels` 注册的 resource-model key，不查普通 inventory variant；当前 `item/robit` 与 `item/robit_allay` 都未被 `addModels`，因此实体和 GUI 的 `getRobitSkin` 实际退回 missing model，物品 renderer 亦查不到模型。另有更早的入口缺口：`FabricMekanismModelPlugin` 将这两个模型解析为非 `BlockModel` 的 `FabricRobitUnbakedModel`，而 `FabricItemRendererRegistration` 的抑制包装仅接受 `BlockModel`；其 `StaticQuads.isCustomRenderer()` 返回 false，所以普通 Robit 物品的 builtin renderer 也不会因该注册而被调用。需同时恢复默认/自定义模型实际烘焙 owner、资源重载和 inventory builtin 接线；官方 `BaseModelCache.registerJSONAndBake` 可按 registry 中的任意 custom_model 动态烘焙，不能只硬编码 allay 或扫描自身命名空间代替。当前这些是静态调用链证据，尚未观察实际世界像素；候选方案须验证真实 Fabric baked model 与物品渲染入口。
+进一步对照固定 Fabric API `BakedModelManagerMixin` 与 vanilla 顶层物品加载：`getModel(ResourceLocation)` 只查 `Context.addModels` 注册的 resource-model key，不查普通 inventory variant；当前 `item/robit` 与 `item/robit_allay` 都未被 `addModels`，因此实体和 GUI 的 `getRobitSkin` 实际退回 missing model，物品 renderer 亦查不到模型。另有更早的入口缺口：`FabricMekanismModelPlugin` 将这两个模型解析为非 `BlockModel` 的 `FabricRobitUnbakedModel`，而 `FabricItemRendererRegistration` 的抑制包装仅接受 `BlockModel`；其 `StaticQuads.isCustomRenderer()` 返回 false，所以普通 Robit 物品的 builtin renderer 也不会因该注册而被调用。需同时恢复默认/自定义模型实际烘焙 owner、资源重载和 inventory builtin 接线；官方 `BaseModelCache.registerJSONAndBake` 可按 registry 中的任意 custom_model 动态烘焙，不能只硬编码 allay 或扫描自身命名空间代替。修复 `e854c16a` 将基础模型作为额外 resource model 烘焙、在真实模型缓存持有当次 Fabric baker，并在读取 registry 的任意 custom_model 时按需烘焙和缓存，重载时丢弃旧 baker；inventory 顶层变体单独包装为 builtin，资源模型不再被空 quad 包装。资源准备阶段也识别其他命名空间的 `mekanism:robit` loader，恢复模型显示变换继承及未映射以外纹理引用；物品 skin 从 registry 选择而不按路径猜测。已依审查 prompt 重读该提交完整 541 行 diff，对照固定官方动态烘焙和 Fabric 顶层/资源模型调用链，发现如下尚未闭合的行为边界而非宣称全面等价：builtin 绘制时需要重新解析模型，当前使用 seed 0、无 entity，可能与外层 override 的实际 seed/entity 得到不同的第三方模型；动态 custom_model 的真实 Fabric baker 和附加资源包、重载时序未实测，非默认纹理跨 robit atlas 与官方同样存在局限。
+
+编译和三项 slice gate 通过；隔离 Knot 测试以真实两份 Robit JSON、合成 sprite 和测试 baker 验证基础几何非空、allay 继承显示变换、不同命名空间 custom id 的模型选择/缓存及清空后的重烘焙。真实客户端 smoke 18/18，日志证明额外基础模型烘出 66 面且 inventory wrapper 已安装；脚本在标题后主动终止客户端（exit 1），未实际调用动态皮肤选择或绘制。实体、手持、GUI 皮肤预览、重载和第三方资源包仍需 mcdebug/实际客户端验证，不以启动 proof 宣告 F48 完全闭环。
 
 ### F49 — QIO 红石适配器未按状态替换完整模型（`a634adff`，候选修复，画面与 FRAPI 连接待验）
 
@@ -359,6 +365,6 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 ## 恢复位置
 
-本轮固定 101 项已读至第 74 项 `f45d2bd7`；下一项为 `7765313e`。F48（Robit 自定义皮肤模型/加载及 builtin 实际路径）与 F49（QIO 红石适配器状态模型）仍待修，应先复核真实 owner 和固定上游，再在边界内修复与复审；F44–F47 与 F50 代码已修，画面、真实声音与输入未验。`1f3283dd`、`205a67fd`、`1b770d06`、`7bb720c7` 的完整 diff 已预读，但还须按顺序追查生命周期和节日 owner 后登记，不算已审完。两次只读子代理启动均失败，无结果且不得计入审查。
+固定 101 项已逐项读取并记录至第 95 项 `c67d838f`；下一项为 `e5f41424`，其后依序还有 `d4d34fcd`、`f3c7947b`、`07eb2698`、`4858ee35`、`a02d7298`。上述已读不等于所有疑点已关闭；F48/F49 的实际画面与平台交互、F57 的实体光照及其他待核验事项按各节限定继续跟进。
 
-优先研究 F8 的 QIO 真实 owner 插入事务闭包，并补验 F9 的 sided inventory 场景；`a147116b` 已读完整 2180 行 diff；`12ebbcf6` 和 `76f790ce` 已读完整 diff，F14 已修，F15 附魔适用/手持/选槽及电弓虚拟 Flame 已接线但部分实机待验；`1d4c4027` 已读完整 diff 并修 F17 普通水下路径；`7785a9c1` 已读完整 diff，F19/F20 已修，不要求旧开发版握手兼容，双进程实体同步仍待实测；`4e5a4232` 已读完整 diff，F21 旧票据迁移已按用户决策退出范围。子代理已并行读完 `b6e5c54d`、`509afc1b`、`1af82201`、`2529dca8`、`38b8b1af`、`a1f1c46f` 的真实 diff；部分问题已由主代理复核修复，剩余候选见上，不把初审直接计为全部关闭。`53fda9e5` 至 `ffbcb655` 的相邻提交已由子代理读完真实 diff，F29 已部分修复，F30–F33 已修且保留各自验证边界；`5ee61549`、`519e1132`、`5c0fcb1f`、`257b9d05`、`b3b87ec3`、`7da81542`、`9bb884a3`、`1e08c1e5` 已读完整真实 diff；`d77c3252` 已补读完整切片重排及文档，五个后续 ISBER 提交亦已读完整 diff。F34 的 datapack 生物群系修复仍待完成；F37 composite 父链代码已修、真实画面待验，F39 能量立方相关代码已修但 FRAPI 及物品画面待实机验证。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。
+此前检查点的开放事项（状态以各发现小节及上方记录为准）：F8 的 QIO 真实 owner 插入事务闭包及 F9 的 sided inventory 场景；`a147116b` 已读完整 2180 行 diff；`12ebbcf6` 和 `76f790ce` 已读完整 diff，F14 已修，F15 附魔适用/手持/选槽及电弓虚拟 Flame 已接线但部分实机待验；`1d4c4027` 已读完整 diff 并修 F17 普通水下路径；`7785a9c1` 已读完整 diff，F19/F20 已修，不要求旧开发版握手兼容，双进程实体同步仍待实测；`4e5a4232` 已读完整 diff，F21 旧票据迁移已按用户决策退出范围。子代理已并行读完 `b6e5c54d`、`509afc1b`、`1af82201`、`2529dca8`、`38b8b1af`、`a1f1c46f` 的真实 diff；部分问题已由主代理复核修复，剩余候选见上，不把初审直接计为全部关闭。`53fda9e5` 至 `ffbcb655` 的相邻提交已由子代理读完真实 diff，F29 已部分修复，F30–F33 已修且保留各自验证边界；`5ee61549`、`519e1132`、`5c0fcb1f`、`257b9d05`、`b3b87ec3`、`7da81542`、`9bb884a3`、`1e08c1e5` 已读完整真实 diff；`d77c3252` 已补读完整切片重排及文档，五个后续 ISBER 提交亦已读完整 diff。F34 的 datapack 生物群系修复仍待完成；F37 composite 父链代码已修、真实画面待验，F39 能量立方相关代码已修但 FRAPI 及物品画面待实机验证。`dba8824e` 初版 `isCorrectToolForDrops` 对移除/自定义工具组件的兜底曾过宽，当前 `ItemAtomicDisassembler` 已区分组件缺失与替换组件，需追查后续修正提交并核对 `ItemMekaTool`，不把历史问题直接认定为当前缺陷。同时跟进 F1 空网络外观、F2 快捷键恢复和 F3/F4 的端到端验证。固定范围的后续提交尚未逐个审查，不得引用此前一次性切片扫描或旧的自评代替本轮逐提交审查。
