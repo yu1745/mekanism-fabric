@@ -76,6 +76,8 @@
 | `fe375103`、`ae350c7c` | 已读完整实现和原审查 diff，对照官方 DriveArrayBakedModel、资源及物品组件；物品驱动器显示完全缺失、方块驱动器 LED 的 NeoForge 顶点亮度未生效，见 F55。miner 变换实机及第三方模型尚未验。 |
 | `c4c4dc0f`、`20aaec89` | 已读完整实现及原审查 diff；机械管流体缓存原错误已在 F36 修复。传输器 contents 每帧重新烘焙而非按模型/图标缓存，已按 F56 恢复；实际管线画面和第三方模型未验。 |
 | `e0dee5bd`、`1726b774` | 已读完整 diff、相关 renderer 及同步路径；transit 更新标签和 S2C batch 的 Fabric 注册均存在，重载时 block entity renderer 重建，原模型抑制自引用已有本提交修复。未证实新的具体生产缺陷；在途物品、分流覆盖和第三方渲染器画面尚未实测。 |
+| `83cd82f1`、`6647ec72` | 已读完整 diff，对照两份固定 Minecraft 的 GuiGraphics 调用点及 NeoForge 装饰器 handler；调用在 vanilla 绘制和 pose pop 之后、空栈被过滤，MekaSuit 色值与官方一致。但 NeoForge 对每个装饰器显式备份/复位 GL 状态并支持多个装饰器，Fabric 单个注册表没有这些平台保证；普通 vanilla 物品绘制会 flush 并启用深度，不能仅凭差异断言实际损坏，特殊 GUI/第三方交互及画面仍待验证。 |
+| `95b025ae`、`c67d838f` | 已读完整 diff，确认五屏与原实体容器匹配。皮肤预览与实体/物品共享模型接线还存在普通模型未注册及物品 builtin 不触发的问题，扩充 F48；旧审查“全闭环”和标题屏 proof 均不证明皮肤 GUI 画面。 |
 
 ## 审查发现与待复核
 
@@ -337,9 +339,11 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 `FabricArmorLayerRegistration` 是在已有 vanilla `ElytraLayer` 的渲染器上**追加** `MekanismElytraLayer`，而端口对非 HDPE 物品调用 `super.render`，因此普通 vanilla 鞘翅先后由原层和附加层各绘一次。官方附加层的 `shouldRender` 只接受 HDPE；原提交审查中声称普通物品走 super 是正确行为，忽略了原层仍存在。修复移除非 HDPE 分支，让 vanilla 层独自处理普通鞘翅，HDPE 绘制保持原路径。`cb083cba` 的完整真实 diff 已按移植风格 prompt 复审，未发现该限定行为边界新增偏离；`compileJava` 和 platform slice gate 通过。未在真实客户端观察附魔 glint、皮肤/披风及 HDPE 画面。
 
-### F48 — Robit 物品未使用皮肤定义的自定义模型（`3cedf196`，待修）
+### F48 — Robit 实体、物品和皮肤预览的模型加载及选择（`3cedf196`、`95b025ae`，待修）
 
 官方 `RobitItemOverrideList` 从当前 registry 取得 `RobitSkin.customModel()`，指定时查询该模型并解析其 item overrides；Fabric `FabricRobitItemRenderer.modelFor` 不查询皮肤，仅看 resource key 的路径是否恰为 `allay`，其他一律用默认模型。数据包自定义皮肤的公共 `custom_model` 因此对物品无效，名字为 `allay` 但命名空间不同或皮肤已回退时也会误选 allay 模型。当前实体渲染与皮肤选择 GUI 已经走 `MekanismModelCache.getRobitSkin`，但该 owner 也有按路径特判 fallback 的偏差；custom model 是否被模型加载器作为 top-level 注册、物品 builtin 抑制及其覆盖模型语义尚需验证，不能只换一行 getter 就宣称闭环。标题屏 proof 不证明 Robit 物品或实体实际绘制。
+
+进一步对照固定 Fabric API `BakedModelManagerMixin` 与 vanilla 顶层物品加载：`getModel(ResourceLocation)` 只查 `Context.addModels` 注册的 resource-model key，不查普通 inventory variant；当前 `item/robit` 与 `item/robit_allay` 都未被 `addModels`，因此实体和 GUI 的 `getRobitSkin` 实际退回 missing model，物品 renderer 亦查不到模型。另有更早的入口缺口：`FabricMekanismModelPlugin` 将这两个模型解析为非 `BlockModel` 的 `FabricRobitUnbakedModel`，而 `FabricItemRendererRegistration` 的抑制包装仅接受 `BlockModel`；其 `StaticQuads.isCustomRenderer()` 返回 false，所以普通 Robit 物品的 builtin renderer 也不会因该注册而被调用。需同时恢复默认/自定义模型实际烘焙 owner、资源重载和 inventory builtin 接线；官方 `BaseModelCache.registerJSONAndBake` 可按 registry 中的任意 custom_model 动态烘焙，不能只硬编码 allay 或扫描自身命名空间代替。当前这些是静态调用链证据，尚未观察实际世界像素；候选方案须验证真实 Fabric baked model 与物品渲染入口。
 
 ### F49 — QIO 红石适配器未按状态替换完整模型（`a634adff`，候选修复，画面与 FRAPI 连接待验）
 
