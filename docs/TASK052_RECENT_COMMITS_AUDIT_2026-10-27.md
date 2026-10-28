@@ -74,8 +74,8 @@
 | `1b770d06`、`7bb720c7` | 已读完整实现及文档 diff，对照固定官方 ClientTickHandler；原审查误称官方每 1200 tick 通知，实际上每 tick 调用，见 F54。图集回调和节日消息尚未实际画面/日期验证。 |
 | `64fedbc7` | 已读完整 diff，对照固定官方实体加入时声音守卫：客户端实体加载 Player 与 enablePlayerSounds 守卫一致；真实追踪、静音及音频尚未实机验证。 |
 | `fe375103`、`ae350c7c` | 已读完整实现和原审查 diff，对照官方 DriveArrayBakedModel、资源及物品组件；物品驱动器显示完全缺失、方块驱动器 LED 的 NeoForge 顶点亮度未生效，见 F55。miner 变换实机及第三方模型尚未验。 |
-
 | `c4c4dc0f`、`20aaec89` | 已读完整实现及原审查 diff；机械管流体缓存原错误已在 F36 修复。传输器 contents 每帧重新烘焙而非按模型/图标缓存，已按 F56 恢复；实际管线画面和第三方模型未验。 |
+| `e0dee5bd`、`1726b774` | 已读完整 diff、相关 renderer 及同步路径；transit 更新标签和 S2C batch 的 Fabric 注册均存在，重载时 block entity renderer 重建，原模型抑制自引用已有本提交修复。未证实新的具体生产缺陷；在途物品、分流覆盖和第三方渲染器画面尚未实测。 |
 
 ## 审查发现与待复核
 
