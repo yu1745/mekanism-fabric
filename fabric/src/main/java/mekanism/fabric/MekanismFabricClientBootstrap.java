@@ -63,6 +63,8 @@ public final class MekanismFabricClientBootstrap implements ClientModInitializer
         //Loader-closure owner for the shipped NeoForge-loader models (composite factories, the Meka-Tool OBJs, the
         //QIO dashboard layers); the energy-cube geometry loader stays deferred to the BE-aware render seam.
         mekanism.fabric.client.model.FabricMekanismModelPlugin.initialize();
+        //Preserve QIO drive item geometry and the light metadata ignored by vanilla model parsing.
+        mekanism.fabric.client.model.FabricQIOModelPlugin.initialize();
         //Offline model-cache capture for the tile renderers (the official BakingCompleted/setup pairing).
         net.fabricmc.fabric.api.client.model.loading.v1.ModelLoadingPlugin.register(new mekanism.fabric.client.model.FabricModelCachePlugin());
         //Block-item ISBERs (energy cube, fluid tank): official item JSONs stay, quads suppressed in favor of the
