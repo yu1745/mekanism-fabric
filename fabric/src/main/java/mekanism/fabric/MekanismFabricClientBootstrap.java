@@ -48,6 +48,28 @@ public final class MekanismFabricClientBootstrap implements ClientModInitializer
         mekanism.fabric.network.FabricPortalClientNetworking.initialize();
         mekanism.fabric.network.FabricSecurityClientNetworking.initialize();
         mekanism.fabric.radiation.FabricRadiationClientLifecycle.initialize();
+        // Client entrypoints run before the GL context exists. Construct the atlas on the render thread when the
+        // first resource reload actually starts, and reuse the same holder on subsequent reloads.
+        net.fabricmc.fabric.api.resource.ResourceManagerHelper.get(net.minecraft.server.packs.PackType.CLIENT_RESOURCES)
+              .registerReloadListener(new net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener() {
+                  private mekanism.client.RobitSpriteUploader uploader;
+
+                  @Override
+                  public net.minecraft.resources.ResourceLocation getFabricId() {
+                      return net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("mekanism", "robit_atlas");
+                  }
+
+                  @Override
+                  public java.util.concurrent.CompletableFuture<Void> reload(PreparationBarrier barrier, net.minecraft.server.packs.resources.ResourceManager resources,
+                        net.minecraft.util.profiling.ProfilerFiller prepareProfiler, net.minecraft.util.profiling.ProfilerFiller applyProfiler,
+                        java.util.concurrent.Executor prepareExecutor, java.util.concurrent.Executor applyExecutor) {
+                      com.mojang.blaze3d.systems.RenderSystem.assertOnRenderThread();
+                      if (uploader == null) {
+                          uploader = new mekanism.client.RobitSpriteUploader(net.minecraft.client.Minecraft.getInstance().getTextureManager());
+                      }
+                      return uploader.reload(barrier, resources, prepareProfiler, applyProfiler, prepareExecutor, applyExecutor);
+                  }
+              });
         //Real model-loading owner for the shipped "mekanism:transmitter" OBJ/MTL models, plus the logistical
         //transporter tint. Model registration needs no block instance: it keys off the model ids in the resource pack.
         FabricTransmitterModelPlugin.initialize();
