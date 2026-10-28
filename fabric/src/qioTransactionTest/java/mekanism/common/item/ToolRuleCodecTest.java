@@ -13,6 +13,7 @@ import mekanism.common.item.gear.ItemAtomicDisassembler;
 import mekanism.common.registries.MekanismDataComponents;
 import mekanism.fabric.chemical.FabricChemicalRegistryLifecycle;
 import mekanism.fabric.gear.BlockToolAnySet;
+import mekanism.fabric.gear.BlockToolRuleCodecs;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.Holder;
 import net.minecraft.core.MappedRegistry;
@@ -25,6 +26,7 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.Bootstrap;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -88,6 +90,31 @@ class ToolRuleCodecTest {
         } finally {
             actual.release();
             vanilla.release();
+        }
+    }
+
+    @Test
+    void ordinaryNetworkRuleDelegatesToExistingCodec() {
+        Tool.Rule rule = Tool.Rule.minesAndDrops(List.of(Blocks.STONE), 2);
+        StreamCodec<RegistryFriendlyByteBuf, Tool.Rule> existing = new StreamCodec<>() {
+            @Override
+            public Tool.Rule decode(RegistryFriendlyByteBuf buffer) {
+                assertEquals(42, buffer.readVarInt());
+                return rule;
+            }
+
+            @Override
+            public void encode(RegistryFriendlyByteBuf buffer, Tool.Rule value) {
+                buffer.writeVarInt(42);
+            }
+        };
+        var wrapper = BlockToolRuleCodecs.network(existing);
+        RegistryFriendlyByteBuf buffer = new RegistryFriendlyByteBuf(Unpooled.buffer(), access);
+        try {
+            wrapper.encode(buffer, rule);
+            assertEquals(rule, wrapper.decode(buffer));
+        } finally {
+            buffer.release();
         }
     }
 

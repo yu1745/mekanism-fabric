@@ -21,6 +21,6 @@ public abstract class ToolRuleCodecMixin {
     @Inject(method = "<clinit>", at = @At("TAIL"))
     private static void mekanism$extendToolRuleCodecs(CallbackInfo ci) {
         CODEC = BlockToolRuleCodecs.persistent(CODEC);
-        STREAM_CODEC = BlockToolRuleCodecs.network();
+        STREAM_CODEC = BlockToolRuleCodecs.network(STREAM_CODEC);
     }
 }
