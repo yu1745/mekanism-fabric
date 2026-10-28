@@ -160,7 +160,7 @@
 
 **撤回前次关于有能量网络无法重新发现接收方的结论。** 前次误将基类 `NetworkAcceptorCache` 的保留对象行为当成当前能源网络行为：`EnergyNetwork.createAcceptorCache()` 已在后续提交 `5ee61549` 改为 `FreshNetworkAcceptorCache`，其 `getAcceptorValues()` 构造快照时遍历真实成员的六侧、调用 `refreshAcceptorConnections()` 并重新查询 provider。`EnergyNetwork.onUpdate()` 在缓冲区非空时调用 `tickEmit()`，因此无独立邻居更新时下次发射仍会重新发现侧配置变化，也不保留旧接收对象。上一版记录称其遍历已保留对象、不再查询，是错误结论，不能据此提交修复。
 
-较窄问题的当前静态链：`EnergyNetwork.onUpdate()` 在空缓冲时不调用 `tickEmit()`，其父类 `DynamicNetwork.onUpdate()` 为空；无 PULL 侧的 `UniversalCable.pullFromAcceptors()` 也立即返回。`TileComponentConfig.sideChangedBasic()` 的 `invalidateCapability()` 只撤销本地缓存、不通知邻居，因此如果外部没有方块更新、网络读取或后续能源发射，可保持旧 `currentAcceptorConnections` 与客户端连接外观；非空发射或网络读数会重新发现，不是断言永远不可恢复。固定官方能力失效会通知 level listener。应在真实侧配置变动后，针对已加载相邻 transmitter 的那一侧安排真实连接刷新，检查方向、服务器线程、生命周期和其他传输类型，不用重引入通用能力框架；尚未做运行复现。当前工作树 WIP：侧配置完成自身缓存与监听更新后，只向已加载、服务端的邻接 transmitter 按相反面排队；transmitter 在自身服务端 tick 清空快照后逐面刷新连接并标记 network acceptor dirty，避免在失效/查询回调中直接查询或重入 network commit。需编译、真实 owner 测试与完整 diff 复审后才能提交或称修复。
+较窄问题的当前静态链：`EnergyNetwork.onUpdate()` 在空缓冲时不调用 `tickEmit()`，其父类 `DynamicNetwork.onUpdate()` 为空；无 PULL 侧的 `UniversalCable.pullFromAcceptors()` 也立即返回。`TileComponentConfig.sideChangedBasic()` 的 `invalidateCapability()` 只撤销本地缓存、不通知邻居，因此如果外部没有方块更新、网络读取或后续能源发射，可保持旧 `currentAcceptorConnections` 与客户端连接外观；非空发射或网络读数会重新发现，不是断言永远不可恢复。固定官方能力失效会通知 level listener。应在真实侧配置变动后，针对已加载相邻 transmitter 的那一侧安排真实连接刷新，检查方向、服务器线程、生命周期和其他传输类型，不用重引入通用能力框架；尚未做运行复现。阶段性 WIP `01cccd8c`：侧配置完成自身缓存与监听更新后，只向已加载、服务端的邻接 transmitter 按相反面排队；transmitter 在自身服务端 tick 清空快照后逐面刷新连接并标记 network acceptor dirty，避免在失效/查询回调中直接查询或重入 network commit。已按 prompt 阅读该提交完整 100 行 diff，检查了方向和已加载查询；编译及三个 slice gate 通过。仍需真实 owner 验证、检查区块卸载/重载与递归及后续复审，不能将此 WIP 当完整修复。
 
 ### F2 — 客户端键绑定回调缺失（`6b6bcb0f`，核心接线已修复；兼容与实机验证待完成）
 
