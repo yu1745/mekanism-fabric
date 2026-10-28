@@ -284,7 +284,8 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
         return accepted - data.add(accepted, Action.EXECUTE, transaction);
     }
 
-    void requireNoInsertionTransaction() {
+    /** Guard non-transactional drive-slot changes before the slot itself is mutated. */
+    public void requireNoInsertionTransaction() {
         if (insertionTransactionActive) {
             throw new IllegalStateException("Cannot mutate QIO frequency outside its active insertion transaction");
         }

@@ -33,6 +33,7 @@ public class QIODriveSlot extends BasicInventorySlot {
 
     @Override
     public void setStack(ItemStack stack) {
+        requireMutableDriveSlot();
         // if we're about to empty this slot and a drive already exists here, remove the current drive from the frequency
         // Note: We don't check to see if the new stack is empty so that we properly are able to handle direct changes
         if (!isRemote() && !isEmpty()) {
@@ -48,6 +49,7 @@ public class QIODriveSlot extends BasicInventorySlot {
 
     @Override
     public void setStackUnchecked(ItemStack stack) {
+        requireMutableDriveSlot();
         // if we're about to empty this slot and a drive already exists here, remove the current drive from the frequency
         // Note: We don't check to see if the new stack is empty so that we properly are able to handle direct changes
         if (!isRemote() && !isEmpty()) {
@@ -63,6 +65,9 @@ public class QIODriveSlot extends BasicInventorySlot {
 
     @Override
     public ItemStack insertItem(ItemStack stack, Action action, AutomationType automationType) {
+        if (action.execute() && !stack.isEmpty()) {
+            requireMutableDriveSlot();
+        }
         ItemStack ret = super.insertItem(stack, action, automationType);
         if (!isRemote() && action.execute() && ret.isEmpty()) {
             addDrive(stack);
@@ -72,6 +77,9 @@ public class QIODriveSlot extends BasicInventorySlot {
 
     @Override
     public ItemStack extractItem(int amount, Action action, AutomationType automationType) {
+        if (action.execute() && amount > 0 && !isEmpty()) {
+            requireMutableDriveSlot();
+        }
         if (!isRemote() && action.execute()) {
             ItemStack ret = super.extractItem(amount, Action.SIMULATE, automationType);
             if (!ret.isEmpty()) {
@@ -81,8 +89,25 @@ public class QIODriveSlot extends BasicInventorySlot {
         return super.extractItem(amount, action, automationType);
     }
 
+    @Override
+    public int setStackSize(int amount, Action action) {
+        if (action.execute() && !isEmpty() && amount != getCount()) {
+            requireMutableDriveSlot();
+        }
+        return super.setStackSize(amount, action);
+    }
+
     public QIODriveKey getKey() {
         return key;
+    }
+
+    private void requireMutableDriveSlot() {
+        if (!isRemote()) {
+            QIOFrequency frequency = driveHolder.getQIOFrequency();
+            if (frequency != null) {
+                frequency.requireNoInsertionTransaction();
+            }
+        }
     }
 
     private boolean isRemote() {

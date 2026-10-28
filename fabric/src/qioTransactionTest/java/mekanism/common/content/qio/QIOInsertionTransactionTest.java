@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -197,6 +198,28 @@ class QIOInsertionTransactionTest {
         //The abort also releases the guard, so normal legacy insertion is still available.
         assertEquals(0, holder.frequency.addItem(second).getCount());
         assertEquals(4, holder.frequency.getStored(second));
+    }
+
+    @Test
+    void serverDriveSlotRejectsReentrantInsertionBeforeMutating() {
+        Holder holder = new Holder();
+        Level serverLevel = mekanism.test.TileLevelStub.create();
+        int[] notifications = {0};
+        QIODriveSlot empty = new QIODriveSlot(holder, holder.slots.size(), () -> serverLevel, () -> notifications[0]++, 0, 0);
+        holder.slots.add(empty);
+        ItemStack drive = new ItemStack(new ItemQIODrive(QIODriveTier.BASE, new Item.Properties()));
+        try (Transaction tx = Transaction.openOuter()) {
+            assertEquals(3, holder.frequency.insertItem(new ItemStack(Items.STONE, 3), 3, tx));
+            assertTrue(empty.insertItem(drive, Action.SIMULATE, mekanism.api.AutomationType.MANUAL).isEmpty());
+            assertThrows(IllegalStateException.class, () -> empty.setStack(drive));
+            assertThrows(IllegalStateException.class, () -> empty.setStackUnchecked(drive));
+            assertThrows(IllegalStateException.class, () -> empty.insertItem(drive, Action.EXECUTE, mekanism.api.AutomationType.MANUAL));
+            assertTrue(empty.isEmpty());
+            assertEquals(0, notifications[0]);
+        }
+        empty.setStack(drive);
+        assertEquals(1, notifications[0]);
+        assertNotNull(holder.frequency.getDriveData(empty.getKey()));
     }
 
     @Test
