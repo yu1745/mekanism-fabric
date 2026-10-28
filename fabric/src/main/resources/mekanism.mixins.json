@@ -6,6 +6,7 @@
   "mixins": [
     "server.MinecraftServerMixin",
     "server.BiomeModificationScopeMixin",
+    "server.BiomeFeatureAppenderMixin",
     "recipe.FabricConditionTagCaptureMixin",
     "recipe.RecipeTagScopeCleanupMixin",
     "robit.RegistryDataMixin",
