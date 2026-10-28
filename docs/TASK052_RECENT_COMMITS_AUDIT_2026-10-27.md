@@ -176,7 +176,9 @@
 
 提交 `9b4c4391` 后按移植风格审查规则重读完整真实 diff，核对键盘事件、屏幕回退及失焦清理调用链；未发现该限定范围内新增已证实偏离。测试不替代真实 GLFW 输入和失焦交互。
 
-剩余偏离：Curios 位置的模式切换仍未接入；vanilla 设置界面无法表示/自定义组合键 modifier，描述键的显示不一定体现 SHIFT；鼠标 mixin 在 vanilla macOS control-click 归一化之前触发，可能与官方不同。还需在 mcdebug/真实客户端验证 GUI、重绑、重复、按下释放、远程同步与上述边界，不得将 F2 标成完全闭环。
+续审鼠标：固定官方 `MekKeyBinding.setDown` 由 `MouseHandler` 的 `KeyMapping.set` 驱动，此前 macOS Control+左击已归一化为右键；Fabric 的 HEAD hook 却收到原始左键。无屏幕/overlay、有玩家且不存在绑定冲突时，将 HUD 重绑到右键即可形成明确差异。修复把现有输入 hook 移到 vanilla 归一化和 touchscreen 早退之后、首次查询 overlay 之前，使用该方法当前的 button 参数；不复制 macOS 模拟右键状态机。编译、平台 slice、remapJar 和现有 client Knot 模型测试通过；增加 client Knot 加载真实 `MouseHandler`，验证该目标上的 mixin 成功应用，但未在 macOS 实测输入，不证明其他模组事件取消的互操作。
+
+剩余偏离：Curios 位置的模式切换仍未接入；vanilla 设置界面无法表示/自定义组合键 modifier，描述键的显示不一定体现 SHIFT。还需在 mcdebug/真实客户端验证 GUI、重绑、重复、按下释放、远程同步与上述边界，不得将 F2 标成完全闭环。
 
 ### F3 — Robit 无法通过充电板的实体能量路径充电（`5d2c9182`，代码修复已提交；端到端验证待完成）
 
