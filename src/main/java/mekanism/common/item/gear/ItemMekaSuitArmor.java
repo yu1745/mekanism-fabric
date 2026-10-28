@@ -134,7 +134,7 @@ public class ItemMekaSuitArmor extends ItemSpecialArmor implements IModuleContai
     }
 
     //Fabric port delta: NeoForge's damageItem hook let the suit refuse all durability loss. Vanilla has no item damage
-    // hook, so the Fabric-side ItemStack mixin cancels durability damage for MekaSuit pieces instead.
+    // hook, so the Fabric-side ItemStack mixin supplies zero damage to the shared server entry point instead.
 
     @Override
     public void onDestroyed(@NotNull ItemEntity item, @NotNull DamageSource damageSource) {

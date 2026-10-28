@@ -89,6 +89,22 @@ class ElytraFlightMixinTest {
         }
     }
 
+    @Test
+    void serverDamageEntryProtectsCustomDurabilityOnMekaSuit() {
+        ItemStack suit = new ItemStack(new ItemMekaSuitArmor(ArmorItem.Type.CHESTPLATE, new Item.Properties()));
+        suit.set(net.minecraft.core.component.DataComponents.MAX_DAMAGE, 100);
+        suit.set(net.minecraft.core.component.DataComponents.DAMAGE, 99);
+        // No enchantments are present; this fixture exercises the real transformed ItemStack server overload.
+        suit.hurtAndBreak(1, (net.minecraft.server.level.ServerLevel) null, null, item -> {
+            throw new AssertionError("MekaSuit must not break");
+        });
+        assertEquals(99, suit.getDamageValue());
+        assertEquals(1, suit.getCount());
+        ItemStack ordinary = new ItemStack(Items.IRON_SWORD);
+        ordinary.hurtAndBreak(1, (net.minecraft.server.level.ServerLevel) null, null, item -> {});
+        assertEquals(1, ordinary.getDamageValue());
+    }
+
     private static final class TestFlight extends Item implements IElytraFlight {
         boolean enabled = true;
         int ticks;
