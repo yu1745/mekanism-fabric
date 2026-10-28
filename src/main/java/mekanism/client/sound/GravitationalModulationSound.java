@@ -13,6 +13,6 @@ public class GravitationalModulationSound extends PlayerSound {
 
     @Override
     public boolean shouldPlaySound(@NotNull Player player) {
-        return PlayerState.INSTANCE.isGravitationalModulationOn(player);
+        return PlayerState.CLIENT.isGravitationalModulationOn(player);
     }
 }

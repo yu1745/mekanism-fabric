@@ -38,6 +38,17 @@ public final class FabricClientTickRegistration {
             if (entity instanceof net.minecraft.world.entity.player.Player player
                   && mekanism.common.config.MekanismConfig.client.enablePlayerSounds.get()) {
                 mekanism.client.sound.SoundHandler.startFlamethrowerSound(player);
+                var state = mekanism.common.base.PlayerState.CLIENT;
+                var uuid = player.getUUID();
+                if (state.isJetpackOn(uuid)) {
+                    mekanism.client.sound.SoundHandler.startSound(world, uuid, mekanism.client.sound.PlayerSound.SoundType.JETPACK);
+                }
+                if (state.isScubaMaskOn(uuid)) {
+                    mekanism.client.sound.SoundHandler.startSound(world, uuid, mekanism.client.sound.PlayerSound.SoundType.SCUBA_MASK);
+                }
+                if (state.isGravitationalModulationOn(uuid)) {
+                    mekanism.client.sound.SoundHandler.startSound(world, uuid, mekanism.client.sound.PlayerSound.SoundType.GRAVITATIONAL_MODULATOR);
+                }
             }
         });
         LOGGER.info("MEKANISM_FABRIC_CLIENT_TICK_PROOF handler=registered seams=mouse,fog_color,fog_setup,living_visibility,recipe_cache,entity_tracking");

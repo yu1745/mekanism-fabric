@@ -13,6 +13,6 @@ public class ScubaMaskSound extends PlayerSound {
 
     @Override
     public boolean shouldPlaySound(@NotNull Player player) {
-        return PlayerState.INSTANCE.isScubaMaskOn(player);
+        return PlayerState.CLIENT.isScubaMaskOn(player);
     }
 }

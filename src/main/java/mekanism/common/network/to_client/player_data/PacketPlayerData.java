@@ -39,8 +39,9 @@ public record PacketPlayerData(UUID uuid, boolean activeJetpack, boolean activeS
 
     @Override
     public void handle(Player player) {
-        PlayerState.INSTANCE.setJetpackState(uuid, activeJetpack, false);
-        PlayerState.INSTANCE.setScubaMaskState(uuid, activeScubaMask, false);
-        PlayerState.INSTANCE.setGravitationalModulationState(uuid, activeModulator, false);
+        PlayerState.CLIENT.init(player.level());
+        PlayerState.CLIENT.setJetpackState(uuid, activeJetpack, false);
+        PlayerState.CLIENT.setScubaMaskState(uuid, activeScubaMask, false);
+        PlayerState.CLIENT.setGravitationalModulationState(uuid, activeModulator, false);
     }
 }

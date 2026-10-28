@@ -26,6 +26,6 @@ public record PacketResetPlayerClient(UUID uuid) implements IMekanismPacket {
 
     @Override
     public void handle(Player player) {
-        PlayerState.INSTANCE.clearPlayer(uuid, true);
+        PlayerState.CLIENT.clearPlayer(uuid, true);
     }
 }

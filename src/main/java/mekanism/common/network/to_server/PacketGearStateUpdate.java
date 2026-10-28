@@ -34,6 +34,10 @@ public record PacketGearStateUpdate(GearType gearType, UUID uuid, boolean state)
 
     @Override
     public void handle(Player player) {
+        if (!player.getUUID().equals(uuid)) {
+            return;
+        }
+        PlayerState.INSTANCE.init(player.level());
         switch (gearType) {
             case JETPACK -> PlayerState.INSTANCE.setJetpackState(uuid, state, false);
             case SCUBA_MASK -> PlayerState.INSTANCE.setScubaMaskState(uuid, state, false);

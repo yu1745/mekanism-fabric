@@ -102,14 +102,14 @@ public class ClientTickHandler {
 
     public static boolean isScubaMaskOn(Player player) {
         if (player != minecraft.player) {
-            return PlayerState.INSTANCE.isScubaMaskOn(player);
+            return PlayerState.CLIENT.isScubaMaskOn(player);
         }
         return CommonPlayerTickHandler.isScubaMaskOn(player, player.getItemBySlot(EquipmentSlot.CHEST));
     }
 
     public static boolean isGravitationalModulationOn(Player player) {
         if (player != minecraft.player) {
-            return PlayerState.INSTANCE.isGravitationalModulationOn(player);
+            return PlayerState.CLIENT.isGravitationalModulationOn(player);
         }
         return CommonPlayerTickHandler.isGravitationalModulationOn(player);
     }
@@ -148,15 +148,16 @@ public class ClientTickHandler {
         SoundHandler.restartSounds();
         //Radiation pre-tick particles are owned by FabricRadiationClientLifecycle.
 
+        PlayerState.CLIENT.init(minecraft.level);
         UUID playerUUID = minecraft.player.getUUID();
         // Update player's state for various items; this also automatically notifies server if something changed and
         // kicks off sounds as necessary
         ItemStack jetpack = IJetpackItem.getActiveJetpack(minecraft.player);
         boolean jetpackInUse = isJetpackInUse(minecraft.player, jetpack);
-        //Mekanism.playerState resolves to the admitted base.PlayerState singleton on Fabric (Mekanism.rl precedent).
-        PlayerState.INSTANCE.setJetpackState(playerUUID, jetpackInUse, true);
-        PlayerState.INSTANCE.setScubaMaskState(playerUUID, isScubaMaskOn(minecraft.player), true);
-        PlayerState.INSTANCE.setGravitationalModulationState(playerUUID, isGravitationalModulationOn(minecraft.player), true);
+        //The client has its own logical-side owner, including when an integrated server shares this JVM.
+        PlayerState.CLIENT.setJetpackState(playerUUID, jetpackInUse, true);
+        PlayerState.CLIENT.setScubaMaskState(playerUUID, isScubaMaskOn(minecraft.player), true);
+        PlayerState.CLIENT.setGravitationalModulationState(playerUUID, isGravitationalModulationOn(minecraft.player), true);
 
         if (tickingNormally) {
             //Note: If we aren't ticking normally we can skip adding the particles or checking if the time matches as we know the time hasn't changed

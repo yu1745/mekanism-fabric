@@ -6,6 +6,7 @@ import mekanism.common.network.to_server.PacketAddTrusted;
 import mekanism.common.network.to_server.PacketDropperUse;
 import mekanism.common.network.to_server.PacketGuiSetEnergy;
 import mekanism.common.network.to_server.PacketGuiInteract;
+import mekanism.common.network.to_server.PacketGearStateUpdate;
 import mekanism.common.network.to_server.PacketKey;
 import mekanism.common.network.to_server.PacketModeChange;
 import mekanism.common.network.to_server.PacketOpenGui;
@@ -76,6 +77,7 @@ public final class FabricServerPlayNetworking {
         register(PacketUpdateModuleSettings.TYPE, PacketUpdateModuleSettings.STREAM_CODEC);
         register(PacketGuiSetEnergy.TYPE, PacketGuiSetEnergy.STREAM_CODEC);
         register(PacketGuiInteract.TYPE, PacketGuiInteract.STREAM_CODEC);
+        register(PacketGearStateUpdate.TYPE, PacketGearStateUpdate.STREAM_CODEC);
         register(PacketRadialModeChange.TYPE, PacketRadialModeChange.STREAM_CODEC);
         register(PacketModeChange.TYPE, PacketModeChange.STREAM_CODEC);
         register(PacketKey.TYPE, PacketKey.STREAM_CODEC);

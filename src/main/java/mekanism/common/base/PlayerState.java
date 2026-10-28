@@ -27,8 +27,9 @@ import net.minecraft.world.level.LevelAccessor;
 
 public class PlayerState {
 
-    /** Fabric port delta: owner of the excluded entrypoint's {@code playerState} field. */
+    /** Logical-side owners must not share state in an integrated server. */
     public static final PlayerState INSTANCE = new PlayerState();
+    public static final PlayerState CLIENT = new PlayerState();
 
     private static final ResourceLocation STEP_ASSIST_MODIFIER_ID = ResourceLocation.fromNamespaceAndPath("mekanism", "step_assist");
 
@@ -43,6 +44,7 @@ public class PlayerState {
         activeJetpacks.clear();
         activeScubaMasks.clear();
         activeGravitationalModulators.clear();
+        world = null;
         if (isRemote) {
             SoundHandler.clearPlayerSounds();
         }

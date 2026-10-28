@@ -46,6 +46,12 @@ public final class MekanismFabricClientBootstrap implements ClientModInitializer
         mekanism.fabric.network.FabricTransmitterClientNetworking.initialize();
         mekanism.fabric.client.render.FabricBoltRendering.initialize();
         mekanism.fabric.network.FabricPortalClientNetworking.initialize();
+        if (!net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(
+              mekanism.common.network.to_client.player_data.PacketPlayerData.TYPE, (packet, context) -> packet.handle(context.player())) ||
+            !net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(
+              mekanism.common.network.to_client.player_data.PacketResetPlayerClient.TYPE, (packet, context) -> packet.handle(context.player()))) {
+            throw new IllegalStateException("A player-state receiver is already registered");
+        }
         mekanism.fabric.network.FabricSecurityClientNetworking.initialize();
         mekanism.fabric.radiation.FabricRadiationClientLifecycle.initialize();
         // Client entrypoints run before the GL context exists. Construct the atlas on the render thread when the

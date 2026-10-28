@@ -55,7 +55,7 @@ public class MekanismClient {
      * Reset things that aren't needed between levels or would leak
      */
     public static void resetDimensionChange() {
-        PlayerState.INSTANCE.clear(true);
+        PlayerState.CLIENT.clear(true);
         MekanismServerState.activeVibrators().clear();
         ClientRadiation.resetClient();
         RenderSPS.clearBoltRenderers();
