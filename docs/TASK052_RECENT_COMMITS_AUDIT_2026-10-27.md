@@ -388,6 +388,8 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 当前 `FabricDataBasedUnbakedModel` 固定返回 unlit chunk 模型，emitting 时 `RenderQIORedstoneAdapter` 再绘制 lit 全模型；两套资源的非 torch 几何在同一位置重合，不能视为官方按 model data 选择其中一个模型。全局 lit 模型 map 还只按资源 ID 保存：同一模型按六种 blockstate 方向多次烘焙，后一次覆盖之前结果，BER 对所有朝向都取同一结果；只绘制 null 方向 quads，遗漏有 cullface 的底面，并忽略 tinted 面的 block color。JSON 的 `neoforge_data` 指定 LED 和 lit torch 全亮，vanilla 解析未证明保留。候选改为每个方块态 bake 同时保存两个模型，tile 显式提供 Fabric render data，FRAPI 网格按 Boolean 选择完整模型、逐面分桶并以官方频率颜色注册 adapter block tint；移除多余的全局 lit map 与叠绘 BER。对原 JSON 的元素 `neoforge_data` 重新按同一 state 烘焙对应面，完整亮度映射 emissive、部分亮度写 lightmap。隔离 client Knot 测试以原始 unlit/lit 资源验证两种状态、上下旋转、剔除面和灯 metadata 确实参与烘焙；编译及平台 gate 通过，真实客户端标题屏模型 smoke 15/15。首次编译因误用 block registry 的 `getBlock()` 报找不到符号，改成 `.get()` 后通过。`45bb7c0d` 的完整 554 行真实 diff 已按移植风格 prompt 复审；确认需明确保留以下偏离，未将其记为完全闭环。`2b9d0dca` 的完整 diff 已复审：追加测试核实所有官方 emitting 光照元数据生成的四边形确实匹配对应烘焙 quads 且为全亮，tile 可空标注也与实际返回值一致；未发现该局部改动的新增偏离。测试未执行实际 FRAPI 网格、色调或运行中状态切换，故不能证明画面；逐 face/inherited `neoforge_data`、几何完全相同但 metadata 不同的第三方资源包仍未覆盖，需继续复核与 mcdebug 实测，不能记全面等价。
 
+补充真实客户端探查：隔离单人开发世界中放置了真实 QIO 红石适配器，以 mcdebug 在客户端捕获了方块画面，并将服务端 `inverse` 改为 1 后再次截图；客户端错误级日志无条目，离开世界后正常退出。两次截图从当前视角均未能可靠辨认状态差异，且未独立读取客户端 render data，故只能证明该方块在该场景可绘制、没有捕获到错误，不能证明亮灭切换、色调或六方向正确。测试用临时调试依赖已移除。
+
 ### F50 — 声音 tick 守卫与官方相反（`a64dca8b`，代码已修，声音待验）
 
 `1d44ca1f^` 的官方 tick 在有效世界/玩家时每次调用 `restartSounds()`，而 Geiger 新建有 `tickingNormally` 守卫；后续移植把 restart 放进该守卫，同时去掉 Geiger 的守卫，故暂停/非正常 tick 时的配置重启及 Geiger 建立时机发生变化。修复在现有 tick handler 恢复原守卫与位置；`132da13a` 的完整 diff 已按移植风格 prompt 复审，该声音边界未发现新增偏离。`compileJava` 和平台 slice gate 通过，未进行真实音频验证。
@@ -395,6 +397,8 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 ### F66 — 自定义 TOOL 与 Fabric 默认值相同导致兜底误判（`dba8824e`，待解决）
 
 主代理追查 `5ee61549` 实际修正及当前两个工具：`ItemAtomicDisassembler` 和 `ItemMekaTool` 均对缺失组件返回 false，对与 Fabric 默认 `Tool` 不相等的替换组件调用 `tool.isCorrectForDrops`；通常的显式删除和不同替换已被正确处理。但固定官方两个工具默认 `Tool` 除 deny 规则外另有 `AnyHolderSet` catch-all，而 Fabric 默认只含 deny 规则、在 `equals` 相等时额外套 Java 兜底。若外部数据包/命令明确给出**恰好等于 Fabric 截断默认值的 deny-only TOOL**，固定官方将其当自定义规则，对非 deny 方块返回 false；当前 Fabric 将它当默认值返回 true。vanilla `PatchedDataComponentMap.applyPatch` 对等于 prototype 的值会移除 patch，因此不能简单靠检查 patch 检出用户意图。此为组件序列化及 prototype 所有权的具体边界，不能通过恒定兜底声称已完全保留。需要找到保持真实组件值、注册时序和 codec 的最小表示；不以旧 Fabric 开发版兼容为理由添加迁移，尚未修改生产代码或运行复现。
+
+只读复核进一步确认：固定 NeoForge 的 `AnyHolderSet` 持久化形状为 `{"type":"neoforge:any"}`，按动态 registry lookup 判断有 key 的 holder；Fabric vanilla 的 HolderSet codec 不接受该对象。因此只更换一个不等值默认哨兵仍会漏掉固定官方显式 TOOL 的读取。候选方向是仅为 TOOL 方块规则保留动态全方块集合及该格式，而非通用 Forge 转换层；但 `DataComponents.TOOL` 会在静态初始化时捕获复合 codec 并缓存编码，网络 HolderSet 编码、registry owner、动态注册时序及双端对称性均须先核实。当前仍未实现或宣称该候选可行。
 
 ### F65 — MekaSuit 自定义耐久组件的另一伤害入口（`2529dca8`，待修复）
 
