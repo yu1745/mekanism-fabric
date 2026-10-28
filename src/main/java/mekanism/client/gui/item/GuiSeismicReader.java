@@ -21,7 +21,6 @@ import mekanism.common.util.MekanismUtils.ResourceType;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -34,17 +33,16 @@ import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.level.material.FlowingFluid;
 import net.minecraft.world.level.material.Fluids;
-import net.minecraft.world.phys.BlockHitResult;
-import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
-import net.neoforged.neoforge.fluids.FluidType;
+import mekanism.api.fluid.FluidStack;
 import org.jetbrains.annotations.NotNull;
 
 public class GuiSeismicReader extends GuiMekanism<SeismicReaderContainer> {
 
     private final List<BlockInfo<?>> blockList = new ArrayList<>();
     private final Reference2IntMap<Block> blockFrequencies = new Reference2IntOpenHashMap<>();
-    private final Reference2IntMap<FluidType> fluidFrequencies = new Reference2IntOpenHashMap<>();
+    private final Reference2IntMap<Fluid> fluidFrequencies = new Reference2IntOpenHashMap<>();
     private final int minHeight;
     private MekanismButton upButton;
     private MekanismButton downButton;
@@ -67,36 +65,41 @@ public class GuiSeismicReader extends GuiMekanism<SeismicReaderContainer> {
             Block block = state.getBlock();
             blockFrequencies.mergeInt(block, 1, Integer::sum);
             //Try to get the clone item stack as maybe it has one, though it might not have a corresponding block
-            ItemStack stack = state.getCloneItemStack(new BlockHitResult(p.getCenter().relative(Direction.UP, 0.5), Direction.UP, p, false), level, p, player);
+            ItemStack stack = block.getCloneItemStack(level, p, state);
             if (stack.isEmpty()) {
                 Fluid fluid = Fluids.EMPTY;
-                if (block instanceof LiquidBlock liquidBlock) {
-                    fluid = liquidBlock.fluid;
+                if (block instanceof LiquidBlock) {
+                    fluid = state.getFluidState().getType();
                 } else if (block instanceof BubbleColumnBlock) {
                     fluid = level.getFluidState(p).getType();
                 }
                 if (fluid == Fluids.EMPTY) {
                     blockList.add(new BlockInfo<>(state, state, null));
                 } else {
-                    FluidType fluidType = fluid.getFluidType();
-                    blockList.add(new BlockInfo<>(state, fluidType, (graphics, f, x, y) -> {
-                        IClientFluidTypeExtensions properties = IClientFluidTypeExtensions.of(f);
-                        MekanismRenderer.color(graphics, properties.getTintColor());
-                        TextureAtlasSprite texture = MekanismRenderer.getSprite(properties.getStillTexture());
+                    Fluid source = sourceFluid(fluid);
+                    blockList.add(new BlockInfo<>(state, source, (graphics, f, x, y) -> {
+                        FluidStack fluidStack = new FluidStack(f, 1);
+                        MekanismRenderer.color(graphics, MekanismRenderer.getColorARGB(fluidStack));
+                        TextureAtlasSprite texture = MekanismRenderer.getBaseFluidTexture(f, MekanismRenderer.FluidTextureType.STILL);
                         graphics.blit(x, y, 0, 16, 16, texture);
                         MekanismRenderer.resetColor(graphics);
                     }));
-                    fluidFrequencies.mergeInt(fluidType, 1, Integer::sum);
+                    fluidFrequencies.mergeInt(source, 1, Integer::sum);
                 }
             } else {
                 blockList.add(new BlockInfo<>(state, stack, this::renderItem));
                 FluidState fluid = state.getFluidState();
                 if (!fluid.isEmpty()) {//Take the fluid into account for frequency count
                     //TODO: Do we want to render the fact that it is fluid logged in some way?
-                    fluidFrequencies.mergeInt(fluid.getFluidType(), 1, Integer::sum);
+                    fluidFrequencies.mergeInt(sourceFluid(fluid.getType()), 1, Integer::sum);
                 }
             }
         }
+    }
+
+    /** Vanilla flowing/still variants share the source fluid, like NeoForge's shared fluid type. */
+    static Fluid sourceFluid(Fluid fluid) {
+        return fluid instanceof FlowingFluid flowing ? flowing.getSource() : fluid;
     }
 
     @Override
@@ -118,9 +121,9 @@ public class GuiSeismicReader extends GuiMekanism<SeismicReaderContainer> {
                     text.add(block.getName());
                     text.add(MekanismLang.ABUNDANCY.translate(blockFrequencies.getInt(block)));
                 }
-                if (blockInfo.type() instanceof FluidType fluidType) {//TODO: Improve this so it actually displays for fluid logged blocks
-                    text.add(fluidType.getDescription());
-                    text.add(MekanismLang.ABUNDANCY.translate(fluidFrequencies.getInt(fluidType)));
+                if (blockInfo.type() instanceof Fluid fluid) {//TODO: Improve this so it actually displays for fluid logged blocks
+                    text.add(new FluidStack(fluid, 1).getHoverName());
+                    text.add(MekanismLang.ABUNDANCY.translate(fluidFrequencies.getInt(fluid)));
                 }
                 return text;
             }

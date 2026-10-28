@@ -186,6 +186,8 @@ mekanism/client/gui/element/window/filter/transporter/GuiSorterModIDFilter.java
 mekanism/client/gui/element/window/filter/transporter/GuiSorterTagFilter.java
 mekanism/client/gui/item/GuiDictionary.java
 mekanism/client/gui/item/GuiPersonalStorageItem.java
+mekanism/client/gui/item/GuiPortableTeleporter.java
+mekanism/client/gui/item/GuiSeismicReader.java
 mekanism/client/gui/machine/GuiAdvancedElectricMachine.java
 mekanism/client/gui/machine/GuiAntiprotonicNucleosynthesizer.java
 mekanism/client/gui/machine/GuiChemicalCrystallizer.java

@@ -32,10 +32,27 @@ public final class FabricScreenRegistration {
         MenuScreens.register(MekanismContainerTypes.ENERGIZED_SMELTER.get(),
               GuiElectricMachine<TileEntityEnergizedSmelter, MekanismTileContainer<TileEntityEnergizedSmelter>>::new);
         MenuScreens.register(MekanismContainerTypes.ELECTROLYTIC_SEPARATOR.get(), GuiElectrolyticSeparator::new);
+        MenuScreens.register(MekanismContainerTypes.CRUSHER.get(),
+              GuiElectricMachine<mekanism.common.tile.machine.TileEntityCrusher, MekanismTileContainer<mekanism.common.tile.machine.TileEntityCrusher>>::new);
+        MenuScreens.register(MekanismContainerTypes.CHEMICAL_INJECTION_CHAMBER.get(),
+              mekanism.client.gui.machine.GuiAdvancedElectricMachine<mekanism.common.tile.machine.TileEntityChemicalInjectionChamber,
+                    MekanismTileContainer<mekanism.common.tile.machine.TileEntityChemicalInjectionChamber>>::new);
+        MenuScreens.register(MekanismContainerTypes.OSMIUM_COMPRESSOR.get(),
+              mekanism.client.gui.machine.GuiAdvancedElectricMachine<mekanism.common.tile.machine.TileEntityOsmiumCompressor,
+                    MekanismTileContainer<mekanism.common.tile.machine.TileEntityOsmiumCompressor>>::new);
+        MenuScreens.register(MekanismContainerTypes.PURIFICATION_CHAMBER.get(),
+              mekanism.client.gui.machine.GuiAdvancedElectricMachine<mekanism.common.tile.machine.TileEntityPurificationChamber,
+                    MekanismTileContainer<mekanism.common.tile.machine.TileEntityPurificationChamber>>::new);
         //The client-registration screen batch: every admitted GUI binds its menu type here (the official
         //ClientRegistration registerScreen fan-out).
         MenuScreens.register(MekanismContainerTypes.MODULE_TWEAKER.get(), mekanism.client.gui.GuiModuleTweaker::new);
         MenuScreens.register(MekanismContainerTypes.DICTIONARY.get(), mekanism.client.gui.item.GuiDictionary::new);
+        MenuScreens.register(MekanismContainerTypes.PORTABLE_TELEPORTER.get(), mekanism.client.gui.item.GuiPortableTeleporter::new);
+        MenuScreens.register(MekanismContainerTypes.SEISMIC_READER.get(), mekanism.client.gui.item.GuiSeismicReader::new);
+        LOGGER.info("MEKANISM_FABRIC_SCREEN_RESTORED_PROOF menus={}", java.util.stream.Stream.of(
+              MekanismContainerTypes.CRUSHER, MekanismContainerTypes.CHEMICAL_INJECTION_CHAMBER, MekanismContainerTypes.OSMIUM_COMPRESSOR,
+              MekanismContainerTypes.PURIFICATION_CHAMBER, MekanismContainerTypes.PORTABLE_TELEPORTER, MekanismContainerTypes.SEISMIC_READER)
+              .map(type -> String.valueOf(BuiltInRegistries.MENU.getKey(type.get()))).collect(java.util.stream.Collectors.joining(",")));
         MenuScreens.register(MekanismContainerTypes.QIO_FREQUENCY_SELECT_ITEM.get(), mekanism.client.gui.qio.GuiQIOItemFrequencySelect::new);
         MenuScreens.register(MekanismContainerTypes.PORTABLE_QIO_DASHBOARD.get(), mekanism.client.gui.qio.GuiPortableQIODashboard::new);
         MenuScreens.register(MekanismContainerTypes.CHEMICAL_CRYSTALLIZER.get(), mekanism.client.gui.machine.GuiChemicalCrystallizer::new);

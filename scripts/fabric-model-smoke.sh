@@ -65,6 +65,7 @@ check "tile entity renderers registered" 'MEKANISM_FABRIC_BER_PROOF tile_types=5
 check "block-item ISBERs wired" 'MEKANISM_FABRIC_ITEM_RENDERER_PROOF suppressed_models=10 builtin_renderers=19'
 check "robit base geometry available" 'MEKANISM_FABRIC_ROBIT_MODEL_PROOF base_quads=[1-9][0-9]*'
 check "robit inventory delegates to builtin renderer" 'MEKANISM_FABRIC_ROBIT_ITEM_MODEL_PROOF builtin=true'
+check "missing machine and item screens registered" 'MEKANISM_FABRIC_SCREEN_RESTORED_PROOF menus=mekanism:crusher,mekanism:chemical_injection_chamber,mekanism:osmium_compressor,mekanism:purification_chamber,mekanism:portable_teleporter,mekanism:seismic_reader'
 check "HUD layers inserted into the vanilla draw" 'MEKANISM_FABRIC_HUD_PROOF layers=2'
 check "entity renderers registered" 'MEKANISM_FABRIC_ENTITY_RENDERER_PROOF entities=2'
 check "gear client tick handler wired" 'MEKANISM_FABRIC_CLIENT_TICK_PROOF handler=registered seams=mouse,fog_color,fog_setup,living_visibility,recipe_cache,entity_tracking'
