@@ -13,6 +13,6 @@ abstract class BiomeModificationScopeMixin {
 
     @WrapMethod(method = "finalizeWorldGen", remap = false)
     private void mekanism$withWorldResources(RegistryAccess registries, Operation<Void> original) {
-        FabricBiomeModifiers.withWorldModifiers(() -> original.call(registries));
+        FabricBiomeModifiers.withWorldModifiers(registries, () -> original.call(registries));
     }
 }

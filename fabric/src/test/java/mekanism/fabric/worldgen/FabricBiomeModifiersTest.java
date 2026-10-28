@@ -6,14 +6,20 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonParser;
+import com.mojang.serialization.Lifecycle;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
+import net.minecraft.core.MappedRegistry;
+import net.minecraft.core.RegistrationInfo;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.packs.PackLocationInfo;
 import net.minecraft.server.packs.PackResources;
@@ -21,8 +27,11 @@ import net.minecraft.server.packs.PackType;
 import net.minecraft.server.packs.PathPackResources;
 import net.minecraft.server.packs.repository.PackSource;
 import net.minecraft.server.packs.resources.MultiPackResourceManager;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.levelgen.GenerationStep;
+import net.minecraft.world.level.levelgen.placement.PlacedFeature;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -46,14 +55,14 @@ class FabricBiomeModifiersTest {
         Files.writeString(lowFile, official("fluorite"));
         Files.writeString(highFile, "{\"type\":\"neoforge:none\"}");
         try (MultiPackResourceManager defaults = resources(low); MultiPackResourceManager overridden = resources(low, high)) {
-            assertEquals(1, FabricBiomeModifiers.load(defaults).size());
-            assertTrue(FabricBiomeModifiers.load(overridden).isEmpty());
+            assertEquals(1, FabricBiomeModifiers.load(defaults, RegistryAccess.EMPTY).size());
+            assertTrue(FabricBiomeModifiers.load(overridden, RegistryAccess.EMPTY).isEmpty());
             FabricBiomeModifiers.captureWorldResources(overridden);
-            assertThrows(IllegalArgumentException.class, () -> FabricBiomeModifiers.withWorldModifiers(() -> {
+            assertThrows(IllegalArgumentException.class, () -> FabricBiomeModifiers.withWorldModifiers(RegistryAccess.EMPTY, () -> {
                 throw new IllegalArgumentException("fixture");
             }));
             FabricBiomeModifiers.captureWorldResources(defaults);
-            FabricBiomeModifiers.withWorldModifiers(() -> assertEquals(1, FabricBiomeModifiers.load(defaults).size()));
+            FabricBiomeModifiers.withWorldModifiers(RegistryAccess.EMPTY, () -> assertEquals(1, FabricBiomeModifiers.load(defaults, RegistryAccess.EMPTY).size()));
         }
     }
 
@@ -75,11 +84,11 @@ class FabricBiomeModifiersTest {
     }
 
     private static FabricBiomeModifiers.OreModifier parseOfficial(String name) {
-        return FabricBiomeModifiers.parse(JsonParser.parseString(official(name)).getAsJsonObject());
+        return FabricBiomeModifiers.parse(JsonParser.parseString(official(name)).getAsJsonObject(), RegistryAccess.EMPTY);
     }
 
     private static FabricBiomeModifiers.OreModifier parse(String json) {
-        return FabricBiomeModifiers.parse(JsonParser.parseString(json).getAsJsonObject());
+        return FabricBiomeModifiers.parse(JsonParser.parseString(json).getAsJsonObject(), RegistryAccess.EMPTY);
     }
 
     private static ResourceLocation id(String value) {
@@ -138,18 +147,44 @@ class FabricBiomeModifiersTest {
     }
 
     @Test
-    void rejectsUnknownTypeStepAndEmptySets() {
+    void rejectsUnknownTypeAndStep() {
         assertThrows(IllegalStateException.class, () -> parse(
               """ 
               {"type":"mekanismadditions:baby_mob_spawn","baby_type":"creeper"}"""));
         assertThrows(IllegalStateException.class, () -> parse("""
               {"type":"neoforge:add_features","biomes":"#c:is_overworld","features":"mekanism:salt","step":"not_a_decoration_step"}
               """));
-        assertThrows(IllegalStateException.class, () -> parse("""
+    }
+
+    @Test
+    void resolvesPlacedFeatureTagsFromCurrentRegistry() {
+        net.minecraft.SharedConstants.tryDetectVersion();
+        net.minecraft.server.Bootstrap.bootStrap();
+        var features = new MappedRegistry<PlacedFeature>(Registries.PLACED_FEATURE, Lifecycle.stable());
+        var first = features.register(ResourceKey.create(Registries.PLACED_FEATURE, id("mekanism:first")),
+              new PlacedFeature(null, List.of()), RegistrationInfo.BUILT_IN);
+        var second = features.register(ResourceKey.create(Registries.PLACED_FEATURE, id("mekanism:second")),
+              new PlacedFeature(null, List.of()), RegistrationInfo.BUILT_IN);
+        features.freeze();
+        features.bindTags(Map.of(TagKey.create(Registries.PLACED_FEATURE, id("mekanism:test")), List.of(second, first)));
+        var registries = new RegistryAccess.ImmutableRegistryAccess(List.of(features));
+        var json = JsonParser.parseString("""
+              {"type":"neoforge:add_features","biomes":"minecraft:plains","features":"#mekanism:test","step":"underground_ores"}
+              """).getAsJsonObject();
+        assertEquals(List.of(id("mekanism:second"), id("mekanism:first")), FabricBiomeModifiers.parse(json, registries).features());
+        json.addProperty("features", "#mekanism:missing");
+        assertThrows(IllegalStateException.class, () -> FabricBiomeModifiers.parse(json, registries));
+    }
+
+    @Test
+    void acceptsEmptyHolderSetsAsNoOps() {
+        var noBiomes = parse("""
               {"type":"neoforge:add_features","biomes":[],"features":"mekanism:salt","step":"underground_ores"}
-              """));
-        assertThrows(IllegalStateException.class, () -> parse("""
+              """);
+        assertFalse(FabricBiomeModifiers.matches(noBiomes.biomes(), tag -> true, biome -> true));
+        var noFeatures = parse("""
               {"type":"neoforge:add_features","biomes":"#c:is_overworld","features":[],"step":"underground_ores"}
-              """));
+              """);
+        assertTrue(noFeatures.features().isEmpty());
     }
 }

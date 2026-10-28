@@ -15,6 +15,7 @@ import mekanism.api.MekanismAPI;
 import net.fabricmc.fabric.api.biome.v1.BiomeModifications;
 import net.fabricmc.fabric.api.biome.v1.BiomeSelectionContext;
 import net.fabricmc.fabric.api.biome.v1.ModificationPhase;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.FileToIdConverter;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
@@ -82,14 +83,14 @@ public final class FabricBiomeModifiers {
     }
 
     /** Runs Fabric's synchronous worldgen finalization with this world's resources, never a process-wide callback list. */
-    public static void withWorldModifiers(Runnable finalizeWorldGen) {
+    public static void withWorldModifiers(RegistryAccess registries, Runnable finalizeWorldGen) {
         WeakReference<ResourceManager> pending = PENDING_RESOURCES.get();
         ResourceManager resources = pending == null ? null : pending.get();
         PENDING_RESOURCES.remove();
         if (resources == null || ACTIVE_MODIFIERS.get() != null) {
             throw new IllegalStateException("Missing or nested Mekanism worldgen resource scope");
         }
-        List<OreModifier> modifiers = load(resources);
+        List<OreModifier> modifiers = load(resources, registries);
         ACTIVE_MODIFIERS.set(modifiers);
         try {
             finalizeWorldGen.run();
@@ -98,7 +99,7 @@ public final class FabricBiomeModifiers {
         }
     }
 
-    static List<OreModifier> load(ResourceManager resources) {
+    static List<OreModifier> load(ResourceManager resources, RegistryAccess registries) {
         List<OreModifier> modifiers = new ArrayList<>();
         Map<ResourceLocation, Resource> files = MODIFIERS.listMatchingResources(resources);
         for (var entry : files.entrySet().stream().sorted(Map.Entry.comparingByKey()).toList()) {
@@ -109,7 +110,7 @@ public final class FabricBiomeModifiers {
             try (Reader reader = entry.getValue().openAsReader()) {
                 JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
                 if (!"neoforge:none".equals(json.get("type").getAsString())) {
-                    modifiers.add(parse(json));
+                    modifiers.add(parse(json, registries));
                 }
             } catch (IOException | RuntimeException failure) {
                 throw new IllegalStateException("Failed to load biome modifier " + id, failure);
@@ -121,13 +122,13 @@ public final class FabricBiomeModifiers {
     }
 
     /** Strict parser for one official {@code neoforge:add_features} JSON object. */
-    static OreModifier parse(JsonObject json) {
+    static OreModifier parse(JsonObject json, RegistryAccess registries) {
         String type = json.get("type").getAsString();
         if (!TYPE_ADD_FEATURES.equals(type)) {
             throw new IllegalStateException("Unsupported official biome modifier type: " + type);
         }
         return new OreModifier(parseBiomes(json.get("biomes")), parseStep(json.get("step").getAsString()),
-              parseLocations(json.get("features")));
+              parseLocations(json.get("features"), registries));
     }
 
     private static BiomeSelector parseBiomes(JsonElement element) {
@@ -142,9 +143,6 @@ public final class FabricBiomeModifiers {
                 biomes.add(ResourceLocation.parse(raw));
             }
         }
-        if (tags.isEmpty() && biomes.isEmpty()) {
-            throw new IllegalStateException("Official biome modifier declares an empty biome set");
-        }
         return new BiomeSelector(List.copyOf(tags), List.copyOf(biomes));
     }
 
@@ -157,7 +155,15 @@ public final class FabricBiomeModifiers {
         throw new IllegalStateException("Unknown official biome modifier decoration step: " + step);
     }
 
-    private static List<ResourceLocation> parseLocations(JsonElement element) {
+    private static List<ResourceLocation> parseLocations(JsonElement element, RegistryAccess registries) {
+        if (element.isJsonPrimitive() && element.getAsString().startsWith("#")) {
+            ResourceLocation id = ResourceLocation.parse(element.getAsString().substring(1));
+            var registry = registries.registryOrThrow(Registries.PLACED_FEATURE);
+            var tag = TagKey.create(Registries.PLACED_FEATURE, id);
+            return registry.getTag(tag).orElseThrow(() -> new IllegalStateException("Missing placed feature tag: " + id))
+                  .stream().map(holder -> holder.unwrapKey().orElseThrow(() -> new IllegalStateException("Unregistered placed feature in tag " + id)).location())
+                  .toList();
+        }
         List<String> raw = rawStrings(element);
         List<ResourceLocation> locations = new ArrayList<>(raw.size());
         for (String entry : raw) {
@@ -169,9 +175,6 @@ public final class FabricBiomeModifiers {
     private static List<String> rawStrings(JsonElement element) {
         if (element.isJsonArray()) {
             JsonArray array = element.getAsJsonArray();
-            if (array.isEmpty()) {
-                throw new IllegalStateException("Official biome modifier declares an empty location list");
-            }
             List<String> entries = new ArrayList<>(array.size());
             for (JsonElement entry : array) {
                 entries.add(entry.getAsString());
