@@ -398,7 +398,7 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 主代理追查 `5ee61549` 实际修正及当前两个工具：`ItemAtomicDisassembler` 和 `ItemMekaTool` 均对缺失组件返回 false，对与 Fabric 默认 `Tool` 不相等的替换组件调用 `tool.isCorrectForDrops`；通常的显式删除和不同替换已被正确处理。但固定官方两个工具默认 `Tool` 除 deny 规则外另有 `AnyHolderSet` catch-all，而 Fabric 默认只含 deny 规则、在 `equals` 相等时额外套 Java 兜底。若外部数据包/命令明确给出**恰好等于 Fabric 截断默认值的 deny-only TOOL**，固定官方将其当自定义规则，对非 deny 方块返回 false；当前 Fabric 将它当默认值返回 true。vanilla `PatchedDataComponentMap.applyPatch` 对等于 prototype 的值会移除 patch，因此不能简单靠检查 patch 检出用户意图。此为组件序列化及 prototype 所有权的具体边界，不能通过恒定兜底声称已完全保留。需要找到保持真实组件值、注册时序和 codec 的最小表示；不以旧 Fabric 开发版兼容为理由添加迁移，尚未修改生产代码或运行复现。
 
-只读复核进一步确认：固定 NeoForge 的 `AnyHolderSet` 持久化形状为 `{"type":"neoforge:any"}`，按动态 registry lookup 判断有 key 的 holder；Fabric vanilla 的 HolderSet codec 不接受该对象。因此只更换一个不等值默认哨兵仍会漏掉固定官方显式 TOOL 的读取。候选方向是仅为 TOOL 方块规则保留动态全方块集合及该格式，而非通用 Forge 转换层；但 `DataComponents.TOOL` 会在静态初始化时捕获复合 codec 并缓存编码，网络 HolderSet 编码、registry owner、动态注册时序及双端对称性均须先核实。当前仍未实现或宣称该候选可行。
+只读复核进一步确认：固定 NeoForge 的 `AnyHolderSet` 持久化形状为 `{"type":"neoforge:any"}`，按动态 registry lookup 判断有 key 的 holder；Fabric vanilla 的 HolderSet codec 不接受该对象。因此只更换一个不等值默认哨兵仍会漏掉固定官方显式 TOOL 的读取。候选方向是仅为 TOOL 方块规则保留动态全方块集合及该格式，而非通用 Forge 转换层；但 `DataComponents.TOOL` 会在静态初始化时捕获复合 codec 并缓存编码，网络 HolderSet 编码、registry owner、动态注册时序及双端对称性均须先核实。`Tool.<clinit>` 首次读取 `Tool.Rule.CODEC` 时先完成 `Rule.<clinit>`，然后将规则 codec 捕获到列表复合 codec；必须在规则类初始化结束前完成替换，之后修改静态字段不会更新已捕获的复合 codec。Fabric `RegistryOps.getter` 只保证 `HolderGetter`，不能无条件强转以枚举；固定 NeoForge 的对应方法要求 owner 实际是 `HolderLookup.RegistryLookup`，否则报错，Fabric 候选也应显式核验而非退回全局 registry。vanilla 网络 HolderSet 将非 tag 集合展开为 holder 列表并解码为 `Direct`，丢失动态性；负 VarInt 标记只有安装相同扩展的双端可理解，不意味着与 vanilla、其他 mod 或 NeoForge wire 互通。当前仍未实现或宣称该候选可行。
 
 ### F65 — MekaSuit 自定义耐久组件的另一伤害入口（`2529dca8`，待修复）
 
