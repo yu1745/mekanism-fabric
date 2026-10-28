@@ -77,11 +77,15 @@
 
 ## 审查发现与待复核
 
-### F55 — QIO 驱动阵列的物品外观和发光（`fe375103`，待修）
+### F55 — QIO 驱动阵列的物品外观和发光（`fe375103`，代码修复已提交；实机画面待验）
 
 原 `DriveArrayBakedModel.DriveArrayOverrideList` 从阵列物品的 12 个附件槽、drive metadata 和频率推导 OFFLINE/READY/NEAR_FULL/FULL，并将相应驱动器几何添加到物品模型；Fabric 仅注册方块实体渲染器，物品模型无 override，因此带驱动器的阵列在手中/物品栏仍显示空架。原审查已明确延后，但这属于已接入模型的官方公共视觉行为，不能以启动 proof 算闭环。
 
-四种 drive 模型的 LED 使用 `neoforge_data` 的 block/sky 15；当前缓存走 vanilla JSON 烘焙忽略此字段，且 BER 使用 vanilla `putBulkData` 不读取 baked light，故暗处发光语义未实现。相关 QIO shell 的频率/状态 LED 也有同类声明，应以实际模型/owner 分层修复，不将整个壳体设为全亮。修复需复用同一驱动器几何与官方状态推导，保留物品基础模型和透明度、重载缓存及方向，不凭标题屏 proof 判定画面。
+三个在线 drive 模型的 LED 使用 `neoforge_data` 的 block/sky 15（offline 模型无 LED）；原缓存走 vanilla JSON 烘焙忽略此字段，且 BER 使用 vanilla `putBulkData` 不读取 baked light，故暗处发光语义未实现。阵列在线 shell 的频率/状态 LED 也有同类声明。
+
+修复 `ed4ec533` 按官方状态算法读取物品附件，并让物品和方块实体共用原 drive 模型、摆位和方向；模型加载阶段按原始元素及实际烘焙旋转恢复逐面亮度，shell 和物品用 FRAPI 发射、BER 按分量合并环境和最低亮度。模型缓存改在 wrapper 后捕获，每次资源重载重新解析；物品仍委托原模型及 override，非 vanilla 自定义模型的发射也保留委托。已依审查 prompt 重读该提交完整 618 行真实 diff，对照官方 override、Fabric 顶层物品烘焙及模型事件 phase 顺序，未发现该限定路径新增偏离。`compileJava` 和两项隔离 Knot focused tests 通过：真实附件槽和 drive 元数据覆盖空、离线及三个在线容量状态；合成 sprite 的两个旋转验证原始模型中发光与普通面分别匹配。首次状态测试缺少真实槽 creator 而失败，按实际 owner 注册后重跑通过。真实客户端 smoke 16/16；日志证明物品顶层 wrapper 装载且 shell 四面、三个在线 drive 各五面亮度被解析，离线为零；客户端在标题 proof 后主动终止（exit 1），未证明任何像素。
+
+仍未用 mcdebug 验证手持、物品栏、暗处方块、朝向、透明渲染或资源包重载画面。非 vanilla 自定义 FRAPI 模型的基础发射直接委托原模型，其自定义的 NeoForge 灯光元数据不由此 wrapper 强加；其他 QIO 壳体不属于本次修复，资源包 override 链与第三方模型兼容也未实测。
 
 ### F54 — 节日通知频率偏离官方（`1b770d06`，代码修复已提交）
 
