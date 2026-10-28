@@ -38,8 +38,10 @@ import mekanism.common.tile.component.config.slot.FluidSlotInfo;
 import mekanism.common.tile.component.config.slot.HeatSlotInfo;
 import mekanism.common.tile.component.config.slot.ISlotInfo;
 import mekanism.common.tile.component.config.slot.InventorySlotInfo;
+import mekanism.common.tile.transmitter.TileEntityTransmitter;
 import mekanism.common.util.EnumUtils;
 import mekanism.common.util.NBTUtils;
+import mekanism.common.util.WorldUtils;
 import net.fabricmc.fabric.api.lookup.v1.block.BlockApiLookup;
 import net.fabricmc.fabric.api.transfer.v1.fluid.FluidStorage;
 import net.fabricmc.fabric.api.transfer.v1.item.ItemStorage;
@@ -101,6 +103,15 @@ public class TileComponentConfig implements ITileComponent, ISpecificContainerTr
         //And invalidate any "listeners" we may have that the side changed for a specific transmission type
         for (Consumer<Direction> listener : configChangeListeners.getOrDefault(transmissionType, Collections.emptyList())) {
             listener.accept(direction);
+        }
+        // Fabric lookups have no push invalidation. Recheck the already-loaded neighboring transmitter on its own tick,
+        // after the machine's side policy and its listeners have settled; never load an adjacent chunk for this.
+        var level = tile.getLevel();
+        if (level != null && !level.isClientSide()) {
+            TileEntityTransmitter neighbor = WorldUtils.getTileEntity(TileEntityTransmitter.class, level, tile.getBlockPos().relative(direction));
+            if (neighbor != null) {
+                neighbor.queueAcceptorRefresh(direction.getOpposite());
+            }
         }
     }
 

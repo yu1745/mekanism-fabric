@@ -1,6 +1,7 @@
 package mekanism.common.tile.transmitter;
 
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.function.Predicate;
 import mekanism.api.IAlloyInteraction;
@@ -71,6 +72,7 @@ public abstract class TileEntityTransmitter extends CapabilityTileEntity impleme
     private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism");
     private final Transmitter<?, ?, ?> transmitter;
     private boolean forceUpdate = true;
+    private final EnumSet<Direction> pendingAcceptorRefresh = EnumSet.noneOf(Direction.class);
     private boolean loaded = false;
     private boolean markJoined = false;
 
@@ -98,6 +100,11 @@ public abstract class TileEntityTransmitter extends CapabilityTileEntity impleme
         forceUpdate = true;
     }
 
+    /** Defer a neighboring Mekanism capability change until this transmitter's server tick. */
+    public void queueAcceptorRefresh(Direction side) {
+        pendingAcceptorRefresh.add(side);
+    }
+
     public abstract TransmitterType getTransmitterType();
 
     protected void onUpdateServer() {
@@ -108,6 +115,15 @@ public abstract class TileEntityTransmitter extends CapabilityTileEntity impleme
         if (forceUpdate) {
             getTransmitter().refreshConnections();
             forceUpdate = false;
+        }
+        if (!pendingAcceptorRefresh.isEmpty()) {
+            // Clear first: a callback triggered while refreshing must be processed on a later tick, not lost.
+            EnumSet<Direction> sides = EnumSet.copyOf(pendingAcceptorRefresh);
+            pendingAcceptorRefresh.clear();
+            for (Direction side : sides) {
+                getTransmitter().refreshConnections(side);
+                getTransmitter().markDirtyAcceptor(side);
+            }
         }
     }
 
