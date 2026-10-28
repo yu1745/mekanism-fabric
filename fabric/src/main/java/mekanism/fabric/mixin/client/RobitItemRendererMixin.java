@@ -27,7 +27,7 @@ public abstract class RobitItemRendererMixin {
         if (stack.getItem() instanceof ItemRobit) {
             BakedModel geometry = FabricItemRendererRegistration.robitGeometry(selectedModel);
             if (geometry != null) {
-                FabricRobitItemRenderer.renderResolved(stack, matrices, buffers, light, overlay, geometry);
+                FabricRobitItemRenderer.renderResolved(stack, context, matrices, buffers, light, overlay, geometry);
                 return;
             }
         }

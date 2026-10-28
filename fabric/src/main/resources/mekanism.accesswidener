@@ -1,5 +1,8 @@
 accessWidener v2 named
 
+# The Robit builtin item path retains vanilla's registered item tint providers.
+accessible field net/minecraft/client/Minecraft itemColors Lnet/minecraft/client/color/item/ItemColors;
+
 # Mirrors Mekanism's NeoForge access transformer so HeatAPI can retain
 # position-adjusted biome ambient-temperature semantics.
 accessible method net/minecraft/world/level/biome/Biome getTemperature (Lnet/minecraft/core/BlockPos;)F

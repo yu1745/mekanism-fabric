@@ -10,10 +10,16 @@ import mekanism.common.registries.MekanismRobitSkins;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.resources.model.BakedModel;
+import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.ItemTags;
+import net.minecraft.util.FastColor;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -30,20 +36,42 @@ public final class FabricRobitItemRenderer {
           @NotNull MultiBufferSource vertexConsumers, int light, int overlay) {
         Minecraft minecraft = Minecraft.getInstance();
         BakedModel model = resolveModel(stack, minecraft.level, null, 0, mekanism.client.model.MekanismModelCache.INSTANCE.getBaseRobit());
-        renderResolved(stack, matrices, vertexConsumers, light, overlay, model);
+        renderResolved(stack, context, matrices, vertexConsumers, light, overlay, model);
     }
 
     /** Render the same model already selected by ItemRenderer, without re-running its overrides. */
-    public static void renderResolved(ItemStack stack, com.mojang.blaze3d.vertex.PoseStack matrices, MultiBufferSource vertexConsumers,
-          int light, int overlay, BakedModel model) {
+    public static void renderResolved(ItemStack stack, ItemDisplayContext context, com.mojang.blaze3d.vertex.PoseStack matrices,
+          MultiBufferSource vertexConsumers, int light, int overlay, BakedModel model) {
+        com.mojang.blaze3d.vertex.VertexConsumer buffer;
+        if ((stack.is(ItemTags.COMPASSES) || stack.is(Items.CLOCK)) && stack.hasFoil()) {
+            com.mojang.blaze3d.vertex.PoseStack.Pose pose = matrices.last().copy();
+            if (context == ItemDisplayContext.GUI) {
+                com.mojang.math.MatrixUtil.mulComponentWise(pose.pose(), 0.5F);
+            } else if (context.firstPerson()) {
+                com.mojang.math.MatrixUtil.mulComponentWise(pose.pose(), 0.75F);
+            }
+            buffer = ItemRenderer.getCompassFoilBuffer(vertexConsumers, RobitSpriteUploader.RENDER_TYPE, pose);
+        } else {
+            buffer = ItemRenderer.getFoilBufferDirect(vertexConsumers, RobitSpriteUploader.RENDER_TYPE, true, stack.hasFoil());
+        }
         ResourceLocation skinTexture = skinTexture(stack);
-        com.mojang.blaze3d.vertex.PoseStack poseStack = matrices;
-        List<BakedQuad> quads = RobitBakedModel.transformForSkin(model.getQuads(null, null, Minecraft.getInstance().level != null
-              ? Minecraft.getInstance().level.random : net.minecraft.util.RandomSource.create()), skinTexture);
-        com.mojang.blaze3d.vertex.VertexConsumer buffer = vertexConsumers.getBuffer(RobitSpriteUploader.RENDER_TYPE);
-        com.mojang.blaze3d.vertex.PoseStack.Pose pose = poseStack.last();
-        for (BakedQuad quad : quads) {
-            buffer.putBulkData(pose, quad, 1.0F, 1.0F, 1.0F, 1.0F, RobitBakedModel.lightFor(quad, light), overlay);
+        RandomSource random = RandomSource.create();
+        for (Direction direction : Direction.values()) {
+            random.setSeed(42L);
+            renderQuads(stack, matrices, buffer, light, overlay, model.getQuads(null, direction, random), skinTexture);
+        }
+        random.setSeed(42L);
+        renderQuads(stack, matrices, buffer, light, overlay, model.getQuads(null, null, random), skinTexture);
+    }
+
+    private static void renderQuads(ItemStack stack, com.mojang.blaze3d.vertex.PoseStack matrices,
+          com.mojang.blaze3d.vertex.VertexConsumer buffer, int light, int overlay, List<BakedQuad> source, ResourceLocation skinTexture) {
+        for (BakedQuad quad : RobitBakedModel.transformForSkin(source, skinTexture)) {
+            int color = quad.isTinted() ? Minecraft.getInstance().itemColors.getColor(stack, quad.getTintIndex()) : -1;
+            int packedLight = RobitBakedModel.lightFor(quad, light);
+            buffer.putBulkData(matrices.last(), quad, new float[]{1, 1, 1, 1}, FastColor.ARGB32.red(color) / 255.0F,
+                  FastColor.ARGB32.green(color) / 255.0F, FastColor.ARGB32.blue(color) / 255.0F, FastColor.ARGB32.alpha(color) / 255.0F,
+                  new int[]{packedLight, packedLight, packedLight, packedLight}, overlay, true);
         }
     }
 
