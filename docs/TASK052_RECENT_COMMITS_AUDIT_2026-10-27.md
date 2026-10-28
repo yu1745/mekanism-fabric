@@ -84,6 +84,10 @@
 
 ## 审查发现与待复核
 
+### F60 — Mekanism 创造标签内搜索缺失（`38b8b1af`，待修）
+
+原官方 `MekanismCreativeTabs` 调用 `withSearchBar()`；固定 NeoForge 创造界面对每个启用搜索的标签显示输入框，并基于该标签 `getDisplayItems()` 独立构建名称与标签搜索树，包含只在父标签显示的变体。移植移除该调用后，原版界面仅对全局 SEARCH 标签显示搜索框：全局搜索能找到部分 Mekanism 物品不等于在本标签内搜索，且可能遗漏 `PARENT_TAB_ONLY` 变体。Fabric ItemGroup API 没有对应 builder 接口；修复应限定 Mekanism 标签，使用真实 vanilla 查询语义和该标签显示项，不能简单把全部类型变成全局 SEARCH 或只过滤全局搜索结果。UI 的输入、标签查询、语言/数据重载和滚动需实测。
+
 ### F59 — MekaSuit 滑翔维持和 HDPE 鞘翅入口失效（`2529dca8` 纳入的既有 mixin，代码已修；实机待验）
 
 只读子代理固定 `84f90de1` 复核 11 个既有 mixin，主代理对照固定两份 Minecraft 与当前调用链：NeoForge 每个滑翔 tick 先 `canElytraFly` 再 `elytraFlightTick`；Fabric 的 `LivingEntityElytraMixin` 只调用后者。真实 `ItemMekaSuitArmor.elytraFlightTick` 假设前者已检查，故滑翔后潜行、能量耗尽、模块关闭或喷气 hover 条件改变仍可能继续飞行；并且它自行每 10 tick 发 `ELYTRA_GLIDE`，vanilla 后段又发送同一事件。另主代理发现官方 HDPE 物品继承 `ElytraItem` 但未实现 `IElytraFlight`，客户端、服务端启动及维持的 redirect 仍只接受 `Items.ELYTRA` 或该接口，因此 HDPE 鞘翅不能像官方那样启动/维持滑翔。修复 `ca24d8e7` 在真正的 `updateFallFlying` 中对 Mekanism `IElytraFlight` 保留原条件顺序、短路检查与自身 tick，跳过 vanilla 重复伤害/事件分支；HDPE 在客户端、服务端开始及维持路径进入 vanilla 鞘翅检查和 tick。已按 prompt 重读该提交完整 241 行 diff，对照固定 NeoForge/vanilla 两处原方法及当前 MekaSuit owner，未发现本限定路径新增偏离。隔离 Knot 三项测试执行真实 mixin：真实无模块 MekaSuit 退出、测试 provider 先判能否飞再 tick 且事件仅一次、HDPE 与 vanilla 服务端开始并维持和事件一致；`TileLevelStub` 不是 `ServerLevel`，因此不证明耐久写入。首次测试的 inherited `@Shadow setSharedFlag` 无法解析，改为 mixin 继承真实 `Entity` 后通过；随后耐久断言因 stub 非 ServerLevel 不会扣耐久，核对 vanilla 后去除该错误假设。真实客户端启动 smoke 19/19，proof 后主动终止 exit 1；未实测 jump、飞行/能耗及资源包或其他 mixin 互操作。对 custom flight 取消原方法可能与第三方注入同点产生顺序差异，不能宣称完整平台兼容。
