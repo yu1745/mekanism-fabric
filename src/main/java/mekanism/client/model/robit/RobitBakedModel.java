@@ -54,6 +54,18 @@ public class RobitBakedModel implements BakedModel {
         return quads;
     }
 
+    /** Vanilla putBulkData ignores the light encoded in baked vertices; preserve the model's per-face minimum. */
+    public static int lightFor(BakedQuad quad, int ambientLight) {
+        int block = net.minecraft.client.renderer.LightTexture.block(ambientLight);
+        int sky = net.minecraft.client.renderer.LightTexture.sky(ambientLight);
+        for (int vertex = 0; vertex < 4; vertex++) {
+            int baked = quad.getVertices()[vertex * 8 + 6];
+            block = Math.max(block, net.minecraft.client.renderer.LightTexture.block(baked));
+            sky = Math.max(sky, net.minecraft.client.renderer.LightTexture.sky(baked));
+        }
+        return net.minecraft.client.renderer.LightTexture.pack(block, sky);
+    }
+
     @Override
     public @NotNull List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side, @NotNull RandomSource rand) {
         return transformForSkin(original.getQuads(state, side, rand), skinTexture);

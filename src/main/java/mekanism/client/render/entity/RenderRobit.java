@@ -68,7 +68,7 @@ public class RenderRobit extends MobRenderer<EntityRobit, RobitModelWrapper> {
                 //Fabric port: the entity's model data has no fabric equivalent - the skin texture is read directly
                 //and the per-skin transform of the reshaped RobitBakedModel applies it.
                 for (BakedQuad quad : RobitBakedModel.transformForSkin(model.getQuads(null, null, robit.level().random), robit.getModelTexture())) {
-                    builder.putBulkData(last, quad, red, green, blue, alpha, light, overlayLight);
+                    builder.putBulkData(last, quad, red, green, blue, alpha, RobitBakedModel.lightFor(quad, light), overlayLight);
                 }
                 matrix.popPose();
             }

@@ -11,8 +11,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.resources.model.BakedModel;
-import net.fabricmc.fabric.api.client.model.loading.v1.FabricBakedModelManager;
-import net.minecraft.client.resources.model.ModelManager;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
@@ -30,7 +28,8 @@ public final class FabricRobitItemRenderer {
 
     public static void renderByItem(@NotNull ItemStack stack, @NotNull ItemDisplayContext context, @NotNull com.mojang.blaze3d.vertex.PoseStack matrices,
           @NotNull MultiBufferSource vertexConsumers, int light, int overlay) {
-        BakedModel model = modelFor(stack);
+        Minecraft minecraft = Minecraft.getInstance();
+        BakedModel model = resolveModel(stack, minecraft.level, null, 0, mekanism.client.model.MekanismModelCache.INSTANCE.getBaseRobit());
         ResourceLocation skinTexture = skinTexture(stack);
         com.mojang.blaze3d.vertex.PoseStack poseStack = matrices;
         List<BakedQuad> quads = RobitBakedModel.transformForSkin(model.getQuads(null, null, Minecraft.getInstance().level != null
@@ -38,28 +37,37 @@ public final class FabricRobitItemRenderer {
         com.mojang.blaze3d.vertex.VertexConsumer buffer = vertexConsumers.getBuffer(RobitSpriteUploader.RENDER_TYPE);
         com.mojang.blaze3d.vertex.PoseStack.Pose pose = poseStack.last();
         for (BakedQuad quad : quads) {
-            buffer.putBulkData(pose, quad, 1.0F, 1.0F, 1.0F, 1.0F, light, overlay);
+            buffer.putBulkData(pose, quad, 1.0F, 1.0F, 1.0F, 1.0F, RobitBakedModel.lightFor(quad, light), overlay);
         }
     }
 
     @NotNull
-    private static BakedModel modelFor(@NotNull ItemStack stack) {
-        ModelManager manager = Minecraft.getInstance().getModelManager();
-        ResourceLocation skinId = stack.getOrDefault(MekanismDataComponents.ROBIT_SKIN.get(), MekanismRobitSkins.BASE).location();
-        ResourceLocation modelId = ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID,
-              "item/" + ("allay".equals(skinId.getPath()) ? "robit_allay" : "robit"));
-        BakedModel model = ((FabricBakedModelManager) manager).getModel(modelId);
-        return model != null ? model : manager.getMissingModel();
+    static BakedModel resolveModel(ItemStack stack, @org.jetbrains.annotations.Nullable net.minecraft.client.multiplayer.ClientLevel level,
+          @org.jetbrains.annotations.Nullable net.minecraft.world.entity.LivingEntity entity, int seed, @org.jetbrains.annotations.Nullable BakedModel fallback) {
+        var world = level != null ? level : entity != null ? entity.level() : Minecraft.getInstance().level;
+        BakedModel selected = fallback;
+        if (world != null && stack.getItem() instanceof ItemRobit) {
+            var key = stack.getOrDefault(MekanismDataComponents.ROBIT_SKIN.get(), MekanismRobitSkins.BASE);
+            BakedModel skinModel = mekanism.client.model.MekanismModelCache.INSTANCE.getRobitSkin(MekanismRobitSkins.lookup(world.registryAccess(), key));
+            if (skinModel != null) {
+                selected = skinModel;
+            }
+        }
+        if (selected == null) {
+            selected = Minecraft.getInstance().getModelManager().getMissingModel();
+        }
+        BakedModel override = selected.getOverrides().resolve(selected, stack, level, entity, seed);
+        return override == null ? selected : override;
     }
 
     @NotNull
     private static ResourceLocation skinTexture(@NotNull ItemStack stack) {
         if (Minecraft.getInstance().level == null) {
-            return ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, "entity/robit/robit");
+            return ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, "robit");
         }
         var skinKey = stack.getOrDefault(MekanismDataComponents.ROBIT_SKIN.get(), MekanismRobitSkins.BASE);
         var skinLookup = MekanismRobitSkins.lookup(Minecraft.getInstance().level.registryAccess(), skinKey);
         List<ResourceLocation> textures = skinLookup.skin().textures();
-        return textures.isEmpty() ? ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, "entity/robit/robit") : textures.getFirst();
+        return textures.isEmpty() ? ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, "robit") : textures.getFirst();
     }
 }

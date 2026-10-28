@@ -43,10 +43,7 @@ public final class FabricItemRendererRegistration implements ModelLoadingPlugin 
               MekanismBlocks.ULTIMATE_FLUID_TANK, MekanismBlocks.CREATIVE_FLUID_TANK}) {
             ids.add(ResourceLocation.fromNamespaceAndPath("mekanism", "item/" + block.getId().getPath()));
         }
-        //Robit items: the baked placeholder quads (missingno sprites) are suppressed; the builtin renderer draws
-        //them on the robit atlas with the per-skin texture transform.
-        ids.add(ResourceLocation.fromNamespaceAndPath("mekanism", "item/robit"));
-        ids.add(ResourceLocation.fromNamespaceAndPath("mekanism", "item/robit_allay"));
+        //Robit's inventory variant is wrapped after bake; its resource models must remain available as geometry.
         return ids;
     }
 
@@ -144,6 +141,15 @@ public final class FabricItemRendererRegistration implements ModelLoadingPlugin 
             }
             return model;
         });
+        // Robit's geometry uses a dedicated UnbakedModel rather than BlockModel, so the load-time suppressor above
+        // cannot wrap it. Wrap only the inventory variant, leaving the resource model available to the entity renderer.
+        context.modifyModelAfterBake().register(net.fabricmc.fabric.api.client.model.loading.v1.ModelModifier.WRAP_PHASE, (model, bake) -> {
+            if (model != null && net.minecraft.client.resources.model.ModelResourceLocation.inventory(MekanismItems.ROBIT.getId()).equals(bake.topLevelId())) {
+                LOGGER.info("MEKANISM_FABRIC_ROBIT_ITEM_MODEL_PROOF builtin=true");
+                return new RobitItemBakedModel(model);
+            }
+            return model;
+        });
         LOGGER.info("MEKANISM_FABRIC_ITEM_RENDERER_PROOF suppressed_models={} builtin_renderers=19", suppressed.size());
     }
 
@@ -164,6 +170,26 @@ public final class FabricItemRendererRegistration implements ModelLoadingPlugin 
         public BakedModel bake(@Nullable ModelBaker baker, Function<Material, TextureAtlasSprite> spriteGetter, ModelState state) {
             BakedModel officialBaked = official.bake(baker, spriteGetter, state);
             return new EmptyQuadsBakedModel(officialBaked);
+        }
+    }
+
+    private record RobitItemBakedModel(BakedModel official) implements BakedModel {
+        @Override public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side, RandomSource random) { return List.of(); }
+        @Override public boolean useAmbientOcclusion() { return official.useAmbientOcclusion(); }
+        @Override public boolean isGui3d() { return official.isGui3d(); }
+        @Override public boolean usesBlockLight() { return official.usesBlockLight(); }
+        @Override public boolean isCustomRenderer() { return true; }
+        @Override public TextureAtlasSprite getParticleIcon() { return official.getParticleIcon(); }
+        @Override public ItemTransforms getTransforms() { return official.getTransforms(); }
+        @Override public ItemOverrides getOverrides() {
+            return new ItemOverrides(null, null, List.of()) {
+                @Override
+                public BakedModel resolve(BakedModel model, net.minecraft.world.item.ItemStack stack,
+                      @Nullable net.minecraft.client.multiplayer.ClientLevel level, @Nullable net.minecraft.world.entity.LivingEntity entity, int seed) {
+                    BakedModel resolved = FabricRobitItemRenderer.resolveModel(stack, level, entity, seed, official);
+                    return new EmptyQuadsBakedModel(resolved);
+                }
+            };
         }
     }
 

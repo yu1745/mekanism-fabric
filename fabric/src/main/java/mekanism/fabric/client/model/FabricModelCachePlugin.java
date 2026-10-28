@@ -35,6 +35,8 @@ public final class FabricModelCachePlugin implements ModelLoadingPlugin {
             }
         }
         context.addModels(byId.keySet());
+        MekanismModelCache.INSTANCE.clearRobitModels();
+        context.addModels(MekanismModelCache.BASE_ROBIT_MODEL);
         //The OBJ half of the cache re-parses lazily on next use; clearing here mirrors the official BakingCompleted
         //reload (the model-cache class documents the seam).
         mekanism.client.model.MekanismModelCache.INSTANCE.onReload();
@@ -43,6 +45,10 @@ public final class FabricModelCachePlugin implements ModelLoadingPlugin {
             JSONModelData json = byId.get(bakeContext.resourceId());
             if (json != null) {
                 json.acceptBakedModel(model);
+            }
+            if (model != null && MekanismModelCache.BASE_ROBIT_MODEL.equals(bakeContext.resourceId())) {
+                MekanismModelCache.INSTANCE.setRobitModelBaker(model, bakeContext.baker());
+                LOGGER.info("MEKANISM_FABRIC_ROBIT_MODEL_PROOF base_quads={}", model.getQuads(null, null, net.minecraft.util.RandomSource.create()).size());
             }
             //The official addCustomModel wrappers: the miner's holiday texture transform rides the keyed cache.
             if (model != null && net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("mekanism", "block/digital_miner")

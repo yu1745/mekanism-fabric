@@ -78,17 +78,46 @@ public class MekanismModelCache extends BaseModelCache {
     public final JSONModelData PIGMENT_MIXER_SHAFT = registerJSON("block/pigment_mixer_shaft");
     public final JSONModelData[] QIO_DRIVES = new JSONModelData[EnumUtils.DRIVE_STATUSES.length];
 
-    /**
-     * Fabric port of the robit skin cache: resolves the skin's model (custom model, else the default per skin family)
-     * through the model manager - the models are baked by the fabric model plugin's robit case.
-     */
+    public static final ResourceLocation BASE_ROBIT_MODEL = ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, "item/robit");
+    private final java.util.Map<ResourceLocation, BakedModel> robitModels = new java.util.HashMap<>();
+    @org.jetbrains.annotations.Nullable
+    private net.minecraft.client.resources.model.ModelBaker robitBaker;
+    @org.jetbrains.annotations.Nullable
+    private BakedModel baseRobit;
+
+    /** Drop models and their atlas-bound baker before the next model reload. */
+    public void clearRobitModels() {
+        robitModels.clear();
+        robitBaker = null;
+        baseRobit = null;
+    }
+
+    /** Capture the actual resource-model bake and its baker for later datapack-selected models. */
+    public void setRobitModelBaker(BakedModel base, net.minecraft.client.resources.model.ModelBaker baker) {
+        baseRobit = base;
+        robitBaker = baker;
+    }
+
+    /** Matches the official cache: the default model unless the skin specifies a custom model. */
+    @org.jetbrains.annotations.Nullable
     public BakedModel getRobitSkin(MekanismRobitSkins.SkinLookup skinLookup) {
         ResourceLocation customModel = skinLookup.skin().customModel();
-        if (customModel != null) {
-            return BaseModelCache.getBakedModel(customModel);
+        if (customModel == null || customModel.equals(BASE_ROBIT_MODEL)) {
+            return baseRobit;
         }
-        String fallback = skinLookup.name().location().getPath().equals("allay") ? "item/robit_allay" : "item/robit";
-        return BaseModelCache.getBakedModel(ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, fallback));
+        if (robitBaker == null) {
+            return null;
+        }
+        return robitModels.computeIfAbsent(customModel, id -> {
+            var unbaked = robitBaker.getModel(id);
+            unbaked.resolveParents(robitBaker::getModel);
+            return robitBaker.bake(id, net.minecraft.client.resources.model.BlockModelRotation.X0_Y0);
+        });
+    }
+
+    @org.jetbrains.annotations.Nullable
+    public BakedModel getBaseRobit() {
+        return baseRobit;
     }
 
     protected OBJModelData registerOBJ(String path) {

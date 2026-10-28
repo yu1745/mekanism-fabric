@@ -93,10 +93,21 @@ public final class FabricMekanismModelPlugin {
             int bakedFluidContainers = 0;
             int transmitterOwned = 0;
             for (Map.Entry<ResourceLocation, Resource> entry : resources.listResources("models", id -> id.getPath().endsWith(".json")).entrySet()) {
+                String json = read(entry.getValue());
                 if (!entry.getKey().getNamespace().equals("mekanism")) {
+                    // A datapack skin may reference a model from another resource namespace using our loader.
+                    // Leave every unrelated foreign model to its own loader.
+                    if (json.contains(LOADER_ROBIT)) {
+                        JsonObject foreignRoot = JsonParser.parseString(json).getAsJsonObject();
+                        JsonElement foreignLoader = foreignRoot.get("loader");
+                        if (foreignLoader != null && foreignLoader.isJsonPrimitive() && foreignLoader.getAsJsonPrimitive().isString()
+                              && LOADER_ROBIT.equals(foreignLoader.getAsString())) {
+                            ResourceLocation foreignId = modelId(entry.getKey());
+                            prepared.put(foreignId, new FabricRobitUnbakedModel(foreignId, foreignRoot));
+                        }
+                    }
                     continue;
                 }
-                String json = read(entry.getValue());
                 if (!json.contains("\"loader\"")) {
                     //The energy cube tier children carry no loader - they parent onto the geometry carrier and
                     //override textures; handled with the merged map below.
