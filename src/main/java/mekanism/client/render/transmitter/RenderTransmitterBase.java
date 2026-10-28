@@ -3,6 +3,7 @@ package mekanism.client.render.transmitter;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.PoseStack.Pose;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -37,20 +38,25 @@ public abstract class RenderTransmitterBase<TRANSMITTER extends TileEntityTransm
     //(gui3d/block light/ao all off); the port's OBJModelData re-bakes per visible-parts set with the icon override,
     //and the flat normals below carry the no-diffuse rule.
     private static final mekanism.client.model.BaseModelCache.OBJModelData CONTENTS = new mekanism.client.model.BaseModelCache.OBJModelData(MODEL_LOCATION);
+    private static final Map<ContentsModelData, List<BakedQuad>> contentModelCache = new Object2ObjectOpenHashMap<>();
     private static final Vector3f NORMAL = new Vector3f(1, 1, 1).normalize();
 
     public static void onStitch() {
+        contentModelCache.clear();
         CONTENTS.clearCached();
     }
 
     private static List<BakedQuad> getBakedQuads(List<String> visible, TextureAtlasSprite icon, Level world) {
-        List<BakedQuad> bakedQuads = CONTENTS.getQuads(new java.util.HashSet<>(visible), world.getRandom(), icon);
-        List<Quad> unpackedQuads = QuadUtils.unpack(bakedQuads);
-        for (Quad unpackedQuad : unpackedQuads) {
-            //Set the normals to ones that ignore the diffuse light in the same way we do it in Render Resizable Cuboid
-            unpackedQuad.vertexTransform(vertex -> vertex.normal(NORMAL));
-        }
-        return QuadUtils.bake(unpackedQuads);
+        ContentsModelData key = new ContentsModelData(List.copyOf(visible), icon);
+        return contentModelCache.computeIfAbsent(key, data -> {
+            List<BakedQuad> bakedQuads = CONTENTS.getQuads(new java.util.HashSet<>(data.visible()), world.getRandom(), data.icon());
+            List<Quad> unpackedQuads = QuadUtils.unpack(bakedQuads);
+            for (Quad unpackedQuad : unpackedQuads) {
+                //Set the normals to ones that ignore the diffuse light in the same way we do it in Render Resizable Cuboid
+                unpackedQuad.vertexTransform(vertex -> vertex.normal(NORMAL));
+            }
+            return QuadUtils.bake(unpackedQuads);
+        });
     }
 
     protected RenderTransmitterBase(BlockEntityRendererProvider.Context context) {
