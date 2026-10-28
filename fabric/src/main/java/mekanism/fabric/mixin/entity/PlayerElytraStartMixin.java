@@ -1,5 +1,6 @@
 package mekanism.fabric.mixin.entity;
 
+import mekanism.common.item.gear.ItemHDPEElytra;
 import mekanism.common.item.interfaces.IElytraFlight;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ElytraItem;
@@ -17,7 +18,7 @@ abstract class PlayerElytraStartMixin {
     @Redirect(method = "tryToStartFallFlying", at = @At(value = "INVOKE",
           target = "Lnet/minecraft/world/item/ItemStack;is(Lnet/minecraft/world/item/Item;)Z"), require = 1)
     private boolean mekanism$alternativeElytra(ItemStack stack, Item item) {
-        return stack.is(item) || (item == Items.ELYTRA && stack.getItem() instanceof IElytraFlight);
+        return stack.is(item) || (item == Items.ELYTRA && (stack.getItem() instanceof IElytraFlight || stack.getItem() instanceof ItemHDPEElytra));
     }
 
     @Redirect(method = "tryToStartFallFlying", at = @At(value = "INVOKE",
