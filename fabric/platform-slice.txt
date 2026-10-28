@@ -5,6 +5,7 @@ mekanism/fabric/chemical/FabricChemicalClientLifecycle.java
 mekanism/fabric/chemical/FabricChemicalIngredientTypeRegistryLifecycle.java
 mekanism/fabric/chemical/FabricChemicalLifecycle.java
 mekanism/fabric/chemical/FabricChemicalRegistryLifecycle.java
+mekanism/fabric/client/CreativeTabSearchIndex.java
 mekanism/fabric/client/FabricFluidColors.java
 mekanism/fabric/client/FabricScreenRegistration.java
 mekanism/fabric/client/GearInteractionPolicy.java
@@ -87,7 +88,6 @@ mekanism/fabric/mixin/block/MachinePistonReactionMixin.java
 mekanism/fabric/mixin/block/MachineRedstoneConnectionMixin.java
 mekanism/fabric/mixin/block/PortalFrameMixin.java
 mekanism/fabric/mixin/block/PowderSnowWalkMixin.java
-mekanism/fabric/mixin/client/BlockBreakResetMixin.java
 mekanism/fabric/mixin/client/BlockModelCompositeMixin.java
 mekanism/fabric/mixin/client/ClientMouseScrollMixin.java
 mekanism/fabric/mixin/client/ClientRecipeCacheMixin.java
@@ -99,6 +99,7 @@ mekanism/fabric/mixin/client/ItemBlockTooltipAccessor.java
 mekanism/fabric/mixin/client/ItemInHandReequipMixin.java
 mekanism/fabric/mixin/client/KeyboardInputMixin.java
 mekanism/fabric/mixin/client/LivingEntityVisibilityMixin.java
+mekanism/fabric/mixin/client/MekanismCreativeSearchMixin.java
 mekanism/fabric/mixin/client/MouseInputMixin.java
 mekanism/fabric/mixin/client/RobitItemRendererMixin.java
 mekanism/fabric/mixin/client/TextureAtlasMixin.java

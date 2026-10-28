@@ -40,16 +40,17 @@ class GearInteractionPolicyTest {
         ItemStack suit = new ItemStack(new ItemMekaSuitArmor(ArmorItem.Type.BOOTS, new Item.Properties()));
         for (ItemStack stack : new ItemStack[]{energy, bow, suit}) {
             assertTrue(GearInteractionPolicy.ignoresReequipComponents(stack));
-            assertTrue(GearInteractionPolicy.ignoresBreakResetComponents(stack));
+            assertTrue(stack.getItem().allowContinuingBlockBreaking(null, stack, stack));
         }
         ItemStack flame = new ItemStack(new ItemFlamethrower(new Item.Properties()));
         ItemStack dashboard = new ItemStack(new ItemPortableQIODashboard(new Item.Properties()));
         for (ItemStack stack : new ItemStack[]{flame, dashboard}) {
             assertTrue(GearInteractionPolicy.ignoresReequipComponents(stack));
-            assertFalse(GearInteractionPolicy.ignoresBreakResetComponents(stack));
+            assertFalse(stack.getItem().allowContinuingBlockBreaking(null, stack, stack));
         }
         assertFalse(GearInteractionPolicy.ignoresReequipComponents(new ItemStack(Items.STONE)));
-        assertFalse(GearInteractionPolicy.ignoresBreakResetComponents(new ItemStack(Items.STONE)));
+        ItemStack stone = new ItemStack(Items.STONE);
+        assertFalse(stone.getItem().allowContinuingBlockBreaking(null, stone, stone));
         assertFalse(GearInteractionPolicy.ignoresReequipComponents(ItemStack.EMPTY));
     }
 }

@@ -37,9 +37,9 @@ public class MekanismCreativeTabs {
 
     public static final MekanismDeferredHolder<CreativeModeTab, CreativeModeTab> MEKANISM = CREATIVE_TABS.registerMain(MekanismLang.MEKANISM,
           MekanismBlocks.METALLURGIC_INFUSER.getItemHolder(), builder ->
-                //Fabric port delta: NeoForge's withSearchBar() has no vanilla counterpart. Items are still added to the vanilla
-                // search tab through PARENT_AND_SEARCH_TABS visibility, so creative search keeps finding them.
-                builder.displayItems((displayParameters, output) -> {
+                // The client mixin supplies this tab's NeoForge-style local search; use the matching vanilla search background.
+                builder.backgroundTexture(CreativeModeTab.createTextureLocation("item_search"))
+                      .displayItems((displayParameters, output) -> {
                           CreativeTabDeferredRegister.addToDisplay(MekanismItems.ITEMS, output);
                           CreativeTabDeferredRegister.addToDisplay(MekanismBlocks.BLOCKS, output);
                           CreativeTabDeferredRegister.addToDisplay(MekanismFluids.FLUIDS, output);

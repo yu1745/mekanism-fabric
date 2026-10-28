@@ -40,6 +40,7 @@ import mekanism.common.util.text.UpgradeDisplay;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
@@ -61,6 +62,11 @@ public class ItemBlockTooltip<BLOCK extends Block & IHasDescription> extends Ite
     public ItemBlockTooltip(BLOCK block, boolean hasDetails, Properties properties) {
         super(block, properties);
         this.hasDetails = hasDetails;
+    }
+
+    @Override
+    public boolean allowContinuingBlockBreaking(Player player, ItemStack oldStack, ItemStack newStack) {
+        return exposesEnergyCapOrTooltips();
     }
 
     @Override

@@ -253,6 +253,11 @@ public class ItemMekaSuitArmor extends ItemSpecialArmor implements IModuleContai
     }
 
     @Override
+    public boolean allowContinuingBlockBreaking(Player player, ItemStack oldStack, ItemStack newStack) {
+        return true;
+    }
+
+    @Override
     public boolean supportsSlotType(ItemStack stack, @NotNull EquipmentSlot slotType) {
         //Note: We ignore radial modes as those are just for the Meka-Tool currently
         return slotType == getEquipmentSlot() && getModules(stack).stream().anyMatch(IModule::handlesModeChange);

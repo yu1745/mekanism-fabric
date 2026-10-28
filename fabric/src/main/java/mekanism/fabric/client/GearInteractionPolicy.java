@@ -22,12 +22,6 @@ public final class GearInteractionPolicy {
               || item instanceof ItemMekaSuitArmor || item instanceof ItemPortableQIODashboard || isEnergyBlockItem(item);
     }
 
-    public static boolean ignoresBreakResetComponents(ItemStack stack) {
-        if (stack.isEmpty()) return false;
-        Item item = stack.getItem();
-        return item instanceof ItemEnergized || item instanceof ItemElectricBow || item instanceof ItemMekaSuitArmor || isEnergyBlockItem(item);
-    }
-
     private static boolean isEnergyBlockItem(Item item) {
         return item instanceof ItemBlockTooltip<?> && ((ItemBlockTooltipAccessor) item).mekanism$exposesEnergyCapOrTooltips();
     }
