@@ -174,6 +174,8 @@
 
 续审扫描码：vanilla `InputConstants.Type.SCANCODE` 可保存为绑定，但 `MekKeyHandler.isKeyDown` 原来只处理 KEYSYM/MOUSE；游戏屏幕打开时 vanilla 又调用 `KeyMapping.releaseAll`，因此扫描码重绑后的详情/描述键在 GUI 中始终被判未按。修复从现有键盘 HEAD hook 记录真实 GLFW 扫描码 press/repeat/release，GUI 回退按该状态查询，并在真实 `Minecraft.setWindowActive(false)` 时清空，防止失焦漏 release 残留。普通 JVM focused 测试覆盖按下、重复、释放和清空；客户端 Knot 模型测试验证客户端 mixin 可加载，不代表已用真实扫描码键盘交互。完整测试契约首次因新增一项使固定普通测试总数从 449 变为 450 而失败；更新计数后 `verifyFabricTestContract`、三个 slice gate 和 `remapJar` 重跑通过。
 
+提交 `9b4c4391` 后按移植风格审查规则重读完整真实 diff，核对键盘事件、屏幕回退及失焦清理调用链；未发现该限定范围内新增已证实偏离。测试不替代真实 GLFW 输入和失焦交互。
+
 剩余偏离：Curios 位置的模式切换仍未接入；vanilla 设置界面无法表示/自定义组合键 modifier，描述键的显示不一定体现 SHIFT；鼠标 mixin 在 vanilla macOS control-click 归一化之前触发，可能与官方不同。还需在 mcdebug/真实客户端验证 GUI、重绑、重复、按下释放、远程同步与上述边界，不得将 F2 标成完全闭环。
 
 ### F3 — Robit 无法通过充电板的实体能量路径充电（`5d2c9182`，代码修复已提交；端到端验证待完成）
