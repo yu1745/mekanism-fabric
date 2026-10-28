@@ -84,6 +84,14 @@
 
 ## 审查发现与待复核
 
+### F64 — 装备状态生命周期和同步链（待复核、待修）
+
+只读复核固定 `fbd881ba` 指出 `PlayerState.INSTANCE` 的 `world` 未初始化：当前 `ClientTickHandler.onTick` 对三种装备状态调用 setter，状态变化后 setter 解引用 `world.isClientSide()`；当前源码未找到 INSTANCE 的 `init` 调用。`PacketGearStateUpdate` 也未见 Fabric C2S 注册，后续还需追查 S2C `PacketPlayerData`、清理、玩家追踪和集成服两侧状态 owner。此处仅记录已初核静态链及候选，须对照固定官方的生命周期、线程和真实调用方后修复，不能仅塞一个全局 world；尚未实机复现。
+
+### F63 — 固定官方历史物品及组件注册别名缺失（待修）
+
+只读复核固定 `fbd881ba` 和官方 `4646f509`：`1af82201` 删除官方四个组件旧名 `mekanism:gases`、`infuse_types`、`pigments`、`slurries` 到 `mekanism:chemicals` 的别名，以及物品 `mekanism:upgrade_gas` 到 `mekanism:upgrade_chemical` 的别名；当前注册器仅注册 canonical key。固定官方版本正常写出 canonical ID，不应误称其全部新存档损坏；但官方仍能读取的未重写历史数据不属于用户排除的旧 Fabric 开发版兼容，缺少映射可能使读取失败并有保存后丢失风险。物品、组件 codec 的实际 partial 行为和安全生命周期需由主代理继续核查，尚无运行证据；不要为修复而注册第二个同值或改变 canonical ID。
+
 ### F62 — Robit 专用图集从未注册（`3cedf196`，代码已修；物品及重载已实测）
 
 在本地 mcdebug 隔离世界的创造物品栏搜索 Robit 后，实际截图显示物品紫黑贴图；客户端日志明确报 `Failed to load texture: mekanism:textures/atlas/robit.png`。`RobitSpriteUploader` 已定义并由实体/GUI/物品绘制引用，但 Fabric 侧没有创建或注册此 `TextureAtlasHolder` 的资源重载监听；生成的 atlas 清单确实已被打包，因此缺的是实际生命周期 owner 而不是凭空补模型。修复 `59c7c914` 在客户端注册真实 uploader 的 Fabric 资源重载 listener：首次 reload 已在 render thread 且 GL/TextureManager 就绪时创建原 holder，后续复用同一图集。初次尝试在客户端 entrypoint 直接构造曾使 JVM 因 GL context 未初始化而 native abort；读取完整 native 栈后改为 reload 时机，重新编译并真实启动。已按 prompt 重读该提交完整 41 行 diff、核对固定 vanilla `TextureAtlasHolder` 和实际 reload 时序，未发现限定路径新增偏离。mcdebug 隔离世界中日志出现 `Created: 512x256x0 mekanism:textures/atlas/robit.png-atlas`，创造标签 Robit 物品由紫黑恢复实际灰色贴图（截图 SHA-256 `7e5b66a1d18ea00e6e2ae66aeac38cc5329542c44392002311b044f6e09730f0`）；同一客户端执行 `gui.reload-resources` 返回成功后截图仍显示正确贴图（`1f4b13b7f51ad521761b7d436d66126208cb60736833eefe57dee2a516257806`）。该实际验证只覆盖基础物品与一次重载；实体、皮肤预览、自定义第三方贴图及其他 reload 顺序仍未验证。
