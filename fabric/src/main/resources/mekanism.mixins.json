@@ -64,6 +64,7 @@
     "client.ItemBlockTooltipAccessor",
     "client.ItemInHandReequipMixin",
     "client.KeyboardInputMixin",
+    "client.KeyboardFocusMixin",
     "client.LivingEntityVisibilityMixin",
     "client.MekanismCreativeSearchMixin",
     "client.MouseInputMixin",

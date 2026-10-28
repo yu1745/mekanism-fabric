@@ -99,6 +99,7 @@ mekanism/fabric/mixin/client/FogSetupMixin.java
 mekanism/fabric/mixin/client/GuiGraphicsMixin.java
 mekanism/fabric/mixin/client/ItemBlockTooltipAccessor.java
 mekanism/fabric/mixin/client/ItemInHandReequipMixin.java
+mekanism/fabric/mixin/client/KeyboardFocusMixin.java
 mekanism/fabric/mixin/client/KeyboardInputMixin.java
 mekanism/fabric/mixin/client/LivingEntityVisibilityMixin.java
 mekanism/fabric/mixin/client/MekanismCreativeSearchMixin.java

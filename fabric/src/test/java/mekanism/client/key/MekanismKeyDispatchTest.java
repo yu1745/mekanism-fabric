@@ -21,6 +21,21 @@ class MekanismKeyDispatchTest {
     }
 
     @Test
+    void scancodeEventsTrackPressRepeatReleaseAndFocusClear() {
+        MekKeyHandler.clearScanCodes();
+        MekKeyHandler.recordScanCode(42, GLFW.GLFW_PRESS);
+        assertTrue(MekKeyHandler.isScanCodeDown(42));
+        assertFalse(MekKeyHandler.isScanCodeDown(43));
+        MekKeyHandler.recordScanCode(42, GLFW.GLFW_REPEAT);
+        assertTrue(MekKeyHandler.isScanCodeDown(42));
+        MekKeyHandler.recordScanCode(42, GLFW.GLFW_RELEASE);
+        assertFalse(MekKeyHandler.isScanCodeDown(42));
+        MekKeyHandler.recordScanCode(43, GLFW.GLFW_PRESS);
+        MekKeyHandler.clearScanCodes();
+        assertFalse(MekKeyHandler.isScanCodeDown(43));
+    }
+
+    @Test
     void mouseRebindingIsDisjointFromKeyboardInput() {
         KeyMapping key = new KeyMapping("test.mekanism.mouse", InputConstants.Type.MOUSE, GLFW.GLFW_MOUSE_BUTTON_4, "test.mekanism");
         assertTrue(MekanismKeyHandler.matches(key, GLFW.GLFW_MOUSE_BUTTON_4, 0, true));

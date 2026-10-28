@@ -40,6 +40,9 @@ public class MekanismKeyHandler {
 
     /** Dispatch raw input instead of vanilla's single-key map so GUI-only and in-game bindings can share N. */
     public static void onInput(int key, int scanCode, int action, boolean mouse) {
+        if (!mouse) {
+            MekKeyHandler.recordScanCode(scanCode, action);
+        }
         Minecraft minecraft = Minecraft.getInstance();
         if (action == GLFW.GLFW_RELEASE && matches(boostKey, key, scanCode, mouse)) {
             MekanismClient.updateKey(false, KeySync.BOOST);

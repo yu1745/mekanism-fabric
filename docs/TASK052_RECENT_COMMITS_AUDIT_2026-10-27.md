@@ -88,6 +88,8 @@
 
 只读复核固定 `fbd881ba` 指出 `PlayerState.INSTANCE` 的 `world` 未初始化：当前 `ClientTickHandler.onTick` 对三种装备状态调用 setter，状态变化后 setter 解引用 `world.isClientSide()`；当前源码未找到 INSTANCE 的 `init` 调用。`PacketGearStateUpdate` 也未见 Fabric C2S 注册，后续还需追查 S2C `PacketPlayerData`、清理、玩家追踪和集成服两侧状态 owner。固定官方 `CommonPlayerTracker` 还负责开始追踪、退出、切维度和重生时状态/包生命周期，但当前该类未纳片；Fabric `EntityTrackingEvents.START_TRACKING` 明确在实体 spawn 包之前触发，而声音创建按 UUID 查客户端世界玩家，因此接线时还须考虑接收时实体尚未出现。集成服中静态共享服务端与客户端状态也会使同 UUID 的写入互相抑制，不能仅塞一个全局 world。修复 `cc771a17` 在实际 client tick / S2C handler 和服务端 C2S handler 使用各自 world 初始化，将服务端与客户端状态隔离，接回三个原有 payload、追踪快照、退出/跨维度清理和重生通知；发送者 UUID 与包内 UUID 不一致时拒绝，避免原官方共有的冒充问题。Fabric tracking 在 spawn 前，故客户端实体加载后对已有活跃状态补建声音；已对照固定 Fabric 事件注入及 `ClientLevel` 添加玩家顺序。服务端停止与客户端重置分别清理各自 owner 和 world 引用，更新 machine smoke 的注册数。`compileJava`、三项 slice gate、`remapJar` 及隔离 Knot 聚焦测试 3/3 通过，分别检查逻辑侧独立和状态快照、伪造 UUID 拒绝、注册与原 codec 往返；首次测试因 fixture 未初始化真实 chemical registry 失败，补真实初始化后通过。该测试使用服务端 Level stub 检查两套状态，不证明客户端事件、实际游戏按键、声音或双进程同步；未做 mcdebug 实机。已按 prompt 重读该提交完整 384 行真实 diff，对照官方 tracker 和 Fabric 事件，未发现上述限定路径新增已证实偏离；断线重连时异步清理与世界转换顺序仍需实测，不宣称全生命周期闭环。
 
+后续只读复核固定 HEAD `dafa1362` 对照官方 `4646f509`，检查客户端与服务端实际 setter 前的初始化、tracking、换维、重生和断线清理，未证实新的移植特有缺陷。集成服两线程共享的 exposure map 风险在官方也存在，客户端换维 reset 与 tracking 包的实际先后仍未实测，不能将静态复核等同真实生命周期验收。
+
 ### F63 — 固定官方历史物品及组件注册别名缺失（代码已修；历史存档待验）
 
 只读复核固定 `fbd881ba` 和官方 `4646f509`：`1af82201` 删除官方四个组件旧名 `mekanism:gases`、`infuse_types`、`pigments`、`slurries` 到 `mekanism:chemicals` 的别名，以及物品 `mekanism:upgrade_gas` 到 `mekanism:upgrade_chemical` 的别名；当前注册器仅注册 canonical key。固定官方版本正常写出 canonical ID，不应误称其全部新存档损坏；但官方仍能读取的未重写历史数据不属于用户排除的旧 Fabric 开发版兼容，缺少映射可能使读取失败并有保存后丢失风险。只读子代理继续核对：物品 `holderByNameCodec` 走 registry holder 查询，组件 `DataComponentPatch.PatchKey` 则直接调用组件 registry `get(ResourceLocation)`，只包装 ItemStack 或 DataComponentType codec 会漏路径；网络一般用数字 ID，不能将字符串映射误当网络 ID 转换。候选是在实际 registry 读取层对五个精确旧名查无真实值时回退至 canonical holder/value，不新增第二个注册项、不改变反向编码；但 `DefaultedMappedRegistry` 默认值、同步/替代 registry 身份、调用 `containsKey` 的消费者、旧名和正名同时出现的重复 patch、冻结/未绑定 holder 及第三方 mixin 需要实际验证。修复 `58d69b20` 在 vanilla `MappedRegistry` 的五个真实读取/holder 创建入口仅解析官方声明的五个旧名，已有真实旧名优先，不增加注册项；固定 NeoForge patched `MappedRegistry` 对相同五处调用 `resolve`，`IRegistryExtension` 也明确真实条目优先，`containsKey` 保持原语义。已按 prompt 读该提交完整 251 行 diff，对照固定两侧 registry，未发现该限定边界新增已证实偏离。隔离 Knot 聚焦测试 4/4 通过：defaulted registry 的 value/holder/lookup 与第三方真实条目优先；真实 `DataComponentPatch.CODEC` 对四种旧空容器与移除标记解码并以 canonical 写回；真实 `ItemStack.CODEC` 以测试注册的物品读取旧 ID 并写 canonical。编译、三项 slice gate 和 remapped JAR 构建通过。组件值测试使用空槽、物品是测试实例，并非真实官方旧世界；旧名和正名同时出现的重复 patch、非空历史化学值、数据包重载、网络及第三方 mixin 尚未实测，不能宣称全部历史存档无损。
@@ -170,7 +172,9 @@
 
 修复 `b876af80` 按历史 `MekanismKeyHandler` 恢复装备/手持模式包、模块调节器包、HUD 保存和 boost 同步；增加键盘/鼠标输入 mixin，同一 N 键在 GUI 与游戏上下文分别处理，并在 tick 中处理打开 GUI 后的 boost 释放。description 在 GUI 中恢复默认 SHIFT 条件。已逐段复审完整 diff，三个切片 gate 与两个键盘/扫描码/鼠标绑定匹配测试通过；客户端真实启动 smoke 15/15，但 smoke 未模拟按键，且运行后额外补了 overlay 一行保护并重新通过编译和测试。因此不能称为真实按键端到端验收。
 
-剩余偏离：Curios 位置的模式切换仍未接入；vanilla 设置界面无法表示/自定义组合键 modifier，描述键的显示不一定体现 SHIFT；`MekKeyHandler` 在 GUI 原始轮询不支持扫描码；鼠标 mixin 在 vanilla macOS control-click 归一化之前触发，可能与官方不同。还需在 mcdebug/真实客户端验证 GUI、重绑、重复、按下释放、远程同步与上述边界，不得将 F2 标成完全闭环。
+续审扫描码：vanilla `InputConstants.Type.SCANCODE` 可保存为绑定，但 `MekKeyHandler.isKeyDown` 原来只处理 KEYSYM/MOUSE；游戏屏幕打开时 vanilla 又调用 `KeyMapping.releaseAll`，因此扫描码重绑后的详情/描述键在 GUI 中始终被判未按。修复从现有键盘 HEAD hook 记录真实 GLFW 扫描码 press/repeat/release，GUI 回退按该状态查询，并在真实 `Minecraft.setWindowActive(false)` 时清空，防止失焦漏 release 残留。普通 JVM focused 测试覆盖按下、重复、释放和清空；客户端 Knot 模型测试验证客户端 mixin 可加载，不代表已用真实扫描码键盘交互。完整测试契约首次因新增一项使固定普通测试总数从 449 变为 450 而失败；更新计数后 `verifyFabricTestContract`、三个 slice gate 和 `remapJar` 重跑通过。
+
+剩余偏离：Curios 位置的模式切换仍未接入；vanilla 设置界面无法表示/自定义组合键 modifier，描述键的显示不一定体现 SHIFT；鼠标 mixin 在 vanilla macOS control-click 归一化之前触发，可能与官方不同。还需在 mcdebug/真实客户端验证 GUI、重绑、重复、按下释放、远程同步与上述边界，不得将 F2 标成完全闭环。
 
 ### F3 — Robit 无法通过充电板的实体能量路径充电（`5d2c9182`，代码修复已提交；端到端验证待完成）
 
