@@ -34,7 +34,7 @@
 | `b6e5c54d` | 子代理固定 `b6acf106` 已读完整 diff，主代理已复核并修复未注册的传送速度/激光命中特效包，见 F22；其余链路仍按报告范围记录。 |
 | `509afc1b` | 子代理固定 `b6acf106` 已读完整 diff，主代理已复核并修复服务器关闭时 retrogen 特征缓存未清理，见 F23；历史 chunk NBT 问题已在后续提交修正。 |
 | `1af82201` | 子代理固定 `b6acf106` 已读完整 diff；主代理已修复 SPS 闪电、精炼黑曜石框、流体渲染/声音及液体罐动态光照，见 F24–F26、F28。官方历史注册别名等尚待核验。 |
-| `2529dca8`、`38b8b1af` | 子代理固定 `3b5301c3` 已读完整 diff；旧伤害路径问题有后续修复，创造标签局部搜索缺失待主代理复核；前者纳入的 11 个既有 mixin 未逐个完成调用链核验。 |
+| `2529dca8`、`38b8b1af` | 子代理固定 `3b5301c3` 已读完整 diff；后续固定 `84f90de1` 对 11 个纳入的 mixin 做只读调用链复核，主代理确认并修复滑翔路径 F59，其余按报告范围未证实具体生产偏离；创造标签局部搜索仍待处理。 |
 | `a1f1c46f` | 子代理固定 `3b5301c3` 已读完整 diff，主代理复核并修复后续提交引入的差集/交集输入缓存错误，见 F27；第三方兼容配方及升级物品端到端未验。 |
 | `53fda9e5` | 子代理固定 `ddbbdb99` 完整审查注册与 26 包调用链；原官方 handler 的 GUI 操作存在未鉴权风险，主代理复核并分组修复，见 F29；未声明所有网络授权问题均已关闭。 |
 | `55c59a0c` | 子代理固定 `ddbbdb99` 完整读取 diff 并追踪当前机器 tick、能力与能量入口，未发现已证实当前缺陷；历史 smoke 仅匹配产物 ID，不能单独证明文档记载的产量或能耗。 |
@@ -83,6 +83,10 @@
 | `4858ee35`、`a02d7298` | 已读完整脚本和文档 diff；扫描器仅检查显式 import，不涵盖同包、通配、完全限定名及反射，也不检查 entrypoint 是否纳片，故“0 边/系统审查通过”只能解释为该正则范围内的结果，不能替代本轮真实 diff/调用链审查。原文档未改变生产代码。 |
 
 ## 审查发现与待复核
+
+### F59 — MekaSuit 滑翔维持和 HDPE 鞘翅入口失效（`2529dca8` 纳入的既有 mixin，代码已修；实机待验）
+
+只读子代理固定 `84f90de1` 复核 11 个既有 mixin，主代理对照固定两份 Minecraft 与当前调用链：NeoForge 每个滑翔 tick 先 `canElytraFly` 再 `elytraFlightTick`；Fabric 的 `LivingEntityElytraMixin` 只调用后者。真实 `ItemMekaSuitArmor.elytraFlightTick` 假设前者已检查，故滑翔后潜行、能量耗尽、模块关闭或喷气 hover 条件改变仍可能继续飞行；并且它自行每 10 tick 发 `ELYTRA_GLIDE`，vanilla 后段又发送同一事件。另主代理发现官方 HDPE 物品继承 `ElytraItem` 但未实现 `IElytraFlight`，客户端、服务端启动及维持的 redirect 仍只接受 `Items.ELYTRA` 或该接口，因此 HDPE 鞘翅不能像官方那样启动/维持滑翔。修复 `ca24d8e7` 在真正的 `updateFallFlying` 中对 Mekanism `IElytraFlight` 保留原条件顺序、短路检查与自身 tick，跳过 vanilla 重复伤害/事件分支；HDPE 在客户端、服务端开始及维持路径进入 vanilla 鞘翅检查和 tick。已按 prompt 重读该提交完整 241 行 diff，对照固定 NeoForge/vanilla 两处原方法及当前 MekaSuit owner，未发现本限定路径新增偏离。隔离 Knot 三项测试执行真实 mixin：真实无模块 MekaSuit 退出、测试 provider 先判能否飞再 tick 且事件仅一次、HDPE 与 vanilla 服务端开始并维持和事件一致；`TileLevelStub` 不是 `ServerLevel`，因此不证明耐久写入。首次测试的 inherited `@Shadow setSharedFlag` 无法解析，改为 mixin 继承真实 `Entity` 后通过；随后耐久断言因 stub 非 ServerLevel 不会扣耐久，核对 vanilla 后去除该错误假设。真实客户端启动 smoke 19/19，proof 后主动终止 exit 1；未实测 jump、飞行/能耗及资源包或其他 mixin 互操作。对 custom flight 取消原方法可能与第三方注入同点产生顺序差异，不能宣称完整平台兼容。
 
 ### F58 — 四种机器和两种物品缺失客户端屏幕（`e5f41424`，代码已修；实机待验）
 
@@ -370,7 +374,7 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 ### 并行初审待主代理核验
 
-尚待主代理核验：`1af82201` 官方历史 registry alias 是否影响固定官方存档；`38b8b1af` 创造标签内搜索；`2529dca8` 纳入的 11 个既有 mixin 调用链；以及 F29 尚未复核的非 GUI 网络包边界。`a1f1c46f` 发现 shift 合成 bin 可能丢额外物品，但只读子代理对照 NeoForge `ResultSlot` 发现官方在同一点触发回调，属于上游共享问题，暂不认定为移植偏差；也未实机验证。不能将只读初审自动计为全部关闭。
+尚待主代理核验：`1af82201` 官方历史 registry alias 是否影响固定官方存档；`38b8b1af` 创造标签内搜索；`2529dca8` 中除 F59 外的 10 个 mixin 的只读复核结果仍须主代理抽核；以及 F29 尚未复核的非 GUI 网络包边界。`a1f1c46f` 发现 shift 合成 bin 可能丢额外物品，但只读子代理对照 NeoForge `ResultSlot` 发现官方在同一点触发回调，属于上游共享问题，暂不认定为移植偏差；也未实机验证。不能将只读初审自动计为全部关闭。
 
 ## 恢复位置
 
