@@ -10,6 +10,8 @@ Official Mekanism integrates Curios (accessory slots) in exactly two shapes rele
 - Armor-path behavior is unaffected (officially the armor branches run before/independently of the curios guard).
 - This is an explicit functional delta (accessory-slot support absent), recorded here; it is not a silent armor-only reduction.
 
+A possible **new integration target**, not an established Curios equivalent, is [Accessories](https://modrinth.com/mod/accessories): its [version list filtered to Fabric 1.21.1](https://modrinth.com/mod/accessories/versions?g=1.21.1&l=fabric) lists `1.1.0-beta.54+1.21.1`, and its project describes a data-driven accessory API. Its slot identity, data/storage semantics, render hooks, licensing/dependencies and mapping of Mekanism's guarded Curios calls have not been audited. Binding it would introduce a different third-party module and requires the user's scope decision; no dependency has been added and no equivalence is claimed.
+
 ## 2. ItemAbility migration (NeoForge `ItemAbility`/`ItemAbilities` → project tokens)
 
 The project seam from the early Task052 checkpoint (`mekanism.api.ItemAbility` token + `IItemAbilityProvider` + `MekanismItemAbilities.canPerformAction`) is now load-bearing: group-D consumers (`ItemAtomicDisassembler`, `ModuleFarmingUnit`, `ModuleShearingUnit`, `EntityFlame`) previously imported the NeoForge types.
