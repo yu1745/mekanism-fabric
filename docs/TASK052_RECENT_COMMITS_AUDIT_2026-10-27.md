@@ -166,6 +166,8 @@
 
 续验使用同一隔离世界的真实 enrichment chamber 和 universal cable，在 GUI 中进入 Energy Config，通过实际 `PacketSideData` 分别修改非目标相对 RIGHT 侧和与电缆相邻的相对 LEFT（机器朝北时为东侧），不使用 `data merge block`。非目标侧 NONE→INPUT 时电缆位图保持 0；恢复后目标侧 NONE→INPUT→NONE，读取服务端真实 transmitter `getAllCurrentConnections()` 得到 0→16→0，机器 NBT 的对应侧也同步变化。过程中没有注入能源，也没有在两次切换及位图读取之前查询 network reader；全过程完成后才调用 network 对象（其 `toString` 会触发 acceptor 快照）并读取 `getBuffer()=0`。没有捕获到客户端错误级日志，开发世界正常保存并退出。该验证比命令写 NBT 更接近实际路径，但没有在原提交代码做同场景负对照，也不证明卸载/替换和客户端连接外观，保留 WIP 边界。
 
+**再复核 F1 实现边界**：只读审查 `01cccd8c` 真实 diff 后，主代理核对当前 `sideChanged` 将相对面换为绝对方向、`sideChangedBasic` 查询该方向的已加载相邻 transmitter 并以相反面入队，以及 transmitter server tick 的 EnumSet 复制后清空、刷新和标脏顺序；两个生产文件自该提交后未变化。未发现该范围可证明的新缺陷。新建 transmitter 的 `forceUpdate` 初值为 true，但这本身不能代替区块卸载/重载实测，也不保证任何情况下队列总在恰好一个 tick 内生效；邻居未加载、替换和 client 外观仍保留前述验证边界。本次复核没有重新运行游戏。
+
 ### F2 — 客户端键绑定回调缺失（`6b6bcb0f`，核心接线已修复；兼容与实机验证待完成）
 
 原提交将官方模式切换、模块调节器、HUD 开关和 boost 按下/释放回调从 `MekanismKeyHandler` 移除，仅声明并注册 vanilla KeyMapping；审查时确认这些回调并未重新接入。用户后续明确要求补修此前发现的问题。
