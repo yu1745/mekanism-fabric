@@ -23,8 +23,8 @@ import org.lwjgl.glfw.GLFW;
 
 /**
  * Fabric key mappings and the Mekanism-owned keyboard/mouse dispatch for the official in-game key actions.
- * Curios mode changes remain unavailable while that optional integration is unbound. Vanilla bindings do not encode the
- * official description key's SHIFT modifier; tooltip polling handles that default separately.
+ * Optional accessory mode changes use the direct Accessories slot when the mod is present. Vanilla bindings do not encode
+ * the official description key's SHIFT modifier; tooltip polling handles that default separately.
  */
 public class MekanismKeyHandler {
 
