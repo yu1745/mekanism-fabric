@@ -8,10 +8,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.netty.buffer.Unpooled;
 import java.util.UUID;
 import mekanism.common.base.PlayerState;
+import mekanism.common.integration.curios.CuriosIntegration;
 import mekanism.common.network.to_client.player_data.PacketPlayerData;
 import mekanism.common.network.to_client.player_data.PacketResetPlayerClient;
 import mekanism.common.network.to_server.PacketGearStateUpdate;
 import mekanism.common.network.to_server.PacketGearStateUpdate.GearType;
+import mekanism.common.network.to_server.PacketModeChangeCurios;
 import mekanism.test.TileLevelStub;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.minecraft.SharedConstants;
@@ -71,16 +73,33 @@ class PlayerStateNetworkingTest {
     }
 
     @Test
+    void absentAccessoryModDoesNotLoadOptionalApiOrHandleModePacket() {
+        assertFalse(net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("accessories"));
+        assertFalse(CuriosIntegration.isLoaded());
+        var level = TileLevelStub.create();
+        var player = new net.minecraft.world.entity.player.Player(level, net.minecraft.core.BlockPos.ZERO, 0,
+              new com.mojang.authlib.GameProfile(UUID.randomUUID(), "accessory-absent")) {
+            @Override public boolean isSpectator() { return false; }
+            @Override public boolean isCreative() { return false; }
+        };
+        assertTrue(CuriosIntegration.getEquippedSlots(player).isEmpty());
+        assertTrue(CuriosIntegration.getSlotStack(player, "back", -1).isEmpty());
+        new PacketModeChangeCurios("back", -1, 1, false).handle(player);
+    }
+
+    @Test
     void registeredPayloadsPreserveOfficialWireData() {
         FabricServerPlayNetworking.initialize();
         FabricGearEffectsNetworking.initialize();
         assertThrows(IllegalArgumentException.class, () -> PayloadTypeRegistry.playC2S().register(PacketGearStateUpdate.TYPE, PacketGearStateUpdate.STREAM_CODEC));
+        assertThrows(IllegalArgumentException.class, () -> PayloadTypeRegistry.playC2S().register(PacketModeChangeCurios.TYPE, PacketModeChangeCurios.STREAM_CODEC));
         assertThrows(IllegalArgumentException.class, () -> PayloadTypeRegistry.playS2C().register(PacketPlayerData.TYPE, PacketPlayerData.STREAM_CODEC));
         assertThrows(IllegalArgumentException.class, () -> PayloadTypeRegistry.playS2C().register(PacketResetPlayerClient.TYPE, PacketResetPlayerClient.STREAM_CODEC));
         UUID uuid = UUID.randomUUID();
         var data = new PacketPlayerData(uuid, true, false, true);
         var gear = new PacketGearStateUpdate(GearType.GRAVITATIONAL_MODULATOR, uuid, true);
         var reset = new PacketResetPlayerClient(uuid);
+        var accessoryMode = new PacketModeChangeCurios("back", 2, -1, true);
         RegistryFriendlyByteBuf buffer = new RegistryFriendlyByteBuf(Unpooled.buffer(), RegistryAccess.EMPTY);
         try {
             PacketGearStateUpdate.STREAM_CODEC.encode(buffer, gear);
@@ -89,6 +108,8 @@ class PlayerStateNetworkingTest {
             assertEquals(data, PacketPlayerData.STREAM_CODEC.decode(buffer));
             PacketResetPlayerClient.STREAM_CODEC.encode(buffer, reset);
             assertEquals(reset, PacketResetPlayerClient.STREAM_CODEC.decode(buffer));
+            PacketModeChangeCurios.STREAM_CODEC.encode(buffer, accessoryMode);
+            assertEquals(accessoryMode, PacketModeChangeCurios.STREAM_CODEC.decode(buffer));
         } finally {
             buffer.release();
         }
