@@ -181,6 +181,10 @@ repositories {
         url = 'https://maven.blamejared.com'
         content { includeGroup 'org.openzen.zencode' }
     }
+    maven {
+        url = 'https://maven.wispforest.io/releases'
+        content { includeGroup 'io.wispforest' }
+    }
 }
 
 def loadSlice = { String listName ->
@@ -619,6 +623,8 @@ dependencies {
     modImplementation "teamreborn:energy:${team_reborn_energy_version}"
     // Optional native computer binding; verified fabric.mod.json targets exactly MC 1.21.1.
     modCompileOnly('cc.tweaked:cc-tweaked-1.21.1-fabric:1.113.1') { transitive = false }
+    // Optional accessory API; never bundle the mod or its runtime dependencies.
+    modCompileOnly('io.wispforest:accessories-fabric:1.1.0-beta.53+1.21.1') { transitive = false }
     annotationProcessor project(':annotation-processor')
     modHandshakeMismatchFixtureImplementation "net.fabricmc:fabric-loader:${loader_version}"
     modHandshakeMismatchFixtureImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"

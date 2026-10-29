@@ -10,14 +10,10 @@ import org.jetbrains.annotations.NotNull;
  * Task052 WIP presence seam for the Curios accessory integration (see docs/TASK052_ADJUDICATION_GEAR_CATALOG.md).
  *
  * <p>Official Mekanism guards its curios branches with {@code Mekanism.hooks.curios.isLoaded()} and consults this class for
- * accessory-slot lookups. The Curios Fabric port (curios-fabric 9.5.1+1.21.1) exists, but its maven host
- * (maven.illusivesoulworks.com) is unreachable from this environment, so the artifact cannot be pinned and the real port
- * cannot compile against the Curios API. Until the artifact becomes available (maven allowlist or a manually supplied jar)
- * and the accessor surface is ported with a slot-semantics audit, this seam reports {@link #isLoaded()} as {@code false} and
- * every lookup behaves exactly like the officially no-Curios environment: callers run their equipment-slot branches and the
- * curios branches never fire. Armor-path behavior is unaffected (officially the armor branches run before/independently of
- * the curios guard). The original NeoForge+Curios implementation is preserved in this file's git history at the baseline
- * import commit (4646f509) and must be restored as the body of the real port once the artifact is pinned.
+ * accessory-slot lookups. The previously named 9.5.1+1.21.1 artifact is NeoForge-only, not a verified Fabric dependency.
+ * An optional Accessories integration is authorized for investigation; slot semantics, data and rendering must be audited
+ * before binding it. Until then this seam reports {@link #isLoaded()} as {@code false}, so guarded accessory branches never
+ * run. The original NeoForge+Curios implementation is preserved in the baseline import commit (4646f509).
  */
 public final class CuriosIntegration {
 
