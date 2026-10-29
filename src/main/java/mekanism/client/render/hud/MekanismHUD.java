@@ -8,6 +8,7 @@ import mekanism.api.gear.IModuleHelper;
 import mekanism.client.gui.GuiUtils;
 import mekanism.client.render.HUDRenderer;
 import mekanism.common.config.MekanismConfig;
+import mekanism.common.integration.curios.CuriosIntegration;
 import mekanism.common.item.interfaces.IItemHUDProvider;
 import mekanism.common.tags.MekanismTags;
 import net.minecraft.client.DeltaTracker;
@@ -62,8 +63,15 @@ public class MekanismHUD implements LayeredDraw.Layer {
                     count += makeComponent(hudProvider, player, stack, slotType, renderStrings, IItemHUDProvider::addHUDStrings);
                 }
             }
-            //The curios loop of the official HUD (addCurioHUDStrings over the curios inventory) belongs to the curios
-            //integration lane and stays deferred with it; the equipment loop above is the native surface.
+            if (CuriosIntegration.isLoaded()) {
+                for (ItemStack stack : CuriosIntegration.getEquippedStacks(player)) {
+                    IItemHUDProvider hudProvider = getHudProvider(stack);
+                    if (hudProvider != null) {
+                        count += makeComponent(hudProvider, player, stack, null, renderStrings,
+                              (provider, lines, wearer, item, ignored) -> provider.addCurioHUDStrings(lines, wearer, item));
+                    }
+                }
+            }
             Font font = minecraft.font;
             List<DelayedString> delayedDraws = null;
 

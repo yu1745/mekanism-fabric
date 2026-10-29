@@ -1,41 +1,107 @@
 package mekanism.common.integration.curios;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
- * Task052 WIP presence seam for the Curios accessory integration (see docs/TASK052_ADJUDICATION_GEAR_CATALOG.md).
- *
- * <p>Official Mekanism guards its curios branches with {@code Mekanism.hooks.curios.isLoaded()} and consults this class for
- * accessory-slot lookups. The previously named 9.5.1+1.21.1 artifact is NeoForge-only, not a verified Fabric dependency.
- * An optional Accessories integration is authorized for investigation; slot semantics, data and rendering must be audited
- * before binding it. Until then this seam reports {@link #isLoaded()} as {@code false}, so guarded accessory branches never
- * run. The original NeoForge+Curios implementation is preserved in the baseline import commit (4646f509).
+ * Optional Accessories integration. The external API is confined to a nested class so the common entry points remain
+ * loadable without the optional mod. See TASK052_ADJUDICATION_GEAR_CATALOG.md for the audited slot semantics and WIP status.
  */
 public final class CuriosIntegration {
+
+    /** Stable direct-slot address; the server must resolve it again against the sending player. */
+    public record EquippedSlot(String slotType, int index, ItemStack stack) {
+    }
 
     private CuriosIntegration() {
     }
 
     public static boolean isLoaded() {
+        // Keep accessory consumers disabled until networking, charge writeback and rendering are connected.
         return false;
     }
 
     @NotNull
     public static ItemStack findFirstCurio(@NotNull LivingEntity entity, Predicate<ItemStack> filter) {
-        //Unreachable while isLoaded() is false; keeps the official call shape compiling at the guarded call sites.
-        return ItemStack.EMPTY;
+        EquippedSlot slot = findFirstSlot(entity, filter);
+        return slot == null ? ItemStack.EMPTY : slot.stack();
     }
 
-    /**
-     * Returns the accessory-slot stacks currently equipped by the entity, in slot order. Empty while the integration is
-     * unbound; the real port must return the same worn stacks the official Curios inventory iteration exposed.
-     */
+    @Nullable
+    public static EquippedSlot findFirstSlot(@NotNull LivingEntity entity, Predicate<ItemStack> filter) {
+        if (!isLoaded()) {
+            return null;
+        }
+        for (EquippedSlot slot : AccessoriesAccess.directSlots(entity)) {
+            if (filter.test(slot.stack())) {
+                return slot;
+            }
+        }
+        return null;
+    }
+
     @NotNull
     public static List<ItemStack> getEquippedStacks(@NotNull LivingEntity entity) {
-        return List.of();
+        if (!isLoaded()) {
+            return List.of();
+        }
+        return AccessoriesAccess.directSlots(entity).stream().map(EquippedSlot::stack).toList();
+    }
+
+    public static List<EquippedSlot> getEquippedSlots(@NotNull LivingEntity entity) {
+        return isLoaded() ? AccessoriesAccess.directSlots(entity) : List.of();
+    }
+
+    public static ItemStack getSlotStack(@NotNull LivingEntity entity, String slotType, int index) {
+        return isLoaded() ? AccessoriesAccess.getSlotStack(entity, slotType, index) : ItemStack.EMPTY;
+    }
+
+    public static void setSlotStack(@NotNull LivingEntity entity, String slotType, int index, ItemStack stack) {
+        if (isLoaded()) {
+            AccessoriesAccess.setSlotStack(entity, slotType, index, stack);
+        }
+    }
+
+    /** Only this class has optional API references; never use recursive or cosmetic slot enumeration. */
+    private static final class AccessoriesAccess {
+        private static List<EquippedSlot> directSlots(LivingEntity entity) {
+            var capability = io.wispforest.accessories.api.AccessoriesCapability.get(entity);
+            if (capability == null) {
+                return List.of();
+            }
+            List<EquippedSlot> slots = new ArrayList<>();
+            for (var entry : capability.getContainers().entrySet()) {
+                var inventory = entry.getValue().getAccessories();
+                for (int index = 0; index < inventory.getContainerSize(); index++) {
+                    ItemStack stack = inventory.getItem(index);
+                    if (!stack.isEmpty()) {
+                        slots.add(new EquippedSlot(entry.getKey(), index, stack));
+                    }
+                }
+            }
+            return slots;
+        }
+
+        private static ItemStack getSlotStack(LivingEntity entity, String slotType, int index) {
+            var capability = io.wispforest.accessories.api.AccessoriesCapability.get(entity);
+            var container = capability == null ? null : capability.getContainers().get(slotType);
+            if (container == null || index < 0 || index >= container.getAccessories().getContainerSize()) {
+                return ItemStack.EMPTY;
+            }
+            return container.getAccessories().getItem(index);
+        }
+
+        private static void setSlotStack(LivingEntity entity, String slotType, int index, ItemStack stack) {
+            var capability = io.wispforest.accessories.api.AccessoriesCapability.get(entity);
+            var container = capability == null ? null : capability.getContainers().get(slotType);
+            if (container != null && index >= 0 && index < container.getAccessories().getContainerSize()) {
+                container.getAccessories().setItem(index, stack);
+            }
+        }
     }
 }

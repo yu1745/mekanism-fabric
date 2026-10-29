@@ -218,7 +218,7 @@ check() {
 }
 
 check "dedicated server reached Done" 'Done \([0-9.]+s\)!'
-check "server play channel registered all 27 payloads" 'MEKANISM_FABRIC_SERVER_PLAY_PROOF payloads=27'
+check "server play channel registered all 28 payloads" 'MEKANISM_FABRIC_SERVER_PLAY_PROOF payloads=28'
 if grep -q 'Parsing error' "$LOG_FILE"; then
   printf 'FAIL no recipe parsing errors\n'
   failures=$((failures + 1))

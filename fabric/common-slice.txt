@@ -1132,6 +1132,7 @@ mekanism/common/network/to_server/PacketGuiSetEnergy.java
 mekanism/common/network/to_server/PacketItemGuiInteract.java
 mekanism/common/network/to_server/PacketKey.java
 mekanism/common/network/to_server/PacketModeChange.java
+mekanism/common/network/to_server/PacketModeChangeCurios.java
 mekanism/common/network/to_server/PacketOpenGui.java
 mekanism/common/network/to_server/PacketPortableTeleporterTeleport.java
 mekanism/common/network/to_server/PacketRadialModeChange.java

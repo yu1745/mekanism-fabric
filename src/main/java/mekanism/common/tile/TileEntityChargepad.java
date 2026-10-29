@@ -12,6 +12,7 @@ import mekanism.common.capabilities.energy.MachineEnergyContainer;
 import mekanism.common.capabilities.holder.energy.EnergyContainerHelper;
 import mekanism.common.capabilities.holder.energy.IEnergyContainerHolder;
 import mekanism.common.entity.EntityRobit;
+import mekanism.common.integration.curios.CuriosIntegration;
 import mekanism.common.integration.energy.EnergyCompatUtils;
 import mekanism.common.registries.MekanismBlocks;
 import mekanism.common.tile.base.TileEntityMekanism;
@@ -61,10 +62,8 @@ public class TileEntityChargepad extends TileEntityMekanism {
                     //If we run out of energy, stop checking the remaining entities
                     break;
                 } else if (entity instanceof Player player) {
-                    //Fabric port delta: Fabric has no entity item capability; the upstream player handler wrapped the vanilla inventory, which is what we
-                    // iterate directly. The Curios fallback is on the unbound integration boundary (docs/TASK052_ADJUDICATION_GEAR_CATALOG.md) and is
-                    // absent until the artifact can be pinned and the integration audited
-                    if (chargeHandler(player.getInventory())) {
+                    // Fabric has no entity item capability; the player handler wraps the vanilla inventory.
+                    if (chargeHandler(player.getInventory()) || chargeAccessories(player)) {
                         active = true;
                     }
                 } else if (provideEnergy(EnergyCompatUtils.getStrictEnergyHandler(entity))) {
@@ -90,6 +89,19 @@ public class TileEntityChargepad extends TileEntityMekanism {
                     inventory.setItem(slot, itemEnergy.getContainer());
                     inventory.setChanged();
                     //Only allow charging one item per player each check
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean chargeAccessories(Player player) {
+        if (CuriosIntegration.isLoaded()) {
+            for (CuriosIntegration.EquippedSlot slot : CuriosIntegration.getEquippedSlots(player)) {
+                ItemEnergyContainer itemEnergy = ItemEnergyContainer.find(slot.stack());
+                if (itemEnergy != null && itemEnergy.transfer(energyContainer, false, energyContainer.getEnergyPerTick(), AutomationType.INTERNAL) > 0) {
+                    CuriosIntegration.setSlotStack(player, slot.slotType(), slot.index(), itemEnergy.getContainer());
                     return true;
                 }
             }

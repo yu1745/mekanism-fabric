@@ -236,7 +236,7 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 ### F11 — Curios 可选集成被固定禁用（`a147116b`，未修复）
 
-当前 `CuriosIntegration.isLoaded()` 无条件 false，查找返回空；即使安装兼容的 Fabric Curios 也不会使用原有喷气背包/自由奔跑靴、辐射屏蔽或对应模式键。该 no-op 是明确遗留，不等同于“无 Curios 环境正确”即可关闭，也不符合以假实现充当闭包的规则。历史裁定曾称 `curios-fabric 9.5.1+1.21.1` 的 Maven 当时无法访问；但复核 [Modrinth 该版本页面](https://modrinth.com/mod/curios/version/9.5.1+1.21.1) 显示实际发布的是 NeoForge jar，不能据此断言存在同版本官方 Fabric artifact。尚未确认任何兼容替代依赖及其 slot/render API。真实修复涉及新增第三方可选模块及客户端渲染，超出当前已纳机器 owner，依 AGENTS 的范围规则先记录具体边界，不用永久 false 假称兼容；在获得范围裁决并核实依赖后实现，不以此阻塞同范围内其他审查和修复。
+当前 `CuriosIntegration.isLoaded()` 无条件 false，查找返回空；即使安装兼容的 Fabric Curios 也不会使用原有喷气背包/自由奔跑靴、辐射屏蔽或对应模式键。该 no-op 是明确遗留，不等同于“无 Curios 环境正确”即可关闭，也不符合以假实现充当闭包的规则。历史裁定曾称 `curios-fabric 9.5.1+1.21.1` 的 Maven 当时无法访问；但复核 [Modrinth 该版本页面](https://modrinth.com/mod/curios/version/9.5.1+1.21.1) 显示实际发布的是 NeoForge jar，不能据此断言存在同版本官方 Fabric artifact。用户已授权审计 Accessories 并在语义可建立时按最小真实边界接入；`8ead3312` 已解析候选 compile-only 依赖，但装备槽状态、顺序、服务端写回及渲染等价尚未建立，现有 guard 仍不启用，具体证据和接续见 `TASK052_ADJUDICATION_GEAR_CATALOG.md`。不以此 WIP 冒充已修复。
 
 ### F12 — 喷火实体模式未保存（`12ebbcf6`，已修复，实际世界加载待验）
 

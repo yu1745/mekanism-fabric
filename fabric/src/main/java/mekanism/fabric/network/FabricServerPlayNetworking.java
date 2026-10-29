@@ -9,6 +9,7 @@ import mekanism.common.network.to_server.PacketGuiInteract;
 import mekanism.common.network.to_server.PacketGearStateUpdate;
 import mekanism.common.network.to_server.PacketKey;
 import mekanism.common.network.to_server.PacketModeChange;
+import mekanism.common.network.to_server.PacketModeChangeCurios;
 import mekanism.common.network.to_server.PacketOpenGui;
 import mekanism.common.network.to_server.PacketPortableTeleporterTeleport;
 import mekanism.common.network.to_server.PacketRadialModeChange;
@@ -80,6 +81,7 @@ public final class FabricServerPlayNetworking {
         register(PacketGearStateUpdate.TYPE, PacketGearStateUpdate.STREAM_CODEC);
         register(PacketRadialModeChange.TYPE, PacketRadialModeChange.STREAM_CODEC);
         register(PacketModeChange.TYPE, PacketModeChange.STREAM_CODEC);
+        register(PacketModeChangeCurios.TYPE, PacketModeChangeCurios.STREAM_CODEC);
         register(PacketKey.TYPE, PacketKey.STREAM_CODEC);
         register(PacketDropperUse.TYPE, PacketDropperUse.STREAM_CODEC);
         register(PacketPortableTeleporterTeleport.TYPE, PacketPortableTeleporterTeleport.STREAM_CODEC);

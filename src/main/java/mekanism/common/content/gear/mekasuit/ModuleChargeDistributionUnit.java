@@ -1,11 +1,9 @@
 package mekanism.common.content.gear.mekasuit;
 
 import java.util.function.Consumer;
-import mekanism.api.Action;
 import mekanism.api.AutomationType;
 import mekanism.api.annotations.ParametersAreNotNullByDefault;
 import mekanism.api.energy.IEnergyContainer;
-import mekanism.api.energy.IStrictEnergyHandler;
 import mekanism.api.gear.ICustomModule;
 import mekanism.api.gear.IModule;
 import mekanism.api.gear.IModuleContainer;
@@ -95,8 +93,9 @@ public record ModuleChargeDistributionUnit(boolean chargeSuit, boolean chargeInv
                 }
             }
             if (CuriosIntegration.isLoaded()) {
-                for (ItemStack stack : CuriosIntegration.getEquippedStacks(player)) {
-                    toCharge = charge(energyContainer, stack, toCharge);
+                for (CuriosIntegration.EquippedSlot slot : CuriosIntegration.getEquippedSlots(player)) {
+                    toCharge = charge(energyContainer, slot.stack(), toCharge,
+                          result -> CuriosIntegration.setSlotStack(player, slot.slotType(), slot.index(), result));
                     if (toCharge == 0L) {
                         return;
                     }
@@ -115,23 +114,5 @@ public record ModuleChargeDistributionUnit(boolean chargeSuit, boolean chargeInv
             install.accept(itemEnergy.getContainer());
         }
         return amount - moved;
-    }
-
-    /** The unbound Curios seam has no native replacement-slot owner yet; this guarded path only uses registered strict Mekanism stacks. */
-    private long charge(IEnergyContainer energyContainer, ItemStack stack, long amount) {
-        if (!stack.isEmpty() && amount > 0L) {
-            IStrictEnergyHandler handler = mekanism.common.attachments.containers.ContainerType.ENERGY.getRegisteredHandler(stack);
-            if (handler != null) {
-                long remaining = handler.insertEnergy(amount, Action.SIMULATE);
-                if (remaining < amount) {
-                    //If we can actually insert any energy into
-                    long toExtract = amount - remaining;
-                    long extracted = energyContainer.extract(toExtract, Action.EXECUTE, AutomationType.MANUAL);
-                    long inserted = handler.insertEnergy(extracted, Action.EXECUTE);
-                    return inserted + remaining;
-                }
-            }
-        }
-        return amount;
     }
 }
