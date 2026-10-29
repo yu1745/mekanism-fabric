@@ -22,8 +22,7 @@ public final class CuriosIntegration {
     }
 
     public static boolean isLoaded() {
-        // Keep accessory consumers disabled until networking, charge writeback and rendering are connected.
-        return false;
+        return net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("accessories");
     }
 
     @NotNull

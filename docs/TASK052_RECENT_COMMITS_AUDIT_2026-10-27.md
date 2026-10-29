@@ -240,7 +240,7 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 
 ### F11 — Curios 可选集成被固定禁用（`a147116b`，未修复）
 
-当前 `CuriosIntegration.isLoaded()` 无条件 false，查找返回空；即使安装兼容的 Fabric Curios 也不会使用原有喷气背包/自由奔跑靴、辐射屏蔽或对应模式键。该 no-op 是明确遗留，不等同于“无 Curios 环境正确”即可关闭，也不符合以假实现充当闭包的规则。历史裁定曾称 `curios-fabric 9.5.1+1.21.1` 的 Maven 当时无法访问；但复核 [Modrinth 该版本页面](https://modrinth.com/mod/curios/version/9.5.1+1.21.1) 显示实际发布的是 NeoForge jar，不能据此断言存在同版本官方 Fabric artifact。用户已授权审计 Accessories 并在语义可建立时按最小真实边界接入；`8ead3312` 已解析候选 compile-only 依赖，但装备槽状态、顺序、服务端写回及渲染等价尚未建立，现有 guard 仍不启用，具体证据和接续见 `TASK052_ADJUDICATION_GEAR_CATALOG.md`。不以此 WIP 冒充已修复。
+审查时 `CuriosIntegration.isLoaded()` 无条件 false，查找返回空；即使安装兼容的 Fabric 饰品模组也不会使用原有喷气背包/自由奔跑靴、辐射屏蔽或对应模式键。该 no-op 是明确遗留，不等同于“无 Curios 环境正确”即可关闭，也不符合以假实现充当闭包的规则。历史裁定曾称 `curios-fabric 9.5.1+1.21.1` 的 Maven 当时无法访问；但复核 [Modrinth 该版本页面](https://modrinth.com/mod/curios/version/9.5.1+1.21.1) 显示实际发布的是 NeoForge jar，不能据此断言存在同版本官方 Fabric artifact。用户已授权审计 Accessories 并进一步明确接受其原生直接槽位语义与 Curios 功能启用开关、跨模槽顺序的差异；`8ead3312` 已解析候选 compile-only 依赖，当前 WIP 已接入真实 mod presence，但服务端写回、实际槽位资格和渲染仍待验证，具体证据和接续见 `TASK052_ADJUDICATION_GEAR_CATALOG.md`。不以此 WIP 冒充已修复。
 
 ### F12 — 喷火实体模式未保存（`12ebbcf6`，已修复，实际世界加载待验）
 
@@ -427,6 +427,8 @@ F2 的剩余 GUI/联机、组合键重绑和输入平台边界仍需验证。`ha
 ### 并行初审待主代理核验
 
 `2529dca8`：主代理重读完整真实 diff，并抽核新纳片的 Ender 面罩、猪灵交易/中立、细雪、掉落物销毁、区块卸载及两端鞘翅调用链；固定 NeoForge 的 MekaSuit ServerLevel 伤害重载差异按 F65 修复，LivingEntity 游戏 hook 及其后续重写按 F59 修复。其余抽核范围暂未发现新的已证实生产缺陷；此复核不证明全部真实客户端/区块生命周期和第三方互操作。`1af82201` 的官方历史 registry alias 已按 F63 修复；`38b8b1af` 创造标签内搜索已按 F60 修复并实际交互验证。F29 的非 GUI C2S 只读复核发现并按 F64 修复装备状态链，其他原官方共有风险不直接归因于移植；不据此宣称所有网络包授权及生命周期已覆盖。`a1f1c46f` 发现 shift 合成 bin 可能丢额外物品，但只读子代理对照 NeoForge `ResultSlot` 发现官方在同一点触发回调，属于上游共享问题，暂不认定为移植偏差；也未实机验证。不能将只读初审自动计为全部关闭。
+
+对 `a1f1c46f` 的 bin follow-up 进一步由主代理对照当前源码、官方基线与两份固定 Minecraft `ResultSlot`：`BinInsertRecipe.onCrafting` 主体相对官方只改变事件参数和 registry holder 取值；NeoForge 的 crafting event 位于 `onCraftedBy` 之后、配方余项和矩阵消耗之前，Fabric mixin 注入同一调用之后，且两边的 shift-click `onQuickCraft` 都先调用 `checkTakeAchievements`。因此先前 shift-click 候选不能只凭该调用时机归因于移植。该结论限于原版 `ResultSlot` 的静态对照，既未实测 shift-click，也不证明其他模组的合成台或自动合成 owner 已获得同等事件。
 
 ## 恢复位置
 

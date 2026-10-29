@@ -183,7 +183,10 @@ repositories {
     }
     maven {
         url = 'https://maven.wispforest.io/releases'
-        content { includeGroup 'io.wispforest' }
+        content {
+            includeGroup 'io.wispforest'
+            includeGroup 'io.wispforest.endec'
+        }
     }
 }
 
@@ -625,6 +628,10 @@ dependencies {
     modCompileOnly('cc.tweaked:cc-tweaked-1.21.1-fabric:1.113.1') { transitive = false }
     // Optional accessory API; never bundle the mod or its runtime dependencies.
     modCompileOnly('io.wispforest:accessories-fabric:1.1.0-beta.53+1.21.1') { transitive = false }
+    // Explicitly opted-in dev runtime for testing the real optional mod; never bundle it.
+    if (providers.gradleProperty('accessoriesDev').isPresent()) {
+        modLocalRuntime 'io.wispforest:accessories-fabric:1.1.0-beta.53+1.21.1'
+    }
     annotationProcessor project(':annotation-processor')
     modHandshakeMismatchFixtureImplementation "net.fabricmc:fabric-loader:${loader_version}"
     modHandshakeMismatchFixtureImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
