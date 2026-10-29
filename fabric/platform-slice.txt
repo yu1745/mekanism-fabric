@@ -50,6 +50,7 @@ mekanism/fabric/client/render/obj/TransmitterObjGeometry.java
 mekanism/fabric/client/render/obj/TransmitterQuadBaker.java
 mekanism/fabric/config/FabricChemicalConfig.java
 mekanism/fabric/config/FabricClientConfigLifecycle.java
+mekanism/fabric/config/FabricGearConfig.java
 mekanism/fabric/config/FabricMekanismConfigManager.java
 mekanism/fabric/config/FabricWindowConfig.java
 mekanism/fabric/config/MekanismConfigSpec.java
