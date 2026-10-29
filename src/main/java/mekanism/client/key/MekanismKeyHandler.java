@@ -5,10 +5,13 @@ import mekanism.client.sound.SoundHandler;
 import mekanism.common.MekanismLang;
 import mekanism.common.base.KeySync;
 import mekanism.common.config.MekanismConfig;
+import mekanism.common.integration.curios.CuriosIntegration;
+import mekanism.common.item.interfaces.IChemicalItem;
 import mekanism.common.inventory.container.ModuleTweakerContainer;
 import mekanism.common.item.interfaces.IModeItem;
 import mekanism.common.network.PacketUtils;
 import mekanism.common.network.to_server.PacketModeChange;
+import mekanism.common.network.to_server.PacketModeChangeCurios;
 import mekanism.common.network.to_server.PacketOpenGui;
 import mekanism.common.registries.MekanismSounds;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
@@ -93,6 +96,14 @@ public class MekanismKeyHandler {
         if (IModeItem.isModeItem(player, slot)) {
             PacketUtils.sendToServer(new PacketModeChange(slot, player.isShiftKeyDown()));
             SoundHandler.playSound(MekanismSounds.HYDRAULIC);
+        } else if (CuriosIntegration.isLoaded()) {
+            CuriosIntegration.EquippedSlot accessory = CuriosIntegration.findFirstSlot(player, stack ->
+                  player.getEquipmentSlotForItem(stack) == slot && IModeItem.isModeItem(stack, slot)
+                        && (!(stack.getItem() instanceof IChemicalItem item) || item.hasChemical(stack)));
+            if (accessory != null) {
+                PacketUtils.sendToServer(new PacketModeChangeCurios(accessory.slotType(), accessory.index(), player.isShiftKeyDown()));
+                SoundHandler.playSound(MekanismSounds.HYDRAULIC);
+            }
         }
     }
 

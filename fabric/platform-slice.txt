@@ -30,6 +30,7 @@ mekanism/fabric/client/model/FabricRobitUnbakedModel.java
 mekanism/fabric/client/render/FabricBoltRendering.java
 mekanism/fabric/client/render/FabricEntityRendererRegistration.java
 mekanism/fabric/client/render/FabricTileEntityRendererRegistration.java
+mekanism/fabric/client/render/armor/FabricAccessoryRenderRegistration.java
 mekanism/fabric/client/render/armor/FabricArmorLayerRegistration.java
 mekanism/fabric/client/render/armor/FabricGearModels.java
 mekanism/fabric/client/render/item/FabricFluidBucketRegistration.java
