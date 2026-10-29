@@ -11,6 +11,8 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -18,6 +20,46 @@ import org.junit.jupiter.api.io.TempDir;
 class MekanismConfigSpecTest {
     @TempDir
     Path temporaryDirectory;
+
+    @Test
+    void gearScalarSnapshotValidatesEverythingBeforeRemoteInstall() throws ReflectiveOperationException {
+        net.minecraft.SharedConstants.tryDetectVersion();
+        net.minecraft.server.Bootstrap.bootStrap();
+        var constructor = mekanism.common.config.GearConfig.class.getDeclaredConstructor();
+        constructor.setAccessible(true);
+        var source = constructor.newInstance();
+        var target = constructor.newInstance();
+        source.getConfigSpec().load(temporaryDirectory.resolve("serverconfig/Mekanism/gear.toml"));
+        source.freeRunnerMaxEnergy.set(9_007_199_254_740_993L);
+        Map<String, Object> snapshot = source.getConfigSpec().scalarSnapshot();
+        assertEquals(9_007_199_254_740_993L, snapshot.get("free_runner.maxEnergy"));
+
+        Map<String, Object> invalid = new HashMap<>(snapshot);
+        invalid.put("free_runner.maxEnergy", -1L);
+        assertThrows(IllegalArgumentException.class, () -> target.getConfigSpec().installRemoteScalars(invalid));
+        assertFalse(target.isLoaded());
+        assertEquals(64_000L, target.freeRunnerMaxEnergy.get());
+        Map<String, Object> missing = new HashMap<>(snapshot);
+        missing.remove("free_runner.maxEnergy");
+        assertThrows(IllegalArgumentException.class, () -> target.getConfigSpec().installRemoteScalars(missing));
+        Map<String, Object> wrongType = new HashMap<>(snapshot);
+        wrongType.put("free_runner.maxEnergy", 100);
+        assertThrows(IllegalArgumentException.class, () -> target.getConfigSpec().installRemoteScalars(wrongType));
+        Map<String, Object> nonFinite = new HashMap<>(snapshot);
+        nonFinite.put("free_runner.fallDamageReductionRatio", Double.NaN);
+        assertThrows(IllegalArgumentException.class, () -> target.getConfigSpec().installRemoteScalars(nonFinite));
+        assertFalse(target.isLoaded());
+
+        target.getConfigSpec().installRemoteScalars(snapshot);
+        target.clearCache(false);
+        assertTrue(target.isLoaded());
+        assertEquals(9_007_199_254_740_993L, target.freeRunnerMaxEnergy.get());
+        assertThrows(IllegalStateException.class, () -> target.getConfigSpec().installRemoteScalars(snapshot));
+        assertThrows(IllegalStateException.class, () -> target.getConfigSpec().save());
+        target.clearCache(true);
+        target.getConfigSpec().unload();
+        source.getConfigSpec().unload();
+    }
 
     @Test
     void missingFileGetsValidatedDefaultsAndMetadata() throws IOException {

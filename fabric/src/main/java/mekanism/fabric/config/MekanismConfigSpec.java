@@ -156,6 +156,41 @@ public final class MekanismConfigSpec {
         return new LoadResult(created, malformed, corrected);
     }
 
+    /** A strict scalar snapshot for the SERVER gear configuration; no document or unknown keys leave the owner. */
+    public synchronized Map<String, Object> scalarSnapshot() {
+        if (!loaded) throw new IllegalStateException("Config spec is not loaded");
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        for (Map.Entry<String, ConfigValue<?>> entry : values.entrySet()) {
+            Object value = entry.getValue().currentValue;
+            if (!(value instanceof Boolean || value instanceof Integer || value instanceof Long || value instanceof Double)) {
+                throw new IllegalStateException("Non-scalar config value at " + entry.getKey());
+            }
+            snapshot.put(entry.getKey(), value);
+        }
+        return Collections.unmodifiableMap(snapshot);
+    }
+
+    /** Validate the complete snapshot before changing any value. Does not read or write a TOML file. */
+    public synchronized void installRemoteScalars(Map<String, Object> snapshot) {
+        Objects.requireNonNull(snapshot);
+        if (loaded || file != null || document != null) throw new IllegalStateException("Config spec already has an owner");
+        if (!snapshot.keySet().equals(values.keySet())) throw new IllegalArgumentException("Config snapshot schema mismatch");
+        Map<ConfigValue<?>, Object> resolved = new IdentityHashMap<>();
+        for (Map.Entry<String, ConfigValue<?>> entry : values.entrySet()) {
+            ConfigValue<?> value = entry.getValue();
+            Object candidate = snapshot.get(entry.getKey());
+            Object defaultValue = value.getDefault();
+            if (candidate == null || !(defaultValue instanceof Boolean || defaultValue instanceof Integer
+                  || defaultValue instanceof Long || defaultValue instanceof Double) || candidate.getClass() != defaultValue.getClass()) {
+                throw new IllegalArgumentException("Invalid config snapshot type for " + entry.getKey());
+            }
+            Object normalized = value.normalize(candidate).orElseThrow(() -> new IllegalArgumentException("Invalid config snapshot value for " + entry.getKey()));
+            resolved.put(value, normalized);
+        }
+        for (Map.Entry<ConfigValue<?>, Object> entry : resolved.entrySet()) entry.getKey().publishLoaded(entry.getValue());
+        loaded = true;
+    }
+
     public synchronized void save() {
         if (!loaded || file == null || document == null) {
             throw new IllegalStateException("Config spec has not been loaded");
