@@ -2,11 +2,11 @@
 
 ## 现状
 
-ROADMAP P4 W-23–28；基线 `843af935`（P3 最终生产提交）。P0–P3 已通过阶段门禁。W-23 已通过真实 cable 传输与 Team Reborn API 双向转换验证，并修复通电 contents 材质崩溃。W-24 满载、断开／重连及原生事务回滚已验证。W-25 Sorter过滤、Transporter及双向漏斗自动化已验证。既有机器 smoke 验证 cube→cable→chamber 放电与产出，以及部分物品／流体／化学连接；这些证据不替代本阶段的完整边界验收。
+ROADMAP P4 W-23–28；基线 `843af935`（P3 最终生产提交）。P0–P3 已通过阶段门禁。W-23 已通过真实 cable 传输与 Team Reborn API 双向转换验证，并修复通电 contents 材质崩溃。W-24 满载、断开／重连及原生事务回滚已验证。W-25 Sorter过滤、Transporter及双向漏斗自动化已验证。W-26 化学品数量守恒、热量连接与断开控制已验证。既有机器 smoke 验证 cube→cable→chamber 放电与产出，以及部分物品／流体／化学连接；这些证据不替代本阶段的完整边界验收。
 
 ## 下一步
 
-W-26：核对 Pressurized Tube 化学传输与 Thermodynamic Conductor 热量网络，在隔离世界取得真实两端／网络读数；不以源码引用代替运行证据。
+W-27：在隔离世界验证真实区块卸载／重载、拆除与世界保存重启后的网络重建；使用实际生命周期回调和连接读数，不以直接调用unload方法代替区块卸载。随后W-28执行P4阶段门禁并归档。
 
 随后依次执行 W-24 pipe→tank 满载／断开／事务回滚，W-25 transporter+sorter+vanilla hopper，W-26 tube 与 conductor，W-27 unload/reload、拆除及存读档网络重建；W-28 统一门禁收尾。
 
@@ -45,3 +45,13 @@ P3 最终 `fabric-machine-smoke: PASSED` 可作本阶段已存在链路的基线
 真实漏斗进出机器：vanilla hopper `[5,100,0]` facing west，enrichment chamber `[4,100,0]` 的LEFT=item INPUT、BOTTOM=item OUTPUT，底部hopper `[4,99,0]`。源hopper放1 iron_ore，机器给40000J；初次读取时hopper已经推入，machine-initial真实读数input1、progress14（不是声称tick0快照）。自然tick完成后机器input/output皆空、能量10000J，底部hopper收到2 mekanism:dust_iron，源hopper空；wait predicate `inv[4,99,0].0.count == 2` matched，ranTicks19。见 [机器初次读数](evidence/p4-item/machine-initial.json)、[最终机器](evidence/p4-item/machine-final.json)、[产物](evidence/p4-item/hopper-bottom-final.json)、[等待结果](evidence/p4-item/hopper-output-wait.json)。没有使用inv.*读写Mekanism库存，权威读数均来自服务端NBT。
 
 GUI：实际打开GuiLogisticalSorter（38 slots）与GuiElectricMachine（41 slots），后者菜单index2显示1 iron_ore。见 sorter-screen/machine-screen.json。第一次teleport落在无平台位置，玩家掉落至y62，open-block明确OUT_OF_REACH；未计入成功证据。回到目标附近并补临时支撑后实际打开成功；一条fill对原有stone返回“No blocks were filled”，无游戏故障。gui problems仅既有启动WARN，无新增ERROR。自有会话正常stopped，世界81个文件SHA-256恢复一致，临时debug mod/wrapper/Xvfb清理。无新测试，未改发布源码／依赖。W-25完成，下一项W-26；P4最终门禁仍留W-28。
+
+2026-10-30 W-26 完成（基线 `e6c21283`，未改生产代码）：PressurizedTube 继续使用原 IChemicalHandler 的simulate/execute领域语义与ChemicalNetwork；HeatHandlerManager 使用唯一 mekanism:heat_handler lookup 和原ProxyHeatHandler，HeatNetwork更新真实导体heat capacitor，ThermodynamicConductor.getAdjacent刷新实际side acceptor。没有将化学域伪装成Fabric fluid，也未引入外部热量接口或替换官方热交换公式。既有 HeatHandlerTest、BasicHeatCapacitorTest、ChemicalCodecTankConnectionTest 各6项，共18项PASS（26秒）。
+
+化学真机：source basic chemical tank `[0,100,4]` 8000 mekanism:oxygen；basic pressurized tube `[1,100,4]` WEST=PULL/EAST=PUSH；sink `[2,100,4]` 空罐输入。稳定读数sink8000、source空、tube无buffer，保持8000单位守恒且化学ID不变。见 [初始源](evidence/p4-chemical-heat/chemical-initial-source.json)、[最终源](evidence/p4-chemical-heat/chemical-final-source.json)、[tube](evidence/p4-chemical-heat/chemical-final-tube.json)、[目标](evidence/p4-chemical-heat/chemical-final-sink.json)。
+
+热量真机：resistive heater `[0,100,0]`→basic thermodynamic conductor `[1,100,0]`→无能量heater `[2,100,0]`。两heater初始heat capacity100，温度分别299.375000894K／299.532437982K；给source的真实energy container配置usage100000J/t、stored10000000J。实际network字符串为“1 transmitters, 2 acceptors”；接收端energy container始终无stored能量、active=false，但heat从29953.2438上升至1780144.009，后续独立temperature读数17413.771867K；source／conductor后续温度分别17568.423930K／1719116.262784K。读数来自连续自然tick，不声称这些独立RPC是同tick守恒快照。网络heatTransferred=346867.317494（原字段是温度传递统计，不写作J）。源的10000000J在采样前已经耗完，仍由已储热容自然交换。见 heat-initial-*/heat-powered-*/heat-temperature-* 与 [实际network](evidence/p4-chemical-heat/heat-network.json)。
+
+控制验证：通过真实transmitter.setConnectionTypeRaw(EAST,NONE)、refreshConnections、notifyTileChange断开；network变1 acceptor。将无能量接收端heat capacitor经NBT重置30000（300K），连续读数299.997947→299.991262K，仅环境变化。恢复EAST=NORMAL并刷新后，同一接收端升至8142.187896K，证明热量来自导体连接；未反射写热量字段，也未人为给接收端供能。见 heat-disconnected-temperature-1/2、heat-disconnected-network、heat-reconnected-temperature.json。官方热算法具有环境散失，本项不伪称绝热／同tick总热量守恒。
+
+运行无新增GUI ERROR；自有客户端正常stopped，完整世界81文件SHA-256恢复一致，临时debug mod/wrapper/Xvfb清理。无新增测试或发布依赖变更。W-26完成；下一项W-27网络实际生命周期，P4全阶段门禁尚待W-28。

@@ -1,0 +1,1 @@
+{"resolvedTo":"getTemperature","steps":[{"seg":"transmitter","field":"transmitter","class":"mekanism.common.content.network.transmitter.ThermodynamicConductor"},{"seg":"buffer","field":"buffer","class":"mekanism.common.capabilities.heat.VariableHeatCapacitor"},{"seg":"temperature","method":"getTemperature","class":"java.lang.Double"}],"value":1719116.2627836533}
