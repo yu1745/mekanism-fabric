@@ -1,0 +1,5 @@
+{
+  "release": "{\"success\":true,\"result\":1,\"output\":\"Unlocked 1 recipes for Player820\"}",
+  "ga": "{\"success\":true,\"result\":1,\"output\":\"Unlocked 1 recipes for Player820\"}",
+  "service_pack": "error [-32603] command execution threw: CommandSyntaxException: Unknown recipe: p3version:service_pack"
+}

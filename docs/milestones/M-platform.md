@@ -54,6 +54,26 @@ Chunk watch 的 LOAD/UNLOAD 使用 Fabric ServerChunkEvents；ticket-level 通�
 
 真实隔离数据包加载四个临时配方：已知且满足的 fabric:all_mods_loaded 子条件使配方加载，recipe give 返回 1；unknown condition、missing child、malformed child 对应配方均在加载时过滤，查询报 Unknown recipe。没有以显式 grant 替代 recipe load。[实际结果](evidence/p3-condition/load-results.json)。运行后正常 stopped，完整世界从备份恢复，临时 debug mod／数据包／wrapper／Xvfb 清理；首轮 assemble PASS（20 秒），最终 assemble 在提交前复核。
 
-W-19 尚有版本比较语义待收口：FabricModVersionLoadedCondition 仍使用 Fabric Version，官方为 Maven ComparableVersion；当前 637 compat 资源的简单版本 floor 已有转换，但不能把这个事实扩称所有输入等价。下一步核对现有 Maven 依赖可用性，并在同一 condition owner 保留官方比较算法，随后继续 W-20。不另建条件框架或删掉官方行为。
+W-19 尚有版本比较语义待收口：FabricModVersionLoadedCondition 仍使用 Fabric Version，官方为 Maven ComparableVersion；当前 637 compat 资源的简单版本 floor 已有转换，但不能把这个事实扩称所有输入等价。该差异随后已在下节收口，继续 W-20。不另建条件框架或删掉官方行为。
 
 本次提交后风格审查：检查已提交 condition adapter、bootstrap、slice 与转换 diff，对照官方 ConditionExistsCondition.test/makeCodec 与固定 Fabric ResourceCondition.CODEC。没有重复 registry 或 fake 条件；false fallback 只作用于 optional 子条件，已有未知顶层条件仍报错。真实资源加载证据覆盖成功及三类失败输入。最终 assemble PASS（4 秒），版本比较差异仍明确待做。
+
+
+2026-10-30 W-19 版本比较收尾：FabricModVersionLoadedCondition 改用官方同一 Maven ComparableVersion 算法，FabricLoader 仅负责查找实际 mod metadata；比较 minVersion 与实际版本 friendly string，不再用 Fabric Version.parse 或将 Maven 支持的 qualifier 当作解析错误。固定使用 `org.apache.maven:maven-artifact:3.9.9`，implementation/include 均关闭 transitive，仅嵌套实际算法依赖；原库 LICENSE/NOTICE 随 nested JAR 保留。packaged 静态合同同时列出该第三份 nested dependency，不放宽其它完整性断言。
+
+assemble PASS（23 秒，含三份 slice gate）。真实隔离数据包分别以 minecraft 1.21.1 为目标：release `1.21.1` 与 alias `1.21.1-ga` 配方成功加载，service-pack 下限 `1.21.1-sp` 配方被过滤；[原始读数](evidence/p3-condition/version-results.json)。这覆盖原 comparator 差异，不测试／重写 Maven 内部算法。此前 condition_exists 四类实际加载证据继续有效；W-19 的两个自定义 condition 和 tag-empty 均有实际 Fabric owner，后续 W-22 记录旧 NeoForge 注册入口被替代的理由。
+
+运行后自有会话正常 stopped，完整世界回退到备份且临时 debug runtime／wrapper／Xvfb 清理，无新测试。最终 JAR 已核对嵌套 ComparableVersion.class 与 LICENSE/NOTICE；静态 packaged 门禁在提交前复核。本批完成 W-19，下一项 W-20。
+
+提交后风格审查：检查已提交 comparator、依赖、packaged 合同与实际读数 diff；与官方 ModVersionLoadedCondition 的 ComparableVersion 顺序和 absent-mod=false 分支一致。原始库直接复用而非复制／重写，嵌套依赖固定且许可证保留。静态 packaged PASS；未发现本次行为边界内的移植风格偏离。
+
+
+2026-10-30 W-20 进行中：CommonPlayerTracker 的 tracking、换维度、respawn、disconnect 已由 FabricGearEffectsNetworking 接通，logged_in 已在 W-18 修复；rightClick 的外部 wrench/cardboard 语义仍待核对。ReloadListener 的缓存失效已由 FabricRecipeCacheLifecycle 承接；发现 IncompleteRecipeScanner 未纳入，现纳入 common（1511→1512），原扫描和警告算法保留，事件参数改实际 server/player，启动及成功 reload 在实际 cache bind 后扫描，JOIN 仅发送已有警告，stop 清空状态。
+
+真实空-tag crushing 配方探针先暴露网络断连：ItemStackIngredient.NetworkCodec 调用拒绝 Ingredient.EMPTY 的公共 of 工厂，而网络将空 tag 展开成空数组。修复为 network decoder 直接构造保留不完整状态，count 继续正数校验，mode/component 组合校验不变；公共构造工厂规则保留。原官方 stream 是 SizedIngredient.STREAM_CODEC 映射到私有 wrapper 构造，不通过公共工厂。assemble PASS（修复后），同一探针客户端成功进入世界，scanner 实际状态 true：[读数](evidence/p3-scanner/start.json)。不通过删除配方或绕过 scanner 获得连接成功。
+
+随后移除临时配方并执行 reload，真实既有机器 tick 崩溃：`Recipe lookup monitor level is not bound to the active recipe manager (epoch 1)`，首个业务帧 RecipeCacheLookupMonitor.validatedBinding:217 → updateAndProcess:85 → TileEntityElectricMachine.onUpdateServer:98。完整 [原始报告](evidence/p3-scanner/reload-crash.txt) 与 lifecycle.log 保留。本次不能声明 reload/扫描收尾通过。下一步检查真实 RecipeManager 替换与 Fabric END_DATA_PACK_RELOAD 回调之间的绑定时序，在现有 recipe owner 修复，不放松 foreign-level/manager guard。
+
+游戏进程已确认 terminal（runClient exit 255），隔离世界完整恢复到启动前备份，临时 mod／wrapper／Xvfb 已清理。无新测试；本批是明确失败点的可恢复实现检查点，W-20 未完成，后续须在同一行为闭包修复并验收。
+
+提交后审查：已检查实际 scanner lifecycle 与 wire decoder diff；count/mode/component 限制及列表不可变性保留，未改变公共 factory 或丢弃不完整配方。真实连接成功支持 empty-wire 修复，但 reload 崩溃仍是明确未通过项，当前检查点不作 W-20 完成声明。原始 crash/log 已显式纳入 Git，后续据此修复。

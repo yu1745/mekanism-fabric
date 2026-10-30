@@ -25,5 +25,6 @@ public final class MekanismUsernameLifecycle {
         //JOIN is (handler, sender, server): the actual player comes from the handler
         UsernameCache.setLastKnownUsername(handler.player.getUUID(), handler.player.getGameProfile().getName());
         mekanism.common.advancements.MekanismCriteriaTriggers.LOGGED_IN.value().trigger(handler.player);
+        mekanism.common.IncompleteRecipeScanner.recipes(server, handler.player);
     }
 }

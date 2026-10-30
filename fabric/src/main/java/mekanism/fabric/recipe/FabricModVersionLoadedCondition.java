@@ -8,19 +8,16 @@ import net.fabricmc.fabric.api.resource.conditions.v1.ResourceCondition;
 import net.fabricmc.fabric.api.resource.conditions.v1.ResourceConditionType;
 import net.fabricmc.fabric.api.resource.conditions.v1.ResourceConditions;
 import net.fabricmc.loader.api.FabricLoader;
-import net.fabricmc.loader.api.Version;
-import net.fabricmc.loader.api.VersionParsingException;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
+import org.apache.maven.artifact.versioning.ComparableVersion;
 
 /**
  * Fabric port of the official {@code ModVersionLoadedCondition} datapack condition: the compat recipes shipped by
  * {@code transformCompatRecipes} reference the mekanism-namespaced condition, and the fabric condition registry keys
  * off the same mekanism id, so the packaged form stays the official decision surface.
  *
- * <p>Comparator delta (documented): the official condition compares with Maven's {@code ComparableVersion}; the
- * Fabric loader's {@link Version} comparison is semver-shaped. The shipped compat floors are simple triples, where
- * both orderings agree.</p>
+ * <p>Retains the official Maven version ordering, including qualifier aliases and release normalization.</p>
  */
 public record FabricModVersionLoadedCondition(String modid, String minVersion) implements ResourceCondition {
 
@@ -48,14 +45,8 @@ public record FabricModVersionLoadedCondition(String modid, String minVersion) i
     @Override
     public boolean test(@NotNull net.minecraft.core.HolderLookup.Provider lookupProvider) {
         return FabricLoader.getInstance().getModContainer(modid)
-              .map(container -> {
-                  try {
-                      //They match or we are ahead of the min version - the official test's exact contract.
-                      return Version.parse(minVersion).compareTo(container.getMetadata().getVersion()) <= 0;
-                  } catch (VersionParsingException e) {
-                      throw new IllegalStateException("Unparseable compat version floor: " + minVersion, e);
-                  }
-              })
+              .map(container -> new ComparableVersion(minVersion).compareTo(
+                    new ComparableVersion(container.getMetadata().getVersion().getFriendlyString())) <= 0)
               .orElse(false);
     }
 }

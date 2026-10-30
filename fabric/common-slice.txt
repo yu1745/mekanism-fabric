@@ -1513,3 +1513,6 @@ mekanism/common/command/builders/StructureBuilder.java
 # P3 original advancement descriptors
 mekanism/common/advancements/MekanismAdvancement.java
 mekanism/common/advancements/MekanismAdvancements.java
+
+# P3 recipe diagnostics lifecycle owner
+mekanism/common/IncompleteRecipeScanner.java

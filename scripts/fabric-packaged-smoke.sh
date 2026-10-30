@@ -241,11 +241,12 @@ with zipfile.ZipFile(sys.argv[1]) as artifact, zipfile.ZipFile(sys.argv[3]) as d
     actual = {name for name in entries if not name.endswith("/")}
     dev = {name for name in development.namelist() if not name.endswith("/")}
     nested = {f"META-INF/jars/{name}-{sys.argv[4]}.jar" for name in ("core", "toml")}
+    nested.add("META-INF/jars/maven-artifact-3.9.9.jar")
     if actual != dev | nested:
         raise SystemExit(f"artifact contents differ from build: missing={sorted((dev | nested) - actual)!r} "
                          f"extra={sorted(actual - (dev | nested))!r}")
     if {entry["file"] for entry in metadata.get("jars", [])} != nested:
-        raise SystemExit("Night Config nested dependencies differ from metadata")
+        raise SystemExit("Bundled Night Config/Maven dependencies differ from metadata")
     # Loom changes these three resources; every other resource, including mixin configs,
     # refmap, service providers, official data maps, recipes and assets, must survive unchanged.
     transformed = {"META-INF/MANIFEST.MF", "fabric.mod.json", "mekanism.accesswidener"}

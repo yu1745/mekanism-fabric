@@ -36,6 +36,7 @@ public final class FabricRecipeCacheLifecycle {
             serverEpoch = 1;
             //Note: The server's own registry access is published with the manager so synthetic vanilla smelting never needs a process-global fallback
             RecipeCacheContext.bind(server.getRecipeManager(), server.registryAccess(), serverEpoch);
+            mekanism.common.IncompleteRecipeScanner.serverStarted(server);
             LOGGER.info("MEKANISM_FABRIC_RECIPE_CACHE_PROOF phase=start epoch={}", serverEpoch);
         });
         ServerLifecycleEvents.END_DATA_PACK_RELOAD.register((server, resources, success) -> {
@@ -47,6 +48,7 @@ public final class FabricRecipeCacheLifecycle {
             requireServerThread(server);
             serverEpoch++;
             RecipeCacheContext.bind(server.getRecipeManager(), server.registryAccess(), serverEpoch);
+            mekanism.common.IncompleteRecipeScanner.recipes(server, null);
             LOGGER.info("MEKANISM_FABRIC_RECIPE_CACHE_PROOF phase=reload epoch={}", serverEpoch);
         });
         //Registered after the bootstrap's frequency/transmitter end-tick pass. Keep the signal throughout all
@@ -68,6 +70,7 @@ public final class FabricRecipeCacheLifecycle {
         });
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
             requireServerThread(server);
+            mekanism.common.IncompleteRecipeScanner.clearServerState();
             RecipeCacheContext.clear();
             serverEpoch = 0;
             LOGGER.info("MEKANISM_FABRIC_RECIPE_CACHE_PROOF phase=stop");

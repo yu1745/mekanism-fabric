@@ -205,7 +205,7 @@ def platformSlice = loadSlice('platform-slice.txt')
 def apiSliceFiles = apiSlice.collect { file("../src/api/java/${it}") }
 def commonSliceFiles = commonSlice.collect { file("../src/main/java/${it}") }
 def platformSliceFiles = platformSlice.collect { file("src/main/java/${it}") }
-if (apiSlice.size() != 262 || commonSlice.size() != 1511 || platformSlice.size() != 203) {
+if (apiSlice.size() != 262 || commonSlice.size() != 1512 || platformSlice.size() != 203) {
     throw new GradleException("Unexpected Fabric source slice counts: api=${apiSlice.size()} common=${commonSlice.size()} platform=${platformSlice.size()}")
 }
 
@@ -650,6 +650,10 @@ dependencies {
     implementation "com.electronwill.night-config:toml:${night_config_version}"
     include "com.electronwill.night-config:core:${night_config_version}"
     include "com.electronwill.night-config:toml:${night_config_version}"
+
+    //Retain the official recipe condition's Maven version ordering without a custom comparator.
+    implementation('org.apache.maven:maven-artifact:3.9.9') { transitive = false }
+    include('org.apache.maven:maven-artifact:3.9.9') { transitive = false }
 
     // Annotation types referenced by the official API slice; neither is bundled.
     compileOnly 'org.jetbrains:annotations:24.1.0'

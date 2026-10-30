@@ -562,6 +562,7 @@ public final class ItemStackIngredient implements InputIngredient<@NotNull ItemS
         @Override
         public ItemStackIngredient decode(RegistryFriendlyByteBuf buffer) {
             int count = ByteBufCodecs.VAR_INT.decode(buffer);
+            if (count < 1) throw new IllegalArgumentException("Item ingredient wire count must be positive");
             int mode = buffer.readByte();
             Ingredient primary;
             List<Ingredient> children = null;
@@ -602,15 +603,19 @@ public final class ItemStackIngredient implements InputIngredient<@NotNull ItemS
                     throw new IllegalStateException("Item ingredient wire payload cannot combine a shaped form with component sensitivity");
                 }
                 DataComponentPredicate components = DataComponentPredicate.STREAM_CODEC.decode(buffer);
-                return ItemStackIngredient.of(primary, count, components);
+                return new ItemStackIngredient(primary, count, components, null, null, null);
             }
             if (subtracted != null) {
-                return ItemStackIngredient.ofDifference(primary, subtracted, count);
+                return new ItemStackIngredient(primary, count, null, null, subtracted, null);
             }
             if (children != null && children.size() > 1) {
-                return mode == MODE_INTERSECTION ? ItemStackIngredient.ofIntersection(children, count) : ItemStackIngredient.of(children, count);
+                return new ItemStackIngredient(primary, count, null,
+                      mode == MODE_COMPOUND ? List.copyOf(children) : null, null,
+                      mode == MODE_INTERSECTION ? List.copyOf(children) : null);
             }
-            return ItemStackIngredient.of(primary, count);
+            //An unresolved tag expands to zero stacks on the wire. Keep that incomplete recipe
+            //representable, like the original SizedIngredient stream, rather than applying public factory guards.
+            return new ItemStackIngredient(primary, count, null, null, null, null);
         }
 
         @Override
