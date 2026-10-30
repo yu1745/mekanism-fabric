@@ -30,21 +30,21 @@ class FabricGearConfigLifecycleTest {
         constructor.setAccessible(true);
         GearConfig server = constructor.newInstance();
         server.getConfigSpec().load(temporaryDirectory.resolve("serverconfig/Mekanism/gear.toml"));
-        Map<String, Object> machineSnapshot = new LinkedHashMap<>();
+        Map<String, Object> otherConfigSnapshot = new LinkedHashMap<>();
         var manager = new FabricMekanismConfigManager(temporaryDirectory.resolve("serverconfig"));
         try {
-            for (var config : List.of(MekanismConfig.storage, MekanismConfig.usage, MekanismConfig.tiers)) {
+            for (var config : List.of(MekanismConfig.general, MekanismConfig.storage, MekanismConfig.usage, MekanismConfig.tiers)) {
                 manager.registerAndLoad(config);
-                config.getConfigSpec().serverSnapshot().forEach((path, value) -> machineSnapshot.put(config.getFileName() + "." + path, value));
+                config.getConfigSpec().serverSnapshot().forEach((path, value) -> otherConfigSnapshot.put(config.getFileName() + "." + path, value));
             }
         } finally {
             manager.unloadAll();
         }
         server.freeRunnerMaxEnergy.set(90_000L);
-        var firstSnapshot = new LinkedHashMap<>(machineSnapshot);
+        var firstSnapshot = new LinkedHashMap<>(otherConfigSnapshot);
         server.getConfigSpec().serverSnapshot().forEach((path, value) -> firstSnapshot.put("gear." + path, value));
         server.freeRunnerMaxEnergy.set(123_456L);
-        var secondSnapshot = new LinkedHashMap<>(machineSnapshot);
+        var secondSnapshot = new LinkedHashMap<>(otherConfigSnapshot);
         server.getConfigSpec().serverSnapshot().forEach((path, value) -> secondSnapshot.put("gear." + path, value));
         Connection first = new Connection(PacketFlow.CLIENTBOUND);
         Connection second = new Connection(PacketFlow.CLIENTBOUND);

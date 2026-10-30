@@ -47,3 +47,7 @@ W-01 基线发现待修 `W-01.1`：`FabricGearConfigLifecycleTest.remoteOwnersRe
 首次 `./fabric-build.sh` 278.10 秒失败；另有 XML 报告写入错误，因为 packaged smoke 内部 `fabric-build.sh remapJar` 与 Gradle 测试重叠。后续显式 gates 与 packaged 调用已停止（143），不作为通过证据；统一改串行运行。机器 smoke 独立使用已生成 JAR，113.94 秒返回 `fabric-machine-smoke: PASSED`。
 
 W-03 已完成上述 owner 实际接通核实，README 将跨系统 resume / recent audit 从单一 owner 归类移出；逐文件标题与正文核对另将事务修复 `ASTRA_REPAIR` / `REVIEW_12/14` 归回 M-transfer。W-04 已在两份总览各补 Task050–052 / 六个里程碑的一行结论。W-05 已核对顶层指定文档：Development 为上游 NeoForge 说明，模型评估为已被替代的执行策略，machine 两文档为 Task050–051 历史；FABRIC 专题保留语义依据并明确历史范围，Mekanism.xml 为仍可使用的 IDE 格式预设。未删除历史证据。
+
+### W-01.1 修复与串行基线
+
+仅更新既有 `FabricGearConfigLifecycleTest` 的 companion snapshot，补入真实 general owner，并将变量改名为 `otherConfigSnapshot`；原有断言与全部生产代码不变。修复后 `./fabric-build.sh` **PASS，173.00 秒**，`verifyApiSliceNoNeoForge test qioTransactionTest` **PASS，0.73 秒**（测试复用刚完成结果）。XML 核对 ordinary 451、transfer 45、registry 3、data-map 4、recipe-registry 8、QIO 50、client-model 17，总计 **578 tests，0 failures/errors/skips**。完整 build 同时通过三份 slice gate 与 remapJar。临时日志 `/tmp/mekanism-roadmap-p0/{build-fixed,gates-fixed}.log`，持久结论以本节为准。
