@@ -333,12 +333,6 @@ public final class TransmitterObjGeometry {
                 }
             }
             if (name != null) {
-                //Blockbench-style entity MTLs may declare textureless placeholder materials (e.g. 'none0') that no
-                //face references. They are skipped here; if a face did use one, the baker's unknown-material check
-                //fails loudly instead of baking an untextured quad silently.
-                if (alias == null) {
-                    return;
-                }
                 materials.put(name, buildMaterial(name, alias, tint, libraryName, red, green, blue, alpha, ambientLight));
             }
         }
@@ -346,7 +340,9 @@ public final class TransmitterObjGeometry {
         private Material buildMaterial(String name, String alias, int tint, String libraryName,
               float red, float green, float blue, float alpha, int ambientLight) {
             int rgba = channel(red) | channel(green) << 8 | channel(blue) << 16 | channel(alpha) << 24;
-            return new Material(alias, tint, rgba, ambientLight);
+            //A material without map_Kd still owns its diffuse/tint/lighting values. The official contents
+            //model deliberately has no texture: its bake supplies the network icon for every material.
+            return new Material(alias == null ? "minecraft:missingno" : alias, tint, rgba, ambientLight);
         }
 
         private static int channel(float value) {
