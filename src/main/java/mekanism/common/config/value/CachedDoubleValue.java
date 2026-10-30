@@ -17,14 +17,14 @@ public class CachedDoubleValue extends CachedValue<Double> implements DoubleSupp
         return new CachedDoubleValue(config, internal);
     }
 
-    public double getOrDefault() {
+    public synchronized double getOrDefault() {
         if (resolved || isLoaded()) {
             return get();
         }
         return internal.getDefault();
     }
 
-    public double get() {
+    public synchronized double get() {
         if (!resolved) {
             //If we don't have a cached value or need to resolve it again, get it from the actual ConfigValue
             cachedValue = internal.get();
@@ -38,13 +38,13 @@ public class CachedDoubleValue extends CachedValue<Double> implements DoubleSupp
         return get();
     }
 
-    public void set(double value) {
+    public synchronized void set(double value) {
         internal.set(value);
         cachedValue = value;
     }
 
     @Override
-    protected boolean clearCachedValue(boolean checkChanged) {
+    protected synchronized boolean clearCachedValue(boolean checkChanged) {
         if (!resolved) {
             //Isn't cached don't need to clear it or run any invalidation listeners
             return false;

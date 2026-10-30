@@ -17,14 +17,14 @@ public class CachedBooleanValue extends CachedValue<Boolean> implements BooleanS
         return new CachedBooleanValue(config, internal);
     }
 
-    public boolean getOrDefault() {
+    public synchronized boolean getOrDefault() {
         if (resolved || isLoaded()) {
             return get();
         }
         return internal.getDefault();
     }
 
-    public boolean get() {
+    public synchronized boolean get() {
         if (!resolved) {
             //If we don't have a cached value or need to resolve it again, get it from the actual ConfigValue
             cachedValue = internal.get();
@@ -38,13 +38,13 @@ public class CachedBooleanValue extends CachedValue<Boolean> implements BooleanS
         return get();
     }
 
-    public void set(boolean value) {
+    public synchronized void set(boolean value) {
         internal.set(value);
         cachedValue = value;
     }
 
     @Override
-    protected boolean clearCachedValue(boolean checkChanged) {
+    protected synchronized boolean clearCachedValue(boolean checkChanged) {
         if (!resolved) {
             //Isn't cached don't need to clear it or run any invalidation listeners
             return false;

@@ -18,14 +18,14 @@ public class CachedFloatValue extends CachedValue<Double> implements FloatSuppli
         return new CachedFloatValue(config, internal);
     }
 
-    public float getOrDefault() {
+    public synchronized float getOrDefault() {
         if (resolved || isLoaded()) {
             return get();
         }
         return clampInternal(internal.getDefault());
     }
 
-    public float get() {
+    public synchronized float get() {
         if (!resolved) {
             //If we don't have a cached value or need to resolve it again, get it from the actual ConfigValue
             //Note: For now we have to get it out of a double as there is no FloatValue config type
@@ -53,18 +53,18 @@ public class CachedFloatValue extends CachedValue<Double> implements FloatSuppli
         return get();
     }
 
-    public void set(float value) {
+    public synchronized void set(float value) {
         internal.set((double) value);
         cachedValue = value;
     }
 
-    public void set(double value) {
+    public synchronized void set(double value) {
         internal.set(value);
         cachedValue = (float) value;
     }
 
     @Override
-    protected boolean clearCachedValue(boolean checkChanged) {
+    protected synchronized boolean clearCachedValue(boolean checkChanged) {
         if (!resolved) {
             //Isn't cached don't need to clear it or run any invalidation listeners
             return false;

@@ -18,13 +18,13 @@ public class ConfigBasedCachedLongSupplier implements LongSupplier {
         }
     }
 
-    protected final void refresh() {
+    protected final synchronized void refresh() {
         this.cachedValue = resolver.getAsLong();
         resolved = true;
     }
 
     @Override
-    public long getAsLong() {
+    public synchronized long getAsLong() {
         if (!resolved) {
             //Lazily initialize the cached value so that we don't accidentally query values before they are initially set
             refresh();

@@ -86,7 +86,7 @@ class ConfigBasedCachedSupplierTest {
     }
 
     @Test
-    void longSupplierCachesLargeValueAndRefreshesEagerlyFromDependencyCallback() {
+    void longSupplierCachesLargeValueAndRefreshesEagerlyFromDependencyCallback() throws Exception {
         TestConfig config = new TestConfig();
         AtomicInteger calls = new AtomicInteger();
         AtomicLong value = new AtomicLong(Long.MAX_VALUE - 7);
@@ -104,6 +104,43 @@ class ConfigBasedCachedSupplierTest {
         config.integer.clearCache(false);
         assertEquals(2, calls.get());
         assertEquals(Long.MIN_VALUE + 9, supplier.getAsLong());
+
+        // An integrated client and server may resolve and invalidate the same derived value concurrently.
+        var entered = new java.util.concurrent.CountDownLatch(1);
+        var release = new java.util.concurrent.CountDownLatch(1);
+        var invalidationStarted = new java.util.concurrent.CountDownLatch(1);
+        var generation = new AtomicInteger();
+        var concurrent = new ConfigBasedCachedLongSupplier(() -> {
+            int observed = generation.get();
+            if (observed == 0) {
+                entered.countDown();
+                try {
+                    if (!release.await(5, java.util.concurrent.TimeUnit.SECONDS)) throw new AssertionError("resolver timed out");
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new AssertionError(e);
+                }
+            }
+            return observed;
+        }, config.integer);
+        try (var executor = java.util.concurrent.Executors.newFixedThreadPool(2)) {
+            var initial = executor.submit(concurrent::getAsLong);
+            assertTrue(entered.await(5, java.util.concurrent.TimeUnit.SECONDS));
+            generation.set(1);
+            var update = executor.submit(() -> {
+                invalidationStarted.countDown();
+                config.integerValue.set(3);
+                config.integer.clearCache(false);
+            });
+            try {
+                assertTrue(invalidationStarted.await(5, java.util.concurrent.TimeUnit.SECONDS));
+            } finally {
+                release.countDown();
+            }
+            assertEquals(0L, initial.get(5, java.util.concurrent.TimeUnit.SECONDS));
+            update.get(5, java.util.concurrent.TimeUnit.SECONDS);
+            assertEquals(1L, concurrent.getAsLong());
+        }
     }
 
     private static final class TestConfig extends BaseMekanismConfig {
