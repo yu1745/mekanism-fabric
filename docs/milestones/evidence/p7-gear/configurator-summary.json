@@ -1,0 +1,9 @@
+{
+  "modeBefore": "CONFIGURATE_ITEMS",
+  "modeAfter": "ROTATE",
+  "facingBefore": "east",
+  "facingAfter": "south",
+  "nativeUseResult": "SUCCESS",
+  "energy": "Official ItemConfigurator is not energy-backed.",
+  "probeCorrection": "Initial exact WEST expectation was invalid: server sneaking changed with live client input between tasks, and native Direction is serialized lowercase. Count the subsequent explicit normal SOUTH use."
+}

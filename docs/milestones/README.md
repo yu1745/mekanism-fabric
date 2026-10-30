@@ -19,7 +19,7 @@
 | M-render | transmitter/Robit/QIO 模型、粒子、GUI、按键与客户端注册 | mcdebug 实际外观／连接截图与 GUI 巡检 | 已验证：P5 W-29–33及578 tests/API/machine门禁通过；[证据](../archive/M-render.md)。 |
 | M-multiblock | 五种核心多方块生命周期 | 破坏重建、区块重载、存读档、尺寸失败路径 | 已验证：P6 W-34–35与build/API/machine门禁通过；[证据](../archive/M-multiblock.md)。 |
 | M-registry | 化学 ingredient 类型注册表、Robit 注册/数据包、官方 legacy alias、biome modifier | 注册冻结后 ID/alias 与官方一致 | 未核实 |
-| M-gear | accessory、Curios 策略、ItemAbility、suit/tool 规则 | 穿戴/工具行为真机核对 | 进行中：P7 W-36–37装备功能／模块闭包；不重复附件预览与客户端注册；见M-gear.md。 |
+| M-gear | accessory、Curios 策略、ItemAbility、suit/tool 规则 | 穿戴/工具行为真机核对 | 进行中：W-36功能通过，修复MekaSuit穿戴tick；下一项W-37模块factory；见M-gear.md。 |
 
 ## 旧 Task052 文档归类（按主题；P0 复核范围见归档 M-owner）
 

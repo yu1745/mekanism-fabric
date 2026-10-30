@@ -1,0 +1,34 @@
+{
+  "jetpack": {
+    "modeBefore": "NORMAL",
+    "modeAfter": "HOVER",
+    "hydrogenBefore": 1000,
+    "hydrogenAfter": 951,
+    "groundY": 100.0,
+    "hoverY": 105.0,
+    "motion": {
+      "ref": 29,
+      "class": "net.minecraft.world.phys.Vec3",
+      "toString": "(0.0, 0.0, 0.0)"
+    }
+  },
+  "scuba": {
+    "modeBefore": false,
+    "modeAfter": true,
+    "oxygenBefore": 962,
+    "oxygenAfter": 736,
+    "airSetup": 100,
+    "airAfter": 300
+  },
+  "flamethrower": {
+    "modeBefore": "COMBAT",
+    "modeAfter": "HEAT",
+    "hydrogenBefore": 1000,
+    "hydrogenAfter": 999,
+    "nativeUse": {
+      "ref": 42,
+      "class": "net.minecraft.world.InteractionResultHolder",
+      "toString": "net.minecraft.world.InteractionResultHolder@500482c4"
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "suit": {
+    "installed": 1,
+    "energyBefore": 995500,
+    "energyAfter": 927500,
+    "modeEnabled": true,
+    "stationInitialOverCapacityMeasurementExcluded": true,
+    "unwornEnergyBefore": 923500,
+    "unwornEnergyAfter": 923500
+  },
+  "tool": {
+    "stationEnergyBefore": 40000,
+    "stationEnergyAfter": 36000,
+    "installed": 1,
+    "modeBefore": "NORMAL",
+    "modeAfter": "OFF",
+    "energyBefore": 1000000,
+    "energyAfter": 999960
+  }
+}
