@@ -1,3 +1,5 @@
+> **已关闭（2026-10-30）**：Task052 范围膨胀，已拆分为 `docs/milestones/README.md` 中的里程碑；本文件仅保留为 M-owner 的原始计划。
+
 # Task052 — Concrete TileEntityMekanism ownership closure
 
 ## Parent decision

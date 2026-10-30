@@ -9,7 +9,7 @@
 - **开发中版本：** 移植尚未发布，较早移植提交与较晚提交间不要求存档/网络兼容；旧移植数据与代码可直接丢弃，不写迁移或拒绝旧开发版的代码。不免除对官方版本行为、注册 ID、NBT、配方、存档语义的保留。
 - API/common/platform 分别由 `fabric/api-slice.txt`、`fabric/common-slice.txt`、`fabric/platform-slice.txt` 精确纳入。不得复制源码、改包名、加入 Kotlin，或无审计地扩大清单。
 - 不实现通用 Forge/Fabric 转换层，不伪造 `net.neoforged.*`，不建立 Crusher 专用替代机器框架。
-- 状态与路线：`docs/FABRIC_PORT.md`、`docs/PORT_MATRIX.md`（唯一状态源）；平台差异 `docs/API_DELTAS.md`、`docs/FABRIC_{REGISTRY,CONFIG,SMOKE}.md` 及专题文档，按需读取。**当前进行中的任务文档**位于 `docs/TASK*.md`（已完成的归档到 `docs/archive/`）。
+- 状态与路线：`docs/FABRIC_PORT.md`、`docs/PORT_MATRIX.md`（唯一状态源）；平台差异 `docs/API_DELTAS.md`、`docs/FABRIC_{REGISTRY,CONFIG,SMOKE}.md` 及专题文档，按需读取。**里程碑与状态表见 `docs/milestones/README.md`**（Task052 已关闭为历史名，不再新开 `TaskNNN`）；进行中的活文档位于 `docs/milestones/`、`docs/TASK052_*.md`（M-config），已完成的归档到 `docs/archive/`。
 
 ## 安全与参考源码
 
