@@ -2,11 +2,11 @@
 
 ## 现状
 
-ROADMAP P4 W-23–28；基线 `843af935`（P3 最终生产提交）。P0–P3 已通过阶段门禁。W-23 已通过真实 cable 传输与 Team Reborn API 双向转换验证，并修复通电 contents 材质崩溃。既有机器 smoke 验证 cube→cable→chamber 放电与产出，以及部分物品／流体／化学连接；这些证据不替代本阶段的完整边界验收。
+ROADMAP P4 W-23–28；基线 `843af935`（P3 最终生产提交）。P0–P3 已通过阶段门禁。W-23 已通过真实 cable 传输与 Team Reborn API 双向转换验证，并修复通电 contents 材质崩溃。W-24 满载、断开／重连及原生事务回滚已验证。既有机器 smoke 验证 cube→cable→chamber 放电与产出，以及部分物品／流体／化学连接；这些证据不替代本阶段的完整边界验收。
 
 ## 下一步
 
-W-24：核对 Mechanical Pipe→Fluid Tank 的实际 Fabric fluid owner，在隔离世界读取满载、断开与事务回滚后的数量；复用现有 focused tests，不新增测试。
+W-25：核对 Logistical Transporter + Sorter 的过滤、真实物品路径与 vanilla hopper 互通；先确认真实 owner 与实际菜单槽，再进行少量端到端验证。
 
 随后依次执行 W-24 pipe→tank 满载／断开／事务回滚，W-25 transporter+sorter+vanilla hopper，W-26 tube 与 conductor，W-27 unload/reload、拆除及存读档网络重建；W-28 统一门禁收尾。
 
@@ -27,3 +27,13 @@ P3 最终 `fabric-machine-smoke: PASSED` 可作本阶段已存在链路的基线
 同一实机复现修复：无 map_Kd 的材质保留为原 Kd/d/Ka/tint 和默认missing texture，原内容bake的icon override仍是唯一贴图来源，不丢弃Contents／none0等材质。assemble PASS（20秒，含slice gates）；重启后同样通电链路保持连接，`gui problems` 只有启动WARN，无新增ERROR，实际状态见 [status](evidence/p4-energy/status.json)。原崩溃报告 [cable-crash](evidence/p4-energy/cable-crash.txt) 保留；未把这次局部修复写作整个P5验收。既有 FabricEnergyStorageTest / FabricStrictEnergyHandlerTest / FabricEnergyLookupTest 共6项 PASS（15秒）。无新测试。
 
 本批自有会话正常 stopped，世界从启动前备份恢复，全部81个文件SHA-256一致；临时debug mod、wrapper与Xvfb清理。W-23完成，下一项W-24；P4阶段全门禁留W-28统一执行。
+
+2026-10-30 W-24 完成（基线 `d10def07`，未改生产代码）：FluidHandlerManager→FabricFluidLookup→FabricFluidStorage 保留真实物理side与快照事务；pipe sideChanged 在启停NONE时撤销对应视图，holder/tank identity漂移失效规则保留。MechanicalPipe.pullFromAcceptors 对捕获的真实network tank做快照并与外部extraction共同commit；FluidSendTransaction 负责分发期间的原子扣款。既有 FabricFluidStorageTest 与 FabricFluidSendTransactionTest 共12项PASS（23秒），直接覆盖共享目标容量、分数单位、outer abort及视图失效后恢复。
+
+真实世界：source tank `[0,100,4]` 8000mB water，sink `[2,100,4]` 31800mB，basic pipe `[1,100,4]` WEST=PULL / EAST=PUSH。稳定后source5800、pipe2000、sink32000，总39800mB与初始一致；sink外部API为2592000droplets/capacity2592000，满载再插入81000返回0。见 [初始源](evidence/p4-fluid/initial-source.json)、[初始目标](evidence/p4-fluid/initial-sink.json)、[满载源](evidence/p4-fluid/full-source.json)、[管道](evidence/p4-fluid/full-pipe.json)、[目标](evidence/p4-fluid/full-sink.json)、[拒绝插入](evidence/p4-fluid/full-insert.json)。储罐并不保存machine component_config，读回以其实际fluid_tanks为准。
+
+真实断开：先取得pipe EAST的实际FabricFluidStorage，slot amount=162000droplets；调用真实transmitter.setConnectionTypeRaw(EAST,NONE)、refreshConnections、notifyTileChange，与原配置入口使用相同owner，未反射写字段。旧view立刻amount0。模拟从sink提取81000返回81000，但sink仍32000mB；实际抽走81000后sink31000，source5800与pipe2000保持。模拟插回81000后sink仍31000；再以mcdebug storage transfer在同一outer transaction内向sink插入并从source扣除81000，abort后source5800/sink31000，证明两端回滚。已经核对mcdebug StorageOps.transferBetween/transferInsert/transferExtract：simulate执行真实Storage调用但不commit，close outer触发abort，不是仅调用领域SIMULATE。见 abort-* / after-* 读数。首次wait探针使用DSL不支持的数组方括号而报解析错误，未计入验收；断开后的连续实际NBT读数才是证据。
+
+重新调用同一transmitter owner设EAST=PUSH并刷新：sink32000/source4800/pipe2000，总38800mB，恰为初始39800减实际抽走1000；新查询返回pipe162000droplets，保留旧view仍0。见 [重连源](evidence/p4-fluid/reconnected-source.json)、[重连目标](evidence/p4-fluid/reconnected-sink.json)、[新视图](evidence/p4-fluid/fresh-after-reconnect.json)、[旧视图](evidence/p4-fluid/retained-after-reconnect.json)。再次程序核对本批所有守恒与abort读数成功。
+
+客户端contentModelCache.size=1，说明真实水内容模型已成功bake，也补强W-23同一Contents材质修复的运行证据；没有新增GUI ERROR。自有客户端正常停止，世界81个文件SHA-256完整恢复，临时debug mod/wrapper/Xvfb清理。W-24完成，下一项W-25；整个P4及W-27保存／卸载验收仍待做。
