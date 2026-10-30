@@ -6,11 +6,11 @@
 
 ## 现状
 
-P0 已完成源码接线复核与基线门禁；M-owner 真机存读档验收仍未核实。配置、传输、渲染等相邻系统已拆为独立里程碑；本里程碑仅含 `TileEntityMekanism`、`TileComponentConfig`、频率/`FrequencyManager`、`ContainerType`、`MekanismContainer` 同步、有效侧线程语义、bounding。
+P0 已完成源码接线复核与基线门禁；P1 W-06/07 Crusher 加工／完整存读档已验证，W-08 升级链有实机证据但仍需直接放置 Basic Factory 的指定用例；W-09/10 未做。配置、传输、渲染等相邻系统已拆为独立里程碑；本里程碑仅含 `TileEntityMekanism`、`TileComponentConfig`、频率/`FrequencyManager`、`ContainerType`、`MekanismContainer` 同步、有效侧线程语义、bounding。
 
 ## 下一步（交给 worker）
 
-1. P0 W-01–05 已复核，见下方证据；下一项为 P1 W-06/07：Crusher GUI、加工和带半成品存读档，再做 W-08–10。
+1. P0 W-01–05 已复核，见下方证据；W-06/07 已验证；下一项补齐 W-08 直接放置 Basic Factory 并安装升级，再做 W-09 频率创建／重启与 W-10 bounding 放拆。
 2. 按验收用例用 mcdebug 在 `fabric/run` 的隔离调试世界实测，记录通过/失败点；失败时抓首条错误原文。
 3. 结果写入本文件"验收证据"，并改 `docs/milestones/README.md` 状态表；通过后在 `PORT_MATRIX`/`FABRIC_PORT` 补一行结论。
 
@@ -75,3 +75,15 @@ AW 保留独立的精确 intermediary 期望列表：111 条成员／类项经 n
 本地诊断：`/tmp/mekanism-roadmap-p0/`；paired 持久工作区日志 `build/fabric-paired-network-smoke/20261030T104728Z-1425317/`；packaged 诊断 `build/fabric-packaged-smoke/20261030T105430Z-1522603/`。smoke 自建临时世界和进程均由脚本清理，未启动 mcdebug 会话。后续客户端使用已有 `fabric/run/saves/Mekanism F1 isolated debug`，先 status/gui status；本轮已确认两平面无活连接。CLI 为 `/home/wangyu/server-v2/develop/mcdebug-wt-121/mcdebug-cli.jar`。当前 shell 缺 systemd 环境，paired 命令显式传入 `XDG_RUNTIME_DIR=/run/user/1000 DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus` 即可。
 
 提交后风格审查：检查本次已提交 packaged 实际 diff，确认没有生产／slice 改动、没有跳过真实服务器门禁；旧 package 子集由完整构建产物比较取代，独立 AW、metadata、依赖及 fixture 隔离保留。复查时补回全 entry 的 `unfreeze` 拒绝，并将兼容层 bytecode 检查统一为精确 namespace（避免把一般 connector 文本误认兼容层）。只需重跑静态门禁；此前相同 JAR 的干净服务端 PASS 仍有效。
+
+### P1 W-06/07 与 W-08 升级链实机证据（2026-10-30，`0ff626d1`）
+
+使用已有 `fabric/run/saves/Mekanism F1 isolated debug`，mcdebug 0.7.0，MC 1.21.1，真实集成服 + 客户端。初始 status/gui status 确认无活客户端后才启动。临时 runtime 是 CLI 内嵌 mcdebug JAR + 其固定依赖 `fabric-language-kotlin:1.13.9+kotlin.2.3.10`；首次缺 Kotlin adapter 失败于 world load 前，补运行依赖后 25 秒进入世界。没有把 Kotlin 或 debug mod 纳入源码／构建依赖。
+
+- **W-06 PASS**：平台原位置 `[4,100,0]` 为 air，下方 `[4,99,0]` 为 stone。初步 command-placement 验证后移除并通过 `world place-as-player --block mekanism:crusher --face up --neighbor 4,99,0 --player-facing south` 重新走完整 BlockItem 流程。默认 item side config `[1,1,4,8,1,1]`、energy side 全 INPUT 与 fake-player owner 正常产生。原生 `data merge block` 注入 20,000 J + 2 iron ingots，真实自然 tick 产出 2 `mekanism:dust_iron`；按官方 `processing/iron/dust/from_ingot.json` 使用铁锭，未把铁矿石当作不存在的 crushing 输入。实际 `GuiElectricMachine` / 41 menu slots 打开，客户端 menu slot 3 读到 dust；[产出截图](evidence/p1-owner/crusher-output.png)。
+- **W-07 PASS**：在同一台 Crusher 上通过真实 sneak-use 安装 1 speed upgrade；注入三个输入和少量能量，让自然 tick 运行至进度 28，再设 HIGH redstone control（无信号，暂停加工），保留 1234 J、输入 3 ingots、输出 2 dust、升级 1、非默认 item side `[1,0,4,8,1,1]` 与 eject=true。正常停止 mcdebug 拥有的客户端，等待 `stopped` 后重新启动同一世界。两份**完整服务端 BE NBT 对象相等**：[重启前](evidence/p1-owner/crusher-before-restart.json) / [重启后](evidence/p1-owner/crusher-after-restart.json)，不限于挑选字段。重启后真实客户端 menu slot 2/3 分别为 3 ingots / 2 dust；[恢复截图](evidence/p1-owner/crusher-restored.png)。`save-all flush` 在集成服不可用，实际保存由正常 session stop 完成，不把命令失败冒充保存成功。
+- **W-08 部分证据**：同一样本通过真实 sneak-use basic_tier_installer、advanced_tier_installer 升级成 Basic / Advanced Crushing Factory，安装器真实消耗。两级保留 1234 J、输入 3、输出 2、升级 1、侧配置、owner 与 control；progress 依次为 `[28,0,0]` / `[28,0,0,0,0]`。服务端读数：[Basic](evidence/p1-owner/basic-factory.json) / [Advanced](evidence/p1-owner/advanced-factory.json)。真实 `GuiFactory` / 49 menu slots 正常打开；[Advanced 截图](evidence/p1-owner/advanced-factory.png)。未将此替代 roadmap 指定的“直接放置 Basic Factory 后装升级”用例，W-08 保持待补齐。
+
+`gui problems --level error` 在两次正常会话均无记录。首次旧调试世界加载有 `Unknown attachment type accessories:inventory_holder ... skipping` 的 WARN；本轮未加载 Accessories，不据此声明 accessory 兼容性，也不将它当作 Crusher 缺陷。
+
+现场收尾：关闭 GUI，以无掉落 remove 恢复 `[4,100,0]` 为 air，并读回 `hasBlockEntity=false`；玩家位置恢复 `[0.5,100,-2.5]`。正常 session stop 返回 `stopped`；移除临时 `fabric/gradlew` 链接及两份 debug runtime JAR，停止本轮独占 Xvfb :188。正式配置与生产代码未改，无新测试。余项仍为 W-08 指定用例、W-09/10 和 P1 末门禁，不提前将整个 M-owner 标为已验证。
