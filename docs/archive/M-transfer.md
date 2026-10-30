@@ -22,7 +22,7 @@ P3 最终 `fabric-machine-smoke: PASSED` 可作本阶段已存在链路的基线
 
 断开cable后，cube置25000J用于独立反向提取：模拟1000外部单位不改库存；实际提取1000后22500J。crusher本来不提供能量输出，最初对它请求output返回STORAGE_NOT_FOUND，未修改原机器输出能力。见 extract/after-extract 系列读数。原生 Team Reborn `SimpleEnergyStorage(100000,100000,100000)` 初始化4000单位，经真实 `FabricEnergyLookup.wrapAsStrictEnergyHandler`：模拟提取2500J仍4000单位，执行后3000单位，再注入5000J返回remainder0且存量5000单位。见 external-handler/external-after 系列读数；这是调用真实第三方API对象的运行探针，没有注册虚拟机器或修改生产框架。
 
-同一实机复现修复：无 map_Kd 的材质保留为原 Kd/d/Ka/tint 和默认missing texture，原内容bake的icon override仍是唯一贴图来源，不丢弃Contents／none0等材质。assemble PASS（20秒，含slice gates）；重启后同样通电链路保持连接，`gui problems` 只有启动WARN，无新增ERROR，实际状态见 [status](../milestones/evidence/p4-energy/status.json)。原崩溃报告 [cable-crash](../milestones/evidence/p4-energy/cable-crash.txt) 保留；未把这次局部修复写作整个P5验收。既有 FabricEnergyStorageTest / FabricStrictEnergyHandlerTest / FabricEnergyLookupTest 共6项 PASS（15秒）。无新测试。
+同一实机复现修复：无 map_Kd 的材质保留为原 Kd/d/Ka/tint 和默认missing texture，原内容bake的icon override仍是唯一贴图来源，不丢弃Contents／none0等材质。assemble PASS（20秒，含slice gates）；重启后同样通电链路保持连接，`gui problems` 只有启动WARN，无新增ERROR，实际状态见 [status](../milestones/evidence/p4-energy/status.json)。首个异常与业务栈 [cable-crash](../milestones/evidence/p4-energy/cable-crash.json) 保留；未把这次局部修复写作整个P5验收。既有 FabricEnergyStorageTest / FabricStrictEnergyHandlerTest / FabricEnergyLookupTest 共6项 PASS（15秒）。无新测试。
 
 本批自有会话正常 stopped，世界从启动前备份恢复，全部81个文件SHA-256一致；临时debug mod、wrapper与Xvfb清理。W-23完成，下一项W-24；P4阶段全门禁留W-28统一执行。
 
@@ -64,12 +64,12 @@ GUI：实际打开GuiLogisticalSorter（38 slots）与GuiElectricMachine（41 sl
 
 拆装：通过真实setblock air触发五种transmitter setRemoved，保留旧BE全false，再重新放置。第一次拆前实际快照还含4000J／3000化学，不能假称清空或用该次数量差判保存问题。后续明确关闭WEST源侧并排空：实际Basic Cube extract请求16000仅返回4000J、ChemicalTank请求10000仅返回1000，符合原tier rate；第一次空缓冲断言因此失败，原读数保留为rate-limited-drain.json。按真实返回量补充排空并自然等待40tick，before-clean-removal确认energy/fluid/boxed_chemical均空，再次拆装五种传输方块。网络均恢复；源箱再放4 ore，目标由8→12，证明新transporter实际工作。见 before-clean-removal/after-clean-replacement与clean-drains.json。热量导体拆除不作热量守恒声明。
 
-存档：集成服没有注册save-all flush命令，实际通过正常owned session stop关闭并保存所有维度；[保存日志](../milestones/evidence/p4-lifecycle/world-save.md)。新JVM启动同一存档，未再手工forceload之前hasChunk(64,64)=true，说明强制加载状态随原存档恢复；五网均重建。after-clean-replacement与after-restart两份读数的source/sink容器、Items及energy/fluid/chemical transmitter buffer逐项完全相同：energy54000/8000/4000000J，fluid10000/2000/32000mB，chemical51000/4000/64000；目标12 ore。
+存档：集成服没有注册save-all flush命令，实际通过正常owned session stop关闭并保存所有维度；[保存日志](../milestones/evidence/p4-lifecycle/world-save.json)。新JVM启动同一存档，未再手工forceload之前hasChunk(64,64)=true，说明强制加载状态随原存档恢复；五网均重建。after-clean-replacement与after-restart两份读数的source/sink容器、Items及energy/fluid/chemical transmitter buffer逐项完全相同：energy54000/8000/4000000J，fluid10000/2000/32000mB，chemical51000/4000/64000；目标12 ore。
 
 重启后的实际传输：从目标取4000J／1000mB／1000氧气后自动补满，源分别变50000J／9000mB／50000氧气，网络buffer仍8000/2000/4000；源箱再加入4 ore，目标变16且源空。source heater以同样1000000J脉冲再次加热，passive sink heat升到181393.119720（capacity100、无stored energy），热网仍1 transmitter/2 acceptors。见 restart-drains/restart-transfer.json。按真实返回量核对，未将独立热量采样写作绝热守恒。
 
 最终客户端无新增GUI ERROR，两次自有会话正常stopped；完整世界从首轮前备份恢复，81文件SHA-256一致，临时debug mod/wrapper/Xvfb清理。所有失败探针与补验边界已注明。W-27完成，W-28当前完整build仍在执行；API门禁17秒PASS、machine smoke PASS，不提前关闭整个P4。
 
-2026-10-30 W-28 阶段收尾：当前生产树的完整 `./fabric-build.sh` PASS（4m56s，578 tests，0 failures/errors/skipped）；`./gradlew -p fabric verifyApiSliceNoNeoForge --console=plain` PASS（17秒）；`scripts/fabric-machine-smoke.sh` exit0、`fabric-machine-smoke: PASSED`。前述“门禁仍在执行”为历史检查点，本轮最终已全部通过。持久摘要见 [门禁](../milestones/evidence/p4-lifecycle/final-gates.md)，会话日志 `/tmp/mek-p4-final-{build,api,machine}.log`。
+2026-10-30 W-28 阶段收尾：当前生产树的完整 `./fabric-build.sh` PASS（4m56s，578 tests，0 failures/errors/skipped）；`./gradlew -p fabric verifyApiSliceNoNeoForge --console=plain` PASS（17秒）；`scripts/fabric-machine-smoke.sh` exit0、`fabric-machine-smoke: PASSED`。前述“门禁仍在执行”为历史检查点，本轮最终已全部通过。持久摘要见 [门禁](../milestones/evidence/p4-lifecycle/final-gates.json)，会话日志 `/tmp/mek-p4-final-{build,api,machine}.log`。
 
 阶段提交：W-23 `d10def07`，W-24 `61ec00c5`，W-25 `e6c21283`，W-26 `3d8d760b`，W-27 `b486f402`，W-28为本次归档提交。无新增测试。与规划偏差仅为W-23提前修复直接阻塞的P5 Contents材质，W-24实际内容bake进一步验证；完整P5仍未验收。W-27探针受tier rate限制的失败与补验均保留，不扩称所有第三方机器或完整多人生命周期矩阵。阶段未新增需用户裁决的模块；P3混合公共API与客户端未纳入ledger仍由后续阶段处理。整体ROADMAP仍继续，非发布完成声明。

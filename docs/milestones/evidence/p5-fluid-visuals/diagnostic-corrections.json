@@ -1,0 +1,10 @@
+{
+  "diagnosticErrors": [
+    "AssertionError: ('fog_terrain-64', 3.4028235e+38, 24.0)",
+    "AssertionError: (-8.0, 16.0, 'CYLINDER')",
+    "AssertionError: (-8.0, 90.50967, 'CYLINDER')",
+    "AssertionError",
+    "AssertionError"
+  ],
+  "scope": "Probe errors only; Python tracebacks removed. Corrections and excluded assertions remain in validation.json and native measurement JSON."
+}

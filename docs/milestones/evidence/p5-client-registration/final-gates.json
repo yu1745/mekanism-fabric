@@ -1,0 +1,92 @@
+{
+  "buildHead": "6d78d97bd98015e735a4e39253ac3695bb88659a",
+  "productionBaseline": "8ad14311",
+  "build": {
+    "command": "./fabric-build.sh",
+    "result": "BUILD SUCCESSFUL",
+    "seconds": 275
+  },
+  "otherGates": [
+    {
+      "name": "api",
+      "command": [
+        "./gradlew",
+        "-p",
+        "fabric",
+        "verifyApiSliceNoNeoForge"
+      ],
+      "exitCode": 0,
+      "seconds": 1.71
+    },
+    {
+      "name": "machine",
+      "command": [
+        "scripts/fabric-machine-smoke.sh"
+      ],
+      "exitCode": 0,
+      "seconds": 98.59
+    }
+  ],
+  "testTasks": {
+    "fabricClientModelTest": {
+      "suites": 15,
+      "tests": 17,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fabricDataMapTest": {
+      "suites": 2,
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fabricRecipeRegistryTest": {
+      "suites": 3,
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fabricRegistryTest": {
+      "suites": 1,
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fabricTransferTest": {
+      "suites": 10,
+      "tests": 45,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "qioTransactionTest": {
+      "suites": 22,
+      "tests": 50,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "test": {
+      "suites": 95,
+      "tests": 451,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "tests": 578,
+  "failures": 0,
+  "errors": 0,
+  "markers": [
+    "fabric-machine-smoke: PASSED"
+  ],
+  "artifact": {
+    "file": "Mekanism-Fabric-Bootstrap-10.7.19.85-fabric-bootstrap.jar",
+    "sha256": "268929a542b1f4311214799ac0d2fcc4190bc150663340e6e2cbf5a712402e9d"
+  },
+  "scope": "P5 phase gates only; W40 release gates and independent packaged-smoke review remain pending."
+}

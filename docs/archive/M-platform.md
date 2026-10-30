@@ -68,7 +68,7 @@ assemble PASS（23 秒，含三份 slice gate）。真实隔离数据包分别�
 
 真实空-tag crushing 配方探针先暴露网络断连：ItemStackIngredient.NetworkCodec 调用拒绝 Ingredient.EMPTY 的公共 of 工厂，而网络将空 tag 展开成空数组。修复为 network decoder 直接构造保留不完整状态，count 继续正数校验，mode/component 组合校验不变；公共构造工厂规则保留。原官方 stream 是 SizedIngredient.STREAM_CODEC 映射到私有 wrapper 构造，不通过公共工厂。assemble PASS（修复后），同一探针客户端成功进入世界，scanner 实际状态 true：[读数](../milestones/evidence/p3-scanner/start.json)。不通过删除配方或绕过 scanner 获得连接成功。
 
-随后移除临时配方并执行 reload，真实既有机器 tick 崩溃：`Recipe lookup monitor level is not bound to the active recipe manager (epoch 1)`，首个业务帧 RecipeCacheLookupMonitor.validatedBinding:217 → updateAndProcess:85 → TileEntityElectricMachine.onUpdateServer:98。完整 [原始报告](../milestones/evidence/p3-scanner/reload-crash.txt) 与 lifecycle.log 保留。本次不能声明 reload/扫描收尾通过。下一步检查真实 RecipeManager 替换与 Fabric END_DATA_PACK_RELOAD 回调之间的绑定时序，在现有 recipe owner 修复，不放松 foreign-level/manager guard。
+随后移除临时配方并执行 reload，真实既有机器 tick 崩溃：`Recipe lookup monitor level is not bound to the active recipe manager (epoch 1)`，首个业务帧 RecipeCacheLookupMonitor.validatedBinding:217 → updateAndProcess:85 → TileEntityElectricMachine.onUpdateServer:98。首个异常与业务栈 [诊断记录](../milestones/evidence/p3-scanner/reload-crash.json) 与 lifecycle.csv 保留。本次不能声明 reload/扫描收尾通过。下一步检查真实 RecipeManager 替换与 Fabric END_DATA_PACK_RELOAD 回调之间的绑定时序，在现有 recipe owner 修复，不放松 foreign-level/manager guard。
 
 游戏进程已确认 terminal（runClient exit 255），隔离世界完整恢复到启动前备份，临时 mod／wrapper／Xvfb 已清理。无新测试；本批是明确失败点的可恢复实现检查点，W-20 未完成，后续须在同一行为闭包修复并验收。
 
@@ -77,7 +77,7 @@ assemble PASS（23 秒，含三份 slice gate）。真实隔离数据包分别�
 
 2026-10-30 W-20 reload 修复：固定 Fabric lifecycle 源码显示 END_DATA_PACK_RELOAD 通过 handleAsync 再排入 server executor；vanilla 已在内部 completion 中替换 resources/RecipeManager，此时后续机器 tick 可先看到新 manager，而缓存仍是 epoch1。没有放松 RecipeCacheLookupMonitor 的真实 manager guard。新增最小 PlayerList.reloadResources HEAD mixin，在 vanilla 完成 resources 赋值、updateRegistryTags 后且同步玩家 recipes 前调用现有 FabricRecipeCacheLifecycle.resourcesApplied，立即为实际 manager 发布新 binding 和 epoch。END 只做成功扫描／结果记录；失败发生在准备阶段时不会触发 publication，保留旧 binding，若 vanilla 已实际 apply 则跟随真实 manager 而非回退伪装。
 
-assemble PASS（21 秒，三 slice gates）；platform slice 203→204（真实 publication mixin）。原空 tag 探针客户端正常进入后，scanner=true；移除探针配方并 reload，scanner=false / epoch2，客户端和既有机器继续运行。重新加入配方并第二次 reload，scanner=true / epoch3，客户端保持连接。每次 apply 与 reload 只有同一 epoch，未重复绑定。[实际读数目录](../milestones/evidence/p3-reload/after.json)，同目录含 start/again、epochs、status 和 lifecycle.log。这修复上一节原始 reload crash 的同一复现；扫描错误日志是探针有意制造的诊断结果，不作为意外 crash。
+assemble PASS（21 秒，三 slice gates）；platform slice 203→204（真实 publication mixin）。原空 tag 探针客户端正常进入后，scanner=true；移除探针配方并 reload，scanner=false / epoch2，客户端和既有机器继续运行。重新加入配方并第二次 reload，scanner=true / epoch3，客户端保持连接。每次 apply 与 reload 只有同一 epoch，未重复绑定。[实际读数目录](../milestones/evidence/p3-reload/after.json)，同目录含 start/again、epochs、status 和 lifecycle.csv。这修复上一节原始 reload crash 的同一复现；扫描错误日志是探针有意制造的诊断结果，不作为意外 crash。
 
 正常停止自有会话并完整恢复世界，备份与恢复后逐文件 SHA-256 一致；临时 runtime/wrapper/Xvfb 清理。保留现有 foreign-level/manager 检查，另跑既有 RecipeCacheLookupMonitorTest，提交前核对结果。无新增测试。W-20 剩余外部 wrench/cardboard 右键语义核对，之后再进 W-21；不提前声明整个 P3 完成。
 
@@ -109,6 +109,6 @@ C2S 主 owner FabricServerPlayNetworking.register 同时注册 codec 与 context
 本轮补齐 service 前的完整 `./fabric-build.sh` PASS（4m12s，现有全部测试与合同）；service 补齐后的 assemble/slice 门禁 PASS。尚需在最终当前树执行 P3 阶段 build、verifyApiSliceNoNeoForge、machine smoke，才关闭 W-22。没有新增测试或更改参考源码。本轮具体下一步就是该最终门禁与收尾，不重做已确认 owner 扫描。
 
 
-2026-10-30 W-22 最终门禁（生产树 `843af935`）：`./fabric-build.sh` PASS（4m33s，578 tests，0 failures/errors/skipped）；`./gradlew -p fabric verifyApiSliceNoNeoForge --console=plain` PASS（10 秒）；`scripts/fabric-machine-smoke.sh` exit0，`fabric-machine-smoke: PASSED`。最终 service 补齐后的当前树已通过，前述“门禁待做”为历史检查点。对应日志位于本次会话 `/tmp/mekanism-p3-current-{build,api,machine}.log`；持久门禁摘要见 [结果](../milestones/evidence/p3-sources/final-gates.md)。
+2026-10-30 W-22 最终门禁（生产树 `843af935`）：`./fabric-build.sh` PASS（4m33s，578 tests，0 failures/errors/skipped）；`./gradlew -p fabric verifyApiSliceNoNeoForge --console=plain` PASS（10 秒）；`scripts/fabric-machine-smoke.sh` exit0，`fabric-machine-smoke: PASSED`。最终 service 补齐后的当前树已通过，前述“门禁待做”为历史检查点。对应日志位于本次会话 `/tmp/mekanism-p3-current-{build,api,machine}.log`；持久门禁摘要见 [结果](../milestones/evidence/p3-sources/final-gates.json)。
 
 阶段提交：W-15 `6928f068`，W-16/17 `f4c760fd`，W-18 `339e4978`，W-19 `797b2b03` / `8cffaec8`，W-20 `fde38c22` / `d511c844` / `de036b6d`，W-21 `504b3dbb`，W-22 `843af935`。新增未决项均在上述清单明确归属后续阶段；未跳过 W 项，无新增测试。P3 归档后进入 P4，不作 P4–P10 完成声明。WIP 历史 squash 仍按 ROADMAP 留给用户决定。

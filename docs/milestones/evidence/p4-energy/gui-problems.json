@@ -1,0 +1,12 @@
+{
+  "warnings": 5,
+  "errors": [
+    {
+      "tick": 757,
+      "source": "mcdebug",
+      "message": "handler error"
+    }
+  ],
+  "truncated": false,
+  "scope": "Original bounded problem summary; detailed startup warning prose removed."
+}

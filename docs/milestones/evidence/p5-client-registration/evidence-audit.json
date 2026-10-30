@@ -1,0 +1,154 @@
+{
+  "beforeBytes": 4121262,
+  "originalFileCount": 652,
+  "fileCountBeforeThisAudit": 653,
+  "converted": [
+    {
+      "source": "p3-sources/final-gates.md",
+      "target": "p3-sources/final-gates.json",
+      "sourceSha256": "2a631db83d3fd48464955bbe798e900cc80b501f3cc680e1a6d35fd3da115672",
+      "kind": "acceptance details retained"
+    },
+    {
+      "source": "p4-lifecycle/world-save.md",
+      "target": "p4-lifecycle/world-save.json",
+      "sourceSha256": "289db5cc8cbe497ca2529927c98fd23da203dd35328815d970480ef98c6c4579",
+      "kind": "acceptance details retained"
+    },
+    {
+      "source": "p4-lifecycle/final-gates.md",
+      "target": "p4-lifecycle/final-gates.json",
+      "sourceSha256": "21007656c6aea0a38dc6cab9dae96c7bfabf962fccbf6d9146f8664516755c25",
+      "kind": "acceptance details retained"
+    },
+    {
+      "source": "p5-model-particles/validation.md",
+      "target": "p5-model-particles/validation.json",
+      "sourceSha256": "2aeeecbbee716bb476c2bb5c85ba58f879c475a07d0143fc64b4c393c760ecd8",
+      "kind": "acceptance details retained"
+    },
+    {
+      "source": "p5-gui/validation.md",
+      "target": "p5-gui/validation.json",
+      "sourceSha256": "f205ddfbb4eb66a076b71438b398da634c5f62fe69186aeebb2fd8a1ce6fa016",
+      "kind": "acceptance details retained"
+    },
+    {
+      "source": "p5-client-registration/validation.md",
+      "target": "p5-client-registration/validation.json",
+      "sourceSha256": "9d2e1e6cf904e5544044dd4802b73b7c6ff77ceeea3f226673f6fc8fda222177",
+      "kind": "acceptance details retained"
+    },
+    {
+      "source": "p5-block-particles/validation.md",
+      "target": "p5-block-particles/validation.json",
+      "sourceSha256": "bdf91d782fe60bf39c43611e2310a41b745b3c77eb547714b18321bc5c8ee0af",
+      "kind": "acceptance details retained"
+    },
+    {
+      "source": "p5-accessories/validation.md",
+      "target": "p5-accessories/validation.json",
+      "sourceSha256": "8e54409b961c7456e3f7558a3ec82e4713988804bfc2dfc6f025fbf381773913",
+      "kind": "acceptance details retained"
+    },
+    {
+      "source": "p5-fluid-visuals/validation.md",
+      "target": "p5-fluid-visuals/validation.json",
+      "sourceSha256": "cb60002785b424d376ea0aeeb92560890ecfed18b132d16df9fc467b4b6a724e",
+      "kind": "acceptance details retained"
+    },
+    {
+      "source": "p3-scanner/lifecycle.log",
+      "target": "p3-scanner/lifecycle.csv",
+      "sourceSha256": "5450c00db9c8565ebef453a220f84e4f605fafd10c5427fb842c23cd3e8db182",
+      "kind": "bounded lifecycle event facts; stdout log removed"
+    },
+    {
+      "source": "p3-reload/lifecycle.log",
+      "target": "p3-reload/lifecycle.csv",
+      "sourceSha256": "e894506b2c1713adf8c012a0243cc63bc834e63c0e45073635465424fd64522c",
+      "kind": "bounded lifecycle event facts; stdout log removed"
+    },
+    {
+      "source": "p3-scanner/reload-crash.txt",
+      "target": "p3-scanner/reload-crash.json",
+      "sourceSha256": "0764b41c50ae9a1fbed486f41339e670392586d4787c47cd0583f57b27a867a7",
+      "kind": "first-error facts retained; logs/tracebacks removed"
+    },
+    {
+      "source": "p4-energy/cable-crash.txt",
+      "target": "p4-energy/cable-crash.json",
+      "sourceSha256": "27f8f43a94cd11968b70d601cf3ec019554e6fc4ed5ad75cb26f856c6e62ca4c",
+      "kind": "first-error facts retained; logs/tracebacks removed"
+    },
+    {
+      "source": "p4-energy/gui-problems.txt",
+      "target": "p4-energy/gui-problems.json",
+      "sourceSha256": "1e15a78875e0eb75e4ac35d65e67c391397b885dcec979ad224c5bb4a606bf4f",
+      "kind": "first-error facts retained; logs/tracebacks removed"
+    },
+    {
+      "source": "p5-accessories/diagnostic-corrections.txt",
+      "target": "p5-accessories/diagnostic-corrections.json",
+      "sourceSha256": "91a0c65ce722f93c53b35a7561b1f653671dc64b0f10900e6b2cefb9e9dc7003",
+      "kind": "first-error facts retained; logs/tracebacks removed"
+    },
+    {
+      "source": "p5-fluid-visuals/diagnostic-corrections.txt",
+      "target": "p5-fluid-visuals/diagnostic-corrections.json",
+      "sourceSha256": "739a63383f43d584e4db0eb543f08cfcdc04ba8a57e4219dfa7d386a7f537822",
+      "kind": "first-error facts retained; logs/tracebacks removed"
+    }
+  ],
+  "largest": [
+    {
+      "path": "p5-transmitter/disconnected.png",
+      "bytes": 362833
+    },
+    {
+      "path": "p5-transmitter/disconnected-before-water-fix.png",
+      "bytes": 360736
+    },
+    {
+      "path": "p5-transmitter/connected.png",
+      "bytes": 355676
+    },
+    {
+      "path": "p5-transmitter/connected-before-water-fix.png",
+      "bytes": 338568
+    },
+    {
+      "path": "p5-fluid-visuals/brine-first-person.png",
+      "bytes": 160796
+    },
+    {
+      "path": "p5-fluid-visuals/outside-fluid.png",
+      "bytes": 160658
+    },
+    {
+      "path": "p5-fluid-visuals/brine-vision.png",
+      "bytes": 125272
+    },
+    {
+      "path": "p2-config/miner-radius-seven.png",
+      "bytes": 30505
+    },
+    {
+      "path": "p5-gui/block-results.json",
+      "bytes": 30310
+    },
+    {
+      "path": "p5-gui/personal_storage_block.json",
+      "bytes": 25035
+    }
+  ],
+  "screenshots": "85 original PNGs retained: 71 distinct W31 menus plus necessary owner/transmitter/accessory/fluid visual evidence; no large binary format added.",
+  "policy": "Only JSON/CSV/necessary PNG; logs, full crash dumps and Python tracebacks removed. Original first errors and decisive frames/events retained as structured facts.",
+  "afterBytesExcludingAudit": 4117391,
+  "filesExcludingAudit": 654,
+  "allowedExtensions": [
+    ".csv",
+    ".json",
+    ".png"
+  ]
+}
