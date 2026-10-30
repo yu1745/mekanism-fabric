@@ -44,7 +44,8 @@ abstract class MekanismCreativeSearchMixin extends AbstractContainerScreen<Creat
     private static boolean mekanism$isOwnTab() {
         ResourceLocation id = BuiltInRegistries.CREATIVE_MODE_TAB.getKey(selectedTab);
         return id != null && (id.toString().equals("mekanism:mekanism") || id.toString().equals("mekanismtools:mekanismtools")
-              || id.toString().equals("mekanismadditions:mekanismadditions"));
+              || id.toString().equals("mekanismadditions:mekanismadditions")
+              || id.toString().equals("mekanismgenerators:mekanismgenerators"));
     }
 
     // Replace only the four SEARCH comparisons controlling the search box/input; leave CATEGORY and inventory logic intact.

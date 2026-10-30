@@ -4,10 +4,12 @@
   "scope": "W-51 registration/config and W-52 simple machines. Multiblock and P13 gates remain pending.",
   "runtime": "core + Generators only; isolated copied world; mcdebug 0.7.0",
   "registration": {
-    "blocks": 24,
     "block_entities": 24,
     "chemicals_including_core": 68,
-    "modules_including_core": 33
+    "modules_including_core": 33,
+    "declared_machine_and_multiblock_blocks": 24,
+    "liquid_blocks": 4,
+    "total_addon_blocks": 28
   },
   "schema_fields": {
     "generators": 44,
@@ -191,5 +193,5 @@
     "gas_cube_joules": 3176025
   },
   "environment_limit": "OpenAL device failed to open; no new GUI/render errors observed. Sound playback not verified.",
-  "cleanup": "Session still owned and running for W-53 onward; restore/remove disposable copy at milestone close."
+  "cleanup": "Both owned sessions stopped normally; disposable copied world, debug/Kotlin JARs, wrapper and owned Xvfb removed at W-57 close."
 }

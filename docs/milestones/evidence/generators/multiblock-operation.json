@@ -1,0 +1,179 @@
+{
+  "source_checkpoint": "9b67cf52",
+  "scope": "W-53–56 operation; persistence and module regression still pending.",
+  "turbine": {
+    "builder_origin": [
+      32,
+      100,
+      0
+    ],
+    "formed": true,
+    "blades": 28,
+    "vents": 345,
+    "coils": 49,
+    "offered_steam": 4000000,
+    "sample_flow": 853,
+    "stored_joules": 31317779,
+    "receiver_joules": 4000000,
+    "receiver_water_millibuckets": 32000
+  },
+  "fission": {
+    "builder_origin": [
+      64,
+      100,
+      0
+    ],
+    "formed": true,
+    "fuel_assemblies": 1920,
+    "actual_burn_rate": 1.0,
+    "sample_temperature_kelvin": 463.6538537560238,
+    "produced_waste": 338,
+    "produced_steam": 1000000,
+    "active_after_sample": false,
+    "coolant_receiver": "mekanism:steam, 64000 units",
+    "waste_receiver": "Top port to radioactive waste barrel (top/bottom-only native capability); 329 nuclear waste after natural decay. Basic chemical tank correctly refuses radioactive waste.",
+    "controlled_threshold": {
+      "formed": {
+        "method": "isFormed",
+        "resolvedTo": "isFormed",
+        "declaringClass": "mekanism.common.lib.multiblock.MultiblockData",
+        "signature": "()",
+        "value": true
+      },
+      "forced_disable": {
+        "method": "isForceDisabled",
+        "resolvedTo": "isForceDisabled",
+        "declaringClass": "mekanism.generators.common.content.fission.FissionReactorMultiblockData",
+        "signature": "()",
+        "value": true
+      },
+      "logic_status": {
+        "method": "getStatus",
+        "resolvedTo": "getStatus",
+        "declaringClass": "mekanism.generators.common.tile.fission.TileEntityFissionReactorLogicAdapter",
+        "signature": "()",
+        "value": "OUTPUTTING"
+      },
+      "native_signal": {
+        "method": "getSignal",
+        "resolvedTo": "getSignal",
+        "declaringClass": "net.minecraft.world.level.SignalGetter",
+        "signature": "(net.minecraft.core.BlockPos,net.minecraft.core.Direction)",
+        "value": 15
+      },
+      "recovered": {
+        "method": "isForceDisabled",
+        "resolvedTo": "isForceDisabled",
+        "declaringClass": "mekanism.generators.common.content.fission.FissionReactorMultiblockData",
+        "signature": "()",
+        "value": false
+      },
+      "restore_chance": {
+        "method": "set",
+        "resolvedTo": "set",
+        "declaringClass": "mekanism.common.config.value.CachedDoubleValue",
+        "signature": "(double)",
+        "value": null
+      },
+      "restore_enabled": {
+        "method": "set",
+        "resolvedTo": "set",
+        "declaringClass": "mekanism.common.config.value.CachedBooleanValue",
+        "signature": "(boolean)",
+        "value": null
+      },
+      "unfreeze": {
+        "success": false,
+        "result": 0,
+        "output": "The game is running normally"
+      }
+    },
+    "threshold_scope": "Original handleDamage called on the formed owner at 2000 K / damage 100, meltdowns disabled and chance 1; forced-disable and 15 signal observed. Cooled to 300 K and cleared temporary damage; defaults restored before unfreeze. Destructive explosion not executed."
+  },
+  "fusion": {
+    "builder_origin": [
+      96,
+      100,
+      0
+    ],
+    "formed": true,
+    "hohlraum_fuel": 10,
+    "deuterium_and_tritium_each": 1000,
+    "ignition_source": "Real core laser amplifier at 92,102,2 with 2000000000 J; native ray hits focus matrix 96,102,2. No direct plasma temperature or receptor invocation used.",
+    "burning_after_ignition": true,
+    "sample_plasma_kelvin": 200613658.08816436,
+    "sample_fuel_burned": 2,
+    "sample_deuterium_remaining": 570,
+    "sample_generated_joules": 302099469,
+    "output_receiver_joules": 4000000
+  },
+  "gui": {
+    "turbine_main": {
+      "class": "mekanism.generators.client.gui.GuiIndustrialTurbine",
+      "open": true,
+      "container_id": 10
+    },
+    "turbine_stats": {
+      "class": "mekanism.generators.client.gui.GuiTurbineStats",
+      "open": true,
+      "container_id": 11
+    },
+    "fission_main": {
+      "class": "mekanism.generators.client.gui.GuiFissionReactor",
+      "open": true,
+      "container_id": 13
+    },
+    "fission_stats": {
+      "class": "mekanism.generators.client.gui.GuiFissionReactorStats",
+      "open": true,
+      "container_id": 14
+    },
+    "fusion_main": {
+      "class": "mekanism.generators.client.gui.GuiFusionReactorController",
+      "open": true,
+      "container_id": 15
+    },
+    "fusion_heat": {
+      "class": "mekanism.generators.client.gui.GuiFusionReactorHeat",
+      "open": true,
+      "container_id": 16
+    },
+    "fusion_fuel": {
+      "class": "mekanism.generators.client.gui.GuiFusionReactorFuel",
+      "open": true,
+      "container_id": 17
+    },
+    "fusion_stats": {
+      "class": "mekanism.generators.client.gui.GuiFusionReactorStats",
+      "open": true,
+      "container_id": 18
+    },
+    "fission_logic": {
+      "class": "mekanism.generators.client.gui.GuiFissionReactorLogicAdapter",
+      "open": true,
+      "container_id": 19
+    },
+    "fusion_logic": {
+      "class": "mekanism.generators.client.gui.GuiFusionReactorLogicAdapter",
+      "open": true,
+      "container_id": 20
+    }
+  },
+  "network": {
+    "tile_button": "Native GUI clicks successfully switch turbine/fission stats and fusion heat/fuel/stats through original C2S packet.",
+    "gui_interact": {
+      "method": "getMode",
+      "resolvedTo": "getMode",
+      "declaringClass": "mekanism.generators.common.tile.fission.TileEntityFissionReactorLogicAdapter",
+      "signature": "()",
+      "value": "DISABLED"
+    }
+  },
+  "new_render_errors": {
+    "entries": [],
+    "next": 12,
+    "truncated": false,
+    "dropped": 0,
+    "available": true
+  }
+}
