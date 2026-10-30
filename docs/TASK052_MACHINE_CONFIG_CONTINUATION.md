@@ -24,4 +24,12 @@
 
 编译、remapJar、remapPortReviewFixtureJar、三个切片 gate 与继承的单一生命周期用例 PASS（17s，`/tmp/mekanism-machine-config-build.log`）。已有测试只调整 owner 名和四配置快照输入，断言/测试数量不增加。既有 paired-network smoke PASS（`/tmp/mekanism-machine-config-paired.log`），运行约 82 秒（启动至第二客户端入世界），独立服务器与两次 fresh client 正常进入 PLAY。保留诊断 `build/fabric-paired-network-smoke/20261030T081852Z-3129744/`：server start 明确 `configs=4`；两客户端完整 `values=235` 小于既有 codec 上限 256，无需扩大限制；两个 session 的 send/client_applied/ack 一致（`beb28c70-4f67-4f36-8940-9a5299d57b4d`、`4d95928e-86aa-4271-b1f4-56dc040d4648`）。脚本通过终止 scope 收尾，不将它算作 graceful disconnect/stop 验证。
 
-当前未宣称真实非默认机器参数、四配置集成服跨世界切换或热重载验证已完成；不为这些限制新增测试矩阵。下一步完成提交后审查，再优先用实际机器验证非默认容量/耗能。
+当前未宣称真实非默认机器参数、四配置集成服跨世界切换或热重载验证已完成；不为这些限制新增测试矩阵。下一步优先用实际机器验证非默认容量/耗能。
+
+## 提交后风格审查 — `207e08ae`
+
+按 `PORT_COMMIT_REVIEW_PROMPT.md` 完整阅读提交后的真实 diff（含四文件重命名的实际方法变化），对照官方 `4646f509` 的 StorageConfig/UsageConfig/TierConfig：三份 schema 现有差异仅 builder/spec/type 平台替换，官方 filename、字段、默认值、范围、tier reference 绑定均保留，本提交未改其领域源码。当前 `MachineEnergyContainer.input/internal` 仍通过原 `AttributeEnergy` 取容量/耗能，无第二套机器或配置模型。新固定配置集合复用原 manager、spec 校验和握手；无新增纳片、兼容分支或测试用例。结论：此提交边界内未发现新的移植风格偏离。
+
+补充既有 `MekanismConfigSpecTest` 整类运行 PASS（8s，`/tmp/mekanism-machine-config-spec-test.log`），其变化仅 payload 类型更名；不将它说成四配置非默认真机证明。
+
+上下文评估：实现与审查已落盘，下一步仍是同一机器配置边界的实际运行，保留当前会话继续，不再重复历史审计或拆新模块。所有本轮 build/smoke jobs 已收集且结束。
