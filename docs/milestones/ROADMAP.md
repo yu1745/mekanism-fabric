@@ -1,4 +1,4 @@
-# 规划书：2026-10-30 起的后续提交（W-01 … W-44）
+# 规划书：2026-10-30 起的后续提交（W-01 … W-62）
 
 协调者编写，worker 按序执行。状态以 `docs/milestones/README.md` 为准；本文只定"做什么、什么顺序、怎样算完成、卡住怎么办"。不得借本文扩大 `AGENTS.md` 的边界。
 
@@ -17,6 +17,9 @@
   - `evidence/` 仅存 CSV/JSON/必要截图，不存日志与大二进制；P5 结束时检查体积（目前 6MB）。
 - 给 worker 的具体事项见 `COORDINATOR_NOTES.md`。
 - **待用户决定**（不阻塞 worker）：①本地领先 origin 31 个提交，需要时再推送；②wip 提交 squash；③submodule 指针更新。
+
+- **2026-10-30 16:15 巡检 1**：用户指示 worker"聚焦开发"，P8 发布门禁后置。W-43 已完成（`ed8e1217`），worker 工作区正在做 W-44（Tools）。路线图因此：P10 细化为 W-44a–e；新增 P11 Additions（W-45…49）、P12 Generators（W-50…58）、P13 发布收口（W-59…62）；引入"回归监测门"取代对每个模块的整套门禁；rejection smoke 的真失败列为 W-59 首项。
+- **0. 已知事实**中的 slice 数字、"约 1700/1802"为 10-30 早间快照，当前 platform slice 已 207→209，不作为依据。
 
 ## 0. 已知事实（规划依据，worker 在 P0 复核）
 
@@ -131,7 +134,7 @@ mcdebug 使用 `fabric/run` 的隔离调试世界；结束恢复现场。
 | W-38 | 注册表收尾：legacy alias、化学 ingredient 注册表、Robit 注册与数据包、biome modifier；注册冻结后 ID/alias 与官方一致 |
 | W-39 | 世界生成：ore retrogen smoke、worldgen smoke 重跑；盐/矿脉生成 |
 
-### P8 发布门禁（W-40 … W-42）
+### P8 发布门禁（W-40 … W-42）—— **后置到 P13（W-59…62）；W-40 已部分执行，见 `evidence/p8-release/w40-results.json`**
 
 | ID | 内容 |
 |---|---|
@@ -139,17 +142,64 @@ mcdebug 使用 `fabric/run` 的隔离调试世界；结束恢复现场。
 | W-41 | `./build.sh --clean` 发布物核验：remapped JAR、`build-info.json` sha256、干净服务端启动；干净构建后**重跑同一静态检查**并记录 jar sha256（C-3） |
 | W-42 | 文档收口：`README.md` 状态表全部为"已验证"或带具体残留项；`PORT_MATRIX`/`FABRIC_PORT` 一页结论；相关 `M-*.md` 归档 |
 
-### P9 Tools 模块立项（W-43）
+### P9 Tools 模块立项（W-43）—— 已完成（`ed8e1217`）
 
 | ID | 内容 |
 |---|---|
 | W-43 | 通读 `src/tools`（52 文件）：写一页边界说明（依赖核心哪些 owner、需要的 slice、风险），建 `docs/milestones/M-tools.md`。**仅文档提交**；之后沿用本规划的协议接力实现 |
 
-### P10 后续模块（W-44，滚动）
+### P10 Tools 实现（W-44，活文档 `M-tools.md`，52 文件，其中 4 个第三方集成排除）
 
-| ID | 内容 |
-|---|---|
-| W-44 | Tools → Additions → Generators，每个模块重复 W-43 的"边界说明 → 分 Phase 实现 → 门禁 → 验收"。Generators（121 文件，含涡轮/裂变/聚变多方块）最后做；开始前再出一版本规划书 |
+| ID | 内容 | 完成标志 |
+|---|---|---|
+| W-44a | 独立 `tools` source set、精确 slice、可单独加载的 Tools JAR；`build.sh` 收集附加 JAR；核心 JAR 不混入 Tools 类 | 编译 + remap 通过，核心包体不变 |
+| W-44b | `MekanismTools → 配置 → ToolsArmorMaterials → ToolsItems → serializer/创作栏/资源`；STARTUP 材料在物品构造前加载，SERVER 配置并入 `FabricServerConfig` 同一 owner/快照 | 72 物品、6 护甲材料注册；非默认配置真机生效 |
+| W-44c | 生物装备（Zombie/Skeleton/Piglin `finalizeSpawn`）→ `MobEquipmentHelper`、paxel 能力、piglin 中立物品 | 真机：生成生物装备与官方时机/随机序一致 |
+| W-44d | 客户端：盾牌 renderer/blocking 属性、护甲渲染、资源 | mcdebug 截图 |
+| W-44e | 一个端到端场景（注册 + paxel 操作/耐久 + 配方 + 护甲/盾牌渲染）；**回归监测门**（见 P11 前说明）；M-tools 状态落定 | 状态表更新 |
+
+### P11 Additions 实现（W-45 … W-49，活文档 `M-additions.md`，64 文件）
+
+范围来自目录盘点：`common/block`(13) · `registries`(9) · `entity`(9：EntityBalloon、EntityObsidianTNT、四种 Baby 生物等) · `client/render`(6) · `config`(4) · `client/voice`+`common/voice`(5：对讲机) · `world`(2：BabyEntitySpawn biome/structure modifier) · `item`(2：ItemBalloon、ItemWalkieTalkie)。
+
+| ID | 内容 | 完成标志 / 风险 |
+|---|---|---|
+| W-45 | 边界页：逐文件归类，标出三块高风险——①baby 生物生成修饰（NeoForge `BiomeModifier`/`StructureModifier` → Fabric biome modification API）②语音/对讲机（`client/voice` 的音频与网络）③实体注册与客户端渲染；写 `M-additions.md` | 仅文档；高风险项各有最小边界或明确延期理由 |
+| W-46 | source set / slice / JAR（沿用 W-44a 做法）；配置、registries、blocks、items（塑料方块、气球物品） | 编译 + 注册；非默认配置生效 |
+| W-47 | 实体：Balloon、Obsidian TNT、四种 Baby 生物及其渲染；spawn 修饰映射 | 真机生成/渲染/爆炸各一次读数 |
+| W-48 | 语音/对讲机：先核对官方实际依赖（服务端转发？客户端音频捕获？）；能原样承接则接，依赖平台库则按"超出边界→记录并跳过"处理，**不 stub** | 要么真机可用，要么 `M-additions.md` 未决项写清调用链 |
+| W-49 | 端到端场景 + 回归监测门 + 状态落定 | 状态表更新 |
+
+### P12 Generators 实现（W-50 … W-58，活文档 `M-generators.md`，121 文件；最大，开工前再出细化版）
+
+范围：`common/tile`(26：Bio/Gas/Heat/Solar/AdvancedSolar/Wind 六种简单发电机；涡轮 Casing/Rotor/Valve/Vent；裂变 Assembly/ControlRod/FuelAssembly/Casing/Port/LogicAdapter；聚变 Controller/Port/LogicAdapter/Block/LaserFocusMatrix；ElectromagneticCoil、RotationalComplex、SaturatingCondenser、ReactorGlass) · `client/gui`(21) · `content`(14：多方块数据/校验) · `registries`(13) · `config`(5) · `client/render`(7) · `client/model`(3) · `item`(4) · `network`(3)。
+
+| ID | 内容 | 完成标志 / 风险 |
+|---|---|---|
+| W-50 | 边界页：依赖核心哪些多方块 owner（沿用 M-multiblock 的 `mek build` 搭建法）；确认化学/热量/能量传输与裂变/聚变的核心依赖 | 仅文档 |
+| W-51 | source set / slice / JAR；配置（5）、registries（13）、items/blocks | 编译 + 注册 |
+| W-52 | 六种简单发电机（含 GUI、能量输出、燃料/热/太阳/风）；这是最小纵向闭包，先于多方块 | 每种一次真机发电读数 |
+| W-53 | 涡轮：多方块成型、转子/叶片、蒸汽→能量、Vent/Valve | 搭建后发电并存读档 |
+| W-54 | 裂变反应堆：成型、燃料/控制棒、热量/冷却剂、逻辑适配器、熔毁路径（只读验证不造成世界破坏——在隔离世界执行） | 受控运行读数 |
+| W-55 | 聚变反应堆：控制器、激光聚焦矩阵、电磁线圈、氘氚燃料注入 | 点火读数 |
+| W-56 | 客户端：21 个 GUI 巡检（沿用 W-31 方法）、涡轮/聚变渲染、模型 | GUI 巡检表 + 截图 |
+| W-57 | 生命周期：各多方块破坏重建、区块重载、存读档（沿用 W-34 方法） | 重启后保持 |
+| W-58 | 端到端场景 + 回归监测门 + 状态落定 | 状态表更新 |
+
+### P13 发布收口（W-59 … W-62，活文档 `M-release.md`）
+
+用户 2026-10-30 指示"聚焦开发"，故发布门禁后置。已跑结果（578 tests / API / machine / paired 通过）仅覆盖该时刻的核心，**不覆盖其后改动**。
+
+| ID | 内容 | 完成标志 |
+|---|---|---|
+| W-59 | **先修 rejection 真失败**：W-40 中 handshake mismatch fixture 先被 Fabric registry remap 以"998 个未知 mekanism 条目"拒绝，未走到 Mekanism 自己的拒绝路径。判断是 fixture 搭法问题还是真实回归，修到 `rejection smoke: PASSED` | 标记行 PASS；原因写入 `M-release.md` |
+| W-60 | 全量测试 + 全部 smoke（含 Tools/Additions/Generators 的 JAR）逐条 PASS；先满足 `COORDINATOR_NOTES.md` 的 C-1…C-4（负向探针、recipe 计数兜底） | 逐条 PASS，记录耗时 |
+| W-61 | `./build.sh --clean` 多 JAR 发布物核验（核心 + 三个附加）；干净构建后重跑同一静态检查并记录各 jar sha256（C-3） | `build-info.json` 含全部 sha256 |
+| W-62 | 文档收口：README 状态表全部"已验证"或带具体残留；发布限制汇总终稿；`PORT_MATRIX`/`FABRIC_PORT` 一页结论；相关活文档归档 | 完成声明由协调者复核后才成立 |
+
+### 回归监测门（取代 P8 对每个模块的整套门禁）
+
+每个模块（M-tools / M-additions / M-generators）收口前跑一次，便宜且足以发现核心退化：`./fabric-build.sh`、`./gradlew -p fabric verifyApiSliceNoNeoForge`、`scripts/fabric-machine-smoke.sh`。失败先修。完整门禁只在 P13 做一次。
 
 ## 4. 依赖与可并行性
 
