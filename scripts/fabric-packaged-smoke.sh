@@ -101,9 +101,9 @@ fi
 # Compare against the same build's slice-gated dev artifact, including generated classes.
 # Early Task043 package subsets are no longer valid once the real machine/client catalogs are admitted.
 DEV_JAR="$ROOT/fabric/build/devlibs/$(basename "${MOD_JARS[0]}" .jar)-dev.jar"
-if ! python3 - "${MOD_JARS[0]}" "$TEAM_REBORN_ENERGY_VERSION" "$DEV_JAR" "$NIGHT_CONFIG_VERSION" <<'PYEOF'
+if ! python3 - "${MOD_JARS[0]}" "$TEAM_REBORN_ENERGY_VERSION" "$DEV_JAR" "$NIGHT_CONFIG_VERSION" "$ROOT/scripts/fabric-packaged-oracles.json" <<'PYEOF'
 from collections import Counter
-import json, sys, zipfile
+import hashlib, json, sys, zipfile
 
 expected_entrypoints = {
     "main": ["mekanism.fabric.MekanismFabricBootstrap"],
@@ -224,6 +224,10 @@ expected_access_widener = [
     'accessible\tfield\tnet/minecraft/class_1755\tfield_7905\tLnet/minecraft/class_3611;',
     'accessible\tmethod\tnet/minecraft/class_1297\tmethod_51502\t(Lnet/minecraft/class_1937;)V',
     'accessible\tfield\tnet/minecraft/class_1542\tfield_7204\tI',
+    'accessible\tmethod\tnet/minecraft/class_687\t<init>\t(Lnet/minecraft/class_638;DDDDDD)V',
+    'accessible\tmethod\tnet/minecraft/class_655\t<init>\t(Lnet/minecraft/class_638;DDDDDD)V',
+    'accessible\tfield\tnet/minecraft/class_5272\tfield_24448\tLjava/util/Map;',
+    'accessible\tmethod\tnet/minecraft/class_4603\tmethod_23069\t(Lnet/minecraft/class_310;Lnet/minecraft/class_4587;)V',
 ]
 with zipfile.ZipFile(sys.argv[1]) as artifact, zipfile.ZipFile(sys.argv[3]) as development:
     entries = artifact.namelist()
@@ -264,8 +268,69 @@ with zipfile.ZipFile(sys.argv[1]) as artifact, zipfile.ZipFile(sys.argv[3]) as d
                 or "Fixture" in basename):
             raise SystemExit(f"test, fixture or external implementation leaked into artifact: {name}")
         bytecode = artifact.read(name)
-        if any(namespace in bytecode for namespace in (b"net/neoforged/", b"xyz/bluspring/kilt/", b"org/sinytra/connector/")):
+        if any(namespace in bytecode for namespace in (b"net/neoforged/", b"xyz/bluspring", b"org/sinytra")):
             raise SystemExit(f"NeoForge or compatibility-layer reference leaked into bytecode: {name}")
+    # Retain the old independent resource/service oracles: equality with the dev JAR alone
+    # cannot detect the same wrong source resource being packaged into both artifacts.
+    with open(sys.argv[5]) as oracle_file:
+        oracles = json.load(oracle_file)
+    missing_required = sorted(set(oracles["required_classes"]) - actual)
+    if missing_required:
+        raise SystemExit(f"previously admitted production classes missing: {missing_required!r}")
+    for name, expected_hash in oracles["resources"].items():
+        if hashlib.sha256(artifact.read(name)).hexdigest() != expected_hash:
+            raise SystemExit(f"official resource oracle changed: {name}")
+    for name, expected_content in oracles["services"].items():
+        if artifact.read(name) != expected_content.encode():
+            raise SystemExit(f"service provider oracle changed: {name}")
+    client_mixins = json.loads(artifact.read("mekanism.client.mixins.json"))
+    if (client_mixins.get("package") != "mekanism.fabric.mixin" or not isinstance(client_mixins.get("client"), list) or not client_mixins.get("client")
+            or "mixins" in client_mixins or "server" in client_mixins
+            or client_mixins.get("injectors", {}).get("defaultRequire") != 1):
+        raise SystemExit("client mixin configuration lost its client-only contract")
+    if metadata.get("mixins") != ["mekanism.mixins.json", {"config": "mekanism.client.mixins.json", "environment": "client"}]:
+        raise SystemExit("common/client mixin environment contract changed")
+
+    def reject_references(name, forbidden):
+        bytecode = artifact.read(name)
+        if any(reference in bytecode for reference in forbidden):
+            raise SystemExit(f"portable owner dependency contract changed: {name}")
+
+    foundation = oracles["registry_foundation"]
+    for name in foundation:
+        reject_references(name, (b"net/fabricmc/loader/", b"mekanism/api/chemical/", b"MEKANISM_FABRIC_"))
+        lowered = artifact.read(name).lower()
+        if any(word in lowered for word in (b"mekanism/api/mekanismapi", b"mekanism:empty", b"radiation", b"datamap", b"data_map", b"kilt", b"connector", b"unfreeze")):
+            raise SystemExit(f"registry foundation lost its domain-independent contract: {name}")
+    for name in sorted(dev):
+        if not name.endswith(".class"):
+            continue
+        serializer = name.startswith("mekanism/api/SerializerHelper")
+        portable_text = (name.startswith("mekanism/api/text/") or name in {
+            "mekanism/api/IIncrementalEnum.class", "mekanism/api/RelativeSide.class", "mekanism/api/inventory/IHashedItem.class"})
+        if serializer or portable_text:
+            reject_references(name, (b"net/fabricmc/loader/", b"MEKANISM_FABRIC_"))
+        if (name.startswith(("mekanism/api/recipes/", "mekanism/common/recipe/", "mekanism/api/chemical/"))
+                or name in oracles["chemical_singletons"] or name in {
+                    "mekanism/common/tile/base/TileEntityUpdateable.class", "mekanism/common/network/to_client/PacketUpdateTile.class",
+                    "mekanism/api/fluid/IExtendedFluidTank.class", "mekanism/api/providers/IFluidProvider.class"}):
+            reject_references(name, (b"net/fabricmc/",))
+        if name.startswith(("mekanism/api/datamaps/", "mekanism/fabric/datamaps/")):
+            lowered = artifact.read(name).lower()
+            if any(word in lowered for word in (b"mekanism/api/mekanismapi", b"advanceddatamap", b"datamaptyperegister", b"kilt", b"connector")):
+                raise SystemExit(f"data-map owner dependency contract changed: {name}")
+    if "mekanism/fabric/datamaps/FabricDataMapType.class" in actual:
+        raise SystemExit("relocated FabricDataMapType must not remain in the artifact")
+    reject_references("mekanism/common/config/ClientWindowConfigAccess.class", (b"mekanism/fabric/", b"net/fabricmc/", b"net/minecraft/client/"))
+    common_bootstrap = artifact.read("mekanism/fabric/MekanismFabricBootstrap.class")
+    foundation_references = tuple(name.split("$", 1)[0].removesuffix(".class").encode() for name in foundation)
+    client_bootstrap = artifact.read("mekanism/fabric/MekanismFabricClientBootstrap.class")
+    if any(reference in common_bootstrap + client_bootstrap for reference in foundation_references):
+        raise SystemExit("bootstrap must not directly wire the registry foundation")
+    if any(reference in common_bootstrap for reference in (b"FabricClientConfigLifecycle", b"FabricWindowConfig", b"ClientWindowConfigAccess", b"SelectedWindowData", b"mekanism/api/SerializerHelper")):
+        raise SystemExit("common bootstrap links an isolated client/serialization owner")
+    if b"FabricClientConfigLifecycle" not in client_bootstrap or b"FabricMekanismClientNetworking" not in client_bootstrap:
+        raise SystemExit("client bootstrap lost its config/network lifecycle")
     dev_metadata = json.loads(development.read("fabric.mod.json"))
     if {key: value for key, value in metadata.items() if key != "jars"} != dev_metadata:
         raise SystemExit("Fabric metadata changed during remapping beyond nested dependency declarations")

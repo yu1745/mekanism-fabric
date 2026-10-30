@@ -1,0 +1,61 @@
+{
+  "purpose": "Coordinator item5 pre-W40 readonly review input; no release clearance.",
+  "oldCommit": "dba1010db1d85b7639c0ecf949fb871fb30e8ac6",
+  "oldScriptLines": 1772,
+  "oldScriptSHA256": "79b0627475ec7a762d6082c9ce3a23726b8c24f77a149a635c9f38b49ae78b64",
+  "rewrittenBeforeThisFixCommit": "8cffaec8",
+  "beforeThisFixLines": 485,
+  "currentScriptLines": 550,
+  "currentScriptSHA256": "2bc232f51d01b0bfcaff8b660623fc8c8bfa627f8bb233c767db692f1f001e20",
+  "oldPythonFailurePoints": 118,
+  "oldRequiredEntryRows": 76,
+  "shellOperationalRows": 27,
+  "mappedRows": 221,
+  "dispositions": {
+    "retained": 113,
+    "updated_pinned_oracle": 1,
+    "proposed_retire_incremental_ceiling": 57,
+    "restored": 21,
+    "retained_floor_and_uniqueness": 10,
+    "restored_original_owner_scope": 1,
+    "proposed_retire_deferred_boundary": 7,
+    "mixed_retained_and_retired": 6,
+    "retained_namespace_contract": 1,
+    "restored_scope_updated_catalog": 2,
+    "updated_pin": 1,
+    "updated_catalog_count": 1
+  },
+  "independentOracles": {
+    "classFloor": 565,
+    "resourcesIncludingLanguage": 21,
+    "exactServices": 4,
+    "source": "Original positive literals/hashes/service bytes; never derived from tested artifact.",
+    "exception": {
+      "oldClass": "mekanism/fabric/config/FabricChemicalConfig$GeneralFragment.class",
+      "reason": "Superseded by canonical GeneralConfig binding at741d580d; existing P2 config owner/sync lifecycle evidence in archive/M-config.md."
+    }
+  },
+  "nonEquivalenceRequiringReview": [
+    "Exact incremental family upper bounds proposed retired, original class floor preserved.",
+    "Task039/042b deferred families (MekanismAPI/QIO/full recipes/client catalog) intentionally admitted, exclusion obsolete.",
+    "Tile no-Fabric constraint stays on original portable pair, not growing common tile-base package with Fabric capability owners.",
+    "No bootstrap linkage to portable-text ILangEntry is obsolete when commands/owners use real translations.",
+    "Bare kilt/connector substring heuristics replaced by actual package namespace checks.",
+    "Three-client-mixin/one-config ceilings retired while explicit client scope restored."
+  ],
+  "restoredChecks": [
+    "Independent old565 class floor;21 resource SHA256;4 service bytes;client mixin scope;portable owner dependency/startup constraints."
+  ],
+  "awCorrection": {
+    "source": "fabric/src/main/resources/mekanism.accesswidener",
+    "mapping": "MC1.21.1 Loom layered2198-v2 mappings.tiny (official/intermediary/named)",
+    "entries": [
+      "FlameParticle.<init>(ClientLevel,DDDDDD)",
+      "BubbleParticle.<init>(ClientLevel,DDDDDD)",
+      "ItemProperties.PROPERTIES:Map",
+      "ScreenEffectRenderer.renderWater(Minecraft,PoseStack)"
+    ],
+    "rule": "Explicit pinned intermediary expectations checked from named source and mapping, not copied from tested artifact."
+  },
+  "reviewStatus": "PENDING coordinator readonly review; proposed retirements are not approved by this worker."
+}

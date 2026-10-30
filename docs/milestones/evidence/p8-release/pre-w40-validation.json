@@ -1,0 +1,30 @@
+{
+  "baseline": "c472e4d0",
+  "productionCodeChange": false,
+  "change": "Restore applicable old packaged gate checks; do not add new gameplay tests.",
+  "command": "FABRIC_SMOKE_STATIC_ONLY=1 scripts/fabric-packaged-smoke.sh",
+  "exit": 0,
+  "markers": [
+    "fabric-packaged-smoke: static contents verified classes=2982",
+    "fabric-packaged-smoke: PASS (static remapped-JAR gates only; no server started)"
+  ],
+  "validation": "bash -n passed;221 map rows,118 unique old Python failure points,76 individual required entries,27 shell/operational checks; current targets resolve. Post-commit review tightened the client mixin array type to retain the old exact-list contract, then reran the existing static gate.",
+  "independentOracles": {
+    "classes": 565,
+    "resources": 21,
+    "services": 4,
+    "fileSHA256": "01e0910554fbc2c9fcdb8c7527e0e72cd0905a26561dc66e00b42096aa1ee41c"
+  },
+  "firstFailure": {
+    "rawErrorPrefix": "unexpected remapped access widener:",
+    "stage": "First restored static gate run before AW expectation update; build succeeded; no server started.",
+    "delta": "Four W32 source AW declarations absent from old pinned intermediary expectation; mapped independently from named source and MC1.21.1 Loom mapping; retained exact ordered equality.",
+    "rawTerminal": "fabric-packaged-smoke: artifact content, metadata or access-widener contract failed"
+  },
+  "limits": [
+    "Static remapped-JAR check only; dedicated server and all P8 smoke not run in this pre-W40 item.",
+    "Current script rejects all duplicates and ensures565 independently listed historical classes, but proposed retirement of old upper ceilings needs coordinator review.",
+    "No release readiness/clearance inferred from a static PASS."
+  ],
+  "reviewStatus": "PENDING coordinator readonly review"
+}
