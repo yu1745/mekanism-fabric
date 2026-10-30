@@ -167,7 +167,12 @@ printf 'fabric-configuration-rejection-smoke: verifying fixture isolation and co
 remaining=$(remaining_seconds) || fail_with_logs "overall ${TIMEOUT}s timeout expired before fixture preflight"
 timeout "${remaining}s" "$ROOT/gradlew" -p "$ROOT/fabric" --no-daemon --console=plain verifyHandshakeFixtureIsolation compileHandshakeMismatchFixtureJava compileHandshakeMissingReceiverFixtureJava || fail_with_logs 'fixture preflight failed or exceeded the overall deadline'
 
-RUN_RELATIVE="run/rejection-$RUN_ID"; RUN_ROOT="$ROOT/fabric/$RUN_RELATIVE"; SERVER_DIR="$RUN_ROOT/server"; mkdir -p "$SERVER_DIR"
+# Keep the independent clients minimal while the rejecting server loads the complete release module set.
+"$ROOT/fabric-build.sh" remapToolsJar remapAdditionsJar remapGeneratorsJar
+mapfile -t ADDON_JARS < <(find "$ROOT/fabric/build/tools-libs" "$ROOT/fabric/build/additions-libs" "$ROOT/fabric/build/generators-libs" \
+  -maxdepth 1 -type f -name '*-fabric.jar' | sort)
+[[ ${#ADDON_JARS[@]} -eq 3 ]] || fail_with_logs 'expected exactly three optional addon JARs'
+RUN_RELATIVE="run/rejection-$RUN_ID"; RUN_ROOT="$ROOT/fabric/$RUN_RELATIVE"; SERVER_DIR="$RUN_ROOT/server"; mkdir -p "$SERVER_DIR/mods"; cp "${ADDON_JARS[@]}" "$SERVER_DIR/mods/"
 server_ready=0
 for attempt in 1 2 3; do
   PORT=$(select_port); rm -rf "$SERVER_DIR/logs" "$SERVER_DIR/world"; printf 'eula=true\n' > "$SERVER_DIR/eula.txt"

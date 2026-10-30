@@ -90,7 +90,7 @@ fetch() {
 }
 
 printf 'fabric-packaged-smoke: building remapped artifact\n'
-"$ROOT/fabric-build.sh" remapJar
+"$ROOT/fabric-build.sh" remapJar remapToolsJar remapAdditionsJar remapGeneratorsJar
 mapfile -t MOD_JARS < <(find "$ROOT/fabric/build/libs" -maxdepth 1 -type f -name '*.jar' \
   ! -name '*-sources.jar' ! -name '*-dev.jar' | sort)
 if [[ ${#MOD_JARS[@]} -ne 1 ]]; then
@@ -98,6 +98,25 @@ if [[ ${#MOD_JARS[@]} -ne 1 ]]; then
   printf '  %s\n' "${MOD_JARS[@]:-<none>}" >&2
   exit 1
 fi
+mapfile -t ADDON_JARS < <(find "$ROOT/fabric/build/tools-libs" "$ROOT/fabric/build/additions-libs" "$ROOT/fabric/build/generators-libs" \
+  -maxdepth 1 -type f -name '*-fabric.jar' | sort)
+[[ ${#ADDON_JARS[@]} -eq 3 ]] || { echo 'fabric-packaged-smoke: expected exactly three optional addon JARs' >&2; exit 1; }
+python3 - "${MOD_JARS[0]}" "${ADDON_JARS[@]}" <<'PYADDONS'
+import json, sys, zipfile
+with zipfile.ZipFile(sys.argv[1]) as core:
+    version = json.loads(core.read('fabric.mod.json'))['version']
+ids = set()
+for path in sys.argv[2:]:
+    with zipfile.ZipFile(path) as addon:
+        metadata = json.loads(addon.read('fabric.mod.json'))
+        if metadata.get('version') != version or metadata.get('depends', {}).get('mekanism') != version or metadata.get('jars'):
+            raise SystemExit(f'addon version, core dependency or isolation contract changed: {path}')
+        if metadata['id'] in ids:
+            raise SystemExit(f'duplicate addon id: {metadata["id"]}')
+        ids.add(metadata['id'])
+if ids != {'mekanismtools', 'mekanismadditions', 'mekanismgenerators'}:
+    raise SystemExit(f'unexpected addon ids: {ids}')
+PYADDONS
 # Compare against the same build's slice-gated dev artifact, including generated classes.
 # Early Task043 package subsets are no longer valid once the real machine/client catalogs are admitted.
 DEV_JAR="$ROOT/fabric/build/devlibs/$(basename "${MOD_JARS[0]}" .jar)-dev.jar"
@@ -228,6 +247,18 @@ expected_access_widener = [
     'accessible\tmethod\tnet/minecraft/class_655\t<init>\t(Lnet/minecraft/class_638;DDDDDD)V',
     'accessible\tfield\tnet/minecraft/class_5272\tfield_24448\tLjava/util/Map;',
     'accessible\tmethod\tnet/minecraft/class_4603\tmethod_23069\t(Lnet/minecraft/class_310;Lnet/minecraft/class_4587;)V',
+    # Required Additions subclass/builder/beacon access, mapped from the pinned named 1.21.1 declarations.
+    'extendable\tmethod\tnet/minecraft/class_1548\tmethod_7006\t()V',
+    'accessible\tfield\tnet/minecraft/class_1548\tfield_7225\tI',
+    'accessible\tmethod\tnet/minecraft/class_1548\tmethod_7001\t()V',
+    'extendable\tmethod\tnet/minecraft/class_1541\tmethod_6971\t()V',
+    'accessible\tfield\tnet/minecraft/class_1541\tfield_7198\tLnet/minecraft/class_1309;',
+    'accessible\tfield\tnet/minecraft/class_1541\tfield_52318\tZ',
+    'accessible\tfield\tnet/minecraft/class_1541\tfield_52317\tLnet/minecraft/class_5362;',
+    'accessible\tfield\tnet/minecraft/class_1299\tfield_25355\tLcom/google/common/collect/ImmutableSet;',
+    'accessible\tfield\tnet/minecraft/class_9066\tfield_47752\tLjava/util/Map;',
+    'accessible\tmethod\tnet/minecraft/class_4719\tmethod_24027\t(Lnet/minecraft/class_4719;)Lnet/minecraft/class_4719;',
+    'accessible\tmethod\tnet/minecraft/class_2580$class_2581\tmethod_10942\t()V',
 ]
 with zipfile.ZipFile(sys.argv[1]) as artifact, zipfile.ZipFile(sys.argv[3]) as development:
     entries = artifact.namelist()
@@ -428,7 +459,7 @@ done
 
 if [[ "$STATIC_ONLY" == 1 ]]; then
   RESULT=0
-  printf 'fabric-packaged-smoke: PASS (static remapped-JAR gates only; no server started)\n'
+  printf 'fabric-packaged-smoke: PASSED (static remapped-JAR gates only; no server started)\n'
   exit 0
 fi
 
@@ -461,7 +492,7 @@ printf 'online-mode=false\nserver-port=0\n' > "$SERVER_DIR/server.properties"
 cp "$LAUNCHER" "$SERVER_DIR/fabric-server-launch.jar"
 cp "$API_JAR" "$SERVER_DIR/mods/"
 cp "$ENERGY_API_JAR" "$SERVER_DIR/mods/"
-cp "${MOD_JARS[0]}" "$SERVER_DIR/mods/"
+cp "${MOD_JARS[0]}" "${ADDON_JARS[@]}" "$SERVER_DIR/mods/"
 printf '%s\n' "artifact=${MOD_JARS[0]}" "minecraft=$MINECRAFT_VERSION" "loader=$LOADER_VERSION" \
   "fabric_api=$FABRIC_API_VERSION" "team_reborn_energy=$TEAM_REBORN_ENERGY_VERSION" \
   "night_config=$NIGHT_CONFIG_VERSION" "installer=$INSTALLER_VERSION" > "$DIAGNOSTIC_DIR/run-info.txt"
@@ -484,6 +515,7 @@ data_map_proof=0
 chemical_data_map_proof=0
 recipe_registration_proof=0
 done_loaded=0
+addon_configs_loaded=0
 crash_pattern='(Exception in thread|A mod crashed on startup|Could not execute entrypoint|Failed to start the minecraft server|---- Minecraft Crash Report ----|NoClassDefFoundError|ClassNotFoundException|[[:space:]]ERROR[[:space:]])'
 while (( SECONDS < deadline )); do
   if grep -Eq '(^|[[:space:]])- mekanism([[:space:]]|$)' "$LOG_FILE"; then mod_loaded=1; fi
@@ -500,12 +532,13 @@ while (( SECONDS < deadline )); do
   if grep -Fq 'MEKANISM_FABRIC_CHEMICAL_DATAMAP_PROOF phase=startup epoch=1 maps=5' "$LOG_FILE"; then chemical_data_map_proof=1; fi
   if grep -Fq 'MEKANISM_FABRIC_RECIPE_REGISTRATION_PROOF recipe_types=26 serializers=30 identity_preserved=true' "$LOG_FILE"; then recipe_registration_proof=1; fi
   if grep -Eq 'Done \(' "$LOG_FILE"; then done_loaded=1; fi
+  if grep -Fq 'MEKANISM_FABRIC_SERVER_CONFIG_PROOF phase=server_start loaded=true configs=10 path=' "$LOG_FILE"; then addon_configs_loaded=1; fi
   if grep -Eiq "$crash_pattern" "$LOG_FILE"; then
     echo 'fabric-packaged-smoke: crash signature detected' >&2
     grep -Ei "$crash_pattern" "$LOG_FILE" | tail -n 10 >&2 || true
     exit 1
   fi
-  if (( mod_loaded && energy_mod_loaded && config_proof && network_proof && registry_proof && heat_proof && data_map_proof && chemical_data_map_proof && recipe_registration_proof && done_loaded )); then
+  if (( mod_loaded && energy_mod_loaded && config_proof && network_proof && registry_proof && heat_proof && data_map_proof && chemical_data_map_proof && recipe_registration_proof && done_loaded && addon_configs_loaded )); then
     STARTUP_CONFIG="$SERVER_DIR/config/Mekanism/startup.toml"
     if [[ ! -s "$STARTUP_CONFIG" ]]; then
       echo 'fabric-packaged-smoke: startup config proof logged but startup.toml is missing or empty' >&2
@@ -533,7 +566,7 @@ PYEOF
       exit 1
     fi
     RESULT=0
-    printf 'fabric-packaged-smoke: PASS (Mekanism and Team Reborn Energy loaded, config/network/registry/heat/data-map/chemical proofs passed, and server reached Done)\n'
+    printf 'fabric-packaged-smoke: PASSED (Mekanism and Team Reborn Energy loaded, config/network/registry/heat/data-map/chemical proofs passed, and server reached Done)\n'
     grep -E '(^|[[:space:]])- (mekanism|team_reborn_energy)([[:space:]]|$)|MEKANISM_FABRIC_(CONFIG|NETWORK|REGISTRY|HEAT|DATAMAP|CHEMICAL_DATAMAP|RECIPE_REGISTRATION)_PROOF|Done \(' "$LOG_FILE" | tail -n 16
     exit 0
   fi

@@ -183,7 +183,8 @@ start_client() {
   CLIENT_NUMBER=$1
   local client_dir="$RUN_ROOT/client-$CLIENT_NUMBER"
   CLIENT_SCOPE="$SCOPE_PREFIX-client-$CLIENT_NUMBER"
-  mkdir -p "$client_dir"
+  mkdir -p "$client_dir/mods"
+  cp "${ADDON_JARS[@]}" "$client_dir/mods/"
   # Fresh 1.21 clients otherwise stop at the accessibility onboarding screen before Quick Play runs.
   printf 'onboardAccessibility:false\n' > "$client_dir/options.txt"
   printf 'fabric-paired-network-smoke: starting client %d\n' "$CLIENT_NUMBER"
@@ -196,10 +197,16 @@ start_client() {
   CLIENT_PID=$!
 }
 
+# The release handshake uses the real optional addons on both sides, including their SERVER schemas.
+"$ROOT/fabric-build.sh" remapToolsJar remapAdditionsJar remapGeneratorsJar
+mapfile -t ADDON_JARS < <(find "$ROOT/fabric/build/tools-libs" "$ROOT/fabric/build/additions-libs" "$ROOT/fabric/build/generators-libs" \
+  -maxdepth 1 -type f -name '*-fabric.jar' | sort)
+[[ ${#ADDON_JARS[@]} -eq 3 ]] || fail_with_logs 'expected exactly three optional addon JARs'
 RUN_RELATIVE="run/paired-$RUN_ID"
 RUN_ROOT="$ROOT/fabric/$RUN_RELATIVE"
 SERVER_DIR="$RUN_ROOT/server"
-mkdir -p "$SERVER_DIR"
+mkdir -p "$SERVER_DIR/mods"
+cp "${ADDON_JARS[@]}" "$SERVER_DIR/mods/"
 DEADLINE=$((SECONDS + TIMEOUT))
 server_ready=0
 for attempt in 1 2 3; do
@@ -268,7 +275,13 @@ for session in 1 2; do
   fi
 done
 
+for client in 1 2; do
+  grep -Eq 'MEKANISM_FABRIC_SERVER_CONFIG_PROOF phase=client_applied session=[^ ]+ values=459$' \
+    "$RUN_ROOT/client-$client/logs/latest.log" || fail_with_logs "client $client did not apply all four modules' SERVER values"
+done
+[[ $(grep -Ec 'MEKANISM_FABRIC_SERVER_CONFIG_PROOF phase=send session=[^ ]+ values=459$' "$SERVER_DIR/logs/latest.log") -eq 2 ]] \
+  || fail_with_logs 'expected two complete 459-value SERVER snapshots'
 RESULT=0
-printf 'fabric-paired-network-smoke: PASS (two fresh clients completed configuration negotiation and joined play)\n'
+printf 'fabric-paired-network-smoke: PASSED (two fresh clients completed configuration negotiation and joined play)\n'
 grep -E 'MEKANISM_FABRIC_NETWORK_HANDSHAKE_(START|COMPLETE)' "$SERVER_DIR/logs/latest.log" | tail -n 8
 grep -F "$USERNAME " "$SERVER_DIR/logs/latest.log" | grep -E 'joined|left' | tail -n 4

@@ -1,0 +1,31 @@
+{
+  "command": "python3 /tmp/mek-release-negative-probes.py (executes the unchanged inline checker from scripts/fabric-packaged-smoke.sh)",
+  "baseline_static_pass": true,
+  "checker_sha256": "616d22fc30396480ba192a03a5a4dc2e565ed9e21e383410f9c204d0ecb132aa",
+  "artifact_sha256": "08a6478bcc4a0cef9db30938748a76f694412cb3994cd4c33ad871e85fdc3771",
+  "oracle_sha256": "459b680eabc52b769cbba53767f414d24e824bd00a851fe0076c946b25f629b1",
+  "scope": "Three required C-1 cases only. Both disposable remapped/dev copies carry the mutation so the independent forbidden-entry/resource oracle is exercised after contents equality. Class probes reuse valid compiled bytes under forbidden entry names; no code is executed. Real artifacts remain untouched.",
+  "results": [
+    {
+      "case": "test_class",
+      "entry": "mekanism/negative/InjectedTest.class",
+      "exit_code": 1,
+      "first_error": "test, fixture or external implementation leaked into artifact: mekanism/negative/InjectedTest.class",
+      "copies_deleted": true
+    },
+    {
+      "case": "neoforge_class",
+      "entry": "net/neoforged/negative/Injected.class",
+      "exit_code": 1,
+      "first_error": "test, fixture or external implementation leaked into artifact: net/neoforged/negative/Injected.class",
+      "copies_deleted": true
+    },
+    {
+      "case": "resource_sha",
+      "entry": "data/mekanism/data_maps/damage_type/mekasuit_absorption.json",
+      "exit_code": 1,
+      "first_error": "official resource oracle changed: data/mekanism/data_maps/damage_type/mekasuit_absorption.json",
+      "copies_deleted": true
+    }
+  ]
+}
