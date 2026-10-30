@@ -5,30 +5,28 @@ import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.UUID;
-import mekanism.additions.common.MekanismAdditions;
 import mekanism.additions.common.item.ItemWalkieTalkie.WalkieData;
 import mekanism.additions.common.registries.AdditionsDataComponents;
-import mekanism.common.Mekanism;
+import mekanism.api.MekanismAPI;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 public class VoiceConnection extends Thread {
 
-    private final MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+    private final MinecraftServer server;
     private DataOutputStream output;
     private DataInputStream input;
-    private boolean open = true;
+    private volatile boolean open = true;
     private final Socket socket;
+    private final VoiceServerManager manager;
     private UUID uuid;
 
-    VoiceConnection(Socket s) {
+    VoiceConnection(MinecraftServer server, VoiceServerManager manager, Socket s) {
         super("VoiceServer Connection Thread");
+        this.server = server;
+        this.manager = manager;
         socket = s;
         //Note: This is set as a Daemon thread because the parent thread is a daemon thread
     }
@@ -38,89 +36,75 @@ public class VoiceConnection extends Thread {
         try {
             input = new DataInputStream(new BufferedInputStream(socket.getInputStream()));
             output = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()));
-            if (MekanismAdditions.voiceManager != null) {
-                synchronized (MekanismAdditions.voiceManager) {
-                    int retryCount = 0;
-                    while (uuid == null && retryCount <= 100) {
-                        try {
-                            List<ServerPlayer> players = Collections.synchronizedList(new ArrayList<>(server.getPlayerList().getPlayers()));
-                            for (ServerPlayer player : players) {
-                                String playerIP = player.getIpAddress();
-                                if (!server.isDedicatedServer() && playerIP.equals("local") && !MekanismAdditions.voiceManager.isFoundLocal()) {
-                                    MekanismAdditions.voiceManager.setFoundLocal(true);
-                                    uuid = player.getUUID();
-                                    break;
-                                } else if (playerIP.equals(socket.getInetAddress().getHostAddress())) {
-                                    uuid = player.getUUID();
-                                    break;
-                                }
+            synchronized (manager) {
+                int retryCount = 0;
+                while (uuid == null && retryCount <= 100 && open && manager.isRunning()) {
+                    uuid = server.submit(() -> {
+                        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+                            String playerIP = player.getIpAddress();
+                            if (!server.isDedicatedServer() && player.connection.getRemoteAddress() instanceof io.netty.channel.local.LocalAddress && !manager.isFoundLocal()) {
+                                manager.setFoundLocal(true);
+                                return player.getUUID();
+                            } else if (playerIP.equals(socket.getInetAddress().getHostAddress())) {
+                                return player.getUUID();
                             }
-                            retryCount++;
-                            sleep(50);
-                        } catch (Exception ignored) {
                         }
-                    }
-
-                    if (uuid == null) {
-                        Mekanism.logger.error("VoiceServer: Unable to trace connection's IP address.");
-                        kill();
-                        return;
-                    } else {
-                        Mekanism.logger.info("VoiceServer: Traced IP for {} in {} attempts.", uuid, retryCount);
-                    }
+                        return (UUID) null;
+                    }).get();
+                    retryCount++;
+                    sleep(50);
                 }
+                if (uuid == null) {
+                    if (open && manager.isRunning()) MekanismAPI.logger.error("VoiceServer: Unable to trace connection's IP address.");
+                    return;
+                }
+                MekanismAPI.logger.info("VoiceServer: Traced IP for {} in {} attempts.", uuid, retryCount);
             }
-        } catch (Exception e) {
-            Mekanism.logger.error("VoiceServer: Error while starting server-based connection.", e);
-            open = false;
+            while (open && manager.isRunning()) {
+                short byteCount = input.readShort();
+                byte[] audioData = new byte[byteCount];
+                input.readFully(audioData);
+                if (byteCount > 0) manager.sendToPlayers(byteCount, audioData, this);
+            }
+        } catch (Exception failure) {
+            if (open && manager.isRunning() && !(failure instanceof java.io.EOFException)) {
+                MekanismAPI.logger.debug("VoiceServer: Connection stopped.", failure);
+            }
+        } finally {
+            close();
         }
-
-        // Main client listen thread (set to daemon because the voice connection is a daemon)
-        new Thread(() -> {
-            while (open) {
-                try {
-                    short byteCount = this.input.readShort();
-                    byte[] audioData = new byte[byteCount];
-                    this.input.readFully(audioData);
-                    if (byteCount > 0) {
-                        MekanismAdditions.voiceManager.sendToPlayers(byteCount, audioData, this);
-                    }
-                } catch (Exception e) {
-                    open = false;
-                }
-            }
-            //No longer open, kill it
-            kill();
-        }, "Voice Server Client Listen Thread").start();
     }
 
-    private void kill() {
+    public void close() {
+        open = false;
+        interrupt();
         try {
-            if (input != null) {
-                input.close();
-            }
-            if (output != null) {
-                output.close();
-            }
-            if (socket != null) {
-                socket.close();
-            }
-            MekanismAdditions.voiceManager.removeConnection(this);
-        } catch (Exception e) {
-            Mekanism.logger.error("VoiceServer: Error while stopping server-based connection.", e);
+            socket.close();
+        } catch (java.io.IOException failure) {
+            MekanismAPI.logger.debug("VoiceServer: Socket close failed.", failure);
         }
+        for (java.io.Closeable stream : new java.io.Closeable[]{input, output}) {
+            if (stream != null) {
+                try {
+                    stream.close();
+                } catch (java.io.IOException failure) {
+                    MekanismAPI.logger.debug("VoiceServer: Stream close failed.", failure);
+                }
+            }
+        }
+        manager.removeConnection(this);
     }
 
-    public void sendToPlayer(short byteCount, byte[] audioData, VoiceConnection connection) {
+    public synchronized void sendToPlayer(short byteCount, byte[] audioData, VoiceConnection connection) {
         if (!open) {
-            kill();
+            return;
         }
         try {
             output.writeShort(byteCount);
             output.write(audioData);
             output.flush();
         } catch (Exception e) {
-            Mekanism.logger.error("VoiceServer: Error while sending data to player.", e);
+            MekanismAPI.logger.error("VoiceServer: Error while sending data to player.", e);
         }
     }
 
@@ -135,7 +119,7 @@ public class VoiceConnection extends Thread {
     }
 
     private boolean canListen(int channel, ItemStack stack) {
-        WalkieData data = stack.getOrDefault(AdditionsDataComponents.WALKIE_DATA, WalkieData.DEFAULT);
+        WalkieData data = stack.getOrDefault(AdditionsDataComponents.WALKIE_DATA.get(), WalkieData.DEFAULT);
         return data.running() && data.channel() == channel;
     }
 
@@ -149,7 +133,7 @@ public class VoiceConnection extends Thread {
     }
 
     private int getCurrentChannel(ItemStack stack) {
-        WalkieData data = stack.getOrDefault(AdditionsDataComponents.WALKIE_DATA, WalkieData.DEFAULT);
+        WalkieData data = stack.getOrDefault(AdditionsDataComponents.WALKIE_DATA.get(), WalkieData.DEFAULT);
         return data.running() ? data.channel() : 0;
     }
 

@@ -72,14 +72,12 @@ public class BlockObsidianTNT extends TntBlock implements IStateFluidLoggable {
         return BlockStateHelper.getStateForPlacement(super.getStateForPlacement(context), context);
     }
 
-    @Override
     public int getFlammability(@NotNull BlockState state, @NotNull BlockGetter world, @NotNull BlockPos pos, @NotNull Direction face) {
         //300 is 100% chance fire will spread to this block, 100 is default for TNT
         // Given we are "obsidian" make ours slightly more stable against fire being spread than vanilla TNT
         return 75;
     }
 
-    @Override
     public void onCaughtFire(@NotNull BlockState state, Level world, @NotNull BlockPos pos, @Nullable Direction side, @Nullable LivingEntity igniter) {
         if (!world.isClientSide && createAndAddEntity(world, pos, igniter)) {
             world.gameEvent(igniter, GameEvent.PRIME_FUSE, pos);

@@ -31,6 +31,13 @@ import org.slf4j.LoggerFactory;
  */
 public final class FabricBiomeModifiers {
     private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism/Fabric");
+    private static final List<java.util.function.BiConsumer<ResourceManager, RegistryAccess>> MODULE_FINALIZERS = new ArrayList<>();
+
+    /** Optional Mekanism modules finish their own worldgen data in this world's real resource scope. */
+    public static void registerModuleFinalizer(java.util.function.BiConsumer<ResourceManager, RegistryAccess> finalizer) {
+        MODULE_FINALIZERS.add(finalizer);
+    }
+
     private static final FileToIdConverter MODIFIERS = FileToIdConverter.json("neoforge/biome_modifier");
     // Do not retain a resource manager if server construction fails before Fabric's worldgen finalization.
     private static final ThreadLocal<WeakReference<ResourceManager>> PENDING_RESOURCES = new ThreadLocal<>();
@@ -84,6 +91,7 @@ public final class FabricBiomeModifiers {
         ACTIVE_MODIFIERS.set(load(resources, registries));
         try {
             finalizeWorldGen.run();
+            MODULE_FINALIZERS.forEach(finalizer -> finalizer.accept(resources, registries));
         } finally {
             ACTIVE_MODIFIERS.remove();
         }

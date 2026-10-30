@@ -2,17 +2,17 @@ package mekanism.additions.common.config;
 
 import mekanism.common.config.BaseMekanismConfig;
 import mekanism.common.config.value.CachedBooleanValue;
-import net.neoforged.fml.config.ModConfig.Type;
-import net.neoforged.neoforge.common.ModConfigSpec;
+import mekanism.common.config.MekanismConfigType;
+import mekanism.fabric.config.MekanismConfigSpec;
 
 public class AdditionsClientConfig extends BaseMekanismConfig {
 
-    private final ModConfigSpec configSpec;
+    private final MekanismConfigSpec configSpec;
 
     public final CachedBooleanValue pushToTalk;
 
     AdditionsClientConfig() {
-        ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
+        MekanismConfigSpec.Builder builder = new MekanismConfigSpec.Builder();
 
         pushToTalk = CachedBooleanValue.wrap(this, AdditionsConfigTranslations.CLIENT_PUSH_TO_TALK.applyToBuilder(builder)
               .define("pushToTalk", true));
@@ -31,12 +31,12 @@ public class AdditionsClientConfig extends BaseMekanismConfig {
     }
 
     @Override
-    public ModConfigSpec getConfigSpec() {
+    public MekanismConfigSpec getConfigSpec() {
         return configSpec;
     }
 
     @Override
-    public Type getConfigType() {
-        return Type.CLIENT;
+    public MekanismConfigType getConfigType() {
+        return MekanismConfigType.CLIENT;
     }
 }

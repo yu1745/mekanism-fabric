@@ -19,11 +19,16 @@ import org.jetbrains.annotations.NotNull;
 
 public class BlockPlasticFenceGate extends FenceGateBlock implements IColoredBlock, IStateFluidLoggable {
 
+    //The official sound constructor keeps stone step sounds and supplies close/open in this order.
+    private static final net.minecraft.world.level.block.state.properties.WoodType PLASTIC_TYPE =
+          net.minecraft.world.level.block.state.properties.WoodType.register(new net.minecraft.world.level.block.state.properties.WoodType(
+                "mekanismadditions:plastic", net.minecraft.world.level.block.state.properties.BlockSetType.STONE,
+                net.minecraft.world.level.block.SoundType.STONE, net.minecraft.world.level.block.SoundType.HANGING_SIGN,
+                SoundEvents.FENCE_GATE_OPEN, SoundEvents.FENCE_GATE_CLOSE));
     private final EnumColor color;
 
     public BlockPlasticFenceGate(EnumColor color) {
-        super(BlockStateHelper.applyLightLevelAdjustments(BlockBehaviour.Properties.of().mapColor(color.getMapColor()).strength(5, 6)),
-              SoundEvents.FENCE_GATE_CLOSE, SoundEvents.FENCE_GATE_OPEN);
+        super(PLASTIC_TYPE, BlockStateHelper.applyLightLevelAdjustments(BlockBehaviour.Properties.of().mapColor(color.getMapColor()).strength(5, 6)));
         this.color = color;
         //Uses getDefaultState as starting state to take into account the stuff from super
         registerDefaultState(BlockStateHelper.getDefaultState(defaultBlockState()));

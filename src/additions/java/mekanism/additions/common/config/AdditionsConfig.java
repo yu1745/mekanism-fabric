@@ -19,12 +19,12 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.biome.MobSpawnSettings;
 import net.minecraft.world.level.biome.MobSpawnSettings.SpawnerData;
-import net.neoforged.fml.config.ModConfig.Type;
-import net.neoforged.neoforge.common.ModConfigSpec;
+import mekanism.common.config.MekanismConfigType;
+import mekanism.fabric.config.MekanismConfigSpec;
 
 public class AdditionsConfig extends BaseMekanismConfig {
 
-    private final ModConfigSpec configSpec;
+    private final MekanismConfigSpec configSpec;
 
     public final CachedIntValue obsidianTNTDelay;
     public final CachedFloatValue obsidianTNTBlastRadius;
@@ -34,7 +34,7 @@ public class AdditionsConfig extends BaseMekanismConfig {
     private final Map<BabyType, SpawnConfig> spawnConfigs = new EnumMap<>(BabyType.class);
 
     AdditionsConfig() {
-        ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
+        MekanismConfigSpec.Builder builder = new MekanismConfigSpec.Builder();
 
         AdditionsConfigTranslations.SERVER_OBSIDIAN_TNT.applyToBuilder(builder).push("obsidian_tnt");
         obsidianTNTDelay = CachedIntValue.wrap(this, AdditionsConfigTranslations.SERVER_OBSIDIAN_DELAY.applyToBuilder(builder)
@@ -66,7 +66,7 @@ public class AdditionsConfig extends BaseMekanismConfig {
         configSpec = builder.build();
     }
 
-    private void addBabyTypeConfig(BabyType type, ModConfigSpec.Builder builder, Holder<EntityType<?>> entityTypeProvider, EntityType<?> parentType) {
+    private void addBabyTypeConfig(BabyType type, MekanismConfigSpec.Builder builder, Holder<EntityType<?>> entityTypeProvider, EntityType<?> parentType) {
         spawnConfigs.put(type, new SpawnConfig(this, builder, "baby_" + type.getSerializedName(), entityTypeProvider, parentType));
     }
 
@@ -81,13 +81,13 @@ public class AdditionsConfig extends BaseMekanismConfig {
     }
 
     @Override
-    public ModConfigSpec getConfigSpec() {
+    public MekanismConfigSpec getConfigSpec() {
         return configSpec;
     }
 
     @Override
-    public Type getConfigType() {
-        return Type.SERVER;
+    public MekanismConfigType getConfigType() {
+        return MekanismConfigType.SERVER;
     }
 
     public SpawnConfig getConfig(BabyType babyType) {
@@ -105,7 +105,7 @@ public class AdditionsConfig extends BaseMekanismConfig {
         public final Holder<EntityType<?>> entityType;
         public final EntityType<?> parentType;
 
-        private SpawnConfig(IMekanismConfig config, ModConfigSpec.Builder builder, String name, Holder<EntityType<?>> entityType, EntityType<?> parentType) {
+        private SpawnConfig(IMekanismConfig config, MekanismConfigSpec.Builder builder, String name, Holder<EntityType<?>> entityType, EntityType<?> parentType) {
             this.entityType = entityType;
             this.parentType = parentType;
             BabySpawnTranslations translations = BabySpawnTranslations.create(name);

@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "package": "mekanism.fabric.additions.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "AdditionsBiomeSpawnsMixin",
+    "AdditionsStructureSpawnsMixin",
+    "AdditionsTntIgnitionMixin",
+    "AdditionsBeaconColorMixin",
+    "AdditionsFireIgnitionMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

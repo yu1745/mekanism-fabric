@@ -1,0 +1,9 @@
+{
+  "values": [
+    "minecraft:magic",
+    {
+      "id": "neoforge:poison",
+      "required": false
+    }
+  ]
+}

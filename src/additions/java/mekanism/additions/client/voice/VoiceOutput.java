@@ -4,13 +4,13 @@ import java.io.EOFException;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.DataLine;
 import javax.sound.sampled.SourceDataLine;
-import mekanism.common.Mekanism;
+import mekanism.api.MekanismAPI;
 
 public class VoiceOutput extends Thread {
 
     private final VoiceClient voiceClient;
     private final DataLine.Info speaker;
-    private SourceDataLine sourceLine;
+    private volatile SourceDataLine sourceLine;
 
     public VoiceOutput(VoiceClient client) {
         super("VoiceServer Client Output Thread");
@@ -22,6 +22,7 @@ public class VoiceOutput extends Thread {
     @Override
     public void run() {
         try {
+            if (!voiceClient.isRunning()) return;
             sourceLine = (SourceDataLine) AudioSystem.getLine(speaker);
             sourceLine.open(voiceClient.getAudioFormat(), 2_200);
             sourceLine.start();
@@ -51,21 +52,22 @@ public class VoiceOutput extends Thread {
                         sleep(20);
                     }
                 } catch (EOFException eof) {
-                    Mekanism.logger.error("VoiceServer: Unexpected input EOF Exception occurred.");
+                    MekanismAPI.logger.error("VoiceServer: Unexpected input EOF Exception occurred.");
                     break; // voiceClient.input will continue throwing EOFs -> no need to go on checking
                 } catch (InterruptedException e) {
                     break;
                 } catch (Exception e) {
-                    Mekanism.logger.error("VoiceServer: Unexpected Exception", e);
+                    MekanismAPI.logger.error("VoiceServer: Unexpected Exception", e);
                 }
             }
         } catch (Exception e) {
-            Mekanism.logger.error("VoiceServer: Error while running client output thread.", e);
+            MekanismAPI.logger.error("VoiceServer: Error while running client output thread.", e);
+        } finally {
+            close();
         }
     }
 
     public void close() {
-        sourceLine.flush();
-        sourceLine.close();
+        if (sourceLine != null) sourceLine.close();
     }
 }

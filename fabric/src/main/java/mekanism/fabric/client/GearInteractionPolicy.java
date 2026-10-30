@@ -12,13 +12,19 @@ import net.minecraft.world.item.ItemStack;
 
 /** The original Mekanism item-specific rules for component-only re-equip and block-break updates. */
 public final class GearInteractionPolicy {
+    private static final java.util.Set<Item> COMPONENT_INSENSITIVE_ITEMS = new java.util.HashSet<>();
+
+    public static void registerComponentInsensitiveItem(Item item) {
+        COMPONENT_INSENSITIVE_ITEMS.add(item);
+    }
+
     private GearInteractionPolicy() {
     }
 
     public static boolean ignoresReequipComponents(ItemStack stack) {
         if (stack.isEmpty()) return false;
         Item item = stack.getItem();
-        return item instanceof ItemEnergized || item instanceof ItemElectricBow || item instanceof ItemFlamethrower
+        return COMPONENT_INSENSITIVE_ITEMS.contains(item) || item instanceof ItemEnergized || item instanceof ItemElectricBow || item instanceof ItemFlamethrower
               || item instanceof ItemMekaSuitArmor || item instanceof ItemPortableQIODashboard || isEnergyBlockItem(item);
     }
 

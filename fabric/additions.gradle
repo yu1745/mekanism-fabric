@@ -1,0 +1,64 @@
+// Native optional Additions module. Its classes/resources never enter the core JAR.
+def additionsSlice = file('additions-slice.txt').readLines().findAll { it && !it.startsWith('#') }
+def additionsPlatformSlice = file('additions-platform-slice.txt').readLines().findAll { it && !it.startsWith('#') }
+if (additionsSlice.size() != 61 || additionsSlice.toSet().size() != 61 || additionsPlatformSlice.size() != 6) {
+    throw new GradleException('Unexpected Additions source admission')
+}
+sourceSets {
+    additions {
+        java {
+            srcDirs = ['../src/additions/java', 'src/additions/java']
+            (additionsSlice + additionsPlatformSlice).each { include it }
+        }
+        resources.srcDirs = ['src/additions/resources', '../src/additions/resources', '../src/datagen/generated/mekanismadditions']
+        resources.exclude 'META-INF/neoforge.mods.toml', '.cache/**'
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
+    }
+}
+loom {
+    createRemapConfigurations(sourceSets.additions)
+    mods { mekanismadditions { sourceSet sourceSets.additions } }
+    runs {
+        additionsClient {
+            client()
+            name 'Additions Client'
+            source sourceSets.additions
+            runDir 'run-additions'
+        }
+        additionsServer {
+            server()
+            name 'Additions Server'
+            source sourceSets.additions
+            runDir System.getProperty('mekanism.additions.serverDir', 'run-additions-server')
+        }
+    }
+}
+tasks.register('verifyAdditionsSliceNoNeoForge') {
+    inputs.files((additionsSlice.collect { file('../src/additions/java/' + it) }) + additionsPlatformSlice.collect { file('src/additions/java/' + it) })
+    doLast {
+        inputs.files.each { source ->
+            if (!source.isFile() || source.text.contains('import net.neoforged.')) {
+                throw new GradleException('Missing or unported Additions source: ' + source)
+            }
+        }
+    }
+}
+tasks.named('compileAdditionsJava') { dependsOn 'verifyAdditionsSliceNoNeoForge', tasks.named('classes') }
+def additionsVersion = project.version.toString()
+tasks.named('processAdditionsResources', ProcessResources) {
+    inputs.property 'version', additionsVersion
+    inputs.property 'recolorIngredientFormat', 'fabric:difference-v1'
+    filesMatching('fabric.mod.json') { expand(version: additionsVersion) }
+    //The original recolor recipes use a difference ingredient; Fabric supplies the same base/subtracted predicate.
+    filesMatching('data/mekanismadditions/recipe/**/*.json') {
+        filter { line -> line.replace('"type": "neoforge:difference"', '"fabric:type": "fabric:difference"') }
+    }
+}
+def additionsJar = tasks.register('additionsJar', Jar) {
+    dependsOn tasks.named('additionsClasses')
+    from sourceSets.additions.output
+    archiveBaseName = 'MekanismAdditions'
+    archiveClassifier = 'dev'
+    destinationDirectory = layout.buildDirectory.dir('additions-devlibs')
+}

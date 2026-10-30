@@ -14,7 +14,7 @@ import mekanism.additions.common.registries.AdditionsItems;
 import mekanism.additions.common.registries.AdditionsSounds;
 import mekanism.additions.common.registries.AdditionsStructureModifierSerializers;
 import mekanism.additions.common.voice.VoiceServerManager;
-import mekanism.common.Mekanism;
+import mekanism.api.MekanismAPI;
 import mekanism.common.base.IModModule;
 import mekanism.common.lib.Version;
 import mekanism.common.registration.impl.ItemRegistryObject;
@@ -29,17 +29,17 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.DispenserBlock;
 import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.ModContainer;
-import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.server.ServerStartingEvent;
-import net.neoforged.neoforge.event.server.ServerStoppingEvent;
+import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
+import net.fabricmc.loader.api.FabricLoader;
+import mekanism.common.base.ModModuleState;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.item.CreativeModeTabs;
+import net.minecraft.server.MinecraftServer;
 import org.jetbrains.annotations.NotNull;
 
-@Mod(MekanismAdditions.MODID)
-public class MekanismAdditions implements IModModule {
+public class MekanismAdditions implements IModModule, ModInitializer {
 
     public static final String MODID = "mekanismadditions";
 
@@ -55,25 +55,32 @@ public class MekanismAdditions implements IModModule {
      */
     public static VoiceServerManager voiceManager;
 
-    public MekanismAdditions(ModContainer modContainer, IEventBus modEventBus) {
-        Mekanism.addModule(instance = this);
-        //Set our version number to match the neoforge.mods.toml file, which matches the one in our build.gradle
-        versionNumber = new Version(modContainer);
-        MekanismAdditionsConfig.registerConfigs(modContainer);
+    public MekanismAdditions() {
+        instance = this;
+        versionNumber = new Version(FabricLoader.getInstance().getModContainer(MODID).orElseThrow()
+              .getMetadata().getVersion().getFriendlyString().split("-", 2)[0]);
+    }
 
-        NeoForge.EVENT_BUS.addListener(this::serverStarting);
-        NeoForge.EVENT_BUS.addListener(this::serverStopping);
-
-        modEventBus.addListener(this::commonSetup);
-        modEventBus.addListener(MekanismAdditionsConfig::onConfigLoad);
-        AdditionsDataComponents.DATA_COMPONENTS.register(modEventBus);
-        AdditionsItems.ITEMS.register(modEventBus);
-        AdditionsBlocks.BLOCKS.register(modEventBus);
-        AdditionsCreativeTabs.CREATIVE_TABS.register(modEventBus);
-        AdditionsEntityTypes.ENTITY_TYPES.register(modEventBus);
-        AdditionsSounds.SOUND_EVENTS.register(modEventBus);
-        AdditionsBiomeModifierSerializers.BIOME_MODIFIER_SERIALIZERS.register(modEventBus);
-        AdditionsStructureModifierSerializers.STRUCTURE_MODIFIER_SERIALIZERS.register(modEventBus);
+    @Override
+    public void onInitialize() {
+        ModModuleState.addModule(this);
+        MekanismAdditionsConfig.registerConfigs();
+        AdditionsDataComponents.DATA_COMPONENTS.registerAll(BuiltInRegistries.DATA_COMPONENT_TYPE);
+        AdditionsEntityTypes.ENTITY_TYPES.registerAll(BuiltInRegistries.ENTITY_TYPE);
+        AdditionsBlocks.BLOCKS.registerAll(BuiltInRegistries.BLOCK, BuiltInRegistries.ITEM);
+        AdditionsItems.ITEMS.registerAll(BuiltInRegistries.ITEM);
+        AdditionsSounds.SOUND_EVENTS.registerAll(BuiltInRegistries.SOUND_EVENT);
+        AdditionsCreativeTabs.CREATIVE_TABS.registerAll(BuiltInRegistries.CREATIVE_MODE_TAB);
+        for (var tab : java.util.List.of(CreativeModeTabs.COLORED_BLOCKS, CreativeModeTabs.FUNCTIONAL_BLOCKS,
+              CreativeModeTabs.REDSTONE_BLOCKS, CreativeModeTabs.COMBAT, CreativeModeTabs.SPAWN_EGGS)) {
+            ItemGroupEvents.modifyEntriesEvent(tab).register(entries -> AdditionsCreativeTabs.CREATIVE_TABS.getAddToExistingTabs()
+                  .addToDisplay(tab, entries, entries.getContext()));
+        }
+        mekanism.fabric.worldgen.FabricBiomeModifiers.registerModuleFinalizer(mekanism.fabric.additions.AdditionsSpawnModifiers::load);
+        net.fabricmc.fabric.api.registry.FlammableBlockRegistry.getDefaultInstance().add(AdditionsBlocks.OBSIDIAN_TNT.get(), 15, 75);
+        commonSetup();
+        ServerLifecycleEvents.SERVER_STARTED.register(this::serverStarting);
+        ServerLifecycleEvents.SERVER_STOPPING.register(this::serverStopping);
     }
 
     public static ResourceLocation rl(String path) {
@@ -100,8 +107,7 @@ public class MekanismAdditions implements IModModule {
         AdditionsClient.launch(connection);
     }
 
-    private void commonSetup(FMLCommonSetupEvent event) {
-        event.enqueueWork(() -> {
+    private void commonSetup() {
             //Dispenser behavior
             DispenserBlock.registerBehavior(AdditionsBlocks.OBSIDIAN_TNT, new DefaultDispenseItemBehavior() {
                 @NotNull
@@ -137,20 +143,19 @@ public class MekanismAdditions implements IModModule {
             for (ItemRegistryObject<ItemBalloon> balloon : AdditionsItems.BALLOONS.values()) {
                 DispenserBlock.registerBehavior(balloon, balloonBehavior);
             }
-        });
-        Mekanism.logger.info("Loaded 'Mekanism: Additions' module.");
+        MekanismAPI.logger.info("Loaded 'Mekanism: Additions' module.");
     }
 
-    private void serverStarting(ServerStartingEvent event) {
+    private void serverStarting(MinecraftServer server) {
         if (MekanismAdditionsConfig.additions.voiceServerEnabled.get()) {
             if (voiceManager == null) {
-                voiceManager = new VoiceServerManager();
+                voiceManager = new VoiceServerManager(server);
             }
             voiceManager.start();
         }
     }
 
-    private void serverStopping(ServerStoppingEvent event) {
+    private void serverStopping(MinecraftServer server) {
         if (voiceManager != null) {
             voiceManager.stop();
             voiceManager = null;

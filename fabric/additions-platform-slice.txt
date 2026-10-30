@@ -1,0 +1,6 @@
+mekanism/fabric/additions/AdditionsSpawnModifiers.java
+mekanism/fabric/additions/mixin/AdditionsBeaconColorMixin.java
+mekanism/fabric/additions/mixin/AdditionsBiomeSpawnsMixin.java
+mekanism/fabric/additions/mixin/AdditionsFireIgnitionMixin.java
+mekanism/fabric/additions/mixin/AdditionsStructureSpawnsMixin.java
+mekanism/fabric/additions/mixin/AdditionsTntIgnitionMixin.java

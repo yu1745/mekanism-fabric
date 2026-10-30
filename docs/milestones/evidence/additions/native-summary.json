@@ -1,0 +1,137 @@
+{
+  "implementation_baseline": "184299a6",
+  "boundary_commit": "f206c34f",
+  "source_admission": {
+    "original": 61,
+    "native": 6,
+    "excluded_third_party": 3
+  },
+  "environment": "native Fabric 1.21.1 client + integrated server; disposable copy of the existing debug world",
+  "registries": {
+    "blocks": 271,
+    "block_items": 271,
+    "other_items": 25,
+    "entities": 8,
+    "data_components": 1,
+    "sounds": 1
+  },
+  "server_config": {
+    "schemas": 6,
+    "snapshot_values": 345,
+    "nondefault_file": "serverconfig/Mekanism/additions.toml",
+    "tnt_delay": 20,
+    "tnt_radius": 2.0,
+    "baby_bogged_weight_multiplier": 0.2,
+    "voice_enabled": true,
+    "voice_port": 36124
+  },
+  "balloon": {
+    "created_by": "real item use-on-block pipeline",
+    "saved_and_reloaded": true,
+    "client_color": "red",
+    "client_latched": true,
+    "magic_invulnerable_after_tag_fix": true
+  },
+  "spawn": {
+    "biome": "minecraft:swamp",
+    "entries": [
+      {
+        "class": "net.minecraft.world.level.biome.MobSpawnSettings$SpawnerData",
+        "toString": "minecraft:spider*(4-4):100"
+      },
+      {
+        "class": "net.minecraft.world.level.biome.MobSpawnSettings$SpawnerData",
+        "toString": "minecraft:zombie*(4-4):95"
+      },
+      {
+        "class": "net.minecraft.world.level.biome.MobSpawnSettings$SpawnerData",
+        "toString": "minecraft:zombie_villager*(1-1):5"
+      },
+      {
+        "class": "net.minecraft.world.level.biome.MobSpawnSettings$SpawnerData",
+        "toString": "minecraft:skeleton*(4-4):70"
+      },
+      {
+        "class": "net.minecraft.world.level.biome.MobSpawnSettings$SpawnerData",
+        "toString": "minecraft:creeper*(4-4):100"
+      },
+      {
+        "class": "net.minecraft.world.level.biome.MobSpawnSettings$SpawnerData",
+        "toString": "minecraft:slime*(4-4):100"
+      },
+      {
+        "class": "net.minecraft.world.level.biome.MobSpawnSettings$SpawnerData",
+        "toString": "minecraft:enderman*(1-4):10"
+      },
+      {
+        "class": "net.minecraft.world.level.biome.MobSpawnSettings$SpawnerData",
+        "toString": "minecraft:witch*(1-1):5"
+      },
+      {
+        "class": "net.minecraft.world.level.biome.MobSpawnSettings$SpawnerData",
+        "toString": "minecraft:slime*(1-1):1"
+      },
+      {
+        "class": "net.minecraft.world.level.biome.MobSpawnSettings$SpawnerData",
+        "toString": "minecraft:bogged*(4-4):30"
+      },
+      {
+        "class": "net.minecraft.world.level.biome.MobSpawnSettings$SpawnerData",
+        "toString": "mekanismadditions:baby_bogged*(2-2):6"
+      },
+      {
+        "class": "net.minecraft.world.level.biome.MobSpawnSettings$SpawnerData",
+        "toString": "mekanismadditions:baby_creeper*(2-2):5"
+      },
+      {
+        "class": "net.minecraft.world.level.biome.MobSpawnSettings$SpawnerData",
+        "toString": "mekanismadditions:baby_enderman*(1-2):1"
+      },
+      {
+        "class": "net.minecraft.world.level.biome.MobSpawnSettings$SpawnerData",
+        "toString": "mekanismadditions:baby_skeleton*(2-2):4"
+      }
+    ],
+    "fortress_entries": 7,
+    "fortress_bounding_box": "PIECE",
+    "fortress_added": [
+      "baby_skeleton*(3-3):1",
+      "baby_wither_skeleton*(3-3):1"
+    ]
+  },
+  "tnt": {
+    "flint_primed_type": "mekanismadditions:obsidian_tnt",
+    "flint_fuse": 20,
+    "fire_checkBurnOut_primed_type": "mekanismadditions:obsidian_tnt",
+    "fire_fuse": 20,
+    "explosion_after_ticks": 21,
+    "ground_before": "minecraft:dirt",
+    "ground_after": "minecraft:air"
+  },
+  "beacon": {
+    "sections": 2,
+    "red_argb": -51140
+  },
+  "recipes": {
+    "loaded_total": 3982,
+    "recolor_recipes_recovered": 256,
+    "red_recolor_accepts_blue": true,
+    "red_recolor_rejects_red": true
+  },
+  "walkie": {
+    "mode_change": "1 -> 8 with shift -1 while running",
+    "client_property": 8.0
+  },
+  "voice": {
+    "startup": "actual SERVER_STARTED callback with enabled config from file",
+    "tcp_connected": true,
+    "local_player_identified": true,
+    "output_thread_state": "TIMED_WAITING",
+    "input_thread_state": "TERMINATED",
+    "capture_error": "javax.sound.sampled.LineUnavailableException: line with format PCM_SIGNED 16000.0 Hz, 16 bit, mono, 2 bytes/frame, big-endian not supported.",
+    "audio_capture_and_multi_client_audio": "NOT VERIFIED",
+    "port_released_on_prior_world_stop": true,
+    "port_released_on_final_session_stop": true
+  },
+  "cleanup": "owned JVM stopped normally; disposable world and debug mods removed; owned Xvfb terminated; original debug world untouched"
+}

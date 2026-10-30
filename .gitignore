@@ -41,3 +41,6 @@ docs/**/*.log.gz
 # Isolated optional Tools development runs
 /fabric/run-tools/
 /fabric/run-tools-server/
+
+/fabric/run-additions/
+/fabric/run-additions-server/

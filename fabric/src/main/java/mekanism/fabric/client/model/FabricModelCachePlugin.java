@@ -20,11 +20,18 @@ public final class FabricModelCachePlugin implements ModelLoadingPlugin {
 
     private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger("Mekanism/FabricModelCache");
 
+    private static final List<mekanism.client.model.BaseModelCache> MODULE_CACHES = new ArrayList<>();
+
+    public static void registerModuleCache(mekanism.client.model.BaseModelCache cache) {
+        MODULE_CACHES.add(cache);
+    }
+
     @Override
     public void onInitializeModelLoader(Context context) {
         List<JSONModelData> jsonModels = new ArrayList<>();
         Map<ResourceLocation, JSONModelData> byId = new HashMap<>();
-        for (MekanismModelData data : MekanismModelCache.INSTANCE.models().values()) {
+        for (MekanismModelData data : java.util.stream.Stream.concat(java.util.stream.Stream.of(MekanismModelCache.INSTANCE), MODULE_CACHES.stream())
+              .flatMap(cache -> cache.models().values().stream()).toList()) {
             List<ResourceLocation> models = new ArrayList<>();
             data.collectAdditionalModels(models);
             for (ResourceLocation id : models) {

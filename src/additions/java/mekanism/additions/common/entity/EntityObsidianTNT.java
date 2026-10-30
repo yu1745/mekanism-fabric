@@ -68,6 +68,10 @@ public class EntityObsidianTNT extends PrimedTnt {
     }
 
     @Override
+    public ItemStack getPickResult() {
+        return getPickedResult(null);
+    }
+
     public ItemStack getPickedResult(HitResult target) {
         return new ItemStack(AdditionsBlocks.OBSIDIAN_TNT);
     }

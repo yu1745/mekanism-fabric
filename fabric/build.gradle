@@ -1221,3 +1221,15 @@ def remapToolsJar = tasks.register('remapToolsJar', RemapJarTask) {
     classpath.from(sourceSets.tools.compileClasspath)
 }
 tasks.named('assemble') { dependsOn remapToolsJar }
+
+apply from: "additions.gradle"
+def remapAdditionsJar = tasks.register('remapAdditionsJar', RemapJarTask) {
+    dependsOn tasks.named('additionsJar')
+    inputFile = tasks.named('additionsJar', Jar).flatMap { it.archiveFile }
+    addNestedDependencies = false
+    archiveBaseName = 'MekanismAdditions'
+    archiveClassifier = 'fabric'
+    destinationDirectory = layout.buildDirectory.dir('additions-libs')
+    classpath.from(sourceSets.additions.compileClasspath)
+}
+tasks.named('assemble') { dependsOn remapAdditionsJar }

@@ -40,7 +40,7 @@ rm -rf "$OUT"
 mkdir -p "$OUT"
 
 # 只收集 Fabric Loom 的 remapped 发布 JAR。
-find fabric/build/libs fabric/build/tools-libs -maxdepth 1 -type f -name '*.jar' \
+find fabric/build/libs fabric/build/tools-libs fabric/build/additions-libs -maxdepth 1 -type f -name '*.jar' \
   ! -name '*-sources.jar' ! -name '*-dev.jar' -print0 \
   | while IFS= read -r -d '' j; do cp "$j" "$OUT/"; done
 

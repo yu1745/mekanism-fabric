@@ -37,7 +37,6 @@ public class BlockPlasticTransparentStairs extends BlockPlasticStairs {
         return BlockPlasticTransparent.isSideInvisible(this, state, adjacentBlockState, side);
     }
 
-    @Override
     public Integer getBeaconColorMultiplier(@NotNull BlockState state, @NotNull LevelReader world, @NotNull BlockPos pos, @NotNull BlockPos beaconPos) {
         return getColor().getPackedColor();
     }

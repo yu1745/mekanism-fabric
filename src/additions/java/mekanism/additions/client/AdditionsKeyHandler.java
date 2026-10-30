@@ -2,18 +2,16 @@ package mekanism.additions.client;
 
 import mekanism.additions.common.AdditionsLang;
 import mekanism.additions.common.config.MekanismAdditionsConfig;
-import mekanism.client.ClientRegistrationUtil;
-import mekanism.client.key.MekKeyBindingBuilder;
 import net.minecraft.client.KeyMapping;
-import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
+import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import org.lwjgl.glfw.GLFW;
 
 public class AdditionsKeyHandler {
 
-    public static final KeyMapping voiceKey = new MekKeyBindingBuilder().description(AdditionsLang.KEY_VOICE).keyCode(GLFW.GLFW_KEY_U)
-          .toggleable(() -> !MekanismAdditionsConfig.client.pushToTalk.getOrDefault()).build();
+    public static final KeyMapping voiceKey = new net.minecraft.client.ToggleKeyMapping(AdditionsLang.KEY_VOICE.getTranslationKey(), GLFW.GLFW_KEY_U,
+          mekanism.common.MekanismLang.MEKANISM.getTranslationKey(), () -> !MekanismAdditionsConfig.client.pushToTalk.getOrDefault());
 
-    public static void registerKeybindings(RegisterKeyMappingsEvent event) {
-        ClientRegistrationUtil.registerKeyBindings(event, voiceKey);
+    public static void registerKeybindings() {
+        KeyBindingHelper.registerKeyBinding(voiceKey);
     }
 }

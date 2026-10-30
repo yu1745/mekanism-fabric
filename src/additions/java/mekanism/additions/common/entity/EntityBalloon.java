@@ -38,12 +38,11 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
-import net.neoforged.neoforge.entity.IEntityWithComplexSpawn;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
 
-public class EntityBalloon extends Entity implements IEntityWithComplexSpawn {
+public class EntityBalloon extends Entity {
 
     private static final EntityDataAccessor<Byte> IS_LATCHED = SynchedEntityData.defineId(EntityBalloon.class, EntityDataSerializers.BYTE);
     private static final EntityDataAccessor<Integer> LATCHED_X = SynchedEntityData.defineId(EntityBalloon.class, EntityDataSerializers.INT);
@@ -51,6 +50,8 @@ public class EntityBalloon extends Entity implements IEntityWithComplexSpawn {
     private static final EntityDataAccessor<Integer> LATCHED_Z = SynchedEntityData.defineId(EntityBalloon.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> LATCHED_ID = SynchedEntityData.defineId(EntityBalloon.class, EntityDataSerializers.INT);
     public static final float OFFSET = -0.275F;
+
+    private static final EntityDataAccessor<Integer> DATA_COLOR = SynchedEntityData.defineId(EntityBalloon.class, EntityDataSerializers.INT);
 
     private EnumColor color = EnumColor.DARK_BLUE;
     private BlockPos latched;
@@ -78,7 +79,7 @@ public class EntityBalloon extends Entity implements IEntityWithComplexSpawn {
         balloon.xo = balloon.getX();
         balloon.yo = balloon.getY();
         balloon.zo = balloon.getZ();
-        balloon.color = c;
+        balloon.setColor(c);
         return balloon;
     }
 
@@ -96,7 +97,7 @@ public class EntityBalloon extends Entity implements IEntityWithComplexSpawn {
         balloon.yo = balloon.getY();
         balloon.zo = balloon.getZ();
 
-        balloon.color = c;
+        balloon.setColor(c);
         balloon.entityData.set(IS_LATCHED, (byte) 2);
         balloon.entityData.set(LATCHED_ID, entity.getId());
         return balloon;
@@ -115,12 +116,28 @@ public class EntityBalloon extends Entity implements IEntityWithComplexSpawn {
         balloon.yo = balloon.getY();
         balloon.zo = balloon.getZ();
 
-        balloon.color = c;
+        balloon.setColor(c);
         balloon.entityData.set(IS_LATCHED, (byte) 1);
         balloon.entityData.set(LATCHED_X, balloon.latched.getX());
         balloon.entityData.set(LATCHED_Y, balloon.latched.getY());
         balloon.entityData.set(LATCHED_Z, balloon.latched.getZ());
         return balloon;
+    }
+
+    private void setColor(EnumColor color) {
+        this.color = color;
+        entityData.set(DATA_COLOR, color.ordinal());
+    }
+
+    @Override
+    public void onSyncedDataUpdated(EntityDataAccessor<?> accessor) {
+        super.onSyncedDataUpdated(accessor);
+        if (DATA_COLOR.equals(accessor)) color = EnumColor.BY_ID.apply(entityData.get(DATA_COLOR));
+    }
+
+    @Override
+    public ItemStack getPickResult() {
+        return getPickedResult(null);
     }
 
     public EnumColor getColor() {
@@ -296,6 +313,7 @@ public class EntityBalloon extends Entity implements IEntityWithComplexSpawn {
 
     @Override
     protected void defineSynchedData(@NotNull SynchedEntityData.Builder builder) {
+        builder.define(DATA_COLOR, EnumColor.DARK_BLUE.ordinal());
         builder.define(IS_LATCHED, (byte) 0);
         builder.define(LATCHED_X, 0);
         builder.define(LATCHED_Y, 0);
@@ -305,7 +323,7 @@ public class EntityBalloon extends Entity implements IEntityWithComplexSpawn {
 
     @Override
     protected void readAdditionalSaveData(@NotNull CompoundTag nbtTags) {
-        NBTUtils.setEnumIfPresent(nbtTags, SerializationConstants.COLOR, EnumColor.BY_ID, color -> this.color = color);
+        NBTUtils.setEnumIfPresent(nbtTags, SerializationConstants.COLOR, EnumColor.BY_ID, this::setColor);
         NBTUtils.setBlockPosIfPresent(nbtTags, SerializationConstants.LATCHED, pos -> latched = pos);
         NBTUtils.setUUIDIfPresent(nbtTags, SerializationConstants.OWNER_UUID, uuid -> {
             hasCachedEntity = true;
@@ -333,7 +351,6 @@ public class EntityBalloon extends Entity implements IEntityWithComplexSpawn {
         return true;
     }
 
-    @Override
     public void writeSpawnData(RegistryFriendlyByteBuf buffer) {
         buffer.writeEnum(color);
         if (latched != null) {
@@ -347,7 +364,6 @@ public class EntityBalloon extends Entity implements IEntityWithComplexSpawn {
         }
     }
 
-    @Override
     public void readSpawnData(RegistryFriendlyByteBuf buffer) {
         color = buffer.readEnum(EnumColor.class);
         byte type = buffer.readByte();
@@ -419,7 +435,6 @@ public class EntityBalloon extends Entity implements IEntityWithComplexSpawn {
         //NO-OP don't allow size to change
     }
 
-    @Override
     public ItemStack getPickedResult(HitResult target) {
         return AdditionsItems.BALLOONS.get(color).asStack();
     }

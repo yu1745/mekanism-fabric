@@ -2,8 +2,6 @@ package mekanism.additions.common;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.tags.BlockTags;
-import net.minecraft.tags.ItemTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.entity.EntityType;
@@ -55,11 +53,11 @@ public class AdditionsTags {
         public static final TagKey<Item> PLASTIC_BLOCKS_TRANSPARENT = tag("plastic_blocks/transparent");
 
         private static TagKey<Item> commonTag(String name) {
-            return ItemTags.create(ResourceLocation.fromNamespaceAndPath("c", name));
+            return TagKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("c", name));
         }
 
         private static TagKey<Item> tag(String name) {
-            return ItemTags.create(MekanismAdditions.rl(name));
+            return TagKey.create(Registries.ITEM, MekanismAdditions.rl(name));
         }
     }
 
@@ -88,11 +86,11 @@ public class AdditionsTags {
         public static final TagKey<Block> PLASTIC_BLOCKS_TRANSPARENT = tag("plastic_blocks/transparent");
 
         private static TagKey<Block> commonTag(String name) {
-            return BlockTags.create(ResourceLocation.fromNamespaceAndPath("c", name));
+            return TagKey.create(Registries.BLOCK, ResourceLocation.fromNamespaceAndPath("c", name));
         }
 
         private static TagKey<Block> tag(String name) {
-            return BlockTags.create(MekanismAdditions.rl(name));
+            return TagKey.create(Registries.BLOCK, MekanismAdditions.rl(name));
         }
     }
 

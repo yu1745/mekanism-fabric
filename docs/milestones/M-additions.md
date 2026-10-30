@@ -2,18 +2,23 @@
 
 ## 现状
 
-W-45基线`184299a6`。原64份源码逐文件归类见evidence/additions/source-boundary.csv；61份实现源码保留原包名，3份JEI/alias按既有路线排除。Tools已提供独立源集/JAR与统一build.sh收集方式，本模块沿用同一模式，不混入核心包体。范围包括塑料/Glow Panel/TNT、气球/对讲机、8实体（其中6种baby）、配置与原资源。
+W-45边界`f206c34f`，W-46–49主体实现及回归完成。保留61份原源码与原包名、注册ID、NBT及WalkieData codec；3份JEI/alias集成按既有边界排除，逐文件清单见evidence/additions/source-boundary.csv。6份native接入直接承接生成查询、TNT/火焰点火及信标扫描。独立Additions源集/JAR不混入核心包体，build.sh收集核心、Tools、Additions三个JAR。
+
+实际注册271方块、271方块物品＋25其他物品、8实体（6种baby）、1组件、1声音。SERVER配置41项：本次核心＋Additions同步345值；同时安装Tools时合计408，低于512上限。原配置、继承/物理/爆炸/生成比例算法与NBT保留；气球color/latch接vanilla实体追踪。原重染difference ingredient在构建资源中使用Fabric原生等价形式；魔法伤害标签数据依据NeoForge21.1.200的NeoForgeDamageTypeTagsProvider，仅补所需magic/poison/wither分类，Fabric原生毒伤仍由magic表达。
+
+生成修饰复用FabricBiomeModifiers的真实活动数据包作用域：原codec/none覆盖/blacklist在worldgen结束时选择，SERVER策略在原生biome/structure生成查询读取，避免注册冻结时误用默认值；结构bounding box与生物生成成本沿用原义。核心仅扩展既有模型缓存、re-equip、创作栏与worldgen owner。火焰会先移除TNT方块，专用native接入使用原方法捕获的状态；没有替代机器/事件框架。
 
 ## 下一步
 
-W-46按完整调用链接入：DataComponents/EntityTypes→Items/Blocks→tab/resources，复用核心注册器、BlockBase、fluid logging、IModeItem、ModModuleState与FabricServerConfig。41项SERVER配置在核心304＋Tools63上增至408，仍低于既有512上限；保留文件名、默认值、NBT和WalkieData codec。直接依赖的原实体和客户端一并纳入，W-47/48逐项完成实际行为，再做W-49一个端到端场景与一次回归监测。
+W-49构建、API与机器回归通过，继续新版ROADMAP W-50 Generators边界与细化规划。W-48音频采集验证分支保留如下具体限制，继续已确定的开发范围。完整发布检查集中P13；协调者巡检2要求的证据精简已单独提交`56e463b0`，移除约1.32MB重复/修复前图片，保留全量JSON读数和关键帧。
 
 ## 未决项
 
-- 生成修饰：保留两种原modifier及`baby_mob_spawn` codec、原活动数据包路径/none覆盖和blacklist。Fabric worldgen注册冻结早于SERVER配置owner；不能在biome callback偷用默认值。最小边界为现有FabricBiomeModifiers资源作用域接入模块loader，并在实际biome/structure spawn查询保留原SpawnConfig比例、成本和bounding box语义；实现时核对world owner，禁止静态缓存跨世界泄漏。
-- 实体与渲染：气球原complex spawn携带color/latch；接vanilla实体追踪，保留原NBT与latched移动算法。TNT原点火/爆炸、透明塑料beacon tint、fluid logging、pick/reequip都需真实入口；仅去掉Override不算完成。客户端复用BaseModelCache真实bake/reload与原renderer。
-- 语音：实际依赖为JDK AudioSystem＋TCP，16kHz/16bit/mono，short长度帧、服务端按玩家IP识别并按WalkieData频道转发；没有外部平台音频库。接真实server/connection owner并保留默认关闭，核对线程退出、socket和音频line释放。真机音频设备若不可用，明确记录验证限制，不伪造音频成功，不以stub代替。明显超出该链的依赖记录后继续已确定范围。
+W-48实现已接真实server/connection owner：JDK AudioSystem＋TCP，原16kHz/16bit/mono/big-endian协议及short帧、频道转发和默认关闭保留；世界/玩家读取回到server线程，socket/音频line随owner关闭。实际SERVER_STARTED启动、客户端TCP连接、玩家识别与退出已验证。`AdditionsClient.launch → VoiceClient.run → VoiceInput.run → TargetDataLine.open`在当前环境报`LineUnavailableException`（原PCM输入格式不可用）；双向音频采集与多客户端实际音频仍未验收，不声明语音完整可用。NeoForge配置屏幕沿核心既定排除范围；完整发布门禁未通过。
 
 ## 验收证据
 
-W-45仅文档边界，尚未宣布Additions可用。后续以编译/独立JAR、非默认配置、气球追踪/存读档、baby生成与渲染、隔离TNT爆炸和语音实际连接作为证据；每模块evidence≤1MB，不新增测试，完整发布门禁留到P13。
+- 真机：271方块／296物品／8实体，6份SERVER配置／345值send/apply/ack；文件中的TNT引信20、爆炸半径2、baby bogged权重0.2和语音端口36124在重启后生效。[读数](evidence/additions/native-summary.json)。
+- 实际气球物品交互、存读档后客户端red/latch一致；magic免疫有效；swamp生成列表14项，bogged权重2→6；fortress保留PIECE并从5项扩为7项；六种baby完成生成，关键渲染见[实体](evidence/additions/native-babies.png)、[气球/信标](evidence/additions/native-balloon-beacon.png)。
+- 火石与实际FireBlock点火都生成20tick引信的原TNT实体，21tick后破坏地面；信标red=-51140。恢复256项重染配方，总3982项，红色重染接受blue/拒绝red；对讲机1→8换频道，客户端属性值8.0。
+- 自有JVM正常停止，端口释放，隔离世界副本、临时debug依赖及自有Xvfb已清理，原调试世界未动。统一构建、既有578项测试、API检查与机器smoke通过；[回归及三JAR摘要](evidence/additions/regression.json)。没有新增测试。提交后真实diff复核已移除语音public方法不必要的checked exception，保持server线程读取和可中断退出。

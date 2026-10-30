@@ -5,13 +5,13 @@ import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.DataLine;
 import javax.sound.sampled.TargetDataLine;
 import mekanism.additions.client.AdditionsKeyHandler;
-import mekanism.common.Mekanism;
+import mekanism.api.MekanismAPI;
 
 public class VoiceInput extends Thread {
 
     private final VoiceClient voiceClient;
     private final DataLine.Info microphone;
-    private TargetDataLine targetLine;
+    private volatile TargetDataLine targetLine;
 
     public VoiceInput(VoiceClient client) {
         super("VoiceServer Client Input Thread");
@@ -23,8 +23,9 @@ public class VoiceInput extends Thread {
     @Override
     public void run() {
         try {
+            if (!voiceClient.isRunning()) return;
             if (!AudioSystem.isLineSupported(microphone)) {
-                Mekanism.logger.info("No audio system available.");
+                MekanismAPI.logger.info("No audio system available.");
                 return;
             }
             targetLine = (TargetDataLine) AudioSystem.getLine(microphone);
@@ -67,14 +68,13 @@ public class VoiceInput extends Thread {
             }
             audioInput.close();
         } catch (Exception e) {
-            Mekanism.logger.error("VoiceServer: Error while running client input thread.", e);
+            MekanismAPI.logger.error("VoiceServer: Error while running client input thread.", e);
+        } finally {
+            close();
         }
     }
 
     public void close() {
-        if (targetLine != null) {
-            targetLine.flush();
-            targetLine.close();
-        }
+        if (targetLine != null) targetLine.close();
     }
 }

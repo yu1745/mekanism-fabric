@@ -27,12 +27,12 @@ import org.jetbrains.annotations.NotNull;
 public class ItemWalkieTalkie extends Item implements IModeItem {
 
     public ItemWalkieTalkie(Item.Properties properties) {
-        super(properties.stacksTo(1).component(AdditionsDataComponents.WALKIE_DATA, WalkieData.DEFAULT));
+        super(properties.stacksTo(1).component(AdditionsDataComponents.WALKIE_DATA.get(), WalkieData.DEFAULT));
     }
 
     @Override
     public void appendHoverText(@NotNull ItemStack stack, @NotNull Item.TooltipContext context, @NotNull List<Component> tooltip, @NotNull TooltipFlag flag) {
-        WalkieData data = stack.getOrDefault(AdditionsDataComponents.WALKIE_DATA, WalkieData.DEFAULT);
+        WalkieData data = stack.getOrDefault(AdditionsDataComponents.WALKIE_DATA.get(), WalkieData.DEFAULT);
         tooltip.add(OnOff.of(data.running(), true).getTextComponent());
         tooltip.add(AdditionsLang.CHANNEL.translateColored(EnumColor.DARK_AQUA, EnumColor.GRAY, data.channel()));
         if (!MekanismAdditionsConfig.additions.voiceServerEnabled.get()) {
@@ -45,25 +45,24 @@ public class ItemWalkieTalkie extends Item implements IModeItem {
     public InteractionResultHolder<ItemStack> use(@NotNull Level world, Player player, @NotNull InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
         if (player.isShiftKeyDown()) {
-            WalkieData data = stack.getOrDefault(AdditionsDataComponents.WALKIE_DATA, WalkieData.DEFAULT);
-            stack.set(AdditionsDataComponents.WALKIE_DATA, new WalkieData(data.channel(), !data.running()));
+            WalkieData data = stack.getOrDefault(AdditionsDataComponents.WALKIE_DATA.get(), WalkieData.DEFAULT);
+            stack.set(AdditionsDataComponents.WALKIE_DATA.get(), new WalkieData(data.channel(), !data.running()));
             return InteractionResultHolder.sidedSuccess(stack, world.isClientSide);
         }
         return InteractionResultHolder.pass(stack);
     }
 
-    @Override
     public boolean shouldCauseReequipAnimation(ItemStack oldStack, @NotNull ItemStack newStack, boolean slotChanged) {
         return slotChanged || oldStack.getItem() != newStack.getItem();
     }
 
     @Override
     public void changeMode(@NotNull Player player, @NotNull ItemStack stack, int shift, DisplayChange displayChange) {
-        WalkieData data = stack.getOrDefault(AdditionsDataComponents.WALKIE_DATA, WalkieData.DEFAULT);
+        WalkieData data = stack.getOrDefault(AdditionsDataComponents.WALKIE_DATA.get(), WalkieData.DEFAULT);
         if (data.running()) {
             int newChannel = Math.floorMod(data.channel() + shift - 1, 8) + 1;
             if (data.channel() != newChannel) {
-                stack.set(AdditionsDataComponents.WALKIE_DATA, new WalkieData(newChannel, true));
+                stack.set(AdditionsDataComponents.WALKIE_DATA.get(), new WalkieData(newChannel, true));
                 displayChange.sendMessage(player, newChannel, AdditionsLang.CHANNEL_CHANGE::translate);
             }
         }
@@ -72,7 +71,7 @@ public class ItemWalkieTalkie extends Item implements IModeItem {
     @NotNull
     @Override
     public Component getScrollTextComponent(@NotNull ItemStack stack) {
-        WalkieData data = stack.getOrDefault(AdditionsDataComponents.WALKIE_DATA, WalkieData.DEFAULT);
+        WalkieData data = stack.getOrDefault(AdditionsDataComponents.WALKIE_DATA.get(), WalkieData.DEFAULT);
         return AdditionsLang.CHANNEL.translateColored(EnumColor.GRAY, EnumColor.WHITE, data.channel());
     }
 

@@ -1,14 +1,12 @@
 package mekanism.additions.common.registries;
 
+import com.mojang.serialization.MapCodec;
 import mekanism.additions.common.MekanismAdditions;
 import mekanism.additions.common.world.modifier.BabyEntitySpawnStructureModifier;
-import mekanism.common.registration.DatapackDeferredRegister;
-import mekanism.common.registration.DeferredMapCodecHolder;
-import net.neoforged.neoforge.common.world.StructureModifier;
+import net.minecraft.resources.ResourceLocation;
 
+/** Codec owned by the Additions datapack loader; the original resource type ID is retained. */
 public class AdditionsStructureModifierSerializers {
-
-    public static final DatapackDeferredRegister<StructureModifier> STRUCTURE_MODIFIER_SERIALIZERS = DatapackDeferredRegister.structureModifiers(MekanismAdditions.MODID);
-
-    public static final DeferredMapCodecHolder<StructureModifier, BabyEntitySpawnStructureModifier> SPAWN_BABIES = STRUCTURE_MODIFIER_SERIALIZERS.registerCodec("baby_mob_spawn", BabyEntitySpawnStructureModifier::makeCodec);
+    public static final ResourceLocation ID = MekanismAdditions.rl("baby_mob_spawn");
+    public static final MapCodec<BabyEntitySpawnStructureModifier> SPAWN_BABIES = BabyEntitySpawnStructureModifier.makeCodec();
 }

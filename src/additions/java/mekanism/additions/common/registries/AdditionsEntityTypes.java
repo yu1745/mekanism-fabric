@@ -100,12 +100,10 @@ public class AdditionsEntityTypes {
         if (parent.canSpawnFarFromPlayer()) {
             builder.canSpawnFarFromPlayer();
         }
+        //All six original parents and these native entity types track deltas in vanilla.
         builder.immuneTo(parent.immuneTo.toArray(Block[]::new))
-              .setShouldReceiveVelocityUpdates(parent.trackDeltas())
               .clientTrackingRange(parent.clientTrackingRange())
-              .setTrackingRange(parent.clientTrackingRange())
-              .updateInterval(parent.updateInterval())
-              .setUpdateInterval(parent.updateInterval());
+              .updateInterval(parent.updateInterval());
         EntityDimensions babyDimensions = parent.getDimensions().scale(scale);
         builder.sized(babyDimensions.width(), babyDimensions.height());
         //Note: We use a custom value rather than the 0.85 multiplier default as babies have larger heads than normal
