@@ -6,7 +6,7 @@ ROADMAP P5 W-29–33。P4 已验证能量／流体／物品／化学／热量及
 
 ## 下一步
 
-W-32继续：已补齐9个item predicates与缺失颜色并实机验证。继续核对ClientRegistrationUtil.registerBlockExtensions／RenderPropertiesProvider的bounding hit与Mekanism block destroy粒子行为，以及layer definitions、overlay等剩余注册映射；完成按键上下文／附件渲染证据后再关闭W-32。随后W-33统一门禁、归档。
+W-32继续：模型属性／颜色、方块粒子、两种Accessories jetpack实际GUI预览已验证。剩余明确缺口为ClientRegistrationUtil.registerFluidExtensions的fog色／范围与第一人称覆盖图；复用现有FogColorMixin/FogSetupMixin及ScreenEffectRenderer原生入口，保留vision事件覆盖顺序。完成后关闭W-32，再W-33统一门禁／归档。
 
 ## 未决项
 
@@ -81,3 +81,9 @@ W-32 第二组边界：确认原ClientRegistrationUtil将PARTICLE_HANDLER注册�
 assemble PASS15秒（首轮仅BlockMekanism import误写prefab，原文已取出并按原包修正）。真实ParticleEngine.destroy读取当前Industrial Alarm shape的两个AABB，原计数5、vanilla每轴至少2会计16；实际队列恰5。stone实际64，等于vanilla64，未被Mekanism规则接管。通过原DIGITAL_MINER.setPlacedBy生成完整真实bounding，客户端BE主位置8,100,0正确；ParticleEngine.crack(8,101,0,NORTH)实际队列1、sprite=mekanism:block/models/digital_miner，与原主state的native model sprite完全相等。不是直接调用helper或new粒子绕过注入。暂停真实单人游戏后取队列以避免粒子tick衰减干扰，退出pause并清理粒子。详见 [验收](evidence/p5-block-particles/validation.md)。
 
 运行无新增ERROR；自有客户端stopped、隔离世界81文件SHA256恢复，临时debug mod/wrapper/Xvfb清理。无新增测试。W-32仍需剩余注册映射和Accessories真实渲染证据；W-33门禁尚未开始。
+
+2026-10-30 W-32 注册映射检查点（基线98caf953）：[30条行为表](evidence/p5-client-registration/official-client-owners.csv)逐项核对实际provider、11 layers、15 reload listeners、HUD层、models/cache与keys。无生产代码改动。固定Accessories beta.53实机从原ScreenOpen packet打开实际ORIGINAL菜单，两种jetpack经真实shift-click装入／取出；server/client back槽一致，native registry返回GearRenderer。已查看两PNG前后预览可见背包、无missing texture，native screenshot hash一致；无screenFault/新增ERROR。原0 guiScale暂改1后恢复0，options.txt及完整隔离世界81文件恢复一致，自有会话停止、临时mod/wrapper/Xvfb清理。失败探针格式／注册ID纠正与范围见 [验收](evidence/p5-accessories/validation.md)，不扩称装备玩法。无新测试，纯证据无需重复编译。
+
+新语义缺口（先记录）：原ClientRegistrationUtil.registerFluidExtensions的RGB fog、start=-8/end=24（renderDistance较小时end截断且CYLINDER）及renderOverlayTexture在Fabric没有owner；现FabricFluidColors仅材质/tint，fog mixins仅vision模块。最小闭包复用FabricFluidColors、两个fog mixins及本地ScreenEffectRenderer入口，不建立通用FluidType框架。
+
+固定NeoForge21.1.200 sources已只读下载至/tmp/mek-w32-neoforge-21.1.200-sources.jar。ClientHooks.getFogColor433–444先按camera block fluid height判断并跑fluid扩展，再发ComputeFogColor；onFogRender447–458先跑fluid扩展，再以**原vanilla near/far/shape**构造RenderFog，只有取消才覆盖shader。vision原取消路径须保留该顺序，不能把fluid24再作为vision倍乘输入；当前onFogStart/onFogEnd比较值是否改变不能识别“取消但值相同”，接新fluid时须一并处理真实active module判断。IClientFluidTypeExtensions.renderOverlay153–156调用ScreenEffectRenderer.renderFluid；非spectator且非WATER的eye fluid才走此分支，Mekanism默认overlay为minecraft underwater.png。Kilt固定参考只确认入口，未复制代码。W-32仍进行，下一步补此闭包并实机取shader／截图。

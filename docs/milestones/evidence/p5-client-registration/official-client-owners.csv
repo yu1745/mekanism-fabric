@@ -1,0 +1,31 @@
+official_behavior,fabric_owner,status,evidence_or_delta
+init: client tick,FabricClientTickRegistration START_CLIENT_TICK,mapped,原ClientTickHandler与native mixins
+init: render tick,bootstrap END_CLIENT_TICK / RenderTickHandler,verified,W30原持物粒子
+init: tile sounds,SoundHandler.startTileSound,mapped,原tick声音owner；无Fabric替换事件，直接存真实sound
+init: recipe viewer guiOpening,third-party boundary,excluded,ROADMAP明确排除JEI/EMI
+init: module OBJ/specs,FabricArmorLayerRegistration / MekaSuitModuleRenderRegistry,mapped,原jetpack/modulator/elytra及cache handler
+init: fluid render layer,FabricFluidColors,mapped,BlockRenderLayerMap translucent
+init: nine item properties,FabricClientModelRegistration,verified,p5-client-registration native getters/四Configurator模型
+init: custom models,FabricModelCachePlugin / FabricQIOModelPlugin / FabricMekanismModelPlugin,verified,W30模型owner映射
+registerKeybindings,MekanismKeyHandler / KeyBindingHelper,mapped,10个原默认绑定
+MekKeyBinding/Builder actions,MekanismKeyHandler.onInput,verified,native KeyboardHandler→ModuleTweaker/boost；声明均非toggle/repeat
+MekKeyBinding GUI context,MekKeyHandler / KeyboardFocusMixin,mapped,GUI polling及SHIFT description；vanilla modifier editor限制
+registerOverlays energy/HUD,FabricHudLayersMixin,mapped,原生armor后及subtitles后
+registerOverlays status/radiation,ModeStatusOverlayMixin / RadiationOverlayMixin,mapped,selected-item后及below-all
+registerRenderers entities,FabricEntityRendererRegistration,mapped,两个原provider
+registerRenderers BE,FabricTileEntityRendererRegistration,mapped,全部原types及transmitters；QIO实际BER替代modelData
+registerLayer,FabricTileEntityRendererRegistration,mapped,11原location与supplier
+registerClientReloadListeners,FabricItemRendererRegistration / bootstrap Robit atlas,mapped,15原reload listeners与Robit uploader
+registerScreens,FabricScreenRegistration,verified,W31全部71真实menu/screen
+registerModelLoaders,FabricTransmitterModelPlugin / FabricMekanismModelPlugin,verified,4精确loader IDs；W29/W30
+registerAdditionalModels/onModelBake,FabricModelCachePlugin与实际model plugins,verified,W29/W30 additional/cache/wrappers/reload
+registerParticleFactories,bootstrap / FabricRadiationClientLifecycle,verified,W30原生engine创建四类；radiation既有owner
+registerBlockColorHandlers,FabricClientModelRegistration / FabricTransmitterColorProvider,verified,W29 tint及W32原表循环/代表native取色
+registerItemColorHandlers,FabricClientModelRegistration / FabricMekaSuitItemColor / FabricFluidBucketRegistration,verified,原类型component/table及bucket owners
+registerItemDecorations,ItemDecorators / GuiGraphicsMixin,mapped,原MekaSuit bars及12种transmitter decorators
+registerClientExtensions items/gear,FabricItemRendererRegistration / FabricGearModels,mapped,原ISBER与原armor singletons
+registerClientExtensions block particles,RenderPropertiesProvider / BlockParticlesMixin,verified,p5-block-particles实际5/64和bounding主sprite
+registerFluidExtensions textures/tint,FabricFluidColors,verified,原still/flow/overlay材质和W29 ARGB
+registerFluidExtensions fog/screen overlay,missing,pending,RGB fog、-8/24距离及renderOverlayTexture为下一闭包
+addLayers,FabricArmorLayerRegistration,mapped,exact HumanoidArmorLayer/ElytraLayer及原layers
+MekanismCurioRenderer,FabricAccessoryRenderRegistration,verified,原humanoid guard/render args；两背包GUI实机预览

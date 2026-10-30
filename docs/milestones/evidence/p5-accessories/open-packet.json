@@ -1,0 +1,1 @@
+{"method":"of","resolvedTo":"of","declaringClass":"io.wispforest.accessories.networking.server.ScreenOpen","signature":"(boolean,io.wispforest.accessories.menu.AccessoriesMenuVariant)","value":{"ref":1,"class":"io.wispforest.accessories.networking.server.ScreenOpen","toString":"ScreenOpen[entityId=-1, targetLookEntity=false, variant=ORIGINAL]"}}

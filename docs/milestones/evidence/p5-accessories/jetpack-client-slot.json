@@ -1,0 +1,1 @@
+{"method":"getSlotStack","resolvedTo":"getSlotStack","declaringClass":"mekanism.common.integration.curios.CuriosIntegration","signature":"(net.minecraft.world.entity.LivingEntity,java.lang.String,int)","value":{"ref":2,"class":"net.minecraft.world.item.ItemStack","toString":"1 mekanism:jetpack"}}
