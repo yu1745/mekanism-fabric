@@ -1,6 +1,6 @@
 # Fabric config 最小适配
 
-> 状态核实（2026-10-30 / W-05）：保留历史配置分片设计；开头的片段范围已被 canonical startup/common、gear、machine/tier 与 general owner 接通取代。当前验收范围见 `milestones/M-config.md` 与 `milestones/README.md`。
+> 状态核实（2026-10-30 / W-05）：保留历史配置分片设计；开头的片段范围已被 canonical startup/common、gear、machine/tier 与 general owner 接通取代。当前验收范围见 `archive/M-config.md` 与 `milestones/README.md`。
 
 当前 config 垂直切片包含 official selected startup、Task 039 physical-client-lifetime
 `client.toml` window fragment（Task052 review17 在同一 owner 增加 transmitter accessibility 值），以及 Task 040 `common.toml` + world `general.toml` Chemical policy fragment；

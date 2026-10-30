@@ -13,7 +13,7 @@
 | 里程碑 | 范围 | 验收（一个端到端用例） | 状态 |
 |---|---|---|---|
 | M-owner | `TileEntityMekanism`、`TileComponentConfig`、频率/`FrequencyManager`、`ContainerType`、`MekanismContainer` 同步、有效侧线程语义、bounding | 真机：Crusher 放置→通电→加工→存读档 | 已验证：P1 W-06–11 与阶段门禁通过；Crusher 加工/存读档、工厂升级、频率持久化、bounding 放拆；[归档证据](../archive/M-owner.md) |
-| M-config | gear / machine+tier / common+startup / general 四类配置 owner 与同步 | 非默认配置真机加载并同步到客户端 | gear、machine+tier、common+startup 已提交且有运行证据；general 已提交 `741d580d`（wip），待真机验证；活文档 `M-config.md` |
+| M-config | gear / machine+tier / common+startup / general 四类配置 owner 与同步 | 非默认配置真机加载并同步到客户端 | 已验证：P2 W-12–14 与阶段门禁通过；[归档证据](../archive/M-config.md) |
 | M-transfer | 流体/物品传输 owner、pipe 查询生命周期、`SnapshotParticipant`、QE 频率流体 | 管道把流体/物品送入机器并回滚正确 | 未核实 |
 | M-render | transmitter 渲染（OBJ/MTL 几何）、Robit atlas、QIO 渲染 | mcdebug 截图：管线与 QIO 正确渲染 | 未核实 |
 | M-registry | 化学 ingredient 类型注册表、Robit 注册/数据包、官方 legacy alias、biome modifier | 注册冻结后 ID/alias 与官方一致 | 未核实 |

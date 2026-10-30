@@ -1,0 +1,1 @@
+{"resolvedTo":"get","steps":[{"seg":"general","field":"general","class":"mekanism.common.config.GeneralConfig"},{"seg":"minerMaxRadius","field":"minerMaxRadius","class":"mekanism.common.config.value.CachedIntValue"},{"seg":"get","method":"get","class":"java.lang.Integer"}],"value":7}
