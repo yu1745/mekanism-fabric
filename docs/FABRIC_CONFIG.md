@@ -5,7 +5,13 @@
 Mekanism 自有窄接口替代 NeoForge `ModConfigSpec` / `ModConfig.Type`。它不是 Forge Config API 兼容层，
 也不提供事件总线或完整九配置 facade。
 
-## 2026-10-30 GearConfig 世界与连接 owner
+## 2026-10-30 已纳机器 SERVER 配置接线
+
+当前 gear-only owner 已原地扩为 `FabricServerConfig`，固定加载 canonical gear、storage、usage、tiers；文件分别为 `<world>/serverconfig/Mekanism/{gear,machine-storage,machine-usage,tiers}.toml`。新 `FabricServerConfigNetworking` 与客户端 receiver 共享一个配置阶段任务，保留官方字段 schema，用 filename 前缀消除网络字段重名。服务端停止与远程断线清理覆盖同一四份配置，集成服共享实例。原有 general/world/client owner 不变，不提供 PLAY 热重载。详见 `TASK052_MACHINE_CONFIG_CONTINUATION.md` 的实际验证状态。
+
+以下 GearConfig 节记录扩展前已完成的运行证据，类名随后已被上述四配置 owner 替换，不代表仍有第二个 gear-only writer。
+
+## 2026-10-30 GearConfig 世界与连接 owner（历史闭包）
 
 本节更新装备配置状态；下文 Task030/039/040 保留各自历史切片说明，不代表当前所有配置仍限于那些 fragment。
 

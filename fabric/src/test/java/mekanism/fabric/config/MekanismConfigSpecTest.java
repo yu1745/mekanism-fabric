@@ -33,11 +33,11 @@ class MekanismConfigSpecTest {
         source.freeRunnerMaxEnergy.set(9_007_199_254_740_993L);
         Map<String, Object> snapshot = source.getConfigSpec().scalarSnapshot();
         assertEquals(9_007_199_254_740_993L, snapshot.get("free_runner.maxEnergy"));
-        var payload = new mekanism.fabric.network.GearConfigSnapshotPayload("test-session", snapshot);
+        var payload = new mekanism.fabric.network.ServerConfigSnapshotPayload("test-session", snapshot);
         var buffer = new net.minecraft.network.FriendlyByteBuf(io.netty.buffer.Unpooled.buffer());
         try {
-            mekanism.fabric.network.GearConfigSnapshotPayload.CODEC.encode(buffer, payload);
-            assertEquals(payload, mekanism.fabric.network.GearConfigSnapshotPayload.CODEC.decode(buffer));
+            mekanism.fabric.network.ServerConfigSnapshotPayload.CODEC.encode(buffer, payload);
+            assertEquals(payload, mekanism.fabric.network.ServerConfigSnapshotPayload.CODEC.decode(buffer));
             buffer.clear();
             buffer.writeUtf("test-session");
             buffer.writeVarInt(2);
@@ -46,22 +46,22 @@ class MekanismConfigSpecTest {
                 buffer.writeByte(0);
                 buffer.writeByte(1);
             }
-            assertThrows(IllegalArgumentException.class, () -> mekanism.fabric.network.GearConfigSnapshotPayload.CODEC.decode(buffer));
+            assertThrows(IllegalArgumentException.class, () -> mekanism.fabric.network.ServerConfigSnapshotPayload.CODEC.decode(buffer));
             buffer.clear();
             buffer.writeUtf("test-session");
             buffer.writeVarInt(257);
-            assertThrows(IllegalArgumentException.class, () -> mekanism.fabric.network.GearConfigSnapshotPayload.CODEC.decode(buffer));
+            assertThrows(IllegalArgumentException.class, () -> mekanism.fabric.network.ServerConfigSnapshotPayload.CODEC.decode(buffer));
             buffer.clear();
             buffer.writeUtf("test-session");
             buffer.writeVarInt(1);
             buffer.writeUtf("bool.path");
             buffer.writeByte(0);
             buffer.writeByte(2);
-            assertThrows(IllegalArgumentException.class, () -> mekanism.fabric.network.GearConfigSnapshotPayload.CODEC.decode(buffer));
+            assertThrows(IllegalArgumentException.class, () -> mekanism.fabric.network.ServerConfigSnapshotPayload.CODEC.decode(buffer));
             buffer.clear();
-            var ack = new mekanism.fabric.network.GearConfigSnapshotPayload.Ack("test-session");
-            mekanism.fabric.network.GearConfigSnapshotPayload.Ack.CODEC.encode(buffer, ack);
-            assertEquals(ack, mekanism.fabric.network.GearConfigSnapshotPayload.Ack.CODEC.decode(buffer));
+            var ack = new mekanism.fabric.network.ServerConfigSnapshotPayload.Ack("test-session");
+            mekanism.fabric.network.ServerConfigSnapshotPayload.Ack.CODEC.encode(buffer, ack);
+            assertEquals(ack, mekanism.fabric.network.ServerConfigSnapshotPayload.Ack.CODEC.decode(buffer));
         } finally {
             buffer.release();
         }

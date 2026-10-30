@@ -27,7 +27,7 @@ import mekanism.common.tile.machine.TileEntityDigitalMiner;
 import mekanism.common.util.StorageUtils;
 import mekanism.common.util.UnitDisplayUtils.EnergyUnit;
 import mekanism.common.util.WorldUtils;
-import mekanism.fabric.config.FabricGearConfig;
+import mekanism.fabric.config.FabricServerConfig;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -134,7 +134,7 @@ public final class PortReviewFixture implements ModInitializer {
         }
         if (ticks == 1) {
             level.setChunkForced(0, 0, true);
-            check(FabricGearConfig.isOwner(server) && MekanismConfig.gear.isLoaded(), "production world gear config must be loaded");
+            check(FabricServerConfig.isOwner(server) && MekanismConfig.gear.isLoaded(), "production world gear config must be loaded");
             LOGGER.info("PORT_REVIEW_PREREQUISITE production_gear_owner=true");
             ServerPlayer player = new ServerPlayer(server, level, new GameProfile(UUID.randomUUID(), "PortReview"), ClientInformation.createDefault());
             player.connection = MekFakePlayer.setupFakePlayer(level).connection;

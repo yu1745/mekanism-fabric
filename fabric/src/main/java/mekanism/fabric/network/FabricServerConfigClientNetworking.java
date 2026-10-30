@@ -1,6 +1,6 @@
 package mekanism.fabric.network;
 
-import mekanism.fabric.config.FabricGearConfig;
+import mekanism.fabric.config.FabricServerConfig;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientConfigurationConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientConfigurationNetworking;
@@ -11,13 +11,13 @@ import net.minecraft.network.chat.Component;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** Installs the matching connection's gear configuration before acknowledging the server task. */
-public final class FabricGearConfigClientNetworking {
-    private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism/FabricGearClient");
+/** Installs the matching connection's server configuration before acknowledging the server task. */
+public final class FabricServerConfigClientNetworking {
+    private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism/FabricServerConfigClient");
     private static Connection activeConnection;
     private static boolean initialized;
 
-    private FabricGearConfigClientNetworking() {
+    private FabricServerConfigClientNetworking() {
     }
 
     public static synchronized void initialize() {
@@ -26,29 +26,29 @@ public final class FabricGearConfigClientNetworking {
         ClientConfigurationConnectionEvents.DISCONNECT.register((handler, client) -> disconnect(client, handler.connection));
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> disconnect(client, handler.getConnection()));
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
-            synchronized (FabricGearConfigClientNetworking.class) {
+            synchronized (FabricServerConfigClientNetworking.class) {
                 Connection old = activeConnection;
                 activeConnection = null;
-                if (old != null) FabricGearConfig.detachClient(old);
+                if (old != null) FabricServerConfig.detachClient(old);
             }
         });
-        if (!ClientConfigurationNetworking.registerGlobalReceiver(GearConfigSnapshotPayload.TYPE, (payload, context) -> {
+        if (!ClientConfigurationNetworking.registerGlobalReceiver(ServerConfigSnapshotPayload.TYPE, (payload, context) -> {
             Connection connection = context.networkHandler().connection;
             context.client().execute(() -> {
-                synchronized (FabricGearConfigClientNetworking.class) {
+                synchronized (FabricServerConfigClientNetworking.class) {
                     if (activeConnection != connection || !connection.isConnected()) return;
                     try {
-                        FabricGearConfig.attachClient(connection, context.client().getSingleplayerServer(), payload.values());
-                        context.responseSender().sendPacket(new GearConfigSnapshotPayload.Ack(payload.session()));
-                        LOGGER.info("MEKANISM_FABRIC_GEAR_CONFIG_PROOF phase=client_applied session={} values={}", payload.session(), payload.values().size());
+                        FabricServerConfig.attachClient(connection, context.client().getSingleplayerServer(), payload.values());
+                        context.responseSender().sendPacket(new ServerConfigSnapshotPayload.Ack(payload.session()));
+                        LOGGER.info("MEKANISM_FABRIC_SERVER_CONFIG_PROOF phase=client_applied session={} values={}", payload.session(), payload.values().size());
                     } catch (RuntimeException failure) {
-                        LOGGER.error("Unable to install gear configuration", failure);
-                        FabricGearConfig.detachClient(connection);
-                        connection.disconnect(Component.literal("Invalid Mekanism gear configuration"));
+                        LOGGER.error("Unable to install server configuration", failure);
+                        FabricServerConfig.detachClient(connection);
+                        connection.disconnect(Component.literal("Invalid Mekanism server configuration"));
                     }
                 }
             });
-        })) throw new IllegalStateException("Gear configuration receiver already registered");
+        })) throw new IllegalStateException("Server configuration receiver already registered");
         initialized = true;
     }
 
@@ -57,9 +57,9 @@ public final class FabricGearConfigClientNetworking {
     }
 
     private static void disconnect(Minecraft client, Connection connection) {
-        synchronized (FabricGearConfigClientNetworking.class) {
+        synchronized (FabricServerConfigClientNetworking.class) {
             if (activeConnection == connection) activeConnection = null;
         }
-        client.execute(() -> FabricGearConfig.detachClient(connection));
+        client.execute(() -> FabricServerConfig.detachClient(connection));
     }
 }

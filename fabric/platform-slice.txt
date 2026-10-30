@@ -50,7 +50,7 @@ mekanism/fabric/client/render/obj/TransmitterObjGeometry.java
 mekanism/fabric/client/render/obj/TransmitterQuadBaker.java
 mekanism/fabric/config/FabricChemicalConfig.java
 mekanism/fabric/config/FabricClientConfigLifecycle.java
-mekanism/fabric/config/FabricGearConfig.java
+mekanism/fabric/config/FabricServerConfig.java
 mekanism/fabric/config/FabricMekanismConfigManager.java
 mekanism/fabric/config/FabricWindowConfig.java
 mekanism/fabric/config/MekanismConfigSpec.java
@@ -162,8 +162,8 @@ mekanism/fabric/network/FabricChemicalClientNetworking.java
 mekanism/fabric/network/FabricChemicalNetworking.java
 mekanism/fabric/network/FabricContainerClientNetworking.java
 mekanism/fabric/network/FabricContainerNetworking.java
-mekanism/fabric/network/FabricGearConfigClientNetworking.java
-mekanism/fabric/network/FabricGearConfigNetworking.java
+mekanism/fabric/network/FabricServerConfigClientNetworking.java
+mekanism/fabric/network/FabricServerConfigNetworking.java
 mekanism/fabric/network/FabricGearEffectsNetworking.java
 mekanism/fabric/network/FabricMekanismClientNetworking.java
 mekanism/fabric/network/FabricMekanismNetworking.java
@@ -176,7 +176,7 @@ mekanism/fabric/network/FabricTileUpdateHandler.java
 mekanism/fabric/network/FabricTileUpdateNetworking.java
 mekanism/fabric/network/FabricTransmitterClientNetworking.java
 mekanism/fabric/network/FabricTransmitterNetworking.java
-mekanism/fabric/network/GearConfigSnapshotPayload.java
+mekanism/fabric/network/ServerConfigSnapshotPayload.java
 mekanism/fabric/network/MekanismNetworkProtocol.java
 mekanism/fabric/radiation/FabricRadiationAttachments.java
 mekanism/fabric/radiation/FabricRadiationClientLifecycle.java

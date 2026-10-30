@@ -91,7 +91,7 @@ public final class MekanismFabricBootstrap implements ModInitializer {
         FabricMekanismConfigManager.Registration startup = CONFIG_MANAGER.registerAndLoad(STARTUP_CONFIG);
         verifyStartupConfig(startup);
         FabricChemicalConfig.initializeCommon(CONFIG_MANAGER);
-        mekanism.fabric.config.FabricGearConfig.initializeCallbacks();
+        mekanism.fabric.config.FabricServerConfig.initializeCallbacks();
         //Original commonSetup transplant: holiday state starts with the config owner available and wraps filterable sounds once, at startup
         mekanism.common.base.holiday.HolidayManager.init();
         FabricChemicalLifecycle.initialize();
@@ -103,7 +103,7 @@ public final class MekanismFabricBootstrap implements ModInitializer {
         FabricMekanismNetworking.Registration networking = FabricMekanismNetworking.initialize();
         FabricServerPlayNetworking.initialize();
         FabricChemicalNetworking.initialize();
-        mekanism.fabric.network.FabricGearConfigNetworking.initialize();
+        mekanism.fabric.network.FabricServerConfigNetworking.initialize();
         FabricTileUpdateNetworking.initialize();
         FabricContainerNetworking.initialize();
         mekanism.fabric.network.FabricTransmitterNetworking.initialize();

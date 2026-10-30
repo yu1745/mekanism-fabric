@@ -41,7 +41,7 @@ public final class MekanismFabricClientBootstrap implements ClientModInitializer
         FabricRecipeCacheClientLifecycle.initialize();
         FabricMekanismClientNetworking.initialize();
         FabricChemicalClientNetworking.initialize();
-        mekanism.fabric.network.FabricGearConfigClientNetworking.initialize();
+        mekanism.fabric.network.FabricServerConfigClientNetworking.initialize();
         FabricTileUpdateHandler.initializeClient();
         FabricContainerClientNetworking.initializeClient();
         mekanism.fabric.network.FabricTransmitterClientNetworking.initialize();

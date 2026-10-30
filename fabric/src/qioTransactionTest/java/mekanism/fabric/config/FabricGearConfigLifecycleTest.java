@@ -6,6 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Path;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import mekanism.common.config.GearConfig;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.config.listener.ConfigBasedCachedLongSupplier;
@@ -27,32 +30,44 @@ class FabricGearConfigLifecycleTest {
         constructor.setAccessible(true);
         GearConfig server = constructor.newInstance();
         server.getConfigSpec().load(temporaryDirectory.resolve("serverconfig/Mekanism/gear.toml"));
+        Map<String, Object> machineSnapshot = new LinkedHashMap<>();
+        var manager = new FabricMekanismConfigManager(temporaryDirectory.resolve("serverconfig"));
+        try {
+            for (var config : List.of(MekanismConfig.storage, MekanismConfig.usage, MekanismConfig.tiers)) {
+                manager.registerAndLoad(config);
+                config.getConfigSpec().scalarSnapshot().forEach((path, value) -> machineSnapshot.put(config.getFileName() + "." + path, value));
+            }
+        } finally {
+            manager.unloadAll();
+        }
         server.freeRunnerMaxEnergy.set(90_000L);
-        var firstSnapshot = server.getConfigSpec().scalarSnapshot();
+        var firstSnapshot = new LinkedHashMap<>(machineSnapshot);
+        server.getConfigSpec().scalarSnapshot().forEach((path, value) -> firstSnapshot.put("gear." + path, value));
         server.freeRunnerMaxEnergy.set(123_456L);
-        var secondSnapshot = server.getConfigSpec().scalarSnapshot();
+        var secondSnapshot = new LinkedHashMap<>(machineSnapshot);
+        server.getConfigSpec().scalarSnapshot().forEach((path, value) -> secondSnapshot.put("gear." + path, value));
         Connection first = new Connection(PacketFlow.CLIENTBOUND);
         Connection second = new Connection(PacketFlow.CLIENTBOUND);
         var cached = new ConfigBasedCachedLongSupplier(MekanismConfig.gear.freeRunnerMaxEnergy::get,
               MekanismConfig.gear.freeRunnerMaxEnergy);
         assertEquals(64_000L, cached.getAsLong());
         try {
-            FabricGearConfig.attachClient(first, null, firstSnapshot);
+            FabricServerConfig.attachClient(first, null, firstSnapshot);
             assertTrue(MekanismConfig.gear.isLoaded());
             assertEquals(90_000L, cached.getAsLong());
-            assertThrows(IllegalStateException.class, () -> FabricGearConfig.attachClient(first, null, firstSnapshot));
+            assertThrows(IllegalStateException.class, () -> FabricServerConfig.attachClient(first, null, firstSnapshot));
             assertEquals(90_000L, cached.getAsLong());
-            FabricGearConfig.attachClient(second, null, secondSnapshot);
+            FabricServerConfig.attachClient(second, null, secondSnapshot);
             assertEquals(123_456L, cached.getAsLong());
-            FabricGearConfig.detachClient(first);
+            FabricServerConfig.detachClient(first);
             assertTrue(MekanismConfig.gear.isLoaded());
             assertEquals(123_456L, cached.getAsLong());
-            FabricGearConfig.detachClient(second);
+            FabricServerConfig.detachClient(second);
             assertFalse(MekanismConfig.gear.isLoaded());
             assertEquals(64_000L, cached.getAsLong());
         } finally {
-            FabricGearConfig.detachClient(first);
-            FabricGearConfig.detachClient(second);
+            FabricServerConfig.detachClient(first);
+            FabricServerConfig.detachClient(second);
             server.getConfigSpec().unload();
         }
     }
