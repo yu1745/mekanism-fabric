@@ -23,8 +23,7 @@
 | M-release | 核心全量测试、smoke、发布物与限制汇总 | 全部门禁／发布契约通过并完成协调者复核 | 进行中：附加模块优先，完整发布门禁留到 P13。 |
 | M-tools | Tools材料／工具／护甲／配方／刷怪装备与客户端渲染 | 独立附加JAR与一个真实工具使用闭包 | 已验证：Tools 功能与回归通过。[证据](../archive/M-tools.md)。 |
 | M-additions | 塑料方块／气球／TNT／baby生物／对讲机 | 独立附加JAR与实际实体及物品闭包 | 进行中：主体真机与回归通过；语音采集格式受环境限制。[证据](M-additions.md)。 |
-
-| M-generators | 六种发电机／涡轮／裂变／聚变 | 原机器发电与多方块运行及生命周期 | 进行中：W-51–52 注册及六种简单发电机真机通过，继续涡轮。[计划](M-generators.md)。 |
+| M-generators | 六种发电机／涡轮／裂变／聚变 | 原机器发电与多方块运行及生命周期 | 已验证：机器、多方块、GUI／生命周期与回归通过。[证据](../archive/M-generators.md)。 |
 
 ## 旧 Task052 文档归类（按主题；P0 复核范围见归档 M-owner）
 
@@ -47,11 +46,11 @@
 
 ## 发布限制（W-42 准备）
 
-当前范围为 Fabric 核心模块；P8 全套验证和最终发布物核验仍待完成。
+当前代码包含 Fabric 核心及三个附加模块；P13 全套验证和最终发布物核验仍待完成。
 
 - **第三方集成**：ROADMAP 排除的 JEI/EMI、CraftTweaker、ProjectE、FramedBlocks、JsonThings、gender、OpenComputers2 等不在本轮发布范围。混合 JEI/EMI 的公共 `IMekanismAccess`／`MekanismAccess` 服务未提供；ingredient creators 已由独立真实服务承接，不代表 viewer API 已兼容。
 - **历史 46 项**：P3 清单中已有 5 份原源码纳入、32 项由实际 Fabric owner 承接；另有 7 项第三方边界、1 项离线开发工具、1 项旧反射辅助。逐项现状见[对照](evidence/p8-release/w42-historical46-current.csv)，旧反射辅助已由原生透视模型分派取代。
 - **平台交互**：不提供任意 modifier 重绑编辑器；Accessories 默认 H 与 Mekanism HUD 绑定冲突可在原版设置中重绑。命令使用原版权限等级／op 回退，未提供 NeoForge 权限插件的逐 node、动态 context 或离线覆盖。多个飞行提供者之间缺少原版权限归属 token；工具动作采用原版映射，不触发 NeoForge `BlockToolModificationEvent` 或其第三方 data-map 扩展。
 - **本批渲染修复**：Meka-Tool 已按原生显示上下文选择独立左右手模型，QIO dashboard 已按官方 JSON 给 LED 层应用 full-bright；[直接实机结果](evidence/development-render/native-summary.json)。未穷举第三方渲染器与资源包组合。
 - **验证边界**：现有证据覆盖代表装备／流体／网络路径，未穷举全部模块组合、流体／船／滑翔、第三方容器与能量提供者。worldgen 的保存 palette 与 retrogen 触发读数不证明全部矿脉分布；[范围与证据](evidence/p8-release/w42-preparation.json)。
-- **后续模块**：Tools、Additions、Generators 依 ROADMAP P9/P10 分阶段推进，当前核心通过记录不代表这些模块已移植。
+- **后续模块**：Tools、Generators 已完成本轮移植及模块回归；Additions 主体与回归通过，语音 PCM 采集受当前环境限制。完整四 JAR 发布验证仍待 P13。

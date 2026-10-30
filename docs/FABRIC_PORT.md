@@ -6,6 +6,7 @@
 
 | 范围 | 后续结论 |
 |---|---|
+| P12（2026-10-30） | Generators W-50–58 原机器与三多方块、GUI／生命周期真机及 578 tests/build/API/machine 回归通过；独立四 JAR 构建，证据 `archive/M-generators.md`，完整发布验证留 P13。 |
 | P7（2026-10-30） | W-36–39装备／模块factory、冻结注册身份与生成通过；修复MekaSuit实际armor tick与retrogen轮询，578 tests/API/machine门禁通过；证据 `archive/M-gear.md`、`archive/M-registry.md`，未宣布P8发布通过。 |
 | P6（2026-10-30） | W-34–35五种核心多方块生命周期、尺寸失败与重启保持通过，build/API/machine阶段门禁通过；未改生产源，证据 `archive/M-multiblock.md`。 |
 | P5（2026-10-30） | M-render W-29–33通过：模型／粒子／71个GUI／客户端注册和附件渲染已验证，578 tests、API与machine阶段门禁通过；证据 `archive/M-render.md`。 |

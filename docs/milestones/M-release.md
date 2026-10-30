@@ -6,11 +6,11 @@
 
 ## 下一步
 
-Tools已完成独立附加模块实现与真机闭包；Additions主体已接通，语音PCM采集验证受当前环境限制，继续Generators规划。按新版ROADMAP先做模块回归监测，完整发布检查留到P13（W-59–62）。
+Tools与Additions主体已完成；Generators的机器、多方块、GUI、生命周期和冷启动均已真机验证，W-58统一构建、578 tests／API／machine回归已通过，独立四JAR已生成。现在进入P13：W-59修拒绝顺序，再执行W-60–62已有发布检查与C-1…C-4，不扩展审查或测试覆盖。
 
 ## 未决项
 
-W-40 rejection真实失败：等待mismatch rejection超时，客户端先被Fabric registry remap拒绝（998个未知mekanism条目）；尚未修复该fixture路径。其后smoke／W-41 clean发布验证未执行，未宣布发布通过。第三方集成和未穷举风险见README限制节。
+W-40 rejection真实失败：等待mismatch rejection超时，客户端先被Fabric registry remap拒绝（998个未知mekanism条目）；实际选路已确认：Fabric registry-sync-v0 5.3.2 在 BEFORE_CONFIGURE 默认阶段排入注册表同步，而当前版本任务排在 CONFIGURE；应将原版本任务放在 BEFORE_CONFIGURE 的默认阶段之前，保留独立fixture与正常注册表同步。下一步实施此调整并运行现有拒绝与正常连接smoke。其后smoke／W-41 clean发布验证未执行，未宣布发布通过。第三方集成和未穷举风险见README限制节。
 
 ## 验收证据
 
