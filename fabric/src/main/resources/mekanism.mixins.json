@@ -9,6 +9,7 @@
     "server.BiomeFeatureAppenderMixin",
     "recipe.FabricConditionTagCaptureMixin",
     "recipe.RecipeTagScopeCleanupMixin",
+    "recipe.RecipeManagerPublicationMixin",
     "robit.RegistryDataMixin",
     "registry.LegacyRegistryAliasMixin",
     "block.BucketItemMixin",

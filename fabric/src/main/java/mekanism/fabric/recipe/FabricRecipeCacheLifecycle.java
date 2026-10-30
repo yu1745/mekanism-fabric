@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory;
  * Server-side recipe cache lifecycle owner.
  *
  * <p>Binds the actual server {@link net.minecraft.world.item.crafting.RecipeManager} and its matching registry access at {@code SERVER_STARTED} epoch 1. A successful
- * {@code END_DATA_PACK_RELOAD} binds a fresh context with an incremented epoch only after vanilla has replaced the recipes, while a failed reload preserves the
+ * native PlayerList recipe publication binds a fresh context after vanilla replaces recipes and tags. A failed preparation preserves the
  * context identity, epoch, and cache state. {@code SERVER_STOPPED} clears the server-thread binding. Chemical data-map publication alone never advances the recipe
  * epoch.</p>
  */
@@ -46,8 +46,6 @@ public final class FabricRecipeCacheLifecycle {
                 return;
             }
             requireServerThread(server);
-            serverEpoch++;
-            RecipeCacheContext.bind(server.getRecipeManager(), server.registryAccess(), serverEpoch);
             mekanism.common.IncompleteRecipeScanner.recipes(server, null);
             LOGGER.info("MEKANISM_FABRIC_RECIPE_CACHE_PROOF phase=reload epoch={}", serverEpoch);
         });
@@ -75,6 +73,16 @@ public final class FabricRecipeCacheLifecycle {
             serverEpoch = 0;
             LOGGER.info("MEKANISM_FABRIC_RECIPE_CACHE_PROOF phase=stop");
         });
+    }
+
+    /** Called at vanilla's installed-resource publication, before its player recipe sync. */
+    public static void resourcesApplied(MinecraftServer server) {
+        requireServerThread(server);
+        if (serverEpoch == 0) return; //Startup is published at SERVER_STARTED.
+        RecipeCacheContext.Binding current = RecipeCacheContext.currentBinding();
+        if (current != null && current.manager() == server.getRecipeManager()) return;
+        RecipeCacheContext.bind(server.getRecipeManager(), server.registryAccess(), ++serverEpoch);
+        LOGGER.info("MEKANISM_FABRIC_RECIPE_CACHE_PROOF phase=apply epoch={}", serverEpoch);
     }
 
     private static void requireServerThread(MinecraftServer server) {

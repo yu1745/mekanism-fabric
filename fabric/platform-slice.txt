@@ -203,3 +203,6 @@ mekanism/fabric/worldgen/FabricWorldGenConfig.java
 
 # P3 optional recipe condition owner
 mekanism/fabric/recipe/FabricConditionExistsCondition.java
+
+# Bind the actual reload manager before native recipe publication
+mekanism/fabric/mixin/recipe/RecipeManagerPublicationMixin.java

@@ -77,3 +77,12 @@ assemble PASS（23 秒，含三份 slice gate）。真实隔离数据包分别�
 游戏进程已确认 terminal（runClient exit 255），隔离世界完整恢复到启动前备份，临时 mod／wrapper／Xvfb 已清理。无新测试；本批是明确失败点的可恢复实现检查点，W-20 未完成，后续须在同一行为闭包修复并验收。
 
 提交后审查：已检查实际 scanner lifecycle 与 wire decoder diff；count/mode/component 限制及列表不可变性保留，未改变公共 factory 或丢弃不完整配方。真实连接成功支持 empty-wire 修复，但 reload 崩溃仍是明确未通过项，当前检查点不作 W-20 完成声明。原始 crash/log 已显式纳入 Git，后续据此修复。
+
+
+2026-10-30 W-20 reload 修复：固定 Fabric lifecycle 源码显示 END_DATA_PACK_RELOAD 通过 handleAsync 再排入 server executor；vanilla 已在内部 completion 中替换 resources/RecipeManager，此时后续机器 tick 可先看到新 manager，而缓存仍是 epoch1。没有放松 RecipeCacheLookupMonitor 的真实 manager guard。新增最小 PlayerList.reloadResources HEAD mixin，在 vanilla 完成 resources 赋值、updateRegistryTags 后且同步玩家 recipes 前调用现有 FabricRecipeCacheLifecycle.resourcesApplied，立即为实际 manager 发布新 binding 和 epoch。END 只做成功扫描／结果记录；失败发生在准备阶段时不会触发 publication，保留旧 binding，若 vanilla 已实际 apply 则跟随真实 manager 而非回退伪装。
+
+assemble PASS（21 秒，三 slice gates）；platform slice 203→204（真实 publication mixin）。原空 tag 探针客户端正常进入后，scanner=true；移除探针配方并 reload，scanner=false / epoch2，客户端和既有机器继续运行。重新加入配方并第二次 reload，scanner=true / epoch3，客户端保持连接。每次 apply 与 reload 只有同一 epoch，未重复绑定。[实际读数目录](evidence/p3-reload/after.json)，同目录含 start/again、epochs、status 和 lifecycle.log。这修复上一节原始 reload crash 的同一复现；扫描错误日志是探针有意制造的诊断结果，不作为意外 crash。
+
+正常停止自有会话并完整恢复世界，备份与恢复后逐文件 SHA-256 一致；临时 runtime/wrapper/Xvfb 清理。保留现有 foreign-level/manager 检查，另跑既有 RecipeCacheLookupMonitorTest，提交前核对结果。无新增测试。W-20 剩余外部 wrench/cardboard 右键语义核对，之后再进 W-21；不提前声明整个 P3 完成。
+
+提交后审查：检查实际 publication mixin、生命周期和证据 diff，并对照 MinecraftServer.reloadResources 内 resources 赋值 → updateRegistryTags → PlayerList.reloadResources 顺序及 Fabric handleAsync 回调。未放松真实 manager/level 校验，原 binding identity／invalidation 机制继续复用；准备失败不发布，已应用的 manager 不回退旧引用。既有 RecipeCacheLookupMonitorTest PASS（8 秒），未发现本次边界内需再修正的偏离。
