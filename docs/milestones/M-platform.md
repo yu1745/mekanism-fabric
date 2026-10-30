@@ -48,3 +48,12 @@ Chunk watch 的 LOAD/UNLOAD 使用 Fabric ServerChunkEvents；ticket-level 通�
 最终 assemble PASS（21 秒，含三份 slice gates）；真实隔离集成服连接后，实际玩家 advancement JSON 中 `mekanism:root` 的 automatic criterion 完成、done=true。通过真实 give 命令把 basic_tier_installer 放进同一玩家库存后，`mekanism:installer` 的 inventory_changed criterion 也完成、done=true；没有执行 advancement grant。原始 [玩家进度](evidence/p3-advancement/progress.json) 及 UUID／give 结果同目录保存。首个自定义 logged_in criterion 与第二个原版 inventory 条件均证明资源加载／注册／实际 consumer 联通；未以单个成就触发扩大为所有触发器均真机覆盖。
 
 自有会话正常 stopped，完整隔离世界恢复至启动前备份且所有文件 SHA-256 相等，临时 debug dependencies、wrapper 链接、Xvfb 清理。无新测试。CommonPlayerTracker 的其余 logout/dimension/respawn/interaction 行为仍在 W-20 核对，未随本次宣布完成。P3 阶段全门禁仍待 W-22。
+
+
+2026-10-30 W-19：实际源码为 MekanismRecipeConditions 注册两个自定义 condition（不是三种自定义；第三类平台依赖是 tag_empty）。现有 mod_version_loaded / tag_empty 已有 Fabric owner，发现 condition_exists 未注册。本次新增最小 FabricConditionExistsCondition，在 bootstrap 注册同一 ID；Fabric 的 discriminator 占用 `condition`，因此转换将官方嵌套 `condition` 字段映射为 `value`。子条件 decode 出错／缺失时 Optional.empty，test=false，保持官方 orElse fallback。compat 转换支持递归 condition_exists，未知 optional 子条件／后代转 false，不影响顶层未映射条件的失败门禁。新增一个审计过的 platform source（202→203），无新测试。
+
+真实隔离数据包加载四个临时配方：已知且满足的 fabric:all_mods_loaded 子条件使配方加载，recipe give 返回 1；unknown condition、missing child、malformed child 对应配方均在加载时过滤，查询报 Unknown recipe。没有以显式 grant 替代 recipe load。[实际结果](evidence/p3-condition/load-results.json)。运行后正常 stopped，完整世界从备份恢复，临时 debug mod／数据包／wrapper／Xvfb 清理；首轮 assemble PASS（20 秒），最终 assemble 在提交前复核。
+
+W-19 尚有版本比较语义待收口：FabricModVersionLoadedCondition 仍使用 Fabric Version，官方为 Maven ComparableVersion；当前 637 compat 资源的简单版本 floor 已有转换，但不能把这个事实扩称所有输入等价。下一步核对现有 Maven 依赖可用性，并在同一 condition owner 保留官方比较算法，随后继续 W-20。不另建条件框架或删掉官方行为。
+
+本次提交后风格审查：检查已提交 condition adapter、bootstrap、slice 与转换 diff，对照官方 ConditionExistsCondition.test/makeCodec 与固定 Fabric ResourceCondition.CODEC。没有重复 registry 或 fake 条件；false fallback 只作用于 optional 子条件，已有未知顶层条件仍报错。真实资源加载证据覆盖成功及三类失败输入。最终 assemble PASS（4 秒），版本比较差异仍明确待做。

@@ -200,3 +200,6 @@ mekanism/fabric/tile/FabricCapabilityTileLifecycle.java
 mekanism/fabric/tile/MekanismBlockLookups.java
 mekanism/fabric/worldgen/FabricBiomeModifiers.java
 mekanism/fabric/worldgen/FabricWorldGenConfig.java
+
+# P3 optional recipe condition owner
+mekanism/fabric/recipe/FabricConditionExistsCondition.java

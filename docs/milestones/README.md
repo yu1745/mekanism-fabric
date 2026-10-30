@@ -14,7 +14,7 @@
 |---|---|---|---|
 | M-owner | `TileEntityMekanism`、`TileComponentConfig`、频率/`FrequencyManager`、`ContainerType`、`MekanismContainer` 同步、有效侧线程语义、bounding | 真机：Crusher 放置→通电→加工→存读档 | 已验证：P1 W-06–11 与阶段门禁通过；Crusher 加工/存读档、工厂升级、频率持久化、bounding 放拆；[归档证据](../archive/M-owner.md) |
 | M-config | gear / machine+tier / common+startup / general 四类配置 owner 与同步 | 非默认配置真机加载并同步到客户端 | 已验证：P2 W-12–14 与阶段门禁通过；[归档证据](../archive/M-config.md) |
-| M-platform | P3 核心平台入口、命令、成就、条件、生命周期与 payload 核对 | 原始行为由真实 Fabric owner 承接，命令真机可执行 | 进行中：W-15 行为 owner 已核对；W-16/17 命令树、builders 与 ticket 接线已实现并实机验证；W-18 登录成就已修复并真机触发；下一项 W-19；活文档 `M-platform.md` |
+| M-platform | P3 核心平台入口、命令、成就、条件、生命周期与 payload 核对 | 原始行为由真实 Fabric owner 承接，命令真机可执行 | 进行中：W-15 行为 owner 已核对；W-16/17 命令树、builders 与 ticket 接线已实现并实机验证；W-18 登录成就已修复并真机触发；W-19 condition_exists 已补并实机验证，版本比较语义待收口；活文档 `M-platform.md` |
 | M-transfer | 流体/物品传输 owner、pipe 查询生命周期、`SnapshotParticipant`、QE 频率流体 | 管道把流体/物品送入机器并回滚正确 | 未核实 |
 | M-render | transmitter 渲染（OBJ/MTL 几何）、Robit atlas、QIO 渲染 | mcdebug 截图：管线与 QIO 正确渲染 | 未核实 |
 | M-registry | 化学 ingredient 类型注册表、Robit 注册/数据包、官方 legacy alias、biome modifier | 注册冻结后 ID/alias 与官方一致 | 未核实 |

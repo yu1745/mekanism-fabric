@@ -205,7 +205,7 @@ def platformSlice = loadSlice('platform-slice.txt')
 def apiSliceFiles = apiSlice.collect { file("../src/api/java/${it}") }
 def commonSliceFiles = commonSlice.collect { file("../src/main/java/${it}") }
 def platformSliceFiles = platformSlice.collect { file("src/main/java/${it}") }
-if (apiSlice.size() != 262 || commonSlice.size() != 1511 || platformSlice.size() != 202) {
+if (apiSlice.size() != 262 || commonSlice.size() != 1511 || platformSlice.size() != 203) {
     throw new GradleException("Unexpected Fabric source slice counts: api=${apiSlice.size()} common=${commonSlice.size()} platform=${platformSlice.size()}")
 }
 
@@ -713,6 +713,19 @@ tasks.register('transformCompatRecipes') {
             }
             if (type == 'neoforge:tag_empty') {
                 return [condition: 'mekanism:tag_empty', tag: condition['tag']]
+            }
+            if (type == 'mekanism:condition_exists') {
+                def child = condition['condition']
+                def known = ['neoforge:mod_loaded', 'neoforge:not', 'neoforge:tag_empty', 'mekanism:condition_exists', 'mekanism:mod_version_loaded']
+                //Unknown optional child conditions fail closed, like the official codec's orElse.
+                if (child instanceof Map && known.contains(child['type'])) {
+                    try {
+                        return [condition: 'mekanism:condition_exists', value: mapCondition(child)]
+                    } catch (GradleException ignored) {
+                        //An unknown descendant of this optional child also decodes to the false fallback.
+                    }
+                }
+                return [condition: 'mekanism:condition_exists']
             }
             if (type == 'mekanism:mod_version_loaded') {
                 //Handled by the port's FabricModVersionLoadedCondition: same mekanism id, same fields.

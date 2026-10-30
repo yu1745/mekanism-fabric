@@ -1,0 +1,6 @@
+{
+  "known": "{\"success\":true,\"result\":1,\"output\":\"Unlocked 1 recipes for Player342\"}",
+  "unknown": "error [-32603] command execution threw: CommandSyntaxException: Unknown recipe: p3probe:unknown",
+  "missing": "error [-32603] command execution threw: CommandSyntaxException: Unknown recipe: p3probe:missing",
+  "malformed": "error [-32603] command execution threw: CommandSyntaxException: Unknown recipe: p3probe:malformed"
+}
