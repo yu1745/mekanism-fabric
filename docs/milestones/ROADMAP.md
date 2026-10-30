@@ -19,6 +19,7 @@
 - **待用户决定**（不阻塞 worker）：①本地领先 origin 31 个提交，需要时再推送；②wip 提交 squash；③submodule 指针更新。
 
 - **2026-10-30 16:15 巡检 1**：用户指示 worker"聚焦开发"，P8 发布门禁后置。W-43 已完成（`ed8e1217`），worker 工作区正在做 W-44（Tools）。路线图因此：P10 细化为 W-44a–e；新增 P11 Additions（W-45…49）、P12 Generators（W-50…58）、P13 发布收口（W-59…62）；引入"回归监测门"取代对每个模块的整套门禁；rejection smoke 的真失败列为 W-59 首项。
+- **2026-10-30 17:01 巡检 2**：W-44a–e 完成（`184299a6`，Tools 已验证并归档），W-45 Additions 边界页完成（`f206c34f`），worker 工作区已开始 W-46。路线图补：P14 评估页（W-63）、W-46 的 evidence 精简前置、W-51 的同步值上限核算；其余 W-46…62 覆盖剩余工作，暂无需再扩。此后不再有自动巡检，worker 如耗尽 W 项，按 P13 之后的"发布后议题"向用户汇报即可。
 - **0. 已知事实**中的 slice 数字、"约 1700/1802"为 10-30 早间快照，当前 platform slice 已 207→209，不作为依据。
 
 ## 0. 已知事实（规划依据，worker 在 P0 复核）
@@ -165,7 +166,7 @@ mcdebug 使用 `fabric/run` 的隔离调试世界；结束恢复现场。
 | ID | 内容 | 完成标志 / 风险 |
 |---|---|---|
 | W-45 | 边界页：逐文件归类，标出三块高风险——①baby 生物生成修饰（NeoForge `BiomeModifier`/`StructureModifier` → Fabric biome modification API）②语音/对讲机（`client/voice` 的音频与网络）③实体注册与客户端渲染；写 `M-additions.md` | 仅文档；高风险项各有最小边界或明确延期理由 |
-| W-46 | source set / slice / JAR（沿用 W-44a 做法）；配置、registries、blocks、items（塑料方块、气球物品） | 编译 + 注册；非默认配置生效 |
+| W-46 | **先精简 `evidence/`（见 COORDINATOR_NOTES 巡检 2）**；source set / slice / JAR（沿用 W-44a 做法）；配置、registries、blocks、items（塑料方块、气球物品） | 编译 + 注册；非默认配置生效 |
 | W-47 | 实体：Balloon、Obsidian TNT、四种 Baby 生物及其渲染；spawn 修饰映射 | 真机生成/渲染/爆炸各一次读数 |
 | W-48 | 语音/对讲机：先核对官方实际依赖（服务端转发？客户端音频捕获？）；能原样承接则接，依赖平台库则按"超出边界→记录并跳过"处理，**不 stub** | 要么真机可用，要么 `M-additions.md` 未决项写清调用链 |
 | W-49 | 端到端场景 + 回归监测门 + 状态落定 | 状态表更新 |
@@ -177,7 +178,7 @@ mcdebug 使用 `fabric/run` 的隔离调试世界；结束恢复现场。
 | ID | 内容 | 完成标志 / 风险 |
 |---|---|---|
 | W-50 | 边界页：依赖核心哪些多方块 owner（沿用 M-multiblock 的 `mek build` 搭建法）；确认化学/热量/能量传输与裂变/聚变的核心依赖 | 仅文档 |
-| W-51 | source set / slice / JAR；配置（5）、registries（13）、items/blocks | 编译 + 注册 |
+| W-51 | source set / slice / JAR；配置（5）、registries（13）、items/blocks；**同步值上限核算**：核心 304 + Tools 63 + Additions 41 = 408，Generators 配置会逼近 512，须在开工时先数清字段数，必要时有依据地提高 `ServerConfigSnapshotPayload.MAX_VALUES`（记录理由），不得靠排除字段保上限 | 编译 + 注册 |
 | W-52 | 六种简单发电机（含 GUI、能量输出、燃料/热/太阳/风）；这是最小纵向闭包，先于多方块 | 每种一次真机发电读数 |
 | W-53 | 涡轮：多方块成型、转子/叶片、蒸汽→能量、Vent/Valve | 搭建后发电并存读档 |
 | W-54 | 裂变反应堆：成型、燃料/控制棒、热量/冷却剂、逻辑适配器、熔毁路径（只读验证不造成世界破坏——在隔离世界执行） | 受控运行读数 |
@@ -200,6 +201,14 @@ mcdebug 使用 `fabric/run` 的隔离调试世界；结束恢复现场。
 ### 回归监测门（取代 P8 对每个模块的整套门禁）
 
 每个模块（M-tools / M-additions / M-generators）收口前跑一次，便宜且足以发现核心退化：`./fabric-build.sh`、`./gradlew -p fabric verifyApiSliceNoNeoForge`、`scripts/fabric-machine-smoke.sh`。失败先修。完整门禁只在 P13 做一次。
+
+### P14 收尾评估与发布后议题（W-63，可选）
+
+| ID | 内容 | 完成标志 |
+|---|---|---|
+| W-63 | 评估官方 `src/gameTest`（12 文件）与 `src/test` 中可直接纳入的 byte-identical 官方测试，作为发布 oracle；`src/datagen` 生成资源与已发布资源的一致性核对。只做评估页，不扩测试矩阵（遵 `AGENTS.md`） | `M-release.md` 一节：纳入/不纳入各自理由 |
+
+发布后议题（本规划不排期，记录以防遗忘）：第三方集成（JEI/EMI 替代、CraftTweaker、ProjectE、looking-at）、wip 提交 squash、submodule 指针更新、`mod_version` 从 `*-fabric-bootstrap` 过渡到正式号。
 
 ## 4. 依赖与可并行性
 
