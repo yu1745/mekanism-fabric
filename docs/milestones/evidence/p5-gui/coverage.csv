@@ -1,72 +1,72 @@
-menu,screen,slots,evidence,screenshot
-ANTIPROTONIC_NUCLEOSYNTHESIZER,mekanism.client.gui.machine.GuiAntiprotonicNucleosynthesizer,42,antiprotonic_nucleosynthesizer.json,screens/antiprotonic_nucleosynthesizer.png
-BOILER_STATS,mekanism.client.gui.GuiBoilerStats,0,boiler-stats.json,screens/boiler_stats.png
-CHEMICAL_CRYSTALLIZER,mekanism.client.gui.machine.GuiChemicalCrystallizer,41,chemical_crystallizer.json,screens/chemical_crystallizer.png
-CHEMICAL_DISSOLUTION_CHAMBER,mekanism.client.gui.machine.GuiChemicalDissolutionChamber,42,chemical_dissolution_chamber.json,screens/chemical_dissolution_chamber.png
-CHEMICAL_INFUSER,mekanism.client.gui.machine.GuiChemicalInfuser,42,chemical_infuser.json,screens/chemical_infuser.png
-CHEMICAL_INJECTION_CHAMBER,mekanism.client.gui.machine.GuiAdvancedElectricMachine,42,chemical_injection_chamber.json,screens/chemical_injection_chamber.png
-CHEMICAL_OXIDIZER,mekanism.client.gui.machine.GuiChemicalOxidizer,41,chemical_oxidizer.json,screens/chemical_oxidizer.png
-CHEMICAL_TANK,mekanism.client.gui.GuiChemicalTank,43,chemical_tank.json,screens/chemical_tank.png
-CHEMICAL_WASHER,mekanism.client.gui.machine.GuiChemicalWasher,42,chemical_washer.json,screens/chemical_washer.png
-COMBINER,mekanism.client.gui.machine.GuiCombiner,42,combiner.json,screens/combiner.png
-CRAFTING_ROBIT,mekanism.client.gui.robit.GuiRobitCrafting,46,robit-crafting.json,screens/crafting_robit.png
-CRUSHER,mekanism.client.gui.machine.GuiElectricMachine,41,crusher.json,screens/crusher.png
-DICTIONARY,mekanism.client.gui.item.GuiDictionary,36,valid-item-dictionary.json,screens/dictionary.png
-DIGITAL_MINER,mekanism.client.gui.machine.GuiDigitalMiner,66,large-digital_miner.json,screens/digital_miner.png
-DIGITAL_MINER_CONFIG,mekanism.client.gui.machine.GuiDigitalMinerConfig,36,miner-config.json,screens/digital_miner_config.png
-DIMENSIONAL_STABILIZER,mekanism.client.gui.GuiDimensionalStabilizer,39,dimensional_stabilizer.json,screens/dimensional_stabilizer.png
-DYNAMIC_TANK,mekanism.client.gui.GuiDynamicTank,43,formed-tank.json,screens/dynamic_tank.png
-ELECTRIC_PUMP,mekanism.client.gui.machine.GuiElectricPump,41,electric_pump.json,screens/electric_pump.png
-ELECTROLYTIC_SEPARATOR,mekanism.client.gui.machine.GuiElectrolyticSeparator,42,electrolytic_separator.json,screens/electrolytic_separator.png
-ENERGIZED_SMELTER,mekanism.client.gui.machine.GuiElectricMachine,41,energized_smelter.json,screens/energized_smelter.png
-ENERGY_CUBE,mekanism.client.gui.GuiEnergyCube,43,energy_cube.json,screens/energy_cube.png
-ENRICHMENT_CHAMBER,mekanism.client.gui.machine.GuiElectricMachine,41,enrichment_chamber.json,screens/enrichment_chamber.png
-FACTORY,mekanism.client.gui.machine.GuiFactory,45,factory.json,screens/factory.png
-FLUIDIC_PLENISHER,mekanism.client.gui.machine.GuiFluidicPlenisher,41,fluidic_plenisher.json,screens/fluidic_plenisher.png
-FLUID_TANK,mekanism.client.gui.GuiFluidTank,43,fluid_tank.json,screens/fluid_tank.png
-FORMULAIC_ASSEMBLICATOR,mekanism.client.gui.machine.GuiFormulaicAssemblicator,73,formulaic_assemblicator.json,screens/formulaic_assemblicator.png
-FUELWOOD_HEATER,mekanism.client.gui.machine.GuiFuelwoodHeater,37,fuelwood_heater.json,screens/fuelwood_heater.png
-INDUCTION_MATRIX,mekanism.client.gui.GuiInductionMatrix,43,formed-matrix.json,screens/induction_matrix.png
-INVENTORY_ROBIT,mekanism.client.gui.robit.GuiRobitInventory,63,robit-inventory.json,screens/inventory_robit.png
-ISOTOPIC_CENTRIFUGE,mekanism.client.gui.machine.GuiIsotopicCentrifuge,41,isotopic_centrifuge.json,screens/isotopic_centrifuge.png
-LASER_AMPLIFIER,mekanism.client.gui.GuiLaserAmplifier,36,laser_amplifier.json,screens/laser_amplifier.png
-LASER_TRACTOR_BEAM,mekanism.client.gui.GuiLaserTractorBeam,63,laser_tractor_beam.json,screens/laser_tractor_beam.png
-LOGISTICAL_SORTER,mekanism.client.gui.GuiLogisticalSorter,38,large-logistical_sorter.json,screens/logistical_sorter.png
-MAIN_ROBIT,mekanism.client.gui.robit.GuiRobitMain,37,robit-main.json,screens/main_robit.png
-MATRIX_STATS,mekanism.client.gui.GuiMatrixStats,0,matrix-stats.json,screens/matrix_stats.png
-METALLURGIC_INFUSER,mekanism.client.gui.machine.GuiMetallurgicInfuser,42,metallurgic_infuser.json,screens/metallurgic_infuser.png
-MODIFICATION_STATION,mekanism.client.gui.GuiModificationStation,44,modification_station.json,screens/modification_station.png
-MODULE_TWEAKER,mekanism.client.gui.GuiModuleTweaker,14,module-tweaker.json,screens/module_tweaker.png
-NUTRITIONAL_LIQUIFIER,mekanism.client.gui.machine.GuiNutritionalLiquifier,43,nutritional_liquifier.json,screens/nutritional_liquifier.png
-OREDICTIONIFICATOR,mekanism.client.gui.machine.GuiOredictionificator,38,oredictionificator.json,screens/oredictionificator.png
-OSMIUM_COMPRESSOR,mekanism.client.gui.machine.GuiAdvancedElectricMachine,42,osmium_compressor.json,screens/osmium_compressor.png
-PAINTING_MACHINE,mekanism.client.gui.machine.GuiPaintingMachine,42,painting_machine.json,screens/painting_machine.png
-PERSONAL_STORAGE_BLOCK,mekanism.client.gui.GuiPersonalStorageTile,90,personal_storage_block.json,screens/personal_storage_block.png
-PERSONAL_STORAGE_ITEM,mekanism.client.gui.item.GuiPersonalStorageItem,90,valid-item-personal_chest.json,screens/personal_storage_item.png
-PIGMENT_EXTRACTOR,mekanism.client.gui.machine.GuiPigmentExtractor,41,pigment_extractor.json,screens/pigment_extractor.png
-PIGMENT_MIXER,mekanism.client.gui.machine.GuiPigmentMixer,42,pigment_mixer.json,screens/pigment_mixer.png
-PORTABLE_QIO_DASHBOARD,mekanism.client.gui.qio.GuiPortableQIODashboard,66,valid-item-portable_qio_dashboard.json,screens/portable_qio_dashboard.png
-PORTABLE_TELEPORTER,mekanism.client.gui.item.GuiPortableTeleporter,0,valid-item-portable_teleporter.json,screens/portable_teleporter.png
-PRECISION_SAWMILL,mekanism.client.gui.machine.GuiPrecisionSawmill,42,precision_sawmill.json,screens/precision_sawmill.png
-PRESSURIZED_REACTION_CHAMBER,mekanism.client.gui.machine.GuiPRC,41,pressurized_reaction_chamber.json,screens/pressurized_reaction_chamber.png
-PURIFICATION_CHAMBER,mekanism.client.gui.machine.GuiAdvancedElectricMachine,42,purification_chamber.json,screens/purification_chamber.png
-QIO_DASHBOARD,mekanism.client.gui.qio.GuiQIODashboard,66,qio_dashboard.json,screens/qio_dashboard.png
-QIO_DRIVE_ARRAY,mekanism.client.gui.qio.GuiQIODriveArray,48,qio_drive_array.json,screens/qio_drive_array.png
-QIO_EXPORTER,mekanism.client.gui.qio.GuiQIOExporter,38,qio_exporter.json,screens/qio_exporter.png
-QIO_FREQUENCY_SELECT_ITEM,mekanism.client.gui.qio.GuiQIOItemFrequencySelect,0,qio-item-frequency-select.json,screens/qio_frequency_select_item.png
-QIO_FREQUENCY_SELECT_TILE,mekanism.client.gui.qio.GuiQIOTileFrequencySelect,0,qio-tile-frequency-select.json,screens/qio_frequency_select_tile.png
-QIO_IMPORTER,mekanism.client.gui.qio.GuiQIOImporter,38,qio_importer.json,screens/qio_importer.png
-QIO_REDSTONE_ADAPTER,mekanism.client.gui.qio.GuiQIORedstoneAdapter,36,qio_redstone_adapter.json,screens/qio_redstone_adapter.png
-QUANTUM_ENTANGLOPORTER,mekanism.client.gui.GuiQuantumEntangloporter,38,quantum_entangloporter.json,screens/quantum_entangloporter.png
-REPAIR_ROBIT,mekanism.client.gui.robit.GuiRobitRepair,39,robit-repair.json,screens/repair_robit.png
-RESISTIVE_HEATER,mekanism.client.gui.machine.GuiResistiveHeater,39,resistive_heater.json,screens/resistive_heater.png
-ROTARY_CONDENSENTRATOR,mekanism.client.gui.machine.GuiRotaryCondensentrator,43,rotary_condensentrator.json,screens/rotary_condensentrator.png
-SECURITY_DESK,mekanism.client.gui.GuiSecurityDesk,38,security_desk.json,screens/security_desk.png
-SEISMIC_READER,mekanism.client.gui.item.GuiSeismicReader,0,valid-item-seismic_reader.json,screens/seismic_reader.png
-SEISMIC_VIBRATOR,mekanism.client.gui.machine.GuiSeismicVibrator,37,seismic_vibrator.json,screens/seismic_vibrator.png
-SMELTING_ROBIT,mekanism.client.gui.robit.GuiRobitSmelting,38,robit-smelting.json,screens/smelting_robit.png
-SOLAR_NEUTRON_ACTIVATOR,mekanism.client.gui.machine.GuiSolarNeutronActivator,38,solar_neutron_activator.json,screens/solar_neutron_activator.png
-SPS,mekanism.client.gui.GuiSPS,36,formed-sps.json,screens/sps.png
-TELEPORTER,mekanism.client.gui.GuiTeleporter,39,teleporter.json,screens/teleporter.png
-THERMAL_EVAPORATION_CONTROLLER,mekanism.client.gui.GuiThermalEvaporationController,40,formed-evaporation.json,screens/thermal_evaporation_controller.png
-THERMOELECTRIC_BOILER,mekanism.client.gui.GuiThermoelectricBoiler,36,formed-boiler.json,screens/thermoelectric_boiler.png
+menu,screen,slots,evidence,screenshot,screenshot_retention
+ANTIPROTONIC_NUCLEOSYNTHESIZER,mekanism.client.gui.machine.GuiAntiprotonicNucleosynthesizer,42,antiprotonic_nucleosynthesizer.json,,pruned; original capture metadata and full structured result retained
+BOILER_STATS,mekanism.client.gui.GuiBoilerStats,0,boiler-stats.json,,pruned; original capture metadata and full structured result retained
+CHEMICAL_CRYSTALLIZER,mekanism.client.gui.machine.GuiChemicalCrystallizer,41,chemical_crystallizer.json,,pruned; original capture metadata and full structured result retained
+CHEMICAL_DISSOLUTION_CHAMBER,mekanism.client.gui.machine.GuiChemicalDissolutionChamber,42,chemical_dissolution_chamber.json,,pruned; original capture metadata and full structured result retained
+CHEMICAL_INFUSER,mekanism.client.gui.machine.GuiChemicalInfuser,42,chemical_infuser.json,,pruned; original capture metadata and full structured result retained
+CHEMICAL_INJECTION_CHAMBER,mekanism.client.gui.machine.GuiAdvancedElectricMachine,42,chemical_injection_chamber.json,,pruned; original capture metadata and full structured result retained
+CHEMICAL_OXIDIZER,mekanism.client.gui.machine.GuiChemicalOxidizer,41,chemical_oxidizer.json,,pruned; original capture metadata and full structured result retained
+CHEMICAL_TANK,mekanism.client.gui.GuiChemicalTank,43,chemical_tank.json,,pruned; original capture metadata and full structured result retained
+CHEMICAL_WASHER,mekanism.client.gui.machine.GuiChemicalWasher,42,chemical_washer.json,,pruned; original capture metadata and full structured result retained
+COMBINER,mekanism.client.gui.machine.GuiCombiner,42,combiner.json,,pruned; original capture metadata and full structured result retained
+CRAFTING_ROBIT,mekanism.client.gui.robit.GuiRobitCrafting,46,robit-crafting.json,,pruned; original capture metadata and full structured result retained
+CRUSHER,mekanism.client.gui.machine.GuiElectricMachine,41,crusher.json,screens/crusher.png,retained
+DICTIONARY,mekanism.client.gui.item.GuiDictionary,36,valid-item-dictionary.json,,pruned; original capture metadata and full structured result retained
+DIGITAL_MINER,mekanism.client.gui.machine.GuiDigitalMiner,66,large-digital_miner.json,screens/digital_miner.png,retained
+DIGITAL_MINER_CONFIG,mekanism.client.gui.machine.GuiDigitalMinerConfig,36,miner-config.json,,pruned; original capture metadata and full structured result retained
+DIMENSIONAL_STABILIZER,mekanism.client.gui.GuiDimensionalStabilizer,39,dimensional_stabilizer.json,,pruned; original capture metadata and full structured result retained
+DYNAMIC_TANK,mekanism.client.gui.GuiDynamicTank,43,formed-tank.json,screens/dynamic_tank.png,retained
+ELECTRIC_PUMP,mekanism.client.gui.machine.GuiElectricPump,41,electric_pump.json,,pruned; original capture metadata and full structured result retained
+ELECTROLYTIC_SEPARATOR,mekanism.client.gui.machine.GuiElectrolyticSeparator,42,electrolytic_separator.json,,pruned; original capture metadata and full structured result retained
+ENERGIZED_SMELTER,mekanism.client.gui.machine.GuiElectricMachine,41,energized_smelter.json,,pruned; original capture metadata and full structured result retained
+ENERGY_CUBE,mekanism.client.gui.GuiEnergyCube,43,energy_cube.json,,pruned; original capture metadata and full structured result retained
+ENRICHMENT_CHAMBER,mekanism.client.gui.machine.GuiElectricMachine,41,enrichment_chamber.json,,pruned; original capture metadata and full structured result retained
+FACTORY,mekanism.client.gui.machine.GuiFactory,45,factory.json,screens/factory.png,retained
+FLUIDIC_PLENISHER,mekanism.client.gui.machine.GuiFluidicPlenisher,41,fluidic_plenisher.json,,pruned; original capture metadata and full structured result retained
+FLUID_TANK,mekanism.client.gui.GuiFluidTank,43,fluid_tank.json,,pruned; original capture metadata and full structured result retained
+FORMULAIC_ASSEMBLICATOR,mekanism.client.gui.machine.GuiFormulaicAssemblicator,73,formulaic_assemblicator.json,,pruned; original capture metadata and full structured result retained
+FUELWOOD_HEATER,mekanism.client.gui.machine.GuiFuelwoodHeater,37,fuelwood_heater.json,,pruned; original capture metadata and full structured result retained
+INDUCTION_MATRIX,mekanism.client.gui.GuiInductionMatrix,43,formed-matrix.json,screens/induction_matrix.png,retained
+INVENTORY_ROBIT,mekanism.client.gui.robit.GuiRobitInventory,63,robit-inventory.json,,pruned; original capture metadata and full structured result retained
+ISOTOPIC_CENTRIFUGE,mekanism.client.gui.machine.GuiIsotopicCentrifuge,41,isotopic_centrifuge.json,,pruned; original capture metadata and full structured result retained
+LASER_AMPLIFIER,mekanism.client.gui.GuiLaserAmplifier,36,laser_amplifier.json,,pruned; original capture metadata and full structured result retained
+LASER_TRACTOR_BEAM,mekanism.client.gui.GuiLaserTractorBeam,63,laser_tractor_beam.json,,pruned; original capture metadata and full structured result retained
+LOGISTICAL_SORTER,mekanism.client.gui.GuiLogisticalSorter,38,large-logistical_sorter.json,,pruned; original capture metadata and full structured result retained
+MAIN_ROBIT,mekanism.client.gui.robit.GuiRobitMain,37,robit-main.json,screens/main_robit.png,retained
+MATRIX_STATS,mekanism.client.gui.GuiMatrixStats,0,matrix-stats.json,,pruned; original capture metadata and full structured result retained
+METALLURGIC_INFUSER,mekanism.client.gui.machine.GuiMetallurgicInfuser,42,metallurgic_infuser.json,,pruned; original capture metadata and full structured result retained
+MODIFICATION_STATION,mekanism.client.gui.GuiModificationStation,44,modification_station.json,,pruned; original capture metadata and full structured result retained
+MODULE_TWEAKER,mekanism.client.gui.GuiModuleTweaker,14,module-tweaker.json,,pruned; original capture metadata and full structured result retained
+NUTRITIONAL_LIQUIFIER,mekanism.client.gui.machine.GuiNutritionalLiquifier,43,nutritional_liquifier.json,,pruned; original capture metadata and full structured result retained
+OREDICTIONIFICATOR,mekanism.client.gui.machine.GuiOredictionificator,38,oredictionificator.json,,pruned; original capture metadata and full structured result retained
+OSMIUM_COMPRESSOR,mekanism.client.gui.machine.GuiAdvancedElectricMachine,42,osmium_compressor.json,,pruned; original capture metadata and full structured result retained
+PAINTING_MACHINE,mekanism.client.gui.machine.GuiPaintingMachine,42,painting_machine.json,,pruned; original capture metadata and full structured result retained
+PERSONAL_STORAGE_BLOCK,mekanism.client.gui.GuiPersonalStorageTile,90,personal_storage_block.json,,pruned; original capture metadata and full structured result retained
+PERSONAL_STORAGE_ITEM,mekanism.client.gui.item.GuiPersonalStorageItem,90,valid-item-personal_chest.json,,pruned; original capture metadata and full structured result retained
+PIGMENT_EXTRACTOR,mekanism.client.gui.machine.GuiPigmentExtractor,41,pigment_extractor.json,,pruned; original capture metadata and full structured result retained
+PIGMENT_MIXER,mekanism.client.gui.machine.GuiPigmentMixer,42,pigment_mixer.json,,pruned; original capture metadata and full structured result retained
+PORTABLE_QIO_DASHBOARD,mekanism.client.gui.qio.GuiPortableQIODashboard,66,valid-item-portable_qio_dashboard.json,screens/portable_qio_dashboard.png,retained
+PORTABLE_TELEPORTER,mekanism.client.gui.item.GuiPortableTeleporter,0,valid-item-portable_teleporter.json,,pruned; original capture metadata and full structured result retained
+PRECISION_SAWMILL,mekanism.client.gui.machine.GuiPrecisionSawmill,42,precision_sawmill.json,,pruned; original capture metadata and full structured result retained
+PRESSURIZED_REACTION_CHAMBER,mekanism.client.gui.machine.GuiPRC,41,pressurized_reaction_chamber.json,,pruned; original capture metadata and full structured result retained
+PURIFICATION_CHAMBER,mekanism.client.gui.machine.GuiAdvancedElectricMachine,42,purification_chamber.json,,pruned; original capture metadata and full structured result retained
+QIO_DASHBOARD,mekanism.client.gui.qio.GuiQIODashboard,66,qio_dashboard.json,screens/qio_dashboard.png,retained
+QIO_DRIVE_ARRAY,mekanism.client.gui.qio.GuiQIODriveArray,48,qio_drive_array.json,,pruned; original capture metadata and full structured result retained
+QIO_EXPORTER,mekanism.client.gui.qio.GuiQIOExporter,38,qio_exporter.json,,pruned; original capture metadata and full structured result retained
+QIO_FREQUENCY_SELECT_ITEM,mekanism.client.gui.qio.GuiQIOItemFrequencySelect,0,qio-item-frequency-select.json,,pruned; original capture metadata and full structured result retained
+QIO_FREQUENCY_SELECT_TILE,mekanism.client.gui.qio.GuiQIOTileFrequencySelect,0,qio-tile-frequency-select.json,,pruned; original capture metadata and full structured result retained
+QIO_IMPORTER,mekanism.client.gui.qio.GuiQIOImporter,38,qio_importer.json,,pruned; original capture metadata and full structured result retained
+QIO_REDSTONE_ADAPTER,mekanism.client.gui.qio.GuiQIORedstoneAdapter,36,qio_redstone_adapter.json,,pruned; original capture metadata and full structured result retained
+QUANTUM_ENTANGLOPORTER,mekanism.client.gui.GuiQuantumEntangloporter,38,quantum_entangloporter.json,,pruned; original capture metadata and full structured result retained
+REPAIR_ROBIT,mekanism.client.gui.robit.GuiRobitRepair,39,robit-repair.json,,pruned; original capture metadata and full structured result retained
+RESISTIVE_HEATER,mekanism.client.gui.machine.GuiResistiveHeater,39,resistive_heater.json,,pruned; original capture metadata and full structured result retained
+ROTARY_CONDENSENTRATOR,mekanism.client.gui.machine.GuiRotaryCondensentrator,43,rotary_condensentrator.json,,pruned; original capture metadata and full structured result retained
+SECURITY_DESK,mekanism.client.gui.GuiSecurityDesk,38,security_desk.json,,pruned; original capture metadata and full structured result retained
+SEISMIC_READER,mekanism.client.gui.item.GuiSeismicReader,0,valid-item-seismic_reader.json,,pruned; original capture metadata and full structured result retained
+SEISMIC_VIBRATOR,mekanism.client.gui.machine.GuiSeismicVibrator,37,seismic_vibrator.json,,pruned; original capture metadata and full structured result retained
+SMELTING_ROBIT,mekanism.client.gui.robit.GuiRobitSmelting,38,robit-smelting.json,,pruned; original capture metadata and full structured result retained
+SOLAR_NEUTRON_ACTIVATOR,mekanism.client.gui.machine.GuiSolarNeutronActivator,38,solar_neutron_activator.json,,pruned; original capture metadata and full structured result retained
+SPS,mekanism.client.gui.GuiSPS,36,formed-sps.json,screens/sps.png,retained
+TELEPORTER,mekanism.client.gui.GuiTeleporter,39,teleporter.json,screens/teleporter.png,retained
+THERMAL_EVAPORATION_CONTROLLER,mekanism.client.gui.GuiThermalEvaporationController,40,formed-evaporation.json,,pruned; original capture metadata and full structured result retained
+THERMOELECTRIC_BOILER,mekanism.client.gui.GuiThermoelectricBoiler,36,formed-boiler.json,screens/thermoelectric_boiler.png,retained

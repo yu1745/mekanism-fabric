@@ -19,7 +19,7 @@ W-29 `be66e52c`：六类OBJ owner映射与连接／断开真机截图；修复�
 
 W-30 `44cd7bb1`：四粒子、JSON及直接tick调用方接通；保留DataBased emitting语义，既有focused tests与原生engine验证通过。[验收](../milestones/evidence/p5-model-particles/validation.json)。
 
-W-31 `64fcddea`：全部71个真实menu/screen及截图覆盖，screenFault为空；未把GUI打开当作P6生命周期完成。[覆盖](../milestones/evidence/p5-gui/coverage.csv)。
+W-31 `64fcddea`：全部71个真实menu/screen当时均完成截图，screenFault为空；现保留代表帧和完整JSON读数；未把GUI打开当作P6生命周期完成。[覆盖](../milestones/evidence/p5-gui/coverage.csv)。
 
 W-32 `2f56427a`／`98caf953`／`fa93e072`／`8ad14311`：原属性、颜色、方块粒子、Accessories与流体视觉缺口接通；30项映射无pending。[映射](../milestones/evidence/p5-client-registration/official-client-owners.csv)、[流体验收及限制](../milestones/evidence/p5-fluid-visuals/validation.json)。
 

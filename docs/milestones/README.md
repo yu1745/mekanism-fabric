@@ -14,14 +14,14 @@
 |---|---|---|---|
 | M-owner | `TileEntityMekanism`、`TileComponentConfig`、频率/`FrequencyManager`、`ContainerType`、`MekanismContainer` 同步、有效侧线程语义、bounding | 真机：Crusher 放置→通电→加工→存读档 | 已验证：P1 W-06–11与门禁通过；[证据](../archive/M-owner.md)。 |
 | M-config | gear / machine+tier / common+startup / general 四类配置 owner 与同步 | 非默认配置真机加载并同步到客户端 | 已验证：P2 W-12–14与门禁通过；[证据](../archive/M-config.md)。 |
-| M-platform | P3 核心平台入口、命令、成就、条件、生命周期与 payload 核对 | 原始行为由真实 Fabric owner 承接，命令真机可执行 | 已验证：P3 W-15–22与门禁通过；46项边界有明确理由；[证据](../archive/M-platform.md)。 |
+| M-platform | P3 核心平台入口、命令、成就、条件、生命周期与 payload 核对 | 原始行为由真实 Fabric owner 承接，命令真机可执行 | 已验证：P3 与回归通过，46 项边界已说明。[证据](../archive/M-platform.md)。 |
 | M-transfer | 能量、流体、物品、化学、热量传输与网络生命周期 | 管线连接真实机器，传输／回滚与存读档后重建正确 | 已验证：P4 W-23–28与门禁通过；[证据](../archive/M-transfer.md)。 |
 | M-render | transmitter/Robit/QIO 模型、粒子、GUI、按键与客户端注册 | mcdebug 实际外观／连接截图与 GUI 巡检 | 已验证：P5 W-29–33及578 tests/API/machine门禁通过；[证据](../archive/M-render.md)。 |
 | M-multiblock | 五种核心多方块生命周期 | 破坏重建、区块重载、存读档、尺寸失败路径 | 已验证：P6 W-34–35与build/API/machine门禁通过；[证据](../archive/M-multiblock.md)。 |
 | M-registry | 化学 ingredient 类型注册表、Robit 注册/数据包、官方 legacy alias、biome modifier | 注册冻结后 ID/alias 与官方一致 | 已验证：W-38–39注册／生成与P7门禁通过；[证据](../archive/M-registry.md)。 |
 | M-gear | accessory、Curios 策略、ItemAbility、suit/tool 规则 | 穿戴/工具行为真机核对 | 已验证：W-36–37功能／factory与P7门禁通过；[证据](../archive/M-gear.md)。 |
-| M-release | 核心全量测试、smoke、发布物与限制汇总 | 全部门禁／发布契约通过并完成协调者复核 | 进行中：安全网复核已关闭；按用户要求优先附加模块开发，余下发布检查顺延。 |
-| M-tools | Tools材料／工具／护甲／配方／刷怪装备与客户端渲染 | 独立附加JAR与一个真实工具使用闭包 | 已验证：W-44a–e实现、真机闭包与核心回归通过；[证据](../archive/M-tools.md)。 |
+| M-release | 核心全量测试、smoke、发布物与限制汇总 | 全部门禁／发布契约通过并完成协调者复核 | 进行中：附加模块优先，完整发布门禁留到 P13。 |
+| M-tools | Tools材料／工具／护甲／配方／刷怪装备与客户端渲染 | 独立附加JAR与一个真实工具使用闭包 | 已验证：Tools 功能与回归通过。[证据](../archive/M-tools.md)。 |
 | M-additions | 塑料方块／气球／TNT／baby生物／对讲机 | 独立附加JAR与实际实体及物品闭包 | 进行中：W-45边界已落，接W-46真实主干；见M-additions.md。 |
 
 ## 旧 Task052 文档归类（按主题；P0 复核范围见归档 M-owner）
