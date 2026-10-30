@@ -1,0 +1,65 @@
+source,phase,owner
+mekanism/additions/client/AdditionsClient.java,W-46,原注册/配置/方块物品主干；客户端入口为立即调用方
+mekanism/additions/client/AdditionsClientRegistration.java,W-46,原注册/配置/方块物品主干；客户端入口为立即调用方
+mekanism/additions/client/AdditionsKeyHandler.java,W-48,原JDK音频/TCP和真实server/connection owner
+mekanism/additions/client/model/AdditionsModelCache.java,W-47,原实体继承/存档/追踪与原模型渲染
+mekanism/additions/client/model/ModelBabyCreeper.java,W-47,原实体继承/存档/追踪与原模型渲染
+mekanism/additions/client/model/ModelBabyEnderman.java,W-47,原实体继承/存档/追踪与原模型渲染
+mekanism/additions/client/recipe_viewer/aliases/AdditionsAliasMapping.java,排除,第三方JEI/alias，沿路线图既有边界
+mekanism/additions/client/recipe_viewer/aliases/AdditionsAliases.java,排除,第三方JEI/alias，沿路线图既有边界
+mekanism/additions/client/recipe_viewer/jei/AdditionsJEI.java,排除,第三方JEI/alias，沿路线图既有边界
+mekanism/additions/client/render/entity/RenderBabyCreeper.java,W-47,原实体继承/存档/追踪与原模型渲染
+mekanism/additions/client/render/entity/RenderBabyEnderman.java,W-47,原实体继承/存档/追踪与原模型渲染
+mekanism/additions/client/render/entity/RenderBalloon.java,W-47,原实体继承/存档/追踪与原模型渲染
+mekanism/additions/client/render/entity/layer/BabyCreeperChargeLayer.java,W-47,原实体继承/存档/追踪与原模型渲染
+mekanism/additions/client/render/entity/layer/BabyEndermanEyesLayer.java,W-47,原实体继承/存档/追踪与原模型渲染
+mekanism/additions/client/render/entity/layer/BabyEndermanHeldBlockLayer.java,W-47,原实体继承/存档/追踪与原模型渲染
+mekanism/additions/client/voice/VoiceClient.java,W-48,原JDK音频/TCP和真实server/connection owner
+mekanism/additions/client/voice/VoiceInput.java,W-48,原JDK音频/TCP和真实server/connection owner
+mekanism/additions/client/voice/VoiceOutput.java,W-48,原JDK音频/TCP和真实server/connection owner
+mekanism/additions/common/AdditionsLang.java,W-46,原注册/配置/方块物品主干；客户端入口为立即调用方
+mekanism/additions/common/AdditionsTags.java,W-46,原注册/配置/方块物品主干；客户端入口为立即调用方
+mekanism/additions/common/MekanismAdditions.java,W-46,原注册/配置/方块物品主干；客户端入口为立即调用方
+mekanism/additions/common/advancements/AdditionsAdvancements.java,W-46,原注册/配置/方块物品主干；客户端入口为立即调用方
+mekanism/additions/common/block/BlockGlowPanel.java,W-46,原注册/配置/方块物品主干；客户端入口为立即调用方
+mekanism/additions/common/block/BlockObsidianTNT.java,W-46,原注册/配置/方块物品主干；客户端入口为立即调用方
+mekanism/additions/common/block/ExtendedFluidLogType.java,W-46,原注册/配置/方块物品主干；客户端入口为立即调用方
+mekanism/additions/common/block/IStateExtendedFluidLoggable.java,W-46,原注册/配置/方块物品主干；客户端入口为立即调用方
+mekanism/additions/common/block/plastic/BlockPlastic.java,W-46,原注册/配置/方块物品主干；客户端入口为立即调用方
+mekanism/additions/common/block/plastic/BlockPlasticFence.java,W-46,原注册/配置/方块物品主干；客户端入口为立即调用方
+mekanism/additions/common/block/plastic/BlockPlasticFenceGate.java,W-46,原注册/配置/方块物品主干；客户端入口为立即调用方
+mekanism/additions/common/block/plastic/BlockPlasticRoad.java,W-46,原注册/配置/方块物品主干；客户端入口为立即调用方
+mekanism/additions/common/block/plastic/BlockPlasticSlab.java,W-46,原注册/配置/方块物品主干；客户端入口为立即调用方
+mekanism/additions/common/block/plastic/BlockPlasticStairs.java,W-46,原注册/配置/方块物品主干；客户端入口为立即调用方
+mekanism/additions/common/block/plastic/BlockPlasticTransparent.java,W-46,原注册/配置/方块物品主干；客户端入口为立即调用方
+mekanism/additions/common/block/plastic/BlockPlasticTransparentSlab.java,W-46,原注册/配置/方块物品主干；客户端入口为立即调用方
+mekanism/additions/common/block/plastic/BlockPlasticTransparentStairs.java,W-46,原注册/配置/方块物品主干；客户端入口为立即调用方
+mekanism/additions/common/config/AdditionsClientConfig.java,W-46,原注册/配置/方块物品主干；客户端入口为立即调用方
+mekanism/additions/common/config/AdditionsConfig.java,W-46,原注册/配置/方块物品主干；客户端入口为立即调用方
+mekanism/additions/common/config/AdditionsConfigTranslations.java,W-46,原注册/配置/方块物品主干；客户端入口为立即调用方
+mekanism/additions/common/config/MekanismAdditionsConfig.java,W-46,原注册/配置/方块物品主干；客户端入口为立即调用方
+mekanism/additions/common/content/blocktype/BlockShapes.java,W-46,原注册/配置/方块物品主干；客户端入口为立即调用方
+mekanism/additions/common/entity/EntityBalloon.java,W-47,原实体继承/存档/追踪与原模型渲染
+mekanism/additions/common/entity/EntityObsidianTNT.java,W-47,原实体继承/存档/追踪与原模型渲染
+mekanism/additions/common/entity/baby/BabyType.java,W-47,原实体继承/存档/追踪与原模型渲染
+mekanism/additions/common/entity/baby/EntityBabyBogged.java,W-47,原实体继承/存档/追踪与原模型渲染
+mekanism/additions/common/entity/baby/EntityBabyCreeper.java,W-47,原实体继承/存档/追踪与原模型渲染
+mekanism/additions/common/entity/baby/EntityBabyEnderman.java,W-47,原实体继承/存档/追踪与原模型渲染
+mekanism/additions/common/entity/baby/EntityBabySkeleton.java,W-47,原实体继承/存档/追踪与原模型渲染
+mekanism/additions/common/entity/baby/EntityBabyStray.java,W-47,原实体继承/存档/追踪与原模型渲染
+mekanism/additions/common/entity/baby/EntityBabyWitherSkeleton.java,W-47,原实体继承/存档/追踪与原模型渲染
+mekanism/additions/common/item/ItemBalloon.java,W-46,原注册/配置/方块物品主干；客户端入口为立即调用方
+mekanism/additions/common/item/ItemWalkieTalkie.java,W-46,原注册/配置/方块物品主干；客户端入口为立即调用方
+mekanism/additions/common/registries/AdditionsBiomeModifierSerializers.java,W-47,活动数据包、biome/structure及原SpawnConfig算法
+mekanism/additions/common/registries/AdditionsBlockTypes.java,W-46,原注册/配置/方块物品主干；客户端入口为立即调用方
+mekanism/additions/common/registries/AdditionsBlocks.java,W-46,原注册/配置/方块物品主干；客户端入口为立即调用方
+mekanism/additions/common/registries/AdditionsCreativeTabs.java,W-46,原注册/配置/方块物品主干；客户端入口为立即调用方
+mekanism/additions/common/registries/AdditionsDataComponents.java,W-46,原注册/配置/方块物品主干；客户端入口为立即调用方
+mekanism/additions/common/registries/AdditionsEntityTypes.java,W-46,原注册/配置/方块物品主干；客户端入口为立即调用方
+mekanism/additions/common/registries/AdditionsItems.java,W-46,原注册/配置/方块物品主干；客户端入口为立即调用方
+mekanism/additions/common/registries/AdditionsSounds.java,W-46,原注册/配置/方块物品主干；客户端入口为立即调用方
+mekanism/additions/common/registries/AdditionsStructureModifierSerializers.java,W-47,活动数据包、biome/structure及原SpawnConfig算法
+mekanism/additions/common/voice/VoiceConnection.java,W-48,原JDK音频/TCP和真实server/connection owner
+mekanism/additions/common/voice/VoiceServerManager.java,W-48,原JDK音频/TCP和真实server/connection owner
+mekanism/additions/common/world/modifier/BabyEntitySpawnBiomeModifier.java,W-47,活动数据包、biome/structure及原SpawnConfig算法
+mekanism/additions/common/world/modifier/BabyEntitySpawnStructureModifier.java,W-47,活动数据包、biome/structure及原SpawnConfig算法

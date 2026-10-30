@@ -22,6 +22,7 @@
 | M-gear | accessory、Curios 策略、ItemAbility、suit/tool 规则 | 穿戴/工具行为真机核对 | 已验证：W-36–37功能／factory与P7门禁通过；[证据](../archive/M-gear.md)。 |
 | M-release | 核心全量测试、smoke、发布物与限制汇总 | 全部门禁／发布契约通过并完成协调者复核 | 进行中：安全网复核已关闭；按用户要求优先附加模块开发，余下发布检查顺延。 |
 | M-tools | Tools材料／工具／护甲／配方／刷怪装备与客户端渲染 | 独立附加JAR与一个真实工具使用闭包 | 已验证：W-44a–e实现、真机闭包与核心回归通过；[证据](../archive/M-tools.md)。 |
+| M-additions | 塑料方块／气球／TNT／baby生物／对讲机 | 独立附加JAR与实际实体及物品闭包 | 进行中：W-45边界已落，接W-46真实主干；见M-additions.md。 |
 
 ## 旧 Task052 文档归类（按主题；P0 复核范围见归档 M-owner）
 
