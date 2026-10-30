@@ -156,22 +156,23 @@ public final class MekanismConfigSpec {
         return new LoadResult(created, malformed, corrected);
     }
 
-    /** A strict scalar snapshot for the SERVER gear configuration; no document or unknown keys leave the owner. */
-    public synchronized Map<String, Object> scalarSnapshot() {
+    /** Snapshot of admitted SERVER scalar/string-list values; no document or unknown keys leave the owner. */
+    public synchronized Map<String, Object> serverSnapshot() {
         if (!loaded) throw new IllegalStateException("Config spec is not loaded");
         Map<String, Object> snapshot = new LinkedHashMap<>();
         for (Map.Entry<String, ConfigValue<?>> entry : values.entrySet()) {
             Object value = entry.getValue().currentValue;
-            if (!(value instanceof Boolean || value instanceof Integer || value instanceof Long || value instanceof Double)) {
-                throw new IllegalStateException("Non-scalar config value at " + entry.getKey());
+            if (!(value instanceof Boolean || value instanceof Integer || value instanceof Long || value instanceof Double
+                  || value instanceof List<?> list && list.stream().allMatch(String.class::isInstance))) {
+                throw new IllegalStateException("Unsupported server config value at " + entry.getKey());
             }
-            snapshot.put(entry.getKey(), value);
+            snapshot.put(entry.getKey(), value instanceof List<?> list ? List.copyOf(list) : value);
         }
         return Collections.unmodifiableMap(snapshot);
     }
 
     /** Validate the complete snapshot before changing any value. Does not read or write a TOML file. */
-    public synchronized void installRemoteScalars(Map<String, Object> snapshot) {
+    public synchronized void installRemoteValues(Map<String, Object> snapshot) {
         Objects.requireNonNull(snapshot);
         if (loaded || file != null || document != null) throw new IllegalStateException("Config spec already has an owner");
         if (!snapshot.keySet().equals(values.keySet())) throw new IllegalArgumentException("Config snapshot schema mismatch");
@@ -180,8 +181,10 @@ public final class MekanismConfigSpec {
             ConfigValue<?> value = entry.getValue();
             Object candidate = snapshot.get(entry.getKey());
             Object defaultValue = value.getDefault();
-            if (candidate == null || !(defaultValue instanceof Boolean || defaultValue instanceof Integer
-                  || defaultValue instanceof Long || defaultValue instanceof Double) || candidate.getClass() != defaultValue.getClass()) {
+            boolean stringList = defaultValue instanceof List<?> && candidate instanceof List<?> list
+                  && list.stream().allMatch(String.class::isInstance);
+            if (!stringList && (candidate == null || !(defaultValue instanceof Boolean || defaultValue instanceof Integer
+                  || defaultValue instanceof Long || defaultValue instanceof Double) || candidate.getClass() != defaultValue.getClass())) {
                 throw new IllegalArgumentException("Invalid config snapshot type for " + entry.getKey());
             }
             Object normalized = value.normalize(candidate).orElseThrow(() -> new IllegalArgumentException("Invalid config snapshot value for " + entry.getKey()));
@@ -192,7 +195,7 @@ public final class MekanismConfigSpec {
     }
 
     /** Reset a remote-only snapshot while still loaded, so callers can invalidate listeners before unloading it. */
-    public synchronized void resetRemoteScalars() {
+    public synchronized void resetRemoteValues() {
         if (!loaded || file != null || document != null) throw new IllegalStateException("Config spec is not remote-owned");
         for (ConfigValue<?> value : values.values()) value.publishLoaded(value.getDefault());
     }

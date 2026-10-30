@@ -1,5 +1,7 @@
 package mekanism.fabric.network;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -8,9 +10,11 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
-/** Bounded scalar server-config transport. Schema and ranges are validated by the receiving config owner. */
+/** Bounded scalar/string-list server-config transport. Schema and ranges are validated by the receiving config owner. */
 public record ServerConfigSnapshotPayload(String session, Map<String, Object> values) implements CustomPacketPayload {
-    public static final int MAX_VALUES = 256;
+    public static final int MAX_VALUES = 512;
+    public static final int MAX_LIST_VALUES = 16_384;
+    public static final int MAX_STRING_LENGTH = 32_767;
     public static final int MAX_PATH_LENGTH = 128;
     public static final int MAX_SESSION_LENGTH = 64;
     public static final Type<ServerConfigSnapshotPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath("mekanism", "server_config"));
@@ -32,6 +36,13 @@ public record ServerConfigSnapshotPayload(String session, Map<String, Object> va
                     case 1 -> buffer.readInt();
                     case 2 -> buffer.readLong();
                     case 3 -> buffer.readDouble();
+                    case 4 -> {
+                        int size = buffer.readVarInt();
+                        if (size < 0 || size > MAX_LIST_VALUES) throw new IllegalArgumentException("Invalid config list size");
+                        List<String> strings = new ArrayList<>(size);
+                        for (int j = 0; j < size; j++) strings.add(buffer.readUtf(MAX_STRING_LENGTH));
+                        yield List.copyOf(strings);
+                    }
                     default -> throw new IllegalArgumentException("Unknown server config value type");
                 };
                 if (values.putIfAbsent(path, value) != null) throw new IllegalArgumentException("Duplicate server config path");
@@ -57,6 +68,10 @@ public record ServerConfigSnapshotPayload(String session, Map<String, Object> va
                 } else if (value instanceof Double number) {
                     buffer.writeByte(3);
                     buffer.writeDouble(number);
+                } else if (value instanceof List<?> list) {
+                    buffer.writeByte(4);
+                    buffer.writeVarInt(list.size());
+                    for (Object element : list) buffer.writeUtf((String) element, MAX_STRING_LENGTH);
                 } else {
                     throw new IllegalArgumentException("Unsupported server config value");
                 }
@@ -68,16 +83,20 @@ public record ServerConfigSnapshotPayload(String session, Map<String, Object> va
         validateSession(session);
         Objects.requireNonNull(values);
         if (values.size() > MAX_VALUES) throw new IllegalArgumentException("Too many server config entries");
+        Map<String, Object> immutable = new LinkedHashMap<>();
         values.forEach((path, value) -> {
             if (path == null || path.isEmpty() || path.length() > MAX_PATH_LENGTH || !path.matches("[a-zA-Z0-9_.-]+")) {
                 throw new IllegalArgumentException("Invalid server config path");
             }
-            if (!(value instanceof Boolean || value instanceof Integer || value instanceof Long || value instanceof Double)
+            boolean stringList = value instanceof List<?> list && list.size() <= MAX_LIST_VALUES
+                  && list.stream().allMatch(element -> element instanceof String string && string.length() <= MAX_STRING_LENGTH);
+            if (!(value instanceof Boolean || value instanceof Integer || value instanceof Long || value instanceof Double || stringList)
                   || value instanceof Double number && !Double.isFinite(number)) {
                 throw new IllegalArgumentException("Invalid server config scalar");
             }
+            immutable.put(path, value instanceof List<?> list ? List.copyOf(list) : value);
         });
-        values = Map.copyOf(values);
+        values = Map.copyOf(immutable);
     }
 
     private static void validateSession(String session) {

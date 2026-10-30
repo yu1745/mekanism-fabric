@@ -6,19 +6,22 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import mekanism.api.radiation.RadiationValidation;
+import mekanism.common.config.ChemicalConfigAccess;
 import mekanism.common.config.IMekanismConfig;
 import mekanism.common.config.MekanismConfig;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.network.Connection;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.storage.LevelResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** World and connection owner for the admitted gear, machine storage/usage and tier SERVER configs. */
+/** World and connection owner for the admitted general, gear, machine storage/usage and tier SERVER configs. */
 public final class FabricServerConfig {
     private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism/FabricServerConfig");
-    private static final List<IMekanismConfig> CONFIGS = List.of(MekanismConfig.gear, MekanismConfig.storage,
+    private static final List<IMekanismConfig> CONFIGS = List.of(MekanismConfig.general, MekanismConfig.gear, MekanismConfig.storage,
           MekanismConfig.usage, MekanismConfig.tiers);
     private static MinecraftServer owner;
     private static FabricMekanismConfigManager manager;
@@ -53,6 +56,10 @@ public final class FabricServerConfig {
             }
             throw failure;
         }
+        var general = MekanismConfig.general;
+        ChemicalConfigAccess.publishServerPolicy(new ChemicalConfigAccess.ServerPolicy(general.radiationEnabled.get(),
+              general.forgeConversionRate.get(), general.blacklistForge.get()));
+        RadiationValidation.publish(ChemicalConfigAccess::radiationEnabled);
         manager = candidate;
         owner = server;
         LOGGER.info("MEKANISM_FABRIC_SERVER_CONFIG_PROOF phase=server_start loaded=true configs={} path={}", CONFIGS.size(), root);
@@ -66,6 +73,8 @@ public final class FabricServerConfig {
         } finally {
             owner = null;
             manager = null;
+            ChemicalConfigAccess.resetServerPolicy();
+            RadiationValidation.reset();
             LOGGER.info("MEKANISM_FABRIC_SERVER_CONFIG_PROOF phase=server_stop loaded={}", CONFIGS.stream().anyMatch(IMekanismConfig::isLoaded));
         }
     }
@@ -74,7 +83,7 @@ public final class FabricServerConfig {
     public static synchronized Map<String, Object> snapshot() {
         Map<String, Object> snapshot = new LinkedHashMap<>();
         for (IMekanismConfig config : CONFIGS) {
-            config.getConfigSpec().scalarSnapshot().forEach((path, value) -> snapshot.put(config.getFileName() + "." + path, value));
+            config.getConfigSpec().serverSnapshot().forEach((path, value) -> snapshot.put(config.getFileName() + "." + path, value));
         }
         return Map.copyOf(snapshot);
     }
@@ -104,7 +113,17 @@ public final class FabricServerConfig {
                     values.put(entry.getKey().substring(prefix.length()), entry.getValue());
                     return true;
                 });
-                config.getConfigSpec().installRemoteScalars(values);
+                if (config == MekanismConfig.general) {
+                    //Official alphaWarning exists only in development; all other fields retain exact schema validation.
+                    Object alphaWarning = values.remove("alphaWarning");
+                    if (alphaWarning != null && !(alphaWarning instanceof Boolean)) {
+                        throw new IllegalArgumentException("Invalid general.alphaWarning");
+                    }
+                    if (FabricLoader.getInstance().isDevelopmentEnvironment()) {
+                        values.put("alphaWarning", alphaWarning == null ? true : alphaWarning);
+                    }
+                }
+                config.getConfigSpec().installRemoteValues(values);
                 installed.add(config);
             }
             if (!remaining.isEmpty()) throw new IllegalArgumentException("Unknown server config paths: " + remaining.keySet());
@@ -135,7 +154,7 @@ public final class FabricServerConfig {
         for (IMekanismConfig config : configs) {
             var spec = config.getConfigSpec();
             try {
-                spec.resetRemoteScalars();
+                spec.resetRemoteValues();
                 config.clearCache(false);
             } catch (RuntimeException failure) {
                 if (firstFailure == null) firstFailure = failure;

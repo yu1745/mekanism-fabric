@@ -35,17 +35,17 @@ class FabricGearConfigLifecycleTest {
         try {
             for (var config : List.of(MekanismConfig.storage, MekanismConfig.usage, MekanismConfig.tiers)) {
                 manager.registerAndLoad(config);
-                config.getConfigSpec().scalarSnapshot().forEach((path, value) -> machineSnapshot.put(config.getFileName() + "." + path, value));
+                config.getConfigSpec().serverSnapshot().forEach((path, value) -> machineSnapshot.put(config.getFileName() + "." + path, value));
             }
         } finally {
             manager.unloadAll();
         }
         server.freeRunnerMaxEnergy.set(90_000L);
         var firstSnapshot = new LinkedHashMap<>(machineSnapshot);
-        server.getConfigSpec().scalarSnapshot().forEach((path, value) -> firstSnapshot.put("gear." + path, value));
+        server.getConfigSpec().serverSnapshot().forEach((path, value) -> firstSnapshot.put("gear." + path, value));
         server.freeRunnerMaxEnergy.set(123_456L);
         var secondSnapshot = new LinkedHashMap<>(machineSnapshot);
-        server.getConfigSpec().scalarSnapshot().forEach((path, value) -> secondSnapshot.put("gear." + path, value));
+        server.getConfigSpec().serverSnapshot().forEach((path, value) -> secondSnapshot.put("gear." + path, value));
         Connection first = new Connection(PacketFlow.CLIENTBOUND);
         Connection second = new Connection(PacketFlow.CLIENTBOUND);
         var cached = new ConfigBasedCachedLongSupplier(MekanismConfig.gear.freeRunnerMaxEnergy::get,

@@ -23,4 +23,4 @@
 
 这比已完成的四配置标量闭包多出：原 general policy owner 合并、字符串列表传输，以及 dev-only schema 差异处理。此前批次明确把 general 排除在外，故先请求用户同意该完整边界，再修改生产代码。
 
-不包含完整 world/client 配置合并、文件 watcher/PLAY 热重载、通用 Forge 配置兼容层、第三方能量模组接入、Additions/Generators/Tools、新测试矩阵。这里仅记录真实 owner 与必要调用链，不把未测试边角当作必须扩张的任务。当前此分支处于待裁决，未改 GeneralConfig 或协议。
+不包含完整 world/client 配置合并、文件 watcher/PLAY 热重载、通用 Forge 配置兼容层、第三方能量模组接入、Additions/Generators/Tools、新测试矩阵。这里仅记录真实 owner 与必要调用链，不把未测试边角当作必须扩张的任务。用户已在本会话的范围选择中明确批准“同意完整接通 GeneralConfig”，该完整边界转为 GO；按上述非目标与不增加测试矩阵约束实施。批准前未改 GeneralConfig 或协议。

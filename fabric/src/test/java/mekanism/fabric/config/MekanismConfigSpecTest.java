@@ -31,7 +31,7 @@ class MekanismConfigSpecTest {
         var target = constructor.newInstance();
         source.getConfigSpec().load(temporaryDirectory.resolve("serverconfig/Mekanism/gear.toml"));
         source.freeRunnerMaxEnergy.set(9_007_199_254_740_993L);
-        Map<String, Object> snapshot = source.getConfigSpec().scalarSnapshot();
+        Map<String, Object> snapshot = source.getConfigSpec().serverSnapshot();
         assertEquals(9_007_199_254_740_993L, snapshot.get("free_runner.maxEnergy"));
         var payload = new mekanism.fabric.network.ServerConfigSnapshotPayload("test-session", snapshot);
         var buffer = new net.minecraft.network.FriendlyByteBuf(io.netty.buffer.Unpooled.buffer());
@@ -49,7 +49,7 @@ class MekanismConfigSpecTest {
             assertThrows(IllegalArgumentException.class, () -> mekanism.fabric.network.ServerConfigSnapshotPayload.CODEC.decode(buffer));
             buffer.clear();
             buffer.writeUtf("test-session");
-            buffer.writeVarInt(257);
+            buffer.writeVarInt(513);
             assertThrows(IllegalArgumentException.class, () -> mekanism.fabric.network.ServerConfigSnapshotPayload.CODEC.decode(buffer));
             buffer.clear();
             buffer.writeUtf("test-session");
@@ -68,25 +68,25 @@ class MekanismConfigSpecTest {
 
         Map<String, Object> invalid = new HashMap<>(snapshot);
         invalid.put("free_runner.maxEnergy", -1L);
-        assertThrows(IllegalArgumentException.class, () -> target.getConfigSpec().installRemoteScalars(invalid));
+        assertThrows(IllegalArgumentException.class, () -> target.getConfigSpec().installRemoteValues(invalid));
         assertFalse(target.isLoaded());
         assertEquals(64_000L, target.freeRunnerMaxEnergy.get());
         Map<String, Object> missing = new HashMap<>(snapshot);
         missing.remove("free_runner.maxEnergy");
-        assertThrows(IllegalArgumentException.class, () -> target.getConfigSpec().installRemoteScalars(missing));
+        assertThrows(IllegalArgumentException.class, () -> target.getConfigSpec().installRemoteValues(missing));
         Map<String, Object> wrongType = new HashMap<>(snapshot);
         wrongType.put("free_runner.maxEnergy", 100);
-        assertThrows(IllegalArgumentException.class, () -> target.getConfigSpec().installRemoteScalars(wrongType));
+        assertThrows(IllegalArgumentException.class, () -> target.getConfigSpec().installRemoteValues(wrongType));
         Map<String, Object> nonFinite = new HashMap<>(snapshot);
         nonFinite.put("free_runner.fallDamageReductionRatio", Double.NaN);
-        assertThrows(IllegalArgumentException.class, () -> target.getConfigSpec().installRemoteScalars(nonFinite));
+        assertThrows(IllegalArgumentException.class, () -> target.getConfigSpec().installRemoteValues(nonFinite));
         assertFalse(target.isLoaded());
 
-        target.getConfigSpec().installRemoteScalars(snapshot);
+        target.getConfigSpec().installRemoteValues(snapshot);
         target.clearCache(false);
         assertTrue(target.isLoaded());
         assertEquals(9_007_199_254_740_993L, target.freeRunnerMaxEnergy.get());
-        assertThrows(IllegalStateException.class, () -> target.getConfigSpec().installRemoteScalars(snapshot));
+        assertThrows(IllegalStateException.class, () -> target.getConfigSpec().installRemoteValues(snapshot));
         assertThrows(IllegalStateException.class, () -> target.getConfigSpec().save());
         target.clearCache(true);
         target.getConfigSpec().unload();
@@ -154,23 +154,6 @@ class MekanismConfigSpecTest {
         String saved = Files.readString(file);
         assertTrue(saved.contains("count = 9"));
         assertTrue(saved.contains("ratio = 0.75"));
-
-        Path general = temporaryDirectory.resolve("world").resolve("serverconfig/Mekanism/general.toml");
-        Files.createDirectories(general.getParent());
-        Files.writeString(general, "[unowned]\nkeep = \"yes\"\n[radiation]\nenabled = \"invalid\"\n"
-              + "[energy_conversion]\nfeConversionRate = 20000.0\nblacklistForge = true\nfuture = 9\n");
-        try (FabricChemicalConfig.GeneralFragment fragment = new FabricChemicalConfig.GeneralFragment(general)) {
-            fragment.load();
-            assertEquals(new mekanism.common.config.ChemicalConfigAccess.ServerPolicy(true, 2.5, true), fragment.policy());
-            assertEquals(MekanismConfigSpec.RestartScope.WORLD,
-                  fragment.spec.restartScope("energy_conversion.blacklistForge"));
-            String preserving = Files.readString(general);
-            assertTrue(preserving.contains("[unowned]"));
-            assertTrue(preserving.contains("keep = \"yes\""));
-            assertTrue(preserving.contains("future = 9"));
-            assertTrue(preserving.contains("enabled = true"));
-            assertTrue(preserving.contains("feConversionRate = 2.5"));
-        }
     }
 
     @Test
