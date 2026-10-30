@@ -6,13 +6,15 @@
 
 ## 下一步
 
-Tools与Additions主体已完成；Generators的机器、多方块、GUI、生命周期和冷启动均已真机验证，W-58统一构建、578 tests／API／machine回归已通过，独立四JAR已生成。现在进入P13：W-59修拒绝顺序，再执行W-60–62已有发布检查与C-1…C-4，不扩展审查或测试覆盖。
+Tools与Additions主体已完成；Generators的机器、多方块、GUI、生命周期和冷启动均已真机验证，W-58统一构建、578 tests／API／machine回归已通过，独立四JAR已生成。现在进入P13：W-59拒绝顺序已修，继续执行W-60–62已有发布检查与C-1…C-4，不扩展审查或测试覆盖。
 
 ## 未决项
 
-W-40 rejection真实失败：等待mismatch rejection超时，客户端先被Fabric registry remap拒绝（998个未知mekanism条目）；实际选路已确认：Fabric registry-sync-v0 5.3.2 在 BEFORE_CONFIGURE 默认阶段排入注册表同步，而当前版本任务排在 CONFIGURE；应将原版本任务放在 BEFORE_CONFIGURE 的默认阶段之前，保留独立fixture与正常注册表同步。下一步实施此调整并运行现有拒绝与正常连接smoke。其后smoke／W-41 clean发布验证未执行，未宣布发布通过。第三方集成和未穷举风险见README限制节。
+W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CONFIGURE 版本任务，独立客户端先被 registry remap 拒绝。版本任务现排入 BEFORE_CONFIGURE 默认阶段之前，三种拒绝 smoke 已通过；正常连接验证与 W-60–62 仍待完成。Additions 语音 PCM 采集受当前主机限制；第三方集成与未穷举风险保持 README 已列边界。
 
 ## 验收证据
+
+W-59：[顺序修复与三种独立客户端拒绝通过](evidence/p8-release/w59-rejection.json)。保留 fixture 隔离及正常 registry sync，无新增测试；实际 diff 仅原任务阶段／顺序及 PASSED 标记，不改协议或拒绝标准。
 
 本批开发：assemble与3项既有focused checks通过；冷启动实机右手／GUI107 quad，第一／第三人称左手102 quad，变换来自各自JSON；dashboard底层light0、LED full-bright15728880。[实机](evidence/development-render/native-summary.json)、[范围／恢复](evidence/development-render/validation.json)。隔离世界81文件和options恢复，自有JVM／临时debug依赖已清理，无新增测试。
 

@@ -5,6 +5,7 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
+import net.fabricmc.fabric.api.event.Event;
 import net.fabricmc.fabric.api.networking.v1.FabricServerConfigurationNetworkHandler;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerConfigurationConnectionEvents;
@@ -56,7 +57,10 @@ public final class FabricMekanismNetworking {
               RESPONSE_TYPE, FabricMekanismNetworking::handleResponse)) {
             throw new IllegalStateException("A server receiver is already registered for " + RESPONSE_ID);
         }
-        ServerConfigurationConnectionEvents.CONFIGURE.register(FabricMekanismNetworking::beginHandshake);
+        //Registry sync also queues BEFORE_CONFIGURE tasks in the default phase. Negotiate first so an incompatible
+        //client receives our protocol rejection before Fabric attempts to remap its deliberately different catalog.
+        ServerConfigurationConnectionEvents.BEFORE_CONFIGURE.addPhaseOrdering(REQUEST_ID, Event.DEFAULT_PHASE);
+        ServerConfigurationConnectionEvents.BEFORE_CONFIGURE.register(REQUEST_ID, FabricMekanismNetworking::beginHandshake);
         ServerConfigurationConnectionEvents.DISCONNECT.register((handler, server) -> {
             HANDSHAKES.disconnect(handler);
             ACTIVE_SESSION_IDS.remove(handler);

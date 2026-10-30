@@ -243,5 +243,5 @@ terminate_scope "$CLIENT_SCOPE" "$CLIENT_PID"; CLIENT_SCOPE=; CLIENT_PID=
 [[ $(grep -Fc "$MISSING_USERNAME joined the game" "$SERVER_LOG" || true) -eq 0 ]] || fail_with_logs 'missing-receiver client reached play'
 kill -0 "$SERVER_PID" 2>/dev/null || fail_with_logs 'server exited after rejecting clients'
 RESULT=0
-printf 'fabric-configuration-rejection-smoke: PASS (version mismatch, same-version client rejection, and missing receiver were rejected before play)\n'
+printf 'fabric-configuration-rejection-smoke: PASSED (version mismatch, same-version client rejection, and missing receiver were rejected before play)\n'
 grep -E 'MEKANISM_FABRIC_NETWORK_HANDSHAKE_(START|REJECT)' "$SERVER_LOG" | tail -n 6
