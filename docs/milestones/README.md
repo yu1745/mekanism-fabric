@@ -17,6 +17,7 @@
 | M-platform | P3 核心平台入口、命令、成就、条件、生命周期与 payload 核对 | 原始行为由真实 Fabric owner 承接，命令真机可执行 | 已验证：P3 W-15–22与门禁通过；46项边界有明确理由；[证据](../archive/M-platform.md)。 |
 | M-transfer | 能量、流体、物品、化学、热量传输与网络生命周期 | 管线连接真实机器，传输／回滚与存读档后重建正确 | 已验证：P4 W-23–28与门禁通过；[证据](../archive/M-transfer.md)。 |
 | M-render | transmitter/Robit/QIO 模型、粒子、GUI、按键与客户端注册 | mcdebug 实际外观／连接截图与 GUI 巡检 | 已验证：P5 W-29–33及578 tests/API/machine门禁通过；[证据](../archive/M-render.md)。 |
+| M-multiblock | 五种核心多方块生命周期 | 破坏重建、区块重载、存读档、尺寸失败路径 | 进行中：P6 W-34–35；复用W-31前置，仅验生命周期；见M-multiblock.md。 |
 | M-registry | 化学 ingredient 类型注册表、Robit 注册/数据包、官方 legacy alias、biome modifier | 注册冻结后 ID/alias 与官方一致 | 未核实 |
 | M-gear | accessory、Curios 策略、ItemAbility、suit/tool 规则 | 穿戴/工具行为真机核对 | 未核实 |
 
