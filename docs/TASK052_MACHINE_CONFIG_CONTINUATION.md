@@ -55,3 +55,7 @@
 同一 bootstrap owner 核对进一步确认 STARTUP 同类问题：entrypoint 的 `STARTUP_CONFIG = new MekanismStartupConfig()` 被加载，而 MekanismArmorMaterials 注册 armor/toughness/knockback 时读取 canonical `MekanismConfig.startup`。将这两份已存在的进程级配置一次完成收敛，不拆成另一个叶子任务：去掉 startup 独立实例，在既有注册之前的同一位置加载 canonical startup，原 proof 改为读取 canonical；不更改任何 armor schema/算法或注册时机。
 
 实现/验证：两处独立实例已删除，既有 manager 只加载 canonical startup/common，原有 startup proof 同步指向 canonical。`remapJar`、三个 slice gate、现有 ChemicalServiceConfigTest 与 MekanismStartupConfigTest PASS（33s，`/tmp/mekanism-process-config-build.log`），没有新增/修改测试。mcdebug 在实际客户端标题屏读取：修复前 canonical startup.isLoaded=false；修复后 true。启动前临时将 free runner armor 设置为 13、holidays 设置 false，实际注册的 `MekanismItems.ARMORED_FREE_RUNNERS.asItem().getDefense()` 返回 **13**，`HolidayManager.areHolidaysEnabled()` 与 ChemicalConfigAccess 的 common.holidays 均返回 **false**。这验证了真实注册 consumer 和同一 common owner，而非只读 config schema。最终客户端日志 `/tmp/mekanism-process-config-client.log`；退出 JVM 导致 Quit Game RPC connection closed，runClient 正常 exit 0。两原始 TOML 已按备份逐字恢复（cmp），两临时 debug JAR 已按绝对路径/hash 核对删除。未进入世界或改动存档。
+
+提交后风格审查 `11a97f1c`：完整阅读真实 diff 并对照官方 `4646f509` 的 MekanismConfig singleton 注册，确认本次只是让原 Fabric 加载调用使用官方 consumers 所持同一实例；未复制配置、修改领域算法、文件/schema、注册 ID 或同步范围。startup 加载仍早于 material/item 注册；真实 armor=13 已证明这一顺序。common 的旧 ChemicalConfigAccess 与直接调用现在共用同一实例。现有 proof 只是更换读取目标，没有新增防御检查。结论：未发现该提交的新风格偏离。
+
+上下文检查点：canonical 进程配置修复与审查已闭环，当前无运行中的本轮 jobs，继续使用同一会话。下一步核对已纳 GeneralConfig 与现有 general fragment 的完整 owner 边界；若所需非标量同步会明显扩大当前标量协议，先记录具体调用链与方案并交由用户裁决，而非又建 fragment 或静默扩展新模块。
