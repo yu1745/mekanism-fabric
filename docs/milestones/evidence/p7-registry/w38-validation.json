@@ -1,0 +1,22 @@
+{
+  "baseline": "3174a76e (production 7ce6a69f)",
+  "productionChange": false,
+  "officialBaseline": "4646f509 v1.21.1-10.7.19.85",
+  "conclusion": "Five fixed official aliases and requested registry owners already complete; no production delta needed.",
+  "nativeScope": "Frozen BuiltInRegistries aliases, actual API registry identity, actual RegistryDataLoader-produced RobitSkinMappedRegistry on server and client, 13 shipped skin IDs and server fallback/optional semantics.",
+  "worldConstructionProofs": [
+    "MEKANISM_FABRIC_WORLDGEN_REGISTRY_PROOF features=3 int_provider_types=2 height_provider_types=1 placement_modifier_types=1",
+    "MEKANISM_FABRIC_WORLDGEN_PROOF modifiers=6 features=11 source=active_datapacks"
+  ],
+  "focusedChecks": 20,
+  "probeCorrections": [
+    "ResourceLocation and empty Optional are serialized by mcdebug as strings; corrected diagnostic assertions.",
+    "Object.getClass reflection is unavailable; use actual returned ref class metadata. No product defect or implementation change."
+  ],
+  "limits": [
+    "Integrated client/server actual dynamic load/sync, not dedicated-server remote handshake; P8 paired tests remain required.",
+    "Third-party serializer/modifier extensions are outside the core scope.",
+    "Actual salt and ore generation and retrogen reserved for W39; no phase/release claim."
+  ],
+  "newTests": false
+}

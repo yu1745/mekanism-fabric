@@ -1,0 +1,44 @@
+{
+  "command": "./gradlew -p fabric fabricRegistryTest --tests mekanism.fabric.registry.FabricRegistryRootIntegrationTest qioTransactionTest --tests mekanism.fabric.network.LegacyRegistryAliasTest fabricTransferTest --tests mekanism.api.recipes.ingredients.IngredientServiceCodecClosureTest test --tests mekanism.fabric.worldgen.FabricBiomeModifiersTest --console=plain",
+  "result": "BUILD SUCCESSFUL",
+  "seconds": 23,
+  "tests": [
+    {
+      "task": "test",
+      "class": "mekanism.fabric.worldgen.FabricBiomeModifiersTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "time": "0.205"
+    },
+    {
+      "task": "qioTransactionTest",
+      "class": "mekanism.fabric.network.LegacyRegistryAliasTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "time": "0.082"
+    },
+    {
+      "task": "fabricTransferTest",
+      "class": "mekanism.api.recipes.ingredients.IngredientServiceCodecClosureTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "time": "0.116"
+    },
+    {
+      "task": "fabricRegistryTest",
+      "class": "mekanism.fabric.registry.FabricRegistryRootIntegrationTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "time": "4.868"
+    }
+  ],
+  "robitDomainProbe": {
+    "command": "scripts/task052-robit-check.sh",
+    "marker": "TASK052_ROBIT_CHECK_PASS serializers=2 assets=13 distinct_network_codec=true defaulted_semantics=true missing_base_rejected=true mixin_execution=NOT_TESTED",
+    "scope": "Existing domain/defaulted-registry check; independent native runtime evidence exercises loader mixin."
+  }
+}
