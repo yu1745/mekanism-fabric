@@ -35,3 +35,13 @@ Additions/Generators/Tools、通用 Forge 配置兼容层、第三方能量模�
 2026-10-30 / W-01.1：P0 全量构建发现 `FabricGearConfigLifecycleTest` 仍构造不含 general 的旧快照，导致 `Config snapshot schema mismatch`。现有测试补齐 general 后，完整构建与 QIO 50 tests 全部通过（其中生命周期 1 test）；未放宽生产 schema 校验，也未增加测试。非默认 general 真机与 alphaWarning 开发／发布核对仍待 W-12/13。
 
 P0 paired-network 重跑通过：5 个 SERVER configs、304 个值，两次 fresh client 均 client_applied 并获得 server ACK；这补充默认值完整 schema 的实际网络证据，不替代 W-12 非默认 consumer 验收。
+
+### P2 检查点（2026-10-30，基线 `3a3a6ba8`）
+
+W-12 consumer 实机证据：隔离世界 general.toml 的 `digital_miner.maxRadius` 从 32 改为 7 后正常启动集成服。完整 BlockItem 路径放置 Digital Miner，实际 `setRadiusFromPacket(999)` 后服务端 radius=7；真实 GUI Config 按钮打开 `GuiDigitalMinerConfig`，客户端 tile.radius=7，`radiusField.textField.maxLength`=1。读数与截图在 [p2-config](evidence/p2-config/miner-radius-seven.png)，同目录包含 server-radius/client-radius/gui-radius-length JSON。无 GUI error。此证据证明非默认值被服务端和 GUI consumer 使用；集成服共享配置实例，独立客户端非默认快照仍待验证，不能用它替代远端安装路径。
+
+W-13 focused test：`./gradlew -p fabric qioTransactionTest --tests mekanism.fabric.config.FabricGearConfigLifecycleTest --console=plain` PASS（8 秒），原生命周期断言全部通过；未新增测试。
+
+`741d580d` 真实 diff 审查：General 加入 canonical 世界 CONFIGS，并移除第二 GeneralFragment writer；Chemical ServerPolicy/RadiationValidation 改由同一 owner 在 start/stop 发布／清理。serverSnapshot 对列表复制，payload 保留 session/path/type 校验与列表长度约束，installRemoteValues 对完整 schema 校验并先规范化所有值再发布，失败清理已安装 config；未发现该接线引入重复 owner 或删除官方配置行为。原提交遗漏测试快照中的 general 已由 P0 `dba1010d` 修复。alphaWarning 源码核对：GeneralConfig 仅 dev 定义，production 使用 ALWAYS_TRUE；接收端仅对该字段适配开发／发布 schema，其余字段保持精确校验。开发／发布跨环境实际运行仍待补，W-13 不标完整完成。
+
+现场已正常停止自有会话，完整隔离世界恢复至本轮前备份，逐文件 SHA-256 一致；临时 debug mod、Kotlin runtime、wrapper 链接及 Xvfb 清理。无生产源码修改。下一步：独立客户端非默认 General 同步、alphaWarning 发布 schema 实证，然后 P2 门禁与 W-14 收尾。

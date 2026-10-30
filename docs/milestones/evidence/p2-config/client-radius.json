@@ -1,0 +1,1 @@
+{"resolvedTo":"radius","steps":[{"seg":"tile","field":"tile","class":"mekanism.common.tile.machine.TileEntityDigitalMiner"},{"seg":"radius","field":"radius","class":"java.lang.Integer"}],"value":7}
