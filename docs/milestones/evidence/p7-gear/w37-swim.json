@@ -1,0 +1,14 @@
+{
+  "factory": "mekanism.common.content.gear.mekasuit.ModuleHydrostaticRepulsorUnit",
+  "installed": 4,
+  "dryEnergy": [
+    1000000,
+    1000000
+  ],
+  "wetEnergy": 978000,
+  "attributeEfficiency": 1.0,
+  "boostedJumpY": 0.07999999821186066,
+  "zeroEnergyJumpY": 0.03999999910593033,
+  "zeroEnergyActive": false,
+  "method": "Actual worn world ticks consume energy; actual native jumpInLiquid called while normal singleplayer PauseScreen freezes physics, no direct module tick invocation."
+}

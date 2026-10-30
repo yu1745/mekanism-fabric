@@ -1,0 +1,16 @@
+{
+  "farming": {
+    "factory": "mekanism.common.content.gear.mekatool.ModuleFarmingUnit",
+    "before": 1000000,
+    "after": 999990,
+    "state": "Block{minecraft:stripped_oak_log}[axis=x]",
+    "unpoweredResult": "Block{minecraft:oak_log}[axis=x]"
+  },
+  "shearing": {
+    "factory": "mekanism.common.content.gear.mekatool.ModuleShearingUnit",
+    "before": 1000000,
+    "after": 999990,
+    "sheared": true,
+    "interaction": "SUCCESS"
+  }
+}

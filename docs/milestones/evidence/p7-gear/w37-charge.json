@@ -1,0 +1,20 @@
+{
+  "factory": "mekanism.common.content.gear.mekasuit.ModuleChargeDistributionUnit",
+  "priority1": {
+    "source": 0,
+    "main": 1000,
+    "off": 0
+  },
+  "priority2": {
+    "source": 0,
+    "main": 16000000,
+    "mainCapacity": 16000000,
+    "off": 800
+  },
+  "suitBalance": {
+    "chest": 500,
+    "helmet": 500,
+    "sum": 1000
+  },
+  "scope": "Actual worn tick and detached owner writeback, no direct tickServer call; optional Accessories path statically mapped, not rerun here."
+}
