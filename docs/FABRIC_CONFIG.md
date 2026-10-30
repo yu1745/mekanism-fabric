@@ -7,11 +7,11 @@ Mekanism 自有窄接口替代 NeoForge `ModConfigSpec` / `ModConfig.Type`。它
 
 ## 2026-10-30 COMMON / STARTUP canonical owner 收敛
 
-bootstrap 的既有进程级 manager 现在直接加载 `MekanismConfig.startup` 与 `MekanismConfig.common`，不再各自构造独立实例；ChemicalConfigAccess 发布的也是同一 canonical common。这样 armor material 注册读取实际 startup 配置，假期、辐射计计时与方块数据复制等官方直接调用读取实际 common 配置。文件、schema、注册前加载顺序及 COMMON/STARTUP 不自动同步的语义不变；未扩大为 general/world/client 配置重构。证据见 `TASK052_MACHINE_CONFIG_CONTINUATION.md`。
+bootstrap 的既有进程级 manager 现在直接加载 `MekanismConfig.startup` 与 `MekanismConfig.common`，不再各自构造独立实例；ChemicalConfigAccess 发布的也是同一 canonical common。这样 armor material 注册读取实际 startup 配置，假期、辐射计计时与方块数据复制等官方直接调用读取实际 common 配置。文件、schema、注册前加载顺序及 COMMON/STARTUP 不自动同步的语义不变；未扩大为 general/world/client 配置重构。证据见 `archive/TASK052_MACHINE_CONFIG_CONTINUATION.md`。
 
 ## 2026-10-30 已纳机器 SERVER 配置接线
 
-当前 gear-only owner 已原地扩为 `FabricServerConfig`，固定加载 canonical gear、storage、usage、tiers；文件分别为 `<world>/serverconfig/Mekanism/{gear,machine-storage,machine-usage,tiers}.toml`。新 `FabricServerConfigNetworking` 与客户端 receiver 共享一个配置阶段任务，保留官方字段 schema，用 filename 前缀消除网络字段重名。服务端停止与远程断线清理覆盖同一四份配置，集成服共享实例。原有 general/world/client owner 不变，不提供 PLAY 热重载。详见 `TASK052_MACHINE_CONFIG_CONTINUATION.md` 的实际验证状态。
+当前 gear-only owner 已原地扩为 `FabricServerConfig`，固定加载 canonical gear、storage、usage、tiers；文件分别为 `<world>/serverconfig/Mekanism/{gear,machine-storage,machine-usage,tiers}.toml`。新 `FabricServerConfigNetworking` 与客户端 receiver 共享一个配置阶段任务，保留官方字段 schema，用 filename 前缀消除网络字段重名。服务端停止与远程断线清理覆盖同一四份配置，集成服共享实例。原有 general/world/client owner 不变，不提供 PLAY 热重载。详见 `archive/TASK052_MACHINE_CONFIG_CONTINUATION.md` 的实际验证状态。
 
 以下 GearConfig 节记录扩展前已完成的运行证据，类名随后已被上述四配置 owner 替换，不代表仍有第二个 gear-only writer。
 

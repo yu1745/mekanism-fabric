@@ -11,7 +11,7 @@
 | 里程碑 | 范围 | 验收（一个端到端用例） | 状态 |
 |---|---|---|---|
 | M-owner | `TileEntityMekanism`、`TileComponentConfig`、频率/`FrequencyManager`、`ContainerType`、`MekanismContainer` 同步、有效侧线程语义、bounding | 真机：Crusher 放置→通电→加工→存读档 | 未核实（Astra whole-owner 与 convergence 文档为最近记录） |
-| M-config | gear / machine+tier / common+startup / general 四类配置 owner 与同步 | 非默认配置真机加载并同步到客户端 | gear、machine+tier、common+startup 已提交且有运行证据；general 工作区进行中（未提交） |
+| M-config | gear / machine+tier / common+startup / general 四类配置 owner 与同步 | 非默认配置真机加载并同步到客户端 | gear、machine+tier、common+startup 已提交且有运行证据；general 已提交 `741d580d`（wip），待真机验证；活文档 `M-config.md` |
 | M-transfer | 流体/物品传输 owner、pipe 查询生命周期、`SnapshotParticipant`、QE 频率流体 | 管道把流体/物品送入机器并回滚正确 | 未核实 |
 | M-render | transmitter 渲染（OBJ/MTL 几何）、Robit atlas、QIO 渲染 | mcdebug 截图：管线与 QIO 正确渲染 | 未核实 |
 | M-registry | 化学 ingredient 类型注册表、Robit 注册/数据包、官方 legacy alias、biome modifier | 注册冻结后 ID/alias 与官方一致 | 未核实 |
@@ -24,9 +24,9 @@
 - **M-render**：`CONTINUATION_10`（及 `_EVIDENCE`/`_EVIDENCE_2`）、`CONTINUATION_11`、`REVIEW_15/16/17/18`、`REVIEW17_REPAIR`
 - **M-registry**：`CONTINUATION_12`、`CONTINUATION12_INGREDIENT_REGISTRY`、`CONTINUATION_13`、`REVIEW_19/20`、`REVIEW19_REPAIR`
 - **M-gear**：`ADJUDICATION_GEAR_CATALOG`
-- **M-config**（顶层活文档）：`docs/TASK052_MACHINE_CONFIG_CONTINUATION.md`、`docs/TASK052_GENERAL_CONFIG_BOUNDARY.md`
+- **M-config**：`archive/TASK052_MACHINE_CONFIG_CONTINUATION.md`、`archive/TASK052_GENERAL_CONFIG_BOUNDARY.md`（已并入 `docs/milestones/M-config.md`，原文移入 archive）
 
-以上文件均保持原路径，链接不变；以后 M-config 完成时整体移入 `docs/archive/`。
+除 M-config 两份外，其余文件保持原路径（链接不变）。
 
 ## 活文档规则
 
