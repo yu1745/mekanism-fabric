@@ -40,3 +40,14 @@
 - 状态只改本表；叙事不写进 `PORT_MATRIX`/`FABRIC_PORT`，两者只在里程碑完成时补一行结论。
 - 新发现的中枢级风险记入 M-owner，不新开里程碑；超出某里程碑范围的事项记入"未决项"，不静默扩题。
 - 里程碑验收通过后：状态改"已验证"并附证据，活文档移入 `docs/archive/`。
+
+## 发布限制（W-42 准备）
+
+当前范围为 Fabric 核心模块；P8 全套验证和最终发布物核验仍待完成。
+
+- **第三方集成**：ROADMAP 排除的 JEI/EMI、CraftTweaker、ProjectE、FramedBlocks、JsonThings、gender、OpenComputers2 等不在本轮发布范围。混合 JEI/EMI 的公共 `IMekanismAccess`／`MekanismAccess` 服务未提供；ingredient creators 已由独立真实服务承接，不代表 viewer API 已兼容。
+- **历史 46 项**：P3 清单中已有 5 份原源码纳入、32 项由实际 Fabric owner 承接；另有 7 项第三方边界、1 项离线开发工具、1 项旧反射辅助。逐项现状见[对照](evidence/p8-release/w42-historical46-current.csv)，旧反射辅助对应的 separate-transforms 可视差异仍保留。
+- **平台交互**：不提供任意 modifier 重绑编辑器；Accessories 默认 H 与 Mekanism HUD 绑定冲突可在原版设置中重绑。命令使用原版权限等级／op 回退，未提供 NeoForge 权限插件的逐 node、动态 context 或离线覆盖。多个飞行提供者之间缺少原版权限归属 token；工具动作采用原版映射，不触发 NeoForge `BlockToolModificationEvent` 或其第三方 data-map 扩展。
+- **已知可视差异**：Meka-Tool 的 separate-transforms 当前各视角均使用 base OBJ，左手镜像模型尚未选择；便携 QIO dashboard 的 LED 层随场景照明，未强制全亮度。依据为当前 `FabricMekanismModelPlugin`／`FabricItemLayersModel` 与既有 `API_DELTAS.md`，不能把模型加载通过扩称全部画面等价。
+- **验证边界**：现有证据覆盖代表装备／流体／网络路径，未穷举全部模块组合、流体／船／滑翔、第三方容器与能量提供者。worldgen 的保存 palette 与 retrogen 触发读数不证明全部矿脉分布；[范围与证据](evidence/p8-release/w42-preparation.json)。
+- **后续模块**：Tools、Additions、Generators 依 ROADMAP P9/P10 分阶段推进，当前核心通过记录不代表这些模块已移植。
