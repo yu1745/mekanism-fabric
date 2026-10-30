@@ -174,6 +174,7 @@ mekanism/fabric/network/FabricTileUpdateHandler.java
 mekanism/fabric/network/FabricTileUpdateNetworking.java
 mekanism/fabric/network/FabricTransmitterClientNetworking.java
 mekanism/fabric/network/FabricTransmitterNetworking.java
+mekanism/fabric/network/GearConfigSnapshotPayload.java
 mekanism/fabric/network/MekanismNetworkProtocol.java
 mekanism/fabric/radiation/FabricRadiationAttachments.java
 mekanism/fabric/radiation/FabricRadiationClientLifecycle.java
