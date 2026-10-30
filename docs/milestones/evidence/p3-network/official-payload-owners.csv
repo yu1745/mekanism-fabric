@@ -1,0 +1,56 @@
+phase/direction,packet,official ID,Fabric codec/receiver owners
+play C2S,PacketAddTrusted,mekanism:add_trusted,mekanism/fabric/network/FabricServerPlayNetworking.java
+play C2S,PacketDropperUse,mekanism:use_dropper,mekanism/fabric/network/FabricServerPlayNetworking.java
+play C2S,PacketEditFilter,mekanism:edit_filter,mekanism/fabric/network/FabricServerPlayNetworking.java
+play C2S,PacketGearStateUpdate,mekanism:update_gear,mekanism/fabric/network/FabricServerPlayNetworking.java
+play C2S,PacketGuiInteract,mekanism:gui_interact,mekanism/fabric/network/FabricServerPlayNetworking.java
+play C2S,PacketItemGuiInteract,mekanism:item_gui_interact,mekanism/fabric/network/FabricContainerNetworking.java
+play C2S,PacketGuiSetEnergy,mekanism:set_energy,mekanism/fabric/network/FabricServerPlayNetworking.java
+play C2S,PacketKey,mekanism:key,mekanism/fabric/network/FabricServerPlayNetworking.java
+play C2S,PacketModeChange,mekanism:mode,mekanism/fabric/network/FabricServerPlayNetworking.java
+play C2S,PacketModeChangeCurios,mekanism:mode_curios,mekanism/fabric/network/FabricServerPlayNetworking.java
+play C2S,PacketNewFilter,mekanism:new_filter,mekanism/fabric/network/FabricServerPlayNetworking.java
+play C2S,PacketOpenGui,mekanism:open_gui,mekanism/fabric/network/FabricServerPlayNetworking.java
+play C2S,PacketPortableTeleporterTeleport,mekanism:portable_teleport,mekanism/fabric/network/FabricServerPlayNetworking.java
+play C2S,PacketRadialModeChange,mekanism:radial_mode,mekanism/fabric/network/FabricServerPlayNetworking.java
+play C2S,PacketRemoveModule,mekanism:remove_module,mekanism/fabric/network/FabricServerPlayNetworking.java
+play C2S,PacketUpdateModuleSettings,mekanism:update_module,mekanism/fabric/network/FabricServerPlayNetworking.java
+play C2S,PacketWindowSelect,mekanism:window_select,mekanism/fabric/network/FabricContainerNetworking.java
+play C2S,PacketEntityButtonPress,mekanism:entity_button,mekanism/fabric/network/FabricServerPlayNetworking.java
+play C2S,PacketItemButtonPress,mekanism:item_button,mekanism/fabric/network/FabricServerPlayNetworking.java
+play C2S,PacketTileButtonPress,mekanism:tile_button,mekanism/fabric/network/FabricServerPlayNetworking.java
+play C2S,PacketSetItemFrequency,mekanism:set_item_frequency,mekanism/fabric/network/FabricServerPlayNetworking.java
+play C2S,PacketSetTileFrequency,mekanism:set_tile_frequency,mekanism/fabric/network/FabricServerPlayNetworking.java
+play C2S,PacketSetFrequencyColor,mekanism:set_frequency_color,mekanism/fabric/network/FabricServerPlayNetworking.java
+play C2S,PacketRobitName,mekanism:robit_name,mekanism/fabric/network/FabricServerPlayNetworking.java
+play C2S,PacketRobitSkin,mekanism:robit_skin,mekanism/fabric/network/FabricServerPlayNetworking.java
+play C2S,PacketQIOClearCraftingWindow,mekanism:clear_qio,mekanism/fabric/network/FabricContainerNetworking.java
+play C2S,PacketQIOFillCraftingWindow,mekanism:fill_qio,mekanism/fabric/network/FabricContainerNetworking.java
+play C2S,PacketQIOItemViewerSlotPlace,mekanism:qio_place,mekanism/fabric/network/FabricContainerNetworking.java
+play C2S,PacketQIOItemViewerSlotTake,mekanism:qio_take,mekanism/fabric/network/FabricContainerNetworking.java
+play C2S,PacketQIOItemViewerSlotShiftTake,mekanism:qio_shift_take,mekanism/fabric/network/FabricContainerNetworking.java
+play C2S,PacketBatchConfiguration,mekanism:batch_configuration,mekanism/fabric/network/FabricServerPlayNetworking.java
+play C2S,PacketEjectColor,mekanism:eject_color,mekanism/fabric/network/FabricServerPlayNetworking.java
+play C2S,PacketEjectConfiguration,mekanism:eject_configuration,mekanism/fabric/network/FabricServerPlayNetworking.java
+play C2S,PacketInputColor,mekanism:input_color,mekanism/fabric/network/FabricServerPlayNetworking.java
+play C2S,PacketSideData,mekanism:side_data,mekanism/fabric/network/FabricServerPlayNetworking.java
+configuration S2C,PacketBatchSecurityUpdate,mekanism:batch_security,mekanism/fabric/network/FabricSecurityClientNetworking.java; mekanism/fabric/network/FabricSecurityNetworking.java
+play S2C,PacketHitBlockEffect,mekanism:hit_block,mekanism/fabric/network/FabricPortalNetworking.java; mekanism/fabric/network/FabricPortalClientNetworking.java
+play S2C,PacketLightningRender,mekanism:render_bolt,mekanism/fabric/network/FabricGearEffectsNetworking.java; mekanism/fabric/client/render/FabricBoltRendering.java
+play S2C,PacketPlayerData,mekanism:player_data,mekanism/fabric/MekanismFabricClientBootstrap.java; mekanism/fabric/network/FabricGearEffectsNetworking.java
+play S2C,PacketPortalFX,mekanism:portal_fx,mekanism/fabric/network/FabricPortalNetworking.java; mekanism/fabric/network/FabricPortalClientNetworking.java
+play S2C,PacketEnvironmentalRadiationData,mekanism:environmental_radiation,mekanism/fabric/radiation/FabricRadiationClientLifecycle.java; mekanism/fabric/radiation/FabricRadiationLifecycle.java
+play S2C,PacketPlayerRadiationData,mekanism:player_radiation,mekanism/fabric/radiation/FabricRadiationClientLifecycle.java; mekanism/fabric/radiation/FabricRadiationLifecycle.java
+play S2C,PacketResetPlayerClient,mekanism:reset_client,mekanism/fabric/MekanismFabricClientBootstrap.java; mekanism/fabric/network/FabricGearEffectsNetworking.java
+play S2C,PacketSyncSecurity,mekanism:sync_security,mekanism/fabric/network/FabricSecurityClientNetworking.java; mekanism/fabric/network/FabricSecurityNetworking.java
+play S2C,PacketUpdateContainer,mekanism:update_container,mekanism/fabric/network/FabricContainerClientNetworking.java; mekanism/fabric/network/FabricContainerNetworking.java
+play S2C,PacketUpdateTile,mekanism:update_tile,mekanism/fabric/network/FabricTileUpdateHandler.java; mekanism/fabric/network/FabricTileUpdateNetworking.java
+play S2C,PacketSetDeltaMovement,mekanism:set_delta_movement,mekanism/fabric/network/FabricPortalNetworking.java; mekanism/fabric/network/FabricPortalClientNetworking.java
+play S2C,PacketUpdateItemViewer,mekanism:update_qio,mekanism/fabric/network/FabricContainerClientNetworking.java; mekanism/fabric/network/FabricContainerNetworking.java
+play S2C,PacketNetworkScale,mekanism:network_scale,mekanism/fabric/network/FabricTransmitterClientNetworking.java; mekanism/fabric/network/FabricTransmitterNetworking.java
+play S2C,PacketChemicalNetworkContents,mekanism:chemical_network,mekanism/fabric/network/FabricTransmitterClientNetworking.java; mekanism/fabric/network/FabricTransmitterNetworking.java
+play S2C,PacketFluidNetworkContents,mekanism:fluid_network,mekanism/fabric/network/FabricTransmitterClientNetworking.java; mekanism/fabric/network/FabricTransmitterNetworking.java
+play S2C,PacketTransporterBatch,mekanism:transporter_batch,mekanism/fabric/network/FabricTransmitterClientNetworking.java; mekanism/fabric/network/FabricTransmitterNetworking.java
+play S2C,PacketTransporterSync,mekanism:transporter_sync,mekanism/fabric/network/FabricTransmitterClientNetworking.java; mekanism/fabric/network/FabricTransmitterNetworking.java
+play S2C,PacketShowModeChange,mekanism:show_mode_change,mekanism/fabric/network/FabricContainerNetworking.java; mekanism/fabric/network/FabricContainerClientNetworking.java
+play S2C,PacketQIOItemViewerKill,mekanism:kill_qio,mekanism/fabric/network/FabricContainerNetworking.java; mekanism/fabric/network/FabricContainerClientNetworking.java

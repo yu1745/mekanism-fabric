@@ -97,3 +97,11 @@ W-20 映射闭环：ReloadListener → FabricRecipeCacheLifecycle + native publi
 本轮自有会话正常 stopped，完整隔离世界恢复备份且逐文件 SHA-256 一致，临时 runtime／wrapper／Xvfb 清理；工作范围无额外扩展。
 
 提交后风格审查：已读实际 mixin 与证据 diff，对照 CommonPlayerTracker 的外部 wrench first branch／纸箱 else-if 和原生 useItemOn 的 block→item 顺序。保留真实 tryWrench/unbox owner、原始 tag 身份与双手 Configurator 判定，没有更改机器算法或删除交互分支。未发现本次边界内移植风格偏离；W-21/22 尚待完成。
+
+2026-10-30 W-21 完成：以官方基线 `4646f509` 的 PacketHandler/BasePacketHandler 为目录，而非已迁移并删去部分注册语句的当前旧入口。逐项核对 **35 play C2S + 19 play S2C + 1 configuration S2C = 55 payloads**；其中两个 instanced payload 转成 PacketShowModeChange/PacketQIOItemViewerKill，仍为原 show_mode_change/kill_qio ID 与 unit body。所有 53 个原 typed TYPE 的路径字符串与官方相同；原两个 instanced ID 也相同。逐包阶段、ID 与实际 Fabric owner 路径见 [目录](evidence/p3-network/official-payload-owners.csv)。临时核对直接读取明确目录与真实注册调用，不新增依赖扫描器或测试。
+
+C2S 主 owner FabricServerPlayNetworking.register 同时注册 codec 与 context.player() 主线程 handler（28 包）；FabricContainerNetworking 对另外 7 包逐一注册 playC2S codec 与 dispatch，保留原 menu/QIO 校验。S2C 的 portal、transmitter、container、tile、gear/player-state、radiation、security owners 均核对实际 codec 和 client receiver/helper 的实现，并核对 bootstrap 的 initialize/initializeClient 调用。没有只凭 import／TYPE 引用当作已接线。核心分派继续复用实际 packet.handle，不出现占位 handler。
+
+配置阶段 PacketBatchSecurityUpdate 在 FabricSecurityNetworking.configurationS2C 注册；FabricSecurityClientNetworking 在 client configuration receiver 应用到当前 connection；SyncAllSecurityData 在实际 server task 构造完整 snapshot，并由真实 configuration handler completeTask。版本握手由 FabricMekanismNetworking 的 exact Version 字符串契约承接，入口不照搬旧 IEventBus。此前 P0/P2 两次 fresh client 已通过该 configuration→play 链路，W-21 没有借目录核对重新声称每个 packet 的所有业务分支均经过真机测试。
+
+既有 PlayerStateNetworkingTest / PortalNetworkingTest PASS（18 秒），未新增测试，未改生产源码。W-21 未发现漏注册包，下一项 W-22：核对非第三方未纳入文件的实际替代／延期理由并执行 P3 阶段门禁；不能把 55 包目录完整等同于整个移植完成。
