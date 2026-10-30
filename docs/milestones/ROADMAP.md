@@ -2,6 +2,21 @@
 
 协调者编写，worker 按序执行。状态以 `docs/milestones/README.md` 为准；本文只定"做什么、什么顺序、怎样算完成、卡住怎么办"。不得借本文扩大 `AGENTS.md` 的边界。
 
+## 进度与调整记录（协调者，2026-10-30 14:20）
+
+- P0–P4 已完成并过门禁（W-01…28，证据在 `docs/archive/M-{owner,config,platform,transfer}.md`）；P5 已做完 W-29/30/31/32，余 W-33 门禁。节奏明显快于预估，质量检查点（证据 CSV、首条错误原文、无新增测试）符合协议。
+- 实际新增里程碑 **M-platform**（P3 的命令/成就/条件/生命周期/payload，46 个未纳入文件逐项记理由）；视同 ROADMAP P3 的活文档，不另立阶段。
+- **微调（本次生效）**：
+  1. **W-34 缩范围**：五个核心多方块在 W-31 已由官方 builder 搭成并打开 GUI，W-34 只验证**生命周期**——破坏/重建、区块卸载重载、存读档后结构保持、尺寸校验失败路径——不重复搭建与 GUI。
+  2. **W-36 去重**：accessory 预览与客户端注册已在 W-32 验证，W-36 只做 MekaSuit/MekaTool/Jetpack/Scuba/Flamethrower/Configurator 的功能读数与模块安装。
+  3. **W-42 增"发布限制汇总"**：汇总第三方集成缺口（JEI/EMI 混合公共 API 等）、M-platform 的 46 个延期文件、未验证风险，写入 `README.md` 一节；不单独成项。
+  4. **W-40 增"安全网复核"**：P0 重写了 `fabric-packaged-smoke.sh`（1772→485 行，改为 dev→remapped 全量清点）。W-40 前由协调者派一次**只读审查**（AGENTS 已授权）确认没有削弱门禁，再据此宣布发布门禁。
+- **文档纪律收紧（防止回到流水账）**：
+  - 活文档"验收证据"节每个 W 项 ≤5 行结论 + 指向 `evidence/` 文件；长叙事（命令、哈希、首轮错误）放 evidence 文件，不放 M 文档。M-render.md 已 95 个长段，W-33 归档前压缩。
+  - `README.md` 状态格 ≤100 字；细节在活文档。
+  - `evidence/` 仅存 CSV/JSON/必要截图，不存日志与大二进制；P5 结束时检查体积（目前 6MB）。
+- **待用户决定**（不阻塞 worker）：①本地领先 origin 31 个提交，需要时再推送；②wip 提交 squash；③submodule 指针更新。
+
 ## 0. 已知事实（规划依据，worker 在 P0 复核）
 
 - 官方 `src/main/java` 共 1802 个文件，三份 slice 清单已纳入约 1700 个；**核心模块的主干基本都已纳入并能编译**（`compileJava`/`compileTestJava` 于 `741d580d` 通过）。
