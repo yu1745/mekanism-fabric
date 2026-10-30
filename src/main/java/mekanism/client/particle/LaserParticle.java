@@ -137,7 +137,7 @@ public class LaserParticle extends TextureSheetParticle {
     }
 
     @NotNull
-    @Override
+    //Fabric vanilla has no per-particle render-box override; retain the original public query and bounds.
     public AABB getRenderBoundingBox(float partialTicks) {
         return getBoundingBox();
     }

@@ -98,8 +98,8 @@ final class FabricDataBasedUnbakedModel implements UnbakedModel {
 
     private ResourceLocation emittingId() {
         if (emittingId == null) {
-            String propertyKey = root.keySet().stream().filter(k -> !k.equals("no_data") && !k.equals("loader")).findFirst().orElseThrow();
-            emittingId = readPath(propertyKey);
+            //The official loader's sole supported property is "emitting"; other JSON metadata is ignored.
+            emittingId = readPath("emitting");
         }
         return emittingId;
     }

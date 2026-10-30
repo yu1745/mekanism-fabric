@@ -178,3 +178,7 @@ accessible field net/minecraft/world/item/BucketItem content Lnet/minecraft/worl
 #accesstransformer covers the same two members).
 accessible method net/minecraft/world/entity/Entity setLevel (Lnet/minecraft/world/level/Level;)V
 accessible field net/minecraft/world/entity/item/ItemEntity age I
+
+#Original jetpack/scuba subclasses reuse the vanilla particle constructors exposed by NeoForge.
+accessible method net/minecraft/client/particle/FlameParticle <init> (Lnet/minecraft/client/multiplayer/ClientLevel;DDDDDD)V
+accessible method net/minecraft/client/particle/BubbleParticle <init> (Lnet/minecraft/client/multiplayer/ClientLevel;DDDDDD)V

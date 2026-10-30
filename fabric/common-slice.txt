@@ -1519,3 +1519,9 @@ mekanism/common/IncompleteRecipeScanner.java
 
 # Official public energy conversion service provider
 mekanism/common/service/EnergyConversionHelper.java
+
+# P5 original client particle implementations
+mekanism/client/particle/JetpackFlameParticle.java
+mekanism/client/particle/JetpackSmokeParticle.java
+mekanism/client/particle/ScubaBubbleParticle.java
+mekanism/client/particle/LaserParticle.java

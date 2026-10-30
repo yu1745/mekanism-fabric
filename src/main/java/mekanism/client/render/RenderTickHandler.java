@@ -24,9 +24,12 @@ import mekanism.common.block.attribute.AttributeCustomSelectionBox;
 import mekanism.common.content.gear.IBlastingItem;
 import mekanism.common.item.ItemConfigurator;
 import mekanism.common.item.ItemConfigurator.ConfiguratorMode;
+import mekanism.common.item.gear.ItemFlamethrower;
 import mekanism.common.lib.effect.BoltEffect;
+import mekanism.common.lib.math.Pos3D;
 import mekanism.common.lib.transmitter.TransmissionType;
 import mekanism.common.registries.MekanismBlocks;
+import mekanism.common.registries.MekanismParticleTypes;
 import mekanism.common.tile.component.TileComponentConfig;
 import mekanism.common.tile.component.config.ConfigInfo;
 import mekanism.common.tile.interfaces.ISideConfiguration;
@@ -48,13 +51,16 @@ import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.level.block.state.BlockState;
@@ -67,8 +73,8 @@ import org.joml.Vector3f;
 import org.joml.Vector4f;
 
 /**
- * Level-render half of the official NeoForge event hub: the transparent {@link LazyRender} queue (drained at the
- * after-translucent-blocks stage by the Fabric bootstrap registration), the wire-frame helpers shared with the tile
+ * Level-render and particle-tick parts of the official NeoForge event hub: the transparent {@link LazyRender} queue
+ * (drained after translucent blocks), the end-client-tick gear particles, the wire-frame helpers shared with the tile
  * renderers, and the block-highlight handler including configurator overlays. Other listeners of the official
  * file are handled by their respective lanes — see
  * {@code docs/TASK052_RESUME_2026-10-26.md}.
@@ -80,6 +86,132 @@ public class RenderTickHandler {
     private static final Map<BlockState, List<Line>> cachedWireFrames = new Reference2ObjectOpenHashMap<>();
     private static final Map<Direction, Map<TransmissionType, Model3D>> cachedOverlays = new EnumMap<>(Direction.class);
     private static final List<LazyRender> transparentRenderers = new ArrayList<>();
+
+    public static void tickEnd() {
+        //Note: We check that the game mode is not null as if it is that means the world is unloading, and we don't actually want to be rendering
+        // as our data may be out of date or invalid. For example configs could unload while it is still unloading
+        Level world;
+        //noinspection ConstantValue
+        if (minecraft.player != null && (world = minecraft.player.level()) != null && minecraft.gameMode != null && MekanismRenderer.isRunningNormally()) {
+            float partialTicks = minecraft.getTimer().getGameTimeDeltaPartialTick(false);
+            for (Player p : world.players()) {
+                //Traverse active jetpacks and do animations
+                if (mekanism.common.base.PlayerState.CLIENT.isJetpackOn(p)) {
+                    doJetpackRender(p, world, partialTicks);
+                }
+
+                if (world.getGameTime() % 4 == 0) {
+                    //Traverse active scuba masks and do animations
+                    if (mekanism.common.base.PlayerState.CLIENT.isScubaMaskOn(p)) {
+                        if (p.isInWater()) {
+                            doScubaRender(p, world);
+                        }
+                    }
+
+                    //Traverse players and do animations for idle flamethrowers
+                    if (!p.swinging) {
+                        if (p.isUsingItem()) {
+                            InteractionHand usedHand = p.getUsedItemHand();
+                            if (!(p.getItemInHand(usedHand).getItem() instanceof ItemFlamethrower)) {
+                                //If we the used item isn't a flamethrower, grab the other hand's item for checks
+                                // if it was an active flamethrower we just skip adding the idle particles
+                                tryAddIdleFlamethrowerParticles(minecraft, p, usedHand == InteractionHand.MAIN_HAND ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND);
+                            }
+                        } else if (!tryAddIdleFlamethrowerParticles(minecraft, p, InteractionHand.MAIN_HAND)) {
+                            //If the player isn't using an item, try to first add particles for a flamethrower in the main hand
+                            // and then add particles for a flamethrower in the offhand if we failed
+                            tryAddIdleFlamethrowerParticles(minecraft, p, InteractionHand.OFF_HAND);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private static void doScubaRender(Player p, Level world) {
+        Pos3D vec = new Pos3D(0.4, 0.4, 0.4).multiply(p.getViewVector(1)).translate(0, -0.2, 0);
+        Pos3D motion = vec.scale(0.2).translate(p.getDeltaMovement());
+        Pos3D v = new Pos3D(p).translate(0, p.getEyeHeight(), 0).translate(vec);
+        world.addParticle(MekanismParticleTypes.SCUBA_BUBBLE.get(), v.x, v.y, v.z, motion.x, motion.y + 0.2, motion.z);
+    }
+
+    private static void doJetpackRender(Player p, Level world, float partialTicks) {
+        Pos3D playerPos = new Pos3D(p).translate(0, p.getEyeHeight(), 0);
+        //TODO - 1.21: Figure out why this is incorrect for other clients when they are hovering
+        Vec3 playerMotion = p.getDeltaMovement();
+        float random = (world.random.nextFloat() - 0.5F) * 0.1F;
+        //This positioning code is somewhat cursed, but it seems to be mostly working and entity pose code seems cursed in general
+        float xRot;
+        if (p.isCrouching()) {
+            xRot = 20;
+            playerPos = playerPos.translate(0, 0.125, 0);
+        } else {
+            float f = p.getSwimAmount(partialTicks);
+            if (p.isFallFlying()) {
+                float f1 = p.getFallFlyingTicks() + partialTicks;
+                float f2 = Mth.clamp(f1 * f1 / 100.0F, 0.0F, 1.0F);
+                xRot = f2 * (-90.0F - p.getXRot());
+            } else {
+                float f3 = p.isInWater() ? -90.0F - p.getXRot() : -90.0F;
+                xRot = Mth.lerp(f, 0.0F, f3);
+            }
+            xRot = -xRot;
+            Pos3D eyeAdjustments;
+            if (p.isFallFlying() && (p != minecraft.player || !minecraft.options.getCameraType().isFirstPerson())) {
+                eyeAdjustments = new Pos3D(0, p.getEyeHeight(Pose.STANDING), 0).xRot(xRot).yRot(p.yBodyRot);
+            } else if (p.isVisuallySwimming()) {
+                eyeAdjustments = new Pos3D(0, p.getEyeHeight(), 0).xRot(xRot).yRot(p.yBodyRot).translate(0, 0.5, 0);
+            } else {
+                eyeAdjustments = new Pos3D(0, p.getEyeHeight(), 0).xRot(xRot).yRot(p.yBodyRot);
+            }
+            playerPos = new Pos3D(p.getX() + eyeAdjustments.x, p.getY() + eyeAdjustments.y, p.getZ() + eyeAdjustments.z);
+        }
+        Pos3D vLeft = new Pos3D(-0.43, -0.55, -0.54).xRot(xRot).yRot(p.yBodyRot);
+        renderJetpackSmoke(world, playerPos.translate(vLeft, playerMotion), vLeft.scale(0.2).translate(playerMotion, vLeft.scale(random)));
+        Pos3D vRight = new Pos3D(0.43, -0.55, -0.54).xRot(xRot).yRot(p.yBodyRot);
+        renderJetpackSmoke(world, playerPos.translate(vRight, playerMotion), vRight.scale(0.2).translate(playerMotion, vRight.scale(random)));
+        Pos3D vCenter = new Pos3D((world.random.nextFloat() - 0.5) * 0.4, -0.86, -0.30).xRot(xRot).yRot(p.yBodyRot);
+        renderJetpackSmoke(world, playerPos.translate(vCenter, playerMotion), vCenter.scale(0.2).translate(playerMotion));
+    }
+
+    private static boolean tryAddIdleFlamethrowerParticles(Minecraft minecraft, Player player, InteractionHand hand) {
+        if (!ItemFlamethrower.isIdleFlamethrower(player, hand)) {
+            return false;
+        }
+        Pos3D flameVec;
+        Entity vehicle = player.getVehicle();
+        boolean rightHanded = MekanismUtils.isRightArm(player, hand);
+        if (minecraft.player == player && minecraft.options.getCameraType().isFirstPerson()) {
+            flameVec = new Pos3D(1, 1, 1)
+                  .multiply(player.getViewVector(minecraft.getTimer().getGameTimeDeltaPartialTick(false)))
+                  .yRot(rightHanded ? 15 : -15)
+                  .translate(0, player.getEyeHeight() - 0.1, 0);
+        } else {
+            double flameXCoord = rightHanded ? -0.2 : 0.2;
+            double flameYCoord = 1;
+            double flameZCoord = 1.2;
+            if (player.isCrouching()) {
+                flameYCoord -= 0.65;
+                flameZCoord -= 0.15;
+            } else if (vehicle != null) {
+                Vec3 attachmentPoint = player.getVehicleAttachmentPoint(vehicle);
+                flameXCoord -= attachmentPoint.x;
+                flameYCoord -= attachmentPoint.y + 0.1;
+                flameZCoord -= attachmentPoint.z;
+            }
+            flameVec = new Pos3D(flameXCoord, flameYCoord, flameZCoord).yRot(player.yBodyRot);
+        }
+        Vec3 motion = vehicle == null ? player.getDeltaMovement() : vehicle.getDeltaMovement();
+        Vec3 flameMotion = new Vec3(motion.x(), player.onGround() || vehicle != null ? 0 : motion.y(), motion.z());
+        Vec3 mergedVec = player.position().add(flameVec);
+        player.level().addParticle(MekanismParticleTypes.JETPACK_FLAME.get(), mergedVec.x, mergedVec.y, mergedVec.z, flameMotion.x, flameMotion.y, flameMotion.z);
+        return true;
+    }
+
+    private static void renderJetpackSmoke(Level world, Vec3 pos, Vec3 motion) {
+        world.addParticle(MekanismParticleTypes.JETPACK_FLAME.get(), pos.x, pos.y, pos.z, motion.x, motion.y, motion.z);
+        world.addParticle(MekanismParticleTypes.JETPACK_SMOKE.get(), pos.x, pos.y, pos.z, motion.x, motion.y, motion.z);
+    }
 
     public static void clearQueued() {
         //RadiationOverlay (HUD lane) resets when its own lane lands; the queue itself is what the BER spine needs.

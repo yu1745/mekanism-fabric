@@ -55,6 +55,17 @@ public final class MekanismFabricClientBootstrap implements ClientModInitializer
         }
         mekanism.fabric.network.FabricSecurityClientNetworking.initialize();
         mekanism.fabric.radiation.FabricRadiationClientLifecycle.initialize();
+        //Original sprite-set providers, owned by Fabric's client particle registry.
+        net.fabricmc.fabric.api.client.particle.v1.ParticleFactoryRegistry.getInstance().register(
+              mekanism.common.registries.MekanismParticleTypes.LASER.get(), mekanism.client.particle.LaserParticle.Factory::new);
+        net.fabricmc.fabric.api.client.particle.v1.ParticleFactoryRegistry.getInstance().register(
+              mekanism.common.registries.MekanismParticleTypes.JETPACK_FLAME.get(), mekanism.client.particle.JetpackFlameParticle.Factory::new);
+        net.fabricmc.fabric.api.client.particle.v1.ParticleFactoryRegistry.getInstance().register(
+              mekanism.common.registries.MekanismParticleTypes.JETPACK_SMOKE.get(), mekanism.client.particle.JetpackSmokeParticle.Factory::new);
+        net.fabricmc.fabric.api.client.particle.v1.ParticleFactoryRegistry.getInstance().register(
+              mekanism.common.registries.MekanismParticleTypes.SCUBA_BUBBLE.get(), mekanism.client.particle.ScubaBubbleParticle.Factory::new);
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(
+              client -> mekanism.client.render.RenderTickHandler.tickEnd());
         // Client entrypoints run before the GL context exists. Construct the atlas on the render thread when the
         // first resource reload actually starts, and reuse the same holder on subsequent reloads.
         net.fabricmc.fabric.api.resource.ResourceManagerHelper.get(net.minecraft.server.packs.PackType.CLIENT_RESOURCES)
