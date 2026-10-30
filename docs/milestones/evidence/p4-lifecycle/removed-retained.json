@@ -1,0 +1,37 @@
+{
+  "energy": {
+    "method": "canExposeCapabilities",
+    "resolvedTo": "canExposeCapabilities",
+    "declaringClass": "mekanism.common.tile.base.CapabilityTileEntity",
+    "signature": "()",
+    "value": false
+  },
+  "fluid": {
+    "method": "canExposeCapabilities",
+    "resolvedTo": "canExposeCapabilities",
+    "declaringClass": "mekanism.common.tile.base.CapabilityTileEntity",
+    "signature": "()",
+    "value": false
+  },
+  "chemical": {
+    "method": "canExposeCapabilities",
+    "resolvedTo": "canExposeCapabilities",
+    "declaringClass": "mekanism.common.tile.base.CapabilityTileEntity",
+    "signature": "()",
+    "value": false
+  },
+  "item": {
+    "method": "canExposeCapabilities",
+    "resolvedTo": "canExposeCapabilities",
+    "declaringClass": "mekanism.common.tile.base.CapabilityTileEntity",
+    "signature": "()",
+    "value": false
+  },
+  "heat": {
+    "method": "canExposeCapabilities",
+    "resolvedTo": "canExposeCapabilities",
+    "declaringClass": "mekanism.common.tile.base.CapabilityTileEntity",
+    "signature": "()",
+    "value": false
+  }
+}

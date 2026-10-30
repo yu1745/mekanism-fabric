@@ -2,11 +2,11 @@
 
 ## 现状
 
-ROADMAP P4 W-23–28；基线 `843af935`（P3 最终生产提交）。P0–P3 已通过阶段门禁。W-23 已通过真实 cable 传输与 Team Reborn API 双向转换验证，并修复通电 contents 材质崩溃。W-24 满载、断开／重连及原生事务回滚已验证。W-25 Sorter过滤、Transporter及双向漏斗自动化已验证。W-26 化学品数量守恒、热量连接与断开控制已验证。既有机器 smoke 验证 cube→cable→chamber 放电与产出，以及部分物品／流体／化学连接；这些证据不替代本阶段的完整边界验收。
+ROADMAP P4 W-23–28；基线 `843af935`（P3 最终生产提交）。P0–P3 已通过阶段门禁。W-23 已通过真实 cable 传输与 Team Reborn API 双向转换验证，并修复通电 contents 材质崩溃。W-24 满载、断开／重连及原生事务回滚已验证。W-25 Sorter过滤、Transporter及双向漏斗自动化已验证。W-26 化学品数量守恒、热量连接与断开控制已验证。W-27 五种网络的实际卸载／重载、拆装和存档重启已验证。既有机器 smoke 验证 cube→cable→chamber 放电与产出，以及部分物品／流体／化学连接；这些证据不替代本阶段的完整边界验收。
 
 ## 下一步
 
-W-27：在隔离世界验证真实区块卸载／重载、拆除与世界保存重启后的网络重建；使用实际生命周期回调和连接读数，不以直接调用unload方法代替区块卸载。随后W-28执行P4阶段门禁并归档。
+W-28：P4阶段门禁已启动，等待完整build的实际结果；API slice与machine smoke已通过。全部通过后归档M-transfer并进入P5。
 
 随后依次执行 W-24 pipe→tank 满载／断开／事务回滚，W-25 transporter+sorter+vanilla hopper，W-26 tube 与 conductor，W-27 unload/reload、拆除及存读档网络重建；W-28 统一门禁收尾。
 
@@ -55,3 +55,19 @@ GUI：实际打开GuiLogisticalSorter（38 slots）与GuiElectricMachine（41 sl
 控制验证：通过真实transmitter.setConnectionTypeRaw(EAST,NONE)、refreshConnections、notifyTileChange断开；network变1 acceptor。将无能量接收端heat capacitor经NBT重置30000（300K），连续读数299.997947→299.991262K，仅环境变化。恢复EAST=NORMAL并刷新后，同一接收端升至8142.187896K，证明热量来自导体连接；未反射写热量字段，也未人为给接收端供能。见 heat-disconnected-temperature-1/2、heat-disconnected-network、heat-reconnected-temperature.json。官方热算法具有环境散失，本项不伪称绝热／同tick总热量守恒。
 
 运行无新增GUI ERROR；自有客户端正常stopped，完整世界81文件SHA-256恢复一致，临时debug mod/wrapper/Xvfb清理。无新增测试或发布依赖变更。W-26完成；下一项W-27网络实际生命周期，P4全阶段门禁尚待W-28。
+
+2026-10-30 W-27 运行检查点：远端chunk(64,64)五种网络已实际卸载（ServerChunkCache.hasChunk=false，五个保留transmitter canExposeCapabilities均false）并重载，旧对象仍关闭，energy/fluid/chemical缓冲与库存和item数量保持。第一次拆装已触发真实setRemoved并撤销五个旧对象；拆前RPC快照仍含energy4000/chemical3000，不能假定耗尽，补做自然tick等待且断言空缓冲后的第二次拆装。当前仍须完成保存重启和实际传输复验，W-27尚未关闭。
+
+2026-10-30 W-27 完成（基线 `3d8d760b`，未改生产代码）：FabricCapabilityTileLifecycle通过真实BLOCK_ENTITY_UNLOAD关闭能力世代，LevelChunkUnloadMixin在clearAllBlockEntities调用原onChunkUnloaded释放transmitter份额；setRemoved仍走原onWorldSeparate/remove。既有CapabilityTileLifecycleTest 3项与FabricEnergyLifetimeTest 2项共5项PASS（19秒）。未新增生命周期框架、测试或生产日志。
+
+同一远端chunk(64,64)，玩家保持出生区：各行源x1028／transmitter x1029／目标x1030、y100；z1028 energy cube+cable+cube，1030 fluid tank+pipe+tank，1032 chemical tank+tube+tank，1034 chest+transporter+chest，1036 resistive heater+conductor+passive heater。tube两端显式使用实际chemical side config；最初默认侧未开放只作场景准备，不计入通过。所有网络实际字符串为1 transmitter；energy/heat有2 acceptors，fluid/chemical/item有1。取消唯一forceload后ServerChunkCache.hasChunk(64,64)=false，保留五个BE的canExposeCapabilities全false，证明真实卸载，未以直接调用生命周期方法代替。重新forceload后五网重建，旧BE仍false。见 before-unload/after-reload、chunk-after-unforce与各retained.json。
+
+卸载前后逐项核对：energy source82000J、buffer8000J、sink4000000J完全相同；fluid30000/2000/32000mB；chemical60000/4000/64000氧气；item目标8 iron_ore且源空。各transmitter connection与化学/流体身份保留。热量持续按原环境散失，不写作同tick完全相等。
+
+拆装：通过真实setblock air触发五种transmitter setRemoved，保留旧BE全false，再重新放置。第一次拆前实际快照还含4000J／3000化学，不能假称清空或用该次数量差判保存问题。后续明确关闭WEST源侧并排空：实际Basic Cube extract请求16000仅返回4000J、ChemicalTank请求10000仅返回1000，符合原tier rate；第一次空缓冲断言因此失败，原读数保留为rate-limited-drain.json。按真实返回量补充排空并自然等待40tick，before-clean-removal确认energy/fluid/boxed_chemical均空，再次拆装五种传输方块。网络均恢复；源箱再放4 ore，目标由8→12，证明新transporter实际工作。见 before-clean-removal/after-clean-replacement与clean-drains.json。热量导体拆除不作热量守恒声明。
+
+存档：集成服没有注册save-all flush命令，实际通过正常owned session stop关闭并保存所有维度；[保存日志](evidence/p4-lifecycle/world-save.md)。新JVM启动同一存档，未再手工forceload之前hasChunk(64,64)=true，说明强制加载状态随原存档恢复；五网均重建。after-clean-replacement与after-restart两份读数的source/sink容器、Items及energy/fluid/chemical transmitter buffer逐项完全相同：energy54000/8000/4000000J，fluid10000/2000/32000mB，chemical51000/4000/64000；目标12 ore。
+
+重启后的实际传输：从目标取4000J／1000mB／1000氧气后自动补满，源分别变50000J／9000mB／50000氧气，网络buffer仍8000/2000/4000；源箱再加入4 ore，目标变16且源空。source heater以同样1000000J脉冲再次加热，passive sink heat升到181393.119720（capacity100、无stored energy），热网仍1 transmitter/2 acceptors。见 restart-drains/restart-transfer.json。按真实返回量核对，未将独立热量采样写作绝热守恒。
+
+最终客户端无新增GUI ERROR，两次自有会话正常stopped；完整世界从首轮前备份恢复，81文件SHA-256一致，临时debug mod/wrapper/Xvfb清理。所有失败探针与补验边界已注明。W-27完成，W-28当前完整build仍在执行；API门禁17秒PASS、machine smoke PASS，不提前关闭整个P4。

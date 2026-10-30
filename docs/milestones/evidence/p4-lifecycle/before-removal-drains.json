@@ -1,0 +1,28 @@
+{
+  "energy": {
+    "method": "extract",
+    "resolvedTo": "extract",
+    "declaringClass": "mekanism.common.capabilities.energy.EnergyCubeEnergyContainer",
+    "signature": "(long,mekanism.api.Action,mekanism.api.AutomationType)",
+    "value": 4000
+  },
+  "fluid": {
+    "handle": "fabric:fluid",
+    "kind": "fluid",
+    "requested": 810000,
+    "extracted": 810000,
+    "remaining": 0,
+    "simulated": false
+  },
+  "chemical": {
+    "method": "extract",
+    "resolvedTo": "extract",
+    "declaringClass": "mekanism.common.capabilities.chemical.ChemicalTankChemicalTank",
+    "signature": "(long,mekanism.api.Action,mekanism.api.AutomationType)",
+    "value": {
+      "ref": 31,
+      "class": "mekanism.api.chemical.ChemicalStack",
+      "toString": "1000 mekanism:oxygen"
+    }
+  }
+}
