@@ -1,0 +1,85 @@
+{
+  "baseline": "85799912",
+  "preW40SafetyReview": "CLOSED readonly rereview85799912",
+  "testMode": "Seven existing test task outputs cleaned before full build to require fresh execution; no new test sources.",
+  "environment": {
+    "userBus": "Existing uid1000 bus verified live; exec shell lacked XDG_RUNTIME_DIR and DBUS_SESSION_BUS_ADDRESS, supplied to this run only.",
+    "artifactCache": "/home/wangyu/.cache/mekanism-fabric-smoke",
+    "modelTimeoutSeconds": 90
+  },
+  "results": [
+    {
+      "name": "build",
+      "command": [
+        "./gradlew",
+        "-p",
+        "fabric",
+        "cleanTest",
+        "cleanFabricTransferTest",
+        "cleanFabricRegistryTest",
+        "cleanQioTransactionTest",
+        "cleanFabricClientModelTest",
+        "cleanFabricDataMapTest",
+        "cleanFabricRecipeRegistryTest",
+        "build",
+        "--console=plain"
+      ],
+      "exit": 0,
+      "seconds": 261.96
+    },
+    {
+      "name": "api",
+      "command": [
+        "./gradlew",
+        "-p",
+        "fabric",
+        "verifyApiSliceNoNeoForge",
+        "--console=plain"
+      ],
+      "exit": 0,
+      "seconds": 0.65
+    },
+    {
+      "name": "machine",
+      "command": [
+        "scripts/fabric-machine-smoke.sh"
+      ],
+      "exit": 0,
+      "seconds": 97.46
+    },
+    {
+      "name": "paired",
+      "command": [
+        "scripts/fabric-paired-network-smoke.sh"
+      ],
+      "exit": 0,
+      "seconds": 76.93
+    },
+    {
+      "name": "rejection",
+      "command": [
+        "scripts/fabric-configuration-rejection-smoke.sh"
+      ],
+      "exit": 1,
+      "seconds": 241.82
+    }
+  ],
+  "current": null,
+  "failed": "rejection",
+  "developmentPriorityChange": "User instructed focus on development; no further release smoke launched after rejection stage terminated.",
+  "failureSummary": {
+    "stage": "rejection",
+    "raw": "overall 240s timeout expired while waiting for mismatch rejection",
+    "underlyingClientError": "RemapException: Received998 registry entries unknown to this client (mekanism namespace)",
+    "scope": "Not investigated further during rendering development; no rejection PASS claim."
+  },
+  "unexecuted": [
+    "packaged",
+    "recipe",
+    "chemical",
+    "model",
+    "worldgen",
+    "retrogen",
+    "tile"
+  ]
+}

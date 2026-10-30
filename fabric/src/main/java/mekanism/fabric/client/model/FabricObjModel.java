@@ -24,9 +24,8 @@ import org.jetbrains.annotations.Nullable;
 /**
  * {@code neoforge:obj} semantics on the shipped Meka-Tool entity OBJs: geometry is parsed off-thread (including the
  * {@code mtllib}/{@code map_Kd} texture bindings), every group is baked through the shared OBJ quad baker, and the
- * display transforms plus gui-light/ambient-occlusion defaults come from the declaring JSON's real parent chain
- * (the separate_transforms base inherits its outer {@code minecraft:item/generated} ancestry), exactly where the
- * official wrapper reads them.
+ * display transforms plus gui-light/ambient-occlusion defaults come from the declaring JSON's real parent chain.
+ * A perspective's parent reuses these OBJ quads with the child's resolved properties.
  *
  * <p>Extends BlockModel for the same vanilla parent-resolution requirement documented on the composite model.</p>
  */
@@ -59,7 +58,17 @@ public final class FabricObjModel extends BlockModel {
     }
 
     @Override
+    public BlockModel getRootModel() {
+        //The generated-item shortcut must not replace custom OBJ geometry with an empty flat item.
+        return this;
+    }
+
+    @Override
     public BakedModel bake(@Nullable ModelBaker baker, Function<Material, TextureAtlasSprite> spriteGetter, ModelState state) {
+        return bakeInherited(this, baker, spriteGetter, state);
+    }
+
+    public BakedModel bakeInherited(BlockModel properties, @Nullable ModelBaker baker, Function<Material, TextureAtlasSprite> spriteGetter, ModelState state) {
         Function<String, TextureAtlasSprite> sprites = alias -> spriteGetter.apply(new Material(
               TextureAtlas.LOCATION_BLOCKS, ResourceLocation.parse(alias)));
         TransmitterQuadBaker quadBaker = new TransmitterQuadBaker(geometry, sprites, state);
@@ -69,7 +78,7 @@ public final class FabricObjModel extends BlockModel {
         }
         //The particle fallback follows the first declared material; the shipped OBJs always declare one.
         String firstAlias = geometry.groups().values().iterator().next().iterator().next().material();
-        return new FabricMergedQuadsModel(id, quads, sprites.apply(firstAlias), getTransforms(),
-              hasAmbientOcclusion(), true, getGuiLight() == BlockModel.GuiLight.SIDE);
+        return new FabricMergedQuadsModel(id, quads, sprites.apply(firstAlias), properties.getTransforms(),
+              properties.hasAmbientOcclusion(), true, properties.getGuiLight() == BlockModel.GuiLight.SIDE);
     }
 }

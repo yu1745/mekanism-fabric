@@ -19,9 +19,8 @@ import org.jetbrains.annotations.Nullable;
  * stack, so the adapter rebases the official JSON onto {@code minecraft:item/generated} and delegates the entire
  * bake to the vanilla pipeline.
  *
- * <p>Documented visual delta: NeoForge's per-layer full-brightness data ({@code neoforge_data.layers}) has no
- * vanilla 1.21.1 counterpart, so the dashboard LED layer renders with scene lighting instead of being forced
- * full-bright. The official JSON stays the source of truth and is not modified.</p>
+ * <p>The QIO model plugin applies the official {@code neoforge_data.layers} lighting to these generated quads
+ * through the existing Fabric renderer path. The official JSON stays unchanged.</p>
  *
  * <p>Extends BlockModel for the same vanilla parent-resolution requirement documented on the composite model.</p>
  */

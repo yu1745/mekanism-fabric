@@ -46,10 +46,11 @@ import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
-/** Preserves the QIO array's item drive layer and the per-element NeoForge light data. */
+/** Preserves QIO drive geometry and the official per-face/per-layer light data through the native renderer. */
 public final class FabricQIOModelPlugin {
     private static final ResourceLocation SHELL = id("block/qio_drive_array");
     private static final ResourceLocation ITEM = id("item/qio_drive_array");
+    private static final ResourceLocation DASHBOARD = id("item/portable_qio_dashboard");
     private static final List<ResourceLocation> DRIVES = List.of(id("block/qio_drive/qio_drive_offline"),
           id("block/qio_drive/qio_drive_empty"), id("block/qio_drive/qio_drive_partial"), id("block/qio_drive/qio_drive_full"));
 
@@ -67,6 +68,8 @@ public final class FabricQIOModelPlugin {
                   // Vanilla bakes inventory models as top-level variants rather than by their item/ resource id.
                   if (net.minecraft.client.resources.model.ModelResourceLocation.inventory(id("qio_drive_array")).equals(bake.topLevelId())) {
                       id = ITEM;
+                  } else if (net.minecraft.client.resources.model.ModelResourceLocation.inventory(id("portable_qio_dashboard")).equals(bake.topLevelId())) {
+                      id = DASHBOARD;
                   }
                   if (model == null || id == null || !models.containsKey(id)) {
                       return model;
@@ -82,7 +85,7 @@ public final class FabricQIOModelPlugin {
                       org.slf4j.LoggerFactory.getLogger("Mekanism/FabricQIOModels").info(
                             "MEKANISM_FABRIC_QIO_MODEL_PROOF model={} item_layer={} light_faces={}", id, id.equals(ITEM), light.size());
                   }
-                  return new QIOModel(model, light, id.equals(ITEM));
+                  return new QIOModel(model, light, id.equals(ITEM), layerLight(geometry));
               }));
     }
 
@@ -92,6 +95,7 @@ public final class FabricQIOModelPlugin {
             List<ResourceLocation> ids = new ArrayList<>(DRIVES);
             ids.add(SHELL);
             ids.add(ITEM);
+            ids.add(DASHBOARD);
             for (ResourceLocation id : ids) {
                 ResourceLocation file = id.withPath(path -> "models/" + path + ".json");
                 resources.getResource(file).ifPresent(resource -> {
@@ -139,12 +143,29 @@ public final class FabricQIOModelPlugin {
         }
     }
 
+    private static Map<Integer, Integer> layerLight(JsonObject model) {
+        JsonObject data = model.getAsJsonObject("neoforge_data");
+        if (data == null || !data.has("layers")) {
+            return Map.of();
+        }
+        Map<Integer, Integer> light = new HashMap<>();
+        data.getAsJsonObject("layers").entrySet().forEach(entry -> {
+            JsonObject layer = entry.getValue().getAsJsonObject();
+            light.put(Integer.parseInt(entry.getKey()), LightTexture.pack(
+                  GsonHelper.getAsInt(layer, "block_light", 0), GsonHelper.getAsInt(layer, "sky_light", 0)));
+        });
+        return Map.copyOf(light);
+    }
+
     public static int lightOf(BakedModel model, BakedQuad quad) {
         return model instanceof QIOModel qio ? qio.light(quad) : 0;
     }
 
-    private record QIOModel(BakedModel original, List<LitQuad> lit, boolean item) implements BakedModel, FabricBakedModel {
+    private record QIOModel(BakedModel original, List<LitQuad> lit, boolean item, Map<Integer, Integer> layerLight) implements BakedModel, FabricBakedModel {
         private int light(BakedQuad quad) {
+            if (layerLight.containsKey(quad.getTintIndex())) {
+                return layerLight.get(quad.getTintIndex());
+            }
             for (LitQuad candidate : lit) {
                 if (candidate.matches(quad)) {
                     return candidate.light();
@@ -218,7 +239,7 @@ public final class FabricQIOModelPlugin {
                     if (resolved == null || resolved == original) {
                         return model;
                     }
-                    return new QIOModel(resolved, List.of(), true);
+                    return new QIOModel(resolved, List.of(), true, Map.of());
                 }
             };
         }

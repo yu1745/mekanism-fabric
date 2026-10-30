@@ -20,7 +20,7 @@
 | M-multiblock | 五种核心多方块生命周期 | 破坏重建、区块重载、存读档、尺寸失败路径 | 已验证：P6 W-34–35与build/API/machine门禁通过；[证据](../archive/M-multiblock.md)。 |
 | M-registry | 化学 ingredient 类型注册表、Robit 注册/数据包、官方 legacy alias、biome modifier | 注册冻结后 ID/alias 与官方一致 | 已验证：W-38–39注册／生成与P7门禁通过；[证据](../archive/M-registry.md)。 |
 | M-gear | accessory、Curios 策略、ItemAbility、suit/tool 规则 | 穿戴/工具行为真机核对 | 已验证：W-36–37功能／factory与P7门禁通过；[证据](../archive/M-gear.md)。 |
-| M-release | 核心全量测试、smoke、发布物与限制汇总 | 全部门禁／发布契约通过并完成协调者复核 | 进行中：221项审查发现mixin注册下限缺口，已修复；待只读复查与W-40门禁；见M-release.md。 |
+| M-release | 核心全量测试、smoke、发布物与限制汇总 | 全部门禁／发布契约通过并完成协调者复核 | 进行中：安全网复核已关闭；按用户要求转回渲染开发，余下发布检查顺延；见M-release.md。 |
 
 ## 旧 Task052 文档归类（按主题；P0 复核范围见归档 M-owner）
 
@@ -46,8 +46,8 @@
 当前范围为 Fabric 核心模块；P8 全套验证和最终发布物核验仍待完成。
 
 - **第三方集成**：ROADMAP 排除的 JEI/EMI、CraftTweaker、ProjectE、FramedBlocks、JsonThings、gender、OpenComputers2 等不在本轮发布范围。混合 JEI/EMI 的公共 `IMekanismAccess`／`MekanismAccess` 服务未提供；ingredient creators 已由独立真实服务承接，不代表 viewer API 已兼容。
-- **历史 46 项**：P3 清单中已有 5 份原源码纳入、32 项由实际 Fabric owner 承接；另有 7 项第三方边界、1 项离线开发工具、1 项旧反射辅助。逐项现状见[对照](evidence/p8-release/w42-historical46-current.csv)，旧反射辅助对应的 separate-transforms 可视差异仍保留。
+- **历史 46 项**：P3 清单中已有 5 份原源码纳入、32 项由实际 Fabric owner 承接；另有 7 项第三方边界、1 项离线开发工具、1 项旧反射辅助。逐项现状见[对照](evidence/p8-release/w42-historical46-current.csv)，旧反射辅助已由原生透视模型分派取代。
 - **平台交互**：不提供任意 modifier 重绑编辑器；Accessories 默认 H 与 Mekanism HUD 绑定冲突可在原版设置中重绑。命令使用原版权限等级／op 回退，未提供 NeoForge 权限插件的逐 node、动态 context 或离线覆盖。多个飞行提供者之间缺少原版权限归属 token；工具动作采用原版映射，不触发 NeoForge `BlockToolModificationEvent` 或其第三方 data-map 扩展。
-- **已知可视差异**：Meka-Tool 的 separate-transforms 当前各视角均使用 base OBJ，左手镜像模型尚未选择；便携 QIO dashboard 的 LED 层随场景照明，未强制全亮度。依据为当前 `FabricMekanismModelPlugin`／`FabricItemLayersModel` 与既有 `API_DELTAS.md`，不能把模型加载通过扩称全部画面等价。
+- **本批渲染修复**：Meka-Tool 已按原生显示上下文选择独立左右手模型，QIO dashboard 已按官方 JSON 给 LED 层应用 full-bright；[直接实机结果](evidence/development-render/native-summary.json)。未穷举第三方渲染器与资源包组合。
 - **验证边界**：现有证据覆盖代表装备／流体／网络路径，未穷举全部模块组合、流体／船／滑翔、第三方容器与能量提供者。worldgen 的保存 palette 与 retrogen 触发读数不证明全部矿脉分布；[范围与证据](evidence/p8-release/w42-preparation.json)。
 - **后续模块**：Tools、Additions、Generators 依 ROADMAP P9/P10 分阶段推进，当前核心通过记录不代表这些模块已移植。

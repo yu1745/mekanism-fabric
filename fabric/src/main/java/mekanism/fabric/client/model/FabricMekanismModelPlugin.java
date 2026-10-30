@@ -26,28 +26,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Fabric model-loading closure for the shipped Mekanism models that declare a NeoForge loader key, which vanilla's
- * model pipeline cannot parse.
- *
- * <p>The official files stay packaged unchanged and remain the source of truth; this plugin parses them in the
- * off-thread preparable phase and resolves each through a Mekanism-owned {@code UnbakedModel} with matching baking
- * semantics:</p>
- *
- * <ul>
- * <li>{@code neoforge:composite} - baked as the merge of its declared inline children (factory machines).</li>
- * <li>{@code neoforge:separate_transforms} - baked as its inline {@code neoforge:obj} base; the perspective swap to
- * a mirrored Meka-Tool OBJ is a documented visual delta (vanilla 1.21.1 offers no per-perspective model hook on
- * Fabric).</li>
- * <li>{@code neoforge:item_layers} - rebased onto the vanilla {@code minecraft:item/generated} layer stack; the
- * NeoForge per-layer full-brightness of the QIO dashboard LED is a documented visual delta.</li>
- * </ul>
- *
- * <p>Loud deferrals (each counted in the proof line, never faked): {@code mekanism:energy_cube},
- * {@code mekanism:data_based} and {@code mekanism:robit} fall back to a vanilla plain parse (tier models parent
- * onto them, so a resolver intervention would break the BlockModel parent cast); the {@code neoforge:fluid_container}
- * family resolves through {@link FabricDeferredLoaderModel} because its {@code neoforge:item/bucket} parent exists
- * only in the NeoForge jar; {@code mekanism:transmitter} belongs to the dedicated transmitter plugin. Unknown
- * loaders still fail loudly, so a future loader can never be dropped silently.</p>
+ * Prepares the shipped Mekanism loader models off-thread and resolves their native baked owners.
+ * Official JSON remains the property authority. Transmitters have their dedicated plugin;
+ * unknown loaders fail rather than falling back to empty geometry.
  */
 public final class FabricMekanismModelPlugin {
 
@@ -58,12 +39,7 @@ public final class FabricMekanismModelPlugin {
     private static final String LOADER_OBJ = "neoforge:obj";
     /** Owned by {@code FabricTransmitterModelPlugin}; this scan only yields the id back to vanilla resolution. */
     private static final String LOADER_TRANSMITTER = "mekanism:transmitter";
-    /**
-     * Deliberate deferrals, each loud and counted in the proof line: their official baked forms read NeoForge model
-     * data or NeoForge-owned base assets, which have no Fabric counterpart yet. Vanilla then parses these files as
-     * plain element-less models, so resolution stays safe; faking the dynamic half here would produce wrong visuals
-     * instead of an honest gap.
-     */
+    //Mekanism-specific geometry owners selected below.
     private static final String LOADER_ENERGY_CUBE = "mekanism:energy_cube";
     private static final String LOADER_DATA_BASED = "mekanism:data_based";
     private static final String LOADER_ROBIT = "mekanism:robit";
@@ -131,11 +107,8 @@ public final class FabricMekanismModelPlugin {
                         composites++;
                     }
                     case LOADER_SEPARATE_TRANSFORMS -> {
-                        //Only the base model is baked: vanilla 1.21.1 on Fabric has no per-perspective model hook,
-                        //so the mirrored left-hand Meka-Tool OBJ stays an explicitly documented visual delta. The
-                        //outer JSON stays the property authority (parent chain, transforms, particle).
-                        LOGGER.debug("separate_transforms model {} bakes its base OBJ for every perspective", id);
-                        prepared.put(id, obj(id, root.getAsJsonObject("base"), resources, root.toString()));
+                        JsonObject base = root.getAsJsonObject("base");
+                        prepared.put(id, new FabricSeparateTransformsModel(id, root, obj(id, base, resources, base.toString())));
                         separateTransforms++;
                     }
                     case LOADER_ITEM_LAYERS -> {

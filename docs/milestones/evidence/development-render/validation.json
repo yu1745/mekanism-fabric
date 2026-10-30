@@ -1,0 +1,42 @@
+{
+  "baseline": "85799912",
+  "change": "Actual Meka-Tool base/left OBJ parent baking and native display-context selection; QIO dashboard per-layer light in existing Fabric renderer.",
+  "sliceDelta": {
+    "api": 0,
+    "common": 0,
+    "platform": 2,
+    "platformTotal": 209
+  },
+  "build": "assemble +3 existing focused client-model tests PASS33s; no new tests.",
+  "tests": [
+    {
+      "class": "QIODriveModelClientTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0"
+    },
+    {
+      "class": "QIODriveItemStatusClientTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0"
+    },
+    {
+      "class": "RobitModelClientTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0"
+    }
+  ],
+  "native": "Cold client world: right/GUI107 quads; first/third left102 quads and native left transforms. Dashboard33 quads, base tint0 light0, LED tint1 fullbright15728880. Actual first-person hand frame captured.",
+  "cleanup": {
+    "worldIdentical": true,
+    "files": 81,
+    "optionsIdentical": true,
+    "ownedClientStopped": true,
+    "temporaryModsRemoved": true
+  },
+  "scope": "Direct development checks only; no all-smoke rerun or release claim. Earlier W40 rejection timeout remains recorded and deferred by user development priority.",
+  "reference": "NeoForge21.1.200 sources: client/model/SeparateTransformsModel.java and ItemLayerModel.java, inspected for behavior; native Fabric implementation, no copied reference-tree code.",
+  "finalAssemble": "PASS after source/comment cleanup; three slice checks included."
+}

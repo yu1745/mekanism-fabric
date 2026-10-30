@@ -10,7 +10,8 @@
     "gear.GearBoltRenderMixin",
     "recipe.ClientPacketListenerMixin",
     "tile.LevelChunkMixin",
-    "tile.ClientPacketListenerTileMixin"
+    "tile.ClientPacketListenerTileMixin",
+    "client.SeparateTransformsItemRendererMixin"
   ],
   "injectors": {
     "defaultRequire": 1

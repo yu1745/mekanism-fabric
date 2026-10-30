@@ -25,6 +25,7 @@ mekanism/fabric/client/model/FabricMergedQuadsModel.java
 mekanism/fabric/client/model/FabricModelCachePlugin.java
 mekanism/fabric/client/model/FabricModelJson.java
 mekanism/fabric/client/model/FabricObjModel.java
+mekanism/fabric/client/model/FabricSeparateTransformsModel.java
 mekanism/fabric/client/model/FabricQIODriveGeometry.java
 mekanism/fabric/client/model/FabricQIOModelPlugin.java
 mekanism/fabric/client/model/FabricRobitUnbakedModel.java
@@ -108,6 +109,7 @@ mekanism/fabric/mixin/client/LivingEntityVisibilityMixin.java
 mekanism/fabric/mixin/client/MekanismCreativeSearchMixin.java
 mekanism/fabric/mixin/client/MouseInputMixin.java
 mekanism/fabric/mixin/client/RobitItemRendererMixin.java
+mekanism/fabric/mixin/client/SeparateTransformsItemRendererMixin.java
 mekanism/fabric/mixin/client/TextureAtlasMixin.java
 mekanism/fabric/mixin/entity/BlockStateDestroyProgressMixin.java
 mekanism/fabric/mixin/entity/EnderManMaskMixin.java

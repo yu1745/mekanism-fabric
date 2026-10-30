@@ -7,13 +7,10 @@
     "offline_development_tool": 1,
     "original_now_admitted": 5,
     "third_party_boundary": 7,
-    "obsolete_reflection_with_visual_delta": 1
+    "obsolete_reflection": 1
   },
   "validation": "Every historical source accounted exactly once;5 admitted originals checked against common slice, native replacements checked for real file existence and exact audited slice inclusion. Existing phase evidence cited; no test rerun or production change.",
-  "knownVisualDeltas": [
-    "Separate-transforms Meka-Tool mirrors not selected by item display context; base OBJ used for every perspective.",
-    "QIO item_layers LED full brightness remains documented model delta; full gameplay parity not claimed."
-  ],
+  "knownVisualDeltas": [],
   "risks": [
     "Arbitrary modifier rebinding editor and default Accessories H conflict.",
     "Permission plugins lose NeoForge per-node/context/offline overrides; native command levels and op security fallback remain.",
@@ -23,5 +20,6 @@
     "Worldgen saved-palette presence and retrogen activation do not prove exhaustive placement distribution.",
     "P8 W40 full suite and W41 clean artifact remain unexecuted in this preparation; coordinator safety review still required."
   ],
-  "newTests": false
+  "newTests": false,
+  "resolvedByDevelopment": "Meka-Tool perspective selection/OBJ inherited bake and QIO LED layer fullbrightness now implemented and native verified; see evidence/development-render/native-summary.json."
 }

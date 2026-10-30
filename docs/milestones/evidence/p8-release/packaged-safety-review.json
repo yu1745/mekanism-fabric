@@ -16,5 +16,15 @@
     "Family/deferred admission ceiling retirements match actual admitted owners.",
     "Four W32 AW expectations independently match named declarations and fixed1.21.1 mappings."
   ],
-  "status": "Initial review complete with one P2; committed fix rereview pending. Release tests and artifact checks still required."
+  "status": "CLOSED pre-W40 safety-net review only. W40/W41 release gates remain required.",
+  "rereview": {
+    "commit": "85799912",
+    "readOnly": true,
+    "conclusion": "P2 fixed; no new defects in the same boundary. Pre-W40 safety-net review may close.",
+    "checks": [
+      "Original three client registrations restored as independent subset floor.",
+      "Independent pure-memory omission of each original registration now rejects; normal existing artifact passes classes2982.",
+      "221-row map and script/oracle hashes match;565 class floor,21 hashes,4 exact services unchanged."
+    ]
+  }
 }

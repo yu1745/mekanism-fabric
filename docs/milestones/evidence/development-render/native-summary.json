@@ -1,0 +1,59 @@
+{
+  "tool": {
+    "wrapper": "mekanism.fabric.client.model.FabricSeparateTransformsModel$Perspectives",
+    "contexts": {
+      "GUI": {
+        "model": "mekanism:item/meka_tool",
+        "quads": 107,
+        "translation": {
+          "ref": 6,
+          "class": "org.joml.Vector3f",
+          "toString": "( 4.062E-1 -2.188E-1  0.000E+0)"
+        }
+      },
+      "FIRST_PERSON_RIGHT_HAND": {
+        "model": "mekanism:item/meka_tool",
+        "quads": 107,
+        "translation": {
+          "ref": 8,
+          "class": "org.joml.Vector3f",
+          "toString": "( 0.000E+0 -1.875E-1  0.000E+0)"
+        }
+      },
+      "FIRST_PERSON_LEFT_HAND": {
+        "model": "mekanism:item/meka_tool_left",
+        "quads": 102,
+        "translation": {
+          "ref": 13,
+          "class": "org.joml.Vector3f",
+          "toString": "(-9.375E-1 -1.875E-1  0.000E+0)"
+        }
+      },
+      "THIRD_PERSON_LEFT_HAND": {
+        "model": "mekanism:item/meka_tool_left",
+        "quads": 102,
+        "translation": {
+          "ref": 18,
+          "class": "org.joml.Vector3f",
+          "toString": "(-9.688E-1 -6.250E-1 -2.500E-1)"
+        }
+      }
+    }
+  },
+  "dashboard": {
+    "model": "mekanism.fabric.client.model.FabricQIOModelPlugin$QIOModel",
+    "quads": 33,
+    "layers": [
+      {
+        "index": 0,
+        "tint": 0,
+        "light": 0
+      },
+      {
+        "index": 32,
+        "tint": 1,
+        "light": 15728880
+      }
+    ]
+  }
+}

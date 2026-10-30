@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.function.Function;
 import mekanism.fabric.client.model.CompositeModelParentAccess;
 import mekanism.fabric.client.model.FabricCompositeModel;
+import mekanism.fabric.client.model.FabricObjModel;
 import net.minecraft.client.renderer.block.model.BlockElement;
 import net.minecraft.client.renderer.block.model.BlockModel;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
@@ -68,6 +69,9 @@ public abstract class BlockModelCompositeMixin implements CompositeModelParentAc
         while (current != null) {
             if (current instanceof FabricCompositeModel composite) {
                 result.setReturnValue(composite.bakeInherited((BlockModel) (Object) this, baker, sprites, state));
+                return;
+            } else if (current instanceof FabricObjModel obj) {
+                result.setReturnValue(obj.bakeInherited((BlockModel) (Object) this, baker, sprites, state));
                 return;
             }
             CompositeModelParentAccess access = (CompositeModelParentAccess) current;
