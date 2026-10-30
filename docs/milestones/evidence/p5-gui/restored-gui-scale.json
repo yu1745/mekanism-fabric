@@ -1,0 +1,1 @@
+{"resolvedTo":"get","steps":[{"seg":"options","field":"options","class":"net.minecraft.client.Options"},{"seg":"guiScale","field":"guiScale","class":"net.minecraft.client.OptionInstance"},{"seg":"get","method":"get","class":"java.lang.Integer"}],"value":0}

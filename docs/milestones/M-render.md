@@ -2,11 +2,11 @@
 
 ## 现状
 
-ROADMAP P5 W-29–33。P4 已验证能量／流体／物品／化学／热量及网络生命周期；其中 Contents 无贴图材质已在 `d10def07` 修复，W-24 实机确认 contentModelCache 已成功 bake。W-29 已完成原OBJ六类行为映射、真实连接／断开截图，并修复原版流体RGB→ARGB与默认模型block-light两项差异。W-30 已补齐粒子与直接tick调用方，模型映射与focused tests通过；W-31–33仍待完成。
+ROADMAP P5 W-29–33。P4 已验证能量／流体／物品／化学／热量及网络生命周期；其中 Contents 无贴图材质已在 `d10def07` 修复，W-24 实机确认 contentModelCache 已成功 bake。W-29 已完成原OBJ六类行为映射、真实连接／断开截图，并修复原版流体RGB→ARGB与默认模型block-light两项差异。W-30 已补齐粒子与直接tick调用方，模型映射与focused tests通过；W-31 全部71个注册menu窗口巡检通过；W-32–33仍待完成。
 
 ## 下一步
 
-W-31：按machine/factory/QIO/robit/teleporter等真实screen/menu owner做GUI巡检，记录打不开／渲染异常并在同一闭包修复。随后W-32按键／客户端注册／accessory渲染，W-33阶段门禁。
+W-32：核对MekKeyBinding*／ClientRegistration*剩余行为与真实Fabric key、HUD/render事件、Curio/Accessories渲染owner；缺口按立即调用链接通并实机验证。随后W-33统一门禁、归档。
 
 ## 未决项
 
@@ -47,3 +47,17 @@ W-30模型核对发现DataBased loader一处行为差异：官方唯一SUPPORTED
 真实客户端：新JVM启动通过构造器访问，补齐JSON并资源reload后ParticleEngine.createParticle根据实际注册provider创建四个原类；sprite分别minecraft:flame、minecraft:generic_*、minecraft:bubble、mekanism:laser；Laser lifetime5，bounds来自原实现。见 [原生factory读数](evidence/p5-model-particles/native-factory-particles.json)。未直接new Factory绕开注册。实际给玩家持有含1000hydrogen的Flamethrower，isIdleFlamethrower=true，END tick后实际particleEngine队列含JetpackFlameParticle及多个非零age，证明原持物→tick→factory→engine路径。见 [条件](evidence/p5-model-particles/idle-flame-eligible.json)、[队列](evidence/p5-model-particles/idle-flame-particles.json)。这不冒充W-36整套Jetpack/Scuba装备行为已完成。
 
 首轮compile两构造器访问失败、首轮factory sprite=null以及CLI枚举/Float参数探针均已记录；补验使用同一真实owner，不放松检查。最终assemble+DataBased focused test PASS（22秒，含slice gates），[验收摘要](evidence/p5-model-particles/validation.md)。运行无新增未处理客户端ERROR；早期反射factory的已知NPE已由缺失JSON修复。自有客户端正常stopped，隔离世界81文件SHA-256恢复一致，临时mod/wrapper/Xvfb清理。无新测试；P5全阶段门禁留W-33。下一项W-31。
+
+2026-10-30 W-31 检查点：55个block menu家族已巡检；50个直接打开，五个multiblock在真实官方builder形成结构后也正常打开。所有已读screenFault为空。Dictionary/Portable/Seismic/Personal等物品初次前提不足不计失败：补足潜行／所有权认领／同区块真实vibrator后均成功。Robit通过真实ItemRobit→chargepad生成实体并绑定本轮玩家，主页面和四个实际侧栏按钮切换均成功。仍须完成两个tile子页和71个注册menu逐项覆盖核对，再关闭W-31。
+
+2026-10-30 W-31 完成（基线 `44cd7bb1`，未改生产代码）：静态MenuScreens注册71个，实际MekanismContainerTypes registry entries也为71；[覆盖表](evidence/p5-gui/coverage.csv)与两者集合完全一致，无缺失／额外。71个都有真实open/menu/screen JSON与持久截图；screenFault全空，阶段[错误记录](evidence/p5-gui/errors.json) entries=[]且truncated=false。不是仅检查类名或调用构造器。实际端到端路径与预条件详见 [验收](evidence/p5-gui/validation.md)。
+
+55个方块菜单：50个直接通过。五个unformed multiblock的NO_GUI_CHANGED是实际成型前提；复用原mek build tank/matrix/boiler/evaporation/sps命令，以真实玩家CommandSourceStack搭建官方完整结构后全部GUI打开，不写假formed NBT。各菜单源／screen关系、slot/widget读数及gui截图在同目录；P6仍需完整功能、破拆和存读档验收，不因本次打开GUI宣布P6完成。
+
+五个物品菜单通过原server ItemStack.use与真实持物打开：Dictionary遵守潜行条件；Portable Teleporter/QIO/Personal Chest先认领所有权后再次use；Seismic Reader使用玩家所在同一chunk内实际通电Vibrator，初次跨chunk的“Unable to discover any vibrations”不是GUI故障。Module Tweaker持MekaTool满足原hasTweakableItem，经真实PacketOpenGui走native网络入口。
+
+Robit通过ItemRobit在chargepad的实际useOn生成，home正确，本轮测试owner用原setOwnerUUID绑定实际玩家；原interactAt打开Main，然后实际侧栏坐标点击Crafting/Inventory/Smelting/Repair，真实C2S按钮→server menu→client screen均通过。额外Stats/Miner config/QIO frequency子页使用原typed payload及实际当前菜单／持物上下文；没有直接new screen绕开server container。
+
+实际查看代表Machine／Factory／QIO／Robit／Boiler stats截图，无异常缺图或screen crash；初始auto-scale=2时Digital Miner/Sorter有窗口边缘超出240高GUI视口，scale=1后完整补拍，最终原guiScale=0已恢复。启动教程toast属于原vanilla overlay，不作为mod UI故障。本项覆盖每个registered menu的一次打开／绘制与problems，不扩称所有动态数据、每个factory tier或每个按钮业务均已验证。
+
+自有客户端正常stopped，完整隔离世界81文件SHA-256恢复一致，临时mod/wrapper/Xvfb清理。无新测试、无需为纯验证重复编译；P5阶段门禁留W-33。W-31完成，下一项W-32。
