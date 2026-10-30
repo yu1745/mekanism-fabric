@@ -1,0 +1,40 @@
+{
+  "headBeforeDocumentation": "6421cc6f4836cd8297d34fb2901218e4ac7fcbfc",
+  "productionBaseline": "8ad14311",
+  "gates": [
+    {
+      "name": "build",
+      "command": [
+        "./fabric-build.sh"
+      ],
+      "exitCode": 0,
+      "seconds": 1.77
+    },
+    {
+      "name": "api",
+      "command": [
+        "./gradlew",
+        "-p",
+        "fabric",
+        "verifyApiSliceNoNeoForge"
+      ],
+      "exitCode": 0,
+      "seconds": 0.66
+    },
+    {
+      "name": "machine",
+      "command": [
+        "scripts/fabric-machine-smoke.sh"
+      ],
+      "exitCode": 0,
+      "seconds": 98.47
+    }
+  ],
+  "markers": [
+    "fabric-machine-smoke: PASSED"
+  ],
+  "testExecution": "Existing tests UP-TO-DATE; production inputs unchanged since P5. Reuse P5 578-test passing result; do not claim 578 fresh runs.",
+  "sourceChanges": false,
+  "newTests": false,
+  "scope": "P6 phase gates only, not W40 release clearance"
+}

@@ -1,11 +1,17 @@
 {
-  "sections": [
-    {
-      "heading": "W-27 正常关闭存档",
-      "paragraphs": [
-        "集成服未注册 `save-all flush` 命令；实际保存通过 owned session stop 正常关闭完成，返回 state=stopped。对应真实日志：",
-        "```text\n[13:18:50] [Server thread/INFO] (Minecraft) Saving players\n[13:18:50] [Server thread/INFO] (Minecraft) Saving worlds\n[13:18:50] [Server thread/INFO] (Minecraft) Saving chunks for level 'ServerLevel[Mekanism F1 isolated debug]'/minecraft:overworld\n[13:18:50] [Server thread/INFO] (Minecraft) Saving chunks for level 'ServerLevel[Mekanism F1 isolated debug]'/minecraft:the_nether\n[13:18:50] [Server thread/INFO] (Minecraft) Saving chunks for level 'ServerLevel[Mekanism F1 isolated debug]'/minecraft:the_end\n[13:18:50] [Server thread/INFO] (Minecraft) ThreadedAnvilChunkStorage (Mekanism F1 isolated debug): All chunks are saved\n[13:18:50] [Server thread/INFO] (Minecraft) ThreadedAnvilChunkStorage (DIM-1): All chunks are saved\n[13:18:50] [Server thread/INFO] (Minecraft) ThreadedAnvilChunkStorage (DIM1): All chunks are saved\n[13:18:50] [Server thread/INFO] (Minecraft) ThreadedAnvilChunkStorage: All dimensions are saved\n```"
-      ]
-    }
-  ]
+  "scope": "W27 normal owned save",
+  "sessionState": "stopped",
+  "saveMechanism": "Owned session stop; integrated server does not register save-all flush",
+  "saveEvents": [
+    "Saving players",
+    "Saving worlds",
+    "Saving chunks for level 'ServerLevel[Mekanism F1 isolated debug]'/minecraft:overworld",
+    "Saving chunks for level 'ServerLevel[Mekanism F1 isolated debug]'/minecraft:the_nether",
+    "Saving chunks for level 'ServerLevel[Mekanism F1 isolated debug]'/minecraft:the_end",
+    "ThreadedAnvilChunkStorage (Mekanism F1 isolated debug): All chunks are saved",
+    "ThreadedAnvilChunkStorage (DIM-1): All chunks are saved",
+    "ThreadedAnvilChunkStorage (DIM1): All chunks are saved",
+    "ThreadedAnvilChunkStorage: All dimensions are saved"
+  ],
+  "note": "Structured save facts replace the historical embedded text log; acceptance unchanged."
 }
