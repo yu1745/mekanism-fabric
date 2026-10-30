@@ -27,11 +27,10 @@ import mekanism.common.tile.machine.TileEntityDigitalMiner;
 import mekanism.common.util.StorageUtils;
 import mekanism.common.util.UnitDisplayUtils.EnergyUnit;
 import mekanism.common.util.WorldUtils;
-import mekanism.fabric.config.FabricMekanismConfigManager;
+import mekanism.fabric.config.FabricGearConfig;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
 import net.fabricmc.fabric.api.transfer.v1.transaction.TransactionContext;
@@ -71,7 +70,6 @@ import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.storage.ChunkSerializer;
 import net.minecraft.world.level.chunk.storage.RegionStorageInfo;
 import net.minecraft.world.level.material.Fluids;
-import net.minecraft.world.level.storage.LevelResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import team.reborn.energy.api.EnergyStorage;
@@ -91,7 +89,6 @@ public final class PortReviewFixture implements ModInitializer {
     private static boolean finished;
     private static Block tickingBlock;
     private static Item replaceableEnergyItem;
-    private static FabricMekanismConfigManager fixtureGear;
 
     @Override
     public void onInitialize() {
@@ -111,9 +108,6 @@ public final class PortReviewFixture implements ModInitializer {
             @Override public long getAmount() { return 0; }
             @Override public long getCapacity() { return 8; }
         }, replaceableEnergyItem);
-        ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
-            if (fixtureGear != null) fixtureGear.unregister(MekanismConfig.gear);
-        });
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             if (!finished) {
                 try {
@@ -140,12 +134,8 @@ public final class PortReviewFixture implements ModInitializer {
         }
         if (ticks == 1) {
             level.setChunkForced(0, 0, true);
-            //Explicit prerequisite: production has not ported this SERVER configuration owner yet.
-            //Use its real spec and world path in this disposable fixture, never bypass provider guards.
-            check(!MekanismConfig.gear.isLoaded(), "fixture must not create a second production gear writer");
-            fixtureGear = new FabricMekanismConfigManager(server.getWorldPath(LevelResource.ROOT).resolve("serverconfig"));
-            fixtureGear.registerAndLoad(MekanismConfig.gear);
-            LOGGER.info("PORT_REVIEW_PREREQUISITE fixture_only_gear_config=true production_gear_owner_unported=true");
+            check(FabricGearConfig.isOwner(server) && MekanismConfig.gear.isLoaded(), "production world gear config must be loaded");
+            LOGGER.info("PORT_REVIEW_PREREQUISITE production_gear_owner=true");
             ServerPlayer player = new ServerPlayer(server, level, new GameProfile(UUID.randomUUID(), "PortReview"), ClientInformation.createDefault());
             player.connection = MekFakePlayer.setupFakePlayer(level).connection;
             //This detached server-side probe has no login ticks; put it past vanilla's 60-tick spawn immunity.

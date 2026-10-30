@@ -191,6 +191,12 @@ public final class MekanismConfigSpec {
         loaded = true;
     }
 
+    /** Reset a remote-only snapshot while still loaded, so callers can invalidate listeners before unloading it. */
+    public synchronized void resetRemoteScalars() {
+        if (!loaded || file != null || document != null) throw new IllegalStateException("Config spec is not remote-owned");
+        for (ConfigValue<?> value : values.values()) value.publishLoaded(value.getDefault());
+    }
+
     public synchronized void save() {
         if (!loaded || file == null || document == null) {
             throw new IllegalStateException("Config spec has not been loaded");

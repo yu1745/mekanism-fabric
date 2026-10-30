@@ -5,6 +5,16 @@
 Mekanism 自有窄接口替代 NeoForge `ModConfigSpec` / `ModConfig.Type`。它不是 Forge Config API 兼容层，
 也不提供事件总线或完整九配置 facade。
 
+## 2026-10-30 GearConfig 世界与连接 owner
+
+本节更新装备配置状态；下文 Task030/039/040 保留各自历史切片说明，不代表当前所有配置仍限于那些 fragment。
+
+- `FabricGearConfig` 在真实 server starting/stopped 加载/卸载唯一 canonical `MekanismConfig.gear`，文件为 `<world>/serverconfig/Mekanism/gear.toml`；沿用既有 config manager、官方 81 个标量路径、默认值与范围，不绕过装备 provider 的 loaded guard。
+- `FabricGearConfigNetworking` 在 CONFIGURATION 阶段发送有界 typed snapshot，客户端验证全 schema/range、安装值并刷新缓存后 ACK，完成后才进入 PLAY。远程快照不写本地 TOML；连接 identity 防止旧 disconnect 清除新连接值。
+- 集成服客户端只验证同一服务端实例的快照，不写第二份配置、不因客户端 disconnect 卸载仍然活动的服务端 owner。远程断线则恢复默认标量、清缓存并卸载。
+- 已验证：编译、三个 slice gate、既有生命周期 focused test、一个真实集成服加载/同步/退出、独立服务端两次 fresh client 握手与入世界，以及真实 Accessories 靴子充电和客户端能量同步。详情和限制见 `TASK052_ADJUDICATION_GEAR_CATALOG.md` 的恢复检查点。
+- 本闭包没有文件 watcher、PLAY 热重载或通用配置同步层；修改 world gear 文件需重启该世界。两非默认世界的真实切换、同一远程客户端进程重连及所有异常路径未逐一运行验证，不以覆盖完整性阻塞后续移植。
+
 ## 当前闭包
 
 `fabric/common-slice.txt` 纳入：

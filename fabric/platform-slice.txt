@@ -162,6 +162,8 @@ mekanism/fabric/network/FabricChemicalClientNetworking.java
 mekanism/fabric/network/FabricChemicalNetworking.java
 mekanism/fabric/network/FabricContainerClientNetworking.java
 mekanism/fabric/network/FabricContainerNetworking.java
+mekanism/fabric/network/FabricGearConfigClientNetworking.java
+mekanism/fabric/network/FabricGearConfigNetworking.java
 mekanism/fabric/network/FabricGearEffectsNetworking.java
 mekanism/fabric/network/FabricMekanismClientNetworking.java
 mekanism/fabric/network/FabricMekanismNetworking.java
