@@ -2,7 +2,7 @@
 
 ## 现状
 
-ROADMAP P3 W-15–22；运行基线 `4e6b6577`。P0/P1/P2 已完成，当前工作区无生产 WIP。W-15 已核对实际 owner；W-16/17 命令入口尚未接通，下一批按完整命令树接入。
+ROADMAP P3 W-15–22；运行基线 `4e6b6577`。P0/P1/P2 已完成，当前工作区无生产 WIP。W-15 已核对实际 owner；W-16/17 命令树与 builders 已接入并有真实运行证据。下一项 W-18 成就入口核对。
 
 ## 下一步
 
@@ -32,3 +32,12 @@ Chunk watch 的 LOAD/UNLOAD 使用 Fabric ServerChunkEvents；ticket-level 通�
 结论：W-15 的行为已有等价 owner，当前不需要新增生产代码或扩大 slice；旧 MekanismAttachmentTypes/MekanismDataMapTypes 属已被 Fabric composition root 承接的注册入口，W-22 清单应写明理由，不能简单按未纳入文件数视为缺失行为。该结论不替代 M-gear 的真实 flamethrower 使用验收。
 
 既有 `fabricDataMapTest` PASS（5 秒）；现有 EntityFlamePersistenceTest / EntitySynchedDataWireTest 也 PASS（16 秒）；分别覆盖模式存读档／默认清理以及真实 synched-data wire。无新测试、无 reference tree 写入、无生产状态修改。
+
+
+2026-10-30 W-16/17 实现：审计七个原始命令／builder 文件，其中 ForceRetrogenCommand 已纳入，实际 common slice 新增六个（1503→1509）；未重复加入原有文件。bootstrap 在内容初始化后注册五个官方 builders 和完整 CommandMek 树；原有权限谓词、radiation/retrogen/tp/testrules/build/remove 业务保留。ChunkCommand 由 Fabric ServerChunkEvents 承接 load/unload，ticket 通知复用已有 TransmitterTicketLevelMixin 的真实有效调度分支，未新建重复 mixin。stop 清理 chunk watchers 与 tpStack，保持每次 server 生命周期独立。BuildCommand 使用 vanilla holder.unwrapKey 及固定官方 namespace，保留原 startsWith 选择行为。
+
+编译 compileJava PASS，实际集成服启动成功并注入现有 ticket mixin。通过 mcdebug 执行 `mek radiation get` 得基线 99.999 nSv/h（原命令低于阈值返回 0，不能把 tool 的 success=false 误判为未执行）；`mek chunk watch 0 0 p3probe` / unwatch 均返回 1。真实 ServerPlayer command source 经 Commands.performPrefixedCommand 执行 `mek build evaporation empty 32 100 0`，实际生成 thermal_evaporation_block。mcdebug 的 execute-as 调用未成功，改用真实玩家 CommandSourceStack 调用相同命令解析器后成功；未绕过原 build 业务。权限谓词对 level0=false、level4=true。原始运行结果在 [p3-command](evidence/p3-command/chunk-watch.json)（同目录含 radiation、unwatch、builder 方块与权限结果）。GUI error 无记录；未声称所有 builders 结构成型验收完成，后续多方块里程碑仍待做。
+
+自有客户端正常 stop，完整隔离世界从本轮前备份恢复且逐文件 SHA-256 相等；清理临时 mod、wrapper 链接和 Xvfb。没有新增测试。最终 assemble PASS（12 秒），含三份 slice gates。W-18–22 及 P3 全阶段门禁尚未完成。
+
+提交后风格审查：已读本次真实 diff，并对照原命令树／builders 与固定 ChunkMap 事件位置。保留原权限、消息、返回值、build/remove 算法；原始 builders/StructureBuilder/RadiationCommand 仅纳入而未重写。所有 Fabric callback 在 bootstrap，ticket 通知复用实际 owner，无独立事件框架或占位命令。未发现需要修复的生产偏离；全 builders 成型与 P3 全门禁不在本次通过声明内。

@@ -35,6 +35,10 @@ public class CommandMek {
 
     private static final Map<UUID, Deque<BlockPos>> tpStack = new Object2ObjectOpenHashMap<>();
 
+    public static void clearServerState() {
+        tpStack.clear();
+    }
+
     public static LiteralArgumentBuilder<CommandSourceStack> register() {
         return Commands.literal("mek")
               .requires(MekanismPermissions.COMMAND)

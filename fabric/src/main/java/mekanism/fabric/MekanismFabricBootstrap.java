@@ -46,6 +46,21 @@ public final class MekanismFabricBootstrap implements ModInitializer {
     private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism/Fabric");
     private static final FabricMekanismConfigManager CONFIG_MANAGER = FabricMekanismConfigManager.createDefault();
 
+    private static void initializeCommands() {
+        mekanism.common.command.builders.BuildCommand.register("boiler", mekanism.common.MekanismLang.BOILER, new mekanism.common.command.builders.Builders.BoilerBuilder());
+        mekanism.common.command.builders.BuildCommand.register("matrix", mekanism.common.MekanismLang.MATRIX, new mekanism.common.command.builders.Builders.MatrixBuilder());
+        mekanism.common.command.builders.BuildCommand.register("tank", mekanism.common.MekanismLang.DYNAMIC_TANK, new mekanism.common.command.builders.Builders.TankBuilder());
+        mekanism.common.command.builders.BuildCommand.register("evaporation", mekanism.common.MekanismLang.EVAPORATION_PLANT, new mekanism.common.command.builders.Builders.EvaporationBuilder());
+        mekanism.common.command.builders.BuildCommand.register("sps", mekanism.common.MekanismLang.SPS, new mekanism.common.command.builders.Builders.SPSBuilder());
+        net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback.EVENT.register((dispatcher, context, selection) -> dispatcher.register(mekanism.common.command.CommandMek.register()));
+        net.fabricmc.fabric.api.event.lifecycle.v1.ServerChunkEvents.CHUNK_LOAD.register(mekanism.common.command.ChunkCommand::onChunkLoad);
+        net.fabricmc.fabric.api.event.lifecycle.v1.ServerChunkEvents.CHUNK_UNLOAD.register(mekanism.common.command.ChunkCommand::onChunkUnload);
+        net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
+            mekanism.common.command.CommandMek.clearServerState();
+            mekanism.common.command.ChunkCommand.clearServerState();
+        });
+    }
+
     @Override
     public void onInitialize() {
         //The compat recipes' mekanism-namespaced version condition must register before any datapack load.
@@ -178,6 +193,7 @@ public final class MekanismFabricBootstrap implements ModInitializer {
         verifyGameEvent(MekanismGameEvents.GRAVITY_MODULATE, "gravity_modulate", 16);
         verifyGameEvent(MekanismGameEvents.GRAVITY_MODULATE_BOOSTED, "gravity_modulate_boosted", 32);
         LOGGER.info("MEKANISM_FABRIC_REGISTRY_PROOF key=mekanism:seismic_vibration canonical_identity=true entries=4");
+        initializeCommands();
         ServerLifecycleEvents.SERVER_STARTED.register(server -> {
             //Revalidate persisted chunk-loader tickets exactly like the official loading-validation callback
             mekanism.common.tile.component.TileComponentChunkLoader.validateTickets(server);

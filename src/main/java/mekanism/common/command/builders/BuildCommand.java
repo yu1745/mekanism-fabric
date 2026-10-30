@@ -13,7 +13,6 @@ import java.util.Queue;
 import java.util.Set;
 import mekanism.api.text.EnumColor;
 import mekanism.api.text.ILangEntry;
-import mekanism.common.Mekanism;
 import mekanism.common.MekanismLang;
 import mekanism.common.base.MekanismPermissions;
 import mekanism.common.util.EnumUtils;
@@ -118,8 +117,8 @@ public class BuildCommand {
 
     private static boolean isMekanismBlock(@Nullable LevelAccessor world, @NotNull Long2ObjectMap<ChunkAccess> chunkMap, @NotNull BlockPos pos) {
         return WorldUtils.getBlockState(world, chunkMap, pos)
-              .map(state -> state.getBlockHolder().getKey())
-              .filter(key -> key.location().getNamespace().startsWith(Mekanism.MODID))
+              .flatMap(state -> state.getBlockHolder().unwrapKey())
+              .filter(key -> key.location().getNamespace().startsWith("mekanism"))
               .isPresent();
     }
 }

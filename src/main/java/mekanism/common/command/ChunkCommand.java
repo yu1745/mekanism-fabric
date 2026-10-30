@@ -21,11 +21,8 @@ import net.minecraft.server.level.ColumnPos;
 import net.minecraft.server.level.ServerChunkCache;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ChunkPos;
-import net.minecraft.world.level.LevelAccessor;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.level.ChunkEvent;
-import net.neoforged.neoforge.event.level.ChunkTicketLevelUpdatedEvent;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.chunk.LevelChunk;
 import org.jetbrains.annotations.Nullable;
 
 public class ChunkCommand {
@@ -44,7 +41,6 @@ public class ChunkCommand {
     private static final Long2ObjectMap<ChunkWatchSettings> chunkWatchers = new Long2ObjectOpenHashMap<>();
 
     static ArgumentBuilder<CommandSourceStack, ?> register() {
-        NeoForge.EVENT_BUS.register(ChunkCommand.class);
         return Commands.literal("chunk")
               .requires(MekanismPermissions.COMMAND_CHUNK)
               .then(WatchCommand.register())
@@ -143,37 +139,33 @@ public class ChunkCommand {
         }
     }
 
-    @SubscribeEvent
-    public static void onChunkLoad(ChunkEvent.Load event) {
-        handleChunkEvent(event, LOADED);
+    public static void onChunkLoad(ServerLevel level, LevelChunk chunk) {
+        handleChunkEvent(level, chunk, LOADED);
     }
 
-    @SubscribeEvent
-    public static void onChunkUnload(ChunkEvent.Unload event) {
-        handleChunkEvent(event, UNLOADED);
+    public static void onChunkUnload(ServerLevel level, LevelChunk chunk) {
+        handleChunkEvent(level, chunk, UNLOADED);
     }
 
-    @SubscribeEvent
-    public static void onTicketLevelChange(ChunkTicketLevelUpdatedEvent event) {
-        if (chunkWatchers.isEmpty() || event.getLevel().players().isEmpty()) {
+    public static void onTicketLevelChange(ServerLevel level, long chunkPos, int oldLevel, int newLevel) {
+        if (chunkWatchers.isEmpty() || level.players().isEmpty()) {
             return;
         }
-        ChunkWatchSettings settings = chunkWatchers.get(event.getChunkPos());
+        ChunkWatchSettings settings = chunkWatchers.get(chunkPos);
         if (settings != null) {
-            Component message = settings.translateTicketLevel(event.getOldTicketLevel(), event.getNewTicketLevel());
-            for (Player player : event.getLevel().players()) {
+            Component message = settings.translateTicketLevel(oldLevel, newLevel);
+            for (Player player : level.players()) {
                 player.sendSystemMessage(message);
             }
         }
     }
 
-    private static void handleChunkEvent(ChunkEvent event, LangData direction) {
-        LevelAccessor level = event.getLevel();
+    private static void handleChunkEvent(ServerLevel level, LevelChunk chunk, LangData direction) {
         if (level != null && !level.isClientSide()) {
             if (chunkWatchers.isEmpty() || level.players().isEmpty()) {
                 return;
             }
-            ChunkWatchSettings settings = chunkWatchers.get(event.getChunk().getPos().toLong());
+            ChunkWatchSettings settings = chunkWatchers.get(chunk.getPos().toLong());
             if (settings != null) {
                 Component message = settings.translate(direction);
                 for (Player player : level.players()) {
@@ -181,6 +173,10 @@ public class ChunkCommand {
                 }
             }
         }
+    }
+
+    public static void clearServerState() {
+        chunkWatchers.clear();
     }
 
     private record LangData(ILangEntry unnamed, ILangEntry named) {

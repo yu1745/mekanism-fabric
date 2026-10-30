@@ -1501,3 +1501,11 @@ mekanism/common/world/height/ConfigurableHeightProvider.java
 mekanism/common/world/height/ConfigurableHeightRange.java
 mekanism/common/world/height/ConfigurableVerticalAnchor.java
 mekanism/common/world/height/HeightShape.java
+
+# P3 original command tree and core builders
+mekanism/common/command/ChunkCommand.java
+mekanism/common/command/CommandMek.java
+mekanism/common/command/RadiationCommand.java
+mekanism/common/command/builders/BuildCommand.java
+mekanism/common/command/builders/Builders.java
+mekanism/common/command/builders/StructureBuilder.java

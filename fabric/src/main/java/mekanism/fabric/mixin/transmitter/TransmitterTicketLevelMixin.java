@@ -22,6 +22,7 @@ abstract class TransmitterTicketLevelMixin {
           CallbackInfoReturnable<ChunkHolder> cir) {
         //The original platform did not fire on the native early return when both ticket levels are unloaded.
         if (ChunkLevel.isLoaded(oldLevel) || ChunkLevel.isLoaded(newLevel)) {
+            mekanism.common.command.ChunkCommand.onTicketLevelChange(level, chunkPos, oldLevel, newLevel);
             TransmitterNetworkRegistry.onTicketLevelChange(level, chunkPos, oldLevel, newLevel);
         }
     }
