@@ -6,6 +6,7 @@
 
 | 范围 | 后续结论 |
 |---|---|
+| P3（2026-10-30） | M-platform W-15–22 与阶段门禁通过：命令、成就、条件、生命周期和 55 payload owners 已核对，46 个未纳入文件保留明确理由；证据 `archive/M-platform.md`。 |
 | P2（2026-10-30） | M-config W-12–14 通过：非默认 miner consumer、两次独立客户端同步、开发／发布 schema、生命周期测试与阶段门禁；证据 `archive/M-config.md`。 |
 | P1（2026-10-30） | M-owner W-06–11 真机与阶段门禁通过：Crusher 加工/存读档、工厂升级、频率落盘、bounding 放拆；证据归档 `archive/M-owner.md`，下一阶段 P2。 |
 | P0（2026-10-30） | W-01–05 完成；578 tests、slice/build 与 machine/paired/packaged 全通过，修复既有测试快照与旧 packaged 合同；P1 真机验收待做，证据见 `archive/M-owner.md`。 |
