@@ -13,7 +13,16 @@
 
 仅在任务相关具体目录内用 `rg`/`fd` 搜索；禁止扫描 `~`、`/`、`~/server` 或宽泛父目录。禁止使用 zvec-grep、其搜索工具或建立/更新索引。开发任务不包含生产、镜像服、部署或 push 操作。
 
-**调试工具（用户指令 2026-10-27）：`/home/wangyu/server-v2/develop/mcdebug` 的 1.21 工作树已可用；GUI 调试可通过它进行。** 需要真机 GUI/客户端行为验证时优先用它，不要凭空推演渲染结果。
+### mcdebug 客户端与真机调试（用户指令 2026-10-30）
+
+**后续所有客户端调试均可使用 mcdebug，优先用它获取真实 GUI、渲染、交互与客户端状态证据，不要凭空推演结果。** 使用前加载 `mcdebug` skill；具体参数先看对应子命令 `--help`，以当前 CLI/mod 版本为准，不在此复制整份易过期的手册。
+
+- 本地源码入口 `/home/wangyu/server-v2/develop/mcdebug`；已验证的 Fabric 1.21.1 工作树为 `/home/wangyu/server-v2/develop/mcdebug-wt-121`，当前可用 CLI 为该工作树的 `mcdebug-cli.jar`。优先发现 PATH 上的 `mcdebug` / `mdb`，没有时用 `java -jar <工作树>/mcdebug-cli.jar`；CLI 与游戏内 mod 版本须匹配。
+- 本项目游戏目录为 `fabric/run`。优先使用 mcdebug managed session 启动/接入开发客户端，或明确指定该目录的 `mcdebug/socket`（服务端）与 `mcdebug/clientSocket`（客户端）；也可在游戏目录运行 CLI 自动发现。先执行 `status` / `gui status --brief` 确认目标、世界和版本，不因发现文件存在就认定 JVM 仍活着。同一游戏目录不启动第二个客户端，不手动删除 socket discovery/lock 文件。
+- 客户端 GUI：`gui open-block`、`screen`、`click`、`hover`、`screenshot --draw-log`、`problems` 可读取真实菜单、操作结果、tooltip、绘制记录和渲染异常；服务端写入后先 `gui settle` 再看客户端。槽位以当前菜单返回的 index 为准；客户端 BE 不持有完整物品库存，显示内容读 screen/menu，权威库存读服务端。
+- 真机状态：`world.*`、`storage.*`、`be.*` 和 `reflect` 可布置机器、读写 NBT/能力与访问真实 owner；反射读客户端须带 `--client`。优先正常 API，反射写字段不会自动触发同步或保存。`inv.*` 只适用于 vanilla Container；Mekanism 自有库存使用实际 storage/menu/slot owner，不因该命令不支持就判定机器失效。
+- 方法体修改可编译后用 `gui hotswap`；Screen 结构变化按 skill 使用 `gui reload-screen`，资源变化用 `gui reload-resources`。字段/构造器/生命周期变化不假定可热替换，必要时重启。按真实命令结果判定成功，不把请求成功当作行为成功。
+- 复用现有隔离调试世界和少量真实功能检查，不因工具可用而主动扩充测试矩阵。短等待按既有标记/实际条件判断；结束时恢复临时方块、物品和配置，保存并关闭自己启动的会话，清理本次临时 debug mod，不干扰他人 JVM。mcdebug 的调试依赖不纳入 Mekanism 发布依赖或源码切片。
 
 以下 `.gitignore` 目录只供参考，不是编译/运行依赖；不得修改、生成构建产物或提交其中内容：
 
