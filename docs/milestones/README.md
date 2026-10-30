@@ -24,7 +24,7 @@
 - **M-render**：`CONTINUATION_10`（及 `_EVIDENCE`/`_EVIDENCE_2`）、`CONTINUATION_11`、`REVIEW_15/16/17/18`、`REVIEW17_REPAIR`
 - **M-registry**：`CONTINUATION_12`、`CONTINUATION12_INGREDIENT_REGISTRY`、`CONTINUATION_13`、`REVIEW_19/20`、`REVIEW19_REPAIR`
 - **M-gear**：`ADJUDICATION_GEAR_CATALOG`
-- **M-config**：`archive/TASK052_MACHINE_CONFIG_CONTINUATION.md`、`archive/TASK052_GENERAL_CONFIG_BOUNDARY.md`（已并入 `docs/milestones/M-config.md`，原文移入 archive）
+- **M-config**：`docs/archive/TASK052_MACHINE_CONFIG_CONTINUATION.md`、`docs/archive/TASK052_GENERAL_CONFIG_BOUNDARY.md`（已并入 `docs/milestones/M-config.md`，原文移入 archive）
 
 除 M-config 两份外，其余文件保持原路径（链接不变）。
 
