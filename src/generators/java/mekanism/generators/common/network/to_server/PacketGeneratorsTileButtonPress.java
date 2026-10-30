@@ -21,7 +21,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.util.ByIdMap;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Player;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -45,13 +45,12 @@ public record PacketGeneratorsTileButtonPress(ClickedGeneratorsTileButton button
     }
 
     @Override
-    public void handle(IPayloadContext context) {
-        Player player = context.player();
+    public void handle(Player player) {
         //If we are on the server (the only time we should be receiving this packet), let forge handle switching the Gui
         TileEntityMekanism tile = WorldUtils.getTileEntity(TileEntityMekanism.class, player.level(), pos);
         MenuProvider provider = buttonClicked.getProvider(tile);
         if (provider != null) {
-            player.openMenu(provider, buf -> {
+            mekanism.common.inventory.container.ContainerProvider.open((net.minecraft.server.level.ServerPlayer) player, provider, buf -> {
                 buf.writeBlockPos(pos);
                 buttonClicked.encodeExtraData(buf, tile);
             });

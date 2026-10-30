@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "mekanismgenerators",
+  "version": "${version}",
+  "name": "Mekanism: Generators",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "mekanism.generators.common.MekanismGenerators"
+    ],
+    "client": [
+      "mekanism.generators.client.GeneratorsClient"
+    ],
+    "mekanism:chemicals": [
+      "mekanism.fabric.generators.GeneratorsRegistryRegistration::chemicals"
+    ],
+    "mekanism:modules": [
+      "mekanism.fabric.generators.GeneratorsRegistryRegistration::modules"
+    ],
+    "mekanism:module_support": [
+      "mekanism.fabric.generators.GeneratorsRegistryRegistration::support"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "1.21.1",
+    "java": ">=21",
+    "fabric-api": "*",
+    "mekanism": "${version}"
+  },
+  "license": "MIT",
+  "mixins": [
+    "mekanismgenerators.mixins.json"
+  ]
+}

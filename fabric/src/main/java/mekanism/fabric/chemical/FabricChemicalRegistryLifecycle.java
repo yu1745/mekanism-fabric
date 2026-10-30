@@ -43,6 +43,7 @@ public final class FabricChemicalRegistryLifecycle {
         Holder.Reference<Chemical> emptyHolder = ChemicalRegistry.emptyHolder();
         MekanismChemicals.CHEMICALS.registerAll(candidate);
         verify(candidate, empty, emptyHolder);
+        net.fabricmc.loader.api.FabricLoader.getInstance().getEntrypoints("mekanism:chemicals", Runnable.class).forEach(Runnable::run);
         // Freeze on the construction thread. Later RegistryAccess snapshots may call freeze
         // idempotently from reload workers, but no population is permitted after publication.
         candidate.freeze();

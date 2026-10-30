@@ -1,0 +1,195 @@
+{
+  "source_checkpoint": "5de1478f",
+  "compile_and_remap": "./gradlew -p fabric compileGeneratorsJava remapGeneratorsJar: BUILD SUCCESSFUL",
+  "scope": "W-51 registration/config and W-52 simple machines. Multiblock and P13 gates remain pending.",
+  "runtime": "core + Generators only; isolated copied world; mcdebug 0.7.0",
+  "registration": {
+    "blocks": 24,
+    "block_entities": 24,
+    "chemicals_including_core": 68,
+    "modules_including_core": 33
+  },
+  "schema_fields": {
+    "generators": 44,
+    "storageConfig": 5,
+    "gear": 2
+  },
+  "config_sync": {
+    "configs": 8,
+    "values": 355,
+    "ack": true,
+    "all_four_modules_expected_values": 459
+  },
+  "machines": {
+    "heat": {
+      "stored_joules": 4369,
+      "gui": {
+        "ok": true,
+        "changed": true,
+        "result": "SUCCESS",
+        "reason": "",
+        "block": "mekanismgenerators:heat_generator",
+        "distance": 2.3,
+        "reach": 5.0,
+        "screen": "mekanism.generators.client.gui.GuiHeatGenerator",
+        "screenType": "container",
+        "screenTitle": "Heat Generator",
+        "containerId": 2,
+        "slotCount": 45,
+        "face": "up",
+        "hand": "main_hand",
+        "sneak": false,
+        "clearHand": false,
+        "pos": [
+          0,
+          100,
+          0
+        ]
+      },
+      "sample_production_joules_per_tick": 4
+    },
+    "bio": {
+      "stored_joules": 159950,
+      "gui": {
+        "ok": true,
+        "changed": true,
+        "result": "SUCCESS",
+        "reason": "",
+        "block": "mekanismgenerators:bio_generator",
+        "distance": 2.3,
+        "reach": 5.0,
+        "screen": "mekanism.generators.client.gui.GuiBioGenerator",
+        "screenType": "container",
+        "screenTitle": "Bio-Generator",
+        "containerId": 3,
+        "slotCount": 45,
+        "face": "up",
+        "hand": "main_hand",
+        "sneak": false,
+        "clearHand": false,
+        "pos": [
+          3,
+          100,
+          0
+        ]
+      }
+    },
+    "gas": {
+      "stored_joules": 199515,
+      "gui": {
+        "ok": true,
+        "changed": true,
+        "result": "SUCCESS",
+        "reason": "",
+        "block": "mekanismgenerators:gas_burning_generator",
+        "distance": 2.3,
+        "reach": 5.0,
+        "screen": "mekanism.generators.client.gui.GuiGasGenerator",
+        "screenType": "container",
+        "screenTitle": "Gas-Burning Generator",
+        "containerId": 4,
+        "slotCount": 45,
+        "face": "up",
+        "hand": "main_hand",
+        "sneak": false,
+        "clearHand": false,
+        "pos": [
+          6,
+          100,
+          0
+        ]
+      },
+      "sample_production_joules_per_tick": 0,
+      "earlier_production_joules_per_tick": 10716
+    },
+    "solar": {
+      "stored_joules": 62352,
+      "gui": {
+        "ok": true,
+        "changed": true,
+        "result": "SUCCESS",
+        "reason": "",
+        "block": "mekanismgenerators:solar_generator",
+        "distance": 2.3,
+        "reach": 5.0,
+        "screen": "mekanism.generators.client.gui.GuiSolarGenerator",
+        "screenType": "container",
+        "screenTitle": "Solar Generator",
+        "containerId": 5,
+        "slotCount": 44,
+        "face": "up",
+        "hand": "main_hand",
+        "sneak": false,
+        "clearHand": false,
+        "pos": [
+          9,
+          100,
+          0
+        ]
+      },
+      "sample_production_joules_per_tick": 36
+    },
+    "advanced_solar": {
+      "stored_joules": 200000,
+      "gui": {
+        "ok": true,
+        "changed": true,
+        "result": "SUCCESS",
+        "reason": "",
+        "block": "mekanismgenerators:advanced_solar_generator",
+        "distance": 2.3,
+        "reach": 5.0,
+        "screen": "mekanism.generators.client.gui.GuiSolarGenerator",
+        "screenType": "container",
+        "screenTitle": "Advanced Solar Generator",
+        "containerId": 6,
+        "slotCount": 44,
+        "face": "up",
+        "hand": "main_hand",
+        "sneak": false,
+        "clearHand": false,
+        "pos": [
+          12,
+          100,
+          0
+        ]
+      },
+      "sample_production_joules_per_tick": 0
+    },
+    "wind": {
+      "stored_joules": 200000,
+      "gui": {
+        "ok": true,
+        "changed": true,
+        "result": "SUCCESS",
+        "reason": "",
+        "block": "mekanismgenerators:wind_generator",
+        "distance": 2.3,
+        "reach": 5.0,
+        "screen": "mekanism.generators.client.gui.GuiWindGenerator",
+        "screenType": "container",
+        "screenTitle": "Wind Generator",
+        "containerId": 7,
+        "slotCount": 44,
+        "face": "up",
+        "hand": "main_hand",
+        "sneak": false,
+        "clearHand": false,
+        "pos": [
+          16,
+          100,
+          0
+        ]
+      },
+      "sample_production_joules_per_tick": 173
+    }
+  },
+  "native_output": {
+    "fixture": "Receiving cubes placed through the actual BlockItem pipeline, retaining default side config; raw setblock cubes had no item side config.",
+    "heat_cube_joules": 14361,
+    "bio_cube_joules": 217000,
+    "gas_cube_joules": 3176025
+  },
+  "environment_limit": "OpenAL device failed to open; no new GUI/render errors observed. Sound playback not verified.",
+  "cleanup": "Session still owned and running for W-53 onward; restore/remove disposable copy at milestone close."
+}

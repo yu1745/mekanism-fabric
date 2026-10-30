@@ -2,7 +2,8 @@ package mekanism.generators.common;
 
 import mekanism.api.MekanismAPI;
 import mekanism.api.chemical.Chemical;
-import mekanism.common.Mekanism;
+import mekanism.api.MekanismAPI;
+import mekanism.common.base.ModModuleState;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.tags.TagKey;
@@ -24,7 +25,7 @@ public class GeneratorTags {
         public static final TagKey<Fluid> TRITIUM = commonTag("tritium");
 
         private static TagKey<Fluid> commonTag(String name) {
-            return FluidTags.create(ResourceLocation.fromNamespaceAndPath("c", name));
+            return TagKey.create(net.minecraft.core.registries.Registries.FLUID, ResourceLocation.fromNamespaceAndPath("c", name));
         }
     }
 
@@ -38,7 +39,7 @@ public class GeneratorTags {
         public static final TagKey<Chemical> FUSION_FUEL = tag("fusion_fuel");
 
         private static TagKey<Chemical> tag(String name) {
-            return TagKey.create(MekanismAPI.CHEMICAL_REGISTRY_NAME, Mekanism.rl(name));
+            return TagKey.create(MekanismAPI.CHEMICAL_REGISTRY_NAME, ResourceLocation.fromNamespaceAndPath("mekanism", name));
         }
     }
 }

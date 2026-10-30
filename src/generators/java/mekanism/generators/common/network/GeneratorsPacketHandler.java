@@ -1,24 +1,24 @@
 package mekanism.generators.common.network;
 
-import mekanism.common.lib.Version;
-import mekanism.common.network.BasePacketHandler;
+import mekanism.common.network.IMekanismPacket;
 import mekanism.generators.common.network.to_server.PacketGeneratorsGuiInteract;
 import mekanism.generators.common.network.to_server.PacketGeneratorsTileButtonPress;
-import net.neoforged.bus.api.IEventBus;
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
-public class GeneratorsPacketHandler extends BasePacketHandler {
-
-    public GeneratorsPacketHandler(IEventBus modEventBus, Version version) {
-        super(modEventBus, version);
+public class GeneratorsPacketHandler {
+    public GeneratorsPacketHandler() {
+        register(PacketGeneratorsTileButtonPress.TYPE, PacketGeneratorsTileButtonPress.STREAM_CODEC);
+        register(PacketGeneratorsGuiInteract.TYPE, PacketGeneratorsGuiInteract.STREAM_CODEC);
     }
 
-    @Override
-    protected void registerClientToServer(PacketRegistrar registrar) {
-        registrar.play(PacketGeneratorsTileButtonPress.TYPE, PacketGeneratorsTileButtonPress.STREAM_CODEC);
-        registrar.play(PacketGeneratorsGuiInteract.TYPE, PacketGeneratorsGuiInteract.STREAM_CODEC);
-    }
-
-    @Override
-    protected void registerServerToClient(PacketRegistrar registrar) {
+    private static <T extends IMekanismPacket> void register(CustomPacketPayload.Type<T> type, StreamCodec<? super RegistryFriendlyByteBuf, T> codec) {
+        PayloadTypeRegistry.playC2S().register(type, codec);
+        if (!ServerPlayNetworking.registerGlobalReceiver(type, (payload, context) -> payload.handle(context.player()))) {
+            throw new IllegalStateException("A server play receiver is already registered for " + type.id());
+        }
     }
 }

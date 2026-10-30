@@ -16,13 +16,13 @@ import org.jetbrains.annotations.NotNull;
 public class ItemBlockFissionLogicAdapter extends ItemBlockTooltip<BlockBasicMultiblock<TileEntityFissionReactorLogicAdapter>> {
 
     public ItemBlockFissionLogicAdapter(BlockBasicMultiblock<TileEntityFissionReactorLogicAdapter> block, Item.Properties properties) {
-        super(block, true, properties.component(GeneratorsDataComponents.FISSION_LOGIC_TYPE, FissionReactorLogic.DISABLED));
+        super(block, true, properties.component(GeneratorsDataComponents.FISSION_LOGIC_TYPE.get(), FissionReactorLogic.DISABLED));
     }
 
     @Override
     protected void addDetails(@NotNull ItemStack stack, @NotNull Item.TooltipContext context, @NotNull List<Component> tooltip, @NotNull TooltipFlag flag) {
         super.addDetails(stack, context, tooltip, flag);
-        FissionReactorLogic logicType = stack.getOrDefault(GeneratorsDataComponents.FISSION_LOGIC_TYPE, FissionReactorLogic.DISABLED);
+        FissionReactorLogic logicType = stack.getOrDefault(GeneratorsDataComponents.FISSION_LOGIC_TYPE.get(), FissionReactorLogic.DISABLED);
         tooltip.add(GeneratorsLang.REACTOR_LOGIC_REDSTONE_MODE.translate(logicType.getColor(), logicType));
     }
 }

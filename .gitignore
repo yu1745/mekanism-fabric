@@ -44,3 +44,6 @@ docs/**/*.log.gz
 
 /fabric/run-additions/
 /fabric/run-additions-server/
+
+fabric/run-generators/
+fabric/run-generators-server/

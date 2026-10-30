@@ -29,20 +29,21 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.capabilities.BlockCapability;
+import net.fabricmc.fabric.api.lookup.v1.block.BlockApiLookup;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidStorage;
 import mekanism.common.capabilities.resolver.manager.ChemicalHandlerManager;
 import java.util.function.Supplier;
 import net.fabricmc.fabric.api.lookup.v1.block.BlockApiCache;
-import net.neoforged.neoforge.fluids.FluidStack;
+import mekanism.api.fluid.FluidStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class TileEntityFissionReactorPort extends TileEntityFissionReactorCasing {
 
     private final Map<Direction, Supplier<@Nullable IChemicalHandler>> capabilityCaches = new EnumMap<>(Direction.class);
-    private final List<BlockCapability<?, @Nullable Direction>> portCapabilities = List.of(
-          Capabilities.CHEMICAL.block(),
-          Capabilities.FLUID.block()
+    private final List<BlockApiLookup<?, @Nullable Direction>> portCapabilities = List.of(
+          ChemicalHandlerManager.CHEMICAL_HANDLER,
+          FluidStorage.SIDED
     );
     private final Predicate<FissionPortMode> MODE_MATCHES = mode -> mode == getMode();
 

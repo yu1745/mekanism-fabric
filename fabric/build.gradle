@@ -1233,3 +1233,15 @@ def remapAdditionsJar = tasks.register('remapAdditionsJar', RemapJarTask) {
     classpath.from(sourceSets.additions.compileClasspath)
 }
 tasks.named('assemble') { dependsOn remapAdditionsJar }
+
+apply from: "generators.gradle"
+def remapGeneratorsJar = tasks.register('remapGeneratorsJar', RemapJarTask) {
+    dependsOn tasks.named('generatorsJar')
+    inputFile = tasks.named('generatorsJar', Jar).flatMap { it.archiveFile }
+    archiveBaseName = 'MekanismGenerators'
+    archiveClassifier = 'fabric'
+    addNestedDependencies = false
+    destinationDirectory = layout.buildDirectory.dir('generators-libs')
+    classpath.from(sourceSets.generators.compileClasspath)
+}
+tasks.named('assemble') { dependsOn remapGeneratorsJar }

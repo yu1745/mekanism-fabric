@@ -25,7 +25,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.AABB;
-import net.neoforged.neoforge.fluids.FluidType;
+
 import org.jetbrains.annotations.Nullable;
 
 @ParametersAreNotNullByDefault
@@ -50,9 +50,9 @@ public class ModuleGeothermalGeneratorUnit implements ICustomModule<ModuleGeothe
         if (energyContainer != null && energyContainer.getNeeded() > 0L) {
             double highestScaledDegrees = 0;
             double legHeight = player.isCrouching() ? 0.6 : 0.7;
-            Map<FluidType, FluidInDetails> fluidsIn = MekanismUtils.getFluidsIn(player, legHeight, (bb, data) -> new AABB(bb.minX, bb.minY, bb.minZ, bb.maxX,
+            Map<net.minecraft.world.level.material.Fluid, FluidInDetails> fluidsIn = MekanismUtils.getFluidsIn(player, legHeight, (bb, data) -> new AABB(bb.minX, bb.minY, bb.minZ, bb.maxX,
                   Math.min(bb.minY + data, bb.maxY), bb.maxZ));
-            for (Map.Entry<FluidType, FluidInDetails> entry : fluidsIn.entrySet()) {
+            for (Map.Entry<net.minecraft.world.level.material.Fluid, FluidInDetails> entry : fluidsIn.entrySet()) {
                 FluidInDetails details = entry.getValue();
                 double height = details.getMaxHeight();
                 if (height < 0.25) {
@@ -62,7 +62,7 @@ public class ModuleGeothermalGeneratorUnit implements ICustomModule<ModuleGeothe
                 double temperature = 0;
                 Map<BlockPos, FluidState> positions = details.getPositions();
                 for (Map.Entry<BlockPos, FluidState> positionEntry : positions.entrySet()) {
-                    temperature += entry.getKey().getTemperature(positionEntry.getValue(), player.level(), positionEntry.getKey());
+                    temperature += fluidTemperature(positionEntry.getValue());
                 }
                 //Divide the temperature by how many positions there are in case there is a difference due to the position in the world
                 // Strictly speaking we should take the height of the position into account for calculating the average as a "weighted"
@@ -90,6 +90,14 @@ public class ModuleGeothermalGeneratorUnit implements ICustomModule<ModuleGeothe
                 energyContainer.insert(rate, Action.EXECUTE, AutomationType.MANUAL);
             }
         }
+    }
+
+    private static int fluidTemperature(FluidState state) {
+        if (state.getType() instanceof mekanism.common.registration.impl.FluidDeferredRegister.MekanismFlowingFluid fluid) {
+            return fluid.getMekanismFluidType().getTemperature();
+        }
+        //NeoForge's vanilla lava metadata is 1300 K; water and the default fluid type are 300 K.
+        return state.is(net.minecraft.tags.FluidTags.LAVA) ? 1_300 : 300;
     }
 
     @Nullable

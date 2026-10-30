@@ -20,7 +20,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.util.ByIdMap;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -55,8 +55,7 @@ public record PacketGeneratorsGuiInteract(GeneratorsGuiInteraction interaction, 
     }
 
     @Override
-    public void handle(IPayloadContext context) {
-        Player player = context.player();
+    public void handle(Player player) {
         TileEntityMekanism tile = WorldUtils.getTileEntity(TileEntityMekanism.class, player.level(), tilePosition);
         if (tile != null) {
             interaction.consume(tile, player, extra);

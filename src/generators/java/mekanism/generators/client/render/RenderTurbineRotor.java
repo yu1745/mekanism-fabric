@@ -88,12 +88,11 @@ public class RenderTurbineRotor extends ModelTileEntityRenderer<TileEntityTurbin
         return tile.getMultiblockUUID() == null && tile.getHousedBlades() > 0 && super.shouldRender(tile, camera);
     }
 
-    @Override
     public AABB getRenderBoundingBox(TileEntityTurbineRotor tile) {
         int radius = tile.getRadius();
         if (tile.blades == 0 || radius == -1) {
             //If there are no blades default to the collision box of the rotor
-            return super.getRenderBoundingBox(tile);
+            return new AABB(tile.getBlockPos());
         }
         BlockPos pos = tile.getBlockPos();
         return AABB.encapsulatingFullBlocks(pos.offset(-radius, 0, -radius), pos.offset(radius, 0, radius));

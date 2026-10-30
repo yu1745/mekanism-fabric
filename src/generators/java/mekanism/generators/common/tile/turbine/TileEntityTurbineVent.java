@@ -12,14 +12,18 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import net.fabricmc.fabric.api.lookup.v1.block.BlockApiCache;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidStorage;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
+import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
+import java.util.function.Supplier;
+
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class TileEntityTurbineVent extends TileEntityTurbineCasing {
 
-    private final Map<Direction, BlockCapabilityCache<IFluidHandler, @Nullable Direction>> capabilityCaches = new EnumMap<>(Direction.class);
+    private final Map<Direction, Supplier<@Nullable Storage<FluidVariant>>> capabilityCaches = new EnumMap<>(Direction.class);
 
     public TileEntityTurbineVent(BlockPos pos, BlockState state) {
         super(GeneratorsBlocks.TURBINE_VENT, pos, state);
@@ -40,12 +44,11 @@ public class TileEntityTurbineVent extends TileEntityTurbineCasing {
         return super.persists(type);
     }
 
-    public void addFluidTargetCapability(List<BlockCapabilityCache<IFluidHandler, @Nullable Direction>> outputTargets, Direction side) {
-        BlockCapabilityCache<IFluidHandler, @Nullable Direction> cache = capabilityCaches.get(side);
-        if (cache == null) {
-            cache = Capabilities.FLUID.createCache((ServerLevel) level, worldPosition.relative(side), side.getOpposite());
-            capabilityCaches.put(side, cache);
-        }
+    public void addFluidTargetCapability(List<Supplier<@Nullable Storage<FluidVariant>>> outputTargets, Direction side) {
+        Supplier<@Nullable Storage<FluidVariant>> cache = capabilityCaches.computeIfAbsent(side, direction -> {
+            var nativeCache = BlockApiCache.create(FluidStorage.SIDED, (ServerLevel) level, worldPosition.relative(direction));
+            return () -> nativeCache.find(direction.getOpposite());
+        });
         outputTargets.add(cache);
     }
 }

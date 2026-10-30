@@ -40,7 +40,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.event.EventHooks;
+
 import org.jetbrains.annotations.NotNull;
 
 public class TileEntityFissionReactorLogicAdapter extends TileEntityFissionReactorCasing implements IReactorLogic<FissionReactorLogic> {
@@ -64,7 +64,7 @@ public class TileEntityFissionReactorLogicAdapter extends TileEntityFissionReact
                 if (side == null) {
                     //Not formed, just update all sides
                     world.updateNeighborsAt(getBlockPos(), state.getBlock());
-                } else if (!EventHooks.onNeighborNotify(world, worldPosition, state, EnumSet.of(side), false).isCanceled()) {
+                } else {
                     world.neighborChanged(worldPosition.relative(side), state.getBlock(), worldPosition);
                 }
             }
@@ -170,13 +170,13 @@ public class TileEntityFissionReactorLogicAdapter extends TileEntityFissionReact
     @Override
     protected void collectImplicitComponents(@NotNull DataComponentMap.Builder builder) {
         super.collectImplicitComponents(builder);
-        builder.set(GeneratorsDataComponents.FISSION_LOGIC_TYPE, logicType);
+        builder.set(GeneratorsDataComponents.FISSION_LOGIC_TYPE.get(), logicType);
     }
 
     @Override
     protected void applyImplicitComponents(@NotNull BlockEntity.DataComponentInput input) {
         super.applyImplicitComponents(input);
-        logicType = input.getOrDefault(GeneratorsDataComponents.FISSION_LOGIC_TYPE, logicType);
+        logicType = input.getOrDefault(GeneratorsDataComponents.FISSION_LOGIC_TYPE.get(), logicType);
     }
 
     @Override

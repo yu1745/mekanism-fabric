@@ -38,7 +38,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.event.EventHooks;
+
 import org.jetbrains.annotations.NotNull;
 
 public class TileEntityFusionReactorLogicAdapter extends TileEntityFusionReactorBlock implements IReactorLogic<FusionReactorLogic>, IHasMode {
@@ -63,7 +63,7 @@ public class TileEntityFusionReactorLogicAdapter extends TileEntityFusionReactor
                 if (side == null) {
                     //Not formed, just update all sides
                     world.updateNeighborsAt(getBlockPos(), state.getBlock());
-                } else if (!EventHooks.onNeighborNotify(world, worldPosition, state, EnumSet.of(side), false).isCanceled()) {
+                } else {
                     world.neighborChanged(worldPosition.relative(side), state.getBlock(), worldPosition);
                 }
             }
@@ -116,15 +116,15 @@ public class TileEntityFusionReactorLogicAdapter extends TileEntityFusionReactor
     @Override
     protected void collectImplicitComponents(@NotNull DataComponentMap.Builder builder) {
         super.collectImplicitComponents(builder);
-        builder.set(GeneratorsDataComponents.FUSION_LOGIC_TYPE, logicType);
-        builder.set(GeneratorsDataComponents.ACTIVE_COOLED, activeCooled);
+        builder.set(GeneratorsDataComponents.FUSION_LOGIC_TYPE.get(), logicType);
+        builder.set(GeneratorsDataComponents.ACTIVE_COOLED.get(), activeCooled);
     }
 
     @Override
     protected void applyImplicitComponents(@NotNull BlockEntity.DataComponentInput input) {
         super.applyImplicitComponents(input);
-        logicType = input.getOrDefault(GeneratorsDataComponents.FUSION_LOGIC_TYPE, logicType);
-        activeCooled = input.getOrDefault(GeneratorsDataComponents.ACTIVE_COOLED, activeCooled);
+        logicType = input.getOrDefault(GeneratorsDataComponents.FUSION_LOGIC_TYPE.get(), logicType);
+        activeCooled = input.getOrDefault(GeneratorsDataComponents.ACTIVE_COOLED.get(), activeCooled);
     }
 
     @Override

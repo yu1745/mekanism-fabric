@@ -5,13 +5,13 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.client.model.data.ModelProperty;
+
 
 //TODO: Eventually make use of the commented out code in this class which is required to get model data working properly for use of the FuelAssemblyBakedModel
 public class TileEntityFissionAssembly extends TileEntityInternalMultiblock {
 
     //private static final Map<UUID, MultiblockPairing> CACHED_MULTIBLOCKS = new HashMap<>();
-    public static final ModelProperty<Void> GLOWING = new ModelProperty<>();
+    //The official glow producer below is disabled; no model attachment is published.
 
     public TileEntityFissionAssembly(Holder<Block> blockProvider, BlockPos pos, BlockState state) {
         super(blockProvider, pos, state);

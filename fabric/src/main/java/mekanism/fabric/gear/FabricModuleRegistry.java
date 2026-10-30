@@ -33,6 +33,7 @@ public final class FabricModuleRegistry {
         if (initialized) return;
         MappedRegistry<ModuleData<?>> candidate = allocate();
         MekanismModules.MODULES.registerAll(candidate);
+        FabricLoader.getInstance().getEntrypoints("mekanism:modules", Runnable.class).forEach(Runnable::run);
         candidate.freeze();
         MekanismModules.registerSupport();
         FabricLoader.getInstance().getEntrypoints("mekanism:module_support", Runnable.class).forEach(Runnable::run);

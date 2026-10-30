@@ -70,7 +70,7 @@ public final class FabricMekanismModelPlugin {
             int transmitterOwned = 0;
             for (Map.Entry<ResourceLocation, Resource> entry : resources.listResources("models", id -> id.getPath().endsWith(".json")).entrySet()) {
                 String json = read(entry.getValue());
-                if (!entry.getKey().getNamespace().equals("mekanism")) {
+                if (!entry.getKey().getNamespace().equals("mekanism") && !entry.getKey().getNamespace().equals("mekanismgenerators")) {
                     // A datapack skin may reference a model from another resource namespace using our loader.
                     // Leave every unrelated foreign model to its own loader.
                     if (json.contains(LOADER_ROBIT)) {

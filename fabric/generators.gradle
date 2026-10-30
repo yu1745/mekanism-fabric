@@ -1,0 +1,59 @@
+// Native optional Generators module. Its classes/resources never enter the core JAR.
+def generatorsSlice = file('generators-slice.txt').readLines().findAll { it && !it.startsWith('#') }
+def generatorsPlatformSlice = file('generators-platform-slice.txt').readLines().findAll { it && !it.startsWith('#') }
+if (generatorsSlice.size() != 113 || generatorsSlice.toSet().size() != 113 || generatorsPlatformSlice.size() != 3) {
+    throw new GradleException('Unexpected Generators source admission')
+}
+sourceSets {
+    generators {
+        java {
+            srcDirs = ['../src/generators/java', 'src/generators/java']
+            (generatorsSlice + generatorsPlatformSlice).each { include it }
+        }
+        resources.srcDirs = ['src/generators/resources', '../src/generators/resources', '../src/datagen/generated/mekanismgenerators']
+        resources.exclude 'META-INF/neoforge.mods.toml', '.cache/**'
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
+    }
+}
+loom {
+    createRemapConfigurations(sourceSets.generators)
+    mods { mekanismgenerators { sourceSet sourceSets.generators } }
+    runs {
+        generatorsClient {
+            client()
+            name 'Generators Client'
+            source sourceSets.generators
+            runDir 'run-generators'
+        }
+        generatorsServer {
+            server()
+            name 'Generators Server'
+            source sourceSets.generators
+            runDir System.getProperty('mekanism.generators.serverDir', 'run-generators-server')
+        }
+    }
+}
+tasks.register('verifyGeneratorsSliceNoNeoForge') {
+    inputs.files((generatorsSlice.collect { file('../src/generators/java/' + it) }) + generatorsPlatformSlice.collect { file('src/generators/java/' + it) })
+    doLast {
+        inputs.files.each { source ->
+            if (!source.isFile() || source.text.contains('import net.neoforged.')) {
+                throw new GradleException('Missing or unported Generators source: ' + source)
+            }
+        }
+    }
+}
+tasks.named('compileGeneratorsJava') { dependsOn 'verifyGeneratorsSliceNoNeoForge', tasks.named('classes') }
+def generatorsVersion = project.version.toString()
+tasks.named('processGeneratorsResources', ProcessResources) {
+    inputs.property 'version', generatorsVersion
+    filesMatching('fabric.mod.json') { expand(version: generatorsVersion) }
+}
+def generatorsJar = tasks.register('generatorsJar', Jar) {
+    dependsOn tasks.named('generatorsClasses')
+    from sourceSets.generators.output
+    archiveBaseName = 'MekanismGenerators'
+    archiveClassifier = 'dev'
+    destinationDirectory = layout.buildDirectory.dir('generators-devlibs')
+}

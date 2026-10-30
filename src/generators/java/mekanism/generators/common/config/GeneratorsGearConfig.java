@@ -5,19 +5,19 @@ import mekanism.common.config.GearConfig;
 import mekanism.common.config.MekanismConfigTranslations;
 import mekanism.common.config.value.CachedFloatValue;
 import mekanism.common.config.value.CachedLongValue;
-import net.neoforged.fml.config.ModConfig.Type;
-import net.neoforged.neoforge.common.ModConfigSpec;
+import mekanism.common.config.MekanismConfigType;
+import mekanism.fabric.config.MekanismConfigSpec;
 
 public class GeneratorsGearConfig extends BaseMekanismConfig {
 
-    private final ModConfigSpec configSpec;
+    private final MekanismConfigSpec configSpec;
 
     //MekaSuit
     public final CachedLongValue mekaSuitGeothermalChargingRate;
     public final CachedFloatValue mekaSuitHeatDamageReductionRatio;
 
     GeneratorsGearConfig() {
-        ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
+        MekanismConfigSpec.Builder builder = new MekanismConfigSpec.Builder();
 
         MekanismConfigTranslations.GEAR_MEKA_SUIT.applyToBuilder(builder).push(GearConfig.MEKASUIT_CATEGORY);
         mekaSuitGeothermalChargingRate = CachedLongValue.wrap(this, GeneratorsConfigTranslations.GEAR_MEKA_SUIT_GEOTHERMAL.applyToBuilder(builder)
@@ -42,12 +42,12 @@ public class GeneratorsGearConfig extends BaseMekanismConfig {
     }
 
     @Override
-    public ModConfigSpec getConfigSpec() {
+    public MekanismConfigSpec getConfigSpec() {
         return configSpec;
     }
 
     @Override
-    public Type getConfigType() {
-        return Type.SERVER;
+    public MekanismConfigType getConfigType() {
+        return MekanismConfigType.SERVER;
     }
 }

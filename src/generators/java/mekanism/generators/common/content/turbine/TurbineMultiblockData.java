@@ -43,10 +43,12 @@ import net.minecraft.tags.FluidTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.material.Fluids;
-import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.FluidType;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import java.util.function.Supplier;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
+import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
+import mekanism.api.fluid.FluidStack;
+
+
 import org.jetbrains.annotations.Nullable;
 
 public class TurbineMultiblockData extends MultiblockData {
@@ -54,7 +56,7 @@ public class TurbineMultiblockData extends MultiblockData {
     public static final float ROTATION_THRESHOLD = 0.001F;
     public static final Object2FloatMap<UUID> clientRotationMap = new Object2FloatOpenHashMap<>();
 
-    private final List<BlockCapabilityCache<IFluidHandler, @Nullable Direction>> fluidOutputTargets = new ArrayList<>();
+    private final List<Supplier<@Nullable Storage<FluidVariant>>> fluidOutputTargets = new ArrayList<>();
     private final List<BlockEnergyCapabilityCache> energyOutputTargets = new ArrayList<>();
     @ContainerSync
     @WrappingComputerMethod(wrapper = ComputerChemicalTankWrapper.class, methodNames = {"getSteam", "getSteamCapacity", "getSteamNeeded",
@@ -102,7 +104,7 @@ public class TurbineMultiblockData extends MultiblockData {
     public TurbineMultiblockData(TileEntityTurbineCasing tile) {
         super(tile);
         chemicalTanks.add(chemicalTank = new TurbineChemicalTank(this, createSaveAndComparator()));
-        fluidTanks.add(ventTank = VariableCapacityFluidTank.output(this, () -> isFormed() ? condensers * MekanismGeneratorsConfig.generators.condenserRate.get() : FluidType.BUCKET_VOLUME,
+        fluidTanks.add(ventTank = VariableCapacityFluidTank.output(this, () -> isFormed() ? condensers * MekanismGeneratorsConfig.generators.condenserRate.get() : 1_000,
               fluid -> fluid.is(FluidTags.WATER), this));
         energyContainer = VariableCapacityEnergyContainer.create(this::getEnergyCapacity, automationType -> isFormed(),
               automationType -> automationType == AutomationType.INTERNAL && isFormed(), this);
@@ -161,7 +163,7 @@ public class TurbineMultiblockData extends MultiblockData {
         }
         if (!fluidOutputTargets.isEmpty() && !ventTank.isEmpty()) {
             //Note: We know that the tank has whatever amount it has stored, we can the simulated extraction
-            ventTank.extract(FluidUtils.emit(fluidOutputTargets, ventTank.getFluid()), Action.EXECUTE, AutomationType.INTERNAL);
+            ventTank.extract(FluidUtils.emit(fluidOutputTargets.stream().map(Supplier::get).filter(java.util.Objects::nonNull).toList(), ventTank.getFluid()), Action.EXECUTE, AutomationType.INTERNAL);
         }
         CableUtils.emit(energyOutputTargets, energyContainer);
 

@@ -10,13 +10,13 @@ import mekanism.common.util.EnumUtils;
 import mekanism.generators.common.content.fission.FissionReactorMultiblockData;
 import mekanism.generators.common.content.fusion.FusionReactorMultiblockData;
 import net.minecraft.world.level.dimension.DimensionType;
-import net.neoforged.fml.config.ModConfig.Type;
-import net.neoforged.neoforge.common.ModConfigSpec;
-import net.neoforged.neoforge.fluids.FluidType;
+import mekanism.common.config.MekanismConfigType;
+import mekanism.fabric.config.MekanismConfigSpec;
+
 
 public class GeneratorsConfig extends BaseMekanismConfig {
 
-    private final ModConfigSpec configSpec;
+    private final MekanismConfigSpec configSpec;
 
     public final CachedLongValue advancedSolarGeneration;
 
@@ -72,7 +72,7 @@ public class GeneratorsConfig extends BaseMekanismConfig {
     public final CachedLongValue fusionSteamPerInjection;
 
     GeneratorsConfig() {
-        ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
+        MekanismConfigSpec.Builder builder = new MekanismConfigSpec.Builder();
 
         GeneratorsConfigTranslations.SERVER_HOHLRAUM.applyToBuilder(builder).push("hohlraum");
         hohlraumMaxGas = CachedLongValue.wrap(this, GeneratorsConfigTranslations.SERVER_HOHLRAUM_CAPACITY.applyToBuilder(builder)
@@ -90,7 +90,7 @@ public class GeneratorsConfig extends BaseMekanismConfig {
         bioGeneration = CachedLongValue.definePositive(this, builder, GeneratorsConfigTranslations.SERVER_GENERATOR_BIO_GENERATION,
               "bioGeneration", 350L);
         bioTankCapacity = CachedIntValue.wrap(this, GeneratorsConfigTranslations.SERVER_GENERATOR_BIO_TANK_CAPACITY.applyToBuilder(builder)
-              .defineInRange("tankCapacity", 24 * FluidType.BUCKET_VOLUME, 1, Integer.MAX_VALUE));
+              .defineInRange("tankCapacity", 24 * 1_000, 1, Integer.MAX_VALUE));
         builder.pop();
 
         GeneratorsConfigTranslations.SERVER_GENERATOR_HEAT.applyToBuilder(builder).push("heat_generator");
@@ -101,14 +101,14 @@ public class GeneratorsConfig extends BaseMekanismConfig {
         heatGenerationNether = CachedLongValue.definePositive(this, builder, GeneratorsConfigTranslations.SERVER_GENERATOR_HEAT_GEN_NETHER,
               "heatGenerationNether", 100L);
         heatTankCapacity = CachedIntValue.wrap(this, GeneratorsConfigTranslations.SERVER_GENERATOR_HEAT_TANK_CAPACITY.applyToBuilder(builder)
-              .defineInRange("tankCapacity", 24 * FluidType.BUCKET_VOLUME, 1, Integer.MAX_VALUE));
+              .defineInRange("tankCapacity", 24 * 1_000, 1, Integer.MAX_VALUE));
         heatGenerationFluidRate = CachedIntValue.wrap(this, GeneratorsConfigTranslations.SERVER_GENERATOR_HEAT_FLUID_RATE.applyToBuilder(builder)
-              .define("heatGenerationFluidRate", 10, value -> value instanceof Integer i && i > 0 && i <= heatTankCapacity.getOrDefault()));
+              .defineValidated("heatGenerationFluidRate", 10, value -> value instanceof Integer i && i > 0 && i <= heatTankCapacity.getOrDefault()));
         builder.pop();
 
         GeneratorsConfigTranslations.SERVER_GENERATOR_GAS.applyToBuilder(builder).push("gas_generator");
         gbgTankCapacity = CachedLongValue.wrap(this, GeneratorsConfigTranslations.SERVER_GENERATOR_GAS_TANK_CAPACITY.applyToBuilder(builder)
-              .defineInRange("tankCapacity", 18L * FluidType.BUCKET_VOLUME, 1, Long.MAX_VALUE));
+              .defineInRange("tankCapacity", 18L * 1_000, 1, Long.MAX_VALUE));
         builder.pop();
 
         GeneratorsConfigTranslations.SERVER_GENERATOR_WIND.applyToBuilder(builder).push("wind_generator");
@@ -120,24 +120,24 @@ public class GeneratorsConfig extends BaseMekanismConfig {
         //Note: We just require that the maxY is greater than the minY, nothing goes badly if it is set above the max y of the world though
         // as it is just used for range clamping
         windGenerationMaxY = CachedIntValue.wrap(this, GeneratorsConfigTranslations.SERVER_GENERATOR_WIND_GEN_MAX_Y.applyToBuilder(builder)
-              .define("maxY", DimensionType.MAX_Y, value -> value instanceof Integer && (Integer) value > windGenerationMinY.getOrDefault()));
+              .defineValidated("maxY", DimensionType.MAX_Y, value -> value instanceof Integer && (Integer) value > windGenerationMinY.getOrDefault()));
         builder.pop();
 
         GeneratorsConfigTranslations.SERVER_TURBINE.applyToBuilder(builder).push("turbine");
         turbineBladesPerCoil = CachedIntValue.wrap(this, GeneratorsConfigTranslations.SERVER_TURBINE_BLADES.applyToBuilder(builder)
               .defineInRange("bladesPerCoil", 4, 1, 12));
         turbineVentChemicalFlow = CachedDoubleValue.wrap(this, GeneratorsConfigTranslations.SERVER_TURBINE_RATE_VENT.applyToBuilder(builder)
-              .defineInRange("ventChemicalFlow", 32D * FluidType.BUCKET_VOLUME, 0.1, 1_024 * FluidType.BUCKET_VOLUME));
+              .defineInRange("ventChemicalFlow", 32D * 1_000, 0.1, 1_024 * 1_000));
         turbineDisperserChemicalFlow = CachedDoubleValue.wrap(this, GeneratorsConfigTranslations.SERVER_TURBINE_RATE_DISPERSER.applyToBuilder(builder)
-              .defineInRange("disperserChemicalFlow", 1_280D, 0.1, 1_024 * FluidType.BUCKET_VOLUME));
+              .defineInRange("disperserChemicalFlow", 1_280D, 0.1, 1_024 * 1_000));
         condenserRate = CachedIntValue.wrap(this, GeneratorsConfigTranslations.SERVER_TURBINE_RATE_CONDENSER.applyToBuilder(builder)
-              .defineInRange("condenserRate", 64 * FluidType.BUCKET_VOLUME, 1, 2_000 * FluidType.BUCKET_VOLUME));
+              .defineInRange("condenserRate", 64 * 1_000, 1, 2_000 * 1_000));
         turbineEnergyCapacityPerVolume = CachedLongValue.define(this, builder, GeneratorsConfigTranslations.SERVER_TURBINE_ENERGY_CAPACITY,
               "energyCapacityPerVolume", 16_000_000L, 1L, 1_000_000_000_000L);
         //Note: We use maxVolume as it still is a large number, and we have no reason to go higher even if some things we technically could
         int maxTurbine = 17 * 17 * 18;
         turbineChemicalPerTank = CachedLongValue.wrap(this, GeneratorsConfigTranslations.SERVER_TURBINE_CHEMICAL_CAPACITY.applyToBuilder(builder)
-              .defineInRange("chemicalPerTank", 64L * FluidType.BUCKET_VOLUME, 1, Long.MAX_VALUE / maxTurbine));
+              .defineInRange("chemicalPerTank", 64L * 1_000, 1, Long.MAX_VALUE / maxTurbine));
         builder.pop();
 
         GeneratorsConfigTranslations.SERVER_FISSION.applyToBuilder(builder).push("fission_reactor");
@@ -151,12 +151,12 @@ public class GeneratorsConfig extends BaseMekanismConfig {
         burnPerAssembly = CachedLongValue.wrap(this, GeneratorsConfigTranslations.SERVER_FISSION_BURN_PER_ASSEMBLY.applyToBuilder(builder)
               .defineInRange("burnPerAssembly", 1L, 1, 1_000_000));
         maxFuelPerAssembly = CachedLongValue.wrap(this, GeneratorsConfigTranslations.SERVER_FISSION_FUEL_CAPACITY.applyToBuilder(builder)
-              .defineInRange("maxFuelPerAssembly", 8L * FluidType.BUCKET_VOLUME, 1, Long.MAX_VALUE / 4_096));
+              .defineInRange("maxFuelPerAssembly", 8L * 1_000, 1, Long.MAX_VALUE / 4_096));
         int maxVolume = 18 * 18 * 18;
         fissionCooledCoolantPerTank = CachedIntValue.wrap(this, GeneratorsConfigTranslations.SERVER_FISSION_COOLED_COOLANT_CAPACITY.applyToBuilder(builder)
-              .defineInRange("cooledCoolantPerTank", 100 * FluidType.BUCKET_VOLUME, 1, Integer.MAX_VALUE / maxVolume));
+              .defineInRange("cooledCoolantPerTank", 100 * 1_000, 1, Integer.MAX_VALUE / maxVolume));
         fissionHeatedCoolantPerTank = CachedLongValue.wrap(this, GeneratorsConfigTranslations.SERVER_FISSION_HEATED_COOLANT_CAPACITY.applyToBuilder(builder)
-              .defineInRange("heatedCoolantPerTank", 1_000L * FluidType.BUCKET_VOLUME, 1_000, Long.MAX_VALUE / maxVolume));
+              .defineInRange("heatedCoolantPerTank", 1_000L * 1_000, 1_000, Long.MAX_VALUE / maxVolume));
         fissionExcessWasteRatio = CachedDoubleValue.wrap(this, GeneratorsConfigTranslations.SERVER_FISSION_EXCESS_WASTE.applyToBuilder(builder)
               .defineInRange("excessWaste", 0.9D, 0.001D, 1D));
 
@@ -184,12 +184,12 @@ public class GeneratorsConfig extends BaseMekanismConfig {
         fusionWaterHeatingRatio = CachedDoubleValue.wrap(this, GeneratorsConfigTranslations.SERVER_FUSION_HEATING_RATE.applyToBuilder(builder)
               .defineInRange("waterHeatingRatio", 0.3D, 0D, 1D));
         fusionFuelCapacity = CachedLongValue.wrap(this, GeneratorsConfigTranslations.SERVER_FUSION_FUEL_CAPACITY.applyToBuilder(builder)
-              .defineInRange("fuelCapacity", FluidType.BUCKET_VOLUME, 2, 1_000L * FluidType.BUCKET_VOLUME));
+              .defineInRange("fuelCapacity", 1_000, 2, 1_000L * 1_000));
         fusionEnergyCapacity = CachedLongValue.define(this, builder, GeneratorsConfigTranslations.SERVER_FUSION_ENERGY_CAPACITY,
               "energyCapacity", 1_000_000_000, 1, Long.MAX_VALUE);
-        int baseMaxWater = 1_000 * FluidType.BUCKET_VOLUME;
+        int baseMaxWater = 1_000 * 1_000;
         fusionWaterPerInjection = CachedIntValue.wrap(this, GeneratorsConfigTranslations.SERVER_FUSION_WATER_INJECTION.applyToBuilder(builder)
-              .defineInRange("waterPerInjection", 1_000 * FluidType.BUCKET_VOLUME, 1, Integer.MAX_VALUE / FusionReactorMultiblockData.MAX_INJECTION));
+              .defineInRange("waterPerInjection", 1_000 * 1_000, 1, Integer.MAX_VALUE / FusionReactorMultiblockData.MAX_INJECTION));
         fusionSteamPerInjection = CachedLongValue.wrap(this, GeneratorsConfigTranslations.SERVER_FUSION_STEAM_INJECTION.applyToBuilder(builder)
               .defineInRange("steamPerInjection", 100L * baseMaxWater, 1, Long.MAX_VALUE / FusionReactorMultiblockData.MAX_INJECTION));
         builder.pop();
@@ -208,12 +208,12 @@ public class GeneratorsConfig extends BaseMekanismConfig {
     }
 
     @Override
-    public ModConfigSpec getConfigSpec() {
+    public MekanismConfigSpec getConfigSpec() {
         return configSpec;
     }
 
     @Override
-    public Type getConfigType() {
-        return Type.SERVER;
+    public MekanismConfigType getConfigType() {
+        return MekanismConfigType.SERVER;
     }
 }

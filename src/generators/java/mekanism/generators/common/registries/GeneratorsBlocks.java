@@ -68,7 +68,7 @@ public class GeneratorsBlocks {
                             .addBasic(TileEntityHeatGenerator.HEAT_CAPACITY, TileEntityHeatGenerator.INVERSE_CONDUCTION_COEFFICIENT, TileEntityHeatGenerator.INVERSE_INSULATION_COEFFICIENT)
                             .build()
                       ).addAttachmentOnlyContainers(ContainerType.ITEM, () -> ItemSlotsBuilder.builder()
-                            .addFluidFuelSlot(0, s -> s.getBurnTime(null) != 0)
+                            .addFluidFuelSlot(0, s -> mekanism.common.inventory.slot.FuelInventorySlot.getBurnTime(s) != 0)
                             .addEnergy()
                             .build()
                       )

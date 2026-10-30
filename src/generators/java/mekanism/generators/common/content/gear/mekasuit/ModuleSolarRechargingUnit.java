@@ -40,7 +40,7 @@ public class ModuleSolarRechargingUnit implements ICustomModule<ModuleSolarRecha
                 // As with temperature, we scale it so that it doesn't overwhelm production. Note the signedness
                 // on the scaling factor. Also note that we only use rainfall as a proxy if it CAN rain; some dimensions
                 // (like the End) have rainfall set, but can't actually support rain.
-                float humidityEff = needsRainCheck ? -0.3F * b.getModifiedClimateSettings().downfall() : 0.0F;
+                float humidityEff = needsRainCheck ? -0.3F * b.climateSettings.downfall() : 0.0F;
                 double peakOutput = MekanismConfig.gear.mekaSuitSolarRechargingRate.get() * (1.0D + tempEff + humidityEff);
 
                 //Get the brightness of the sun; note that there are some implementations that depend on the base

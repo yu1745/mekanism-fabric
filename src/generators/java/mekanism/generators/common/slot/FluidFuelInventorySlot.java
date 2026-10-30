@@ -13,8 +13,8 @@ import mekanism.common.capabilities.Capabilities;
 import mekanism.common.inventory.slot.FluidInventorySlot;
 import mekanism.common.util.MekanismUtils;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandlerItem;
+import mekanism.api.fluid.FluidStack;
+import mekanism.fabric.fluid.ItemFluidContainer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -31,10 +31,10 @@ public class FluidFuelInventorySlot extends FluidInventorySlot {
         Objects.requireNonNull(fuelValue, "Fuel value calculator cannot be null");
         Predicate<ItemStack> fillPredicate = getFillPredicate(fluidTank);
         return new FluidFuelInventorySlot(fluidTank, fuelValue, fuelCreator, stack -> {
-            IFluidHandlerItem fluidHandlerItem = Capabilities.FLUID.getCapability(stack);
+            ItemFluidContainer fluidHandlerItem = ItemFluidContainer.find(stack);
             if (fluidHandlerItem != null) {
-                for (int tank = 0, tanks = fluidHandlerItem.getTanks(); tank < tanks; tank++) {
-                    if (fluidTank.isFluidValid(fluidHandlerItem.getFluidInTank(tank))) {
+                for (var tank : fluidHandlerItem.tanks()) {
+                    if (fluidTank.isFluidValid(tank.fluid())) {
                         //False if the items contents are still valid
                         return false;
                     }
@@ -68,7 +68,7 @@ public class FluidFuelInventorySlot extends FluidInventorySlot {
                 //If filling from item failed, try doing it by conversion
                 int fuel = fuelValue.applyAsInt(current);
                 if (fuel > 0 && fuel <= needed) {
-                    boolean hasContainer = current.hasCraftingRemainingItem();
+                    boolean hasContainer = current.getItem().hasCraftingRemainingItem();
                     if (hasContainer && current.getCount() > 1) {
                         //If we have a container but have more than a single stack of it somehow just exit
                         return;
@@ -76,7 +76,7 @@ public class FluidFuelInventorySlot extends FluidInventorySlot {
                     fluidTank.insert(fuelCreator.apply(fuel), Action.EXECUTE, AutomationType.INTERNAL);
                     if (hasContainer) {
                         //If the item has a container, then replace it with the container
-                        setStack(current.getCraftingRemainingItem());
+                        setStack(new ItemStack(current.getItem().getCraftingRemainingItem()));
                     } else {
                         //Otherwise, shrink the size of the stack by one
                         MekanismUtils.logMismatchedStackSize(shrinkStack(1, Action.EXECUTE), 1);

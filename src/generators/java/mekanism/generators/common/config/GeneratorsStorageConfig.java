@@ -2,12 +2,12 @@ package mekanism.generators.common.config;
 
 import mekanism.common.config.BaseMekanismConfig;
 import mekanism.common.config.value.CachedLongValue;
-import net.neoforged.fml.config.ModConfig.Type;
-import net.neoforged.neoforge.common.ModConfigSpec;
+import mekanism.common.config.MekanismConfigType;
+import mekanism.fabric.config.MekanismConfigSpec;
 
 public class GeneratorsStorageConfig extends BaseMekanismConfig {
 
-    private final ModConfigSpec configSpec;
+    private final MekanismConfigSpec configSpec;
 
     public final CachedLongValue heatGenerator;
     public final CachedLongValue bioGenerator;
@@ -16,7 +16,7 @@ public class GeneratorsStorageConfig extends BaseMekanismConfig {
     public final CachedLongValue windGenerator;
 
     GeneratorsStorageConfig() {
-        ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
+        MekanismConfigSpec.Builder builder = new MekanismConfigSpec.Builder();
 
         heatGenerator = CachedLongValue.definedMin(this, builder, GeneratorsConfigTranslations.ENERGY_STORAGE_GENERATOR_HEAT, "heatGenerator",
               160_000L, 1);
@@ -43,12 +43,12 @@ public class GeneratorsStorageConfig extends BaseMekanismConfig {
     }
 
     @Override
-    public ModConfigSpec getConfigSpec() {
+    public MekanismConfigSpec getConfigSpec() {
         return configSpec;
     }
 
     @Override
-    public Type getConfigType() {
-        return Type.SERVER;
+    public MekanismConfigType getConfigType() {
+        return MekanismConfigType.SERVER;
     }
 }

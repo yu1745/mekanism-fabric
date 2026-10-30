@@ -62,7 +62,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
-import net.neoforged.neoforge.fluids.FluidStack;
+import mekanism.api.fluid.FluidStack;
 import org.jetbrains.annotations.Nullable;
 
 public class FissionReactorMultiblockData extends MultiblockData implements IValveHandler {
@@ -293,7 +293,7 @@ public class FissionReactorMultiblockData extends MultiblockData implements IVal
         tag.put(SerializationConstants.CHEMICAL_STORED_ALT, heatedCoolantTank.getStack().saveOptional(provider));
         tag.put(SerializationConstants.CHEMICAL_STORED_ALT_2, wasteTank.getStack().saveOptional(provider));
         writeValves(tag);
-        ListTag list = new ListTag(assemblies.size());
+        ListTag list = new ListTag();
         for (FormedAssembly assembly : assemblies) {
             list.add(assembly.write());
         }

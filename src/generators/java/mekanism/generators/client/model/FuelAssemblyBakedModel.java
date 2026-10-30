@@ -16,16 +16,16 @@ import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.client.ChunkRenderTypeSet;
-import net.neoforged.neoforge.client.model.BakedModelWrapper;
-import net.neoforged.neoforge.client.model.data.ModelData;
+import java.util.Set;
+import net.fabricmc.fabric.api.renderer.v1.model.ForwardingBakedModel;
+
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
 
 //TODO: Eventually make use of this if we figure out a way to not have coolant rendering make this invisible
 @NothingNullByDefault
-public class FuelAssemblyBakedModel extends BakedModelWrapper<BakedModel> {
+public class FuelAssemblyBakedModel extends ForwardingBakedModel {
 
     private static final Color GLOW_ARGB = Color.rgbad(0.466, 0.882, 0.929, 0.6);
     private static final Vector3f NORTH_EAST = new Vector3f(0.95F, 0.125F, 0.05F);
@@ -33,23 +33,22 @@ public class FuelAssemblyBakedModel extends BakedModelWrapper<BakedModel> {
 
     private final Map<Direction, List<BakedQuad>> cachedGlows = new EnumMap<>(Direction.class);
     @Nullable
-    private ChunkRenderTypeSet renderTypes;
+    private Set<RenderType> renderTypes;
     private final float height;
 
     public FuelAssemblyBakedModel(BakedModel original, float height) {
-        super(original);
+        this.wrapped = original;
         this.height = height;
     }
 
     @NotNull
-    @Override
-    public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side, RandomSource rand, ModelData data, @Nullable RenderType renderType) {
-        List<BakedQuad> quads = super.getQuads(state, side, rand, data, renderType);
+    public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side, RandomSource rand, boolean glowing, @Nullable RenderType renderType) {
+        List<BakedQuad> quads = super.getQuads(state, side, rand);
         //Note: Technically we would want the null side rather than a cullable side, but as this only would end up being used in fission reactors where
         // it should be in a checkerboard pattern we may as well allow it to be culled
         //TODO: Re-evaluate the above thought if we ever end up being able to make use of this model
         if (side != null && side.getAxis().isHorizontal() && renderType == RenderType.translucent()) {
-            if (data.has(TileEntityFissionAssembly.GLOWING)) {
+            if (glowing) {
                 //TODO: Eventually we may want to make the glow component be part of the json so resource packs can customize it more
                 List<BakedQuad> allQuads = cachedGlows.get(side);
                 if (allQuads == null) {
@@ -79,14 +78,15 @@ public class FuelAssemblyBakedModel extends BakedModelWrapper<BakedModel> {
         return quads;
     }
 
-    @Override
-    public ChunkRenderTypeSet getRenderTypes(BlockState state, RandomSource rand, ModelData data) {
-        if (data.has(TileEntityFissionAssembly.GLOWING)) {
+    //The original wrapper and its glow producer are disabled in GeneratorsClientRegistration.
+    //Keep the glow geometry available for a real native producer, without inventing ModelData.
+    public Set<RenderType> getRenderTypes(BlockState state, RandomSource rand, boolean glowing) {
+        if (glowing) {
             if (renderTypes == null) {
-                renderTypes = ChunkRenderTypeSet.union(super.getRenderTypes(state, rand, data), ChunkRenderTypeSet.of(RenderType.translucent()));
+                renderTypes = new java.util.HashSet<>(java.util.List.of(net.minecraft.client.renderer.ItemBlockRenderTypes.getChunkRenderType(state), RenderType.translucent()));
             }
             return renderTypes;
         }
-        return super.getRenderTypes(state, rand, data);
+        return Set.of(net.minecraft.client.renderer.ItemBlockRenderTypes.getChunkRenderType(state));
     }
 }

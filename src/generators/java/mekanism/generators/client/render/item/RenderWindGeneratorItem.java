@@ -37,7 +37,7 @@ public class RenderWindGeneratorItem extends MekanismISTER {
                 //If the dimension is blacklisted, don't try to tick it at all
                 tickingNormally = false;
             } else {
-                int ticks = Minecraft.getInstance().levelRenderer.getTicks();
+                int ticks = Minecraft.getInstance().levelRenderer.ticks;
                 if (lastTicksUpdated != ticks) {
                     angle = (angle + SPEED) % 360;
                     lastTicksUpdated = ticks;
