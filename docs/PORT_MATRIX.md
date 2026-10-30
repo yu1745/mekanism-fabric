@@ -370,7 +370,7 @@ server/client runtime gate 见 `scripts/fabric-recipe-runtime-smoke.sh` 与 `FAB
 
 ### Task 042A output handling and one-input cached recipe execution
 
-Task 042A 从 clean commit `cd263092` 在隔离 worktree 实现 `TASK042_PLAN.md` 中获批的 042A 半部。计划已证明
+Task 042A 从 clean commit `cd263092` 在隔离 worktree 实现 `archive/TASK042_PLAN.md` 中获批的 042A 半部。计划已证明
 原请求的完整垂直被阻断：vanilla `Recipe#getType()` 为 abstract 且 `RecipeManager` 在真实 reload 路径上调用它，
 而本仓库既无 by-key holder 机制，也无 recipe type registration ownership、serializer、production recipe JSON，
 且十个 `getToastSymbol()` holder 所需的 `MekanismItems` 家族未纳入。042A 因此在**不写任何 production registry**
@@ -395,7 +395,7 @@ recipe family、`MekanismItems` 与 client recipe viewer 仍属单独审批的 0
 
 ### Task 043 recipe type/serializer registration and concrete recipe family
 
-Task 043 从 clean commit `87fe68e6` 实现 `TASK043_PLAN.md`，关闭 042A 明确留下的边界。原 042B blocker 的四条理由中三条经测量
+Task 043 从 clean commit `87fe68e6` 实现 `archive/TASK043_PLAN.md`，关闭 042A 明确留下的边界。原 042B blocker 的四条理由中三条经测量
 不在本垂直路径上：`MekanismKeyedHolder.attach` 已存在且 `keyed(...)` 允许 attach，因此 registration 可把 canonical holder 绑回
 **同一个** `RecipeType` instance，`byType` identity 分组按构造保持；`MekanismRecipe.isSpecial()` 为 `true`，`ServerRecipeBook.addRecipes`
 与 `ClientRecipeBook.categorizeAndGroupRecipes` 都以 `!isSpecial()` 为门，唯一 `getToastSymbol()` caller（`RecipeToast`）永不触达，
@@ -423,7 +423,7 @@ crafting special、无 bin 与 recipe-upgrade recipe；artifact 内无 productio
 
 ### Task 044 rotary input-cache ownership closure
 
-Task 044 从 clean commit `8a4c6105` 实现 `TASK044_PLAN.md`，把最后一个未接入的 input-cache 形状移植到既有
+Task 044 从 clean commit `8a4c6105` 实现 `archive/TASK044_PLAN.md`，把最后一个未接入的 input-cache 形状移植到既有
 `AbstractInputRecipeCache` per-binding 契约，不改 `MekanismRecipeType` cache owner、registration、provider、monitor、factory、viewer 或其它
 cached recipe family。
 

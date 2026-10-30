@@ -1019,7 +1019,7 @@ GLM 在任务 013、014 完成两轮临时复测；任务 015 以受支持的 hi
 - 用户要求审视 Tasks035–043 是否偏离官方 Java port/首台 Crusher 路径，以及开发提速方式。独立只读 reviewer 为 `openai-codex/gpt-5.6-terra` high，run `22919750-0643-440`：150.4s、153,241 tokens、38次工具调用、约 `$0.4674`；未修改文件、未执行构建/测试。不是新的 DeepSeek high 实现任务，也不替代完整 Task043 adversarial gate。
 - 接受：总体路线未回到重写；当前无完整 Crusher；Task043 anonymous canonical type 与未来 official type/cache owner 必须统一 identity；Task042 blocker 部分过度；Task038 是有后续复用但不直接属于 Crusher 的平台先行试验。
 - 主代理核对后限缩：不能仅凭 Crusher 无 direct Chemical/window import 就认定 Task039/040 可跳过。`IInsertableSlot.exists(SelectedWindowData)`、官方 machine base 的 Chemical handler，以及 OneInputCachedRecipe 的完整 factory 都是真实传递依赖；未证明保持官方公共面的替代闭包前，不采纳整批无用论。
-- 主代理纠正：Task043 final runtime/clean release 实际已在 `2f2740ba` 通过，只是仓库仍只记录候选静态门禁；本次补记 TASK043_PLAN。详细事实、审查取舍和组织建议见 [`DEVELOPMENT_REVIEW_2026-09-13.md`](DEVELOPMENT_REVIEW_2026-09-13.md)。建议不自动修改架构/测试/门禁或正在运行的 Task044。
+- 主代理纠正：Task043 final runtime/clean release 实际已在 `2f2740ba` 通过，只是仓库仍只记录候选静态门禁；本次补记 TASK043_PLAN。详细事实、审查取舍和组织建议见 [`archive/DEVELOPMENT_REVIEW_2026-09-13.md`](archive/DEVELOPMENT_REVIEW_2026-09-13.md)。建议不自动修改架构/测试/门禁或正在运行的 Task044。
 
 ## 任务 044：rotary input-cache ownership（单实现 + 风险触发只读审查）
 
@@ -1027,14 +1027,14 @@ GLM 在任务 013、014 完成两轮临时复测；任务 015 以受支持的 hi
 - 独立只读 reviewer（Agent 默认继承模型，未覆盖 model），run `de73ab63-c130-4df`：92.5s、69,017 tokens、23次工具调用，约 `$1.0841`；审查固定 `45a5c96a` 的全部9文件及 base/sibling/index/recipe/fixture/packaging，未修改或重跑构建。结论无确证 production regression，候选可接受。
 - 有效覆盖发现：clear/rebind 原测试只填充普通 indices，不能声称验证 complex fallback 清除；fluid fallback 测试未验证 indexed-first 和 indexed amount 不足后 fallback。主代理在原5方法内补充真实 component fluid recipe 的 clear/rebind，以及两种候选并存下的优先级和 amount fallback；focused 5 tests 通过。修正 `RecipeSource` 文档笔误。Chemical fallback 因当前 `ChemicalInputCache.mapInputs()` 恒返回 false 而不可达，保留官方结构，不创建 synthetic test seam。
 - 非本批回归：通用旧测试未真正构造 mismatched non-null Level，不能把方法名当执行证据；Rotary 四入口实际均委托既有 enforcing base。未扩展到 owner/registry 或改动生产代码。
-- 父级最终门禁与 artifact identity 记录于 `TASK044_PLAN.md`，本记录不以只读意见代替运行证据。
+- 父级最终门禁与 artifact identity 记录于 `archive/TASK044_PLAN.md`，本记录不以只读意见代替运行证据。
 
 ## 任务 045：canonical common recipe owner（单实现 + 风险触发只读审查）
 
 - 实现：`commandcode/deepseek/deepseek-v4.1-flash` high，基线 `c6255a4e`，候选 `436fb30e`（5 commits）；2728.4s、649,034 tokens、255次工具调用。监督纠正了一次错误 Minecraft 26.1.1 javap 取样，改为实际1.21.1 artifact；并要求过滤输出管道之外的真实 Gradle exit/XML 证据。
 - 固定候选独立 reviewer：`openai-codex/gpt-6-astra`，run `0d19397c-2be5-477`，176.1s、116,060 tokens、45次工具调用，约 `$2.0480`；完整只读审查 production/test/registration/cache/lifecycle/static contracts，未修改或执行门禁。结论 **REJECT**：P1 common holder 注册后递归 `value → super.value → virtual get → value`；P2 Binding 的 `Object` owner key 与 recipe 泛型脱钩。另指出 post-registration common access、不同 non-null RegistryAccess、synthetic skip/multi-Ingredient/helper、client published-access 的执行覆盖缺口。
 - 父代理独立检查同样发现 P1，并在原两种 init-order worker 内增加注册后 all26 common `get/value/getRecipeType` 断言：先红（两者均 StackOverflowError），再改为两个 `super.get()` 后绿。修复 `c1c9aa3f` 还恢复官方 `registerMek(String, Function<...>)` overload，绑定缓存按 `RecipeCacheSource<R>` 约束并 defensively immutable，在原6 ordinary methods内补齐上述独立风险（总方法数仍8），且 client fixture 在 initial/reload/reconnect 的必需 phase marker 前验证真实 connection access 与 canonical/synthetic owner。未添加第二个完整实现候选。
-- 修复版父级 `check compileRecipeRuntimeFixtureJava` 加五个 fixture isolation、`--rerun-tasks`：63s、30 tasks executed，435 tests通过。P1红绿日志 `/tmp/task045-parent-bound-holder-{red,green}.log`；修复全量日志 `/tmp/task045-parent-fixed-check.log`。真实runtime/release及复审结论以 `TASK045_PLAN.md` 父验收记录为准，不用单测通过替代真实运行证据。
+- 修复版父级 `check compileRecipeRuntimeFixtureJava` 加五个 fixture isolation、`--rerun-tasks`：63s、30 tasks executed，435 tests通过。P1红绿日志 `/tmp/task045-parent-bound-holder-{red,green}.log`；修复全量日志 `/tmp/task045-parent-fixed-check.log`。真实runtime/release及复审结论以 `archive/TASK045_PLAN.md` 父验收记录为准，不用单测通过替代真实运行证据。
 - 针对性复审 run `717a8a96-59c6-4bb`（默认继承模型，未覆盖 model）：59.8s、54,270 tokens、16次工具调用、约 `$0.6808`，固定 `c1c9aa3f` **ACCEPT**。P1/P2关闭；审阅红绿日志及补测，确认 factory overload与客户端真实access断言。仅只读，未执行runtime。父已另行完成真实recipe-runtime、packaged server及clean release，详见TASK045_PLAN。
 
 ## 任务 046：lookup handler/monitor ownership（单实现 + GLM 只读审查）
@@ -1043,11 +1043,11 @@ GLM 在任务 013、014 完成两轮临时复测；任务 015 以受支持的 hi
 - 用户要求下个子代理试用 GLM5.3，故固定候选只读 reviewer 使用 `glm-5.3` high（run `429e346c-92cb-424`）。初审工具记录383.0s、98,614 tokens、27次调用、约 `$0.4415`；未改代码或执行构建。初判 **ACCEPT，但判断有误**：把任意 handler callback 内同步 rebind 限缩成当前 live lifecycle 是否会 interleave，遗漏 handler 独立返回 recipe 的 no-context 路径，以及 Factory 显式选择入口的 context/Level validation。
 - 父级红证据 `/tmp/task046-parent-ownership-red.log`：8 tests /3 failures，分别为无 context 仍处理、foreign Level 的 Factory creation 未先拒绝、lookup callback rebind 后旧 candidate 被盖上新 stamp。父修复 `8d826837` 使用 captured binding/generation，在 resolution、changed callback、unpause 后验证，direct query 不 acknowledgement 未安装缓存；Factory 在 creation 前后验证，不错误恢复 saved data。保留7个原测试、增加第8个同步 callback 中断测试；新增测试的 creation-clear/changed-callback-clear 子阶段在 green 实跑，不能将三处顶层红失败夸称为所有子阶段均有红证。原 Factory 测试还补真实 CachedRecipe 非零25L耗能，不是单测 JDK 算术。
 - 同一 GLM resumed 复审固定修复，工具报告本次131.5s，累计32次工具调用、252.6k tokens、约 `$0.7638`（后几项为该 agent 累计口径，不另加初审）；明确撤回初审上述判断及“energy test只是Math”的评价，确认红绿证据与 captured-stamp/异常/直接查询/Factory 持久语义，修复版 **ACCEPT**，未发现剩余 blocker。复审自述的调用分组数不取代工具统计。
-- 这是一次实现与独立审查的不同角色观察，**不能据此宣称 GLM 与 DeepSeek 整体实现能力孰强**。初审接受不能替代父级真实 diff 和可执行反例；最终父级443 tests/build/static及真实发布门禁见 `TASK046_PLAN.md`。无第二份完整实现，无测试删除。
+- 这是一次实现与独立审查的不同角色观察，**不能据此宣称 GLM 与 DeepSeek 整体实现能力孰强**。初审接受不能替代父级真实 diff 和可执行反例；最终父级443 tests/build/static及真实发布门禁见 `archive/TASK046_PLAN.md`。无第二份完整实现，无测试删除。
 
 
 ## Task047 — DeepSeek implementation / GLM5.3 bounded review
 
-DeepSeek V4.1 Flash **high** implemented candidate `cdd50997` from `d9aaa36c` (67m35s,351 tool uses). Its document incorrectly called itself SOL; parent corrected attribution. GLM5.3 read-only review (5m10s,30 tools) returned ACCEPT, correctly noting the weak chest-control assertion, but missed that vanilla's empty-tag guard prevents the candidate redirect from reaching subclass onDataPacket. Parent reproduced that defect with a real-client empty packet and fixed the hook; details and exact evidence are in `TASK047_PLAN.md`. No reviewer runtime validation occurred, and acceptance is not evidence that all candidate claims were true.
+DeepSeek V4.1 Flash **high** implemented candidate `cdd50997` from `d9aaa36c` (67m35s,351 tool uses). Its document incorrectly called itself SOL; parent corrected attribution. GLM5.3 read-only review (5m10s,30 tools) returned ACCEPT, correctly noting the weak chest-control assertion, but missed that vanilla's empty-tag guard prevents the candidate redirect from reaching subclass onDataPacket. Parent reproduced that defect with a real-client empty packet and fixed the hook; details and exact evidence are in `archive/TASK047_PLAN.md`. No reviewer runtime validation occurred, and acceptance is not evidence that all candidate claims were true.
 
 During closeout the user explicitly reprioritized completion over exhaustive testing. Parent stopped full-gate/reviewer cycling, kept the already-written regression/fixture improvements, and verified the final build plus six focused tests. No final runtime-green/release claim. The next **implementation** uses GLM5.3 as requested; this review does not consume that requirement.

@@ -1,6 +1,6 @@
 # Concrete machine-owner admission checkpoint (after Task050)
 
-Baseline: `c433ace0` (Task050 accepted; 205/224/45). This records the initial source checkpoint, **not** Task051 implementation or a compile-success claim. Subsequent parent decision is in `TASK051_PLAN.md`: verified Fabric per-find provider behavior removes the false need for world/bounding cache-notification coupling; admit the complete real cache/base lifecycle with a permanently bound real-component policy callback, not a cache-only or fake-config batch.
+Baseline: `c433ace0` (Task050 accepted; 205/224/45). This records the initial source checkpoint, **not** Task051 implementation or a compile-success claim. Subsequent parent decision is in `archive/TASK051_PLAN.md`: verified Fabric per-find provider behavior removes the false need for world/bounding cache-notification coupling; admit the complete real cache/base lifecycle with a permanently bound real-component policy callback, not a cache-only or fake-config batch.
 
 ## What was read
 
@@ -26,7 +26,7 @@ No production changes, new interfaces, provider registrations, runtime gates or 
 
 ## After Task051 acceptance — remaining concrete owners
 
-The initial boundary discussion above is historical: Task051 accepted `CapabilityCache`/`CapabilityTileEntity` with the permanent actual-component predicate binding and real Fabric BE lifecycle. See `TASK051_PLAN.md` for implementation and correction `2c65edb8` (Fabric already forwards chunk/world unload into BE unload). It does not admit the following owners.
+The initial boundary discussion above is historical: Task051 accepted `CapabilityCache`/`CapabilityTileEntity` with the permanent actual-component predicate binding and real Fabric BE lifecycle. See `archive/TASK051_PLAN.md` for implementation and correction `2c65edb8` (Fabric already forwards chunk/world unload into BE unload). It does not admit the following owners.
 
 Additional parent source reads: complete `lib/frequency/TileComponentFrequency.java`, `FrequencyType.java`, `FrequencyManager.java`, and `inventory/container/MekanismContainer.java`.
 

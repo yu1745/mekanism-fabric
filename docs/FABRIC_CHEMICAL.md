@@ -212,7 +212,7 @@ and verifies SHA-256:
 
 ## Source identity and delta report
 
-Oracle: `4646f509`. All **18 `U` sources** named in `TASK040_PLAN.md` were compared with
+Oracle: `4646f509`. All **18 `U` sources** named in `archive/TASK040_PLAN.md` were compared with
 `git hash-object` against the oracle blob and are byte-identical: nine API leaves
 (`BasicChemicalTank`, `ChemicalUtils`, `IMekanismChemicalHandler`, three base attribute contracts,
 `IChemicalAttribute`, `IBaseProvider`, `IDisableableEnum`) and nine common leaves

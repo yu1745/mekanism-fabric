@@ -447,7 +447,7 @@ Task 041 admits the recipe ingredient/input/generic-cache layer with these bound
 Task 042A admits the 33-source output-handling/one-input closure plus one new layer-neutral source, moving the compiled slices to **163/184/37**. Against
 `4646f509` the closure is exactly 12 `U` (byte-identical) and 21 `A`, plus the new `N` source; there is no `M` or `R`.
 
-The only adaptations are the four families approved by `TASK042_PLAN.md`:
+The only adaptations are the four families approved by `archive/TASK042_PLAN.md`:
 
 - the NeoForge `FluidStack` import becomes the project-owned `mekanism.api.fluid.FluidStack` in 14 files. `OutputHelper`'s fluid paths keep `Integer.MAX_VALUE` as
   the simulate cap, `int amountUsed / toOutput.getAmount()` truncation, and the exact `getNeeded() > 0` error split; the chemical path keeps
@@ -583,7 +583,7 @@ gate）BUILD SUCCESSFUL。未运行（按完成度优先策略）：全量测试
 
 ### 深审修正的平台边界（2026-10-26）
 
-完整来源与验收见 `PORT_DEEP_REVIEW_2026-10-26.md`。本批保持既有官方 owner，不增加通用兼容层。
+完整来源与验收见 `archive/PORT_DEEP_REVIEW_2026-10-26.md`。本批保持既有官方 owner，不增加通用兼容层。
 
 - Chunk loader 用独立 `TicketType<BlockPos>` 的 region ticket（distance 2 / level 31），不再修改全局 `/forceload`。普通票据也允许 entity/BE tick；`forceTicks` 的额外语义是绕过附近玩家对 random tick/spawn 的门控。保存仍使用 `owners`/`pos`/`chunks`，增加 `force_ticks`（缺失默认 false，启动按真实 component 重新裁定）；恢复所有有效票据，清空也必须保存。旧错误实现写进全局 forced 标记的来源不可区分，不自动删除。
 - 数字矿机和纸箱的 speculative break probe 走真实 `PlayerBlockBreakEvents.BEFORE`，加 Mekanism 安全检查；不发送 AFTER，不把 probe 当实际破坏。矿机回调使用 owner UUID 的假玩家并 finally 清理。

@@ -2,7 +2,7 @@
 
 ## Status and boundary
 
-Task 041 implements the recipe ingredient, generic execution/cache, and reload-ownership vertical approved by `TASK041_PLAN.md`, starting from approval commit
+Task 041 implements the recipe ingredient, generic execution/cache, and reload-ownership vertical approved by `archive/TASK041_PLAN.md`, starting from approval commit
 `e4d85c3e`. The compiled slices move **98/164/33 → 129/184/37** (350 production sources) and the executable test contract moves to ordinary **75 suites/372 tests**,
 transfer-Knot **5/27**, root-registry **1/2**, data-map-Knot **2/4**, aggregate **83/405**.
 
@@ -106,7 +106,7 @@ The derive-once amortization itself is proven by the tracking-override unit cont
 
 ## Task 042A — output handling and one-input cached recipe execution
 
-Task 042A implements the approved 042A half of `TASK042_PLAN.md` from clean commit `cd263092`, in an isolated worktree. `TASK042_PLAN.md` recorded that the
+Task 042A implements the approved 042A half of `archive/TASK042_PLAN.md` from clean commit `cd263092`, in an isolated worktree. `archive/TASK042_PLAN.md` recorded that the
 originally requested full vertical (output handling plus **registered** one-input recipe types and their decoders) is blocked: `Recipe#getType()` is abstract and the
 vanilla `RecipeManager` calls it on the live reload path, while this repository has no by-key holder mechanism, no recipe-type registration ownership, no
 serializers, and no admitted `MekanismItems` family for the ten `getToastSymbol()` holders.
@@ -186,7 +186,7 @@ remain the separately approved 042B, which must reuse these exact `RecipeType` i
 
 ## Task 043 — recipe type and serializer registration with the concrete recipe family
 
-Task 043 implements `TASK043_PLAN.md` from clean commit `87fe68e6`, in an isolated worktree. It closes the boundary Task 042A explicitly left open: the 26 recipe
+Task 043 implements `archive/TASK043_PLAN.md` from clean commit `87fe68e6`, in an isolated worktree. It closes the boundary Task 042A explicitly left open: the 26 recipe
 types are now **really registered**, and every Mekanism recipe serializer is registered so datapack recipes decode.
 
 Slices move **163/184/37 → 199/188/38** (API +36, common +4, platform +1; 425 production sources). The executable contract moves to ordinary **77 suites/384 tests**,
@@ -259,7 +259,7 @@ set. A real `RecipeManager` decode-and-serve case proves the served recipe repor
 
 ## Task 044 — rotary input-cache ownership closure
 
-Task 044 implements `TASK044_PLAN.md` from clean commit `8a4c6105`, in an isolated worktree. It ports the last remaining input-cache shape onto the per-binding
+Task 044 implements `archive/TASK044_PLAN.md` from clean commit `8a4c6105`, in an isolated worktree. It ports the last remaining input-cache shape onto the per-binding
 `AbstractInputRecipeCache` contract without touching the `MekanismRecipeType` cache owner, registration, providers, monitors, factories, viewers, or any other cached
 recipe family.
 
@@ -298,7 +298,7 @@ machine-facing `InputRecipeCache` index; no new global mutable cache state or se
 
 ## Task 045 — canonical common recipe-type owner and provider
 
-Task 045 implements `TASK045_PLAN.md` from clean baseline `c6255a4e`. It closes the ownership boundary Task 044 left open: the 26 recipe types are now owned by the
+Task 045 implements `archive/TASK045_PLAN.md` from clean baseline `c6255a4e`. It closes the ownership boundary Task 044 left open: the 26 recipe types are now owned by the
 **common** layer, the API no longer creates anonymous `RecipeType` instances, and the recipe-cache binding carries the registry access that synthetic vanilla
 smelting needs.
 
@@ -367,7 +367,7 @@ world fallback, no second context mechanism and no weakening of the generic defe
 
 ## Task 046 — recipe lookup handlers and generic monitor ownership
 
-Task 046 implements `TASK046_PLAN.md` from clean baseline `2db8a184`. It completes the common owner → handler → cached-recipe execution spine by porting the five
+Task 046 implements `archive/TASK046_PLAN.md` from clean baseline `2db8a184`. It completes the common owner → handler → cached-recipe execution spine by porting the five
 lookup-handler interfaces and the two generic monitors, and replaces the official process-global one-tick flush flag with the existing binding's publication identity
 plus a narrow binding-local invalidation generation.
 
@@ -415,7 +415,7 @@ constant chemical saved usage, wrong-cache-index behaviour and energy-delta repo
 
 The candidate's seven new ordinary methods in `RecipeCacheLookupMonitorTest` drive the real monitors, real canonical providers, real input caches and a real
 `OneInputCachedRecipe`, reusing existing fixtures rather than rebuilding lower-level matrices. Parent correction adds an eighth method below. Final parent
-443-test/build/static/clean-release/real packaged-server gates all passed on `8d826837`; exact evidence and artifact identity are in `TASK046_PLAN.md`.
+443-test/build/static/clean-release/real packaged-server gates all passed on `8d826837`; exact evidence and artifact identity are in `archive/TASK046_PLAN.md`.
 No live publication callback changed, so the plan did not require an additional recipe-runtime smoke for this binding-local batch.
 
 Non-claims: no `CommonWorldTickHandler` closure, no machine/tile/item/block/menu/viewer/codec/recipe-registration or production recipe JSON change, no

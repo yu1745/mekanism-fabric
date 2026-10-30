@@ -1,106 +1,84 @@
 # AGENTS.md — Mekanism Fabric Java 移植约束
 
+当前生效规则的精简版；指令演变与被取代条文见 `docs/POLICY_HISTORY.md`，历史任务文档在 `docs/archive/`。
+
 ## 目标与源码边界
 
 将官方 Mekanism `v1.21.1-10.7.19.85` 从 NeoForge 移植到 Fabric（Minecraft 1.21.1、Java 21、Mojang official mappings）。保留官方 `mekanism.api.*`、`mekanism.common.*`、`mekanism.client.*` 包名、公共行为、领域模型、注册 ID、NBT、配方与存档语义。
 
-- **开发中版本兼容（用户指令 2026-10-27）：** 本 Fabric 移植尚未发布给玩家，不要求较早移植提交与较晚移植提交之间的存档、网络或其他兼容性；旧移植数据和代码可直接丢弃，不为它们编写迁移、兼容或拒绝旧开发版的代码。此项不免除对固定官方 Mekanism 版本的行为、注册 ID、NBT、配方及存档语义的保留要求。
-- API/common/platform 分别由 `fabric/api-slice.txt`、`fabric/common-slice.txt`、`fabric/platform-slice.txt` 精确纳入。不得复制源码、改包名、加入 Kotlin，或为消除编译错误无审计地扩大清单。
+- **开发中版本：** 移植尚未发布，较早移植提交与较晚提交间不要求存档/网络兼容；旧移植数据与代码可直接丢弃，不写迁移或拒绝旧开发版的代码。不免除对官方版本行为、注册 ID、NBT、配方、存档语义的保留。
+- API/common/platform 分别由 `fabric/api-slice.txt`、`fabric/common-slice.txt`、`fabric/platform-slice.txt` 精确纳入。不得复制源码、改包名、加入 Kotlin，或无审计地扩大清单。
 - 不实现通用 Forge/Fabric 转换层，不伪造 `net.neoforged.*`，不建立 Crusher 专用替代机器框架。
-- 路线/状态见 `docs/FABRIC_PORT.md`、`docs/PORT_MATRIX.md`；平台差异与验收见 `docs/API_DELTAS.md`、`docs/FABRIC_{REGISTRY,CONFIG,SMOKE}.md` 及任务对应专题文档，按需读取。
+- 状态与路线：`docs/FABRIC_PORT.md`、`docs/PORT_MATRIX.md`（唯一状态源）；平台差异 `docs/API_DELTAS.md`、`docs/FABRIC_{REGISTRY,CONFIG,SMOKE}.md` 及专题文档，按需读取。**当前进行中的任务文档**位于 `docs/TASK*.md`（已完成的归档到 `docs/archive/`）。
 
 ## 安全与参考源码
 
-仅在任务相关具体目录内用 `rg`/`fd` 搜索；禁止扫描 `~`、`/`、`~/server` 或宽泛父目录。禁止使用 zvec-grep、其搜索工具或建立/更新索引。开发任务不包含生产、镜像服、部署或 push 操作。
-
-### mcdebug 客户端与真机调试（用户指令 2026-10-30）
-
-**后续所有客户端调试均可使用 mcdebug，优先用它获取真实 GUI、渲染、交互与客户端状态证据，不要凭空推演结果。** 使用前加载 `mcdebug` skill；具体参数先看对应子命令 `--help`，以当前 CLI/mod 版本为准，不在此复制整份易过期的手册。
-
-- 本地源码入口 `/home/wangyu/server-v2/develop/mcdebug`；已验证的 Fabric 1.21.1 工作树为 `/home/wangyu/server-v2/develop/mcdebug-wt-121`，当前可用 CLI 为该工作树的 `mcdebug-cli.jar`。优先发现 PATH 上的 `mcdebug` / `mdb`，没有时用 `java -jar <工作树>/mcdebug-cli.jar`；CLI 与游戏内 mod 版本须匹配。
-- 本项目游戏目录为 `fabric/run`。优先使用 mcdebug managed session 启动/接入开发客户端，或明确指定该目录的 `mcdebug/socket`（服务端）与 `mcdebug/clientSocket`（客户端）；也可在游戏目录运行 CLI 自动发现。先执行 `status` / `gui status --brief` 确认目标、世界和版本，不因发现文件存在就认定 JVM 仍活着。同一游戏目录不启动第二个客户端，不手动删除 socket discovery/lock 文件。
-- 客户端 GUI：`gui open-block`、`screen`、`click`、`hover`、`screenshot --draw-log`、`problems` 可读取真实菜单、操作结果、tooltip、绘制记录和渲染异常；服务端写入后先 `gui settle` 再看客户端。槽位以当前菜单返回的 index 为准；客户端 BE 不持有完整物品库存，显示内容读 screen/menu，权威库存读服务端。
-- 真机状态：`world.*`、`storage.*`、`be.*` 和 `reflect` 可布置机器、读写 NBT/能力与访问真实 owner；反射读客户端须带 `--client`。优先正常 API，反射写字段不会自动触发同步或保存。`inv.*` 只适用于 vanilla Container；Mekanism 自有库存使用实际 storage/menu/slot owner，不因该命令不支持就判定机器失效。
-- 方法体修改可编译后用 `gui hotswap`；Screen 结构变化按 skill 使用 `gui reload-screen`，资源变化用 `gui reload-resources`。字段/构造器/生命周期变化不假定可热替换，必要时重启。按真实命令结果判定成功，不把请求成功当作行为成功。
-- 复用现有隔离调试世界和少量真实功能检查，不因工具可用而主动扩充测试矩阵。短等待按既有标记/实际条件判断；结束时恢复临时方块、物品和配置，保存并关闭自己启动的会话，清理本次临时 debug mod，不干扰他人 JVM。mcdebug 的调试依赖不纳入 Mekanism 发布依赖或源码切片。
+仅在任务相关具体目录内用 `rg`/`fd` 搜索；禁止扫描 `~`、`/`、`~/server` 或宽泛父目录。禁止使用 zvec-grep 及其索引。开发任务不包含生产、镜像服、部署或 push 操作。
 
 以下 `.gitignore` 目录只供参考，不是编译/运行依赖；不得修改、生成构建产物或提交其中内容：
 
 | 路径 | 固定身份 | 用途 |
 |---|---|---|
-| `upstream/neoforge-minecraft/` | MC `1.21.1` / NeoForge `21.1.200` / NeoForm `1.21.1-20240808.144430`；patched-source SHA-256 `a2003718973f1b772e1b7a1c8527bd2b19a86aa938104a77515e8140ca865ce1` | 核对 patched Minecraft 新增接口/方法/语义（NeoForge 视角） |
-| `upstream/fabric-minecraft/` | MC `1.21.1` / Fabric（Loom `1.13.6` + Vineflower）；5363 个 `*.java`；来源见该目录 `SOURCE.txt` | 同上，Fabric 视角；移植时与 `neoforge-minecraft/` 互相对照 |
-| `upstream/kilt/` | `KiltMC/Kilt` `version/1.21.1`，commit `9e8f0d67411f10234bf0d864bd151a6dbcef14b4` | NeoForge→Fabric 行为参考；LGPL-2.1 |
-| `upstream/connector/` | `Sinytra/Connector` `1.21.x`，commit `8b27f1ad042aae8037bcc522b321c03fcce1a12a` | Fabric→NeoForge 反向参考；MIT |
+| `upstream/neoforge-minecraft/` | MC `1.21.1` / NeoForge `21.1.200` / NeoForm `1.21.1-20240808.144430`；patched-source SHA-256 `a2003718973f1b772e1b7a1c8527bd2b19a86aa938104a77515e8140ca865ce1` | patched Minecraft（NeoForge 视角）；只含 MC 自身包，不含 `net.neoforged.neoforge.**` 本体 |
+| `upstream/fabric-minecraft/` | MC `1.21.1` / Fabric（Loom `1.13.6` + Vineflower）；5363 个 `*.java`；见 `SOURCE.txt` | 同上，Fabric 视角；与上一份互相对照 |
+| `upstream/kilt/` | `KiltMC/Kilt` `version/1.21.1`，`9e8f0d67411f10234bf0d864bd151a6dbcef14b4` | NeoForge→Fabric 行为参考；LGPL-2.1 |
+| `upstream/connector/` | `Sinytra/Connector` `1.21.x`，`8b27f1ad042aae8037bcc522b321c03fcce1a12a` | Fabric→NeoForge 反向参考；MIT |
 
-patched Minecraft 仅保留 5,363 个 `com/mojang/**/*.java`、`net/minecraft/**/*.java`，来源见该目录 `SOURCE.txt`；禁止复制或修改 Minecraft 源码。参考版本只能显式更新，并同步本表；patched Minecraft 更新还须重建 `SOURCE.txt`、核对文件数。
+patched Minecraft 仅含 `com/mojang/**`、`net/minecraft/**` 共 5,363 个 java；禁止复制或修改。参考版本只能显式更新并同步本表（更新 patched MC 须重建 `SOURCE.txt`、核对文件数）。
 
-两份 patched Minecraft 的对照须知（**它们是参考存档，不是 diff 对象**）：
-
-- 两棵树的目录结构已对齐（均为扁平 `com/` + `net/`），同一类在两边路径相同，可逐文件翻查。
-- 排版风格不同，因为产出工具链不同：NeoForm 用 4 空格缩进且剥离 javadoc，Vineflower 用 tab 且保留 javadoc。
-- 局部变量命名不同：NeoForm 保留混淆名（`pos`、`level`、`s`），Vineflower 重命名为 `blockPos`、`serverLevel`、`blockState`。
-- 客户端注解形式不同：`@OnlyIn(Dist.CLIENT)` vs `@Environment(EnvType.CLIENT)`；`@Nullable` 来源也不同。
-- **两份都已烘入本项目的访问放宽**：Fabric 那份含 `fabric/src/main/resources/mekanism.accesswidener`，NeoForge 那份含 `src/main/resources/META-INF/accesstransformer.cfg`。两者互为镜像，故两棵树可见性一致，但与 vanilla 不同（例：`ShapedRecipe.pattern` 在两棵树里均为 `public`，vanilla 实为 package-private）。翻查时勿据此推断 vanilla 语义。
-- `upstream/neoforge-minecraft/` 只含 MC 自身包，**不含** NeoForge API（`net.neoforged.neoforge.**`）源码；NeoForge 仅以 import 与注入到 MC 类上的接口（如 `Registry extends IRegistryExtension`、`Holder extends IHolderExtension`）形式出现。查 NeoForge API 本体需另找来源。
+对照须知：两棵树目录对齐、同类同路径，但**是参考存档不是 diff 对象**——排版（空格 vs tab、javadoc）、局部变量名（混淆名 vs 重命名）、客户端注解（`@OnlyIn` vs `@Environment`）不同；两份都已烘入本项目的访问放宽（`mekanism.accesswidener` / `accesstransformer.cfg`），可见性与 vanilla 不同（如 `ShapedRecipe.pattern` 为 `public`），勿据此推断 vanilla 语义。
 
 ## 平台映射
 
-依次判断 vanilla 类型/能力 → Fabric API → patched Minecraft → Kilt → Connector，基于实际行为实现最小 Mekanism 专用 adapter，补平台差异测试。参考项目不是必须照抄的架构，也不默认加入依赖；直接采用代码须记录仓库、commit、文件路径并遵守许可证。
+依次判断 vanilla 类型/能力 → Fabric API → patched Minecraft → Kilt → Connector，基于实际行为实现最小 Mekanism 专用 adapter。参考项目不默认加入依赖；直接采用代码须记录仓库、commit、文件路径并遵守许可证。
 
 重点核对 EMPTY/null、amount 单位、side/context、simulate/execute/transaction、缓存失效、区块卸载、线程/owner 生命周期、注册冻结和 codec/NBT/packet 顺序。
 
-## 工作组织与任务定界
+## 工作方式（当前生效）
 
-- **单一实现者负责选路、实现与验收闭环。** 由当前会话确定基线 commit、具体源码入口/调用方、真实 owner、允许的 delta、非目标、可执行验收、已知依赖和未决问题；不启动第二个实现者。**用户授权（2026-10-27）：可并行派发子代理只读审查独立提交的真实 diff 和调用链；子代理不得修改文件、运行会改动工作区的操作或提交。** 各自固定审查基线、标明证据及不确定性；主代理须结合最新代码和提交依赖复核结论，所有修复、提交和最终验收均由主代理串行执行。需要用户裁决的开放选题或明显边界扩大，先落入文档再暂停报告，不静默扩大范围。
-- **不设 production 文件数目标或硬上限。** 按完整模块或 ownership/语义边界纳入直接前置与立即调用方；不凑无关代码，不因数量回避主干，不为拆小而截断公共行为或引入临时 holder、重复 adapter、synthetic seam。只有可独立验证/发布且 ownership 清楚的边界才拆分。
-- 遇到平台/事务/线程等风险先证明该边界，再完成所属纵向闭包；确实无法建立 owner、必须截断行为或依靠 fake/no-op 才能继续时，报告具体 blocker。
-- **Task052 收敛优先（用户最新授权，2026-09-14）：停止无限制扩张。** 保持同一实现者和完整上下文，优先修通当前已纳入的原始机器及组件、注册、容器、能力提供方主干，取得真实整体构建证据。必要直接前置和立即调用方仍可补齐，但必须区分真实行为 owner 与类型/常量引用，不得遇到引用就自动展开整个新模块。若必需的新模块会明显扩大当前边界，先记录具体调用链、不可截断的行为和最小真实边界；由用户裁决，无用户在场时暂停该分支并继续已确定范围的修复。禁止通过删除公共行为、fake/no-op、重复框架或排除必要源码取得假绿。此规则约束此前“大批次/跨 owner”授权：批次要完整，但范围不无限增长。
-- **Task052 卡点教训：不要把连通的主干问题碎片化为“一个补丁一个小修补”。** 连续补叶子、反复选题/审查/交接，却始终不能让真实 owner 与整体构建前进，是组织方式需要调整的信号，不应继续机械拆小。同一实现者应在一次连续实现中交付完整目标、已保存 WIP、真实调用链、已裁定语义与当前构建阻断，并跨相关模块、必要前置与立即调用方连续完成纵向闭包；检查点用于记录进展和暴露真实语义分歧，不是自动结束实现或拆出下一叶子任务。扩大批次不是无审计扩清单或放弃语义约束；仍保持单实现者、真实 diff 审核，以及以整体构建/实际 owner 接通为依据的进度判断。多轮局部修复仍无主干进展时，应重新评估批次边界与上下文交接。
-- 规划约 **10–15分钟**设检查点，记录 GO、具体 blocker 或待裁决方案；无结论先写清现状与下一步，不无限换候选，也不为到点而强行接受。实现中发现新语义问题先落文档，必要时暂停等待用户裁决。
-- 复用已验证的依赖事实、官方 consumer 编译 probe 和失败 fixture。扫描须区分真实类型/调用、字符串/注释、常量与生命周期 owner；递归闭包数字不独立构成阻断依据，不每批重造扫描器。
-- 同时只运行一个实现者：当前会话完成实现并自查真实 diff、构建与运行证据；不以未经核对的总结代替代码状态。提速靠减少重复规划、返工和手工同步，不未经验证削减门禁。
+- **自主工作、不向用户提问**（2026-10-30）。超出已授权范围的事项记录到任务文档，暂停该分支，继续已确定范围。
+- **单一实现者**负责选路、实现与验收闭环：确定基线 commit、真实 owner、允许的 delta、非目标、验收。可并行派发只读子代理审查**已提交**的真实 diff；子代理不得修改文件/提交，结论由主代理复核后串行修复。
+- **按完整纵向闭包交付，不碎片化**：按模块/ownership 纳入直接前置与立即调用方，不设文件数上限，也不为拆小截断公共行为或引入临时 holder、重复 adapter、synthetic seam。区分真实行为 owner 与类型/常量引用，不见引用就展开整个新模块。必需的新模块会明显扩大边界时，先记录调用链与最小边界并暂停该分支。
+- **收敛优先**：优先修通已纳入的机器、组件、注册、容器、能力主干，以整体构建/实际 owner 接通为进度依据。禁止删除公共行为、fake/no-op、重复框架、排除必要源码取得假绿。连续补叶子而主干不前进时，重估批次边界与上下文交接。
+- 检查点约 10–15 分钟，记录 GO、具体 blocker 或待裁决方案；发现新语义问题先落文档。
+- 复用已验证的依赖事实与 consumer 编译 probe；扫描须区分真实类型/调用与字符串/注释/常量，不每批重造扫描器。
 
 ## 审查
 
-- **每次移植提交后，必须按[移植风格审查 Prompt](docs/PORT_COMMIT_REVIEW_PROMPT.md)审查该提交的真实 diff，并记录简要结论。发现偏离时，在该提交涉及的行为边界内修复并复查，不借审查扩大移植范围。**
-- 独立只读审查不再作为每个高风险批次的强制前置；仅在具体重大语义分歧阻碍实现、存在明确数据损坏风险或用户要求时调用。审查聚焦生产缺陷，不以测试缺口扩张任务。实际发生的审查保留简要证据。
+- 每次移植提交后，按 [移植风格审查 Prompt](docs/PORT_COMMIT_REVIEW_PROMPT.md) 审查该提交真实 diff；**结论写入对应任务文档小节或提交信息，不单独提交**。发现偏离在该提交行为边界内修复并复查，不借审查扩大范围。wip 提交在合并/收尾前 squash。
+- 独立只读审查仅在重大语义分歧、明确数据损坏风险或用户要求时调用；审查聚焦生产缺陷，不以测试缺口扩张任务。
 
 ## 测试与验收
 
-**用户最新优先级（2026-09-13）：完成度优先，显著降低测试权重。** 优先接通官方机器主干与实际可用功能，不为测试完整性、fixture、模型评审或验收文档反复延长任务。此规则优先于旧任务计划中的强制全套门禁。
+完成度优先，不主动增加测试覆盖，避免过度防御编程（2026-09-13 / 10-30）。现有测试保留；普通批次只做编译/构建与直接覆盖高风险改动的少量现有 focused tests。新增测试仅在另获授权时进行，聚焦平台差异与层间连接，不测试 vanilla/JDK 自身行为。有 byte-identical 官方测试时优先纳入。
 
-现有测试保留，不因本次降权删除。普通批次默认只做编译/构建与直接覆盖本次高风险改动的少量现有 focused tests；不以补齐测试矩阵为交付前提。已发现的具体生产缺陷仍需修复，但不得借机扩展为新一轮全面验错。
-
-**用户最新指令（2026-10-30）：不主动增加测试覆盖，避免过度防御性编程。** 优先完成实际功能，复用已有测试和真实运行验证；不为推测性风险添加检查、兼容分支或测试矩阵。下文新增测试数量仅作为另获授权时的约束，不作为每批新增测试的要求。
-
-- 有可执行的 byte-identical 官方测试时优先直接纳入精确 oracle；新增 Fabric-local tests 聚焦平台差异、独立风险和层间连接，不随 production 文件数线性增加。
-- 每闭包通常新增 **3–6个 tests**；超过8个前逐项说明超额测试独立捕获的 production mutation，记录于实现评估。高风险边界可有据突破目标；测试源码不设行数限制。
-- 下层负责排列组合，上层 bridge 通常只补 happy path 与平台特有边界。不重复精确输出已蕴含的派生断言，不测试 vanilla/JDK 自身行为。
-- **普通批次门禁：** 实现者检查真实 diff，确认构建与必要 focused checks；不要求实现者之外重复跑全套测试，不默认启动专门 server/client fixture、packaged smoke 或 clean release。
-- **功能里程碑门禁：** 完整测试、真实运行和发布物核验集中到机器真正可用、发布等明确里程碑，或用户明确要求时执行。优先一个能证明实际功能的端到端检查，不为了边界完备性持续增建测试基础设施。记录已验证范围与未验证风险即可，不冒充通过。
+完整测试、packaged smoke、真实运行和发布物核验集中到功能里程碑或用户明确要求；优先一个端到端检查证明实际功能。记录已验证范围与未验证风险，不冒充通过。
 
 ```bash
 ./build.sh [--clean] [--out <dir>]    # 统一 Fabric 发布契约
-./fabric-build.sh                   # allowlist 开发构建
+./fabric-build.sh                     # allowlist 开发构建
 ./gradlew -p fabric verifyApiSliceNoNeoForge
-scripts/scan-platform-deps.py        # 平台依赖清点
-scripts/fabric-packaged-smoke.sh     # 最终 remapped JAR 干净服务端门禁
+scripts/scan-platform-deps.py         # 平台依赖清点
+scripts/fabric-packaged-smoke.sh      # 最终 remapped JAR 干净服务端门禁
 scripts/fabric-paired-network-smoke.sh
-scripts/fabric-configuration-rejection-smoke.sh
+scripts/fabric-configuration-rejection-smoke.sh   # 后两项需 Linux、systemd user、Xvfb
 ```
 
-后两项分别验证两个顺序新 client JVM 的成功握手，以及错版/同版本显式拒绝/缺失 receiver 的拒绝；需 Linux、systemd user、Xvfb。其他风险场景按对应专题文档选择。
+## 客户端调试（mcdebug）
 
-## 长任务等待纪律（用户指令 2026-10-27）
+优先用 mcdebug 取得真实 GUI、渲染、交互与客户端状态证据，不凭空推演；加载 `mcdebug` skill，参数以子命令 `--help` 为准。
 
-- **任何长耗时命令（smoke/build/服务端/gradle）禁止盲等**：不确定耗时多久就往短了猜；**单次轮询块任何时候不得超过 1 分钟**。超时后先验证是否已完成（匹配日志中的结果标记行 / magic proof 行），未完成则重新生成轮询指令继续轮询，不得 sleep 到块尾才看结果。
-- **验证与诊断一律用标记匹配，禁止瞎猜**：轮询只匹配既定 magic 标记行（`MEKANISM_FABRIC_*_PROOF`、`*smoke: PASSED/FAILED`）；失败诊断第一步抓错误块原文（首条错误及其完整链），答案通常逐字在日志里——不得先推演框架行为再回头翻日志。
-- smoke 真实耗时先实测记录（如机器 smoke 场景 ~58 秒、服务端启动 ~9 秒），后续等待以此为上界再收紧，不凭感觉放宽。
+- CLI：PATH 上的 `mcdebug`/`mdb`，否则 `java -jar /home/wangyu/server-v2/develop/mcdebug-wt-121/mcdebug-cli.jar`；CLI 与游戏内 mod 版本须匹配。游戏目录 `fabric/run`，先 `status` / `gui status --brief` 确认目标，不因 socket 文件存在就认定 JVM 存活；同目录不起第二个客户端，不手动删 socket/lock。
+- 服务端写入后先 `gui settle` 再看客户端；槽位以当前菜单 index 为准；客户端 BE 不持完整库存，权威库存读服务端；反射读客户端须 `--client`，反射写不触发同步/保存；`inv.*` 仅限 vanilla Container。
+- 方法体改动可 `gui hotswap`；字段/构造器/生命周期变化需重启。以真实命令结果判定成功。
+- 复用现有隔离调试世界，少量真实功能检查；结束时恢复临时方块/物品/配置，保存并关闭自己启动的会话，清理临时 debug mod。mcdebug 依赖不进入发布依赖或源码切片。
 
-## 持久记录
+## 长任务等待纪律
 
-- **每完成一个大任务（实现、审查与最终验收闭环）后，主动评估是否切换上下文窗口，即使上下文尚未满。** 根据已完成任务的历史负担、下一任务边界及当前状态是否便于恢复决定，不以剩余 token 充足为理由跳过评估，也不要求每批机械滚窗。
-- 决定滚窗时，先将长期结论与验收证据落入仓库并提交，再精简 Notes，仅保留当前请求、必要历史定位、运行中任务、未决问题与下一动作；成功 checkpoint 后再切换。滚窗不改变用户的持续工作指令；恢复后从仓库与短期 Notes 接续。
+- 长耗时命令（smoke/build/服务端/gradle）禁止盲等：单次轮询块 ≤1 分钟；超时先验证是否已完成，未完成再继续轮询。
+- 轮询只匹配既定标记行（`MEKANISM_FABRIC_*_PROOF`、`*smoke: PASSED/FAILED`）；失败诊断第一步抓错误块原文，不先推演再翻日志。
+- 已实测耗时：机器 smoke 场景 ~58 秒，服务端启动 ~9 秒；以此为上界。
 
-仓库文件与 Git 是长期任务的权威：决定、用户策略、状态、依赖证据、验收和恢复步骤必须落入对应文档/测试/脚本并提交，不能只留聊天或工具输出。Notes 只存当前 Session 临时状态（未落盘发现、下一动作）；到达任务边界/暂停点前持久化，随后 Notes 仅留必要指针。新 Session 应只依赖仓库恢复项目状态，不把 Notes 当 changelog 或文档副本。
+## 持久记录与上下文
+
+仓库文件与 Git 是长期状态的权威：决定、用户策略、验收和恢复步骤落入文档/脚本并提交；Notes 只存当前会话临时状态。每个大任务闭环后评估是否切换上下文窗口：先把结论与证据提交，再精简 Notes（仅留当前请求、运行中任务、未决问题、下一动作），成功 checkpoint 后切换；新会话只依赖仓库恢复。

@@ -33,3 +33,7 @@ libs/
 /fabric/run
 /upstream/
 /dist/
+
+# 任务日志产物不入库
+docs/**/*.log
+docs/**/*.log.gz
