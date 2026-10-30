@@ -1,0 +1,1 @@
+{"method":"getBlockEntity","resolvedTo":"getBlockEntity","declaringClass":"net.minecraft.world.level.Level","signature":"(net.minecraft.core.BlockPos)","value":{"ref":7,"class":"mekanism.common.tile.TileEntityBoundingBlock","toString":"mekanism.common.tile.TileEntityBoundingBlock@730713a7"}}

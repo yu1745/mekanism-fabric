@@ -1,0 +1,1 @@
+{"alarm":{"originalCount":5,"vanillaCount":16,"actual":5},"stone":{"originalCount":64,"vanillaCount":64,"actual":64},"bounding":{"main":{"ref":8,"class":"net.minecraft.core.BlockPos","toString":"BlockPos{x=8, y=100, z=0}"},"sprite":"mekanism:block/models/digital_miner","count":1}}

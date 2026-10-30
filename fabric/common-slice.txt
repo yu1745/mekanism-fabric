@@ -1525,3 +1525,4 @@ mekanism/client/particle/JetpackFlameParticle.java
 mekanism/client/particle/JetpackSmokeParticle.java
 mekanism/client/particle/ScubaBubbleParticle.java
 mekanism/client/particle/LaserParticle.java
+mekanism/client/render/RenderPropertiesProvider.java

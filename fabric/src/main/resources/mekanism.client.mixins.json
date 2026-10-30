@@ -5,6 +5,7 @@
   "compatibilityLevel": "JAVA_21",
   "client": [
     "client.BlockModelCompositeMixin",
+    "client.BlockParticlesMixin",
     "gear.GearBoltRenderMixin",
     "recipe.ClientPacketListenerMixin",
     "tile.LevelChunkMixin",
