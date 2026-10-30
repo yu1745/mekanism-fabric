@@ -1,0 +1,89 @@
+{
+  "-3": {
+    "resolvedTo": "getRenderData",
+    "steps": [
+      {
+        "seg": "renderData",
+        "method": "getRenderData",
+        "class": "mekanism.client.model.data.TransmitterModelData"
+      }
+    ],
+    "value": {
+      "ref": 12,
+      "class": "mekanism.client.model.data.TransmitterModelData",
+      "toString": "mekanism.client.model.data.TransmitterModelData@9c59616f"
+    },
+    "north": {
+      "method": "getConnectionType",
+      "resolvedTo": "getConnectionType",
+      "declaringClass": "mekanism.client.model.data.TransmitterModelData",
+      "signature": "(net.minecraft.core.Direction)",
+      "value": "NONE"
+    },
+    "south": {
+      "method": "getConnectionType",
+      "resolvedTo": "getConnectionType",
+      "declaringClass": "mekanism.client.model.data.TransmitterModelData",
+      "signature": "(net.minecraft.core.Direction)",
+      "value": "NONE"
+    }
+  },
+  "0": {
+    "resolvedTo": "getRenderData",
+    "steps": [
+      {
+        "seg": "renderData",
+        "method": "getRenderData",
+        "class": "mekanism.client.model.data.TransmitterModelData"
+      }
+    ],
+    "value": {
+      "ref": 14,
+      "class": "mekanism.client.model.data.TransmitterModelData",
+      "toString": "mekanism.client.model.data.TransmitterModelData@9c59616f"
+    },
+    "north": {
+      "method": "getConnectionType",
+      "resolvedTo": "getConnectionType",
+      "declaringClass": "mekanism.client.model.data.TransmitterModelData",
+      "signature": "(net.minecraft.core.Direction)",
+      "value": "NONE"
+    },
+    "south": {
+      "method": "getConnectionType",
+      "resolvedTo": "getConnectionType",
+      "declaringClass": "mekanism.client.model.data.TransmitterModelData",
+      "signature": "(net.minecraft.core.Direction)",
+      "value": "NONE"
+    }
+  },
+  "3": {
+    "resolvedTo": "getRenderData",
+    "steps": [
+      {
+        "seg": "renderData",
+        "method": "getRenderData",
+        "class": "mekanism.client.model.data.TransmitterModelData"
+      }
+    ],
+    "value": {
+      "ref": 16,
+      "class": "mekanism.client.model.data.TransmitterModelData",
+      "toString": "mekanism.client.model.data.TransmitterModelData@9c59616f"
+    },
+    "north": {
+      "method": "getConnectionType",
+      "resolvedTo": "getConnectionType",
+      "declaringClass": "mekanism.client.model.data.TransmitterModelData",
+      "signature": "(net.minecraft.core.Direction)",
+      "value": "NONE"
+    },
+    "south": {
+      "method": "getConnectionType",
+      "resolvedTo": "getConnectionType",
+      "declaringClass": "mekanism.client.model.data.TransmitterModelData",
+      "signature": "(net.minecraft.core.Direction)",
+      "value": "NONE"
+    }
+  }
+}

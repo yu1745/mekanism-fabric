@@ -98,7 +98,8 @@ public final class FabricTransmitterBlockModel extends BlockModel {
         //Alias resolution runs through this model's real material chain, so it sees this model's own aliases plus
         //everything inherited from its transmitter base and block/block, exactly like the official configuration.
         return new FabricTransmitterBakedModel(internalGeometry, glassGeometry, alias -> spriteGetter.apply(getMaterial(alias)),
-              opaqueTransmitters.getAsBoolean(), getTransforms(), state, hasAmbientOcclusion(), getGuiLight().lightLikeBlock(),
+              //Official VisibleModelConfiguration inherits WrapperModelConfiguration.useBlockLight() == false.
+              opaqueTransmitters.getAsBoolean(), getTransforms(), state, hasAmbientOcclusion(), false,
               new net.minecraft.client.renderer.block.model.ItemOverrides(baker, this, getOverrides()));
     }
 

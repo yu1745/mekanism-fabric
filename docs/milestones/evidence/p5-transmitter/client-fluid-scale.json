@@ -1,0 +1,1 @@
+{"resolvedTo":"currentScale","steps":[{"seg":"transmitter","field":"transmitter","class":"mekanism.common.content.network.transmitter.MechanicalPipe"},{"seg":"transmitterNetwork","method":"getTransmitterNetwork","class":"mekanism.common.content.network.FluidNetwork"},{"seg":"currentScale","field":"currentScale","class":"java.lang.Float"}],"value":1.0}

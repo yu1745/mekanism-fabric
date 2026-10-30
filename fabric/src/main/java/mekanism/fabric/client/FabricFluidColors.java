@@ -2,11 +2,13 @@ package mekanism.fabric.client;
 
 import mekanism.api.fluid.FluidStack;
 import mekanism.common.registration.impl.FluidDeferredRegister;
+import mekanism.common.registration.impl.FluidDeferredRegister.MekanismFlowingFluid;
 import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap;
 import net.fabricmc.fabric.api.client.render.fluid.v1.FluidRenderHandler;
 import net.fabricmc.fabric.api.client.render.fluid.v1.FluidRenderHandlerRegistry;
 import net.fabricmc.fabric.api.client.render.fluid.v1.SimpleFluidRenderHandler;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.util.FastColor;
 
 /**
  * Client-only fluid tint lookup. NeoForge exposes per-fluid client extensions ({@code IClientFluidTypeExtensions}) that the
@@ -41,6 +43,12 @@ public final class FabricFluidColors {
         }
         //No world/position: the officially queried stack-only extension also had no level context, so biome-tinted
         // fluids fall back to their handler's context-free default color.
-        return handler.getFluidColor(null, null, stack.getFluid().defaultFluidState());
+        //Fabric's fluid tint is RGB: its alpha is ignored by the native fluid renderer. Mekanism's
+        //stack rendering consumes ARGB, so use opaque alpha for native fluids and retain the original
+        //Mekanism FluidType's alpha for our own fluids.
+        int color = handler.getFluidColor(null, null, stack.getFluid().defaultFluidState());
+        int alpha = stack.getFluid() instanceof MekanismFlowingFluid fluid
+              ? FastColor.ARGB32.alpha(fluid.getMekanismFluidType().color) : 255;
+        return FastColor.ARGB32.color(alpha, color);
     }
 }

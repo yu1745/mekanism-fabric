@@ -1,0 +1,7 @@
+official_path,fabric_owner,behavior
+mekanism/client/render/obj/TransmitterLoader.java,FabricTransmitterModelPlugin + FabricTransmitterAssets.read,实际 mekanism:transmitter loader、internal/glass、flip_v 与 mtl_override；每次 reload 新准备资产
+mekanism/client/render/obj/TransmitterModel.java,FabricTransmitterBlockModel,真实vanilla父链/alias/display/ModelState；无需NeoForge IUnbakedGeometry
+mekanism/client/render/obj/TransmitterBakedModel.java,FabricTransmitterBakedModel,六side按immutable render attachment选parts；internal CUTOUT/glass TRANSLUCENT，保留tint及缺省item NONE模型
+mekanism/client/render/obj/TransmitterModelConfiguration.java,FabricTransmitterBakedModel.adjustAlias/getIconStatus,图标仅无连接面且两垂直方向形成直线时显示；同NO_ROTATION/ROTATE_270、opaque alias规则
+mekanism/client/render/obj/VisibleModelConfiguration.java,TransmitterQuadBaker.bakeGroup + BaseModelCache.OBJModelData.getQuads,按真实OBJ group精确选择；contents通过live icon覆盖每个材质
+mekanism/client/render/obj/WrapperModelConfiguration.java,FabricTransmitterBlockModel parent/display + fixed useBlockLight=false,wrapper语义由真实vanilla链和专用bake接入；本批修复原useBlockLight=false的遗漏
