@@ -4,7 +4,7 @@ import mekanism.api.MekanismAPI;
 import mekanism.api.MekanismServices;
 import mekanism.api.heat.HeatAPI;
 import mekanism.api.recipes.ingredients.creator.IIngredientCreatorProvider;
-import mekanism.common.config.MekanismStartupConfig;
+import mekanism.common.config.MekanismConfig;
 import mekanism.fabric.chemical.FabricChemicalLifecycle;
 import mekanism.fabric.config.FabricChemicalConfig;
 import mekanism.common.registration.MekanismDeferredHolder;
@@ -45,7 +45,6 @@ import java.util.List;
 public final class MekanismFabricBootstrap implements ModInitializer {
     private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism/Fabric");
     private static final FabricMekanismConfigManager CONFIG_MANAGER = FabricMekanismConfigManager.createDefault();
-    private static final MekanismStartupConfig STARTUP_CONFIG = new MekanismStartupConfig();
 
     @Override
     public void onInitialize() {
@@ -88,7 +87,7 @@ public final class MekanismFabricBootstrap implements ModInitializer {
             //Original LOWEST post-tick pass: flush masters dirtied by later valves even while normal ticking is frozen.
             MultiblockManager.endOfTickAll();
         });
-        FabricMekanismConfigManager.Registration startup = CONFIG_MANAGER.registerAndLoad(STARTUP_CONFIG);
+        FabricMekanismConfigManager.Registration startup = CONFIG_MANAGER.registerAndLoad(MekanismConfig.startup);
         verifyStartupConfig(startup);
         FabricChemicalConfig.initializeCommon(CONFIG_MANAGER);
         mekanism.fabric.config.FabricServerConfig.initializeCallbacks();
@@ -213,19 +212,19 @@ public final class MekanismFabricBootstrap implements ModInitializer {
     }
 
     private static void verifyStartupConfig(FabricMekanismConfigManager.Registration registration) {
-        boolean valid = STARTUP_CONFIG.isLoaded() && STARTUP_CONFIG.getConfigSpec().size() == 12
-              && STARTUP_CONFIG.armoredFreeRunnerArmor.get() >= 0
-              && STARTUP_CONFIG.armoredFreeRunnerToughness.get() >= 0
-              && STARTUP_CONFIG.armoredFreeRunnerKnockbackResistance.get() >= 0
-              && STARTUP_CONFIG.armoredJetpackArmor.get() >= 0
-              && STARTUP_CONFIG.armoredJetpackToughness.get() >= 0
-              && STARTUP_CONFIG.armoredJetpackKnockbackResistance.get() >= 0
-              && STARTUP_CONFIG.mekaSuitHelmetArmor.get() >= 0
-              && STARTUP_CONFIG.mekaSuitBodyArmorArmor.get() >= 0
-              && STARTUP_CONFIG.mekaSuitPantsArmor.get() >= 0
-              && STARTUP_CONFIG.mekaSuitBootsArmor.get() >= 0
-              && STARTUP_CONFIG.mekaSuitToughness.get() >= 0
-              && STARTUP_CONFIG.mekaSuitKnockbackResistance.get() >= 0;
+        boolean valid = MekanismConfig.startup.isLoaded() && MekanismConfig.startup.getConfigSpec().size() == 12
+              && MekanismConfig.startup.armoredFreeRunnerArmor.get() >= 0
+              && MekanismConfig.startup.armoredFreeRunnerToughness.get() >= 0
+              && MekanismConfig.startup.armoredFreeRunnerKnockbackResistance.get() >= 0
+              && MekanismConfig.startup.armoredJetpackArmor.get() >= 0
+              && MekanismConfig.startup.armoredJetpackToughness.get() >= 0
+              && MekanismConfig.startup.armoredJetpackKnockbackResistance.get() >= 0
+              && MekanismConfig.startup.mekaSuitHelmetArmor.get() >= 0
+              && MekanismConfig.startup.mekaSuitBodyArmorArmor.get() >= 0
+              && MekanismConfig.startup.mekaSuitPantsArmor.get() >= 0
+              && MekanismConfig.startup.mekaSuitBootsArmor.get() >= 0
+              && MekanismConfig.startup.mekaSuitToughness.get() >= 0
+              && MekanismConfig.startup.mekaSuitKnockbackResistance.get() >= 0;
         if (!valid) {
             throw new IllegalStateException("Fabric startup config proof failed for " + registration.file());
         }

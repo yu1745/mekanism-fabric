@@ -7,14 +7,13 @@ import java.util.Map;
 import java.util.Set;
 import mekanism.api.radiation.RadiationValidation;
 import mekanism.common.config.ChemicalConfigAccess;
-import mekanism.common.config.CommonConfig;
+import mekanism.common.config.MekanismConfig;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.storage.LevelResource;
 
 /** Sole owners for complete common.toml and the preserving world general.toml fragment. */
 public final class FabricChemicalConfig {
-    private static final CommonConfig COMMON = new CommonConfig();
     private static final Map<MinecraftServer, GeneralFragment> SERVERS = new IdentityHashMap<>();
     private static final Set<Path> CLAIMS = new HashSet<>();
     private static boolean commonInitialized;
@@ -25,8 +24,8 @@ public final class FabricChemicalConfig {
 
     public static synchronized void initializeCommon(FabricMekanismConfigManager manager) {
         if (commonInitialized) return;
-        manager.registerAndLoad(COMMON);
-        ChemicalConfigAccess.publishCommon(COMMON);
+        manager.registerAndLoad(MekanismConfig.common);
+        ChemicalConfigAccess.publishCommon(MekanismConfig.common);
         commonInitialized = true;
     }
 

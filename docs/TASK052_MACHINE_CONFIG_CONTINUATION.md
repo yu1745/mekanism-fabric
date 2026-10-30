@@ -45,3 +45,13 @@
 清理：两机器恢复为空气；未改玩家位置或物品。`gui disconnect` 返回 `serverStopped=true`，其后客户端反射 storage/usage/tiers 的 `isLoaded()` 均为 false。点击 Quit Game 时 RPC 因 JVM 退出而 connection closed；原 runClient job 最终 exit 0。确认绝对路径及 debug JAR 哈希后删除本轮临时两 JAR，并移除原本不存在的三份调试 TOML（生成后的内容存于 `/tmp/mekanism-machine-config-*.toml` 供诊断），没有运行中的本轮客户端或 jobs。
 
 本次仅追加实际运行证据，无生产代码或测试覆盖变更。当前配置接线闭包的实现、构建、关键运行及提交后审查已齐；下一边界按既有 Task052 主干范围选取，不因本轮完成自动启动 Additions 等未授权模块。
+
+## 下一已纳 owner 修复：canonical COMMON
+
+基线 `53103874`。确认 `FabricChemicalConfig` 使用 `new CommonConfig()` 加载完整 common.toml 并发布 ChemicalConfigAccess，但 `MekanismConfig.common` 是另一实例且未加载；HolidayManager、BlockMekanism.copyBlockData、dosimeter/geiger 与 MekanismUtils 温度显示均直接读取后者，用户文件中的非默认值因此不生效。这不是新增配置模块，而是已经存在的完整 COMMON schema 的真实 owner 分裂。
+
+最小闭包：移除独立实例，由同一 bootstrap manager 加载 canonical `MekanismConfig.common` 并发布给原 ChemicalConfigAccess；不修改 schema、文件路径、COMMON 的本地进程生命周期或三字段 general policy，不增加同步、兼容或 defensive 分支。复用现有 ChemicalServiceConfigTest 与构建；必要时用一次非默认 common 值的实际 consumer 读取验证启动顺序。此修复不重开 general/world/client 等前批非目标。
+
+同一 bootstrap owner 核对进一步确认 STARTUP 同类问题：entrypoint 的 `STARTUP_CONFIG = new MekanismStartupConfig()` 被加载，而 MekanismArmorMaterials 注册 armor/toughness/knockback 时读取 canonical `MekanismConfig.startup`。将这两份已存在的进程级配置一次完成收敛，不拆成另一个叶子任务：去掉 startup 独立实例，在既有注册之前的同一位置加载 canonical startup，原 proof 改为读取 canonical；不更改任何 armor schema/算法或注册时机。
+
+实现/验证：两处独立实例已删除，既有 manager 只加载 canonical startup/common，原有 startup proof 同步指向 canonical。`remapJar`、三个 slice gate、现有 ChemicalServiceConfigTest 与 MekanismStartupConfigTest PASS（33s，`/tmp/mekanism-process-config-build.log`），没有新增/修改测试。mcdebug 在实际客户端标题屏读取：修复前 canonical startup.isLoaded=false；修复后 true。启动前临时将 free runner armor 设置为 13、holidays 设置 false，实际注册的 `MekanismItems.ARMORED_FREE_RUNNERS.asItem().getDefense()` 返回 **13**，`HolidayManager.areHolidaysEnabled()` 与 ChemicalConfigAccess 的 common.holidays 均返回 **false**。这验证了真实注册 consumer 和同一 common owner，而非只读 config schema。最终客户端日志 `/tmp/mekanism-process-config-client.log`；退出 JVM 导致 Quit Game RPC connection closed，runClient 正常 exit 0。两原始 TOML 已按备份逐字恢复（cmp），两临时 debug JAR 已按绝对路径/hash 核对删除。未进入世界或改动存档。
