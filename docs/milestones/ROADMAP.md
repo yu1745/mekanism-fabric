@@ -15,6 +15,7 @@
   - 活文档"验收证据"节每个 W 项 ≤5 行结论 + 指向 `evidence/` 文件；长叙事（命令、哈希、首轮错误）放 evidence 文件，不放 M 文档。M-render.md 已 95 个长段，W-33 归档前压缩。
   - `README.md` 状态格 ≤100 字；细节在活文档。
   - `evidence/` 仅存 CSV/JSON/必要截图，不存日志与大二进制；P5 结束时检查体积（目前 6MB）。
+- 给 worker 的具体事项见 `COORDINATOR_NOTES.md`。
 - **待用户决定**（不阻塞 worker）：①本地领先 origin 31 个提交，需要时再推送；②wip 提交 squash；③submodule 指针更新。
 
 ## 0. 已知事实（规划依据，worker 在 P0 复核）
