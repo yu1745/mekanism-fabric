@@ -86,3 +86,14 @@ assemble PASS（21 秒，三 slice gates）；platform slice 203→204（真实 
 正常停止自有会话并完整恢复世界，备份与恢复后逐文件 SHA-256 一致；临时 runtime/wrapper/Xvfb 清理。保留现有 foreign-level/manager 检查，另跑既有 RecipeCacheLookupMonitorTest，提交前核对结果。无新增测试。W-20 剩余外部 wrench/cardboard 右键语义核对，之后再进 W-21；不提前声明整个 P3 完成。
 
 提交后审查：检查实际 publication mixin、生命周期和证据 diff，并对照 MinecraftServer.reloadResources 内 resources 赋值 → updateRegistryTags → PlayerList.reloadResources 顺序及 Fabric handleAsync 回调。未放松真实 manager/level 校验，原 binding identity／invalidation 机制继续复用；准备失败不发布，已应用的 manager 不回退旧引用。既有 RecipeCacheLookupMonitorTest PASS（8 秒），未发现本次边界内需再修正的偏离。
+
+
+2026-10-30 W-20 交互收尾：原 CommonPlayerTracker.rightClickEvent 的两个剩余分支现接入同一 ConfiguratorUseMixin：对 CONFIGURATORS tag 且非自家 Configurator 的物品，遇 BlockMekanism/BlockBounding 时强制走 block-use；对其它物品的潜行纸箱交互强制 block-use，并在原物品 useOn 入口阻止纸箱仍存在时的后续 item-use。保留原 else-if 优先级、自家 Configurator 的双手 bypass 逻辑；纸箱成功恢复后提前消费，不误阻止其它方块。无通用 Forge 事件层，无新 slice 或测试。
+
+assemble PASS，实际集成服验证：临时数据包将 vanilla stick 加入 mekanism:configurators；潜行使用 stick 拆卸真实 Crusher，blockConsumed=true、itemConsumed=false、stick count1 保留、Crusher 变 air。真实纸箱物品先捕获地面石头，实际 box 在 `[6,99,0]`；持石头潜行点击该 box 后恢复内部 stone、blockConsumed=true、itemConsumed=false、手中 stone count1 保留。最初按放置目标 `[6,100,0]` 点击空气的调用只是探针位置错误，不计入验收。[wrench](evidence/p3-interaction/wrench.json)、[纸箱](evidence/p3-interaction/cardboard.json) 与前后方块读数同目录。没有 GUI error。纸箱失败恢复时的 item-use 抑制由原生调用入口检查覆盖，未扩称本次另做了破坏权限矩阵。
+
+W-20 映射闭环：ReloadListener → FabricRecipeCacheLifecycle + native publication mixin；IncompleteRecipeScanner → 启动／成功 reload 扫描、JOIN 警告、stop 清理（同探针两次 reload 已通过）；CommonPlayerTracker login → MekanismUsernameLifecycle，tracking/dimension/respawn/logout → FabricGearEffectsNetworking，rightClick → 现有 ConfiguratorUseMixin。原 alpha warning 代码本就注释禁用，不额外启用。旧三个 NeoForge 入口不照搬，W-22 记替代理由。阶段全门禁仍在 W-22；下一项 W-21 payload 目录核对。
+
+本轮自有会话正常 stopped，完整隔离世界恢复备份且逐文件 SHA-256 一致，临时 runtime／wrapper／Xvfb 清理；工作范围无额外扩展。
+
+提交后风格审查：已读实际 mixin 与证据 diff，对照 CommonPlayerTracker 的外部 wrench first branch／纸箱 else-if 和原生 useItemOn 的 block→item 顺序。保留真实 tryWrench/unbox owner、原始 tag 身份与双手 Configurator 判定，没有更改机器算法或删除交互分支。未发现本次边界内移植风格偏离；W-21/22 尚待完成。

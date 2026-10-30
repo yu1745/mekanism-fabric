@@ -1,0 +1,1 @@
+{"pos":[6,99,0],"success":true,"action":"consume","face":"north","sneaking":true,"playerFacing":"south","gamemode":"survival","creativeMode":false,"eventConsumed":false,"blockConsumed":true,"itemConsumed":false,"itemBefore":{"item":"minecraft:stone","count":1},"itemAfter":{"item":"minecraft:stone","count":1},"blockState":{"name":"minecraft:stone","props":{}}}
