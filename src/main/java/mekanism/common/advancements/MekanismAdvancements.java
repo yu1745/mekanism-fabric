@@ -1,6 +1,6 @@
 package mekanism.common.advancements;
 
-import mekanism.common.Mekanism;
+import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
 public class MekanismAdvancements {
@@ -9,7 +9,7 @@ public class MekanismAdvancements {
     }
 
     private static MekanismAdvancement advancement(@Nullable MekanismAdvancement parent, String name) {
-        return new MekanismAdvancement(parent, Mekanism.rl(name));
+        return new MekanismAdvancement(parent, ResourceLocation.fromNamespaceAndPath("mekanism", name));
     }
 
     public static final MekanismAdvancement ROOT = advancement(null, "root");

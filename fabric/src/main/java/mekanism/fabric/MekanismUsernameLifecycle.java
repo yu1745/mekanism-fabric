@@ -24,5 +24,6 @@ public final class MekanismUsernameLifecycle {
     private static void recordLogin(ServerGamePacketListenerImpl handler, PacketSender sender, MinecraftServer server) {
         //JOIN is (handler, sender, server): the actual player comes from the handler
         UsernameCache.setLastKnownUsername(handler.player.getUUID(), handler.player.getGameProfile().getName());
+        mekanism.common.advancements.MekanismCriteriaTriggers.LOGGED_IN.value().trigger(handler.player);
     }
 }

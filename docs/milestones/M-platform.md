@@ -2,7 +2,7 @@
 
 ## 现状
 
-ROADMAP P3 W-15–22；运行基线 `4e6b6577`。P0/P1/P2 已完成，当前工作区无生产 WIP。W-15 已核对实际 owner；W-16/17 命令树与 builders 已接入并有真实运行证据。下一项 W-18 成就入口核对。
+ROADMAP P3 W-15–22；运行基线 `4e6b6577`。P0/P1/P2 已完成，当前工作区无生产 WIP。W-15 已核对实际 owner；W-16/17 命令树与 builders 已接入并有真实运行证据。W-18 已补齐登录成就入口并实机触发；下一项 W-19 conditions。
 
 ## 下一步
 
@@ -41,3 +41,10 @@ Chunk watch 的 LOAD/UNLOAD 使用 Fabric ServerChunkEvents；ticket-level 通�
 自有客户端正常 stop，完整隔离世界从本轮前备份恢复且逐文件 SHA-256 相等；清理临时 mod、wrapper 链接和 Xvfb。没有新增测试。最终 assemble PASS（12 秒），含三份 slice gates。W-18–22 及 P3 全阶段门禁尚未完成。
 
 提交后风格审查：已读本次真实 diff，并对照原命令树／builders 与固定 ChunkMap 事件位置。保留原权限、消息、返回值、build/remove 算法；原始 builders/StructureBuilder/RadiationCommand 仅纳入而未重写。所有 Fabric callback 在 bootstrap，ticket 通知复用实际 owner，无独立事件框架或占位命令。未发现需要修复的生产偏离；全 builders 成型与 P3 全门禁不在本次通过声明内。
+
+
+2026-10-30 W-18：原始 MekanismCriteriaTriggers 的 12 种 criterion 已由 bootstrap 注册到 TRIGGER_TYPES，生成 advancement JSON 已打包；缺口是 CommonPlayerTracker 的 logged_in 没有 Fabric consumer。最小修复在现有 MekanismUsernameLifecycle JOIN owner 记录用户名后调用原 LOGGED_IN.trigger(handler.player)，不再注册第二套登录 owner。原始 MekanismAdvancement record 与完整 MekanismAdvancements 常量目录纳入 slice（1509→1511），仅把 root Mekanism.rl 改为等价固定 namespace 的 ResourceLocation 构造；无 ID 或 title/parent 变更。
+
+最终 assemble PASS（21 秒，含三份 slice gates）；真实隔离集成服连接后，实际玩家 advancement JSON 中 `mekanism:root` 的 automatic criterion 完成、done=true。通过真实 give 命令把 basic_tier_installer 放进同一玩家库存后，`mekanism:installer` 的 inventory_changed criterion 也完成、done=true；没有执行 advancement grant。原始 [玩家进度](evidence/p3-advancement/progress.json) 及 UUID／give 结果同目录保存。首个自定义 logged_in criterion 与第二个原版 inventory 条件均证明资源加载／注册／实际 consumer 联通；未以单个成就触发扩大为所有触发器均真机覆盖。
+
+自有会话正常 stopped，完整隔离世界恢复至启动前备份且所有文件 SHA-256 相等，临时 debug dependencies、wrapper 链接、Xvfb 清理。无新测试。CommonPlayerTracker 的其余 logout/dimension/respawn/interaction 行为仍在 W-20 核对，未随本次宣布完成。P3 阶段全门禁仍待 W-22。
