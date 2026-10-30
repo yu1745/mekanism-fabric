@@ -2,11 +2,11 @@
 
 ## 现状
 
-ROADMAP P4 W-23–28；基线 `843af935`（P3 最终生产提交）。P0–P3 已通过阶段门禁。W-23 已通过真实 cable 传输与 Team Reborn API 双向转换验证，并修复通电 contents 材质崩溃。W-24 满载、断开／重连及原生事务回滚已验证。既有机器 smoke 验证 cube→cable→chamber 放电与产出，以及部分物品／流体／化学连接；这些证据不替代本阶段的完整边界验收。
+ROADMAP P4 W-23–28；基线 `843af935`（P3 最终生产提交）。P0–P3 已通过阶段门禁。W-23 已通过真实 cable 传输与 Team Reborn API 双向转换验证，并修复通电 contents 材质崩溃。W-24 满载、断开／重连及原生事务回滚已验证。W-25 Sorter过滤、Transporter及双向漏斗自动化已验证。既有机器 smoke 验证 cube→cable→chamber 放电与产出，以及部分物品／流体／化学连接；这些证据不替代本阶段的完整边界验收。
 
 ## 下一步
 
-W-25：核对 Logistical Transporter + Sorter 的过滤、真实物品路径与 vanilla hopper 互通；先确认真实 owner 与实际菜单槽，再进行少量端到端验证。
+W-26：核对 Pressurized Tube 化学传输与 Thermodynamic Conductor 热量网络，在隔离世界取得真实两端／网络读数；不以源码引用代替运行证据。
 
 随后依次执行 W-24 pipe→tank 满载／断开／事务回滚，W-25 transporter+sorter+vanilla hopper，W-26 tube 与 conductor，W-27 unload/reload、拆除及存读档网络重建；W-28 统一门禁收尾。
 
@@ -37,3 +37,11 @@ P3 最终 `fabric-machine-smoke: PASSED` 可作本阶段已存在链路的基线
 重新调用同一transmitter owner设EAST=PUSH并刷新：sink32000/source4800/pipe2000，总38800mB，恰为初始39800减实际抽走1000；新查询返回pipe162000droplets，保留旧view仍0。见 [重连源](evidence/p4-fluid/reconnected-source.json)、[重连目标](evidence/p4-fluid/reconnected-sink.json)、[新视图](evidence/p4-fluid/fresh-after-reconnect.json)、[旧视图](evidence/p4-fluid/retained-after-reconnect.json)。再次程序核对本批所有守恒与abort读数成功。
 
 客户端contentModelCache.size=1，说明真实水内容模型已成功bake，也补强W-23同一Contents材质修复的运行证据；没有新增GUI ERROR。自有客户端正常停止，世界81个文件SHA-256完整恢复，临时debug mod/wrapper/Xvfb清理。W-24完成，下一项W-25；整个P4及W-27保存／卸载验收仍待做。
+
+2026-10-30 W-25 完成（基线 `61ec00c5`，未改生产代码）：Sorter.getHomeInventory/getTargetInventory 每操作以真实物理side查 ItemStorage.SIDED；filter.mapInventory 生成官方 TransitRequest，目标是 TransporterItemStorage 时调用真实 insertMaybeRR。路由reservation与response.useAll源扣款处于同一caller transaction，仅commit后设active。原 allowDefault/strictFinder/autoEject 分支保留，本例关闭autoEject，仅按item-stack filter发送。HopperTransferMixin仅在实际Mekanism Storage端点经FabricHopperTransfer桥接vanilla push/pull，现有FabricItemStorageTest共6项PASS（23秒），包括阻塞variant后继续尝试后续机器槽。
+
+真机过滤路径：chest `[-3,100,4]`→east-facing sorter `[-2,100,4]`→basic transporter `[-1,100,4]`→vanilla hopper `[0,100,4]`向下→chest `[0,99,4]`。通过实际NBT codec载入 `sorter_itemstack_filter/target_stack=minecraft:iron_ore`，eject=false；原codec省略默认enabled=true。混合8 iron_ore与8 cobblestone，最终源箱只余8圆石，目标箱有8铁矿，途经hopper为空、transporter无在途stack，数量没有重复或丢失。见 [过滤配置](evidence/p4-item/sorter-config.json)、[源](evidence/p4-item/filtered-source.json)、[目标](evidence/p4-item/filtered-destination.json)、[经过的漏斗](evidence/p4-item/filtered-hopper.json)、[管道](evidence/p4-item/transporter.json)。
+
+真实漏斗进出机器：vanilla hopper `[5,100,0]` facing west，enrichment chamber `[4,100,0]` 的LEFT=item INPUT、BOTTOM=item OUTPUT，底部hopper `[4,99,0]`。源hopper放1 iron_ore，机器给40000J；初次读取时hopper已经推入，machine-initial真实读数input1、progress14（不是声称tick0快照）。自然tick完成后机器input/output皆空、能量10000J，底部hopper收到2 mekanism:dust_iron，源hopper空；wait predicate `inv[4,99,0].0.count == 2` matched，ranTicks19。见 [机器初次读数](evidence/p4-item/machine-initial.json)、[最终机器](evidence/p4-item/machine-final.json)、[产物](evidence/p4-item/hopper-bottom-final.json)、[等待结果](evidence/p4-item/hopper-output-wait.json)。没有使用inv.*读写Mekanism库存，权威读数均来自服务端NBT。
+
+GUI：实际打开GuiLogisticalSorter（38 slots）与GuiElectricMachine（41 slots），后者菜单index2显示1 iron_ore。见 sorter-screen/machine-screen.json。第一次teleport落在无平台位置，玩家掉落至y62，open-block明确OUT_OF_REACH；未计入成功证据。回到目标附近并补临时支撑后实际打开成功；一条fill对原有stone返回“No blocks were filled”，无游戏故障。gui problems仅既有启动WARN，无新增ERROR。自有会话正常stopped，世界81个文件SHA-256恢复一致，临时debug mod/wrapper/Xvfb清理。无新测试，未改发布源码／依赖。W-25完成，下一项W-26；P4最终门禁仍留W-28。
