@@ -135,8 +135,8 @@ mcdebug 使用 `fabric/run` 的隔离调试世界；结束恢复现场。
 
 | ID | 内容 |
 |---|---|
-| W-40 | 全量测试 + 全部 smoke（machine/paired/rejection/packaged/recipe/chemical/model/worldgen/retrogen/tile）逐条 PASS，记录耗时 |
-| W-41 | `./build.sh --clean` 发布物核验：remapped JAR、`build-info.json` sha256、干净服务端启动 |
+| W-40 | 全量测试 + 全部 smoke（machine/paired/rejection/packaged/recipe/chemical/model/worldgen/retrogen/tile）逐条 PASS，记录耗时；**须先满足 `COORDINATOR_NOTES.md` 的 C-1…C-4（负向探针、recipe 计数兜底）** |
+| W-41 | `./build.sh --clean` 发布物核验：remapped JAR、`build-info.json` sha256、干净服务端启动；干净构建后**重跑同一静态检查**并记录 jar sha256（C-3） |
 | W-42 | 文档收口：`README.md` 状态表全部为"已验证"或带具体残留项；`PORT_MATRIX`/`FABRIC_PORT` 一页结论；相关 `M-*.md` 归档 |
 
 ### P9 Tools 模块立项（W-43）
