@@ -33,3 +33,5 @@ Additions/Generators/Tools、通用 Forge 配置兼容层、第三方能量模�
 见上表与归档文档；`741d580d` 之后的新证据追加在此。
 
 2026-10-30 / W-01.1：P0 全量构建发现 `FabricGearConfigLifecycleTest` 仍构造不含 general 的旧快照，导致 `Config snapshot schema mismatch`。现有测试补齐 general 后，完整构建与 QIO 50 tests 全部通过（其中生命周期 1 test）；未放宽生产 schema 校验，也未增加测试。非默认 general 真机与 alphaWarning 开发／发布核对仍待 W-12/13。
+
+P0 paired-network 重跑通过：5 个 SERVER configs、304 个值，两次 fresh client 均 client_applied 并获得 server ACK；这补充默认值完整 schema 的实际网络证据，不替代 W-12 非默认 consumer 验收。

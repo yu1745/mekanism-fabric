@@ -12,7 +12,7 @@
 
 | 里程碑 | 范围 | 验收（一个端到端用例） | 状态 |
 |---|---|---|---|
-| M-owner | `TileEntityMekanism`、`TileComponentConfig`、频率/`FrequencyManager`、`ContainerType`、`MekanismContainer` 同步、有效侧线程语义、bounding | 真机：Crusher 放置→通电→加工→存读档 | 进行中：P0 W-03–05 已复核；W-01 快照回归已修，build 与 578 tests 通过；W-02 paired/packaged 待串行复核；Crusher 重启验收仍未核实 |
+| M-owner | `TileEntityMekanism`、`TileComponentConfig`、频率/`FrequencyManager`、`ContainerType`、`MekanismContainer` 同步、有效侧线程语义、bounding | 真机：Crusher 放置→通电→加工→存读档 | 进行中：P0 W-01–05 完成，build / 578 tests / machine / paired / packaged 全通过；两项旧门禁退化已修；下一步 P1 W-06–10 真机验收 |
 | M-config | gear / machine+tier / common+startup / general 四类配置 owner 与同步 | 非默认配置真机加载并同步到客户端 | gear、machine+tier、common+startup 已提交且有运行证据；general 已提交 `741d580d`（wip），待真机验证；活文档 `M-config.md` |
 | M-transfer | 流体/物品传输 owner、pipe 查询生命周期、`SnapshotParticipant`、QE 频率流体 | 管道把流体/物品送入机器并回滚正确 | 未核实 |
 | M-render | transmitter 渲染（OBJ/MTL 几何）、Robit atlas、QIO 渲染 | mcdebug 截图：管线与 QIO 正确渲染 | 未核实 |

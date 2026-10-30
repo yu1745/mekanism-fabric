@@ -6,6 +6,7 @@
 
 | 范围 | 后续结论 |
 |---|---|
+| P0（2026-10-30） | W-01–05 完成；578 tests、slice/build 与 machine/paired/packaged 全通过，修复既有测试快照与旧 packaged 合同；P1 真机验收待做，证据见 `milestones/M-owner.md`。 |
 | Task050–051 | `c433ace0` / `a4feef18` 完成真实配置状态、capability cache 与 base-tile 生命周期；见 `archive/TASK050_PLAN.md`、`archive/TASK051_PLAN.md`。 |
 | M-owner（Task052） | 原始 tile、组件、频率、容器、有效侧与 bounding 已纳入并接线；Crusher 加工及重启一致性待 W-06–W-10，详见 `milestones/M-owner.md`。 |
 | M-config（Task052） | gear、machine/tier、common/startup 已有提交与运行证据；general `741d580d` 已接通，非默认真机同步待 W-12。 |
