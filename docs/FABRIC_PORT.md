@@ -6,9 +6,10 @@
 
 | 范围 | 后续结论 |
 |---|---|
-| P0（2026-10-30） | W-01–05 完成；578 tests、slice/build 与 machine/paired/packaged 全通过，修复既有测试快照与旧 packaged 合同；P1 真机验收待做，证据见 `milestones/M-owner.md`。 |
+| P1（2026-10-30） | M-owner W-06–11 真机与阶段门禁通过：Crusher 加工/存读档、工厂升级、频率落盘、bounding 放拆；证据归档 `archive/M-owner.md`，下一阶段 P2。 |
+| P0（2026-10-30） | W-01–05 完成；578 tests、slice/build 与 machine/paired/packaged 全通过，修复既有测试快照与旧 packaged 合同；P1 真机验收待做，证据见 `archive/M-owner.md`。 |
 | Task050–051 | `c433ace0` / `a4feef18` 完成真实配置状态、capability cache 与 base-tile 生命周期；见 `archive/TASK050_PLAN.md`、`archive/TASK051_PLAN.md`。 |
-| M-owner（Task052） | 原始 tile、组件、频率、容器、有效侧与 bounding 已纳入并接线；Crusher 加工及重启一致性待 W-06–W-10，详见 `milestones/M-owner.md`。 |
+| M-owner（Task052） | 原始 tile、组件、频率、容器、有效侧与 bounding 已接通；P1 W-06–W-10 真机验收通过，详见 `archive/M-owner.md`。 |
 | M-config（Task052） | gear、machine/tier、common/startup 已有提交与运行证据；general `741d580d` 已接通，非默认真机同步待 W-12。 |
 | M-transfer（Task052） | `b0f7e13d` / `9cabfea9` 等接通真实机器能量和物品／流体／化学传输；旧 smoke 不代替 W-23–W-28 的生命周期验收。 |
 | M-render（Task052） | GUI、模型加载与 BER 后续接线见 `archive/TASK052_RESUME_2026-10-26.md`；完整模型与 GUI 巡检待 W-29–W-33。 |

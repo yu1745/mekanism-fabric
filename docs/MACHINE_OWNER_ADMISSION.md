@@ -1,6 +1,6 @@
 # Concrete machine-owner admission checkpoint (after Task050)
 
-> 状态核实（2026-10-30 / W-05）：Task050–051 时点的历史边界审计；“尚未授权／未纳入”不再表示当前状态。当前 owner 接线与验收见 `milestones/M-owner.md`。
+> 状态核实（2026-10-30 / W-05）：Task050–051 时点的历史边界审计；“尚未授权／未纳入”不再表示当前状态。当前 owner 接线与验收见 `archive/M-owner.md`。
 
 Baseline: `c433ace0` (Task050 accepted; 205/224/45). This records the initial source checkpoint, **not** Task051 implementation or a compile-success claim. Subsequent parent decision is in `archive/TASK051_PLAN.md`: verified Fabric per-find provider behavior removes the false need for world/bounding cache-notification coupling; admit the complete real cache/base lifecycle with a permanently bound real-component policy callback, not a cache-only or fake-config batch.
 

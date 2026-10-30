@@ -2,17 +2,15 @@
 
 原始计划：`docs/archive/TASK052_PLAN.md`。相关历史文档按 `docs/milestones/README.md` 的归类表查找。
 
-**验收（唯一）**：真机上一台 Crusher 放置 → 通电 → 加工 → 存档读档后状态一致。通过前状态保持"未核实"，不得声明机器可用。
+**验收**：Crusher 放置 → 通电 → 加工 → 存档读档后状态一致；ROADMAP P1 W-06–10 的工厂、频率与 bounding 验收亦已完成。2026-10-30 收尾归档。
 
 ## 现状
 
-P0 已完成源码接线复核与基线门禁；P1 W-06/07 Crusher 加工／完整存读档已验证，W-08 升级链有实机证据但仍需直接放置 Basic Factory 的指定用例；W-09/10 未做。配置、传输、渲染等相邻系统已拆为独立里程碑；本里程碑仅含 `TileEntityMekanism`、`TileComponentConfig`、频率/`FrequencyManager`、`ContainerType`、`MekanismContainer` 同步、有效侧线程语义、bounding。
+P0 与 P1 已完成；W-06–10 的真实 owner 用例和 P1 末门禁均通过。配置、传输、渲染等相邻系统已拆为独立里程碑；本里程碑仅含 `TileEntityMekanism`、`TileComponentConfig`、频率/`FrequencyManager`、`ContainerType`、`MekanismContainer` 同步、有效侧线程语义、bounding。
 
-## 下一步（交给 worker）
+## 下一步
 
-1. P0 W-01–05 已复核，见下方证据；W-06/07 已验证；下一项补齐 W-08 直接放置 Basic Factory 并安装升级，再做 W-09 频率创建／重启与 W-10 bounding 放拆。
-2. 按验收用例用 mcdebug 在 `fabric/run` 的隔离调试世界实测，记录通过/失败点；失败时抓首条错误原文。
-3. 结果写入本文件"验收证据"，并改 `docs/milestones/README.md` 状态表；通过后在 `PORT_MATRIX`/`FABRIC_PORT` 补一行结论。
+M-owner 本里程碑收尾；按 ROADMAP 转入 P2 M-config W-12–14。后续网络、传输、多方块和 GUI 巡检仍按各自里程碑进行，本验收不替代它们。
 
 ## 未决项（协调者待裁决）
 
@@ -80,10 +78,24 @@ AW 保留独立的精确 intermediary 期望列表：111 条成员／类项经 n
 
 使用已有 `fabric/run/saves/Mekanism F1 isolated debug`，mcdebug 0.7.0，MC 1.21.1，真实集成服 + 客户端。初始 status/gui status 确认无活客户端后才启动。临时 runtime 是 CLI 内嵌 mcdebug JAR + 其固定依赖 `fabric-language-kotlin:1.13.9+kotlin.2.3.10`；首次缺 Kotlin adapter 失败于 world load 前，补运行依赖后 25 秒进入世界。没有把 Kotlin 或 debug mod 纳入源码／构建依赖。
 
-- **W-06 PASS**：平台原位置 `[4,100,0]` 为 air，下方 `[4,99,0]` 为 stone。初步 command-placement 验证后移除并通过 `world place-as-player --block mekanism:crusher --face up --neighbor 4,99,0 --player-facing south` 重新走完整 BlockItem 流程。默认 item side config `[1,1,4,8,1,1]`、energy side 全 INPUT 与 fake-player owner 正常产生。原生 `data merge block` 注入 20,000 J + 2 iron ingots，真实自然 tick 产出 2 `mekanism:dust_iron`；按官方 `processing/iron/dust/from_ingot.json` 使用铁锭，未把铁矿石当作不存在的 crushing 输入。实际 `GuiElectricMachine` / 41 menu slots 打开，客户端 menu slot 3 读到 dust；[产出截图](evidence/p1-owner/crusher-output.png)。
-- **W-07 PASS**：在同一台 Crusher 上通过真实 sneak-use 安装 1 speed upgrade；注入三个输入和少量能量，让自然 tick 运行至进度 28，再设 HIGH redstone control（无信号，暂停加工），保留 1234 J、输入 3 ingots、输出 2 dust、升级 1、非默认 item side `[1,0,4,8,1,1]` 与 eject=true。正常停止 mcdebug 拥有的客户端，等待 `stopped` 后重新启动同一世界。两份**完整服务端 BE NBT 对象相等**：[重启前](evidence/p1-owner/crusher-before-restart.json) / [重启后](evidence/p1-owner/crusher-after-restart.json)，不限于挑选字段。重启后真实客户端 menu slot 2/3 分别为 3 ingots / 2 dust；[恢复截图](evidence/p1-owner/crusher-restored.png)。`save-all flush` 在集成服不可用，实际保存由正常 session stop 完成，不把命令失败冒充保存成功。
-- **W-08 部分证据**：同一样本通过真实 sneak-use basic_tier_installer、advanced_tier_installer 升级成 Basic / Advanced Crushing Factory，安装器真实消耗。两级保留 1234 J、输入 3、输出 2、升级 1、侧配置、owner 与 control；progress 依次为 `[28,0,0]` / `[28,0,0,0,0]`。服务端读数：[Basic](evidence/p1-owner/basic-factory.json) / [Advanced](evidence/p1-owner/advanced-factory.json)。真实 `GuiFactory` / 49 menu slots 正常打开；[Advanced 截图](evidence/p1-owner/advanced-factory.png)。未将此替代 roadmap 指定的“直接放置 Basic Factory 后装升级”用例，W-08 保持待补齐。
+- **W-06 PASS**：平台原位置 `[4,100,0]` 为 air，下方 `[4,99,0]` 为 stone。初步 command-placement 验证后移除并通过 `world place-as-player --block mekanism:crusher --face up --neighbor 4,99,0 --player-facing south` 重新走完整 BlockItem 流程。默认 item side config `[1,1,4,8,1,1]`、energy side 全 INPUT 与 fake-player owner 正常产生。原生 `data merge block` 注入 20,000 J + 2 iron ingots，真实自然 tick 产出 2 `mekanism:dust_iron`；按官方 `processing/iron/dust/from_ingot.json` 使用铁锭，未把铁矿石当作不存在的 crushing 输入。实际 `GuiElectricMachine` / 41 menu slots 打开，客户端 menu slot 3 读到 dust；[产出截图](../milestones/evidence/p1-owner/crusher-output.png)。
+- **W-07 PASS**：在同一台 Crusher 上通过真实 sneak-use 安装 1 speed upgrade；注入三个输入和少量能量，让自然 tick 运行至进度 28，再设 HIGH redstone control（无信号，暂停加工），保留 1234 J、输入 3 ingots、输出 2 dust、升级 1、非默认 item side `[1,0,4,8,1,1]` 与 eject=true。正常停止 mcdebug 拥有的客户端，等待 `stopped` 后重新启动同一世界。两份**完整服务端 BE NBT 对象相等**：[重启前](../milestones/evidence/p1-owner/crusher-before-restart.json) / [重启后](../milestones/evidence/p1-owner/crusher-after-restart.json)，不限于挑选字段。重启后真实客户端 menu slot 2/3 分别为 3 ingots / 2 dust；[恢复截图](../milestones/evidence/p1-owner/crusher-restored.png)。`save-all flush` 在集成服不可用，实际保存由正常 session stop 完成，不把命令失败冒充保存成功。
+- **W-08 部分证据**：同一样本通过真实 sneak-use basic_tier_installer、advanced_tier_installer 升级成 Basic / Advanced Crushing Factory，安装器真实消耗。两级保留 1234 J、输入 3、输出 2、升级 1、侧配置、owner 与 control；progress 依次为 `[28,0,0]` / `[28,0,0,0,0]`。服务端读数：[Basic](../milestones/evidence/p1-owner/basic-factory.json) / [Advanced](../milestones/evidence/p1-owner/advanced-factory.json)。真实 `GuiFactory` / 49 menu slots 正常打开；[Advanced 截图](../milestones/evidence/p1-owner/advanced-factory.png)。未将此替代 roadmap 指定的“直接放置 Basic Factory 后装升级”用例，W-08 保持待补齐。
 
 `gui problems --level error` 在两次正常会话均无记录。首次旧调试世界加载有 `Unknown attachment type accessories:inventory_holder ... skipping` 的 WARN；本轮未加载 Accessories，不据此声明 accessory 兼容性，也不将它当作 Crusher 缺陷。
 
 现场收尾：关闭 GUI，以无掉落 remove 恢复 `[4,100,0]` 为 air，并读回 `hasBlockEntity=false`；玩家位置恢复 `[0.5,100,-2.5]`。正常 session stop 返回 `stopped`；移除临时 `fabric/gradlew` 链接及两份 debug runtime JAR，停止本轮独占 Xvfb :188。正式配置与生产代码未改，无新测试。余项仍为 W-08 指定用例、W-09/10 和 P1 末门禁，不提前将整个 M-owner 标为已验证。
+
+### P1 W-08–11 收尾（2026-10-30，运行基线 `15f3a4f8`）
+
+**W-08 PASS**：本次直接以完整 BlockItem 路径放置 `basic_crushing_factory`，随后真实 sneak-use 安装 speed upgrade=1，再使用 `advanced_tier_installer`。安装器消耗，方块切换为 Advanced；输入铁锭 3、输出铁粉 2、能量 1234 J、升级、侧配置、安全 owner、control_type 全部逐字段一致，三个 progress 槽扩为五个且均为 0。[Basic 读数](../milestones/evidence/p1-owner/basic-direct.json)、[Advanced 读数](../milestones/evidence/p1-owner/advanced-direct.json)。这补齐上一节待做的直接放置用例。
+
+**W-09 PASS**：Teleporter `[6,100,0]` 与 QE `[8,99,0]` 的实际 `createFrequency(String)` owner 方法创建 `roadmap_p1_teleporter`、`roadmap_p1_qe`；Security Desk `[11,100,0]` 的实际 `TileComponentSecurity.setOwnerUUID` 以真实玩家 UUID 建立 SecurityFrequency，再调用 `toggleOverride` 设 true。反射只调用真实业务方法，没有反射写字段代替保存。QE 通过真实 `teamreborn:energy` 存储 south 侧插入 2000 FE，实际频率容器读 5000 J。正常停止并重启同一隔离世界后，两个命名频率的实际对象名称一致、QE 5000 J 保留、SecurityFrequency override 仍 true。对应 Inventory / Teleporter / Security FrequencyHandler 的 `MekanismSavedData` 文件已落盘，gzip 内容含命名频率；[文件名、大小与 SHA-256](../milestones/evidence/p1-owner/frequency-saved-files.json)。[Teleporter 对象](../milestones/evidence/p1-owner/teleporter-live-after.json)、[QE 对象](../milestones/evidence/p1-owner/qe-live-after.json)、[QE 能量](../milestones/evidence/p1-owner/qe-energy-after.json)、[Security override](../milestones/evidence/p1-owner/security-override-after.json)为重启后读数；同目录含重启前 BE NBT 与 override 读数。
+
+**W-10 PASS**：真实放置 Digital Miner `[4,100,4]`，`[3,100,3]..[5,101,5]` 从 18 air 变为 **1 主块 + 17 bounding BE**；从块 NBT main=`[4,100,4]`。`gui settle` 后从 `[3,100,3]` 的 bounding 块走真实客户端交互，打开 `GuiDigitalMiner` / 66 slots，[截图](../milestones/evidence/p1-owner/miner-bounding-gui.png)。分别执行“打碎从块”与“重新放置后打碎主块”，两轮区域均为 18 air / 0 BE：[放置](../milestones/evidence/p1-owner/miner-placed.json)、[拆从块](../milestones/evidence/p1-owner/miner-after-slave-break.json)、[拆主块](../milestones/evidence/p1-owner/miner-after-master-break.json)。使用原生 creative 破坏管线，无掉落干扰。
+
+`MekanismBlockTypes` 的 Teleporter、QE 与官方设计一样没有 AttributeHasBounding，不能按规划措辞虚造从块；两者真实放置／破坏均成功，目标恢复 air / no BE，周边无 bounding 残留。[区域读数](../milestones/evidence/p1-owner/single-block-removal.json)含原有 `[5,100,0]` QIO redstone adapter，该方块不是本轮残留，未删除。服务端与客户端线程分别调用 `EffectiveSide.isServer` 得 true / false（同目录 `effective-server.json` / `effective-client.json`）。`gui problems --level error` 无 error；这证明当前主线程路径，不扩称所有异步线程均已覆盖。
+
+**W-11 / 阶段门禁 PASS**：`./fabric-build.sh` 0.77 s、`./gradlew -p fabric verifyApiSliceNoNeoForge` 0.91 s（缓存复用 P0 已通过测试）、`scripts/fabric-machine-smoke.sh` 96.44 s，原始标记 `fabric-machine-smoke: PASSED`。本轮未修改生产源码、slice 或测试，没有需追加的生产 fix。P0 提交 `e7dc881a` / `dba1010d` / `0ff626d1`；W-06/07 提交 `15f3a4f8`；本次提交完成 W-08–11。
+
+阶段偏差仅为按真实 block ownership 修正 W-10 的多格假设。现场在启动前已完整备份，停止自有会话后恢复整个隔离世界，逐文件 SHA-256 与备份一致（包括测试频率及 Security override 一并回退）；临时 wrapper 链接、mcdebug/Kotlin runtime JAR、自有 Xvfb 均清理。未触碰其它游戏进程。诊断在 `/tmp/mekanism-p1-{build,slice,machine}.log`，验收读数和截图随本次提交归档。下一阶段 P2，不以 P1 通过代替 M-config 或传输／渲染／装备验收。
