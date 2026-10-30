@@ -6,6 +6,7 @@
 
 | 范围 | 后续结论 |
 |---|---|
+| P7（2026-10-30） | W-36–39装备／模块factory、冻结注册身份与生成通过；修复MekaSuit实际armor tick与retrogen轮询，578 tests/API/machine门禁通过；证据 `archive/M-gear.md`、`archive/M-registry.md`，未宣布P8发布通过。 |
 | P6（2026-10-30） | W-34–35五种核心多方块生命周期、尺寸失败与重启保持通过，build/API/machine阶段门禁通过；未改生产源，证据 `archive/M-multiblock.md`。 |
 | P5（2026-10-30） | M-render W-29–33通过：模型／粒子／71个GUI／客户端注册和附件渲染已验证，578 tests、API与machine阶段门禁通过；证据 `archive/M-render.md`。 |
 | P4（2026-10-30） | M-transfer W-23–28 通过：五种传输及网络卸载／重载、拆装、存档重启有实机证据，阶段门禁578 tests/API/machine全部通过；证据 `archive/M-transfer.md`。 |

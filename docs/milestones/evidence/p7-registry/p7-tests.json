@@ -1,0 +1,55 @@
+{
+  "source": "fabric/build/test-results after ./fabric-build.sh",
+  "tasks": {
+    "fabricClientModelTest": {
+      "tests": 17,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fabricDataMapTest": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fabricRecipeRegistryTest": {
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fabricRegistryTest": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fabricTransferTest": {
+      "tests": 45,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "qioTransactionTest": {
+      "tests": 50,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "test": {
+      "tests": 451,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "totals": {
+    "tests": 578,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "note": "All seven test tasks executed in this build (none UP-TO-DATE);578 tests,0 failures/errors/skipped. No additional test run or new tests.",
+  "allSevenTestTasksExecuted": true
+}

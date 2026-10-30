@@ -77,7 +77,7 @@ boot() {
   cd "$SERVER_DIR"
   (
     for _ in $(seq 1 180); do
-      grep -q 'Done (' server.log 2>/dev/null && break
+      grep -q 'Done (' "server-$phase.log" 2>/dev/null && break
       sleep 1
     done
     sleep 1
