@@ -6,6 +6,7 @@
 
 | 范围 | 后续结论 |
 |---|---|
+| P4（2026-10-30） | M-transfer W-23–28 通过：五种传输及网络卸载／重载、拆装、存档重启有实机证据，阶段门禁578 tests/API/machine全部通过；证据 `archive/M-transfer.md`。 |
 | P3（2026-10-30） | M-platform W-15–22 与阶段门禁通过：命令、成就、条件、生命周期和 55 payload owners 已核对，46 个未纳入文件保留明确理由；证据 `archive/M-platform.md`。 |
 | P2（2026-10-30） | M-config W-12–14 通过：非默认 miner consumer、两次独立客户端同步、开发／发布 schema、生命周期测试与阶段门禁；证据 `archive/M-config.md`。 |
 | P1（2026-10-30） | M-owner W-06–11 真机与阶段门禁通过：Crusher 加工/存读档、工厂升级、频率落盘、bounding 放拆；证据归档 `archive/M-owner.md`，下一阶段 P2。 |
