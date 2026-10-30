@@ -24,7 +24,7 @@
 
 编译、remapJar、remapPortReviewFixtureJar、三个切片 gate 与继承的单一生命周期用例 PASS（17s，`/tmp/mekanism-machine-config-build.log`）。已有测试只调整 owner 名和四配置快照输入，断言/测试数量不增加。既有 paired-network smoke PASS（`/tmp/mekanism-machine-config-paired.log`），运行约 82 秒（启动至第二客户端入世界），独立服务器与两次 fresh client 正常进入 PLAY。保留诊断 `build/fabric-paired-network-smoke/20261030T081852Z-3129744/`：server start 明确 `configs=4`；两客户端完整 `values=235` 小于既有 codec 上限 256，无需扩大限制；两个 session 的 send/client_applied/ack 一致（`beb28c70-4f67-4f36-8940-9a5299d57b4d`、`4d95928e-86aa-4271-b1f4-56dc040d4648`）。脚本通过终止 scope 收尾，不将它算作 graceful disconnect/stop 验证。
 
-当前未宣称真实非默认机器参数、四配置集成服跨世界切换或热重载验证已完成；不为这些限制新增测试矩阵。下一步优先用实际机器验证非默认容量/耗能。
+此检查点尚未验证非默认机器参数；其后已完成下节真机验证。四配置集成服跨世界切换与热重载仍不在已验证声明内，不为这些限制新增测试矩阵。
 
 ## 提交后风格审查 — `207e08ae`
 
@@ -33,3 +33,15 @@
 补充既有 `MekanismConfigSpecTest` 整类运行 PASS（8s，`/tmp/mekanism-machine-config-spec-test.log`），其变化仅 payload 类型更名；不将它说成四配置非默认真机证明。
 
 上下文评估：实现与审查已落盘，下一步仍是同一机器配置边界的实际运行，保留当前会话继续，不再重复历史审计或拆新模块。所有本轮 build/smoke jobs 已收集且结束。
+
+## 非默认机器参数真机验证 — 2026-10-30
+
+复用 `fabric/run/saves/Mekanism F1 isolated debug` 与 mcdebug 0.7.0 / Accessories dev 客户端；仅在启动前临时新增三份配置：`machine-storage.toml` 的 `crusher=44444`、`machine-usage.toml` 的 `crusher=37`、`tiers.toml` 的 `energy_cubes.basicCapacity=1234567`。未通过反射修改配置或机器字段。启动日志 `/tmp/mekanism-machine-config-client.log` 中实际 server_start 为四配置，session `0e70771e-9443-477a-8b84-97e18896bcd7` 的 send/client_applied/ack 均为 235 值。
+
+在确认原方块均为空气后放置真实 Crusher `(10,100,0)` 与 Basic Energy Cube `(12,100,0)`。mcdebug 读取实际 BE 的公共 `getEnergyContainer().getMaxEnergy()` 分别为 **44444** 和 **1234567**；Crusher 的 `getEnergyPerTick()` 为 **37**。客户端线程读取 canonical usage=37 与 tier capacity=1234567，证明集成服共享配置握手未拒绝且实际机器采用非默认数值；它不是独立远程客户端的非默认快照证明，独立客户端默认完整快照的证据见前节。没有额外新增配方 tick/GUI 测试矩阵。
+
+一次 `inv get-size` 返回 `block entity ... is not an Container`：这是 mcdebug vanilla Container API 的适用范围，Mekanism 使用真实 slot/storage owner，并非本次配置缺陷。后续直接读取实际能量 owner。
+
+清理：两机器恢复为空气；未改玩家位置或物品。`gui disconnect` 返回 `serverStopped=true`，其后客户端反射 storage/usage/tiers 的 `isLoaded()` 均为 false。点击 Quit Game 时 RPC 因 JVM 退出而 connection closed；原 runClient job 最终 exit 0。确认绝对路径及 debug JAR 哈希后删除本轮临时两 JAR，并移除原本不存在的三份调试 TOML（生成后的内容存于 `/tmp/mekanism-machine-config-*.toml` 供诊断），没有运行中的本轮客户端或 jobs。
+
+本次仅追加实际运行证据，无生产代码或测试覆盖变更。当前配置接线闭包的实现、构建、关键运行及提交后审查已齐；下一边界按既有 Task052 主干范围选取，不因本轮完成自动启动 Additions 等未授权模块。
