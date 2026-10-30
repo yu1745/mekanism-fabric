@@ -1516,3 +1516,6 @@ mekanism/common/advancements/MekanismAdvancements.java
 
 # P3 recipe diagnostics lifecycle owner
 mekanism/common/IncompleteRecipeScanner.java
+
+# Official public energy conversion service provider
+mekanism/common/service/EnergyConversionHelper.java

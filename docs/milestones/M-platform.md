@@ -105,3 +105,9 @@ C2S 主 owner FabricServerPlayNetworking.register 同时注册 codec 与 context
 配置阶段 PacketBatchSecurityUpdate 在 FabricSecurityNetworking.configurationS2C 注册；FabricSecurityClientNetworking 在 client configuration receiver 应用到当前 connection；SyncAllSecurityData 在实际 server task 构造完整 snapshot，并由真实 configuration handler completeTask。版本握手由 FabricMekanismNetworking 的 exact Version 字符串契约承接，入口不照搬旧 IEventBus。此前 P0/P2 两次 fresh client 已通过该 configuration→play 链路，W-21 没有借目录核对重新声称每个 packet 的所有业务分支均经过真机测试。
 
 既有 PlayerStateNetworkingTest / PortalNetworkingTest PASS（18 秒），未新增测试，未改生产源码。W-21 未发现漏注册包，下一项 W-22：核对非第三方未纳入文件的实际替代／延期理由并执行 P3 阶段门禁；不能把 55 包目录完整等同于整个移植完成。
+
+2026-10-30 W-22 清单与 public service 补齐：固定 `src/main/java` 共 1802 文件；开始核对时 common slice 1512，缺 290，其中明确第三方目录 243，余 47。逐项记录实际替代／后续阶段理由后，发现 EnergyConversionHelper 不是可直接忽略的第三方代码：公共 IEnergyConversionHelper 与原 service descriptor 均未纳入。现将**原样** API 接口和原样 common provider 纳入（API 262→263、common 1512→1513），生产 processResources 复制原 `META-INF/services/mekanism.api.energy.IEnergyConversionHelper`，实际返回原 EnergyUnit.JOULES/FORGE_ENERGY，未引入第二套转换算法。原 service/API/provider 三者在 remapped JAR 中均核对存在且唯一，descriptor 指向原 provider；assemble PASS（21 秒）。客户端 window fixture 未使用该服务，不扩大其资源合同。
+
+当前非第三方过滤后未纳入 **46 个文件**，每个路径及理由见 [精确清单](evidence/p3-sources/unadmitted-core.csv)。其中：NeoForge composition/registrar/event 类由已验收的 Fabric owner 替代；client model/key/particle/render 类留 P5/P7 逐行为核对，不把替代类存在写成完成；四个共享 recipe-viewer helper 与 LazyChemicalProvider 的实际调用属于已排除的第三方集成。IMekanismAccess/MekanismAccess 混合暴露 JEI/EMI，creator 功能已由实际 IIngredientCreatorProvider 承接，但原混合公共 API 仍列明未纳入理由，不能以 stub 假装完整。该清单不是发布完成声明，P8 仍须汇总残留与实际行为验收。
+
+本轮补齐 service 前的完整 `./fabric-build.sh` PASS（4m12s，现有全部测试与合同）；service 补齐后的 assemble/slice 门禁 PASS。尚需在最终当前树执行 P3 阶段 build、verifyApiSliceNoNeoForge、machine smoke，才关闭 W-22。没有新增测试或更改参考源码。本轮具体下一步就是该最终门禁与收尾，不重做已确认 owner 扫描。

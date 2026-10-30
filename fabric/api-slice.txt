@@ -262,3 +262,6 @@ mekanism/api/recipes/cache/TwoInputCachedRecipe.java
 mekanism/api/recipes/cache/RotaryCachedRecipe.java
 mekanism/api/recipes/cache/PressurizedReactionCachedRecipe.java
 mekanism/api/recipes/cache/ChemicalChemicalToChemicalCachedRecipe.java
+
+# Official public energy conversion service contract
+mekanism/api/energy/IEnergyConversionHelper.java
