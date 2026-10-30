@@ -208,3 +208,4 @@ mekanism/fabric/recipe/FabricConditionExistsCondition.java
 # Bind the actual reload manager before native recipe publication
 mekanism/fabric/mixin/recipe/RecipeManagerPublicationMixin.java
 mekanism/fabric/mixin/client/BlockParticlesMixin.java
+mekanism/fabric/mixin/client/FluidScreenOverlayMixin.java

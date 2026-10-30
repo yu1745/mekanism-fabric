@@ -306,6 +306,11 @@ public class ClientTickHandler {
         return end * (((float) Math.pow(module.getInstalledCount(), 1.25)) / module.getUntypedData().getMaxStackSize());
     }
 
+    /** Whether the original RenderFog event is cancelled, even when its numerical result is unchanged. */
+    public static boolean overridesFog() {
+        return activeVisionModule() != null;
+    }
+
     private static IModule<ModuleVisionEnhancementUnit> activeVisionModule() {
         if (visionEnhancement && Minecraft.getInstance().getCameraEntity() instanceof Player player) {
             return IModuleHelper.INSTANCE.getIfEnabled(player, EquipmentSlot.HEAD, MekanismModules.VISION_ENHANCEMENT_UNIT);

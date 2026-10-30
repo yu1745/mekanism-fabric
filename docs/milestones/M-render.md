@@ -2,11 +2,11 @@
 
 ## 现状
 
-ROADMAP P5 W-29–33。P4 已验证能量／流体／物品／化学／热量及网络生命周期；其中 Contents 无贴图材质已在 `d10def07` 修复，W-24 实机确认 contentModelCache 已成功 bake。W-29 已完成原OBJ六类行为映射、真实连接／断开截图，并修复原版流体RGB→ARGB与默认模型block-light两项差异。W-30 已补齐粒子与直接tick调用方，模型映射与focused tests通过；W-31 全部71个注册menu窗口巡检通过；W-32–33仍待完成。
+ROADMAP P5 W-29–33。P4 已验证能量／流体／物品／化学／热量及网络生命周期；其中 Contents 无贴图材质已在 `d10def07` 修复，W-24 实机确认 contentModelCache 已成功 bake。W-29 已完成原OBJ六类行为映射、真实连接／断开截图，并修复原版流体RGB→ARGB与默认模型block-light两项差异。W-30 已补齐粒子与直接tick调用方，模型映射与focused tests通过；W-31 全部71个注册menu窗口巡检通过；W-32按键／客户端注册与Accessories审计及视觉行为修复已完成；W-33阶段门禁待执行。
 
 ## 下一步
 
-W-32继续：模型属性／颜色、方块粒子、两种Accessories jetpack实际GUI预览已验证。剩余明确缺口为ClientRegistrationUtil.registerFluidExtensions的fog色／范围与第一人称覆盖图；复用现有FogColorMixin/FogSetupMixin及ScreenEffectRenderer原生入口，保留vision事件覆盖顺序。完成后关闭W-32，再W-33统一门禁／归档。
+W-33：执行fabric-build、verifyApiSliceNoNeoForge、fabric-machine-smoke阶段门禁；全部通过后同步状态并归档M-render。W-32已完成，完整映射与证据见验收节。
 
 ## 未决项
 
@@ -87,3 +87,9 @@ assemble PASS15秒（首轮仅BlockMekanism import误写prefab，原文已取出
 新语义缺口（先记录）：原ClientRegistrationUtil.registerFluidExtensions的RGB fog、start=-8/end=24（renderDistance较小时end截断且CYLINDER）及renderOverlayTexture在Fabric没有owner；现FabricFluidColors仅材质/tint，fog mixins仅vision模块。最小闭包复用FabricFluidColors、两个fog mixins及本地ScreenEffectRenderer入口，不建立通用FluidType框架。
 
 固定NeoForge21.1.200 sources已只读下载至/tmp/mek-w32-neoforge-21.1.200-sources.jar。ClientHooks.getFogColor433–444先按camera block fluid height判断并跑fluid扩展，再发ComputeFogColor；onFogRender447–458先跑fluid扩展，再以**原vanilla near/far/shape**构造RenderFog，只有取消才覆盖shader。vision原取消路径须保留该顺序，不能把fluid24再作为vision倍乘输入；当前onFogStart/onFogEnd比较值是否改变不能识别“取消但值相同”，接新fluid时须一并处理真实active module判断。IClientFluidTypeExtensions.renderOverlay153–156调用ScreenEffectRenderer.renderFluid；非spectator且非WATER的eye fluid才走此分支，Mekanism默认overlay为minecraft underwater.png。Kilt固定参考只确认入口，未复制代码。W-32仍进行，下一步补此闭包并实机取shader／截图。
+
+2026-10-30 W-32 完成（最后修复基线fa93e072）：流体fog／overlay完整直接闭包接通。FabricFluidColors按原camera液面与eye/boat条件取真实type；FogColorMixin在最终clearColor前先设fluid RGB再调原vision tint；FogSetupMixin先存vanilla near/far/shape、应用fluid -8/24及截断，再按真实active module取消契约用保存的原vanilla值覆盖三值，不凭数值变化猜取消。新增一个client mixin和renderWater精确AW，复用原生underwater绘制与原type.renderOverlayTexture；WATER路径和spectator guard保留原入口行为。platform206→207，common1518/API263不变。
+
+assemble PASS44秒，真机brine camera→native color/range/overlay通过；TERRAIN/SKY、distance64/12分别start=-8/end24或12。同次客户端任务组合原native方法与shader getter，排除GUI setupNoFog干扰，不增加生产探针。ScreenEffectRenderer实际绑定underwater texture ID62。原ModuleContainer给真实充能helmet装并开启1/4个vision模块，vanilla64输入得16／90.50967，保留原4^1.25公式、fluid→module顺序和tint叠加。已查看原生截图。[完整验收](evidence/p5-fluid-visuals/validation.md)明确记录跨帧shader0断言不计通过、SPHERE／四模块64预期错误、ClassLoader/null编码修正，不冒充穷举。
+
+正常停止后完整日志与前轮原managed log均有相同两条flame/robit no-data-fixer启动ERROR，新增ERROR为空；完整世界81文件与前检查点options.txt恢复一致，hideGui非保存字段随JVM停止清除；临时wrapper/mod/Xvfb清理，无新增测试。30条原行为映射无pending，W-29–32完成，下一项W-33阶段门禁。modifier editor和第三方默认H冲突等已记录平台限制留P8发布说明，不扩称NeoForge UI完全相同。

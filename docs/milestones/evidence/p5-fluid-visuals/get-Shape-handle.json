@@ -1,0 +1,1 @@
+{"method":"findStatic","resolvedTo":"findStatic","declaringClass":"java.lang.invoke.MethodHandles$Lookup","signature":"(java.lang.Class,java.lang.String,java.lang.invoke.MethodType)","value":{"ref":12,"class":"java.lang.invoke.DirectMethodHandle","toString":"MethodHandle()FogShape"}}

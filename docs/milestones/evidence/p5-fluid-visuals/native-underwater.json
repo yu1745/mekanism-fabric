@@ -1,0 +1,1 @@
+{"method":"getTexture","resolvedTo":"getTexture","declaringClass":"net.minecraft.client.renderer.texture.TextureManager","signature":"(net.minecraft.resources.ResourceLocation)","value":{"ref":37,"class":"net.minecraft.client.renderer.texture.SimpleTexture","toString":"net.minecraft.client.renderer.texture.SimpleTexture@3018ca32"}}

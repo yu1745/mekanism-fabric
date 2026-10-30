@@ -1,6 +1,10 @@
 package mekanism.fabric.mixin.client;
 
+import com.mojang.blaze3d.shaders.FogShape;
+import com.mojang.blaze3d.systems.RenderSystem;
 import mekanism.client.ClientTickHandler;
+import mekanism.fabric.client.FabricFluidColors;
+import net.minecraft.client.Camera;
 import net.minecraft.client.renderer.FogRenderer;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -17,16 +21,23 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 abstract class FogSetupMixin {
 
     @Inject(method = "setupFog", at = @At("TAIL"))
-    private static void mekanism$fogOverride(CallbackInfo ci) {
-        float start = com.mojang.blaze3d.systems.RenderSystem.getShaderFogStart();
-        float end = com.mojang.blaze3d.systems.RenderSystem.getShaderFogEnd();
-        float updatedStart = ClientTickHandler.onFogStart(start);
-        float updatedEnd = ClientTickHandler.onFogEnd(end);
-        if (updatedStart != start) {
-            com.mojang.blaze3d.systems.RenderSystem.setShaderFogStart(updatedStart);
+    private static void mekanism$fogOverride(Camera camera, FogRenderer.FogMode mode, float renderDistance, boolean thickFog, float partialTick, CallbackInfo ci) {
+        float start = RenderSystem.getShaderFogStart();
+        float end = RenderSystem.getShaderFogEnd();
+        FogShape shape = RenderSystem.getShaderFogShape();
+        if (FabricFluidColors.getSubmergedType(camera.getEntity().level(), camera.getPosition()) != null) {
+            RenderSystem.setShaderFogStart(-8);
+            RenderSystem.setShaderFogEnd(Math.min(24F, renderDistance));
+            if (24F > renderDistance) {
+                RenderSystem.setShaderFogShape(FogShape.CYLINDER);
+            }
         }
-        if (updatedEnd != end) {
-            com.mojang.blaze3d.systems.RenderSystem.setShaderFogEnd(updatedEnd);
+        //RenderFog receives the original vanilla values after the fluid extension has run.
+        //Cancellation overrides all three values, including values numerically equal to vanilla's.
+        if (ClientTickHandler.overridesFog()) {
+            RenderSystem.setShaderFogStart(ClientTickHandler.onFogStart(start));
+            RenderSystem.setShaderFogEnd(ClientTickHandler.onFogEnd(end));
+            RenderSystem.setShaderFogShape(shape);
         }
     }
 }

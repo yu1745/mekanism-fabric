@@ -26,6 +26,6 @@ registerItemDecorations,ItemDecorators / GuiGraphicsMixin,mapped,原MekaSuit bar
 registerClientExtensions items/gear,FabricItemRendererRegistration / FabricGearModels,mapped,原ISBER与原armor singletons
 registerClientExtensions block particles,RenderPropertiesProvider / BlockParticlesMixin,verified,p5-block-particles实际5/64和bounding主sprite
 registerFluidExtensions textures/tint,FabricFluidColors,verified,原still/flow/overlay材质和W29 ARGB
-registerFluidExtensions fog/screen overlay,missing,pending,RGB fog、-8/24距离及renderOverlayTexture为下一闭包
+registerFluidExtensions fog/screen overlay,FabricFluidColors / FogColorMixin / FogSetupMixin / FluidScreenOverlayMixin,verified,p5-fluid-visuals native RGB/range/overlay and charged-module order; original camera/eye height and boat guard
 addLayers,FabricArmorLayerRegistration,mapped,exact HumanoidArmorLayer/ElytraLayer及原layers
 MekanismCurioRenderer,FabricAccessoryRenderRegistration,verified,原humanoid guard/render args；两背包GUI实机预览

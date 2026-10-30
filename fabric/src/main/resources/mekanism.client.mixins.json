@@ -6,6 +6,7 @@
   "client": [
     "client.BlockModelCompositeMixin",
     "client.BlockParticlesMixin",
+    "client.FluidScreenOverlayMixin",
     "gear.GearBoltRenderMixin",
     "recipe.ClientPacketListenerMixin",
     "tile.LevelChunkMixin",

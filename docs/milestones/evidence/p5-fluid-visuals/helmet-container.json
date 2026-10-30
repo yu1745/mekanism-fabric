@@ -1,0 +1,1 @@
+{"method":"getModuleContainer","resolvedTo":"getModuleContainer","declaringClass":"mekanism.common.content.gear.ModuleHelper","signature":"(net.minecraft.world.item.ItemStack)","value":{"ref":2,"class":"mekanism.common.content.gear.ModuleContainer","toString":"ModuleContainer[typedModules={}, enchantments=ItemEnchantments{enchantments={}, showInTooltip=true}]"}}

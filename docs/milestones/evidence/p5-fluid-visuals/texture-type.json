@@ -1,0 +1,1 @@
+{"method":"fromMethodDescriptorString","resolvedTo":"fromMethodDescriptorString","declaringClass":"java.lang.invoke.MethodType","signature":"(java.lang.String,java.lang.ClassLoader)","value":{"ref":33,"class":"java.lang.invoke.MethodType","toString":"(int)int"}}

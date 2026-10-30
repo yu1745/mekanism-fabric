@@ -1,0 +1,1 @@
+{"method":"isVisionEnhancementOn","resolvedTo":"isVisionEnhancementOn","declaringClass":"mekanism.client.ClientTickHandler","signature":"(net.minecraft.world.entity.player.Player)","value":true}

@@ -1,0 +1,1 @@
+{"method":"getClassLoader","resolvedTo":"getClassLoader","declaringClass":"java.lang.Class","signature":"()","value":{"ref":5,"class":"net.fabricmc.loader.impl.launch.knot.KnotClassLoader","toString":"net.fabricmc.loader.impl.launch.knot.KnotClassLoader@5700d6b1"}}

@@ -1,0 +1,1 @@
+{"method":"fromMethodDescriptorString","resolvedTo":"fromMethodDescriptorString","declaringClass":"java.lang.invoke.MethodType","signature":"(java.lang.String,java.lang.ClassLoader)","value":{"ref":6,"class":"java.lang.invoke.MethodType","toString":"(Camera,FogMode,float,boolean,float)void"}}
