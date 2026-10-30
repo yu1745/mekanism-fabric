@@ -16,7 +16,7 @@
 | M-config | gear / machine+tier / common+startup / general 四类配置 owner 与同步 | 非默认配置真机加载并同步到客户端 | 已验证：P2 W-12–14 与阶段门禁通过；[归档证据](../archive/M-config.md) |
 | M-platform | P3 核心平台入口、命令、成就、条件、生命周期与 payload 核对 | 原始行为由真实 Fabric owner 承接，命令真机可执行 | 已验证：P3 W-15–22 与阶段门禁通过；46 个未纳入文件逐项列明替代／延期理由；[归档证据](../archive/M-platform.md) |
 | M-transfer | 能量、流体、物品、化学、热量传输与网络生命周期 | 管线连接真实机器，传输／回滚与存读档后重建正确 | 已验证：P4 W-23–28 与阶段门禁通过；[归档证据](../archive/M-transfer.md) |
-| M-render | transmitter/Robit/QIO 模型、粒子、GUI、按键与客户端注册 | mcdebug 实际外观／连接截图与 GUI 巡检 | 进行中：P5 W-29 模型映射／连接截图通过，修复流体alpha和默认模型光照；W-30 模型映射与四粒子/直接调用方已接通验证；W-31 全部71个menu巡检通过；下一项 W-32；活文档 `M-render.md` |
+| M-render | transmitter/Robit/QIO 模型、粒子、GUI、按键与客户端注册 | mcdebug 实际外观／连接截图与 GUI 巡检 | 进行中：P5 W-29 模型映射／连接截图通过，修复流体alpha和默认模型光照；W-30 模型映射与四粒子/直接调用方已接通验证；W-31 全部71个menu巡检通过；W-32进行中，补齐9项item predicates与缺失颜色并实机验证；仍需剩余注册核对；活文档 `M-render.md` |
 | M-registry | 化学 ingredient 类型注册表、Robit 注册/数据包、官方 legacy alias、biome modifier | 注册冻结后 ID/alias 与官方一致 | 未核实 |
 | M-gear | accessory、Curios 策略、ItemAbility、suit/tool 规则 | 穿戴/工具行为真机核对 | 未核实 |
 

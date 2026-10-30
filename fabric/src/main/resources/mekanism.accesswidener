@@ -182,3 +182,6 @@ accessible field net/minecraft/world/entity/item/ItemEntity age I
 #Original jetpack/scuba subclasses reuse the vanilla particle constructors exposed by NeoForge.
 accessible method net/minecraft/client/particle/FlameParticle <init> (Lnet/minecraft/client/multiplayer/ClientLevel;DDDDDD)V
 accessible method net/minecraft/client/particle/BubbleParticle <init> (Lnet/minecraft/client/multiplayer/ClientLevel;DDDDDD)V
+
+# Preserve official unbounded item predicates (Configurator mode and radiation ordinal exceed one).
+accessible field net/minecraft/client/renderer/item/ItemProperties PROPERTIES Ljava/util/Map;

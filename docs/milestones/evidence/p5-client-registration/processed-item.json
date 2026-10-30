@@ -1,0 +1,1 @@
+{"method":"getValue","resolvedTo":"getValue","declaringClass":"com.google.common.collect.Tables$ImmutableCell","signature":"()","value":{"ref":47,"class":"mekanism.common.registration.impl.ItemRegistryObject","toString":"MekanismDeferredHolder{ResourceKey[minecraft:item / mekanism:shard_iron]}"}}

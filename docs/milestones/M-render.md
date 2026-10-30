@@ -6,7 +6,7 @@ ROADMAP P5 W-29–33。P4 已验证能量／流体／物品／化学／热量及
 
 ## 下一步
 
-W-32：核对MekKeyBinding*／ClientRegistration*剩余行为与真实Fabric key、HUD/render事件、Curio/Accessories渲染owner；缺口按立即调用链接通并实机验证。随后W-33统一门禁、归档。
+W-32继续：已补齐9个item predicates与缺失颜色并实机验证。继续核对ClientRegistrationUtil.registerBlockExtensions／RenderPropertiesProvider的bounding hit与Mekanism block destroy粒子行为，以及layer definitions、overlay等剩余注册映射；完成按键上下文／附件渲染证据后再关闭W-32。随后W-33统一门禁、归档。
 
 ## 未决项
 
@@ -61,3 +61,15 @@ Robit通过ItemRobit在chargepad的实际useOn生成，home正确，本轮测试
 实际查看代表Machine／Factory／QIO／Robit／Boiler stats截图，无异常缺图或screen crash；初始auto-scale=2时Digital Miner/Sorter有窗口边缘超出240高GUI视口，scale=1后完整补拍，最终原guiScale=0已恢复。启动教程toast属于原vanilla overlay，不作为mod UI故障。本项覆盖每个registered menu的一次打开／绘制与problems，不扩称所有动态数据、每个factory tier或每个按钮业务均已验证。
 
 自有客户端正常stopped，完整隔离世界81文件SHA-256恢复一致，临时mod/wrapper/Xvfb清理。无新测试、无需为纯验证重复编译；P5阶段门禁留W-33。W-31完成，下一项W-32。
+
+W-32 检查点：静态核对确认九个官方item predicates全部缺少实际注册，另有fluid tank、五个QIO block、QIO item与processed resources颜色缺口。最小闭包在client init增加FabricClientModelRegistration，直接保留官方getter算法，使用Fabric原生predicate/color注册；已有bucket、MekaSuit、transporter颜色owner继续复用。移除bootstrap单独QIO redstone adapter注册，五者统一在同一注册owner。尚待构建及实际客户端验证，不声明W-32完成。
+
+W-32 平台语义：NeoForge ItemProperties.register公开ItemPropertyFunction重载，vanilla/Fabric只接受ClampedItemPropertyFunction，直接迁移会把Configurator mode=2/3和radiation ordinal截成1。使用精确AW访问vanilla原PROPERTIES map并按原重载computeIfAbsent/put保存原getter，不建立第二套registry。首轮compile仅ItemBlockFluidTank包路径误写，已按原import修正。
+
+2026-10-30 W-32 首组修复完成（基线 `64fcddea`）：新增单一client model registration接官方9项property与缺失颜色，精确纳入platform slice204→205，API263/common1517不变。native vanilla PROPERTIES存原ItemPropertyFunction，以一条AW保留NeoForge unbounded重载；不是Clamped函数，也没有第二套registry。HDPE Elytra原NeoForge ElytraItem.canElytraFly恰等于vanilla ElytraItem.isFlyEnabled，null entity也保留同一耐久判断。Fabric holder须显式get；COLOR实际类型为EnumColor，默认灰色与原ARGB算法一致。
+
+assemble PASS（15秒，三slice gates及remapped JAR）；无新增测试。实际新JVM经原ItemProperties.getProperty取得全部9个getter，默认空stack皆0；Configurator真实component依次CONFIGURATE_ITEMS/EMPTY/ROTATE/WRENCH，native getter返回0/1/2/3，ItemRenderer.getModel取得四个不同实例。真实ItemColors验证basic tank tier、portable QIO默认灰色与PURPLE component、QIO drive item以及真实processed table首项shard_iron；tint0=-1。真实BlockColors验证basic tank tint1等于BaseTier.BASIC、tint0=-1。Elytra耐久=max-1时null entity的broken=1。证据与限制见 [验收](evidence/p5-client-registration/validation.md)。
+
+附带真实按键调用链：反射调用原KeyboardHandler.keyPress（native window handle），没有直接调用MekanismKeyHandler或new screen；持MekaTool时backslash经mixin→原PacketOpenGui→server container打开GuiModuleTweaker。BOOST在按下后KeySync.has=true，GUI内释放后false；不冒充覆盖全部绑定／硬件polling／附加鼠标或modifier重绑。运行仅原有5条WARN，无新增ERROR。关闭screen后误请求gui裁剪截图收到NO_CONTAINER_SCREEN，属于CLI前提限制，未作为截图证据。
+
+自有客户端已stopped；隔离世界81文件SHA-256完整恢复一致；临时mod/wrapper/Xvfb清理。W-32尚未关闭：静态核对未找到ClientRegistrationUtil.registerBlockExtensions的Mekanism block destroy粒子缩减与bounding hit委托入口，须下一步对照vanilla ParticleEngine实际调用链，先确认平台最小接线，不删原行为求绿。其它已存在owners仍需汇总映射；本批不扩称P5完成，W-33完整门禁待后续。

@@ -1,0 +1,1 @@
+{"resolvedTo":"getPackedColor","steps":[{"seg":"PURPLE","field":"PURPLE","class":"mekanism.api.text.EnumColor"},{"seg":"getPackedColor","method":"getPackedColor","class":"java.lang.Integer"}],"value":-6004519}

@@ -1,0 +1,1 @@
+{"method":"getColor","resolvedTo":"getColor","declaringClass":"net.minecraft.client.color.block.BlockColors","signature":"(net.minecraft.world.level.block.state.BlockState,net.minecraft.world.level.BlockAndTintGetter,net.minecraft.core.BlockPos,int)","value":-10485832}

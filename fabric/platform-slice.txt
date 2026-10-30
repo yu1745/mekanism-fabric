@@ -7,6 +7,7 @@ mekanism/fabric/chemical/FabricChemicalLifecycle.java
 mekanism/fabric/chemical/FabricChemicalRegistryLifecycle.java
 mekanism/fabric/client/CreativeTabSearchIndex.java
 mekanism/fabric/client/FabricFluidColors.java
+mekanism/fabric/client/FabricClientModelRegistration.java
 mekanism/fabric/client/FabricScreenRegistration.java
 mekanism/fabric/client/GearInteractionPolicy.java
 mekanism/fabric/client/hud/FabricClientTickRegistration.java
