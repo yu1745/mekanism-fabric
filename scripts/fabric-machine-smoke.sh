@@ -65,7 +65,7 @@ fetch() {
 
 #Newest artifact wins: a stale dist/ jar from an earlier release build must not mask the current remap output.
 MOD_JAR=
-for candidate in "$ROOT/dist/"*.jar "$ROOT/fabric/build/libs/"*.jar; do
+for candidate in "$ROOT/dist/"*-fabric-bootstrap.jar "$ROOT/fabric/build/libs/"*.jar; do
   [[ -f "$candidate" ]] || continue
   [[ "$candidate" == *-sources.jar || "$candidate" == *-dev.jar || "$candidate" == *fixture* ]] && continue
   if [[ -z "$MOD_JAR" || "$candidate" -nt "$MOD_JAR" ]]; then MOD_JAR=$candidate; fi

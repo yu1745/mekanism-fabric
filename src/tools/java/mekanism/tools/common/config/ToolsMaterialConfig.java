@@ -15,12 +15,12 @@ import mekanism.tools.common.material.impl.vanilla.IronPaxelMaterialDefaults;
 import mekanism.tools.common.material.impl.vanilla.NetheritePaxelMaterialDefaults;
 import mekanism.tools.common.material.impl.vanilla.StonePaxelMaterialDefaults;
 import mekanism.tools.common.material.impl.vanilla.WoodPaxelMaterialDefaults;
-import net.neoforged.fml.config.ModConfig.Type;
-import net.neoforged.neoforge.common.ModConfigSpec;
+import mekanism.common.config.MekanismConfigType;
+import mekanism.fabric.config.MekanismConfigSpec;
 
 public class ToolsMaterialConfig extends BaseMekanismConfig {
 
-    private final ModConfigSpec configSpec;
+    private final MekanismConfigSpec configSpec;
 
     public final VanillaPaxelMaterialCreator wood;
     public final VanillaPaxelMaterialCreator stone;
@@ -36,7 +36,7 @@ public class ToolsMaterialConfig extends BaseMekanismConfig {
     public final MaterialCreator steel;
 
     ToolsMaterialConfig() {
-        ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
+        MekanismConfigSpec.Builder builder = new MekanismConfigSpec.Builder();
 
         ToolsConfigTranslations.STARTUP_MATERIALS.applyToBuilder(builder).push("materials");
         wood = new VanillaPaxelMaterialCreator(this, builder, new WoodPaxelMaterialDefaults());
@@ -68,12 +68,12 @@ public class ToolsMaterialConfig extends BaseMekanismConfig {
     }
 
     @Override
-    public ModConfigSpec getConfigSpec() {
+    public MekanismConfigSpec getConfigSpec() {
         return configSpec;
     }
 
     @Override
-    public Type getConfigType() {
-        return Type.STARTUP;
+    public MekanismConfigType getConfigType() {
+        return MekanismConfigType.STARTUP;
     }
 }

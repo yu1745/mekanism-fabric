@@ -3,7 +3,8 @@ package mekanism.fabric.mixin.client;
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import java.util.List;
 import java.util.Set;
-import mekanism.common.registries.MekanismCreativeTabs;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
 import mekanism.fabric.client.CreativeTabSearchIndex;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -41,7 +42,8 @@ abstract class MekanismCreativeSearchMixin extends AbstractContainerScreen<Creat
 
     @Unique
     private static boolean mekanism$isOwnTab() {
-        return selectedTab == MekanismCreativeTabs.MEKANISM.get();
+        ResourceLocation id = BuiltInRegistries.CREATIVE_MODE_TAB.getKey(selectedTab);
+        return id != null && (id.toString().equals("mekanism:mekanism") || id.toString().equals("mekanismtools:mekanismtools"));
     }
 
     // Replace only the four SEARCH comparisons controlling the search box/input; leave CATEGORY and inventory logic intact.

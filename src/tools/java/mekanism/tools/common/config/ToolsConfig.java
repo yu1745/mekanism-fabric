@@ -6,12 +6,12 @@ import mekanism.common.config.value.CachedBooleanValue;
 import mekanism.common.config.value.CachedFloatValue;
 import mekanism.tools.common.config.ToolsConfigTranslations.ArmorSpawnChanceTranslations;
 import mekanism.tools.common.material.MaterialCreator;
-import net.neoforged.fml.config.ModConfig.Type;
-import net.neoforged.neoforge.common.ModConfigSpec;
+import mekanism.common.config.MekanismConfigType;
+import mekanism.fabric.config.MekanismConfigSpec;
 
 public class ToolsConfig extends BaseMekanismConfig {
 
-    private final ModConfigSpec configSpec;
+    private final MekanismConfigSpec configSpec;
 
     public final CachedFloatValue armorSpawnChance;
     public final CachedFloatValue weaponSpawnChance;
@@ -24,7 +24,7 @@ public class ToolsConfig extends BaseMekanismConfig {
     public final ArmorSpawnChanceConfig steelSpawnRate;
 
     ToolsConfig() {
-        ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
+        MekanismConfigSpec.Builder builder = new MekanismConfigSpec.Builder();
 
         ToolsConfigTranslations.SERVER_GEAR_SPAWN_CHANCE.applyToBuilder(builder).push("mobGearSpawnRate");
         armorSpawnChance = CachedFloatValue.wrap(this, ToolsConfigTranslations.SERVER_GEAR_SPAWN_CHANCE_ARMOR.applyToBuilder(builder)
@@ -56,13 +56,13 @@ public class ToolsConfig extends BaseMekanismConfig {
     }
 
     @Override
-    public ModConfigSpec getConfigSpec() {
+    public MekanismConfigSpec getConfigSpec() {
         return configSpec;
     }
 
     @Override
-    public Type getConfigType() {
-        return Type.SERVER;
+    public MekanismConfigType getConfigType() {
+        return MekanismConfigType.SERVER;
     }
 
     public static class ArmorSpawnChanceConfig {
@@ -80,11 +80,11 @@ public class ToolsConfig extends BaseMekanismConfig {
         public final CachedFloatValue weaponEnchantmentChance;
         public final CachedFloatValue armorEnchantmentChance;
 
-        private ArmorSpawnChanceConfig(IMekanismConfig config, ModConfigSpec.Builder builder, MaterialCreator material) {
+        private ArmorSpawnChanceConfig(IMekanismConfig config, MekanismConfigSpec.Builder builder, MaterialCreator material) {
             this(config, builder, material.getRegistryPrefix(), 0.33, 1, 1, 1, 1, 0.25, 0.5);
         }
 
-        private ArmorSpawnChanceConfig(IMekanismConfig config, ModConfigSpec.Builder builder, String key, double swordChance, double helmetChance,
+        private ArmorSpawnChanceConfig(IMekanismConfig config, MekanismConfigSpec.Builder builder, String key, double swordChance, double helmetChance,
               double chestplateChance, double leggingsChance, double bootsChance, double weaponEnchantmentChance, double armorEnchantmentChance) {
             ArmorSpawnChanceTranslations translations = ArmorSpawnChanceTranslations.create(key);
             translations.topLevel().applyToBuilder(builder).push(key);

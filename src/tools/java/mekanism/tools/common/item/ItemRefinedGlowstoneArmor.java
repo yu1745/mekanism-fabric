@@ -7,7 +7,7 @@ import net.minecraft.world.item.ArmorMaterial;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
-public class ItemRefinedGlowstoneArmor extends ItemMekanismArmor {
+public class ItemRefinedGlowstoneArmor extends ItemMekanismArmor implements mekanism.common.item.interfaces.IPiglinNeutralItem {
 
     public ItemRefinedGlowstoneArmor(Holder<ArmorMaterial> material, ArmorItem.Type armorType, Properties properties) {
         super(material, armorType, properties);

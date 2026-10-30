@@ -20,9 +20,25 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.providers.VanillaEnchantmentProviders;
-import net.neoforged.neoforge.event.entity.living.FinalizeSpawnEvent;
+import net.minecraft.world.level.ServerLevelAccessor;
 
 public class MobEquipmentHelper {
+
+    private static final ThreadLocal<java.util.Set<LivingEntity>> FINALIZING = ThreadLocal.withInitial(() ->
+          java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>()));
+
+    public static boolean enterSpawn(LivingEntity entity) {
+        return FINALIZING.get().add(entity);
+    }
+
+    public static void leaveSpawn(LivingEntity entity) {
+        java.util.Set<LivingEntity> entities = FINALIZING.get();
+        entities.remove(entity);
+        if (entities.isEmpty()) {
+            FINALIZING.remove();
+        }
+    }
+
 
     private static final GearType REFINED_GLOWSTONE = new GearType(ToolsItems.REFINED_GLOWSTONE_SWORD, ToolsItems.REFINED_GLOWSTONE_SHOVEL,
           ToolsItems.REFINED_GLOWSTONE_HELMET, ToolsItems.REFINED_GLOWSTONE_CHESTPLATE, ToolsItems.REFINED_GLOWSTONE_LEGGINGS, ToolsItems.REFINED_GLOWSTONE_BOOTS,
@@ -43,13 +59,11 @@ public class MobEquipmentHelper {
         return entity instanceof Zombie && !(entity instanceof Drowned) && !(entity instanceof ZombifiedPiglin);
     }
 
-    public static void onLivingSpecialSpawn(FinalizeSpawnEvent event) {
-        LivingEntity entity = event.getEntity();
+    public static void onLivingSpecialSpawn(LivingEntity entity, ServerLevelAccessor level, DifficultyInstance difficulty) {
         boolean isZombie = isZombie(entity);
         if (isZombie || entity instanceof Skeleton || entity instanceof Stray || entity instanceof Piglin) {
             //Don't bother calculating random numbers unless the instanceof checks pass
-            RandomSource random = event.getLevel().getRandom();
-            DifficultyInstance difficulty = event.getDifficulty();
+            RandomSource random = level.getRandom();
             boolean isHard = difficulty.getDifficulty() == Difficulty.HARD;
             float difficultyMultiplier = difficulty.getSpecialMultiplier();
             GearType gearType = null;

@@ -32,6 +32,7 @@ public final class ItemAbilities {
     public static final ItemAbility FIRESTARTER_LIGHT = ItemAbility.get("firestarter_light");
 
     // Default actions supported by each tool type, mirroring the upstream sets
+    public static final Set<ItemAbility> DEFAULT_PICKAXE_ACTIONS = Set.of(PICKAXE_DIG);
     public static final Set<ItemAbility> DEFAULT_AXE_ACTIONS = Set.of(AXE_DIG, AXE_STRIP, AXE_SCRAPE, AXE_WAX_OFF);
     public static final Set<ItemAbility> DEFAULT_HOE_ACTIONS = Set.of(HOE_DIG, HOE_TILL);
     public static final Set<ItemAbility> DEFAULT_SHOVEL_ACTIONS = Set.of(SHOVEL_DIG, SHOVEL_FLATTEN, SHOVEL_DOUSE);

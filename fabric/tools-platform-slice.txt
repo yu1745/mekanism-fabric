@@ -1,0 +1,2 @@
+mekanism/fabric/tools/mixin/ToolsGlowArmorMixin.java
+mekanism/fabric/tools/mixin/ToolsMobEquipmentMixin.java

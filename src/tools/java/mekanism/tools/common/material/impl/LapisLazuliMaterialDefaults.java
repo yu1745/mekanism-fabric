@@ -6,10 +6,11 @@ import net.minecraft.core.Holder;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.TagKey;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
-import net.neoforged.neoforge.common.Tags;
 import org.jetbrains.annotations.NotNull;
 
 public class LapisLazuliMaterialDefaults implements BaseMekanismMaterial {
@@ -95,7 +96,7 @@ public class LapisLazuliMaterialDefaults implements BaseMekanismMaterial {
     @NotNull
     @Override
     public Ingredient getRepairIngredient() {
-        return Ingredient.of(Tags.Items.GEMS_LAPIS);
+        return Ingredient.of(TagKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("c", "gems/lapis")));
     }
 
     @Override

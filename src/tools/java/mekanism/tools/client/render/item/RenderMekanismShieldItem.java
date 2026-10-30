@@ -4,7 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import java.util.Objects;
 import mekanism.client.render.item.MekanismISTER;
-import mekanism.common.Mekanism;
+import mekanism.api.MekanismAPI;
 import mekanism.tools.client.ShieldTextures;
 import mekanism.tools.common.registries.ToolsItems;
 import net.minecraft.client.model.ShieldModel;
@@ -36,20 +36,20 @@ public class RenderMekanismShieldItem extends MekanismISTER {
     public void renderByItem(@NotNull ItemStack stack, @NotNull ItemDisplayContext displayContext, @NotNull PoseStack matrix, @NotNull MultiBufferSource renderer,
           int light, int overlayLight) {
         ShieldTextures textures;
-        if (stack.is(ToolsItems.BRONZE_SHIELD)) {
+        if (stack.is(ToolsItems.BRONZE_SHIELD.asItem())) {
             textures = ShieldTextures.BRONZE;
-        } else if (stack.is(ToolsItems.LAPIS_LAZULI_SHIELD)) {
+        } else if (stack.is(ToolsItems.LAPIS_LAZULI_SHIELD.asItem())) {
             textures = ShieldTextures.LAPIS_LAZULI;
-        } else if (stack.is(ToolsItems.OSMIUM_SHIELD)) {
+        } else if (stack.is(ToolsItems.OSMIUM_SHIELD.asItem())) {
             textures = ShieldTextures.OSMIUM;
-        } else if (stack.is(ToolsItems.REFINED_GLOWSTONE_SHIELD)) {
+        } else if (stack.is(ToolsItems.REFINED_GLOWSTONE_SHIELD.asItem())) {
             textures = ShieldTextures.REFINED_GLOWSTONE;
-        } else if (stack.is(ToolsItems.REFINED_OBSIDIAN_SHIELD)) {
+        } else if (stack.is(ToolsItems.REFINED_OBSIDIAN_SHIELD.asItem())) {
             textures = ShieldTextures.REFINED_OBSIDIAN;
-        } else if (stack.is(ToolsItems.STEEL_SHIELD)) {
+        } else if (stack.is(ToolsItems.STEEL_SHIELD.asItem())) {
             textures = ShieldTextures.STEEL;
         } else {
-            Mekanism.logger.warn("Unknown item for mekanism shield renderer: {}", stack.getItem());
+            MekanismAPI.logger.warn("Unknown item for mekanism shield renderer: {}", stack.getItem());
             return;
         }
         Material material = textures.getBase();

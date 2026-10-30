@@ -21,8 +21,8 @@ import org.slf4j.LoggerFactory;
 /** World and connection owner for the admitted general, gear, machine storage/usage and tier SERVER configs. */
 public final class FabricServerConfig {
     private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism/FabricServerConfig");
-    private static final List<IMekanismConfig> CONFIGS = List.of(MekanismConfig.general, MekanismConfig.gear, MekanismConfig.storage,
-          MekanismConfig.usage, MekanismConfig.tiers);
+    private static final List<IMekanismConfig> CONFIGS = new ArrayList<>(List.of(MekanismConfig.general, MekanismConfig.gear, MekanismConfig.storage,
+          MekanismConfig.usage, MekanismConfig.tiers));
     private static MinecraftServer owner;
     private static FabricMekanismConfigManager manager;
     private static Connection clientOwner;
@@ -30,6 +30,15 @@ public final class FabricServerConfig {
     private static boolean initialized;
 
     private FabricServerConfig() {
+    }
+
+    /** Add an actual Mekanism addon SERVER schema before any world or client owns the config list. */
+    public static synchronized void registerModuleConfig(IMekanismConfig config) {
+        if (owner != null || clientOwner != null || config.getConfigType() != mekanism.common.config.MekanismConfigType.SERVER
+              || CONFIGS.stream().anyMatch(existing -> existing == config || existing.getFileName().equals(config.getFileName()))) {
+            throw new IllegalStateException("Cannot register module server config " + config.getFileName());
+        }
+        CONFIGS.add(config);
     }
 
     public static synchronized void initializeCallbacks() {

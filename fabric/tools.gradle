@@ -1,0 +1,59 @@
+// Native optional Tools module. Its classes/resources never enter the core JAR.
+def toolsSlice = file('tools-slice.txt').readLines().findAll { it && !it.startsWith('#') }
+def toolsPlatformSlice = file('tools-platform-slice.txt').readLines().findAll { it && !it.startsWith('#') }
+if (toolsSlice.size() != 48 || toolsSlice.toSet().size() != 48 || toolsPlatformSlice.size() != 2) {
+    throw new GradleException('Unexpected Tools source admission')
+}
+sourceSets {
+    tools {
+        java {
+            srcDirs = ['../src/tools/java', 'src/tools/java']
+            (toolsSlice + toolsPlatformSlice).each { include it }
+        }
+        resources.srcDirs = ['src/tools/resources', '../src/tools/resources', '../src/datagen/generated/mekanismtools']
+        resources.exclude 'META-INF/neoforge.mods.toml', '.cache/**'
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
+    }
+}
+loom {
+    createRemapConfigurations(sourceSets.tools)
+    mods { mekanismtools { sourceSet sourceSets.tools } }
+    runs {
+        toolsClient {
+            client()
+            name 'Tools Client'
+            source sourceSets.tools
+            runDir 'run-tools'
+        }
+        toolsServer {
+            server()
+            name 'Tools Server'
+            source sourceSets.tools
+            runDir System.getProperty('mekanism.tools.serverDir', 'run-tools-server')
+        }
+    }
+}
+tasks.register('verifyToolsSliceNoNeoForge') {
+    inputs.files((toolsSlice.collect { file('../src/tools/java/' + it) }) + toolsPlatformSlice.collect { file('src/tools/java/' + it) })
+    doLast {
+        inputs.files.each { source ->
+            if (!source.isFile() || source.text.contains('import net.neoforged.')) {
+                throw new GradleException('Missing or unported Tools source: ' + source)
+            }
+        }
+    }
+}
+tasks.named('compileToolsJava') { dependsOn 'verifyToolsSliceNoNeoForge', tasks.named('classes') }
+def toolsVersion = project.version.toString()
+tasks.named('processToolsResources', ProcessResources) {
+    inputs.property 'version', toolsVersion
+    filesMatching('fabric.mod.json') { expand(version: toolsVersion) }
+}
+def toolsJar = tasks.register('toolsJar', Jar) {
+    dependsOn tasks.named('toolsClasses')
+    from sourceSets.tools.output
+    archiveBaseName = 'MekanismTools'
+    archiveClassifier = 'dev'
+    destinationDirectory = layout.buildDirectory.dir('tools-devlibs')
+}

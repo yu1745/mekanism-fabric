@@ -37,3 +37,7 @@ libs/
 # 任务日志产物不入库
 docs/**/*.log
 docs/**/*.log.gz
+
+# Isolated optional Tools development runs
+/fabric/run-tools/
+/fabric/run-tools-server/

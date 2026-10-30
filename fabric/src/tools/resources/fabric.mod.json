@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "mekanismtools",
+  "version": "${version}",
+  "name": "Mekanism: Tools",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "mekanism.tools.common.MekanismTools"
+    ],
+    "client": [
+      "mekanism.tools.client.ToolsClient"
+    ]
+  },
+  "mixins": [
+    "mekanismtools.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "1.21.1",
+    "java": ">=21",
+    "fabric-api": "*",
+    "mekanism": "${version}"
+  },
+  "license": "MIT"
+}

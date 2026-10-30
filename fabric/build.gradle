@@ -1208,3 +1208,16 @@ tasks.register('remapPortReviewFixtureJar', RemapJarTask) {
     destinationDirectory = layout.buildDirectory.dir('port-review-fixture/remapped')
     addNestedDependencies = false
 }
+
+apply from: "tools.gradle"
+
+def remapToolsJar = tasks.register('remapToolsJar', RemapJarTask) {
+    dependsOn tasks.named('toolsJar')
+    inputFile = tasks.named('toolsJar', Jar).flatMap { it.archiveFile }
+    addNestedDependencies = false
+    archiveBaseName = 'MekanismTools'
+    archiveClassifier = 'fabric'
+    destinationDirectory = layout.buildDirectory.dir('tools-libs')
+    classpath.from(sourceSets.tools.compileClasspath)
+}
+tasks.named('assemble') { dependsOn remapToolsJar }

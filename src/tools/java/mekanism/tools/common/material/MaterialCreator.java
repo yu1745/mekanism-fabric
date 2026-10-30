@@ -13,7 +13,7 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
-import net.neoforged.neoforge.common.ModConfigSpec;
+import mekanism.fabric.config.MekanismConfigSpec;
 
 @NothingNullByDefault
 public class MaterialCreator implements BaseMekanismMaterial {
@@ -51,7 +51,7 @@ public class MaterialCreator implements BaseMekanismMaterial {
     private final CachedIntValue chestplateArmor;
     private final CachedIntValue helmetArmor;
 
-    public MaterialCreator(IMekanismConfig config, ModConfigSpec.Builder builder, BaseMekanismMaterial materialDefaults) {
+    public MaterialCreator(IMekanismConfig config, MekanismConfigSpec.Builder builder, BaseMekanismMaterial materialDefaults) {
         fallBack = materialDefaults;
         String toolKey = getRegistryPrefix();
         MaterialTranslations translations = MaterialTranslations.create(toolKey);
@@ -76,37 +76,37 @@ public class MaterialCreator implements BaseMekanismMaterial {
               .defineInRange(toolKey + "ShieldDurability", materialDefaults.getShieldDurability(), 0, Integer.MAX_VALUE));
         swordDamage = CachedFloatValue.wrap(config, translations.swordDamage().applyToBuilder(builder)
               .gameRestart()
-              .define(toolKey + "SwordDamage", validateDefaultModifier(materialDefaults.getSwordDamage()), damageModifierPredicate));
+              .defineDoubleValidated(toolKey + "SwordDamage", validateDefaultModifier(materialDefaults.getSwordDamage()), damageModifierPredicate));
         swordAtkSpeed = CachedFloatValue.wrap(config, translations.swordAtkSpeed().applyToBuilder(builder)
               .gameRestart()
               .define(toolKey + "SwordAtkSpeed", (double) materialDefaults.getSwordAtkSpeed()));
         shovelDamage = CachedFloatValue.wrap(config, translations.shovelDamage().applyToBuilder(builder)
               .gameRestart()
-              .define(toolKey + "ShovelDamage", validateDefaultModifier(materialDefaults.getShovelDamage()), damageModifierPredicate));
+              .defineDoubleValidated(toolKey + "ShovelDamage", validateDefaultModifier(materialDefaults.getShovelDamage()), damageModifierPredicate));
         shovelAtkSpeed = CachedFloatValue.wrap(config, translations.shovelAtkSpeed().applyToBuilder(builder)
               .gameRestart()
               .define(toolKey + "ShovelAtkSpeed", (double) materialDefaults.getShovelAtkSpeed()));
         axeDamage = CachedFloatValue.wrap(config, translations.axeDamage().applyToBuilder(builder)
               .gameRestart()
-              .define(toolKey + "AxeDamage", validateDefaultModifier(materialDefaults.getAxeDamage()), damageModifierPredicate));
+              .defineDoubleValidated(toolKey + "AxeDamage", validateDefaultModifier(materialDefaults.getAxeDamage()), damageModifierPredicate));
         axeAtkSpeed = CachedFloatValue.wrap(config, translations.axeAtkSpeed().applyToBuilder(builder)
               .gameRestart()
               .define(toolKey + "AxeAtkSpeed", (double) materialDefaults.getAxeAtkSpeed()));
         pickaxeDamage = CachedFloatValue.wrap(config, translations.pickaxeDamage().applyToBuilder(builder)
               .gameRestart()
-              .define(toolKey + "PickaxeDamage", validateDefaultModifier(materialDefaults.getPickaxeDamage()), damageModifierPredicate));
+              .defineDoubleValidated(toolKey + "PickaxeDamage", validateDefaultModifier(materialDefaults.getPickaxeDamage()), damageModifierPredicate));
         pickaxeAtkSpeed = CachedFloatValue.wrap(config, translations.pickaxeAtkSpeed().applyToBuilder(builder)
               .gameRestart()
               .define(toolKey + "PickaxeAtkSpeed", (double) materialDefaults.getPickaxeAtkSpeed()));
         hoeDamage = CachedFloatValue.wrap(config, translations.hoeDamage().applyToBuilder(builder)
               .gameRestart()
-              .define(toolKey + "HoeDamage", validateDefaultModifier(materialDefaults.getHoeDamage()), damageModifierPredicate));
+              .defineDoubleValidated(toolKey + "HoeDamage", validateDefaultModifier(materialDefaults.getHoeDamage()), damageModifierPredicate));
         hoeAtkSpeed = CachedFloatValue.wrap(config, translations.hoeAtkSpeed().applyToBuilder(builder)
               .gameRestart()
               .define(toolKey + "HoeAtkSpeed", (double) materialDefaults.getHoeAtkSpeed()));
         paxelDamage = CachedFloatValue.wrap(config, translations.paxelDamage().applyToBuilder(builder)
               .gameRestart()
-              .define(toolKey + "PaxelDamage", validateDefaultModifier(materialDefaults.getPaxelDamage()), damageModifierPredicate));
+              .defineDoubleValidated(toolKey + "PaxelDamage", validateDefaultModifier(materialDefaults.getPaxelDamage()), damageModifierPredicate));
         paxelAtkSpeed = CachedFloatValue.wrap(config, translations.paxelAtkSpeed().applyToBuilder(builder)
               .gameRestart()
               .define(toolKey + "PaxelAtkSpeed", (double) materialDefaults.getPaxelAtkSpeed()));

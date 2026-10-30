@@ -413,6 +413,7 @@ public final class MekanismConfigSpec {
         private final List<String> path;
         private final String dottedPath;
         private final T defaultValue;
+        private Supplier<T> defaultSupplier;
         private final Function<Object, Optional<T>> normalizer;
         private final Function<T, Object> encoder;
         private final String translation;
@@ -434,13 +435,13 @@ public final class MekanismConfigSpec {
         }
 
         public T getDefault() {
-            return defaultValue;
+            return defaultSupplier == null ? defaultValue : defaultSupplier.get();
         }
 
         public T get() {
             MekanismConfigSpec spec = requireOwner();
             synchronized (spec) {
-                return currentValue;
+                return !spec.loaded && defaultSupplier != null ? getDefault() : currentValue;
             }
         }
 
@@ -609,6 +610,18 @@ public final class MekanismConfigSpec {
 
         public ConfigValue<Boolean> define(String name, boolean defaultValue) {
             return define(name, defaultValue, Builder::normalizeBoolean);
+        }
+
+        public ConfigValue<Double> define(String name, double defaultValue) {
+            return define(name, defaultValue, raw -> raw instanceof Double value ? Optional.of(value) : Optional.empty());
+        }
+
+        /** Tools damage defaults depend on the material's configured base damage. */
+        public ConfigValue<Double> defineDoubleValidated(String name, Supplier<Double> defaults, Predicate<Object> validator) {
+            ConfigValue<Double> value = define(name, (Double) null, raw -> raw instanceof Double candidate
+                  && validator.test(candidate) ? Optional.of(candidate) : Optional.empty());
+            value.defaultSupplier = defaults;
+            return value;
         }
 
         /** Defines a strict enum encoded by its declared Java name. */

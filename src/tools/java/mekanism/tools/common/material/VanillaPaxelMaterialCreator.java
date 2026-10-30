@@ -10,7 +10,7 @@ import mekanism.tools.common.ToolsTags;
 import mekanism.tools.common.config.ToolsConfigTranslations.VanillaPaxelMaterialTranslations;
 import net.minecraft.world.item.Tiers;
 import net.minecraft.world.item.component.Tool;
-import net.neoforged.neoforge.common.ModConfigSpec;
+import mekanism.fabric.config.MekanismConfigSpec;
 
 @NothingNullByDefault
 public class VanillaPaxelMaterialCreator implements IPaxelMaterial {
@@ -23,7 +23,7 @@ public class VanillaPaxelMaterialCreator implements IPaxelMaterial {
     private final CachedIntValue paxelEnchantability;
     private final CachedIntValue paxelDurability;
 
-    public VanillaPaxelMaterialCreator(IMekanismConfig config, ModConfigSpec.Builder builder, VanillaPaxelMaterial materialDefaults) {
+    public VanillaPaxelMaterialCreator(IMekanismConfig config, MekanismConfigSpec.Builder builder, VanillaPaxelMaterial materialDefaults) {
         this.fallback = materialDefaults;
         String toolKey = getRegistryPrefix();
         VanillaPaxelMaterialTranslations translations = VanillaPaxelMaterialTranslations.create(toolKey);
@@ -32,7 +32,7 @@ public class VanillaPaxelMaterialCreator implements IPaxelMaterial {
         // can effectively have zero damage for things like the hoe
         paxelDamage = CachedFloatValue.wrap(config, translations.damage().applyToBuilder(builder)
               .gameRestart()
-              .define(toolKey + "PaxelDamage", validateDefaultModifier(materialDefaults.getPaxelDamage()), this::validateDamageModifier));
+              .defineDoubleValidated(toolKey + "PaxelDamage", validateDefaultModifier(materialDefaults.getPaxelDamage()), this::validateDamageModifier));
         paxelAtkSpeed = CachedFloatValue.wrap(config, translations.attackSpeed().applyToBuilder(builder)
               .gameRestart()
               .define(toolKey + "PaxelAtkSpeed", (double) materialDefaults.getPaxelAtkSpeed()));

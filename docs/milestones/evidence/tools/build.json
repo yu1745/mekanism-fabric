@@ -1,0 +1,25 @@
+{
+  "command": "./build.sh --out /tmp/mek-tools-dist",
+  "build": "PASS",
+  "full_build_seconds": 296,
+  "refresh_seconds": 4,
+  "tests": {
+    "tests": 578,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "artifacts": [
+    {
+      "file": "Mekanism-Fabric-Bootstrap-10.7.19.85-fabric-bootstrap.jar",
+      "sha256": "4cc10beac582a2bda135e3538aa974abcaeec1a653c212e451c21f461a0f196e"
+    },
+    {
+      "file": "MekanismTools-10.7.19.85-fabric-bootstrap-fabric.jar",
+      "sha256": "afb0734d0f18b99f653b67a8dbf788e3ec774987d69186c6d9d702bb65daa6e6"
+    }
+  ],
+  "source_commit": "55402378edf0570fccda09eda656884fc18fd92c",
+  "core_contains_tools_classes": false,
+  "working_tree": "Tools implementation uncommitted at build, committed together with this evidence"
+}

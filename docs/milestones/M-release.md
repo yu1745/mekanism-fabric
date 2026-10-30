@@ -6,7 +6,7 @@
 
 ## 下一步
 
-接续Tools模块的一页边界与实际纵向移植。余下发布检查集中到功能里程碑执行，保留已跑结果，不以重复审计作为进度。
+Tools已完成独立附加模块实现与真机闭包，接续Additions开发。按新版ROADMAP先做模块回归监测，完整发布检查留到P13（W-59–62）。
 
 ## 未决项
 
@@ -18,6 +18,6 @@ W-40 rejection真实失败：等待mismatch rejection超时，客户端先被Fab
 
 先前安全网复核：`b7fb09ab`对照221项，`85799912`修复独立审查提出的mixin注册下限P2并复查关闭；[结论](evidence/p8-release/packaged-safety-review.json)。此项已结束，不重复审查。
 
-W-40已跑：578 tests／API／machine／paired通过，rejection失败后停止；[结果与未跑项](evidence/p8-release/w40-results.json)。此后用户要求转回开发，上述通过不覆盖本批新渲染实现。
+W-40已跑：当时578 tests／API／machine／paired通过，rejection失败后停止；[结果与未跑项](evidence/p8-release/w40-results.json)。此后用户要求转回开发，这些旧结果不覆盖后续修改；Tools收口的当前构建另见evidence/tools/build.json，仍不等同完整发布门禁通过。
 
 W-42准备：历史46项已逐一更新、README已列真实发布限制；[清单](evidence/p8-release/w42-historical46-current.csv)。原两项模型可视差异现已实际实现，最终发布收口尚未完成。
