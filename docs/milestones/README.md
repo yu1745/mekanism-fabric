@@ -4,7 +4,7 @@
 
 > `FABRIC_PORT.md` 与 `PORT_MATRIX.md` 已补 Task050–052 的简明索引；早期叙事保留作历史证据，当前状态仍以本表及对应活文档为准。
 
-后续提交的执行规划见 `docs/milestones/ROADMAP.md`（W-01…W-44，按 Phase 推进）。
+后续提交的执行规划见 `docs/milestones/ROADMAP.md`（W-01…W-63，按 Phase 推进）。
 
 ## 状态表
 
@@ -23,6 +23,8 @@
 | M-release | 核心全量测试、smoke、发布物与限制汇总 | 全部门禁／发布契约通过并完成协调者复核 | 进行中：附加模块优先，完整发布门禁留到 P13。 |
 | M-tools | Tools材料／工具／护甲／配方／刷怪装备与客户端渲染 | 独立附加JAR与一个真实工具使用闭包 | 已验证：Tools 功能与回归通过。[证据](../archive/M-tools.md)。 |
 | M-additions | 塑料方块／气球／TNT／baby生物／对讲机 | 独立附加JAR与实际实体及物品闭包 | 进行中：主体真机与回归通过；语音采集格式受环境限制。[证据](M-additions.md)。 |
+
+| M-generators | 六种发电机／涡轮／裂变／聚变 | 原机器发电与多方块运行及生命周期 | 进行中：W-50 边界与细化规划已完成。[计划](M-generators.md)。 |
 
 ## 旧 Task052 文档归类（按主题；P0 复核范围见归档 M-owner）
 
