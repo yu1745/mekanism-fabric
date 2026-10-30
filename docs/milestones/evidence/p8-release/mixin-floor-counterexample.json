@@ -1,0 +1,7 @@
+{
+  "method": "Run existing static gate Python block with ZipFile.read overridden in memory for both production and dev client mixin JSON; no artifact or source mutation.",
+  "omitted": "recipe.ClientPacketListenerMixin",
+  "expected": "previously admitted client mixin registrations missing",
+  "actual": "previously admitted client mixin registrations missing",
+  "rejected": true
+}

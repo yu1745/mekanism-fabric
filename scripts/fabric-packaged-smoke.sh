@@ -288,6 +288,8 @@ with zipfile.ZipFile(sys.argv[1]) as artifact, zipfile.ZipFile(sys.argv[3]) as d
             or "mixins" in client_mixins or "server" in client_mixins
             or client_mixins.get("injectors", {}).get("defaultRequire") != 1):
         raise SystemExit("client mixin configuration lost its client-only contract")
+    if not set(oracles["required_client_mixins"]).issubset(client_mixins["client"]):
+        raise SystemExit("previously admitted client mixin registrations missing")
     if metadata.get("mixins") != ["mekanism.mixins.json", {"config": "mekanism.client.mixins.json", "environment": "client"}]:
         raise SystemExit("common/client mixin environment contract changed")
 

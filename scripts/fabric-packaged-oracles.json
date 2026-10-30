@@ -614,5 +614,10 @@
     "mekanism/fabric/registry/FabricDeferredRegister$Registrar.class",
     "mekanism/fabric/registry/FabricDeferredRegister.class",
     "mekanism/fabric/registry/FabricRegistryLifecycle.class"
+  ],
+  "required_client_mixins": [
+    "recipe.ClientPacketListenerMixin",
+    "tile.LevelChunkMixin",
+    "tile.ClientPacketListenerTileMixin"
   ]
 }

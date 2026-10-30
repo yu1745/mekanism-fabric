@@ -13,7 +13,8 @@
     "classes": 565,
     "resources": 21,
     "services": 4,
-    "fileSHA256": "01e0910554fbc2c9fcdb8c7527e0e72cd0905a26561dc66e00b42096aa1ee41c"
+    "fileSHA256": "459b680eabc52b769cbba53767f414d24e824bd00a851fe0076c946b25f629b1",
+    "registeredClientMixins": 3
   },
   "firstFailure": {
     "rawErrorPrefix": "unexpected remapped access widener:",
@@ -26,5 +27,6 @@
     "Current script rejects all duplicates and ensures565 independently listed historical classes, but proposed retirement of old upper ceilings needs coordinator review.",
     "No release readiness/clearance inferred from a static PASS."
   ],
-  "reviewStatus": "PENDING coordinator readonly review"
+  "reviewStatus": "P2 fixed; pending readonly rereview of committed diff.",
+  "followup": "Independent review confirmed missing registration floor; restore original3 subset floor. Existing static gate PASS, pure-memory original deletion counterexample now rejected (mixin-floor-counterexample.json). No new repository test source."
 }
