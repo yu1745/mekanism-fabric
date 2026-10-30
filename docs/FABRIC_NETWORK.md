@@ -1,5 +1,7 @@
 # Fabric configuration and Chemical synchronization contract
 
+> 状态核实（2026-10-30 / W-05）：保留早期配置／Chemical 协议设计；“未纳入 packet catalog”只描述该历史切片，后续已接通 container、play 与 SERVER config 网络。当前状态见 `milestones/README.md`，逐包核对安排在 ROADMAP W-21。
+
 ## Current slice
 
 The first networking slice is a mandatory, Mekanism-owned protocol negotiation during Minecraft's configuration phase. Task 040 adds an ordered Chemical snapshot/ACK task and play reload publication after that compatibility owner. Neither slice imports the official `BasePacketHandler`, `PacketHandler`, `IMekanismPacket`, or packet catalog: those classes still close over NeoForge registration/context APIs and large gameplay/client subsystems.

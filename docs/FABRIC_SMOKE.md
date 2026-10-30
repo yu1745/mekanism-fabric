@@ -1,5 +1,7 @@
 # Packaged Fabric artifact and server smoke test
 
+> 状态核实（2026-10-30 / W-05）：现有 smoke 操作参考；历史 PASS 不替代当前提交重跑。2026-10-30 起的执行顺序与结果分别见 `milestones/ROADMAP.md`、对应里程碑验收证据。
+
 Run all static remapped-JAR gates without starting a server:
 
 ```bash

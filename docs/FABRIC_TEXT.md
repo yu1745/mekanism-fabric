@@ -1,5 +1,7 @@
 # Portable API text and color closure
 
+> 状态核实（2026-10-30 / W-05）：保留对应早期切片的语义设计与验收记录；文中 “current”、slice 数量及延期调用方仅指当时范围，不代表 Task052 后的纳入状态。当前状态与后续验收以 `milestones/README.md` 和 `milestones/ROADMAP.md` 为准。
+
 ## Task 036 scope
 
 Task 036 admits one connected eight-source API closure and changes no common or

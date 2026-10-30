@@ -1,5 +1,7 @@
 # Fabric Chemical vertical (Task 040)
 
+> 状态核实（2026-10-30 / W-05）：保留对应早期切片的语义设计与验收记录；文中 “current”、slice 数量及延期调用方仅指当时范围，不代表 Task052 后的纳入状态。当前状态与后续验收以 `milestones/README.md` 和 `milestones/ROADMAP.md` 为准。
+
 ## Status and boundary
 
 Task 040 was implemented as candidate `dc9c5687`, hardened by focused corrective `ff7e5f7c`,

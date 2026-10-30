@@ -2,7 +2,7 @@
 
 **Task052 已关闭为历史名**：它最初的定义是"TileEntityMekanism 具体 owner 闭包"（`docs/archive/TASK052_PLAN.md`），但 2026-09-14 至 10-30 间约 350 个提交已分散进多个独立系统。此后不再新开 `TaskNNN`，改用下列**按系统命名、以可验证功能为验收**的里程碑。每个里程碑只维护一份状态（本表）和至多一份活文档，不再产生 CONTINUATION_NN / CHECKPOINT_NN / REVIEW_NN 编号文件。
 
-> 注：`FABRIC_PORT.md` 与 `PORT_MATRIX.md` 的任务叙事止于 Task049，**未记录 Task050–052**；在补写之前，本表与 `git log` 才是 050+ 的状态依据。
+> `FABRIC_PORT.md` 与 `PORT_MATRIX.md` 已补 Task050–052 的简明索引；早期叙事保留作历史证据，当前状态仍以本表及对应活文档为准。
 
 后续提交的执行规划见 `docs/milestones/ROADMAP.md`（W-01…W-44，按 Phase 推进）。
 
@@ -12,17 +12,18 @@
 
 | 里程碑 | 范围 | 验收（一个端到端用例） | 状态 |
 |---|---|---|---|
-| M-owner | `TileEntityMekanism`、`TileComponentConfig`、频率/`FrequencyManager`、`ContainerType`、`MekanismContainer` 同步、有效侧线程语义、bounding | 真机：Crusher 放置→通电→加工→存读档 | 未核实（Astra whole-owner 与 convergence 文档为最近记录） |
+| M-owner | `TileEntityMekanism`、`TileComponentConfig`、频率/`FrequencyManager`、`ContainerType`、`MekanismContainer` 同步、有效侧线程语义、bounding | 真机：Crusher 放置→通电→加工→存读档 | 进行中：P0 W-03–05 已复核；W-01 发现配置生命周期测试快照缺 general，W-01/02 门禁待串行重跑；Crusher 重启验收仍未核实 |
 | M-config | gear / machine+tier / common+startup / general 四类配置 owner 与同步 | 非默认配置真机加载并同步到客户端 | gear、machine+tier、common+startup 已提交且有运行证据；general 已提交 `741d580d`（wip），待真机验证；活文档 `M-config.md` |
 | M-transfer | 流体/物品传输 owner、pipe 查询生命周期、`SnapshotParticipant`、QE 频率流体 | 管道把流体/物品送入机器并回滚正确 | 未核实 |
 | M-render | transmitter 渲染（OBJ/MTL 几何）、Robit atlas、QIO 渲染 | mcdebug 截图：管线与 QIO 正确渲染 | 未核实 |
 | M-registry | 化学 ingredient 类型注册表、Robit 注册/数据包、官方 legacy alias、biome modifier | 注册冻结后 ID/alias 与官方一致 | 未核实 |
 | M-gear | accessory、Curios 策略、ItemAbility、suit/tool 规则 | 穿戴/工具行为真机核对 | 未核实 |
 
-## 旧 Task052 文档归类（按标题，未逐份通读）
+## 旧 Task052 文档归类（按主题；P0 复核范围见 M-owner）
 
-- **M-owner**：`TASK052_PLAN`、`ADJUDICATION`、`ADJUDICATION_EFFECTIVE_SIDE`、`CONTINUATION_03/14`、`CHECKPOINT`、`CONVERGENCE_14`、`ASTRA14_PROGRESS`、`ASTRA_REPAIR`、`PAUSE_*`、`REVIEW_02/03/04/12/14`、`RESUME_2026-10-26`、`RECENT_COMMITS_AUDIT_2026-10-27`
-- **M-transfer**：`CONTINUATION_04/06/07/08/09`（及 `_EVIDENCE`）、`CHECKPOINT_05/06/09/13`、`REVIEW_05/06/07/08/09/10/11/13`、`REVIEW13_FIX_WIP`、`ITEM_*`、`PIPE_LIFECYCLE_EVIDENCE`
+- **M-owner**：`TASK052_PLAN`、`ADJUDICATION`、`ADJUDICATION_EFFECTIVE_SIDE`、`CONTINUATION_03/14`、`CHECKPOINT`、`CONVERGENCE_14`、`ASTRA14_PROGRESS`、`PAUSE_*`、`REVIEW_02/03/04`
+- **跨里程碑索引**：`RESUME_2026-10-26`、`RECENT_COMMITS_AUDIT_2026-10-27`（owner / transfer / render / registry / gear / config；历史 blocker 需与后续 Git 核对）
+- **M-transfer**：`CONTINUATION_04/06/07/08/09`（及 `_EVIDENCE`）、`CHECKPOINT_05/06/09/13`、`REVIEW_05/06/07/08/09/10/11/12/13/14`、`ASTRA_REPAIR`、`REVIEW13_FIX_WIP`、`ITEM_*`、`PIPE_LIFECYCLE_EVIDENCE`
 - **M-render**：`CONTINUATION_10`（及 `_EVIDENCE`/`_EVIDENCE_2`）、`CONTINUATION_11`、`REVIEW_15/16/17/18`、`REVIEW17_REPAIR`
 - **M-registry**：`CONTINUATION_12`、`CONTINUATION12_INGREDIENT_REGISTRY`、`CONTINUATION_13`、`REVIEW_19/20`、`REVIEW19_REPAIR`
 - **M-gear**：`ADJUDICATION_GEAR_CATALOG`

@@ -1,5 +1,19 @@
 # Mekanism 1.21.1 Fabric 移植基线
 
+## Task050–052 后续索引（2026-10-30 / W-04）
+
+下方早期任务叙事保留作历史证据；当前状态统一见 [里程碑表](milestones/README.md)，执行顺序见 [ROADMAP](milestones/ROADMAP.md)。已提交不等于已完成真机验收。
+
+| 范围 | 后续结论 |
+|---|---|
+| Task050–051 | `c433ace0` / `a4feef18` 完成真实配置状态、capability cache 与 base-tile 生命周期；见 `archive/TASK050_PLAN.md`、`archive/TASK051_PLAN.md`。 |
+| M-owner（Task052） | 原始 tile、组件、频率、容器、有效侧与 bounding 已纳入并接线；Crusher 加工及重启一致性待 W-06–W-10，详见 `milestones/M-owner.md`。 |
+| M-config（Task052） | gear、machine/tier、common/startup 已有提交与运行证据；general `741d580d` 已接通，非默认真机同步待 W-12。 |
+| M-transfer（Task052） | `b0f7e13d` / `9cabfea9` 等接通真实机器能量和物品／流体／化学传输；旧 smoke 不代替 W-23–W-28 的生命周期验收。 |
+| M-render（Task052） | GUI、模型加载与 BER 后续接线见 `archive/TASK052_RESUME_2026-10-26.md`；完整模型与 GUI 巡检待 W-29–W-33。 |
+| M-registry（Task052） | 内容 catalog、配方、Robit、chemical ingredient 等已有后续接线与审查；注册冻结／alias／数据包一致性待 W-38。 |
+| M-gear（Task052） | 模块、装备及 accessory 后续实现与运行证据见 Git 历史；整套工具／装备行为待 W-36–W-37，不沿用早期未纳入清单。 |
+
 ## 目标
 
 以官方 Mekanism `v1.21.1-10.7.19.85` 为行为、API、数据和资源基线，将 NeoForge 平台接入替换为 Fabric 接入，同时尽量保持：

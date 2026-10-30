@@ -1,5 +1,7 @@
 # Official machine spine: owner-oriented critical path
 
+> 状态核实（2026-10-30 / W-05）：Task051 时点的历史主干盘点；其中“尚未纳入／Deferred”已被 Task052 后续提交取代。当前实际接线与剩余验收见 `milestones/M-owner.md`，状态见 `milestones/README.md`。
+
 This is a short current navigation table, not an import-graph completion metric. The target remains the original Java machine inheritance and composition, never a parallel Crusher framework.
 
 | Executable boundary | State / evidence | Immediate consumer / remaining obligation |
