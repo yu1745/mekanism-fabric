@@ -24,6 +24,8 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 
 ## 验收证据
 
+W-110（双玩家安全拒绝）：**未完成，已定界**。试了路线图备选①：单人会话里用服务端平面反射把机器设为 `PRIVATE`（回读确认为 PRIVATE），但 `ownerUUID` 无法改成「别人」——`reflect call` 传不了 UUID 对象；而 `/setblock` 放的机器无主，`SecurityUtils.canAccessObject` 第一条短路是 `owner == null → 允许`，所以无主机器对任何人可开（官方同逻辑）。结论：需要 **paired smoke fixture 双用户名**（备选③）才可能产出拒绝证据。[记录](evidence/p8-release/w110-security-denial.json)
+
 W-104（W-81/82 余项）：**区块卸载完成**，涡轮与跨维度传送仍开放。新增 smoke 场景：在 x=2000 建富集仓（先 forceload 再释放），卸载期间库存原封不动（矿 4、能量 5850 FE），重新 force-load 后**同一台机器继续加工**产出铁粉；smoke **EXIT=0 / 25 PASS**。坑：vanilla `setblock` 拒绝未加载区块、`/forceload` 用**方块坐标**。未做：涡轮性能、跨维度传送（需玩家实体移动）。[记录](evidence/p8-release/w104-chunk-unload.json)
 
 W-112（工厂/升级/并行吞吐）：**主体完成**。三档富集工厂的能量缓冲 ≈20k/40k/80k、`progress` 槽数 3/5/9 均与 tier 一致。关键结论：工厂**默认 sorting 关闭**时只跑 1 个进程（20 秒 2 矿石）；**用 GUI 点开排序页后 `sorting=1`**，同一窗口内消耗 **9 个矿石**、`progress` 9 个槽全动，**实测 ≈4.5× 加速（2→9 矿石/20 秒）**，截图见 `w74/factory-parallel.png`（9 输入槽各 12~13 矿、9 输出槽各 6 粉、排序页显示 on）。官方构建默认同样是 `sorting: 0b`，故非移植偏差。**未测**：速度/能量升级的影响（升级槽是虚拟容器槽，`be set-nbt` 写不进，需光标持有物品）与满输出回压。[记录](evidence/p8-release/w112-factory-throughput.json)
