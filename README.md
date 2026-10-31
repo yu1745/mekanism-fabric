@@ -9,7 +9,8 @@
 > port. See [`docs/FABRIC_PORT.md`](docs/FABRIC_PORT.md) and
 > [`docs/FABRIC_CHEMICAL.md`](docs/FABRIC_CHEMICAL.md) for scope and evidence, and
 > [`docs/INSTALL.md`](docs/INSTALL.md) for requirements, the four JARs, install steps, save compatibility
-> with the NeoForge build and the current limitations.
+> with the NeoForge build and the current limitations, and [`CHANGELOG.md`](CHANGELOG.md) for what this
+> build contains.
 
 Mekanism is an independent Minecraft add-on featuring high-tech machinery that can be used to create powerful tools, 
 armor, and weapons. You can find more detail on the features on the [**Official Wiki**](https://wiki.aidancbrady.com/wiki/Mekanism).

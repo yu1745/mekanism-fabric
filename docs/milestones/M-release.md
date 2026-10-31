@@ -24,6 +24,8 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 
 ## 验收证据
 
+W-86：CHANGELOG 与发布说明——新增 [`CHANGELOG.md`](../CHANGELOG.md)：版本命名、四 JAR 能力范围、与 NeoForge 的差异（Fabric 平台/Team Reborn Energy/条件翻译/无第三方集成/NeoForge 品牌配置项）、已知限制（含频率与 QIO 未纳入往返探针）、四条验证命令，以及可直接贴到 Modrinth/CurseForge 的发布说明段落；README 已加指向。数字与声明逐条对应证据（依赖版本取自 `fabric.mod.json`、451 JVM 测试、存档结论对应 W-65/W-77/W-80/W-82）。[记录](evidence/p8-release/w86-changelog.json)
+
 W-85：许可证与归属审计——新增 [`docs/LICENSES.md`](../LICENSES.md)；发现并修复两处缺失：**三个附加 JAR 完全没有 LICENSE**（Jar 任务补 `from('../LICENSE')` 重命名）、**maven-artifact 的 Apache-2.0 与 NOTICE 未随 JAR**（补进 `META-INF/licenses/`）。核心已带 MIT + night-config LGPL-3.0 + NeoForge 两副本（仅归属说明，JAR 内无 `net.neoforged` 类）。重建后四个 JAR 均含许可证条目，sha256 全部更新（记在证据里，并说明 W-71 的旧哈希以当时提交为准）。[记录](evidence/p8-release/w85-licenses.json)
 
 W-82（部分）：传输网络跨区块——跨区块短网络（源 OUTPUT=4 / 汇 INPUT=1 / 中间线缆显式 `connection:[I;3,3,3,3,2,1]`）在一个 `sprint 200t` 内把 800000L 从源搬到汇；`save-all flush` + 停服 + 重启后汇保留 1200000L，再传 200000 升到 1400000L，**网络从存档重建并继续工作**。会话内真正卸载未能证明（`forceload remove` 后 `loadedChunks` 仍 1444）。顺带记下一条关键经验：**`fill` 出来的线缆 `connection` 全 0、网络不成立**，前几轮传输失败都是这个原因。跨维度/区块加载器/辐射未做。[记录](evidence/p8-release/w82-multidim-networks.json)
