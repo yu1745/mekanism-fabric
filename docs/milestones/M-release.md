@@ -12,6 +12,8 @@ Tools与Additions主体已完成；Generators的机器、多方块、GUI、生�
 
 ## 未决项
 
+协调者 B2 要求"用发布 JAR 搭干净客户端目录"取 458 值客户端 ack：当前环境没有 packaged client 启动链（仅 server launcher；客户端需 MC client jar+assets+libraries 的完整安装），而 Loom 开发客户端的 class-path group 会把核心注册静态表复制一份（`w60-dev-classloader.json`），加载发布 addon JAR 必然 `mekanism:security` 未绑定。可选路径与代价：①落一个 packaged client 目录（一次性下载 client jar/assets/libraries，本机网络对 sessionserver 曾超时）后跑真客户端；②改 handshake 运行配置为 `source sourceSets.generators`（核心+单个 addon，dev schema 355 值）作为多模块客户端证明。两条都未执行，待协调者裁决后再投入；在此之前只声明 packaged 服务端 458 值装配与 dev 304 值 send/apply。
+
 W-60四模块开发联机启动失败已定性为开发环境类加载产物，非移植缺陷：Loom 开发运行把每个 mod 源集放进独立 class-path group，addon 代码因此看到第二份核心注册静态表（`mekanism:security` 未绑定；remapped JAR 另有 intermediary 名）。干净 remapped 四 JAR 服务端（packaged smoke）加载四模块并到达 `Done`，故不改注册语义；开发侧 paired／rejection smoke 保持仅加载核心 mod，四模块装配由 packaged smoke 断言。[证据](evidence/p8-release/w60-dev-classloader.json)
 
 W-60 同步值实测更正：发布 schema 下四模块合计 **458**（core 303 + tools 63 + additions 41 + generators 51），而非先前估计的 459——core 的 `general:alphaWarning` 只在开发 schema 存在（开发 304／发布 303）。packaged smoke 现断言 `configs=10 values=458`，逐 schema 数字记于 `detail=`。[证据](evidence/p8-release/w60-dev-classloader.json)
