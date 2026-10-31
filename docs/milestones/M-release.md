@@ -12,6 +12,8 @@ Tools与Additions主体已完成；Generators的机器、多方块、GUI、生�
 
 ## 未决项
 
+常驻 NeoForge 参考环境：官方 NeoForge 21.1.200 + 官方 Mekanism 10.7.19.85 + W-65 样本世界常驻于 `~/.cache/mekanism-neoforge-reference/`（端口 25594），由 `scripts/neoforge-reference.sh start|stop|status|logs|install` 管理，后续 NBT／存档／行为对照直接复用，不再重复下载安装。
+
 W-69 已完成（原 B2 缺口）：发布 JAR 客户端路径已验证——用 Loom/Gradle 缓存离线装配 intermediary 生产客户端 + 干净四 JAR 服务端，客户端 `phase=client_applied values=458` 并加入游戏；门禁脚本 `scripts/fabric-packaged-client-smoke.sh`。
 
 W-60四模块开发联机启动失败已定性为开发环境类加载产物，非移植缺陷：Loom 开发运行把每个 mod 源集放进独立 class-path group，addon 代码因此看到第二份核心注册静态表（`mekanism:security` 未绑定；remapped JAR 另有 intermediary 名）。干净 remapped 四 JAR 服务端（packaged smoke）加载四模块并到达 `Done`，故不改注册语义；开发侧 paired／rejection smoke 保持仅加载核心 mod，四模块装配由 packaged smoke 断言。[证据](evidence/p8-release/w60-dev-classloader.json)

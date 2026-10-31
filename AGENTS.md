@@ -73,6 +73,12 @@ scripts/fabric-configuration-rejection-smoke.sh   # 后两项需 Linux、systemd
 - 方法体改动可 `gui hotswap`；字段/构造器/生命周期变化需重启。以真实命令结果判定成功。
 - 复用现有隔离调试世界，少量真实功能检查；结束时恢复临时方块/物品/配置，保存并关闭自己启动的会话，清理临时 debug mod。mcdebug 依赖不进入发布依赖或源码切片。
 
+## NeoForge 参考环境（常驻）
+
+- 官方 NeoForge 版 Mekanism 的比对环境常驻在 `~/.cache/mekanism-neoforge-reference/`：NeoForge `21.1.200` + 官方 `Mekanism-1.21.1-10.7.19.85.jar`（Modrinth，sha256 `004dbc9f3106f4d192aeaa1ee1190dd16ec9ca8059ed3d093b80034f4c574f43`）+ W-65 样本世界，端口 `25594`。约 200MB，**不进仓库、不进入发布依赖或源码切片**。
+- 用 `scripts/neoforge-reference.sh start|stop|status|logs|install` 管理；`start` 后台常驻，需要 NBT／存档／行为对照前先 `status`，用完不必删除，可长期复用。
+- 参考端只用于服务端侧比对：命令经 `server.log` 回读，世界改动要复制样本后再改，不污染常驻世界。样本世界的生成命令见 `docs/milestones/evidence/p8-release/w65-neoforge-save-probe.json`。
+
 ## 任务等待纪律
 
 - **会自己退出的任务**（`gradle build`/`test`、`build.sh`、单次编译、smoke 脚本本体）：直接执行（可后台）并阻塞取结果，用退出码和输出判断；不要 `sleep` 轮询，也不要套标记行等待。
