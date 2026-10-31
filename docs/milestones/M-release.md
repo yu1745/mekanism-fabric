@@ -24,6 +24,8 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 
 ## 验收证据
 
+W-63：官方测试 oracle 评估（只出评估页，不扩测试矩阵）——官方 `src/test` 24 个文件、`src/gameTest` 12 个文件；移植测试树 93 文件/451 项里只有 `WildcardMatcherTest` 有对应物且已改写（新增 locale 用例），**当前无 byte-identical 纳入项**。可 byte-identical 纳入的是 4 个纯逻辑用例（`SearchQueryParserTest`、`BiLongMultimapTest`、`IndexedCuboidMapTest`、`ChunkUtilsTest`，目标类都在 common-slice），`Distribution*Test` 三个需小适配；不可纳入的：三个 `*AccessTest`（测有意不加载的 `IMekanismAccess` 服务）、`forgeenergy/EnergyConversionTest`（NeoForge 能量语义）、整包 `src/gameTest`（依赖 NeoForge GameTest 框架）。datagen 与发布资源一致性沿用 W-75 结论（无未解释缺口）。按 AGENTS“不主动增加测试覆盖”，本轮不纳入任何用例。[记录](evidence/p8-release/w63-oracle-evaluation.json)
+
 W-72：核心延期文件复盘——slice 排除的 35 个非集成类文件逐项对照 Fabric 侧实现，**全部有替代或确认不适用，无玩家可见缺口**，本轮不改生产代码。替代关系（示例）：`Mekanism`→`MekanismFabricBootstrap`、`PacketHandler/BasePacketHandler`→`fabric/network`、`ClientRegistration*`→`MekanismFabricClientBootstrap`+`Fabric{ClientModel,EntityRenderer,Screen}Registration`、`MekKeyBinding*`→`MekanismKeyHandler.registerKeybindings()`、NeoForge ModelData 一批→`Fabric{DataBased,DeferredLoader,Composite}*`、`MekanismCurioRenderer`→`FabricAccessoryRenderRegistration`、`CommonPlayerTracker`→`MekanismUsernameLifecycle`、`MekanismAttachmentTypes`→`FabricRadiationAttachments`+`EntityFlame` 持久数据、三个条件类→`mekanism:{condition_exists,mod_version_loaded,tag_empty}`。[明细表](M-deferred.md)、[证据](evidence/p8-release/w72-deferred-review.json)
 未覆盖：键位缺真机读数（W-64）、库存/能量注入（W-77 残留）、249 个集成类文件归 W-68。
 
