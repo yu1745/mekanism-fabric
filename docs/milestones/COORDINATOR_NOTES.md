@@ -430,3 +430,21 @@ JEI（W-74c）与 WTHIT（W-74d）已批准，见 `ROADMAP.md`「W-74 范围追�
 5. 请把 WTHIT 新增的 5 个 slice 项按 owner 记入 `M-integration.md`。
 
 路线图：未开始/未完成项 W-79、W-98、W-99、W-101（执行）、W-102、W-103、W-104、W-105 共约 8，**不触发补充线**，本次无改动；F4 为本批次最后一次，会据实补足无人值守余量。
+
+## 巡检 F4（2026-10-31 14:17，最后一次）
+
+自 F3 起新提交 4 个：`e2e433fd`（W-74d 跟进：撤销会崩溃的 WTHIT 注册）、`fc76e00e`（记录 WTHIT slice owner 与临时 wrapper 软链接）、`6b864764`（把 WTHIT 插件按 WTHIT 12 拆成 common/client 双接口）、`aaeb53f0`（**改用模块根 `wthit_plugins.json` + `entrypoints.common/client` 注册成功，有 tooltip 截图**）。**审计陷阱：未触发**——全是围绕一个真实阻塞的生产/构建改动。
+
+**质量评价：这一段做得好**
+- WTHIT 的定位过程在证据页里按轮次记录（round47→49）：先发现 `Found legacy plugins` 崩溃（官方实现的是旧 `IWailaPlugin`）→ 改双接口后又遇 `ClassCastException`（`custom."waila:plugins"` 硬编码走 deprecated 路径）→ 读 WTHIT 官方文档与源码确认正确注册是根目录 `wthit_plugins.json` 的 `entrypoints.common/client`。中途两次**主动撤销注册**，保证"装了 WTHIT 也不崩"，而不是留一个坏状态。F3 提出的"只保留一种机制"已落实（只剩根 `wthit_plugins.json`，旧的 `assets/mekanism/…` 与 `custom` 段都已删）。
+- 软链接问题已解释并处理：`fabric/gradlew`、`fabric/gradle` 是 `mdb session start --project fabric` 需要的**临时**软链接，会话结束即删，`M-release.md` 已加说明；当前工作区无残留，`git ls-files` 无跟踪。**可接受**，请保持"每次会话结束必须删除"，并在 `mdb` 相关脚本退出前自检。
+- 范围：只动 WTHIT；未碰 wip 历史、submodule、push；无新增测试；未启动 REI/TOP。
+
+**仍需注意**
+1. 插件类被拆分后 `MekanismWTHITPlugin` 由 97 行重写，行为已在开发客户端有 tooltip 截图；**多方块、传输器、Robit 的 WTHIT 读数**仍未验证，并入 W-102 同一轮会话。
+2. 根 `wthit_plugins.json` 在发布 JAR 里是否随包、WTHIT 不在场时是否无副作用，应在 W-103 的最终全量里一并确认（静态门禁加一条存在性断言即可，不要新写框架）。
+3. 四个集成都完成后，**最终 HEAD 的完整 release-check 仍未跑**（W-103）。
+
+路线图：W-74 全部完成。未开始/未完成项：W-79、W-98、W-99、W-101（执行）、W-102、W-103、W-104、W-105 约 8，**未触发 ≤6 补充线**；但这是最后一次自动巡检，为保证无人值守余量并把重心切到找 bug，**新增 P22：W-106…109**（矿石加工链端到端并与 NeoForge 参考服对照、崩溃/卸载鲁棒性、安全/权限与频率、集成文档同步），见 `ROADMAP.md`。
+
+之后不再有自动巡检。worker 请按 P0 → P1 → P2 推进：先 W-102（JEI/WTHIT/EMI/Jade 一轮真机会话）与 W-106/107，再 W-103 最终全量，W-101 在工作区干净时执行；强制推送、发布版本号形态与发布口径只等用户。
