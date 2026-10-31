@@ -24,7 +24,7 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 
 ## 验收证据
 
-W-112（工厂/升级/并行吞吐）：**部分完成**。已核对三档富集工厂的能量缓冲（≈20k/40k/80k）与 `progress` 槽数（3/5/9）；满输入下三档**都只完成 1 配方/10 秒**，原因是 **sorting 关闭**（所有矿石留在 slot 0，只有第 0 个进程在跑，连续采样 `progress` 只有第 0 位变化）。官方参考服务端同样 `sorting: 0b`，**默认值一致**，故不是移植偏差；开启 sorting 需 GUI 开关，而 `be set-nbt` 改不到该字段（移植里它走 sustained data）。未验证：开启后的并行加速比、升级对吞吐的影响、回压。[记录](evidence/p8-release/w112-factory-throughput.json)
+W-112（工厂/升级/并行吞吐）：**主体完成**。三档富集工厂的能量缓冲 ≈20k/40k/80k、`progress` 槽数 3/5/9 均与 tier 一致。关键结论：工厂**默认 sorting 关闭**时只跑 1 个进程（20 秒 2 矿石）；**用 GUI 点开排序页后 `sorting=1`**，同一窗口内消耗 **9 个矿石**、`progress` 9 个槽全动，**实测 ≈4.5× 加速（2→9 矿石/20 秒）**，截图见 `w74/factory-parallel.png`（9 输入槽各 12~13 矿、9 输出槽各 6 粉、排序页显示 on）。官方构建默认同样是 `sorting: 0b`，故非移植偏差。**未测**：速度/能量升级的影响（升级槽是虚拟容器槽，`be set-nbt` 写不进，需光标持有物品）与满输出回压。[记录](evidence/p8-release/w112-factory-throughput.json)
 
 W-111（完整化学链）：**受工具限制，未完成；曾疑似的 P0 已撤回**。先解决“把流体/化学品送进机器”：流体储罐可用水桶注入（实测 1,000 mB），但机器的罐无法用桶注入、也无法用 NBT 写入（attachment），`component_config` 的 NBT 写入对已加载方块实体不生效。过程中曾怀疑“线缆连不上机器”是移植缺陷，**用官方参考服务端做了对照后撤回**：官方在同样默认（全 NONE 侧配置）的机器 + 线缆组合上，`data get block` 读数同样是 `connections: 0b, acceptors: 0b`，而两根线缆相邻时是 `connections: 32b`（说明读数口径正确）——两版行为一致，问题在于“外部供电/供料必须先配置机器侧面”，而当前工具链无法可靠驱动侧面配置 GUI。[记录](evidence/p8-release/w111-chemical-chain.json)
 
