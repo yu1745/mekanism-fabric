@@ -24,6 +24,8 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 
 ## 验收证据
 
+W-74a（EMI，第一步）：依赖与移植面勘察——`fabric/build.gradle` 加入 Modrinth maven 与 `modCompileOnly("maven.modrinth:emi:1.1.24+1.21.1+fabric")`（`emiDev` 属性开关 `modLocalRuntime`，不进发布物），依赖解析通过；`client/recipe_viewer/emi/**` 共 39 个文件，对 NeoForge 的引用只有 7 行（分布在 6 个文件：`FluidStack`/`FluidType`/`IFluidHandler`），其余是 EMI API + 本仓 GUI/配方类型。临时把这 39 个文件加入 slice 后 `verifyCommonSliceNoNeoForge` **按预期拦下**，随后已回滚、仓库保持 BUILD SUCCESSFUL——下一步替换 6 处流体引用再纳入。[记录](evidence/p8-release/w74a-emi-step1.json)
+
 W-89：回归检查与修复——全量 `release-check.sh`（含 clean build，6 步 352+19+59+88+122+100 秒）**PASSED**，未发现功能回归；但发现一个真实的发布完整性问题：**同一份源码两次 clean build 出来的 JAR sha256 不同**（W-71/W-85/W-89 三次核心 JAR 哈希各异），发布物无法用哈希验证。原因与修复：Gradle 归档默认写文件时间戳且按目录遍历顺序打包，已在 `fabric/build.gradle` 加 `tasks.withType(Jar).configureEach { preserveFileTimestamps = false; reproducibleFileOrder = true }`；连续三次重建四个 JAR 哈希**完全一致**，`./build.sh` 产出的 dist 与 standalone assemble 一致，随后 `release-check --skip-build` 仍 5 步 PASSED。[记录](evidence/p8-release/w89-regression-reproducible.json)
 
 W-87（第二遍）：docs/ 顶层去重归档——把三份只被 ROADMAP 与索引引用的早期工作笔记 `MACHINE_SPINE.md`、`MACHINE_OWNER_ADMISSION.md`、`MODEL_IMPLEMENTATION_COMPARISONS.md`（1055 行）移入 `docs/archive/`，各加 `Archived (W-87, 2026-10-31)` 注记指向 `milestones/README.md`；`docs/README.md` 索引与 ROADMAP W-05 行同步更新。顶层文档 24→22（含新增索引），链接校验 0 broken。保留 `PORT_MATRIX.md`/`POLICY_HISTORY.md`/`API_DELTAS.md`/`FABRIC_*.md`（均被 AGENTS 或里程碑现行引用）。[记录](evidence/p8-release/w87b-docs-archive.json)

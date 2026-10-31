@@ -188,6 +188,11 @@ repositories {
             includeGroup 'io.wispforest.endec'
         }
     }
+    //Optional client recipe viewer (W-74a). Modrinth mirrors EMI; it never enters the release artifacts.
+    maven {
+        url = 'https://api.modrinth.com/maven'
+        content { includeGroup 'maven.modrinth' }
+    }
 }
 
 def loadSlice = { String listName ->
@@ -635,6 +640,12 @@ dependencies {
     modCompileOnly('cc.tweaked:cc-tweaked-1.21.1-fabric:1.113.1') { transitive = false }
     // Optional accessory API; never bundle the mod or its runtime dependencies.
     modCompileOnly('io.wispforest:accessories-fabric:1.1.0-beta.53+1.21.1') { transitive = false }
+    //EMI recipe viewer (W-74a): compile-only plus a local runtime slot for the client gates; not shipped.
+    def emiVersion = '1.1.24+1.21.1+fabric'
+    modCompileOnly("maven.modrinth:emi:${emiVersion}") { transitive = false }
+    if (providers.gradleProperty('emiDev').isPresent()) {
+        modLocalRuntime "maven.modrinth:emi:${emiVersion}"
+    }
     // Explicitly opted-in dev runtime for testing the real optional mod; never bundle it.
     if (providers.gradleProperty('accessoriesDev').isPresent()) {
         modLocalRuntime 'io.wispforest:accessories-fabric:1.1.0-beta.53+1.21.1'
