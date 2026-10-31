@@ -65,7 +65,8 @@ start_server() {
     return 0
   fi
   [[ -f $SERVER_DIR/run.sh ]] || install_env
-  ( cd "$SERVER_DIR" && exec setsid bash -c "./run.sh nogui >> '$LOG_FILE' 2>&1" ) &
+  # setsid makes the launcher a process-group leader so stop can take the java child down with it.
+  ( cd "$SERVER_DIR" && exec setsid ./run.sh nogui >> "$LOG_FILE" 2>&1 ) &
   printf '%s\n' "$!" > "$PID_FILE"
   local deadline=$((SECONDS + 180))
   while (( SECONDS < deadline )); do
@@ -80,9 +81,15 @@ start_server() {
 
 stop_server() {
   if pid=$(server_pid); then
-    kill "$pid" 2>/dev/null
-    for _ in $(seq 1 30); do kill -0 "$pid" 2>/dev/null || break; sleep 1; done
-    kill -9 "$pid" 2>/dev/null
+    # Negative pid signals the whole process group, which is what actually owns the java child.
+    kill -TERM -- "-$pid" 2>/dev/null || kill -TERM "$pid" 2>/dev/null
+    for _ in $(seq 1 30); do
+      kill -0 -- "-$pid" 2>/dev/null || break
+      sleep 1
+    done
+    kill -KILL -- "-$pid" 2>/dev/null || kill -9 "$pid" 2>/dev/null
+    pgrep -f "[l]ibraries/net/neoforged/neoforge/$NEOFORGE_VERSION" >/dev/null &&
+      pkill -9 -f "[l]ibraries/net/neoforged/neoforge/$NEOFORGE_VERSION" 2>/dev/null
     printf 'neoforge-reference: stopped (pid %s)\n' "$pid"
   else
     printf 'neoforge-reference: not running\n'
