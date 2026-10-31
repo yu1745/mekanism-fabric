@@ -24,6 +24,8 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 
 ## 验收证据
 
+W-80：**机器库存与侧配置的跨端往返通过**——找到 tile 槽位的真实序列化键（`ContainerType.ITEM` → `SerializationConstants.ITEMS="items"`，元素 `{item:{...},slot:<byte>}`），用 `be set-nbt` 写入 4 个铁矿石 + 控制台 `data merge` 写入 `component_config.config0=[6,6,6,6,6,6]`，停服后由四个 Fabric JAR 加载同一世界，`be get-nbt` 回读**逐字段一致**；此前的 `Items` 键、`storage.insert`、`screen open-block`、`reflect` 全部被丢弃或拒绝，原因已记录。能量（基础能量立方）仍未写入成功，留待下一轮。
+
 W-80（第一遍，部分）：**打通了 NeoForge 参考服的 mdb 驱动**（副本环境加 `mcdebug-neoforge-0.8.0.jar` + `kotlinforforge-5.11.0-all.jar`，status 返回 `modLoader=neoforge`/`fluidUnit=mb`/`energyUnit=FE`，安装步骤写进 `neoforge-reference.sh` 的 `install_env`），但**写入机器运行内容仍无可行路径**：`inv.*`（非 vanilla 容器）、`data merge`/`be set-nbt`（键不是槽位序列化键）、`storage.insert`（inserted:0，带面则找不到句柄）、`screen open-block`（-32018 无 MenuProvider）、`reflect`（NeoForge 专用服加载 client 类被拒绝）六条都试过，逐条贴了返回错误。W-77 的库存/能量残留与 W-80 同源。[记录](evidence/p8-release/w80-save-roundtrip.json)
 
 W-84：CI 工作流 `.github/workflows/fabric-port.yml`——在 `java-port` 分支的 push/PR 上跑 `./gradlew -p fabric test verifyApiSliceNoNeoForge assemble`（本地已跑通，BUILD SUCCESSFUL），并上传四个 JAR 作 artifact；**不跑**六个需要 MC 运行时的任务与全部 smoke（在注释里写明原因与本地等价命令）。YAML 已解析校验，但未在真实 GitHub runner 上执行。[记录](evidence/p8-release/w84-ci.json)
