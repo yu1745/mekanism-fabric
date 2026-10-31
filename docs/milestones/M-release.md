@@ -28,7 +28,7 @@ W-104（W-81/82 余项）：**区块卸载完成**，涡轮与跨维度传送仍
 
 W-112（工厂/升级/并行吞吐）：**主体完成**。三档富集工厂的能量缓冲 ≈20k/40k/80k、`progress` 槽数 3/5/9 均与 tier 一致。关键结论：工厂**默认 sorting 关闭**时只跑 1 个进程（20 秒 2 矿石）；**用 GUI 点开排序页后 `sorting=1`**，同一窗口内消耗 **9 个矿石**、`progress` 9 个槽全动，**实测 ≈4.5× 加速（2→9 矿石/20 秒）**，截图见 `w74/factory-parallel.png`（9 输入槽各 12~13 矿、9 输出槽各 6 粉、排序页显示 on）。官方构建默认同样是 `sorting: 0b`，故非移植偏差。**未测**：速度/能量升级的影响（升级槽是虚拟容器槽，`be set-nbt` 写不进，需光标持有物品）与满输出回压。[记录](evidence/p8-release/w112-factory-throughput.json)
 
-W-111（完整化学链）：**第一阶段完成**（在专用服务端 smoke 里）。新增场景：化学灌注机（三氧化硫+水蒸气→硫酸）→ 加压管道 → 化学溶解室（硫酸+铁矿石→**dirty_iron 浆液**），实测溶解室 `chemical_tanks=[4115 mB sulfuric_acid, 1000 mB dirty_iron]`，`fabric-machine-smoke.sh` **EXIT=0 / 23 PASS**。途中记下三个坑：溶解室槽位是 **0=化学品输入、1=物品输入**（矿石放槽 0 机器完全不启动）、新场景需 `forceload add 3 0`、灌注机输出罐不序列化（断言要看下游）。未做：×4/×5 全链与硫酸自产（硫→氧化→酸）。[记录](evidence/p8-release/w111-chemical-chain.json)
+W-111（完整化学链）：**入口段完成**。化学灌注机（三氧化硫+水蒸气→硫酸）→ 加压管道 → 化学溶解室（硫酸+铁矿石→**dirty_iron 浆液**），实测 `chemical_tanks=[4115 mB sulfuric_acid, 1000 mB dirty_iron]`，`fabric-machine-smoke.sh` **EXIT=0 / 25 PASS**。**后续段（洗涤→结晶）受阻并已回退**：共试 6 种配置（管道直连、相邻直连、`OUTPUT(4)`/`OUTPUT_2(6)`、以化学品储罐做中转），溶解室始终没有把浆液弹射出去（下游 tank/washer 读不到任何化学品），而已核实的配置写入是正确的 → 问题在输出罐与侧类型的绑定/弹射路径，不在地址算术。[记录](evidence/p8-release/w111-chemical-chain.json)
 
 W-102（JEI 分类覆盖）：**完成**（改用运行时计数代替逐类截图）。`MekanismJEI` 在 `onRuntimeAvailable(IJeiRuntime)` 里对注册过的 30 个分类逐个 `createRecipeLookup(...).includeHidden().get().count()`，打点 `MEKANISM_FABRIC_JEI_CATEGORY_PROOF`：实测 **count=30 empty=0**，配方数从 1（activating、sps_casing）到 200（crushing）；完整分类-配方数清单见证据页。此前“逐类截图”的路线在 mdb 上不可行（JEI 搜索框不接收合成字符、按 R 不弹配方页），已记录；未覆盖的是各分类的**渲染外观**逐类核对与 QIO 配方转移按钮。[记录](evidence/p8-release/w102-jei-categories.json)
 
