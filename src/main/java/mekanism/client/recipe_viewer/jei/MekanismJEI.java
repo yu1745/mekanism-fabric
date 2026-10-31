@@ -61,6 +61,8 @@ import mezz.jei.api.helpers.IStackHelper;
 import mezz.jei.api.ingredients.IIngredientType;
 import mezz.jei.api.ingredients.subtypes.ISubtypeInterpreter;
 import mezz.jei.api.fabric.constants.FabricTypes;
+import mezz.jei.api.recipe.IRecipeManager;
+import mezz.jei.api.runtime.IJeiRuntime;
 import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.recipe.transfer.IRecipeTransferHandlerHelper;
 import mezz.jei.api.registration.IGuiHandlerRegistration;
@@ -88,6 +90,9 @@ public class MekanismJEI implements IModPlugin {
     public static final ChemicalStackHelper CHEMICAL_STACK_HELPER = new ChemicalStackHelper();
     private static final ISubtypeInterpreter<ItemStack> MEKANISM_DATA_INTERPRETER = new MekanismSubtypeInterpreter();
     private static final Map<IRecipeViewerRecipeType<?>, RecipeType<?>> recipeTypeInstanceCache = new HashMap<>();
+    //Fabric port proof: every category this plugin registers, so the runtime hook can report how many recipes
+    //each one actually resolves (W-102 asks for per-category coverage that the UI cannot be driven for here).
+    private static final java.util.List<mezz.jei.api.recipe.category.IRecipeCategory<?>> REGISTERED_CATEGORIES = new java.util.ArrayList<>();
 
     public static boolean shouldLoad() {
         //Skip handling if both EMI and JEI are loaded as otherwise some things behave strangely
@@ -173,49 +178,49 @@ public class MekanismJEI implements IModPlugin {
         }
         IGuiHelper guiHelper = registry.getJeiHelpers().getGuiHelper();
 
-        registry.addRecipeCategories(new ChemicalCrystallizerRecipeCategory(guiHelper, RecipeViewerRecipeType.CRYSTALLIZING));
-        registry.addRecipeCategories(new ChemicalDissolutionRecipeCategory(guiHelper, RecipeViewerRecipeType.DISSOLUTION));
-        registry.addRecipeCategories(new ChemicalChemicalToChemicalRecipeCategory(guiHelper, RecipeViewerRecipeType.CHEMICAL_INFUSING));
-        registry.addRecipeCategories(new FluidChemicalToChemicalRecipeCategory(guiHelper, RecipeViewerRecipeType.WASHING));
-        registry.addRecipeCategories(new ElectrolysisRecipeCategory(guiHelper, RecipeViewerRecipeType.SEPARATING));
-        registry.addRecipeCategories(new MetallurgicInfuserRecipeCategory(guiHelper, RecipeViewerRecipeType.METALLURGIC_INFUSING));
-        registry.addRecipeCategories(new PressurizedReactionRecipeCategory(guiHelper, RecipeViewerRecipeType.REACTION));
-        registry.addRecipeCategories(new PigmentExtractingRecipeCategory(guiHelper, RecipeViewerRecipeType.PIGMENT_EXTRACTING));
-        registry.addRecipeCategories(new PigmentMixerRecipeCategory(guiHelper, RecipeViewerRecipeType.PIGMENT_MIXING));
-        registry.addRecipeCategories(new PaintingRecipeCategory(guiHelper, RecipeViewerRecipeType.PAINTING));
+        addCategory(registry, new ChemicalCrystallizerRecipeCategory(guiHelper, RecipeViewerRecipeType.CRYSTALLIZING));
+        addCategory(registry, new ChemicalDissolutionRecipeCategory(guiHelper, RecipeViewerRecipeType.DISSOLUTION));
+        addCategory(registry, new ChemicalChemicalToChemicalRecipeCategory(guiHelper, RecipeViewerRecipeType.CHEMICAL_INFUSING));
+        addCategory(registry, new FluidChemicalToChemicalRecipeCategory(guiHelper, RecipeViewerRecipeType.WASHING));
+        addCategory(registry, new ElectrolysisRecipeCategory(guiHelper, RecipeViewerRecipeType.SEPARATING));
+        addCategory(registry, new MetallurgicInfuserRecipeCategory(guiHelper, RecipeViewerRecipeType.METALLURGIC_INFUSING));
+        addCategory(registry, new PressurizedReactionRecipeCategory(guiHelper, RecipeViewerRecipeType.REACTION));
+        addCategory(registry, new PigmentExtractingRecipeCategory(guiHelper, RecipeViewerRecipeType.PIGMENT_EXTRACTING));
+        addCategory(registry, new PigmentMixerRecipeCategory(guiHelper, RecipeViewerRecipeType.PIGMENT_MIXING));
+        addCategory(registry, new PaintingRecipeCategory(guiHelper, RecipeViewerRecipeType.PAINTING));
 
         //Register both methods of rotary condensentrator recipes
-        registry.addRecipeCategories(new RotaryCondensentratorRecipeCategory(guiHelper, true));
-        registry.addRecipeCategories(new RotaryCondensentratorRecipeCategory(guiHelper, false));
+        addCategory(registry, new RotaryCondensentratorRecipeCategory(guiHelper, true));
+        addCategory(registry, new RotaryCondensentratorRecipeCategory(guiHelper, false));
 
-        registry.addRecipeCategories(new ItemStackToChemicalRecipeCategory<>(guiHelper, RecipeViewerRecipeType.OXIDIZING, false));
-        registry.addRecipeCategories(new ItemStackToFluidOptionalItemRecipeCategory(guiHelper, RecipeViewerRecipeType.NUTRITIONAL_LIQUIFICATION, false));
+        addCategory(registry, new ItemStackToChemicalRecipeCategory<>(guiHelper, RecipeViewerRecipeType.OXIDIZING, false));
+        addCategory(registry, new ItemStackToFluidOptionalItemRecipeCategory(guiHelper, RecipeViewerRecipeType.NUTRITIONAL_LIQUIFICATION, false));
 
-        registry.addRecipeCategories(new ChemicalToChemicalRecipeCategory(guiHelper, RecipeViewerRecipeType.ACTIVATING));
-        registry.addRecipeCategories(new ChemicalToChemicalRecipeCategory(guiHelper, RecipeViewerRecipeType.CENTRIFUGING));
+        addCategory(registry, new ChemicalToChemicalRecipeCategory(guiHelper, RecipeViewerRecipeType.ACTIVATING));
+        addCategory(registry, new ChemicalToChemicalRecipeCategory(guiHelper, RecipeViewerRecipeType.CENTRIFUGING));
 
-        registry.addRecipeCategories(new CombinerRecipeCategory(guiHelper, RecipeViewerRecipeType.COMBINING));
+        addCategory(registry, new CombinerRecipeCategory(guiHelper, RecipeViewerRecipeType.COMBINING));
 
-        registry.addRecipeCategories(new ItemStackChemicalToItemStackRecipeCategory(guiHelper, RecipeViewerRecipeType.PURIFYING));
-        registry.addRecipeCategories(new ItemStackChemicalToItemStackRecipeCategory(guiHelper, RecipeViewerRecipeType.COMPRESSING));
-        registry.addRecipeCategories(new ItemStackChemicalToItemStackRecipeCategory(guiHelper, RecipeViewerRecipeType.INJECTING));
+        addCategory(registry, new ItemStackChemicalToItemStackRecipeCategory(guiHelper, RecipeViewerRecipeType.PURIFYING));
+        addCategory(registry, new ItemStackChemicalToItemStackRecipeCategory(guiHelper, RecipeViewerRecipeType.COMPRESSING));
+        addCategory(registry, new ItemStackChemicalToItemStackRecipeCategory(guiHelper, RecipeViewerRecipeType.INJECTING));
 
-        registry.addRecipeCategories(new NucleosynthesizingRecipeCategory(guiHelper, RecipeViewerRecipeType.NUCLEOSYNTHESIZING));
+        addCategory(registry, new NucleosynthesizingRecipeCategory(guiHelper, RecipeViewerRecipeType.NUCLEOSYNTHESIZING));
 
-        registry.addRecipeCategories(new SPSRecipeCategory(guiHelper, RecipeViewerRecipeType.SPS));
-        registry.addRecipeCategories(new BoilerRecipeCategory(guiHelper, RecipeViewerRecipeType.BOILER));
+        addCategory(registry, new SPSRecipeCategory(guiHelper, RecipeViewerRecipeType.SPS));
+        addCategory(registry, new BoilerRecipeCategory(guiHelper, RecipeViewerRecipeType.BOILER));
 
-        registry.addRecipeCategories(new SawmillRecipeCategory(guiHelper, RecipeViewerRecipeType.SAWING));
+        addCategory(registry, new SawmillRecipeCategory(guiHelper, RecipeViewerRecipeType.SAWING));
 
-        registry.addRecipeCategories(new ItemStackToItemStackRecipeCategory(guiHelper, RecipeViewerRecipeType.ENRICHING));
-        registry.addRecipeCategories(new ItemStackToItemStackRecipeCategory(guiHelper, RecipeViewerRecipeType.CRUSHING));
-        registry.addRecipeCategories(new ItemStackToItemStackRecipeCategory(guiHelper, RecipeViewerRecipeType.SMELTING));
+        addCategory(registry, new ItemStackToItemStackRecipeCategory(guiHelper, RecipeViewerRecipeType.ENRICHING));
+        addCategory(registry, new ItemStackToItemStackRecipeCategory(guiHelper, RecipeViewerRecipeType.CRUSHING));
+        addCategory(registry, new ItemStackToItemStackRecipeCategory(guiHelper, RecipeViewerRecipeType.SMELTING));
 
-        registry.addRecipeCategories(new FluidToFluidRecipeCategory(guiHelper, RecipeViewerRecipeType.EVAPORATING));
+        addCategory(registry, new FluidToFluidRecipeCategory(guiHelper, RecipeViewerRecipeType.EVAPORATING));
 
         //Conversion recipes
-        registry.addRecipeCategories(new ItemStackToEnergyRecipeCategory(guiHelper, RecipeViewerRecipeType.ENERGY_CONVERSION));
-        registry.addRecipeCategories(new ItemStackToChemicalRecipeCategory<>(guiHelper, RecipeViewerRecipeType.CHEMICAL_CONVERSION, true));
+        addCategory(registry, new ItemStackToEnergyRecipeCategory(guiHelper, RecipeViewerRecipeType.ENERGY_CONVERSION));
+        addCategory(registry, new ItemStackToChemicalRecipeCategory<>(guiHelper, RecipeViewerRecipeType.CHEMICAL_CONVERSION, true));
     }
 
     @Override
@@ -231,6 +236,32 @@ public class MekanismJEI implements IModPlugin {
     @Override
     public void registerIngredientAliases(IIngredientAliasRegistration registration) {
         new MekanismAliasMapping().addAliases(new JEIAliasHelper(registration));
+    }
+
+    private static void addCategory(IRecipeCategoryRegistration registry, mezz.jei.api.recipe.category.IRecipeCategory<?> category) {
+        REGISTERED_CATEGORIES.add(category);
+        registry.addRecipeCategories(category);
+    }
+
+    @Override
+    public void onRuntimeAvailable(@NotNull IJeiRuntime runtime) {
+        IRecipeManager recipeManager = runtime.getRecipeManager();
+        StringBuilder report = new StringBuilder();
+        int empty = 0;
+        for (mezz.jei.api.recipe.category.IRecipeCategory<?> category : REGISTERED_CATEGORIES) {
+            String id = String.valueOf(category.getRecipeType().getUid());
+            long count;
+            try {
+                count = recipeManager.createRecipeLookup(category.getRecipeType()).includeHidden().get().count();
+            } catch (RuntimeException e) {
+                count = -1L;
+            }
+            if (count <= 0) {
+                empty++;
+            }
+            report.append(id).append('=').append(count).append(' ');
+        }
+        MekanismAPI.logger.info("MEKANISM_FABRIC_JEI_CATEGORY_PROOF count={} empty={} categories={}", REGISTERED_CATEGORIES.size(), empty, report.toString().trim());
     }
 
     @Override

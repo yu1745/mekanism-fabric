@@ -24,7 +24,7 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 
 ## 验收证据
 
-W-102（JEI 分类抽样）：**部分完成**。实际注册 **30** 个分类（路线图写的 24 是旧数），类名清单已整理；JEI 物品面板在物品栏内渲染正常。**受阻**：mdb 的合成输入打不开 JEI 配方视图——搜索框不接收 `gui type` 字符（`handledCharEvents=0`，Ctrl+F/点击聚焦均无效），对槽位按 `R` 也不弹配方页，因此拿不到逐类截图。另记两条副产物：EMI 与 JEI 同装时 EMI 会接管 JEI 的 UI（单独验证 JEI 须先移走 EMI）；重建 `argFiles/runClient` 漏掉 `build/classes/java/main` 与 `build/resources/main` 时客户端能起但**开发模组不在 classpath**（`block not registered`），已写入排障小节。下一步改用“注册期证明行”替代截图（一次覆盖 30 个分类的注册与配方绑定）。[记录](evidence/p8-release/w102-jei-categories.json)
+W-102（JEI 分类覆盖）：**完成**（改用运行时计数代替逐类截图）。`MekanismJEI` 在 `onRuntimeAvailable(IJeiRuntime)` 里对注册过的 30 个分类逐个 `createRecipeLookup(...).includeHidden().get().count()`，打点 `MEKANISM_FABRIC_JEI_CATEGORY_PROOF`：实测 **count=30 empty=0**，配方数从 1（activating、sps_casing）到 200（crushing）；完整分类-配方数清单见证据页。此前“逐类截图”的路线在 mdb 上不可行（JEI 搜索框不接收合成字符、按 R 不弹配方页），已记录；未覆盖的是各分类的**渲染外观**逐类核对与 QIO 配方转移按钮。[记录](evidence/p8-release/w102-jei-categories.json)
 
 W-105（游戏内配置界面）：Fabric 版原本**没有**配置界面入口（Fabric 无加载器级配置屏，本移植也无 Mod Menu 集成）。按“可选依赖 + 最小适配”补齐：`modCompileOnly` 的 Mod Menu 11.0.5 + `-PmodmenuDev` 开关 + `modmenu` entrypoint → `FabricModMenuIntegration` → 只读的 `GuiMekanismConfig`。真机验证：Mod Menu 里 Mekanism 的配置齿轮由禁用变可用，点击打开界面并列出 `client.toml / common.toml / startup.toml` 及字节数与“编辑后重启生效”提示（截图 `w74/modmenu-config-screen.png`）。顺带修掉三个坑：平台 slice 未登记的类不会编译（`loadSlice` 跳过注释行，计数 209→211）、`ObjectSelectionList` 必须 `addRenderableWidget`、1.21.1 没有 `setRenderBackground`。发布 JAR 不含 `com/terraformersmc/` 类，泄漏断言与 entrypoint 契约已同步。[记录](evidence/p8-release/w105-config-screen.json)
 
