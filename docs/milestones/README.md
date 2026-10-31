@@ -54,5 +54,6 @@
 - **本批渲染修复**：Meka-Tool 已按原生显示上下文选择独立左右手模型，QIO dashboard 已按官方 JSON 给 LED 层应用 full-bright；[直接实机结果](evidence/development-render/native-summary.json)。未穷举第三方渲染器与资源包组合。
 - **验证边界**：现有证据覆盖代表装备／流体／网络路径，未穷举全部模块组合、流体／船／滑翔、第三方容器与能量提供者。worldgen 的保存 palette 与 retrogen 触发读数不证明全部矿脉分布；[范围与证据](evidence/p8-release/w42-preparation.json)。
 - **后续模块**：Tools、Generators、Additions 已完成移植与模块回归；四 JAR 净构建与哈希见 W-61 证据。
+- **NeoForge 存档语义**：机器／传输器／多方块 NBT 已在官方 NeoForge 样本世界上比对通过（W-65 第一轮）；频率与机器运行库存尚未覆盖。
 - **发布 JAR 客户端路径**：已验证（W-69，`scripts/fabric-packaged-client-smoke.sh`）：生产客户端加载四个发布 JAR 并应用 458 值后加入游戏。
 - **尚未真机验证（P15 处理，`docs/milestones/ROADMAP.md` W-64）**：Generators 音效播放、裂变熔毁受控路径、Additions 语音 PCM 采集与本机音频设备、Meka 套装 HUD 细节。
