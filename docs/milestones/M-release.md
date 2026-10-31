@@ -24,6 +24,8 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 
 ## 验收证据
 
+W-83（受阻）：裂变熔毁受控路径**未完成**——`/mek build` 的 `build` 字面量要求命令来源是 `ServerPlayer`，控制台没有实体，`help mek` 里看不到 `build`、`mek build fission <pos>` 直接报错；同一台官方 NeoForge 参考服控制台表现**完全一致**（可见子命令 chunk/debug/retrogen/radiation/testrules 相同），证明这是上游设计而非移植缺失，D4 关于“控制台可跑 `mek build`”的假设需要修正。三条可行路径已记录（玩家连接后 `execute as`、离线写 level attachment、reflect 取 AttachmentType），推荐第一条。[记录](evidence/p8-release/w83-fission-blocked.json)
+
 W-88：文档终稿——根 `README.md` 重写为入口（Fabric 来源与成熟度说明 + 「我想做…→看哪份文档」6 行表 + 三条常用命令 + 证据索引，上游介绍原样保留在 “Upstream Mekanism” 小节）；新增 `docs/README.md` 索引（24 份顶层文档逐份一行说明 + archive 说明 + 三条约定：当前状态以 `milestones/README.md` 为准、每个断言链证据、archive 只读）。两份入口文档的相对链接经脚本校验 **0 broken**。未移动 docs/ 顶层文档——逐份检查都是现行主题笔记，移动会破坏既有引用。[记录](evidence/p8-release/w88-docs-final.json)
 
 W-87（第一遍）：清理第二轮——`rg TASK0[0-9]{2}` 命中 57 处，绝大多数是**出处说明**（解释与上游的差异来源），删除会丢审查依据，故只修**失效路径**：`TASK052_RESUME_2026-10-26.md` 与 `TASK052_ADJUDICATION_EFFECTIVE_SIDE.md` 已归档到 `docs/archive/`，6 处源码注释仍指旧路径，已全部改到归档路径；`./gradlew -p fabric assemble` BUILD SUCCESSFUL。重复/过时文档合并留给 W-88。[记录](evidence/p8-release/w87-cleanup-pass2.json)
