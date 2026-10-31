@@ -367,3 +367,7 @@ AGENTS.md 本批新增：①"游戏客户端只能用 mdb 启动"硬规则 ②"�
 ## 用户裁决（2026-10-31 12:20）
 
 主仓库 `server-v2` **不用管**：submodule 指针更新从待办中移除，不要在 `DECISIONS_PENDING.md`（W-100）里列入。仍等用户的只剩 wip squash、推送本地领先提交、JEI/WTHIT 是否批准。
+
+## 用户裁决（2026-10-31 追加）
+
+JEI（W-74c）与 WTHIT（W-74d）已批准，见 `ROADMAP.md`「W-74 范围追加」；REI/TOP 不做。本地提交已推送 origin。仍等用户的只剩 wip 提交 squash。
