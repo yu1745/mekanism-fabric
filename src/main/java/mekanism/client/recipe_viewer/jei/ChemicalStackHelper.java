@@ -24,7 +24,7 @@ import net.minecraft.core.HolderSet.Named;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.fluids.FluidType;
+
 import org.jetbrains.annotations.Nullable;
 
 public class ChemicalStackHelper implements IIngredientHelper<ChemicalStack> {
@@ -66,7 +66,7 @@ public class ChemicalStackHelper implements IIngredientHelper<ChemicalStack> {
 
     @Override
     public ChemicalStack normalizeIngredient(ChemicalStack ingredient) {
-        return ingredient.copyWithAmount(FluidType.BUCKET_VOLUME);
+        return ingredient.copyWithAmount(1000);
     }
 
     @Override

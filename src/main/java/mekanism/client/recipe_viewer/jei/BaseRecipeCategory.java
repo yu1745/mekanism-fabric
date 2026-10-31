@@ -33,7 +33,7 @@ import mezz.jei.api.gui.widgets.IRecipeExtrasBuilder;
 import mezz.jei.api.helpers.ICodecHelper;
 import mezz.jei.api.helpers.IGuiHelper;
 import mezz.jei.api.ingredients.IIngredientType;
-import mezz.jei.api.neoforge.NeoForgeTypes;
+import mezz.jei.api.fabric.constants.FabricTypes;
 import mezz.jei.api.recipe.IFocusGroup;
 import mezz.jei.api.recipe.IRecipeManager;
 import mezz.jei.api.recipe.RecipeIngredientRole;
@@ -46,8 +46,8 @@ import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.FluidType;
+import mekanism.api.fluid.FluidStack;
+
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -295,8 +295,8 @@ public abstract class BaseRecipeCategory<RECIPE> extends AbstractContainerEventH
         int height = gauge.getHeight() - 2;
         //If we have no max (no fluids or just an empty fluid) we want to ensure the fluid renderer doesn't throw errors,
         // so we just return a capacity for the render of a bucket
-        int max = stacks.stream().mapToInt(FluidStack::getAmount).filter(stackSize -> stackSize > 0).max().orElse(FluidType.BUCKET_VOLUME);
-        return init(builder, NeoForgeTypes.FLUID_STACK, role, gauge, stacks)
+        int max = stacks.stream().mapToInt(FluidStack::getAmount).filter(stackSize -> stackSize > 0).max().orElse(1000);
+        return init(builder, FabricTypes.FLUID_STACK, role, gauge, stacks.stream().map(JeiFluidStacks::toIngredient).toList())
               .setFluidRenderer(max, false, width, height);
     }
 
@@ -304,7 +304,7 @@ public abstract class BaseRecipeCategory<RECIPE> extends AbstractContainerEventH
         int width = element.getWidth() - 2;
         int height = element.getHeight() - 2;
         //If we have no max (no chemicals or just an empty chemical) we mirror how we handle fluids and just return a capacity for the render of a bucket
-        long max = stacks.stream().mapToLong(ChemicalStack::getAmount).filter(stackSize -> stackSize > 0).max().orElse(FluidType.BUCKET_VOLUME);
+        long max = stacks.stream().mapToLong(ChemicalStack::getAmount).filter(stackSize -> stackSize > 0).max().orElse(1000);
         return init(builder, MekanismJEI.TYPE_CHEMICAL, role, element, stacks)
               .setCustomRenderer(MekanismJEI.TYPE_CHEMICAL, new ChemicalStackRenderer(max, width, height));
     }

@@ -24,6 +24,8 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 
 ## 验收证据
 
+W-74c（JEI）：**41 个文件编译通过并经真机注册验证**——依赖用 `mezz.jei:jei-1.21.1-fabric:19.43.0.398`（最新 19.70 由 Loom 1.18.2 构建，本仓 Loom 1.13.6 拒绝；Modrinth 坐标拿到的是不含 loader API 的套壳 jar），仅编译期 + `-PjeiDev` 运行期。移植要点：7 个文件的流体类型改写、**JEI 流体 ingredient 类型差异**（Fabric 是 `FabricTypes.FLUID_STACK` + `IJeiFluidIngredient`，故新增 `JeiFluidStacks` 适配器并在 3 处改写）、`addFluidAliases` 的映射/文本分离、与 EMI 一致地去掉物品流体 capability 回退、`Mekanism.hooks.emi.isLoaded()` 换成 `FabricLoader.isModLoaded`。`jei_mod_plugin` entrypoint 已注册并同步进打包契约。真机（只装 JEI）输出 `MEKANISM_FABRIC_JEI_PROOF`，JEI 显示 57 页物品与搜索框、无异常。**未验证**：24 个分类的逐个渲染、QIO 合成转移。[记录](evidence/p8-release/w74c-jei.json)
+
 W-100（给用户的决策清单）：新增 [`DECISIONS_PENDING.md`](DECISIONS_PENDING.md)——①强制推送确认（W-101 squash 后需 `--force-with-lease`，worker 不自行推送）②版本号与发布形态（`+fabric.1` 是否要改、是否正式发布）③剩余 W 项取舍（W-79、W-83 受阻路径、W-80/81/82 余项、W-98 Sodium/Iris 覆盖档位、W-99 选哪个第三方模组、W-74c/d JEI+WTHIT 是否仍做）④发布说明的已知限制口径 ⑤其他未阻塞事项（证据体积、完整演练）。按用户裁决，`server-v2` 的 submodule 指针**未列入**。[记录](evidence/p8-release/w100-decisions.json)
 
 W-94（注册表差异定性）：重跑比对得 blocks 501/501、items 1064/1066（missing 0）、tags 444/448（missing 2 / extra 6），**自己命名空间 missing 恒为 0**。逐项定性：items 多出的 `neoforge:bucket`/`neoforge:default` 是端口 shim（Fabric 没有 NeoForge 提供的父模型）；tags 缺的 `neoforge:damage_type/is_environment`、`projecte:block/vein/shovel` 与多出的 `accessories:item/*`、4 个 `neoforge:damage_type/*` **全是外来命名空间**，分别对应 Accessories 集成与无 ProjectE/无 NeoForge 消费者的惰性标签。附带核实：核心 JAR 有 **104 个资产 JSON 引用 `neoforge:` 装载器**（composite 82、item/bucket 18、fluid_container 18、obj 2），由 `FabricMekanismModelPlugin`/`FabricCompositeModel`/`FabricObjModel`/`BlockModelCompositeMixin` 解释，**不是残留**。结论：无漏移植，无需补实现。[记录](evidence/p8-release/w94-registry-deltas.json)

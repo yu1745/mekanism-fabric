@@ -106,6 +106,7 @@ mekanism/api/heat/IHeatHandler.java
 mekanism/api/heat/IMekanismHeatHandler.java
 mekanism/api/heat/ISidedHeatHandler.java
 mekanism/api/integration/emi/IMekanismEmiHelper.java
+mekanism/api/integration/jei/IMekanismJEIHelper.java
 mekanism/api/inventory/ICreativeInventorySlot.java
 mekanism/api/inventory/IHashedItem.java
 mekanism/api/inventory/IInventorySlot.java

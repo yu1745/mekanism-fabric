@@ -128,6 +128,7 @@ expected_entrypoints = {
     # them here keeps the "no third-party classes in the release JAR" property intact while allowing the hooks.
     "emi": ["mekanism.client.recipe_viewer.emi.MekanismEmi"],
     "jade": ["mekanism.common.integration.lookingat.jade.MekanismJadePlugin"],
+    "jei_mod_plugin": ["mekanism.client.recipe_viewer.jei.MekanismJEI"],
 }
 # Pinned MC 1.21.1 intermediary entries, checked against the named source and Loom mappings.
 # Update deliberately alongside changes to mekanism.accesswidener; never infer this from the tested JAR.

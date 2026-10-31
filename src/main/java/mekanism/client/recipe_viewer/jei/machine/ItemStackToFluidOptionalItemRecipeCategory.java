@@ -19,7 +19,8 @@ import mekanism.client.gui.element.slot.SlotType;
 import mekanism.client.recipe_viewer.RecipeViewerUtils;
 import mekanism.client.recipe_viewer.jei.BaseRecipeCategory;
 import mekanism.client.recipe_viewer.type.IRecipeViewerRecipeType;
-import mekanism.common.Mekanism;
+import mekanism.api.MekanismAPI;
+import net.minecraft.resources.ResourceLocation;
 import mekanism.common.recipe.impl.NutritionalLiquifierIRecipe;
 import mekanism.common.tile.component.config.DataType;
 import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
@@ -31,7 +32,7 @@ import mezz.jei.api.recipe.RecipeIngredientRole;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.fluids.FluidStack;
+import mekanism.api.fluid.FluidStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -79,9 +80,9 @@ public class ItemStackToFluidOptionalItemRecipeCategory extends BaseRecipeCatego
     public ResourceLocation getRegistryName(@NotNull BasicItemStackToFluidOptionalItemRecipe recipe) {
         List<@NotNull ItemStack> representations = recipe.getInput().getRepresentations();
         if (representations.size() == 1) {
-            ResourceLocation itemId = BuiltInRegistries.ITEM.getKeyOrNull(representations.getFirst().getItem());
+            ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(representations.getFirst().getItem());
             if (itemId != null) {
-                return RecipeViewerUtils.synthetic(itemId, "liquification", Mekanism.MODID);
+                return RecipeViewerUtils.synthetic(itemId, "liquification", MekanismAPI.MEKANISM_MODID);
             }
         }
         return null;

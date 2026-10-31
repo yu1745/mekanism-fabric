@@ -10,8 +10,8 @@ import mekanism.common.capabilities.Capabilities;
 import mezz.jei.api.ingredients.subtypes.ISubtypeInterpreter;
 import mezz.jei.api.ingredients.subtypes.UidContext;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import mekanism.api.fluid.FluidStack;
+import mekanism.api.fluid.IExtendedFluidHandler;
 import org.jetbrains.annotations.Nullable;
 
 public class MekanismSubtypeInterpreter implements ISubtypeInterpreter<ItemStack> {
@@ -43,7 +43,7 @@ public class MekanismSubtypeInterpreter implements ISubtypeInterpreter<ItemStack
             }
         }
 
-        IFluidHandler fluidHandler = getFluidHandler(stack);
+        IExtendedFluidHandler fluidHandler = getFluidHandler(stack);
         if (fluidHandler != null) {
             for (int tank = 0, tanks = fluidHandler.getTanks(); tank < tanks; tank++) {
                 FluidStack fluidStack = fluidHandler.getFluidInTank(tank);
@@ -109,7 +109,7 @@ public class MekanismSubtypeInterpreter implements ISubtypeInterpreter<ItemStack
 
     @Deprecated
     private static String getFluidComponent(ItemStack stack) {
-        IFluidHandler handler = getFluidHandler(stack);
+        IExtendedFluidHandler handler = getFluidHandler(stack);
         if (handler != null) {
             String component = "";
             for (int tank = 0, tanks = handler.getTanks(); tank < tanks; tank++) {
@@ -154,12 +154,10 @@ public class MekanismSubtypeInterpreter implements ISubtypeInterpreter<ItemStack
     }
 
     @Nullable
-    private static IFluidHandler getFluidHandler(ItemStack stack) {
-        IFluidHandler handler = ContainerType.FLUID.createHandlerIfData(stack);
-        if (handler == null) {
-            return Capabilities.FLUID.getCapability(stack);
-        }
-        return handler;
+    private static IExtendedFluidHandler getFluidHandler(ItemStack stack) {
+        //Fabric port delta: the loader item capability yields a transfer Storage rather than a Mekanism handler, and
+        //Mekanism's own containers keep their fluid in components, so only the component-backed path is inspected.
+        return ContainerType.FLUID.createHandlerIfData(stack);
     }
 
     @Nullable

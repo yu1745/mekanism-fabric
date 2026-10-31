@@ -24,7 +24,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.TooltipFlag;
-import net.neoforged.neoforge.fluids.FluidType;
+
 import org.jetbrains.annotations.NotNull;
 
 public class ChemicalStackRenderer implements IIngredientRenderer<ChemicalStack> {
@@ -38,7 +38,7 @@ public class ChemicalStackRenderer implements IIngredientRenderer<ChemicalStack>
     private final int height;
 
     public ChemicalStackRenderer() {
-        this(FluidType.BUCKET_VOLUME, TooltipMode.ITEM_LIST, TEXTURE_SIZE, TEXTURE_SIZE);
+        this(1000, TooltipMode.ITEM_LIST, TEXTURE_SIZE, TEXTURE_SIZE);
     }
 
     public ChemicalStackRenderer(long capacityMb, int width, int height) {

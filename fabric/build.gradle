@@ -179,7 +179,10 @@ repositories {
     }
     maven {
         url = 'https://maven.blamejared.com'
-        content { includeGroup 'org.openzen.zencode' }
+        content {
+            includeGroup 'org.openzen.zencode'
+            includeGroup 'mezz.jei'
+        }
     }
     maven {
         url = 'https://maven.wispforest.io/releases'
@@ -210,7 +213,7 @@ def platformSlice = loadSlice('platform-slice.txt')
 def apiSliceFiles = apiSlice.collect { file("../src/api/java/${it}") }
 def commonSliceFiles = commonSlice.collect { file("../src/main/java/${it}") }
 def platformSliceFiles = platformSlice.collect { file("src/main/java/${it}") }
-if (apiSlice.size() != 264 || commonSlice.size() != 1580 || platformSlice.size() != 209) {
+if (apiSlice.size() != 265 || commonSlice.size() != 1627 || platformSlice.size() != 209) {
     throw new GradleException("Unexpected Fabric source slice counts: api=${apiSlice.size()} common=${commonSlice.size()} platform=${platformSlice.size()}")
 }
 
@@ -652,6 +655,12 @@ dependencies {
     modCompileOnly("maven.modrinth:jade:${jadeVersion}") { transitive = false }
     if (providers.gradleProperty('jadeDev').isPresent()) {
         modLocalRuntime "maven.modrinth:jade:${jadeVersion}"
+    }
+    //JEI recipe viewer (W-74c): same optional arrangement as EMI and Jade.
+    def jeiVersion = '19.43.0.398'
+    modCompileOnly("mezz.jei:jei-1.21.1-fabric:${jeiVersion}") { transitive = false }
+    if (providers.gradleProperty('jeiDev').isPresent()) {
+        modLocalRuntime "mezz.jei:jei-1.21.1-fabric:${jeiVersion}"
     }
     // Explicitly opted-in dev runtime for testing the real optional mod; never bundle it.
     if (providers.gradleProperty('accessoriesDev').isPresent()) {

@@ -5,7 +5,8 @@ import java.util.List;
 import mekanism.api.chemical.Chemical;
 import mekanism.api.gear.IModuleHelper;
 import mekanism.api.text.IHasTranslationKey;
-import mekanism.common.Mekanism;
+import mekanism.api.MekanismAPI;
+import net.minecraft.resources.ResourceLocation;
 import mekanism.common.content.gear.IModuleItem;
 import mekanism.common.registration.impl.BlockRegistryObject;
 import mekanism.common.registration.impl.ItemDeferredRegister;
@@ -15,7 +16,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.material.Fluid;
-import net.neoforged.neoforge.fluids.FluidStack;
+import mekanism.api.fluid.FluidStack;
 
 public interface RVAliasHelper<ITEM, FLUID, CHEMICAL> {
 
@@ -66,7 +67,7 @@ public interface RVAliasHelper<ITEM, FLUID, CHEMICAL> {
 
     default void addItemAliases(TagKey<Item> tag, IHasTranslationKey... aliases) {
         if (aliases.length == 0) {
-            Mekanism.logger.warn("Expected to have at least one alias for item tag: {}", tag.location());
+            MekanismAPI.logger.warn("Expected to have at least one alias for item tag: {}", tag.location());
         } else {
             addItemAliases(itemTagContents(tag), aliases);
         }
@@ -82,7 +83,7 @@ public interface RVAliasHelper<ITEM, FLUID, CHEMICAL> {
 
     default void addFluidAliases(TagKey<Fluid> tag, IHasTranslationKey... aliases) {
         if (aliases.length == 0) {
-            Mekanism.logger.warn("Expected to have at least one alias for fluid tag: {}", tag.location());
+            MekanismAPI.logger.warn("Expected to have at least one alias for fluid tag: {}", tag.location());
         } else {
             addFluidAliases(fluidTagContents(tag), aliases);
         }
@@ -94,7 +95,7 @@ public interface RVAliasHelper<ITEM, FLUID, CHEMICAL> {
 
     default void addChemicalAliases(TagKey<Chemical> tag, IHasTranslationKey... aliases) {
         if (aliases.length == 0) {
-            Mekanism.logger.warn("Expected to have at least one alias for chemical tag: {}", tag.location());
+            MekanismAPI.logger.warn("Expected to have at least one alias for chemical tag: {}", tag.location());
         } else {
             addChemicalAliases(chemicalTagContents(tag), aliases);
         }

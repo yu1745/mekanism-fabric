@@ -9,10 +9,12 @@ import mekanism.api.chemical.Chemical;
 import mekanism.api.chemical.ChemicalStack;
 import mekanism.api.text.IHasTranslationKey;
 import mekanism.client.recipe_viewer.alias.RVAliasHelper;
-import mekanism.common.Mekanism;
+import mekanism.api.MekanismAPI;
+import net.minecraft.resources.ResourceLocation;
 import mezz.jei.api.constants.VanillaTypes;
 import mezz.jei.api.ingredients.IIngredientType;
-import mezz.jei.api.neoforge.NeoForgeTypes;
+import mezz.jei.api.fabric.constants.FabricTypes;
+import mezz.jei.api.fabric.ingredients.fluids.IJeiFluidIngredient;
 import mezz.jei.api.registration.IIngredientAliasRegistration;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderSet;
@@ -22,8 +24,8 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.material.Fluid;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.FluidType;
+import mekanism.api.fluid.FluidStack;
+
 
 public class JEIAliasHelper implements RVAliasHelper<ItemStack, FluidStack, ChemicalStack> {
 
@@ -54,7 +56,7 @@ public class JEIAliasHelper implements RVAliasHelper<ItemStack, FluidStack, Chem
 
     @Override
     public FluidStack fluidIngredient(Holder<Fluid> fluid) {
-        return new FluidStack(fluid, FluidType.BUCKET_VOLUME);
+        return new FluidStack(fluid, 1000);
     }
 
     @Override
@@ -64,17 +66,17 @@ public class JEIAliasHelper implements RVAliasHelper<ItemStack, FluidStack, Chem
 
     @Override
     public List<FluidStack> fluidTagContents(TagKey<Fluid> tag) {
-        return tagContents(BuiltInRegistries.FLUID, tag, holder -> new FluidStack(holder, FluidType.BUCKET_VOLUME));
+        return tagContents(BuiltInRegistries.FLUID, tag, holder -> new FluidStack(holder, 1000));
     }
 
     @Override
     public ChemicalStack chemicalIngredient(Holder<Chemical> chemical) {
-        return new ChemicalStack(chemical, FluidType.BUCKET_VOLUME);
+        return new ChemicalStack(chemical, 1000);
     }
 
     @Override
     public List<ChemicalStack> chemicalTagContents(TagKey<Chemical> tag) {
-        return tagContents(MekanismAPI.CHEMICAL_REGISTRY, tag, holder -> new ChemicalStack(holder, FluidType.BUCKET_VOLUME));
+        return tagContents(MekanismAPI.CHEMICAL_REGISTRY, tag, holder -> new ChemicalStack(holder, 1000));
     }
 
     private <TYPE, STACK> List<STACK> tagContents(Registry<TYPE> registry, TagKey<TYPE> tag, Function<Holder<TYPE>, STACK> stackFunction) {
@@ -92,7 +94,15 @@ public class JEIAliasHelper implements RVAliasHelper<ItemStack, FluidStack, Chem
 
     @Override
     public void addFluidAliases(List<FluidStack> stacks, IHasTranslationKey... aliases) {
-        addAliases(NeoForgeTypes.FLUID_STACK, stacks, FLUID_TO_STRING, aliases);
+        //Fabric port delta: JEI's fluid ingredient type differs from the domain stack, so the alias text is derived from
+        //the domain stacks and the mapped ingredients are registered separately (the shared helper keys off one list).
+        if (aliases.length == 0) {
+            MekanismAPI.logger.warn("Expected to have at least one alias for ingredients of type: {}. Ingredients: {}",
+                  FabricTypes.FLUID_STACK.getUid(), stacks.stream().map(FLUID_TO_STRING).collect(Collectors.joining(", ")));
+            return;
+        }
+        List<IJeiFluidIngredient> ingredients = stacks.stream().map(JeiFluidStacks::toIngredient).toList();
+        registration.addAliases(FabricTypes.FLUID_STACK, ingredients, Arrays.stream(aliases).map(IHasTranslationKey::getTranslationKey).toList());
     }
 
     @Override
@@ -103,7 +113,7 @@ public class JEIAliasHelper implements RVAliasHelper<ItemStack, FluidStack, Chem
     private <INGREDIENT> void addAliases(IIngredientType<INGREDIENT> type, List<INGREDIENT> stacks, Function<INGREDIENT, String> ingredientToString,
           IHasTranslationKey... aliases) {
         if (aliases.length == 0) {
-            Mekanism.logger.warn("Expected to have at least one alias for ingredients of type: {}. Ingredients: {}", type.getUid(), stacks.stream()
+            MekanismAPI.logger.warn("Expected to have at least one alias for ingredients of type: {}. Ingredients: {}", type.getUid(), stacks.stream()
                   .map(ingredientToString)
                   .collect(Collectors.joining(", "))
             );

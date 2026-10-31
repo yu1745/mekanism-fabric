@@ -4,7 +4,8 @@ import java.util.List;
 import java.util.Map;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.text.IHasTranslationKey;
-import mekanism.common.Mekanism;
+import mekanism.api.MekanismAPI;
+import net.minecraft.resources.ResourceLocation;
 import mekanism.common.content.blocktype.FactoryType;
 import mekanism.common.item.block.ItemBlockEnergyCube;
 import mekanism.common.registration.impl.BlockRegistryObject;
@@ -85,7 +86,7 @@ public final class MekanismAliasMapping implements IAliasMapping {
                   MekanismBlocks.getFactory(FactoryTier.ULTIMATE, factoryType)
             ), factoryType.getBaseBlock());
             //Add the type as a way to look-up the base block
-            rv.addAliases(factoryType.getBaseBlock(), () -> Util.makeDescriptionId("alias", Mekanism.rl(factoryType.getRegistryNameComponent())));
+            rv.addAliases(factoryType.getBaseBlock(), () -> Util.makeDescriptionId("alias", ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, factoryType.getRegistryNameComponent())));
         }
     }
 
@@ -259,7 +260,7 @@ public final class MekanismAliasMapping implements IAliasMapping {
         rv.addAliases(MekanismBlocks.FLUORITE_BLOCK, MekanismAliases.BLOCK_FLUORITE);
         //Dynamic storage blocks
         for (Map.Entry<IResource, BlockRegistryObject<?, ?>> entry : MekanismBlocks.PROCESSED_RESOURCE_BLOCKS.entrySet()) {
-            rv.addItemAliases(entry.getValue().getItemHolder(), () -> Util.makeDescriptionId("alias", Mekanism.rl(entry.getKey().getRegistrySuffix())));
+            rv.addItemAliases(entry.getValue().getItemHolder(), () -> Util.makeDescriptionId("alias", ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, entry.getKey().getRegistrySuffix())));
         }
     }
 
