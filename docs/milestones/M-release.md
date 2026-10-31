@@ -24,6 +24,8 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 
 ## 验收证据
 
+W-109（文档同步）：`CHANGELOG.md` 增“Optional integrations”表（四个 viewer 的版本/`-P*Dev` 开关/能力/未验证项）；`docs/INSTALL.md` 把“无第三方集成”改为“四个可选 viewer 即插即用”并列出 jar 名与注意事项（EMI 需 Fabric Language Kotlin、WTHIT 需 badpackets、JEI 版本受 Loom 限制）；`docs/RELEASE_CHECKLIST.md` 的客户端检查项扩到四个、已知限制同步；`docs/LICENSES.md` 新增许可表（JEI/EMI=MIT，Jade/WTHIT=CC-BY-NC-SA-4.0，均仅编译期链接不打包，许可证取自各 JAR 的 `fabric.mod.json`）。四份文档链接全部可解析。[记录](evidence/p8-release/w109-doc-sync.json)
+
 W-108（安全/权限）：**部分验证**。机器 GUI（Crusher）与安全台 GUI 都能由 `gui open-block` 打开并正确渲染（截图 `w74/crusher-gui.png`、`w74/security-desk.png`），顺带澄清：此前 W-83/92 的 `-32018 no screen handler factory` 是“方块刚放置、BE 未同步”的临时态，BE 就绪后同样调用成功。新放置的安全台显示 “No Owner / Security Offline”（无频率时的正确语义），世界目录也还没有 `mekanism_frequencies.dat`。**未验证**：跨玩家拒绝与公开/私有/受信门禁——mdb 单机会话只有一个玩家，也没有服务端命令通道，无法构造第二个玩家；需用双客户端环境（`fabric-paired-network-smoke.sh` 扩展）另开一项。[记录](evidence/p8-release/w108-security.json)
 
 W-107（崩溃/卸载鲁棒性）：加工中 `kill -9` 集成服务端再重启——存档正常加载、**物品守恒 64**（63锭+1粉 → 62锭+2粉，无复制无丢失）、重新充能后机器可继续加工（progress 0→47）；线缆网络在硬崩后 `connections=32` 与崩溃前**完全一致**。未验证：autosave 瞬间硬杀、在途传输物品、跨维度传送恢复。两次硬杀均无残留进程。[记录](evidence/p8-release/w107-crash-robustness.json)

@@ -52,11 +52,22 @@ loader reports a missing or too-old version instead of failing at runtime.
 
 ## Third-party content
 
-The port does not bundle or ship any optional integration code: JEI/EMI/REI, Jade/WTHIT/TOP, CraftTweaker,
-ProjectE, Curios and Accessories are absent (see
+The port does not bundle or ship any optional integration code. Four client-side viewers are supported through
+**compile-only** API use — no code, assets or binaries from them are packaged into our JARs — and the rest
+(REI, TOP, CraftTweaker, ProjectE, Curios) are absent (see
 [`docs/milestones/M-integration.md`](milestones/M-integration.md)). Upstream data files that reference other
 mods are either transformed mechanically (compat recipe conditions) or left out, and are covered by the
 upstream MIT license.
+
+| Optional integration | Version compiled against | License | How it is used |
+|---|---|---|---|
+| JEI | `mezz.jei:jei-1.21.1-fabric:19.43.0.398` | MIT | `modCompileOnly`; `jei_mod_plugin` entrypoint (W-74c) |
+| EMI | `maven.modrinth:emi:1.1.24+1.21.1+fabric` | MIT | `modCompileOnly`; `emi` entrypoint (W-74a/W-91) |
+| Jade | `maven.modrinth:jade:15.10.6+fabric` | CC-BY-NC-SA-4.0 | `modCompileOnly`; `jade` entrypoint (W-74b/W-92) |
+| WTHIT | `mcp.mobius.waila:wthit:fabric-12.10.2` | CC-BY-NC-SA-4.0 | `modCompileOnly`; root `wthit_plugins.json` descriptor (W-74d) |
+
+Both CC-BY-NC-SA-4.0 mods (Jade, WTHIT) are only linked against at compile time and never redistributed; a user
+who installs them takes on their licence terms. Refresh the table whenever a dependency version is bumped.
 
 ## Where the evidence lives
 

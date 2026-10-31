@@ -74,7 +74,7 @@ mdb --session dev gui screenshot --mode window --out /tmp/release-client.png
 mdb session stop dev
 ```
 
-若 `fabric/run/mods/` 里放了 EMI / Jade，打开物品栏与准星对准机器应分别看到配方分类与 tooltip 读数（W-74a/W-74b 的证据口径）。
+若 `fabric/run/mods/` 里放了 JEI / EMI / Jade / WTHIT（WTHIT 还需 `badpackets`），打开物品栏与准星对准机器应分别看到配方分类与 tooltip 读数（W-74a/b/c/d）b 的证据口径）。
 
 ## 6. 产物清单与校验和（写进发布说明）
 
@@ -101,5 +101,5 @@ sha256sum dist/*.jar
 ## 已知限制（发布说明里应如实带上）
 
 - 未覆盖：Sodium/Iris/光影（W-98）、真实第三方科技模组的能量互通样本（W-99）
-- JEI / WTHIT / REI 未做（仅 EMI 与 Jade，均为客户端可选）
+- 可选集成为 JEI / EMI / Jade / WTHIT 四个（编译期依赖、不打包）；未做的集成是 REI / TOP / CraftTweaker / ProjectE / Curios
 - 注册表差异：items 1064 vs 1066、tags 444 vs 448（W-76 记录，W-94 待逐项定性）

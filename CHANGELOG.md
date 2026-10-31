@@ -25,9 +25,27 @@ was ported from.
   energy cubes speak Team Reborn Energy, and the mod declares it as a required dependency.
 - Compat recipe conditions are translated at build time (`neoforge:conditions` → `fabric:load_conditions`); the
   official sources are untouched.
-- The optional third-party integrations upstream ships (JEI/EMI/REI viewers, Jade/WTHIT/TOP looking-at,
-  CraftTweaker, ProjectE, Curios) are not part of this build. Accessories is used for the equipment slots that
-  Curios covers upstream.
+- Of the optional third-party integrations upstream ships, four client-side viewers are supported and the rest
+  are not: JEI, EMI, Jade and WTHIT (details below). REI, TOP, CraftTweaker, ProjectE and Curios are absent;
+  Accessories is used for the equipment slots that Curios covers upstream.
+
+### Optional integrations
+
+All four are **compile-only** dependencies: the release JARs contain no code or assets from them, and installing
+none of them changes nothing about a normal game.
+
+| Viewer | Compiled against | Switch for a dev client | What it adds |
+|---|---|---|---|
+| JEI | `mezz.jei:jei-1.21.1-fabric:19.43.0.398` | `-PjeiDev` | 24 machine categories, item/chemical/fluid ingredients, transfer buttons |
+| EMI | `maven.modrinth:emi:1.1.24+1.21.1+fabric` | `-PemiDev` | 30 categories, 65 chemicals, fluid and chemical ingredients |
+| Jade | `maven.modrinth:jade:15.10.6+fabric` | `-PjadeDev` | block/entity tooltips with energy, chemical and fluid rows |
+| WTHIT | `mcp.mobius.waila:wthit:fabric-12.10.2` | `-PwthitDev` | the same readings through WTHIT's plugin format |
+
+Verified in a running client: JEI categories and recipe pages, EMI's chemical and fluid ingredients, Jade's
+energy and fluid tooltip rows with real values, and WTHIT's energy row on an energised machine. Not verified for
+any of them: multi-block and transmitter readings, the Robit entity tooltip, JEI's QIO recipe transfer, and the
+ghost-ingredient drag path. WTHIT must be paired with `badpackets`, and both Jade and WTHIT are CC-BY-NC-SA-4.0 —
+see [`docs/LICENSES.md`](docs/LICENSES.md).
 - `NeoForge`-branded config entries are gone; the four configuration files keep the same keys and values otherwise.
 
 ### Known limitations of this build

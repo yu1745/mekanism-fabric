@@ -52,9 +52,25 @@ A small world authored by the official NeoForge build was loaded by this port an
 
 ## Limitations
 
-- No third-party integration yet: JEI/EMI/REI recipe viewers and Jade/WTHIT looking-at are not wired up
-  ([boundary page](milestones/M-integration.md)). CraftTweaker scripts and ProjectE data shipped by upstream are
-  absent by design.
+- Four optional client-side viewers are supported and compile-only: JEI, EMI, Jade and WTHIT. Drop the
+  matching mod JARs into `mods/` and the integration activates; without them nothing changes. REI, TOP and the
+  CraftTweaker/ProjectE data shipped by upstream are absent by design
+  ([boundary page](milestones/M-integration.md)).
+
+## Optional viewer integrations
+
+Each one is compiled against but never bundled, so the release JARs stay free of third-party code.
+
+| Viewer | Version compiled against | Notes |
+|---|---|---|
+| JEI | `jei-1.21.1-fabric-19.43.0.398` | recipe categories plus item/chemical/fluid ingredients |
+| EMI | `emi-1.1.24+1.21.1+fabric` | EMI needs Fabric Language Kotlin installed alongside it |
+| Jade | `Jade-1.21.1-Fabric-15.10.6` | block and entity tooltips |
+| WTHIT | `wthit-fabric-12.10.2` | requires `badpackets` (0.8.x) as well |
+
+Versions matter: newer JEI builds are assembled with a newer Loom than this project uses and the loader rejects
+them, and WTHIT is published on bai's maven rather than Modrinth's. For development the same set is available
+through the `-PjeiDev`, `-PemiDev`, `-PjadeDev` and `-PwthitDev` Gradle switches instead of copying JARs.
 - Frequency/channel networks, large transmission networks and long-run performance have no measured baseline.
 - The release-JAR client path has one-off evidence only; it is not re-verified automatically with each build, and a
   version change requires a fresh approval to re-run it.
