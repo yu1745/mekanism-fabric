@@ -55,6 +55,17 @@ fi
 printf 'online-mode=false\nserver-ip=127.0.0.1\nserver-port=%s\nmotd=soak\nmax-players=4\nview-distance=4\nsimulation-distance=3\n' \
   "$PORT" > "$WORK/server/server.properties"
 
+MCDEBUG_CLI=${MCDEBUG_CLI:-/home/wangyu/server-v2/develop/mcdebug-wt-121/mcdebug-cli.jar}
+KOTLIN_JAR=$(ls "$HOME"/.gradle/caches/modules-2/files-2.1/net.fabricmc/fabric-language-kotlin/*/*/fabric-language-kotlin-*.jar 2>/dev/null | grep -v sources | head -1)
+if [[ -f $MCDEBUG_CLI && -n ${KOTLIN_JAR:-} ]]; then
+  cp "$KOTLIN_JAR" "$WORK/server/mods/"
+  java -jar "$MCDEBUG_CLI" jar --output "$WORK/server/mods" >/dev/null 2>&1 || true
+  HAS_PROBE=1
+else
+  HAS_PROBE=0
+  printf 'fabric-soak-smoke: mcdebug or fabric-language-kotlin unavailable; health sampling disabled\n'
+fi
+
 ( cd "$WORK/server" && exec setsid java -Xms1G -Xmx2G -jar fabric-server-launch.jar nogui ) > "$LOG_DIR/server.log" 2>&1 &
 SERVER_PID=$!
 CLIENT_PIDS=()
@@ -76,6 +87,20 @@ while (( SECONDS < DEADLINE )); do
 done
 (( server_ready == 1 )) || fail 'server was not ready within 180s'
 grep -F 'values=458 ' "$LOG_DIR/server.log" >/dev/null || fail 'server did not log the release 458-value snapshot'
+
+SOAK_MDB=()
+if (( HAS_PROBE )); then
+  probe_deadline=$((SECONDS + 90))
+  while (( SECONDS < probe_deadline )) && [[ ! -S $WORK/server/mcdebug/socket ]]; do sleep 2; done
+  [[ -S $WORK/server/mcdebug/socket ]] || fail 'the mcdebug probe did not open its socket on the soak server'
+  SOAK_MDB=(java -jar "$MCDEBUG_CLI" --port-file "$WORK/server/mcdebug/port")
+  # Live load: a heat generator sitting on lava feeding an energy cube through a cable.
+  "${SOAK_MDB[@]}" world set-block --x 0 --y 70 --z 0 --block minecraft:lava >/dev/null
+  "${SOAK_MDB[@]}" world set-block --x 0 --y 71 --z 0 --block mekanismgenerators:heat_generator >/dev/null
+  "${SOAK_MDB[@]}" world set-block --x 1 --y 71 --z 0 --block mekanism:basic_universal_cable >/dev/null
+  "${SOAK_MDB[@]}" world set-block --x 2 --y 71 --z 0 --block mekanism:basic_energy_cube >/dev/null
+  printf 'fabric-soak-smoke: live load placed (heat generator on lava -> cable -> energy cube)\n'
+fi
 
 start_client() {
   local name=$1
@@ -130,6 +155,9 @@ while (( SECONDS < DEADLINE )); do
   kill -0 "$SERVER_PID" 2>/dev/null || fail 'the server process exited during the soak'
   grep -Fq 'lost connection' "$LOG_DIR/server.log" && fail 'a client lost its connection during the soak'
   grep -Fq "Can't keep up" "$LOG_DIR/server.log" && fail 'the server reported it cannot keep up'
+  if (( HAS_PROBE )) && [[ -n ${SOAK_MDB[*]:-} ]]; then
+    "${SOAK_MDB[@]}" status --health 2>/dev/null | tr '\n' ' ' >> "$LOG_DIR/health.jsonl" && printf '\n' >> "$LOG_DIR/health.jsonl"
+  fi
   remaining=$(( DEADLINE - SECONDS ))
   (( remaining <= 0 )) && break
   # Wall-clock pacing for the soak timer itself, never for readiness.
@@ -143,4 +171,18 @@ ERRORS=$(grep -cE '\[.*ERROR\]' "$LOG_DIR/server.log" || true)
 BENIGN=$(grep -cE 'No data fixer registered' "$LOG_DIR/server.log" || true)
 printf 'fabric-soak-smoke: PASSED (%s min, 2 clients connected, server ERROR lines=%s, benign datafixer lines=%s)\n' \
   "$MINUTES" "$ERRORS" "$BENIGN"
+if [[ -s $LOG_DIR/health.jsonl ]]; then
+  python3 - "$LOG_DIR/health.jsonl" <<'PYHEALTH'
+import re, sys
+tps, mspt = [], []
+pattern = re.compile(r"tps: ([0-9.]+).*?mspt: ([0-9.]+)")
+for line in open(sys.argv[1]):
+    for match in pattern.finditer(line):
+        tps.append(float(match.group(1)))
+        mspt.append(float(match.group(2)))
+if mspt:
+    print(f"fabric-soak-smoke: tick mspt min={min(mspt):.2f} mean={sum(mspt)/len(mspt):.2f} max={max(mspt):.2f} samples={len(mspt)}")
+    print(f"fabric-soak-smoke: tps min={min(tps):.2f} max={max(tps):.2f}")
+PYHEALTH
+fi
 grep -hE 'phase=(send|client_applied)' "$LOG_DIR/server.log" "$LOG_DIR"/client-*.log | tail -n 2
