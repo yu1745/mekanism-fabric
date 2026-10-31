@@ -418,3 +418,27 @@ W-74 的批准范围由"EMI→Jade"扩大为 **EMI → Jade → JEI → WTHIT**�
 | W-117 | P1 | **P24/P25 全部完成后的收口序列**（不可乱序）：①`release-check.sh` 最终全量（机器 smoke 已增长）；②两次 `build.sh --clean` 四哈希一致；③W-101 squash（22 个显式 wip，备份在先，树哈希一致，不强制推送）；④把结果与待用户项写入 `DECISIONS_PENDING.md` | 一次完整序列记录 |
 
 规则：W-98/W-99（P24）仍是自主项，在 W-114/W-115 之后立即做，不得再以"等用户"为由挂起。
+
+## 2026-10-31 会话收尾（W-104/110/111/112 现状）
+
+| 工作项 | 状态 | 证据 |
+|---|---|---|
+| W-104 真实区块卸载 | ✅ 完成 | `execute unless loaded` 证明真卸载 + `tick sprint` 重载后续加工；smoke 29 PASS（[w104-chunk-unload.json](evidence/p8-release/w104-chunk-unload.json)）|
+| W-104 涡轮（W-116） | 未做 | 多方块需手工搭建，风险高，留给后续会话 |
+| W-104 跨维度传送 | 未做 | 需玩家实体移动，mdb 无该能力 |
+| W-110 双玩家安全拒绝 | 阻塞 | 单人会话改不动所有者（`reflect` 传不了 UUID）；`/setblock` 机器无主且 `owner == null → 允许`。需 paired fixture 双用户名（[w110-security-denial.json](evidence/p8-release/w110-security-denial.json)）|
+| W-111 ×3 链 | ✅ 完成 | 硫酸→dirty_iron→clean_iron→**crystal_iron** 实测（[w111-chemical-chain.json](evidence/p8-release/w111-chemical-chain.json)）|
+| W-111 ×4 链 | ✅ 化学反应 | 卤水→氯→**HCl**→**shard_iron** 实测；官方服对照一致；缺口：注入室 HCl 用种子（输送未断言）|
+| W-111 ×5 链 | 未做 | 净化/粉碎/富集 |
+| W-112 tier/并行 | ✅ 完成 | 三档缓冲 20k/40k/80k、progress 3/5/9；sorting 开启后 **9 进程并行**、20 秒 2→9 矿石（[w112-factory-throughput.json](evidence/p8-release/w112-factory-throughput.json)）|
+| W-112 升级 | 阻塞 | 升级槽是虚拟容器槽，`be set-nbt` 写不进、需光标持有物品 |
+| 发布门禁 | ✅ 通过 | `release-check.sh` 六步全绿；机器 smoke 提速 113s→65s |
+
+**关键经验（避免重复踩坑）**
+
+1. `component_config` 的 6 元侧面数组按 **`RelativeSide`**（FRONT/LEFT/RIGHT/BACK/TOP/BOTTOM）索引，**不是绝对方向**。
+2. 侧面类型：`INPUT(1)`、`OUTPUT(4)`、`OUTPUT_2(6)`、`INPUT_OUTPUT(7)` 语义不同——分离器的氯在右罐必须用 **6**；机器既要进料又要弹射用 **7**；缓冲储罐也用 **7**，否则管道拉不走。
+3. 断言要放在**下游**：会弹射的机器自身罐在 dump 时通常是空的（分离器、溶解室都是这样）。
+4. 专用服务端 + `data merge` 才能改激活中的方块实体组件；客户端 `be set-nbt` 改不到。
+5. 机器只吃**游戏 tick**，无玩家时用 `/tick sprint` 加速，不要固定 `sleep`。
+6. `/forceload` 用**方块坐标**；未加载区块拒绝 `setblock`。

@@ -1,41 +1,42 @@
 {
   "work_item": "release-check",
   "date": "2026-10-31",
-  "goal": "\u5728\u6539\u52a8 fabric-machine-smoke.sh\uff08\u65b0\u589e\u5316\u5b66\u94fe\u5165\u53e3\u6bb5\u4e0e\u533a\u5757\u5378\u8f7d\u573a\u666f\uff09\u4e4b\u540e\uff0c\u8bc1\u660e\u6574\u4e2a\u53d1\u5e03\u95e8\u7981\u4ecd\u7136\u5168\u7eff\u3002",
+  "run": "final",
+  "goal": "\u5728 \u2713\u00d73/\u00d74 \u5316\u5b66\u94fe\u3001\u533a\u5757\u5378\u8f7d\u771f\u8bc1\u660e\u3001smoke \u63d0\u901f\uff08113s\u219265s\uff09\u4e4b\u540e\uff0c\u590d\u6838\u6574\u4e2a\u53d1\u5e03\u95e8\u7981\u3002",
   "result": "PASSED (6 steps)",
   "steps": [
     {
       "name": "clean four-JAR build",
       "exit": 0,
-      "seconds": 342
+      "seconds": 279
     },
     {
       "name": "packaged static four-JAR gates",
       "exit": 0,
-      "seconds": 16
+      "seconds": 15
     },
     {
       "name": "packaged server (50 mods, 458 values)",
       "exit": 0,
-      "seconds": 62
+      "seconds": 55
     },
     {
       "name": "paired network (two clients, handshake)",
       "exit": 0,
-      "seconds": 91
+      "seconds": 86
     },
     {
       "name": "configuration rejection (three clients rejected)",
       "exit": 0,
-      "seconds": 120
+      "seconds": 109
     },
     {
       "name": "machine runtime smoke",
       "exit": 0,
-      "seconds": 113
+      "seconds": 65
     }
   ],
-  "logs": "/tmp/release-check",
-  "note": "\u673a\u5668 smoke \u7528\u65f6 113 \u79d2\uff08\u542b\u65b0\u589e\u7684\u5316\u5b66\u94fe\u573a\u666f\u4e0e 15 \u79d2\u533a\u5757\u91cd\u8f7d\u7b49\u5f85\uff09\uff0c\u672a\u8d85\u51fa\u534f\u8c03\u8005\u63d0\u9192\u7684\u65f6\u957f\u533a\u95f4\u3002",
-  "total_seconds": 744
+  "total_seconds": 609,
+  "wall_seconds": 608,
+  "logs": "/tmp/release-check"
 }
