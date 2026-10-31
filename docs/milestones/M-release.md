@@ -24,6 +24,8 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 
 ## 验收证据
 
+W-89：回归检查与修复——全量 `release-check.sh`（含 clean build，6 步 352+19+59+88+122+100 秒）**PASSED**，未发现功能回归；但发现一个真实的发布完整性问题：**同一份源码两次 clean build 出来的 JAR sha256 不同**（W-71/W-85/W-89 三次核心 JAR 哈希各异），发布物无法用哈希验证。原因与修复：Gradle 归档默认写文件时间戳且按目录遍历顺序打包，已在 `fabric/build.gradle` 加 `tasks.withType(Jar).configureEach { preserveFileTimestamps = false; reproducibleFileOrder = true }`；连续三次重建四个 JAR 哈希**完全一致**，`./build.sh` 产出的 dist 与 standalone assemble 一致，随后 `release-check --skip-build` 仍 5 步 PASSED。[记录](evidence/p8-release/w89-regression-reproducible.json)
+
 W-87（第二遍）：docs/ 顶层去重归档——把三份只被 ROADMAP 与索引引用的早期工作笔记 `MACHINE_SPINE.md`、`MACHINE_OWNER_ADMISSION.md`、`MODEL_IMPLEMENTATION_COMPARISONS.md`（1055 行）移入 `docs/archive/`，各加 `Archived (W-87, 2026-10-31)` 注记指向 `milestones/README.md`；`docs/README.md` 索引与 ROADMAP W-05 行同步更新。顶层文档 24→22（含新增索引），链接校验 0 broken。保留 `PORT_MATRIX.md`/`POLICY_HISTORY.md`/`API_DELTAS.md`/`FABRIC_*.md`（均被 AGENTS 或里程碑现行引用）。[记录](evidence/p8-release/w87b-docs-archive.json)
 
 W-83（受阻）：裂变熔毁受控路径**未完成**——`/mek build` 的 `build` 字面量要求命令来源是 `ServerPlayer`，控制台没有实体，`help mek` 里看不到 `build`、`mek build fission <pos>` 直接报错；同一台官方 NeoForge 参考服控制台表现**完全一致**（可见子命令 chunk/debug/retrogen/radiation/testrules 相同），证明这是上游设计而非移植缺失，D4 关于“控制台可跑 `mek build`”的假设需要修正。三条可行路径已记录（玩家连接后 `execute as`、离线写 level attachment、reflect 取 AttachmentType），推荐第一条。**路径一实际尝试后又被拦**：开发客户端（只加载 core）加入四 JAR 专用服务器时被拒——客户端报 `Received 781 registry entries that are unknown to this client ... mekanismadditions`，说明模组集不匹配拒绝正常工作；要做下去必须让客户端与服务端同模组集（loom 的 `generatorsClient`/`generatorsServer` 配对），但 **mdb 只接受 runClient 类任务**，`runGeneratorsClient` 不被接受，需要用户裁决或给 mdb 加白名单。[记录](evidence/p8-release/w83-fission-blocked.json)

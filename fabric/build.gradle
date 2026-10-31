@@ -1181,6 +1181,13 @@ java {
     withSourcesJar()
 }
 
+//Reproducible archives: identical inputs must produce identical JARs so a published sha256 can be verified.
+//Without these two flags the archive embeds build timestamps and directory order, and the hash changes on every build.
+tasks.withType(Jar).configureEach {
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+}
+
 def licenseSuffix = base.archivesName.get()
 jar {
     from('../LICENSE') {
