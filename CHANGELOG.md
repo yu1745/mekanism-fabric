@@ -48,7 +48,7 @@ was ported from.
 scripts/release-check.sh      # clean build, static gates, packaged server, paired network, rejection, machine smoke
 scripts/compare-resource-inventory.py   # data/assets diff against the official NeoForge JARs
 scripts/compare-registry-ids.py         # registry id inventory against the official JARs
-./gradlew -p fabric test      # 451 JVM tests; integration tasks per module when that module changes
+./gradlew -p fabric test      # 457 JVM tests; integration tasks per module when that module changes
 ```
 
 Evidence for each claim above lives under [`docs/milestones/evidence/`](docs/milestones/evidence/); the per-item

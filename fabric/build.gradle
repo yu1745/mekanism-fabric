@@ -235,6 +235,7 @@ def officialRootTestOracle = [
       'mekanism/common/lib/distribution/target/IntegerTarget.java',
       'mekanism/common/lib/distribution/target/LongTarget.java',
       'mekanism/common/util/ChunkUtilsTest.java',
+      'mekanism/common/content/qio/SearchQueryParserTest.java',
 ]
 def officialRootTestOracleFiles = officialRootTestOracle.collect { file("../src/test/java/${it}") }
 
@@ -264,10 +265,10 @@ registerPortableSliceCheck('verifyPlatformSliceNoNeoForge',
 
 def verifyOfficialRootTestSources = tasks.register('verifyOfficialRootTestSources') {
     group = 'verification'
-    description = 'Checks the exact 18-file official root-test oracle allowlist.'
+    description = 'Checks the exact 19-file official root-test oracle allowlist.'
     inputs.files(officialRootTestOracleFiles)
     doLast {
-        if (officialRootTestOracle.size() != 18 || officialRootTestOracle.size() != officialRootTestOracle.toSet().size()) {
+        if (officialRootTestOracle.size() != 19 || officialRootTestOracle.size() != officialRootTestOracle.toSet().size()) {
             throw new GradleException('The official root-test oracle must contain exactly 18 unique paths')
         }
         def missing = officialRootTestOracleFiles.findAll { !it.isFile() }

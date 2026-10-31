@@ -18,7 +18,7 @@ playable, but the port is still early: recipe viewers, looking-at mods and some 
 
 ```bash
 ./build.sh --clean          # four release JARs into dist/ + build-info.json
-./gradlew -p fabric test    # 451 JVM tests
+./gradlew -p fabric test    # 457 JVM tests
 scripts/release-check.sh    # full server-side release gates (clean build, packaged, paired, rejection, machine smoke)
 ```
 
