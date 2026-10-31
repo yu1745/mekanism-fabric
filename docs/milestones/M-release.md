@@ -24,6 +24,9 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 
 ## 验收证据
 
+W-72：核心延期文件复盘——slice 排除的 35 个非集成类文件逐项对照 Fabric 侧实现，**全部有替代或确认不适用，无玩家可见缺口**，本轮不改生产代码。替代关系（示例）：`Mekanism`→`MekanismFabricBootstrap`、`PacketHandler/BasePacketHandler`→`fabric/network`、`ClientRegistration*`→`MekanismFabricClientBootstrap`+`Fabric{ClientModel,EntityRenderer,Screen}Registration`、`MekKeyBinding*`→`MekanismKeyHandler.registerKeybindings()`、NeoForge ModelData 一批→`Fabric{DataBased,DeferredLoader,Composite}*`、`MekanismCurioRenderer`→`FabricAccessoryRenderRegistration`、`CommonPlayerTracker`→`MekanismUsernameLifecycle`、`MekanismAttachmentTypes`→`FabricRadiationAttachments`+`EntityFlame` 持久数据、三个条件类→`mekanism:{condition_exists,mod_version_loaded,tag_empty}`。[明细表](M-deferred.md)、[证据](evidence/p8-release/w72-deferred-review.json)
+未覆盖：键位缺真机读数（W-64）、库存/能量注入（W-77 残留）、249 个集成类文件归 W-68。
+
 W-73：用户文档 `docs/INSTALL.md`——依赖（按 `fabric.mod.json` 实测声明）、四个 JAR 的必需/可选关系与 `+fabric.N` 版本含义、安装步骤、与 NeoForge 存档的兼容边界（已比对项与未比对项）、已知限制、构建与门禁命令；README 顶部 Fabric 分支说明已加指向。页内相对链接全部校验存在。[记录](evidence/p8-release/w73-install-doc.json)
 
 W-78：清理 Task052 时期临时物——删除 8 个脚本（3 个 init.gradle、2 个 transmitter 检查、Robit 检查脚本与其 Java、TransmitterObjGeometryCheck），每项都先 grep 确认只被 archive 历史叙述或彼此引用；`task052-robit-check.sh` 依赖已删的 renderer-classpath init，且其命令被 W-38 证据引用，故在证据里加 `retired_by` 注记后删除。`./gradlew -p fabric assemble` 仍 BUILD SUCCESSFUL，`scripts/` 已无 Task052 条目。重复文档与源码 `TASK*` 注释留待单独一轮。[记录](evidence/p8-release/w78-cleanup.json)
