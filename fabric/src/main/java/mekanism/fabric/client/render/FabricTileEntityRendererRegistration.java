@@ -43,7 +43,7 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
  *
  * <p>The transmitter renderers of the official block stay deferred: on this port the transmitter shell visual is
  * owned by the baked-model seam ({@code FabricTransmitterModels}), and the contents overlay re-bakes through the
- * official OBJ geometry loader, which has no Fabric counterpart yet - see {@code docs/TASK052_RESUME_2026-10-26.md}.</p>
+ * official OBJ geometry loader, which has no Fabric counterpart yet - see {@code docs/archive/TASK052_RESUME_2026-10-26.md}.</p>
  */
 public final class FabricTileEntityRendererRegistration {
 

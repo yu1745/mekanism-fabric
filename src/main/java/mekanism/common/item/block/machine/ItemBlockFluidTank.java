@@ -122,7 +122,7 @@ public class ItemBlockFluidTank extends ItemBlockTooltip<BlockTile<?, ?>> implem
                 return InteractionResult.PASS;
             }
             //Fabric port delta: milking into the tank required NeoForge's milk fluid, which has no Fabric counterpart (vanilla has no milk fluid and the
-            // port invents no content). Bucket mode therefore cannot scoop milk on this platform (docs/TASK052_RESUME_2026-10-26.md)
+            // port invents no content). Bucket mode therefore cannot scoop milk on this platform (docs/archive/TASK052_RESUME_2026-10-26.md)
             if (entity instanceof Cow || entity instanceof Goat) {
                 return InteractionResult.PASS;
             }

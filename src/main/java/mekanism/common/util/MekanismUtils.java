@@ -602,7 +602,7 @@ public final class MekanismUtils {
             return "<???>";
         }
         String ret = UsernameCache.getLastKnownUsername(uuid);
-        //Fabric port delta: the NeoForge FML EffectiveSide check is replaced by the Mekanism thread-group query (docs/TASK052_ADJUDICATION_EFFECTIVE_SIDE.md):
+        //Fabric port delta: the NeoForge FML EffectiveSide check is replaced by the Mekanism thread-group query (docs/archive/TASK052_ADJUDICATION_EFFECTIVE_SIDE.md):
         //the profile-cache fallback runs on the logical server's thread group — the server thread and worker threads inheriting it — never on client threads
         if (ret == null && !warnedFails.contains(uuid) && EffectiveSide.isServer()) { // see if MC/Yggdrasil knows about it?!
             MinecraftServer server = MekanismServerLifecycle.getServer();

@@ -2,7 +2,7 @@ package mekanism.common.util;
 
 /**
  * Fabric port delta: replaces the NeoForge FML utility class named {@code EffectiveSide} (its {@code fml.util.thread} package) for deciding which logical
- * side the current thread belongs to, with the semantics pinned in {@code docs/TASK052_ADJUDICATION_EFFECTIVE_SIDE.md}.
+ * side the current thread belongs to, with the semantics pinned in {@code docs/archive/TASK052_ADJUDICATION_EFFECTIVE_SIDE.md}.
  *
  * <p>Upstream answers SERVER exactly when the current thread's {@link ThreadGroup} carries the sided server marker; the platform mixin in this project
  * installs that marker on the real {@code MinecraftServer.spin} thread-creation entry, matching NeoForge 1.21.1's {@code SidedThreadGroups.SERVER}

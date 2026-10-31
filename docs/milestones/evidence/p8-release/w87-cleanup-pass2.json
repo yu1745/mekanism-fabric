@@ -1,0 +1,22 @@
+{
+  "work_item": "W-87\uff08\u7b2c\u4e00\u904d\uff09",
+  "date": "2026-10-31",
+  "goal": "\u6e05\u7406\u7b2c\u4e8c\u8f6e\uff1a\u6e90\u7801\u91cc\u6b8b\u7559\u7684 TASK0xx \u6ce8\u91ca\u4e0e\u8fc7\u65f6\u5f15\u7528\uff08W-78 \u660e\u786e\u7559\u7684\u7b2c\u4e8c\u904d\uff09\u3002",
+  "finding": "`rg 'TASK0[0-9]{2}'` \u5728 src/fabric/src \u547d\u4e2d 57 \u5904\uff0c\u4f46\u7edd\u5927\u591a\u6570\u662f**\u51fa\u5904\u8bf4\u660e**\uff08\u4e3a\u4ec0\u4e48\u8fd9\u5904\u4ee3\u7801\u4e0e\u4e0a\u6e38\u4e0d\u540c\u3001\u5bf9\u5e94\u54ea\u6b21\u88c1\u5b9a\uff09\uff0c\u5220\u9664\u4f1a\u4e22\u5931\u5ba1\u67e5\u4f9d\u636e\uff0c\u56e0\u6b64\u53ea\u5904\u7406**\u6307\u5411\u5df2\u5f52\u6863\u6587\u6863\u7684\u5931\u6548\u8def\u5f84**\uff1a`docs/TASK052_RESUME_2026-10-26.md` \u4e0e `docs/TASK052_ADJUDICATION_EFFECTIVE_SIDE.md` \u5df2\u79fb\u5165 `docs/archive/`\uff0c\u6e90\u7801\u6ce8\u91ca\u4ecd\u6307\u65e7\u8def\u5f84\u3002",
+  "changed": [
+    "src/main/java/mekanism/client/render/RenderTickHandler.java",
+    "src/main/java/mekanism/common/util/EffectiveSide.java",
+    "src/main/java/mekanism/common/util/MekanismUtils.java",
+    "src/main/java/mekanism/common/item/block/machine/ItemBlockFluidTank.java",
+    "fabric/src/main/java/mekanism/fabric/mixin/server/MinecraftServerMixin.java",
+    "fabric/src/main/java/mekanism/fabric/client/render/FabricTileEntityRendererRegistration.java"
+  ],
+  "verification": {
+    "./gradlew -p fabric assemble": "BUILD SUCCESSFUL in 26s",
+    "\u5f15\u7528\u68c0\u67e5": "6 \u5904\u8def\u5f84\u5df2\u6539\u5230 docs/archive/\uff0c\u5176\u4f59\u6ce8\u91ca\u672a\u52a8\uff08\u5747\u6709\u51fa\u5904\u4ef7\u503c\uff09"
+  },
+  "not_done": [
+    "docs/ \u9876\u5c42\u7684\u91cd\u590d/\u8fc7\u65f6\u6587\u6863\u5408\u5e76\u7559\u7ed9 W-88\uff08\u6587\u6863\u7ec8\u7a3f\uff09",
+    "\u6ca1\u6709\u9010\u6761\u6539\u5199 57 \u5904\u51fa\u5904\u6ce8\u91ca\uff08\u6309\u8981\u6c42\u4fdd\u7559\u53ef\u8ffd\u6eaf\u6027\uff09"
+  ]
+}

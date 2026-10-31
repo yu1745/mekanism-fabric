@@ -24,6 +24,8 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 
 ## 验收证据
 
+W-87（第一遍）：清理第二轮——`rg TASK0[0-9]{2}` 命中 57 处，绝大多数是**出处说明**（解释与上游的差异来源），删除会丢审查依据，故只修**失效路径**：`TASK052_RESUME_2026-10-26.md` 与 `TASK052_ADJUDICATION_EFFECTIVE_SIDE.md` 已归档到 `docs/archive/`，6 处源码注释仍指旧路径，已全部改到归档路径；`./gradlew -p fabric assemble` BUILD SUCCESSFUL。重复/过时文档合并留给 W-88。[记录](evidence/p8-release/w87-cleanup-pass2.json)
+
 W-86：CHANGELOG 与发布说明——新增 [`CHANGELOG.md`](../CHANGELOG.md)：版本命名、四 JAR 能力范围、与 NeoForge 的差异（Fabric 平台/Team Reborn Energy/条件翻译/无第三方集成/NeoForge 品牌配置项）、已知限制（含频率与 QIO 未纳入往返探针）、四条验证命令，以及可直接贴到 Modrinth/CurseForge 的发布说明段落；README 已加指向。数字与声明逐条对应证据（依赖版本取自 `fabric.mod.json`、451 JVM 测试、存档结论对应 W-65/W-77/W-80/W-82）。[记录](evidence/p8-release/w86-changelog.json)
 
 W-85：许可证与归属审计——新增 [`docs/LICENSES.md`](../LICENSES.md)；发现并修复两处缺失：**三个附加 JAR 完全没有 LICENSE**（Jar 任务补 `from('../LICENSE')` 重命名）、**maven-artifact 的 Apache-2.0 与 NOTICE 未随 JAR**（补进 `META-INF/licenses/`）。核心已带 MIT + night-config LGPL-3.0 + NeoForge 两副本（仅归属说明，JAR 内无 `net.neoforged` 类）。重建后四个 JAR 均含许可证条目，sha256 全部更新（记在证据里，并说明 W-71 的旧哈希以当时提交为准）。[记录](evidence/p8-release/w85-licenses.json)
