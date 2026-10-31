@@ -12,6 +12,7 @@
 | 2026-10-30（整理） | 文档整理：AGENTS.md 精简；`TASK*`、历史审查文档移入 `docs/archive/`；编译日志不再入库；审查结论写入任务文档/提交信息而非单独提交；wip 提交合并前 squash。 |
 | 2026-10-30（里程碑） | Task052 因触及中枢而膨胀，关闭为历史名；改用按系统命名的里程碑（M-owner/config/transfer/render/registry/gear），见 `docs/milestones/README.md`。 |
 | 2026-10-31 | 批准 W-74 第三方集成（先 EMI 再 Jade，JEI/WTHIT 未批）与 W-90（采纳 4 个 byte-identical 官方测试，属"不主动加测试"的例外）。 |
+| 2026-10-31 | 主仓库 `server-v2` 不用管：submodule 指针更新不再是待办，worker 与协调者都不处理。 |
 
 ## 被取代的旧条文
 
