@@ -147,3 +147,17 @@ P0–P7 完成，P5/P6/P7 用时与质量符合预期；新增 M-multiblock 与 
 3. `AGENTS.md` 等待纪律同步为"单次 ≤60 秒、更长预算用分片循环"。
 
 请 worker：下一次跑这两个 smoke 时顺带确认分片循环行为正常（可用一个故意不出现的标记行验证总 deadline 到点后返回 3 且 gate 失败），不要为此另开审计提交。
+
+## 协调者巡检 B2（2026-10-31 04:17，基线 `5442c594`；后面还有 B3 04:47、B4 05:17）
+
+**事实**：worker 仍**零提交**（HEAD 无变化，换人后已约 1 小时，此前 9 小时空档）。工作区增长到 11 个已跟踪文件（+163/−121）+ 3 个新文件，新增范围：`fabric-chemical/recipe/tile-runtime-smoke.sh`、`datamap-reload-smoke.sh` 的等待逻辑改造，`fabric/build.gradle`（+47/−）。`bash -n` 全部通过；`wait-for-log-line.sh` 已被扩展 `-F`（字面量匹配），60 秒上限保持，tile smoke 的分片循环（`left>60→60`，处理 0/4/5）写得符合新规则。**这一点做得对。**
+
+**审计陷阱检测：未触发，但出现"脚本改造蔓延"。** 没有重复审计；问题是 W-60 的交付物（含 Tools/Additions/Generators 的**客户端成功握手并同步配置**）仍无证据，而时间在把所有历史 smoke 的等待逻辑统一改造上。该改造是用户要求的方向，但属于**收尾项**，不应先于 W-60。
+
+需 worker 处理（按顺序）：
+1. **立即提交**：把当前已通过 `bash -n` 的改动分两个 `wip:` 提交——①`scripts/wait-for-log-line.sh` + `AGENTS.md` + 已改造的 smoke 脚本；②W-60 证据文件（`w60-*.json`）与 `M-release.md`。不要等全部改完。11 个文件 1 小时零提交，一旦工作区丢失代价很大。
+2. **先交付 W-60 再继续改造**：下一步必须跑出 `fabric-paired-network-smoke.sh` 的成功握手（含三个附加模块的发布 JAR 路径，或经 packaged smoke 的客户端路径），拿到 `PASSED` 标记行与发布 schema 的 458 值同步 ack；开发类加载器限制不是不验证客户端的理由，可用发布 JAR 搭一个干净客户端目录。
+3. **改造的边界**：已改的 smoke 保持；其余未改的 smoke 脚本（grep `while.*sleep|sleep [0-9]` 约 35 处）**不要一次性全改**——只改会在本轮 P13 实跑的脚本，其余记入 `M-release.md` 未决项，等 P13 通过后用独立 `fix:` 提交收尾。
+4. `fabric/build.gradle` 的 +47/−：提交前确认其改动只服务 W-60/等待改造，若含其他目的请在提交信息说明。
+
+路线图：无改动（W-60…68 足够）。
