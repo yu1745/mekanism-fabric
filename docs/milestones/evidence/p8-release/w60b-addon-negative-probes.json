@@ -1,0 +1,32 @@
+{
+  "work_item": "W-60b",
+  "date": "2026-10-31",
+  "purpose": "Prove the addon metadata contract inside the packaged gate is not a no-op: three deliberate mutations of disposable release-JAR copies must each FAIL the same checker the gate runs.",
+  "method": "scripts/fabric-packaged-smoke.sh now calls scripts/verify-packaged-addons.py (inline check extracted unchanged). The probe harness copies the four release JARs into a temporary directory, mutates copies only, runs the same script, and deletes the copies.",
+  "checker": "scripts/verify-packaged-addons.py",
+  "checker_sha256": "35b842ee31e62d56e0557d03115bb8c569b3a6b9bb7241cdebe4541b938776d4",
+  "core_jar_sha256": "1c7bca94aaa7aa25e008ecc973b340004cb99b7365196d2e95622e7b038f6bba",
+  "real_artifacts_touched": false,
+  "results": [
+    {
+      "case": "baseline_unmodified",
+      "exit_code": 0,
+      "first_error": "verify-packaged-addons: ok version=10.7.19.85-fabric-bootstrap ids=mekanismadditions,mekanismgenerators,mekanismtools"
+    },
+    {
+      "case": "missing_addon_jar",
+      "exit_code": 1,
+      "first_error": "verify-packaged-addons: expected exactly three optional addon JARs, found 2"
+    },
+    {
+      "case": "duplicate_addon_id",
+      "exit_code": 1,
+      "first_error": "verify-packaged-addons: duplicate addon id: mekanismtools"
+    },
+    {
+      "case": "addon_version_mismatch",
+      "exit_code": 1,
+      "first_error": "verify-packaged-addons: addon version, core dependency or isolation contract changed: /tmp/w60b-probe-ltdq41wn/wrong-version.jar"
+    }
+  ]
+}

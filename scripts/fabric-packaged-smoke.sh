@@ -101,22 +101,8 @@ fi
 mapfile -t ADDON_JARS < <(find "$ROOT/fabric/build/tools-libs" "$ROOT/fabric/build/additions-libs" "$ROOT/fabric/build/generators-libs" \
   -maxdepth 1 -type f -name '*-fabric.jar' | sort)
 [[ ${#ADDON_JARS[@]} -eq 3 ]] || { echo 'fabric-packaged-smoke: expected exactly three optional addon JARs' >&2; exit 1; }
-python3 - "${MOD_JARS[0]}" "${ADDON_JARS[@]}" <<'PYADDONS'
-import json, sys, zipfile
-with zipfile.ZipFile(sys.argv[1]) as core:
-    version = json.loads(core.read('fabric.mod.json'))['version']
-ids = set()
-for path in sys.argv[2:]:
-    with zipfile.ZipFile(path) as addon:
-        metadata = json.loads(addon.read('fabric.mod.json'))
-        if metadata.get('version') != version or metadata.get('depends', {}).get('mekanism') != version or metadata.get('jars'):
-            raise SystemExit(f'addon version, core dependency or isolation contract changed: {path}')
-        if metadata['id'] in ids:
-            raise SystemExit(f'duplicate addon id: {metadata["id"]}')
-        ids.add(metadata['id'])
-if ids != {'mekanismtools', 'mekanismadditions', 'mekanismgenerators'}:
-    raise SystemExit(f'unexpected addon ids: {ids}')
-PYADDONS
+# The addon metadata contract is a separate script so the negative probes exercise the same checks.
+python3 "$ROOT/scripts/verify-packaged-addons.py" "${MOD_JARS[0]}" "${ADDON_JARS[@]}" || exit 1
 # Compare against the same build's slice-gated dev artifact, including generated classes.
 # Early Task043 package subsets are no longer valid once the real machine/client catalogs are admitted.
 DEV_JAR="$ROOT/fabric/build/devlibs/$(basename "${MOD_JARS[0]}" .jar)-dev.jar"
