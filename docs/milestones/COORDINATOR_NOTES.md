@@ -314,3 +314,15 @@ AGENTS.md 本批新增：①"游戏客户端只能用 mdb 启动"硬规则 ②"�
 2. **W-90 已批准**：只纳入那 4 个 byte-identical 官方测试，不得借机新写其他测试；纳入后同步测试计数（451 项会变化，文档里的 578 一并更新）。
 3. 排序：P0（W-80/81/82）之后，W-74a → W-74b → W-90 与 P1 项并列推进；纯文档项不连续超过 2 个。
 4. 仍等用户：wip squash、submodule 指针、推送本地提交。worker 不要动。
+
+## 巡检 E1（2026-10-31 10:47）
+
+新提交 4 个（`ae40eaec` W-89 四 JAR 逐位可复现、`f0aea6ad`/`01747201`/`ba325c6e` W-74a EMI step 1–3）。均有生产/构建改动，**审计陷阱：未触发**。
+
+- 越界核对：W-74a 只动 EMI 与 `recipe_viewer` 下的共享文件，未碰 JEI 实现、wip squash、submodule、push；无新增测试。EMI 依赖为 `modCompileOnly`（`transitive=false`），运行期仅 `-PemiDev` 才 `modLocalRuntime`，**不进发布依赖**，符合批准条件。W-89 的 `preserveFileTimestamps=false` + `reproducibleFileOrder=true` 正是 C-3 要求，好。
+- 需注意（请 worker 处理）：
+  1. 工作区有**未提交的 slice 改动**（`fabric/api-slice.txt`、`common-slice.txt` 增加 `IMekanismEmiHelper`、`MekanismEvent*`、多个 `CachedRecipe` 等）。AGENTS 要求"不得无审计地扩大清单"：提交时在提交信息或 `w74a` 证据里写明每个新增条目的**真实 owner/调用链**，不要只因编译报错就加。
+  2. step 3 把 `Mekanism.logger`/`Mekanism.rl` 换成 `MekanismAPI.logger`/`ResourceLocation.fromNamespaceAndPath`，把 `NeoForgeEmiStack.of` 换成 `new FluidEmiStack(...)`。这是 loader 适配、可接受，但需确认 `MekanismAPI.logger` 在 Fabric 构建里确实存在且不是 no-op，并把"与官方文件的差异清单"记入 `M-integration.md`，方便后续审查。
+  3. EMI 版本 `1.1.24+1.21.1+fabric` 来自 Modrinth maven：在 `M-integration.md` 记下来源与许可证（MIT），release-check 的"JAR 不含 EMI 类"可顺手加一条断言（只做现有 oracle 扩充，不新写检查框架）。
+  4. 验收仍须是 mdb 起的客户端 + 乙烯 ingredient 读数，编译通过不算完成。
+- 路线图：未开始/未完成的 W 项仍有 W-74b、W-90、W-79、W-80/81/82 余项、W-84 等，≥6，**本次不补充**，无改动。
