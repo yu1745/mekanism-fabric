@@ -24,6 +24,10 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 
 ## 验收证据
 
+W-95：`IBarInfoHandler` 结构偏离复核——结论写入 [`API_DELTAS.md`](../API_DELTAS.md)：该类型属客户端内部（不进 api-slice、不参与网络/存档/NBT），附加模块已随 W-74a 一并改到顶层类型并编译通过；保留顶层版本，理由是恢复官方嵌套会让 `RecipeViewerUtils` 与 EMI 重新需要第二套类型或桥接。**已完成，无需改代码**。
+
+W-96：发布演练清单——新增 [`RELEASE_CHECKLIST.md`](../RELEASE_CHECKLIST.md)：干净 HEAD 检查 → 全量 `release-check`（六步与耗时基线）→ 可复现性校验（两次 `--clean` 比对）→ 干净目录安装演练 → W-65 样本世界存档往返 → mdb 客户端抽查 → 产物清单与 sha256 → 用户侧动作（tag/推送/上传，worker 不执行）→ 已知限制（W-98/W-99、JEI-WTHIT、注册表差异）。当前 HEAD 的四个 sha256 已写入。[记录](evidence/p8-release/w96-release-checklist.json)
+
 W-97：核心 JAR 不可复现的根因修复——逐条目比对两次 clean build 的核心 JAR（9066 条目，集合相同），**只有一个条目不同**：`mekanism/generated/mekanism/ComputerMethodRegistry_mekanism.class`。根因是 `ComputerMethodProcessor` 用 `HashMap` 迭代生成源码（`TypeElement` 是身份哈希，顺序每次变）；改为 `TreeMap` 按限定名排序 + 元素按名排序后，连续三次 clean 编译生成的源码 md5 恒定，连续两次 `./build.sh --clean` 的**四个 JAR 哈希完全一致**（core `81cbda9f…`），`./gradlew -p fabric test` 457 项通过。**C-3 对四个 JAR 全部成立**，先前“仅附加 JAR 可复现”的限定作废。[记录](evidence/p8-release/w97-core-jar-reproducible.json)
 
 W-93：集成改动后的全量回归——两次全量 `release-check` 各暴露一处**契约过期**（不是产品缺陷）：①`verifyFabricTestContract` 期望 ordinary 95/451、聚合 111/511，W-90 加测试后 clean build 在此失败，已改 96/457 与 112/517；②`fabric-packaged-smoke.sh` 把 entrypoints 钉死为 main+client，新增的 `emi`/`jade` 触发契约失败，已加入两者并注明只在第三方模组存在时生效。修完 `release-check --skip-build` **5 步全过**（14/55/79/113/96 秒）。**已完成**：修复后在同一 HEAD（`cf1de6ea`）跑通 **6 步全量**（278/14/54/80/103/97 秒，PASSED），W-70 的发布结论刷新到当前 HEAD；**并复核可复现性**：删产物再 assemble，四个 sha256 与 `--clean` 产物逐个一致（core `b9022885…`、additions `e2019d55…`、generators `3ee7497b…`、tools `b74c23a5…`），W-89 的结论在集成改动后仍成立（那一轮比对是 `assemble` 与 `--clean` 产物一致）。**但 E3 要求的“最终 HEAD 两次 clean build”推翻了可复现性结论的一半**：同一 commit 连续两次 `build.sh --clean`，**核心 JAR 哈希不同**（`b66051c1…` vs `00fab557…`），三个附加 JAR 稳定。已作为 W-89 遗留项记录——**W-97 已定位并修复**：不是 Loom 重打包，而是注解处理器 `ComputerMethodProcessor` 用 HashMap 迭代生成 `ComputerMethodRegistry`，改为 TreeMap + 按名排序后四个 JAR 逐位可复现。[记录](evidence/p8-release/w93-integration-regression.json)
@@ -44,7 +48,7 @@ W-88：文档终稿——根 `README.md` 重写为入口（Fabric 来源与成�
 
 W-87（第一遍）：清理第二轮——`rg TASK0[0-9]{2}` 命中 57 处，绝大多数是**出处说明**（解释与上游的差异来源），删除会丢审查依据，故只修**失效路径**：`TASK052_RESUME_2026-10-26.md` 与 `TASK052_ADJUDICATION_EFFECTIVE_SIDE.md` 已归档到 `docs/archive/`，6 处源码注释仍指旧路径，已全部改到归档路径；`./gradlew -p fabric assemble` BUILD SUCCESSFUL。重复/过时文档合并留给 W-88。[记录](evidence/p8-release/w87-cleanup-pass2.json)
 
-W-86：CHANGELOG 与发布说明——新增 [`CHANGELOG.md`](../CHANGELOG.md)：版本命名、四 JAR 能力范围、与 NeoForge 的差异（Fabric 平台/Team Reborn Energy/条件翻译/无第三方集成/NeoForge 品牌配置项）、已知限制（含频率与 QIO 未纳入往返探针）、四条验证命令，以及可直接贴到 Modrinth/CurseForge 的发布说明段落；README 已加指向。数字与声明逐条对应证据（依赖版本取自 `fabric.mod.json`、451 JVM 测试、存档结论对应 W-65/W-77/W-80/W-82）。[记录](evidence/p8-release/w86-changelog.json)
+W-86：CHANGELOG 与发布说明——新增 [`CHANGELOG.md`](../../CHANGELOG.md)：版本命名、四 JAR 能力范围、与 NeoForge 的差异（Fabric 平台/Team Reborn Energy/条件翻译/无第三方集成/NeoForge 品牌配置项）、已知限制（含频率与 QIO 未纳入往返探针）、四条验证命令，以及可直接贴到 Modrinth/CurseForge 的发布说明段落；README 已加指向。数字与声明逐条对应证据（依赖版本取自 `fabric.mod.json`、451 JVM 测试、存档结论对应 W-65/W-77/W-80/W-82）。[记录](evidence/p8-release/w86-changelog.json)
 
 W-85：许可证与归属审计——新增 [`docs/LICENSES.md`](../LICENSES.md)；发现并修复两处缺失：**三个附加 JAR 完全没有 LICENSE**（Jar 任务补 `from('../LICENSE')` 重命名）、**maven-artifact 的 Apache-2.0 与 NOTICE 未随 JAR**（补进 `META-INF/licenses/`）。核心已带 MIT + night-config LGPL-3.0 + NeoForge 两副本（仅归属说明，JAR 内无 `net.neoforged` 类）。重建后四个 JAR 均含许可证条目，sha256 全部更新（记在证据里，并说明 W-71 的旧哈希以当时提交为准）。[记录](evidence/p8-release/w85-licenses.json)
 

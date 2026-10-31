@@ -7,6 +7,7 @@ Start here if you are new to the repository.
 | [`../README.md`](../README.md) | project entry point and the table below in shorter form | everyone |
 | [`../CHANGELOG.md`](../CHANGELOG.md) | what the current build contains and what it does not | users |
 | [`INSTALL.md`](INSTALL.md) | requirements, the four JARs, install steps, save migration, limitations | users |
+| [`RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md) | 发布前最后一遍的可执行清单（门禁、可复现、安装演练、产物校验和） | 发布执行者 |
 | [`LICENSES.md`](LICENSES.md) | licences, bundled libraries, attribution | users, distributors |
 | [`milestones/README.md`](milestones/README.md) | milestone status table and the release-limits list | everyone |
 | [`milestones/ROADMAP.md`](milestones/ROADMAP.md) | the work plan behind the status table | contributors |
