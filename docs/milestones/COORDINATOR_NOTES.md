@@ -351,3 +351,15 @@ AGENTS.md 本批新增：①"游戏客户端只能用 mdb 启动"硬规则 ②"�
   2. `fabric-packaged-smoke.sh` 的 entrypoints 契约被放宽为 main+client+emi+jade。这是对老 oracle 的合理扩充（只在对应 mod 存在时生效），但请在 `scripts/fabric-packaged-oracles.json` 或脚本注释里写明"仅可选集成键，其他键仍视为契约变化"，避免日后被当作通配。
   3. 新 dist 哈希已记录；C-3 可复现要求下，最终 HEAD 须 clean build 两次并比对（W-89 已具备条件）。
 - 路线图：未开始/未完成项仍有 W-91、W-92、W-94、W-95、W-96、W-79 与 W-80/81/82 余项，≥6，**本次不补充**，无改动。
+
+## 巡检 E4（2026-10-31 12:17，最后一次）
+
+新提交 2 个：`85b9eac5`（W-93 收口：最终 HEAD 上一次干净的 6 步 release-check）、`be1383fd`（W-89 追加：发现核心 JAR 不可复现）。**审计陷阱：未触发**——两者虽是文档提交，但后者是按我 E3 的要求做 clean build 两次比对后**发现了真实缺陷**，工作区已有对应的 `ComputerMethodProcessor`（HashMap→TreeMap）源码修复在进行中。
+
+- 范围核对：未碰 JEI/WTHIT、wip squash、submodule、push；无新增测试；W-74 仅 EMI+Jade、W-90 仅 1 个测试，均未超批准范围。
+- **必须更正（P0）**：
+  1. `w93-integration-regression.json` 的 `reproducibility_recheck` 写"四个 sha256 完全一致、W-89 可复现结论仍成立"，而 `be1383fd` 证明 `./build.sh --clean` 两次核心 JAR 哈希不同（b66051c1→00fab557）。那个 recheck 用的是 `gradle assemble` 而非发布路径 `build.sh --clean`。**请在该页把 `reproducibility_recheck` 标为"被 be1383fd 推翻"**，并让 `conclusion` 不再声称可复现。同一页还出现三个不同的核心哈希（298be698 / b9022885 / 此前两个），最终以修复后的两次 clean build 结果为准重记。
+  2. 在核心 JAR 复现修好前，**C-3 对核心 JAR 不成立**，P13 的"可复现构建"措辞只能限定为"三个附加 JAR 逐位可复现"。
+  3. 工作区未提交的 `ComputerMethodProcessor` 改动：这是对注解处理器输出顺序的修改，会改变生成源码，提交前跑 `./gradlew -p fabric test` 与相关 consumer 编译；并**逐条目比对**两次构建确认它确为根因，不要凭猜测宣布修复（见 W-97）。
+- 路线图：W-91、W-92、W-94、W-95、W-96、W-79、W-80/81/82 余项仍在，未完成数 ≥6，**不触发补充线**；但这是最后一次自动巡检，为保证无人值守余量，**新增 P20：W-97…W-100**——W-97（核心 JAR 复现根因，P0，排在 W-91 之前）、W-98（Sodium/Iris/资源包兼容抽样）、W-99（真实第三方科技模组能量互通）、W-100（用户决策清单，不执行）。
+- 本批次之后不再有自动巡检；worker 按 P19/P20 推进，W-74 范围外的 JEI/WTHIT/REI 不得启动，wip squash、submodule、push 仍等用户。
