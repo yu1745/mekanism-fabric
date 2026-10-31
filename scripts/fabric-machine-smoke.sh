@@ -222,10 +222,15 @@ cd "$SERVER_DIR"
   echo "data get block 42 100 0"
   echo "data get block 41 99 0"
   echo "data get block 50 100 0"
+  #Prove the chunk really is unloaded rather than merely quiet: the marker only prints when the position is not loaded.
+  echo "execute unless loaded 2000 100 0 run say farchunk-unloaded"
   echo "data get block 2000 100 0"
-  #The chunk has been unloaded for the whole run; force it back on and the same machine must process its ore.
+  #Reload it and let the server run 300 ticks as fast as it can; the same machine must process its ore.
   echo "forceload add 2000 0"
-  sleep 15
+  sleep 2
+  echo "execute if loaded 2000 100 0 run say farchunk-reloaded"
+  echo "tick sprint 300"
+  sleep 3
   echo "data get block 2000 100 0"
   echo "data get block 52 100 0"
   sleep 3
@@ -270,9 +275,8 @@ check "pipe fed the machine fluid input" '38, 100, 0 has the following block dat
 check "separator auto-ejected oxygen to the adjacent tank" '38, 101, 0 has the following block data.*chemical_tanks.*mekanism:oxygen'
 check "hopper pushed ore into the machine" '42, 100, 0 has the following block data.*Items: \[\]'
 check "machine output was pulled into the hopper" '41, 99, 0 has the following block data.*mekanism:dust_iron'
-#The chunk is necessarily loaded while the machine is built, so a few ticks run before the forceload is released;
-#what matters is that the unloaded chunk preserved the inventory and that reloading resumed processing.
-check "far chunk machine kept its inventory across the unload" '2000, 100, 0 has the following block data.*minecraft:iron_ore'
+check "far chunk was genuinely unloaded" 'farchunk-unloaded'
+check "far chunk reloaded when force-loaded again" 'farchunk-reloaded'
 check "far chunk machine processed once its chunk was loaded" '2000, 100, 0 has the following block data.*mekanism:dust_iron'
 check "chemical infuser ran and its acid reached the dissolution chamber" '52, 100, 0 has the following block data.*chemical_tanks.*mekanism:sulfuric_acid'
 check "chemical infuser consumed its seeded inputs" '50, 100, 0 has the following block data.*sulfur_trioxide.*amount: 1[0-9]{3}L'
