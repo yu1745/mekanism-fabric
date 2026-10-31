@@ -24,6 +24,8 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 
 ## 验收证据
 
+W-77：运行内容比对（部分）——官方参考服用新增的 `neoforge-reference.sh cmd`（console.fifo）写入侧配置 `component_config.config0=[6,6,6,6,6,6]`，同一世界由 Fabric 四 JAR 加载后 mcdebug 回读**逐字段一致**；机器库存与能量未能从控制台注入（无玩家、`Items` 键与 Mekanism 槽位序列化不符），记为残留并给出 mdb 玩家注入的后续方案。[记录](evidence/p8-release/w77-runtime-content.json)
+
 W-76：注册 ID 对照（`scripts/compare-registry-ids.py`）——方块 **501/501 完全一致**，物品 1064/1066、标签 444/448，**自有命名空间零缺口**；差异全在外部命名空间：`neoforge:item/{bucket,default}` 是移植自带的兼容父模型、`neoforge:damage_type/*` 是移植的伤害类型分组、`accessories:item/{back,shoes}` 是装备槽标签、`projecte` 属第三方。运行期转储不可得（mcdebug 无注册表 RPC），故用双方发布物里游戏解析 ID 的数据文件；运行期数量仍由 content proof 覆盖。[明细](evidence/p8-release/w76-registry-ids.json)
 
 W-71：版本号过渡到 `10.7.19.85+fabric.1`（上游号不变，`+fabric.N` 为本移植构建序号），四个 JAR 的 name／description／license(MIT)／contact／authors／icon 已统一且图标实际打进 JAR；改号引发一处真实缺陷——附加模块引导用 `-` 截断版本后缀，`85+fabric` 进 `Integer.parseInt` 崩溃，已在 `Version.fromFabricVersion` 统一修复。改号后重跑 `release-check --skip-build` 通过（5 步：静态 15s／packaged 服务端 55s／paired 85s／rejection 112s／machine 99s），W-75 复跑缺失 33→30（语言文件缺口消除）。[元数据与哈希](evidence/p8-release/w71-release-metadata.json)
