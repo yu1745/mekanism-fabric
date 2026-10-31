@@ -114,8 +114,6 @@ cd "$SERVER_DIR"
   echo "forceload add 0 0"
   echo "forceload add 16 0"
   echo "forceload add 32 0"
-  #The chemical chain sits at x=50..52 (chunk 3), outside the spawn-chunk radius the other scenarios rely on.
-  echo "forceload add 3 0"
   echo "setblock 0 100 0 mekanism:enrichment_chamber"
   echo "setblock 3 100 0 mekanism:energized_smelter"
   echo "setblock 6 100 0 mekanism:basic_universal_cable"
@@ -169,10 +167,17 @@ cd "$SERVER_DIR"
   #iron slurry. This is the entry stage of the x3/x4/x5 ore path - the stage that needs a real chemical feed rather
   #than an item one.
   echo "setblock 50 100 0 mekanism:chemical_infuser"
+  #Chunk-unload scenario (W-104): vanilla refuses setblock in an unloaded chunk, so the far machine at x=2000 is built
+  #while its chunk is force-loaded and the forceload is released afterwards. Unloaded, it must not tick; force-loading
+  #again must let it process, with the inventory intact across the unload.
+  echo "forceload add 2000 0"
+  echo "setblock 2000 100 0 mekanism:enrichment_chamber"
   echo "setblock 52 100 0 mekanism:chemical_dissolution_chamber"
   echo 'data merge block 41 100 0 {component_config:{config3:[I;1,1,1,1,1,4]}, energy_containers:[{container:0b,stored:40000L}]}'
   echo 'item replace block 42 100 0 container.0 with minecraft:iron_ore 4'
   echo 'data merge block 50 100 0 {energy_containers:[{container:0b,stored:40000L}], component_config:{config2:[I;4,4,4,4,4,4]}, chemical_tanks:[{tank:0b,stored:{id:"mekanism:sulfur_trioxide",amount:2000}},{tank:1b,stored:{id:"mekanism:water_vapor",amount:2000}}]}'
+  echo 'data merge block 2000 100 0 {energy_containers:[{container:0b,stored:20000L}], items:[{slot:0b,item:{id:"minecraft:iron_ore",count:4}}]}'
+  echo "forceload remove 2000 0"
   #Slot layout: 0 is the chemical input slot, 1 is the item input, 2 the chemical output, 3 the energy slot - so the
   #ore goes in slot 1. The chamber needs a full recipe's worth of acid (1000 mB per ore) and enough energy for the operation; the infuser
   #only ever produces one 200 mB batch per 40k buffer, so the acid it makes arrives as extra input on top of this seed.
@@ -217,6 +222,11 @@ cd "$SERVER_DIR"
   echo "data get block 42 100 0"
   echo "data get block 41 99 0"
   echo "data get block 50 100 0"
+  echo "data get block 2000 100 0"
+  #The chunk has been unloaded for the whole run; force it back on and the same machine must process its ore.
+  echo "forceload add 2000 0"
+  sleep 15
+  echo "data get block 2000 100 0"
   echo "data get block 52 100 0"
   sleep 3
   echo "stop"
@@ -260,6 +270,10 @@ check "pipe fed the machine fluid input" '38, 100, 0 has the following block dat
 check "separator auto-ejected oxygen to the adjacent tank" '38, 101, 0 has the following block data.*chemical_tanks.*mekanism:oxygen'
 check "hopper pushed ore into the machine" '42, 100, 0 has the following block data.*Items: \[\]'
 check "machine output was pulled into the hopper" '41, 99, 0 has the following block data.*mekanism:dust_iron'
+#The chunk is necessarily loaded while the machine is built, so a few ticks run before the forceload is released;
+#what matters is that the unloaded chunk preserved the inventory and that reloading resumed processing.
+check "far chunk machine kept its inventory across the unload" '2000, 100, 0 has the following block data.*minecraft:iron_ore'
+check "far chunk machine processed once its chunk was loaded" '2000, 100, 0 has the following block data.*mekanism:dust_iron'
 check "chemical infuser ran and its acid reached the dissolution chamber" '52, 100, 0 has the following block data.*chemical_tanks.*mekanism:sulfuric_acid'
 check "chemical infuser consumed its seeded inputs" '50, 100, 0 has the following block data.*sulfur_trioxide.*amount: 1[0-9]{3}L'
 check "dissolution chamber produced dirty iron slurry" '52, 100, 0 has the following block data.*chemical_tanks.*mekanism:dirty_iron'

@@ -24,6 +24,8 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 
 ## 验收证据
 
+W-104（W-81/82 余项）：**区块卸载完成**，涡轮与跨维度传送仍开放。新增 smoke 场景：在 x=2000 建富集仓（先 forceload 再释放），卸载期间库存原封不动（矿 4、能量 5850 FE），重新 force-load 后**同一台机器继续加工**产出铁粉；smoke **EXIT=0 / 25 PASS**。坑：vanilla `setblock` 拒绝未加载区块、`/forceload` 用**方块坐标**。未做：涡轮性能、跨维度传送（需玩家实体移动）。[记录](evidence/p8-release/w104-chunk-unload.json)
+
 W-112（工厂/升级/并行吞吐）：**主体完成**。三档富集工厂的能量缓冲 ≈20k/40k/80k、`progress` 槽数 3/5/9 均与 tier 一致。关键结论：工厂**默认 sorting 关闭**时只跑 1 个进程（20 秒 2 矿石）；**用 GUI 点开排序页后 `sorting=1`**，同一窗口内消耗 **9 个矿石**、`progress` 9 个槽全动，**实测 ≈4.5× 加速（2→9 矿石/20 秒）**，截图见 `w74/factory-parallel.png`（9 输入槽各 12~13 矿、9 输出槽各 6 粉、排序页显示 on）。官方构建默认同样是 `sorting: 0b`，故非移植偏差。**未测**：速度/能量升级的影响（升级槽是虚拟容器槽，`be set-nbt` 写不进，需光标持有物品）与满输出回压。[记录](evidence/p8-release/w112-factory-throughput.json)
 
 W-111（完整化学链）：**第一阶段完成**（在专用服务端 smoke 里）。新增场景：化学灌注机（三氧化硫+水蒸气→硫酸）→ 加压管道 → 化学溶解室（硫酸+铁矿石→**dirty_iron 浆液**），实测溶解室 `chemical_tanks=[4115 mB sulfuric_acid, 1000 mB dirty_iron]`，`fabric-machine-smoke.sh` **EXIT=0 / 23 PASS**。途中记下三个坑：溶解室槽位是 **0=化学品输入、1=物品输入**（矿石放槽 0 机器完全不启动）、新场景需 `forceload add 3 0`、灌注机输出罐不序列化（断言要看下游）。未做：×4/×5 全链与硫酸自产（硫→氧化→酸）。[记录](evidence/p8-release/w111-chemical-chain.json)
