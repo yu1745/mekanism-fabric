@@ -326,3 +326,16 @@ AGENTS.md 本批新增：①"游戏客户端只能用 mdb 启动"硬规则 ②"�
   3. EMI 版本 `1.1.24+1.21.1+fabric` 来自 Modrinth maven：在 `M-integration.md` 记下来源与许可证（MIT），release-check 的"JAR 不含 EMI 类"可顺手加一条断言（只做现有 oracle 扩充，不新写检查框架）。
   4. 验收仍须是 mdb 起的客户端 + 乙烯 ingredient 读数，编译通过不算完成。
 - 路线图：未开始/未完成的 W 项仍有 W-74b、W-90、W-79、W-80/81/82 余项、W-84 等，≥6，**本次不补充**，无改动。
+
+## 巡检 E2（2026-10-31 11:17）
+
+新提交 4 个：`e6c31c63` EMI 编译（W-74a step4）、`4b123a21` EMI 真机验证 + 发布 JAR 第三方类泄漏断言（step5）、`7440e512` W-90、`c5ce6e1d` Jade（W-74b）。**审计陷阱：未触发**（全部是生产/构建/脚本改动，且有 mdb 真机截图证据）。
+
+- 范围核对：只做了 EMI 与 Jade，JEI/WTHIT 未碰；EMI/Jade 均 `modCompileOnly`，`-PemiDev`/`-PjadeDev` 才进运行期；`fabric-packaged-smoke.sh` 新增 `dev/emi/`、`mezz/jei/`、`snownee/jade/` 泄漏断言，**很好**。W-90 只新增 1 个测试（`SearchQueryParserTest`，官方逐字节），并**主动更正了 W-63 评估页的错误结论**（其余 6 个早已通过 `officialRootTestOracle` 纳入）。这个自我纠错是好习惯，请继续；教训"判断是否已纳入须查 oracle allowlist"已写入证据页。
+- 需注意：
+  1. `7440e512` 改了 `AGENTS.md` 的测试计数（451→457、578→584）。仅是数字同步，可以；但**只改了计数**，请确认 `docs/milestones/README.md`、`INSTALL.md`、`CHANGELOG`、`release-check.sh` 里的计数是否同步（已见 README/CHANGELOG 改了）。
+  2. `GuiBar.IBarInfoHandler` 嵌套接口被删、21 个文件改为顶层 `IBarInfoHandler`。这是**对官方类结构的偏离**，理由（移植原本拆成了两套类型）成立，但应评估对附加模块/第三方的二进制兼容并写入 `API_DELTAS.md`（见 W-95）。
+  3. Jade slice 增加 16 项，EMI 增加约 90 行条目：证据页有数量变化，但**请在 `M-integration.md` 里按"owner/调用链"列出为何每组被纳入**，而非只记数量。
+  4. EMI 对 Mekanism 罐的流体容器显示因 Fabric 能力模型不同而缩减（只看组件式 Mekanism 罐），已注释为 port delta；请在 W-91 里确认玩家可见影响。
+  5. 这四个提交改了 common-slice/GuiBar/api-slice，而 **release-check 尚未在新 HEAD 上跑过**——见 W-93，先别声称 P13 结论在新 HEAD 上仍成立。
+- 路线图：W-74、W-84…W-90 基本已做，原有未开始项只剩 W-79（预留）与 W-80/81/82 余项，**触发补充线**。已新增 **P19：W-91…W-96（6 项）**，见 `ROADMAP.md`：EMI/Jade 范围补全（P0）、集成后全量回归（P0）、注册表差异实质修复、IBarInfoHandler 偏离复核、发布演练。JEI/WTHIT 仍未批准，不得启动。
