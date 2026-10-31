@@ -24,7 +24,7 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 
 ## 验收证据
 
-W-111（完整化学链）：**调查中，发现疑似 P0 缺陷**。先解决了“怎么把流体/化学品送进机器”：流体储罐可用水桶注入（实测 1,000 mB），但**机器的流体罐无法用桶注入、也无法用 NBT 写入**，侧面配置 `component_config` 的 NBT 写入也不生效（回读仍是全 0）。更关键的是：`ultimate_universal_cable` 贴着机器 `connections=0`（连不上），而贴着能量立方体是 `connections=16`（正常）；机械管道对流体储罐 `acceptors=16`、对机器无连接。若成立则**机器无法经线缆/管道获得能量与流体**，玩家路径不通——已用官方样本存档排除了“默认侧配置写错”这一假设：官方存下的机器 `config0` 同样是全 0，本移植新放的机器也是全 0，**默认值一致**；差异在本移植的按侧能力解析链（`getStrictEnergyHandler` → `STRICT_ENERGY.find(side)` → 容器为空即返回 null），导致机器对传输器完全不暴露能量。修复方向与验证方法已写入证据页。[记录](evidence/p8-release/w111-chemical-chain.json)
+W-111（完整化学链）：**受工具限制，未完成；曾疑似的 P0 已撤回**。先解决“把流体/化学品送进机器”：流体储罐可用水桶注入（实测 1,000 mB），但机器的罐无法用桶注入、也无法用 NBT 写入（attachment），`component_config` 的 NBT 写入对已加载方块实体不生效。过程中曾怀疑“线缆连不上机器”是移植缺陷，**用官方参考服务端做了对照后撤回**：官方在同样默认（全 NONE 侧配置）的机器 + 线缆组合上，`data get block` 读数同样是 `connections: 0b, acceptors: 0b`，而两根线缆相邻时是 `connections: 32b`（说明读数口径正确）——两版行为一致，问题在于“外部供电/供料必须先配置机器侧面”，而当前工具链无法可靠驱动侧面配置 GUI。[记录](evidence/p8-release/w111-chemical-chain.json)
 
 W-102（JEI 分类覆盖）：**完成**（改用运行时计数代替逐类截图）。`MekanismJEI` 在 `onRuntimeAvailable(IJeiRuntime)` 里对注册过的 30 个分类逐个 `createRecipeLookup(...).includeHidden().get().count()`，打点 `MEKANISM_FABRIC_JEI_CATEGORY_PROOF`：实测 **count=30 empty=0**，配方数从 1（activating、sps_casing）到 200（crushing）；完整分类-配方数清单见证据页。此前“逐类截图”的路线在 mdb 上不可行（JEI 搜索框不接收合成字符、按 R 不弹配方页），已记录；未覆盖的是各分类的**渲染外观**逐类核对与 QIO 配方转移按钮。[记录](evidence/p8-release/w102-jei-categories.json)
 
