@@ -11,6 +11,7 @@
 | 2026-10-30 | 自主继续工作、不再向用户提问（GeneralConfig 完整 owner、字符串列表同步及必要生命周期收敛已批准）；不主动增加测试覆盖、避免过度防御；所有客户端调试可用 mcdebug。 |
 | 2026-10-30（整理） | 文档整理：AGENTS.md 精简；`TASK*`、历史审查文档移入 `docs/archive/`；编译日志不再入库；审查结论写入任务文档/提交信息而非单独提交；wip 提交合并前 squash。 |
 | 2026-10-30（里程碑） | Task052 因触及中枢而膨胀，关闭为历史名；改用按系统命名的里程碑（M-owner/config/transfer/render/registry/gear），见 `docs/milestones/README.md`。 |
+| 2026-10-31 | 批准 W-74 第三方集成（先 EMI 再 Jade，JEI/WTHIT 未批）与 W-90（采纳 4 个 byte-identical 官方测试，属"不主动加测试"的例外）。 |
 
 ## 被取代的旧条文
 
