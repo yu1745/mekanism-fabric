@@ -1,0 +1,24 @@
+{
+  "work_item": "W-74d\uff08WTHIT\uff09",
+  "date": "2026-10-31",
+  "dependency": {
+    "coordinate": "mcp.mobius.waila:wthit:fabric-12.10.2\uff08bai \u7684 Maven\uff1ahttps://maven.bai.lol\uff0c\u4ed3\u5e93\u53ea\u653e\u884c\u8be5 group\uff09",
+    "why_not_modrinth": "Modrinth Maven \u6ca1\u6709 wthit \u5750\u6807\uff08`maven.modrinth:wthit:12.10.2` \u89e3\u6790\u5931\u8d25\uff09\uff1bbai \u7684 Maven \u7528 loader \u524d\u7f00\u7248\u672c\u53f7",
+    "runtime": "`-PwthitDev` \u5f00\u5173\u6302 modLocalRuntime\uff1bWTHIT \u53e6\u9700 `badpackets`\uff08\u8fd0\u884c\u65f6\u5df2\u653e 0.8.2\uff09"
+  },
+  "slice": "common 1627 \u2192 1632\uff08wthit 5 \u4e2a\u6587\u4ef6\uff09",
+  "port_fixes": [
+    "`Mekanism.rl/MODID/logger` \u2192 `MekanismAPI` + `ResourceLocation.fromNamespaceAndPath`\uff08\u4ec5 `MekanismWTHITPlugin` \u4e00\u5904\u9700\u8981\uff09"
+  ],
+  "compiles": "`./gradlew -p fabric compileJava` BUILD SUCCESSFUL\uff1b`./gradlew -p fabric test` 457 \u9879\u901a\u8fc7",
+  "plugin_registration": {
+    "finding_1": "Fabric \u7684 entrypoint \u4e0d\u80fd\u7528\u6765\u6ce8\u518c WTHIT \u63d2\u4ef6\uff1aWTHIT 12 \u8d70**\u81ea\u5df1\u7684\u63d2\u4ef6 JSON**\uff08`assets/<modid>/wthit_plugins.json` \u6216 `waila_plugins.json`\uff09\uff0c\u5b57\u6bb5\u662f `{id, initializer, environment}`\uff1b\u628a\u5bf9\u8c61\u5f62\u5f0f\u585e\u8fdb `fabric.mod.json` \u7684 entrypoints \u4f1a\u88ab Fabric Loader \u76f4\u63a5\u62d2\u7edd\uff08`Entrypoint value must be present`\uff09",
+    "implemented": "\u65b0\u589e `src/main/resources/assets/mekanism/wthit_plugins.json`\uff0c\u5e76\u52a0\u5165 `processResources` \u7684\u767d\u540d\u5355\uff1b`assemble` \u540e\u6838\u5fc3 JAR \u5185\u786e\u5b9e\u542b\u8be5\u6587\u4ef6",
+    "unverified": "**\u5f00\u53d1\u5ba2\u6237\u7aef\uff08\u76ee\u5f55\u5f62\u5f0f\u8d44\u6e90\uff09\u91cc WTHIT \u6ca1\u6709\u52a0\u8f7d\u672c\u63d2\u4ef6**\uff1a\u65e5\u5fd7\u53ea\u6709 `waila:core` \u7684\u521d\u59cb\u5316\uff0c\u6ca1\u6709 `mekanism`\uff1bWTHIT \u5bf9\u673a\u5668\u7684\u540d\u5b57 tooltip \u4ecd\u663e\u793a\uff08\u5185\u7f6e\u540d\u79f0\u63d0\u4f9b\u8005\uff09\uff0c\u4f46 `MEKANISM_FABRIC_WTHIT_PROOF` \u8ba1\u6570 0\u2014\u2014\u8bf4\u660e WTHIT \u7684\u63d2\u4ef6\u626b\u63cf\u5728\u5f00\u53d1\u7c7b\u8def\u5f84\uff08\u76ee\u5f55\uff09\u4e0b\u4e0d\u751f\u6548\uff0c\u53ea\u5728 JAR \u4e2d\u751f\u6548"
+  },
+  "known_limitation": "\u53d1\u5e03 JAR \u5ba2\u6237\u7aef\u4e0d\u80fd\u7528 mdb \u542f\u52a8\uff08AGENTS \u786c\u89c4\u5219\uff09\uff0c\u6240\u4ee5\u672c\u9879\u5728\u5f00\u53d1\u5ba2\u6237\u7aef\u91cc\u65e0\u6cd5\u5b8c\u6210\u63d2\u4ef6\u6ce8\u518c\u9a8c\u8bc1\uff1b\u9700\u8981\u7528\u6237\u5728\u771f\u5b9e\u53d1\u5e03\u7269\u4e0a\u9a8c\u8bc1\uff0c\u6216\u5c06\u5176\u8bb0\u4e3a\u53d7\u5de5\u5177\u9650\u5236\u7684\u672a\u9a8c\u8bc1\u9879",
+  "not_done": [
+    "WTHIT \u63d2\u4ef6\u5728\u771f\u5b9e\uff08JAR \u5f62\u5f0f\uff09\u5ba2\u6237\u7aef\u7684\u6ce8\u518c\u4e0e tooltip \u8bfb\u6570\u672a\u9a8c\u8bc1",
+    "\u591a\u65b9\u5757/\u4f20\u8f93\u5668/\u5b9e\u4f53\uff08Robit\uff09\u7684 WTHIT \u8bfb\u6570\u672a\u9a8c\u8bc1"
+  ]
+}

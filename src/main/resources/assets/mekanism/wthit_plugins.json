@@ -1,0 +1,9 @@
+{
+  "plugins": [
+    {
+      "id": "mekanism",
+      "initializer": "mekanism.common.integration.lookingat.wthit.MekanismWTHITPlugin",
+      "environment": "*"
+    }
+  ]
+}

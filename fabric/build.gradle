@@ -196,6 +196,11 @@ repositories {
         url = 'https://api.modrinth.com/maven'
         content { includeGroup 'maven.modrinth' }
     }
+    //WTHIT publishes on bai's maven; scope the repository to its group so nothing else is pulled from there.
+    maven {
+        url = 'https://maven.bai.lol'
+        content { includeGroup 'mcp.mobius.waila' }
+    }
 }
 
 def loadSlice = { String listName ->
@@ -213,7 +218,7 @@ def platformSlice = loadSlice('platform-slice.txt')
 def apiSliceFiles = apiSlice.collect { file("../src/api/java/${it}") }
 def commonSliceFiles = commonSlice.collect { file("../src/main/java/${it}") }
 def platformSliceFiles = platformSlice.collect { file("src/main/java/${it}") }
-if (apiSlice.size() != 265 || commonSlice.size() != 1627 || platformSlice.size() != 209) {
+if (apiSlice.size() != 265 || commonSlice.size() != 1632 || platformSlice.size() != 209) {
     throw new GradleException("Unexpected Fabric source slice counts: api=${apiSlice.size()} common=${commonSlice.size()} platform=${platformSlice.size()}")
 }
 
@@ -662,6 +667,13 @@ dependencies {
     if (providers.gradleProperty('jeiDev').isPresent()) {
         modLocalRuntime "mezz.jei:jei-1.21.1-fabric:${jeiVersion}"
     }
+    //WTHIT looking-at integration (W-74d): same optional compile-only arrangement. WTHIT publishes to bai's maven
+    //(Modrinth's maven has no wthit coordinates) with loader-prefixed versions.
+    def wthitVersion = 'fabric-12.10.2'
+    modCompileOnly("mcp.mobius.waila:wthit:${wthitVersion}") { transitive = false }
+    if (providers.gradleProperty('wthitDev').isPresent()) {
+        modLocalRuntime "mcp.mobius.waila:wthit:${wthitVersion}"
+    }
     // Explicitly opted-in dev runtime for testing the real optional mod; never bundle it.
     if (providers.gradleProperty('accessoriesDev').isPresent()) {
         modLocalRuntime 'io.wispforest:accessories-fabric:1.1.0-beta.53+1.21.1'
@@ -799,6 +811,7 @@ processResources {
     }
     from('../src/main/resources') {
         mekanismServiceDescriptors.each { name -> include "META-INF/services/$name" }
+        include 'assets/mekanism/wthit_plugins.json'
         include 'assets/mekanism/particles/radiation.json'
         include 'assets/mekanism/particles/jetpack_flame.json'
         include 'assets/mekanism/particles/jetpack_smoke.json'

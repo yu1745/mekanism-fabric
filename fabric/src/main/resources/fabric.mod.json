@@ -50,6 +50,7 @@
   "suggests": {
     "emi": "*",
     "jade": "*",
-    "jei": "*"
+    "jei": "*",
+    "wthit": "*"
   }
 }

@@ -12,7 +12,8 @@ import mcp.mobius.waila.api.IWailaPlugin;
 import mcp.mobius.waila.api.TooltipPosition;
 import mcp.mobius.waila.api.data.EnergyData;
 import mcp.mobius.waila.api.data.FluidData;
-import mekanism.common.Mekanism;
+import mekanism.api.MekanismAPI;
+import net.minecraft.resources.ResourceLocation;
 import mekanism.common.block.BlockBounding;
 import mekanism.common.entity.EntityRobit;
 import mekanism.common.integration.lookingat.LookingAtUtils;
@@ -29,10 +30,12 @@ import org.jetbrains.annotations.Nullable;
 @SuppressWarnings("unused")
 public class MekanismWTHITPlugin implements IWailaPlugin {
 
-    static final ResourceLocation MEK_DATA = Mekanism.rl("wthit_data");
+    static final ResourceLocation MEK_DATA = ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, "wthit_data");
 
     @Override
     public void register(IRegistrar registration) {
+        //Fabric port proof line: the client gates grep this exact marker to confirm the plugin ran.
+        MekanismAPI.logger.info("MEKANISM_FABRIC_WTHIT_PROOF data={}", MEK_DATA);
         registration.addBlockData(WTHITDataProvider.INSTANCE, BlockEntity.class);
         registration.addEntityData(WTHITEntityDataProvider.INSTANCE, EntityRobit.class);
         registration.addConfig(LookingAtUtils.ENERGY, true);

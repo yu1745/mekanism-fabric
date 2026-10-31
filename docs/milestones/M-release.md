@@ -24,6 +24,8 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 
 ## 验收证据
 
+W-74d（WTHIT）：5 个文件编译通过（`compileJava` + 457 项测试），依赖用 `mcp.mobius.waila:wthit:fabric-12.10.2`（bai Maven，Modrinth 无该坐标），`-PwthitDev` 开关运行期。**注册机制与 EMI/Jade/JEI 不同**：WTHIT 12 读自己的插件 JSON `assets/<modid>/wthit_plugins.json`（`{id, initializer, environment}`），把对象塞进 `fabric.mod.json` 的 entrypoints 会被 Fabric Loader 拒绝（`Entrypoint value must be present`）；已新增该资源并加入 `processResources` 白名单，`assemble` 产物内含。**未验证**：开发客户端（目录形式资源）里 WTHIT 只初始化了 `waila:core`，没有加载本插件（`MEKANISM_FABRIC_WTHIT_PROOF` 计数 0），说明其插件扫描只认 JAR；而发布 JAR 客户端按 AGENTS 硬规则不能用 mdb 启动，故插件注册的真机验证受工具限制，需在真实发布物上确认。[记录](evidence/p8-release/w74d-wthit.json)
+
 W-74c（JEI）：**41 个文件编译通过并经真机注册验证**——依赖用 `mezz.jei:jei-1.21.1-fabric:19.43.0.398`（最新 19.70 由 Loom 1.18.2 构建，本仓 Loom 1.13.6 拒绝；Modrinth 坐标拿到的是不含 loader API 的套壳 jar），仅编译期 + `-PjeiDev` 运行期。移植要点：7 个文件的流体类型改写、**JEI 流体 ingredient 类型差异**（Fabric 是 `FabricTypes.FLUID_STACK` + `IJeiFluidIngredient`，故新增 `JeiFluidStacks` 适配器并在 3 处改写）、`addFluidAliases` 的映射/文本分离、与 EMI 一致地去掉物品流体 capability 回退、`Mekanism.hooks.emi.isLoaded()` 换成 `FabricLoader.isModLoaded`。`jei_mod_plugin` entrypoint 已注册并同步进打包契约。真机（只装 JEI）输出 `MEKANISM_FABRIC_JEI_PROOF`，JEI 显示 57 页物品与搜索框、无异常。**未验证**：24 个分类的逐个渲染、QIO 合成转移。改动后 `release-check --skip-build` **5 步全过**（260/55/84/113/98 秒），其中静态门禁含“发布 JAR 不得出现 `mezz/jei/` 类”的断言。[记录](evidence/p8-release/w74c-jei.json)
 
 W-100（给用户的决策清单）：新增 [`DECISIONS_PENDING.md`](DECISIONS_PENDING.md)——①强制推送确认（W-101 squash 后需 `--force-with-lease`，worker 不自行推送）②版本号与发布形态（`+fabric.1` 是否要改、是否正式发布）③剩余 W 项取舍（W-79、W-83 受阻路径、W-80/81/82 余项、W-98 Sodium/Iris 覆盖档位、W-99 选哪个第三方模组、W-74c/d JEI+WTHIT 是否仍做）④发布说明的已知限制口径 ⑤其他未阻塞事项（证据体积、完整演练）。按用户裁决，`server-v2` 的 submodule 指针**未列入**。[记录](evidence/p8-release/w100-decisions.json)
