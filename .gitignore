@@ -47,3 +47,5 @@ docs/**/*.log.gz
 
 fabric/run-generators/
 fabric/run-generators-server/
+/fabric/gradle
+/fabric/gradlew
