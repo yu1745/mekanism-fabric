@@ -24,6 +24,8 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 
 ## 验收证据
 
+W-102（JEI 分类抽样）：**部分完成**。实际注册 **30** 个分类（路线图写的 24 是旧数），类名清单已整理；JEI 物品面板在物品栏内渲染正常。**受阻**：mdb 的合成输入打不开 JEI 配方视图——搜索框不接收 `gui type` 字符（`handledCharEvents=0`，Ctrl+F/点击聚焦均无效），对槽位按 `R` 也不弹配方页，因此拿不到逐类截图。另记两条副产物：EMI 与 JEI 同装时 EMI 会接管 JEI 的 UI（单独验证 JEI 须先移走 EMI）；重建 `argFiles/runClient` 漏掉 `build/classes/java/main` 与 `build/resources/main` 时客户端能起但**开发模组不在 classpath**（`block not registered`），已写入排障小节。下一步改用“注册期证明行”替代截图（一次覆盖 30 个分类的注册与配方绑定）。[记录](evidence/p8-release/w102-jei-categories.json)
+
 W-105（游戏内配置界面）：Fabric 版原本**没有**配置界面入口（Fabric 无加载器级配置屏，本移植也无 Mod Menu 集成）。按“可选依赖 + 最小适配”补齐：`modCompileOnly` 的 Mod Menu 11.0.5 + `-PmodmenuDev` 开关 + `modmenu` entrypoint → `FabricModMenuIntegration` → 只读的 `GuiMekanismConfig`。真机验证：Mod Menu 里 Mekanism 的配置齿轮由禁用变可用，点击打开界面并列出 `client.toml / common.toml / startup.toml` 及字节数与“编辑后重启生效”提示（截图 `w74/modmenu-config-screen.png`）。顺带修掉三个坑：平台 slice 未登记的类不会编译（`loadSlice` 跳过注释行，计数 209→211）、`ObjectSelectionList` 必须 `addRenderableWidget`、1.21.1 没有 `setRenderBackground`。发布 JAR 不含 `com/terraformersmc/` 类，泄漏断言与 entrypoint 契约已同步。[记录](evidence/p8-release/w105-config-screen.json)
 
 W-109（文档同步）：`CHANGELOG.md` 增“Optional integrations”表（四个 viewer 的版本/`-P*Dev` 开关/能力/未验证项）；`docs/INSTALL.md` 把“无第三方集成”改为“四个可选 viewer 即插即用”并列出 jar 名与注意事项（EMI 需 Fabric Language Kotlin、WTHIT 需 badpackets、JEI 版本受 Loom 限制）；`docs/RELEASE_CHECKLIST.md` 的客户端检查项扩到四个、已知限制同步；`docs/LICENSES.md` 新增许可表（JEI/EMI=MIT，Jade/WTHIT=CC-BY-NC-SA-4.0，均仅编译期链接不打包，许可证取自各 JAR 的 `fabric.mod.json`）。四份文档链接全部可解析。[记录](evidence/p8-release/w109-doc-sync.json)
@@ -152,6 +154,11 @@ EOF
 ./gradlew -p fabric -I /tmp/print-cp.gradle dumpRuntimeCp --no-configuration-cache
 ```
 
-然后按 `-classpath` + 冒号连接的方式写入 `fabric/build/loom-cache/argFiles/runClient`。注意 `remapClasspath.txt`
-**不是**启动 classpath（缺 fabric-loader / dev-launch-injector），用它拼出来会报
-`ClassNotFoundException: net.fabricmc.devlaunchinjector.Main`。
+然后按 `-classpath` + 冒号连接的方式写入 `fabric/build/loom-cache/argFiles/runClient`。**两点必须注意**：
+
+1. `remapClasspath.txt` **不是**启动 classpath（缺 fabric-loader / dev-launch-injector），用它拼出来会报
+   `ClassNotFoundException: net.fabricmc.devlaunchinjector.Main`；正确来源是 Gradle 的 `runtimeClasspath`。
+2. `runtimeClasspath` 同样**不含**本项目的类与资源输出目录，必须把
+   `fabric/build/classes/java/main` 与 `fabric/build/resources/main` 加在最前面。漏掉它们时客户端能启动、
+   但**开发模组根本不在 classpath 上**——表现为 `block not registered: mekanism:crusher`、JEI 里没有
+   Mekanism 物品，很容易被误判成“注册坏了”。
