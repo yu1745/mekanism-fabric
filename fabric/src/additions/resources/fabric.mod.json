@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "mekanismadditions",
   "version": "${version}",
-  "name": "Mekanism: Additions",
+  "name": "Mekanism: Additions (Fabric)",
   "environment": "*",
   "entrypoints": {
     "main": [
@@ -22,5 +22,15 @@
   "license": "MIT",
   "mixins": [
     "mekanismadditions.mixins.json"
-  ]
+  ],
+  "description": "Mekanism Additions for Fabric: plastic blocks, balloons, glow panels and the Mekanism glider. Part of the Mekanism Fabric port.",
+  "contact": {
+    "homepage": "https://aidancbrady.com/mekanism/",
+    "sources": "https://github.com/mekanism/Mekanism"
+  },
+  "authors": [
+    "Aidan C. Brady",
+    "Mekanism contributors"
+  ],
+  "icon": "logo.png"
 }

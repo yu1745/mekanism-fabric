@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "mekanismgenerators",
   "version": "${version}",
-  "name": "Mekanism: Generators",
+  "name": "Mekanism: Generators (Fabric)",
   "environment": "*",
   "entrypoints": {
     "main": [
@@ -31,5 +31,15 @@
   "license": "MIT",
   "mixins": [
     "mekanismgenerators.mixins.json"
-  ]
+  ],
+  "description": "Mekanism Generators for Fabric: solar, heat, gas, bio, wind, fission and fusion power. Part of the Mekanism Fabric port.",
+  "contact": {
+    "homepage": "https://aidancbrady.com/mekanism/",
+    "sources": "https://github.com/mekanism/Mekanism"
+  },
+  "authors": [
+    "Aidan C. Brady",
+    "Mekanism contributors"
+  ],
+  "icon": "logo.png"
 }

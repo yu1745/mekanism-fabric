@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "mekanismtools",
   "version": "${version}",
-  "name": "Mekanism: Tools",
+  "name": "Mekanism: Tools (Fabric)",
   "environment": "*",
   "entrypoints": {
     "main": [
@@ -22,5 +22,15 @@
     "fabric-api": "*",
     "mekanism": "${version}"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "description": "Mekanism Tools for Fabric: paxels and osmium/bronze/steel/refined obsidian gear. Part of the Mekanism Fabric port.",
+  "contact": {
+    "homepage": "https://aidancbrady.com/mekanism/",
+    "sources": "https://github.com/mekanism/Mekanism"
+  },
+  "authors": [
+    "Aidan C. Brady",
+    "Mekanism contributors"
+  ],
+  "icon": "logo.png"
 }

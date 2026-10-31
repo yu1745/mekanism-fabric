@@ -31,6 +31,18 @@ public record Version(int major, int minor, int build) implements Comparable<Ver
      *
      * @return version if applicable, otherwise null
      */
+    /**
+     * Fabric port delta: parses the mod's friendly version after dropping the port build suffix ("+fabric.N" or the older
+     * "-fabric-bootstrap"). Upstream only ever sees the plain "10.7.19.85", so the suffix must not reach the numeric parse.
+     */
+    public static Version fromFabricVersion(String friendlyVersion) {
+        int cut = friendlyVersion.indexOf('+');
+        if (cut < 0) {
+            cut = friendlyVersion.indexOf('-');
+        }
+        return new Version(cut < 0 ? friendlyVersion : friendlyVersion.substring(0, cut));
+    }
+
     public static Version get(String s) {
         String[] split = s.replace('.', ':').split(":");
         if (split.length != 3) {

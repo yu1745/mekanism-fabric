@@ -24,6 +24,8 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 
 ## 验收证据
 
+W-71：版本号过渡到 `10.7.19.85+fabric.1`（上游号不变，`+fabric.N` 为本移植构建序号），四个 JAR 的 name／description／license(MIT)／contact／authors／icon 已统一且图标实际打进 JAR；改号引发一处真实缺陷——附加模块引导用 `-` 截断版本后缀，`85+fabric` 进 `Integer.parseInt` 崩溃，已在 `Version.fromFabricVersion` 统一修复。改号后重跑 `release-check --skip-build` 通过（5 步：静态 15s／packaged 服务端 55s／paired 85s／rejection 112s／machine 99s），W-75 复跑缺失 33→30（语言文件缺口消除）。[元数据与哈希](evidence/p8-release/w71-release-metadata.json)
+
 W-75：官方四个 NeoForge JAR 与 Fabric 四个发布 JAR 的 `data/`+`assets/` 逐文件对照完成（`scripts/compare-resource-inventory.py`，JSON 规范化后比较）：8379 个上游文件中 7165 个一致（5708 个仅格式化），33 个缺失（29 个 CraftTweaker `.zs`、1 个 ProjectE、3 个英文变体语言文件）与 1181 个内容差异（637 个被构建排除的 compat 配方、544 个 Additions 配方的 loader ingredient 翻译）全部有成因。已补入 `en_au/en_gb/en_ud` 三个语言文件，待下次构建复验。[明细](evidence/p8-release/w75-resource-inventory.json)
 
 W-70：一键发布检查 `scripts/release-check.sh` 通过——6 步全绿：clean 四 JAR 构建（409s，含 578 项测试）→ 四 JAR 静态门禁（17s）→ packaged 服务端 50 mods/458 值（65s）→ paired 双客户端握手（109s）→ 三种配置拒绝（146s）→ machine 运行时 smoke（100s），总墙钟约 14 分钟。[逐步耗时与标记行](evidence/p8-release/w70-release-check.json)

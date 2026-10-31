@@ -23,7 +23,7 @@ public class MekanismTools implements IModModule, ModInitializer {
 
     public MekanismTools() {
         instance = this;
-        versionNumber = new Version(FabricLoader.getInstance().getModContainer(MODID).orElseThrow().getMetadata().getVersion().getFriendlyString().split("-", 2)[0]);
+        versionNumber = Version.fromFabricVersion(FabricLoader.getInstance().getModContainer(MODID).orElseThrow().getMetadata().getVersion().getFriendlyString());
     }
 
     @Override

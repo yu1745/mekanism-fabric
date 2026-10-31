@@ -56,9 +56,8 @@ public class MekanismGenerators implements IModModule, net.fabricmc.api.ModIniti
     public void onInitialize() {
         instance = this;
         ModModuleState.addModule(this);
-        String version = net.fabricmc.loader.api.FabricLoader.getInstance().getModContainer(MODID).orElseThrow()
-              .getMetadata().getVersion().getFriendlyString().replace("-fabric-bootstrap", "");
-        versionNumber = new Version(version);
+        versionNumber = Version.fromFabricVersion(net.fabricmc.loader.api.FabricLoader.getInstance()
+              .getModContainer(MODID).orElseThrow().getMetadata().getVersion().getFriendlyString());
         MekanismGeneratorsConfig.registerConfigs();
         GeneratorsDataComponents.DATA_COMPONENTS.registerAll(net.minecraft.core.registries.BuiltInRegistries.DATA_COMPONENT_TYPE);
         GeneratorsBlocks.BLOCKS.registerAll(net.minecraft.core.registries.BuiltInRegistries.BLOCK, net.minecraft.core.registries.BuiltInRegistries.ITEM);

@@ -792,6 +792,8 @@ processResources {
         include 'assets/mekanism/sounds/**'
         include 'assets/mekanism/lang/**'
         exclude 'assets/mekanism/lang/en_us.json'
+        //Mod icon (official logo.png) referenced by fabric.mod.json; not part of any other glob.
+        include 'assets/mekanism/icon.png'
     }
     from('../src/datagen/generated/mekanism') {
         include 'data/mekanism/mekanism/robit_skin/*.json'

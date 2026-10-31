@@ -57,8 +57,8 @@ public class MekanismAdditions implements IModModule, ModInitializer {
 
     public MekanismAdditions() {
         instance = this;
-        versionNumber = new Version(FabricLoader.getInstance().getModContainer(MODID).orElseThrow()
-              .getMetadata().getVersion().getFriendlyString().split("-", 2)[0]);
+        versionNumber = Version.fromFabricVersion(FabricLoader.getInstance().getModContainer(MODID).orElseThrow()
+              .getMetadata().getVersion().getFriendlyString());
     }
 
     @Override

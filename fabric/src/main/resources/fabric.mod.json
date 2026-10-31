@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "id": "mekanism",
   "version": "${version}",
-  "name": "Mekanism (Fabric Bootstrap)",
-  "description": "Minimal Java bootstrap for the incremental Mekanism Fabric port.",
+  "name": "Mekanism (Fabric)",
+  "description": "Mekanism for Fabric: ore processing, energy, chemicals, machines, tools, generators and more. Unofficial port of the official NeoForge build 10.7.19.85.",
   "authors": [
     "Aidan C. Brady",
     "Mekanism contributors"
@@ -36,5 +36,6 @@
     "java": ">=21",
     "fabric-api": ">=0.116.17",
     "team_reborn_energy": ">=4.1.0"
-  }
+  },
+  "icon": "assets/mekanism/icon.png"
 }
