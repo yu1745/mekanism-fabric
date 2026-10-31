@@ -26,6 +26,7 @@
 - **2026-10-31 11:17 巡检 E2**：W-74a（EMI 真机）、W-74b（Jade）、W-90（仅补 1 个测试）、W-89 完成；路线图原有项基本耗尽，补 P19（W-91…96：EMI/Jade 范围补全、集成后全量回归、注册表差异实质修复、发布演练）。
 - **2026-10-31 12:17 巡检 E4（最后一次）**：W-93 完成但在其"可复现仍成立"的表述被 `be1383fd` 自我推翻（核心 JAR 两次 clean build 哈希不同，附加三个一致）；补 P20（W-97 可复现根因修复 P0、W-98 渲染器兼容、W-99 真实第三方能量互通、W-100 用户决策清单）。此后无自动巡检。
 - **2026-10-31（用户裁决）**：批准 JEI 与 WTHIT（W-74c/W-74d）；已 push 本地提交到 origin。
+- **2026-10-31 13:17 巡检 F2**：W-74c（JEI）、W-91/92/94/100 及 W-101 准备已完成；未开始项降到约 4（W-74d、W-79、W-98、W-99），补 P21（W-102…105：JEI 范围验证、最终全量、W-81/82 缺陷修复、游戏内配置界面核对）。
 - **0. 已知事实**中的 slice 数字、"约 1700/1802"为 10-30 早间快照，当前 platform slice 已 207→209，不作为依据。
 
 ## 0. 已知事实（规划依据，worker 在 P0 复核）
@@ -348,3 +349,12 @@ W-74 的批准范围由"EMI→Jade"扩大为 **EMI → Jade → JEI → WTHIT**�
 | ID | 优先级 | 内容 | 完成标志 |
 |---|---|---|---|
 | W-101 | P1（在 W-97 之后、工作区干净且无进行中批次时做；不与 W-91…W-96 的开发穿插） | 把 `java-port` 上约 62 个 `wip:` 提交按**功能主题**合并成少量有意义的提交（建议按里程碑：owner / config / platform / transfer / render / multiblock / registry / gear 等，非 wip 提交与后续 W 项提交保持原样）。步骤：①工作区必须干净；②先建本地备份 `git branch backup/pre-squash-<日期>` 与 tag；③用非交互方式重排（`git rebase -i` 在本环境不可用，用 `git reset --soft`/`commit-tree`/`cherry-pick --no-commit` 或脚本化 rebase 构造新历史）；④**验证新旧最终树逐字节相同**（`git diff backup/pre-squash-<日期> HEAD` 为空，`git rev-parse HEAD^{tree}` 两者相同）；⑤新提交信息写清合并了哪些旧提交（保留旧 hash 列表）；⑥跑 `./gradlew -p fabric test` 确认 | 新历史无 `wip:` 提交；树哈希与备份一致；记录写入 `M-release.md`。**强制推送不属于本项**：改写历史后 origin 与本地分叉，`git push --force-with-lease` 必须**等用户明确同意后**才执行，worker 只准备好并写入 `DECISIONS_PENDING.md`（W-100） |
+
+### P21 JEI 收口与余量（W-102 … W-105；F2 巡检补充）
+
+| ID | 优先级 | 内容 | 完成标志 / 风险 |
+|---|---|---|---|
+| W-102 | P0 | **JEI 范围验证**（W-74c 后续）：当前只有 `jei-inventory.png`。补 ①24 个机器分类逐类抽样（至少每种 recipe 形态一类：物品→物品、化学品→化学品、流体、能量、多输入）能列出配方；②QIO 合成转移（`JeiQIOCraftingTransferHandler`）真机可用；③ghost ingredient；④JEI 与 EMI 同装时"EMI 在场不启用 JEI 处理器"规则；⑤三个附加模块的 JEI 分类 | 每项 mdb 读数或带原文的限制 |
+| W-103 | P0 | **JEI/WTHIT 落地后的最终全量**：JEI 使 common slice 1580→1627；W-74d 再改一次。两者都完成后在最终 HEAD 上跑一次完整 `release-check.sh`（含 build --clean），连续两次 `build.sh --clean` 四哈希一致，刷新 `RELEASE_CHECKLIST.md` 第 6 节的 sha256 | 一次通过的 6 步 + 可复现记录 |
+| W-104 | P1 | **W-81/82 余项的修复**：涡轮性能、真实区块卸载、跨维度传送余项中凡暴露出来的缺陷逐个 `fix:`（不是只记录）；确实不是缺陷的写依据 | 缺陷清零或每项有依据 |
+| W-105 | P1 | **游戏内配置界面核对**：官方 NeoForge 版在客户端注册了配置界面入口（`IConfigScreenFactory`）。核对 Fabric 版是否有等价入口（Mod Menu 的 `modmenu` entrypoint 或自带界面），没有则按"可选依赖 + 最小适配"补齐；有则真机截图 | 读数/截图，或补齐后的 mdb 验证 |

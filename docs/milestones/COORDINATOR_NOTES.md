@@ -393,3 +393,23 @@ JEI（W-74c）与 WTHIT（W-74d）已批准，见 `ROADMAP.md`「W-74 范围追�
 - **W-91 EMI Generators**：范围合规（只加 Generators 的 EMI 与 slice 4 项，entrypoint `emi` 和 `suggests.emi`），generators-slice 契约 113→117 同步。请在 `M-integration.md` 里按 owner 记录这 4 项；并确认 `fabric-packaged-smoke.sh` 的 entrypoints 契约对 Generators JAR 的 `emi` 键同样放行（否则下次 release-check 会再被拦下，W-93 已踩过一次）。**Tools/Additions 的 EMI 分类**（W-91 范围①）是否存在尚未看到，请核对上游有无对应 viewer 文件。
 - 工作区干净；上一轮看到的未跟踪 `fabric/gradle` 已不存在。无新增测试；wip squash（W-101）、强制推送未被触碰。
 - 路线图：未完成项 W-91 余项、W-92、W-94、W-98、W-99、W-100、W-101、W-74c、W-74d、W-79、W-80/81/82 余项，远超 6，**本次不补充**，无改动。
+
+## 巡检 F2（2026-10-31 13:17）
+
+自 F1 起新提交 6 个：`83c87b23`（W-91 门禁复跑记录）、`2e01144b`（W-92 Jade 流体 tooltip 与"未装 Jade"截图）、`f6f802af`（W-94）、`7b0696c5`（W-100 决策清单）、`2f6b74fb`（W-101 准备）、`0352a083`（**W-74c JEI**，生产+构建+截图）。
+
+**审计陷阱：边缘，不判定，但给提示。** 前 5 个提交没有生产/脚本改动（其中 2 个是真机截图证据，3 个纯文档），随后 JEI 恢复了开发。这 3 个文档项都是路线图指定交付物，且 W-94 复跑了对照脚本、W-101 做了实测，不是空转。**但请不要再连续放 3 个以上纯文档/证据提交**：下一步先做 W-74d（WTHIT）与 W-102（JEI 验证），再回到文档。
+
+**范围与质量核对**
+- JEI 属于 10-31 追加批准的范围（W-74c）；依赖 `mezz.jei:jei-1.21.1-fabric:19.43.0.398`（`modCompileOnly`、`-PjeiDev` 才进运行期），**写明了为何不用最新 19.70（Loom 版本不兼容）和为何不用 Modrinth 套壳**，好。发布 JAR 泄漏断言早已含 `mezz/jei/`；`jei_mod_plugin` 与 `suggests.jei` 已入 `fabric.mod.json`。JEI 流体 ingredient 用 `JeiFluidStacks` 适配（mB↔droplets），属必需的平台适配，不是转换层。
+- **W-94 的结论正确**：自有命名空间零缺口；104 个资源引用 `neoforge:` 命名空间由端口自带的模型装载器兼容层承接，已说明。
+- `common-slice` 1580→1627：请把 JEI 新增的 47 项按 owner 记入 `M-integration.md`（同 EMI/Jade 要求）。
+- 未碰 wip squash 之外的历史、submodule、push；无新增测试。
+
+**需要我纠正/裁决的事（W-100 里 worker 提的问题）**
+1. **W-101 目标集**：worker 实测显式 wip 提交只有 **22 个**（15 个 `wip:` + 7 个 `WIP`），路线图写的"约 62"是我用 `grep -i wip` 数出的**含评审记录提及**的数量，**我估错了**。裁决：**目标集 = 这 22 个显式 wip 提交**；评审记录类提交保持原样。分组按主题 5–7 组。**这两点由协调者定，不必等用户**。worker 可在 JEI/WTHIT 与 W-102 做完、工作区干净后执行 W-101；**强制推送仍只等用户**。
+2. **W-83 熔毁**：worker 问能否用 Gradle 直接起 `generatorsClient`。**不可以**，AGENTS 的"游戏客户端只能用 mdb 起"是用户硬规则。W-83 保持"不可验证"，原文已记录即可，不再投入。
+3. **DECISIONS_PENDING 过宽**：清单里把 W-79、W-80/81/82 余项、W-98、W-99、W-74c/d 都当作"待用户决策"。这些**路线图里已有结论**（W-98/W-99 是 P1 自主项，W-74c/d 已批准），AGENTS 规定"自主工作、不向用户提问"。请把清单精简为**真正需要用户的 3 项**：强制推送确认、发布版本号形态（`+fabric.1` 是否改写）、发布口径。W-98 覆盖到 Sodium+Iris+一个光影包即可，W-99 自选 Modern Industrialization 或 Tech Reborn，**自行推进，别等用户**。
+4. 文档里 W-100 已更正 W-93 的 `conclusion`（F1 的第 1 点），确认已完成。
+
+路线图：未开始项降到约 4（W-74d、W-79、W-98、W-99），触发补充线，已新增 **P21：W-102…W-105**（JEI 范围验证、JEI/WTHIT 后最终全量、W-81/82 缺陷修复、游戏内配置界面核对），见 `ROADMAP.md`。
