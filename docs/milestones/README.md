@@ -47,7 +47,7 @@
 
 ## 发布限制（W-42 准备）
 
-服务端与发布 JAR 客户端路径均已验证（W-60／W-61／W-69）；完整发布声明待协调者复核。
+服务端路径已验证（W-60／W-61，随后续 JAR 自动复验）；发布 JAR 客户端路径仅有 W-69 一次性证据、不自动复验，改版本号后须用户批准单独复验；完整发布声明待协调者复核。
 
 - **第三方集成**：ROADMAP 排除的 JEI/EMI、CraftTweaker、ProjectE、FramedBlocks、JsonThings、gender、OpenComputers2 等不在本轮发布范围。混合 JEI/EMI 的公共 `IMekanismAccess`／`MekanismAccess` 服务未提供；ingredient creators 已由独立真实服务承接，不代表 viewer API 已兼容。
 - **历史 46 项**：P3 清单中已有 5 份原源码纳入、32 项由实际 Fabric owner 承接；另有 7 项第三方边界、1 项离线开发工具、1 项旧反射辅助。逐项现状见[对照](evidence/p8-release/w42-historical46-current.csv)，旧反射辅助已由原生透视模型分派取代。

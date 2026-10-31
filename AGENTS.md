@@ -54,11 +54,9 @@ patched Minecraft 仅含 `com/mojang/**`、`net/minecraft/**` 共 5,363 个 java
 
 完整测试、packaged smoke、真实运行和发布物核验集中到功能里程碑或用户明确要求；优先一个端到端检查证明实际功能。记录已验证范围与未验证风险，不冒充通过。
 
-**测试分两档，默认只跑快的那档**（明确要求）：
-- **日常改动（每次编译/小改）**：只跑 `./gradlew -p fabric test`（纯 JVM 451 项，秒级），或只编译。**不要**跑 `./gradlew build`——它经 `check` 依赖带上 `fabricDataMapTest`、`fabricRecipeRegistryTest`，每次都会 fork 带 MC 运行时的 JVM，慢且吃内存。
-- **按 owner 触发**（改了哪块就只补跑对应任务）：注册表适配层/`DeferredHolder` → `fabricRegistryTest`；QIO/槽位/齿轮逻辑 → `qioTransactionTest`；客户端模型/渲染/mixin → `fabricClientModelTest`；data-map/资源栈 → `fabricDataMapTest`；配方类型/序列化器/初始化顺序 → `fabricRecipeRegistryTest`；storage/transfer → `fabricTransferTest`。
-- **里程碑或发布前（必须全量）**：`./build.sh --clean` 与 `scripts/release-check.sh`，此时 7 个测试任务全跑并按 578 项（451 + 127）记录。
-- 不允许用 `-x test` 跳过测试后再声称已验证；跳过的套件必须在结论里写明"未跑"。
+**测试分两档**：日常只跑 `./gradlew -p fabric test`（451 项，秒级），**不跑** `./gradlew build`（`check` 会带上 dataMap/recipeRegistry 的 MC 运行时 JVM）。
+改了哪块就补跑哪个集成任务：注册表→`fabricRegistryTest`、QIO/槽位/齿轮→`qioTransactionTest`、客户端模型→`fabricClientModelTest`、data-map→`fabricDataMapTest`、配方注册→`fabricRecipeRegistryTest`、storage/transfer→`fabricTransferTest`。
+里程碑/发布前才全量（`build.sh --clean`、`scripts/release-check.sh`，578 项）；跳过任何套件必须在结论里写明"未跑"。
 
 ```bash
 ./build.sh [--clean] [--out <dir>]    # 统一 Fabric 发布契约
@@ -100,12 +98,8 @@ scripts/release-check.sh                          # W-70 一键发布检查（�
 - 单次调用 ≤60 秒；需要更久就由 agent 自己再次调用该脚本续等，不用 `sleep`，也不要求给 gate 脚本加分片循环。
 - 有写日志的进程就传 `-p`；已知崩溃/端口占用/拒绝签名用 `--fail-on` 提前退出。
 - 失败先抓首条错误原文，不先推演再翻日志。
-- **停止进程必须杀整棵树，杀完要验证**（2026-10-31 连续三次误杀后立规）：
-  - 先 `pstree -p <pid>` 或 `pgrep -P <pid>` 看清树，再一次性杀掉脚本及其全部子孙；只杀记录下来的 `$!` 往往只是外层包装 shell，里面真正的脚本、gradle、java 会继续跑（一次误杀后 `release-check.sh` 又跑了 12 分钟，另一次 `fabric-soak-smoke.sh` 被 systemd 收养后空转 32 分钟）。
-  - 后台任务优先用进程组：`setsid` 起的进程用 `kill -- -<PGID>`（TERM → 2s → KILL）。
-  - **禁止**用会匹配到自身的 `pkill -f '<自己的命令行里出现的字符串>'`；要用匹配模式时写成 `pkill -f "[f]abric-server"` 这类加方括号的形式，或先 `pgrep` 拿 PID 再按 PID 杀。
-  - 杀完必须复查：`ps -p <pid>` 应无输出；再查 `ps -eo pid,ppid,args | awk '$2==1'` 里是否有 ppid=1 的孤儿（被收养的脚本/服务端），有就继续清理。
-  - 脚本退出前自检残留（按工作目录或进程组），有残留即非零退出，不要"杀完就走"。
+- **停进程杀整棵树并验证**：先 `pstree -p`/`pgrep -P` 看清子孙，`setsid` 的用 `kill -- -<PGID>`（TERM→2s→KILL）；只杀 `$!` 常只是包装 shell，里的脚本/gradle/java 会继续跑。
+- 禁止会匹配自身的 `pkill -f '…'`（用 `[f]abric-server` 形式或先 `pgrep` 再按 PID）；杀完 `ps -p` 复查并清 ppid=1 的孤儿，脚本退出前自检残留，有残留非零退出。
 - **长时验证不傻等**：预计超过 1 分钟的等待／浸泡一律用加速方式，不按 1:1 真实时间跑。服务端用原版 `/tick sprint <N>t`（等价 N 游戏 tick，控制台经 FIFO 发送，完成标记 `Sprint completed with`；实测 36000 tick = 30 游戏分钟 ≈ 118 秒壁钟、306 ticks/s）；需要冻结/步进时用 `/tick freeze`、`/tick step`。加速跑完必须在证据里同时写 wall time、ticks/s 与等价游戏时长。只有无法加速的等待（真实网络/IO 延迟、必须真实时钟的行为）才按真实时间跑，并写明原因。
 
 ## 持久记录与上下文

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# W-70: one command that reproduces the P13 release conclusions by orchestrating the existing gates in order.
-# It adds no checks of its own: every step is a script that already exists and passes on its own.
+# W-70: one command that runs the server-side release gates in order (clean build, four-JAR static checks, packaged
+# server, paired network, configuration rejection, machine runtime). It adds no checks of its own: every step is an
+# existing script. The release-JAR client path is NOT re-run here - that has one-off evidence only (W-69).
 #
 # Usage: scripts/release-check.sh [--skip-build]
 # Exit code: 0 only when every step passed; on the first failure it prints the step, its log path and the first
