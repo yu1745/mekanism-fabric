@@ -5,26 +5,37 @@
   "result": "PASSED (6 steps)",
   "steps": [
     {
-      "name": "[3] packaged server (50 mods, 458 values)",
+      "name": "clean four-JAR build",
+      "exit": 0,
+      "seconds": 342
+    },
+    {
+      "name": "packaged static four-JAR gates",
+      "exit": 0,
+      "seconds": 16
+    },
+    {
+      "name": "packaged server (50 mods, 458 values)",
       "exit": 0,
       "seconds": 62
     },
     {
-      "name": "[4] paired network (two clients, handshake)",
+      "name": "paired network (two clients, handshake)",
       "exit": 0,
       "seconds": 91
     },
     {
-      "name": "[5] configuration rejection (three clients rejected)",
+      "name": "configuration rejection (three clients rejected)",
       "exit": 0,
       "seconds": 120
     },
     {
-      "name": "[6] machine runtime smoke",
+      "name": "machine runtime smoke",
       "exit": 0,
       "seconds": 113
     }
   ],
   "logs": "/tmp/release-check",
-  "note": "\u673a\u5668 smoke \u7528\u65f6 113 \u79d2\uff08\u542b\u65b0\u589e\u7684\u5316\u5b66\u94fe\u573a\u666f\u4e0e 15 \u79d2\u533a\u5757\u91cd\u8f7d\u7b49\u5f85\uff09\uff0c\u672a\u8d85\u51fa\u534f\u8c03\u8005\u63d0\u9192\u7684\u65f6\u957f\u533a\u95f4\u3002"
+  "note": "\u673a\u5668 smoke \u7528\u65f6 113 \u79d2\uff08\u542b\u65b0\u589e\u7684\u5316\u5b66\u94fe\u573a\u666f\u4e0e 15 \u79d2\u533a\u5757\u91cd\u8f7d\u7b49\u5f85\uff09\uff0c\u672a\u8d85\u51fa\u534f\u8c03\u8005\u63d0\u9192\u7684\u65f6\u957f\u533a\u95f4\u3002",
+  "total_seconds": 744
 }
