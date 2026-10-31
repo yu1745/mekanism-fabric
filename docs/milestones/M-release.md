@@ -24,6 +24,8 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 
 ## 验收证据
 
+W-66（第一轮）：1 服 2 客户端浸泡 30 分钟通过——两客户端各自应用 458 值并加入游戏，全程无掉线、无 "Can't keep up"，服务端与客户端真实 ERROR 均为 0（仅 vanilla datafixer 噪音）。负载为 W-65 样本世界（线缆/传送器网络 + 成型动态储罐 + 空闲机器）。未覆盖：mspt/TPS 读数、持续发电机流量、堆内存采样。[记录](evidence/p8-release/w66-soak.json)
+
 W-65（第一轮）：官方 NeoForge 21.1.200 + Mekanism 10.7.19.85 生成的独立样本世界（机器／传输器／成型动态储罐）在 Fabric 四模块服务端直接加载通过，9 个位置的方块实体 NBT 字段与值一致，含非零连接位掩码（32／16）与多方块成型（两阀门共享 inventory_id；该 id 两侧每次加载都重生成，非持久数据）。残留：频率数据与机器运行库存未覆盖（需 GUI 授权路径）。[比对表与生成命令](evidence/p8-release/w65-neoforge-save-probe.json)
 
 W-64：音效与语音采集已收口——7 个声音事件 / `sounds.json` / 7 个 ogg 在发布 JAR 中一致，生产客户端加载四模块时不报 `Missing sound for event: mekanism*`；本机 Java Sound 采集线路可用（48000Hz/16bit/mono，500ms 采到 48000 字节），"本机限制"结论已过时。Meka 套装 HUD/按键与受控裂变熔毁**本环境不可验证**：mcdebug 无命令执行 RPC、`inv.*` 只覆盖方块实体容器，无法给出套装或执行 `/mek build fission`；原因与替代证据已记录。[证据](evidence/p8-release/w64-verification.json)

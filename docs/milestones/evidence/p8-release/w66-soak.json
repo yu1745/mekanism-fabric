@@ -1,0 +1,33 @@
+{
+  "work_item": "W-66",
+  "date": "2026-10-31",
+  "goal": "1 \u4e2a\u4e13\u7528\u670d\u52a1\u5668 + 2 \u4e2a\u5ba2\u6237\u7aef\uff0c\u8fd0\u884c \u226530 \u5206\u949f\uff0c\u65e5\u5fd7\u65e0\u771f\u5b9e ERROR\uff0c\u8bb0\u5f55\u7ed3\u8bba\u3002",
+  "command": "FABRIC_SOAK_MINUTES=30 FABRIC_SOAK_ENV=/tmp/w66 FABRIC_SOAK_WORLD=~/.cache/mekanism-w65/world scripts/fabric-soak-smoke.sh",
+  "result": "PASSED",
+  "marker": "fabric-soak-smoke: PASSED (30 min, 2 clients connected, server ERROR lines=10, benign datafixer lines=10)",
+  "topology": {
+    "server": "\u56db\u4e2a dist \u53d1\u5e03 JAR + fabric-api 0.116.17 + team_reborn_energy 4.1.0\uff0c\u7aef\u53e3 25595",
+    "clients": 2,
+    "world": "W-65 \u5b98\u65b9 NeoForge \u6837\u672c\u4e16\u754c\uff08\u673a\u5668\u3001\u8fde\u63a5\u7ebf\u7f06/\u4f20\u9001\u5668\u3001\u6210\u578b 4x4x4 \u52a8\u6001\u50a8\u7f50\uff09"
+  },
+  "observations": {
+    "snapshot": "\u4e24\u4fa7\u5ba2\u6237\u7aef\u5404\u81ea phase=client_applied values=458\uff1b\u670d\u52a1\u7aef phase=send values=458 \u00d72",
+    "join": "MekSoakA / MekSoakB \u5148\u540e joined the game\uff0805:39:13\uff09",
+    "duration": "30 \u5206\u949f\uff0c\u671f\u95f4\u65e0 lost connection\u3001\u65e0 \"Can't keep up\"",
+    "errors": {
+      "server_error_lines": 10,
+      "server_benign": "\u5168\u90e8\u4e3a vanilla 'No data fixer registered for <id>'",
+      "server_real_errors": 0,
+      "client_real_errors": {
+        "MekSoakA": 0,
+        "MekSoakB": 0
+      }
+    }
+  },
+  "not_covered": [
+    "tick \u65f6\u95f4\u8bfb\u6570\uff08mspt/TPS\uff09\u672a\u91c7\u6837\uff1a\u672c\u8f6e soak \u811a\u672c\u672a\u63a5\u5165 mcdebug health\uff0c\u53ea\u7528\u65e5\u5fd7\u7684 lag \u5224\u636e",
+    "\u8d1f\u8f7d\u4e3a\u9759\u6001\u7f51\u7edc + \u6210\u578b\u591a\u65b9\u5757 + \u7a7a\u95f2\u673a\u5668\uff0c\u6ca1\u6709\u6301\u7eed\u8fd0\u884c\u7684\u53d1\u7535\u673a/\u4f20\u8f93\u6d41\u91cf",
+    "\u5806/\u5185\u5b58\u6cc4\u6f0f\u672a\u91c7\u6837\uff08\u4ec5\u89c2\u5bdf\u8fdb\u7a0b\u5b58\u6d3b\u4e0e\u65e0 OOM/GC \u9519\u8bef\uff09"
+  ],
+  "next": "\u811a\u672c\u63a5\u5165 mcdebug health \u91c7\u6837\u4e0e\u53d1\u7535\u673a\u8d1f\u8f7d\u540e\u91cd\u8dd1\uff0c\u8865\u9f50 tick \u8bfb\u6570"
+}
