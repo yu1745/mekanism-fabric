@@ -381,3 +381,15 @@ JEI（W-74c）与 WTHIT（W-74d）已批准，见 `ROADMAP.md`「W-74 范围追�
 3. 本环境不能用交互式 rebase，用 `reset --soft` / `commit-tree` / 脚本化方式构造。
 4. **不要强制推送。** 历史已推送到 origin（2ad7858a），改写后需要 `--force-with-lease`，这要用户明确同意；worker 只准备好并把「请用户确认强制推送」写进 W-100 的决策清单。
 5. 在 squash 完成并经用户确认推送前，本地提交别继续往旧历史上堆过多无关改动，减少重建成本。
+
+## 巡检 F1（2026-10-31 12:47）
+
+自 E4 起新提交 3 个：`fd5b2afa`（W-97）、`d4f74399`（W-95/W-96 发布清单）、`4221ddac`（W-91：Generators 的 EMI 分类 + entrypoint）。**审计陷阱：未触发**——`fd5b2afa` 是真实缺陷修复，`4221ddac` 是真机截图 + 生产代码，`d4f74399` 是路线图指定的文档交付物。注：cron 提示里"JEI/WTHIT 未批准"已过时，二者已于 10-31 批准（W-74c/d），本次按已批准核对。
+
+**重点核对结果**
+- **W-97 修好了，证据可信**：逐条目比对两次构建的核心 JAR（9066 个条目），**只有 1 个条目不同**（`ComputerMethodRegistry_mekanism.class`），根因是注解处理器用 `HashMap<TypeElement,…>` 迭代；改 `TreeMap` + 按名排序后，生成源码 md5 三次一致，连续两次 `./build.sh --clean` 四个 JAR 哈希一致（core `81cbda9f…`），测试 457 通过。**C-3 现在对四个 JAR 成立**。这是按"逐条目找根因"而不是猜测完成的，做得好。
+- **W-93 证据页已更正**：`reproducibility_recheck` 已标明"表述是错的"并写明原因（比较基准不一致）。**但**同页的 `conclusion` 仍写"dist 哈希与上一轮可复现构建一致"，且 `dist_hashes`/`final_hashes` 里的核心哈希（298be698 / b9022885）已过期（现为 81cbda9f）。请把 `conclusion` 改成引用 W-97，并让该页的哈希指向现行值，或在字段名上注明"历史值"。
+- **W-95/W-96**：`d4f74399` 只做了 W-96 的清单（`docs/RELEASE_CHECKLIST.md`），**没有做 W-95**（`IBarInfoHandler` 偏离的兼容性复核与 `API_DELTAS.md` 记录——E3 前 W-93 的 `API_DELTAS` 已有 14 行，请确认其中包含 W-95 要求的二进制/源码兼容影响评估；若不含，W-95 仍未完成，提交信息里不应写 W-95）。清单中第 3/4/5 步未演练，worker 已如实写入 `not_done`，**W-96 不能记为"演练完成"，只是"清单已写"**。
+- **W-91 EMI Generators**：范围合规（只加 Generators 的 EMI 与 slice 4 项，entrypoint `emi` 和 `suggests.emi`），generators-slice 契约 113→117 同步。请在 `M-integration.md` 里按 owner 记录这 4 项；并确认 `fabric-packaged-smoke.sh` 的 entrypoints 契约对 Generators JAR 的 `emi` 键同样放行（否则下次 release-check 会再被拦下，W-93 已踩过一次）。**Tools/Additions 的 EMI 分类**（W-91 范围①）是否存在尚未看到，请核对上游有无对应 viewer 文件。
+- 工作区干净；上一轮看到的未跟踪 `fabric/gradle` 已不存在。无新增测试；wip squash（W-101）、强制推送未被触碰。
+- 路线图：未完成项 W-91 余项、W-92、W-94、W-98、W-99、W-100、W-101、W-74c、W-74d、W-79、W-80/81/82 余项，远超 6，**本次不补充**，无改动。
