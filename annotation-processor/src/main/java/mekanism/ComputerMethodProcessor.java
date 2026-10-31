@@ -3,7 +3,8 @@ package mekanism;
 import com.palantir.javapoet.JavaFile;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Comparator;
+import java.util.TreeMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -40,10 +41,14 @@ public class ComputerMethodProcessor extends AbstractProcessor {
     @Override
     public boolean process(Set<? extends TypeElement> annotatedTypes, RoundEnvironment roundEnvironment) {
         //map annotated elements to multimap by enclosing class
-        Map<TypeElement, List<Element>> annotatedElementsByParent = new HashMap<>();
+        //Sort by qualified name and by element name so the generated sources (and the jars built from them) are
+        //byte-for-byte reproducible: HashMap iteration order depends on identity hash codes and changes per run.
+        Map<TypeElement, List<Element>> annotatedElementsByParent = new TreeMap<>(
+              Comparator.comparing(type -> type.getQualifiedName().toString()));
         for (Element element : roundEnvironment.getElementsAnnotatedWithAny(annotatedTypes.toArray(new TypeElement[0]))) {
             annotatedElementsByParent.computeIfAbsent((TypeElement) element.getEnclosingElement(), i -> new ArrayList<>()).add(element);
         }
+        annotatedElementsByParent.values().forEach(elements -> elements.sort(Comparator.comparing(element -> element.getSimpleName().toString())));
 
         annotatedElementsByParent.forEach(this::processTypeWithAnnotations);
 
