@@ -12,6 +12,11 @@ wip 提交 squash 已获批准且由 worker 执行（见 `ROADMAP.md` W-101）�
 - 在此之前 worker **不会**强制推送；squash 准备好后会在本文件追加「待确认」条目并停在该点。
 - 想改为"只在本地 squash、不推送"，也请明确，worker 会保留备份分支与 tag 供你随时切回。
 
+**另需先澄清两点**（详见 [`W101-squash-analysis.md`](W101-squash-analysis.md)）：
+
+1. **目标集**：实测 `java-port` 上显式 wip 提交只有 **22 个**（15 个 `wip:` + 7 个以 `WIP` 开头），而"含 wip 字样"的提交有 63 个（多数是评审记录）。路线图写的"约 62 个"与两者都不吻合。要 squash 22 个显式 wip，还是 63 个全部？
+2. **分组粒度**：按主题分 5–7 组（accessory / gear-config / qio-transaction / config-owner / recipe-viewer / release-smoke），还是合成单条提交？
+
 ## 2. 版本号与发布形态
 
 当前版本号 `10.7.19.85+fabric.1`（沿用官方 `10.7.19.85` 并加 Fabric 后缀）。
