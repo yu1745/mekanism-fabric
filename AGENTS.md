@@ -54,6 +54,12 @@ patched Minecraft 仅含 `com/mojang/**`、`net/minecraft/**` 共 5,363 个 java
 
 完整测试、packaged smoke、真实运行和发布物核验集中到功能里程碑或用户明确要求；优先一个端到端检查证明实际功能。记录已验证范围与未验证风险，不冒充通过。
 
+**测试分两档，默认只跑快的那档**（明确要求）：
+- **日常改动（每次编译/小改）**：只跑 `./gradlew -p fabric test`（纯 JVM 451 项，秒级），或只编译。**不要**跑 `./gradlew build`——它经 `check` 依赖带上 `fabricDataMapTest`、`fabricRecipeRegistryTest`，每次都会 fork 带 MC 运行时的 JVM，慢且吃内存。
+- **按 owner 触发**（改了哪块就只补跑对应任务）：注册表适配层/`DeferredHolder` → `fabricRegistryTest`；QIO/槽位/齿轮逻辑 → `qioTransactionTest`；客户端模型/渲染/mixin → `fabricClientModelTest`；data-map/资源栈 → `fabricDataMapTest`；配方类型/序列化器/初始化顺序 → `fabricRecipeRegistryTest`；storage/transfer → `fabricTransferTest`。
+- **里程碑或发布前（必须全量）**：`./build.sh --clean` 与 `scripts/release-check.sh`，此时 7 个测试任务全跑并按 578 项（451 + 127）记录。
+- 不允许用 `-x test` 跳过测试后再声称已验证；跳过的套件必须在结论里写明"未跑"。
+
 ```bash
 ./build.sh [--clean] [--out <dir>]    # 统一 Fabric 发布契约
 ./fabric-build.sh                     # allowlist 开发构建
