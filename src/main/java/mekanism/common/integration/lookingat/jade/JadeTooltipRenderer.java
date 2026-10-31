@@ -65,9 +65,10 @@ public class JadeTooltipRenderer<ACCESSOR extends Accessor<?>> implements ICompo
           FLUID_OR_CHEMICAL_CODEC,
           ENERGY_OR_TEXT_CODEC,
           (ILookingAtElement element) -> switch (element) {
+              //Outer left half is FLUID_OR_CHEMICAL, outer right half is ENERGY_OR_TEXT.
               case FluidElement fluidElement -> DataResult.success(Either.left(fluidElement));
-              case ChemicalElement chemicalElement -> DataResult.success(Either.right(chemicalElement));
-              case EnergyElement energyElement -> DataResult.success(Either.left(energyElement));
+              case ChemicalElement chemicalElement -> DataResult.success(Either.left(chemicalElement));
+              case EnergyElement energyElement -> DataResult.success(Either.right(energyElement));
               case TextElement textElement -> DataResult.success(Either.right(textElement));
               default -> DataResult.error(() -> "Unknown looking-at element type");
           }
