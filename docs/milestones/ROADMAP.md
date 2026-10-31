@@ -62,7 +62,7 @@
 | W-02 | 重跑 `scripts/fabric-machine-smoke.sh` 与 `fabric-paired-network-smoke.sh`、`fabric-packaged-smoke.sh` | 三条 PASS 标记行 |
 | W-03 | 从 `git log` 与 `docs/archive/TASK052_{CONVERGENCE_14,CONTINUATION_14,ASTRA14_PROGRESS,RESUME_2026-10-26}.md` 提炼 M-owner 实际接通清单；逐文件归类校正 `README.md` 的旧文档归类表 | 清单写入 `M-owner.md` |
 | W-04 | 补写 `FABRIC_PORT.md`/`PORT_MATRIX.md` 的 Task050–052 缺口：每个里程碑一行结论，不写叙事 | 两文档止于 Task049 的缺口消除 |
-| W-05 | 盘点 `docs/` 顶层未审文档（`Development.md`、`Mekanism.xml`、`MODEL_IMPLEMENTATION_COMPARISONS.md`、`MACHINE_SPINE.md`、`MACHINE_OWNER_ADMISSION.md`、`FABRIC_*.md`）：过时者归档或加"已被取代"头注 | 顶层文档均有明确现状 |
+| W-05 | 盘点 `docs/` 顶层未审文档（`Development.md`、`Mekanism.xml`、`MODEL_IMPLEMENTATION_COMPARISONS.md`、`MACHINE_SPINE.md`、`MACHINE_OWNER_ADMISSION.md`、`FABRIC_*.md`）：过时者归档或加"已被取代"头注 | 顶层文档均有明确现状（W-87 二次清理：`MACHINE_SPINE`/`MACHINE_OWNER_ADMISSION`/`MODEL_IMPLEMENTATION_COMPARISONS` 已移入 `docs/archive/`） |
 
 ### P1 M-owner 验收（W-06 … W-11）
 

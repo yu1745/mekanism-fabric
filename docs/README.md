@@ -19,10 +19,8 @@ Start here if you are new to the repository.
 | [`API_DELTAS.md`](API_DELTAS.md) | every intentional difference from the NeoForge behaviour | maintainers |
 | [`PORT_COMMIT_REVIEW_PROMPT.md`](PORT_COMMIT_REVIEW_PROMPT.md) | the review prompt used for every port commit | maintainers |
 | [`POLICY_HISTORY.md`](POLICY_HISTORY.md) | how the working rules evolved | maintainers |
-| [`MACHINE_SPINE.md`](MACHINE_SPINE.md), [`MACHINE_OWNER_ADMISSION.md`](MACHINE_OWNER_ADMISSION.md) | machine owner admission rules from the early port | maintainers |
-| [`MODEL_IMPLEMENTATION_COMPARISONS.md`](MODEL_IMPLEMENTATION_COMPARISONS.md) | model/renderer comparison notes from the early port | maintainers |
 | `FABRIC_{CHEMICAL,CONFIG,DATA_MAPS,ENERGY,FLUID,HEAT,HOLDERS,ITEM,NETWORK,RECIPES,REGISTRY,TEXT}.md` | topic notes: the platform facts and boundaries for one subsystem each | maintainers |
-| [`archive/`](archive/) | closed task narratives (Task052 and earlier); history only, not current status | nobody, unless tracing a decision |
+| [`archive/`](archive/) | closed task narratives and early-port notes (Task050–052 and earlier, incl. `MACHINE_SPINE`, `MACHINE_OWNER_ADMISSION`, `MODEL_IMPLEMENTATION_COMPARISONS`); history only, not current status | nobody, unless tracing a decision |
 
 ## Conventions
 
