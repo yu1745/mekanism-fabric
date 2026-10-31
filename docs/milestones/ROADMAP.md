@@ -342,3 +342,9 @@ W-74 的批准范围由"EMI→Jade"扩大为 **EMI → Jade → JEI → WTHIT**�
 | W-74d | P2 | **WTHIT**（上游 5 个文件，与 Jade 共享 lookingat 元素类）。同样可选依赖 | mdb 真机 tooltip 读数 |
 
 顺序：W-97 → W-91/92（EMI/Jade 补全）→ W-74c → W-74d；JEI 的 slice 改动落地后，**最终 HEAD 上须再做一次完整 `release-check.sh`**。
+
+### W-101 wip 提交 squash（用户 2026-10-31 批准，**由 worker 执行**）
+
+| ID | 优先级 | 内容 | 完成标志 |
+|---|---|---|---|
+| W-101 | P1（在 W-97 之后、工作区干净且无进行中批次时做；不与 W-91…W-96 的开发穿插） | 把 `java-port` 上约 62 个 `wip:` 提交按**功能主题**合并成少量有意义的提交（建议按里程碑：owner / config / platform / transfer / render / multiblock / registry / gear 等，非 wip 提交与后续 W 项提交保持原样）。步骤：①工作区必须干净；②先建本地备份 `git branch backup/pre-squash-<日期>` 与 tag；③用非交互方式重排（`git rebase -i` 在本环境不可用，用 `git reset --soft`/`commit-tree`/`cherry-pick --no-commit` 或脚本化 rebase 构造新历史）；④**验证新旧最终树逐字节相同**（`git diff backup/pre-squash-<日期> HEAD` 为空，`git rev-parse HEAD^{tree}` 两者相同）；⑤新提交信息写清合并了哪些旧提交（保留旧 hash 列表）；⑥跑 `./gradlew -p fabric test` 确认 | 新历史无 `wip:` 提交；树哈希与备份一致；记录写入 `M-release.md`。**强制推送不属于本项**：改写历史后 origin 与本地分叉，`git push --force-with-lease` 必须**等用户明确同意后**才执行，worker 只准备好并写入 `DECISIONS_PENDING.md`（W-100） |
