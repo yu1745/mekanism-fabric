@@ -1,0 +1,18 @@
+{
+  "work_item": "W-91\uff08EMI \u8303\u56f4\u8865\u5168\uff09",
+  "date": "2026-10-31",
+  "done": {
+    "addons_survey": "\u4e09\u4e2a\u9644\u52a0\u6a21\u5757\u91cc\u53ea\u6709 **generators** \u6709 EMI \u5b9e\u73b0\uff08`GeneratorsEmi` + `emi/recipe/FissionReactorEmiRecipe`\uff0c\u5171 2 \u4e2a\uff09\uff1btools \u4e0e additions \u53ea\u6709 aliases \u4e0e JEI \u7248\uff0c\u65e0 EMI\u2014\u2014\u8def\u7ebf\u56fe\u5199\u7684\u201c\u7ea6 14 \u4e2a viewer \u6587\u4ef6\u201d\u5b9e\u9645\u7edd\u5927\u90e8\u5206\u662f JEI/alias\u3002",
+    "ported": "generators \u5207\u7247 113\u2192117\uff1a\u65b0\u589e `client/recipe_viewer/GeneratorsRVRecipeType.java`\u3001`emi/GeneratorsEmi.java`\u3001`emi/recipe/FissionReactorEmiRecipe.java`\u3001`recipe/FissionRecipeViewerRecipe.java`\uff1b`compileGeneratorsJava` BUILD SUCCESSFUL",
+    "port_fix": "`FissionRecipeViewerRecipe` \u7528 `MekanismAPI.CHEMICAL_REGISTRY.getDataMap(...)` \u8bfb\u51b7\u5374\u5242\u8868\uff0c\u79fb\u690d\u91cc\u6570\u636e\u8868\u5f52 Fabric data-map \u4f1a\u8bdd\u6240\u6709\uff1a\u6539\u7528 `ChemicalDataContext.current().maps().get(...)`\uff08\u4e0e\u5df2\u79fb\u690d\u7684 `BoilerRecipeViewerRecipe` \u4e00\u81f4\uff09",
+    "entrypoint": "`fabric/src/generators/resources/fabric.mod.json` \u589e\u52a0 `emi: [mekanism.generators.client.recipe_viewer.emi.GeneratorsEmi]` \u4e0e `suggests.emi`\uff1bassemble \u540e generators JAR \u5185\u5df2\u542b"
+  },
+  "delta_impact_analysis": {
+    "item": "W-91 \u2462\uff1a`addFluidComponent` \u7684 NeoForge item-capability \u56de\u9000\u88ab\u53bb\u6389\uff0c\u73a9\u5bb6\u53ef\u89c1\u5f71\u54cd\u662f\u4ec0\u4e48",
+    "finding": "Mekanism \u81ea\u5df1\u7684\u7f50/\u673a\u5668\u7269\u54c1\u628a\u6d41\u4f53\u5b58\u5728**\u7ec4\u4ef6**\u91cc\uff08`ContainerType.FLUID.createHandlerIfData` \u5df2\u8986\u76d6\uff09\uff0c\u6240\u4ee5 Mekanism \u7269\u54c1\u7684 EMI \u53bb\u91cd/\u5206\u7ec4\u5b8c\u5168\u4e0d\u53d8\u3002\u53d7\u5f71\u54cd\u7684\u53ea\u6709**\u4ec5\u901a\u8fc7 capability \u66b4\u9732\u6d41\u4f53**\u7684\u7b2c\u4e09\u65b9\u7269\u54c1\u2014\u2014\u5b83\u4eec\u5728 EMI \u91cc\u4e0d\u518d\u6309\u6d41\u4f53\u5185\u5bb9\u533a\u5206\uff0c\u4f1a\u4e0e\u7a7a\u7269\u54c1\u5408\u5e76\u6210\u4e00\u6761\u3002",
+    "conclusion": "\u5bf9 Mekanism \u81ea\u8eab\u65e0\u73a9\u5bb6\u53ef\u89c1\u5f71\u54cd\uff1b\u7b2c\u4e09\u65b9\u517c\u5bb9\u5c5e EMI \u4fa7\u5dee\u5f02\uff0c\u8bb0\u5165\u6587\u6863\u5373\u53ef"
+  },
+  "not_done": [
+    "\u2461 ghost ingredient \u62d6\u62fd / exclusion / QIO \u5408\u6210\u8f6c\u79fb\u7684**\u771f\u673a\u4ea4\u4e92**\u672a\u9a8c\u8bc1\uff1a\u5f00\u53d1\u5ba2\u6237\u7aef\u91cc\u653e\u4e0b\u7684\u673a\u5668\u7528 `screen open-block` \u62a5 `-32018 no screen handler factory`\uff08\u65b9\u5757\u5b9e\u4f53\u5b58\u5728\u3001\u72b6\u6001\u6b63\u5e38\uff0c\u8bf4\u660e\u8be5\u8def\u5f84\u8981\u6c42\u771f\u5b9e\u73a9\u5bb6\u4ea4\u4e92\u800c\u975e\u76f4\u63a5\u5f00\u83dc\u5355\uff09\uff1bgenerators \u5ba2\u6237\u7aef\uff08`runGeneratorsClient`\uff09\u4ecd\u88ab mdb \u62d2\u7edd\u542f\u52a8\uff0c\u6240\u4ee5 fission \u5206\u7c7b\u65e0\u6cd5\u771f\u673a\u9a8c\u8bc1"
+  ]
+}

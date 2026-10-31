@@ -25,6 +25,10 @@ mekanism/generators/client/gui/element/button/ReactorLogicButton.java
 mekanism/generators/client/model/FuelAssemblyBakedModel.java
 mekanism/generators/client/model/ModelTurbine.java
 mekanism/generators/client/model/ModelWindGenerator.java
+mekanism/generators/client/recipe_viewer/GeneratorsRVRecipeType.java
+mekanism/generators/client/recipe_viewer/emi/GeneratorsEmi.java
+mekanism/generators/client/recipe_viewer/emi/recipe/FissionReactorEmiRecipe.java
+mekanism/generators/client/recipe_viewer/recipe/FissionRecipeViewerRecipe.java
 mekanism/generators/client/render/RenderBioGenerator.java
 mekanism/generators/client/render/RenderFissionReactor.java
 mekanism/generators/client/render/RenderFusionReactor.java

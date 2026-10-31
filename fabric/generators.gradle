@@ -1,7 +1,7 @@
 // Native optional Generators module. Its classes/resources never enter the core JAR.
 def generatorsSlice = file('generators-slice.txt').readLines().findAll { it && !it.startsWith('#') }
 def generatorsPlatformSlice = file('generators-platform-slice.txt').readLines().findAll { it && !it.startsWith('#') }
-if (generatorsSlice.size() != 113 || generatorsSlice.toSet().size() != 113 || generatorsPlatformSlice.size() != 3) {
+if (generatorsSlice.size() != 117 || generatorsSlice.toSet().size() != 117 || generatorsPlatformSlice.size() != 3) {
     throw new GradleException('Unexpected Generators source admission')
 }
 sourceSets {

@@ -19,6 +19,9 @@
     ],
     "mekanism:module_support": [
       "mekanism.fabric.generators.GeneratorsRegistryRegistration::support"
+    ],
+    "emi": [
+      "mekanism.generators.client.recipe_viewer.emi.GeneratorsEmi"
     ]
   },
   "depends": {
@@ -41,5 +44,8 @@
     "Aidan C. Brady",
     "Mekanism contributors"
   ],
-  "icon": "logo.png"
+  "icon": "logo.png",
+  "suggests": {
+    "emi": "*"
+  }
 }

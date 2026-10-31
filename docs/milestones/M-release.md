@@ -24,6 +24,8 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 
 ## 验收证据
 
+W-91（EMI 范围补全）：**三个附加模块里只有 generators 有 EMI 实现**（`GeneratorsEmi` + `FissionReactorEmiRecipe`；tools/additions 只有 alias 与 JEI），已把 4 个文件纳入 generators 切片（113→117）并在 `compileGeneratorsJava` 通过；`FissionRecipeViewerRecipe` 的冷却剂表读取改用 `ChemicalDataContext.current().maps()`（数据表归 Fabric data-map 会话，与 Boiler 一致）；generators 的 `emi` entrypoint 已注册并随 JAR 打包。**③ fluid delta 影响**：Mekanism 物品的流体在组件里，去重/分组不变，只有“仅靠 capability 暴露流体”的第三方物品不再按流体区分。**② 真机交互未验证**：开发客户端里 `screen open-block` 报 `-32018`（BE 存在，该路径要求真实交互），generators 客户端仍无法用 mdb 启动。[记录](evidence/p8-release/w91-emi-scope.json)
+
 W-95：`IBarInfoHandler` 结构偏离复核——结论写入 [`API_DELTAS.md`](../API_DELTAS.md)：该类型属客户端内部（不进 api-slice、不参与网络/存档/NBT），附加模块已随 W-74a 一并改到顶层类型并编译通过；保留顶层版本，理由是恢复官方嵌套会让 `RecipeViewerUtils` 与 EMI 重新需要第二套类型或桥接。**已完成，无需改代码**。
 
 W-96：发布演练清单——新增 [`RELEASE_CHECKLIST.md`](../RELEASE_CHECKLIST.md)：干净 HEAD 检查 → 全量 `release-check`（六步与耗时基线）→ 可复现性校验（两次 `--clean` 比对）→ 干净目录安装演练 → W-65 样本世界存档往返 → mdb 客户端抽查 → 产物清单与 sha256 → 用户侧动作（tag/推送/上传，worker 不执行）→ 已知限制（W-98/W-99、JEI-WTHIT、注册表差异）。当前 HEAD 的四个 sha256 已写入。[记录](evidence/p8-release/w96-release-checklist.json)

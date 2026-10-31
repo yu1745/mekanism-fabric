@@ -13,6 +13,7 @@ import mekanism.api.chemical.ChemicalStack;
 import mekanism.api.chemical.attribute.ChemicalAttributes;
 import mekanism.api.datamaps.IMekanismDataMapTypes;
 import mekanism.api.datamaps.chemical.attribute.CooledCoolant;
+import mekanism.api.chemical.ChemicalDataContext;
 import mekanism.api.math.MathUtils;
 import mekanism.api.recipes.ingredients.ChemicalStackIngredient;
 import mekanism.api.recipes.ingredients.FluidStackIngredient;
@@ -60,9 +61,14 @@ public record FissionRecipeViewerRecipe(ResourceLocation id, @Nullable ChemicalS
               MekanismChemicals.STEAM.asStack(coolantAmount), MekanismChemicals.NUCLEAR_WASTE.asStack(1)
         ));
         //Add recipes for all cooled coolants
-        for (Map.Entry<ResourceKey<Chemical>, CooledCoolant> entry : MekanismAPI.CHEMICAL_REGISTRY.getDataMap(IMekanismDataMapTypes.INSTANCE.cooledChemicalCoolant()).entrySet()) {
+        //Fabric port delta: the chemical data maps are owned by the Fabric data-map session, not a registry data map.
+        Map<ResourceKey<Chemical>, ?> coolantMaps = ChemicalDataContext.current().maps().get(IMekanismDataMapTypes.INSTANCE.cooledChemicalCoolant());
+        if (coolantMaps == null) {
+            coolantMaps = Map.of();
+        }
+        for (Map.Entry<ResourceKey<Chemical>, ?> entry : coolantMaps.entrySet()) {
             ResourceKey<Chemical> key = entry.getKey();
-            CooledCoolant coolant = entry.getValue();
+            CooledCoolant coolant = (CooledCoolant) entry.getValue();
             long amount = Math.round(energyPerFuel / coolant.thermalEnthalpy());
             recipes.add(new FissionRecipeViewerRecipe(
                   RecipeViewerUtils.synthetic(key.location(), "fission", MekanismGenerators.MODID),
