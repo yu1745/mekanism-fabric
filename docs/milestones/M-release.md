@@ -24,6 +24,8 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 
 ## 验收证据
 
+W-76：注册 ID 对照（`scripts/compare-registry-ids.py`）——方块 **501/501 完全一致**，物品 1064/1066、标签 444/448，**自有命名空间零缺口**；差异全在外部命名空间：`neoforge:item/{bucket,default}` 是移植自带的兼容父模型、`neoforge:damage_type/*` 是移植的伤害类型分组、`accessories:item/{back,shoes}` 是装备槽标签、`projecte` 属第三方。运行期转储不可得（mcdebug 无注册表 RPC），故用双方发布物里游戏解析 ID 的数据文件；运行期数量仍由 content proof 覆盖。[明细](evidence/p8-release/w76-registry-ids.json)
+
 W-71：版本号过渡到 `10.7.19.85+fabric.1`（上游号不变，`+fabric.N` 为本移植构建序号），四个 JAR 的 name／description／license(MIT)／contact／authors／icon 已统一且图标实际打进 JAR；改号引发一处真实缺陷——附加模块引导用 `-` 截断版本后缀，`85+fabric` 进 `Integer.parseInt` 崩溃，已在 `Version.fromFabricVersion` 统一修复。改号后重跑 `release-check --skip-build` 通过（5 步：静态 15s／packaged 服务端 55s／paired 85s／rejection 112s／machine 99s），W-75 复跑缺失 33→30（语言文件缺口消除）。[元数据与哈希](evidence/p8-release/w71-release-metadata.json)
 
 W-75：官方四个 NeoForge JAR 与 Fabric 四个发布 JAR 的 `data/`+`assets/` 逐文件对照完成（`scripts/compare-resource-inventory.py`，JSON 规范化后比较）：8379 个上游文件中 7165 个一致（5708 个仅格式化），33 个缺失（29 个 CraftTweaker `.zs`、1 个 ProjectE、3 个英文变体语言文件）与 1181 个内容差异（637 个 compat 配方的条件包装翻译（`neoforge:conditions`→`fabric:load_conditions`）、544 个 Additions 配方的 loader ingredient 翻译）全部有成因。已补入 `en_au/en_gb/en_ud` 三个语言文件，待下次构建复验。[明细](evidence/p8-release/w75-resource-inventory.json)
