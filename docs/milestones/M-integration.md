@@ -19,6 +19,12 @@
 | **WTHIT** | 5（`MekanismWTHITPlugin`、`WTHITDataProvider`、`WTHITEntityDataProvider`、`WTHITTooltipRenderer`、`WTHITLookingAtHelper`） | 原生 Fabric，MIT | 同上 | 最小，0.5–1 天 | 与 Jade 二选一即可先做 |
 | **TOP** | 6 | NeoForge 专用 | 不适用 | — | 不做，Fabric 上用 Jade/WTHIT 取代 |
 
+## EMI 依赖事实（W-74a，2026-10-31）
+
+- 坐标：`maven.modrinth:emi:1.1.24+1.21.1+fabric`，来自 Modrinth Maven（`https://api.modrinth.com/maven`），仓库块只放行 `maven.modrinth` 组。
+- 许可证：**MIT**。只作 `modCompileOnly`（`transitive = false`）参与编译，另由 `-PemiDev` 开关挂 `modLocalRuntime` 供客户端门禁使用；**不随发布 JAR 分发**。
+- 断言：`scripts/fabric-packaged-smoke.sh` 静态阶段检查发布 JAR 内不得出现 `dev/emi/`、`mezz/jei/`、`snownee/jade/` 类，防止集成代码泄漏进发布物。
+
 ## 依赖与许可证
 
 - EMI（MIT）、Jade（MIT）、WTHIT（MIT）、JEI（MIT，Fabric 构建与 NeoForge 同 API）都可作为**客户端可选依赖**（`suggests`/运行期探测），不得进入发布必需依赖或源码切片之外。

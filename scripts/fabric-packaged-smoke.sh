@@ -103,6 +103,16 @@ mapfile -t ADDON_JARS < <(find "$ROOT/fabric/build/tools-libs" "$ROOT/fabric/bui
 [[ ${#ADDON_JARS[@]} -eq 3 ]] || { echo 'fabric-packaged-smoke: expected exactly three optional addon JARs' >&2; exit 1; }
 # The addon metadata contract is a separate script so the negative probes exercise the same checks.
 python3 "$ROOT/scripts/verify-packaged-addons.py" "${MOD_JARS[0]}" "${ADDON_JARS[@]}" || exit 1
+# Optional client integrations must stay compile-only: no third-party classes may leak into the release JARs.
+python3 - "${MOD_JARS[0]}" "${ADDON_JARS[@]}" <<'PYEOF' || exit 1
+import sys, zipfile
+for path in sys.argv[1:]:
+    with zipfile.ZipFile(path) as archive:
+        leaked = [name for name in archive.namelist() if name.startswith(('dev/emi/', 'mezz/jei/', 'snownee/jade/'))]
+    if leaked:
+        print('fabric-packaged-smoke: third-party integration classes leaked into ' + path + ': ' + ', '.join(leaked[:3]))
+        sys.exit(1)
+PYEOF
 # Compare against the same build's slice-gated dev artifact, including generated classes.
 # Early Task043 package subsets are no longer valid once the real machine/client catalogs are admitted.
 DEV_JAR="$ROOT/fabric/build/devlibs/$(basename "${MOD_JARS[0]}" .jar)-dev.jar"

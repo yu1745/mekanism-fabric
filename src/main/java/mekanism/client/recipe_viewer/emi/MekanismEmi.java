@@ -202,6 +202,10 @@ public class MekanismEmi implements EmiPlugin {
 
         registerItemSubtypes(registry, MekanismItems.ITEMS.getEntries());
         registerItemSubtypes(registry, MekanismBlocks.BLOCKS.getSecondaryEntries());
+        //Fabric port proof line: the node/headless gates and the client evidence greps assert this exact marker.
+        MekanismAPI.logger.info("MEKANISM_FABRIC_EMI_PROOF categories={} chemical_stacks={} ethene={}",
+              registeredCategories, MekanismAPI.CHEMICAL_REGISTRY.size(),
+              MekanismAPI.CHEMICAL_REGISTRY.containsKey(ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, "ethene")));
     }
 
     public static void registerItemSubtypes(EmiRegistry registry, Collection<? extends Holder<Item>> items) {
@@ -213,6 +217,8 @@ public class MekanismEmi implements EmiPlugin {
             }
         }
     }
+
+    private static int registeredCategories;
 
     private void addCategories(EmiRegistry registry) {
         addCategoryAndRecipes(registry, RecipeViewerRecipeType.CRYSTALLIZING, ChemicalCrystallizerEmiRecipe::new);
@@ -311,6 +317,7 @@ public class MekanismEmi implements EmiPlugin {
     }
 
     private static MekanismEmiRecipeCategory addCategory(EmiRegistry registry, IRecipeViewerRecipeType<?> recipeType) {
+        registeredCategories++;
         MekanismEmiRecipeCategory category = MekanismEmiRecipeCategory.create(recipeType);
         registry.addCategory(category);
         addWorkstations(registry, category, recipeType.workstations());

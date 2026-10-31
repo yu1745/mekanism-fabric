@@ -48,5 +48,20 @@
       "EMI \u7684 exclusion/ghost/stack-under-mouse \u7b49\u4ea4\u4e92\u672a\u9a8c\u8bc1",
       "JEI \u9002\u914d\u4ecd\u4e0d\u5728\u6279\u51c6\u8303\u56f4"
     ]
+  },
+  "step5_client_verification": {
+    "date": "2026-10-31",
+    "session": "mdb owned session\uff08EMI 1.1.24 \u653e\u5165 fabric/run/mods\uff09\uff0c\u4e16\u754c 'Mekanism F60 Debug'\uff0c\u7ed3\u675f\u7528 session stop \u4fdd\u5b58\u5e76\u56de\u6536",
+    "proof_line": "MEKANISM_FABRIC_EMI_PROOF categories=30 chemical_stacks=65 ethene=true\uff08\u7531 MekanismEmi.register \u5728\u771f\u5b9e\u5ba2\u6237\u7aef\u8f93\u51fa\uff09",
+    "meaning": "EMI \u63d2\u4ef6\u5728\u771f\u5b9e\u5ba2\u6237\u7aef\u5b8c\u6210\u6ce8\u518c\uff1a**30 \u4e2a\u914d\u65b9\u5206\u7c7b**\u3001\u5316\u5b66\u54c1\u9002\u914d\u5668\u8986\u76d6 **65 \u4e2a\u5316\u5b66\u54c1**\uff0c\u5176\u4e2d `mekanism:ethene`\uff08\u4e0a\u6e38 10.7 \u7684 ethylene\uff0c\u65e7\u540d\u7531 alias \u5904\u7406\uff09\u5b58\u5728",
+    "screenshots": [
+      "evidence/p8-release/w74/emi-inventory.png\uff08EMI \u5728\u521b\u9020\u7269\u54c1\u680f\u4e2d\u6b63\u5e38\u6e32\u67d3\uff1a\u641c\u7d22\u680f\u30011/32 \u9875\u7269\u54c1\u7f51\u683c\u3001EMI Dev Mode\uff09",
+      "evidence/p8-release/w74/emi-verified.png"
+    ],
+    "not_done": [
+      "\u8fd8\u6ca1\u5728 EMI \u91cc\u9010\u4e2a\u70b9\u5f00\u914d\u65b9\u67e5\u770b\u6e32\u67d3\u7ec6\u8282\uff08\u5206\u7c7b widgets\u3001\u5316\u5b66\u54c1 gauge \u7684\u8d34\u56fe/\u5e03\u5c40\uff09",
+      "ghost ingredient \u62d6\u62fd\u3001stack-under-mouse\u3001QIO \u8f6c\u79fb\u5904\u7406\u5668\u672a\u5b9e\u6d4b",
+      "ethylene/ethene \u4f5c\u4e3a ingredient \u7684\u60ac\u505c tooltip \u672a\u622a\u56fe\u786e\u8ba4\uff08\u5f53\u524d\u7528\u6ce8\u518c\u8868\u4e0e\u9002\u914d\u5668\u8ba1\u6570\u4f5c\u4e3a\u4ee3\u7406\u8bc1\u636e\uff09"
+    ]
   }
 }
