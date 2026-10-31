@@ -1,0 +1,54 @@
+{
+  "work_item": "W-69",
+  "date": "2026-10-31",
+  "goal": "Prove the release JAR client path: a production (intermediary) client built only from release artifacts must apply the complete release SERVER snapshot and join play against a clean four-JAR server.",
+  "result": "PASSED",
+  "command": "scripts/fabric-packaged-client-smoke.sh",
+  "marker": "fabric-packaged-client-smoke: PASSED (release JARs: client applied 458 SERVER values and joined play)",
+  "client": {
+    "kind": "production KnotClient, intermediary namespace, release mods discovered from <gameDir>/mods",
+    "mods_loaded": 62,
+    "mekanism_mods": [
+      "mekanism",
+      "mekanismadditions",
+      "mekanismgenerators",
+      "mekanismtools"
+    ],
+    "client_applied": "MEKANISM_FABRIC_SERVER_CONFIG_PROOF phase=client_applied session=bbf26a23-e4e9-4fd2-a20c-9b048c83befb values=458"
+  },
+  "server": {
+    "kind": "clean fabric-server-launch.jar with fabric-api, team_reborn_energy and the four dist JARs",
+    "mods_loaded": 50,
+    "server_send": "MEKANISM_FABRIC_SERVER_CONFIG_PROOF phase=send session=bbf26a23-e4e9-4fd2-a20c-9b048c83befb values=458",
+    "join": "MekProd joined the game"
+  },
+  "offline_assembly": {
+    "game_jar": "Loom cache minecraft-merged-intermediary 1.21.1",
+    "libraries": "Mojang 1.21.1 client libraries resolved from the Gradle module cache (no downloads)",
+    "assets": "Loom assets cache, assetIndex 1.21.1-17",
+    "loader": "fabric-loader 0.19.5, sponge-mixin 0.17.4, mixinextras-fabric, ASM 9.10.1, tiny-mappings-parser 0.3.0 from the Gradle cache",
+    "namespace": "-Dfabric.runtimeMappingNamespace=intermediary with -Dfabric.mappingPath=<loom>/1.21.1/intermediary-v2.tiny",
+    "jars": [
+      "Mekanism-Fabric-Bootstrap-10.7.19.85-fabric-bootstrap.jar",
+      "MekanismAdditions-10.7.19.85-fabric-bootstrap-fabric.jar",
+      "MekanismGenerators-10.7.19.85-fabric-bootstrap-fabric.jar",
+      "MekanismTools-10.7.19.85-fabric-bootstrap-fabric.jar"
+    ]
+  },
+  "hashes": {
+    "Mekanism-Fabric-Bootstrap-10.7.19.85-fabric-bootstrap.jar": "1c7bca94aaa7aa25e008ecc973b340004cb99b7365196d2e95622e7b038f6bba",
+    "MekanismAdditions-10.7.19.85-fabric-bootstrap-fabric.jar": "9873a802b500f4e5b05e4a7418130a7baaaa69c95210cb7f7d0e4c9eeaa0d8d2",
+    "MekanismGenerators-10.7.19.85-fabric-bootstrap-fabric.jar": "01681014d3e135fbb83b5cabc60474c5c848594d6a24fa879acc5774d86126f0",
+    "MekanismTools-10.7.19.85-fabric-bootstrap-fabric.jar": "afb0734d0f18b99f653b67a8dbf788e3ec774987d69186c6d9d702bb65daa6e6"
+  },
+  "notes": [
+    "The client was launched with xvfb-run; no GUI interaction beyond Quick Play was needed.",
+    "Vanilla logs 'No data fixer registered for <id>' for every modded entity type; that is expected noise, not a crash.",
+    "The gate asserts the 458-value release snapshot and the join, so it covers the intermediary client mixin/refmap, registry sync, screens/models load and the SERVER config apply in the release namespace."
+  ],
+  "not_claimed": [
+    "terser renderer/resource-pack combinations",
+    "third-party integrations",
+    "long-soak stability (W-66)"
+  ]
+}

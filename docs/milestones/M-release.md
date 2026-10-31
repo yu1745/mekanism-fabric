@@ -12,7 +12,7 @@ Tools与Additions主体已完成；Generators的机器、多方块、GUI、生�
 
 ## 未决项
 
-协调者 B2 要求"用发布 JAR 搭干净客户端目录"取 458 值客户端 ack：当前环境没有 packaged client 启动链（仅 server launcher；客户端需 MC client jar+assets+libraries 的完整安装），而 Loom 开发客户端的 class-path group 会把核心注册静态表复制一份（`w60-dev-classloader.json`），加载发布 addon JAR 必然 `mekanism:security` 未绑定。可选路径与代价：①落一个 packaged client 目录（一次性下载 client jar/assets/libraries，本机网络对 sessionserver 曾超时）后跑真客户端；②改 handshake 运行配置为 `source sourceSets.generators`（核心+单个 addon，dev schema 355 值）作为多模块客户端证明。两条都未执行，待协调者裁决后再投入；在此之前只声明 packaged 服务端 458 值装配与 dev 304 值 send/apply。
+W-69 已完成（原 B2 缺口）：发布 JAR 客户端路径已验证——用 Loom/Gradle 缓存离线装配 intermediary 生产客户端 + 干净四 JAR 服务端，客户端 `phase=client_applied values=458` 并加入游戏；门禁脚本 `scripts/fabric-packaged-client-smoke.sh`。
 
 W-60四模块开发联机启动失败已定性为开发环境类加载产物，非移植缺陷：Loom 开发运行把每个 mod 源集放进独立 class-path group，addon 代码因此看到第二份核心注册静态表（`mekanism:security` 未绑定；remapped JAR 另有 intermediary 名）。干净 remapped 四 JAR 服务端（packaged smoke）加载四模块并到达 `Done`，故不改注册语义；开发侧 paired／rejection smoke 保持仅加载核心 mod，四模块装配由 packaged smoke 断言。[证据](evidence/p8-release/w60-dev-classloader.json)
 
@@ -21,6 +21,8 @@ W-60 同步值实测更正：发布 schema 下四模块合计 **458**（core 303
 W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CONFIGURE 版本任务，独立客户端先被 registry remap 拒绝。版本任务现排入 BEFORE_CONFIGURE 默认阶段之前，三种拒绝 smoke 已通过；正常连接验证与 W-60–62 仍待完成。Additions 语音 PCM 采集受当前主机限制；第三方集成与未穷举风险保持 README 已列边界。
 
 ## 验收证据
+
+W-69：发布 JAR 客户端路径已验证。生产（intermediary）客户端从 `<gameDir>/mods` 发现四个发布 JAR（62 mods），对干净四 JAR 服务端完成 `phase=send`／`phase=client_applied values=458` 并 `joined the game`；全程离线，用 Loom 缓存的合并 intermediary 客户端 JAR、Gradle 缓存的库/loader/ASM 与 `-Dfabric.runtimeMappingNamespace=intermediary`。[标记行与装配方式](evidence/p8-release/w69-packaged-client.json)，可重复执行的门禁：`scripts/fabric-packaged-client-smoke.sh`。
 
 W-60b：addon 元数据契约（缺 JAR／重复 id／版本不符）负向探针三项全部按预期 FAIL，基线拷贝通过；门禁内联检查提取为 `scripts/verify-packaged-addons.py`，探针跑同一文件。[结果](evidence/p8-release/w60b-addon-negative-probes.json)
 

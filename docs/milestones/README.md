@@ -46,7 +46,7 @@
 
 ## 发布限制（W-42 准备）
 
-发布服务端路径已验证（W-60／W-61）；发布 JAR 客户端路径见 W-69；完整发布声明待协调者复核。
+服务端与发布 JAR 客户端路径均已验证（W-60／W-61／W-69）；完整发布声明待协调者复核。
 
 - **第三方集成**：ROADMAP 排除的 JEI/EMI、CraftTweaker、ProjectE、FramedBlocks、JsonThings、gender、OpenComputers2 等不在本轮发布范围。混合 JEI/EMI 的公共 `IMekanismAccess`／`MekanismAccess` 服务未提供；ingredient creators 已由独立真实服务承接，不代表 viewer API 已兼容。
 - **历史 46 项**：P3 清单中已有 5 份原源码纳入、32 项由实际 Fabric owner 承接；另有 7 项第三方边界、1 项离线开发工具、1 项旧反射辅助。逐项现状见[对照](evidence/p8-release/w42-historical46-current.csv)，旧反射辅助已由原生透视模型分派取代。
@@ -54,5 +54,5 @@
 - **本批渲染修复**：Meka-Tool 已按原生显示上下文选择独立左右手模型，QIO dashboard 已按官方 JSON 给 LED 层应用 full-bright；[直接实机结果](evidence/development-render/native-summary.json)。未穷举第三方渲染器与资源包组合。
 - **验证边界**：现有证据覆盖代表装备／流体／网络路径，未穷举全部模块组合、流体／船／滑翔、第三方容器与能量提供者。worldgen 的保存 palette 与 retrogen 触发读数不证明全部矿脉分布；[范围与证据](evidence/p8-release/w42-preparation.json)。
 - **后续模块**：Tools、Generators、Additions 已完成移植与模块回归；四 JAR 净构建与哈希见 W-61 证据。
-- **发布 JAR 客户端路径未验证（W-69）**：只验证了服务端装配；客户端 mixin/refmap 与屏幕类加载在发布命名空间下无运行证据。
+- **发布 JAR 客户端路径**：已验证（W-69，`scripts/fabric-packaged-client-smoke.sh`）：生产客户端加载四个发布 JAR 并应用 458 值后加入游戏。
 - **尚未真机验证（P15 处理，`docs/milestones/ROADMAP.md` W-64）**：Generators 音效播放、裂变熔毁受控路径、Additions 语音 PCM 采集与本机音频设备、Meka 套装 HUD 细节。
