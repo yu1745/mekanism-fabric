@@ -25,7 +25,7 @@ import java.util.UUID;
 import mekanism.api.Action;
 import mekanism.api.inventory.IInventorySlot;
 import mekanism.api.math.MathUtils;
-import mekanism.common.Mekanism;
+import mekanism.api.MekanismAPI;
 import mekanism.common.config.MekanismConfig;
 import mekanism.common.content.qio.QIOCraftingTransferHelper;
 import mekanism.common.content.qio.QIOCraftingTransferHelper.BaseSimulatedInventory;
@@ -135,7 +135,7 @@ public class QIOCraftingTransferHandler {
             //I don't believe this ever will happen with a normal crafting recipe but just in case it does, error
             // if we have more than nine inputs, as there should never be
             // a case where this actually happens except potentially with some really obscure modded recipe
-            Mekanism.logger.warn("Error evaluating recipe transfer handler for recipe: {}, had more than 9 inputs: {}", recipeHelper.id(), maxInputCount);
+            MekanismAPI.logger.warn("Error evaluating recipe transfer handler for recipe: {}, had more than 9 inputs: {}", recipeHelper.id(), maxInputCount);
             return recipeHelper.createInternalError();
         }
         int inputCount = 0;
@@ -179,7 +179,7 @@ public class QIOCraftingTransferHandler {
         // the items in the currently selected crafting window and the player's inventory to our available items
         QIOCraftingTransferHelper qioTransferHelper = container.getTransferHelper(recipeHelper.player(), craftingWindow);
         if (qioTransferHelper.isInvalid()) {
-            Mekanism.logger.warn("Error initializing QIO transfer handler for crafting window: {}", selectedCraftingGrid);
+            MekanismAPI.logger.warn("Error initializing QIO transfer handler for crafting window: {}", selectedCraftingGrid);
             return recipeHelper.createInternalError();
         }
         //Note: We do this in a reversed manner (HashedItem -> slots, vs slot -> HashedItem) so that we can more easily
@@ -356,7 +356,7 @@ public class QIOCraftingTransferHandler {
     }
 
     private static <RESULT> RESULT invalidSource(RVRecipeInfo<RESULT, ?, ?> recipeHelper, @NotNull HashedItem type) {
-        Mekanism.logger.warn("Error finding source for: {}. This should not be possible.", type);
+        MekanismAPI.logger.warn("Error finding source for: {}. This should not be possible.", type);
         return recipeHelper.createInternalError();
     }
 

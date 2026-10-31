@@ -57,7 +57,7 @@ import mekanism.client.recipe_viewer.recipe.BoilerRecipeViewerRecipe;
 import mekanism.client.recipe_viewer.recipe.SPSRecipeViewerRecipe;
 import mekanism.client.recipe_viewer.type.IRecipeViewerRecipeType;
 import mekanism.client.recipe_viewer.type.RecipeViewerRecipeType;
-import mekanism.common.Mekanism;
+import mekanism.api.MekanismAPI;
 import mekanism.common.MekanismLang;
 import mekanism.common.attachments.containers.ContainerType;
 import mekanism.common.block.attribute.Attribute;
@@ -277,13 +277,13 @@ public class MekanismEmi implements EmiPlugin {
 
         registry.addRecipe(new EmiInfoRecipe(List.of(EmiStack.of(MekanismFluids.HEAVY_WATER.value())), List.of(
               MekanismLang.RECIPE_VIEWER_INFO_HEAVY_WATER.translate(MekanismConfig.general.pumpHeavyWaterAmount.get())
-        ), Mekanism.rl("info/heavy_water")));
+        ), ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, "info/heavy_water")));
         registry.addRecipe(new EmiInfoRecipe(MekanismAPI.MODULE_REGISTRY.stream()
               .map(ModuleData::getItemHolder)
               .<EmiIngredient>map(item -> EmiStack.of(item.value()))
               .toList(), List.of(
               MekanismLang.RECIPE_VIEWER_INFO_MODULE_INSTALLATION.translate()
-        ), Mekanism.rl("info/module_installation")));
+        ), ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, "info/module_installation")));
     }
 
     public static <RECIPE extends MekanismRecipe<?>, TYPE extends IRecipeViewerRecipeType<RECIPE> & IMekanismRecipeTypeProvider<?, RECIPE, ?>> void addCategoryAndRecipes(
