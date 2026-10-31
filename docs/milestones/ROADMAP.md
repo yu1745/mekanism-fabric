@@ -21,6 +21,7 @@
 - **2026-10-30 16:15 巡检 1**：用户指示 worker"聚焦开发"，P8 发布门禁后置。W-43 已完成（`ed8e1217`），worker 工作区正在做 W-44（Tools）。路线图因此：P10 细化为 W-44a–e；新增 P11 Additions（W-45…49）、P12 Generators（W-50…58）、P13 发布收口（W-59…62）；引入"回归监测门"取代对每个模块的整套门禁；rejection smoke 的真失败列为 W-59 首项。
 - **2026-10-30 17:01 巡检 2**：W-44a–e 完成（`184299a6`，Tools 已验证并归档），W-45 Additions 边界页完成（`f206c34f`），worker 工作区已开始 W-46。路线图补：P14 评估页（W-63）、W-46 的 evidence 精简前置、W-51 的同步值上限核算；其余 W-46…62 覆盖剩余工作，暂无需再扩。此后不再有自动巡检，worker 如耗尽 W 项，按 P13 之后的"发布后议题"向用户汇报即可。
 - **2026-10-30 18:15 巡检 A1**：Tools、Additions、Generators 均已移植并验证（`184299a6`/`3f365066`/`e26940e0`+`47fe5afa`），W-59 rejection 顺序缺陷已修（`aa71976b`），worker 进入 P13。路线图因 W 项即将耗尽，新增 P15 W-64…68（未验证行为收口、NeoForge 存档加载探针、浸泡、性能基线、第三方集成评估页）。P13 的 W-60 须补：协议阶段改动后的**正常连接**验证（paired-network smoke）。
+- **2026-10-31 04:47 巡检 B3**：W-60/W-61 已完成（`77118a66`/`376cf9a5`），W-62 准备已落盘并保持待协调者复核。补 W-69（发布 JAR 客户端启动，时间盒）与 W-60b（addon 负向探针）为 W-62 前置。
 - **0. 已知事实**中的 slice 数字、"约 1700/1802"为 10-30 早间快照，当前 platform slice 已 207→209，不作为依据。
 
 ## 0. 已知事实（规划依据，worker 在 P0 复核）
@@ -198,6 +199,14 @@ mcdebug 使用 `fabric/run` 的隔离调试世界；结束恢复现场。
 | W-60 | 全量测试 + 全部 smoke（含 Tools/Additions/Generators 的 JAR）逐条 PASS；先满足 `COORDINATOR_NOTES.md` 的 C-1…C-4（负向探针、recipe 计数兜底） | 逐条 PASS，记录耗时 |
 | W-61 | `./build.sh --clean` 多 JAR 发布物核验（核心 + 三个附加）；干净构建后重跑同一静态检查并记录各 jar sha256（C-3） | `build-info.json` 含全部 sha256 |
 | W-62 | 文档收口：README 状态表全部"已验证"或带具体残留；发布限制汇总终稿；`PORT_MATRIX`/`FABRIC_PORT` 一页结论；相关活文档归档 | 完成声明由协调者复核后才成立 |
+
+### P13 补充（协调者 2026-10-31 04:55 裁决，W-62 前置）
+
+| ID | 内容 | 完成标志 |
+|---|---|---|
+| W-69 | **发布 JAR 客户端启动与握手（时间盒 60 分钟）**：用四个发布 JAR 起一个干净客户端，经 Fabric Loader 加载（优先复用 Loom 缓存里的 MC client jar / assets / libraries，离线模式绕过 sessionserver，Xvfb 下运行），取客户端 `client_applied values=458` 与 ack。目的：覆盖发布路径特有风险——intermediary 名下的客户端 mixin refmap、四模块客户端类（渲染器、屏幕）加载 | 标记行 PASS + 客户端日志无 ERROR；**或**时间盒耗尽时在 `M-release.md` 与 README 发布限制写明"发布 JAR 客户端路径未验证"并转 P15 |
+| W-60b | 附加模块的负向探针：在发布 JAR 拷贝上各做一次——缺少一个 addon JAR、重复 addon id、addon `depends.mekanism` 版本错误——对 `fabric-packaged-smoke.sh` 的 addon 检查各应 FAIL；结果追加到 `negative-probes.json`。半小时内可完成，在拷贝上做，真实产物不动 | 3 条首错原文入档 |
+| W-62 | 收口措辞：在 W-69 与 W-60b 完成前，P13 结论只能写"**发布服务端路径已验证**"，不得写"发布通过" | 协调者复核后才成立 |
 
 ### 回归监测门（取代 P8 对每个模块的整套门禁）
 
