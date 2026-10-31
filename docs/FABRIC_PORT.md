@@ -372,3 +372,9 @@ rereview 唯一要求的 nested different-Chemical frame-restoration assertion�
 build-info source。不声明 deployment、production、mirror、external Chemical provider/transaction、ingredients、
 IRadiationManager/environmental effects、configurable holder/ejector、
 recipe/machine/Crusher 或 gameplay 完整性。
+
+## P13 交付结论（2026-10-31，`77118a66`）
+
+- 范围：核心 + Tools / Additions / Generators 四个独立 JAR；各里程碑当前状态以 `docs/milestones/README.md` 为准。
+- 发布物：`./build.sh --clean` 的四个 JAR 与 sha256 记于 [W-61 证据](milestones/evidence/p8-release/w61-release.json)；干净四 JAR 服务端装配发布 schema 的 458 值 SERVER 快照（[W-60 证据](milestones/evidence/p8-release/w60-results.json)）。
+- 未含：第三方集成（JEI/EMI、CraftTweaker、ProjectE 等）、NeoForge 存档差异（W-65）、长稳与性能（W-66/67）；发布限制见 `docs/milestones/README.md`。

@@ -53,4 +53,5 @@
 - **平台交互**：不提供任意 modifier 重绑编辑器；Accessories 默认 H 与 Mekanism HUD 绑定冲突可在原版设置中重绑。命令使用原版权限等级／op 回退，未提供 NeoForge 权限插件的逐 node、动态 context 或离线覆盖。多个飞行提供者之间缺少原版权限归属 token；工具动作采用原版映射，不触发 NeoForge `BlockToolModificationEvent` 或其第三方 data-map 扩展。
 - **本批渲染修复**：Meka-Tool 已按原生显示上下文选择独立左右手模型，QIO dashboard 已按官方 JSON 给 LED 层应用 full-bright；[直接实机结果](evidence/development-render/native-summary.json)。未穷举第三方渲染器与资源包组合。
 - **验证边界**：现有证据覆盖代表装备／流体／网络路径，未穷举全部模块组合、流体／船／滑翔、第三方容器与能量提供者。worldgen 的保存 palette 与 retrogen 触发读数不证明全部矿脉分布；[范围与证据](evidence/p8-release/w42-preparation.json)。
-- **后续模块**：Tools、Generators 已完成本轮移植及模块回归；Additions 主体与回归通过，语音 PCM 采集受当前环境限制。完整四 JAR 发布验证仍待 P13。
+- **后续模块**：Tools、Generators、Additions 已完成移植与模块回归；四 JAR 净构建与哈希见 W-61 证据。
+- **尚未真机验证（P15 处理，`docs/milestones/ROADMAP.md` W-64）**：Generators 音效播放、裂变熔毁受控路径、Additions 语音 PCM 采集与本机音频设备、Meka 套装 HUD 细节。

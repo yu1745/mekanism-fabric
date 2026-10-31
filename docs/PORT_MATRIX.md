@@ -475,3 +475,8 @@ recipe JSON 仍被拒绝。`./build.sh --clean` 与真实 dedicated-server/clien
 Non-claims：无 `MekanismRecipeType` cache owner / `IMekanismRecipeTypeProvider` / `RecipeTypeRegistryObject` / `RecipeTypeDeferredRegister`
 或 owner-registration 变更；无 monitor、factory、recipe-viewer、synthetic smelting、tile 或其它 cached recipe family；无 codec 或 canonical
 recipe identity 变更；无 machine-facing `InputRecipeCache` index；无新的全局可变 cache state 或第二套 context 机制。
+
+## P13 结论（2026-10-31）
+
+平台依赖清点与历史叙事截至 Task049；Task050–052 与 P0–P13 的当前状态以 `docs/milestones/README.md` 为准。
+四模块 JAR 的构建、初始化与 458 值配置同步证据在 `docs/milestones/evidence/p8-release/`，本文不再逐项复述。
