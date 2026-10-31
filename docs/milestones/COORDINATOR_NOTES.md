@@ -466,3 +466,21 @@ JEI（W-74c）与 WTHIT（W-74d）已批准，见 `ROADMAP.md`「W-74 范围追�
 **其余**：W-109 文档与 W-103/W-105 证据一致；Mod Menu 界面是只读列表，已如实标注 `not_verified`（热重载不存在）。
 
 **路线图**：未完成项 W-79、W-98、W-99、W-101、W-102、W-104 + 新增 P23（W-110…113）。已补 **P23**。
+
+## 巡检 G1（2026-10-31 15:47）
+
+自 G0 起新提交 2 个：`88745af6`（W-103 最终全量复跑记录 + 客户端 argfile 重建说明）、`65526531`（W-102 部分：JEI 实际注册 30 个分类，逐类截图被工具阻塞）。工作区有一处**未提交的生产改动**（`MekanismJEI.java` 加注册期证明行）和 `fabric/gradle(w)` 软链接——此时 worker 正有一个 mdb 会话在跑（`ps` 里是 mdb 自己起的 `runClient`，不是裸启动）。范围：未碰 wip 历史、submodule、push；无新增第三方依赖；无新增测试。
+
+**审计陷阱：未触发。** 两个提交虽是文档，但 W-102 的阻塞被转成了新的生产侧证明手段（`MEKANISM_FABRIC_JEI_CATEGORY_PROOF`：每个分类的 id 与实际配方数、`empty` 计数），思路正确——比截图更能一次性覆盖 30 个分类的注册与配方绑定，且对"空分类"这种真实缺陷敏感。
+
+**G0 六点核对**
+1. **最终全量重跑：已做**。`w103` 的 rerun 记录 6 步 PASSED，覆盖 modmenu entrypoint、`wthit_plugins.json` 存在性断言、`com/terraformersmc/` 泄漏断言。**但**目前工作区的 `MekanismJEI` 证明行是此后的新改动，P23 结束后仍需再跑一次，哈希两次 clean build 比对。
+2. **W-113 mdb 前置固化：只做了一半**。写成了 `M-release.md` 的排障小节，用 `/tmp/print-cp.gradle` + 内联 python 重建 `argFiles/runClient`。这是**手工食谱而非可复用脚本**，且依赖 `/tmp` 文件与手拼 classpath；漏掉 `build/classes`、`build/resources` 会导致"客户端能起但开发模组不在 classpath"（worker 已自己踩到并记录，好）。请把它收成 `scripts/mdb-prepare-client.sh`：重建 argfile、创建 `fabric/gradle(w)` 软链接、`trap` 退出即删、启动前自检 classpath 含 `fabric/build/classes/java/main`。**不要**为生成参数文件再去跑 `runClient`。
+3. **W-110（双玩家安全拒绝）**、**W-111（完整化学链）**、**W-107 energy 基线**：均未开始——W-102 优先，合理。
+4. 软链接：当前有 mdb 会话在跑，出现正常；**会话结束必须删除**，下次巡检核对。
+
+**关于 W-102 的两点提醒**
+- 路线图写的"24 个分类"是旧数字，实际 30，已被如实更正；`REGISTERED_CATEGORIES` 用全限定名和静态列表，作为证明代码可以接受，但请确认它在**无 JEI 时不会被加载**（类仅由 JEI 插件入口引用，应当如此），并别让证明行进入热路径。
+- 证明行落地后，若出现 `empty>0` 的分类，**那就是第一个真实缺陷**——请逐个判断是该分类本来就没有配方（合理）还是 recipe 绑定漏了（缺陷，修）。这是"找 bug 阶段零发现"的突破口，请认真对待。
+
+路线图：未完成项 W-79、W-98、W-99、W-101、W-104、W-110、W-111、W-112、W-113 共 9，**不触发补充线**，本次无改动。
