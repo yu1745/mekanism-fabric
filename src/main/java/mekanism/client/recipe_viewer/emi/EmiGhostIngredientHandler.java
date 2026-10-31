@@ -14,8 +14,8 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.material.Fluid;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.FluidType;
+import mekanism.api.fluid.FluidStack;
+import mekanism.api.fluid.FluidStack;
 import org.jetbrains.annotations.Nullable;
 
 public class EmiGhostIngredientHandler implements EmiDragDropHandler<Screen> {
@@ -51,7 +51,7 @@ public class EmiGhostIngredientHandler implements EmiDragDropHandler<Screen> {
             if (emiStack.getKey() instanceof Item) {
                 raw = emiStack.getItemStack();
             } else if (emiStack.getKey() instanceof Fluid fluid) {
-                raw = new FluidStack(fluid.builtInRegistryHolder(), FluidType.BUCKET_VOLUME, emiStack.getComponentChanges());
+                raw = new FluidStack(fluid.builtInRegistryHolder(), 1000, emiStack.getComponentChanges());
             } else if (emiStack instanceof ChemicalEmiStack chemicalEmiStack) {
                 raw = chemicalEmiStack.getStack();
             }

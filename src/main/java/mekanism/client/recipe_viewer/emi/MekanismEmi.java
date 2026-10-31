@@ -81,8 +81,8 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.ItemLike;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import mekanism.api.fluid.FluidStack;
+import mekanism.api.fluid.IExtendedFluidHandler;
 
 @EmiEntrypoint
 public class MekanismEmi implements EmiPlugin {
@@ -125,7 +125,7 @@ public class MekanismEmi implements EmiPlugin {
     }
 
     private static void addFluidComponent(Set<Object> representation, ItemStack stack) {
-        IFluidHandler handler = ContainerType.FLUID.createHandlerIfData(stack);
+        IExtendedFluidHandler handler = ContainerType.FLUID.createHandlerIfData(stack);
         if (handler == null) {
             handler = Capabilities.FLUID.getCapability(stack);
         }
