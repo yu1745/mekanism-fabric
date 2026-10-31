@@ -12,7 +12,7 @@ Tools与Additions主体已完成；Generators的机器、多方块、GUI、生�
 
 ## 未决项
 
-常驻 NeoForge 参考环境：官方 NeoForge 21.1.200 + 官方 Mekanism 10.7.19.85 + W-65 样本世界常驻于 `~/.cache/mekanism-neoforge-reference/`（端口 25594），由 `scripts/neoforge-reference.sh start|stop|status|logs|install` 管理，后续 NBT／存档／行为对照直接复用，不再重复下载安装。
+NeoForge 参考环境文件常驻：官方 NeoForge 21.1.200 + 官方 Mekanism 10.7.19.85 + W-65 样本世界落在 `~/.cache/mekanism-neoforge-reference/`（约 200MB，不进仓库），由 `scripts/neoforge-reference.sh start|stop|status|logs|install` 按需启停（端口 25594，用完 stop，不常驻进程），后续 NBT／存档／行为对比直接复用。
 
 W-69 已完成（原 B2 缺口）：发布 JAR 客户端路径已验证——用 Loom/Gradle 缓存离线装配 intermediary 生产客户端 + 干净四 JAR 服务端，客户端 `phase=client_applied values=458` 并加入游戏；门禁脚本 `scripts/fabric-packaged-client-smoke.sh`。
 
