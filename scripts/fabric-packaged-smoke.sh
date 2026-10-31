@@ -123,7 +123,9 @@ import hashlib, json, sys, zipfile
 expected_entrypoints = {
     "main": ["mekanism.fabric.MekanismFabricBootstrap"],
     "client": ["mekanism.fabric.MekanismFabricClientBootstrap"],
-    # Optional client integrations (W-74a/W-74b): the entrypoint keys only fire when the third-party mod is present.
+    # Optional client integrations (W-74a/W-74b). Deliberate contract relaxation (E3): EMI and Jade discover
+    # plugins through loader entrypoint keys, and these keys do nothing unless that mod is installed, so pinning
+    # them here keeps the "no third-party classes in the release JAR" property intact while allowing the hooks.
     "emi": ["mekanism.client.recipe_viewer.emi.MekanismEmi"],
     "jade": ["mekanism.common.integration.lookingat.jade.MekanismJadePlugin"],
 }
