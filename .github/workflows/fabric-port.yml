@@ -1,0 +1,59 @@
+name: "Fabric port build"
+
+# Cheap, loader-only checks for the Fabric port: the JVM test suite, the slice/API audit and the four-JAR assemble.
+# The Minecraft-runtime tasks (fabricRegistryTest, qioTransactionTest, fabricClientModelTest, fabricDataMapTest,
+# fabricRecipeRegistryTest, fabricTransferTest) and every smoke script need a game runtime, so they stay out of CI.
+#
+# Local equivalent:  ./gradlew -p fabric test verifyApiSliceNoNeoForge assemble
+on:
+  push:
+    branches: [ "java-port" ]
+    paths:
+      - 'fabric/**'
+      - 'src/**'
+      - 'build.gradle'
+      - 'gradle.properties'
+      - 'settings.gradle'
+      - '.github/workflows/fabric-port.yml'
+  pull_request:
+    branches: [ "java-port" ]
+    paths:
+      - 'fabric/**'
+      - 'src/**'
+      - 'build.gradle'
+      - 'gradle.properties'
+      - 'settings.gradle'
+      - '.github/workflows/fabric-port.yml'
+
+jobs:
+  build:
+    name: Test + slice audit + assemble
+    timeout-minutes: 40
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: 21
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Test, audit slices, assemble the four JARs
+        run: ./gradlew -p fabric test verifyApiSliceNoNeoForge assemble --console=plain
+
+      - name: Upload the release JARs
+        uses: actions/upload-artifact@v4
+        with:
+          name: fabric-jars
+          path: |
+            fabric/build/libs/*.jar
+            fabric/build/tools-libs/*.jar
+            fabric/build/additions-libs/*.jar
+            fabric/build/generators-libs/*.jar
+          retention-days: 7

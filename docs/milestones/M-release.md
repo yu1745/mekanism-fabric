@@ -24,6 +24,8 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 
 ## 验收证据
 
+W-84：CI 工作流 `.github/workflows/fabric-port.yml`——在 `java-port` 分支的 push/PR 上跑 `./gradlew -p fabric test verifyApiSliceNoNeoForge assemble`（本地已跑通，BUILD SUCCESSFUL），并上传四个 JAR 作 artifact；**不跑**六个需要 MC 运行时的任务与全部 smoke（在注释里写明原因与本地等价命令）。YAML 已解析校验，但未在真实 GitHub runner 上执行。[记录](evidence/p8-release/w84-ci.json)
+
 W-81（第一遍）：规模与堆基线——两端用**完全相同的 fill 命令**搭约 700 根终极通用线缆的网络，`/tick sprint 120000t` 加速采样：Fabric 四 JAR 侧 **13.1 s（9176 ticks/s，0.11 ms/tick，mspt 0.62，1781 区块）**，官方 NeoForge 侧 **29.2 s（4114 ticks/s，0.24 ms/tick）**；堆用量 Fabric 716MB/1024MB、官方 379MB/872MB，RSS 1526/1437MB。**不把"快 2.2 倍"当性能结论**——两侧世界不同（新超平坦 vs 样本世界）、模块集不同（四 JAR vs 仅核心），且 sprint 吞吐是加速态指标。[记录](evidence/p8-release/w81-scale-baseline.json)
 
 W-64（部分）：真实客户端读数——mdb 会话在 `Mekanism F60 Debug` 世界读到 **Mekanism 键位确实注册**（44 个键位里 10 个 `key.mekanism.*`）与 **GUI 真实打开**（`GuiMetallurgicInfuser`，42 槽位，176x166，截图落盘）。过程中踩到三处工具链问题并解决：mdb 把 `fabric/run` 误推断为 `:fabric:runClient`（改用 `--project fabric`）、fabric 独立构建没有 gradlew（临时 symlink 根 wrapper，用完删除）、dev 客户端缺 kotlin adapter（把 fabric-language-kotlin 放进 `fabric/run/mods`）。第二轮读数：**MekaSuit HUD 在客户端渲染**（穿戴后左上角三枚指示器，数值 0% 因未充能）、**MekaTool 的 OBJ 模型正常渲染**（主手截图可见），并记录一条告警级贴图警告 `meka_tool#inventory` 材质名 `minecraft:3/6` 被当 sprite 解析。仍未读数：裂变熔毁、Generators 音效、按键触发行为。[记录](evidence/p8-release/w64-client-readings.json)
