@@ -123,16 +123,29 @@ import socket
 with socket.socket() as sock: sock.bind(('127.0.0.1',0)); print(sock.getsockname()[1])
 PY
 }
-wait_for_server() {
-  local log=$1
-  while (( SECONDS < DEADLINE )); do
-    grep -Eq 'Done \(' "$log" 2>/dev/null && return 0
-    grep -Eiq '(FAILED TO BIND TO PORT|Address already in use)' "$ACTIVE_SERVER_CONSOLE" "$log" 2>/dev/null && return 2
-    kill -0 "$SERVER_PID" 2>/dev/null || return 1
-    grep -Eiq '(Exception in thread|Could not execute entrypoint|Failed to start the minecraft server|---- Minecraft Crash Report ----)' "$ACTIVE_SERVER_CONSOLE" "$log" 2>/dev/null && return 1
-    sleep 0.5
+# Every wait is capped at 60 s per call; a longer budget is spent in slices until the script's own DEADLINE.
+wait_log() {
+  local left status
+  while :; do
+    left=$(( DEADLINE - SECONDS )); (( left > 0 )) || return 3
+    "$ROOT/scripts/wait-for-log-line.sh" -t $(( left > 60 ? 60 : left )) "$@"; status=$?
+    (( status == 3 )) || return $status
   done
-  return 3
+}
+# Magic-line waits: scripts/wait-for-log-line.sh follows the logs through a FIFO instead of re-checking on a sleep loop.
+CRASH_PATTERN='Exception in thread|Could not execute entrypoint|Failed to start the minecraft server|---- Minecraft Crash Report ----'
+BIND_FAILURE_PATTERN='FAILED TO BIND TO PORT|Address already in use'
+
+wait_for_server() {
+  local log=$1 remaining status
+  remaining=$(remaining_seconds) || return 3
+  wait_log -q -p "$SERVER_PID" \
+    --fail-on "$CRASH_PATTERN|$BIND_FAILURE_PATTERN" 'Done \(' "$ACTIVE_SERVER_CONSOLE" "$log"
+  status=$?
+  if (( status == 0 )); then return 0; fi
+  if grep -Eiq "$BIND_FAILURE_PATTERN" "$ACTIVE_SERVER_CONSOLE" "$log" 2>/dev/null; then return 2; fi
+  if (( status == 3 )); then return 3; fi
+  return 1
 }
 start_client() {
   local kind=$1 username=$2 property task mode=
@@ -153,26 +166,32 @@ start_client() {
   CLIENT_PID=$!
 }
 wait_for_evidence() {
-  local server_marker=$1 client_marker=$2 server_log="$SERVER_DIR/logs/latest.log" client_log="$RUN_ROOT/$CLIENT_KIND-client/logs/latest.log"
-  while (( SECONDS < DEADLINE )); do
-    if [[ $(marker_count "$server_log" "$server_marker") -eq 1 && $(marker_count "$client_log" "$client_marker") -eq 1 ]]; then return 0; fi
-    kill -0 "$SERVER_PID" 2>/dev/null || fail_with_logs 'server exited while waiting for configuration rejection'
-    kill -0 "$CLIENT_PID" 2>/dev/null || fail_with_logs "$CLIENT_KIND client exited before its rejection evidence was complete"
-    sleep 0.5
-  done
-  fail_with_logs "overall ${TIMEOUT}s timeout expired while waiting for $CLIENT_KIND rejection"
+  local server_marker=$1 client_marker=$2 remaining status
+  local server_log="$SERVER_DIR/logs/latest.log" client_log="$RUN_ROOT/$CLIENT_KIND-client/logs/latest.log"
+  remaining=$(remaining_seconds) || fail_with_logs "overall ${TIMEOUT}s timeout expired while waiting for $CLIENT_KIND rejection"
+  wait_log -q -p "$CLIENT_PID" "$client_marker" "$client_log"
+  status=$?
+  if (( status == 4 )); then
+    fail_with_logs "$CLIENT_KIND client exited before its rejection evidence was complete"
+  fi
+  (( status == 0 )) || fail_with_logs "overall ${TIMEOUT}s timeout expired while waiting for $CLIENT_KIND rejection"
+  remaining=$(remaining_seconds) || fail_with_logs "overall ${TIMEOUT}s timeout expired while waiting for $CLIENT_KIND rejection"
+  wait_log -q -p "$SERVER_PID" --fail-on "$CRASH_PATTERN" "$server_marker" "$server_log"
+  status=$?
+  if (( status == 4 )); then
+    fail_with_logs 'server exited while waiting for configuration rejection'
+  fi
+  (( status == 0 )) || fail_with_logs "overall ${TIMEOUT}s timeout expired while waiting for $CLIENT_KIND rejection"
+  [[ $(marker_count "$server_log" "$server_marker") -eq 1 ]] || fail_with_logs 'expected exactly one server-side rejection marker'
+  [[ $(marker_count "$client_log" "$client_marker") -eq 1 ]] || fail_with_logs 'expected exactly one client-side rejection marker'
 }
 
 printf 'fabric-configuration-rejection-smoke: verifying fixture isolation and compiling both fixtures\n'
 remaining=$(remaining_seconds) || fail_with_logs "overall ${TIMEOUT}s timeout expired before fixture preflight"
 timeout "${remaining}s" "$ROOT/gradlew" -p "$ROOT/fabric" --no-daemon --console=plain verifyHandshakeFixtureIsolation compileHandshakeMismatchFixtureJava compileHandshakeMissingReceiverFixtureJava || fail_with_logs 'fixture preflight failed or exceeded the overall deadline'
 
-# Keep the independent clients minimal while the rejecting server loads the complete release module set.
-"$ROOT/fabric-build.sh" remapToolsJar remapAdditionsJar remapGeneratorsJar
-mapfile -t ADDON_JARS < <(find "$ROOT/fabric/build/tools-libs" "$ROOT/fabric/build/additions-libs" "$ROOT/fabric/build/generators-libs" \
-  -maxdepth 1 -type f -name '*-fabric.jar' | sort)
-[[ ${#ADDON_JARS[@]} -eq 3 ]] || fail_with_logs 'expected exactly three optional addon JARs'
-RUN_RELATIVE="run/rejection-$RUN_ID"; RUN_ROOT="$ROOT/fabric/$RUN_RELATIVE"; SERVER_DIR="$RUN_ROOT/server"; mkdir -p "$SERVER_DIR/mods"; cp "${ADDON_JARS[@]}" "$SERVER_DIR/mods/"
+# Development runs load only the core mod (see fabric-paired-network-smoke.sh); rejection clients keep isolated classpaths.
+RUN_RELATIVE="run/rejection-$RUN_ID"; RUN_ROOT="$ROOT/fabric/$RUN_RELATIVE"; SERVER_DIR="$RUN_ROOT/server"; mkdir -p "$SERVER_DIR"
 server_ready=0
 for attempt in 1 2 3; do
   PORT=$(select_port); rm -rf "$SERVER_DIR/logs" "$SERVER_DIR/world"; printf 'eula=true\n' > "$SERVER_DIR/eula.txt"

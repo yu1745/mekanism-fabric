@@ -113,7 +113,8 @@ log_line_count() {
 
 log_errors_between() {
   local first=$(( $1 + 1 )) last=$2
-  awk -v first="$first" -v last="$last" 'NR >= first && NR <= last && /\[[^]]*ERROR\]/ { print }' "$SERVER_DIR/logs/latest.log"
+  # Vanilla logs "No data fixer registered for <id>" for modded entity types at startup; it is not a defect.
+  awk -v first="$first" -v last="$last" 'NR >= first && NR <= last && /\[[^]]*ERROR\]/ && !/No data fixer registered for/ { print }' "$SERVER_DIR/logs/latest.log"
 }
 
 assert_no_new_errors() {
@@ -171,7 +172,7 @@ assert_fixture_failure_logs() {
 
 assert_all_errors_accounted() {
   local total
-  total=$(awk '/\[[^]]*ERROR\]/ { count++ } END { print count + 0 }' "$SERVER_DIR/logs/latest.log")
+  total=$(awk '/\[[^]]*ERROR\]/ && !/No data fixer registered for/ { count++ } END { print count + 0 }' "$SERVER_DIR/logs/latest.log")
   (( total == ACCOUNTED_ERROR_LINES )) || fail "ERROR accounting mismatch: total=$total accounted=$ACCOUNTED_ERROR_LINES"
 }
 

@@ -71,7 +71,16 @@ public final class FabricServerConfig {
         RadiationValidation.publish(ChemicalConfigAccess::radiationEnabled);
         manager = candidate;
         owner = server;
-        LOGGER.info("MEKANISM_FABRIC_SERVER_CONFIG_PROOF phase=server_start loaded=true configs={} path={}", CONFIGS.size(), root);
+        //The per-schema counts make the aggregate value count auditable: a dropped or duplicated schema shows up here.
+        StringBuilder detail = new StringBuilder();
+        CONFIGS.stream().sorted(java.util.Comparator.comparing(IMekanismConfig::getFileName)).forEach(config -> {
+            if (!detail.isEmpty()) {
+                detail.append(',');
+            }
+            detail.append(config.getFileName()).append(':').append(config.getConfigSpec().serverSnapshot().size());
+        });
+        LOGGER.info("MEKANISM_FABRIC_SERVER_CONFIG_PROOF phase=server_start loaded=true configs={} values={} detail={} path={}", CONFIGS.size(),
+              snapshot().size(), detail, root);
     }
 
     private static synchronized void stop(MinecraftServer server) {

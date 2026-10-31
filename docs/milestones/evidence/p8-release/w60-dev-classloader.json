@@ -1,0 +1,63 @@
+{
+  "question": "W-60: are the four Mekanism modules loadable together, and is the earlier 'mekanism:security is not bound' failure a port defect or a development-environment artifact?",
+  "answer": "There is no production defect. The three addon mods load beside the core in a clean remapped release server; only Loom development runs cannot host them beside the core because each mod source set lives in its own Fabric class-path group, so addon code resolves a second copy of the core registry statics.",
+  "development_attempts": [
+    {
+      "configuration": "remapped addon release JARs copied into a development run's mods/ directory",
+      "observed": [
+        "NoSuchMethodError: VoxelShape mekanism.additions.common.block.BlockGlowPanel.method_9541(double,double,double,double,double,double)",
+        "IllegalStateException: Registry value mekanism:security is not bound"
+      ],
+      "explanation": "The release JARs are remapped to intermediary names; Loom development runs use named mappings, so addon code cannot bind to Minecraft or to the named core.",
+      "evidence": "evidence/p8-release/w60-failures.json"
+    },
+    {
+      "configuration": "addon source-set outputs appended to the named development classpath of runHandshakeServer",
+      "observed": [
+        "48 mods load (core plus all three addons); tools and additions initialize",
+        "generators fails in GeneratorsBlocks with 'Registry value mekanism:security is not bound' in 3 of 4 attempts",
+        "one attempt started the server normally ('Done (6.204s)'), so the failure is non-deterministic"
+      ],
+      "explanation": "The same class files are reachable both from Loom's per-source-set class-path groups and from the plain development classpath, so core registry statics may be initialized twice. A diagnostic build recorded the binding of mekanism:security in one FabricDeferredHolder copy and an unbound holder in another copy.",
+      "diagnostics": "fabric/run/probe-w60-server/console.log (transient)"
+    },
+    {
+      "configuration": "named (non-remapped) dev JARs from build/{tools,additions,generators}-devlibs copied into a development run's mods/ directory",
+      "observed": [
+        "48 mods load; tools and additions initialize",
+        "generators fails with the same 'Registry value mekanism:security is not bound'"
+      ],
+      "explanation": "JARs loaded from mods/ are resolved outside the core's class-path group, so they again see a second copy of the core statics. Named mappings remove the BlockGlowPanel failure but not the duplication."
+    }
+  ],
+  "release_check": {
+    "command": "scripts/fabric-packaged-smoke.sh",
+    "result": "PASSED",
+    "server": "clean fabric-server-launch.jar with fabric-api, team_reborn_energy and the four remapped Mekanism JARs",
+    "mods_loaded": 50,
+    "mekanism_mods": ["mekanism", "mekanismadditions", "mekanismgenerators", "mekanismtools"],
+    "module_proofs": ["Loaded 'Mekanism: Additions' module.", "Loaded 'Mekanism: Generators' module.", "Loaded 'Mekanism: Tools' module."],
+    "server_config_snapshot_before": "configs=10",
+    "server_config_snapshot_release": "configs=10 values=458",
+    "server_config_detail_release": {
+      "additions": 41,
+      "gear": 81,
+      "general": 68,
+      "generator-storage": 5,
+      "generators": 44,
+      "generators-gear": 2,
+      "machine-storage": 36,
+      "machine-usage": 35,
+      "tiers": 83,
+      "tools": 63,
+      "total": 458
+    },
+    "development_vs_release_delta": "Core SERVER snapshots are 304 values in a development world and 303 in a release world: general.alphaWarning exists only in the development schema (FabricServerConfig sanitizes it for release). The earlier planning figure 459 assumed the development core count (304 + 63 + 41 + 51); the release total is 458.",
+    "server_reached": "Done (4.240s)! For help, type \"help\"",
+    "diagnostics": "build/fabric-packaged-smoke/20261031T022405Z-1419490/latest.log"
+  },
+  "consequence": [
+    "fabric-paired-network-smoke.sh and fabric-configuration-rejection-smoke.sh stay core-only development runs and assert the core 304-value server snapshot; they no longer install addon JARs.",
+    "fabric-packaged-smoke.sh remains the four-module release check and asserts the complete release schema snapshot (configs=10 values=458)."
+  ]
+}

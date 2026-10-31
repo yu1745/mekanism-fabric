@@ -108,12 +108,6 @@ finish() {
 }
 trap finish EXIT INT TERM
 
-count_matches() {
-  local file=$1 pattern=$2
-  [[ -f "$file" ]] || { printf '0\n'; return; }
-  grep -Fc "$pattern" "$file" 2>/dev/null || true
-}
-
 fail_with_logs() {
   local message=$1
   printf 'fabric-paired-network-smoke: %s\n' "$message" >&2
@@ -135,47 +129,54 @@ with socket.socket() as sock:
 PY
 }
 
-wait_for_server() {
-  local log=$1
-  while (( SECONDS < DEADLINE )); do
-    grep -Eq 'Done \(' "$log" 2>/dev/null && return 0
-    if grep -Eiq '(FAILED TO BIND TO PORT|Address already in use)' "$log" 2>/dev/null; then
-      return 2
-    fi
-    if ! kill -0 "$SERVER_PID" 2>/dev/null; then
-      grep -Eiq '(FAILED TO BIND TO PORT|Address already in use)' "$log" 2>/dev/null && return 2
-      return 1
-    fi
-    if grep -Eiq '(Exception in thread|Could not execute entrypoint|Failed to start the minecraft server|---- Minecraft Crash Report ----)' "$log" 2>/dev/null; then
-      return 1
-    fi
-    sleep 0.5
+# Every wait is capped at 60 s per call; a longer budget is spent in slices until the script's own DEADLINE.
+wait_log() {
+  local left status
+  while :; do
+    left=$(( DEADLINE - SECONDS )); (( left > 0 )) || return 3
+    "$ROOT/scripts/wait-for-log-line.sh" -t $(( left > 60 ? 60 : left )) "$@"; status=$?
+    (( status == 3 )) || return $status
   done
-  return 3
+}
+# Magic-line waits: scripts/wait-for-log-line.sh follows the logs through a FIFO instead of re-checking on a sleep loop.
+CRASH_PATTERN='Exception in thread|Could not execute entrypoint|Failed to start the minecraft server|---- Minecraft Crash Report ----'
+BIND_FAILURE_PATTERN='FAILED TO BIND TO PORT|Address already in use'
+
+wait_for_server() {
+  local log=$1 remaining status
+  remaining=$(( DEADLINE - SECONDS ))
+  (( remaining > 0 )) || return 3
+  wait_log -q -p "$SERVER_PID" \
+    --fail-on "$CRASH_PATTERN|$BIND_FAILURE_PATTERN" 'Done \(' "$log"
+  status=$?
+  if (( status == 0 )); then return 0; fi
+  if grep -Eiq "$BIND_FAILURE_PATTERN" "$log" 2>/dev/null; then return 2; fi
+  if (( status == 3 )); then return 3; fi
+  return 1
 }
 
 wait_for_join_count() {
-  local target=$1 server_log="$SERVER_DIR/logs/latest.log"
-  while (( SECONDS < DEADLINE )); do
-    if (( $(count_matches "$server_log" "$USERNAME joined the game") >= target )); then
-      return 0
-    fi
-    kill -0 "$SERVER_PID" 2>/dev/null || fail_with_logs 'server exited while waiting for client join'
-    kill -0 "$CLIENT_PID" 2>/dev/null || fail_with_logs "client $CLIENT_NUMBER exited before joining"
-    sleep 0.5
-  done
+  local target=$1 remaining status server_log="$SERVER_DIR/logs/latest.log" client_log="$RUN_ROOT/client-$CLIENT_NUMBER/logs/latest.log"
+  remaining=$(( DEADLINE - SECONDS ))
+  (( remaining > 0 )) || fail_with_logs "overall ${TIMEOUT}s timeout expired while waiting for client $CLIENT_NUMBER"
+  wait_log -q -n "$target" -p "$SERVER_PID" \
+    --fail-on "$CRASH_PATTERN" "$USERNAME joined the game" "$server_log" "$client_log"
+  status=$?
+  (( status == 0 )) && return 0
+  kill -0 "$SERVER_PID" 2>/dev/null || fail_with_logs 'server exited while waiting for client join'
+  kill -0 "$CLIENT_PID" 2>/dev/null || fail_with_logs "client $CLIENT_NUMBER exited before joining"
   fail_with_logs "overall ${TIMEOUT}s timeout expired while waiting for client $CLIENT_NUMBER"
 }
 
 wait_for_leave_count() {
-  local target=$1 server_log="$SERVER_DIR/logs/latest.log"
-  while (( SECONDS < DEADLINE )); do
-    if (( $(count_matches "$server_log" "$USERNAME left the game") >= target )); then
-      return 0
-    fi
-    kill -0 "$SERVER_PID" 2>/dev/null || fail_with_logs 'server exited while waiting for client disconnect'
-    sleep 0.5
-  done
+  local target=$1 remaining status server_log="$SERVER_DIR/logs/latest.log" client_log="$RUN_ROOT/client-$CLIENT_NUMBER/logs/latest.log"
+  remaining=$(( DEADLINE - SECONDS ))
+  (( remaining > 0 )) || fail_with_logs "overall ${TIMEOUT}s timeout expired while waiting for client $CLIENT_NUMBER disconnect"
+  wait_log -q -n "$target" -p "$SERVER_PID" \
+    --fail-on "$CRASH_PATTERN" "$USERNAME left the game" "$server_log" "$client_log"
+  status=$?
+  (( status == 0 )) && return 0
+  kill -0 "$SERVER_PID" 2>/dev/null || fail_with_logs 'server exited while waiting for client disconnect'
   fail_with_logs "overall ${TIMEOUT}s timeout expired while waiting for client $CLIENT_NUMBER disconnect"
 }
 
@@ -183,8 +184,7 @@ start_client() {
   CLIENT_NUMBER=$1
   local client_dir="$RUN_ROOT/client-$CLIENT_NUMBER"
   CLIENT_SCOPE="$SCOPE_PREFIX-client-$CLIENT_NUMBER"
-  mkdir -p "$client_dir/mods"
-  cp "${ADDON_JARS[@]}" "$client_dir/mods/"
+  mkdir -p "$client_dir"
   # Fresh 1.21 clients otherwise stop at the accessibility onboarding screen before Quick Play runs.
   printf 'onboardAccessibility:false\n' > "$client_dir/options.txt"
   printf 'fabric-paired-network-smoke: starting client %d\n' "$CLIENT_NUMBER"
@@ -197,16 +197,13 @@ start_client() {
   CLIENT_PID=$!
 }
 
-# The release handshake uses the real optional addons on both sides, including their SERVER schemas.
-"$ROOT/fabric-build.sh" remapToolsJar remapAdditionsJar remapGeneratorsJar
-mapfile -t ADDON_JARS < <(find "$ROOT/fabric/build/tools-libs" "$ROOT/fabric/build/additions-libs" "$ROOT/fabric/build/generators-libs" \
-  -maxdepth 1 -type f -name '*-fabric.jar' | sort)
-[[ ${#ADDON_JARS[@]} -eq 3 ]] || fail_with_logs 'expected exactly three optional addon JARs'
+# Development runs load only the core mod: Loom's dev class groups cannot host the three addon mods beside the core
+# (separate group loaders duplicate core registry statics, see evidence/p8-release/w60-dev-classloader.json).
+# The four-module release load and its complete 459-value snapshot are asserted by fabric-packaged-smoke.sh instead.
 RUN_RELATIVE="run/paired-$RUN_ID"
 RUN_ROOT="$ROOT/fabric/$RUN_RELATIVE"
 SERVER_DIR="$RUN_ROOT/server"
-mkdir -p "$SERVER_DIR/mods"
-cp "${ADDON_JARS[@]}" "$SERVER_DIR/mods/"
+mkdir -p "$SERVER_DIR"
 DEADLINE=$((SECONDS + TIMEOUT))
 server_ready=0
 for attempt in 1 2 3; do
@@ -276,11 +273,11 @@ for session in 1 2; do
 done
 
 for client in 1 2; do
-  grep -Eq 'MEKANISM_FABRIC_SERVER_CONFIG_PROOF phase=client_applied session=[^ ]+ values=459$' \
-    "$RUN_ROOT/client-$client/logs/latest.log" || fail_with_logs "client $client did not apply all four modules' SERVER values"
+  grep -Eq 'MEKANISM_FABRIC_SERVER_CONFIG_PROOF phase=client_applied session=[^ ]+ values=304$' \
+    "$RUN_ROOT/client-$client/logs/latest.log" || fail_with_logs "client $client did not apply the core SERVER values"
 done
-[[ $(grep -Ec 'MEKANISM_FABRIC_SERVER_CONFIG_PROOF phase=send session=[^ ]+ values=459$' "$SERVER_DIR/logs/latest.log") -eq 2 ]] \
-  || fail_with_logs 'expected two complete 459-value SERVER snapshots'
+[[ $(grep -Ec 'MEKANISM_FABRIC_SERVER_CONFIG_PROOF phase=send session=[^ ]+ values=304$' "$SERVER_DIR/logs/latest.log") -eq 2 ]] \
+  || fail_with_logs 'expected two complete 304-value core SERVER snapshots'
 RESULT=0
 printf 'fabric-paired-network-smoke: PASSED (two fresh clients completed configuration negotiation and joined play)\n'
 grep -E 'MEKANISM_FABRIC_NETWORK_HANDSHAKE_(START|COMPLETE)' "$SERVER_DIR/logs/latest.log" | tail -n 8

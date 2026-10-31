@@ -20,7 +20,7 @@
 | M-multiblock | 五种核心多方块生命周期 | 破坏重建、区块重载、存读档、尺寸失败路径 | 已验证：P6 W-34–35与build/API/machine门禁通过；[证据](../archive/M-multiblock.md)。 |
 | M-registry | 化学 ingredient 类型注册表、Robit 注册/数据包、官方 legacy alias、biome modifier | 注册冻结后 ID/alias 与官方一致 | 已验证：W-38–39注册／生成与P7门禁通过；[证据](../archive/M-registry.md)。 |
 | M-gear | accessory、Curios 策略、ItemAbility、suit/tool 规则 | 穿戴/工具行为真机核对 | 已验证：W-36–37功能／factory与P7门禁通过；[证据](../archive/M-gear.md)。 |
-| M-release | 核心全量测试、smoke、发布物与限制汇总 | 全部门禁／发布契约通过并完成协调者复核 | 进行中：附加模块优先，完整发布门禁留到 P13。 |
+| M-release | 核心全量测试、smoke、发布物与限制汇总 | 全部门禁／发布契约通过并完成协调者复核 | 进行中：W-60 全 smoke／测试通过；W-61 净构建与 sha256、W-62 收口待做。 |
 | M-tools | Tools材料／工具／护甲／配方／刷怪装备与客户端渲染 | 独立附加JAR与一个真实工具使用闭包 | 已验证：Tools 功能与回归通过。[证据](../archive/M-tools.md)。 |
 | M-additions | 塑料方块／气球／TNT／baby生物／对讲机 | 独立附加JAR与实际实体及物品闭包 | 进行中：主体真机与回归通过；语音采集格式受环境限制。[证据](M-additions.md)。 |
 | M-generators | 六种发电机／涡轮／裂变／聚变 | 原机器发电与多方块运行及生命周期 | 已验证：机器、多方块、GUI／生命周期与回归通过。[证据](../archive/M-generators.md)。 |

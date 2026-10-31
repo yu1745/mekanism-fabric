@@ -532,7 +532,8 @@ while (( SECONDS < deadline )); do
   if grep -Fq 'MEKANISM_FABRIC_CHEMICAL_DATAMAP_PROOF phase=startup epoch=1 maps=5' "$LOG_FILE"; then chemical_data_map_proof=1; fi
   if grep -Fq 'MEKANISM_FABRIC_RECIPE_REGISTRATION_PROOF recipe_types=26 serializers=30 identity_preserved=true' "$LOG_FILE"; then recipe_registration_proof=1; fi
   if grep -Eq 'Done \(' "$LOG_FILE"; then done_loaded=1; fi
-  if grep -Fq 'MEKANISM_FABRIC_SERVER_CONFIG_PROOF phase=server_start loaded=true configs=10 path=' "$LOG_FILE"; then addon_configs_loaded=1; fi
+  # Release schema: core 303 (general without the development-only alphaWarning) + tools 63 + additions 41 + generators 51.
+  if grep -Fq 'MEKANISM_FABRIC_SERVER_CONFIG_PROOF phase=server_start loaded=true configs=10 values=458 ' "$LOG_FILE"; then addon_configs_loaded=1; fi
   if grep -Eiq "$crash_pattern" "$LOG_FILE"; then
     echo 'fabric-packaged-smoke: crash signature detected' >&2
     grep -Ei "$crash_pattern" "$LOG_FILE" | tail -n 10 >&2 || true

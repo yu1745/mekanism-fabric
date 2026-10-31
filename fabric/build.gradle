@@ -428,12 +428,23 @@ def clientWindowFixtureRuntime = files(sourceSets.clientWindowFixture.runtimeCla
 def mainResourceOutputFiles = files(sourceSets.main.output.resourcesDir)
 def clientWindowFixtureMetadata = layout.projectDirectory.file('src/clientWindowFixture/resources/fabric.mod.json')
 def clientWindowFixtureResourceOutput = layout.buildDirectory.dir('resources/clientWindowFixture')
-def clientWindowFixtureServices = [
-      layout.projectDirectory.file('../src/main/resources/META-INF/services/mekanism.api.text.ITooltipHelper'),
-      layout.projectDirectory.file('../src/main/resources/META-INF/services/mekanism.api.datamaps.IMekanismDataMapTypes'),
-      layout.projectDirectory.file('../src/main/resources/META-INF/services/mekanism.api.recipes.ingredients.creator.IIngredientCreatorProvider'),
-      layout.projectDirectory.file('../src/main/resources/META-INF/services/mekanism.api.recipes.IRecipeTypeRegistry'),
+// The service descriptors the core JAR surfaces. IMekanismAccess stays out: the mixed JEI/EMI access service is not provided.
+def mekanismServiceDescriptors = [
+      'mekanism.api.energy.IEnergyConversionHelper',
+      'mekanism.api.text.ITooltipHelper',
+      'mekanism.api.datamaps.IMekanismDataMapTypes',
+      'mekanism.api.recipes.ingredients.creator.IIngredientCreatorProvider',
+      'mekanism.api.recipes.IRecipeTypeRegistry',
+      'mekanism.api.gear.IModuleHelper',
+      'mekanism.api.radial.IRadialDataHelper',
+      'mekanism.api.security.IBlockSecurityUtils',
+      'mekanism.api.security.IItemSecurityUtils',
+      'mekanism.api.security.IEntitySecurityUtils',
+      'mekanism.api.security.ISecurityUtils',
+      'mekanism.api.radiation.IRadiationManager',
 ]
+def mekanismServiceDirectory = layout.projectDirectory.dir('../src/main/resources/META-INF/services')
+def clientWindowFixtureServices = mekanismServiceDescriptors.collect { name -> mekanismServiceDirectory.file(name) }
 def verifyClientWindowFixtureIsolation = tasks.register('verifyClientWindowFixtureIsolation') {
     group = 'verification'
     description = 'Checks the single real-client window probe stays outside production output and metadata.'
@@ -466,12 +477,8 @@ def verifyClientWindowFixtureIsolation = tasks.register('verifyClientWindowFixtu
         }
         def serviceDirectory = new File(clientWindowFixtureResourceOutput.get().asFile, 'META-INF/services')
         def actualServices = serviceDirectory.listFiles()?.findAll { it.isFile() }?.collectEntries { [(it.name): it.getBytes()] } ?: [:]
-        def expectedServices = [
-              'mekanism.api.text.ITooltipHelper': 'mekanism.common.util.text.TooltipHelper'.bytes,
-              'mekanism.api.datamaps.IMekanismDataMapTypes': 'mekanism.fabric.datamaps.FabricChemicalDataMaps\n'.bytes,
-              'mekanism.api.recipes.ingredients.creator.IIngredientCreatorProvider': 'mekanism.fabric.recipe.FabricIngredientCreatorProvider\n'.bytes,
-              'mekanism.api.recipes.IRecipeTypeRegistry': 'mekanism.fabric.recipe.FabricRecipeTypeRegistry\n'.bytes,
-        ]
+        // The fixture must surface exactly the production service descriptors, byte for byte.
+        def expectedServices = mekanismServiceDescriptors.collectEntries { name -> [(name): mekanismServiceDirectory.file(name).asFile.bytes] }
         if (actualServices.keySet() != expectedServices.keySet()
               || actualServices.any { name, bytes -> !java.util.Arrays.equals(bytes, expectedServices[name]) }) {
             throw new GradleException("Client-window fixture must copy exactly both production service descriptors: ${actualServices.keySet()}")
@@ -764,18 +771,7 @@ processResources {
         expand version: resolvedModVersion
     }
     from('../src/main/resources') {
-        include 'META-INF/services/mekanism.api.energy.IEnergyConversionHelper'
-        include 'META-INF/services/mekanism.api.text.ITooltipHelper'
-        include 'META-INF/services/mekanism.api.datamaps.IMekanismDataMapTypes'
-        include 'META-INF/services/mekanism.api.recipes.ingredients.creator.IIngredientCreatorProvider'
-        include 'META-INF/services/mekanism.api.recipes.IRecipeTypeRegistry'
-        include 'META-INF/services/mekanism.api.gear.IModuleHelper'
-        include 'META-INF/services/mekanism.api.radial.IRadialDataHelper'
-        include 'META-INF/services/mekanism.api.security.IBlockSecurityUtils'
-        include 'META-INF/services/mekanism.api.security.IItemSecurityUtils'
-        include 'META-INF/services/mekanism.api.security.IEntitySecurityUtils'
-        include 'META-INF/services/mekanism.api.security.ISecurityUtils'
-        include 'META-INF/services/mekanism.api.radiation.IRadiationManager'
+        mekanismServiceDescriptors.each { name -> include "META-INF/services/$name" }
         include 'assets/mekanism/particles/radiation.json'
         include 'assets/mekanism/particles/jetpack_flame.json'
         include 'assets/mekanism/particles/jetpack_smoke.json'
@@ -889,10 +885,7 @@ tasks.named('processTileUpdateRuntimeFixtureResources') {
 }
 tasks.named('processClientWindowFixtureResources') {
     from('../src/main/resources') {
-        include 'META-INF/services/mekanism.api.text.ITooltipHelper'
-        include 'META-INF/services/mekanism.api.datamaps.IMekanismDataMapTypes'
-        include 'META-INF/services/mekanism.api.recipes.ingredients.creator.IIngredientCreatorProvider'
-        include 'META-INF/services/mekanism.api.recipes.IRecipeTypeRegistry'
+        mekanismServiceDescriptors.each { name -> include "META-INF/services/$name" }
     }
 }
 

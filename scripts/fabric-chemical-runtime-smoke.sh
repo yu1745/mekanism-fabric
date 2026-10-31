@@ -87,17 +87,22 @@ assert_alive_clean() {
   kill -0 "$SERVER_PID" 2>/dev/null || fail 'server exited unexpectedly'
   if [[ -n "$CLIENT_PID" ]]; then kill -0 "$CLIENT_PID" 2>/dev/null || fail 'client exited unexpectedly'; fi
   local pattern='(\[[^]]+/ERROR\]|Exception in thread|Could not execute entrypoint|Failed to start the minecraft server|---- Minecraft Crash Report ----|NoClassDefFoundError|ClassNotFoundException)'
-  grep -Eiq "$pattern" "$SERVER_DIR/logs/latest.log" 2>/dev/null && fail 'server crash signature detected'
-  grep -Eiq "$pattern" "$CLIENT_DIR/logs/latest.log" 2>/dev/null && fail 'client crash signature detected'
+  # Vanilla logs "No data fixer registered for <id>" for every modded entity type at startup (Util.java); not a crash.
+  grep -Ev 'No data fixer registered for' "$SERVER_DIR/logs/latest.log" 2>/dev/null | grep -Eiq "$pattern" && fail 'server crash signature detected'
+  grep -Ev 'No data fixer registered for' "$CLIENT_DIR/logs/latest.log" 2>/dev/null | grep -Eiq "$pattern" && fail 'client crash signature detected'
   return 0
 }
 
 wait_log() {
-  local file=$1 pattern=$2 description=$3 deadline=$((SECONDS + TIMEOUT))
+  # Magic-line wait through the event-driven poller; each call is capped at 60 s and re-armed in slices.
+  local file=$1 pattern=$2 description=$3 deadline=$((SECONDS + TIMEOUT)) left status
   while (( SECONDS < deadline )); do
-    grep -Fq "$pattern" "$file" 2>/dev/null && return 0
+    left=$(( deadline - SECONDS )); (( left > 60 )) && left=60
+    "$ROOT/scripts/wait-for-log-line.sh" -F -q -t "$left" "$pattern" "$file"
+    status=$?
+    (( status == 0 )) && return 0
     assert_alive_clean
-    sleep 0.5
+    (( status == 4 || status == 5 )) && fail "did not reach $description"
   done
   fail "timed out waiting for $description"
 }
