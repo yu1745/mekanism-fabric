@@ -1,0 +1,10 @@
+{
+  "mekanism:looking_at": {
+    "entrypoints": {
+      "common": "mekanism.common.integration.lookingat.wthit.MekanismWTHITPlugin",
+      "client": "mekanism.common.integration.lookingat.wthit.MekanismWTHITPlugin"
+    },
+    "side": "*",
+    "required": []
+  }
+}
