@@ -1,0 +1,38 @@
+{
+  "work_item": "W-64\uff08\u90e8\u5206\uff09",
+  "date": "2026-10-31",
+  "goal": "\u5df2\u77e5\u672a\u9a8c\u8bc1\u9879\u6e05\u5355\u6536\u53e3\uff1b\u672c\u8f6e\u5148\u505a\u771f\u5b9e\u5ba2\u6237\u7aef\u8bfb\u6570\u91cc\u6700\u4fbf\u5b9c\u3001\u6700\u80fd\u8bc1\u4f2a\u7684\u4e24\u9879\u3002",
+  "session": {
+    "tool": "mdb session start\uff08AGENTS \u786c\u89c4\u5219\uff1a\u5ba2\u6237\u7aef\u53ea\u80fd\u7531 mdb \u542f\u52a8\uff09",
+    "project": "fabric\uff08\u72ec\u7acb\u6784\u5efa\uff0c\u9700\u4e34\u65f6 symlink gradlew/gradle \u5230\u6839 wrapper\uff09",
+    "world": "Mekanism F60 Debug",
+    "state": "world_ready \u2192 \u7ed3\u675f\u540e mdb session stop \u4fdd\u5b58\u5e76\u56de\u6536\uff0c\u590d\u67e5\u65e0 KnotClient \u6b8b\u7559",
+    "obstacles": [
+      "mdb \u9ed8\u8ba4\u628a fabric/run \u63a8\u65ad\u6210 :fabric:runClient\uff08\u6839\u6784\u5efa\u6ca1\u6709\u8be5\u5b50\u9879\u76ee\uff09\u2192 \u7528 --project fabric \u6307\u5b9a\u72ec\u7acb\u6784\u5efa",
+      "fabric \u6784\u5efa\u6ca1\u6709\u81ea\u5df1\u7684 gradlew\uff1amdb \u62a5 target project has no Gradle wrapper \u2192 \u4e34\u65f6 symlink \u6839 wrapper\uff08\u7528\u5b8c\u5df2\u5220\u9664\uff09",
+      "dev \u5ba2\u6237\u7aef\u7f3a kotlin adapter\uff08mcdebug \u662f Kotlin mod\uff09\uff1aCould not find adapter 'kotlin' \u2192 \u628a fabric-language-kotlin \u653e\u8fdb fabric/run/mods"
+    ]
+  },
+  "readings": [
+    {
+      "item": "Mekanism \u952e\u4f4d\u5728\u771f\u5b9e\u5ba2\u6237\u7aef\u6ce8\u518c",
+      "result": "PASS",
+      "detail": "options.keyMappings \u5171 44 \u9879\uff0c\u5176\u4e2d 10 \u9879\u4e3a key.mekanism.*\uff08mode\u3001head/chest/legs/feet_mode\u3001details\u3001description\u3001module_tweaker\u3001key_boost\u3001key_hud\uff09\uff0c\u5168\u90e8\u4e3a\u53ef\u53d1\u73b0\u7684\u5df2\u6ce8\u518c\u952e\u4f4d",
+      "note": "\u8fd9\u5173\u95ed\u4e86 W-64 \u91cc\u201c\u952e\u4f4d\u662f\u5426\u771f\u7684\u6ce8\u518c\u201d\u7684\u7591\u95ee\uff1b\u6309\u952e\u89e6\u53d1\u540e\u7684\u884c\u4e3a\u4ecd\u672a\u8bfb\u6570"
+    },
+    {
+      "item": "Mekanism GUI \u5728\u771f\u5b9e\u5ba2\u6237\u7aef\u53ef\u6253\u5f00\u5e76\u6e32\u67d3",
+      "result": "PASS",
+      "detail": "world.setBlock \u653e\u7f6e\u51b6\u91d1\u704c\u6ce8\u673a\u540e gui open-block \u8fd4\u56de screen=mekanism.client.gui.machine.GuiMetallurgicInfuser\u3001slotCount=42\u3001\u8ddd\u79bb 2.5 \u5728 reach \u5185\uff1bgui screen \u7ed9\u51fa 176x166 GUI \u77e9\u5f62\u4e0e 42 \u4e2a\u69fd\u4f4d\u5750\u6807\uff1bgui screenshot --mode gui \u4ea7\u51fa PNG\uff08sha256 4761b1b5\u2026\uff09",
+      "artifact": "evidence/p8-release/w64/infuser-gui.png"
+    }
+  ],
+  "still_open": [
+    "MekaSuit HUD \u6570\u503c",
+    "\u88c2\u53d8\u7194\u6bc1\u53d7\u63a7\u8bfb\u6570",
+    "Generators \u97f3\u6548\u64ad\u653e",
+    "Ad Astra \u88c5\u5907\uff08\u96c6\u6210\u672a\u505a\uff09",
+    "\u6309\u952e\u6309\u4e0b\u540e\u7684\u5b9e\u9645\u884c\u4e3a"
+  ],
+  "cleanup": "\u653e\u7f6e\u7684\u4e24\u53f0\u673a\u5668\u5df2 setblock air \u8fd8\u539f\uff1b\u4e34\u65f6 symlink \u5df2\u5220\u9664\uff1b\u4f1a\u8bdd world \u5df2\u4fdd\u5b58"
+}
