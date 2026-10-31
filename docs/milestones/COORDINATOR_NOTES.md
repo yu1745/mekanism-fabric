@@ -339,3 +339,15 @@ AGENTS.md 本批新增：①"游戏客户端只能用 mdb 启动"硬规则 ②"�
   4. EMI 对 Mekanism 罐的流体容器显示因 Fabric 能力模型不同而缩减（只看组件式 Mekanism 罐），已注释为 port delta；请在 W-91 里确认玩家可见影响。
   5. 这四个提交改了 common-slice/GuiBar/api-slice，而 **release-check 尚未在新 HEAD 上跑过**——见 W-93，先别声称 P13 结论在新 HEAD 上仍成立。
 - 路线图：W-74、W-84…W-90 基本已做，原有未开始项只剩 W-79（预留）与 W-80/81/82 余项，**触发补充线**。已新增 **P19：W-91…W-96（6 项）**，见 `ROADMAP.md`：EMI/Jade 范围补全（P0）、集成后全量回归（P0）、注册表差异实质修复、IBarInfoHandler 偏离复核、发布演练。JEI/WTHIT 仍未批准，不得启动。
+
+## 巡检 E3（2026-10-31 11:47）
+
+新提交 2 个：`23bf47a3`（Jade 化学品 tooltip 截图与已验证元素类型记录）、`cf1de6ea`（W-93：集成后回归，修复被拦下的两个契约）。**审计陷阱：未触发**——W-93 是真实回归，在全量里抓到 2 个过期契约并修复，不是重复复核。
+
+- 范围核对：未碰 JEI/WTHIT、wip squash、submodule、push；无新增测试（`verifyFabricTestContract` 期望值随 W-90 改为 96 套件/457、聚合 112/517）。
+- 好的地方：全量检查 2 次失败如实记录（#1 测试契约、#2 entrypoints 契约），并写明"之前只跑 `test` 没跑带契约校验的 `check`，所以漏了"；`not_done` 如实承认最终 HEAD 上未一次性跑完 6 步。
+- 需注意：
+  1. **W-93 提前做了**（我写的顺序是 W-91/92 之后）。可接受，因为它修的是已落地改动的契约；但 W-91/W-92 若再改 slice 或 entrypoint，**须在最终 HEAD 上再做一次完整 `release-check.sh`（含 build --clean）**，且 P13 措辞在此之前保持"部分步骤通过"，不要写"新 HEAD 发布通过"。
+  2. `fabric-packaged-smoke.sh` 的 entrypoints 契约被放宽为 main+client+emi+jade。这是对老 oracle 的合理扩充（只在对应 mod 存在时生效），但请在 `scripts/fabric-packaged-oracles.json` 或脚本注释里写明"仅可选集成键，其他键仍视为契约变化"，避免日后被当作通配。
+  3. 新 dist 哈希已记录；C-3 可复现要求下，最终 HEAD 须 clean build 两次并比对（W-89 已具备条件）。
+- 路线图：未开始/未完成项仍有 W-91、W-92、W-94、W-95、W-96、W-79 与 W-80/81/82 余项，≥6，**本次不补充**，无改动。
