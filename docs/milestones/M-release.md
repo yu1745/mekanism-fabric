@@ -24,6 +24,8 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 
 ## 验收证据
 
+W-112（工厂/升级/并行吞吐）：**部分完成**。已核对三档富集工厂的能量缓冲（≈20k/40k/80k）与 `progress` 槽数（3/5/9）；满输入下三档**都只完成 1 配方/10 秒**，原因是 **sorting 关闭**（所有矿石留在 slot 0，只有第 0 个进程在跑，连续采样 `progress` 只有第 0 位变化）。官方参考服务端同样 `sorting: 0b`，**默认值一致**，故不是移植偏差；开启 sorting 需 GUI 开关，而 `be set-nbt` 改不到该字段（移植里它走 sustained data）。未验证：开启后的并行加速比、升级对吞吐的影响、回压。[记录](evidence/p8-release/w112-factory-throughput.json)
+
 W-111（完整化学链）：**受工具限制，未完成；曾疑似的 P0 已撤回**。先解决“把流体/化学品送进机器”：流体储罐可用水桶注入（实测 1,000 mB），但机器的罐无法用桶注入、也无法用 NBT 写入（attachment），`component_config` 的 NBT 写入对已加载方块实体不生效。过程中曾怀疑“线缆连不上机器”是移植缺陷，**用官方参考服务端做了对照后撤回**：官方在同样默认（全 NONE 侧配置）的机器 + 线缆组合上，`data get block` 读数同样是 `connections: 0b, acceptors: 0b`，而两根线缆相邻时是 `connections: 32b`（说明读数口径正确）——两版行为一致，问题在于“外部供电/供料必须先配置机器侧面”，而当前工具链无法可靠驱动侧面配置 GUI。[记录](evidence/p8-release/w111-chemical-chain.json)
 
 W-102（JEI 分类覆盖）：**完成**（改用运行时计数代替逐类截图）。`MekanismJEI` 在 `onRuntimeAvailable(IJeiRuntime)` 里对注册过的 30 个分类逐个 `createRecipeLookup(...).includeHidden().get().count()`，打点 `MEKANISM_FABRIC_JEI_CATEGORY_PROOF`：实测 **count=30 empty=0**，配方数从 1（activating、sps_casing）到 200（crushing）；完整分类-配方数清单见证据页。此前“逐类截图”的路线在 mdb 上不可行（JEI 搜索框不接收合成字符、按 R 不弹配方页），已记录；未覆盖的是各分类的**渲染外观**逐类核对与 QIO 配方转移按钮。[记录](evidence/p8-release/w102-jei-categories.json)
