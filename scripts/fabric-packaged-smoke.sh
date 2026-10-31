@@ -268,6 +268,8 @@ with zipfile.ZipFile(sys.argv[1]) as artifact, zipfile.ZipFile(sys.argv[3]) as d
     if duplicates:
         raise SystemExit(f"duplicate artifact entries: {duplicates!r}")
     metadata = json.loads(artifact.read("fabric.mod.json"))
+    if "wthit_plugins.json" not in artifact.namelist():
+        raise SystemExit("WTHIT plugin descriptor is missing from the release artifact")
     if (metadata.get("id") != "mekanism" or metadata.get("entrypoints") != expected_entrypoints
             or metadata.get("accessWidener") != "mekanism.accesswidener"
             or metadata.get("depends", {}).get("team_reborn_energy") != f">={sys.argv[2]}"):
