@@ -1,0 +1,63 @@
+{
+  "work_item": "W-94",
+  "date": "2026-10-31",
+  "goal": "\u628a W-76 \u7559\u4e0b\u7684 items 1064 vs 1066\u3001tags 444 vs 448 \u9010\u9879\u5b9a\u6027\uff1aFabric \u5408\u7406\u5dee\u5f02\u8fd8\u662f\u6f0f\u79fb\u690d\u3002",
+  "rerun": "`scripts/compare-registry-ids.py` \u5728\u5f53\u524d dist \u4e0a\u91cd\u8dd1\uff1ablocks 501/501\uff08missing 0\uff0cextra 0\uff09\u3001items 1064/1066\uff08missing 0\uff0cextra 2\uff09\u3001tags 444/448\uff08missing 2\uff0cextra 6\uff09\uff1b**\u81ea\u5df1\u547d\u540d\u7a7a\u95f4 missing \u6052\u4e3a 0**\u3002",
+  "items_extra": [
+    {
+      "id": "neoforge:bucket",
+      "why": "\u7aef\u53e3 shim\uff1a`fabric/src/main/resources/assets/neoforge/models/item/bucket.json` \u63d0\u4f9b `neoforge:item/bucket` / `neoforge:fluid_container` \u7684\u7236\u6a21\u578b\uff0c\u5b98\u65b9\u7531 NeoForge \u672c\u4f53\u63d0\u4f9b\uff0cFabric \u6ca1\u6709"
+    },
+    {
+      "id": "neoforge:default",
+      "why": "\u540c\u4e0a\uff0c`neoforge:item/default` \u662f\u5b98\u65b9\u7269\u54c1\u6a21\u578b\u7684\u9ed8\u8ba4\u7236\u6a21\u578b"
+    }
+  ],
+  "tags_missing": [
+    {
+      "id": "neoforge:damage_type/is_environment",
+      "why": "NeoForge \u547d\u540d\u7a7a\u95f4\u6807\u7b7e\uff0cFabric \u4e0a\u6ca1\u6709\u6d88\u8d39\u8005\uff1b\u4e0d\u662f Mekanism \u5185\u5bb9"
+    },
+    {
+      "id": "projecte:block/vein/shovel",
+      "why": "ProjectE \u96c6\u6210\u6807\u7b7e\uff0cFabric \u4e0a\u6ca1\u6709 ProjectE"
+    }
+  ],
+  "tags_extra": [
+    {
+      "id": "accessories:item/back",
+      "why": "Fabric \u4fa7 Accessories \u96c6\u6210\uff08\u5b98\u65b9\u8d70 Curios\uff09\uff0c\u5c5e\u5e73\u53f0\u5dee\u5f02"
+    },
+    {
+      "id": "accessories:item/shoes",
+      "why": "\u540c\u4e0a"
+    },
+    {
+      "id": "neoforge:damage_type/is_magic",
+      "why": "NeoForge \u547d\u540d\u7a7a\u95f4\u6807\u7b7e\uff0c\u60f0\u6027"
+    },
+    {
+      "id": "neoforge:damage_type/is_poison",
+      "why": "\u540c\u4e0a"
+    },
+    {
+      "id": "neoforge:damage_type/is_technical",
+      "why": "\u540c\u4e0a"
+    },
+    {
+      "id": "neoforge:damage_type/is_wither",
+      "why": "\u540c\u4e0a"
+    }
+  ],
+  "additional_finding": {
+    "obs": "\u6838\u5fc3 JAR \u7684 assets \u91cc\u6709 **104 \u4e2a JSON \u5f15\u7528 `neoforge:` \u547d\u540d\u7a7a\u95f4**\uff08`neoforge:composite` \u00d782\u3001`neoforge:item/bucket` \u00d718\u3001`neoforge:fluid_container` \u00d718\u3001`neoforge:obj` \u00d72 \u7b49\uff09",
+    "why_not_leftover": "\u7aef\u53e3\u6709\u5b8c\u6574\u7684\u6a21\u578b\u88c5\u8f7d\u5668\u517c\u5bb9\u5c42\uff1a`FabricMekanismModelPlugin`\u3001`FabricCompositeModel`\u3001`FabricObjModel`\u3001`FabricItemLayersModel` \u4e0e `BlockModelCompositeMixin` \u5728 Fabric \u4e0a\u89e3\u91ca\u8fd9\u4e9b loader\uff1b\u673a\u5668\u5728\u771f\u673a\u91cc\u80fd\u6b63\u5e38\u6e32\u67d3\u5373\u4e3a\u8bc1",
+    "conclusion": "\u8fd9\u4e9b `neoforge:` \u6a21\u578b\u58f0\u660e\u662f**\u6709\u6d88\u8d39\u8005**\u7684\uff0c\u4e0d\u662f\u6b8b\u7559"
+  },
+  "data_namespace_delta": {
+    "data/neoforge/**": "\u5b98\u65b9 4 \u4e2a\u6587\u4ef6\u3001\u6211\u4eec 1 \u4e2a\uff08`tags/damage_type/is_technical.json`\uff09\uff1a\u7f3a\u7684 3 \u4e2a\u662f NeoForge data map \u4e0e\u6807\u7b7e\uff08`game_event/vibration_frequencies`\u3001`item/furnace_fuels`\u3001`tags/block/enderman_place_on_blacklist`\u3001`tags/damage_type/is_environment`\uff09\uff0c\u5728 Fabric \u4e0a\u6ca1\u6709\u8bfb\u53d6\u65b9\uff1b\u6211\u4eec\u7684\u71c3\u6599/\u632f\u52a8\u7b49\u7531\u81ea\u8eab\u6570\u636e\u6ce8\u518c\u8986\u76d6",
+    "data/mekanism/neoforge/**": "6/6 \u4e00\u81f4",
+    "data/mekanism/data_maps/**": "6/6 \u4e00\u81f4"
+  },
+  "verdict": "W-76 \u7684\u5dee\u5f02**\u5168\u90e8\u662f\u5916\u6765\u547d\u540d\u7a7a\u95f4**\uff08neoforge/projecte/accessories\uff09\u9020\u6210\u7684\u5e73\u53f0\u4e0e\u96c6\u6210\u5dee\u5f02\uff0c**\u6ca1\u6709\u4e00\u9879\u662f Mekanism \u81ea\u5df1\u7684\u65b9\u5757/\u7269\u54c1/\u6807\u7b7e\u6f0f\u79fb\u690d**\u3002\u65e0\u9700\u8865\u5b9e\u73b0\uff1b\u7ed3\u8bba\u5199\u5165 M-release\u3002"
+}
