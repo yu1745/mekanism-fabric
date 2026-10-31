@@ -729,3 +729,17 @@ gate）BUILD SUCCESSFUL。未运行（按完成度优先策略）：全量测试
 - 四渲染器纳片(机械管/加压管/热导线/ universal 缆;pressurized/thermo/cable 0 neoforge 直纳):机械管 FluidStack→`mekanism.api.fluid.FluidStack` + LinkedSet→plain map(RenderFluidTank 先例:端口类型自带组件等值)。
 - 注册:4 渲染器 × 4 tier(BASIC/ADVANCED/ELITE/ULTIMATE,官方 transmitter 无 creative tier)= 16 类型;BER proof `tile_types=48 renderers=21`;MekanismRenderer.onStitch 恢复两处 contents 清缓存。
 - 验收:15/15 冒烟×2。管内流体视觉留 mcdebug/观察;logistical transporter(物品动画车道)与物品形态 drive 阵列继续延后。
+
+## `GuiBar.IBarInfoHandler` 提到顶层（W-74a，2026-10-31）
+
+官方把它作为 `GuiBar` 的嵌套接口；本移植在早期批次就已同时存在嵌套与顶层两个同名接口（顶层版注释写明是"为了 viewer-neutral 代码不拉入 GUI 框架"）。W-74a 接入 EMI 时，`RecipeViewerUtils.FULL_BAR` 是顶层类型，而 `GuiVerticalPowerBar`/`GuiHorizontalPowerBar` 只接受嵌套类型，导致 26 处编译错误。
+
+**处置（W-74a）**：删除 `GuiBar` 内的嵌套接口，全仓 21 个文件统一用顶层 `mekanism.client.gui.element.bar.IBarInfoHandler`。
+
+**兼容性影响（W-95 复核）**：
+
+- 这是**客户端渲染内部类型**，不进入 api-slice（`mekanism.api.*` 未受影响），也不参与网络/存档/NBT。
+- 受影响面仅在 `mekanism.client.*` 的源码级引用；附加模块（tools/additions/generators）各自的 GUI 已随该次提交一起改到顶层类型，编译通过。
+- 官方嵌套名 `GuiBar$IBarInfoHandler` 在二进制层面不再存在。第三方 mod 若引用该嵌套名会失败——但官方 Mekanism 从未把它作为 API 暴露（不在 `mekanism.api`），且同为客户端类，风险限于直接引用客户端内部类型的深度集成方。
+- **结论：保留顶层版本**（恢复嵌套会让 `RecipeViewerUtils`/EMI 再次需要桥接或另一套类型，等于把两套类型问题搬回来）。若未来有玩家可见的第三方兼容问题再评估。
+

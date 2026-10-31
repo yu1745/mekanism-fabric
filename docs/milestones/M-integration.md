@@ -25,6 +25,26 @@
 - 许可证：**MIT**。只作 `modCompileOnly`（`transitive = false`）参与编译，另由 `-PemiDev` 开关挂 `modLocalRuntime` 供客户端门禁使用；**不随发布 JAR 分发**。
 - 断言：`scripts/fabric-packaged-smoke.sh` 静态阶段检查发布 JAR 内不得出现 `dev/emi/`、`mezz/jei/`、`snownee/jade/` 类，防止集成代码泄漏进发布物。
 
+## 纳入的源码组与理由（E2 巡检要求）
+
+**EMI（W-74a，common-slice 1518→1564）**
+
+| 组 | 文件数 | 真实 owner / 调用链 | 为什么必须在同一批纳入 |
+|---|---|---|---|
+| `client/recipe_viewer/emi/`（根） | 9 | `MekanismEmi`（EMI 插件入口，`emi` entrypoint） | 入口自己引用全部子类：category、helper、化学栈与序列化器、鼠标栈提供者、exclusion、ghost |
+| `emi/recipe/` | 18 | `MekanismEmiRecipe` 基类 + 每个分类的配方视图 | `addCategories` 为 30 个分类各建一个子类，缺一即编译不过 |
+| `emi/transfer/` + `emi/widget/` | 6 | `EmiQIOCraftingTransferHandler`、`FormulaicAssemblicatorTransferHandler`、`MekanismTankEmiWidget` | 插件在 `register` 里直接 `registry.addRecipeHandler(...)` 注册，属于同一生命周期 |
+| `client/recipe_viewer/` 共享类 | 6 | `GuiElementHandler`、`GhostIngredientHandler`、`QIOCraftingTransferHandler`、`RVTransferUtils`、`color/**`(4) | 上一行与配方视图都直接调用它们；不为拆小再造 holder |
+| `api/integration/emi/IMekanismEmiHelper` | 1 | 上述 helper 的实现接口 | API 侧的契约，属 api-slice 扩 1 项 |
+
+**Jade（W-74b，common-slice 1564→1580）**
+
+| 组 | 文件数 | owner / 调用链 | 说明 |
+|---|---|---|---|
+| `lookingat/jade/` | 7 | `MekanismJadePlugin`（`jade` entrypoint） | 入口注册数据提供者、tooltip 渲染器、builtin remover 与 raycast 回调 |
+| `lookingat/`（元素与工具） | 9 | `LookingAtUtils`、`LookingAtElement` 及四个元素类型、`LookingAtHelper` 接口 | 插件把元素序列化进 `mekanism:data`，客户端反序列化后渲染，缺任一元素类型 codec 即失败 |
+| `wthit/`、`theoneprobe/` | 0 | — | 不纳入：WTHIT/TOP 未获批准 |
+
 ## 依赖与许可证
 
 - EMI（MIT）、Jade（MIT）、WTHIT（MIT）、JEI（MIT，Fabric 构建与 NeoForge 同 API）都可作为**客户端可选依赖**（`suggests`/运行期探测），不得进入发布必需依赖或源码切片之外。

@@ -123,6 +123,9 @@ import hashlib, json, sys, zipfile
 expected_entrypoints = {
     "main": ["mekanism.fabric.MekanismFabricBootstrap"],
     "client": ["mekanism.fabric.MekanismFabricClientBootstrap"],
+    # Optional client integrations (W-74a/W-74b): the entrypoint keys only fire when the third-party mod is present.
+    "emi": ["mekanism.client.recipe_viewer.emi.MekanismEmi"],
+    "jade": ["mekanism.common.integration.lookingat.jade.MekanismJadePlugin"],
 }
 # Pinned MC 1.21.1 intermediary entries, checked against the named source and Loom mappings.
 # Update deliberately alongside changes to mekanism.accesswidener; never infer this from the tested JAR.
