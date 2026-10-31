@@ -31,7 +31,7 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 cd "$ROOT"
-MOD_JAR=$(ls -t fabric/build/libs/*-fabric-bootstrap.jar 2>/dev/null | grep -v sources | head -1)
+MOD_JAR=$(ls -t fabric/build/libs/*.jar 2>/dev/null | grep -v sources | grep -v dev | head -1)
 [[ -n "$MOD_JAR" ]] || { echo "fabric-retrogen-smoke: missing remapped jar (run ./fabric-build.sh remapJar)" >&2; exit 2; }
 CACHE_DIR=${FABRIC_SMOKE_CACHE_DIR:-/tmp/mekanism-fabric-smoke-cache}
 mkdir -p "$CACHE_DIR"
