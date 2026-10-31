@@ -925,6 +925,7 @@ mekanism/common/integration/lookingat/jade/JadeEntityDataProvider.java
 mekanism/common/integration/lookingat/jade/JadeLookingAtHelper.java
 mekanism/common/integration/lookingat/jade/JadeTooltipRenderer.java
 mekanism/common/integration/lookingat/jade/MekanismJadePlugin.java
+mekanism/common/integration/lookingat/wthit/MekanismTooltipEventListener.java
 mekanism/common/integration/lookingat/wthit/MekanismWTHITPlugin.java
 mekanism/common/integration/lookingat/wthit/WTHITDataProvider.java
 mekanism/common/integration/lookingat/wthit/WTHITEntityDataProvider.java
