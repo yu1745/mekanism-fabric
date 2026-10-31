@@ -46,6 +46,15 @@
 | `client/recipe_viewer/recipe/FissionRecipeViewerRecipe.java` | 配方数据 → 视图模型的转换 | 视图类依赖它 |
 | `client/recipe_viewer/GeneratorsRVRecipeType.java` | 分类类型定义 | 插件与视图都引用 |
 
+**WTHIT（W-74d，common-slice 1627→1632）**
+
+| 文件 | owner / 调用链 | 为何同批 |
+|---|---|---|
+| `lookingat/wthit/MekanismWTHITPlugin.java` | WTHIT 插件入口（`register` 注册块/实体数据提供者） | 缺它整组无入口 |
+| `WTHITDataProvider.java` / `WTHITEntityDataProvider.java` | 上者注册的区块与 Robit 数据提供者 | 插件直接引用 |
+| `WTHITTooltipRenderer.java` | 客户端 tooltip 渲染（消费 `LookingAtElement` 序列化数据） | 与数据提供者共享 `mekanism:data` 载荷 |
+| `WTHITLookingAtHelper.java` | 填充 `LookingAtElement` 集合的 helper | 上者构造时使用 |
+
 **Jade（W-74b，common-slice 1564→1580）**
 
 | 组 | 文件数 | owner / 调用链 | 说明 |

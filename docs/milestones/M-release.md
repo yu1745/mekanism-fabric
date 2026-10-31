@@ -118,3 +118,7 @@ W-59：[顺序修复与三种独立客户端拒绝通过](evidence/p8-release/w5
 W-40已跑：当时578 tests／API／machine／paired通过，rejection失败后停止；[结果与未跑项](evidence/p8-release/w40-results.json)。此后用户要求转回开发，这些旧结果不覆盖后续修改；Tools收口的当前构建另见evidence/tools/build.json，仍不等同完整发布门禁通过。
 
 W-42准备：历史46项已逐一更新、README已列真实发布限制；[清单](evidence/p8-release/w42-historical46-current.csv)。原两项模型可视差异现已实际实现，最终发布收口尚未完成。
+
+## 已知工作区产物（给巡检）
+
+- `fabric/gradlew`、`fabric/gradle` 是**临时符号链接**（指向上级目录的 wrapper）。原因：`mdb session start --project fabric` 找不到 `fabric/` 下的 wrapper 会直接拒绝（`target project has no Gradle wrapper`），而客户端又必须由 mdb 启动。**每次会话结束都会删除**；若巡检时看到它们，说明当时有会话在跑或清理遗漏，可直接删除，不影响构建。
