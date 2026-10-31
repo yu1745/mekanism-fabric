@@ -51,3 +51,13 @@ wip 提交 squash 已获批准且由 worker 执行（见 `ROADMAP.md` W-101）�
 
 - 证据目录体积约 6 MB 以上（首轮预算 4.24 MB），如需精简请说明保留标准。
 - `docs/RELEASE_CHECKLIST.md` 的"一次完整演练"仍需在真正发布前跑一遍（W-96 记录）。
+
+### D-05 第五个可选依赖：Mod Menu（W-105）
+
+用户批准的可选集成为 EMI / Jade / JEI / WTHIT 四个。W-105（P21 路线图项）要求核对官方 `IConfigScreenFactory` 的
+Fabric 等价物，并按"可选依赖 + 最小适配"补齐，因此新增了第五个：`com.terraformersmc:modmenu:11.0.5`（`modCompileOnly`
++ `-PmodmenuDev`，不进发布物）。巡检 G0 指出这**不在用户对四个集成的批准范围内**。
+
+现状态：保留（编译期依赖、发布 JAR 无 `com/terraformersmc/` 类、无 Mod Menu 时不激活）。**待用户确认**是否接受这第五个
+可选依赖；若不接受，回退方式是删除 `modmenu` entrypoint 与两个类（`FabricModMenuIntegration`、`GuiMekanismConfig`）并
+从 `platform-slice.txt` 移除，其余功能不受影响。
