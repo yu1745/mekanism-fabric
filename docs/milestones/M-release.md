@@ -24,6 +24,8 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 
 ## 验收证据
 
+W-78：清理 Task052 时期临时物——删除 8 个脚本（3 个 init.gradle、2 个 transmitter 检查、Robit 检查脚本与其 Java、TransmitterObjGeometryCheck），每项都先 grep 确认只被 archive 历史叙述或彼此引用；`task052-robit-check.sh` 依赖已删的 renderer-classpath init，且其命令被 W-38 证据引用，故在证据里加 `retired_by` 注记后删除。`./gradlew -p fabric assemble` 仍 BUILD SUCCESSFUL，`scripts/` 已无 Task052 条目。重复文档与源码 `TASK*` 注释留待单独一轮。[记录](evidence/p8-release/w78-cleanup.json)
+
 W-77：运行内容比对（部分）——官方参考服用新增的 `neoforge-reference.sh cmd`（console.fifo）写入侧配置 `component_config.config0=[6,6,6,6,6,6]`，同一世界由 Fabric 四 JAR 加载后 mcdebug 回读**逐字段一致**；机器库存与能量未能从控制台注入（无玩家、`Items` 键与 Mekanism 槽位序列化不符），记为残留并给出 mdb 玩家注入的后续方案。[记录](evidence/p8-release/w77-runtime-content.json)
 
 W-76：注册 ID 对照（`scripts/compare-registry-ids.py`）——方块 **501/501 完全一致**，物品 1064/1066、标签 444/448，**自有命名空间零缺口**；差异全在外部命名空间：`neoforge:item/{bucket,default}` 是移植自带的兼容父模型、`neoforge:damage_type/*` 是移植的伤害类型分组、`accessories:item/{back,shoes}` 是装备槽标签、`projecte` 属第三方。运行期转储不可得（mcdebug 无注册表 RPC），故用双方发布物里游戏解析 ID 的数据文件；运行期数量仍由 content proof 覆盖。[明细](evidence/p8-release/w76-registry-ids.json)
