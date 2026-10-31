@@ -25,6 +25,23 @@
       "result": "PASS",
       "detail": "world.setBlock \u653e\u7f6e\u51b6\u91d1\u704c\u6ce8\u673a\u540e gui open-block \u8fd4\u56de screen=mekanism.client.gui.machine.GuiMetallurgicInfuser\u3001slotCount=42\u3001\u8ddd\u79bb 2.5 \u5728 reach \u5185\uff1bgui screen \u7ed9\u51fa 176x166 GUI \u77e9\u5f62\u4e0e 42 \u4e2a\u69fd\u4f4d\u5750\u6807\uff1bgui screenshot --mode gui \u4ea7\u51fa PNG\uff08sha256 4761b1b5\u2026\uff09",
       "artifact": "evidence/p8-release/w64/infuser-gui.png"
+    },
+    {
+      "item": "MekaSuit HUD \u5728\u771f\u5b9e\u5ba2\u6237\u7aef\u6e32\u67d3",
+      "result": "PASS\uff08\u6570\u503c\u4e3a 0%\uff0c\u56e0\u88c5\u5907\u672a\u5145\u80fd\uff09",
+      "detail": "/give + /item replace \u7a7f\u6234\u4e0a keystone \u5934\u76d4\u4e0e\u80f8\u7532\u540e\uff0c\u7a97\u53e3\u622a\u56fe\u5de6\u4e0a\u89d2\u51fa\u73b0 Mekanism HUD \u6307\u793a\u5668\uff1b\u518d\u7ed9 MekaTool \u540e\u51fa\u73b0\u7b2c\u4e09\u4e2a\u6307\u793a\u5668\uff0c\u4e09\u679a\u90fd\u663e\u793a 0%\uff08\u672a\u5145\u80fd\uff0c\u7b26\u5408\u9884\u671f\uff09",
+      "artifacts": [
+        "evidence/p8-release/w64/hud-suit-day.png",
+        "evidence/p8-release/w64/meka-tool-hand.png"
+      ]
+    },
+    {
+      "item": "MekaTool \u7269\u54c1\u6a21\u578b\uff08OBJ\uff09\u5728\u5ba2\u6237\u7aef\u6e32\u67d3",
+      "result": "PASS\uff0c\u4f46\u6709\u4e00\u6761\u8d34\u56fe\u544a\u8b66",
+      "detail": "\u4e3b\u624b\u6301 MekaTool \u622a\u56fe\u53ef\u89c1 3D \u6a21\u578b\u6b63\u5e38\u6e32\u67d3\uff1b\u540c\u65f6\u5ba2\u6237\u7aef\u65e5\u5fd7\u6709 `Missing textures in model mekanism:meka_tool#inventory: minecraft:3 / minecraft:6`\u2014\u2014OBJ \u6750\u8d28\u540d\u88ab\u5f53\u6210 atlas sprite \u89e3\u6790\uff0c\u5c5e\u544a\u8b66\u7ea7\u3001\u4e0d\u5f71\u54cd\u6e32\u67d3",
+      "artifacts": [
+        "evidence/p8-release/w64/meka-tool-hand.png"
+      ]
     }
   ],
   "still_open": [
@@ -34,5 +51,24 @@
     "Ad Astra \u88c5\u5907\uff08\u96c6\u6210\u672a\u505a\uff09",
     "\u6309\u952e\u6309\u4e0b\u540e\u7684\u5b9e\u9645\u884c\u4e3a"
   ],
-  "cleanup": "\u653e\u7f6e\u7684\u4e24\u53f0\u673a\u5668\u5df2 setblock air \u8fd8\u539f\uff1b\u4e34\u65f6 symlink \u5df2\u5220\u9664\uff1b\u4f1a\u8bdd world \u5df2\u4fdd\u5b58"
+  "cleanup": "\u5df2 /clear\u3001\u4e09\u5904\u88c5\u5907\u4f4d\u8bbe\u56de air\u3001gui \u5173\u95ed\uff1bmdb session stop \u4fdd\u5b58\u4e16\u754c\uff1b\u4e34\u65f6 symlink \u5220\u9664\uff1b\u65e0 KnotClient \u6b8b\u7559",
+  "client_warnings": [
+    {
+      "message": "Missing textures in model mekanism:meka_tool#inventory: minecraft:3, minecraft:6",
+      "impact": "\u544a\u8b66\uff1b\u6e32\u67d3\u6b63\u5e38\uff08\u622a\u56fe\u53ef\u89c1\u6a21\u578b\uff09",
+      "cause_hypothesis": "OBJ/Mtl \u6750\u8d28\u540d\u4e3a\u6570\u5b57\uff0c\u88ab\u5f53\u4f5c sprite \u540d\u89e3\u6790"
+    },
+    {
+      "message": "Missing sound for event: minecraft:item.goat_horn.play / minecraft:entity.goat.screaming.horn_break",
+      "impact": "\u4e0e Mekanism \u65e0\u5173\u7684 vanilla \u97f3\u6548\u7f3a\u5931\uff08dev \u8d44\u6e90\u73af\u5883\uff09\uff0c\u4e0d\u4f5c\u4e3a\u79fb\u690d\u7f3a\u9677"
+    },
+    {
+      "message": "Shader rendertype_entity_translucent_emissive could not find sampler Sampler2",
+      "impact": "vanilla/Fabric \u4fa7\u7740\u8272\u5668\u544a\u8b66\uff0c\u975e Mekanism"
+    },
+    {
+      "message": "Untranslated Item Tags detected (Fabric convention)",
+      "impact": "Fabric \u7ea6\u5b9a\u6807\u7b7e\u7ffb\u8bd1\u544a\u8b66\uff0c\u975e Mekanism \u6570\u636e\u7f3a\u9677"
+    }
+  ]
 }
