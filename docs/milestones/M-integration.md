@@ -33,7 +33,7 @@
 
 ## 验收方式（若获批）
 
-- 客户端门禁：`scripts/fabric-packaged-client-smoke.sh` 的发布客户端环境装入选定查看器，断言打开机器界面后查看器能列出该机器配方（mcdebug `gui screen` 读窗口）。
+- 客户端验证：用 `mdb session start` 起的开发客户端（装入选定查看器）打开机器界面，断言查看器能列出该机器配方（mdb `gui screen` 读窗口）；不自行启动裸客户端。
 - 化学品显示：至少一种化学品（乙烯）作为 ingredient 出现在分类中，且鼠标悬停时 `status`/`gui problems` 无异常。
 - 回归：`fabric-client-window-smoke.sh` 与既有 GUI 门禁保持通过，化学品/能量条仍正常渲染。
 

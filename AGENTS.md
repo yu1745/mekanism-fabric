@@ -74,6 +74,13 @@ scripts/fabric-soak-smoke.sh                      # 1 服 2 客户端浸泡，�
 - 方法体改动可 `gui hotswap`；字段/构造器/生命周期变化需重启。以真实命令结果判定成功。
 - 复用现有隔离调试世界，少量真实功能检查；结束时恢复临时方块/物品/配置，保存并关闭自己启动的会话，清理临时 debug mod。mcdebug 依赖不进入发布依赖或源码切片。
 
+## 游戏客户端只能用 mdb 启动（硬规则）
+
+- **禁止**用裸 `java -cp … KnotClient`、手写 `xvfb-run`、或任何自定义启动器起游戏客户端；客户端一律用 `mdb session start`（owned session），由 `mdb session stop` 保存世界并回收进程。非 mdb 管理的客户端会留下孤儿进程，一小时能吃掉几个 GB 内存并把主机压垮。
+- 由此推论：**发布 JAR（intermediary）客户端无法用 mdb 启动**（mdb 只运行 Gradle `runClient` 任务）。需要发布端客户端证据时，不得自行起裸客户端；改为在开发客户端上验证，或经用户批准后单独安排。
+- 服务端不受此条限制（`runServer`、打包服务端、`scripts/neoforge-reference.sh` 等可自行启动），但必须按进程组回收（`kill -- -PGID`），脚本退出前自检无残留。
+- 已退役：`scripts/fabric-packaged-client-smoke.sh`（裸发布客户端启动器）。W-69 的发布客户端结论与其证据（`docs/milestones/evidence/p8-release/w69-packaged-client.json`）保留，但不再重复执行。
+
 ## NeoForge 参考环境（文件常驻）
 
 - 官方 NeoForge 版 Mekanism 的比对文件常驻在 `~/.cache/mekanism-neoforge-reference/`（约 200MB）：NeoForge `21.1.200` 服务端文件 + 官方 `Mekanism-1.21.1-10.7.19.85.jar`（Modrinth，sha256 `004dbc9f3106f4d192aeaa1ee1190dd16ec9ca8059ed3d093b80034f4c574f43`）+ W-65 样本世界。**只落盘，不常驻进程**；不进仓库、不进入发布依赖或源码切片。
