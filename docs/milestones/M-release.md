@@ -20,6 +20,8 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 
 ## 验收证据
 
+W-61：`./build.sh --clean` 在 `77118a66` 产出四个 JAR（dist/，含 build-info.json 的 sha256）；随后 `FABRIC_SMOKE_STATIC_ONLY=1 scripts/fabric-packaged-smoke.sh` 在同一提交 PASSED，重建的四个 JAR 与 dist 逐字节同摘要（核心 `1c7bca94…`、Tools `afb0734d…`、Additions `9873a802…`、Generators `01681014…`），C-3 满足。[明细](evidence/p8-release/w61-release.json)
+
 W-60：13 项既有 smoke 与完整测试全部复跑通过（packaged 干净四 JAR：50 mods、`configs=10 values=458`、`Done`；paired 两客户端 304 值；rejection 三种拒绝；machine/recipe/chemical/model/worldgen/retrogen/tile/datamap/port-review/client-window 各自 PASSED；`test` 451 项 0 失败）。期间修正三处 gate 自身缺陷：recipe smoke 仍禁用已批准退休的"产物含 recipe 数据"、client-window fixture 的 services 清单停在 4 条（Task040 后启动即缺 IRadiationManager provider）、四个 smoke 把 vanilla `No data fixer` 当崩溃。[逐项标记行与修因](evidence/p8-release/w60-results.json)
 
 W-59：[顺序修复与三种独立客户端拒绝通过](evidence/p8-release/w59-rejection.json)。保留 fixture 隔离及正常 registry sync，无新增测试；实际 diff 仅原任务阶段／顺序及 PASSED 标记，不改协议或拒绝标准。
