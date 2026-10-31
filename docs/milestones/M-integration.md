@@ -37,6 +37,15 @@
 | `client/recipe_viewer/` 共享类 | 6 | `GuiElementHandler`、`GhostIngredientHandler`、`QIOCraftingTransferHandler`、`RVTransferUtils`、`color/**`(4) | 上一行与配方视图都直接调用它们；不为拆小再造 holder |
 | `api/integration/emi/IMekanismEmiHelper` | 1 | 上述 helper 的实现接口 | API 侧的契约，属 api-slice 扩 1 项 |
 
+**Generators 的 EMI（W-91，generators-slice 113→117）**
+
+| 文件 | owner / 调用链 | 为何同批 |
+|---|---|---|
+| `client/recipe_viewer/emi/GeneratorsEmi.java` | 模块自己的 EMI 插件（`emi` entrypoint） | 注册 fission 分类，必须在 generators 模块内 |
+| `client/recipe_viewer/emi/recipe/FissionReactorEmiRecipe.java` | 上者唯一注册的配方视图 | 缺它插件无法构建 |
+| `client/recipe_viewer/recipe/FissionRecipeViewerRecipe.java` | 配方数据 → 视图模型的转换 | 视图类依赖它 |
+| `client/recipe_viewer/GeneratorsRVRecipeType.java` | 分类类型定义 | 插件与视图都引用 |
+
 **Jade（W-74b，common-slice 1564→1580）**
 
 | 组 | 文件数 | owner / 调用链 | 说明 |

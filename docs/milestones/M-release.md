@@ -24,6 +24,8 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 
 ## 验收证据
 
+W-100（给用户的决策清单）：新增 [`DECISIONS_PENDING.md`](DECISIONS_PENDING.md)——①强制推送确认（W-101 squash 后需 `--force-with-lease`，worker 不自行推送）②版本号与发布形态（`+fabric.1` 是否要改、是否正式发布）③剩余 W 项取舍（W-79、W-83 受阻路径、W-80/81/82 余项、W-98 Sodium/Iris 覆盖档位、W-99 选哪个第三方模组、W-74c/d JEI+WTHIT 是否仍做）④发布说明的已知限制口径 ⑤其他未阻塞事项（证据体积、完整演练）。按用户裁决，`server-v2` 的 submodule 指针**未列入**。[记录](evidence/p8-release/w100-decisions.json)
+
 W-94（注册表差异定性）：重跑比对得 blocks 501/501、items 1064/1066（missing 0）、tags 444/448（missing 2 / extra 6），**自己命名空间 missing 恒为 0**。逐项定性：items 多出的 `neoforge:bucket`/`neoforge:default` 是端口 shim（Fabric 没有 NeoForge 提供的父模型）；tags 缺的 `neoforge:damage_type/is_environment`、`projecte:block/vein/shovel` 与多出的 `accessories:item/*`、4 个 `neoforge:damage_type/*` **全是外来命名空间**，分别对应 Accessories 集成与无 ProjectE/无 NeoForge 消费者的惰性标签。附带核实：核心 JAR 有 **104 个资产 JSON 引用 `neoforge:` 装载器**（composite 82、item/bucket 18、fluid_container 18、obj 2），由 `FabricMekanismModelPlugin`/`FabricCompositeModel`/`FabricObjModel`/`BlockModelCompositeMixin` 解释，**不是残留**。结论：无漏移植，无需补实现。[记录](evidence/p8-release/w94-registry-deltas.json)
 
 W-92（Jade 范围补全）：**能量行有数值**（Crusher 20M FE → 8.0 kFE/8.0 kFE）、**流体行有数值**（用水桶经 `world use-on-block` 注入 → “Liquid: Water / Water: 1,000 mB”，顺带解决此前 NBT 写不进 attachment 的注液限制）、化学行渲染但为空（无对应注入道具）、文本行=名称/模组行；**无 Jade 启动验证通过**——移走 JAR 后客户端正常进世界、无 tooltip、无崩溃，`MEKANISM_FABRIC_JADE_PROOF` 计数 0 而 EMI 证明行仍在，说明入口可选且缺失安全。**未验证**：Robit 实体 tooltip（无视角控制 API，准星压不上实体）、附加模块方块（开发客户端只加载 core）、多方块与传输器读数。[记录](evidence/p8-release/w74b-jade.json)

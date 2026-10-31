@@ -12,6 +12,7 @@ Start here if you are new to the repository.
 | [`milestones/README.md`](milestones/README.md) | milestone status table and the release-limits list | everyone |
 | [`milestones/ROADMAP.md`](milestones/ROADMAP.md) | the work plan behind the status table | contributors |
 | [`milestones/M-release.md`](milestones/M-release.md) | per-work-item evidence index (W-xx → evidence JSON) | reviewers |
+| [`milestones/DECISIONS_PENDING.md`](milestones/DECISIONS_PENDING.md) | items that need a user decision (force push, release form, remaining scope) | user |
 | [`milestones/evidence/`](milestones/evidence/) | raw evidence: gates, probes, comparisons | reviewers |
 | [`Development.md`](Development.md) | local build, test task tiers, verify commands | contributors |
 | [`FABRIC_SMOKE.md`](FABRIC_SMOKE.md) | what each smoke script proves and how to run it | contributors |
