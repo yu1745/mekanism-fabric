@@ -20,6 +20,7 @@
 | M-multiblock | 五种核心多方块生命周期 | 破坏重建、区块重载、存读档、尺寸失败路径 | 已验证：P6 W-34–35与build/API/machine门禁通过；[证据](../archive/M-multiblock.md)。 |
 | M-registry | 化学 ingredient 类型注册表、Robit 注册/数据包、官方 legacy alias、biome modifier | 注册冻结后 ID/alias 与官方一致 | 已验证：W-38–39注册／生成与P7门禁通过；[证据](../archive/M-registry.md)。 |
 | M-gear | accessory、Curios 策略、ItemAbility、suit/tool 规则 | 穿戴/工具行为真机核对 | 已验证：W-36–37功能／factory与P7门禁通过；[证据](../archive/M-gear.md)。 |
+| M-integration | W-68 第三方配方查看器与 looking-at 的 Fabric 边界（EMI/JEI/REI、Jade/WTHIT/TOP） | 边界页与建议顺序，实现须用户裁决（W-74） | 边界页已出，等待裁决：[M-integration](M-integration.md)。 |
 | M-release | 核心全量测试、smoke、发布物与限制汇总 | 全部门禁／发布契约通过并完成协调者复核 | 进行中：W-60／W-61 通过（四 JAR 净构建与 sha256 已记录）；W-62 待协调者复核。 |
 | M-tools | Tools材料／工具／护甲／配方／刷怪装备与客户端渲染 | 独立附加JAR与一个真实工具使用闭包 | 已验证：Tools 功能与回归通过。[证据](../archive/M-tools.md)。 |
 | M-additions | 塑料方块／气球／TNT／baby生物／对讲机 | 独立附加JAR与实际实体及物品闭包 | 进行中：主体真机与回归通过；语音采集格式受环境限制。[证据](M-additions.md)。 |
