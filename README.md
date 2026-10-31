@@ -7,7 +7,9 @@
 > The bounded Fabric artifact now builds and passes clean dedicated-server plus selected real-client
 > gates, including the integrated Task 040 Chemical vertical, but it is not yet a complete playable Mekanism
 > port. See [`docs/FABRIC_PORT.md`](docs/FABRIC_PORT.md) and
-> [`docs/FABRIC_CHEMICAL.md`](docs/FABRIC_CHEMICAL.md) for scope and evidence.
+> [`docs/FABRIC_CHEMICAL.md`](docs/FABRIC_CHEMICAL.md) for scope and evidence, and
+> [`docs/INSTALL.md`](docs/INSTALL.md) for requirements, the four JARs, install steps, save compatibility
+> with the NeoForge build and the current limitations.
 
 Mekanism is an independent Minecraft add-on featuring high-tech machinery that can be used to create powerful tools, 
 armor, and weapons. You can find more detail on the features on the [**Official Wiki**](https://wiki.aidancbrady.com/wiki/Mekanism).

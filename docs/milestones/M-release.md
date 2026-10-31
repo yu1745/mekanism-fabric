@@ -24,6 +24,8 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 
 ## 验收证据
 
+W-73：用户文档 `docs/INSTALL.md`——依赖（按 `fabric.mod.json` 实测声明）、四个 JAR 的必需/可选关系与 `+fabric.N` 版本含义、安装步骤、与 NeoForge 存档的兼容边界（已比对项与未比对项）、已知限制、构建与门禁命令；README 顶部 Fabric 分支说明已加指向。页内相对链接全部校验存在。[记录](evidence/p8-release/w73-install-doc.json)
+
 W-78：清理 Task052 时期临时物——删除 8 个脚本（3 个 init.gradle、2 个 transmitter 检查、Robit 检查脚本与其 Java、TransmitterObjGeometryCheck），每项都先 grep 确认只被 archive 历史叙述或彼此引用；`task052-robit-check.sh` 依赖已删的 renderer-classpath init，且其命令被 W-38 证据引用，故在证据里加 `retired_by` 注记后删除。`./gradlew -p fabric assemble` 仍 BUILD SUCCESSFUL，`scripts/` 已无 Task052 条目。重复文档与源码 `TASK*` 注释留待单独一轮。[记录](evidence/p8-release/w78-cleanup.json)
 
 W-77：运行内容比对（部分）——官方参考服用新增的 `neoforge-reference.sh cmd`（console.fifo）写入侧配置 `component_config.config0=[6,6,6,6,6,6]`，同一世界由 Fabric 四 JAR 加载后 mcdebug 回读**逐字段一致**；机器库存与能量未能从控制台注入（无玩家、`Items` 键与 Mekanism 槽位序列化不符），记为残留并给出 mdb 玩家注入的后续方案。[记录](evidence/p8-release/w77-runtime-content.json)
