@@ -24,6 +24,8 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 
 ## 验收证据
 
+**门禁提速**：机器 smoke 的长壁钟等待改为 `/tick sprint`（900/200/300 tick），耗时 **113 s → 65 s**，断言仍 **29 PASS / 0 FAIL**（响应协调者 H3「固定 sleep 应改加速」）。[记录](evidence/p8-release/w104-chunk-unload.json)
+
 W-110（双玩家安全拒绝）：**未完成，已定界**。试了路线图备选①：单人会话里用服务端平面反射把机器设为 `PRIVATE`（回读确认为 PRIVATE），但 `ownerUUID` 无法改成「别人」——`reflect call` 传不了 UUID 对象；而 `/setblock` 放的机器无主，`SecurityUtils.canAccessObject` 第一条短路是 `owner == null → 允许`，所以无主机器对任何人可开（官方同逻辑）。结论：需要 **paired smoke fixture 双用户名**（备选③）才可能产出拒绝证据。[记录](evidence/p8-release/w110-security-denial.json)
 
 W-104（W-81/82 余项）：**区块卸载完成（已按 W-114 修正为真证明）**，涡轮与跨维度传送仍开放。做法：x=2000 先 forceload 建机器、注入 4 矿石+20k FE，再 `forceload remove`；用 **`execute unless loaded 2000 100 0` 输出标记**证明区块确实未加载（旁证 `data get` 回 `That position is not loaded`），`forceload add` + **`tick sprint 300`** 后 `execute if loaded` 证明已重载，同台机器继续加工产出铁粉。smoke **EXIT=0 / 26 PASS**（`Sprint completed with 6302 ticks per second`）。未做：涡轮性能（W-116 手搭多方块）、跨维度传送（需玩家实体移动）。[记录](evidence/p8-release/w104-chunk-unload.json)

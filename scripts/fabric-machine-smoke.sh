@@ -218,8 +218,10 @@ cd "$SERVER_DIR"
   echo 'data merge block 37 100 0 {connection:[I;3,3,3,3,2,1]}'
   echo 'data merge block 51 100 0 {connection:[I;3,3,3,3,2,1]}'
   echo 'data merge block 54 100 0 {connection:[I;3,3,3,3,2,1]}'
-  #45 s covers four hopper-fed operations (hopper cadence is one item per 8 game ticks) plus extraction and latency.
-  sleep 45
+  #900 ticks cover four hopper-fed operations (hopper cadence is one item per 8 game ticks) plus extraction, and they
+  #are fast-forwarded rather than slept through.
+  echo "tick sprint 900"
+  sleep 2
   echo "data get block 0 100 0"
   echo "data get block 3 100 0"
   echo "data get block 9 100 0"
@@ -255,11 +257,13 @@ cd "$SERVER_DIR"
   echo "data get block 2000 100 0"
   #The crystallizer starts only after the washer has fed it, by which point its 40k buffer has already drained; top it
   #up (and the washer with it) so the crystal can finish.
-  sleep 15
+  echo "tick sprint 200"
+  sleep 2
   echo 'data merge block 56 100 0 {energy_containers:[{container:0b,stored:40000L}]}'
   echo 'data merge block 55 100 0 {energy_containers:[{container:0b,stored:40000L}]}'
   echo 'data merge block 58 100 0 {energy_containers:[{container:0b,stored:40000L}]}'
-  sleep 15
+  echo "tick sprint 300"
+  sleep 2
   echo "data get block 52 100 0"
   echo "data get block 53 100 0"
   echo "data get block 55 100 0"
