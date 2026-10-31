@@ -24,6 +24,8 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 
 ## 验收证据
 
+W-105（游戏内配置界面）：Fabric 版原本**没有**配置界面入口（Fabric 无加载器级配置屏，本移植也无 Mod Menu 集成）。按“可选依赖 + 最小适配”补齐：`modCompileOnly` 的 Mod Menu 11.0.5 + `-PmodmenuDev` 开关 + `modmenu` entrypoint → `FabricModMenuIntegration` → 只读的 `GuiMekanismConfig`。真机验证：Mod Menu 里 Mekanism 的配置齿轮由禁用变可用，点击打开界面并列出 `client.toml / common.toml / startup.toml` 及字节数与“编辑后重启生效”提示（截图 `w74/modmenu-config-screen.png`）。顺带修掉三个坑：平台 slice 未登记的类不会编译（`loadSlice` 跳过注释行，计数 209→211）、`ObjectSelectionList` 必须 `addRenderableWidget`、1.21.1 没有 `setRenderBackground`。发布 JAR 不含 `com/terraformersmc/` 类，泄漏断言与 entrypoint 契约已同步。[记录](evidence/p8-release/w105-config-screen.json)
+
 W-109（文档同步）：`CHANGELOG.md` 增“Optional integrations”表（四个 viewer 的版本/`-P*Dev` 开关/能力/未验证项）；`docs/INSTALL.md` 把“无第三方集成”改为“四个可选 viewer 即插即用”并列出 jar 名与注意事项（EMI 需 Fabric Language Kotlin、WTHIT 需 badpackets、JEI 版本受 Loom 限制）；`docs/RELEASE_CHECKLIST.md` 的客户端检查项扩到四个、已知限制同步；`docs/LICENSES.md` 新增许可表（JEI/EMI=MIT，Jade/WTHIT=CC-BY-NC-SA-4.0，均仅编译期链接不打包，许可证取自各 JAR 的 `fabric.mod.json`）。四份文档链接全部可解析。[记录](evidence/p8-release/w109-doc-sync.json)
 
 W-108（安全/权限）：**部分验证**。机器 GUI（Crusher）与安全台 GUI 都能由 `gui open-block` 打开并正确渲染（截图 `w74/crusher-gui.png`、`w74/security-desk.png`），顺带澄清：此前 W-83/92 的 `-32018 no screen handler factory` 是“方块刚放置、BE 未同步”的临时态，BE 就绪后同样调用成功。新放置的安全台显示 “No Owner / Security Offline”（无频率时的正确语义），世界目录也还没有 `mekanism_frequencies.dat`。**未验证**：跨玩家拒绝与公开/私有/受信门禁——mdb 单机会话只有一个玩家，也没有服务端命令通道，无法构造第二个玩家；需用双客户端环境（`fabric-paired-network-smoke.sh` 扩展）另开一项。[记录](evidence/p8-release/w108-security.json)

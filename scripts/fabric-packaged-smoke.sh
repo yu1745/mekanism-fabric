@@ -108,7 +108,7 @@ python3 - "${MOD_JARS[0]}" "${ADDON_JARS[@]}" <<'PYEOF' || exit 1
 import sys, zipfile
 for path in sys.argv[1:]:
     with zipfile.ZipFile(path) as archive:
-        leaked = [name for name in archive.namelist() if name.startswith(('dev/emi/', 'mezz/jei/', 'snownee/jade/'))]
+        leaked = [name for name in archive.namelist() if name.startswith(('dev/emi/', 'mezz/jei/', 'snownee/jade/', 'com/terraformersmc/'))]
     if leaked:
         print('fabric-packaged-smoke: third-party integration classes leaked into ' + path + ': ' + ', '.join(leaked[:3]))
         sys.exit(1)
@@ -129,6 +129,7 @@ expected_entrypoints = {
     "emi": ["mekanism.client.recipe_viewer.emi.MekanismEmi"],
     "jade": ["mekanism.common.integration.lookingat.jade.MekanismJadePlugin"],
     "jei_mod_plugin": ["mekanism.client.recipe_viewer.jei.MekanismJEI"],
+    "modmenu": ["mekanism.fabric.client.FabricModMenuIntegration"],
 }
 # Pinned MC 1.21.1 intermediary entries, checked against the named source and Loom mappings.
 # Update deliberately alongside changes to mekanism.accesswidener; never infer this from the tested JAR.

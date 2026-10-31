@@ -37,6 +37,9 @@
     ],
     "jei_mod_plugin": [
       "mekanism.client.recipe_viewer.jei.MekanismJEI"
+    ],
+    "modmenu": [
+      "mekanism.fabric.client.FabricModMenuIntegration"
     ]
   },
   "depends": {

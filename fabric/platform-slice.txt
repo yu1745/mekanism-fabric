@@ -1,3 +1,5 @@
+# Bind the actual reload manager before native recipe publication
+# P3 optional recipe condition owner
 mekanism/fabric/MekanismFabricBootstrap.java
 mekanism/fabric/MekanismFabricClientBootstrap.java
 mekanism/fabric/MekanismUsernameLifecycle.java
@@ -6,10 +8,12 @@ mekanism/fabric/chemical/FabricChemicalIngredientTypeRegistryLifecycle.java
 mekanism/fabric/chemical/FabricChemicalLifecycle.java
 mekanism/fabric/chemical/FabricChemicalRegistryLifecycle.java
 mekanism/fabric/client/CreativeTabSearchIndex.java
-mekanism/fabric/client/FabricFluidColors.java
 mekanism/fabric/client/FabricClientModelRegistration.java
+mekanism/fabric/client/FabricFluidColors.java
+mekanism/fabric/client/FabricModMenuIntegration.java
 mekanism/fabric/client/FabricScreenRegistration.java
 mekanism/fabric/client/GearInteractionPolicy.java
+mekanism/fabric/client/GuiMekanismConfig.java
 mekanism/fabric/client/hud/FabricClientTickRegistration.java
 mekanism/fabric/client/hud/FabricHudHeights.java
 mekanism/fabric/client/model/CompositeModelParentAccess.java
@@ -25,10 +29,10 @@ mekanism/fabric/client/model/FabricMergedQuadsModel.java
 mekanism/fabric/client/model/FabricModelCachePlugin.java
 mekanism/fabric/client/model/FabricModelJson.java
 mekanism/fabric/client/model/FabricObjModel.java
-mekanism/fabric/client/model/FabricSeparateTransformsModel.java
 mekanism/fabric/client/model/FabricQIODriveGeometry.java
 mekanism/fabric/client/model/FabricQIOModelPlugin.java
 mekanism/fabric/client/model/FabricRobitUnbakedModel.java
+mekanism/fabric/client/model/FabricSeparateTransformsModel.java
 mekanism/fabric/client/render/FabricBoltRendering.java
 mekanism/fabric/client/render/FabricEntityRendererRegistration.java
 mekanism/fabric/client/render/FabricTileEntityRendererRegistration.java
@@ -52,8 +56,8 @@ mekanism/fabric/client/render/obj/TransmitterObjGeometry.java
 mekanism/fabric/client/render/obj/TransmitterQuadBaker.java
 mekanism/fabric/config/FabricChemicalConfig.java
 mekanism/fabric/config/FabricClientConfigLifecycle.java
-mekanism/fabric/config/FabricServerConfig.java
 mekanism/fabric/config/FabricMekanismConfigManager.java
+mekanism/fabric/config/FabricServerConfig.java
 mekanism/fabric/config/FabricWindowConfig.java
 mekanism/fabric/config/MekanismConfigSpec.java
 mekanism/fabric/datamaps/FabricChemicalDataMapSession.java
@@ -71,11 +75,11 @@ mekanism/fabric/fluid/FabricFluidConversions.java
 mekanism/fabric/fluid/FabricFluidLookup.java
 mekanism/fabric/fluid/FabricFluidStorage.java
 mekanism/fabric/fluid/ItemFluidContainer.java
+mekanism/fabric/gear/BlockToolAnySet.java
+mekanism/fabric/gear/BlockToolRuleCodecs.java
 mekanism/fabric/gear/FabricEnchantmentLookup.java
 mekanism/fabric/gear/FabricEnchantmentRules.java
 mekanism/fabric/gear/FabricModuleRegistry.java
-mekanism/fabric/gear/BlockToolAnySet.java
-mekanism/fabric/gear/BlockToolRuleCodecs.java
 mekanism/fabric/gear/GearItemLookups.java
 mekanism/fabric/item/ComponentItemContext.java
 mekanism/fabric/item/DetachedItemContext.java
@@ -95,9 +99,11 @@ mekanism/fabric/mixin/block/MachineRedstoneConnectionMixin.java
 mekanism/fabric/mixin/block/PortalFrameMixin.java
 mekanism/fabric/mixin/block/PowderSnowWalkMixin.java
 mekanism/fabric/mixin/client/BlockModelCompositeMixin.java
+mekanism/fabric/mixin/client/BlockParticlesMixin.java
 mekanism/fabric/mixin/client/ClientMouseScrollMixin.java
 mekanism/fabric/mixin/client/ClientRecipeCacheMixin.java
 mekanism/fabric/mixin/client/FabricHudLayersMixin.java
+mekanism/fabric/mixin/client/FluidScreenOverlayMixin.java
 mekanism/fabric/mixin/client/FogColorMixin.java
 mekanism/fabric/mixin/client/FogSetupMixin.java
 mekanism/fabric/mixin/client/GuiGraphicsMixin.java
@@ -146,6 +152,7 @@ mekanism/fabric/mixin/radiation/RadiationOverlayMixin.java
 mekanism/fabric/mixin/radiation/RadiationPlayerTickMixin.java
 mekanism/fabric/mixin/recipe/ClientPacketListenerMixin.java
 mekanism/fabric/mixin/recipe/FabricConditionTagCaptureMixin.java
+mekanism/fabric/mixin/recipe/RecipeManagerPublicationMixin.java
 mekanism/fabric/mixin/recipe/RecipeTagScopeCleanupMixin.java
 mekanism/fabric/mixin/registry/LegacyRegistryAliasMixin.java
 mekanism/fabric/mixin/robit/RegistryDataMixin.java
@@ -165,8 +172,6 @@ mekanism/fabric/network/FabricChemicalClientNetworking.java
 mekanism/fabric/network/FabricChemicalNetworking.java
 mekanism/fabric/network/FabricContainerClientNetworking.java
 mekanism/fabric/network/FabricContainerNetworking.java
-mekanism/fabric/network/FabricServerConfigClientNetworking.java
-mekanism/fabric/network/FabricServerConfigNetworking.java
 mekanism/fabric/network/FabricGearEffectsNetworking.java
 mekanism/fabric/network/FabricMekanismClientNetworking.java
 mekanism/fabric/network/FabricMekanismNetworking.java
@@ -174,23 +179,26 @@ mekanism/fabric/network/FabricPortalClientNetworking.java
 mekanism/fabric/network/FabricPortalNetworking.java
 mekanism/fabric/network/FabricSecurityClientNetworking.java
 mekanism/fabric/network/FabricSecurityNetworking.java
+mekanism/fabric/network/FabricServerConfigClientNetworking.java
+mekanism/fabric/network/FabricServerConfigNetworking.java
 mekanism/fabric/network/FabricServerPlayNetworking.java
 mekanism/fabric/network/FabricTileUpdateHandler.java
 mekanism/fabric/network/FabricTileUpdateNetworking.java
 mekanism/fabric/network/FabricTransmitterClientNetworking.java
 mekanism/fabric/network/FabricTransmitterNetworking.java
-mekanism/fabric/network/ServerConfigSnapshotPayload.java
 mekanism/fabric/network/MekanismNetworkProtocol.java
+mekanism/fabric/network/ServerConfigSnapshotPayload.java
 mekanism/fabric/radiation/FabricRadiationAttachments.java
 mekanism/fabric/radiation/FabricRadiationClientLifecycle.java
 mekanism/fabric/radiation/FabricRadiationLifecycle.java
+mekanism/fabric/recipe/FabricConditionExistsCondition.java
 mekanism/fabric/recipe/FabricIngredientCreatorProvider.java
 mekanism/fabric/recipe/FabricModVersionLoadedCondition.java
-mekanism/fabric/recipe/FabricTagEmptyCondition.java
 mekanism/fabric/recipe/FabricRecipeCacheClientLifecycle.java
 mekanism/fabric/recipe/FabricRecipeCacheLifecycle.java
 mekanism/fabric/recipe/FabricRecipeRegistration.java
 mekanism/fabric/recipe/FabricRecipeTypeRegistry.java
+mekanism/fabric/recipe/FabricTagEmptyCondition.java
 mekanism/fabric/registry/FabricCustomRegistryLifecycle.java
 mekanism/fabric/registry/FabricDefaultedRegistry.java
 mekanism/fabric/registry/FabricDeferredHolder.java
@@ -203,11 +211,3 @@ mekanism/fabric/tile/FabricCapabilityTileLifecycle.java
 mekanism/fabric/tile/MekanismBlockLookups.java
 mekanism/fabric/worldgen/FabricBiomeModifiers.java
 mekanism/fabric/worldgen/FabricWorldGenConfig.java
-
-# P3 optional recipe condition owner
-mekanism/fabric/recipe/FabricConditionExistsCondition.java
-
-# Bind the actual reload manager before native recipe publication
-mekanism/fabric/mixin/recipe/RecipeManagerPublicationMixin.java
-mekanism/fabric/mixin/client/BlockParticlesMixin.java
-mekanism/fabric/mixin/client/FluidScreenOverlayMixin.java
