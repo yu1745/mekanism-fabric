@@ -3,8 +3,13 @@
 # the release JARs run their tick loops. Fails when a client or the server dies, a client disconnects, or the server
 # reports errors/lag; prints the evidence lines at the end.
 #
+# Acceleration: the soak uses vanilla 1.21 /tick sprint, which runs the scheduled ticks as fast as the server can, so
+# a 30 game-minute soak finishes in seconds of wall time instead of waiting 1:1. Set FABRIC_SOAK_GAME_TICKS to change
+# the game time, or FABRIC_SOAK_GAME_TICKS=0 to fall back to the real-time FABRIC_SOAK_MINUTES mode.
+#
 # Usage: scripts/fabric-soak-smoke.sh
-# Env:   FABRIC_SOAK_MINUTES   soak duration in minutes (default 30)
+# Env:   FABRIC_SOAK_GAME_TICKS game ticks to warp (default 36000 = 30 game minutes; 0 = real-time mode)
+#        FABRIC_SOAK_MINUTES   real-time soak duration when warping is disabled (default 30)
 #        FABRIC_SOAK_PORT      server port (default 25595)
 #        FABRIC_SOAK_WORK      working directory (default /tmp/mekanism-soak)
 #        FABRIC_SOAK_ENV       prepared client/server environment (default: $FABRIC_SOAK_WORK/env)
@@ -14,6 +19,7 @@ set -uo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 MINUTES=${FABRIC_SOAK_MINUTES:-30}
+GAME_TICKS=${FABRIC_SOAK_GAME_TICKS:-36000}
 PORT=${FABRIC_SOAK_PORT:-25595}
 WORK=${FABRIC_SOAK_WORK:-/tmp/mekanism-soak}
 ENV_DIR=${FABRIC_SOAK_ENV:-$WORK/env}
@@ -66,12 +72,32 @@ else
   printf 'fabric-soak-smoke: mcdebug or fabric-language-kotlin unavailable; health sampling disabled\n'
 fi
 
-( cd "$WORK/server" && exec setsid java -Xms1G -Xmx2G -jar fabric-server-launch.jar nogui ) > "$LOG_DIR/server.log" 2>&1 &
+FIFO=$WORK/server-cmd.fifo
+rm -f "$FIFO"; mkfifo "$FIFO"; exec 9<>"$FIFO"   # read-write open so neither side blocks
+( cd "$WORK/server" && exec setsid java -Xms1G -Xmx2G -jar fabric-server-launch.jar nogui < "$FIFO" ) > "$LOG_DIR/server.log" 2>&1 &
 SERVER_PID=$!
 CLIENT_PIDS=()
+# Clients and the server are setsid leaders, so TERM/KILL the whole process group: killing only the recorded pid
+# leaves xvfb-run's java child alive and each orphan keeps ~2GB resident.
+kill_tree() {
+  local pid=$1 signal=${2:-TERM}
+  kill -"$signal" -- "-$pid" 2>/dev/null || kill -"$signal" "$pid" 2>/dev/null
+}
+
+reap_leftovers() {
+  local pid
+  for pid in $(pgrep -f "gameDir $WORK/" 2>/dev/null); do kill -9 "$pid" 2>/dev/null; done
+}
+
 cleanup() {
-  for pid in "${CLIENT_PIDS[@]:-}"; do [[ -n $pid ]] && kill "$pid" 2>/dev/null; done
-  [[ -n ${SERVER_PID:-} ]] && kill "$SERVER_PID" 2>/dev/null
+  local pid
+  for pid in "${CLIENT_PIDS[@]:-}"; do [[ -n $pid ]] && kill_tree "$pid" TERM; done
+  [[ -n ${SERVER_PID:-} ]] && kill_tree "$SERVER_PID" TERM
+  sleep 2
+  for pid in "${CLIENT_PIDS[@]:-}"; do [[ -n $pid ]] && kill_tree "$pid" KILL; done
+  [[ -n ${SERVER_PID:-} ]] && kill_tree "$SERVER_PID" KILL
+  reap_leftovers
+  exec 9>&- 2>/dev/null
   wait 2>/dev/null
 }
 trap cleanup EXIT INT TERM
@@ -145,32 +171,78 @@ while (( SECONDS < DEADLINE )); do
 done
 (( joined == 1 )) || fail 'both clients did not join play'
 
-printf 'fabric-soak-smoke: both clients joined; soaking for %s minute(s)\n' "$MINUTES"
-START=$SECONDS
-DEADLINE=$((START + MINUTES * 60))
-while (( SECONDS < DEADLINE )); do
-  for pid in "${CLIENT_PIDS[@]}"; do
-    kill -0 "$pid" 2>/dev/null || fail 'a client process exited during the soak'
+printf 'fabric-soak-smoke: both clients joined\n'
+if (( HAS_PROBE )); then
+  START_TICK=$("${SOAK_MDB[@]}" status 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin).get("tick",0))' 2>/dev/null || echo 0)
+else
+  START_TICK=0
+fi
+
+warp=0
+if (( GAME_TICKS > 0 )); then
+  # Vanilla 1.21 has /tick sprint <time>: it runs the scheduled ticks as fast as the server can, then reports
+  # "Sprint completed with N ticks per second, or M ms per tick". No Carpet needed, and no RPC can answer while the
+  # server thread is sprinting, so completion is read from the log instead of polled.
+  printf 'tick sprint %st\n' "$GAME_TICKS" >&9
+  printf 'fabric-soak-smoke: tick sprint %st requested (%.1f game minutes)\n' "$GAME_TICKS" \
+    "$(python3 -c "print($GAME_TICKS/1200)")"
+  WARP_START=$SECONDS
+  WARP_DEADLINE=$((SECONDS + 900))
+  sprinted=0
+  while (( SECONDS < WARP_DEADLINE )); do
+    for pid in "${CLIENT_PIDS[@]}"; do
+      kill -0 "$pid" 2>/dev/null || fail 'a client process exited during the tick sprint'
+    done
+    kill -0 "$SERVER_PID" 2>/dev/null || fail 'the server process exited during the tick sprint'
+    grep -Fq 'lost connection' "$LOG_DIR/server.log" && fail 'a client lost its connection during the tick sprint'
+    left=$(( WARP_DEADLINE - SECONDS )); (( left > 60 )) && left=60
+    "$ROOT/scripts/wait-for-log-line.sh" -q -t "$left" 'Sprint completed with' "$LOG_DIR/server.log" >/dev/null
+    status=$?
+    (( status == 0 )) && { sprinted=1; break; }
+    (( status == 4 )) && fail 'the server exited during the tick sprint'
   done
-  kill -0 "$SERVER_PID" 2>/dev/null || fail 'the server process exited during the soak'
-  grep -Fq 'lost connection' "$LOG_DIR/server.log" && fail 'a client lost its connection during the soak'
-  grep -Fq "Can't keep up" "$LOG_DIR/server.log" && fail 'the server reported it cannot keep up'
-  if (( HAS_PROBE )) && [[ -n ${SOAK_MDB[*]:-} ]]; then
+  (( sprinted == 1 )) || fail "the tick sprint of ${GAME_TICKS} ticks did not complete within 900s"
+  WARP_SECONDS=$((SECONDS - WARP_START))
+  SPRINT_REPORT=$(grep -F 'Sprint completed with' "$LOG_DIR/server.log" | tail -n 1)
+  printf 'fabric-soak-smoke: %s (wall %ss)\n' "$SPRINT_REPORT" "$WARP_SECONDS"
+  warp=1
+  if (( HAS_PROBE )); then
+    sleep 5
     "${SOAK_MDB[@]}" status --health 2>/dev/null | tr '\n' ' ' >> "$LOG_DIR/health.jsonl" && printf '\n' >> "$LOG_DIR/health.jsonl"
   fi
-  remaining=$(( DEADLINE - SECONDS ))
-  (( remaining <= 0 )) && break
-  # Wall-clock pacing for the soak timer itself, never for readiness.
-  sleep $(( remaining < POLL ? remaining : POLL ))
-done
+else
+  printf 'fabric-soak-smoke: real-time soaking for %s minute(s)\n' "$MINUTES"
+  DEADLINE=$((SECONDS + MINUTES * 60))
+  while (( SECONDS < DEADLINE )); do
+    for pid in "${CLIENT_PIDS[@]}"; do
+      kill -0 "$pid" 2>/dev/null || fail 'a client process exited during the soak'
+    done
+    kill -0 "$SERVER_PID" 2>/dev/null || fail 'the server process exited during the soak'
+    grep -Fq 'lost connection' "$LOG_DIR/server.log" && fail 'a client lost its connection during the soak'
+    grep -Fq "Can't keep up" "$LOG_DIR/server.log" && fail 'the server reported it cannot keep up'
+    if (( HAS_PROBE )); then
+      "${SOAK_MDB[@]}" status --health 2>/dev/null | tr '\n' ' ' >> "$LOG_DIR/health.jsonl" && printf '\n' >> "$LOG_DIR/health.jsonl"
+    fi
+    remaining=$(( DEADLINE - SECONDS ))
+    (( remaining <= 0 )) && break
+    # Wall-clock pacing for the real-time timer itself, never for readiness.
+    sleep $(( remaining < POLL ? remaining : POLL ))
+  done
+  WARP_SECONDS=0
+fi
 
 for pid in "${CLIENT_PIDS[@]}"; do
   kill -0 "$pid" 2>/dev/null || fail 'a client process exited during the soak'
 done
 ERRORS=$(grep -cE '\[.*ERROR\]' "$LOG_DIR/server.log" || true)
 BENIGN=$(grep -cE 'No data fixer registered' "$LOG_DIR/server.log" || true)
-printf 'fabric-soak-smoke: PASSED (%s min, 2 clients connected, server ERROR lines=%s, benign datafixer lines=%s)\n' \
-  "$MINUTES" "$ERRORS" "$BENIGN"
+if (( warp )); then
+  printf 'fabric-soak-smoke: PASSED (warped %s ticks in %ss, 2 clients connected, server ERROR lines=%s, benign datafixer lines=%s)\n' \
+    "$GAME_TICKS" "$WARP_SECONDS" "$ERRORS" "$BENIGN"
+else
+  printf 'fabric-soak-smoke: PASSED (%s min real time, 2 clients connected, server ERROR lines=%s, benign datafixer lines=%s)\n' \
+    "$MINUTES" "$ERRORS" "$BENIGN"
+fi
 if [[ -s $LOG_DIR/health.jsonl ]]; then
   python3 - "$LOG_DIR/health.jsonl" <<'PYHEALTH'
 import re, sys

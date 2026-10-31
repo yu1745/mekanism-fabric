@@ -62,6 +62,7 @@ scripts/scan-platform-deps.py         # 平台依赖清点
 scripts/fabric-packaged-smoke.sh      # 最终 remapped JAR 干净服务端门禁
 scripts/fabric-paired-network-smoke.sh
 scripts/fabric-configuration-rejection-smoke.sh   # 后两项需 Linux、systemd user、Xvfb
+scripts/fabric-soak-smoke.sh                      # 1 服 2 客户端浸泡，默认 /tick sprint 加速
 ```
 
 ## 客户端调试（mcdebug）
@@ -86,6 +87,7 @@ scripts/fabric-configuration-rejection-smoke.sh   # 后两项需 Linux、systemd
 - 单次调用 ≤60 秒；需要更久就由 agent 自己再次调用该脚本续等，不用 `sleep`，也不要求给 gate 脚本加分片循环。
 - 有写日志的进程就传 `-p`；已知崩溃/端口占用/拒绝签名用 `--fail-on` 提前退出。
 - 失败先抓首条错误原文，不先推演再翻日志。
+- **长时验证不傻等**：预计超过 1 分钟的等待／浸泡一律用加速方式，不按 1:1 真实时间跑。服务端用原版 `/tick sprint <N>t`（等价 N 游戏 tick，控制台经 FIFO 发送，完成标记 `Sprint completed with`）；需要冻结/步进时用 `/tick freeze`、`/tick step`。加速跑完必须在证据里同时写 wall time、ticks/s 与等价游戏时长（`scripts/fabric-soak-smoke.sh` 是范例：36000 tick = 30 游戏分钟，实际约 2 分钟跑完）。只有无法加速的等待（真实网络/IO 延迟、必须真实时钟的行为）才按真实时间跑，并写明原因。
 
 ## 持久记录与上下文
 
