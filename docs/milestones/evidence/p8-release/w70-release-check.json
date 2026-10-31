@@ -1,0 +1,56 @@
+{
+  "work_item": "W-70",
+  "date": "2026-10-31",
+  "goal": "\u4e00\u6761\u547d\u4ee4\u590d\u73b0 P13 \u5168\u90e8\u7ed3\u8bba\uff1a\u7f16\u6392\u65e2\u6709\u95e8\u7981\uff0c\u4efb\u4e00\u6b65\u5931\u8d25\u5373\u505c\u5e76\u6253\u5370\u9996\u6761\u9519\u8bef\u539f\u6587\uff0c\u9000\u51fa\u7801\u53ef\u4fe1\u3002",
+  "command": "scripts/release-check.sh",
+  "result": "PASSED (6 steps)",
+  "marker": "release-check: PASSED (6 steps, logs in /tmp/release-check)",
+  "steps": [
+    {
+      "n": 1,
+      "name": "clean four-JAR build",
+      "exit": 0,
+      "seconds": 409
+    },
+    {
+      "n": 2,
+      "name": "packaged static four-JAR gates",
+      "exit": 0,
+      "seconds": 17,
+      "marker": "fabric-packaged-smoke: PASSED (static remapped-JAR gates only; no server started)"
+    },
+    {
+      "n": 3,
+      "name": "packaged server (50 mods, 458 values)",
+      "exit": 0,
+      "seconds": 65,
+      "marker": "fabric-packaged-smoke: PASSED (\u2026 server reached Done)"
+    },
+    {
+      "n": 4,
+      "name": "paired network (two clients, handshake)",
+      "exit": 0,
+      "seconds": 109,
+      "marker": "fabric-paired-network-smoke: PASSED (two fresh clients completed configuration negotiation and joined play)"
+    },
+    {
+      "n": 5,
+      "name": "configuration rejection (three clients rejected)",
+      "exit": 0,
+      "seconds": 146,
+      "marker": "fabric-configuration-rejection-smoke: PASSED (version mismatch, same-version client rejection, and missing receiver were rejected before play)"
+    },
+    {
+      "n": 6,
+      "name": "machine runtime smoke",
+      "exit": 0,
+      "seconds": 100,
+      "marker": "fabric-machine-smoke: PASSED"
+    }
+  ],
+  "notes": [
+    "\u53d1\u5e03 JAR \u5ba2\u6237\u7aef\u4e00\u6b65\u5df2\u6309\u201c\u5ba2\u6237\u7aef\u53ea\u80fd\u7528 mdb \u542f\u52a8\u201d\u89c4\u5219\u79fb\u9664\uff1bW-69 \u7ed3\u8bba\u4fdd\u7559\u5728 w69-packaged-client.json\u3002",
+    "\u603b\u5899\u949f\u7ea6 14 \u5206\u949f\uff0c\u5176\u4e2d clean build 409 \u79d2\uff08\u542b 7 \u4e2a\u6d4b\u8bd5\u4efb\u52a1\u5171 578 \u9879\uff09\u3002",
+    "\u5931\u8d25\u5373\u505c\uff1arun_step \u6355\u83b7\u975e\u96f6\u9000\u51fa\u540e\u6253\u5370\u6b65\u9aa4\u540d\u3001\u65e5\u5fd7\u8def\u5f84\u4e0e\u9996\u6761\u5339\u914d ERROR/Exception \u7684\u884c\u3002"
+  ]
+}
