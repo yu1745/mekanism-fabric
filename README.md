@@ -1,16 +1,33 @@
 ![Mekanism Logo](logo.png)
 
-# Mekanism for Minecraft 1.21 #
+# Mekanism for Minecraft 1.21 — Fabric port #
 
-> **Fabric port branch:** this branch starts from the exact upstream
-> `v1.21.1-10.7.19.85` Java source and is being converted from NeoForge to Fabric.
-> The bounded Fabric artifact now builds and passes clean dedicated-server plus selected real-client
-> gates, including the integrated Task 040 Chemical vertical, but it is not yet a complete playable Mekanism
-> port. See [`docs/FABRIC_PORT.md`](docs/FABRIC_PORT.md) and
-> [`docs/FABRIC_CHEMICAL.md`](docs/FABRIC_CHEMICAL.md) for scope and evidence, and
-> [`docs/INSTALL.md`](docs/INSTALL.md) for requirements, the four JARs, install steps, save compatibility
-> with the NeoForge build and the current limitations, and [`CHANGELOG.md`](CHANGELOG.md) for what this
-> build contains.
+**This branch is the Fabric port of Mekanism**, converted from the official NeoForge `v1.21.1-10.7.19.85` source.
+The four release JARs build, the server path and the save format are exercised by the gates below, and the mod is
+playable, but the port is still early: recipe viewers, looking-at mods and some long-run behaviour are not covered.
+
+| I want to… | Read |
+|---|---|
+| install it and start playing | [`docs/INSTALL.md`](docs/INSTALL.md) — requirements, the four JARs, install steps |
+| know what changed in this build | [`CHANGELOG.md`](CHANGELOG.md) |
+| see how far the port is | [`docs/milestones/README.md`](docs/milestones/README.md) — milestone table and release limits |
+| take a NeoForge world across | [`docs/INSTALL.md`](docs/INSTALL.md#save-compatibility-with-the-neoforge-build) |
+| report where it differs from upstream | [`docs/API_DELTAS.md`](docs/API_DELTAS.md), [`docs/PORT_MATRIX.md`](docs/PORT_MATRIX.md) |
+| build and verify locally | [`docs/Development.md`](docs/Development.md), [`docs/FABRIC_SMOKE.md`](docs/FABRIC_SMOKE.md) |
+| see licences and attribution | [`docs/LICENSES.md`](docs/LICENSES.md) |
+
+```bash
+./build.sh --clean          # four release JARs into dist/ + build-info.json
+./gradlew -p fabric test    # 451 JVM tests
+scripts/release-check.sh    # full server-side release gates (clean build, packaged, paired, rejection, machine smoke)
+```
+
+All verification evidence lives in [`docs/milestones/evidence/`](docs/milestones/evidence/); the per-work-item index is
+[`docs/milestones/M-release.md`](docs/milestones/M-release.md).
+
+## Upstream Mekanism ##
+
+The text below describes the mod itself and is unchanged from the upstream project.
 
 Mekanism is an independent Minecraft add-on featuring high-tech machinery that can be used to create powerful tools, 
 armor, and weapons. You can find more detail on the features on the [**Official Wiki**](https://wiki.aidancbrady.com/wiki/Mekanism).

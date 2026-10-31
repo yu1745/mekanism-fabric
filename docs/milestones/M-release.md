@@ -24,6 +24,8 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 
 ## 验收证据
 
+W-88：文档终稿——根 `README.md` 重写为入口（Fabric 来源与成熟度说明 + 「我想做…→看哪份文档」6 行表 + 三条常用命令 + 证据索引，上游介绍原样保留在 “Upstream Mekanism” 小节）；新增 `docs/README.md` 索引（24 份顶层文档逐份一行说明 + archive 说明 + 三条约定：当前状态以 `milestones/README.md` 为准、每个断言链证据、archive 只读）。两份入口文档的相对链接经脚本校验 **0 broken**。未移动 docs/ 顶层文档——逐份检查都是现行主题笔记，移动会破坏既有引用。[记录](evidence/p8-release/w88-docs-final.json)
+
 W-87（第一遍）：清理第二轮——`rg TASK0[0-9]{2}` 命中 57 处，绝大多数是**出处说明**（解释与上游的差异来源），删除会丢审查依据，故只修**失效路径**：`TASK052_RESUME_2026-10-26.md` 与 `TASK052_ADJUDICATION_EFFECTIVE_SIDE.md` 已归档到 `docs/archive/`，6 处源码注释仍指旧路径，已全部改到归档路径；`./gradlew -p fabric assemble` BUILD SUCCESSFUL。重复/过时文档合并留给 W-88。[记录](evidence/p8-release/w87-cleanup-pass2.json)
 
 W-86：CHANGELOG 与发布说明——新增 [`CHANGELOG.md`](../CHANGELOG.md)：版本命名、四 JAR 能力范围、与 NeoForge 的差异（Fabric 平台/Team Reborn Energy/条件翻译/无第三方集成/NeoForge 品牌配置项）、已知限制（含频率与 QIO 未纳入往返探针）、四条验证命令，以及可直接贴到 Modrinth/CurseForge 的发布说明段落；README 已加指向。数字与声明逐条对应证据（依赖版本取自 `fabric.mod.json`、451 JVM 测试、存档结论对应 W-65/W-77/W-80/W-82）。[记录](evidence/p8-release/w86-changelog.json)
