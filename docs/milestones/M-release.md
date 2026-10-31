@@ -34,7 +34,7 @@ W-107（崩溃/卸载鲁棒性）：加工中 `kill -9` 集成服务端再重启
 
 W-106（矿石加工链端到端）：mdb 集成服务端上搭 Crusher / Enrichment Chamber / Energized Smelter 三台机器实测——**铁矿石→富集→每矿 2 粉（×2）**、铁锭→粉碎→铁粉、铁粉→通电熔炉→铁锭，全部按预期产出。**排除一个误判**：把矿石放进粉碎机不动是正确行为（官方与该移植的 `data/mekanism/recipe/` 同为 2215 个配方，粉碎机本就没有矿石配方）。未验证：×3/×4/×5 化学链、管道运输（W-82 已单独验）、工厂版与速度升级。另**自查记录**：本轮曾误用 `gradlew runClient` 起客户端约 40 秒，发现后按进程组终止并改回 mdb；起因是 mdb 缺少 `loom-cache/argFiles/runClient`，正确解法是先跑 `configureClientLaunch`。[记录](evidence/p8-release/w106-ore-chain.json)
 
-W-103（JEI/WTHIT 落地后的最终全量）：在 HEAD `b0c205b9`（含 EMI/Jade/JEI/WTHIT 四个集成）上跑完整六步 `release-check` **PASSED**——clean build、静态门禁、packaged server 55s、paired network 81s、configuration rejection 105s、machine runtime smoke。F4 建议的“根 `wthit_plugins.json` 是否随包”断言**已加入**静态门禁（发布 JAR 缺该描述文件即失败）；该断言在本轮 6 步之后加入，需在下一次全量里复跑闭环。[记录](evidence/p8-release/w103-final-release-check.json)
+W-103（JEI/WTHIT 落地后的最终全量）：在 HEAD `b0c205b9`（含 EMI/Jade/JEI/WTHIT 四个集成）上跑完整六步 `release-check` **PASSED**——clean build、静态门禁、packaged server 55s、paired network 81s、configuration rejection 105s、machine runtime smoke。F4 建议的“根 `wthit_plugins.json` 是否随包”断言**已加入**静态门禁（发布 JAR 缺该描述文件即失败）；该断言在本轮 6 步之后加入，需在下一次全量里复跑闭环。**已复跑闭环**：W-105 落地后再次全量 **PASSED (6 steps)**，覆盖 modmenu entrypoint、wthit_plugins.json 存在性与 com/terraformersmc/ 泄漏断言。[记录](evidence/p8-release/w103-final-release-check.json)
 
 W-74d（WTHIT）：5 个文件编译通过（`compileJava` + 457 项测试），依赖用 `mcp.mobius.waila:wthit:fabric-12.10.2`（bai Maven，Modrinth 无该坐标），`-PwthitDev` 开关运行期。**注册机制与 EMI/Jade/JEI 不同**：WTHIT 12 读自己的插件 JSON `assets/<modid>/wthit_plugins.json`（`{id, initializer, environment}`），把对象塞进 `fabric.mod.json` 的 entrypoints 会被 Fabric Loader 拒绝（`Entrypoint value must be present`）；已新增该资源并加入 `processResources` 白名单，`assemble` 产物内含。**未验证**：开发客户端（目录形式资源）里 WTHIT 只初始化了 `waila:core`，没有加载本插件（`MEKANISM_FABRIC_WTHIT_PROOF` 计数 0），说明其插件扫描只认 JAR；而发布 JAR 客户端按 AGENTS 硬规则不能用 mdb 启动，故插件注册的真机验证受工具限制，需在真实发布物上确认。**第二轮补正**：注册的**正确位置**是 `fabric.mod.json` 的 `custom` 段 `"waila:plugins"`（放根级被 Loader 拒绝、放 `entrypoints` 也被拒）；但加上后客户端**崩溃**于 `UnsupportedOperationException: Found legacy plugins`——官方插件类实现的是旧版 `IWailaPlugin`（WTHIT 4.x API），WTHIT 12 要求 `IWailaCommonPlugin`+`IWailaClientPlugin` 拆分；上游遗留的旧格式 `src/main/resources/wthit_plugins.json` 也触发同一异常（已删除）。**当前状态：注册已移除**（客户端装 WTHIT 时正常启动、只显示 WTHIT 内置 tooltip），**第三轮**：插件类已改写为 WTHIT 12 的 `IWailaCommonPlugin`+`IWailaClientPlugin` 双接口并通过编译；但注册仍失败——`custom."waila:plugins"` 走的是**已废弃路径**（`PluginInfo.registerDeprecated`，要求旧 `IWailaPlugin`），现代路径 `PluginInfo.register(...)` 需要 common/client 两个初始化器且位于内部包 `mcp.mobius.waila.plugin`。注册已再次移除，客户端装 WTHIT 时正常启动（legacy/ClassCastException 均为 0）；**第四轮：注册成功**。查 WTHIT 官方文档与 1.21.1 源码后确认：现代 API 的注册方式是模块根目录的 **`wthit_plugins.json`**，且必须用 `entrypoints.common`/`entrypoints.client` 两个字段——`custom."waila:plugins"` 在 Fabric 加载器里硬编码走 `registerDeprecated`，之前两次失败是**路径选错**而非类实现错。实测 `MEKANISM_FABRIC_WTHIT_PROOF` 出现 2 次（common+client 各自 register）、legacy/ClassCastException 为 0；准星对准写入 20M FE 的 Crusher，WTHIT 显示 “Crusher / **8.0 kFE/8.0 kFE** / Mekanism (Fabric)”（截图 `w74/wthit-tooltip.png`）。**W-74d 完成**（多方块/传输器读数与 Robit tooltip 未核对）。[记录](evidence/p8-release/w74d-wthit.json)
 
@@ -134,3 +134,24 @@ W-42准备：历史46项已逐一更新、README已列真实发布限制；[清�
 ## 已知工作区产物（给巡检）
 
 - `fabric/gradlew`、`fabric/gradle` 是**临时符号链接**（指向上级目录的 wrapper）。原因：`mdb session start --project fabric` 找不到 `fabric/` 下的 wrapper 会直接拒绝（`target project has no Gradle wrapper`），而客户端又必须由 mdb 启动。**每次会话结束都会删除**；若巡检时看到它们，说明当时有会话在跑或清理遗漏，可直接删除，不影响构建。
+
+### 清理后重建客户端启动参数（mdb）
+
+`build.sh --clean` 与 `release-check.sh` 的第 1 步都会删掉 `fabric/build/`，连带删除 Loom 生成的
+`build/loom-cache/argFiles/runClient`。此后 `mdb session start` 会失败于 `could not open .../argFiles/runClient`，
+而 `configureClientLaunch` 不会重建它（只有真正执行 `runClient` 才会，但按 AGENTS 客户端只能由 mdb 启动，
+不能为了生成参数文件去跑一次客户端）。可用的重建办法：用 init 脚本导出真实运行时 classpath，再按 Loom 的格式写回。
+
+```bash
+cat > /tmp/print-cp.gradle <<'EOF'
+allprojects { tasks.register('dumpRuntimeCp') { doLast {
+  def cfg = configurations.findByName('runtimeClasspath')
+  if (cfg != null) new File("/tmp/cp-${project.name}.txt").text = cfg.files.collect { it.absolutePath }.join(':')
+} } }
+EOF
+./gradlew -p fabric -I /tmp/print-cp.gradle dumpRuntimeCp --no-configuration-cache
+```
+
+然后按 `-classpath` + 冒号连接的方式写入 `fabric/build/loom-cache/argFiles/runClient`。注意 `remapClasspath.txt`
+**不是**启动 classpath（缺 fabric-loader / dev-launch-injector），用它拼出来会报
+`ClassNotFoundException: net.fabricmc.devlaunchinjector.Main`。
