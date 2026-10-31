@@ -13,7 +13,8 @@ import mekanism.api.fluid.IExtendedFluidTank;
 import mekanism.api.fluid.IMekanismFluidHandler;
 import mekanism.api.text.EnumColor;
 import mekanism.api.text.ILangEntry;
-import mekanism.common.Mekanism;
+import mekanism.api.MekanismAPI;
+import net.minecraft.resources.ResourceLocation;
 import mekanism.common.MekanismLang;
 import mekanism.common.attachments.BlockData;
 import mekanism.common.capabilities.Capabilities;
@@ -45,8 +46,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import mekanism.api.fluid.FluidStack;
+import mekanism.api.fluid.IExtendedFluidHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -55,9 +56,9 @@ import org.jetbrains.annotations.Nullable;
  */
 public class LookingAtUtils {
 
-    public static final ResourceLocation ENERGY = Mekanism.rl("energy");
-    public static final ResourceLocation FLUID = Mekanism.rl("fluid");
-    public static final ResourceLocation CHEMICAL = Mekanism.rl("chemical");
+    public static final ResourceLocation ENERGY = ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, "energy");
+    public static final ResourceLocation FLUID = ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, "fluid");
+    public static final ResourceLocation CHEMICAL = ResourceLocation.fromNamespaceAndPath(MekanismAPI.MEKANISM_MODID, "chemical");
 
     private LookingAtUtils() {
     }
@@ -131,7 +132,9 @@ public class LookingAtUtils {
         if (displayTanks) {
             //Fluid - only add it to our own tiles in which we disable the default display for
             if (displayFluidTanks && tile instanceof TileEntityUpdateable) {
-                IFluidHandler fluidCapability = Capabilities.FLUID.getCapabilityIfLoaded(level, pos, state, tile, null);
+                //Fabric port delta: the world-level fluid lookup yields a transfer Storage, not a Mekanism handler. This branch
+                //only ever runs for our own block entities, so read the domain handler directly instead of bridging the Storage.
+                IExtendedFluidHandler fluidCapability = tile instanceof IMekanismFluidHandler mekanismHandler ? mekanismHandler : null;
                 if (fluidCapability != null) {
                     FluidStack fallback = FluidStack.EMPTY;
                     if (tile instanceof TileEntityMechanicalPipe pipe && pipe.getTransmitter().hasTransmitterNetwork()) {
@@ -148,7 +151,7 @@ public class LookingAtUtils {
         }
     }
 
-    private static void displayFluid(LookingAtHelper info, IFluidHandler fluidHandler, FluidStack fallback) {
+    private static void displayFluid(LookingAtHelper info, IExtendedFluidHandler fluidHandler, FluidStack fallback) {
         if (fluidHandler instanceof IMekanismFluidHandler mekFluidHandler) {
             for (IExtendedFluidTank fluidTank : mekFluidHandler.getFluidTanks(null)) {
                 if (fluidTank instanceof FluidTankWrapper wrapper) {

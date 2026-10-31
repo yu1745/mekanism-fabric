@@ -2,7 +2,8 @@ package mekanism.common.integration.lookingat.jade;
 
 import com.mojang.serialization.DataResult;
 import mekanism.api.SerializationConstants;
-import mekanism.common.Mekanism;
+import mekanism.api.MekanismAPI;
+import net.minecraft.resources.ResourceLocation;
 import mekanism.common.integration.lookingat.ILookingAtElement;
 import mekanism.common.integration.lookingat.SimpleLookingAtHelper;
 import net.minecraft.core.HolderLookup;
@@ -23,11 +24,11 @@ public class JadeLookingAtHelper extends SimpleLookingAtHelper {
     public void finalizeData(CompoundTag data) {
         if (!elements.isEmpty()) {
             RegistryOps<Tag> registryOps = provider.createSerializationContext(NbtOps.INSTANCE);
-            ListTag list = new ListTag(elements.size());
+            ListTag list = new ListTag();
             for (ILookingAtElement element : elements) {
                 DataResult<Tag> encoded = JadeTooltipRenderer.ELEMENT_CODEC.encodeStart(registryOps, element);
                 encoded.ifSuccess(list::add);
-                encoded.ifError(error -> Mekanism.logger.warn("Failed to serialize jade looking at data: {}", error.message()));
+                encoded.ifError(error -> MekanismAPI.logger.warn("Failed to serialize jade looking at data: {}", error.message()));
             }
             data.put(SerializationConstants.MEK_DATA, list);
         }

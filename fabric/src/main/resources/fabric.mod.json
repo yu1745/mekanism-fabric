@@ -31,6 +31,9 @@
     ],
     "emi": [
       "mekanism.client.recipe_viewer.emi.MekanismEmi"
+    ],
+    "jade": [
+      "mekanism.common.integration.lookingat.jade.MekanismJadePlugin"
     ]
   },
   "depends": {
@@ -42,6 +45,7 @@
   },
   "icon": "assets/mekanism/icon.png",
   "suggests": {
-    "emi": "*"
+    "emi": "*",
+    "jade": "*"
   }
 }

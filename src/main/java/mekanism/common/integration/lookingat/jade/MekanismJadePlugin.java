@@ -36,6 +36,9 @@ public class MekanismJadePlugin implements IWailaPlugin {
         registration.registerBlockComponent((IComponentProvider<BlockAccessor>) JadeTooltipRenderer.INSTANCE, Block.class);
         registration.registerEntityComponent((IComponentProvider<EntityAccessor>) JadeBuiltinRemover.INSTANCE, EntityRobit.class);
         registration.registerBlockComponent((IComponentProvider<BlockAccessor>) JadeBuiltinRemover.INSTANCE, Block.class);
+        //Fabric port proof line: the headless/client gates grep this exact marker to confirm the plugin ran.
+        mekanism.api.MekanismAPI.logger.info("MEKANISM_FABRIC_JADE_PROOF energy={} fluid={} chemical={}",
+              LookingAtUtils.ENERGY, LookingAtUtils.FLUID, LookingAtUtils.CHEMICAL);
         registration.addRayTraceCallback((hitResult, accessor, originalAccessor) -> {
             //Redirect bounding blocks to the main tile for purposes of naming and the like
             if (accessor instanceof BlockAccessor target && target.getBlockState().is(MekanismBlocks.BOUNDING_BLOCK)) {

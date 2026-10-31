@@ -24,7 +24,6 @@ import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec2;
-import net.neoforged.neoforge.common.util.NeoForgeExtraCodecs;
 import org.jetbrains.annotations.Nullable;
 import snownee.jade.api.Accessor;
 import snownee.jade.api.IComponentProvider;
@@ -60,7 +59,19 @@ public class JadeTooltipRenderer<ACCESSOR extends Accessor<?>> implements ICompo
               default -> DataResult.error(() -> "Unknown Element Type, expected either energy or text");
           }
     );
-    static final Codec<ILookingAtElement> ELEMENT_CODEC = NeoForgeExtraCodecs.withAlternative(FLUID_OR_CHEMICAL_CODEC, ENERGY_OR_TEXT_CODEC).codec();
+    //Fabric port delta: NeoForge's NeoForgeExtraCodecs.withAlternative combined two MapCodecs directly; the vanilla
+    //equivalent is mapEither plus a flatComap, which is what alternativeElement already does for the inner pair.
+    static final Codec<ILookingAtElement> ELEMENT_CODEC = alternativeElement(
+          FLUID_OR_CHEMICAL_CODEC,
+          ENERGY_OR_TEXT_CODEC,
+          (ILookingAtElement element) -> switch (element) {
+              case FluidElement fluidElement -> DataResult.success(Either.left(fluidElement));
+              case ChemicalElement chemicalElement -> DataResult.success(Either.right(chemicalElement));
+              case EnergyElement energyElement -> DataResult.success(Either.left(energyElement));
+              case TextElement textElement -> DataResult.success(Either.right(textElement));
+              default -> DataResult.error(() -> "Unknown looking-at element type");
+          }
+    ).codec();
 
     @Override
     public ResourceLocation getUid() {
