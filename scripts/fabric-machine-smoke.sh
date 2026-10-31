@@ -114,6 +114,8 @@ cd "$SERVER_DIR"
   echo "forceload add 0 0"
   echo "forceload add 16 0"
   echo "forceload add 32 0"
+  #The chemical chain sits at x=50..52 (chunk 3), outside the spawn-chunk radius the other scenarios rely on.
+  echo "forceload add 3 0"
   echo "setblock 0 100 0 mekanism:enrichment_chamber"
   echo "setblock 3 100 0 mekanism:energized_smelter"
   echo "setblock 6 100 0 mekanism:basic_universal_cable"
@@ -162,8 +164,19 @@ cd "$SERVER_DIR"
   echo "setblock 41 100 0 mekanism:enrichment_chamber"
   echo "setblock 42 100 0 minecraft:hopper[facing=west]"
   echo "setblock 41 99 0 minecraft:hopper[facing=down]"
+  #Chemical chain scenario (W-111): a chemical infuser turns seeded sulfur trioxide + water vapour into sulfuric acid,
+  #a pressurized tube carries it into a chemical dissolution chamber, and the chamber dissolves iron ore into dirty
+  #iron slurry. This is the entry stage of the x3/x4/x5 ore path - the stage that needs a real chemical feed rather
+  #than an item one.
+  echo "setblock 50 100 0 mekanism:chemical_infuser"
+  echo "setblock 52 100 0 mekanism:chemical_dissolution_chamber"
   echo 'data merge block 41 100 0 {component_config:{config3:[I;1,1,1,1,1,4]}, energy_containers:[{container:0b,stored:40000L}]}'
   echo 'item replace block 42 100 0 container.0 with minecraft:iron_ore 4'
+  echo 'data merge block 50 100 0 {energy_containers:[{container:0b,stored:40000L}], component_config:{config2:[I;4,4,4,4,4,4]}, chemical_tanks:[{tank:0b,stored:{id:"mekanism:sulfur_trioxide",amount:2000}},{tank:1b,stored:{id:"mekanism:water_vapor",amount:2000}}]}'
+  #Slot layout: 0 is the chemical input slot, 1 is the item input, 2 the chemical output, 3 the energy slot - so the
+  #ore goes in slot 1. The chamber needs a full recipe's worth of acid (1000 mB per ore) and enough energy for the operation; the infuser
+  #only ever produces one 200 mB batch per 40k buffer, so the acid it makes arrives as extra input on top of this seed.
+  echo 'data merge block 52 100 0 {energy_containers:[{container:0b,stored:40000L}], items:[{slot:1b,item:{id:"minecraft:iron_ore",count:4}}], chemical_tanks:[{tank:0b,stored:{id:"mekanism:sulfuric_acid",amount:4000}}], component_config:{config2:[I;1,1,1,1,1,1], config3:[I;1,1,1,1,1,1]}}'
   sleep 3
   echo "setblock 13 100 0 mekanism:basic_universal_cable"
   echo "setblock 21 100 0 mekanism:basic_logistical_transporter"
@@ -171,12 +184,14 @@ cd "$SERVER_DIR"
   echo "setblock 29 100 0 mekanism:basic_pressurized_tube"
   echo "setblock 33 100 0 mekanism:basic_logistical_transporter"
   echo "setblock 37 100 0 mekanism:basic_mechanical_pipe"
+  echo "setblock 51 100 0 mekanism:basic_pressurized_tube"
   sleep 3
   echo 'data merge block 21 100 0 {connection:[I;3,3,3,3,2,1]}'
   echo 'data merge block 25 100 0 {connection:[I;3,3,3,3,2,1]}'
   echo 'data merge block 29 100 0 {connection:[I;3,3,3,3,2,1]}'
   echo 'data merge block 33 100 0 {connection:[I;3,3,3,3,2,1]}'
   echo 'data merge block 37 100 0 {connection:[I;3,3,3,3,2,1]}'
+  echo 'data merge block 51 100 0 {connection:[I;3,3,3,3,2,1]}'
   #45 s covers four hopper-fed operations (hopper cadence is one item per 8 game ticks) plus extraction and latency.
   sleep 45
   echo "data get block 0 100 0"
@@ -201,6 +216,8 @@ cd "$SERVER_DIR"
   echo "data get block 41 100 0"
   echo "data get block 42 100 0"
   echo "data get block 41 99 0"
+  echo "data get block 50 100 0"
+  echo "data get block 52 100 0"
   sleep 3
   echo "stop"
   sleep 5
@@ -243,6 +260,9 @@ check "pipe fed the machine fluid input" '38, 100, 0 has the following block dat
 check "separator auto-ejected oxygen to the adjacent tank" '38, 101, 0 has the following block data.*chemical_tanks.*mekanism:oxygen'
 check "hopper pushed ore into the machine" '42, 100, 0 has the following block data.*Items: \[\]'
 check "machine output was pulled into the hopper" '41, 99, 0 has the following block data.*mekanism:dust_iron'
+check "chemical infuser ran and its acid reached the dissolution chamber" '52, 100, 0 has the following block data.*chemical_tanks.*mekanism:sulfuric_acid'
+check "chemical infuser consumed its seeded inputs" '50, 100, 0 has the following block data.*sulfur_trioxide.*amount: 1[0-9]{3}L'
+check "dissolution chamber produced dirty iron slurry" '52, 100, 0 has the following block data.*chemical_tanks.*mekanism:dirty_iron'
 if grep -Eq '28, 100, 0 has the following block data.*stored: ' "$LOG_FILE"; then
   printf 'FAIL chemical source tank was emptied\n'
   failures=$((failures + 1))
