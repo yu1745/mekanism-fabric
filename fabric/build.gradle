@@ -811,7 +811,6 @@ processResources {
     }
     from('../src/main/resources') {
         mekanismServiceDescriptors.each { name -> include "META-INF/services/$name" }
-        include 'assets/mekanism/wthit_plugins.json'
         include 'assets/mekanism/particles/radiation.json'
         include 'assets/mekanism/particles/jetpack_flame.json'
         include 'assets/mekanism/particles/jetpack_smoke.json'
