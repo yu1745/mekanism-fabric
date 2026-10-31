@@ -413,3 +413,20 @@ JEI（W-74c）与 WTHIT（W-74d）已批准，见 `ROADMAP.md`「W-74 范围追�
 4. 文档里 W-100 已更正 W-93 的 `conclusion`（F1 的第 1 点），确认已完成。
 
 路线图：未开始项降到约 4（W-74d、W-79、W-98、W-99），触发补充线，已新增 **P21：W-102…W-105**（JEI 范围验证、JEI/WTHIT 后最终全量、W-81/82 缺陷修复、游戏内配置界面核对），见 `ROADMAP.md`。
+
+## 巡检 F3（2026-10-31 13:47）
+
+自 F2 起新提交 2 个：`70bdad56`（W-74c 门禁复跑记录：JEI 接入后 5 步通过，含"发布 JAR 不含 `mezz/jei`"断言）、`0134a0f2`（**W-74d WTHIT**：生产+构建+插件描述符）。**审计陷阱：未触发**（一个文档提交夹一个真实功能提交，F2 提示后已回到开发）。
+
+**范围与质量**
+- WTHIT 属 10-31 追加批准范围（W-74d）。依赖 `mcp.mobius.waila:wthit:fabric-12.10.2`，仓库 `maven.bai.lol` 已限定只放行该 group；`modCompileOnly` + `-PwthitDev`，不进发布依赖。证据页写明为何不用 Modrinth 坐标、为何 entrypoint 对象形式会被 Loader 拒绝，诚实。
+- 未碰 wip 历史、submodule、push；无新增测试。
+
+**问题**
+1. **WTHIT 插件注册机制未定论，工作区有未提交的 `fabric.mod.json` 改动**：已提交版本用 `assets/mekanism/wthit_plugins.json`，开发客户端日志里 WTHIT **没有加载本插件**（`MEKANISM_FABRIC_WTHIT_PROOF` 计数 0）；工作区现在又在 `fabric.mod.json` 加 `custom."waila:plugins"`（WTHIT Fabric 的常规方式）。请**只保留一种注册机制**：若 `custom.waila:plugins` 能让开发客户端加载，就删除 `wthit_plugins.json` 及 `processResources` 里的白名单项，避免重复注册；两者都留要证明不会注册两次。结论以 mdb 开发客户端里出现 `MEKANISM_FABRIC_WTHIT_PROOF` 为准。若仍加载不上，如实记为"受工具限制的未验证项"（发布 JAR 客户端不得裸启动），不要为了通过而改探测方式。
+2. **`fabric/gradle`、`fabric/gradlew` 软链接** 13:43 又出现在工作区（指向 `../gradle`、`../gradlew`，未跟踪；上次出现于 F1 前后）。请弄清是谁创建（多半是某个脚本在 `fabric/` 下执行了 wrapper），要么在脚本里修正，要么 `.gitignore`，**不要提交**。
+3. **W-74c JEI 仍有三项未验证**（24 个分类渲染、QIO 合成转移、化学品 ingredient 渲染）——已在 P21 的 W-102 里；W-74d 的"多方块/传输器/Robit 读数"同理，请并入 W-102 的同一轮 mdb 会话，不要每个再单起会话。
+4. JEI + WTHIT 使 common slice 1580→1632。**WTHIT 之后尚未再跑完整 release-check**（70bdad56 的复跑只覆盖到 JEI）；按 W-103 在 W-102 完成后一次性跑最终全量，连续两次 `build.sh --clean` 比对四哈希。
+5. 请把 WTHIT 新增的 5 个 slice 项按 owner 记入 `M-integration.md`。
+
+路线图：未开始/未完成项 W-79、W-98、W-99、W-101（执行）、W-102、W-103、W-104、W-105 共约 8，**不触发补充线**，本次无改动；F4 为本批次最后一次，会据实补足无人值守余量。
