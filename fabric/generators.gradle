@@ -53,6 +53,9 @@ tasks.named('processGeneratorsResources', ProcessResources) {
 def generatorsJar = tasks.register('generatorsJar', Jar) {
     dependsOn tasks.named('generatorsClasses')
     from sourceSets.generators.output
+    from('../LICENSE') {
+        rename { "${it}_MekanismGenerators" }
+    }
     archiveBaseName = 'MekanismGenerators'
     archiveClassifier = 'dev'
     destinationDirectory = layout.buildDirectory.dir('generators-devlibs')

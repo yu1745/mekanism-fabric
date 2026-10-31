@@ -53,6 +53,9 @@ tasks.named('processToolsResources', ProcessResources) {
 def toolsJar = tasks.register('toolsJar', Jar) {
     dependsOn tasks.named('toolsClasses')
     from sourceSets.tools.output
+    from('../LICENSE') {
+        rename { "${it}_MekanismTools" }
+    }
     archiveBaseName = 'MekanismTools'
     archiveClassifier = 'dev'
     destinationDirectory = layout.buildDirectory.dir('tools-devlibs')

@@ -58,6 +58,9 @@ tasks.named('processAdditionsResources', ProcessResources) {
 def additionsJar = tasks.register('additionsJar', Jar) {
     dependsOn tasks.named('additionsClasses')
     from sourceSets.additions.output
+    from('../LICENSE') {
+        rename { "${it}_MekanismAdditions" }
+    }
     archiveBaseName = 'MekanismAdditions'
     archiveClassifier = 'dev'
     destinationDirectory = layout.buildDirectory.dir('additions-devlibs')
