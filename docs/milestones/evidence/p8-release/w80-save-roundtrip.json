@@ -1,0 +1,55 @@
+{
+  "work_item": "W-80\uff08\u7b2c\u4e00\u904d\uff0c\u90e8\u5206\uff09",
+  "date": "2026-10-31",
+  "goal": "\u542b\u8fd0\u884c\u5185\u5bb9\u7684\u5b58\u6863\u5f80\u8fd4\uff1a\u5728 NeoForge \u53c2\u8003\u670d\u5199\u5165\u673a\u5668\u5e93\u5b58/\u80fd\u91cf\uff0c\u518d\u7531 Fabric \u52a0\u8f7d\u6bd4\u5bf9\u3002",
+  "win": "NeoForge \u53c2\u8003\u670d\u73b0\u5728\u53ef\u4ee5\u7531 mdb \u9a71\u52a8\uff1a\u5f80\u526f\u672c\u73af\u5883\u7684 mods/ \u653e mcdebug-neoforge-0.8.0.jar + kotlinforforge-5.11.0-all.jar\uff08mcdebug \u58f0\u660e kotlinforforge>=5.10\uff09\u540e status \u8fd4\u56de modLoader=neoforge\u3001fluidUnit=mb\u3001energyUnit=FE\uff0csocket \u6b63\u5e38\u3002\u5b89\u88c5\u6b65\u9aa4\u5df2\u5199\u8fdb scripts/neoforge-reference.sh \u7684 install_env\uff08\u53ea\u843d\u5728\u7f13\u5b58\u76ee\u5f55\uff0c\u4e0d\u8fdb\u4ed3\u5e93/\u53d1\u5e03\u7269\uff09\u3002",
+  "attempts_to_write_machine_contents": [
+    {
+      "path": "inv.*\uff08\u65b9\u5757\u5b9e\u4f53\u5bb9\u5668\uff09",
+      "result": "-32602 block entity ... is not an Container",
+      "why": "Mekanism \u673a\u5668\u4e0d\u662f vanilla Container\uff0cinv.* \u53ea\u8986\u76d6 vanilla \u5bb9\u5668"
+    },
+    {
+      "path": "data merge block {Items:[...]}\uff08\u63a7\u5236\u53f0\uff09",
+      "result": "\u547d\u4ee4\u62a5 Modified\uff0c\u4f46\u56de\u8bfb\u65e0 Items",
+      "why": "tile \u4ece\u5185\u5b58\u72b6\u6001\u91cd\u65b0\u5e8f\u5217\u5316\uff0c\u672a\u8bc6\u522b\u7684\u952e\u88ab\u4e22\u5f03"
+    },
+    {
+      "path": "be set-nbt --nbt '{Items:[...]}'",
+      "result": "ok:true\uff0c\u4f46 be get-nbt \u4e0e storage get \u90fd\u770b\u4e0d\u5230\u7269\u54c1",
+      "why": "\u8be5 NBT \u952e\u4e0d\u662f Mekanism \u69fd\u4f4d\u7684\u5e8f\u5217\u5316\u952e"
+    },
+    {
+      "path": "storage insert --handle fabric:item",
+      "result": "inserted:0 / remaining:4",
+      "why": "mekanism \u7684 item handler \u7ecf slim \u63d2\u5165\u88ab\u62d2\u7edd\uff08\u9762/\u914d\u7f6e\u9650\u5236\u6216\u8be5 handler \u4e0d\u63a5\u53d7\u5916\u90e8\u63d2\u5165\uff09"
+    },
+    {
+      "path": "storage insert --side up|north|down|east",
+      "result": "-32015 storage not found",
+      "why": "\u6307\u5b9a\u9762\u65f6 mcdebug \u8d70\u9762\u7279\u5b9a\u7684 capability \u67e5\u627e\uff0cfabric:item \u53e5\u67c4\u4e0d\u5b58\u5728"
+    },
+    {
+      "path": "screen open-block --x 0 --y 90 --z 0",
+      "result": "-32018 no screen handler factory",
+      "why": "Mekanism tile \u672a\u5411\u5047\u73a9\u5bb6\u63d0\u4f9b MenuProvider\uff08\u53ef\u80fd\u662f\u7aef\u53e3\u6216\u4e0a\u6e38\u884c\u4e3a\uff09"
+    },
+    {
+      "path": "reflect resolve --root be\uff08NeoForge\uff09",
+      "result": "-32603 RuntimeDistCleaner: \u5c1d\u8bd5\u5728 DEDICATED_SERVER \u52a0\u8f7d client SoundInstance",
+      "why": "mcdebug reflect \u5728 NeoForge \u4e13\u7528\u670d\u52a1\u5668\u4e0a\u7684\u5df2\u77e5\u9650\u5236"
+    },
+    {
+      "path": "\u6f0f\u6597\u63a8\u5165\uff08W-77 \u5df2\u8bd5\uff09",
+      "result": "\u673a\u5668 NBT \u4ecd\u65e0 Items",
+      "why": "\u540c\u524d\uff0c\u69fd\u4f4d\u5e8f\u5217\u5316\u952e\u672a\u77e5"
+    }
+  ],
+  "conclusion": "\u672c\u8f6e\u628a\u201c\u80fd\u5426\u9a71\u52a8 NeoForge \u53c2\u8003\u670d\u201d\u8fd9\u4e2a\u524d\u7f6e\u6253\u901a\u4e86\uff0c\u4f46\u201c\u5199\u5165 Mekanism \u673a\u5668\u8fd0\u884c\u5185\u5bb9\u201d\u4ecd\u7f3a\u4e00\u6761\u53ef\u884c\u8def\u5f84\uff1bW-77 \u7684\u5e93\u5b58/\u80fd\u91cf\u6b8b\u7559\u4e0e W-80 \u540c\u6e90\u3002",
+  "next_ideas": [
+    "\u5728 Fabric \u4fa7\u5148\u7528 mdb \u5ba2\u6237\u7aef\uff08\u771f\u73a9\u5bb6\uff09\u5199\u5165\u5185\u5bb9\uff0c\u518d\u53cd\u5411\u9a8c\u8bc1 NeoForge \u8bfb\u53d6\u2014\u2014\u65b9\u5411\u53cd\u8fc7\u6765\u540c\u6837\u80fd\u8bc1\u660e\u5b58\u6863\u8bed\u4e49\u4e00\u81f4",
+    "\u67e5 Mekanism tile \u7684\u69fd\u4f4d\u5e8f\u5217\u5316\u952e\uff08grep saveAdditional / ItemStackTileEntity\uff09\uff0c\u7528 be set-nbt \u5199\u6b63\u786e\u952e",
+    "\u7528 screen open-block \u524d\u5148 setblock \u6210 vanilla \u5bb9\u5668\u9a8c\u8bc1\u5047\u73a9\u5bb6\u94fe\u8def\uff0c\u518d\u5224\u65ad Mekanism MenuProvider \u662f\u5426\u771f\u7684\u7f3a\u5931"
+  ],
+  "cleanup": "\u526f\u672c\u73af\u5883\u5df2 stop \u5e76\u5220\u9664\uff1b\u5e38\u9a7b\u53c2\u8003\u6837\u672c\u4e16\u754c\u672a\u6539\u52a8\uff1b\u65e0\u6b8b\u7559\u8fdb\u7a0b"
+}

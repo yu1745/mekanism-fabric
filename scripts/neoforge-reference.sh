@@ -29,6 +29,8 @@ fail() {
   exit 1
 }
 
+MCDEBUG_NEOFORGE_JAR=${MCDEBUG_NEOFORGE_JAR:-/home/wangyu/server-v2/develop/mcdebug-wt-121/neoforge/build/libs/mcdebug-neoforge-0.8.0.jar}
+
 install_env() {
   mkdir -p "$SERVER_DIR/mods"
   if [[ ! -f $SERVER_DIR/run.sh ]]; then
@@ -46,6 +48,17 @@ install_env() {
   local actual
   actual=$(sha256sum "$SERVER_DIR/mods/$MEKANISM_JAR" | cut -d' ' -f1)
   [[ $actual == "$MEKANISM_SHA" ]] || fail "official Mekanism jar checksum mismatch: $actual"
+  # mcdebug + Kotlin for Forge make the reference server drivable from the mdb CLI (server plane only).
+  # Both are dev tooling: they live in this cache directory, never in the repo or the release.
+  if [[ ! -f $SERVER_DIR/mods/mcdebug-neoforge-0.8.0.jar ]]; then
+    cp "$MCDEBUG_NEOFORGE_JAR" "$SERVER_DIR/mods/" 2>/dev/null ||
+      fail "missing $MCDEBUG_NEOFORGE_JAR (build it in the mcdebug checkout: ./gradlew :neoforge:build)"
+  fi
+  if [[ ! -f $SERVER_DIR/mods/kotlinforforge-all.jar ]]; then
+    curl -fsSL --max-time 180 -o "$SERVER_DIR/mods/kotlinforforge-all.jar" \
+      "https://cdn.modrinth.com/data/ordsPcFz/versions/NrSebcsG/kotlinforforge-5.11.0-all.jar" ||
+      fail 'could not download Kotlin for Forge (mcdebug declares it as a required mod)'
+  fi
   printf 'eula=true\n' > "$SERVER_DIR/eula.txt"
   printf 'online-mode=false\nserver-ip=127.0.0.1\nserver-port=%s\nmax-players=4\nlevel-name=world\nspawn-protection=0\nmotd=mekanism neoforge reference\n' \
     "$PORT" > "$SERVER_DIR/server.properties"
