@@ -10,7 +10,7 @@ import java.util.Optional;
 import mekanism.api.chemical.ChemicalStack;
 import mekanism.client.gui.IGuiWrapper;
 import mekanism.client.gui.element.GuiElement;
-import mekanism.client.gui.element.bar.GuiBar.IBarInfoHandler;
+import mekanism.client.gui.element.bar.IBarInfoHandler;
 import mekanism.client.gui.element.gauge.GaugeOverlay;
 import mekanism.client.gui.element.gauge.GuiGauge;
 import mekanism.client.gui.element.progress.GuiProgress;

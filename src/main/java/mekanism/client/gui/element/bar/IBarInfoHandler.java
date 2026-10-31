@@ -4,7 +4,7 @@ import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Fabric port delta: the official nested {@code GuiBar.IBarInfoHandler} was extracted to a top-level interface so viewer-neutral
+ * Fabric port delta: the official nested {@code IBarInfoHandler} was extracted to a top-level interface so viewer-neutral
  * code (the synthetic recipe helpers) can type bar progress handlers without pulling in the GUI framework while the GUI vertical
  * is unported. {@code GuiBar} keeps implementing/accepting this same shape when it is admitted.
  */

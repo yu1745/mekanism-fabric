@@ -31,5 +31,22 @@
     "compile_progress": "\u9010\u6b65\u7eb3\u5165\u540e\u7f16\u8bd1\u9519\u8bef\u6570\uff1a\u5ba1\u8ba1\u62e6\u622a\uff086 \u6587\u4ef6\uff09\u2192 NeoForgeEmiStack\uff085 \u5904\uff09\u2192 \u7f3a\u5931 recipe_viewer \u5171\u4eab\u7c7b\uff08GuiElementHandler/GhostIngredientHandler/QIOCraftingTransferHandler/RVTransferUtils/color \u5305\uff09\u2192 **\u6700\u540e\u5269 32 \u5904 GUI API \u7b7e\u540d\u4e0d\u5339\u914d**\uff08\u5982 `GuiVerticalScroll`\u3001`GuiInnerScreen` \u6784\u9020\u53c2\u6570\uff09",
     "decision": "slice \u4e0e\u8ba1\u6570\u518d\u6b21\u56de\u6eda\uff0c\u4ed3\u5e93\u4fdd\u6301 BUILD SUCCESSFUL\uff1b\u6e90\u7801\u7ea7\u53bb NeoForge \u5316\u6539\u52a8\u4fdd\u7559",
     "remaining": "EMI recipe \u7c7b\u7528\u7684 GUI \u5143\u7d20\u6784\u9020\u7b7e\u540d\u4e0e Fabric \u4fa7\u4e0d\u540c\uff0c\u9700\u8981\u9010\u4e2a\u5bf9\u9f50\uff0832 \u5904\uff0c\u96c6\u4e2d\u5728 emi/recipe/**\uff09"
+  },
+  "step4": {
+    "date": "2026-10-31",
+    "result": "**EMI \u5b50\u6811\u7f16\u8bd1\u901a\u8fc7**\uff08`./gradlew -p fabric compileJava` BUILD SUCCESSFUL\uff09\uff0c39 \u4e2a EMI \u6587\u4ef6 + 5 \u4e2a\u5171\u4eab recipe_viewer \u7c7b + `color` \u5305 + `api/integration/emi` \u5df2\u7eb3\u5165 slice\uff08common 1518\u21921564\u3001api 263\u2192264\uff09",
+    "fixes": [
+      "`GuiBar.IBarInfoHandler` \u4e0e\u9876\u5c42 `IBarInfoHandler` \u662f\u4e24\u5957\u7c7b\u578b\uff08\u79fb\u690d\u628a\u5b83\u4eec\u62c6\u5f00\u4e86\uff09\uff0cEMI \u4f20 `RecipeViewerUtils.FULL_BAR` \u65f6\u7c7b\u578b\u4e0d\u5339\u914d\uff1a**\u5220\u9664 GuiBar \u5185\u5d4c\u63a5\u53e3\uff0c\u5168\u4ed3 21 \u4e2a\u6587\u4ef6\u7edf\u4e00\u7528\u9876\u5c42\u7c7b\u578b**\u2014\u2014\u8fd9\u4e00\u5904\u4fee\u6389\u4e86 32 \u4e2a\u9519\u8bef\u91cc\u7684 26 \u4e2a",
+      "`ChemicalEmiStack.getId()`\uff1a`chemical.getKey()` \u2192 `Holder.unwrapKey()`\uff08\u79fb\u690d\u7684 Chemical \u4e0d\u5e26\u9884\u89e3\u6790\u952e\uff09",
+      "`MekanismEmi.addChemicalComponent`\uff1a`stack.getCapability(Capabilities.CHEMICAL.item())` \u2192 `Capabilities.CHEMICAL.getCapability(stack)`",
+      "`MekanismEmi.addFluidComponent`\uff1aNeoForge \u7684 item capability \u56de\u9000\u5728 Fabric \u4e0a\u7ed9\u7684\u662f transfer `Storage<FluidVariant>`\uff0c\u4e0d\u662f `IExtendedFluidHandler`\uff1bEMI \u672c\u8eab\u4f1a\u6e32\u67d3\u539f\u7248\u6d41\u4f53\u5bb9\u5668\uff0c\u6545\u53ea\u68c0\u67e5\u7ec4\u4ef6\u5f0f Mekanism \u7f50\uff08\u6ce8\u91ca\u5199\u660e port delta\uff09"
+    ],
+    "entrypoint": "`fabric.mod.json` \u589e\u52a0 `\"emi\": [\"mekanism.client.recipe_viewer.emi.MekanismEmi\"]` \u4e0e `suggests.emi`\uff1b`assemble` \u540e JAR \u5185\u7684 fabric.mod.json \u5df2\u542b\u8be5 entrypoint",
+    "regression": "./gradlew -p fabric test BUILD SUCCESSFUL\uff08451 \u9879 JVM \u6d4b\u8bd5\uff09",
+    "not_done": [
+      "\u5c1a\u672a\u5728\u771f\u5b9e\u5ba2\u6237\u7aef\u9a8c\u8bc1\uff08\u9700\u8981 `-PemiDev` \u8d77 mdb \u4f1a\u8bdd\u88c5 EMI \u540e\u6253\u5f00\u673a\u5668\u754c\u9762\u770b\u914d\u65b9\uff09",
+      "EMI \u7684 exclusion/ghost/stack-under-mouse \u7b49\u4ea4\u4e92\u672a\u9a8c\u8bc1",
+      "JEI \u9002\u914d\u4ecd\u4e0d\u5728\u6279\u51c6\u8303\u56f4"
+    ]
   }
 }

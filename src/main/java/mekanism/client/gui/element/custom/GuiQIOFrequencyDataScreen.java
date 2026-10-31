@@ -4,7 +4,7 @@ import java.util.function.Supplier;
 import mekanism.api.text.EnumColor;
 import mekanism.client.gui.IGuiWrapper;
 import mekanism.client.gui.element.GuiInnerScreen;
-import mekanism.client.gui.element.bar.GuiBar.IBarInfoHandler;
+import mekanism.client.gui.element.bar.IBarInfoHandler;
 import mekanism.client.gui.element.bar.GuiDigitalBar;
 import mekanism.common.MekanismLang;
 import mekanism.common.content.qio.QIOFrequency;

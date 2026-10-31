@@ -7,7 +7,7 @@ import mekanism.api.recipes.cache.CachedRecipe.OperationTracker.RecipeError;
 import mekanism.client.gui.element.GuiDownArrow;
 import mekanism.client.gui.element.GuiElement;
 import mekanism.client.gui.element.GuiInnerScreen;
-import mekanism.client.gui.element.bar.GuiBar.IBarInfoHandler;
+import mekanism.client.gui.element.bar.IBarInfoHandler;
 import mekanism.client.gui.element.bar.GuiHorizontalRateBar;
 import mekanism.client.gui.element.gauge.GaugeType;
 import mekanism.client.gui.element.gauge.GuiFluidGauge;

@@ -1,7 +1,7 @@
 package mekanism.client.gui.element.bar;
 
 import mekanism.client.gui.IGuiWrapper;
-import mekanism.client.gui.element.bar.GuiBar.IBarInfoHandler;
+import mekanism.client.gui.element.bar.IBarInfoHandler;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.MekanismUtils.ResourceType;
 import net.minecraft.client.gui.GuiGraphics;

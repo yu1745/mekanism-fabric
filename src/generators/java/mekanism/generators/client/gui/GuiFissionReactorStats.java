@@ -2,7 +2,7 @@ package mekanism.generators.client.gui;
 
 import java.util.Collections;
 import mekanism.client.gui.GuiMekanismTile;
-import mekanism.client.gui.element.bar.GuiBar.IBarInfoHandler;
+import mekanism.client.gui.element.bar.IBarInfoHandler;
 import mekanism.client.gui.element.bar.GuiDynamicHorizontalRateBar;
 import mekanism.client.gui.element.tab.GuiHeatTab;
 import mekanism.client.gui.element.tab.GuiWarningTab;

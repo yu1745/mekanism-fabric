@@ -1,3 +1,8 @@
+# Official public energy conversion service provider
+# P3 original advancement descriptors
+# P3 original command tree and core builders
+# P3 recipe diagnostics lifecycle owner
+# P5 original client particle implementations
 mekanism/client/ClientPlayerAccess.java
 mekanism/client/ClientTickHandler.java
 mekanism/client/MekanismClient.java
@@ -262,9 +267,59 @@ mekanism/client/model/energycube/EnergyCubeGeometry.java
 mekanism/client/model/energycube/EnergyCubeModelLoader.java
 mekanism/client/model/robit/RobitBakedModel.java
 mekanism/client/model/robit/RobitModel.java
+mekanism/client/particle/JetpackFlameParticle.java
+mekanism/client/particle/JetpackSmokeParticle.java
+mekanism/client/particle/LaserParticle.java
 mekanism/client/particle/RadiationParticle.java
+mekanism/client/particle/ScubaBubbleParticle.java
+mekanism/client/recipe_viewer/GhostIngredientHandler.java
+mekanism/client/recipe_viewer/GuiElementHandler.java
+mekanism/client/recipe_viewer/QIOCraftingTransferHandler.java
+mekanism/client/recipe_viewer/RVTransferUtils.java
 mekanism/client/recipe_viewer/RecipeViewerUtils.java
+mekanism/client/recipe_viewer/color/PaintingColorDetails.java
+mekanism/client/recipe_viewer/color/PigmentExtractorColorDetails.java
+mekanism/client/recipe_viewer/color/PigmentMixerColorDetails.java
+mekanism/client/recipe_viewer/color/RecipeViewerColorDetails.java
+mekanism/client/recipe_viewer/emi/ChemicalEmiIngredientSerializer.java
+mekanism/client/recipe_viewer/emi/ChemicalEmiStack.java
+mekanism/client/recipe_viewer/emi/EmiExclusionHandler.java
+mekanism/client/recipe_viewer/emi/EmiGhostIngredientHandler.java
+mekanism/client/recipe_viewer/emi/EmiStackUnderMouseProvider.java
 mekanism/client/recipe_viewer/emi/INamedRVRecipe.java
+mekanism/client/recipe_viewer/emi/MekanismEmi.java
+mekanism/client/recipe_viewer/emi/MekanismEmiHelper.java
+mekanism/client/recipe_viewer/emi/MekanismEmiRecipeCategory.java
+mekanism/client/recipe_viewer/emi/recipe/BoilerEmiRecipe.java
+mekanism/client/recipe_viewer/emi/recipe/ChemicalChemicalToChemicalEmiRecipe.java
+mekanism/client/recipe_viewer/emi/recipe/ChemicalCrystallizerEmiRecipe.java
+mekanism/client/recipe_viewer/emi/recipe/ChemicalDissolutionEmiRecipe.java
+mekanism/client/recipe_viewer/emi/recipe/ChemicalToChemicalEmiRecipe.java
+mekanism/client/recipe_viewer/emi/recipe/CombinerEmiRecipe.java
+mekanism/client/recipe_viewer/emi/recipe/ElectrolysisEmiRecipe.java
+mekanism/client/recipe_viewer/emi/recipe/FluidChemicalToChemicalEmiRecipe.java
+mekanism/client/recipe_viewer/emi/recipe/FluidToFluidEmiRecipe.java
+mekanism/client/recipe_viewer/emi/recipe/ItemStackChemicalToItemStackEmiRecipe.java
+mekanism/client/recipe_viewer/emi/recipe/ItemStackToChemicalEmiRecipe.java
+mekanism/client/recipe_viewer/emi/recipe/ItemStackToEnergyEmiRecipe.java
+mekanism/client/recipe_viewer/emi/recipe/ItemStackToFluidEmiRecipe.java
+mekanism/client/recipe_viewer/emi/recipe/ItemStackToFluidOptionalItemEmiRecipe.java
+mekanism/client/recipe_viewer/emi/recipe/ItemStackToItemStackEmiRecipe.java
+mekanism/client/recipe_viewer/emi/recipe/MekanismEmiHolderRecipe.java
+mekanism/client/recipe_viewer/emi/recipe/MekanismEmiRecipe.java
+mekanism/client/recipe_viewer/emi/recipe/MetallurgicInfuserEmiRecipe.java
+mekanism/client/recipe_viewer/emi/recipe/NucleosynthesizingEmiRecipe.java
+mekanism/client/recipe_viewer/emi/recipe/PaintingEmiRecipe.java
+mekanism/client/recipe_viewer/emi/recipe/PigmentExtractingEmiRecipe.java
+mekanism/client/recipe_viewer/emi/recipe/PigmentMixerEmiRecipe.java
+mekanism/client/recipe_viewer/emi/recipe/PressurizedReactionEmiRecipe.java
+mekanism/client/recipe_viewer/emi/recipe/RotaryEmiRecipe.java
+mekanism/client/recipe_viewer/emi/recipe/SPSEmiRecipe.java
+mekanism/client/recipe_viewer/emi/recipe/SawmillEmiRecipe.java
+mekanism/client/recipe_viewer/emi/transfer/EmiQIOCraftingTransferHandler.java
+mekanism/client/recipe_viewer/emi/transfer/FormulaicAssemblicatorTransferHandler.java
+mekanism/client/recipe_viewer/emi/widget/MekanismEmiWidget.java
+mekanism/client/recipe_viewer/emi/widget/MekanismTankEmiWidget.java
 mekanism/client/recipe_viewer/interfaces/IRecipeViewerGhostTarget.java
 mekanism/client/recipe_viewer/interfaces/IRecipeViewerIngredientHelper.java
 mekanism/client/recipe_viewer/interfaces/IRecipeViewerRecipeArea.java
@@ -283,6 +338,7 @@ mekanism/client/render/MekanismRenderType.java
 mekanism/client/render/MekanismRenderer.java
 mekanism/client/render/MekanismShaders.java
 mekanism/client/render/ModelRenderer.java
+mekanism/client/render/RenderPropertiesProvider.java
 mekanism/client/render/RenderResizableCuboid.java
 mekanism/client/render/RenderTickHandler.java
 mekanism/client/render/armor/FreeRunnerArmor.java
@@ -363,8 +419,11 @@ mekanism/client/sound/SoundHandler.java
 mekanism/common/ChemicalConstants.java
 mekanism/common/CommonPlayerTickHandler.java
 mekanism/common/CommonWorldTickHandler.java
+mekanism/common/IncompleteRecipeScanner.java
 mekanism/common/MekanismLang.java
 mekanism/common/UsernameCache.java
+mekanism/common/advancements/MekanismAdvancement.java
+mekanism/common/advancements/MekanismAdvancements.java
 mekanism/common/advancements/MekanismCriteriaTriggers.java
 mekanism/common/advancements/triggers/AlloyUpgradeTrigger.java
 mekanism/common/advancements/triggers/BlockLaserTrigger.java
@@ -596,7 +655,13 @@ mekanism/common/capabilities/resolver/manager/ICapabilityHandlerManager.java
 mekanism/common/capabilities/resolver/manager/ItemHandlerManager.java
 mekanism/common/capabilities/security/OwnerObject.java
 mekanism/common/capabilities/security/SecurityObject.java
+mekanism/common/command/ChunkCommand.java
+mekanism/common/command/CommandMek.java
 mekanism/common/command/ForceRetrogenCommand.java
+mekanism/common/command/RadiationCommand.java
+mekanism/common/command/builders/BuildCommand.java
+mekanism/common/command/builders/Builders.java
+mekanism/common/command/builders/StructureBuilder.java
 mekanism/common/config/BaseMekanismConfig.java
 mekanism/common/config/ChemicalConfigAccess.java
 mekanism/common/config/ClientConfig.java
@@ -1282,6 +1347,7 @@ mekanism/common/resource/ore/BaseOreConfig.java
 mekanism/common/resource/ore/OreAnchor.java
 mekanism/common/resource/ore/OreBlockType.java
 mekanism/common/resource/ore/OreType.java
+mekanism/common/service/EnergyConversionHelper.java
 mekanism/common/tags/MekanismTags.java
 mekanism/common/tier/BinTier.java
 mekanism/common/tier/CableTier.java
@@ -1501,28 +1567,3 @@ mekanism/common/world/height/ConfigurableHeightProvider.java
 mekanism/common/world/height/ConfigurableHeightRange.java
 mekanism/common/world/height/ConfigurableVerticalAnchor.java
 mekanism/common/world/height/HeightShape.java
-
-# P3 original command tree and core builders
-mekanism/common/command/ChunkCommand.java
-mekanism/common/command/CommandMek.java
-mekanism/common/command/RadiationCommand.java
-mekanism/common/command/builders/BuildCommand.java
-mekanism/common/command/builders/Builders.java
-mekanism/common/command/builders/StructureBuilder.java
-
-# P3 original advancement descriptors
-mekanism/common/advancements/MekanismAdvancement.java
-mekanism/common/advancements/MekanismAdvancements.java
-
-# P3 recipe diagnostics lifecycle owner
-mekanism/common/IncompleteRecipeScanner.java
-
-# Official public energy conversion service provider
-mekanism/common/service/EnergyConversionHelper.java
-
-# P5 original client particle implementations
-mekanism/client/particle/JetpackFlameParticle.java
-mekanism/client/particle/JetpackSmokeParticle.java
-mekanism/client/particle/ScubaBubbleParticle.java
-mekanism/client/particle/LaserParticle.java
-mekanism/client/render/RenderPropertiesProvider.java

@@ -100,7 +100,8 @@ public class ChemicalEmiStack extends EmiStack {
 
     @Override
     public ResourceLocation getId() {
-        ResourceKey<Chemical> key = chemical.getKey();
+        //Fabric port delta: Chemical no longer carries a pre-resolved registry key; resolve it from the stack's holder.
+        ResourceKey<Chemical> key = chemical.unwrapKey().orElse(null);
         return key == null ? MekanismAPI.CHEMICAL_REGISTRY.getDefaultKey() : key.location();
     }
 

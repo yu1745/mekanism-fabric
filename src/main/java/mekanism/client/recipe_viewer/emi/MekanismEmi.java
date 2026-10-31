@@ -105,7 +105,7 @@ public class MekanismEmi implements EmiPlugin {
     private static void addChemicalComponent(Set<Object> representation, ItemStack stack) {
         IChemicalHandler handler = ContainerType.CHEMICAL.createHandlerIfData(stack);
         if (handler == null) {
-            handler = stack.getCapability(Capabilities.CHEMICAL.item());
+            handler = Capabilities.CHEMICAL.getCapability(stack);
         }
         if (handler != null) {
             int tanks = handler.getChemicalTanks();
@@ -125,10 +125,10 @@ public class MekanismEmi implements EmiPlugin {
     }
 
     private static void addFluidComponent(Set<Object> representation, ItemStack stack) {
+        //Fabric port delta: the NeoForge fallback read a capability off the stack; on Fabric that lookup yields a
+        //transfer Storage (not an IExtendedFluidHandler), and EMI already renders vanilla fluid containers itself,
+        //so only component-backed Mekanism tanks are inspected here.
         IExtendedFluidHandler handler = ContainerType.FLUID.createHandlerIfData(stack);
-        if (handler == null) {
-            handler = Capabilities.FLUID.getCapability(stack);
-        }
         if (handler != null) {
             int tanks = handler.getTanks();
             if (tanks == 1) {

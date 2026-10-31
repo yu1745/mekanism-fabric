@@ -3,7 +3,7 @@ package mekanism.client.gui.element.bar;
 import mekanism.api.energy.IEnergyContainer;
 import mekanism.api.math.MathUtils;
 import mekanism.client.gui.IGuiWrapper;
-import mekanism.client.gui.element.bar.GuiBar.IBarInfoHandler;
+import mekanism.client.gui.element.bar.IBarInfoHandler;
 import mekanism.common.util.MekanismUtils;
 import mekanism.common.util.MekanismUtils.ResourceType;
 import mekanism.common.util.text.EnergyDisplay;

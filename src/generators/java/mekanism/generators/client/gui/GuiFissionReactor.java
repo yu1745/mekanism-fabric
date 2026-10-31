@@ -7,7 +7,7 @@ import mekanism.api.text.EnumColor;
 import mekanism.client.gui.GuiMekanismTile;
 import mekanism.client.gui.element.GuiBigLight;
 import mekanism.client.gui.element.GuiInnerScreen;
-import mekanism.client.gui.element.bar.GuiBar.IBarInfoHandler;
+import mekanism.client.gui.element.bar.IBarInfoHandler;
 import mekanism.client.gui.element.bar.GuiDynamicHorizontalRateBar;
 import mekanism.client.gui.element.button.TranslationButton;
 import mekanism.client.gui.element.gauge.GaugeType;

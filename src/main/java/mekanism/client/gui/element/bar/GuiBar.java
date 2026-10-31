@@ -4,7 +4,6 @@ import java.util.Objects;
 import java.util.function.BooleanSupplier;
 import mekanism.client.gui.IGuiWrapper;
 import mekanism.client.gui.element.GuiTexturedElement;
-import mekanism.client.gui.element.bar.GuiBar.IBarInfoHandler;
 import mekanism.client.gui.element.slot.GuiSlot;
 import mekanism.client.gui.tooltip.TooltipUtils;
 import mekanism.common.inventory.warning.ISupportsWarning;
@@ -101,15 +100,5 @@ public abstract class GuiBar<INFO extends IBarInfoHandler> extends GuiTexturedEl
         }//else > 1
         //Allow rounding up
         return (int) Math.round(scale * value);
-    }
-
-    public interface IBarInfoHandler {
-
-        @Nullable
-        default Component getTooltip() {
-            return null;
-        }
-
-        double getLevel();
     }
 }

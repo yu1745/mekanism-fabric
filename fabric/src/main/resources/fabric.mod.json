@@ -28,6 +28,9 @@
     ],
     "client": [
       "mekanism.fabric.MekanismFabricClientBootstrap"
+    ],
+    "emi": [
+      "mekanism.client.recipe_viewer.emi.MekanismEmi"
     ]
   },
   "depends": {
@@ -37,5 +40,8 @@
     "fabric-api": ">=0.116.17",
     "team_reborn_energy": ">=4.1.0"
   },
-  "icon": "assets/mekanism/icon.png"
+  "icon": "assets/mekanism/icon.png",
+  "suggests": {
+    "emi": "*"
+  }
 }

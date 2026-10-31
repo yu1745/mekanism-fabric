@@ -4,7 +4,7 @@ import mekanism.api.energy.IEnergyContainer;
 import mekanism.api.math.MathUtils;
 import mekanism.client.ClientTickHandler;
 import mekanism.client.gui.GuiMekanism;
-import mekanism.client.gui.element.bar.GuiBar.IBarInfoHandler;
+import mekanism.client.gui.element.bar.IBarInfoHandler;
 import mekanism.client.gui.element.bar.GuiVerticalPowerBar;
 import mekanism.client.gui.element.button.MekanismButton;
 import mekanism.client.gui.element.button.TranslationButton;

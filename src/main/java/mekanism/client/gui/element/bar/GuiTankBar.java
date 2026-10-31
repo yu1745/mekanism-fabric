@@ -125,8 +125,8 @@ public abstract class GuiTankBar<STACK> extends GuiBar<TankInfoProvider<STACK>> 
         return new Rect2i(getX() + 1, getY() + 1, width - 2, height - 2);
     }
 
-    //Note the GuiBar.IBarInfoHandler is needed, as it cannot compile and resolve just IBarInfoHandler
-    public interface TankInfoProvider<STACK> extends GuiBar.IBarInfoHandler {
+    //Note the IBarInfoHandler is needed, as it cannot compile and resolve just IBarInfoHandler
+    public interface TankInfoProvider<STACK> extends IBarInfoHandler {
 
         @NotNull
         STACK getStack();

@@ -1,7 +1,7 @@
 package mekanism.client.gui.element.bar;
 
 import mekanism.client.gui.IGuiWrapper;
-import mekanism.client.gui.element.bar.GuiBar.IBarInfoHandler;
+import mekanism.client.gui.element.bar.IBarInfoHandler;
 import mekanism.client.render.MekanismRenderer;
 import mekanism.common.lib.Color.ColorFunction;
 import mekanism.common.util.MekanismUtils;

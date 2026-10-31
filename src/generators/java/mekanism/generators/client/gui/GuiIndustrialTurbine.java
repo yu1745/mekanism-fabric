@@ -6,7 +6,7 @@ import mekanism.api.math.MathUtils;
 import mekanism.api.text.EnumColor;
 import mekanism.client.gui.GuiMekanismTile;
 import mekanism.client.gui.element.GuiInnerScreen;
-import mekanism.client.gui.element.bar.GuiBar.IBarInfoHandler;
+import mekanism.client.gui.element.bar.IBarInfoHandler;
 import mekanism.client.gui.element.bar.GuiVerticalPowerBar;
 import mekanism.client.gui.element.bar.GuiVerticalRateBar;
 import mekanism.client.gui.element.button.GuiGasMode;

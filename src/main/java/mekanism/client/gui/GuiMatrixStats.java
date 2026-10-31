@@ -2,7 +2,7 @@ package mekanism.client.gui;
 
 import java.util.List;
 import mekanism.api.math.MathUtils;
-import mekanism.client.gui.element.bar.GuiBar.IBarInfoHandler;
+import mekanism.client.gui.element.bar.IBarInfoHandler;
 import mekanism.client.gui.element.bar.GuiVerticalRateBar;
 import mekanism.client.gui.element.gauge.GaugeType;
 import mekanism.client.gui.element.gauge.GuiEnergyGauge;
