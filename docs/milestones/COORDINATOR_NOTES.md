@@ -277,3 +277,19 @@ AGENTS.md 本批新增：①"游戏客户端只能用 mdb 启动"硬规则 ②"�
 核对：声明未越界；W-74 未启动；wip squash / submodule 指针未动；evidence 4.24MB。
 
 路线图：未开始 W 项约 9（W-67 视情况、W-71、W-72、W-73、W-63、W-74（待用户）、W-75…79），不触发补充线，本次无改动。
+
+## 协调者巡检 D3（2026-10-31 08:52，基线 `5660847f`；后面还有 D4）
+
+**事实**：worker 恢复，自 `c8685eda` 起 2 个提交：`fbe51944`（落实 C4/D1 的措辞修正：README 收窄客户端路径声明、`release-check.sh` 头部改为只列真实运行的服务端门禁、`w66-soak.json` 增加"堆/RSS 从未采样"的如实说明、W-67 并入 W-66 并把大型传输网/涡轮裂变压力列为残留；AGENTS 两条新规则各压到 2 行）、`5660847f`（**W-75**：`compare-resource-inventory.py`，对 8379 个官方 data/assets 条目归一化 JSON 后比对，结果 1457 字节一致 / 5708 仅格式 / 33 缺失 / 1181 内容不同，缺失与差异逐一归因，并把缺的 3 个 en_au/en_gb/en_ud 语言文件补进 `src/main/resources`）。工作区进行中：W-71（`mod_version` → `10.7.19.85+fabric.1`、四个 `fabric.mod.json` 改名/描述/图标、新增 `icon.png`），未提交。
+
+**审计陷阱检测：未触发，P17 已启动。** W-75 产出了工具 + 实际修复（补语言文件），符合"差异清单须伴随修复"。C4/D1 的三项遗留要求已全部落实且措辞准确（W-66 缺堆数据如实声明为未采样，我接受，不再追）。
+
+问题与要求：
+1. **W-71 改版本号的硬风险——三个 smoke 的 JAR 通配符会失配**：`scripts/fabric-machine-smoke.sh:68`、`fabric-worldgen-smoke.sh:68` 使用 `dist/*-fabric-bootstrap.jar`，`fabric-retrogen-smoke.sh:34` 使用 `fabric/build/libs/*-fabric-bootstrap.jar`；`archives_base_name` 也仍是 `Mekanism-Fabric-Bootstrap`。版本改为 `+fabric.1` 后核心 JAR 文件名不再以 `-fabric-bootstrap.jar` 结尾，**machine smoke（在 release-check 中）会找不到 JAR**。请在同一 W-71 提交里：①统一 JAR 命名（`archives_base_name` 是否去掉 Bootstrap 由你定，但要与 `build.sh` 的 dist 收集、三个 smoke、`fabric-packaged-oracles.json` 里任何按文件名的断言一致）②改版本后**必须**重跑 `scripts/release-check.sh` 全量（W-71 完成标志），并把新 JAR 的 sha256 重记（W-61 的哈希随之作废）。
+2. **W-75 的后续动作**：提交信息已记"比对基于 W-61 的 dist，下次 `./build.sh` 后须重跑"。W-71 重建后顺便重跑一次，确认 33 缺失降到 30（仅第三方）、未解释差异仍为 0；无需另开提交，写入同一份 `w75-resource-inventory.json`。
+3. **544 个 Additions 配方的 `neoforge:*`→`fabric:*` 翻译**是语义改动（涉及自定义 ingredient 类型）。请从中抽 2–3 个有代表性的（含化学/复合 ingredient 的）用现有 recipe smoke 或 mcdebug 在游戏里实际合成/加工一次，确认翻译后行为正确；写一行结果即可，不新增测试。
+4. 下一步顺序：W-71 收口 → W-76（注册表 ID 对照，用 `neoforge-reference.sh start` 导出，用完 `stop`，按 AGENTS 进程树规则复查无残留）→ W-77 → W-78 → W-73。
+
+核对：声明未越界；W-74 未启动；wip squash / submodule 指针未动；evidence 4.24MB；AGENTS.md 未见新偏离。
+
+路线图：未开始 W 项约 8（W-71 进行中，W-72、W-73、W-63、W-74（待用户）、W-76…79），**临近 ≤6 的补充线**；D4 将补足无人值守余量，本次无改动。
