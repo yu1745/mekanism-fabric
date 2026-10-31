@@ -32,7 +32,7 @@ W-109（文档同步）：`CHANGELOG.md` 增“Optional integrations”表（四
 
 W-108（安全/权限）：**部分验证**。机器 GUI（Crusher）与安全台 GUI 都能由 `gui open-block` 打开并正确渲染（截图 `w74/crusher-gui.png`、`w74/security-desk.png`），顺带澄清：此前 W-83/92 的 `-32018 no screen handler factory` 是“方块刚放置、BE 未同步”的临时态，BE 就绪后同样调用成功。新放置的安全台显示 “No Owner / Security Offline”（无频率时的正确语义），世界目录也还没有 `mekanism_frequencies.dat`。**未验证**：跨玩家拒绝与公开/私有/受信门禁——mdb 单机会话只有一个玩家，也没有服务端命令通道，无法构造第二个玩家；需用双客户端环境（`fabric-paired-network-smoke.sh` 扩展）另开一项。[记录](evidence/p8-release/w108-security.json)
 
-W-107（崩溃/卸载鲁棒性）：加工中 `kill -9` 集成服务端再重启——存档正常加载、**物品守恒 64**（63锭+1粉 → 62锭+2粉，无复制无丢失）、重新充能后机器可继续加工（progress 0→47）；线缆网络在硬崩后 `connections=32` 与崩溃前**完全一致**。未验证：autosave 瞬间硬杀、在途传输物品、跨维度传送恢复。两次硬杀均无残留进程。[记录](evidence/p8-release/w107-crash-robustness.json)
+W-107（崩溃/卸载鲁棒性）：加工中 `kill -9` 集成服务端再重启——存档正常加载、**物品守恒 64**（63锭+1粉 → 62锭+2粉，无复制无丢失）、重新充能后机器可继续加工（progress 0→47）；线缆网络在硬崩后 `connections=32` 与崩溃前**完全一致**。未验证：autosave 瞬间硬杀、在途传输物品、跨维度传送恢复。两次硬杀均无残留进程。**能量持久化补测（回应巡检 G0 第 5 条）**：改用正常保存对照，写入 12,345 FE 后立即停止，重启读到 **45 FE**、物品仍守恒 8——说明**能量确实跨存档保留**，先前两次的 `energy=0` 是“关机前把电用完了”（机器在保存完成前仍在加工，两次观察里物品都恰好前进 1–2 个），不是存档丢失。[记录](evidence/p8-release/w107-crash-robustness.json)
 
 W-106（矿石加工链端到端）：mdb 集成服务端上搭 Crusher / Enrichment Chamber / Energized Smelter 三台机器实测——**铁矿石→富集→每矿 2 粉（×2）**、铁锭→粉碎→铁粉、铁粉→通电熔炉→铁锭，全部按预期产出。**排除一个误判**：把矿石放进粉碎机不动是正确行为（官方与该移植的 `data/mekanism/recipe/` 同为 2215 个配方，粉碎机本就没有矿石配方）。未验证：×3/×4/×5 化学链、管道运输（W-82 已单独验）、工厂版与速度升级。另**自查记录**：本轮曾误用 `gradlew runClient` 起客户端约 40 秒，发现后按进程组终止并改回 mdb；起因是 mdb 缺少 `loom-cache/argFiles/runClient`，正确解法是先跑 `configureClientLaunch`。[记录](evidence/p8-release/w106-ore-chain.json)
 
