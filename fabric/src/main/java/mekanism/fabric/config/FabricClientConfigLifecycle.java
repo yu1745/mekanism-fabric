@@ -53,6 +53,7 @@ public final class FabricClientConfigLifecycle implements AutoCloseable {
             throw new IllegalStateException("Fabric client config lifecycle is already initialized");
         }
         FabricClientConfigLifecycle lifecycle = new FabricClientConfigLifecycle(FabricMekanismConfigManager.createDefault());
+        lifecycle.manager.beginWatching(net.minecraft.client.Minecraft.getInstance()::execute);
         active = lifecycle;
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> shutdown());
         LOGGER.info("MEKANISM_FABRIC_CLIENT_CONFIG_INITIALIZED owner={} thread={}",
@@ -88,6 +89,7 @@ public final class FabricClientConfigLifecycle implements AutoCloseable {
             ClientWindowConfigAccess.verifyOwnerThread(windowConfig);
             closed = true;
         }
+        manager.stopWatching();
         windowConfig.stopAndDrain();
         RuntimeException unloadFailure = null;
         try {

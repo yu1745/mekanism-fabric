@@ -66,11 +66,11 @@ public final class FabricServerConfig {
             throw failure;
         }
         var general = MekanismConfig.general;
-        ChemicalConfigAccess.publishServerPolicy(new ChemicalConfigAccess.ServerPolicy(general.radiationEnabled.get(),
-              general.forgeConversionRate.get(), general.blacklistForge.get()));
+        ChemicalConfigAccess.publishServerPolicy(general);
         RadiationValidation.publish(ChemicalConfigAccess::radiationEnabled);
         manager = candidate;
         owner = server;
+        candidate.beginWatching(server::execute);
         //The per-schema counts make the aggregate value count auditable: a dropped or duplicated schema shows up here.
         StringBuilder detail = new StringBuilder();
         CONFIGS.stream().sorted(java.util.Comparator.comparing(IMekanismConfig::getFileName)).forEach(config -> {
@@ -145,6 +145,8 @@ public final class FabricServerConfig {
                 installed.add(config);
             }
             if (!remaining.isEmpty()) throw new IllegalArgumentException("Unknown server config paths: " + remaining.keySet());
+            ChemicalConfigAccess.publishServerPolicy(MekanismConfig.general);
+            RadiationValidation.publish(ChemicalConfigAccess::radiationEnabled);
             CONFIGS.forEach(config -> config.clearCache(false));
         } catch (RuntimeException | Error failure) {
             try {
@@ -168,6 +170,8 @@ public final class FabricServerConfig {
     }
 
     private static void resetRemote(List<IMekanismConfig> configs) {
+        RadiationValidation.reset();
+        ChemicalConfigAccess.resetServerPolicy();
         RuntimeException firstFailure = null;
         for (IMekanismConfig config : configs) {
             var spec = config.getConfigSpec();

@@ -838,3 +838,35 @@ W-123 当前仅四台代表机器、配置/sorting 与内容 id 集合；W-124 �
 **路线收敛**：W-120、原运输器范围的 W-121、太阳能输出范围的 W-122、W-116 负载闭包均已有本轮提交和证据。剩余必要实现是把已有 paired/rejection 的 `systemd-run + xvfb-run + Gradle 客户端任务` 改成 mdb owned 生命周期；这是恢复现有最终门禁可合法执行的前置，不是新增验证任务。必须保留 paired 的实际握手/配置 apply/重复连接断言，以及 rejection 的 version_mismatch、same_version_reject、missing_receiver 精确服务端/客户端原因与顺序、唯一性、无握手完成/未进入 PLAY 断言。不能为适配 mdb 退化成只检查进程或标题画面启动。
 
 完成该接线后，按根 goal 已有验收执行最终门禁、记录最终提交/JAR 与未跑套件，更新状态及证据索引，清理本轮 owned session 与临时开发依赖即可收口；不再自动追加 QIO、跨区块、矩阵、配置官方全矩阵、GUI 等场景。frozen-sprint 初始差异仍按 M2 记录为未归因，不凭“后续测试通过”抹去，也不在无实质复现依据时改生产 tick 行为。发布、部署、push 保持范围外。本次未运行测试或游戏，完整门禁未跑。
+
+## 方向核对 M4（2026-11-01，已提交基线 `f8e37d33`）
+
+**已提交真实 diff 简审通过，未发现生产缺陷或门禁断言削弱**。`devClientRun` 只继承已有 handshake/mismatch/missing-receiver preset 并接到 `runClient`；禁止与附加模块选择混用，未改生产 payload、注册或握手算法。共享 helper 为现有门禁管理 mdb owned session、独立显示及临时 debug/Kotlin 运行依赖，未将这些依赖纳入发布物。paired/rejection 的精确 marker、顺序、次数、原因、正常配置同步及拒绝不得进入 PLAY 等原断言保留，实际 focused 结果为两个正常客户端与三种拒绝通过，五条 session stopped 且对应 JVM 不存在的读数已落证据。
+
+旧 `fabric-security-denial-smoke.sh` 原本无有效双客户端验收且违反客户端启动规则，本次改成 exit 2 并指向已验收的 mdb GUI probe，避免假通过；它不是删除现行发布 gate。主实现者后续全门禁仍须确认自己的新 session/显示进程/临时 wrapper 和运行目录收干净，不能仅复用 focused 运行的清理读数。
+
+**口径更正接受**：48kHz/little-endian Java Sound 采样不等于 Additions 的 16kHz/big-endian 真实协议或双向语音；M-additions、W-64 与当前状态页已明确未验收。DECISIONS_PENDING 当前表前置、旧条目标为历史，已批准项不再反复询问；Iris 开发映射失败不推断发布客户端兼容性。此次是纠正既有证据范围，不派生新的音频/渲染测试任务。
+
+**收敛到最终验收**：主实现者正在执行当前基线的 `release-check.sh --extended`（含 clean build），随后第二次 clean 比四 JAR 哈希；本检查时结果未返回，因此最终门禁/可复现结论仍为待结果。除真实失败所需修复，不再追加实现或场景。最后同步状态、证据索引、未跑项及清理结果并提交；frozen-sprint 初始观察保持未归因，QIO/跨区块/矩阵/语音等范围保持明确未测。协调者本轮没有运行工具验证或游戏进程，没有提交。
+
+## 方向核对 M5（2026-11-01，W-124 固定运行库只读核对）
+
+**结论：存在明确配置热重载行为缺口，不能仅降格为文档差异。** 本次仅对固定本地 JAR 执行 `javap -p -c/-v` 并读取本仓实际 owner；未启动游戏、未新增测试。官方目录为 `~/.cache/mekanism-neoforge-reference/`；FML loader 4.0.41 SHA-256 `bf490b3c254738339932ecfb3068607ff7b9d3622086cd3c476f979f4981cda9`，NeoForge 21.1.200 universal 为 `bad2e2d951a275f1063600b432223d3fb5c18345f6bfde204517b51cb25720da`；Mekanism/Generators 10.7.19.85 身份沿用固定官方核心 `004dbc9f…`、Generators `0e5783b1…`。常驻 `server/config/fml.toml` 明确 `disableConfigWatcher = false`，与 FML 的默认值一致。
+
+**真实官方调用链**：`ConfigTracker.openConfig` 在 watcher 未禁用时为实际路径注册 NightConfig `FileWatcher.addWatch(new ConfigWatcher(...))`；文件变化进入 `ConfigWatcher.run`，在该 mod 的 lock 内调用 `ConfigTracker.loadConfig` 重新读 TOML、校验/修正并建立 `LoadedConfig`；`ModConfig.setConfig` 先 `IConfigSpec.acceptConfig`，后交给 mod container 发布 `ModConfigEvent.Reloading`。`Mekanism` 与 `MekanismGenerators` 的 listener 方法引用分别接到 `MekanismConfig.onConfigLoad`、`MekanismGeneratorsConfig.onConfigLoad`，再调用官方 `MekanismConfigHelper.onConfigLoad`，对 Reloading 执行 `config.clearCache(false)`。`ConfigTracker.closeConfig` 走卸载并撤销文件 watch，owner 生命周期不是永久全局扫描。
+
+**必须保留的层间语义**：NeoForge `ModConfigSpec.acceptConfig → afterReload` 仅 `resetCaches(RestartType.NONE)`；WORLD/GAME 值已有缓存不会因文件编辑立即清掉。随后 Mekanism `BaseMekanismConfig.clearCache(false) → CachedValue.clearCache` 除重新读取外，还在实际值改变时通知既有 invalidation listeners。`GeneratorsConfig.solarGeneration` 是默认无重启限制的定义，真实太阳能通过 `getConfiguredMax()` 读取，因此它落在热重载范围；本仓 `MekanismConfigSpec.load` 会全量 publishLoaded，不能直接拿它反复调用而让 WORLD/GAME 项也即时生效。
+
+**Fabric 当前缺口位置**：`FabricMekanismConfigManager.registerAndLoad` 只在首次注册时 load/clearCache，`unregister/unloadAll` 只管清理，没有文件监听或重载入口；`FabricServerConfig` 只在 SERVER_STARTING/STOPPED 驱动，并在启动时发布 general policy。最小完整边界是：在既有 manager/spec 增加受 owner 生命周期约束的文件变更入口、解析/校验后的有效值发布与 restart 缓存分离；在真实 server/client/process owner 上调度缓存/失效 listener，并刷新已派生的 general policy；卸载注销监听并拒绝旧 owner 的排队回调。覆盖既有 manager 管理的配置与立即调用方，不做太阳能特例，不造通用 Forge/Fabric 配置事件框架。
+
+**网络边界已核实，无需新增 PLAY 协议**：固定 NeoForge universal JAR 的 `ConfigSync`/`ConfigFilePayload` 字节码引用仅落在发送/接收类、配置任务及注册入口；`NetworkInitialization` 明确调用 `configurationToClient` 注册，`ConfigurationInitialization` 注册 `SyncConfig` 任务，由 `SyncConfig.run → ConfigSync.syncConfigs` 发送。`ConfigWatcher` 不广播，已核对的运行库没有 reload 时向在线 PLAY 客户端重发配置的入口。保持现有 configuration snapshot/ack，不把热重载扩成新协议。官方同步读取 `Files.readAllBytes(config.getFullPath())`，即磁盘文件而非已缓存 effective 值：pending 磁盘值/运行值分离后，既有 snapshot 对新连接的取值语义仍须对应这个事实；远端客户端的本地文件监听不能覆盖 server snapshot。
+
+**STARTUP 并非 watcher 例外**：FML `ConfigTracker.registerConfig` 遇 STARTUP 立即调用同一个 `openConfig`，该入口没有按 config type 排除 watch，默认仍监听；其有效变更受字段 restartType 约束。因此 manager 的 process COMMON/STARTUP、客户端生命周期与世界 SERVER 入口均属现有 owner 闭包，不能只给太阳能所在的 SERVER 配置加监听。重载时有效值和待重启的磁盘值必须区分，后续 `save()` 不得把待重启的新值覆盖回当前旧值；基于真值变化的 cache/listener 行为保持原义。
+
+**执行调整**：主实现者已接受这是需修复的真实缺口，继续单一实现者闭包；协调者不改代码。正在执行的 f8 基线门禁（已报告 clean build 584/0/0、静态通过）只证明修复前版本，不能作为后续热重载修复的最终验收。管理完有限既有进程生命周期后进入本闭包，复用 W-124 与已有 focused checks，不新增测试类；W-124 的 `rate_of` 读 NBT `stored`，单位应为 J/t。此前“只剩最终验收”判断由本节取代；不因此扩到其他无关玩法场景。
+
+### M5 补充：配置策略消费者的最小 owner（仅核对已提交 `f8e37d33`）
+
+推荐由 `ChemicalConfigAccess` 在 canonical `MekanismConfig.general.isLoaded()` 时直接读取既有 cached 值；未加载时继续使用 thread `ChemicalDataContext`/`serverPolicy` 回退。这样服务端取 effective、远程新连接取安装的原始文件 snapshot、集成客户端共享服务端实例。化学 snapshot 的旧 effective policy 不应覆盖新连接收到的 pending WORLD 配置。现有 `ChemicalServiceConfigTest` 的独立 context 场景没有加载 GeneralConfig，保留其原回退路径即可；API 层不引入 common 依赖，也不删除已有 context 的策略字段。
+
+**直接调用方必须一并接通**：HEAD 的 `RadiationValidation.isEnabled()` 在 context epoch > 0 时优先取 context，绕过已发布 supplier；只改三个 `ChemicalConfigAccess` getter 仍会留下旧辐射策略。沿既有 `publish/reset` 接入真实运行 owner，使已发布的运行期策略优先，未发布时维持独立 API 的 context/default 行为；远程 attach/detach 也在该闭包内，集成客户端 detach 不能清除仍在运行的服务端 owner。`Chemical` 的派生缓存只存 radioactivity 数值，`hasAttributesWithValidation()` 每次动态调用 `RadiationValidation`，因此无需为配置重载刷新 data-map epoch/identity、增加客户端 tick 镜像或 PLAY 推送。前文“刷新已派生 general policy”据此落实为修正消费 owner，不要求维护第二份策略镜像。该结论是实现方向核对，尚未审查或验收主实现者未提交的修复。

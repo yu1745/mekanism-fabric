@@ -2,7 +2,7 @@
 
 协调者编写，worker 按序执行。状态以 `docs/milestones/README.md` 为准；本文只定"做什么、什么顺序、怎样算完成、卡住怎么办"。不得借本文扩大 `AGENTS.md` 的边界。
 
-## 当前执行入口（2026-11-01，goal 恢复；起始基线 `482abbb9`，已核对 `132b48d0`）
+## 当前执行入口（2026-11-01，goal 恢复；起始基线 `482abbb9`，已核对 `f8e37d33`）
 
 本节取代下方 K2/K3 与旧巡检中冲突的完成判断和执行顺序。协调者本轮只读核对提交、源码与既有证据，没有重新运行游戏门禁；旧通过记录仅覆盖当时实际场景。
 
@@ -10,11 +10,15 @@
 2. **W-121 已提交，Fabric/官方同 rig 通过**（`b9bf320c`）：两端同脚本均使用 unfreeze → sprint → freeze，保存与硬崩溃重启后均为源 1709 + 在途 2 + 目标 17 = 1728，继续搬运为 1690 + 2 + 36 = 1728。既有日志解析与定性错误已纠正；覆盖单区块运输器保存/恢复及继续搬运，QIO、跨区块未测。首轮 frozen-sprint-only 两端表现不同尚未归因，保留观察，不宣称产品缺陷或环境正常，也不因本项扩测试矩阵。
 3. **W-122 已提交，太阳能输出闭包通过**（`60761195`）：固定 BOTTOM → 初始空立方 → 线缆 → 初始空熔炉，800 tick 后立方 7955 J、太阳能 45 J、熔炉 20000 J。`energy_containers.stored` 单位是 J，不能写作 FE。原“缺少 component_config 无法输出”阻塞撤回；不声称感应矩阵容量或含线缆缓冲的全链精确能量守恒已验收。
 4. **W-116 已提交，负载范围通过**（`132b48d0`）：既有 Generators 源集接入 mdb `runClient`，355 值 ack；真实玩家 builder/GUI 成型，满蒸汽且空能量下单 tick 消耗 11,040,000 mB、生成 110,400,000 J，与最大流量/产率及官方同状态完全一致。Fabric creative tank 经阀门持续供汽 200 tick 后末产率仍为最大；官方持续供汽未跑，不把瞬时/末值读数扩称全程逐 tick 恒定。457 项测试真正执行且 0 失败，API 检查通过；临时世界改动已恢复，收尾确认 owned session 最终停止和进程无残留。
-5. **当前唯一实现收口：既有 paired/rejection 客户端改为 mdb owned**。保留原握手成功、重连/配置同步与三种拒绝的精确原因、顺序、次数及不得进入 PLAY 断言；只替换客户端启动/停止和必要 runClient 接线，不删除 gate、不降低断言，不新增场景。先跑改动直接覆盖的两项，随后在最终提交基线上完成既有最终门禁，并更新当前状态/证据索引与未跑范围；不因待办减少再补 W 项。仍未知的 frozen-sprint 初始差异留明确边界，不能随收口改写为已归因。
+5. **paired/rejection 已接入 mdb owned，直接门禁通过**（`f8e37d33`）：沿既有 preset 配置 `runClient`；两个全新客户端的正常握手和三种拒绝均通过，原精确原因/顺序/次数/无 PLAY 等断言未放宽。五个 owned session 已记录 stopped、JVM absent。旧未验收的 securityDenial 直启脚本以非零退出退役，W-120 使用已验证的真实 GUI probe。
+6. **W-124 新确认配置热重载缺口，先完成真实 owner 闭包**：固定 NeoForge 21.1.200 / FML 4.0.41 默认文件监听经 `ConfigWatcher → ConfigTracker.loadConfig → ModConfig.setConfig → ModConfigSpec.acceptConfig/afterReload → ModConfigEvent.Reloading → MekanismConfigHelper.onConfigLoad → clearCache(false)` 更新无需重启项；Fabric manager 当前仅初次 load/unload，缺运行期变更接入，不能把 W-124 写成“与官方一致”。最小边界是既有 manager/spec 的文件变更、磁盘 pending/运行 effective 分离、NONE/WORLD/GAME 缓存语义、Mekanism 失效 listener、实际 server/client/process owner 的调度和卸载注销。STARTUP 官方也会 watch；官方配置包仅 configurationToClient，无需新增 PLAY 协议，新连接 snapshot 与 save 要保留磁盘 pending 语义。由唯一实现者修复，不建立通用 FML 转换层或太阳能专用路径。具体事实见 COORDINATOR_NOTES M5。
+7. **最终验收暂只代表旧基线**：当前 `release-check.sh --extended` 针对 `f8e37d33`，clean build 已报 584/0/0、静态通过，后续仍在运行。主实现者先管理好现有任务生命周期，再修配置缺口；该旧基线即使通过也不能覆盖后续生产修复。修复后按实际影响完成既有检查与最终构建/四哈希记录，不新增测试类或无边界场景。frozen-sprint 初始差异仍未归因；语音原格式/双向会话仍未验收。
+
+W-124 策略消费采用既有 canonical GeneralConfig owner：已加载时由 `ChemicalConfigAccess` 读取其 cached effective/远程已安装值，未加载保留独立 API context 回退；同时接通 `RadiationValidation` 的真实 owner 优先级与远程 attach/detach，集成客户端断开不撤销存活服务端 owner。无需配置专用 data-map epoch、客户端 tick 策略镜像或新 PLAY 协议；详见 COORDINATOR_NOTES M5 补充。此为方向建议，未提交实现尚未独立审查。
 
 **客户端规则更正**：COORDINATOR_NOTES L3/L4 的“Gradle fixture 属于既有 paired smoke 的同类机制”不能构成例外，相关豁免说法撤回。所有游戏客户端（含 fixture/handshake）都必须 `mdb session start/stop`；会启动客户端的旧脚本须先接入该生命周期再执行。历史证据保留，不据此重新启动旧路径。
 
-已完成范围继续复用：W-101b、本次已覆盖的 W-98 Sodium 抽样及 Iris 开发环境限制、W-99 双向互通、W-79 无反馈缺陷、W-112 升级读数。W-123 只覆盖四台代表机器的侧配置/sorting 与 id 集合，W-124 只提供 Fabric 太阳能配置生效读数；两项均不自动等于原计划的完整官方对照。不开新 W 编号，不因剩余项减少追加场景。日常按实际改动执行既有测试，完整门禁集中功能闭包收口；push、部署、发布仍不在本 goal 范围。
+已完成范围继续复用：W-101b、本次已覆盖的 W-98 Sodium 抽样及 Iris 开发环境限制、W-99 双向互通、W-79 无反馈缺陷、W-112 升级读数。W-123 只覆盖四台代表机器的侧配置/sorting 与 id 集合；W-124 原 Fabric 读数的单位是 J/t，且当前实际不热重载是已确认移植缺口，须由上述闭包修复。不开新 W 编号，不因剩余项减少追加场景。日常按实际改动执行既有测试，完整门禁集中功能闭包收口；push、部署、发布仍不在本 goal 范围。
 
 
 **K2 历史进展（2026-11-01，P27 场景读数；完成口径以上方当前执行入口为准）**
@@ -24,7 +28,7 @@
 | W-121 崩溃物品计数 | 历史 +33~35 定性撤回；`b9bf320c` 的 Fabric/官方单区块运输器严格总量均通过 | `evidence/p8-release/w121-crash-conservation.json` |
 | W-122 能量链 | `60761195` 已补太阳能 BOTTOM→空立方→线缆→空熔炉；矩阵及全链精确能量守恒未测 | `evidence/p8-release/w122-energy-chain.json` |
 | W-123 存档往返 | 侧配置与 sorting 逐字保留、物品/化学品 id 集合一致 | `evidence/p8-release/w123-save-roundtrip.json` |
-| W-124 配置边界 | 改配置需重启，运行期编辑无效（≈41 vs ≈184 vs ≈204 FE/tick） | `evidence/p8-release/w124-config-boundary.json` |
+| W-124 配置边界 | 原 Fabric 运行期编辑无效（单位 J/t）；官方默认支持 NONE 项热重载，当前缺口待修，不能写“与官方一致” | `evidence/p8-release/w124-config-boundary.json` |
 
 新增四个可复跑脚本，并以 `release-check.sh --extended` 纳入收口档位；证据索引为 `evidence/p8-release/INDEX.md`（72 条）。
 

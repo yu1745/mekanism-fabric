@@ -1,16 +1,21 @@
 package mekanism.fabric.config;
 
+import com.electronwill.nightconfig.core.file.FileWatcher;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.Executor;
 import mekanism.common.config.IMekanismConfig;
 import net.fabricmc.loader.api.FabricLoader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** Owns Mekanism config paths and load/unload cache invalidation on Fabric. */
 public final class FabricMekanismConfigManager {
+    private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism/FabricConfig");
     public record Registration(Path file, MekanismConfigSpec.LoadResult loadResult) {
     }
 
@@ -20,6 +25,8 @@ public final class FabricMekanismConfigManager {
     private final Path configRoot;
     private final Map<MekanismConfigSpec, IMekanismConfig> knownConfigs = Collections.synchronizedMap(new IdentityHashMap<>());
     private final Map<Path, IMekanismConfig> knownFiles = new HashMap<>();
+    private Object watchOwner;
+    private Executor reloadExecutor;
 
     public FabricMekanismConfigManager(Path configRoot) {
         this.configRoot = Objects.requireNonNull(configRoot).toAbsolutePath().normalize();
@@ -51,7 +58,7 @@ public final class FabricMekanismConfigManager {
             claim(file, config);
             boolean registered = false;
             try {
-                MekanismConfigSpec.LoadResult result = spec.load(file);
+                MekanismConfigSpec.LoadResult result = spec.loadForOwner(file);
                 try {
                     config.clearCache(false);
                 } catch (RuntimeException | Error callbackFailure) {
@@ -60,11 +67,19 @@ public final class FabricMekanismConfigManager {
                 }
                 knownConfigs.put(spec, config);
                 knownFiles.put(file, config);
+                if (watchOwner != null) watch(file, config, watchOwner);
                 registered = true;
                 return new Registration(file, result);
             } finally {
                 if (!registered) {
-                    release(file, config);
+                    knownConfigs.remove(spec);
+                    knownFiles.remove(file);
+                    spec.unload();
+                    try {
+                        if (watchOwner != null) FileWatcher.defaultInstance().removeWatch(file);
+                    } finally {
+                        release(file, config);
+                    }
                 }
             }
         }
@@ -78,6 +93,7 @@ public final class FabricMekanismConfigManager {
                 throw new IllegalStateException("Config is not registered: " + config.getFileName());
             }
             Path file = findFile(config);
+            if (watchOwner != null) FileWatcher.defaultInstance().removeWatch(file);
             RuntimeException callbackFailure = null;
             try {
                 config.clearCache(true);
@@ -96,6 +112,7 @@ public final class FabricMekanismConfigManager {
     }
 
     public void unloadAll() {
+        stopWatching();
         RuntimeException firstFailure = null;
         synchronized (knownConfigs) {
             for (Map.Entry<MekanismConfigSpec, IMekanismConfig> entry : knownConfigs.entrySet()) {
@@ -119,6 +136,58 @@ public final class FabricMekanismConfigManager {
         }
         if (firstFailure != null) {
             throw firstFailure;
+        }
+    }
+
+    /** The real physical client or server lifetime supplies its executor; file-watcher threads never run domain callbacks. */
+    public void beginWatching(Executor executor) {
+        synchronized (knownConfigs) {
+            if (watchOwner != null) throw new IllegalStateException("Config watcher already has an owner");
+            reloadExecutor = Objects.requireNonNull(executor);
+            Object lifetime = watchOwner = new Object();
+            try {
+                knownFiles.forEach((file, config) -> watch(file, config, lifetime));
+            } catch (RuntimeException failure) {
+                stopWatching();
+                throw failure;
+            }
+        }
+    }
+
+    private void watch(Path file, IMekanismConfig config, Object lifetime) {
+        Executor executor = reloadExecutor;
+        Runnable queue = () -> {
+            synchronized (knownConfigs) {
+                if (watchOwner != lifetime || knownFiles.get(file) != config) return;
+            }
+            executor.execute(() -> reload(file, config, lifetime));
+        };
+        FileWatcher.defaultInstance().addWatch(file, queue);
+        // Pick up edits made while no world/client executor owned this process config.
+        queue.run();
+    }
+
+    private void reload(Path file, IMekanismConfig config, Object lifetime) {
+        synchronized (knownConfigs) {
+            if (watchOwner != lifetime || knownFiles.get(file) != config) return;
+            try {
+                MekanismConfigSpec.LoadResult result = config.getConfigSpec().reload(file);
+                config.clearCache(false);
+                LOGGER.info("MEKANISM_FABRIC_CONFIG_RELOAD file={} corrected={} thread={}", file, result.correctedValues(),
+                      Thread.currentThread().getName());
+            } catch (RuntimeException failure) {
+                LOGGER.error("Unable to reload Mekanism config {}", file, failure);
+            }
+        }
+    }
+
+    public void stopWatching() {
+        synchronized (knownConfigs) {
+            if (watchOwner == null) return;
+            // Invalidate already queued work before unregistering the asynchronous watcher.
+            watchOwner = null;
+            knownFiles.keySet().forEach(FileWatcher.defaultInstance()::removeWatch);
+            reloadExecutor = null;
         }
     }
 

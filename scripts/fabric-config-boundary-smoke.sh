@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Where a config change takes effect (W-124).
 #
-# The observable is the solar generator's generation rate, because it is a single number: the config value in FE per tick.
+# The observable is the solar generator's generation rate, because it is a single number: the config value in joules per tick.
 # The run measures the rate, edits the config file while the server keeps running to see whether the change is hot, and
-# then restarts on the edited file to see whether it applies at startup.
+# compares default, restarted and live-reloaded NONE values. Optional FABRIC_CONFIG_REFERENCE_SERVER runs the same rig on the fixed official runtime.
 #
 # Prerequisite: a remapped release jar (`./build.sh`). Requires only a JRE.
 set -euo pipefail
@@ -14,6 +14,8 @@ CACHE_DIR=${FABRIC_SMOKE_CACHE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/mekanism-fab
 TIMEOUT=${FABRIC_CONFIG_TIMEOUT:-300}
 KEEP_SERVER=${FABRIC_SMOKE_KEEP_SERVER:-0}
 SPRINT=${FABRIC_CONFIG_SPRINT:-100}
+REFERENCE_SERVER=${FABRIC_CONFIG_REFERENCE_SERVER:-}
+SERVER_PID=
 
 SERVER_DIR=
 LOG_FILE=
@@ -37,13 +39,18 @@ INSTALLER_VERSION=${FABRIC_INSTALLER_VERSION:-1.1.2}
 cleanup() {
   local status=$?
   trap - EXIT INT TERM
-  if [[ -n "$SERVER_DIR" && -d "$SERVER_DIR" ]]; then
-    local pid pgid
-    pid=$(cat "$SERVER_DIR/server.pid" 2>/dev/null || true)
-    if [[ -n "${pid:-}" ]]; then
-      pgid=$(ps -o pgid= -p "$pid" 2>/dev/null | tr -d ' ' || true)
-      [[ -n "$pgid" ]] && kill -KILL -- "-$pgid" 2>/dev/null || true
+  if [[ -n "$SERVER_PID" ]]; then
+    kill -TERM -- "-$SERVER_PID" 2>/dev/null || true
+    if ! timeout 2 tail --pid="$SERVER_PID" -f /dev/null; then
+      kill -KILL -- "-$SERVER_PID" 2>/dev/null || true
     fi
+    wait "$SERVER_PID" 2>/dev/null || true
+    if ps -eo pgid= | awk -v group="$SERVER_PID" '$1 == group { found=1 } END { exit !found }'; then
+      echo "fabric-config-boundary-smoke: residual process group $SERVER_PID" >&2
+      status=1
+    fi
+  fi
+  if [[ -n "$SERVER_DIR" && -d "$SERVER_DIR" ]]; then
     if [[ "$KEEP_SERVER" == 1 ]]; then
       printf 'fabric-config-boundary-smoke: retained server: %s\n' "$SERVER_DIR" >&2
     else
@@ -65,6 +72,7 @@ fetch() {
   mv "$temporary" "$destination"
 }
 
+if [[ -z "$REFERENCE_SERVER" ]]; then
 mkdir -p "$CACHE_DIR"
 LAUNCHER_JAR="$CACHE_DIR/fabric-server-launch.jar"
 FABRIC_API_JAR="$CACHE_DIR/fabric-api-${FABRIC_API_VERSION}.jar"
@@ -74,17 +82,26 @@ fetch "https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/${FABRIC_AP
 fetch "https://maven.fabricmc.net/teamreborn/energy/${TEAM_REBORN_ENERGY_VERSION}/energy-${TEAM_REBORN_ENERGY_VERSION}.jar" "$ENERGY_JAR"
 
 MOD_JARS=()
-while IFS= read -r jar; do MOD_JARS+=("$jar"); done < <(find "$ROOT/dist" -maxdepth 1 -name '*.jar' | sort)
+while IFS= read -r jar; do MOD_JARS+=("$jar"); done < <(printf '%s\n' "$ROOT"/dist/*.jar | sort)
 if [[ ${#MOD_JARS[@]} -ne 4 ]]; then
   printf 'fabric-config-boundary-smoke: expected four release jars, found %d\n' "${#MOD_JARS[@]}" >&2
   exit 2
 fi
 
+fi
+
 SERVER_DIR=$(mktemp -d "${TMPDIR:-/tmp}/mekanism-config-boundary.XXXXXX")
 LOG_FILE="$SERVER_DIR/server.log"
 mkdir -p "$SERVER_DIR/mods"
-cp "$LAUNCHER_JAR" "$SERVER_DIR/fabric-server-launch.jar"
-cp "$FABRIC_API_JAR" "$ENERGY_JAR" "${MOD_JARS[@]}" "$SERVER_DIR/mods/"
+if [[ -z "$REFERENCE_SERVER" ]]; then
+  cp "$LAUNCHER_JAR" "$SERVER_DIR/fabric-server-launch.jar"
+  cp "$FABRIC_API_JAR" "$ENERGY_JAR" "${MOD_JARS[@]}" "$SERVER_DIR/mods/"
+else
+  # Copy runtime only, never the resident reference sample world.
+  cp -a --reflink=auto "$REFERENCE_SERVER/libraries" "$REFERENCE_SERVER/user_jvm_args.txt" "$SERVER_DIR/"
+  cp "$REFERENCE_SERVER/../official/Mekanism-1.21.1-10.7.19.85.jar" \
+    "$REFERENCE_SERVER/../official/MekanismGenerators-1.21.1-10.7.19.85.jar" "$SERVER_DIR/mods/"
+fi
 printf 'eula=true\n' > "$SERVER_DIR/eula.txt"
 printf 'online-mode=false\nserver-port=0\nspawn-protection=0\nmax-players=1\nview-distance=4\n' > "$SERVER_DIR/server.properties"
 
@@ -100,58 +117,76 @@ set_generation() {
   fi
 }
 
+command() { printf '%s\n' "$1" >&9; }
+wait_line() {
+  local left=$((DEADLINE - SECONDS))
+  (( left > 0 )) || { echo 'config boundary overall timeout' >&2; return 1; }
+  "$ROOT/scripts/wait-for-log-line.sh" -t "$((left > 60 ? 60 : left))" -p "$SERVER_PID" \
+    --fail-on 'Encountered an unexpected exception|FAILED TO BIND|Exception in thread' "$@"
+}
+barrier() { command "say $1"; wait_line "\[Server\] $1" "$LOG_FILE"; }
+start_server() {
+  LOG_FILE="$SERVER_DIR/$1.log"
+  : > "$LOG_FILE"
+  rm -f "$SERVER_DIR/console"
+  mkfifo "$SERVER_DIR/console"
+  exec 9<>"$SERVER_DIR/console"
+  local launch=(java -Xms512M -Xmx2G -jar fabric-server-launch.jar nogui)
+  [[ -z "$REFERENCE_SERVER" ]] || launch=(java -Xms512M -Xmx2G @user_jvm_args.txt @libraries/net/neoforged/neoforge/21.1.200/unix_args.txt nogui)
+  (cd "$SERVER_DIR" && exec setsid "${launch[@]}" < console > "$LOG_FILE" 2>&1) &
+  SERVER_PID=$!
+  wait_line 'Done \(' "$LOG_FILE"
+  command 'tick freeze'
+  command 'forceload add 0 0'
+  command 'time set noon'
+  command 'weather clear'
+  command 'gamerule doDaylightCycle false'
+  command 'tick unfreeze'
+  command 'tick sprint 20t'
+  wait_line 'Sprint completed with' "$LOG_FILE"
+  command 'tick freeze'
+}
+stop_server() {
+  command stop
+  wait "$SERVER_PID"
+  SERVER_PID=
+  exec 9>&-
+}
 measure() {
-  #Reset the generator's buffer, sprint a fixed number of ticks and read what it produced. Everything is echoed into the
-  #server's stdin, which is what the command pipeline reads.
-  echo "data merge block 0 100 0 {energy_containers:[{container:0b,stored:0L}]}"
-  echo "tick sprint $SPRINT"
-  sleep 2
-  echo "data get block 0 100 0"
+  local label=$1 previous
+  previous=$(grep -c 'Sprint completed with' "$LOG_FILE" || true)
+  command 'data merge block 0 100 0 {energy_containers:[{container:0b,stored:0L}]}'
+  command 'tick unfreeze'
+  command "tick sprint ${SPRINT}t"
+  wait_line -n "$((previous + 1))" 'Sprint completed with' "$LOG_FILE"
+  command 'tick freeze'
+  command 'data get block 0 100 0'
+  barrier "$label"
 }
 
-#Phase one: let the server write its default config and measure the default rate.
-run_phase_one() {
-  cd "$SERVER_DIR"
-  (
-    for _ in $(seq 1 180); do grep -q 'Done (' server.log 2>/dev/null && break; sleep 1; done
-    sleep 1
-    echo "forceload add 0 0"
-    echo "setblock 0 100 0 mekanismgenerators:solar_generator"
-    sleep 2
-    measure
-    sleep 3
-    echo "stop"
-    sleep 6
-  ) | timeout "$TIMEOUT" java -Xms512M -Xmx2G -jar fabric-server-launch.jar nogui > server.log 2>&1 &
-  echo $! > server.pid
-  wait $! 2>/dev/null || true
-  cp server.log phase-one.log
-  [[ -f "$GENERATOR_CONFIG" ]] || { echo "fabric-config-boundary-smoke: the server wrote no generators config" >&2; exit 1; }
-}
-
-#Phase two: run with the edited value, then edit it again mid-run to see whether it is picked up live.
-run_phase_two() {
-  cd "$SERVER_DIR"
-  {
-    for _ in $(seq 1 180); do grep -q 'Done (' server.log 2>/dev/null && break; sleep 1; done
-    sleep 1
-    echo "forceload add 0 0"
-    measure
-    sleep 2
-    set_generation 400
-    measure
-    sleep 3
-    echo "stop"
-    sleep 6
-  } | timeout "$TIMEOUT" java -Xms512M -Xmx2G -jar fabric-server-launch.jar nogui > server.log 2>&1 &
-  echo $! > server.pid
-  wait $! 2>/dev/null || true
-  cp server.log phase-two.log
-}
-
-run_phase_one
+DEADLINE=$((SECONDS + TIMEOUT))
+start_server phase-one
+command 'setblock 0 100 0 mekanismgenerators:solar_generator'
+measure CONFIG_DEFAULT_MEASURED
+stop_server
+[[ -f "$GENERATOR_CONFIG" ]] || { echo 'generator config missing' >&2; exit 1; }
 set_generation 200
-run_phase_two
+start_server phase-two
+measure CONFIG_RESTART_MEASURED
+
+reload_log="$LOG_FILE"
+reload_pattern='MEKANISM_FABRIC_CONFIG_RELOAD file=.*generators.toml '
+if [[ -n "$REFERENCE_SERVER" ]]; then
+  reload_log="$SERVER_DIR/logs/debug.log"
+  reload_pattern='Config file .*generators.toml changed, re-loading'
+fi
+previous=$(grep -c "$reload_pattern" "$reload_log" 2>/dev/null || true)
+previous=${previous:-0}
+set_generation 400
+# FileWatcher debounce is real filesystem time; a tick sprint cannot accelerate it. Wait for its actual reload marker.
+wait_line -n "$((previous + 1))" "$reload_pattern" "$reload_log"
+measure CONFIG_HOT_RELOAD_MEASURED
+stop_server
 
 rate_of() {
   #$1 log, $2 sprint ticks, $3 which dump to read counting back from the last one.
@@ -177,12 +212,13 @@ check() {
   if [[ "$condition" == 0 ]]; then printf 'PASS %s\n' "$description"; else printf 'FAIL %s\n' "$description"; failures=$((failures + 1)); fi
 }
 
-printf 'fabric-config-boundary-smoke: default ~%s FE/tick, after restart with solarGeneration=200 ~%s FE/tick, after editing to 400 mid-run ~%s FE/tick\n' \
+printf 'fabric-config-boundary-smoke: default ~%s J/tick, after restart with solarGeneration=200 ~%s J/tick, after editing to 400 mid-run ~%s J/tick\n' \
   "$default_rate" "$edited_rate" "$hot_rate"
 check "the default config produced a rate" $([[ "$default_rate" != "unreadable" && "$default_rate" -gt 0 ]] && echo 0 || echo 1)
 check "an edited config takes effect after a restart" $([[ "$edited_rate" != "unreadable" && "$default_rate" != "unreadable" && "$edited_rate" -gt "$default_rate" ]] && echo 0 || echo 1)
-check "editing the config while running changes nothing (not hot)" $([[ "$hot_rate" != "unreadable" && "$edited_rate" != "unreadable" ]] && #The measurement carries roughly ten percent of noise from ticks outside the sprint, so the test is whether the run sits near the 200 rate or has jumped towards the 400 one.
-[[ $(( hot_rate - edited_rate )) -lt 100 && $(( edited_rate - hot_rate )) -lt 100 ]] && echo 0 || echo 1)
+check "editing NONE config while running updates the real generator" $([[ "$hot_rate" != "unreadable" && "$edited_rate" != "unreadable" ]] && # Some normal ticks pass between unfreeze and freeze; the 200->400 change must clearly exceed that noise.
+[[ $(( hot_rate - edited_rate )) -gt 100 ]] && echo 0 || echo 1)
+
 if (( failures > 0 )); then
   echo "fabric-config-boundary-smoke: FAILED ($failures checks)" >&2
   exit 1

@@ -2,11 +2,11 @@
 
 ## 现状
 
-核心与三个附加模块主体已移植。本 goal 已闭环 W-120 受信／撤销交互、W-121 严格运输器崩溃守恒与官方对照、W-122 固定底部发电输出、W-116 合法模块客户端与最大负载官方对照；未改生产算法或源码切片，未新增测试类。当前发布门禁客户端正在接入 mdb owned，旧全绿结果不替代本 HEAD 验收。
+W-120、W-121、W-122、W-116 已闭环，mdb 网络门禁已接通。对 W-124 的固定官方 FML/NeoForge owner 核对发现真实热重载缺口；当前正在修复，不能把“需重启”当官方等价行为。修复前 `f8e37d33` 的 11 步扩展门禁已通过，只构成基线证据。
 
 ## 下一步
 
-完成既有 paired/rejection 的 mdb 生命周期接线，保留全部协议原因／顺序／唯一性断言。随后集中执行最终既有门禁与两次 clean 四 JAR 哈希比对，更新本页、状态表、证据索引及决策清单。日常 `test` 457 项与 API 检查已通过，不重复扩大覆盖。
+完成 W-124 现有场景的修复后实机与官方对照，再执行最终既有门禁及两次 clean 四 JAR 哈希比对。当前实现已接实际文件 owner/executor、NONE/WORLD/GAME、pending 保存/同步、COMMON/STARTUP/CLIENT/SERVER 生命周期；policy 消费与 RadiationValidation 接真实 GeneralConfig owner，API 独立 context 继续回退，不新增 PLAY 协议。457 普通＋50 QIO/配置生命周期既有检查通过，无新增测试类。
 
 ## 未决项
 
@@ -24,7 +24,7 @@
 
 W-116（涡轮满负载）：通过 `devModule=generators` 将既有源集接入 mdb 的 `runClient`，355 值同步／ack，原“模块无法启动”阻塞撤回。真实玩家 builder／GUI 成型涡轮，满蒸汽、空能量缓冲下单 tick **11,040,000 mB → 110,400,000 J**，与计算上限及官方 NeoForge 同状态读数完全一致；真实 creative tank 经阀门持续供汽，200 tick 加速后仍达最大产率。临时结构、forceload、玩家位置与会话已清理；`test` **457/0/0** 与 API 检查通过，未新增测试类。官方持续供汽场景未跑。[完整读数](evidence/p8-release/w116-turbine.json)
 
-W-124（配置生效边界）：**改配置需要重启，不支持热重载**。用太阳能发电速率做可观测值（`[solar_generator] solarGeneration`）：默认 **≈42–49 FE/tick**；把文件改成 200 并**重启**后 **≈189–224 FE/tick**（生效）；运行中把文件改成 400、不重启再测 **≈207–246 FE/tick**（仍停在 200 档，**没有跳到 400**）。与官方一致——Mekanism 服务端在启动时加载配置、运行期不重读。脚本 `scripts/fabric-config-boundary-smoke.sh`，测量噪声约 10%，故用档位距离判定。[记录](evidence/p8-release/w124-config-boundary.json)
+W-124（配置生效边界）：**改配置需要重启，不支持热重载**。用太阳能发电速率做可观测值（`[solar_generator] solarGeneration`）：默认 **≈42–49 J/tick**；把文件改成 200 并**重启**后 **≈189–224 J/tick**（生效）；运行中把文件改成 400、不重启再测 **≈207–246 J/tick**（仍停在 200 档，**没有跳到 400**）。仅证明当前 Fabric 行为；官方配置文件监听／重载 owner 正在核对，不声明等价。脚本 `scripts/fabric-config-boundary-smoke.sh`，测量噪声约 10%，故用档位距离判定。[记录](evidence/p8-release/w124-config-boundary.json)
 
 W-123（存档往返第二轮）：**配置与内容都能活过重启**。脚本 `scripts/fabric-save-roundtrip-smoke.sh` 两阶段：布置四台机器（注入室 HCl 1500 + 4 晶体、化学储罐 HCl 2000、分离器、精英冶炼工厂 `sorting:1b` + 8 脏粉）→ `save-all flush` → 干净 `stop` → 同世界重启 → 再转储。逐字段比对：`component_config` 与 `sorting` **逐字一致**，`items`/`chemical_tanks` 的 **id 集合一致**；数量变化（注入室喝 HCl、工厂吃脏粉）属正常消耗，故不比数量。连续 2 次 PASS。[记录](evidence/p8-release/w123-save-roundtrip.json)
 

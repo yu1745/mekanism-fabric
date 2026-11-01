@@ -46,6 +46,15 @@ public final class MekanismFabricBootstrap implements ModInitializer {
     private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism/Fabric");
     private static final FabricMekanismConfigManager CONFIG_MANAGER = FabricMekanismConfigManager.createDefault();
 
+    /** The physical-client executor owns COMMON/STARTUP reloads, including an integrated server's shared values. */
+    public static void beginClientConfigWatching(java.util.concurrent.Executor executor) {
+        CONFIG_MANAGER.beginWatching(executor);
+    }
+
+    public static void stopClientConfigWatching() {
+        CONFIG_MANAGER.stopWatching();
+    }
+
     private static void initializeCommands() {
         mekanism.common.command.builders.BuildCommand.register("boiler", mekanism.common.MekanismLang.BOILER, new mekanism.common.command.builders.Builders.BoilerBuilder());
         mekanism.common.command.builders.BuildCommand.register("matrix", mekanism.common.MekanismLang.MATRIX, new mekanism.common.command.builders.Builders.MatrixBuilder());
@@ -106,6 +115,10 @@ public final class MekanismFabricBootstrap implements ModInitializer {
         FabricMekanismConfigManager.Registration startup = CONFIG_MANAGER.registerAndLoad(MekanismConfig.startup);
         verifyStartupConfig(startup);
         FabricChemicalConfig.initializeCommon(CONFIG_MANAGER);
+        if (net.fabricmc.loader.api.FabricLoader.getInstance().getEnvironmentType() == net.fabricmc.api.EnvType.SERVER) {
+            ServerLifecycleEvents.SERVER_STARTING.register(server -> CONFIG_MANAGER.beginWatching(server::execute));
+            ServerLifecycleEvents.SERVER_STOPPED.register(server -> CONFIG_MANAGER.stopWatching());
+        }
         mekanism.fabric.config.FabricServerConfig.initializeCallbacks();
         //Original commonSetup transplant: holiday state starts with the config owner available and wraps filterable sounds once, at startup
         mekanism.common.base.holiday.HolidayManager.init();

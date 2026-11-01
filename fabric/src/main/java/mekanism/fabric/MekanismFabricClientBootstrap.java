@@ -23,6 +23,9 @@ public final class MekanismFabricClientBootstrap implements ClientModInitializer
     @Override
     public void onInitializeClient() {
         FabricClientConfigLifecycle.initialize();
+        MekanismFabricBootstrap.beginClientConfigWatching(net.minecraft.client.Minecraft.getInstance()::execute);
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents.CLIENT_STOPPING.register(
+              client -> MekanismFabricBootstrap.stopClientConfigWatching());
         //Official RegisterMenuScreensEvent transplant: machine screens register during client init
         mekanism.fabric.client.FabricScreenRegistration.register();
         //Official RegisterKeyMappingsEvent transplant: all declared keys register during client init

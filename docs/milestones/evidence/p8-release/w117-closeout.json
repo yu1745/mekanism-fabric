@@ -1,5 +1,5 @@
 {
-  "work_item": "W-117\uff08\u6536\u53e3\u5e8f\u5217\uff09",
+  "work_item": "W-117（收口序列）",
   "date": "2026-11-01",
   "steps": {
     "1_release_check": {
@@ -40,8 +40,8 @@
       "logs": "/tmp/release-check"
     },
     "2_two_clean_builds_identical": {
-      "method": "`scripts/release-check.sh`\uff08\u5185\u542b\u4e00\u6b21 `build.sh --clean`\uff09\u540e\u518d\u8dd1\u4e00\u6b21 `build.sh --clean`\uff0c\u6bd4\u5bf9 dist/ \u56db\u4efd JAR \u7684 sha256",
-      "result": "**\u56db\u4efd\u54c8\u5e0c\u5b8c\u5168\u4e00\u81f4**\uff08byte-identical\uff09\uff0c`source_commit` \u4e24\u6b21\u5747\u4e3a 8833c20c56e069544cdd61bc1ce83fdc3940750f",
+      "method": "`scripts/release-check.sh`（内含一次 `build.sh --clean`）后再跑一次 `build.sh --clean`，比对 dist/ 四份 JAR 的 sha256",
+      "result": "**四份哈希完全一致**（byte-identical），`source_commit` 两次均为 8833c20c56e069544cdd61bc1ce83fdc3940750f",
       "hashes": {
         "Mekanism-Fabric-Bootstrap-10.7.19.85+fabric.1.jar": "b37409447ecb523003e91f8ec1a1fa58857f2c54975e27ba975d256687da6d4d",
         "MekanismTools-10.7.19.85+fabric.1-fabric.jar": "b74c23a5b504a236051fab7450420b46f894511009aaaddf4b9c0a3baeda75c9",
@@ -50,9 +50,78 @@
       }
     },
     "3_w101_squash": {
-      "result": "\u672a\u6267\u884c\uff08\u6309 W-101 \u81ea\u8eab\u7ea6\u5b9a\u9700\u7528\u6237\u786e\u8ba4\u76ee\u6807\u96c6\uff09",
-      "why": "\u5b9e\u6d4b\u663e\u5f0f wip \u63d0\u4ea4 22 \u4e2a\u3001\u542b wip \u5b57\u6837\u7684\u63d0\u4ea4 63 \u4e2a\u3001\u8def\u7ebf\u56fe\u5199\u201c\u7ea6 62\u201d\uff0c\u4e09\u8005\u4e0d\u4e00\u81f4\uff1b\u6539\u5199\u5386\u53f2\u5c5e\u4e8e\u4e0d\u53ef\u9006\u64cd\u4f5c\uff0cW-101 \u8bc1\u636e\u9875\u660e\u786e\u5199\u7740\u201c\u7b49\u5f85\u76ee\u6807\u96c6\u4e0e\u5206\u7ec4\u7c92\u5ea6\u786e\u8ba4\u201d"
+      "result": "未执行（按 W-101 自身约定需用户确认目标集）",
+      "why": "实测显式 wip 提交 22 个、含 wip 字样的提交 63 个、路线图写“约 62”，三者不一致；改写历史属于不可逆操作，W-101 证据页明确写着“等待目标集与分组粒度确认”"
     },
-    "4_pending_items": "\u5df2\u5199\u5165 DECISIONS_PENDING.md\uff08D-05 Mod Menu\u3001D-06 W-98/W-99\u3001W-101 \u76ee\u6807\u96c6\u3001W-110 fixture \u6388\u6743\uff09"
+    "4_pending_items": "已写入 DECISIONS_PENDING.md（D-05 Mod Menu、D-06 W-98/W-99、W-101 目标集、W-110 fixture 授权）"
+  },
+  "pre_config_reload_fix_baseline": {
+    "source_commit": "f8e37d33672445ba41dfa132cae200c5b28c4332",
+    "result": "PASSED (11 steps)",
+    "steps": [
+      {
+        "name": "clean four-JAR build",
+        "exit": 0,
+        "seconds": 287
+      },
+      {
+        "name": "packaged static four-JAR gates",
+        "exit": 0,
+        "seconds": 16
+      },
+      {
+        "name": "packaged server (50 mods, 458 values)",
+        "exit": 0,
+        "seconds": 53
+      },
+      {
+        "name": "paired network (two clients, handshake)",
+        "exit": 0,
+        "seconds": 81
+      },
+      {
+        "name": "configuration rejection (three clients rejected)",
+        "exit": 0,
+        "seconds": 98
+      },
+      {
+        "name": "machine runtime smoke",
+        "exit": 0,
+        "seconds": 65
+      },
+      {
+        "name": "third-party energy interop (Tech Reborn)",
+        "exit": 0,
+        "seconds": 68
+      },
+      {
+        "name": "crash conservation (W-121)",
+        "exit": 0,
+        "seconds": 54
+      },
+      {
+        "name": "energy chain (W-122)",
+        "exit": 0,
+        "seconds": 37
+      },
+      {
+        "name": "save round-trip (W-123)",
+        "exit": 0,
+        "seconds": 376
+      },
+      {
+        "name": "config boundary (W-124)",
+        "exit": 0,
+        "seconds": 85
+      }
+    ],
+    "scope": "Pre hot-reload fix production JARs; not final acceptance of the config reload implementation in progress.",
+    "test_counts": {
+      "ordinary": 457,
+      "all_existing_suites": 584,
+      "failures": 0,
+      "errors": 0
+    },
+    "logs": "/tmp/mekanism-goal-release"
   }
 }

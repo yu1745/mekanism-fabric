@@ -100,6 +100,23 @@ public final class MekanismConfigSpec {
     }
 
     public synchronized LoadResult load(Path target) {
+        return load(target, RestartScope.GAME);
+    }
+
+    /** A new world/connection may refresh WORLD values, while GAME values retain their process cache. */
+    synchronized LoadResult loadForOwner(Path target) {
+        return load(target, RestartScope.WORLD);
+    }
+
+    /** Reload a file owned by this spec, retaining WORLD/GAME values until their respective restart. */
+    public synchronized LoadResult reload(Path target) {
+        if (!loaded || file == null || !file.equals(target.toAbsolutePath().normalize())) {
+            throw new IllegalStateException("Config file is not owned by this spec");
+        }
+        return load(target, RestartScope.NONE);
+    }
+
+    private LoadResult load(Path target, RestartScope boundary) {
         Objects.requireNonNull(target);
         Path normalizedTarget = target.toAbsolutePath().normalize();
         boolean created = !Files.exists(normalizedTarget);
@@ -150,7 +167,7 @@ public final class MekanismConfigSpec {
         file = normalizedTarget;
         document = candidate;
         for (Map.Entry<ConfigValue<?>, Object> entry : resolved.entrySet()) {
-            entry.getKey().publishLoaded(entry.getValue());
+            entry.getKey().publishFileValue(entry.getValue(), boundary);
         }
         loaded = true;
         return new LoadResult(created, malformed, corrected);
@@ -161,7 +178,8 @@ public final class MekanismConfigSpec {
         if (!loaded) throw new IllegalStateException("Config spec is not loaded");
         Map<String, Object> snapshot = new LinkedHashMap<>();
         for (Map.Entry<String, ConfigValue<?>> entry : values.entrySet()) {
-            Object value = entry.getValue().currentValue;
+            // NeoForge syncs the file, including pending restart values, rather than its effective value cache.
+            Object value = entry.getValue().configuredValue;
             if (!(value instanceof Boolean || value instanceof Integer || value instanceof Long || value instanceof Double
                   || value instanceof List<?> list && list.stream().allMatch(String.class::isInstance))) {
                 throw new IllegalStateException("Unsupported server config value at " + entry.getKey());
@@ -190,14 +208,16 @@ public final class MekanismConfigSpec {
             Object normalized = value.normalize(candidate).orElseThrow(() -> new IllegalArgumentException("Invalid config snapshot value for " + entry.getKey()));
             resolved.put(value, normalized);
         }
-        for (Map.Entry<ConfigValue<?>, Object> entry : resolved.entrySet()) entry.getKey().publishLoaded(entry.getValue());
+        for (Map.Entry<ConfigValue<?>, Object> entry : resolved.entrySet()) entry.getKey().publishFileValue(entry.getValue(), RestartScope.WORLD);
         loaded = true;
     }
 
     /** Reset a remote-only snapshot while still loaded, so callers can invalidate listeners before unloading it. */
     public synchronized void resetRemoteValues() {
         if (!loaded || file != null || document != null) throw new IllegalStateException("Config spec is not remote-owned");
-        for (ConfigValue<?> value : values.values()) value.publishLoaded(value.getDefault());
+        for (ConfigValue<?> value : values.values()) {
+            if (value.restartScope != RestartScope.GAME) value.publishLoaded(value.getDefault());
+        }
     }
 
     public synchronized void save() {
@@ -205,7 +225,7 @@ public final class MekanismConfigSpec {
             throw new IllegalStateException("Config spec has not been loaded");
         }
         for (ConfigValue<?> value : values.values()) {
-            document.set(value.path(), value.encodeCurrent());
+            document.set(value.path(), value.encodeConfigured());
         }
         applyComments(document);
         saveDocument();
@@ -420,6 +440,8 @@ public final class MekanismConfigSpec {
         private final String comment;
         private final RestartScope restartScope;
         private volatile T currentValue;
+        private T configuredValue;
+        private boolean initialized;
 
         protected ConfigValue(List<String> path, T defaultValue, Function<Object, Optional<T>> normalizer,
               Function<T, Object> encoder, String translation, String comment, RestartScope restartScope) {
@@ -432,6 +454,7 @@ public final class MekanismConfigSpec {
             this.comment = comment;
             this.restartScope = restartScope;
             currentValue = defaultValue;
+            configuredValue = defaultValue;
         }
 
         public T getDefault() {
@@ -480,8 +503,8 @@ public final class MekanismConfigSpec {
             return encoder.apply(value);
         }
 
-        private Object encodeCurrent() {
-            return encode(currentValue);
+        private Object encodeConfigured() {
+            return encode(configuredValue);
         }
 
         @SuppressWarnings("unchecked")
@@ -492,6 +515,18 @@ public final class MekanismConfigSpec {
         @SuppressWarnings("unchecked")
         private void publishLoaded(Object value) {
             currentValue = (T) value;
+            configuredValue = currentValue;
+            initialized = true;
+        }
+
+        @SuppressWarnings("unchecked")
+        private void publishFileValue(Object value, RestartScope boundary) {
+            configuredValue = (T) value;
+            if (!initialized || restartScope == RestartScope.NONE || boundary == RestartScope.GAME
+                  || boundary == RestartScope.WORLD && restartScope == RestartScope.WORLD) {
+                currentValue = configuredValue;
+            }
+            initialized = true;
         }
 
         private String translation() {

@@ -4,17 +4,19 @@ import java.util.Objects;
 import java.util.function.BooleanSupplier;
 import mekanism.api.chemical.ChemicalDataContext;
 
-/** Narrow radiation validation policy; environmental radiation remains outside the Fabric port. */
+/** Radiation validation policy published by the active world or connection, with an API-only context fallback. */
 public final class RadiationValidation {
     public static final double BASELINE = 1.0E-7;
-    private static volatile BooleanSupplier enabled = () -> true;
+    private static volatile BooleanSupplier enabled;
 
     private RadiationValidation() {
     }
 
     public static boolean isEnabled() {
+        BooleanSupplier policy = enabled;
+        if (policy != null) return policy.getAsBoolean();
         ChemicalDataContext context = ChemicalDataContext.current();
-        return context.epoch() > 0 ? context.radiationEnabled() : enabled.getAsBoolean();
+        return context.epoch() == 0 || context.radiationEnabled();
     }
 
     public static void publish(BooleanSupplier policy) {
@@ -22,6 +24,6 @@ public final class RadiationValidation {
     }
 
     public static void reset() {
-        enabled = () -> true;
+        enabled = null;
     }
 }

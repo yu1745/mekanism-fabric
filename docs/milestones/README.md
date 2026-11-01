@@ -51,7 +51,7 @@
 
 服务端路径已验证（W-60／W-61，随后续 JAR 自动复验）；发布 JAR 客户端路径仅有 W-69 一次性证据、不自动复验，改版本号后须用户批准单独复验；完整发布声明待协调者复核。
 
-- **第三方集成**：ROADMAP 排除的 JEI/EMI、CraftTweaker、ProjectE、FramedBlocks、JsonThings、gender、OpenComputers2 等不在本轮发布范围。混合 JEI/EMI 的公共 `IMekanismAccess`／`MekanismAccess` 服务未提供；ingredient creators 已由独立真实服务承接，不代表 viewer API 已兼容。
+- **第三方集成**：EMI／JEI／Jade／WTHIT 与 Mod Menu 已作为可选接入保留，发布物不内嵌第三方实现。REI／TOP、CraftTweaker、ProjectE、FramedBlocks、JsonThings、gender、OpenComputers2 不在当前范围。原 NeoForge 混合 `IMekanismAccess`／`MekanismAccess` 公共服务未提供，不能从原生 viewer 接入推断该第三方 API 已兼容。
 - **历史 46 项**：P3 清单中已有 5 份原源码纳入、32 项由实际 Fabric owner 承接；另有 7 项第三方边界、1 项离线开发工具、1 项旧反射辅助。逐项现状见[对照](evidence/p8-release/w42-historical46-current.csv)，旧反射辅助已由原生透视模型分派取代。
 - **平台交互**：不提供任意 modifier 重绑编辑器；Accessories 默认 H 与 Mekanism HUD 绑定冲突可在原版设置中重绑。命令使用原版权限等级／op 回退，未提供 NeoForge 权限插件的逐 node、动态 context 或离线覆盖。多个飞行提供者之间缺少原版权限归属 token；工具动作采用原版映射，不触发 NeoForge `BlockToolModificationEvent` 或其第三方 data-map 扩展。
 - **本批渲染修复**：Meka-Tool 已按原生显示上下文选择独立左右手模型，QIO dashboard 已按官方 JSON 给 LED 层应用 full-bright；[直接实机结果](evidence/development-render/native-summary.json)。未穷举第三方渲染器与资源包组合。

@@ -2,19 +2,36 @@
   "work_item": "W-124",
   "date": "2026-11-01",
   "goal": "改配置之后是重启生效还是热生效，与官方是否一致。",
-  "observable": "太阳能发电机的发电速率（`[solar_generator] solarGeneration`，单位 FE/tick）",
+  "observable": "太阳能发电机的发电速率（`[solar_generator] solarGeneration`，单位 J/tick）",
   "rig": "scripts/fabric-config-boundary-smoke.sh（默认配置跑一遍 → 改文件为 200 → 重启再跑 → 运行中改成 400 再跑）",
   "readings": {
-    "default_50": "≈42–49 FE/tick",
-    "after_restart_200": "≈189–224 FE/tick（**改动在重启后生效**）",
-    "edited_to_400_while_running": "≈207–246 FE/tick（**仍停在 200 档，没有跳到 400**）"
+    "default_50": "≈42–49 J/tick",
+    "after_restart_200": "≈189–224 J/tick（**改动在重启后生效**）",
+    "edited_to_400_while_running": "≈207–246 J/tick（**仍停在 200 档，没有跳到 400**）"
   },
   "conclusion": {
     "hot_reload": "**不支持**：运行期修改 `generators.toml` 不会影响正在运行的服务端",
     "restart": "**需要重启**：改配置文件后重启即生效",
-    "consistency_with_official": "Mekanism 的配置在服务端启动时加载，运行期不重读文件；本移植行为与之一致（同为本项目既有配置加载路径，未见热重载实现）"
+    "consistency_with_official": "官方运行时配置重载未测；本记录仅证明Fabric当前启动加载/运行期不重读行为，不据此宣称与NeoForge等价。"
   },
   "stability": "连续 3 次一致的读数趋势；退出码已修正为 0",
   "reproduce": "bash scripts/fabric-config-boundary-smoke.sh",
-  "note": "测量有约 10% 噪声（sprint 之外仍有 tick 流过），因此判定「是否热生效」用档位距离（200 vs 400）而不是精确相等"
+  "note": "测量有约 10% 噪声（sprint 之外仍有 tick 流过），因此判定「是否热生效」用档位距离（200 vs 400）而不是精确相等",
+  "correction_2026_11_01": "rate_of直接解析energy_containers.stored，单位为J；未作J→FE转换。官方ConfigTracker重载owner待核对，旧“与官方一致”无充分证据。",
+  "status": "reload_implementation_compiled_runtime_acceptance_pending",
+  "history_notice": "readings/conclusion describe the pre-fix Fabric behavior, now known to differ from the official watcher lifecycle. Do not use them as final equivalence evidence.",
+  "implementation_checkpoint": {
+    "existing_checks": {
+      "test": 457,
+      "qioTransactionTest": 50,
+      "failures": 0,
+      "errors": 0
+    },
+    "new_tests": 0,
+    "runtime": "pending repaired existing W-124 scenario and fixed official reference",
+    "initial_failures_fixed": [
+      "Direct MekanismConfig access initialized common registries in API-only tests; actual GeneralConfig owner is now published through the existing policy seam.",
+      "Explicit spec.load must retain full load semantics; owner/world load and file reload now have distinct restart boundaries."
+    ]
+  }
 }
