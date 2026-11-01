@@ -162,6 +162,11 @@ cd "$SERVER_DIR"
   #the chamber's BOTTOM item side is OUTPUT so the hopper below can pull the dust back out. The bridge only claims
   #Mekanism storage views, so vanilla hopper behavior elsewhere is untouched.
   echo "setblock 41 100 0 mekanism:enrichment_chamber"
+  #Upgrades live in component_upgrade as {type, amount} pairs; writing them is enough to install them, which
+  #makes the upgrade effect measurable without a player carrying the item into the slot.
+  echo "setblock 70 100 0 mekanism:crusher"
+  echo 'data merge block 70 100 0 {component_upgrade:{upgrades:[{type:1,amount:8}]}}'
+  echo 'data merge block 70 100 0 {energy_containers:[{container:0b,stored:40000L}]}'
   echo "setblock 42 100 0 minecraft:hopper[facing=west]"
   echo "setblock 41 99 0 minecraft:hopper[facing=down]"
   #Chemical chain scenario (W-111): a chemical infuser turns seeded sulfur trioxide + water vapour into sulfuric acid,
@@ -308,6 +313,7 @@ cd "$SERVER_DIR"
   echo "data get block 58 100 2"
   echo "data get block 58 100 4"
   echo "data get block 58 100 6"
+  echo "data get block 70 100 0"
   sleep 3
   echo "stop"
   sleep 5
@@ -357,6 +363,8 @@ check "chemical infuser ran and its acid reached the dissolution chamber" '52, 1
 check "chemical infuser consumed its seeded inputs" '50, 100, 0 has the following block data.*sulfur_trioxide.*amount: 1[0-9]{3}L'
 check "washer fed clean slurry to the crystallizer" '56, 100, 0 has the following block data.*chemical_tanks.*mekanism:clean_iron'
 check "crystallizer produced an iron crystal" '56, 100, 0 has the following block data.*mekanism:crystal_iron'
+check "eight energy upgrades raised the machine's buffer above the stock 20k" 'INFO\]: 70, 100, 0 has the following block data.*stored: (4[0-9]{4}|[5-9][0-9]{4})L'
+check "the upgrade counters were written" 'INFO\]: 70, 100, 0 has the following block data.*component_upgrade'
 check "ore path ran end to end: crystal in at the chamber, dust out at the enrichment chamber" '58, 100, 6 has the following block data.*"mekanism:dust_iron"'
 if grep -Eq '28, 100, 0 has the following block data.*stored: ' "$LOG_FILE"; then
   printf 'FAIL chemical source tank was emptied\n'

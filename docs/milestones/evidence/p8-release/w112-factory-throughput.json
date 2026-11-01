@@ -2,38 +2,38 @@
   "work_item": "W-112",
   "date": "2026-10-31",
   "status": "done_for_sorting_and_tiers",
-  "goal": "\u5de5\u5382\u5404 tier\u3001\u5347\u7ea7\u3001\u5e76\u884c\u52a0\u5de5\u5728\u6ee1\u8f93\u5165\u8f93\u51fa\u65f6\u7684\u541e\u5410\u4e0e\u56de\u538b\u3002",
+  "goal": "工厂各 tier、升级、并行加工在满输入输出时的吞吐与回压。",
   "verified": {
-    "tier_parameters": "\u4e09\u6863\u5bcc\u96c6\u5de5\u5382\u7684**\u80fd\u91cf\u7f13\u51b2**\uff1abasic\u224820k\u3001advanced\u224840k\u3001ultimate\u224880k\uff08\u5199\u5165 2,000,000 FE \u540e\u56de\u8bfb\u5206\u522b\u4e3a 8,850 / 28,850 / 68,800 \u5269\u4f59\u91cf\u7ea7\uff09\uff1b`progress` \u6570\u7ec4\u957f\u5ea6 **3 / 5 / 9**\uff0c\u4e0e tier \u7684\u5e76\u884c\u69fd\u6570\u4e00\u81f4",
-    "processing_rate_single": "\u5582 16 \u6216 64 \u4e2a\u94c1\u77ff\u77f3\u3001\u7ed9\u6ee1\u80fd\u91cf\u3001\u5b9e\u6d4b 20 \u79d2\uff1a\u4e09\u6863\u90fd\u53ea\u5b8c\u6210 **2 \u4e2a\u77ff\u77f3**\uff08+4 \u94c1\u7c89\uff09\uff0c\u5373**\u6bcf 10 \u79d2 1 \u4e2a\u914d\u65b9**\uff0c\u4e0e tier \u65e0\u5173",
-    "recipe_correctness": "\u5bcc\u96c6\u5de5\u5382 1 \u77ff\u77f3 \u2192 2 \u94c1\u7c89\uff0c\u4ea7\u7269\u6b63\u786e\uff08\u4e0e W-106 \u7684\u624b\u52a8\u673a\u5668\u4e00\u81f4\uff09"
+    "tier_parameters": "三档富集工厂的**能量缓冲**：basic≈20k、advanced≈40k、ultimate≈80k（写入 2,000,000 FE 后回读分别为 8,850 / 28,850 / 68,800 剩余量级）；`progress` 数组长度 **3 / 5 / 9**，与 tier 的并行槽数一致",
+    "processing_rate_single": "喂 16 或 64 个铁矿石、给满能量、实测 20 秒：三档都只完成 **2 个矿石**（+4 铁粉），即**每 10 秒 1 个配方**，与 tier 无关",
+    "recipe_correctness": "富集工厂 1 矿石 → 2 铁粉，产物正确（与 W-106 的手动机器一致）"
   },
   "root_cause_found": {
-    "what": "\u5de5\u5382\u53ea\u8dd1\u5355\u8fdb\u7a0b\u7684\u539f\u56e0\u662f **sorting\uff08\u8f93\u5165\u81ea\u52a8\u5206\u914d\u5230\u5404\u8fdb\u7a0b\u69fd\uff09\u5904\u4e8e\u5173\u95ed\u72b6\u6001**\uff1a`be get-nbt` \u8bfb\u5230 `sorting: 0`\uff0c\u800c\u6240\u6709\u77ff\u77f3\u90fd\u7559\u5728 slot 0\uff0c\u5176\u4f59 8 \u4e2a\u8fdb\u7a0b\u69fd\u7a7a\u7740\uff1b\u8fde\u7eed\u91c7\u6837 `progress` \u53ea\u6709\u7b2c 0 \u4f4d\u5728\u63a8\u8fdb\uff08`[51,0,0,0,0,0,0,0,0]`\uff09\u3002",
-    "upstream_check": "\u5b98\u65b9\u53c2\u8003\u670d\u52a1\u7aef\uff08NeoForge 21.1.200 + Mekanism 10.7.19.85\uff09`setblock` \u4e00\u53f0 `ultimate_enriching_factory` \u540e `data get block` \u540c\u6837\u662f `sorting: 0b` \u2014\u2014 **\u9ed8\u8ba4\u503c\u4e00\u81f4**\uff0c\u4e0d\u662f\u79fb\u690d\u504f\u5dee\u3002",
-    "why_still_blocked": "\u5f00\u542f sorting \u9700\u8981\u8d70 GUI \u7684\u6392\u5e8f\u5f00\u5173\uff1b\u6211\u4eec\u7684 `be set-nbt {\"sorting\":1}` \u5bf9\u6fc0\u6d3b\u4e2d\u7684\u65b9\u5757\u5b9e\u4f53\u4e0d\u751f\u6548\uff08\u8be5\u5b57\u6bb5\u5728\u79fb\u690d\u91cc\u8d70 `writeSustainedData/readSustainedData`\uff0c\u4e0d\u8bfb\u6839 NBT\uff09\uff0cmdb \u4e5f\u65e0\u6cd5\u53ef\u9760\u70b9\u51fb\u8be5\u6309\u94ae\u3002\u5b98\u65b9 `/data merge` \u80fd\u6539\u5230 NBT \u91cc\uff0c\u4f46\u90a3\u53ea\u8bf4\u660e\u6807\u7b7e\u5199\u8fdb\u4e86 BE \u7684 NBT\uff0c\u662f\u5426\u6539\u53d8\u8fd0\u884c\u4e2d\u7684\u5b57\u6bb5\u65e0\u6cd5\u5224\u5b9a\uff0c\u56e0\u6b64\u4e0d\u4f5c\u4e3a\u201c\u79fb\u690d\u7f3a\u9677\u201d\u8bc1\u636e\u3002"
+    "what": "工厂只跑单进程的原因是 **sorting（输入自动分配到各进程槽）处于关闭状态**：`be get-nbt` 读到 `sorting: 0`，而所有矿石都留在 slot 0，其余 8 个进程槽空着；连续采样 `progress` 只有第 0 位在推进（`[51,0,0,0,0,0,0,0,0]`）。",
+    "upstream_check": "官方参考服务端（NeoForge 21.1.200 + Mekanism 10.7.19.85）`setblock` 一台 `ultimate_enriching_factory` 后 `data get block` 同样是 `sorting: 0b` —— **默认值一致**，不是移植偏差。",
+    "why_still_blocked": "开启 sorting 需要走 GUI 的排序开关；我们的 `be set-nbt {\"sorting\":1}` 对激活中的方块实体不生效（该字段在移植里走 `writeSustainedData/readSustainedData`，不读根 NBT），mdb 也无法可靠点击该按钮。官方 `/data merge` 能改到 NBT 里，但那只说明标签写进了 BE 的 NBT，是否改变运行中的字段无法判定，因此不作为“移植缺陷”证据。"
   },
   "not_verified": [
-    "\u901f\u5ea6/\u80fd\u91cf\u5347\u7ea7\u5bf9\u541e\u5410\u7684\u5f71\u54cd\uff08\u865a\u62df\u69fd + \u9700\u8981\u5149\u6807\u7269\u54c1\uff0c\u5de5\u5177\u9650\u5236\uff09",
-    "\u6ee1\u8f93\u51fa\u65f6\u7684\u56de\u538b"
+    "速度/能量升级对吞吐的影响（虚拟槽 + 需要光标物品，工具限制）",
+    "满输出时的回压"
   ],
   "next": [
-    "\u7528 GUI \u9a71\u52a8\u6392\u5e8f\u5f00\u5173\uff1a`gui open-block` \u6253\u5f00\u5de5\u5382 \u2192 `gui screen` \u627e\u5230\u6392\u5e8f\u6309\u94ae\u7d22\u5f15 \u2192 `gui click --slot` \u6216\u6309\u5750\u6807\u70b9\u51fb",
-    "\u786e\u5b9a\u5347\u7ea7\u69fd\u5728 `items` \u91cc\u7684\u7d22\u5f15\u540e\u585e\u5165 `mekanism:speed_upgrade` \u91cd\u6d4b"
+    "用 GUI 驱动排序开关：`gui open-block` 打开工厂 → `gui screen` 找到排序按钮索引 → `gui click --slot` 或按坐标点击",
+    "确定升级槽在 `items` 里的索引后塞入 `mekanism:speed_upgrade` 重测"
   ],
   "sorting_enabled_measurement": {
-    "how": "GUI \u91cc\u70b9 `mekanism.client.gui.element.tab.GuiSortingTab`\uff08`gui screen --brief` \u62a5 (82,99) 26x35\uff0c\u70b9\u51fb `--gui 95,116`\uff09\uff0c\u56de\u8bfb `sorting` \u4ece 0 \u53d8 **1**",
-    "before": "sorting=0\uff1a20 \u79d2\u53ea\u6d88\u8017 2 \u4e2a\u77ff\u77f3\uff08+4 \u94c1\u7c89\uff09\uff0c`progress` \u53ea\u6709\u7b2c 0 \u4f4d\u5728\u52a8",
-    "after": "sorting=1\uff1a20 \u79d2\u6d88\u8017 **9 \u4e2a\u77ff\u77f3**\uff08+18 \u94c1\u7c89\uff09\uff0c`progress=[46,170,170,169,169,169,169,169,169]` \u2014\u2014 **9 \u4e2a\u8fdb\u7a0b\u5168\u90e8\u5728\u8dd1**",
-    "acceleration": "\u540c\u4e00\u7a97\u53e3\u5185 \u22484.5\u00d7\uff082\u21929 \u77ff\u77f3\uff09\uff1b\u7406\u8bba\u7a33\u6001 9\u00d7\uff08\u6bcf\u4e2a\u8fdb\u7a0b 1 \u914d\u65b9/10 \u79d2\uff09\uff0c\u53d7\u80fd\u91cf\u7f13\u51b2\uff0880k\uff09\u8017\u5c3d\u622a\u65ad",
-    "screenshot": "w74/factory-parallel.png \u2014\u2014 Ultimate Enriching Factory \u7684 9 \u4e2a\u8f93\u5165\u69fd\u5404 12~13 \u77ff\u77f3\u30019 \u4e2a\u8f93\u51fa\u69fd\u5404 6 \u94c1\u7c89\u3001\u5de6\u4fa7\u6392\u5e8f\u9875\u663e\u793a on",
-    "energy_note": "\u5e76\u884c\u65f6 80k \u7f13\u51b2\u7ea6 20 \u79d2\u8017\u5c3d\uff08\u56de\u8bfb energy=None \u5373 0\uff09\uff0c\u8bf4\u660e\u6ee1\u5e76\u884c\u4e0b\u80fd\u8017\u7ea6 **4,000 FE/s**\uff1b\u80fd\u91cf\u8017\u5c3d\u540e\u8fdb\u5ea6\u51bb\u7ed3\u5728\u786e\u5b9a\u503c"
+    "how": "GUI 里点 `mekanism.client.gui.element.tab.GuiSortingTab`（`gui screen --brief` 报 (82,99) 26x35，点击 `--gui 95,116`），回读 `sorting` 从 0 变 **1**",
+    "before": "sorting=0：20 秒只消耗 2 个矿石（+4 铁粉），`progress` 只有第 0 位在动",
+    "after": "sorting=1：20 秒消耗 **9 个矿石**（+18 铁粉），`progress=[46,170,170,169,169,169,169,169,169]` —— **9 个进程全部在跑**",
+    "acceleration": "同一窗口内 ≈4.5×（2→9 矿石）；理论稳态 9×（每个进程 1 配方/10 秒），受能量缓冲（80k）耗尽截断",
+    "screenshot": "w74/factory-parallel.png —— Ultimate Enriching Factory 的 9 个输入槽各 12~13 矿石、9 个输出槽各 6 铁粉、左侧排序页显示 on",
+    "energy_note": "并行时 80k 缓冲约 20 秒耗尽（回读 energy=None 即 0），说明满并行下能耗约 **4,000 FE/s**；能量耗尽后进度冻结在确定值"
   },
   "tiers": {
     "buffers": {
-      "basic": "\u224820k",
-      "advanced": "\u224840k",
-      "ultimate": "\u224880k"
+      "basic": "≈20k",
+      "advanced": "≈40k",
+      "ultimate": "≈80k"
     },
     "progress_lengths": {
       "basic": 3,
@@ -41,14 +41,29 @@
       "ultimate": 9
     }
   },
-  "upgrades_blocked": "\u5347\u7ea7\u69fd\u662f**\u865a\u62df\u5bb9\u5668\u69fd**\uff08`MekanismTileContainer` \u91cc\u7684 `VirtualInventoryContainerSlot`\uff09\uff0c\u4e0d\u5c5e\u4e8e\u65b9\u5757\u5b9e\u4f53\u7684 `items` \u5217\u8868 \u2014\u2014 `be set-nbt` \u5199 18~41 \u53f7\u69fd\u4f4d\u90fd\u65e0\u6cd5\u653e\u5165\u5347\u7ea7\uff1b\u8981\u6d4b\u5347\u7ea7\u5fc5\u987b\u7528 GUI \u69fd\u4f4d\u70b9\u51fb\u5e76\u8ba9\u5149\u6807\u6301\u6709\u5347\u7ea7\u7269\u54c1\uff0c\u800c mdb \u65e0\u6cd5\u8bbe\u7f6e\u73a9\u5bb6\u80cc\u5305\uff0c\u6545\u672a\u6d4b\u3002",
+  "upgrades_blocked": "升级槽是**虚拟容器槽**（`MekanismTileContainer` 里的 `VirtualInventoryContainerSlot`），不属于方块实体的 `items` 列表 —— `be set-nbt` 写 18~41 号槽位都无法放入升级；要测升级必须用 GUI 槽位点击并让光标持有升级物品，而 mdb 无法设置玩家背包，故未测。",
   "upgrades_probe": {
-    "question": "W-112 \u5347\u7ea7\u9879\uff1a\u80fd\u5426\u4e0d\u7ecf\u8fc7 GUI\uff08\u65e0\u5149\u6807\u7269\u54c1\uff09\u628a\u5347\u7ea7\u88c5\u8fdb\u673a\u5668\uff1f",
-    "code_finding": "\u5347\u7ea7\u6570\u91cf\u5b58\u5728**\u6570\u636e\u7ec4\u4ef6**\u91cc\uff1a`TileComponentUpgrade#collectImplicitComponents` \u5199 `MekanismDataComponents.UPGRADES`\uff0c\u53cd\u5e8f\u5217\u5316\u8d70 `Upgrade.buildMap(CompoundTag)`\uff0c\u683c\u5f0f\u4e3a `{upgrades:[{type:<ordinal>,amount:N}]}`\uff08SPEED=0\u3001ENERGY=1\uff09\u3002\u5347\u7ea7\u7269\u54c1\u672c\u8eab\u4e0d\u5728 `items` \u5217\u8868\u91cc\uff08\u865a\u62df\u69fd\uff0c\u63d2\u5165\u540e\u88ab\u6d88\u8017\u6210\u8ba1\u6570\uff09\u3002",
+    "question": "W-112 升级项：能否不经过 GUI（无光标物品）把升级装进机器？",
+    "code_finding": "升级数量存在**数据组件**里：`TileComponentUpgrade#collectImplicitComponents` 写 `MekanismDataComponents.UPGRADES`，反序列化走 `Upgrade.buildMap(CompoundTag)`，格式为 `{upgrades:[{type:<ordinal>,amount:N}]}`（SPEED=0、ENERGY=1）。升级物品本身不在 `items` 列表里（虚拟槽，插入后被消耗成计数）。",
     "tested": [
-      "`data merge block 58 100 8 {components:{\"mekanism:upgrades\":{upgrades:[{type:1,amount:8}]}}}` + \u6ce8\u5165 40k FE \u2192 \u56de\u8bfb\u4ecd\u662f **20000**\uff08\u57fa\u7840\u788e\u77f3\u673a\u4e0a\u9650\uff09",
-      "`data merge block 58 100 10 {upgrades:[{type:1,amount:8}]}` + \u6ce8\u5165 40k FE \u2192 \u56de\u8bfb\u4ecd\u662f **20000**"
+      "`data merge block 58 100 8 {components:{\"mekanism:upgrades\":{upgrades:[{type:1,amount:8}]}}}` + 注入 40k FE → 回读仍是 **20000**（基础碎石机上限）",
+      "`data merge block 58 100 10 {upgrades:[{type:1,amount:8}]}` + 注入 40k FE → 回读仍是 **20000**"
     ],
-    "conclusion": "\u4e24\u79cd NBT \u5e03\u5c40\u90fd\u65e0\u6cd5\u5728**\u5df2\u52a0\u8f7d**\u7684\u65b9\u5757\u5b9e\u4f53\u4e0a\u751f\u6548\uff08\u6570\u636e\u7ec4\u4ef6\u53ea\u5728\u7269\u54c1\u653e\u7f6e/\u52a0\u8f7d\u8def\u5f84\u5e94\u7528\uff09\u3002W-112 \u5347\u7ea7\u9879\u56e0\u6b64\u9700\u8981**\u5149\u6807\u6301\u6709\u5347\u7ea7\u7269\u54c1**\u7684 GUI \u4ea4\u4e92\uff0c\u5f53\u524d\u5de5\u5177\u94fe\u65e0\u6cd5\u63d0\u4f9b \u2014\u2014 \u4e0e\u4e4b\u524d\u7684\u7ed3\u8bba\u4e00\u81f4\uff0c\u4f46\u73b0\u5728\u6709\u5b9e\u6d4b\u4f9d\u636e\u3002"
+    "conclusion": "两种 NBT 布局都无法在**已加载**的方块实体上生效（数据组件只在物品放置/加载路径应用）。W-112 升级项因此需要**光标持有升级物品**的 GUI 交互，当前工具链无法提供 —— 与之前的结论一致，但现在有实测依据。"
+  },
+  "upgrades_solved": {
+    "status": "已解决（先前记为阻塞）",
+    "nbt_layout": "`component_upgrade: {upgrades: [{type: <ordinal>, amount: <n>}]}`，SPEED=0、ENERGY=1；**这个键可以直接 `data merge` 写入运行中的方块实体**",
+    "why_earlier_probe_failed": "之前试的是顶层 `upgrades:[...]` 与 `components:{\"mekanism:upgrades\":…}`，两个键都不对，所以看起来“数据组件写不进去”",
+    "gui_path_also_works": {
+      "how": "mdb：`gui click --slot 32` 把玩家背包里的 `mekanism:upgrade_energy` ×8 拿到光标，再 `gui click --slot 0` —— 槽 0 是 `VirtualInventoryContainerSlot`（升级槽），**点击后物品被消耗、升级计数 +8**",
+      "evidence": "点击后 `carried` 变空、槽 0 为 air，机器 NBT 出现 `component_upgrade: {upgrades:[{amount:8,type:1}]}`"
+    },
+    "measured_effect": {
+      "layout": "碎石机(70,100,0) + 8 个能量升级，合并 40000 FE",
+      "reading": "`energy_containers[0].stored = 40000`（**未升级时上限 20000**）→ 容量确实被升级抬高",
+      "assertion": "已并入 `scripts/fabric-machine-smoke.sh`：`PASS eight energy upgrades raised the machine's buffer above the stock 20k`"
+    },
+    "item_ids_for_future_runs": "`mekanism:upgrade_speed`、`mekanism:upgrade_energy`（注册名是 `upgrade_<name>`，不是 `<name>_upgrade`）"
   }
 }
