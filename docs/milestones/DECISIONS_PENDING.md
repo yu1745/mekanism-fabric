@@ -61,3 +61,10 @@ Fabric 等价物，并按"可选依赖 + 最小适配"补齐，因此新增了�
 现状态：保留（编译期依赖、发布 JAR 无 `com/terraformersmc/` 类、无 Mod Menu 时不激活）。**待用户确认**是否接受这第五个
 可选依赖；若不接受，回退方式是删除 `modmenu` entrypoint 与两个类（`FabricModMenuIntegration`、`GuiMekanismConfig`）并
 从 `platform-slice.txt` 移除，其余功能不受影响。
+
+## D-06 W-98 / W-99 是否开工（协调者与 goal 冲突）
+
+- **协调者 J1**：要求"立即开始 W-98（Sodium/Iris）、W-99（第三方能量），不要再往后推"，依据是 ROADMAP 把它们标为"自主项，不等用户"。
+- **当前 goal 文本**（用户设定）："W-79/W-98/W-99 等用户裁决或外部样本，**不擅自开工**"。
+- **两者直接冲突**，我按 goal（用户指令优先）暂不开工，等用户裁决。
+- 若用户裁定开工，需要：从 Modrinth 下载 1.21.1 Fabric 版 Sodium + Iris（运行期开关，不进发布依赖），在开发客户端量测帧率读数；W-99 则选一个第三方能量模组做双向读数。
