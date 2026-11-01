@@ -38,6 +38,15 @@ build of upstream `10.7.19.85`.
 
 The server does not need any extra file: boot it with the Fabric server launcher and the same `mods/` contents.
 
+## Configuration
+
+Files default to the instance's `config/Mekanism/` directory. An existing file in
+`<world>/serverconfig/Mekanism/` overrides that individual SERVER file; other files keep using the global directory.
+Missing files can initialize from `defaultconfigs/Mekanism/` templates. Files are watched automatically, with each
+value's original restart requirement retained: ordinary values reload live, WORLD values await the next world load,
+and GAME values await a new process. Pending restart values survive later saves. Remote clients receive configuration
+on connection; reload does not add a live PLAY configuration broadcast.
+
 ## Save compatibility with the NeoForge build
 
 A small world authored by the official NeoForge build was loaded by this port and compared field by field:

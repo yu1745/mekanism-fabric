@@ -16,6 +16,10 @@
 
 W-124 策略消费采用既有 canonical GeneralConfig owner：已加载时由 `ChemicalConfigAccess` 读取其 cached effective/远程已安装值，未加载保留独立 API context 回退；同时接通 `RadiationValidation` 的真实 owner 优先级与远程 attach/detach，集成客户端断开不撤销存活服务端 owner。无需配置专用 data-map epoch、客户端 tick 策略镜像或新 PLAY 协议；详见 COORDINATOR_NOTES M5 补充。此为方向建议，未提交实现尚未独立审查。
 
+**`3512ce90` 实现审查更新，W-124 仍进行中**：configured/effective、restart 边界、真实 executor 与策略 publication 已提交；507 项既有测试及编译通过是主实现者报告，修复后 runtime 尚未完成。只读审查发现 `FabricWorldGenConfig` 的独立 manager 尚未接 watch，`world.toml` 的 NONE 项仍缺热重载；由主实现者在该既有 owner 补监听/撤销/失败清理后继续原 W-124 同 rig 和最终门禁，不新增测试清单。详见 COORDINATOR_NOTES M6。
+
+**固定官方路径新事实，仍属未完成产品边界**：NeoForge 21.1.200 / FML 4.0.41 的 SERVER 配置默认加载实例 `config/Mekanism`；仅某个 `<world>/serverconfig/Mekanism/<name>.toml` 已存在时，该文件覆盖全局配置。选中路径缺失时还使用 `defaultconfigs` 模板初始化。旧 API_DELTAS 的“官方固定世界路径”说法未记录获批 delta，须纠正。最小修复限于既有 manager 的逐文件路径选择、FabricServerConfig/FabricWorldGenConfig 生命周期及直接 smoke 路径；保留已经 seed 的合法世界 override，不做旧开发版迁移、不新建配置框架。先按 COORDINATOR_NOTES M7 已记录的链与边界串行修复，再收口验收；仅改官方探针路径不等于该差异已解决。
+
 **客户端规则更正**：COORDINATOR_NOTES L3/L4 的“Gradle fixture 属于既有 paired smoke 的同类机制”不能构成例外，相关豁免说法撤回。所有游戏客户端（含 fixture/handshake）都必须 `mdb session start/stop`；会启动客户端的旧脚本须先接入该生命周期再执行。历史证据保留，不据此重新启动旧路径。
 
 已完成范围继续复用：W-101b、本次已覆盖的 W-98 Sodium 抽样及 Iris 开发环境限制、W-99 双向互通、W-79 无反馈缺陷、W-112 升级读数。W-123 只覆盖四台代表机器的侧配置/sorting 与 id 集合；W-124 原 Fabric 读数的单位是 J/t，且当前实际不热重载是已确认移植缺口，须由上述闭包修复。不开新 W 编号，不因剩余项减少追加场景。日常按实际改动执行既有测试，完整门禁集中功能闭包收口；push、部署、发布仍不在本 goal 范围。

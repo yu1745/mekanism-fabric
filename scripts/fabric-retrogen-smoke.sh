@@ -96,6 +96,7 @@ grep -q 'Done (' "server-generate.log" || { echo "fabric-retrogen-smoke: first b
 #Flip the config the per-world owner reads: retrogen on, version bumped. The stored chunk versions (0) are
 #now older than userGenVersion (1), which is the official mark-and-regenerate trigger.
 WORLD_TOML="$SERVER_DIR/world/serverconfig/Mekanism/world.toml"
+[[ -f "$WORLD_TOML" ]] || WORLD_TOML="$SERVER_DIR/config/Mekanism/world.toml"
 [[ -f "$WORLD_TOML" ]] || { echo "fabric-retrogen-smoke: world.toml missing after first boot" >&2; exit 1; }
 python3 - "$WORLD_TOML" <<'PY'
 import re, sys

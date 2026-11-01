@@ -18,7 +18,7 @@ git log --oneline -1        # 记下 commit，后面写进发布说明
 scripts/release-check.sh
 ```
 
-期望：`release-check: PASSED (6 steps)`，六步为
+期望：`release-check: PASSED (7 steps)`；`--extended` 为11步，在默认7步后追加四项既有配置／存档／传输场景。默认步骤为
 
 | 步骤 | 内容 | 参考耗时 |
 |---|---|---|
@@ -27,7 +27,8 @@ scripts/release-check.sh
 | 3 | packaged server (50 mods, 458 values) | ~55 s |
 | 4 | paired network (two clients, handshake) | ~80 s |
 | 5 | configuration rejection (three clients rejected) | ~105 s |
-| 6 | machine runtime smoke | ~97 s |
+| 6 | machine runtime smoke | ~65 s |
+| 7 | third-party energy interop (Tech Reborn) | ~68 s |
 
 第 2 步同时检查：四 JAR 内容/元数据/access-widener 契约、`fabric.mod.json` 的 entrypoints（`main`、`client`、可选 `emi`/`jade`）、以及**发布 JAR 内不得出现 `dev/emi/`、`mezz/jei/`、`snownee/jade/` 类**。
 

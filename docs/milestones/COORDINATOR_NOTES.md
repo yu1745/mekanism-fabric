@@ -870,3 +870,21 @@ W-123 当前仅四台代表机器、配置/sorting 与内容 id 集合；W-124 �
 推荐由 `ChemicalConfigAccess` 在 canonical `MekanismConfig.general.isLoaded()` 时直接读取既有 cached 值；未加载时继续使用 thread `ChemicalDataContext`/`serverPolicy` 回退。这样服务端取 effective、远程新连接取安装的原始文件 snapshot、集成客户端共享服务端实例。化学 snapshot 的旧 effective policy 不应覆盖新连接收到的 pending WORLD 配置。现有 `ChemicalServiceConfigTest` 的独立 context 场景没有加载 GeneralConfig，保留其原回退路径即可；API 层不引入 common 依赖，也不删除已有 context 的策略字段。
 
 **直接调用方必须一并接通**：HEAD 的 `RadiationValidation.isEnabled()` 在 context epoch > 0 时优先取 context，绕过已发布 supplier；只改三个 `ChemicalConfigAccess` getter 仍会留下旧辐射策略。沿既有 `publish/reset` 接入真实运行 owner，使已发布的运行期策略优先，未发布时维持独立 API 的 context/default 行为；远程 attach/detach 也在该闭包内，集成客户端 detach 不能清除仍在运行的服务端 owner。`Chemical` 的派生缓存只存 radioactivity 数值，`hasAttributesWithValidation()` 每次动态调用 `RadiationValidation`，因此无需为配置重载刷新 data-map epoch/identity、增加客户端 tick 镜像或 PLAY 推送。前文“刷新已派生 general policy”据此落实为修正消费 owner，不要求维护第二份策略镜像。该结论是实现方向核对，尚未审查或验收主实现者未提交的修复。
+
+## 方向核对 M6（2026-11-01，配置实现提交 `3512ce90`）
+
+按移植风格审查 Prompt 只读审查真实 diff，**发现一处尚需修复的 owner 遗漏**：`FabricWorldGenConfig.start` 仍仅在其独立 manager 上 `registerAndLoad(MekanismConfig.world)`，未接 `beginWatching(server::execute)`；此 schema 不在 `FabricServerConfig.CONFIGS` 中。因此 `world.toml` 的 NONE 项（如 ore/salt 的 shouldGenerate、perChunk）没有获得本次热重载行为。最小修正是在已有世界 owner 内接监听、卸载撤销和失败清理，无需新增 schema、同步协议或测试类；已反馈唯一实现者串行处理。
+
+其余已核对路径未发现新的明确生产缺陷：manager 的 watcher 只排队到真实 executor，stop 先撤销 lifetime，执行前复查 lifetime/文件 owner；spec 的 configured/effective 分离保留 pending 保存与新连接 snapshot，reload 只更新 NONE，owner load 更新 WORLD 而保留 GAME，显式 load 保留既有显式重载契约。GeneralConfig 通过既有 publication seam 发布引用，避免独立 API 消费触发 canonical 静态初始化；远程 attach 发布、detach 撤销，集成 detach 保留服务端 owner，RadiationValidation 已优先真实 supplier。未新增 data-map epoch、PLAY 推送、重复事件框架或源码切片扩张。
+
+**仍为进行中**：主实现者报告 507 项既有测试通过、编译通过；W-124 修复后的真实运行及固定官方同 rig 正在准备，不能由编译/测试宣称 runtime 已完成。协调者未运行游戏或测试，只维护两份方向文档、不提交；修正上述 owner 后沿原 W-124 与最终验收收口，不扩场景。
+
+## 方向核对 M7（2026-11-01，固定官方 SERVER 配置路径差异）
+
+**确认产品行为差异，不能只修官方 fixture 路径后宣称 parity**。官方 fresh world 的日志 `/tmp/mekanism-config-boundary.AUxPT8/logs/debug.log` 记录 general/world/generators 等 SERVER 文件实际加载于实例 `config/Mekanism/`；其 `world/serverconfig/readme.txt` 明确该目录用于覆盖全局文件。只读固定 JAR 的调用链与日志一致：`ServerLifecycleHooks.handleServerAboutToStart → ConfigTracker.loadConfigs(SERVER, FMLPaths.CONFIGDIR.get(), getServerConfigPath(server))`；FML `resolveBasePath` 仅当 override 根下该具体 filename 已存在时选世界根，否则选全局 config 根。这是**逐文件存在即覆盖**，不是整个目录切换，也不是全部 SERVER 无条件全局化。选定文件由同一 SERVER 生命周期加载、监听和卸载。`setupConfigFile` 在目标缺失时从 `defaultconfigs/<filename>` 复制模板，否则创建 schema 默认值。
+
+`API_DELTAS.md:604` 与旧 `FABRIC_CONFIG.md` 把 `<world>/serverconfig` 描述成官方固定 owner 路径，并未记录这是经批准的主动 delta；现有说法是需纠正的依据错误。最小闭包为：既有 manager 注册入口支持全局根与可选世界 override 根，按具体文件选择并固定本次 owner 的实际路径；`FabricServerConfig` 和 `FabricWorldGenConfig` 复用此规则，claim/watch/save/snapshot 均沿选定文件；下一世界重新选择并保持已有 WORLD/GAME 缓存边界，远程客户端不接本地文件。模板初始化在同一文件创建边界处理，不引入通用 FML 配置框架、不实现旧开发版迁移、不静默迁走现有世界覆盖文件。
+
+**既有 smoke 的直接影响**：energy-chain、machine、third-party-energy 在启动前 seed 的 `world/serverconfig/Mekanism/general.toml` 本身就是合法 override，可保留；config-boundary 与 worldgen 对默认生成路径的假定、retrogen 对 world 文件的编辑路径需随真实选择规则校正。不要为跑通而把所有种子搬到全局，从而丢掉已有 override 路径覆盖。主实现者可先让官方同 rig 编辑其真实已加载文件，继续隔离验证热重载；该证据不豁免路径行为缺口。
+
+该改变影响跨世界文件选择，但调用链仍限于已经纳入的配置 manager、两个现有 SERVER owner 及其直接脚本/文档，没有必需的新模块。按 AGENTS 先记录本节边界，由唯一实现者在现有配置闭包内串行修复；若实施确需新模块再暂停该分支评估。协调者未审未提交实现、未启动进程或新增测试；热重载/路径修复与最终 runtime 验收均仍进行中。

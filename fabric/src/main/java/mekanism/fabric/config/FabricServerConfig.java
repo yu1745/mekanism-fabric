@@ -54,7 +54,7 @@ public final class FabricServerConfig {
             throw new IllegalStateException("Canonical server config already has an owner");
         }
         Path root = server.getWorldPath(LevelResource.ROOT).resolve("serverconfig").toAbsolutePath().normalize();
-        FabricMekanismConfigManager candidate = new FabricMekanismConfigManager(root);
+        FabricMekanismConfigManager candidate = FabricMekanismConfigManager.createForServer(root);
         try {
             CONFIGS.forEach(candidate::registerAndLoad);
         } catch (RuntimeException | Error failure) {
@@ -79,8 +79,8 @@ public final class FabricServerConfig {
             }
             detail.append(config.getFileName()).append(':').append(config.getConfigSpec().serverSnapshot().size());
         });
-        LOGGER.info("MEKANISM_FABRIC_SERVER_CONFIG_PROOF phase=server_start loaded=true configs={} values={} detail={} path={}", CONFIGS.size(),
-              snapshot().size(), detail, root);
+        LOGGER.info("MEKANISM_FABRIC_SERVER_CONFIG_PROOF phase=server_start loaded=true configs={} values={} detail={} base_path={} override_path={}",
+              CONFIGS.size(), snapshot().size(), detail, FabricLoader.getInstance().getConfigDir(), root);
     }
 
     private static synchronized void stop(MinecraftServer server) {

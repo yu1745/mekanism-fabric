@@ -145,6 +145,10 @@ command 'say ENERGY_CHAIN_COMPLETE'
 wait_line '\[Server\] ENERGY_CHAIN_COMPLETE'
 command stop
 wait "$SERVER_PID"
+if ps -eo pgid= | awk -v group="$SERVER_PID" '$1 == group { found=1 } END { exit !found }'; then
+  echo "smoke: residual process group $SERVER_PID after shutdown" >&2
+  exit 1
+fi
 SERVER_PID=
 exec 9>&-
 

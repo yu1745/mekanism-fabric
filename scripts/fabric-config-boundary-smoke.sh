@@ -103,9 +103,13 @@ else
     "$REFERENCE_SERVER/../official/MekanismGenerators-1.21.1-10.7.19.85.jar" "$SERVER_DIR/mods/"
 fi
 printf 'eula=true\n' > "$SERVER_DIR/eula.txt"
-printf 'online-mode=false\nserver-port=0\nspawn-protection=0\nmax-players=1\nview-distance=4\n' > "$SERVER_DIR/server.properties"
+printf 'online-mode=false\nserver-port=0\nspawn-protection=0\nmax-players=1\nview-distance=4\nlevel-type=minecraft:flat\ngenerator-settings={"layers":[{"block":"minecraft:bedrock","height":1},{"block":"minecraft:dirt","height":2},{"block":"minecraft:grass_block","height":1}],"biome":"minecraft:plains","lakes":false,"features":false}\n' > "$SERVER_DIR/server.properties"
 
 GENERATOR_CONFIG="$SERVER_DIR/world/serverconfig/Mekanism/generators.toml"
+GLOBAL_GENERATOR_CONFIG="$SERVER_DIR/config/Mekanism/generators.toml"
+# A schema-valid template value proves initialization used defaultconfigs, not merely built-in defaults.
+mkdir -p "$SERVER_DIR/defaultconfigs/Mekanism"
+printf '[bio_generator]\n    bioGeneration = 777\n' > "$SERVER_DIR/defaultconfigs/Mekanism/generators.toml"
 
 set_generation() {
   local value=$1
@@ -149,6 +153,10 @@ start_server() {
 stop_server() {
   command stop
   wait "$SERVER_PID"
+  if ps -eo pgid= | awk -v group="$SERVER_PID" '$1 == group { found=1 } END { exit !found }'; then
+    echo "smoke: residual process group $SERVER_PID after shutdown" >&2
+    exit 1
+  fi
   SERVER_PID=
   exec 9>&-
 }
@@ -169,7 +177,11 @@ start_server phase-one
 command 'setblock 0 100 0 mekanismgenerators:solar_generator'
 measure CONFIG_DEFAULT_MEASURED
 stop_server
-[[ -f "$GENERATOR_CONFIG" ]] || { echo 'generator config missing' >&2; exit 1; }
+[[ -f "$GLOBAL_GENERATOR_CONFIG" && ! -f "$GENERATOR_CONFIG" ]] || { echo 'default SERVER config did not select the global file' >&2; exit 1; }
+grep -Eq 'bioGeneration[[:space:]]*=[[:space:]]*777' "$GLOBAL_GENERATOR_CONFIG" || { echo 'defaultconfigs template was not applied' >&2; exit 1; }
+# Introduce an explicit per-file world override only between owner lifetimes. The global file must remain unchanged.
+mkdir -p "$(dirname "$GENERATOR_CONFIG")"
+cp "$GLOBAL_GENERATOR_CONFIG" "$GENERATOR_CONFIG"
 set_generation 200
 start_server phase-two
 measure CONFIG_RESTART_MEASURED
@@ -187,6 +199,8 @@ set_generation 400
 wait_line -n "$((previous + 1))" "$reload_pattern" "$reload_log"
 measure CONFIG_HOT_RELOAD_MEASURED
 stop_server
+grep -Eq 'solarGeneration[[:space:]]*=[[:space:]]*50' "$GLOBAL_GENERATOR_CONFIG" || { echo 'world override overwrote the global config' >&2; exit 1; }
+printf 'PASS global default, defaultconfigs template, per-file world override and global-file preservation\n'
 
 rate_of() {
   #$1 log, $2 sprint ticks, $3 which dump to read counting back from the last one.
@@ -223,4 +237,5 @@ if (( failures > 0 )); then
   echo "fabric-config-boundary-smoke: FAILED ($failures checks)" >&2
   exit 1
 fi
+printf 'fabric-config-boundary-smoke: wall_seconds=%s requested_game_ticks=%s\n' "$SECONDS" "$((40 + 3 * SPRINT))"
 echo "fabric-config-boundary-smoke: PASSED"

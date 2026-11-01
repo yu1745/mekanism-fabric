@@ -2,11 +2,11 @@
 
 ## 现状
 
-W-120、W-121、W-122、W-116 已闭环，mdb 网络门禁已接通。对 W-124 的固定官方 FML/NeoForge owner 核对发现真实热重载缺口；当前正在修复，不能把“需重启”当官方等价行为。修复前 `f8e37d33` 的 11 步扩展门禁已通过，只构成基线证据。
+W-120、W-121、W-122、W-116 已闭环，mdb 网络门禁已接通。W-124 的真实热重载与文件选择缺口已实现，官方/Fabric 同 rig 和 mdb owner 检查通过；不再把“只启动加载/固定世界路径”当平台差异。修复前 `f8e37d33` 的11步门禁只作基线，修复后最终 clean gate 尚待执行。
 
 ## 下一步
 
-完成 W-124 现有场景的修复后实机与官方对照，再执行最终既有门禁及两次 clean 四 JAR 哈希比对。当前实现已接实际文件 owner/executor、NONE/WORLD/GAME、pending 保存/同步、COMMON/STARTUP/CLIENT/SERVER 生命周期；policy 消费与 RadiationValidation 接真实 GeneralConfig owner，API 独立 context 继续回退，不新增 PLAY 协议。457 普通＋50 QIO/配置生命周期既有检查通过，无新增测试类。
+按当前实际实现执行最终既有扩展门禁和两次 clean 四 JAR 哈希比对，更新状态表、索引和清理结果。W-124 实现/验证沿既有 config owner、restart cache 和文件初始化闭包，无新测试类、无新 PLAY 协议。日常507项 focused检查及584项构建检查已通过，最终门禁不使用修复前结果替代。
 
 ## 未决项
 
@@ -24,7 +24,7 @@ W-120、W-121、W-122、W-116 已闭环，mdb 网络门禁已接通。对 W-124 
 
 W-116（涡轮满负载）：通过 `devModule=generators` 将既有源集接入 mdb 的 `runClient`，355 值同步／ack，原“模块无法启动”阻塞撤回。真实玩家 builder／GUI 成型涡轮，满蒸汽、空能量缓冲下单 tick **11,040,000 mB → 110,400,000 J**，与计算上限及官方 NeoForge 同状态读数完全一致；真实 creative tank 经阀门持续供汽，200 tick 加速后仍达最大产率。临时结构、forceload、玩家位置与会话已清理；`test` **457/0/0** 与 API 检查通过，未新增测试类。官方持续供汽场景未跑。[完整读数](evidence/p8-release/w116-turbine.json)
 
-W-124（配置生效边界）：**改配置需要重启，不支持热重载**。用太阳能发电速率做可观测值（`[solar_generator] solarGeneration`）：默认 **≈42–49 J/tick**；把文件改成 200 并**重启**后 **≈189–224 J/tick**（生效）；运行中把文件改成 400、不重启再测 **≈207–246 J/tick**（仍停在 200 档，**没有跳到 400**）。仅证明当前 Fabric 行为；官方配置文件监听／重载 owner 正在核对，不声明等价。脚本 `scripts/fabric-config-boundary-smoke.sh`，测量噪声约 10%，故用档位距离判定。[记录](evidence/p8-release/w124-config-boundary.json)
+W-124（真实配置缺口修复）：原“与官方一样不热重载”撤回。现已接所有实际 config owner 的文件监听/线程/卸载，区分 NONE/WORLD/GAME，保存和登录 snapshot 保留待重启值，并恢复官方全局默认＋逐文件世界覆盖＋defaultconfigs 模板规则。官方/Fabric 同一场景均 **44→179→366 J/t**；真实 mdb 五项检查覆盖实际策略消费者、WORLD/GAME pending/save 与独立 worldgen NONE，3 份配置逐字节恢复、owned JVM 退出。584 项既有检查通过，无新增测试类、无 PLAY 协议。最终 clean gate 仍待修复后复跑。[对照与历史撤回](evidence/p8-release/w124-config-boundary.json)
 
 W-123（存档往返第二轮）：**配置与内容都能活过重启**。脚本 `scripts/fabric-save-roundtrip-smoke.sh` 两阶段：布置四台机器（注入室 HCl 1500 + 4 晶体、化学储罐 HCl 2000、分离器、精英冶炼工厂 `sorting:1b` + 8 脏粉）→ `save-all flush` → 干净 `stop` → 同世界重启 → 再转储。逐字段比对：`component_config` 与 `sorting` **逐字一致**，`items`/`chemical_tanks` 的 **id 集合一致**；数量变化（注入室喝 HCl、工厂吃脏粉）属正常消耗，故不比数量。连续 2 次 PASS。[记录](evidence/p8-release/w123-save-roundtrip.json)
 
@@ -242,3 +242,5 @@ W-60 同步值实测更正：发布 schema 下四模块合计 **458**（core 303
 W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CONFIGURE 版本任务，独立客户端先被 registry remap 拒绝。版本任务现排入 BEFORE_CONFIGURE 默认阶段之前，三种拒绝 smoke 已通过；正常连接验证与 W-60–62 仍待完成。Additions 语音 PCM 采集受当前主机限制；第三方集成与未穷举风险保持 README 已列边界。
 
 提交风格复核：`132b48d0` 的真实 diff 只让 `runClient` 选择既有附加模块源集和运行目录，无公共算法／注册／存档／切片变化；官方与 Fabric 单 tick 满负载一致。457 项既有测试和 API 检查通过；未新增测试类。
+
+提交后复核：`3512ce90` 的真实 diff 经主代理与 Astra 审查，发现 worldgen 独立 manager 漏 watch；已在同一配置 owner 边界补监听、卸载撤销和失败清理。其余 lifecycle/pending/effective/API fallback 未发现确定缺陷。官方同 rig 又证明原固定世界路径是假设错误，修复仍复用现 manager，不新增配置框架或测试类。

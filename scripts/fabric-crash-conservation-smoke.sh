@@ -233,6 +233,10 @@ PYCOMPARE
 printf 'PASS resumed transfer: %s\n' "$resumed"
 command stop
 wait "$SERVER_PID"
+if ps -eo pgid= | awk -v group="$SERVER_PID" '$1 == group { found=1 } END { exit !found }'; then
+  echo "smoke: residual process group $SERVER_PID after shutdown" >&2
+  exit 1
+fi
 SERVER_PID=
 exec 9>&-
 echo 'fabric-conservation-smoke: PASSED'

@@ -49,7 +49,8 @@ energy and fluid tooltip rows with real values, and WTHIT's energy row on an ene
 any of them: multi-block and transmitter readings, the Robit entity tooltip, JEI's QIO recipe transfer, and the
 ghost-ingredient drag path. WTHIT must be paired with `badpackets`, and both Jade and WTHIT are CC-BY-NC-SA-4.0 —
 see [`docs/LICENSES.md`](docs/LICENSES.md).
-- `NeoForge`-branded config entries are gone; the four configuration files keep the same keys and values otherwise.
+- Configuration keys and restart metadata are retained. Files reload through their real owners; SERVER files default
+  to `config/Mekanism/`, with existing per-file world overrides and `defaultconfigs` templates supported.
 
 ### Known limitations of this build
 

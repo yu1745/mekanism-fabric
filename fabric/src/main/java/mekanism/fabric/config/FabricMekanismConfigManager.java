@@ -1,6 +1,9 @@
 package mekanism.fabric.config;
 
 import com.electronwill.nightconfig.core.file.FileWatcher;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashMap;
@@ -23,17 +26,32 @@ public final class FabricMekanismConfigManager {
     private static final Map<Path, IMekanismConfig> PROCESS_FILE_CLAIMS = new HashMap<>();
 
     private final Path configRoot;
+    private final Path overrideRoot;
+    private final Path defaultConfigRoot;
     private final Map<MekanismConfigSpec, IMekanismConfig> knownConfigs = Collections.synchronizedMap(new IdentityHashMap<>());
     private final Map<Path, IMekanismConfig> knownFiles = new HashMap<>();
     private Object watchOwner;
     private Executor reloadExecutor;
 
     public FabricMekanismConfigManager(Path configRoot) {
+        this(configRoot, null, null);
+    }
+
+    private FabricMekanismConfigManager(Path configRoot, Path overrideRoot, Path defaultConfigRoot) {
         this.configRoot = Objects.requireNonNull(configRoot).toAbsolutePath().normalize();
+        this.overrideRoot = overrideRoot == null ? null : overrideRoot.toAbsolutePath().normalize();
+        this.defaultConfigRoot = defaultConfigRoot == null ? null : defaultConfigRoot.toAbsolutePath().normalize();
     }
 
     public static FabricMekanismConfigManager createDefault() {
-        return new FabricMekanismConfigManager(FabricLoader.getInstance().getConfigDir());
+        FabricLoader loader = FabricLoader.getInstance();
+        return new FabricMekanismConfigManager(loader.getConfigDir(), null, loader.getGameDir().resolve("defaultconfigs"));
+    }
+
+    /** NeoForge 21.1 uses global SERVER files by default, with an existing world override selected per filename. */
+    public static FabricMekanismConfigManager createForServer(Path worldOverrides) {
+        FabricLoader loader = FabricLoader.getInstance();
+        return new FabricMekanismConfigManager(loader.getConfigDir(), worldOverrides, loader.getGameDir().resolve("defaultconfigs"));
     }
 
     public Registration registerAndLoad(IMekanismConfig config) {
@@ -48,6 +66,9 @@ public final class FabricMekanismConfigManager {
                 throw new IllegalStateException("Config spec is already registered: " + fileName);
             }
             Path mekanismDirectory = configRoot.resolve("Mekanism").normalize();
+            if (overrideRoot != null && Files.exists(overrideRoot.resolve("Mekanism").resolve(fileName + ".toml"))) {
+                mekanismDirectory = overrideRoot.resolve("Mekanism").normalize();
+            }
             Path file = mekanismDirectory.resolve(fileName + ".toml").normalize();
             if (!file.startsWith(mekanismDirectory)) {
                 throw new IllegalArgumentException("Config filename escapes Mekanism config directory: " + fileName);
@@ -58,6 +79,17 @@ public final class FabricMekanismConfigManager {
             claim(file, config);
             boolean registered = false;
             try {
+                if (!Files.exists(file) && defaultConfigRoot != null) {
+                    Path template = defaultConfigRoot.resolve("Mekanism").resolve(fileName + ".toml");
+                    if (Files.isRegularFile(template)) {
+                        try {
+                            Files.createDirectories(file.getParent());
+                            Files.copy(template, file);
+                        } catch (IOException failure) {
+                            throw new UncheckedIOException("Unable to initialize config from " + template, failure);
+                        }
+                    }
+                }
                 MekanismConfigSpec.LoadResult result = spec.loadForOwner(file);
                 try {
                     config.clearCache(false);

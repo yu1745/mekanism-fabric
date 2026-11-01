@@ -138,10 +138,12 @@ if grep -q 'Errors in currently selected datapacks' "$LOG_FILE"; then
 else
   echo "PASS datapack loads without errors"
 fi
-if [[ -f "$SERVER_DIR/world/serverconfig/Mekanism/world.toml" ]] && grep -q '\[salt\]' "$SERVER_DIR/world/serverconfig/Mekanism/world.toml"; then
-  echo "PASS per-world world.toml owner loaded"
+WORLD_TOML="$SERVER_DIR/world/serverconfig/Mekanism/world.toml"
+[[ -f "$WORLD_TOML" ]] || WORLD_TOML="$SERVER_DIR/config/Mekanism/world.toml"
+if [[ -f "$WORLD_TOML" ]] && grep -q '\[salt\]' "$WORLD_TOML"; then
+  echo "PASS selected SERVER world.toml owner loaded"
 else
-  echo "FAIL per-world world.toml owner loaded"
+  echo "FAIL selected SERVER world.toml owner loaded"
   failures=$((failures + 1))
 fi
 

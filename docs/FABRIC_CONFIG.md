@@ -7,9 +7,11 @@
 Mekanism 自有窄接口替代 NeoForge `ModConfigSpec` / `ModConfig.Type`。它不是 Forge Config API 兼容层，
 也不提供事件总线或完整九配置 facade。
 
-## W-124 文件热重载（实现已接线，实机验收进行中）
+## W-124 文件热重载与文件选择（已实机对照）
 
 固定 FML 4.0.41 / NeoForge 21.1.200 默认注册 Night Config watcher，并经 `Reloading` 触发官方 Mekanism `clearCache(false)`。Fabric 原先只有启动加载，原 W-124“与官方一致”的判断撤回。现复用原 manager 和 spec：文件回调交实际物理客户端/服务端 executor，关闭 owner 时移除监听并作废排队回调；所有已纳入 COMMON/STARTUP、客户端窗口及世界 SERVER 配置遵循原 owner 生命周期。
+
+SERVER 文件默认选实例 `config/Mekanism/`，已存在的 `<world>/serverconfig/Mekanism/<name>.toml` 按文件覆盖；目标缺失时从 `defaultconfigs/Mekanism/<name>.toml` 初始化，否则使用 schema 默认。所有 claim/watch/save/snapshot 沿已选文件，SERVER owner 仍随世界关闭，不改成永久进程 owner。没有旧开发版迁移。旧章节中固定世界路径、无 watcher 的说法是历史实现，已由本节取代。
 
 `reload` 只发布 NONE 运行值；WORLD 等新世界/连接、GAME 等新进程。显式 `load` 保持完整加载语义。磁盘 configured 值与 effective cache 分离，保存保留待重启值，现配置阶段 snapshot 同官方发送磁盘值；未新增 PLAY 同步。GeneralConfig 的实际 owner 经已有 `ChemicalConfigAccess` 发布，独立 API 不触发 common 注册初始化；RadiationValidation 的运行 owner 优先于离线 context 回退。
 

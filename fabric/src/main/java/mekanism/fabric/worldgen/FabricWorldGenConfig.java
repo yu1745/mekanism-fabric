@@ -12,9 +12,9 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.storage.LevelResource;
 
 /**
- * Per-world SERVER config owner for {@code serverconfig/Mekanism/world.toml} ({@link MekanismConfig#world}).
+ * SERVER lifecycle owner for {@link MekanismConfig#world}: a global file unless this world already supplies an override.
  *
- * <p>Official NeoForge loads every SERVER-type config under the world's {@code serverconfig} directory when the server
+ * <p>Official NeoForge selects an existing world {@code serverconfig} file or the global config file when the server
  * starts and unloads it on stop; the worldgen feature codecs ({@code mekanism:ore}, {@code mekanism:disk}, the
  * configurable providers and the {@code mekanism:disableable} placement filter) resolve their vein/salt values lazily
  * through the cached config values, so this owner must be live before the first chunk decorates and released on stop.
@@ -23,7 +23,7 @@ import net.minecraft.world.level.storage.LevelResource;
  *
  * <p>Integration note for the future full-config closure: {@link MekanismConfig#registerConfigs} must not register the
  * world config through the global {@code config/} rooted manager, or the two owners would fight over the same spec -
- * the world config's real file location is always the per-world {@code serverconfig/Mekanism/world.toml}.</p>
+ * the global/override selection must still be loaded and released with the actual server lifetime.</p>
  */
 public final class FabricWorldGenConfig {
     private record OwnedServer(FabricMekanismConfigManager manager, Path configRoot) {
@@ -48,12 +48,17 @@ public final class FabricWorldGenConfig {
         if (SERVERS.containsKey(server)) throw new IllegalStateException("Duplicate world config owner for server");
         Path configRoot = server.getWorldPath(LevelResource.ROOT).resolve("serverconfig").toAbsolutePath().normalize();
         if (!CLAIMS.add(configRoot)) throw new IllegalStateException("World config root is already owned: " + configRoot);
-        //A fresh manager per server keeps this owner independent of the global config/ manager; the file claim inside the
-        //manager resolves to the official per-world path <world>/serverconfig/Mekanism/world.toml.
-        FabricMekanismConfigManager manager = new FabricMekanismConfigManager(configRoot);
+        //A fresh manager retains the SERVER lifetime even when the selected file is global.
+        FabricMekanismConfigManager manager = FabricMekanismConfigManager.createForServer(configRoot);
         try {
             manager.registerAndLoad(MekanismConfig.world);
+            manager.beginWatching(server::execute);
         } catch (Throwable failure) {
+            try {
+                manager.unloadAll();
+            } catch (Throwable cleanup) {
+                failure.addSuppressed(cleanup);
+            }
             CLAIMS.remove(configRoot);
             throw failure;
         }
@@ -64,7 +69,7 @@ public final class FabricWorldGenConfig {
         OwnedServer owned = SERVERS.remove(server);
         if (owned == null) return; // a failure before this callback's start is permitted
         try {
-            owned.manager().unregister(MekanismConfig.world);
+            owned.manager().unloadAll();
         } finally {
             CLAIMS.remove(owned.configRoot());
         }

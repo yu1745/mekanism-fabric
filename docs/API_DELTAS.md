@@ -601,7 +601,7 @@ gate）BUILD SUCCESSFUL。未运行（按完成度优先策略）：全量测试
 - 官方 `data/mekanism/neoforge/biome_modifier/*.json`（6 个 `neoforge:add_features`，共引用 11 个 placed feature）按原样打包，仍是唯一事实来源；`FabricBiomeModifiers` 在启动时解析并逐 placed feature 调 `BiomeModifications.addFeature`，不发明注册表、不修改官方 JSON。`biomes` 字段保持官方 `HolderSet<Biome>` 语义：`#tag` 引用或 biome ID（单个/数组），在 biome 选择上下文上惰性匹配（tag 只有世界加载时才可解析）。`#` 前缀必须在 `ResourceLocation.parse` 之前剥离。
 - 非 `add_features` 官方类型（当前仅 Additions 的 `mekanismadditions:baby_mob_spawn`）直接拒绝而不是静默忽略，防止未来新增类型被无声丢弃；Additions 的 mob 修饰符不属于本轮边界。
 - 打包面新增 `data/mekanism/worldgen/configured_feature/`、`placed_feature/` 与 `neoforge/biome_modifier/` 三个目录（`tags/worldgen/biome/spawn_ores.json` 原已在 `data/mekanism/tags/**` 内）。configured/placed feature 作为普通 datapack 内容加载；`mekanism:ore`、`mekanism:disk`、`mekanism:ore_retrogen` feature、`configurable_constant`/`configurable_uniform` int provider、`configurable` height provider 与 `mekanism:disableable` placement modifier 共 7 个 codec 条目随 bootstrap 注册进对应 BuiltInRegistries。
-- 官方世界配置 `MekanismConfig.world`（`serverconfig/Mekanism/world.toml`，SERVER 型）由 `FabricWorldGenConfig` 按 `FabricChemicalConfig` 的世界片段模式接管：SERVER_STARTING 在 server 线程以 `<world>/serverconfig` 为根注册加载，SERVER_STOPPED 卸载，每世界路径一个 claim。feature codec 的解码只绑定 cached value supplier（惰性），真正的 config 读取发生在世界生成/区块事件时，此时 owner 已加载。未来完整配置闭包不得再把 world config 注册进全局 `config/` manager（会与真实 owner 冲突）。
+- 官方世界配置 `MekanismConfig.world`（SERVER 型）由 `FabricWorldGenConfig` 在实际 SERVER 生命周期加载/监听/卸载。W-124 固定 JAR 核对纠正旧固定世界路径说法：NeoForge 21.1.200 默认选实例 `config/Mekanism/world.toml`，仅已存在的 `<world>/serverconfig/Mekanism/world.toml` 覆盖该文件；缺失文件可从 `defaultconfigs/Mekanism/world.toml` 初始化。claim/save/watch 均绑定本次选择，下一世界重新选择。feature codec 只绑定 cached supplier，真实生成时读取已加载值；不得通过另一个 process manager 重复注册此 SERVER spec。
 - `ConfigurableHeightProvider` 的官方 `Mekanism.logger` 改为同类别私有 SLF4J logger（与 `SerializerHelper` 先例一致），警告文本不变；四个 registry 类的 `DeferredHolder/DeferredRegister` 换成本项目注册件、`Mekanism.MODID` 换字面 mod id（与 `MekanismItems` 同型）。
 - 验收：`scripts/fabric-worldgen-smoke.sh`（固定 seed 世界 + 512 chunk forceload + 停服后扫描真实 region 文件调色板）5/5：注册 proof、`modifiers=6 features=11` proof、datapack 零错误、`world.toml` 落盘、六类目标（五种矿石 stone/deepslate 形态 + 盐盘）均在真实生成区块中命中。retrogen（`enableRegeneration` 默认 false）由既有 `CommonWorldTickHandler`/`ChunkGenVersionMixin` owner 承接，本轮未变。
 
@@ -743,3 +743,9 @@ gate）BUILD SUCCESSFUL。未运行（按完成度优先策略）：全量测试
 - 官方嵌套名 `GuiBar$IBarInfoHandler` 在二进制层面不再存在。第三方 mod 若引用该嵌套名会失败——但官方 Mekanism 从未把它作为 API 暴露（不在 `mekanism.api`），且同为客户端类，风险限于直接引用客户端内部类型的深度集成方。
 - **结论：保留顶层版本**（恢复嵌套会让 `RecipeViewerUtils`/EMI 再次需要桥接或另一套类型，等于把两套类型问题搬回来）。若未来有玩家可见的第三方兼容问题再评估。
 
+
+### 配置文件重载与重启边界纠正（W-124，2026-11-01）
+
+固定 FML 4.0.41 / NeoForge 21.1.200 具备默认文件监听；旧 Fabric 只启动加载不是有意平台差异。现在复用既有 manager/spec 与 COMMON/STARTUP/CLIENT/SERVER 真实 owner：IO 回调交 owner executor，关闭取消监听和排队任务。NONE 重载刷新缓存/listener；WORLD/GAME 运行值保留到对应重启，磁盘待重启值仍用于保存和登录快照。显式 `load` 维持完整加载接口，实际世界/连接加载保留 GAME 缓存。没有新增 PLAY 同步。
+
+GeneralConfig 经既有 ChemicalConfigAccess 发布实际 owner，避免独立 API 触发 common 注册初始化；已有数据上下文仍供无运行 owner 的 API 消费者回退。RadiationValidation 优先已发布策略；远程 attach/detach 管理其生命周期，集成客户端断开不撤销仍存活的服务端。既有 584 项检查通过；同一太阳能场景在官方/Fabric 均测得44→179→366 J/t，覆盖全局默认、defaultconfigs 模板、逐文件世界覆盖和热重载。真实 mdb 会话覆盖 NONE 消费者、WORLD/GAME pending 保存和 worldgen owner，见里程碑证据。
