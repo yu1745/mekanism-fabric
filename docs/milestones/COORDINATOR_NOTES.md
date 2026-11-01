@@ -682,3 +682,14 @@ JEI（W-74c）与 WTHIT（W-74d）已批准，见 `ROADMAP.md`「W-74 范围追�
 - 授权范围内剩下的只有 **W-101b**。其余全部等用户：D-05（Mod Menu）、D-06（W-98 Sodium/Iris、W-99 第三方能量、W-79）、W-120（paired fixture 客户端动作代码）、强制推送、版本号形态（`+fabric.1`）、发布口径。W-116 涡轮与 W-112 升级项受 mdb 工具限制，原文已记。
 
 这是本批次最后一次自动巡检，之后没有定时检查。
+
+## 用户裁决（2026-11-01，K0）
+
+用户批复：**D-05 接受 Mod Menu**；**D-06 W-98/W-99/W-79 全部接受**；**W-120 接受**。D-07（强制推送重写后的历史）**未批**。详见 `DECISIONS_PENDING.md` 末尾与 `ROADMAP.md` 的 K0 段。
+
+给 worker 的几点：
+1. **你上一轮报告里写"显式 wip 0"不准确**：历史里实际还有 **18 个 `wip(fabric): …`/`wip(task052): …`**（备份分支 40 个，HEAD 18 个，差 22）。W-101b 补做；不要把"blocked"当成已收尾。
+2. goal 文本里"W-79/W-98/W-99 等用户裁决、不擅自开工"的限制**现已被用户解除**；goal 文本需要同步更新（由用户在 worker 会话里改，或以本记录为准）。
+3. 第三方模组（Sodium、Iris、Modern Industrialization/Tech Reborn）**仅作测试运行期**，用 `-P*Dev` 开关或等价的本地运行期开关，**不进发布依赖**，发布 JAR 泄漏断言要同步加上它们的包名前缀；仓库用 `includeGroup` 限定。
+4. W-120 的专项授权**只限**这个 fixture 用途，不扩大为"可以随意新增测试"。
+5. 所有客户端会话仍只用 mdb；生成 argfile 用 `scripts/rebuild-client-argfile.sh`。

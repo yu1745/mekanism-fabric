@@ -465,3 +465,14 @@ W-74 的批准范围由"EMI→Jade"扩大为 **EMI → Jade → JEI → WTHIT**�
 ### W-101b wip squash 补做（J4 巡检发现第一次不完整；授权范围内、无需再批准）
 
 第一次 squash（`c5f52f3a`）按 22 个 `wip:` 提交处理，但历史里实际有 **40 个**以 `wip`/`WIP` 开头的提交：另外 **18 个是 `wip(fabric): …` / `wip(task052): …` 带括号作用域的形式**，被 `wip:` 匹配漏掉了（备份分支 40 个 → 现 HEAD 18 个，差正好 22）。目标集应为**所有主题以 `wip` 或 `WIP` 开头的提交**（正则 `^(wip|WIP)`，含 `wip(...)`）。补做步骤同前：备份分支/tag 先建（用新日期）、折叠、新旧树哈希一致、`git diff <backup> HEAD` 除后续文档外为空、`./gradlew -p fabric test` 457 项、不强制推送。
+
+### K0 用户裁决（2026-11-01）：W-98 / W-99 / W-79 / W-120 解除阻塞
+
+用户裁决：D-05 接受 Mod Menu；**D-06 W-98、W-99、W-79 全部接受开工**；**W-120 接受**。取代 J3 更正段中这几项"待用户裁决"的状态。执行顺序（前一项做不通带原文记录后立刻转下一项）：
+
+1. **W-101b**：补完 wip squash（目标集 `^(wip|WIP)`，含 `wip(scope):` 的 18 个；worker 上一轮报告的"显式 wip 0"不准确）。**不强制推送**。
+2. **W-120**：paired smoke 新增 Alice/Bob 客户端动作 fixture。
+3. **W-98**：Sodium + Iris（+ 一个光影包 + 一个资源包）在 mdb 开发客户端的渲染读数。
+4. **W-99**：Modern Industrialization 或 Tech Reborn 二选一，Mekanism↔对方双向能量读数。
+5. **W-79**：W-66/W-67 的反馈修复预留槽，无发现记"无"。
+6. 收口：再跑一次 `release-check.sh` + 两次 `build.sh --clean` 哈希比对；更新 `DECISIONS_PENDING.md`。
