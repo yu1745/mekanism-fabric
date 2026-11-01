@@ -828,3 +828,13 @@ W-123 当前仅四台代表机器、配置/sorting 与内容 id 集合；W-124 �
 - **W-122**：两个链物理分离，太阳能链的立方和熔炉均从空开始，因此下游非零能量支持发电→储能→线缆→消费者已连通。800 tick = 40 游戏秒，1107 tick/s，按报告速率约 0.72 秒；立方 7955 J、太阳能 45 J、熔炉 20000 J。`stored` 是 Mekanism J，不是 FE；证据已明确单位及未核算线缆缓冲/总产量，不宣称无损守恒。原矩阵“外壳可读”空断言已移除，矩阵容量/流量未测。
 
 **当前 GO：W-116 的剩余负载范围**。主实现者报告 `ORG_GRADLE_PROJECT_devModule=generators mdb session start goal-generators` 已经 world_ready、355 值 ack；`fabric/build.gradle` 的既有源集选择/runClient runDir 接线仍未提交，未纳入本次 diff 审查。旧 task 白名单障碍已消除，继续使用 owned session 和旧 builder，不重做已归档的普通运行、GUI、生命周期全套；结构/会话清理留在同一闭包。此次只改两份方向文档，无进程操作，完整门禁未跑，不新增任务清单。
+
+## 方向核对 M3（2026-11-01，已提交基线 `132b48d0`）
+
+**真实 diff 简审通过，未发现生产缺陷或移植风格偏离**。`devModule` 仅选择已经定义的 `core/tools/additions/generators` 源集并设置 `client` runDir，默认核心不变；Generators 的既有 runtimeClasspath 已包含 main 输出及依赖。没有复制源码、修改切片/发布 JAR 任务、实现新的机器框架，客户端仍由 mdb `runClient` 管理。Tools/Additions 只是该属性可选项，本批未启动，不扩称真机已验收。
+
+**W-116 当前证据接受**：真实玩家命令源进入原 builder 与验证器，GUI 成型；Fabric/官方同保存结构、同满蒸汽/空能量状态单 tick 均为 `11,040,000 mB → 110,400,000 J`，与 `maxFlow/maxProduction` 相等。Fabric 真实 creative tank→valve 的 200 tick 持续供汽后末产率仍达最大；能量总量包含 sprint 外普通 tick，证据已说明，不能倒算严格 200 次产出或声称全程每 tick 恒定。官方持续供汽未跑。457 项测试实际执行、0 失败，API 检查通过；官方临时服务端进程组已确认消失，临时结构/票据/玩家/tick 已恢复，主实现者收口时确认 `goal-generators` stop 的最终状态。
+
+**路线收敛**：W-120、原运输器范围的 W-121、太阳能输出范围的 W-122、W-116 负载闭包均已有本轮提交和证据。剩余必要实现是把已有 paired/rejection 的 `systemd-run + xvfb-run + Gradle 客户端任务` 改成 mdb owned 生命周期；这是恢复现有最终门禁可合法执行的前置，不是新增验证任务。必须保留 paired 的实际握手/配置 apply/重复连接断言，以及 rejection 的 version_mismatch、same_version_reject、missing_receiver 精确服务端/客户端原因与顺序、唯一性、无握手完成/未进入 PLAY 断言。不能为适配 mdb 退化成只检查进程或标题画面启动。
+
+完成该接线后，按根 goal 已有验收执行最终门禁、记录最终提交/JAR 与未跑套件，更新状态及证据索引，清理本轮 owned session 与临时开发依赖即可收口；不再自动追加 QIO、跨区块、矩阵、配置官方全矩阵、GUI 等场景。frozen-sprint 初始差异仍按 M2 记录为未归因，不凭“后续测试通过”抹去，也不在无实质复现依据时改生产 tick 行为。发布、部署、push 保持范围外。本次未运行测试或游戏，完整门禁未跑。

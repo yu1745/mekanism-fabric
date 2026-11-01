@@ -25,6 +25,14 @@ wrapper inside `fabric`, temporarily link `fabric/gradlew` to `../gradlew` and `
 `../gradle`; remove only the links created for the session after stopping it. `mdb` here may also
 be invoked as `java -jar /path/to/mcdebug-cli.jar`. Do not launch module client tasks directly.
 
+The existing paired/rejection gates select their original Loom presets with `devClientRun`
+(`handshakeClient`, `handshakeMismatchClient`, `handshakeMissingReceiverClient`) while the owned task
+remains `runClient`. These presets require `devModule=core`. The gate helper installs the matching
+mcdebug mod and copies the existing `fabric/run/mods/fabric-language-kotlin-*.jar` runtime into each
+disposable client directory; neither becomes a release dependency. Each gate owns and stops its
+Xvfb display, and mdb owns and stops every game client. A systemd user manager is still required for
+the dedicated server scope; non-login shells may need `XDG_RUNTIME_DIR=/run/user/$(id -u)`.
+
 ## Audited source slices
 
 `api-slice.txt` is the auditable allowlist of API source paths, relative to

@@ -13,7 +13,7 @@ RUN_ROOT= RUN_RELATIVE= SERVER_DIR= SERVER_PID= SERVER_SCOPE= CLIENT_PID= CLIENT
 ACTIVE_SERVER_CONSOLE=
 RESULT=1
 
-for command in flock java python3 systemctl systemd-run timeout xvfb-run Xvfb; do
+for command in flock java python3 systemctl systemd-run timeout Xvfb; do
   command -v "$command" >/dev/null 2>&1 || { printf 'fabric-configuration-rejection-smoke: required command not found: %s\n' "$command" >&2; exit 2; }
 done
 systemctl --user show-environment >/dev/null 2>&1 || { echo 'fabric-configuration-rejection-smoke: a running systemd user manager is required' >&2; exit 2; }
@@ -50,7 +50,7 @@ copy_diagnostic() { local source=$1 destination=$2; [[ -f "$source" ]] || return
 finish() {
   local status=$?
   trap - EXIT INT TERM
-  terminate_scope "$CLIENT_SCOPE" "$CLIENT_PID"
+  if declare -F mdb_owned_cleanup >/dev/null; then mdb_owned_cleanup || status=1; fi
   terminate_scope "$SERVER_SCOPE" "$SERVER_PID"
   if [[ -n "$RUN_ROOT" && -d "$RUN_ROOT" ]]; then
     for console in "$RUN_ROOT"/server-console-attempt-*.log; do [[ -f "$console" ]] && copy_diagnostic "$console" "$DIAGNOSTIC_DIR/$(basename "$console")"; done
@@ -66,6 +66,7 @@ finish() {
   (( status == 0 )) && status=1
   exit "$status"
 }
+source "$ROOT/scripts/mdb-owned-client.sh"
 trap finish EXIT INT TERM
 
 fail_with_logs() {
@@ -148,22 +149,26 @@ wait_for_server() {
   return 1
 }
 start_client() {
-  local kind=$1 username=$2 property task mode=
+  local kind=$1 username=$2 property mode=
   local -a mode_args=()
   CLIENT_KIND=$kind; CLIENT_SCOPE="$SCOPE_PREFIX-$kind-client"; CLIENT_PID=
   mkdir -p "$RUN_ROOT/$kind-client"; printf 'onboardAccessibility:false\n' > "$RUN_ROOT/$kind-client/options.txt"
   case "$kind" in
-    mismatch) property=mekanism.handshake.mismatchClientDir; task=runHandshakeMismatchClient; mode=version_mismatch ;;
-    client_rejected) property=mekanism.handshake.mismatchClientDir; task=runHandshakeMismatchClient; mode=same_version_reject ;;
-    missing_receiver) property=mekanism.handshake.missingReceiverClientDir; task=runHandshakeMissingReceiverClient ;;
+    mismatch) property=mekanism.handshake.mismatchClientDir; mode=version_mismatch ;;
+    client_rejected) property=mekanism.handshake.mismatchClientDir; mode=same_version_reject ;;
+    missing_receiver) property=mekanism.handshake.missingReceiverClientDir ;;
     *) fail_with_logs "unknown client fixture: $kind" ;;
   esac
   [[ -z "$mode" ]] || mode_args+=("-Dmekanism.handshake.fixtureMode=$mode")
   printf 'fabric-configuration-rejection-smoke: starting %s client\n' "$kind"
-  systemd-run --user --scope --collect --quiet --unit="$CLIENT_SCOPE" xvfb-run -a "$ROOT/gradlew" -p "$ROOT/fabric" --no-daemon --console=plain \
-    -D"$property=$RUN_RELATIVE/$kind-client" -Dmekanism.handshake.address="127.0.0.1:$PORT" -Dmekanism.handshake.username="$username" \
-    "${mode_args[@]}" "$task" >"$RUN_ROOT/$kind-client-console.log" 2>&1 &
-  CLIENT_PID=$!
+  local preset
+  case "$kind" in
+    mismatch|client_rejected) preset=handshakeMismatchClient ;;
+    missing_receiver) preset=handshakeMissingReceiverClient ;;
+  esac
+  mdb_owned_start "$preset" "$RUN_ROOT/$kind-client" "rejection-$RUN_ID-$kind" \
+    "-D$property=$RUN_RELATIVE/$kind-client" "-Dmekanism.handshake.address=127.0.0.1:$PORT" \
+    "-Dmekanism.handshake.username=$username" "${mode_args[@]}" >"$RUN_ROOT/$kind-client-console.log" 2>&1
 }
 wait_for_evidence() {
   local server_marker=$1 client_marker=$2 remaining status
@@ -192,6 +197,7 @@ timeout "${remaining}s" "$ROOT/gradlew" -p "$ROOT/fabric" --no-daemon --console=
 
 # Development runs load only the core mod (see fabric-paired-network-smoke.sh); rejection clients keep isolated classpaths.
 RUN_RELATIVE="run/rejection-$RUN_ID"; RUN_ROOT="$ROOT/fabric/$RUN_RELATIVE"; SERVER_DIR="$RUN_ROOT/server"; mkdir -p "$SERVER_DIR"
+mdb_owned_prepare
 server_ready=0
 for attempt in 1 2 3; do
   PORT=$(select_port); rm -rf "$SERVER_DIR/logs" "$SERVER_DIR/world"; printf 'eula=true\n' > "$SERVER_DIR/eula.txt"
@@ -226,7 +232,7 @@ reject_line=$(marker_line "$SERVER_LOG" "$MISMATCH_REJECT") || fail_with_logs 'm
 [[ $start_line -lt $reject_line ]] || fail_with_logs 'server START -> mismatch REJECT order was not proven'
 require_username_disconnect "$SERVER_LOG" "$MISMATCH_USERNAME" "$MISMATCH_REASON" 'server disconnect was not bound to the mismatch username and exact reason'
 [[ $(marker_count "$MISMATCH_CLIENT_LOG" 'MEKANISM_FABRIC_NETWORK_CLIENT_PROOF') -eq 0 ]] || fail_with_logs 'mismatch client leaked production entrypoint'
-terminate_scope "$CLIENT_SCOPE" "$CLIENT_PID"; CLIENT_SCOPE=; CLIENT_PID=
+mdb_owned_stop; CLIENT_SCOPE=; CLIENT_PID=
 
 REJECTED_READY='MEKANISM_FIXTURE_MISMATCH_READY mode=same_version_reject local=10.7.19 registry_entries=4'
 REJECTED_RESPONSE='MEKANISM_FIXTURE_MISMATCH_RESPONSE mode=same_version_reject local=10.7.19 remote=10.7.19 accepted=false'
@@ -244,7 +250,7 @@ reject_line=$(marker_line "$SERVER_LOG" "$REJECTED_REJECT") || fail_with_logs 'm
 [[ $start_line -lt $reject_line ]] || fail_with_logs 'server START -> same-version REJECT order was not proven'
 require_username_disconnect "$SERVER_LOG" "$REJECTED_USERNAME" "$REJECTED_REASON" 'server disconnect was not bound to the same-version rejection username and exact reason'
 [[ $(marker_count "$REJECTED_CLIENT_LOG" 'MEKANISM_FABRIC_NETWORK_CLIENT_PROOF') -eq 0 ]] || fail_with_logs 'same-version rejection client leaked production entrypoint'
-terminate_scope "$CLIENT_SCOPE" "$CLIENT_PID"; CLIENT_SCOPE=; CLIENT_PID=
+mdb_owned_stop; CLIENT_SCOPE=; CLIENT_PID=
 
 MISSING_READY='MEKANISM_FIXTURE_MISSING_RECEIVER_READY registry_entries=4 payloads=0'
 MISSING_REASON='This server requires Mekanism protocol 10.7.19'
@@ -255,7 +261,7 @@ wait_for_evidence "$MISSING_REJECT" "$MISSING_DISCONNECT"
 MISSING_CLIENT_LOG="$RUN_ROOT/missing_receiver-client/logs/latest.log"
 require_order "$MISSING_CLIENT_LOG" "$MISSING_READY" "$MISSING_DISCONNECT" 'missing receiver client READY -> DISCONNECT'
 require_username_disconnect "$SERVER_LOG" "$MISSING_USERNAME" "$MISSING_REASON" 'server disconnect was not bound to the missing-receiver username and exact reason'
-terminate_scope "$CLIENT_SCOPE" "$CLIENT_PID"; CLIENT_SCOPE=; CLIENT_PID=
+mdb_owned_stop; CLIENT_SCOPE=; CLIENT_PID=
 
 [[ $(marker_count "$SERVER_LOG" "$MISMATCH_REJECT") -eq 1 ]] || fail_with_logs 'expected one exact version-mismatch rejection'
 [[ $(marker_count "$SERVER_LOG" "$REJECTED_REJECT") -eq 1 ]] || fail_with_logs 'expected one exact same-version client rejection'

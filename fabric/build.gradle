@@ -1350,3 +1350,16 @@ if (devModule != 'core') {
         runDir "run-${devModule}"
     }
 }
+
+// Existing handshake fixtures also run through the mdb-owned runClient task.
+def devClientRun = providers.gradleProperty('devClientRun').getOrElse('client')
+if (devClientRun != 'client') {
+    if (devModule != 'core' || !(devClientRun in ['handshakeClient', 'handshakeMismatchClient', 'handshakeMissingReceiverClient'])) {
+        throw new GradleException('devClientRun selects a core handshake client fixture; do not combine it with devModule')
+    }
+    def selectedClientRun = loom.runs.getByName(devClientRun)
+    loom.runs.named('client') {
+        inherit selectedClientRun
+        runDir selectedClientRun.runDir
+    }
+}

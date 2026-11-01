@@ -2,7 +2,7 @@
 
 ## 现状
 
-W-45边界`f206c34f`，W-46–49主体实现及回归完成。保留61份原源码与原包名、注册ID、NBT及WalkieData codec；3份JEI/alias集成按既有边界排除，逐文件清单见evidence/additions/source-boundary.csv。6份native接入直接承接生成查询、TNT/火焰点火及信标扫描。独立Additions源集/JAR不混入核心包体，build.sh收集核心、Tools、Additions三个JAR。
+W-45边界`f206c34f`，W-46–49主体实现及回归完成。保留61份原源码与原包名、注册ID、NBT及WalkieData codec；3份JEI/alias集成按既有边界排除，逐文件清单见evidence/additions/source-boundary.csv。6份native接入直接承接生成查询、TNT/火焰点火及信标扫描。独立Additions源集/JAR不混入核心包体，当时build.sh收集核心、Tools、Additions三个JAR；当前已含Generators，共四个JAR。
 
 实际注册271方块、271方块物品＋25其他物品、8实体（6种baby）、1组件、1声音。SERVER配置41项：本次核心＋Additions同步345值；同时安装Tools时合计408，低于512上限。原配置、继承/物理/爆炸/生成比例算法与NBT保留；气球color/latch接vanilla实体追踪。原重染difference ingredient在构建资源中使用Fabric原生等价形式；魔法伤害标签数据依据NeoForge21.1.200的NeoForgeDamageTypeTagsProvider，仅补所需magic/poison/wither分类，Fabric原生毒伤仍由magic表达。
 
@@ -10,7 +10,7 @@ W-45边界`f206c34f`，W-46–49主体实现及回归完成。保留61份原源�
 
 ## 下一步
 
-W-49构建、API与机器回归通过，继续新版ROADMAP W-50 Generators边界与细化规划。W-48音频采集验证分支保留如下具体限制，继续已确定的开发范围。完整发布检查集中P13；协调者巡检2要求的证据精简已单独提交`56e463b0`，移除约1.32MB重复/修复前图片，保留全量JSON读数和关键帧。
+主体实现与既有回归已完成；当前随 `M-release.md` 收口，不重开已完成的 Generators 规划。W-48 原始 16kHz/big-endian 音频与双向会话仍未验收；W-64 的 48kHz/little-endian Java Sound 采样只证明另一格式的线路可用，不能替代原协议读数。未新增音频测试。
 
 ## 未决项
 

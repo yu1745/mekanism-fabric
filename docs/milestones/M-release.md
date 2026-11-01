@@ -1,30 +1,26 @@
-# M-release — 核心开发与后续发布验证
+# M-release — 核心开发与发布验证
 
 ## 现状
 
-按用户“聚焦开发”要求，已补Meka-Tool左右手模型／OBJ继承烘焙和QIO dashboard LED逐层全亮度。平台仅新增两个实际渲染owner（207→209），未新建转换框架。
+核心与三个附加模块主体已移植。本 goal 已闭环 W-120 受信／撤销交互、W-121 严格运输器崩溃守恒与官方对照、W-122 固定底部发电输出、W-116 合法模块客户端与最大负载官方对照；未改生产算法或源码切片，未新增测试类。当前发布门禁客户端正在接入 mdb owned，旧全绿结果不替代本 HEAD 验收。
 
 ## 下一步
 
-W-60现有完整smoke将使用四模块发布物；C-1三项拷贝负向探针均按预期FAIL，C-2四JAR配方计数／摘要已记录，C-4旧oracles保持不变，仅追加Additions已纳入的11条必需AW预期。静态检查通过；W-60 复核的测试口径为 `test` 451 项 + `fabricClientModelTest` 17 + `fabricDataMapTest` 4 + `fabricRecipeRegistryTest` 8 + `fabricRegistryTest` 3 + `fabricTransferTest` 45 + `qioTransactionTest` 50 = 578，无套件被静默排除。
-
-Tools与Additions主体已完成；Generators的机器、多方块、GUI、生命周期和冷启动均已真机验证，W-58统一构建、578 tests／API／machine回归已通过，独立四JAR已生成。现在进入P13：W-59拒绝顺序已修，继续执行W-60–62已有发布检查与C-1…C-4，不扩展审查或测试覆盖。
+完成既有 paired/rejection 的 mdb 生命周期接线，保留全部协议原因／顺序／唯一性断言。随后集中执行最终既有门禁与两次 clean 四 JAR 哈希比对，更新本页、状态表、证据索引及决策清单。日常 `test` 457 项与 API 检查已通过，不重复扩大覆盖。
 
 ## 未决项
 
-NeoForge 参考环境文件常驻：官方 NeoForge 21.1.200 + 官方 Mekanism 10.7.19.85 + W-65 样本世界落在 `~/.cache/mekanism-neoforge-reference/`（约 200MB，不进仓库），由 `scripts/neoforge-reference.sh start|stop|status|logs|install` 按需启停（端口 25594，用完 stop，不常驻进程），后续 NBT／存档／行为对比直接复用。
-
-W-69 已完成（原 B2 缺口）：发布 JAR 客户端路径已验证——用 Loom/Gradle 缓存离线装配 intermediary 生产客户端 + 干净四 JAR 服务端，客户端 `phase=client_applied values=458` 并加入游戏；该结论已成档；对应裸客户端启动脚本按新规则退役，不再重复执行。
-
-W-60四模块开发联机启动失败已定性为开发环境类加载产物，非移植缺陷：Loom 开发运行把每个 mod 源集放进独立 class-path group，addon 代码因此看到第二份核心注册静态表（`mekanism:security` 未绑定；remapped JAR 另有 intermediary 名）。干净 remapped 四 JAR 服务端（packaged smoke）加载四模块并到达 `Done`，故不改注册语义；开发侧 paired／rejection smoke 保持仅加载核心 mod，四模块装配由 packaged smoke 断言。[证据](evidence/p8-release/w60-dev-classloader.json)
-
-W-60 同步值实测更正：发布 schema 下四模块合计 **458**（core 303 + tools 63 + additions 41 + generators 51），而非先前估计的 459——core 的 `general:alphaWarning` 只在开发 schema 存在（开发 304／发布 303）。packaged smoke 现断言 `configs=10 values=458`，逐 schema 数字记于 `detail=`。[证据](evidence/p8-release/w60-dev-classloader.json)
-
-W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CONFIGURE 版本任务，独立客户端先被 registry remap 拒绝。版本任务现排入 BEFORE_CONFIGURE 默认阶段之前，三种拒绝 smoke 已通过；正常连接验证与 W-60–62 仍待完成。Additions 语音 PCM 采集受当前主机限制；第三方集成与未穷举风险保持 README 已列边界。
+- QIO 崩溃守恒、跨区块原子性、矩阵容量及全链精确能量核算未跑；不能从已测的运输器与能量立方推断。
+- W-123 仅四台代表机器的配置／sorting与id集合；W-124 仅Fabric太阳能配置生效读数，非完整官方配置对照。
+- 语音原始16kHz/big-endian与双向会话未验证；W-64另一采样格式不能替代。Iris开发环境失败只构成该环境限制。
+- 早先frozen-sprint搭场差异未归因；当前运输器对照明确在两端unfreeze后执行sprint，不据早先现象判定产品缺陷。
+- 推送、发布与版本口径仅由用户决定，见 `DECISIONS_PENDING.md`。本 goal 不 push、不发布、不再改写历史。
 
 ## 验收证据
 
 **门禁分成两档**：`scripts/release-check.sh`（7 步，快速发布门禁）与 `scripts/release-check.sh --extended`（再加 P27 的四个场景：崩溃守恒、能量链、存档往返、配置边界）。后者每项都要起一到两次专用服务端，属于里程碑收口才跑的档位。全部证据索引见 [`evidence/p8-release/INDEX.md`](evidence/p8-release/INDEX.md)（由证据文件自身字段生成，72 条）。
+
+发布客户端门禁接线：既有 paired／rejection 通过 `devClientRun` 复用原 Loom preset，任务保持 `runClient`，由 mdb owned session 启停；两次正常连接、三种配置拒绝全部通过，5 个 owned 记录均 stopped，JVM 不存活。原协议断言未放宽；旧 W-120 双客户端直启脚本已非零退役，继续使用已验证的 mdb GUI 探针。全量发布门禁待本 HEAD 集中复跑。[生命周期证据](evidence/p8-release/w103-final-release-check.json)
 
 W-116（涡轮满负载）：通过 `devModule=generators` 将既有源集接入 mdb 的 `runClient`，355 值同步／ack，原“模块无法启动”阻塞撤回。真实玩家 builder／GUI 成型涡轮，满蒸汽、空能量缓冲下单 tick **11,040,000 mB → 110,400,000 J**，与计算上限及官方 NeoForge 同状态读数完全一致；真实 creative tank 经阀门持续供汽，200 tick 加速后仍达最大产率。临时结构、forceload、玩家位置与会话已清理；`test` **457/0/0** 与 API 检查通过，未新增测试类。官方持续供汽场景未跑。[完整读数](evidence/p8-release/w116-turbine.json)
 
@@ -145,7 +141,7 @@ W-66：1 服 2 客户端浸泡通过（脚本随后按“客户端只能用 mdb 
 
 W-65（第一轮）：官方 NeoForge 21.1.200 + Mekanism 10.7.19.85 生成的独立样本世界（机器／传输器／成型动态储罐）在 Fabric 四模块服务端直接加载通过，9 个位置的方块实体 NBT 字段与值一致，含非零连接位掩码（32／16）与多方块成型（两阀门共享 inventory_id；该 id 两侧每次加载都重生成，非持久数据）。残留：频率数据与机器运行库存未覆盖（需 GUI 授权路径）。[比对表与生成命令](evidence/p8-release/w65-neoforge-save-probe.json)
 
-W-64：音效与语音采集已收口——7 个声音事件 / `sounds.json` / 7 个 ogg 在发布 JAR 中一致，生产客户端加载四模块时不报 `Missing sound for event: mekanism*`；本机 Java Sound 采集线路可用（48000Hz/16bit/mono，500ms 采到 48000 字节），"本机限制"结论已过时。Meka 套装 HUD/按键与受控裂变熔毁**本环境不可验证**：mcdebug 无命令执行 RPC、`inv.*` 只覆盖方块实体容器，无法给出套装或执行 `/mek build fission`；原因与替代证据已记录。[证据](evidence/p8-release/w64-verification.json)
+W-64（验证边界纠正）：7 个声音事件／sounds.json／ogg 完整，旧发布客户端无缺失声音警告，未证明可听度。Java Sound **48kHz/little-endian** 采到48000字节，仅证明该格式采集线路；Additions 实际协议为 **16kHz/big-endian**，原格式与双向语音未跑，不能撤回 W-48 限制。旧“Generators 无法通过 mdb 启动”已由 W-116 消除；Meka HUD与受控裂变熔毁本批未跑。[证据与纠正](evidence/p8-release/w64-verification.json)
 
 W-69：发布 JAR 客户端路径已验证。生产（intermediary）客户端从 `<gameDir>/mods` 发现四个发布 JAR（62 mods），对干净四 JAR 服务端完成 `phase=send`／`phase=client_applied values=458` 并 `joined the game`；全程离线，用 Loom 缓存的合并 intermediary 客户端 JAR、Gradle 缓存的库/loader/ASM 与 `-Dfabric.runtimeMappingNamespace=intermediary`。[标记行与装配方式](evidence/p8-release/w69-packaged-client.json)，该脚本已退役（客户端一律 mdb 管理）。
 
@@ -219,3 +215,30 @@ EOF
 提交风格复核：`b9bf320c` 仅修正 W-121 既有探针与失效证据，未改生产行为或扩大切片；严格计数包含真实持久化的在途栈，官方与 Fabric 同 rig 均通过。QIO／跨区块范围未跑，不宣称完成。
 
 提交风格复核：`60761195` 的真实 diff 仅修正固定 BOTTOM 发电输出的既有 rig 与旧证据，复用原太阳能／能量立方／线缆 owner；无生产实现替换、无新测试类。全链容量与精确能量守恒未跑。
+
+### 历史阶段背景（已被当前状态与后续证据取代）
+
+
+**历史现状**
+
+按用户“聚焦开发”要求，已补Meka-Tool左右手模型／OBJ继承烘焙和QIO dashboard LED逐层全亮度。平台仅新增两个实际渲染owner（207→209），未新建转换框架。
+
+**历史下一步**
+
+W-60现有完整smoke将使用四模块发布物；C-1三项拷贝负向探针均按预期FAIL，C-2四JAR配方计数／摘要已记录，C-4旧oracles保持不变，仅追加Additions已纳入的11条必需AW预期。静态检查通过；W-60 复核的测试口径为 `test` 451 项 + `fabricClientModelTest` 17 + `fabricDataMapTest` 4 + `fabricRecipeRegistryTest` 8 + `fabricRegistryTest` 3 + `fabricTransferTest` 45 + `qioTransactionTest` 50 = 578，无套件被静默排除。
+
+Tools与Additions主体已完成；Generators的机器、多方块、GUI、生命周期和冷启动均已真机验证，W-58统一构建、578 tests／API／machine回归已通过，独立四JAR已生成。现在进入P13：W-59拒绝顺序已修，继续执行W-60–62已有发布检查与C-1…C-4，不扩展审查或测试覆盖。
+
+**历史未决项**
+
+NeoForge 参考环境文件常驻：官方 NeoForge 21.1.200 + 官方 Mekanism 10.7.19.85 + W-65 样本世界落在 `~/.cache/mekanism-neoforge-reference/`（约 200MB，不进仓库），由 `scripts/neoforge-reference.sh start|stop|status|logs|install` 按需启停（端口 25594，用完 stop，不常驻进程），后续 NBT／存档／行为对比直接复用。
+
+W-69 已完成（原 B2 缺口）：发布 JAR 客户端路径已验证——用 Loom/Gradle 缓存离线装配 intermediary 生产客户端 + 干净四 JAR 服务端，客户端 `phase=client_applied values=458` 并加入游戏；该结论已成档；对应裸客户端启动脚本按新规则退役，不再重复执行。
+
+W-60四模块开发联机启动失败已定性为开发环境类加载产物，非移植缺陷：Loom 开发运行把每个 mod 源集放进独立 class-path group，addon 代码因此看到第二份核心注册静态表（`mekanism:security` 未绑定；remapped JAR 另有 intermediary 名）。干净 remapped 四 JAR 服务端（packaged smoke）加载四模块并到达 `Done`，故不改注册语义；开发侧 paired／rejection smoke 保持仅加载核心 mod，四模块装配由 packaged smoke 断言。[证据](evidence/p8-release/w60-dev-classloader.json)
+
+W-60 同步值实测更正：发布 schema 下四模块合计 **458**（core 303 + tools 63 + additions 41 + generators 51），而非先前估计的 459——core 的 `general:alphaWarning` 只在开发 schema 存在（开发 304／发布 303）。packaged smoke 现断言 `configs=10 values=458`，逐 schema 数字记于 `detail=`。[证据](evidence/p8-release/w60-dev-classloader.json)
+
+W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CONFIGURE 版本任务，独立客户端先被 registry remap 拒绝。版本任务现排入 BEFORE_CONFIGURE 默认阶段之前，三种拒绝 smoke 已通过；正常连接验证与 W-60–62 仍待完成。Additions 语音 PCM 采集受当前主机限制；第三方集成与未穷举风险保持 README 已列边界。
+
+提交风格复核：`132b48d0` 的真实 diff 只让 `runClient` 选择既有附加模块源集和运行目录，无公共算法／注册／存档／切片变化；官方与 Fabric 单 tick 满负载一致。457 项既有测试和 API 检查通过；未新增测试类。

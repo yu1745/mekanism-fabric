@@ -29,6 +29,9 @@ was ported from.
   are not: JEI, EMI, Jade and WTHIT (details below). REI, TOP, CraftTweaker, ProjectE and Curios are absent;
   Accessories is used for the equipment slots that Curios covers upstream.
 
+- Iris shaders could not be validated in the named-mapping development client (W-98: mixin remapping failed).
+  This records a development-environment limitation; release-client shader compatibility remains unverified.
+
 ### Optional integrations
 
 All four are **compile-only** dependencies: the release JARs contain no code or assets from them, and installing

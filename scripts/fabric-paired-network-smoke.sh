@@ -18,7 +18,7 @@ CLIENT_NUMBER=0
 RESULT=1
 DEADLINE=0
 
-for command in flock java python3 systemctl systemd-run xvfb-run Xvfb; do
+for command in flock java python3 systemctl systemd-run Xvfb; do
   if ! command -v "$command" >/dev/null 2>&1; then
     printf 'fabric-paired-network-smoke: required command not found: %s\n' "$command" >&2
     exit 2
@@ -80,7 +80,7 @@ copy_diagnostic() {
 finish() {
   local status=$?
   trap - EXIT INT TERM
-  terminate_scope "$CLIENT_SCOPE" "$CLIENT_PID"
+  if declare -F mdb_owned_cleanup >/dev/null; then mdb_owned_cleanup || status=1; fi
   terminate_scope "$SERVER_SCOPE" "$SERVER_PID"
   if [[ -n "$RUN_ROOT" && -d "$RUN_ROOT" ]]; then
     copy_diagnostic "$RUN_ROOT/server-console.log" "$DIAGNOSTIC_DIR/server-console.log"
@@ -188,13 +188,10 @@ start_client() {
   # Fresh 1.21 clients otherwise stop at the accessibility onboarding screen before Quick Play runs.
   printf 'onboardAccessibility:false\n' > "$client_dir/options.txt"
   printf 'fabric-paired-network-smoke: starting client %d\n' "$CLIENT_NUMBER"
-  systemd-run --user --scope --collect --quiet --unit="$CLIENT_SCOPE" \
-    xvfb-run -a "$ROOT/gradlew" -p "$ROOT/fabric" --no-daemon --console=plain \
-    -Dmekanism.handshake.clientDir="$RUN_RELATIVE/client-$CLIENT_NUMBER" \
-    -Dmekanism.handshake.address="127.0.0.1:$PORT" \
-    -Dmekanism.handshake.username="$USERNAME" \
-    runHandshakeClient >"$RUN_ROOT/client-$CLIENT_NUMBER-console.log" 2>&1 &
-  CLIENT_PID=$!
+  mdb_owned_start handshakeClient "$client_dir" "$CLIENT_SCOPE" \
+    "-Dmekanism.handshake.clientDir=$RUN_RELATIVE/client-$CLIENT_NUMBER" \
+    "-Dmekanism.handshake.address=127.0.0.1:$PORT" \
+    "-Dmekanism.handshake.username=$USERNAME" >"$RUN_ROOT/client-$CLIENT_NUMBER-console.log" 2>&1
 }
 
 # Development runs load only the core mod: Loom's dev class groups cannot host the three addon mods beside the core
@@ -204,6 +201,8 @@ RUN_RELATIVE="run/paired-$RUN_ID"
 RUN_ROOT="$ROOT/fabric/$RUN_RELATIVE"
 SERVER_DIR="$RUN_ROOT/server"
 mkdir -p "$SERVER_DIR"
+source "$ROOT/scripts/mdb-owned-client.sh"
+mdb_owned_prepare
 DEADLINE=$((SECONDS + TIMEOUT))
 server_ready=0
 for attempt in 1 2 3; do
@@ -251,7 +250,7 @@ wait_for_join_count 1
 if ! grep -Fq 'MEKANISM_FABRIC_NETWORK_CLIENT_PROOF protocol=10.7.19 receiver=true' "$RUN_ROOT/client-1/logs/latest.log"; then
   fail_with_logs 'first client did not initialize the network receiver'
 fi
-terminate_scope "$CLIENT_SCOPE" "$CLIENT_PID"
+mdb_owned_stop
 CLIENT_SCOPE=
 CLIENT_PID=
 wait_for_leave_count 1
