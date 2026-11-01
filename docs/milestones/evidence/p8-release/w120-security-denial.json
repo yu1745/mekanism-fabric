@@ -1,7 +1,7 @@
 {
   "work_item": "W-120（进行中）",
   "date": "2026-11-01",
-  "status": "deny_and_allow_readings_captured",
+  "status": "deny_and_allow_readings_repeatable",
   "what_exists": {
     "fixture_source_set": "fabric/src/securityDenialFixture（源集 + remap + mods 条目 + `runSecurityDenialClient` 运行配置），编译通过",
     "fixture_class": "SecurityDenialClient：每 tick 检查，进入世界后对目标方块发一次 useItemOn，再读 `minecraft.screen` 判定，日志输出 `SECURITY_FIXTURE_ALLOWED` / `SECURITY_FIXTURE_DENIED` / `SECURITY_FIXTURE_UNEXPECTED`",
@@ -65,10 +65,16 @@
     "why": "`TileComponentSecurity.deserialize` 用 `NBTUtils.setEnumIfPresent(..., SecurityMode.BY_ID, ...)` 读取，按 id 整数解析"
   },
   "two_client_script_status": {
-    "state": "脚本仍保留（`scripts/fabric-security-denial-smoke.sh`），但两个 Gradle 客户端在软件渲染环境每个约 4–5 分钟且偶发互相拖死，本轮未能稳定跑完",
+    "state": "脚本仍保留（scripts/fabric-security-denial-smoke.sh）：同源 dev 服务端、单 mod 接线、数据包+命令方块布场、整型 security_mode 都已修好；但两个客户端在软件渲染环境各需 4-5 分钟且偶发互相拖死，未纳入门禁。验收读数改由 mdb 探针脚本提供，更快且符合客户端只用 mdb 的规则。",
     "fixed_in_it": [
       "dev 服务端同源、单 mod 接线、数据包 + 命令方块布场、security_mode 整型"
     ],
     "remaining": "客户端点击后仍无界面（诊断字段已加入 fixture，下轮按诊断结果定位）"
+  },
+  "script": {
+    "path": "scripts/fabric-security-denial-probe.sh",
+    "requires": "一个运行中的 mdb owned session（mdb session start dev …）",
+    "does": "把机器属主先设为 Bob 的离线 UUID（PRIVATE），断言 gui open-block 被拒（NO_GUI_CHANGED）；再把属主设为当前玩家 UUID，断言界面打开",
+    "stability": "连跑 3 次全部 PASS（每次两条断言）"
   }
 }
