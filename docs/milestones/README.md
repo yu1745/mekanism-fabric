@@ -23,7 +23,7 @@
 | LICENSES | 许可证与归属（W-85） | 四个 JAR 均带 LICENSE/NOTICE；内嵌库许可齐全 | [LICENSES](../LICENSES.md) |
 | M-deferred | W-72 核心延期文件复盘（35 个非集成类） | 每项有替代或不适用，无玩家可见缺口 | 已复盘：全部有替代，无需补实现。[M-deferred](M-deferred.md) |
 | M-integration | W-68 第三方配方查看器与 looking-at 的 Fabric 边界（EMI/JEI/REI、Jade/WTHIT/TOP） | 边界页与建议顺序，实现须用户裁决（W-74） | 已批准 EMI→Jade：[M-integration](M-integration.md)。 |
-| M-release | 核心全量测试、smoke、发布物与限制汇总 | 全部门禁／发布契约通过并完成协调者复核 | 进行中：W-60／W-61 通过（四 JAR 净构建与 sha256 已记录）；W-62 待协调者复核。 |
+| M-release | 核心全量测试、smoke、发布物与限制汇总 | 全部门禁／发布契约通过并完成协调者复核 | 六步门禁通过（含 EMI/Jade/JEI/WTHIT）；协调者复核限 B4 范围，新 HEAD 终签待 W-117。 |
 | M-tools | Tools材料／工具／护甲／配方／刷怪装备与客户端渲染 | 独立附加JAR与一个真实工具使用闭包 | 已验证：Tools 功能与回归通过。[证据](../archive/M-tools.md)。 |
 | M-additions | 塑料方块／气球／TNT／baby生物／对讲机 | 独立附加JAR与实际实体及物品闭包 | 进行中：主体真机与回归通过；语音采集格式受环境限制。[证据](M-additions.md)。 |
 | M-generators | 六种发电机／涡轮／裂变／聚变 | 原机器发电与多方块运行及生命周期 | 已验证：机器、多方块、GUI／生命周期与回归通过。[证据](../archive/M-generators.md)。 |
