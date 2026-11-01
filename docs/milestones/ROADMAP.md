@@ -2,6 +2,18 @@
 
 协调者编写，worker 按序执行。状态以 `docs/milestones/README.md` 为准；本文只定"做什么、什么顺序、怎样算完成、卡住怎么办"。不得借本文扩大 `AGENTS.md` 的边界。
 
+
+**K2 进展（2026-11-01，P27 四项完成）**
+
+| 项 | 结果 | 证据 |
+|---|---|---|
+| W-121 崩溃物品守恒 | 硬崩溃后总量 +33~35（重复）；官方 `javap` 证明在途缓冲不持久化 + 区块独立保存 → 引擎行为 | `evidence/p8-release/w121-crash-conservation.json` |
+| W-122 能量链 | 储能→线缆→机器 PASS（熔炉充满 20000）；发电机一跳因 tile 无 `component_config` 不可判定；感应矩阵无头不成型 | `evidence/p8-release/w122-energy-chain.json` |
+| W-123 存档往返 | 侧配置与 sorting 逐字保留、物品/化学品 id 集合一致 | `evidence/p8-release/w123-save-roundtrip.json` |
+| W-124 配置边界 | 改配置需重启，运行期编辑无效（≈41 vs ≈184 vs ≈204 FE/tick） | `evidence/p8-release/w124-config-boundary.json` |
+
+新增四个可复跑脚本，并以 `release-check.sh --extended` 纳入收口档位；证据索引为 `evidence/p8-release/INDEX.md`（72 条）。
+
 ## 进度与调整记录（协调者，2026-10-30 14:20）
 
 - P0–P4 已完成并过门禁（W-01…28，证据在 `docs/archive/M-{owner,config,platform,transfer}.md`）；P5 已做完 W-29/30/31/32，余 W-33 门禁。节奏明显快于预估，质量检查点（证据 CSV、首条错误原文、无新增测试）符合协议。
