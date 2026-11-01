@@ -1,30 +1,79 @@
 {
   "work_item": "W-122",
   "date": "2026-11-01",
-  "goal": "发电 → 储能 → 用电 的整条能量链是否真的通电。",
-  "rig": "scripts/fabric-energy-chain-smoke.sh（一次性专用服务端 + 四份发布 JAR，因此 generators 模块也在）",
-  "results": {
-    "storage_to_machine_through_cable": {
-      "layout": "能量立方(0,100,0，eject0 + 能量侧 OUTPUT，预充 100000) → 通用线缆(1,100,0，西拉东推) → 富集熔炉(2,100,0，能量侧 INPUT)",
-      "reading": "熔炉 `energy_containers[0].stored = 20000`（充满到上限）；能量立方仍有剩余",
-      "verdict": "**储能→线缆→机器 通了**"
+  "status": "solar_storage_cable_machine_chain_verified",
+  "rig": "scripts/fabric-energy-chain-smoke.sh",
+  "layout": [
+    "solar(20,101,0) fixed DOWN output -> initially empty cube(20,100,0), INPUT_OUTPUT and eject enabled -> cable(21,100,0) -> initially empty smelter(22,100,0)",
+    "Separate precharged cube(0,100,0)->cable(1,100,0)->smelter(2,100,0) retains the existing storage-output check."
+  ],
+  "source_owner": "TileEntitySolarGenerator.getEnergySides returns BOTTOM; TileEntityGenerator.onUpdateServer calls CableUtils.emit; there is no side-configuration component to invent.",
+  "readings": {
+    "0, 100, 0": {
+      "stored_joules": 72000
     },
-    "generator": {
-      "layout": "太阳能发电机(20,100,0)（generators 模块）",
-      "reading": "`stored: 13397L`、`active_state: 1b` —— **发电机确实在发电**",
-      "limits": "但它的方块数据里**没有 `component_config`**，命令 rig 写不进能量侧配置，所以「发电机→线缆→机器」这一跳无法在无头 rig 里判定（与「配置写不进去」无法区分）"
+    "2, 100, 0": {
+      "stored_joules": 20000
     },
-    "induction_matrix": {
-      "layout": "3×3×3 完整外壳（26 个 induction_casing）+ 内部 1 个 basic_induction_cell，逐块放置后等待 60 tick",
-      "reading": "外壳与电芯都正常作为方块实体存在，但**没有成型**",
-      "verbatim_reason": "成型入口是 `IMultiblockBase.onActivate(Player, InteractionHand, ItemStack)`，由玩家交互触发（与 W-116 涡轮同一堵墙）",
-      "verdict": "**无头 rig 无法成型感应矩阵**，按 W-116 同样方式记录"
+    "20, 100, 0": {
+      "stored_joules": 7955
+    },
+    "20, 101, 0": {
+      "stored_joules": 45
+    },
+    "22, 100, 0": {
+      "stored_joules": 20000
     }
   },
-  "stability": "连跑 2 次全 PASS（4 条断言）",
-  "reproduce": "bash scripts/fabric-energy-chain-smoke.sh",
-  "open_observations": [
-    "发电机→线缆→机器的真实通路未判定：发电机 tile 不落 `component_config`，无法给出 OUTPUT/eject",
-    "若后续用玩家手持配置（或 GUI）给发电机设好输出，这条链值得重测"
-  ]
+  "units": "NBT energy_containers.stored is Mekanism joules, not FE.",
+  "acceleration": {
+    "ticks": 800,
+    "ticks_per_second": 1107,
+    "wall_seconds_from_reported_rate": 0.7227,
+    "equivalent_game_seconds": 40
+  },
+  "checks": [
+    "PASS dedicated server reached Done",
+    "PASS the energy cube still holds a charge after feeding the cable",
+    "PASS the smelter was charged through the cable",
+    "PASS the initially empty cube received solar energy from above",
+    "PASS the unseeded smelter received solar energy via cube and cable",
+    "fabric-energy-chain-smoke: PASSED"
+  ],
+  "limits": [
+    "Induction matrix capacity/flow not verified by this rig. A casing shell remaining readable is not formation proof; the previous vacuous assertion was removed.",
+    "This proves source-to-machine transfer, not whole-chain lossless accounting including cable buffers and time-varying solar output."
+  ],
+  "process_lifecycle": "dedicated JVM owns a setsid process group, command FIFO, readiness and sprint markers; graceful stop, wait and failure cleanup with group verification. No owned game client started by this script.",
+  "superseded_record": {
+    "work_item": "W-122",
+    "date": "2026-11-01",
+    "goal": "发电 → 储能 → 用电 的整条能量链是否真的通电。",
+    "rig": "scripts/fabric-energy-chain-smoke.sh（一次性专用服务端 + 四份发布 JAR，因此 generators 模块也在）",
+    "results": {
+      "storage_to_machine_through_cable": {
+        "layout": "能量立方(0,100,0，eject0 + 能量侧 OUTPUT，预充 100000) → 通用线缆(1,100,0，西拉东推) → 富集熔炉(2,100,0，能量侧 INPUT)",
+        "reading": "熔炉 `energy_containers[0].stored = 20000`（充满到上限）；能量立方仍有剩余",
+        "verdict": "**储能→线缆→机器 通了**"
+      },
+      "generator": {
+        "layout": "太阳能发电机(20,100,0)（generators 模块）",
+        "reading": "`stored: 13397L`、`active_state: 1b` —— **发电机确实在发电**",
+        "limits": "但它的方块数据里**没有 `component_config`**，命令 rig 写不进能量侧配置，所以「发电机→线缆→机器」这一跳无法在无头 rig 里判定（与「配置写不进去」无法区分）"
+      },
+      "induction_matrix": {
+        "layout": "3×3×3 完整外壳（26 个 induction_casing）+ 内部 1 个 basic_induction_cell，逐块放置后等待 60 tick",
+        "reading": "外壳与电芯都正常作为方块实体存在，但**没有成型**",
+        "verbatim_reason": "成型入口是 `IMultiblockBase.onActivate(Player, InteractionHand, ItemStack)`，由玩家交互触发（与 W-116 涡轮同一堵墙）",
+        "verdict": "**无头 rig 无法成型感应矩阵**，按 W-116 同样方式记录"
+      }
+    },
+    "stability": "连跑 2 次全 PASS（4 条断言）",
+    "reproduce": "bash scripts/fabric-energy-chain-smoke.sh",
+    "open_observations": [
+      "发电机→线缆→机器的真实通路未判定：发电机 tile 不落 `component_config`，无法给出 OUTPUT/eject",
+      "若后续用玩家手持配置（或 GUI）给发电机设好输出，这条链值得重测"
+    ]
+  },
+  "superseded_notice": "The old claim that generators require component_config is false; fixed bottom output is covered above."
 }

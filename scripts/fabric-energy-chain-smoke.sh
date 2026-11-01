@@ -1,25 +1,10 @@
 #!/usr/bin/env bash
-# Energy interop against a real third-party tech mod (W-99).
-#
-# Loads Tech Reborn and Reborn Core next to the release jars in a disposable dedicated server and checks both directions:
-# a Mekanism energy cube pushes through a universal cable into a Tech Reborn grinder, and a Tech Reborn solid fuel
-# generator pushes back through a universal cable into an energized smelter. The two mods are a test-runtime input only -
-# they are downloaded into the smoke cache and never enter the release jars (the packaged static gate asserts that).
-#
-# Prerequisite: a remapped release jar (`./build.sh`). Requires only a JRE.
-# Drive real Mekanism machines in a disposable Fabric dedicated server.
-#
-# Places an enrichment chamber and an energized smelter, injects energy and input
-# through the vanilla `data merge block` command, lets the server tick, and asserts
-# the processed output appears. This is the end-to-end check for the machine
-# ownership closure: it exercises block entity ticking, the real recipe lookup,
-# energy accounting, container persistence and the item output path.
-#
-# Prerequisite: a remapped release jar (`./fabric-build.sh remapJar` or `./build.sh`).
-# Requires only a JRE; the launcher and Fabric API jars are cached or downloaded.
+# W-122: solar generator (fixed bottom output) -> energy cube -> cable -> smelter.
+# The generator chain starts empty; the separate seeded cube chain retains the existing storage-output check.
+# Uses four release jars in a disposable dedicated server. No third-party runtime is required.
 set -euo pipefail
 
-ROOT=/home/wangyu/server-v2/develop/mekanism-fabric
+ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 PROPERTIES="$ROOT/fabric/gradle.properties"
 CACHE_DIR=${FABRIC_SMOKE_CACHE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/mekanism-fabric-smoke}
 TIMEOUT=${FABRIC_ENERGY_CHAIN_TIMEOUT:-240}
@@ -44,9 +29,21 @@ TEAM_REBORN_ENERGY_VERSION=$(property team_reborn_energy_version)
 #Pinned third-party test-runtime mods; they never become release inputs.
 INSTALLER_VERSION=${FABRIC_INSTALLER_VERSION:-1.1.2}
 
+SERVER_PID=
 cleanup() {
   local status=$?
   trap - EXIT INT TERM
+  if [[ -n "$SERVER_PID" ]]; then
+    kill -TERM -- "-$SERVER_PID" 2>/dev/null || true
+    if ! timeout 2 tail --pid="$SERVER_PID" -f /dev/null; then
+      kill -KILL -- "-$SERVER_PID" 2>/dev/null || true
+    fi
+    wait "$SERVER_PID" 2>/dev/null || true
+    if ps -eo pgid= | awk -v group="$SERVER_PID" '$1 == group { found=1 } END { exit !found }'; then
+      echo "fabric-energy-chain-smoke: residual process group $SERVER_PID" >&2
+      status=1
+    fi
+  fi
   if [[ -n "$SERVER_DIR" && -d "$SERVER_DIR" && "$KEEP_SERVER" != 1 ]]; then
     rm -rf "$SERVER_DIR"
   elif [[ -n "$SERVER_DIR" ]]; then
@@ -72,7 +69,7 @@ fetch() {
   mv "$temporary" "$destination"
 }
 
-#Newest artifact wins: a stale dist/ jar from an earlier release build must not mask the current remap output.
+# Use the four artifacts from the unified release build.
 MOD_JARS=()
 while IFS= read -r jar; do MOD_JARS+=("$jar"); done < <(find "$ROOT/dist" -maxdepth 1 -name '*.jar' | sort)
 if [[ ${#MOD_JARS[@]} -ne 4 ]]; then
@@ -89,7 +86,7 @@ fetch "https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/${FABRIC_AP
 fetch "https://maven.fabricmc.net/teamreborn/energy/${TEAM_REBORN_ENERGY_VERSION}/energy-${TEAM_REBORN_ENERGY_VERSION}.jar" "$ENERGY_JAR"
 
 
-SERVER_DIR=$(mktemp -d "${TMPDIR:-/tmp}/mekanism-third-party-energy-smoke.XXXXXX")
+SERVER_DIR=$(mktemp -d "${TMPDIR:-/tmp}/mekanism-energy-chain-smoke.XXXXXX")
 LOG_FILE="$SERVER_DIR/server.log"
 mkdir -p "$SERVER_DIR/mods"
 cp "$LAUNCHER_JAR" "$SERVER_DIR/fabric-server-launch.jar"
@@ -109,66 +106,47 @@ if [[ ${FABRIC_MACHINE_BLACKLIST_FE:-0} == 1 ]]; then
   printf '[energy_conversion]\nblacklistForge = true\n' > "$SERVER_DIR/world/serverconfig/Mekanism/general.toml"
 fi
 
-cd "$SERVER_DIR"
-(
-  for _ in $(seq 1 180); do
-    grep -q 'Done (' server.log 2>/dev/null && break
-    sleep 1
-  done
-  sleep 1
-  echo "forceload add 0 0"
-  echo "forceload add 16 0"
-  #The chain: an energy source feeds a universal cable that charges an energized smelter. Both endpoints go down first and
-  #the transmitter second, so its first refresh already sees them.
-  echo "setblock 0 100 0 mekanism:basic_energy_cube"
-  echo "setblock 2 100 0 mekanism:energized_smelter"
-  echo 'data merge block 2 100 0 {component_config:{config0:[I;1,1,1,1,1,1]}}'
-  echo 'data merge block 0 100 0 {component_config:{eject0:1b, config0:[I;4,4,4,4,4,4]}, energy_containers:[{container:0b,stored:100000L}]}'
-  sleep 2
-  echo "setblock 1 100 0 mekanism:basic_universal_cable"
-  echo 'data merge block 1 100 0 {connection:[I;3,3,3,3,2,1]}'
-  #A solar generator is placed beside the same cable's far side and left alone: whatever it reports is an observation, not
-  #an assertion, because a headless server has no player to confirm the sky and daylight it needs.
-  #Second chain, this time starting at a generator. It is placed and read but not asserted: a generator's fuel/side
-  #configuration is not reachable through the data component the command rig writes (its block data carries no
-  #component_config at all), so the rig cannot tell a real transfer failure from an unconfigured emitter.
-  echo "setblock 22 100 0 mekanism:energized_smelter"
-  echo 'data merge block 22 100 0 {component_config:{config0:[I;1,1,1,1,1,1]}}'
-  sleep 1
-  echo "setblock 21 100 0 mekanism:basic_universal_cable"
-  echo "setblock 20 100 0 mekanismgenerators:solar_generator"
-  echo 'data merge block 20 100 0 {component_config:{eject0:1b, config0:[I;4,4,4,4,4,4]}}'
-  #The mask goes on last: placing the generator refreshes the cable's sides and would overwrite an earlier mask.
-  sleep 1
-  echo 'data merge block 21 100 0 {connection:[I;3,3,3,3,2,1]}'
-  sleep 2
-  echo "tick sprint 400"
-  sleep 2
-  echo "data get block 0 100 0"
-  echo "data get block 2 100 0"
-  echo "data get block 20 100 0"
-  echo "data get block 22 100 0"
-  #The induction matrix is a multiblock: a complete 3x3x3 shell with a cell inside is placed block by block and then
-  #asked whether it formed on its own.
-  for x in 20 21 22; do
-    for y in 100 101 102; do
-      for z in 0 1 2; do
-        if [[ $x == 21 && $y == 101 && $z == 1 ]]; then
-          echo "setblock $x $y $z mekanism:basic_induction_cell"
-        else
-          echo "setblock $x $y $z mekanism:induction_casing"
-        fi
-      done
-    done
-  done
-  sleep 3
-  echo "tick sprint 60"
-  sleep 2
-  echo "data get block 20 100 0"
-  echo "data get block 21 101 1"
-  echo "stop"
-  sleep 5
-) | timeout "$TIMEOUT" java -Xms512M -Xmx2G -jar fabric-server-launch.jar nogui > server.log 2>&1 || true
+mkfifo "$SERVER_DIR/console"
+exec 9<>"$SERVER_DIR/console"
+(cd "$SERVER_DIR" && exec setsid java -Xms512M -Xmx2G -jar fabric-server-launch.jar nogui < console > "$LOG_FILE" 2>&1) &
+SERVER_PID=$!
+wait_line() {
+  "$ROOT/scripts/wait-for-log-line.sh" -t 60 -p "$SERVER_PID" \
+    --fail-on 'Encountered an unexpected exception|FAILED TO BIND|Exception in thread' "$1" "$LOG_FILE"
+}
+command() { printf '%s\n' "$1" >&9; }
+wait_line 'Done \('
+command 'tick freeze'
+command 'forceload add 0 0'
+command 'forceload add 16 0'
+command 'time set noon'
+command 'weather clear'
+command 'gamerule doDaylightCycle false'
+command 'setblock 0 100 0 mekanism:basic_energy_cube'
+command 'setblock 2 100 0 mekanism:energized_smelter'
+command 'data merge block 2 100 0 {component_config:{config0:[I;1,1,1,1,1,1]}}'
+command 'data merge block 0 100 0 {component_config:{eject0:1b,config0:[I;4,4,4,4,4,4]},energy_containers:[{container:0b,stored:100000L}]}'
+command 'setblock 1 100 0 mekanism:basic_universal_cable'
+command 'data merge block 1 100 0 {connection:[I;3,3,3,3,2,1]}'
+# Solar output is intrinsically DOWN; it has no configurable side component. Put the empty storage below it.
+command 'setblock 20 100 0 mekanism:basic_energy_cube'
+command 'data merge block 20 100 0 {component_config:{eject0:1b,config0:[I;7,7,7,7,7,7]}}'
+command 'setblock 22 100 0 mekanism:energized_smelter'
+command 'data merge block 22 100 0 {component_config:{config0:[I;1,1,1,1,1,1]}}'
+command 'setblock 21 100 0 mekanism:basic_universal_cable'
+command 'data merge block 21 100 0 {connection:[I;3,3,3,3,2,1]}'
+command 'setblock 20 101 0 mekanismgenerators:solar_generator'
+command 'tick sprint 800t'
+wait_line 'Sprint completed with'
+for position in '0 100 0' '2 100 0' '20 100 0' '20 101 0' '22 100 0'; do
+  command "data get block $position"
+done
+command 'say ENERGY_CHAIN_COMPLETE'
+wait_line '\[Server\] ENERGY_CHAIN_COMPLETE'
+command stop
+wait "$SERVER_PID"
+SERVER_PID=
+exec 9>&-
 
 failures=0
 check() {
@@ -184,7 +162,8 @@ check() {
 check "dedicated server reached Done" 'Done \([0-9.]+s\)!'
 check "the energy cube still holds a charge after feeding the cable" 'INFO\]: 0, 100, 0 has the following block data.*energy_containers.*stored: [1-9]'
 check "the smelter was charged through the cable" 'INFO\]: 2, 100, 0 has the following block data.*energy_containers.*stored: [1-9]'
-check "the completed matrix shell did not form on its own" 'INFO\]: 20, 100, 0 has the following block data'
+check "the initially empty cube received solar energy from above" 'INFO\]: 20, 100, 0 has the following block data.*energy_containers.*stored: [1-9]'
+check "the unseeded smelter received solar energy via cube and cable" 'INFO\]: 22, 100, 0 has the following block data.*energy_containers.*stored: [1-9]'
 if (( failures > 0 )); then
   echo "fabric-energy-chain-smoke: FAILED ($failures checks)" >&2
   exit 1

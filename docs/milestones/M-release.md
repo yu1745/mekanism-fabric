@@ -30,7 +30,7 @@ W-124（配置生效边界）：**改配置需要重启，不支持热重载**�
 
 W-123（存档往返第二轮）：**配置与内容都能活过重启**。脚本 `scripts/fabric-save-roundtrip-smoke.sh` 两阶段：布置四台机器（注入室 HCl 1500 + 4 晶体、化学储罐 HCl 2000、分离器、精英冶炼工厂 `sorting:1b` + 8 脏粉）→ `save-all flush` → 干净 `stop` → 同世界重启 → 再转储。逐字段比对：`component_config` 与 `sorting` **逐字一致**，`items`/`chemical_tanks` 的 **id 集合一致**；数量变化（注入室喝 HCl、工厂吃脏粉）属正常消耗，故不比数量。连续 2 次 PASS。[记录](evidence/p8-release/w123-save-roundtrip.json)
 
-W-122（发电→储能→用电）：**储能→线缆→机器通了，发电机一跳与感应矩阵均受限**。脚本 `scripts/fabric-energy-chain-smoke.sh`：能量立方（eject + 能量侧 OUTPUT，预充 100000）→ 通用线缆（西拉东推）→ 富集熔炉（能量侧 INPUT），熔炉实测 `stored = 20000`（充满上限）。**太阳能发电机确实在发电**（`stored: 13397`、`active_state: 1b`），但它的方块数据里**没有 `component_config`**，命令 rig 写不进能量侧配置，因此「发电机→线缆→机器」这一跳无法在无头 rig 里判定。**感应矩阵**：3×3×3 完整外壳 + 内部电芯逐块放置、等 60 tick 后**没有成型**，原文原因是成型入口 `IMultiblockBase.onActivate(Player, …)` 需玩家交互（与 W-116 涡轮同一堵墙）。[记录](evidence/p8-release/w122-energy-chain.json)
+W-122（发电→储能→用电纠正）：太阳能固定从 **BOTTOM** 输出，不需要 `component_config`。修正既有 rig 为太阳能→其下方空能量立方→线缆→空熔炉，800 tick（40 游戏秒，1107 tick/s，按报告速率约 0.72 秒加速运行）后，立方 **7955 J**、发电机 **45 J**、熔炉 **20000 J**，五项断言通过。原“无法配置输出”的阻塞撤回；不再把外壳仍可读取当成矩阵成型断言。矩阵容量与全链精确能量守恒未跑。[读数](evidence/p8-release/w122-energy-chain.json)
 
 W-121（崩溃守恒纠正）：旧“多出 33–35 个、引擎导致重复”的结论撤回：正则跨日志行重复计入目标箱，且两箱同区块，运输器实际经继承路径持久化在途栈。修正既有脚本为**两箱＋在途精确计数**、冻结快照、加速搬运、保存后继续搬运并杀整个进程组、同世界重启再搬运。Fabric 与官方 NeoForge 同脚本均通过：保存与重启均 **1709＋2＋17＝1728**，恢复搬运后 **1690＋2＋36＝1728**。QIO、跨区块未跑；先前 frozen-sprint 设置的差异未归因，不据此宣称产品缺陷。[证据与撤回记录](evidence/p8-release/w121-crash-conservation.json)
 
@@ -213,3 +213,5 @@ EOF
 **扩展档已实跑通过**：`scripts/release-check.sh --skip-build --extended` **10 步全绿**（静态 14s、打包服务端 57s、配对 85s、配置拒绝 117s、机器 smoke 66s、第三方能量 61s、崩溃守恒 105s、能量链 53s、存档往返 376s、配置边界 82s）。首次运行第 6 步以 **exit 126** 失败——`fabric-third-party-energy-smoke.sh` 缺可执行位（脚本由 python 写入时默认 644）；`chmod +x scripts/*.sh` 后复跑全绿。[记录](evidence/p8-release/w103-extended-release-check.json)
 
 提交风格复核：`e0bfa412` 的真实 diff 仅扩展已授权 W-120 探针和纠正文档，复用真实 security owner／frequency，无生产语义替代、无源码切片变化。五条 GUI 判定与清理已实跑，日常 `test` 成功（UP-TO-DATE）；全量门禁本批未跑。
+
+提交风格复核：`b9bf320c` 仅修正 W-121 既有探针与失效证据，未改生产行为或扩大切片；严格计数包含真实持久化的在途栈，官方与 Fabric 同 rig 均通过。QIO／跨区块范围未跑，不宣称完成。
