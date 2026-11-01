@@ -1,42 +1,40 @@
 {
   "work_item": "release-check",
-  "date": "2026-10-31",
-  "run": "final",
-  "goal": "\u5728 \u2713\u00d73/\u00d74 \u5316\u5b66\u94fe\u3001\u533a\u5757\u5378\u8f7d\u771f\u8bc1\u660e\u3001smoke \u63d0\u901f\uff08113s\u219265s\uff09\u4e4b\u540e\uff0c\u590d\u6838\u6574\u4e2a\u53d1\u5e03\u95e8\u7981\u3002",
+  "date": "2026-11-01",
+  "run": "post W-111 x5 chain + W-118 + W-116/W-110 docs",
   "result": "PASSED (6 steps)",
   "steps": [
     {
       "name": "clean four-JAR build",
       "exit": 0,
-      "seconds": 279
+      "seconds": 357
     },
     {
       "name": "packaged static four-JAR gates",
       "exit": 0,
-      "seconds": 15
+      "seconds": 19
     },
     {
       "name": "packaged server (50 mods, 458 values)",
       "exit": 0,
-      "seconds": 55
+      "seconds": 68
     },
     {
       "name": "paired network (two clients, handshake)",
       "exit": 0,
-      "seconds": 86
+      "seconds": 108
     },
     {
       "name": "configuration rejection (three clients rejected)",
       "exit": 0,
-      "seconds": 109
+      "seconds": 122
     },
     {
       "name": "machine runtime smoke",
       "exit": 0,
-      "seconds": 65
+      "seconds": 72
     }
   ],
-  "total_seconds": 609,
-  "wall_seconds": 608,
+  "total_seconds": 746,
   "logs": "/tmp/release-check"
 }
