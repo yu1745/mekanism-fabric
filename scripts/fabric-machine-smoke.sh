@@ -189,9 +189,9 @@ cd "$SERVER_DIR"
   echo "setblock 62 100 0 mekanism:electrolytic_separator"
   #x5 stage (W-111): shard plus oxygen purifies into a clump, crushing the clump gives dirty dust, and enriching the
   #dirty dust gives the finished dust - the last three conversions of the ore path.
-  echo "setblock 64 100 0 mekanism:purification_chamber"
-  echo "setblock 66 100 0 mekanism:crusher"
-  echo "setblock 68 100 0 mekanism:enrichment_chamber"
+  echo "setblock 58 100 2 mekanism:purification_chamber"
+  echo "setblock 58 100 4 mekanism:crusher"
+  echo "setblock 58 100 6 mekanism:enrichment_chamber"
   echo 'data merge block 41 100 0 {component_config:{config3:[I;1,1,1,1,1,4]}, energy_containers:[{container:0b,stored:40000L}]}'
   echo 'item replace block 42 100 0 container.0 with minecraft:iron_ore 4'
   echo 'data merge block 50 100 0 {energy_containers:[{container:0b,stored:40000L}], component_config:{config2:[I;4,4,4,4,4,4]}, chemical_tanks:[{tank:0b,stored:{id:"mekanism:sulfur_trioxide",amount:2000}},{tank:1b,stored:{id:"mekanism:water_vapor",amount:2000}}]}'
@@ -206,13 +206,14 @@ cd "$SERVER_DIR"
   #needs a water fill and enough energy for one 1000 mB washing operation.
   echo 'data merge block 55 100 0 {energy_containers:[{container:0b,stored:40000L}], fluid_tanks:[{tank:0b,stored:{id:"minecraft:water",amount:8000}}], component_config:{eject2:1b, config1:[I;1,1,1,1,1,1], config2:[I;7,7,7,7,7,7]}}'
   echo 'data merge block 56 100 0 {energy_containers:[{container:0b,stored:40000L}], component_config:{config2:[I;1,1,1,1,1,1]}}'
-  echo 'data merge block 58 100 0 {energy_containers:[{container:0b,stored:40000L}], items:[{slot:0b,item:{id:"mekanism:crystal_iron",count:4}}], chemical_tanks:[{tank:0b,stored:{id:"mekanism:hydrogen_chloride",amount:2000}}], component_config:{config2:[I;1,1,1,1,1,1]}}'
+  echo 'data merge block 58 100 0 {energy_containers:[{container:0b,stored:40000L}], items:[{slot:0b,item:{id:"mekanism:crystal_iron",count:4}}], chemical_tanks:[{tank:0b,stored:{id:"mekanism:hydrogen_chloride",amount:2000}}], component_config:{eject3:1b, config2:[I;1,1,1,1,1,1], config3:[I;4,4,4,4,4,4]}}'
   echo 'data merge block 60 100 0 {component_config:{config2:[I;7,7,7,7,7,7]}}'
   echo 'data merge block 61 100 0 {energy_containers:[{container:0b,stored:40000L}], chemical_tanks:[{tank:0b,stored:{id:"mekanism:hydrogen",amount:2000}}], component_config:{eject2:1b, config2:[I;7,7,7,7,7,7]}}'
   echo 'data merge block 62 100 0 {energy_containers:[{container:0b,stored:40000L}], fluid_tanks:[{tank:0b,stored:{id:"mekanism:brine",amount:8000}}], component_config:{eject2:1b, config2:[I;6,6,6,6,6,6]}}'
-  echo 'data merge block 64 100 0 {energy_containers:[{container:0b,stored:40000L}], items:[{slot:0b,item:{id:"mekanism:shard_iron",count:8}}], chemical_tanks:[{tank:0b,stored:{id:"mekanism:oxygen",amount:2000}}], component_config:{config2:[I;1,1,1,1,1,1]}}'
-  echo 'data merge block 66 100 0 {energy_containers:[{container:0b,stored:40000L}], items:[{slot:0b,item:{id:"mekanism:clump_iron",count:8}}]}'
-  echo 'data merge block 68 100 0 {energy_containers:[{container:0b,stored:40000L}], items:[{slot:0b,item:{id:"mekanism:dirty_dust_iron",count:8}}]}'
+  #No item seeds: the shard has to arrive from the injection chamber through three transporters.
+  echo 'data merge block 58 100 2 {energy_containers:[{container:0b,stored:40000L}], chemical_tanks:[{tank:0b,stored:{id:"mekanism:oxygen",amount:4000}}], component_config:{config2:[I;1,1,1,1,1,1], config3:[I;7,7,7,7,7,7]}}'
+  echo 'data merge block 58 100 4 {energy_containers:[{container:0b,stored:40000L}], component_config:{config3:[I;7,7,7,7,7,7]}}'
+  echo 'data merge block 58 100 6 {energy_containers:[{container:0b,stored:40000L}], component_config:{config3:[I;1,1,1,1,1,1]}}'
   sleep 3
   echo "setblock 13 100 0 mekanism:basic_universal_cable"
   echo "setblock 21 100 0 mekanism:basic_logistical_transporter"
@@ -222,6 +223,9 @@ cd "$SERVER_DIR"
   echo "setblock 37 100 0 mekanism:basic_mechanical_pipe"
   echo "setblock 51 100 0 mekanism:basic_pressurized_tube"
   echo "setblock 54 100 0 mekanism:basic_pressurized_tube"
+  echo "setblock 58 100 1 mekanism:basic_logistical_transporter"
+  echo "setblock 58 100 3 mekanism:basic_logistical_transporter"
+  echo "setblock 58 100 5 mekanism:basic_logistical_transporter"
   echo "setblock 59 100 0 mekanism:basic_pressurized_tube"
   sleep 3
   echo 'data merge block 21 100 0 {connection:[I;3,3,3,3,2,1]}'
@@ -231,6 +235,10 @@ cd "$SERVER_DIR"
   echo 'data merge block 37 100 0 {connection:[I;3,3,3,3,2,1]}'
   echo 'data merge block 51 100 0 {connection:[I;3,3,3,3,2,1]}'
   echo 'data merge block 54 100 0 {connection:[I;3,3,3,3,2,1]}'
+  #Pull from the north (the stage behind) and push south (the stage ahead).
+  echo 'data merge block 58 100 1 {connection:[I;3,3,2,1,3,3]}'
+  echo 'data merge block 58 100 3 {connection:[I;3,3,2,1,3,3]}'
+  echo 'data merge block 58 100 5 {connection:[I;3,3,2,1,3,3]}'
   #Pulls hydrogen chloride from the tank and pushes it into the injection chamber.
   echo 'data merge block 59 100 0 {connection:[I;3,3,3,3,1,2]}'
   #900 ticks cover four hopper-fed operations (hopper cadence is one item per 8 game ticks) plus extraction, and they
@@ -277,10 +285,17 @@ cd "$SERVER_DIR"
   echo 'data merge block 56 100 0 {energy_containers:[{container:0b,stored:40000L}]}'
   echo 'data merge block 55 100 0 {energy_containers:[{container:0b,stored:40000L}]}'
   echo 'data merge block 58 100 0 {energy_containers:[{container:0b,stored:40000L}]}'
-  echo 'data merge block 64 100 0 {energy_containers:[{container:0b,stored:40000L}]}'
-  echo 'data merge block 66 100 0 {energy_containers:[{container:0b,stored:40000L}]}'
-  echo 'data merge block 68 100 0 {energy_containers:[{container:0b,stored:40000L}]}'
+  echo 'data merge block 58 100 2 {energy_containers:[{container:0b,stored:40000L}]}'
+  echo 'data merge block 58 100 4 {energy_containers:[{container:0b,stored:40000L}]}'
+  echo 'data merge block 58 100 6 {energy_containers:[{container:0b,stored:40000L}]}'
   echo "tick sprint 300"
+  sleep 2
+  #A second top-up right before the dump: the chained stages burn their 40k buffers faster than one refill covers.
+  echo 'data merge block 58 100 2 {energy_containers:[{container:0b,stored:40000L}]}'
+  echo 'data merge block 58 100 4 {energy_containers:[{container:0b,stored:40000L}]}'
+  echo 'data merge block 58 100 6 {energy_containers:[{container:0b,stored:40000L}]}'
+  #The enrichment chamber starts its last craft only once the dirty dust arrives, so give it a full operation of ticks.
+  echo "tick sprint 600"
   sleep 2
   echo "data get block 52 100 0"
   echo "data get block 53 100 0"
@@ -290,9 +305,9 @@ cd "$SERVER_DIR"
   echo "data get block 60 100 0"
   echo "data get block 61 100 0"
   echo "data get block 62 100 0"
-  echo "data get block 64 100 0"
-  echo "data get block 66 100 0"
-  echo "data get block 68 100 0"
+  echo "data get block 58 100 2"
+  echo "data get block 58 100 4"
+  echo "data get block 58 100 6"
   sleep 3
   echo "stop"
   sleep 5
@@ -342,10 +357,7 @@ check "chemical infuser ran and its acid reached the dissolution chamber" '52, 1
 check "chemical infuser consumed its seeded inputs" '50, 100, 0 has the following block data.*sulfur_trioxide.*amount: 1[0-9]{3}L'
 check "washer fed clean slurry to the crystallizer" '56, 100, 0 has the following block data.*chemical_tanks.*mekanism:clean_iron'
 check "crystallizer produced an iron crystal" '56, 100, 0 has the following block data.*mekanism:crystal_iron'
-check "injection chamber turned a crystal into a shard" '58, 100, 0 has the following block data.*mekanism:shard_iron'
-check "purification chamber turned a shard into a clump" '64, 100, 0 has the following block data.*mekanism:clump_iron'
-check "crusher turned a clump into dirty dust" '66, 100, 0 has the following block data.*mekanism:dirty_dust_iron'
-check "enrichment chamber turned dirty dust into dust" '68, 100, 0 has the following block data.*"mekanism:dust_iron"'
+check "ore path ran end to end: crystal in at the chamber, dust out at the enrichment chamber" '58, 100, 6 has the following block data.*"mekanism:dust_iron"'
 if grep -Eq '28, 100, 0 has the following block data.*stored: ' "$LOG_FILE"; then
   printf 'FAIL chemical source tank was emptied\n'
   failures=$((failures + 1))
