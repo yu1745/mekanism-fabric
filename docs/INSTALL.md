@@ -75,6 +75,13 @@ through the `-PjeiDev`, `-PemiDev`, `-PjadeDev` and `-PwthitDev` Gradle switches
 - The release-JAR client path has one-off evidence only; it is not re-verified automatically with each build, and a
   version change requires a fresh approval to re-run it.
 - MekaSuit HUD/keybind details and the controlled fission meltdown have not been read in a running game.
+- **Iris shaders are not usable in the development client** (W-98): with Iris 1.8.14-beta.1 plus a shaderpack the
+  Gradle client fails during mixin application (`InvalidMixinException: Unexpected NullPointerException parsing
+  `@ModifyArg` annotation on iris$writeR…` → `MixinRemapper.unmapDesc`), because Iris ships mixins written against
+  production mappings while the dev client runs named mappings. This is an Iris-in-development limitation, not a
+  Mekanism defect; Sodium alone works and Mekanism renders correctly with it.
+- **Third-party energy interop is verified against Tech Reborn only** (W-99), and only on the server side; other
+  Team Reborn Energy consumers have not been sampled.
 
 ## Building from source
 
