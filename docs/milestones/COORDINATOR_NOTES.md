@@ -750,3 +750,16 @@ JEI（W-74c）与 WTHIT（W-74d）已批准，见 `ROADMAP.md`「W-74 范围追�
 3. 到目前为止 W-120 还没有任何读数，**还不是缺陷也不是通过**。如果握手墙一时解不开，请在 1–2 次尝试后转 W-79 与 P27 的 W-121，W-120 带原文记录，别无限期卡住。
 
 路线图：授权范围内未做项 W-120（进行中）、W-79、收口 + P27（W-121…W-124）共 7，**不触发补充线**，本次无改动。累计产品缺陷仍为 0。
+
+## 巡检 L3（2026-11-01 09:57）
+
+自 L2 起**没有新提交**（最后一个是 09:05 的 `3f7b619e`，已 52 分钟）。工作区仍是 W-120 的进行中改动（`fabric/build.gradle`、fixture 的 `fabric.mod.json`、`scripts/fabric-security-denial-smoke.sh`，脚本最后一次改在 09:41），并且 **smoke 正在跑**：`bash scripts/fabric-security-denial-smoke.sh` 已 15 分钟、外面套着一个先 `systemctl --user stop mekanism-*` 再清理的 `bash -c` 包装。L2 里说的两个悬空 `sleep` 壳已不在了。范围：无越界；无裸启动（该 smoke 的客户端由 Gradle 任务经 systemd user 单元起，属于既有 paired smoke 的同类机制，不是 mdb 外的手写启动器）；未强制推送（origin 仍在 `cbf55f96`）。**审计陷阱：未触发**——没有提交是因为在跑一个长任务，不是空转。
+
+**看到的进展**：脚本里把 UUID 转成 NBT int 数组的 Python 重写了（`(u.int >> shift) & 0xFFFFFFFF`，按"四个有符号 32 位整数、高位在前"），旧写法对 `(v >> 32)` 的符号处理有误，属于**自己发现并修正自己的 bug**——属主写错就会让"拒绝"断言变成假阴性，这一步很关键。
+
+**问题**
+1. **这个 smoke 一次要 15 分钟以上**（软件渲染下两个客户端顺序启动）。`release-check.sh` 目前约 704 秒，**W-120 这条不要接进发布门禁**；作为按需运行的专项 smoke 保留即可，在 `RELEASE_CHECKLIST.md` 里写明"手动运行、约 15–20 分钟、非门禁"。
+2. 如果这次跑完仍被握手墙挡住，L2 建议的绕法（扩展既有 `handshakeClient` 的 fixture 类，用系统属性切换行为）请直接试；**再失败一次就带原文记录并转 W-79/W-121**，别让 W-120 拖过 11:00。
+3. 停止后检查残留：`pgrep -f 'securityDenial|KnotClient'`、`systemctl --user list-units 'mekanism-*'` 都应为空；`fabric/home/` 不要再出现。
+
+路线图：授权范围内 W-120（进行中）、W-79、收口、P27 的 W-121…124，未做项 ≥6，**不补充**，本次无改动。累计产品缺陷仍为 0。
