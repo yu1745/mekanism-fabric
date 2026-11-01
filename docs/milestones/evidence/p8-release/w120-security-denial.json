@@ -1,7 +1,7 @@
 {
   "work_item": "W-120（进行中）",
   "date": "2026-11-01",
-  "status": "fixture_clicking_no_screen_opens",
+  "status": "deny_and_allow_readings_captured",
   "what_exists": {
     "fixture_source_set": "fabric/src/securityDenialFixture（源集 + remap + mods 条目 + `runSecurityDenialClient` 运行配置），编译通过",
     "fixture_class": "SecurityDenialClient：每 tick 检查，进入世界后对目标方块发一次 useItemOn，再读 `minecraft.screen` 判定，日志输出 `SECURITY_FIXTURE_ALLOWED` / `SECURITY_FIXTURE_DENIED` / `SECURITY_FIXTURE_UNEXPECTED`",
@@ -43,5 +43,32 @@
       "reading": "机器收到点击但任何人都没开出界面，更可能是 fixture 点击路径没触发服务端开界面，而非安全判定",
       "next": "显式发送 ServerboundUseItemOnPacket（带 sequence）；先用 PUBLIC 模式验证合法点击能开出界面，再区分安全拒绝与点击失败"
     }
+  },
+  "result": {
+    "rig": "mdb owned session（dev 客户端，集成服务端），用 `reflect call --root server --method createCommandSourceStack/getCommands` 执行 `data merge` 改机器属主，再用 `gui open-block` 走真实交互路径",
+    "deny_reading": {
+      "setup": "机器 `-18 89 -303` 属主设为 **Bob 的离线 UUID**、`security_mode: 1`（PRIVATE），当前玩家不是 Bob",
+      "reading": "`gui open-block` → `{\"ok\":false,\"changed\":false,\"result\":\"SUCCESS\",\"reason\":\"NO_GUI_CHANGED\"}`，`gui status` 的 `screen` 仍为 `none`",
+      "meaning": "**非属主被拒绝**：服务端不打开界面"
+    },
+    "allow_reading": {
+      "setup": "同一机器属主改为**当前玩家的 UUID**、`security_mode: 1`",
+      "reading": "`gui open-block` → `{\"ok\":true,\"changed\":true,\"screen\":\"mekanism.client.gui.machine.GuiElectricMachine\"}`，`gui status` → `screen: container Enrichment Chamber`",
+      "meaning": "**属主放行**：界面正常打开"
+    },
+    "why_this_is_a_fair_pair": "两次唯一变化是 `component_security.owner`；放行那次证明点击路径本身可用，因此拒绝那次只能来自安全判定",
+    "player_uuid": "fafe4ed7-8e8e-3030-a8e4-3ca9d4ada870"
+  },
+  "nbt_findings": {
+    "owner": "`component_security.owner` 是 4 个有符号 32 位整数（高位在前），`data merge` 可写入运行中的方块实体",
+    "mode_key": "**`security_mode`，且必须是整型**（`security_mode: 1`）。写 `security:1b` 或 `security_mode:1b` 都会**静默丢弃**模式，机器保持 PUBLIC",
+    "why": "`TileComponentSecurity.deserialize` 用 `NBTUtils.setEnumIfPresent(..., SecurityMode.BY_ID, ...)` 读取，按 id 整数解析"
+  },
+  "two_client_script_status": {
+    "state": "脚本仍保留（`scripts/fabric-security-denial-smoke.sh`），但两个 Gradle 客户端在软件渲染环境每个约 4–5 分钟且偶发互相拖死，本轮未能稳定跑完",
+    "fixed_in_it": [
+      "dev 服务端同源、单 mod 接线、数据包 + 命令方块布场、security_mode 整型"
+    ],
+    "remaining": "客户端点击后仍无界面（诊断字段已加入 fixture，下轮按诊断结果定位）"
   }
 }

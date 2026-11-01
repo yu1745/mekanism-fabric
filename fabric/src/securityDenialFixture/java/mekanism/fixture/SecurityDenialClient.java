@@ -51,8 +51,14 @@ public final class SecurityDenialClient implements ClientModInitializer {
             clicked = true;
             BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(target), net.minecraft.core.Direction.UP, target, false);
             // The interaction packet is what the server's access check sees, so this is the real path a player takes.
-            minecraft.gameMode.useItemOn(minecraft.player, InteractionHand.MAIN_HAND, hit);
-            LOGGER.info("SECURITY_FIXTURE_CLICKED pos={} expect={}", target, expected);
+            net.minecraft.world.InteractionResult result =
+                  minecraft.gameMode.useItemOn(minecraft.player, InteractionHand.MAIN_HAND, hit);
+            //Everything the decision could hinge on is logged once, so a single run explains a refusal.
+            LOGGER.info("SECURITY_FIXTURE_CLICKED pos={} expect={} result={} mode={} playerPos={} dist={} screen={} block={}",
+                  target, expected, result, minecraft.gameMode.getPlayerMode().getName(), minecraft.player.blockPosition(),
+                  Math.sqrt(minecraft.player.distanceToSqr(Vec3.atCenterOf(target))),
+                  minecraft.screen == null ? "none" : minecraft.screen.getClass().getSimpleName(),
+                  level.getBlockState(target).getBlock());
             return;
         }
         if (ticks < 120) {

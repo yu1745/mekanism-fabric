@@ -34,7 +34,7 @@ W-104 涡轮（W-116）：**受阻并已定界**。工业涡轮属于 **Mekanism
 
 **门禁提速**：机器 smoke 的长壁钟等待改为 `/tick sprint`（900/200/300 tick），耗时 **113 s → 65 s**，断言仍 **29 PASS / 0 FAIL**（响应协调者 H3「固定 sleep 应改加速」）。[记录](evidence/p8-release/w104-chunk-unload.json)
 
-W-110（双玩家安全拒绝）：**阻塞，需新增 fixture 代码**。已排除的方向：单人会话改不动 `ownerUUID`（`reflect` 传不了 UUID 对象），且 `/setblock` 放置的机器无主、`SecurityUtils.canAccessObject` 首条短路是 `owner == null → 允许`（与官方一致我们在上一轮已对照过）。**新发现**：现有的 `handshakeClient` 运行配置只是 `--quickPlayMultiplayer --username`，连上后**不做任何动作**，两个客户端还共用同一用户名；要断言“B 打开 A 的机器被拒绝”，必须在 fixture 里实现客户端 use-on 与拒绝检测——属于新增测试代码，按 AGENTS 需另获授权，故未擅自实现。[记录](evidence/p8-release/w110-security-denial.json)
+W-120（双玩家安全拒绝）：**拒绝与放行两条读数已拿到**。用 mdb owned session 在集成服务端上改机器 `component_security`：属主设为**他人 UUID** + `security_mode: 1` 时，`gui open-block` 返回 `{"ok":false,"reason":"NO_GUI_CHANGED"}`、`screen` 保持 `none`（**拒绝**）；属主改回**当前玩家 UUID** 后同一操作返回 `screen: GuiElectricMachine`（**放行**）。两次唯一变量是 owner，且放行那次证明点击路径可用，所以拒绝只能来自安全判定。**关键技术事实**：`security_mode` 必须是**整型**，写成字节会被 `setEnumIfPresent` 静默丢弃、机器留在 PUBLIC。[记录](evidence/p8-release/w120-security-denial.json)
 
 W-104（W-81/82 余项）：**区块卸载完成（已按 W-114 修正为真证明）**，涡轮与跨维度传送仍开放。做法：x=2000 先 forceload 建机器、注入 4 矿石+20k FE，再 `forceload remove`；用 **`execute unless loaded 2000 100 0` 输出标记**证明区块确实未加载（旁证 `data get` 回 `That position is not loaded`），`forceload add` + **`tick sprint 300`** 后 `execute if loaded` 证明已重载，同台机器继续加工产出铁粉。smoke **EXIT=0 / 26 PASS**（`Sprint completed with 6302 ticks per second`）。未做：涡轮性能（W-116 手搭多方块）、跨维度传送（需玩家实体移动）。[记录](evidence/p8-release/w104-chunk-unload.json)
 
