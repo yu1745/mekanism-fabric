@@ -2,7 +2,7 @@
 
 ## 现状
 
-W-120、W-121、W-122、W-116 已闭环，mdb 网络门禁已接通。W-124 的真实热重载与文件选择缺口已实现，官方/Fabric 同 rig 和 mdb owner 检查通过；不再把“只启动加载/固定世界路径”当平台差异。修复前 `f8e37d33` 的11步门禁只作基线，修复后最终 clean gate 第1–5步通过，第6步机器末端产出失败。已修正气槽超容量、缺少氧气供给及 tick/区块加载边界；focused复跑30项通过，完整最终门禁仍待重跑。
+W-120、W-121、W-122、W-116 已闭环，mdb 网络门禁已接通。W-124 的真实热重载与文件选择缺口已实现，官方/Fabric 同 rig 和 mdb owner 检查通过；不再把“只启动加载/固定世界路径”当平台差异。修复前 `f8e37d33` 的11步门禁只作基线，修复后最终 clean gate 第1–5步通过，第6步机器末端产出失败。已修正气槽超容量、缺少氧气供给及 tick/区块加载边界；focused复跑30项通过，其后最终运行前7步通过，W-121第8步因首次无实际搬运停止；已补vanilla ENTITY_TICKING前置确认并focused通过，现同四JAR续跑9–11，第二clean仍待完成。
 
 ## 下一步
 
@@ -20,7 +20,7 @@ W-120、W-121、W-122、W-116 已闭环，mdb 网络门禁已接通。W-124 的�
 
 当前机器 gate 修正：真实高级机器气槽仅210 mB，原2000/4000种子无效。改为210初值与真实储罐/管道持续供气，随机耗气与dust断言保留；30项focused通过且无shrink异常。首次失败raw被旧cleanup删除，根因不能追认。现失败保留日志、四级机器/运输器NBT，区块实际加载和sprint完成后再读取。[纠正证据](evidence/p8-release/w117-smoke-stability.json)
 
-**门禁分成两档**：`scripts/release-check.sh`（7 步，快速发布门禁）与 `scripts/release-check.sh --extended`（再加 P27 的四个场景：崩溃守恒、能量链、存档往返、配置边界）。后者每项都要起一到两次专用服务端，属于里程碑收口才跑的档位。全部证据索引见 [`evidence/p8-release/INDEX.md`](evidence/p8-release/INDEX.md)（由证据文件自身字段生成，72 条）。
+**门禁分成两档**：`scripts/release-check.sh`（7 步，快速发布门禁）与 `scripts/release-check.sh --extended`（再加 P27 的四个场景：崩溃守恒、能量链、存档往返、配置边界）。后者每项都要起一到两次专用服务端，属于里程碑收口才跑的档位。全部证据索引见 [`evidence/p8-release/INDEX.md`](evidence/p8-release/INDEX.md)（当前75份JSON快照，范围以各文件为准）。
 
 发布客户端门禁接线：既有 paired／rejection 通过 `devClientRun` 复用原 Loom preset，任务保持 `runClient`，由 mdb owned session 启停；两次正常连接、三种配置拒绝全部通过，5 个 owned 记录均 stopped，JVM 不存活。原协议断言未放宽；旧 W-120 双客户端直启脚本已非零退役，继续使用已验证的 mdb GUI 探针。全量发布门禁待本 HEAD 集中复跑。[生命周期证据](evidence/p8-release/w103-final-release-check.json)
 
@@ -250,3 +250,5 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 提交后复核：`3512ce90` 的真实 diff 经主代理与 Astra 审查，发现 worldgen 独立 manager 漏 watch；已在同一配置 owner 边界补监听、卸载撤销和失败清理。其余 lifecycle/pending/effective/API fallback 未发现确定缺陷。官方同 rig 又证明原固定世界路径是假设错误，修复仍复用现 manager，不新增配置框架或测试类。
 
 提交风格复核：`8867f499` 只修复既有machine/save gate的非法种子、实际ID、时序与进程生命周期，不改生产算法或切片。Astra发现W-123字段解析漏掉根compound的首字段；已在同一比较边界修正，并直接重用保留的两份日志运行原比较器，`ok`且明确提取储罐HCl2000。没有新增测试类或游戏场景。
+
+W-121当前gate复核：同JAR复现总数始终1728但重启首201tick未搬运，原始首次失败raw已丢失，唯一根因未证实。原probe未要求ENTITY_TICKING；现按vanilla真实loaded条件确认前置状态后再测，保存/重载1709+2+17，继续1690+2+36均1728，通过。只改既有probe就绪判定和留证，未改传输算法；已通过的前7步保留，同产物续跑剩余项。[记录](evidence/p8-release/w121-crash-conservation.json)

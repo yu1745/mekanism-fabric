@@ -53,7 +53,7 @@ cleanup() {
     fi
   fi
   if [[ -n "$SERVER_DIR" && -d "$SERVER_DIR" ]]; then
-    if [[ "$KEEP_SERVER" == 1 ]]; then
+    if [[ "$KEEP_SERVER" == 1 || "$status" != 0 ]]; then
       printf 'fabric-conservation-smoke: retained server: %s\n' "$SERVER_DIR" >&2
     else
       rm -rf "$SERVER_DIR"
@@ -154,6 +154,23 @@ advance() {
   return "$result"
 }
 
+#Vanilla execute-if-loaded requires ENTITY_TICKING plus loaded entities, rather than mere data-get access.
+#Chunk IO/activation is asynchronous even when a very short sprint has already completed.
+await_ticking_chunk() {
+  local phase=$1 attempt
+  for attempt in {1..20}; do
+    command "execute unless loaded 1 100 0 run say WAITING_CHUNK_${phase}_$attempt"
+    command "execute if loaded 1 100 0 run say TICKING_CHUNK_$phase"
+    barrier "CHUNK_CHECK_${phase}_$attempt"
+    if grep -q "\\[Server\\] TICKING_CHUNK_$phase" "$LOG_FILE"; then
+      return
+    fi
+    advance "activation_${phase}_$attempt" 20
+  done
+  echo 'fabric-conservation-smoke: chunk did not reach ENTITY_TICKING' >&2
+  return 1
+}
+
 snapshot() {
   command 'data get block 1 100 0'
   command 'data get block 2 100 0'
@@ -195,6 +212,7 @@ setup_server_dir
 start_server before-crash
 command 'tick freeze'
 command 'forceload add 0 0'
+await_ticking_chunk initial
 command 'setblock 1 100 0 minecraft:chest'
 command 'setblock 2 100 0 mekanism:basic_logistical_transporter'
 command 'setblock 3 100 0 minecraft:chest'
@@ -204,7 +222,10 @@ done
 command 'data merge block 2 100 0 {connection:[I;3,3,3,3,2,1]}'
 advance initial 201
 snapshot CONSERVATION_BEFORE_SAVE
-before=$(count_snapshot)
+if ! before=$(count_snapshot); then
+  printf 'FAIL before save: %s\n' "$before" >&2
+  exit 1
+fi
 printf 'PASS before save: %s\n' "$before"
 # Save an actual running transport network, including its in-flight stacks, then run further without saving.
 command 'save-all flush'
@@ -222,6 +243,7 @@ command 'tick freeze'
 snapshot CONSERVATION_RELOADED
 reloaded=$(count_snapshot)
 printf 'PASS after hard crash: %s\n' "$reloaded"
+await_ticking_chunk resumed
 advance resumed 201
 snapshot CONSERVATION_RESUMED
 resumed=$(count_snapshot)

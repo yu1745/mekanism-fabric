@@ -193,5 +193,71 @@
     "stability": "连跑 3 次全部 PASS（每条 3 个断言）",
     "reproduce": "bash scripts/fabric-crash-conservation-smoke.sh"
   },
-  "superseded_notice": "The old verdict and readings below are invalid evidence and retained solely as a correction trail."
+  "superseded_notice": "The old verdict and readings below are invalid evidence and retained solely as a correction trail.",
+  "current_gate_followup": {
+    "artifact_source_commit": "4070cd5e8c8822d9285f79d97667086b1f9a8a91",
+    "failure": "Extended gate2 stopped at initial no destination transfer; original raw removed by previous cleanup. Same-JAR retained reproduction moved initially but did not move during resumed201tick; all observed totals1728. No definitive cause attribution from the lost first raw or merely passing rerun.",
+    "retained_reproduction": {
+      "directory": "/tmp/mekanism-conservation-smoke.2f17Jf",
+      "before": [
+        1721,
+        2,
+        5
+      ],
+      "before_crash": [
+        1703,
+        2,
+        23
+      ],
+      "reloaded": [
+        1703,
+        2,
+        23
+      ],
+      "resumed": [
+        1703,
+        2,
+        23
+      ],
+      "result": "FAIL resumed movement; total preserved"
+    },
+    "minimum_prerequisite_fix": "Use vanilla execute-if-loaded to require ENTITY_TICKING and areEntitiesLoaded before initial rig construction and resumed measured sprint. At most20 activation rounds of20 accelerated ticks; no physical sleeps, no altered counts or movement assertion. Preserve failed worlds/logs and print failed initial count.",
+    "vanilla_owner": "upstream/fabric-minecraft/net/minecraft/server/commands/ExecuteCommand.java:470-473",
+    "corrected_run": {
+      "directory": "/tmp/mekanism-conservation-smoke.Q7X54R",
+      "result": "PASS; loaded condition checked true before initial and resumed measured phases",
+      "before": [
+        1709,
+        2,
+        17
+      ],
+      "reloaded": [
+        1709,
+        2,
+        17
+      ],
+      "resumed": [
+        1690,
+        2,
+        36
+      ],
+      "total": 1728,
+      "ticks": [
+        201,
+        200,
+        201
+      ],
+      "reported_ticks_per_second": [
+        477,
+        1915,
+        504
+      ],
+      "estimated_sprint_wall_seconds": 0.925,
+      "equivalent_game_seconds": 30.1,
+      "timing_note": "Rates rounded by vanilla; no activation rounds needed in this run. Wall includes bootstrap/IO/restart outside estimated sprint time.",
+      "server_log_wall_seconds": 35,
+      "process_cleanup": "Both JVM groups absent after deliberate SIGKILL and normal stop."
+    },
+    "scope": "Same existing single-chunk transporter scenario, no new tests, no production algorithm or persistence changes; QIO/cross-chunk remain unrun."
+  }
 }
