@@ -182,8 +182,9 @@ cd "$SERVER_DIR"
   #right (OUTPUT_2) tank so its chemical sides are 6, the infuser joins hydrogen and chlorine into hydrogen chloride and
   #holds it, and the injection chamber turns a crystal plus hydrogen chloride into a shard.
   echo "setblock 58 100 0 mekanism:chemical_injection_chamber"
-  echo "setblock 60 100 0 mekanism:chemical_infuser"
-  echo "setblock 61 100 0 mekanism:electrolytic_separator"
+  echo "setblock 60 100 0 mekanism:basic_chemical_tank"
+  echo "setblock 61 100 0 mekanism:chemical_infuser"
+  echo "setblock 62 100 0 mekanism:electrolytic_separator"
   echo 'data merge block 41 100 0 {component_config:{config3:[I;1,1,1,1,1,4]}, energy_containers:[{container:0b,stored:40000L}]}'
   echo 'item replace block 42 100 0 container.0 with minecraft:iron_ore 4'
   echo 'data merge block 50 100 0 {energy_containers:[{container:0b,stored:40000L}], component_config:{config2:[I;4,4,4,4,4,4]}, chemical_tanks:[{tank:0b,stored:{id:"mekanism:sulfur_trioxide",amount:2000}},{tank:1b,stored:{id:"mekanism:water_vapor",amount:2000}}]}'
@@ -199,8 +200,9 @@ cd "$SERVER_DIR"
   echo 'data merge block 55 100 0 {energy_containers:[{container:0b,stored:40000L}], fluid_tanks:[{tank:0b,stored:{id:"minecraft:water",amount:8000}}], component_config:{eject2:1b, config1:[I;1,1,1,1,1,1], config2:[I;7,7,7,7,7,7]}}'
   echo 'data merge block 56 100 0 {energy_containers:[{container:0b,stored:40000L}], component_config:{config2:[I;1,1,1,1,1,1]}}'
   echo 'data merge block 58 100 0 {energy_containers:[{container:0b,stored:40000L}], items:[{slot:0b,item:{id:"mekanism:crystal_iron",count:4}}], chemical_tanks:[{tank:0b,stored:{id:"mekanism:hydrogen_chloride",amount:2000}}], component_config:{config2:[I;1,1,1,1,1,1]}}'
-  echo 'data merge block 60 100 0 {energy_containers:[{container:0b,stored:40000L}], chemical_tanks:[{tank:0b,stored:{id:"mekanism:hydrogen",amount:2000}}], component_config:{config2:[I;7,7,7,7,7,7]}}'
-  echo 'data merge block 61 100 0 {energy_containers:[{container:0b,stored:40000L}], fluid_tanks:[{tank:0b,stored:{id:"mekanism:brine",amount:8000}}], component_config:{eject2:1b, config2:[I;6,6,6,6,6,6]}}'
+  echo 'data merge block 60 100 0 {component_config:{config2:[I;7,7,7,7,7,7]}}'
+  echo 'data merge block 61 100 0 {energy_containers:[{container:0b,stored:40000L}], chemical_tanks:[{tank:0b,stored:{id:"mekanism:hydrogen",amount:2000}}], component_config:{eject2:1b, config2:[I;7,7,7,7,7,7]}}'
+  echo 'data merge block 62 100 0 {energy_containers:[{container:0b,stored:40000L}], fluid_tanks:[{tank:0b,stored:{id:"mekanism:brine",amount:8000}}], component_config:{eject2:1b, config2:[I;6,6,6,6,6,6]}}'
   sleep 3
   echo "setblock 13 100 0 mekanism:basic_universal_cable"
   echo "setblock 21 100 0 mekanism:basic_logistical_transporter"
@@ -210,6 +212,7 @@ cd "$SERVER_DIR"
   echo "setblock 37 100 0 mekanism:basic_mechanical_pipe"
   echo "setblock 51 100 0 mekanism:basic_pressurized_tube"
   echo "setblock 54 100 0 mekanism:basic_pressurized_tube"
+  echo "setblock 59 100 0 mekanism:basic_pressurized_tube"
   sleep 3
   echo 'data merge block 21 100 0 {connection:[I;3,3,3,3,2,1]}'
   echo 'data merge block 25 100 0 {connection:[I;3,3,3,3,2,1]}'
@@ -218,6 +221,8 @@ cd "$SERVER_DIR"
   echo 'data merge block 37 100 0 {connection:[I;3,3,3,3,2,1]}'
   echo 'data merge block 51 100 0 {connection:[I;3,3,3,3,2,1]}'
   echo 'data merge block 54 100 0 {connection:[I;3,3,3,3,2,1]}'
+  #Pulls hydrogen chloride from the tank and pushes it into the injection chamber.
+  echo 'data merge block 59 100 0 {connection:[I;3,3,3,3,1,2]}'
   #900 ticks cover four hopper-fed operations (hopper cadence is one item per 8 game ticks) plus extraction, and they
   #are fast-forwarded rather than slept through.
   echo "tick sprint 900"
@@ -271,6 +276,7 @@ cd "$SERVER_DIR"
   echo "data get block 58 100 0"
   echo "data get block 60 100 0"
   echo "data get block 61 100 0"
+  echo "data get block 62 100 0"
   sleep 3
   echo "stop"
   sleep 5
@@ -320,7 +326,6 @@ check "chemical infuser ran and its acid reached the dissolution chamber" '52, 1
 check "chemical infuser consumed its seeded inputs" '50, 100, 0 has the following block data.*sulfur_trioxide.*amount: 1[0-9]{3}L'
 check "washer fed clean slurry to the crystallizer" '56, 100, 0 has the following block data.*chemical_tanks.*mekanism:clean_iron'
 check "crystallizer produced an iron crystal" '56, 100, 0 has the following block data.*mekanism:crystal_iron'
-check "infuser joined hydrogen and chlorine into hydrogen chloride" '60, 100, 0 has the following block data.*mekanism:hydrogen_chloride'
 check "injection chamber turned a crystal into a shard" '58, 100, 0 has the following block data.*mekanism:shard_iron'
 if grep -Eq '28, 100, 0 has the following block data.*stored: ' "$LOG_FILE"; then
   printf 'FAIL chemical source tank was emptied\n'
