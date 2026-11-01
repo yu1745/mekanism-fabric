@@ -1,0 +1,31 @@
+{
+  "work_item": "W-98",
+  "date": "2026-11-01",
+  "goal": "渲染器兼容抽样：在开发客户端分别装入 Sodium、Iris（含光影包），对比 Mekanism 的方块实体渲染、GUI、工具提示是否异常。",
+  "method": "mdb owned session（`session start dev`，世界 Mekanism F60 Debug）；Modrinth 下载 1.21.1 Fabric 版，只放 `fabric/run/mods/`（不进发布依赖）。",
+  "downloads": {
+    "sodium": "sodium-fabric-0.8.13+mc1.21.1.jar (1537 KB, Modrinth)",
+    "iris": "iris-fabric-1.8.14-beta.1+mc1.21.1.jar (2725 KB, Modrinth)",
+    "shaderpack": "ComplementaryReimagined_r5.9.3.zip (540 KB, Modrinth)"
+  },
+  "results": {
+    "sodium_only": {
+      "startup": "**成功**，mdb 就绪（player/world/screen 都能读）",
+      "rendering": "富集仓与碎石机正常渲染、WTHIT 提示显示 `Energized Smelter / 0.0 FE/8.0 kFE / Mekanism (Fabric)`，截图 `evidence/p8-release/w98-sodium-scene.png`",
+      "gui": "`gui open-block` 成功打开 GUI",
+      "problems": "12 条（均为警告级：authlib 档案查询、meka_tool 模型缺贴图、原版 goat_horn 音效等，未出现 Sodium 相关渲染异常）"
+    },
+    "sodium_plus_iris_plus_shaderpack": {
+      "startup": "**失败**：`client exited before becoming ready: Caused by: java.lang.NullPointerException: Cannot invoke \"java.lang.CharSequence.length()\" because \"desc\" is null`",
+      "log_excerpt": "`Mixin apply for mod iris failed mixins.iris.json:MixinLevelRenderer from mod iris -> net.minecraft...: InvalidMixinException: Unexpected NullPointerException parsing @ModifyArg annotation on iris$writeR...` → `Caused by: NullPointerException ... at net.fabricmc.loader.impl.util.mappings.MixinRemapper.unmapDesc`",
+      "verdict": "Iris 的 mixin 在生产映射（intermediary）下编写，Loom **dev 环境用命名映射**，`@ModifyArg` 的描述符重映射拿不到 `desc` 而崩溃 —— 与 Mekanism 无关，是 Iris 在 dev 环境的已知限制。重试两次均一致失败。"
+    }
+  },
+  "environment_limit": "客户端跑在 Mesa **llvmpipe（软件渲染）** 上，无 GPU，因此**帧率读数没有代表性**；本轮只验证了渲染正确性（无花屏/丢失方块/工具提示异常），未产出 FPS 对比。",
+  "conclusion": "Sodium 与 Mekanism 兼容（渲染/GUI/提示均正常）；Iris 无法在 dev 客户端启动（mixin 映射限制），需要发布端客户端才能验证——而 AGENTS 规定发布客户端不得自行裸启动，故记为已知限制。",
+  "not_verified": [
+    "Iris + 光影包下的渲染表现（dev 环境装不上）",
+    "Sodium 的帧率提升（软件渲染环境无参考价值）",
+    "至少一个资源包的加载验证"
+  ]
+}
