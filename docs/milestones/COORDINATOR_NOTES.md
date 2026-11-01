@@ -712,3 +712,23 @@ JEI（W-74c）与 WTHIT（W-74d）已批准，见 `ROADMAP.md`「W-74 范围追�
 3. Iris 失败应给 `INSTALL.md`/`CHANGELOG.md` 补一条"Sodium 已验证兼容；Iris/光影未能验证（dev 环境限制）"。
 
 路线图：授权范围内未做的是 W-120、W-99、W-79，以及收口（最终 release-check + 两次 clean build 哈希比对 + 更新 `DECISIONS_PENDING.md`），共 4，**≤6 但这些都是用户已批准的真实项**，不另补；若这四项全部完成，才需要补充。累计产品缺陷仍为 0。
+
+## 巡检 L1（2026-11-01 08:57）
+
+自 K1 起新提交 2 个：`03732b1f`（W-99 真实第三方能量互通）、`019dd541`（K1 进展 + `release-check.sh` 接入新步骤）。工作区有 W-120 的进行中改动：`fabric/src/securityDenialFixture/`、`scripts/fabric-security-denial-smoke.sh`、`fabric/build.gradle` 新增 `securityDenialClient` 运行配置、以及未跟踪的 `fabric/home/`。范围：未强制推送（origin 仍在 `cbf55f96`）；无裸启动客户端；W-120 严格限于用户授权的 fixture 用途。**审计陷阱：未触发。**
+
+**做得好的：W-99 是真东西**
+- 选 Tech Reborn 5.11.19 + Reborn Core（Modern Industrialization 在 1.21.1 Fabric 查 Modrinth 为空，已记）。一次性专用服务端 + **发布 JAR**（不是 dev 构建）+ Tech Reborn + Fabric API。
+- **双向读数**：Mekanism 能量立方→线缆→`techreborn:grinder`，grinder 能量 **1000 L**；Tech Reborn 固体燃料发电机（8 煤）→线缆→Mekanism 富集熔炉，熔炉 **6925 FE**，发电机被抽到 0。脚本连跑 3 次一致。
+- 如实写了边界：未断言 FE↔L 的换算比例、未测跨区块/跨维度、未做客户端 UI 交叉验证。
+- 发布 JAR 泄漏断言扩到 `sodium/net.caffeinemc/iris/net.irisshaders/techreborn/reborncore/teamreborn`，覆盖了 K0 的要求。
+- W-120 起步快：新增独立 source set `securityDenialFixture` + 独立运行配置（与 `handshakeClient` 同规则：只用 main 的依赖 classpath，不含 main 输出），不进发布 JAR。
+
+**问题**
+1. **`release-check.sh` 新增了一步 `third-party energy interop`，这会让发布门禁依赖外网下载**（`curl` 从 `cdn.modrinth.com` 取 Tech Reborn 与 Reborn Core，缓存在 `~/.cache/mekanism-fabric-smoke`）。现有 smoke 也会下载 Fabric launcher / API，所以不是新类型的依赖，但请：①对两个第三方 jar 加 **sha256 校验**（下载完不对就失败），否则门禁结果可能随上游替换文件而变；②让这一步在离线且缓存存在时可用（脚本里已有 `FABRIC_SMOKE_RUNTIME_CACHE_DIR`，保持）；③把它的耗时记入 `RELEASE_CHECKLIST.md`，并确认 `release-check` 总时长（目前约 704 秒）仍可接受。
+2. **`fabric/home/` 是未跟踪且未被忽略的目录**（1.4MB，内含 `wangyu/server-v2`，像是 W-120 客户端把 `user.home` 指向了项目内）。要么让 fixture 把它指到 `fabric/run/security-client` 之下或系统缓存目录，要么加进 `.gitignore`；**提交时用具体路径，别 `git add -A`**。
+3. **worker 又一次往 `ROADMAP.md` 追加了"K1 进展"状态表**（我在 I0 要求过别这样）。内容是准确的（W-101b、W-98、W-99），但状态应写在 `M-release.md`/证据页；而且表里写"921→885 提交"，与我复核的 888 对不上（885 是此后又加了文档提交之前的值？），请以实测为准或删掉该行。以后路线图只由协调者改。
+4. **次序**：W-120 在进行中，是对的；**W-79 没动**（预留槽，无发现记"无"即可，不是大事）；INSTALL/CHANGELOG 里**没有 Iris 限制**（`rg -i iris` 在 `INSTALL.md`/`CHANGELOG.md` 命中 0），K1 的第 3 点还欠着。
+5. 打包服务端 `mods` 数仍应是 50：W-99 的 Tech Reborn 只进一次性服务端的 mods，与打包 smoke 的服务端是两套，我没看到污染；W-117 最终收口时再确认一次。
+
+路线图：授权范围内未做的是 W-120（进行中）、W-79、收口，共 3，**已达到"≤3 补充"的线**，补 P27（见 ROADMAP）。累计产品缺陷仍为 0。
