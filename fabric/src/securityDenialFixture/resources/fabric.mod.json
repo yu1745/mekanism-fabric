@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "mekanism_security_denial_fixture",
+  "version": "1.0.0",
+  "name": "Mekanism Security Denial Fixture",
+  "description": "Client-only fixture that right-clicks one block and reports whether the server opened its GUI.",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "mekanism.fixture.SecurityDenialClient"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "minecraft": "~1.21.1",
+    "java": ">=21",
+    "fabric-api": ">=0.116.17"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "work_item": "W-120（进行中）",
+  "date": "2026-11-01",
+  "status": "fixture_and_script_written_client_blocked_on_protocol_handshake",
+  "what_exists": {
+    "fixture_source_set": "fabric/src/securityDenialFixture（源集 + remap + mods 条目 + `runSecurityDenialClient` 运行配置），编译通过",
+    "fixture_class": "SecurityDenialClient：每 tick 检查，进入世界后对目标方块发一次 useItemOn，再读 `minecraft.screen` 判定，日志输出 `SECURITY_FIXTURE_ALLOWED` / `SECURITY_FIXTURE_DENIED` / `SECURITY_FIXTURE_UNEXPECTED`",
+    "script": "scripts/fabric-security-denial-smoke.sh：一次性专用服务端（发布 JAR）+ 两个顺序运行的客户端（Alice 期望 allow、Bob 期望 deny），断言两条 fixture 日志",
+    "server_side_owner_write": "**已验证可用**：`data merge block 0 100 0 {component_security:{owner:[I;…],security:1b}}` 能在已加载方块实体上写入属主与 PRIVATE 模式（带宽 UUID 的 int 数组）"
+  },
+  "problems_found": [
+    {
+      "problem": "客户端游戏目录传绝对路径导致客户端卡在资源加载、永不进入世界",
+      "detail": "`-Dmekanism.security.clientDir=/abs/path` 时日志停在 gui.png-atlas 之后；改成相对 `run/security-N` 后立刻出现 `Connecting to 127.0.0.1, PORT`",
+      "fixed": true
+    },
+    {
+      "problem": "两个客户端并发启动会互相拖死（软件渲染 llvmpipe）",
+      "detail": "并发时两个客户端各占 ~190% CPU 十几分钟不进世界；改为顺序运行（属主写在方块上，不依赖同时在线的第二个客户端）",
+      "fixed": true
+    },
+    {
+      "problem": "**当前阻塞**：客户端带 fixture 源集时被服务端协议握手拒绝",
+      "verbatim": "`Client disconnected with reason: This server requires Mekanism protocol 10.7.19`",
+      "code_reason": "`FabricMekanismNetworking.beginHandshake`：`ServerConfigurationNetworking.canSend(handler, REQUEST_TYPE)` 为 false 时断开；模板 handshake 客户端（只用 sourceSets.main）可以连上，说明是「运行里多了一个 fixture mod」让客户端的配置阶段 payload 注册没生效",
+      "next": "下轮试：不把 fixture 作为独立 mod 加进 run（改为把 fixture 输出并入主运行类路径），或用 `clientWindowFixture` 同样的接线方式（它同样是第二源集但用 `source` + 显式 runtimeClasspath）"
+    }
+  ],
+  "not_verified": [
+    "双玩家拒绝/放行读数（被上面第三条挡住）"
+  ]
+}

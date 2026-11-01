@@ -29,6 +29,7 @@ sourceSets {
     recipeRuntimeFixture
     tileUpdateRuntimeFixture
     portReviewFixture
+    securityDenialFixture
 }
 
 loom {
@@ -41,6 +42,7 @@ loom {
     createRemapConfigurations(sourceSets.recipeRuntimeFixture)
     createRemapConfigurations(sourceSets.tileUpdateRuntimeFixture)
     createRemapConfigurations(sourceSets.portReviewFixture)
+    createRemapConfigurations(sourceSets.securityDenialFixture)
 
     mods {
         mekanism {
@@ -54,6 +56,9 @@ loom {
         }
         clientWindowFixture {
             sourceSet sourceSets.clientWindowFixture
+        }
+        securityDenialFixture {
+            sourceSet sourceSets.securityDenialFixture
         }
         dataMapReloadFixture {
             sourceSet sourceSets.dataMapReloadFixture
@@ -83,6 +88,18 @@ loom {
             runDir = System.getProperty('mekanism.handshake.clientDir', 'run/handshake-client')
             programArgs '--quickPlayMultiplayer', System.getProperty('mekanism.handshake.address', '127.0.0.1:25567'),
                   '--username', System.getProperty('mekanism.handshake.username', 'MekanismSmoke')
+        }
+        securityDenialClient {
+            client()
+            name = 'Mekanism security denial fixture client'
+            source sourceSets.main
+            source sourceSets.securityDenialFixture
+            runDir = System.getProperty('mekanism.security.clientDir', 'run/security-client')
+            programArgs '--quickPlayMultiplayer', System.getProperty('mekanism.security.address', '127.0.0.1:25567'),
+                  '--username', System.getProperty('mekanism.security.username', 'Alice')
+            //What this client should observe: the owner may open the machine, the intruder must get no screen.
+            property 'mekanism.security.target', System.getProperty('mekanism.security.target', '0,100,0')
+            property 'mekanism.security.expect', System.getProperty('mekanism.security.expect', 'allow')
         }
         clientWindowFixture {
             client()
@@ -293,6 +310,11 @@ def verifyOfficialRootTestSources = tasks.register('verifyOfficialRootTestSource
 sourceSets {
     handshakeMismatchFixture {
         // Reuse only main's external Minecraft/Fabric compile dependencies; never main output.
+        compileClasspath += sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.runtimeClasspath - sourceSets.main.output
+    }
+    securityDenialFixture {
+        // Same rule as the handshake fixtures: main's dependency classpath, never main output.
         compileClasspath += sourceSets.main.compileClasspath
         runtimeClasspath += sourceSets.main.runtimeClasspath - sourceSets.main.output
     }
