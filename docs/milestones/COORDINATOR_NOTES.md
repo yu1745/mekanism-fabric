@@ -809,3 +809,13 @@ W-122 的现有 blocker 也需纠正：`TileEntitySolarGenerator.getEnergySides(
 W-116 先核查 Loom 既有源集与 mdb `runClient` 入口的接线。旧 `runGeneratorsClient` 白名单错误不等于功能无法验证；若能以正式运行配置接入需要的模块，再由真实玩家触发结构成型。禁止以兼容壳、新机器框架或裸客户端绕过问题。
 
 W-123 当前仅四台代表机器、配置/sorting 与内容 id 集合；W-124 当前仅 Fabric 太阳能配置前后读数，未提供官方运行期对照。保留这些有效范围，不继续写“P27 全完成”。本轮不据此扩测试清单，不自动追加 W 编号，不重跑已有通过矩阵；普通编译与现有 focused tests 随真实改动，完整门禁留到功能闭包收口。push、部署、发布均不在本 goal 范围。
+
+## 方向核对 M1（2026-11-01，已提交基线 `e0bfa412`）
+
+**W-120 已提交真实 diff 只读简审**：按 `docs/PORT_COMMIT_REVIEW_PROMPT.md` 核对探针、证据及实际 `TileComponentSecurity`/`SecurityFrequency`/`FrequencyManager` owner，未发现移植风格偏离或生产缺陷。提交没有改生产实现、源码清单、注册或存档格式；探针通过真实 owner 设置安全频率、加入/移除受信玩家，并用同一机器的 GUI 交互证明访问变化。随机 UUID 隔离临时频率，清理调用 manager 的真实 remove 并确认查空，不借已有玩家的频率作测试。此结论由主实现者复核后随闭包记录提交，不另开审查提交。
+
+五项证据为 PRIVATE 非属主拒绝、TRUSTED 未列入拒绝、加入受信放行、移除受信拒绝、PRIVATE 属主放行。主实现者报告临时机器/频率已删除、`goal-security` owned session 已停止，日常 `./gradlew -p fabric test` SUCCESSFUL（UP-TO-DATE）。严格范围是单个真实玩家及随机他人 owner 的访问判定和撤销；受信编辑经 `addTrusted/removeTrusted`，**不声明安全台 GUI 编辑、两个并发客户端或全套安全同步场景通过**。不因这些边界另增任务；W-120 本次闭包接受。
+
+**W-121 当前为修正后的首轮成功，未提交实现不作独立 diff 审查**。主实现者报告既有探针已改为单条日志计数、单区块冻结快照并纳入在途栈：保存前及 SIGKILL 后重启均为 `1709 + 2 + 17 = 1728`，继续搬运为 `1690 + 2 + 36 = 1728`。这支持原运输器场景的保存恢复和继续搬运；旧跨行解析产生的“复制/引擎行为”结论撤回。**QIO、官方同 rig、跨区块硬崩溃未测**，不补造已验证范围、不再追加测试清单。由主实现者完成证据与提交后进入下一项。
+
+下一项仍为 **W-122：太阳能 BOTTOM → 线缆 → 真实消费者**，没有 `component_config` 不是 blocker。之后按主实现者发现的历史 `roadmap-generators`/`runClient` 会话核实已有模块入口，优先复用归档 M-generators 的六机器、三多方块与生命周期证据；W-116 只推进未回答的负载问题，不以任务名白名单错误推断 Generators 不可运行。此次未启动任何游戏进程，未执行新的游戏检查或改实现，完整门禁未跑。

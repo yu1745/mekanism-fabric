@@ -1,49 +1,197 @@
 {
   "work_item": "W-121",
   "date": "2026-11-01",
-  "goal": "物品在硬崩溃（kill -9）下是否守恒：不重复、不意外丢失。",
+  "status": "transporter_single_chunk_crash_conservation_verified_on_both_loaders",
   "rig": "scripts/fabric-crash-conservation-smoke.sh",
+  "corrections": [
+    "Old parser used greedy DOTALL and included later block dumps in the source count. A source64/destination5 example was incorrectly counted source69/destination5.",
+    "All three positions are in chunk (0,0); the previous cross-chunk explanation does not apply.",
+    "Transporter saves in-flight item stacks through TileEntityTransmitter.saveAdditional -> LogisticalTransporterBase.write -> writeToNBT (items). Absence of methods declared on one subclass does not imply absence of inherited persistence.",
+    "Removed arbitrary +/-128 tolerance. Total includes both chests and the transporter, with exact equality to1728."
+  ],
   "method": [
-    "一次性专用服务端（四份发布 JAR）；箱子(1,100,0) 27 格各 64 个铁矿石 = 1728，运输器(2,100,0) 西拉东推，箱子(3,100,0)",
-    "`save-all flush` 把填充状态落盘后，让运输器搬运 ~20 秒",
-    "对 java 进程组 `kill -9`（无关闭钩子、无保存）",
-    "同一世界重启服务端，重新读两个箱子并求和"
+    "Start fresh isolated world, fill27 chest slots with64 iron ore, connect one transporter and a destination chest.",
+    "Unfreeze and sprint201 ticks; freeze, dump all three blocks, assert exact total and destination>0.",
+    "save-all flush, sprint200 more ticks, freeze and assert total; SIGKILL the dedicated server process group without another save.",
+    "Restart same world, freeze and dump all three blocks; assert exact total. Sprint201 more ticks, freeze, assert exact total and increased destination.",
+    "Graceful stop after verification, wait for processes and verify no residual process group."
   ],
-  "readings": [
-    {
-      "source": 1727,
-      "destination": 35,
-      "expected": 1728,
-      "deviation": 34
-    },
-    {
-      "source": 1726,
-      "destination": 37,
-      "expected": 1728,
-      "deviation": 35
-    },
-    {
-      "source": 1726,
-      "destination": 35,
-      "expected": 1728,
-      "deviation": 33
-    }
-  ],
-  "verdict": {
-    "headline": "**硬崩溃下运输器搬运不守恒**：总量比应有值多出 33–35 个（重复），3 次一致；不是随机噪声",
-    "why_engine": [
-      "官方 `TileEntityLogisticalTransporterBase` **没有** `saveAdditional`/`loadAdditional`（用 `javap` 直接核对官方 JAR 得到，方法计数 0）——在途物品不持久化，崩溃即丢",
-      "区块各自独立保存：源箱子所在区块可能保存于物品离开之前，目标箱子所在区块保存于物品到达之后 → 同一件物品在两处同时被记录",
-      "两者叠加就是观测到的「小幅重复」"
+  "fabric": {
+    "result": "PASSED",
+    "checks": [
+      {
+        "case": "before save",
+        "counts": {
+          "source": 1709,
+          "transit": 2,
+          "destination": 17,
+          "total": 1728,
+          "expected": 1728
+        }
+      },
+      {
+        "case": "after hard crash",
+        "counts": {
+          "source": 1709,
+          "transit": 2,
+          "destination": 17,
+          "total": 1728,
+          "expected": 1728
+        }
+      },
+      {
+        "case": "resumed transfer",
+        "counts": {
+          "source": 1690,
+          "transit": 2,
+          "destination": 36,
+          "total": 1728,
+          "expected": 1728
+        }
+      }
     ],
-    "port_defect": false,
-    "port_matches_upstream": "本移植的运输器同样没有持久化在途缓冲，与官方实现一致"
+    "acceleration": [
+      {
+        "ticks": 201,
+        "ticks_per_second": 783,
+        "wall_seconds_from_reported_rate": 0.2567,
+        "equivalent_game_seconds": 10.05
+      },
+      {
+        "ticks": 200,
+        "ticks_per_second": 5292,
+        "wall_seconds_from_reported_rate": 0.0378,
+        "equivalent_game_seconds": 10.0
+      },
+      {
+        "ticks": 201,
+        "ticks_per_second": 2380,
+        "wall_seconds_from_reported_rate": 0.0845,
+        "equivalent_game_seconds": 10.05
+      }
+    ]
   },
-  "assumptions_and_limits": [
-    "本测试用运输器而非 QIO：QIO 网络需要**在 GUI 里创建频率**（驱动阵列的频率页签），无头命令无法完成",
-    "容差断言取 ±128（一个箱子槽位的量级），实测偏差 33–35",
-    "只在服务端崩溃路径上验证；客户端崩溃（集成服务端）未测"
+  "official": {
+    "result": "PASSED",
+    "checks": [
+      {
+        "case": "before save",
+        "counts": {
+          "source": 1709,
+          "transit": 2,
+          "destination": 17,
+          "total": 1728,
+          "expected": 1728
+        }
+      },
+      {
+        "case": "after hard crash",
+        "counts": {
+          "source": 1709,
+          "transit": 2,
+          "destination": 17,
+          "total": 1728,
+          "expected": 1728
+        }
+      },
+      {
+        "case": "resumed transfer",
+        "counts": {
+          "source": 1690,
+          "transit": 2,
+          "destination": 36,
+          "total": 1728,
+          "expected": 1728
+        }
+      }
+    ],
+    "acceleration": [
+      {
+        "ticks": 201,
+        "ticks_per_second": 1382,
+        "wall_seconds_from_reported_rate": 0.1454,
+        "equivalent_game_seconds": 10.05
+      },
+      {
+        "ticks": 200,
+        "ticks_per_second": 4614,
+        "wall_seconds_from_reported_rate": 0.0433,
+        "equivalent_game_seconds": 10.0
+      },
+      {
+        "ticks": 201,
+        "ticks_per_second": 1264,
+        "wall_seconds_from_reported_rate": 0.159,
+        "equivalent_game_seconds": 10.05
+      }
+    ]
+  },
+  "official_identity": {
+    "minecraft": "1.21.1",
+    "neoforge": "21.1.200",
+    "mekanism": "1.21.1-10.7.19.85",
+    "jar_sha256": "004dbc9f3106f4d192aeaa1ee1190dd16ec9ca8059ed3d093b80034f4c574f43",
+    "world": "fresh disposable world; resident sample not used"
+  },
+  "release_jars": {
+    "Mekanism-Fabric-Bootstrap-10.7.19.85+fabric.1.jar": "b37409447ecb523003e91f8ec1a1fa58857f2c54975e27ba975d256687da6d4d",
+    "MekanismTools-10.7.19.85+fabric.1-fabric.jar": "b74c23a5b504a236051fab7450420b46f894511009aaaddf4b9c0a3baeda75c9",
+    "MekanismAdditions-10.7.19.85+fabric.1-fabric.jar": "e2019d55e61bab1aac70f2bf7d6d737c8e6cef126e9fdb2c9d81d95d0b1df526",
+    "MekanismGenerators-10.7.19.85+fabric.1-fabric.jar": "cae3464201f9c6bdf270f9215695d140f6f6e80b838d9b600067257d157ad711"
+  },
+  "limits": [
+    "QIO not tested; this does not close original QIO-specific scope.",
+    "Cross-chunk crash atomicity not tested; only single-chunk transport storage is covered.",
+    "First frozen-sprint-only official setup did not move items, while Fabric first run did. Current comparison explicitly unfreezes for each sprint on both loaders. Cause of that earlier observation is unresolved; no product defect is inferred."
   ],
-  "stability": "连跑 3 次全部 PASS（每条 3 个断言）",
-  "reproduce": "bash scripts/fabric-crash-conservation-smoke.sh"
+  "superseded_record": {
+    "work_item": "W-121",
+    "date": "2026-11-01",
+    "goal": "物品在硬崩溃（kill -9）下是否守恒：不重复、不意外丢失。",
+    "rig": "scripts/fabric-crash-conservation-smoke.sh",
+    "method": [
+      "一次性专用服务端（四份发布 JAR）；箱子(1,100,0) 27 格各 64 个铁矿石 = 1728，运输器(2,100,0) 西拉东推，箱子(3,100,0)",
+      "`save-all flush` 把填充状态落盘后，让运输器搬运 ~20 秒",
+      "对 java 进程组 `kill -9`（无关闭钩子、无保存）",
+      "同一世界重启服务端，重新读两个箱子并求和"
+    ],
+    "readings": [
+      {
+        "source": 1727,
+        "destination": 35,
+        "expected": 1728,
+        "deviation": 34
+      },
+      {
+        "source": 1726,
+        "destination": 37,
+        "expected": 1728,
+        "deviation": 35
+      },
+      {
+        "source": 1726,
+        "destination": 35,
+        "expected": 1728,
+        "deviation": 33
+      }
+    ],
+    "verdict": {
+      "headline": "**硬崩溃下运输器搬运不守恒**：总量比应有值多出 33–35 个（重复），3 次一致；不是随机噪声",
+      "why_engine": [
+        "官方 `TileEntityLogisticalTransporterBase` **没有** `saveAdditional`/`loadAdditional`（用 `javap` 直接核对官方 JAR 得到，方法计数 0）——在途物品不持久化，崩溃即丢",
+        "区块各自独立保存：源箱子所在区块可能保存于物品离开之前，目标箱子所在区块保存于物品到达之后 → 同一件物品在两处同时被记录",
+        "两者叠加就是观测到的「小幅重复」"
+      ],
+      "port_defect": false,
+      "port_matches_upstream": "本移植的运输器同样没有持久化在途缓冲，与官方实现一致"
+    },
+    "assumptions_and_limits": [
+      "本测试用运输器而非 QIO：QIO 网络需要**在 GUI 里创建频率**（驱动阵列的频率页签），无头命令无法完成",
+      "容差断言取 ±128（一个箱子槽位的量级），实测偏差 33–35",
+      "只在服务端崩溃路径上验证；客户端崩溃（集成服务端）未测"
+    ],
+    "stability": "连跑 3 次全部 PASS（每条 3 个断言）",
+    "reproduce": "bash scripts/fabric-crash-conservation-smoke.sh"
+  },
+  "superseded_notice": "The old verdict and readings below are invalid evidence and retained solely as a correction trail."
 }

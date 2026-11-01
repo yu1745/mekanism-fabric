@@ -2,17 +2,19 @@
 # Item conservation across a hard crash (W-121).
 #
 # Moves a known number of stacks between two chests through a logistical transporter, kills the server with SIGKILL in
-# the middle of the transfer, restarts it on the same world and counts both chests again. The total must be unchanged:
-# a save that captured the destination but not the source would duplicate items, and the other order would lose them.
+# the middle of the transfer, restarts it on the same world and counts both chests plus in-flight stacks.
+# All three blocks are in one chunk. This is a transporter check, not a QIO or cross-chunk crash guarantee.
 #
-# Prerequisite: a remapped release jar (`./build.sh`). Requires only a JRE.
+# Prerequisite: four release jars (`./build.sh`). For the same rig on the official cached runtime,
+# set FABRIC_CONSERVATION_REFERENCE_SERVER to its server directory; its sample world is never used.
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 PROPERTIES="$ROOT/fabric/gradle.properties"
 CACHE_DIR=${FABRIC_SMOKE_CACHE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/mekanism-fabric-smoke}
-TIMEOUT=${FABRIC_CONSERVATION_TIMEOUT:-420}
+TIMEOUT=${FABRIC_CONSERVATION_TIMEOUT:-60}
 KEEP_SERVER=${FABRIC_SMOKE_KEEP_SERVER:-0}
+REFERENCE_SERVER=${FABRIC_CONSERVATION_REFERENCE_SERVER:-}
 #One full stack per slot: a command cannot place more than a stack into a slot.
 ITEM_COUNT=${FABRIC_CONSERVATION_COUNT:-64}
 
@@ -35,16 +37,22 @@ FABRIC_API_VERSION=$(property fabric_api_version)
 TEAM_REBORN_ENERGY_VERSION=$(property team_reborn_energy_version)
 INSTALLER_VERSION=${FABRIC_INSTALLER_VERSION:-1.1.2}
 
+SERVER_PID=
 cleanup() {
   local status=$?
   trap - EXIT INT TERM
-  if [[ -n "$SERVER_DIR" && -d "$SERVER_DIR" ]]; then
-    local pid pgid
-    pid=$(cat "$SERVER_DIR/server.pid" 2>/dev/null || true)
-    if [[ -n "${pid:-}" ]]; then
-      pgid=$(ps -o pgid= -p "$pid" 2>/dev/null | tr -d ' ' || true)
-      [[ -n "$pgid" ]] && kill -KILL -- "-$pgid" 2>/dev/null || true
+  if [[ -n "$SERVER_PID" ]]; then
+    kill -TERM -- "-$SERVER_PID" 2>/dev/null || true
+    if ! timeout 2 tail --pid="$SERVER_PID" -f /dev/null; then
+      kill -KILL -- "-$SERVER_PID" 2>/dev/null || true
     fi
+    wait "$SERVER_PID" 2>/dev/null || true
+    if ps -eo pgid= | awk -v group="$SERVER_PID" '$1 == group { found=1 } END { exit !found }'; then
+      echo "fabric-conservation-smoke: residual process group $SERVER_PID" >&2
+      status=1
+    fi
+  fi
+  if [[ -n "$SERVER_DIR" && -d "$SERVER_DIR" ]]; then
     if [[ "$KEEP_SERVER" == 1 ]]; then
       printf 'fabric-conservation-smoke: retained server: %s\n' "$SERVER_DIR" >&2
     else
@@ -66,6 +74,7 @@ fetch() {
   mv "$temporary" "$destination"
 }
 
+if [[ -z "$REFERENCE_SERVER" ]]; then
 mkdir -p "$CACHE_DIR"
 LAUNCHER_JAR="$CACHE_DIR/fabric-server-launch.jar"
 FABRIC_API_JAR="$CACHE_DIR/fabric-api-${FABRIC_API_VERSION}.jar"
@@ -75,161 +84,155 @@ fetch "https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/${FABRIC_AP
 fetch "https://maven.fabricmc.net/teamreborn/energy/${TEAM_REBORN_ENERGY_VERSION}/energy-${TEAM_REBORN_ENERGY_VERSION}.jar" "$ENERGY_JAR"
 
 MOD_JARS=()
-while IFS= read -r jar; do MOD_JARS+=("$jar"); done < <(find "$ROOT/dist" -maxdepth 1 -name '*.jar' | sort)
+while IFS= read -r jar; do MOD_JARS+=("$jar"); done < <(printf '%s\n' "$ROOT"/dist/*.jar | sort)
 if [[ ${#MOD_JARS[@]} -ne 4 ]]; then
   printf 'fabric-conservation-smoke: expected four release jars, found %d\n' "${#MOD_JARS[@]}" >&2
   exit 2
+fi
+
 fi
 
 setup_server_dir() {
   SERVER_DIR=$(mktemp -d "${TMPDIR:-/tmp}/mekanism-conservation-smoke.XXXXXX")
   LOG_FILE="$SERVER_DIR/server.log"
   mkdir -p "$SERVER_DIR/mods"
-  cp "$LAUNCHER_JAR" "$SERVER_DIR/fabric-server-launch.jar"
-  cp "$FABRIC_API_JAR" "$ENERGY_JAR" "${MOD_JARS[@]}" "$SERVER_DIR/mods/"
+  if [[ -z "$REFERENCE_SERVER" ]]; then
+    cp "$LAUNCHER_JAR" "$SERVER_DIR/fabric-server-launch.jar"
+    cp "$FABRIC_API_JAR" "$ENERGY_JAR" "${MOD_JARS[@]}" "$SERVER_DIR/mods/"
+  else
+    # Only copy runtime files; never alter the resident official sample world or its configuration.
+    cp -a --reflink=auto "$REFERENCE_SERVER/libraries" "$REFERENCE_SERVER/run.sh" \
+      "$REFERENCE_SERVER/user_jvm_args.txt" "$SERVER_DIR/"
+    cp "$REFERENCE_SERVER/mods/Mekanism-1.21.1-10.7.19.85.jar" "$SERVER_DIR/mods/"
+    printf '004dbc9f3106f4d192aeaa1ee1190dd16ec9ca8059ed3d093b80034f4c574f43  %s\n' \
+      "$SERVER_DIR/mods/Mekanism-1.21.1-10.7.19.85.jar" | sha256sum -c -
+  fi
   printf 'eula=true\n' > "$SERVER_DIR/eula.txt"
   printf 'online-mode=false\nserver-port=0\nspawn-protection=0\nmax-players=1\nview-distance=4\n' > "$SERVER_DIR/server.properties"
 }
 
-# Phase one: fill one chest and let the transporter move the stacks, then kill the server without any save.
-start_phase_one() {
-  cd "$SERVER_DIR"
-  (
-    for _ in $(seq 1 180); do
-      grep -q 'Done (' server.log 2>/dev/null && break
-      sleep 1
-    done
-    sleep 1
-    echo "forceload add 0 0"
-    echo "setblock 1 100 0 minecraft:chest"
-    echo "setblock 2 100 0 mekanism:basic_logistical_transporter"
-    echo "setblock 3 100 0 minecraft:chest"
-    #Three stacks of 64 per slot, spread over the chest's 27 slots, so a partial transfer is what a crash interrupts.
-    for slot in $(seq 0 26); do
-      echo "item replace block 1 100 0 container.$slot with minecraft:iron_ore $ITEM_COUNT"
-    done
-    echo 'data merge block 2 100 0 {connection:[I;3,3,3,3,2,1]}'
-    #The filled state has to reach disk before the crash, otherwise the run only proves that an unsaved world is lost.
-    echo "save-all flush"
-    sleep 3
-    echo "say CONSERVATION_FILLED"
-    sleep 30
-  ) | timeout "$TIMEOUT" java -Xms512M -Xmx2G -jar fabric-server-launch.jar nogui > server.log 2>&1 &
-  echo $! > server.pid
-  for _ in $(seq 1 180); do
-    grep -q 'CONSERVATION_FILLED' server.log 2>/dev/null && break
-    sleep 1
-  done
-  if ! grep -q 'CONSERVATION_FILLED' server.log 2>/dev/null; then
-    echo "fabric-conservation-smoke: server never filled the chest" >&2
-    tail -20 server.log >&2
-    exit 1
-  fi
-  #Let the transporter move a few stacks, then kill the JVM outright: no shutdown hook, no save.
-  sleep "${FABRIC_CONSERVATION_MOVE_SECONDS:-20}"
-  local pid pgid
-  pid=$(cat server.pid)
-  pgid=$(ps -o pgid= -p "$pid" 2>/dev/null | tr -d ' ')
-  [[ -n "$pgid" ]] && kill -KILL -- "-$pgid" 2>/dev/null || true
-  sleep 2
+# Every launch has its own process group and the same world; no pipeline writer or timeout shell survives it.
+start_server() {
+  LOG_FILE="$SERVER_DIR/$1.log"
+  : > "$LOG_FILE"
+  rm -f "$SERVER_DIR/console"
+  mkfifo "$SERVER_DIR/console"
+  exec 9<>"$SERVER_DIR/console"
+  local launch=(java -Xms512M -Xmx2G -jar fabric-server-launch.jar nogui)
+  [[ -z "$REFERENCE_SERVER" ]] || launch=(java @user_jvm_args.txt @libraries/net/neoforged/neoforge/21.1.200/unix_args.txt nogui)
+  (cd "$SERVER_DIR" && exec setsid "${launch[@]}" < console > "$LOG_FILE" 2>&1) &
+  SERVER_PID=$!
+  wait_line 'Done \('
 }
 
-# Phase two: same world, count both chests.
-start_phase_two() {
-  local world_dir="$1"
-  cd "$SERVER_DIR"
-  (
-    for _ in $(seq 1 180); do
-      grep -q 'Done (' server.log 2>/dev/null && break
-      sleep 1
-    done
-    sleep 1
-    echo "data get block 1 100 0"
-    echo "data get block 3 100 0"
-    sleep 3
-    echo "stop"
-    sleep 5
-  ) | timeout "$TIMEOUT" java -Xms512M -Xmx2G -jar fabric-server-launch.jar nogui > server.log 2>&1 || true
+wait_line() {
+  "$ROOT/scripts/wait-for-log-line.sh" -t "$TIMEOUT" -p "$SERVER_PID" \
+    --fail-on 'Encountered an unexpected exception|FAILED TO BIND|Exception in thread' "$1" "$LOG_FILE"
 }
 
-setup_server_dir
-SERVER_ROOT="$SERVER_DIR"
-start_phase_one
-WORLD="$SERVER_ROOT/world"
-if [[ ! -d "$WORLD" ]]; then
-  echo "fabric-conservation-smoke: the crashed server left no world" >&2
-  exit 1
-fi
-#Keep the phase-one log, then run phase two in a second directory that mounts the same world.
-cp "$SERVER_DIR/server.log" "$SERVER_DIR/phase-one.log"
-PHASE_ONE_DIR="$SERVER_DIR"
-setup_server_dir
-cp -a "$WORLD" "$SERVER_DIR/world"
-start_phase_two "$SERVER_DIR/world"
+command() { printf '%s\n' "$1" >&9; }
+barrier() { command "say $1"; wait_line "\[Server\] $1"; }
+# Each sprint uses a fresh log segment to prevent matching a previous completion marker.
+advance() {
+  local label=$1 ticks=$2
+  command "say BEGIN_$label"
+  wait_line "\[Server\] BEGIN_$label"
+  local line
+  line=$(wc -l < "$LOG_FILE")
+  command "tick unfreeze"
+  command "tick sprint ${ticks}t"
+  local segment="$SERVER_DIR/sprint-$label.log"
+  # The helper watches the real JVM; tail follows only the new part of the existing log.
+  tail -n +"$((line + 1))" -f --pid="$SERVER_PID" "$LOG_FILE" > "$segment" &
+  local follower=$!
+  local result=0
+  "$ROOT/scripts/wait-for-log-line.sh" -t "$TIMEOUT" -p "$SERVER_PID" \
+    --fail-on 'Encountered an unexpected exception' 'Sprint completed with' "$segment" || result=$?
+  kill "$follower" 2>/dev/null || true
+  wait "$follower" 2>/dev/null || true
+  command "tick freeze"
+  return "$result"
+}
 
-count_items() {
-  local position=$1 log=$2
-  python3 - "$position" "$log" <<'PY'
-import re, sys
-position, log = sys.argv[1], sys.argv[2]
-text = open(log, encoding="utf-8", errors="replace").read()
-#The dump is a single NBT blob per block; the chest's item list is what matters, whatever the field order is.
-match = re.search(re.escape(position) + r" has the following block data: (\{.*)", text, re.S)
-if not match:
-    print("unreadable")
-    raise SystemExit(0)
-blob = match.group(1)
-items = re.findall(r"\{[^{}]*\}", blob)
-total = 0
-found = False
-for entry in items:
-    if "minecraft:iron_ore" in entry:
-        found = True
-        count = re.search(r"count: (\d+)", entry)
-        if count:
+snapshot() {
+  command 'data get block 1 100 0'
+  command 'data get block 2 100 0'
+  command 'data get block 3 100 0'
+  barrier "$1"
+}
+
+count_snapshot() {
+  python3 - "$LOG_FILE" "$ITEM_COUNT" <<'PYCOUNT'
+import json, re, sys
+lines = open(sys.argv[1], encoding='utf-8', errors='replace').read().splitlines()
+counts = []
+for x in (1, 2, 3):
+    marker = f'{x}, 100, 0 has the following block data: '
+    dumps = [line.split(marker, 1)[1] for line in lines if marker in line]
+    if not dumps:
+        raise SystemExit(f'missing block dump: {marker}')
+    # Each block dump occupies one log line. Never consume the following block dump.
+    # Chest and transported stacks both serialize their vanilla ItemStack in a leaf compound.
+    entries = re.findall(r'\{[^{}]*\}', dumps[-1])
+    total = 0
+    for entry in entries:
+        if re.search(r'id: "minecraft:iron_ore"', entry):
+            count = re.search(r'count: (\d+)', entry)
+            if count is None:
+                raise SystemExit(f'unreadable iron stack: {entry}')
             total += int(count.group(1))
-print(total if found else 0)
-PY
+    counts.append(total)
+expected = int(sys.argv[2]) * 27
+print(json.dumps(dict(source=counts[0], transit=counts[1], destination=counts[2], total=sum(counts), expected=expected)))
+if sum(counts) != expected:
+    raise SystemExit('item conservation failed')
+if counts[2] <= 0:
+    raise SystemExit('no items reached destination')
+PYCOUNT
 }
 
-after_src=$(count_items "1, 100, 0" "$SERVER_DIR/server.log")
-after_dst=$(count_items "3, 100, 0" "$SERVER_DIR/server.log")
-
-failures=0
-check() {
-  local description=$1 condition=$2
-  if [[ "$condition" == 0 ]]; then
-    printf 'PASS %s\n' "$description"
-  else
-    printf 'FAIL %s\n' "$description"
-    failures=$((failures + 1))
-  fi
-}
-
-expected=$((ITEM_COUNT * 27))
-for value in "$after_src" "$after_dst"; do
-  if [[ "$value" == "unreadable" ]]; then
-    echo "fabric-conservation-smoke: could not read a chest dump; see $SERVER_DIR" >&2
-    exit 1
-  fi
+setup_server_dir
+start_server before-crash
+command 'tick freeze'
+command 'forceload add 0 0'
+command 'setblock 1 100 0 minecraft:chest'
+command 'setblock 2 100 0 mekanism:basic_logistical_transporter'
+command 'setblock 3 100 0 minecraft:chest'
+for slot in $(seq 0 26); do
+  command "item replace block 1 100 0 container.$slot with minecraft:iron_ore $ITEM_COUNT"
 done
-moved=$((expected - after_src))
-check "some stacks actually moved before the crash" $([[ "$moved" -gt 0 ]] && echo 0 || echo 1)
-#A hard crash cannot conserve a transporter-based move exactly, and that is engine behaviour rather than a port defect:
-#the official TileEntityLogisticalTransporterBase has no saveAdditional/loadAdditional, so items being carried are lost,
-#and chunks save independently, so the source and destination can disagree about what already moved. What the check can
-#hold onto is that the deviation stays inside that window instead of running away.
-total=$((after_src + after_dst))
-deviation=$((total - expected))
-abs_deviation=${deviation#-}
-tolerance=${FABRIC_CONSERVATION_TOLERANCE:-128}
-check "the destination received items" $([[ "$after_dst" -gt 0 ]] && echo 0 || echo 1)
-check "the deviation stays inside the in-flight window (${deviation})" $([[ "$abs_deviation" -le "$tolerance" ]] && echo 0 || echo 1)
+command 'data merge block 2 100 0 {connection:[I;3,3,3,3,2,1]}'
+advance initial 201
+snapshot CONSERVATION_BEFORE_SAVE
+before=$(count_snapshot)
+printf 'PASS before save: %s\n' "$before"
+# Save an actual running transport network, including its in-flight stacks, then run further without saving.
+command 'save-all flush'
+barrier CONSERVATION_SAVED
+advance unsaved 200
+snapshot CONSERVATION_BEFORE_CRASH
+count_snapshot
+kill -KILL -- "-$SERVER_PID"
+wait "$SERVER_PID" 2>/dev/null || true
+SERVER_PID=
+exec 9>&-
 
-printf 'fabric-conservation-smoke: source %s, destination %s, expected %s, deviation %s\n' \
-  "$after_src" "$after_dst" "$expected" "$deviation"
-if (( failures > 0 )); then
-  echo "fabric-conservation-smoke: FAILED ($failures checks)" >&2
-  exit 1
-fi
-echo "fabric-conservation-smoke: PASSED"
+start_server after-crash
+command 'tick freeze'
+snapshot CONSERVATION_RELOADED
+reloaded=$(count_snapshot)
+printf 'PASS after hard crash: %s\n' "$reloaded"
+advance resumed 201
+snapshot CONSERVATION_RESUMED
+resumed=$(count_snapshot)
+python3 - "$reloaded" "$resumed" <<'PYCOMPARE'
+import json, sys
+before, after = map(json.loads, sys.argv[1:])
+assert after['destination'] > before['destination'], (before, after)
+PYCOMPARE
+printf 'PASS resumed transfer: %s\n' "$resumed"
+command stop
+wait "$SERVER_PID"
+SERVER_PID=
+exec 9>&-
+echo 'fabric-conservation-smoke: PASSED'

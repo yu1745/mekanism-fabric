@@ -32,7 +32,7 @@ W-123（存档往返第二轮）：**配置与内容都能活过重启**。脚�
 
 W-122（发电→储能→用电）：**储能→线缆→机器通了，发电机一跳与感应矩阵均受限**。脚本 `scripts/fabric-energy-chain-smoke.sh`：能量立方（eject + 能量侧 OUTPUT，预充 100000）→ 通用线缆（西拉东推）→ 富集熔炉（能量侧 INPUT），熔炉实测 `stored = 20000`（充满上限）。**太阳能发电机确实在发电**（`stored: 13397`、`active_state: 1b`），但它的方块数据里**没有 `component_config`**，命令 rig 写不进能量侧配置，因此「发电机→线缆→机器」这一跳无法在无头 rig 里判定。**感应矩阵**：3×3×3 完整外壳 + 内部电芯逐块放置、等 60 tick 后**没有成型**，原文原因是成型入口 `IMultiblockBase.onActivate(Player, …)` 需玩家交互（与 W-116 涡轮同一堵墙）。[记录](evidence/p8-release/w122-energy-chain.json)
 
-W-121（崩溃下物品守恒）：**运输器搬运在硬崩溃下不精确守恒，但这是引擎行为不是移植缺陷**。脚本 `scripts/fabric-crash-conservation-smoke.sh`：1728 个铁矿石从箱子搬到另一箱子，`save-all flush` 后搬 20 秒、对进程组 `kill -9`、同世界重启再求和。三次实测总量 1762 / 1763 / 1761（应为 1728），**多出 33–35 个**——重复而非丢失。原因有二：官方 `TileEntityLogisticalTransporterBase` **没有** `saveAdditional`/`loadAdditional`（`javap` 核对官方 JAR，方法数 0），在途物品不持久化；且区块各自保存，源区块可能停留在物品离开前、目标区块已包含物品到达后。本移植的运输器同样不持久化在途缓冲，与官方一致。**QIO 变体未测**：QIO 网络需在 GUI 里创建频率，无头命令做不到。[记录](evidence/p8-release/w121-crash-conservation.json)
+W-121（崩溃守恒纠正）：旧“多出 33–35 个、引擎导致重复”的结论撤回：正则跨日志行重复计入目标箱，且两箱同区块，运输器实际经继承路径持久化在途栈。修正既有脚本为**两箱＋在途精确计数**、冻结快照、加速搬运、保存后继续搬运并杀整个进程组、同世界重启再搬运。Fabric 与官方 NeoForge 同脚本均通过：保存与重启均 **1709＋2＋17＝1728**，恢复搬运后 **1690＋2＋36＝1728**。QIO、跨区块未跑；先前 frozen-sprint 设置的差异未归因，不据此宣称产品缺陷。[证据与撤回记录](evidence/p8-release/w121-crash-conservation.json)
 
 W-99（第三方能量互通）：**双向都通，用真实的 Tech Reborn 验证**。选 Tech Reborn 5.11.19 + Reborn Core 5.11.19（Modrinth 1.21.1 Fabric；Modern Industrialization 在 1.21.1 无可用版本）。两个方向：Mekanism 能量立方经通用线缆给 Tech Reborn 研磨机充到 **1000 L**；Tech Reborn 固体燃料发电机（喂煤）经通用线缆把 Mekanism 富集熔炉充到 **6925 FE**。脚本 `scripts/fabric-third-party-energy-smoke.sh`，连跑 3 次一致。第三方模组只进一次性服务端，`fabric-packaged-smoke.sh` 已加断言：发布 JAR 不含 `sodium/iris/techreborn/reborncore/teamreborn` 等包。[记录](evidence/p8-release/w99-third-party-energy.json)
 
@@ -211,3 +211,5 @@ EOF
 机器能量跨存档保留（45 FE 实测），先前 `energy=0` 是关机前耗尽而非存档丢失。
 
 **扩展档已实跑通过**：`scripts/release-check.sh --skip-build --extended` **10 步全绿**（静态 14s、打包服务端 57s、配对 85s、配置拒绝 117s、机器 smoke 66s、第三方能量 61s、崩溃守恒 105s、能量链 53s、存档往返 376s、配置边界 82s）。首次运行第 6 步以 **exit 126** 失败——`fabric-third-party-energy-smoke.sh` 缺可执行位（脚本由 python 写入时默认 644）；`chmod +x scripts/*.sh` 后复跑全绿。[记录](evidence/p8-release/w103-extended-release-check.json)
+
+提交风格复核：`e0bfa412` 的真实 diff 仅扩展已授权 W-120 探针和纠正文档，复用真实 security owner／frequency，无生产语义替代、无源码切片变化。五条 GUI 判定与清理已实跑，日常 `test` 成功（UP-TO-DATE）；全量门禁本批未跑。
