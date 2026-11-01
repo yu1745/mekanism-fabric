@@ -89,10 +89,16 @@ loom {
             programArgs '--quickPlayMultiplayer', System.getProperty('mekanism.handshake.address', '127.0.0.1:25567'),
                   '--username', System.getProperty('mekanism.handshake.username', 'MekanismSmoke')
         }
+        securityDenialServer {
+            server()
+            name = 'Mekanism security denial fixture server'
+            source sourceSets.securityDenialFixture
+            runDir = System.getProperty('mekanism.security.serverDir', 'run/security-server')
+            property 'mekanism.security.serverPort', System.getProperty('mekanism.security.serverPort', '25567')
+        }
         securityDenialClient {
             client()
             name = 'Mekanism security denial fixture client'
-            source sourceSets.main
             source sourceSets.securityDenialFixture
             runDir = System.getProperty('mekanism.security.clientDir', 'run/security-client')
             programArgs '--quickPlayMultiplayer', System.getProperty('mekanism.security.address', '127.0.0.1:25567'),
@@ -314,9 +320,9 @@ sourceSets {
         runtimeClasspath += sourceSets.main.runtimeClasspath - sourceSets.main.output
     }
     securityDenialFixture {
-        // Same rule as the handshake fixtures: main's dependency classpath, never main output.
-        compileClasspath += sourceSets.main.compileClasspath
-        runtimeClasspath += sourceSets.main.runtimeClasspath - sourceSets.main.output
+        // A real client that also carries Mekanism's own bootstraps, so it sees production classes but never leaks back.
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.output.classesDirs + (sourceSets.main.runtimeClasspath - sourceSets.main.output)
     }
     handshakeMissingReceiverFixture {
         // Reuse external dependencies but never main or mismatch-fixture output.
@@ -960,6 +966,19 @@ tasks.named('processTileUpdateRuntimeFixtureResources') {
 tasks.named('processClientWindowFixtureResources') {
     from('../src/main/resources') {
         mekanismServiceDescriptors.each { name -> include "META-INF/services/$name" }
+    }
+}
+
+//Same rule for the security probe: one merged mod needs the core service descriptors or its bootstraps cannot load.
+tasks.named('processSecurityDenialFixtureResources') {
+    from('../src/main/resources') {
+        mekanismServiceDescriptors.each { name -> include "META-INF/services/$name" }
+    }
+    //The merged mod is a real client, so it needs the mod's own assets and data or models fail to load and the client
+    //never reaches the main menu.
+    from('../src/main/resources') {
+        include 'assets/**'
+        include 'data/**'
     }
 }
 

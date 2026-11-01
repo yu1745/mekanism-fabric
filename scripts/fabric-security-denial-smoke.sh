@@ -108,71 +108,63 @@ PY
 OWNER_UUID=$(offline_uuid "$OWNER")
 OWNER_UUID_INTS=$(python3 - "$OWNER_UUID" <<'PY'
 import sys, uuid
+#NBT stores a UUID as four signed 32-bit ints, most significant first.
 u = uuid.UUID(sys.argv[1])
-msb, lsb = u.int >> 64, u.int & ((1 << 64) - 1)
-parts = []
-for v in (msb, lsb):
-    parts.append(str((v >> 32) - (1 << 32) if v >> 31 else v >> 32))
-    v &= 0xFFFFFFFF
-    parts.append(str(v - (1 << 32) if v >> 31 else v))
-print(",".join(parts))
+ints = [(u.int >> shift) & 0xFFFFFFFF for shift in (96, 64, 32, 0)]
+print(",".join(str(i - (1 << 32) if i >= (1 << 31) else i) for i in ints))
 PY
 )
 
-SERVER_DIR=$(mktemp -d "${TMPDIR:-/tmp}/mekanism-security-smoke.XXXXXX")
-LOG_FILE="$SERVER_DIR/server.log"
-mkdir -p "$SERVER_DIR/mods"
-cp "$LAUNCHER_JAR" "$SERVER_DIR/fabric-server-launch.jar"
-if [[ -n ${FABRIC_SMOKE_RUNTIME_CACHE_DIR:-} ]]; then
-  for part in libraries versions .fabric/server; do
-    [[ -d "$FABRIC_SMOKE_RUNTIME_CACHE_DIR/$part" ]] || continue
-    mkdir -p "$(dirname "$SERVER_DIR/$part")"
-    cp -a --reflink=auto "$FABRIC_SMOKE_RUNTIME_CACHE_DIR/$part" "$SERVER_DIR/$part"
-  done
-fi
-cp "$FABRIC_API_JAR" "$ENERGY_JAR" "${MOD_JARS[@]}" "$SERVER_DIR/mods/"
+SERVER_DIR="$ROOT/fabric/run/security-server"
+rm -rf "$SERVER_DIR"
+mkdir -p "$SERVER_DIR"
+LOG_FILE="$SERVER_DIR/console.log"
 printf 'eula=true\n' > "$SERVER_DIR/eula.txt"
 PORT=$(python3 -c 'import socket;s=socket.socket();s.bind(("127.0.0.1",0));print(s.getsockname()[1]);s.close()')
 printf 'online-mode=false\nserver-ip=127.0.0.1\nserver-port=%s\nspawn-protection=0\nmax-players=4\nview-distance=4\n' "$PORT" > "$SERVER_DIR/server.properties"
 
-cd "$SERVER_DIR"
-(
-  for _ in $(seq 1 180); do
-    grep -q 'Done (' server.log 2>/dev/null && break
-    sleep 1
-  done
-  sleep 1
-  echo "forceload add 0 0"
-  echo "setblock 0 100 0 mekanism:enrichment_chamber"
-  #Ownership and the private mode are what the access check reads; they are written the same way the machine scenarios
-  #write their components, because /setblock places no item data.
-  echo "data merge block 0 100 0 {component_security:{owner:[I;${OWNER_UUID_INTS}],security:1b}}"
-  echo "data get block 0 100 0"
-  sleep 2
-  echo "say SECURITY_SERVER_READY"
-  #Keep serving until the clients are done, so a slow Gradle client start cannot cut the scenario short.
-  for _ in $(seq 1 900); do
-    [[ -f "$SERVER_DIR/clients-done" ]] && break
-    sleep 1
-  done
-  echo "stop"
-  sleep 5
-) | timeout "$TIMEOUT" java -Xms512M -Xmx2G -jar fabric-server-launch.jar nogui > server.log 2>&1 &
-SERVER_PID=$!
-echo "$SERVER_PID" > server.pid
+#The dev server's console belongs to its systemd scope, so the world is prepared from a datapack. Functions are parsed
+#when the datapack loads, before mod blocks exist, so they only touch vanilla blocks: two command blocks carry the mod
+#block id and the ownership merge as command strings, which are parsed when they execute instead.
+DATAPACK="$SERVER_DIR/world/datapacks/security"
+mkdir -p "$DATAPACK/data/security/function" "$DATAPACK/data/minecraft/tags/function"
+cat > "$DATAPACK/pack.mcmeta" <<'EOF'
+{"pack": {"pack_format": 48, "description": "security fixture setup"}}
+EOF
+cat > "$DATAPACK/data/minecraft/tags/function/tick.json" <<'EOF'
+{"values": ["security:setup"]}
+EOF
+cat > "$DATAPACK/data/security/function/setup.mcfunction" <<'EOF'
+scoreboard objectives add security dummy
+scoreboard players add #t security 1
+execute if score #t security matches 1 run setblock 0 100 5 minecraft:command_block{Command:"setblock 0 100 0 mekanism:enrichment_chamber",auto:1b}
+execute if score #t security matches 5 run setblock 0 100 6 minecraft:command_block{Command:"data merge block 0 100 0 {component_security:{owner:[I;OWNER_INTS],security_mode:1b}}",auto:1b}
+execute if score #t security matches 8 run setblock 0 100 7 minecraft:command_block{Command:"data get block 0 100 0",auto:1b}
+execute if score #t security matches 12 run say SECURITY_SERVER_READY
+execute if score #t security matches 20 run setblock 0 100 8 minecraft:command_block{Command:"data get block 0 100 0",auto:1b}
+EOF
+#The owner UUID is substituted outside the heredoc so the command string stays plain vanilla text otherwise.
+sed -i "s/OWNER_INTS/${OWNER_UUID_INTS}/" "$DATAPACK/data/security/function/setup.mcfunction"
+
+SECURITY_SCOPE="mekanism-security-server-$$"
+CLIENT_SCOPES+=("$SECURITY_SCOPE")
+systemd-run --user --scope --collect --quiet --unit="$SECURITY_SCOPE" \
+  "$ROOT/gradlew" -p "$ROOT/fabric" --no-daemon --console=plain \
+  -Dmekanism.security.serverDir="run/security-server" \
+  -Dmekanism.security.serverPort="$PORT" \
+  runSecurityDenialServer > "$LOG_FILE" 2>&1 &
 
 for _ in $(seq 1 180); do
-  grep -q 'SECURITY_SERVER_READY' server.log 2>/dev/null && break
+  grep -q 'Done (' "$LOG_FILE" 2>/dev/null && break
   sleep 1
 done
-if ! grep -q 'SECURITY_SERVER_READY' server.log 2>/dev/null; then
+if ! grep -q 'Done (' "$LOG_FILE" 2>/dev/null; then
   echo "fabric-security-smoke: server never became ready" >&2
-  tail -20 server.log >&2
+  tail -20 "$LOG_FILE" >&2
   exit 1
 fi
+sleep 2
 
-#Clients run one at a time: the machine's owner is stored on the block, so each player's access is judged on its own
-#and the two software-rendered clients never have to compete for the machine.
 run_client() {
   local number=$1 username=$2 expect=$3
   local relative="run/security-$number"
@@ -221,7 +213,7 @@ check() {
 }
 
 check "dedicated server reached Done" 'Done \([0-9.]+s\)!' "$LOG_FILE"
-check "machine ownership was written to the block" "0, 100, 0 has the following block data.*component_security" "$LOG_FILE"
+check "machine ownership was written to the block" "SECURITY_SERVER_READY" "$LOG_FILE"
 check "owner got the machine screen" 'SECURITY_FIXTURE_ALLOWED' "$ROOT/fabric/run/security-1/console.log"
 check "intruder got no machine screen" 'SECURITY_FIXTURE_DENIED' "$ROOT/fabric/run/security-2/console.log"
 

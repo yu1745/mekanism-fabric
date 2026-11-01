@@ -1,7 +1,7 @@
 {
   "work_item": "W-120（进行中）",
   "date": "2026-11-01",
-  "status": "fixture_and_script_written_client_blocked_on_protocol_handshake",
+  "status": "fixture_clicking_no_screen_opens",
   "what_exists": {
     "fixture_source_set": "fabric/src/securityDenialFixture（源集 + remap + mods 条目 + `runSecurityDenialClient` 运行配置），编译通过",
     "fixture_class": "SecurityDenialClient：每 tick 检查，进入世界后对目标方块发一次 useItemOn，再读 `minecraft.screen` 判定，日志输出 `SECURITY_FIXTURE_ALLOWED` / `SECURITY_FIXTURE_DENIED` / `SECURITY_FIXTURE_UNEXPECTED`",
@@ -28,5 +28,20 @@
   ],
   "not_verified": [
     "双玩家拒绝/放行读数（被上面第三条挡住）"
-  ]
+  ],
+  "progress_this_round": {
+    "dev_server": "dev 客户端连四 JAR 发布服务端会被拒（Received 781 registry entries that are unknown to this client），改用同源 dev 服务端 runSecurityDenialServer",
+    "merged_mod": "单 mod 接法（同 clientWindowFixture）：fixture 源集带 main 的服务描述与 assets/data，否则服务缺失或模型加载失败、客户端卡在 atlas",
+    "world_setup": "dev 服务端控制台归 systemd scope，改用数据包布场；函数解析早于 mod 方块注册，故函数只碰原版方块，用命令方块承载 mod 方块 id 与 data merge 命令",
+    "verified_facts": [
+      "data merge 能写入 component_security.owner（发布服务端实测转储可见 owner 数组）",
+      "安全模式 NBT 键是 security_mode（写 security 会被静默丢弃）",
+      "UUID 的 NBT 形态是 4 个有符号 32 位整数，高位在前"
+    ],
+    "remaining_blocker": {
+      "symptom": "属主 Alice expected=allow actual=deny；闯入者 Bob actual=deny —— 两人都没开出界面",
+      "reading": "机器收到点击但任何人都没开出界面，更可能是 fixture 点击路径没触发服务端开界面，而非安全判定",
+      "next": "显式发送 ServerboundUseItemOnPacket（带 sequence）；先用 PUBLIC 模式验证合法点击能开出界面，再区分安全拒绝与点击失败"
+    }
+  }
 }

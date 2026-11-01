@@ -1,12 +1,16 @@
 {
   "schemaVersion": 1,
-  "id": "mekanism_security_denial_fixture",
-  "version": "1.0.0",
+  "id": "mekanism",
+  "version": "1.0.0-security-denial-fixture",
   "name": "Mekanism Security Denial Fixture",
-  "description": "Client-only fixture that right-clicks one block and reports whether the server opened its GUI.",
+  "description": "Isolated combined client fixture for the two-player access check; never packaged for release.",
   "environment": "client",
   "entrypoints": {
+    "main": [
+      "mekanism.fabric.MekanismFabricBootstrap"
+    ],
     "client": [
+      "mekanism.fabric.MekanismFabricClientBootstrap",
       "mekanism.fixture.SecurityDenialClient"
     ]
   },
@@ -14,6 +18,7 @@
     "fabricloader": ">=0.19.5",
     "minecraft": "~1.21.1",
     "java": ">=21",
-    "fabric-api": ">=0.116.17"
+    "fabric-api": ">=0.116.17",
+    "team_reborn_energy": ">=4.1.0"
   }
 }
