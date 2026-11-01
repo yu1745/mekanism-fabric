@@ -732,3 +732,21 @@ JEI（W-74c）与 WTHIT（W-74d）已批准，见 `ROADMAP.md`「W-74 范围追�
 5. 打包服务端 `mods` 数仍应是 50：W-99 的 Tech Reborn 只进一次性服务端的 mods，与打包 smoke 的服务端是两套，我没看到污染；W-117 最终收口时再确认一次。
 
 路线图：授权范围内未做的是 W-120（进行中）、W-79、收口，共 3，**已达到"≤3 补充"的线**，补 P27（见 ROADMAP）。累计产品缺陷仍为 0。
+
+## 巡检 L2（2026-11-01 09:27）
+
+自 L1 起新提交 1 个：`3f7b619e`（W-120 进行中：双玩家安全 fixture 已建好，撞上协议握手墙）。工作区有未提交的 `fabric/build.gradle`、fixture 的 `fabric.mod.json`、`scripts/fabric-security-denial-smoke.sh` 改动。范围：fixture 严格限于用户授权的 W-120（独立 source set、不进发布 JAR）；无裸启动客户端；未强制推送（origin 仍在 `cbf55f96`）。`fabric/home/` 已不存在。**审计陷阱：未触发**（30 分钟里 1 个提交，但它带 385 行新增的 fixture/脚本，并如实标注"in progress"）。
+
+**进展与做得好的**
+- 已验证：**服务端侧可以用 `data merge block … {component_security:{owner:[I;…],security:1b}}` 在已加载方块实体上直接写属主和 PRIVATE 模式**。这一条很重要——它让"属主是别人"不再依赖第二个同时在线的客户端，等于解决了 J3 里 `reflect` 传不了 UUID 的死结。
+- 发现并修了两个环境坑：客户端游戏目录用绝对路径会卡在资源加载（改相对路径）；两个客户端在软件渲染（llvmpipe）上并发会互相拖死（改顺序运行，因为属主已写在方块上，不需要并发）。
+- 当前阻塞写得很具体：`Client disconnected … This server requires Mekanism protocol 10.7.19`，代码位置 `FabricMekanismNetworking.beginHandshake` 里 `ServerConfigurationNetworking.canSend(handler, REQUEST_TYPE)` 为 false；而模板 `handshakeClient` 只用 `sourceSets.main` 就能连上，所以是"多了一个 fixture mod"让配置阶段的 payload 注册没生效。
+
+**一个更简单的绕法（供参考，不是强制）**：不要新建独立的 fixture mod，而是**扩展已有 `handshakeClient` 的 fixture 类**，加一个系统属性开关（例如 `mekanism.security.target`/`expect`）：属性存在时在进世界后执行 `useItemOn` 并输出 `SECURITY_FIXTURE_*`。这样客户端 mod 集合与 `handshakeClient` 完全一致，握手问题不会出现；仍属于 W-120 的授权范围（fixture 代码，不是测试类）。若坚持两个 source set，worker 提的"并入主运行类路径/仿照 `clientWindowFixture` 接线"也行。
+
+**问题**
+1. **机器上有两个 `fabric-security-denial-smoke.sh` 实例同时存活**（pid 2641020 已 15 分钟、pid 2685949 已 9.5 分钟，父进程都是 systemd，各自只剩一个 `sleep`），下面没有服务端/客户端，端口 25567 也没监听——看起来是后台启动的等待壳**没被回收**。按 AGENTS："停进程杀整棵树并验证，脚本退出前自检残留"。请 `pstree` 看清后用 `kill -- -<PGID>` 清掉，并让脚本在退出时自检（本项目的 smoke 不应留下 ppid=1 的壳）。
+2. `3f7b619e` 的提交标题带"in progress"，这类半成品提交会被后续 squash 进去也行，但**不要把它当 W-120 完成**；完成标志仍是 Alice 放行、Bob 拒绝两条读数 + 受信列表加 Bob 后放行。
+3. 到目前为止 W-120 还没有任何读数，**还不是缺陷也不是通过**。如果握手墙一时解不开，请在 1–2 次尝试后转 W-79 与 P27 的 W-121，W-120 带原文记录，别无限期卡住。
+
+路线图：授权范围内未做项 W-120（进行中）、W-79、收口 + P27（W-121…W-124）共 7，**不触发补充线**，本次无改动。累计产品缺陷仍为 0。
