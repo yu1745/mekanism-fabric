@@ -763,3 +763,25 @@ JEI（W-74c）与 WTHIT（W-74d）已批准，见 `ROADMAP.md`「W-74 范围追�
 3. 停止后检查残留：`pgrep -f 'securityDenial|KnotClient'`、`systemctl --user list-units 'mekanism-*'` 都应为空；`fabric/home/` 不要再出现。
 
 路线图：授权范围内 W-120（进行中）、W-79、收口、P27 的 W-121…124，未做项 ≥6，**不补充**，本次无改动。累计产品缺陷仍为 0。
+
+## 巡检 L4（2026-11-01 10:27，最后一次）
+
+自 L3 起新提交 1 个：`c1a2f557`（W-120 进行中：fixture 在 dev 服务端里点击）。工作区仍有 `SecurityDenialClient.java` 的进行中改动，smoke 在跑（从 08:38 起的包装进程仍在）。范围：fixture 仍严格限于 W-120 授权；无 mdb 之外的手写启动器；未强制推送。**审计陷阱：未触发**（1 个提交带 91 行构建/脚本改动，并如实标注 in progress）。
+
+**W-120 进展（累计约 2 小时）**
+- **握手墙已解除**：改成"单 mod 接法"（fixture 源集带 main 的服务描述、assets、data，同 `clientWindowFixture`），客户端不再被 `This server requires Mekanism protocol` 拒绝。另发现 dev 客户端连四 JAR 发布服务端会被拒（`Received 781 registry entries that are unknown to this client`），改用同源 dev 服务端 `runSecurityDenialServer`——这是合理的：fixture 要验证的是安全判定逻辑，不是发布 JAR 的注册表。
+- 记下的实用事实：安全模式 NBT 键是 `security_mode`（写 `security` 会被静默丢弃）；UUID 是 4 个有符号 32 位整数、高位在前；数据包函数解析早于 mod 方块注册，所以函数只碰原版方块，mod 方块 id 与 `data merge` 命令由命令方块承载。
+- **当前读数不可信，不是缺陷**：属主 Alice `expected=allow actual=deny`、闯入者 Bob `actual=deny`——两人都没开出界面。worker 判断是 fixture 的点击路径没触发服务端开界面，而不是安全判定；下一步是显式发 `ServerboundUseItemOnPacket`（带 sequence），并**先用 PUBLIC 模式确认合法点击能开界面**，再区分"拒绝"与"点击失败"。这个排查顺序是对的。**请不要在 PUBLIC 都开不出界面之前，把任何 deny 写成安全拒绝成功。**
+- 建议**给 W-120 设时间盒**：再 2 小时仍无"Alice 放行 / Bob 拒绝 / 受信后放行"三条读数，就带原文记录并转 W-79、W-121。
+
+**其它未决**
+1. **Iris 限制仍未写进 `INSTALL.md`/`CHANGELOG.md`**（`rg -i iris` 只命中 `M-release.md`），这是 K1、L1 都提过的，补一行即可。
+2. **W-79 整个批次都没动**（预留槽，无发现记"无"，一个提交的事）。
+3. 机器上 `~/.cache/mcdebug-port-skill-eval/` 的游戏进程不是本项目的，未动。
+
+**路线图**：授权范围内未做项 W-120（进行中）、W-79、收口 + P27 的 W-121、W-122、W-123、W-124，共 7，**不触发补充线**。无人值守顺序：W-120（2 小时时间盒）→ W-79 → W-121 → W-122 → W-123 → W-124 → 收口（最终 `release-check.sh` + 两次 `build.sh --clean` 四哈希比对 + 更新 `DECISIONS_PENDING.md`）。第三方模组只作测试运行期；客户端只用 mdb（W-120 的 Gradle fixture 是既有 paired smoke 的同类机制）；不强制推送。
+
+**本批次汇总**
+- 累计产品缺陷：**0**。门禁/验证抓出并已修复的真实问题 4 个（`+` 版本号解析崩溃、核心 JAR 不可复现、两个过期契约、WTHIT 旧接口崩溃）；被官方对照撤回或自我更正的怀疑/结论 5 次；本批次新增的"自己发现并修自己的 bug"：UUID int 数组转换、`security_mode` 键名。
+- W-99：**完成**（Tech Reborn 双向互通）。W-98：Sodium 兼容，Iris 在 dev 环境装不上（限制已记）。W-101/W-101b：完成，HEAD 无 `wip` 开头提交，树无损。W-120：进行中。W-79：未动。
+- 本地比 origin：**已分叉**（HEAD 896 个提交，合并基点 `e171c5c6`，origin 仍在 `cbf55f96`），推送必须 `--force-with-lease`。备份分支 `wip-squash-backup-20261101`、`wip-squash-backup2-20261101` 与对应 tag 都在。W-101b 已做完，**现在可以一次推完**，只等用户明确批准（D-07）。
