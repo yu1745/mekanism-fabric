@@ -693,3 +693,22 @@ JEI（W-74c）与 WTHIT（W-74d）已批准，见 `ROADMAP.md`「W-74 范围追�
 3. 第三方模组（Sodium、Iris、Modern Industrialization/Tech Reborn）**仅作测试运行期**，用 `-P*Dev` 开关或等价的本地运行期开关，**不进发布依赖**，发布 JAR 泄漏断言要同步加上它们的包名前缀；仓库用 `includeGroup` 限定。
 4. W-120 的专项授权**只限**这个 fixture 用途，不扩大为"可以随意新增测试"。
 5. 所有客户端会话仍只用 mdb；生成 argfile 用 `scripts/rebuild-client-argfile.sh`。
+
+## 即时检查 K1（2026-11-01 08:22，用户裁决解除阻塞之后）
+
+自 K0 起新提交 3 个：`915aa39c`（**W-101b 补完 wip squash**）、`528b8761`（W-98 Sodium/Iris 抽样）、`64a393a1`（W-98 结果写入发布说明）。工作区干净。范围：未强制推送（origin 仍在 `cbf55f96`）；第三方模组只放 `fabric/run/mods/`（被 `.gitignore` 忽略，不进发布依赖）；客户端由 mdb 启动，本项目的 mdb 会话均已 stopped。机器上另有两个游戏进程，属于 `~/.cache/mcdebug-port-skill-eval/` 的别的评测任务，**不是本项目的**。**审计陷阱：未触发。**
+
+**W-101b（我复核过）**：HEAD 现为 888 个提交，主题以 `wip`/`WIP` 开头的提交 **0 个**（含此前漏掉的 18 个 `wip(scope):`）；新备份分支 `wip-squash-backup2-20261101` 与 tag 已建（上一份 `wip-squash-backup-20261101` 也保留）；`git diff wip-squash-backup-20261101 HEAD` 除文档外为空，源码与资源逐字节无损。**D-07 仍待用户**：本地与 origin 已分叉，推送需 `--force-with-lease`，现在可以一次推完。
+
+**W-98 结果（诚实）**
+- Sodium 0.8.13：启动成功，富集仓/碎石机正常渲染，WTHIT 提示正常，GUI 可开，12 条 problems 均为警告级（authlib、meka_tool 缺贴图、goat_horn 音效），无 Sodium 相关渲染异常，有截图。
+- Iris 1.8.14-beta.1 + Complementary Reimagined：**dev 客户端启动失败**，`NullPointerException … MixinRemapper.unmapDesc`，Iris 的 `@ModifyArg` 在 Loom 命名映射下重映射不到描述符；重试两次一致失败。**与 Mekanism 无关**，是 Iris 在 dev 环境的已知限制；要验证需发布端（intermediary）客户端，AGENTS 禁止裸启动，故记为限制。
+- 软件渲染（llvmpipe）下**帧率无代表性**，只验证了渲染正确性。资源包加载未验证。
+- 这个结论写得干净，边界清楚；Iris 的限制应进 `INSTALL.md` 的已知限制，**不要用 Iris 在发布端的行为做任何声明**。
+
+**需要注意**
+1. **次序**：我 K0 列的顺序是 W-101b → W-120 → W-98 → W-99；worker 先做了 W-98，**W-120 还没动**。不是问题，但 W-120 是用户专项授权的安全拒绝验证（最有可能出真实缺陷的一项），请紧接着做。
+2. `fabric/run/mods/` 里现在有 Sodium、Jade、JEI、modmenu、wthit 等，**release-check/打包 smoke 不能读这个目录**（它们用的是 `dist/` 四个 JAR）；请在 W-117 最终收口前确认没有污染（打包服务端 `mods` 数仍是 50）。
+3. Iris 失败应给 `INSTALL.md`/`CHANGELOG.md` 补一条"Sodium 已验证兼容；Iris/光影未能验证（dev 环境限制）"。
+
+路线图：授权范围内未做的是 W-120、W-99、W-79，以及收口（最终 release-check + 两次 clean build 哈希比对 + 更新 `DECISIONS_PENDING.md`），共 4，**≤6 但这些都是用户已批准的真实项**，不另补；若这四项全部完成，才需要补充。累计产品缺陷仍为 0。
