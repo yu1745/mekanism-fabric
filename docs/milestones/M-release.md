@@ -209,3 +209,5 @@ EOF
 
 **本轮明确排除的误判**：把矿石放进粉碎机不动是正确行为（官方同无该配方）；JEI 逐类截图不可行是工具限制（改用运行时计数覆盖 30/30）；
 机器能量跨存档保留（45 FE 实测），先前 `energy=0` 是关机前耗尽而非存档丢失。
+
+**扩展档已实跑通过**：`scripts/release-check.sh --skip-build --extended` **10 步全绿**（静态 14s、打包服务端 57s、配对 85s、配置拒绝 117s、机器 smoke 66s、第三方能量 61s、崩溃守恒 105s、能量链 53s、存档往返 376s、配置边界 82s）。首次运行第 6 步以 **exit 126** 失败——`fabric-third-party-energy-smoke.sh` 缺可执行位（脚本由 python 写入时默认 644）；`chmod +x scripts/*.sh` 后复跑全绿。[记录](evidence/p8-release/w103-extended-release-check.json)

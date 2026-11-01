@@ -1,0 +1,56 @@
+{
+  "work_item": "release-check（扩展档）",
+  "date": "2026-11-01",
+  "result": "PASSED (10 steps)",
+  "mode": "--skip-build --extended（跳过 clean build，复用当前 dist）",
+  "steps": [
+    {
+      "name": "packaged static four-JAR gates",
+      "exit": 0,
+      "seconds": 14
+    },
+    {
+      "name": "packaged server (50 mods, 458 values)",
+      "exit": 0,
+      "seconds": 57
+    },
+    {
+      "name": "paired network (two clients, handshake)",
+      "exit": 0,
+      "seconds": 85
+    },
+    {
+      "name": "configuration rejection (three clients rejected)",
+      "exit": 0,
+      "seconds": 117
+    },
+    {
+      "name": "machine runtime smoke",
+      "exit": 0,
+      "seconds": 66
+    },
+    {
+      "name": "third-party energy interop (Tech Reborn)",
+      "exit": 0,
+      "seconds": 61
+    },
+    {
+      "name": "crash conservation (W-121)",
+      "exit": 0,
+      "seconds": 105
+    },
+    {
+      "name": "energy chain (W-122)",
+      "exit": 0,
+      "seconds": 53
+    },
+    {
+      "name": "save round-trip (W-123)",
+      "exit": 0,
+      "seconds": 376
+    }
+  ],
+  "total_seconds": 934,
+  "note": "第 6 步首次以 exit 126 失败：`scripts/fabric-third-party-energy-smoke.sh` **缺少可执行位**（python 写入默认 644）。已 `chmod +x scripts/*.sh` 修正，随后 10 步全绿。",
+  "logs": "/tmp/release-check"
+}
