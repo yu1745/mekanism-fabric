@@ -26,7 +26,7 @@ Snapshot regenerated on 2026-11-01 from the JSON evidence metadata (75 files). O
 | W-112 | done_for_sorting_and_tiers | [w112-factory-throughput.json](w112-factory-throughput.json) |
 | W-115 | resolved_setup_error_not_defect | [w115-chemical-ejection.json](w115-chemical-ejection.json) |
 | W-116 / W-104 turbine load | maximum_flow_verified_and_matches_official | [w116-turbine.json](w116-turbine.json) |
-| W-117（收口序列） | validation_complete_pending_final_committed_document_review | [w117-closeout.json](w117-closeout.json) |
+| W-117（收口序列） | authorized_goal_closed_with_final_GO | [w117-closeout.json](w117-closeout.json) |
 | W-117 前置 / W-103 复核 | Corrected machine rig30PASS; earlier final failure retained | [w117-smoke-stability.json](w117-smoke-stability.json) |
 | W-120 | owner_stranger_trusted_and_revocation_verified | [w120-security-denial.json](w120-security-denial.json) |
 | W-121 | transporter_single_chunk_crash_conservation_verified_on_both_loaders | [w121-crash-conservation.json](w121-crash-conservation.json) |

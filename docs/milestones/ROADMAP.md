@@ -2,7 +2,7 @@
 
 协调者编写，worker 按序执行。状态以 `docs/milestones/README.md` 为准；本文只定"做什么、什么顺序、怎样算完成、卡住怎么办"。不得借本文扩大 `AGENTS.md` 的边界。
 
-## 当前执行入口（2026-11-01，goal 恢复；起始基线 `482abbb9`，已核对 `20d05524`）
+## 当前执行入口（2026-11-01，goal 最终 GO；起始基线 `482abbb9`，已核对 `3a8699e1`）
 
 本节取代下方 K2/K3 与旧巡检中冲突的完成判断和执行顺序。协调者本轮只读核对提交、源码与既有证据，没有重新运行游戏门禁；旧通过记录仅覆盖当时实际场景。
 
@@ -12,7 +12,7 @@
 4. **W-116 已提交，负载范围通过**（`132b48d0`）：既有 Generators 源集接入 mdb `runClient`，355 值 ack；真实玩家 builder/GUI 成型，满蒸汽且空能量下单 tick 消耗 11,040,000 mB、生成 110,400,000 J，与最大流量/产率及官方同状态完全一致。Fabric creative tank 经阀门持续供汽 200 tick 后末产率仍为最大；官方持续供汽未跑，不把瞬时/末值读数扩称全程逐 tick 恒定。457 项测试真正执行且 0 失败，API 检查通过；临时世界改动已恢复，收尾确认 owned session 最终停止和进程无残留。
 5. **paired/rejection 已接入 mdb owned，直接门禁通过**（`f8e37d33`）：沿既有 preset 配置 `runClient`；两个全新客户端的正常握手和三种拒绝均通过，原精确原因/顺序/次数/无 PLAY 等断言未放宽。五个 owned session 已记录 stopped、JVM absent。旧未验收的 securityDenial 直启脚本以非零退出退役，W-120 使用已验证的真实 GUI probe。
 6. **W-124 配置闭包已提交并通过限定范围实机对照**（`3512ce90`、`bff6045b`）：所有实际 owner 接文件监听/executor/撤销；NONE 热生效，WORLD/GAME 保留 effective 与 pending 分离；save/登录 snapshot 保留 pending。GeneralConfig 沿既有 publication seam 接真实消费者，独立 API 回退不变，无新 epoch 或 PLAY 协议。SERVER 默认全局配置，已有逐文件世界 override 优先，目标缺失可从 defaultconfigs 初始化。worldgen 独立 manager 漏接 watch 已修。官方/Fabric 同 rig 均 44→179→366 J/t，模板 bio777、生效世界覆盖及全局 solar50 保留均通过；mdb 五项覆盖实际策略消费者、WORLD/GAME pending/save 和 worldgen NONE，3 份配置逐字节恢复，owned session stopped/PID absent。既有 584 项构建检查通过，没有新增测试类。远程 pending WORLD 重连仅有既有 snapshot 验证及集成会话读数，不扩称真实双客户端矩阵已跑。
-7. **执行与验证已收口，待最终文档提交简审**：已核对实际日志：`4070cd5e` 的前1–7项通过；第8项中断后，`20d05524` 修正既有探针前置并focused通过，随后同四JAR续跑9/10/11分别39/52/46秒通过。应表述为“各项经修复后分段完成”，不能写成一次连续11步全绿。两次clean均584/0/0，四JAR哈希逐一相同；metadata分别4070与20d，两提交仅W-121脚本和两份文档变化，生产/资源/构建输入相同，不能写成同一Git commit两次构建。主实现者报告23条owned记录stopped且PID absent、自建symlink与临时世界已清理、日志归档、参考服务端stopped；其他pi的旧Xvfb未触碰。最后提交证据/状态/索引并只读简审即可，无新增测试、场景、实现或前七步重跑。
+7. **最终 GO：授权范围的实现、验证与已提交文档审查完成**：已核对实际日志：`4070cd5e` 的前1–7项通过；第8项中断后，`20d05524` 修正既有探针前置并focused通过，随后同四JAR续跑9/10/11分别39/52/46秒通过。应表述为“各项经修复后分段完成”，不能写成一次连续11步全绿。两次clean均584/0/0，四JAR哈希逐一相同；metadata分别4070与20d，两提交仅W-121脚本和两份文档变化，生产/资源/构建输入相同，不能写成同一Git commit两次构建。主实现者报告23条owned记录stopped且PID absent、自建symlink与临时世界已清理、日志归档、参考服务端stopped；其他pi的旧Xvfb未触碰。`3a8699e1` 的真实文档 diff 已简审，最终证据、状态和索引保留上述分段门禁、不同 metadata 与未测范围，未发现确定遗漏。仅由主实现者将刻意保留的“待最终文档审查”状态改为完成并统一提交本次结论；无新增测试、场景、实现或前七步重跑。
 
 W-124 的发现、真实官方调用链及两次审查见 COORDINATOR_NOTES M5–M8；先前“缺口待修/实机待验”状态已由本入口取代。frozen-sprint 初始差异仍未归因；语音原格式/双向会话仍未验收。
 
