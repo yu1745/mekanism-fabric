@@ -11,6 +11,7 @@ files' own `work_item` and `status` fields, so it never drifts from the files th
 | packaged-smoke-review-input | - | [packaged-smoke-review-input.json](packaged-smoke-review-input.json) |
 | pre-w40-validation | - | [pre-w40-validation.json](pre-w40-validation.json) |
 | W-100 | - | [w100-decisions.json](w100-decisions.json) |
+| W-101 / W-101b（已执行） | squashed_tree_identical_not_pushed | [w101-squash-analysis.json](w101-squash-analysis.json) |
 | W-102 | done_via_runtime_proof | [w102-jei-categories.json](w102-jei-categories.json) |
 | release-check（扩展档） | PASSED (10 steps) | [w103-extended-release-check.json](w103-extended-release-check.json) |
 | release-check | PASSED (6 steps) | [w103-final-release-check.json](w103-final-release-check.json) |
@@ -80,4 +81,4 @@ files' own `work_item` and `status` fields, so it never drifts from the files th
 | W-98 | - | [w98-renderer-compat.json](w98-renderer-compat.json) |
 | W-99 | - | [w99-third-party-energy.json](w99-third-party-energy.json) |
 
-74 files.
+75 files.
