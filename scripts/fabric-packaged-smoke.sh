@@ -462,6 +462,15 @@ for required_entry in \
   fi
 done
 
+#Third-party mods are loaded only as test-runtime inputs (W-98/W-99). Their classes must never ride along in a release
+#artifact, so the four jars are checked for the packages those mods ship.
+for jar in "${MOD_JARS[@]}"; do
+  if jar tf "$jar" | grep -Eq '^(sodium|net/caffeinemc|iris|net/irisshaders|techreborn|reborncore|teamreborn)/'; then
+    echo "fabric-packaged-smoke: $(basename "$jar") contains a test-only third-party package" >&2
+    exit 1
+  fi
+done
+
 if [[ "$STATIC_ONLY" == 1 ]]; then
   RESULT=0
   printf 'fabric-packaged-smoke: PASSED (static remapped-JAR gates only; no server started)\n'

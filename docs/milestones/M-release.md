@@ -24,6 +24,8 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 
 ## 验收证据
 
+W-99（第三方能量互通）：**双向都通，用真实的 Tech Reborn 验证**。选 Tech Reborn 5.11.19 + Reborn Core 5.11.19（Modrinth 1.21.1 Fabric；Modern Industrialization 在 1.21.1 无可用版本）。两个方向：Mekanism 能量立方经通用线缆给 Tech Reborn 研磨机充到 **1000 L**；Tech Reborn 固体燃料发电机（喂煤）经通用线缆把 Mekanism 富集熔炉充到 **6925 FE**。脚本 `scripts/fabric-third-party-energy-smoke.sh`，连跑 3 次一致。第三方模组只进一次性服务端，`fabric-packaged-smoke.sh` 已加断言：发布 JAR 不含 `sodium/iris/techreborn/reborncore/teamreborn` 等包。[记录](evidence/p8-release/w99-third-party-energy.json)
+
 W-98（渲染器兼容抽样）：**Sodium 兼容、Iris 在 dev 环境装不上**。Sodium 0.8.13（Modrinth, 1.21.1 Fabric）装入开发客户端后 mdb 正常就绪，富集仓/碎石机渲染正确、WTHIT 提示正常、GUI 可打开（截图 `evidence/p8-release/w98-sodium-scene.png`）；`gui problems` 12 条均为警告级、无渲染异常。**Iris** 1.8.14-beta.1 + Sodium + ComplementaryReimagined 光影包：客户端启动失败（两次一致），原文 `InvalidMixinException: Unexpected NullPointerException parsing @ModifyArg annotation on iris$writeR...` → `MixinRemapper.unmapDesc` 空指针——Iris 的 mixin 按生产映射编写，dev 环境命名映射下重映射失败，与 Mekanism 无关。环境限制：客户端是 Mesa llvmpipe 软件渲染，**帧率无代表性**。第三方模组只在 `fabric/run/mods/`，不进发布依赖。[记录](evidence/p8-release/w98-renderer-compat.json)
 
 **门禁稳定性复核**（协调者 J1 第 4 条）：机器 smoke 连跑 3 次全部 exit 0、均 31 PASS，耗时 65/65/70 秒（提速前 113 秒），无 flaky。证据目录同时从 9.3 MB 压到 6.0 MB（256 色量化，不下采样，文字仍可读）。[记录](evidence/p8-release/w117-smoke-stability.json)

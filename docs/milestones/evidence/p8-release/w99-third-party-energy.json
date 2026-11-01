@@ -1,0 +1,31 @@
+{
+  "work_item": "W-99",
+  "date": "2026-11-01",
+  "goal": "用真实第三方科技模组验证能量互通的两个方向，而不是只在自身 Team Reborn adapter 内自证。",
+  "chosen_mod": {
+    "mod": "Tech Reborn 5.11.19 + Reborn Core 5.11.19（Modrinth，1.21.1 Fabric）",
+    "why": "Tech Reborn 的能量就是 Team Reborn Energy API，正是本移植 adapter 面向的接口；Modern Industrialization 在 1.21.1 Fabric 无可用版本（已查 Modrinth，返回空）。",
+    "isolation": "只下载到 smoke 缓存并放进一次性服务端的 mods/，**不进发布依赖**；`scripts/fabric-packaged-smoke.sh` 新增断言：四份发布 JAR 不得包含 `sodium/iris/techreborn/reborncore/teamreborn/net.caffeinemc/net.irisshaders` 包。"
+  },
+  "rig": "scripts/fabric-third-party-energy-smoke.sh（一次性 Fabric 专用服务端 + 发布 JAR + Tech Reborn + Reborn Core + Fabric API）",
+  "results": {
+    "mekanism_to_third_party": {
+      "layout": "能量立方(0,100,0，energy 侧 OUTPUT) → 通用线缆(1,100,0，pull 西 / push 东) → techreborn:grinder(2,100,0)",
+      "reading": "grinder `PowerAcceptor.energy` = **1000 L**（首次转储为 0，200 tick 后为 1000）",
+      "verdict": "Mekanism 能量成功进入 Team Reborn 存储"
+    },
+    "third_party_to_mekanism": {
+      "layout": "techreborn:solid_fuel_generator(20,100,0，喂 8 煤) → 通用线缆(21,100,0) → 富集熔炉(22,100,0，energy 侧 INPUT)",
+      "reading": "熔炉 `energy_containers[0].stored` = **6925 FE**；发电机自身 `PowerAcceptor.energy` 被抽到 0",
+      "verdict": "第三方发电成功驱动 Mekanism 机器"
+    }
+  },
+  "stability": "连跑 2 次均 3/3 PASS，随后用正式脚本再跑 1 次仍 PASS（共 3 次一致）",
+  "unit_semantics": "读数看的是两侧各自的原生单位（Mekanism FE / Team Reborn 的 L），未做换算断言；两侧能量都在同一 tick 循环内增长，说明 adapter 的双向转换都在工作。",
+  "not_verified": [
+    "能量单位换算比例（FE ↔ Team Reborn L）的精确等价性未单独断言",
+    "跨区块/跨维度的第三方能量网络未测",
+    "只在服务端验证，未做第三方模组的客户端 UI 交叉验证"
+  ],
+  "reproduce": "`bash scripts/fabric-third-party-energy-smoke.sh`"
+}
