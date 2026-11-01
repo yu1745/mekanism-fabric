@@ -24,6 +24,8 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 
 ## 验收证据
 
+**门禁稳定性复核**（协调者 J1 第 4 条）：机器 smoke 连跑 3 次全部 exit 0、均 31 PASS，耗时 65/65/70 秒（提速前 113 秒），无 flaky。证据目录同时从 9.3 MB 压到 6.0 MB（256 色量化，不下采样，文字仍可读）。[记录](evidence/p8-release/w117-smoke-stability.json)
+
 W-104 涡轮（W-116）：**受阻并已定界**。工业涡轮属于 **MekanismGenerators** 模块，dev 客户端只加载核心 mod —— `world fill-box ... mekanismgenerators:turbine_casing` 直接报 `block not registered`；且多方块成型需玩家交互（`BlockBasicMultiblock.useItemOn` → `onActivate(player,…)`），无玩家服务端触发不了。按 W-116 约定带原文结束。**已把 `TurbineValidator` 的完整结构规则提取留存**（尺寸/中心复合体/转子连续/叶片>0/线圈自复合体上方蔓延/分散器铺满平面/冷凝器在复合体之上/通风口不低于复合体），其中叶片数**可通过 NBT 注入**（`SerializationConstants.BLADES` 会被 `loadAdditional` 读取）。[记录](evidence/p8-release/w116-turbine.json)
 
 **门禁提速**：机器 smoke 的长壁钟等待改为 `/tick sprint`（900/200/300 tick），耗时 **113 s → 65 s**，断言仍 **29 PASS / 0 FAIL**（响应协调者 H3「固定 sleep 应改加速」）。[记录](evidence/p8-release/w104-chunk-unload.json)
