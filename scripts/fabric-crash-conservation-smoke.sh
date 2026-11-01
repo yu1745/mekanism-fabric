@@ -42,7 +42,7 @@ cleanup() {
     local pid pgid
     pid=$(cat "$SERVER_DIR/server.pid" 2>/dev/null || true)
     if [[ -n "${pid:-}" ]]; then
-      pgid=$(ps -o pgid= -p "$pid" 2>/dev/null | tr -d ' ')
+      pgid=$(ps -o pgid= -p "$pid" 2>/dev/null | tr -d ' ' || true)
       [[ -n "$pgid" ]] && kill -KILL -- "-$pgid" 2>/dev/null || true
     fi
     if [[ "$KEEP_SERVER" == 1 ]]; then
