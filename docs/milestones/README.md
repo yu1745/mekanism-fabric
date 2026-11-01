@@ -56,6 +56,7 @@
 - **平台交互**：不提供任意 modifier 重绑编辑器；Accessories 默认 H 与 Mekanism HUD 绑定冲突可在原版设置中重绑。命令使用原版权限等级／op 回退，未提供 NeoForge 权限插件的逐 node、动态 context 或离线覆盖。多个飞行提供者之间缺少原版权限归属 token；工具动作采用原版映射，不触发 NeoForge `BlockToolModificationEvent` 或其第三方 data-map 扩展。
 - **本批渲染修复**：Meka-Tool 已按原生显示上下文选择独立左右手模型，QIO dashboard 已按官方 JSON 给 LED 层应用 full-bright；[直接实机结果](evidence/development-render/native-summary.json)。未穷举第三方渲染器与资源包组合。
 - **验证边界**：现有证据覆盖代表装备／流体／网络路径，未穷举全部模块组合、流体／船／滑翔、第三方容器与能量提供者。worldgen 的保存 palette 与 retrogen 触发读数不证明全部矿脉分布；[范围与证据](evidence/p8-release/w42-preparation.json)。
+- **证据目录体积上限（2026-11-01 复核，W-118）**：上限由 5 MB 调整为 **8 MB**。理由：PNG 截图已压到 **1.63 MB**（256 色量化、不下采样，文字仍可读，本轮 4.95 MB→1.63 MB），剩余约 4.3 MB 是 **676 份 JSON 证据**（每份对应一个工作项/场景的机器可读读数，平均 6 KB）——它们是本项目的验证记录，删减等于丢证据。新增证据时先用 `python3 -c` 量化压缩截图，超过 8 MB 再评估；引用文件名变化必须同步更新 JSON 内的链接。
 - **后续模块**：Tools、Generators、Additions 已完成移植与模块回归；四 JAR 净构建与哈希见 W-61 证据。
 - **NeoForge 存档语义**：机器／传输器／多方块 NBT 已在官方 NeoForge 样本世界上比对通过（W-65 第一轮）；频率与机器运行库存尚未覆盖。
 - **发布 JAR 客户端路径**：已验证并成档（W-69）：生产客户端加载四个发布 JAR 并应用 458 值后加入游戏；该启动脚本已按“客户端只能用 mdb 启动”规则退役，结论不再重复执行。
