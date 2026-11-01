@@ -3,7 +3,11 @@
 # server, paired network, configuration rejection, machine runtime). It adds no checks of its own: every step is an
 # existing script. The release-JAR client path is NOT re-run here - that has one-off evidence only (W-69).
 #
-# Usage: scripts/release-check.sh [--skip-build]
+# Usage: scripts/release-check.sh [--skip-build] [--extended]
+#
+# --extended adds the P27 scenario gates (crash conservation, energy chain, save round-trip, config boundary). They are
+# real scenarios rather than build gates and each one starts its own server twice, so the default run stays the fast
+# release gate and the extended one is what a milestone closeout uses.
 # Exit code: 0 only when every step passed; on the first failure it prints the step, its log path and the first
 # error line, then stops.
 set -uo pipefail
@@ -11,7 +15,14 @@ set -uo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 LOG_DIR=${RELEASE_CHECK_LOG_DIR:-/tmp/release-check}
 SKIP_BUILD=0
-[[ ${1:-} == '--skip-build' ]] && SKIP_BUILD=1
+EXTENDED=0
+for argument in "$@"; do
+  case "$argument" in
+    --skip-build) SKIP_BUILD=1 ;;
+    --extended) EXTENDED=1 ;;
+    *) printf 'release-check: unknown argument %s\n' "$argument" >&2; exit 2 ;;
+  esac
+done
 mkdir -p "$LOG_DIR"
 
 fail() {
@@ -45,5 +56,11 @@ run_step 'paired network (two clients, handshake)' "$ROOT/scripts/fabric-paired-
 run_step 'configuration rejection (three clients rejected)' "$ROOT/scripts/fabric-configuration-rejection-smoke.sh"
 run_step 'machine runtime smoke' "$ROOT/scripts/fabric-machine-smoke.sh"
 run_step 'third-party energy interop (Tech Reborn)' "$ROOT/scripts/fabric-third-party-energy-smoke.sh"
+if (( EXTENDED )); then
+  run_step 'crash conservation (W-121)' "$ROOT/scripts/fabric-crash-conservation-smoke.sh"
+  run_step 'energy chain (W-122)' "$ROOT/scripts/fabric-energy-chain-smoke.sh"
+  run_step 'save round-trip (W-123)' "$ROOT/scripts/fabric-save-roundtrip-smoke.sh"
+  run_step 'config boundary (W-124)' "$ROOT/scripts/fabric-config-boundary-smoke.sh"
+fi
 
 printf 'release-check: PASSED (%d steps, logs in %s)\n' "$STEP" "$LOG_DIR"

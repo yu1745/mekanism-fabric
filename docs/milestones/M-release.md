@@ -24,6 +24,8 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 
 ## 验收证据
 
+**门禁分成两档**：`scripts/release-check.sh`（7 步，快速发布门禁）与 `scripts/release-check.sh --extended`（再加 P27 的四个场景：崩溃守恒、能量链、存档往返、配置边界）。后者每项都要起一到两次专用服务端，属于里程碑收口才跑的档位。全部证据索引见 [`evidence/p8-release/INDEX.md`](evidence/p8-release/INDEX.md)（由证据文件自身字段生成，72 条）。
+
 W-124（配置生效边界）：**改配置需要重启，不支持热重载**。用太阳能发电速率做可观测值（`[solar_generator] solarGeneration`）：默认 **≈42–49 FE/tick**；把文件改成 200 并**重启**后 **≈189–224 FE/tick**（生效）；运行中把文件改成 400、不重启再测 **≈207–246 FE/tick**（仍停在 200 档，**没有跳到 400**）。与官方一致——Mekanism 服务端在启动时加载配置、运行期不重读。脚本 `scripts/fabric-config-boundary-smoke.sh`，测量噪声约 10%，故用档位距离判定。[记录](evidence/p8-release/w124-config-boundary.json)
 
 W-123（存档往返第二轮）：**配置与内容都能活过重启**。脚本 `scripts/fabric-save-roundtrip-smoke.sh` 两阶段：布置四台机器（注入室 HCl 1500 + 4 晶体、化学储罐 HCl 2000、分离器、精英冶炼工厂 `sorting:1b` + 8 脏粉）→ `save-all flush` → 干净 `stop` → 同世界重启 → 再转储。逐字段比对：`component_config` 与 `sorting` **逐字一致**，`items`/`chemical_tanks` 的 **id 集合一致**；数量变化（注入室喝 HCl、工厂吃脏粉）属正常消耗，故不比数量。连续 2 次 PASS。[记录](evidence/p8-release/w123-save-roundtrip.json)
