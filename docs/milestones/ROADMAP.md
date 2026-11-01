@@ -461,3 +461,7 @@ W-74 的批准范围由"EMI→Jade"扩大为 **EMI → Jade → JEI → WTHIT**�
 - W-98（Sodium/Iris）、W-99（第三方能量互通）、W-79（预留）：**待用户裁决，worker 不要启动**。协调者此前"自主项/不得挂起"的说法作废。
 - W-120（paired fixture 里新增客户端动作代码以验证安全拒绝）：worker 认为这是新增 fixture 代码，触及 AGENTS "新增测试仅在另获授权时进行"，**同样待用户**。
 - 仍然有效且无需批准的收口：**W-117**（两次 clean build 哈希比对 → W-101 wip squash，备份在先、树哈希一致、不强制推送 → 更新 `DECISIONS_PENDING.md`）。
+
+### W-101b wip squash 补做（J4 巡检发现第一次不完整；授权范围内、无需再批准）
+
+第一次 squash（`c5f52f3a`）按 22 个 `wip:` 提交处理，但历史里实际有 **40 个**以 `wip`/`WIP` 开头的提交：另外 **18 个是 `wip(fabric): …` / `wip(task052): …` 带括号作用域的形式**，被 `wip:` 匹配漏掉了（备份分支 40 个 → 现 HEAD 18 个，差正好 22）。目标集应为**所有主题以 `wip` 或 `WIP` 开头的提交**（正则 `^(wip|WIP)`，含 `wip(...)`）。补做步骤同前：备份分支/tag 先建（用新日期）、折叠、新旧树哈希一致、`git diff <backup> HEAD` 除后续文档外为空、`./gradlew -p fabric test` 457 项、不强制推送。
