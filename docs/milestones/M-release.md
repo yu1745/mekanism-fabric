@@ -24,6 +24,8 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 
 ## 验收证据
 
+W-122（发电→储能→用电）：**储能→线缆→机器通了，发电机一跳与感应矩阵均受限**。脚本 `scripts/fabric-energy-chain-smoke.sh`：能量立方（eject + 能量侧 OUTPUT，预充 100000）→ 通用线缆（西拉东推）→ 富集熔炉（能量侧 INPUT），熔炉实测 `stored = 20000`（充满上限）。**太阳能发电机确实在发电**（`stored: 13397`、`active_state: 1b`），但它的方块数据里**没有 `component_config`**，命令 rig 写不进能量侧配置，因此「发电机→线缆→机器」这一跳无法在无头 rig 里判定。**感应矩阵**：3×3×3 完整外壳 + 内部电芯逐块放置、等 60 tick 后**没有成型**，原文原因是成型入口 `IMultiblockBase.onActivate(Player, …)` 需玩家交互（与 W-116 涡轮同一堵墙）。[记录](evidence/p8-release/w122-energy-chain.json)
+
 W-121（崩溃下物品守恒）：**运输器搬运在硬崩溃下不精确守恒，但这是引擎行为不是移植缺陷**。脚本 `scripts/fabric-crash-conservation-smoke.sh`：1728 个铁矿石从箱子搬到另一箱子，`save-all flush` 后搬 20 秒、对进程组 `kill -9`、同世界重启再求和。三次实测总量 1762 / 1763 / 1761（应为 1728），**多出 33–35 个**——重复而非丢失。原因有二：官方 `TileEntityLogisticalTransporterBase` **没有** `saveAdditional`/`loadAdditional`（`javap` 核对官方 JAR，方法数 0），在途物品不持久化；且区块各自保存，源区块可能停留在物品离开前、目标区块已包含物品到达后。本移植的运输器同样不持久化在途缓冲，与官方一致。**QIO 变体未测**：QIO 网络需在 GUI 里创建频率，无头命令做不到。[记录](evidence/p8-release/w121-crash-conservation.json)
 
 W-99（第三方能量互通）：**双向都通，用真实的 Tech Reborn 验证**。选 Tech Reborn 5.11.19 + Reborn Core 5.11.19（Modrinth 1.21.1 Fabric；Modern Industrialization 在 1.21.1 无可用版本）。两个方向：Mekanism 能量立方经通用线缆给 Tech Reborn 研磨机充到 **1000 L**；Tech Reborn 固体燃料发电机（喂煤）经通用线缆把 Mekanism 富集熔炉充到 **6925 FE**。脚本 `scripts/fabric-third-party-energy-smoke.sh`，连跑 3 次一致。第三方模组只进一次性服务端，`fabric-packaged-smoke.sh` 已加断言：发布 JAR 不含 `sodium/iris/techreborn/reborncore/teamreborn` 等包。[记录](evidence/p8-release/w99-third-party-energy.json)
