@@ -219,7 +219,8 @@
         2,
         23
       ],
-      "result": "FAIL resumed movement; total preserved"
+      "result": "FAIL resumed movement; total preserved",
+      "log_archive": "/tmp/mekanism-goal-final-release2/diagnostics/mekanism-conservation-smoke.2f17Jf-"
     },
     "minimum_prerequisite_fix": "Use vanilla execute-if-loaded to require ENTITY_TICKING and areEntitiesLoaded before initial rig construction and resumed measured sprint. At most20 activation rounds of20 accelerated ticks; no physical sleeps, no altered counts or movement assertion. Preserve failed worlds/logs and print failed initial count.",
     "vanilla_owner": "upstream/fabric-minecraft/net/minecraft/server/commands/ExecuteCommand.java:470-473",
@@ -256,8 +257,10 @@
       "equivalent_game_seconds": 30.1,
       "timing_note": "Rates rounded by vanilla; no activation rounds needed in this run. Wall includes bootstrap/IO/restart outside estimated sprint time.",
       "server_log_wall_seconds": 35,
-      "process_cleanup": "Both JVM groups absent after deliberate SIGKILL and normal stop."
+      "process_cleanup": "Both JVM groups absent after deliberate SIGKILL and normal stop.",
+      "log_archive": "/tmp/mekanism-goal-final-release2/diagnostics/mekanism-conservation-smoke.Q7X54R-"
     },
-    "scope": "Same existing single-chunk transporter scenario, no new tests, no production algorithm or persistence changes; QIO/cross-chunk remain unrun."
+    "scope": "Same existing single-chunk transporter scenario, no new tests, no production algorithm or persistence changes; QIO/cross-chunk remain unrun.",
+    "cleanup": "Temporary worlds removed after process checks; before-crash/after-crash raw logs retained in the archive."
   }
 }

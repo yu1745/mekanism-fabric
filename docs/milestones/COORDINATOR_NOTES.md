@@ -907,3 +907,38 @@ W-123 当前仅四台代表机器、配置/sorting 与内容 id 集合；W-124 �
 最小方向是保留随机消耗算法和最终 dust 断言，修正这个既有链的容量内种子/持续化学输入或冻结阶段合法补气；构建、补能与最终取样需明确 tick 边界，以既有 Sprint 完成标记替代固定 sleep 推断。诊断保留四级机器及中间三运输器的 energy/progress/used_so_far/chemical/items 数据和失败日志；不新增测试类或玩法矩阵，不改生产代码以适应非法种子。由唯一实现者捕获和串行修正后继续既有最终验收；协调者未启动进程、未改脚本实现、未提交。
 
 **恢复检查点**：已再次核实 HEAD 仍为 `bff6045b`，工作区仅本文件与 ROADMAP 两份方向记录未提交，没有新的实现或验收结果。下一步确认采用既有链的合法持续化学供给、Sprint 完成标记/冻结取样及失败日志保留；随机算法、原四级真实流转和末端 dust 断言保持。该修复与必要进程回收属于原 gate 执行闭包；完成后回到既有最终门禁，不派生新场景。本次未运行游戏/测试、未改代码、未提交。
+
+## 方向核对 M10（2026-11-01，fixture 修复提交 `8867f499`）
+
+只读审查真实 diff 及保留 raw 日志：machine 已用容量内210种子和真实外储/tube 持续供气，原随机消耗算法与末端 dust 断言不变；未给后三级播种物品。实际末端 dust1、净化机气体210、外储氧3825，无旧超量 shrink 异常；FIFO、Sprint 次数标记、冻结取样、失败目录保留和进程组检查均在原执行闭包内。接受该次30项通过，首次 gate 失败因 raw 已丢失仍不追认唯一根因。sprint 派生墙钟估值的段序不可靠，主实现者已计划改用实际日志时间跨度，不将该估值作性能结论。
+
+W-123 确实修复了错误 separator ID、过量 HCl、错误化学 config1、等待错误日志及任一轮缺转储仍跳过的问题，但**比较器尚有确定首字段漏验**：`field()` 的 `(?:^|[,{] )` 要求开括号后有空格，实际根 SNBT 为 `{chemical_tanks: ...}`。保留的 `/tmp/mekanism-save-roundtrip.MQVZUr/phase-one.log` 与 phase-two 的 `(60,100,0)` 储罐都恰好如此，旧匹配两次均返回 None；所以当前 PASS 未实际比较此罐的 chemical ID。已反馈唯一实现者修正根首字段入口，保留 balanced compound/list 提取，并直接复用两份 raw 核对，不新增场景或测试类。未发现生产源码变化；最终 extended 与第二 clean 四哈希仍待此最小修正后收口。
+
+
+## 方向核对 M11（2026-11-01，`4070cd5e` 与 W-121 当前失败）
+
+只读审查 `4070cd5e` 真实 diff：根首字段匹配已改为允许开括号后零空格，能读取实际储罐的 chemical_tanks，balanced 提取未放宽；主实现者复用 MQVZUr 两份日志比较为 ok。M10 的首字段漏验已解决。machine 证据删除不可靠的段序派生 wall 估值，改记1秒日志精度的实际启动到退出跨度，范围说明清楚；无生产源码变化。
+
+**最新 gate 状态**：主实现者报告当前 clean584、static、packaged、paired、rejection、machine30、TechReborn 第1–7步均通过，第一次 clean metadata4070 已保存。第8步 W-121 首次201tick snapshot 失败 `no items reached destination`；旧脚本 failure cleanup 删除 raw，且 `before=$(count_snapshot)` 失败退出吞掉 stdout 计数，故不能还原该次链路状态。同 JAR 旧通过不能排除这次故障。当前只补失败留证并按原场景复现，尚不宣布最终 gate 通过。
+
+**已提交探针的最小诊断方向**：Done 后立即 freeze→forceload→布置/seed→initial201，缺少独立区块激活确认；Done、forceload 返回和可读 NBT 均不单独证明此段 BE 已进入实际 tick。真实 owner 为 `TileEntityTransmitter.onAdded/首次tick → onWorldJoin → registerOrphanTransmitter`，`TransmitterNetworkRegistry.onTick` 先分配/commit，`LogisticalTransporterBase.onUpdateServer` 在 network 非空时才 pull；runsNormally gate 位于 registry 分配之后。保留首次失败 source/transit/destination 与 transporter connection/acceptors/items 原文，先区分未tick/未分配与已有pull但无路由，再决定原脚本的最小前置修正。不能先把本次归因于历史 frozen-sprint 观察，也不能改宽严格总量、目标到货或恢复后继续搬运断言。
+
+产物与相关实现未变时，无依据重跑已完成前七步；原 gate 的剩余8–11项同四JAR续跑，记录失败、诊断和续跑的实际边界。第二 clean 留在故障处理后完成；若后续真改生产代码再按实际影响重定必要门禁。协调者未启动游戏/测试，未读未提交脚本实现，仅维护两份方向文档，不提交。
+
+
+## 方向核对 M12（2026-11-01，`20d05524` 简审；继续既有收口）
+
+只读简审真实 diff，**未发现生产缺陷或断言放宽**。vanilla `ExecuteCommand.isChunkLoaded` 明确要求 `ENTITY_TICKING` 且 `areEntitiesLoaded`，新增前置检查据此确认初始布置和重启后测量的实际条件；失败最多20轮各推进20 tick，原源/在途/目标严格总量、目标收到物品、恢复后继续搬运断言保留。失败目录保留和初次计数打印修复了旧探针的留证缺口，没有改生产网络/tick/存档代码。
+
+保留复现2f17Jf曾出现初始搬运但重启后201tick不动、总量均1728；Q7X54R在明确ready状态下为 before/reloaded1709+2+17、resumed1690+2+36，focused通过。**新运行前置首检即ready，没有实际等待激活轮次，因此不能据此把前次停滞唯一归因于未就绪**，更不能补造已删除raw的初次故障解释。历史 frozen-sprint差异同样保留未归因。
+
+当前前1–7步已通过；第8项修正focused通过，同四JAR继续9–11，主实现者报告第9能量链39s通过、第10运行。`git diff --name-only 4070cd5e 20d05524` 仅 W-121脚本、M-release、W-121证据JSON，无编译、资源或打包输入改动。无需重复无变化前七步；剩余门禁通过后做第二clean，分别记录两次metadata源commit与生产输入等价、四哈希实际结果和清理，当前尚不宣布最终验收全部通过。协调者未运行游戏/测试，未改脚本、未提交，只维护两份方向文档。
+
+
+## 方向核对 M13（2026-11-01，最终执行与验证收口）
+
+**各项实际日志已核对通过，采用分段验收口径**：`/tmp/mekanism-goal-final-release2.log` 的1–7项退出0；第8项首次失败保留为失败记录，修正后的 `/tmp/mekanism-goal-conservation-ready.log` 严格总量1728、保存/重载1709+2+17、续搬1690+2+36通过；随后 final-release2 下09-energy_chain、10-save_roundtrip、11-config_boundary 均显示 PASSED（39/52/46秒），存档比较ok，配置仍44→179→366 J/t。不是一次连续11步全绿，也不凭后续通过唯一解释旧machine/运输器失败；既有未测范围继续保留。
+
+已读取 `/tmp/mekanism-goal-final2-reproducibility.json`：两次clean记录均584/0/0，四JAR SHA-256完全相同；核心`0d6a47a7…`、Additions`e2019d55…`、Generators`cae34642…`、Tools`b74c23a5…`。两次metadata source_commit分别4070cd5e与20d05524，已核对两提交差异仅W-121脚本、M-release与W-121证据JSON，无生产源码/资源/构建输入变化。因此接受“相同生产/构建输入的两次clean四产物byte-identical”，不声称同一Git commit两次构建。完整哈希与元数据由主实现者落入最终证据。
+
+清理由主实现者报告：23条owned记录stopped且对应PID absent，自建symlink删除、已知临时世界清理、原日志归档、参考服务端stopped；其他pi拥有的旧Xvfb不操作。协调者本轮只读核对日志/产物记录并更新两份方向文档，未启动游戏或执行测试、未提交。**GO完成最终证据/状态/索引文档提交后简审**；无剩余需新增的实现、测试或场景，不再重复无变化的前七步。最终已提交文档审查待主实现者提供commit。

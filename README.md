@@ -4,7 +4,8 @@
 
 **This branch is the Fabric port of Mekanism**, converted from the official NeoForge `v1.21.1-10.7.19.85` source.
 The four release JARs build, the server path and the save format are exercised by the gates below, and the mod is
-playable, but the port is still early: recipe viewers, looking-at mods and some long-run behaviour are not covered.
+playable, with bounded verification: EMI/JEI and Jade/WTHIT integrations are exercised, while large networks,
+shader compatibility and several long-run or gameplay combinations remain unverified.
 
 | I want to… | Read |
 |---|---|
@@ -19,7 +20,7 @@ playable, but the port is still early: recipe viewers, looking-at mods and some 
 ```bash
 ./build.sh --clean          # four release JARs into dist/ + build-info.json
 ./gradlew -p fabric test    # 457 JVM tests
-scripts/release-check.sh    # full server-side release gates (clean build, packaged, paired, rejection, machine smoke)
+scripts/release-check.sh    # server-side release gates (clean build, packaged, paired, rejection, machine, Tech Reborn)
 ```
 
 All verification evidence lives in [`docs/milestones/evidence/`](docs/milestones/evidence/); the per-work-item index is

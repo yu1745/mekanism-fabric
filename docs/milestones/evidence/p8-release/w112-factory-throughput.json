@@ -14,8 +14,8 @@
     "why_still_blocked": "开启 sorting 需要走 GUI 的排序开关；我们的 `be set-nbt {\"sorting\":1}` 对激活中的方块实体不生效（该字段在移植里走 `writeSustainedData/readSustainedData`，不读根 NBT），mdb 也无法可靠点击该按钮。官方 `/data merge` 能改到 NBT 里，但那只说明标签写进了 BE 的 NBT，是否改变运行中的字段无法判定，因此不作为“移植缺陷”证据。"
   },
   "not_verified": [
-    "速度/能量升级对吞吐的影响（虚拟槽 + 需要光标物品，工具限制）",
-    "满输出时的回压"
+    "速度/能量升级对满载吞吐的数值影响",
+    "满输出回压与QIO高并发守恒"
   ],
   "next": [
     "用 GUI 驱动排序开关：`gui open-block` 打开工厂 → `gui screen` 找到排序按钮索引 → `gui click --slot` 或按坐标点击",
@@ -65,5 +65,10 @@
       "assertion": "已并入 `scripts/fabric-machine-smoke.sh`：`PASS eight energy upgrades raised the machine's buffer above the stock 20k`"
     },
     "item_ids_for_future_runs": "`mekanism:upgrade_speed`、`mekanism:upgrade_energy`（注册名是 `upgrade_<name>`，不是 `<name>_upgrade`）"
-  }
+  },
+  "historical_not_verified": [
+    "速度/能量升级对吞吐的影响（虚拟槽 + 需要光标物品，工具限制）",
+    "满输出时的回压"
+  ],
+  "current_scope": "Sorting/tier and real energy-upgrade installation/buffer readings verified. Old tool/NBT upgrade blockers superseded by upgrades_solved; no complete throughput/backpressure matrix claim. Stored Mekanism energy is J, not FE; historical FE labels retained as history."
 }

@@ -123,5 +123,431 @@
       "errors": 0
     },
     "logs": "/tmp/mekanism-goal-release"
+  },
+  "historical_notice": "steps and pre_config_reload_fix_baseline are historical snapshots; only current_goal_closeout below describes the current result.",
+  "status": "validation_complete_pending_final_committed_document_review",
+  "current_goal_closeout": {
+    "source_commit": "4070cd5e8c8822d9285f79d97667086b1f9a8a91",
+    "status": "Implementation and authorized validation complete; final document commit/review pending.",
+    "first_attempt": {
+      "source_commit": "bff6045bae357af42d8a5003701c0c707b82efaf",
+      "log": "/tmp/mekanism-goal-final-release.log",
+      "result": "Stopped at machine gate6; terminal dust absent. Raw log deleted by old cleanup, root cause cannot be proved retroactively."
+    },
+    "fixture_corrections": [
+      "8867f499 valid gas capacity/supply, actual tick and chunk-load boundaries, process ownership and failed-log retention; strict real four-machine save rig",
+      "4070cd5e parse root first compound field; original retained logs recompare ok with tank chemical field explicitly present"
+    ],
+    "clean_build": {
+      "repo": "git@github.com:yu1745/mekanism-fabric.git",
+      "version": "10.7.19.85+fabric.1",
+      "source_commit": "4070cd5e8c8822d9285f79d97667086b1f9a8a91",
+      "jars": [
+        {
+          "file": "Mekanism-Fabric-Bootstrap-10.7.19.85+fabric.1.jar",
+          "sha256": "0d6a47a778794f30698fe361e3859d4be539df388a7b64359821d90a5540f4ec"
+        },
+        {
+          "file": "MekanismAdditions-10.7.19.85+fabric.1-fabric.jar",
+          "sha256": "e2019d55e61bab1aac70f2bf7d6d737c8e6cef126e9fdb2c9d81d95d0b1df526"
+        },
+        {
+          "file": "MekanismGenerators-10.7.19.85+fabric.1-fabric.jar",
+          "sha256": "cae3464201f9c6bdf270f9215695d140f6f6e80b838d9b600067257d157ad711"
+        },
+        {
+          "file": "MekanismTools-10.7.19.85+fabric.1-fabric.jar",
+          "sha256": "b74c23a5b504a236051fab7450420b46f894511009aaaddf4b9c0a3baeda75c9"
+        }
+      ],
+      "built_at": "2026-11-01T18:18:54Z"
+    },
+    "existing_test_suites": {
+      "test": {
+        "tests": 457,
+        "failures": 0,
+        "errors": 0
+      },
+      "fabricClientModelTest": {
+        "tests": 17,
+        "failures": 0,
+        "errors": 0
+      },
+      "qioTransactionTest": {
+        "tests": 50,
+        "failures": 0,
+        "errors": 0
+      },
+      "fabricTransferTest": {
+        "tests": 45,
+        "failures": 0,
+        "errors": 0
+      },
+      "fabricRegistryTest": {
+        "tests": 3,
+        "failures": 0,
+        "errors": 0
+      },
+      "fabricDataMapTest": {
+        "tests": 4,
+        "failures": 0,
+        "errors": 0
+      },
+      "fabricRecipeRegistryTest": {
+        "tests": 8,
+        "failures": 0,
+        "errors": 0
+      }
+    },
+    "goal_requirements": {
+      "1_W120_trusted_allow": "e0bfa412; five actual GUI allow/deny/revocation readings in w120-security-denial.json",
+      "2_W121_124_W111_112_116_scope": "Corrected real current statuses and bounded readings in corresponding evidence files; W111 full original multiplier/oracle matrix and W112 throughput not claimed",
+      "3_real_behavior_gaps": "3512ce90+bff6045b fixed config reload, real owner policy consumers, independent worldgen watch and exact upstream file selection; official parity and mdb checks in W124",
+      "4_current_docs": "README/install/current milestone/index and evidence corrected; historical records explicitly preserved. Unrun areas stated without turning them into new tasks.",
+      "5_closeout": "All11 existing gate components passed with documented failure/fix/resume; two clean builds584/0/0, identical4JARs;23 owned sessions stopped/PIDs absent, own wrappers/worlds cleaned; final committed document review pending."
+    },
+    "not_run_in_this_closeout": [
+      "retired standalone packaged client launcher",
+      "QIO/cross-chunk crash conservation",
+      "full matrix capacity/lossless energy accounting",
+      "full remote pending WORLD reconnect matrix",
+      "original16kHz big-endian/two-way voice",
+      "controlled fission meltdown and cross-dimension player teleport",
+      "additional worldgen/retrogen macros beyond the configured existing release-check tasks"
+    ],
+    "user_decisions_only": [
+      "push/force push of earlier rewritten history",
+      "version suffix/tag/upload/public release"
+    ],
+    "authorization": "No push, publish, production action, submodule pointer update, further history rewrite or new test class.",
+    "release_gate_components": {
+      "result": "All11 existing components passed across the documented initial run and resume; not a single uninterrupted release-check PASSED11 run.",
+      "steps": [
+        {
+          "step": 1,
+          "name": "clean four-JAR build",
+          "exit": 0,
+          "seconds": 280,
+          "run": "/tmp/mekanism-goal-final-release2.log"
+        },
+        {
+          "step": 2,
+          "name": "packaged static four-JAR gates",
+          "exit": 0,
+          "seconds": 15,
+          "run": "/tmp/mekanism-goal-final-release2.log"
+        },
+        {
+          "step": 3,
+          "name": "packaged server (50 mods, 458 values)",
+          "exit": 0,
+          "seconds": 55,
+          "run": "/tmp/mekanism-goal-final-release2.log"
+        },
+        {
+          "step": 4,
+          "name": "paired network (two clients, handshake)",
+          "exit": 0,
+          "seconds": 78,
+          "run": "/tmp/mekanism-goal-final-release2.log"
+        },
+        {
+          "step": 5,
+          "name": "configuration rejection (three clients rejected)",
+          "exit": 0,
+          "seconds": 96,
+          "run": "/tmp/mekanism-goal-final-release2.log"
+        },
+        {
+          "step": 6,
+          "name": "machine runtime smoke",
+          "exit": 0,
+          "seconds": 42,
+          "run": "/tmp/mekanism-goal-final-release2.log"
+        },
+        {
+          "step": 7,
+          "name": "third-party energy interop (Tech Reborn)",
+          "exit": 0,
+          "seconds": 58,
+          "run": "/tmp/mekanism-goal-final-release2.log"
+        },
+        {
+          "step": 8,
+          "name": "crash conservation",
+          "exit": 0,
+          "run": "/tmp/mekanism-goal-conservation-ready.log",
+          "evidence": "w121-crash-conservation.json:current_gate_followup",
+          "note": "Original orchestration failed here. Preserve preceding seven passed results; resumed focused with explicit ticking-chunk precondition on same four JARs."
+        },
+        {
+          "step": 9,
+          "name": "energy_chain",
+          "exit": 0,
+          "seconds": 39,
+          "run": "/tmp/mekanism-goal-final-release2/09-energy_chain.log"
+        },
+        {
+          "step": 10,
+          "name": "save_roundtrip",
+          "exit": 0,
+          "seconds": 52,
+          "run": "/tmp/mekanism-goal-final-release2/10-save_roundtrip.log"
+        },
+        {
+          "step": 11,
+          "name": "config_boundary",
+          "exit": 0,
+          "seconds": 46,
+          "run": "/tmp/mekanism-goal-final-release2/11-config_boundary.log"
+        }
+      ],
+      "original_orchestration_result": "STOPPED at step8; no blanket successful invocation claimed.",
+      "resume_reason": "Only smoke precondition/diagnostic changes; production/build/packaged inputs unchanged. No unaffected gate repeated."
+    },
+    "owned_session_cleanup": [
+      {
+        "name": "goal-config",
+        "state": "stopped",
+        "pid": 2777526,
+        "pid_absent": true
+      },
+      {
+        "name": "goal-generators",
+        "state": "stopped",
+        "pid": 2265360,
+        "pid_absent": true
+      },
+      {
+        "name": "goal-security",
+        "state": "stopped",
+        "pid": 2183691,
+        "pid_absent": true
+      },
+      {
+        "name": "mekanism-paired-20261101T163118Z-2399809-client-1",
+        "state": "stopped",
+        "pid": 2404969,
+        "pid_absent": true
+      },
+      {
+        "name": "mekanism-paired-20261101T163118Z-2399809-client-2",
+        "state": "stopped",
+        "pid": 2408788,
+        "pid_absent": true
+      },
+      {
+        "name": "mekanism-paired-20261101T164416Z-2510069-client-1",
+        "state": "stopped",
+        "pid": 2514429,
+        "pid_absent": true
+      },
+      {
+        "name": "mekanism-paired-20261101T164416Z-2510069-client-2",
+        "state": "stopped",
+        "pid": 2518284,
+        "pid_absent": true
+      },
+      {
+        "name": "mekanism-paired-20261101T175536Z-3062752-client-1",
+        "state": "stopped",
+        "pid": 3067139,
+        "pid_absent": true
+      },
+      {
+        "name": "mekanism-paired-20261101T175536Z-3062752-client-2",
+        "state": "stopped",
+        "pid": 3070816,
+        "pid_absent": true
+      },
+      {
+        "name": "mekanism-paired-20261101T182004Z-3256914-client-1",
+        "state": "stopped",
+        "pid": 3261293,
+        "pid_absent": true
+      },
+      {
+        "name": "mekanism-paired-20261101T182004Z-3256914-client-2",
+        "state": "stopped",
+        "pid": 3264840,
+        "pid_absent": true
+      },
+      {
+        "name": "rejection-20261101T163502Z-2430323-client_rejected",
+        "state": "stopped",
+        "pid": 2438761,
+        "pid_absent": true
+      },
+      {
+        "name": "rejection-20261101T163502Z-2430323-mismatch",
+        "state": "stopped",
+        "pid": 2435516,
+        "pid_absent": true
+      },
+      {
+        "name": "rejection-20261101T163502Z-2430323-missing_receiver",
+        "state": "stopped",
+        "pid": 2441868,
+        "pid_absent": true
+      },
+      {
+        "name": "rejection-20261101T164536Z-2522037-client_rejected",
+        "state": "stopped",
+        "pid": 2530840,
+        "pid_absent": true
+      },
+      {
+        "name": "rejection-20261101T164536Z-2522037-mismatch",
+        "state": "stopped",
+        "pid": 2527549,
+        "pid_absent": true
+      },
+      {
+        "name": "rejection-20261101T164536Z-2522037-missing_receiver",
+        "state": "stopped",
+        "pid": 2534143,
+        "pid_absent": true
+      },
+      {
+        "name": "rejection-20261101T175655Z-3073984-client_rejected",
+        "state": "stopped",
+        "pid": 3082279,
+        "pid_absent": true
+      },
+      {
+        "name": "rejection-20261101T175655Z-3073984-mismatch",
+        "state": "stopped",
+        "pid": 3079199,
+        "pid_absent": true
+      },
+      {
+        "name": "rejection-20261101T175655Z-3073984-missing_receiver",
+        "state": "stopped",
+        "pid": 3085711,
+        "pid_absent": true
+      },
+      {
+        "name": "rejection-20261101T182122Z-3267929-client_rejected",
+        "state": "stopped",
+        "pid": 3276289,
+        "pid_absent": true
+      },
+      {
+        "name": "rejection-20261101T182122Z-3267929-mismatch",
+        "state": "stopped",
+        "pid": 3273143,
+        "pid_absent": true
+      },
+      {
+        "name": "rejection-20261101T182122Z-3267929-missing_receiver",
+        "state": "stopped",
+        "pid": 3279372,
+        "pid_absent": true
+      }
+    ],
+    "cleanup": {
+      "reference_server": "stopped, fixed resident runtime and sample retained",
+      "own_game_processes": "No KnotClient/KnotServer/server-launch/NeoForge game process remains.23 owned records stopped with recorded PIDs absent.",
+      "wrappers": "Removed only own fabric/gradlew and fabric/gradle symlinks with exact expected targets.",
+      "temporary_worlds": "Explicit known disposable config, machine, save and crash worlds removed after live cwd checks. Raw logs archived outside repository.",
+      "diagnostic_archive": "/tmp/mekanism-goal-final-release2/diagnostics",
+      "unrelated_resources": "Pre-existing Xvfb displays and user mods left unchanged."
+    },
+    "reproducibility": {
+      "result": "Four JARs byte-identical across two clean builds with identical production/build inputs",
+      "first_build": {
+        "repo": "git@github.com:yu1745/mekanism-fabric.git",
+        "version": "10.7.19.85+fabric.1",
+        "source_commit": "4070cd5e8c8822d9285f79d97667086b1f9a8a91",
+        "jars": [
+          {
+            "file": "Mekanism-Fabric-Bootstrap-10.7.19.85+fabric.1.jar",
+            "sha256": "0d6a47a778794f30698fe361e3859d4be539df388a7b64359821d90a5540f4ec"
+          },
+          {
+            "file": "MekanismAdditions-10.7.19.85+fabric.1-fabric.jar",
+            "sha256": "e2019d55e61bab1aac70f2bf7d6d737c8e6cef126e9fdb2c9d81d95d0b1df526"
+          },
+          {
+            "file": "MekanismGenerators-10.7.19.85+fabric.1-fabric.jar",
+            "sha256": "cae3464201f9c6bdf270f9215695d140f6f6e80b838d9b600067257d157ad711"
+          },
+          {
+            "file": "MekanismTools-10.7.19.85+fabric.1-fabric.jar",
+            "sha256": "b74c23a5b504a236051fab7450420b46f894511009aaaddf4b9c0a3baeda75c9"
+          }
+        ],
+        "built_at": "2026-11-01T18:18:54Z"
+      },
+      "second_build": {
+        "repo": "git@github.com:yu1745/mekanism-fabric.git",
+        "version": "10.7.19.85+fabric.1",
+        "source_commit": "20d05524cfc3465ce2b1b050dab9fa1241d210e0",
+        "jars": [
+          {
+            "file": "Mekanism-Fabric-Bootstrap-10.7.19.85+fabric.1.jar",
+            "sha256": "0d6a47a778794f30698fe361e3859d4be539df388a7b64359821d90a5540f4ec"
+          },
+          {
+            "file": "MekanismAdditions-10.7.19.85+fabric.1-fabric.jar",
+            "sha256": "e2019d55e61bab1aac70f2bf7d6d737c8e6cef126e9fdb2c9d81d95d0b1df526"
+          },
+          {
+            "file": "MekanismGenerators-10.7.19.85+fabric.1-fabric.jar",
+            "sha256": "cae3464201f9c6bdf270f9215695d140f6f6e80b838d9b600067257d157ad711"
+          },
+          {
+            "file": "MekanismTools-10.7.19.85+fabric.1-fabric.jar",
+            "sha256": "b74c23a5b504a236051fab7450420b46f894511009aaaddf4b9c0a3baeda75c9"
+          }
+        ],
+        "built_at": "2026-11-01T18:36:33Z"
+      },
+      "second_build_tests": {
+        "test": {
+          "tests": 457,
+          "failures": 0,
+          "errors": 0
+        },
+        "fabricClientModelTest": {
+          "tests": 17,
+          "failures": 0,
+          "errors": 0
+        },
+        "qioTransactionTest": {
+          "tests": 50,
+          "failures": 0,
+          "errors": 0
+        },
+        "fabricTransferTest": {
+          "tests": 45,
+          "failures": 0,
+          "errors": 0
+        },
+        "fabricRegistryTest": {
+          "tests": 3,
+          "failures": 0,
+          "errors": 0
+        },
+        "fabricDataMapTest": {
+          "tests": 4,
+          "failures": 0,
+          "errors": 0
+        },
+        "fabricRecipeRegistryTest": {
+          "tests": 8,
+          "failures": 0,
+          "errors": 0
+        }
+      },
+      "tracked_changes_between_build_commits": [
+        "docs/milestones/M-release.md",
+        "docs/milestones/evidence/p8-release/w121-crash-conservation.json",
+        "scripts/fabric-crash-conservation-smoke.sh"
+      ],
+      "commit_note": "Source metadata is4070cd5e versus20d05524; only existing smoke/doc changed. This is not represented as two builds of one identical Git commit. Production source/resource/build input unchanged."
+    },
+    "final_runtime_source_commit": "4070cd5e8c8822d9285f79d97667086b1f9a8a91",
+    "final_packaged_source_commit": "20d05524cfc3465ce2b1b050dab9fa1241d210e0"
   }
 }

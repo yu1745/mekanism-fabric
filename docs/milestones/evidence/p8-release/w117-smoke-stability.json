@@ -38,7 +38,7 @@
     },
     "unchanged_jar_reproduction": {
       "result": "30 PASS but invalid fixture gas overfill produced shrink warnings",
-      "log": "/tmp/mekanism-machine-smoke.SAsgar/server.log",
+      "log": "/tmp/mekanism-goal-final-release2/diagnostics/mekanism-machine-smoke.SAsgar-server.log",
       "warnings": [
         "requested shrink 1, actual 1790 from HCl2000 cap210",
         "requested shrink 1, actual 3790 from oxygen4000 cap210"
@@ -47,7 +47,7 @@
     "fix": "Machine gas seeds 210; existing external HCl tank seeded8000 and real oxygen tank8000 with tube feeding purification. Unchanged randomized consumption, recipes and terminal dust assertion. FIFO/setsid, sprint completion, frozen snapshots, loaded-chunk confirmation; failures retain raw log/world.",
     "corrected_run": {
       "result": "30 PASS / 0 FAIL",
-      "raw_log": "/tmp/mekanism-machine-smoke.FdsR6K/server.log",
+      "raw_log": "/tmp/mekanism-goal-final-release2/diagnostics/mekanism-machine-smoke.FdsR6K-server.log",
       "output": "/tmp/mekanism-goal-machine-fixed2.log",
       "terminal_dust": 1,
       "purification_gas": 210,
@@ -80,6 +80,7 @@
       "cleanup": "Server exited normally; process group absent.",
       "server_log_wall_seconds": 20
     },
-    "supersedes": "Historical no-flaky conclusion does not prove current gate. Full final extended gate remains pending."
+    "supersedes": "Historical no-flaky conclusion does not prove current gate. Full final extended gate remains pending.",
+    "cleanup": "Disposable worlds removed after confirming no live process cwd; diagnostic logs copied to listed archive paths."
   }
 }

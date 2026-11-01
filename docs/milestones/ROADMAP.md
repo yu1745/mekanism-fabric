@@ -2,7 +2,7 @@
 
 协调者编写，worker 按序执行。状态以 `docs/milestones/README.md` 为准；本文只定"做什么、什么顺序、怎样算完成、卡住怎么办"。不得借本文扩大 `AGENTS.md` 的边界。
 
-## 当前执行入口（2026-11-01，goal 恢复；起始基线 `482abbb9`，已核对 `bff6045b`）
+## 当前执行入口（2026-11-01，goal 恢复；起始基线 `482abbb9`，已核对 `20d05524`）
 
 本节取代下方 K2/K3 与旧巡检中冲突的完成判断和执行顺序。协调者本轮只读核对提交、源码与既有证据，没有重新运行游戏门禁；旧通过记录仅覆盖当时实际场景。
 
@@ -12,11 +12,13 @@
 4. **W-116 已提交，负载范围通过**（`132b48d0`）：既有 Generators 源集接入 mdb `runClient`，355 值 ack；真实玩家 builder/GUI 成型，满蒸汽且空能量下单 tick 消耗 11,040,000 mB、生成 110,400,000 J，与最大流量/产率及官方同状态完全一致。Fabric creative tank 经阀门持续供汽 200 tick 后末产率仍为最大；官方持续供汽未跑，不把瞬时/末值读数扩称全程逐 tick 恒定。457 项测试真正执行且 0 失败，API 检查通过；临时世界改动已恢复，收尾确认 owned session 最终停止和进程无残留。
 5. **paired/rejection 已接入 mdb owned，直接门禁通过**（`f8e37d33`）：沿既有 preset 配置 `runClient`；两个全新客户端的正常握手和三种拒绝均通过，原精确原因/顺序/次数/无 PLAY 等断言未放宽。五个 owned session 已记录 stopped、JVM absent。旧未验收的 securityDenial 直启脚本以非零退出退役，W-120 使用已验证的真实 GUI probe。
 6. **W-124 配置闭包已提交并通过限定范围实机对照**（`3512ce90`、`bff6045b`）：所有实际 owner 接文件监听/executor/撤销；NONE 热生效，WORLD/GAME 保留 effective 与 pending 分离；save/登录 snapshot 保留 pending。GeneralConfig 沿既有 publication seam 接真实消费者，独立 API 回退不变，无新 epoch 或 PLAY 协议。SERVER 默认全局配置，已有逐文件世界 override 优先，目标缺失可从 defaultconfigs 初始化。worldgen 独立 manager 漏接 watch 已修。官方/Fabric 同 rig 均 44→179→366 J/t，模板 bio777、生效世界覆盖及全局 solar50 保留均通过；mdb 五项覆盖实际策略消费者、WORLD/GAME pending/save 和 worldgen NONE，3 份配置逐字节恢复，owned session stopped/PID absent。既有 584 项构建检查通过，没有新增测试类。远程 pending WORLD 重连仅有既有 snapshot 验证及集成会话读数，不扩称真实双客户端矩阵已跑。
-7. **GO：先修 M9 既有 fixture，再完成最终收口**：只读审查 `bff6045b` 未发现新的确定生产缺陷，M6/M7 的实际缺口已在原 owner 边界修复；当前下一动作是下述 machine 合法供给、tick 标记与失败留证修正。完成后按实际提交运行 `release-check.sh --extended`（含 clean build），再第二次 clean 比四 JAR 哈希；更新最终提交/产物身份、状态和证据索引，确认所有 owned session、服务端进程组和临时依赖清理后提交。`f8e37d33` 的旧 11 步通过仅作基线，不能替代新结果；W-124 focused JAR 的 metadata 尚为前提交且含当时未提交修复，最终 clean 负责给出完整 committed provenance。不追加场景或测试清单。
+7. **执行与验证已收口，待最终文档提交简审**：已核对实际日志：`4070cd5e` 的前1–7项通过；第8项中断后，`20d05524` 修正既有探针前置并focused通过，随后同四JAR续跑9/10/11分别39/52/46秒通过。应表述为“各项经修复后分段完成”，不能写成一次连续11步全绿。两次clean均584/0/0，四JAR哈希逐一相同；metadata分别4070与20d，两提交仅W-121脚本和两份文档变化，生产/资源/构建输入相同，不能写成同一Git commit两次构建。主实现者报告23条owned记录stopped且PID absent、自建symlink与临时世界已清理、日志归档、参考服务端stopped；其他pi的旧Xvfb未触碰。最后提交证据/状态/索引并只读简审即可，无新增测试、场景、实现或前七步重跑。
 
 W-124 的发现、真实官方调用链及两次审查见 COORDINATOR_NOTES M5–M8；先前“缺口待修/实机待验”状态已由本入口取代。frozen-sprint 初始差异仍未归因；语音原格式/双向会话仍未验收。
 
-**最终 gate 当前未通过（M9）**：`bff6045b` 第 1–5 步通过，第 6 步 machine 的四级矿物链末端 dust 断言失败（其余 29 项通过）；原日志被 cleanup 删除，同 JAR 保留目录复跑 30 项通过不等于故障已排除。只读核对发现既有脚本向容量210的注入/净化机灌2000/4000气体，成功 raw 日志1790/3790超额 shrink异常与之吻合；净化机无持续氧气且存在随机消耗，后续只补能。主实现者在原 rig 内修合法供给、tick/快照边界与失败留证，保持最终dust断言；不扩大场景或先改生产算法，完成诊断修正后再继续最终收口。原失败的唯一根因尚未证实。
+**历史检查点 M9（后续修复与最终完成以上方第7项为准）**：`bff6045b` 第 1–5 步通过，第 6 步 machine 的四级矿物链末端 dust 断言失败（其余 29 项通过）；原日志被 cleanup 删除，同 JAR 保留目录复跑 30 项通过不等于故障已排除。只读核对发现既有脚本向容量210的注入/净化机灌2000/4000气体，成功 raw 日志1790/3790超额 shrink异常与之吻合；净化机无持续氧气且存在随机消耗，后续只补能。主实现者在原 rig 内修合法供给、tick/快照边界与失败留证，保持最终dust断言；不扩大场景或先改生产算法，完成诊断修正后再继续最终收口。原失败的唯一根因尚未证实。
+
+**历史检查点 `8867f499`（M10，首字段漏验已由4070修复）**：machine 合法持续化学供给、标记/冻结/失败留证已提交，真实末端 dust1、气槽210、外储氧3825，30项通过且无 shrink异常；首轮失败仍不追认根因。W-123 已修真实方块/侧配置/容量与缺转储假绿，但只读审查确认 `field()` 漏匹配根首字段，实际储罐 chemical_tanks 两轮均被读成 None；先在原比较器修首字段入口并复用保留日志核对，再进行既有最终 extended 与第二 clean 四哈希。主实现者同步更正machine派生墙钟估值，不扩新场景/测试。
 
 **客户端规则更正**：COORDINATOR_NOTES L3/L4 的“Gradle fixture 属于既有 paired smoke 的同类机制”不能构成例外，相关豁免说法撤回。所有游戏客户端（含 fixture/handshake）都必须 `mdb session start/stop`；会启动客户端的旧脚本须先接入该生命周期再执行。历史证据保留，不据此重新启动旧路径。
 

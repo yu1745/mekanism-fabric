@@ -226,5 +226,18 @@
     "MekanismAdditions-10.7.19.85+fabric.1-fabric.jar": "e2019d55e61bab1aac70f2bf7d6d737c8e6cef126e9fdb2c9d81d95d0b1df526",
     "MekanismGenerators-10.7.19.85+fabric.1-fabric.jar": "cae3464201f9c6bdf270f9215695d140f6f6e80b838d9b600067257d157ad711"
   },
-  "artifact_provenance": "Focused four-JAR build metadata names3512ce90; the same working tree additionally contained the worldgen watch and reviewed global/override/template fix, committed with this evidence. Final clean build/gate will provide the final committed artifact provenance."
+  "artifact_provenance": "Focused four-JAR build metadata names3512ce90; the same working tree additionally contained the worldgen watch and reviewed global/override/template fix, committed with this evidence. Final clean build/gate will provide the final committed artifact provenance.",
+  "final_gate": {
+    "result": "PASS",
+    "seconds": 46,
+    "readings_J_per_tick": [
+      44,
+      179,
+      366
+    ],
+    "log": "/tmp/mekanism-goal-final-release2/11-config_boundary.log",
+    "artifact_source_commit": "4070cd5e8c8822d9285f79d97667086b1f9a8a91",
+    "final_clean_build": "20d05524cfc3465ce2b1b050dab9fa1241d210e0",
+    "note": "Final clean JARs byte-identical to runtime-tested JARs; existing official/owner evidence and unrun limits remain as stated."
+  }
 }

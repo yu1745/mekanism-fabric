@@ -1,7 +1,7 @@
 # Installing the Mekanism Fabric port
 
 This is the **Fabric** build of Mekanism for Minecraft 1.21.1, ported from the official NeoForge
-`v1.21.1-10.7.19.85`. It is not a complete playable port yet — see [Limitations](#limitations) — but the release
+`v1.21.1-10.7.19.85`. It remains a development port — see [Limitations](#limitations) — and the release
 server path and the data/save model are exercised by the gates listed in
 [`docs/milestones/README.md`](milestones/README.md).
 
@@ -56,17 +56,17 @@ A small world authored by the official NeoForge build was loaded by this port an
   [`evidence/p8-release/w65-neoforge-save-probe.json`](milestones/evidence/p8-release/w65-neoforge-save-probe.json);
 - verified: machine side configuration (`component_config`, eject flags) written by the official build and read back
   by the port — [`w77-runtime-content.json`](milestones/evidence/p8-release/w77-runtime-content.json);
-- **not verified**: machine inventories, stored energy, frequencies and channel assignments. Treat world transfer from
+- verified in a later sample: machine inventory/side configuration and stored energy 5000 J transferred from the
+  official build — [`w80-save-roundtrip.json`](milestones/evidence/p8-release/w80-save-roundtrip.json);
+- **not verified**: complete frequency/channel networks or arbitrary world transfers. Treat world transfer from
   NeoForge as experimental and keep a backup.
 
-## Limitations
+## Optional viewer integrations
 
-- Four optional client-side viewers are supported and compile-only: JEI, EMI, Jade and WTHIT. Drop the
+Four optional client-side viewers are supported and compile-only: JEI, EMI, Jade and WTHIT. Drop the
   matching mod JARs into `mods/` and the integration activates; without them nothing changes. REI, TOP and the
   CraftTweaker/ProjectE data shipped by upstream are absent by design
   ([boundary page](milestones/M-integration.md)).
-
-## Optional viewer integrations
 
 Each one is compiled against but never bundled, so the release JARs stay free of third-party code.
 
@@ -80,9 +80,14 @@ Each one is compiled against but never bundled, so the release JARs stay free of
 Versions matter: newer JEI builds are assembled with a newer Loom than this project uses and the loader rejects
 them, and WTHIT is published on bai's maven rather than Modrinth's. For development the same set is available
 through the `-PjeiDev`, `-PemiDev`, `-PjadeDev` and `-PwthitDev` Gradle switches instead of copying JARs.
-- Frequency/channel networks, large transmission networks and long-run performance have no measured baseline.
+
+## Limitations
+
+- Large frequency/channel or transmission networks and long-run performance have no measured baseline.
 - The release-JAR client path has one-off evidence only; it is not re-verified automatically with each build, and a
-  version change requires a fresh approval to re-run it.
+  clients must use mdb owned sessions. The retired standalone release-client launcher must not be used.
+- Additions original16kHz/big-endian microphone capture and two-way voice are unverified; the earlier48kHz
+  little-endian capture probe does not establish support for the actual protocol.
 - MekaSuit HUD/keybind details and the controlled fission meltdown have not been read in a running game.
 - **Iris shaders are not usable in the development client** (W-98): with Iris 1.8.14-beta.1 plus a shaderpack the
   Gradle client fails during mixin application (`InvalidMixinException: Unexpected NullPointerException parsing
@@ -96,7 +101,7 @@ through the `-PjeiDev`, `-PemiDev`, `-PjadeDev` and `-PwthitDev` Gradle switches
 
 ```bash
 ./build.sh --clean          # four release JARs into dist/ + build-info.json
-scripts/release-check.sh    # server-side release gates (clean build, static, packaged, paired, rejection, machine)
+scripts/release-check.sh    # server-side gates (clean build, static, packaged, paired, rejection, machine, Tech Reborn)
 ```
 
 Evidence for every verification lives under [`docs/milestones/evidence/`](milestones/evidence/).

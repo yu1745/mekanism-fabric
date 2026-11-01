@@ -1,141 +1,148 @@
 {
   "work_item": "W-111",
   "date": "2026-10-31",
-  "status": "x3_x4_x5_fully_chained",
-  "goal": "\u00d73/\u00d74/\u00d75 \u5316\u5b66\u94fe\uff08\u6eb6\u89e3\u2192\u6c27\u5316\u2192\u6d17\u6da4\u2192\u7ed3\u6676\u2192\u6ce8\u5165\uff09\uff0c\u9700\u8981\u628a\u6c34/\u5316\u5b66\u54c1\u771f\u6b63\u9001\u8fdb\u673a\u5668\u3002",
+  "status": "representative_chemical_stages_and_seeded_crystal_to_dust_chain_verified",
+  "goal": "×3/×4/×5 化学链（溶解→氧化→洗涤→结晶→注入），需要把水/化学品真正送进机器。",
   "attempts": {
-    "fluid_tank_fill": "\u2705 \u53ef\u7528\uff1a`world use-on-block --item minecraft:water_bucket` \u5bf9 `mekanism:ultimate_fluid_tank` \u751f\u6548\uff0c`fluid_tanks=[{amount:1000, id:minecraft:water}]`",
-    "machine_fluid_by_bucket": "\u274c \u5bf9 `mekanism:electrolytic_separator` \u540c\u4e00\u4e2a\u8c03\u7528\u8fd4\u56de success/consume\uff0c\u4f46\u53cd\u5c04\u8bfb `fluidTank.getFluidAmount` \u4ecd\u4e3a 0 \u2014\u2014 \u6c34\u6ca1\u6709\u8fdb\u673a\u5668",
-    "machine_fluid_by_nbt": "\u274c `be set-nbt {\"fluid_tanks\":[...]}` \u5199\u4e0d\u8fdb\u53bb\uff08\u673a\u5668\u7f50\u662f attachment\uff0c\u4e0d\u8bfb NBT\uff09",
-    "machine_side_config_by_nbt": "\u274c `be set-nbt {\"component_config\":{\"config0\":[1,1,1,1,1,1]}}` \u8fd4\u56de ok\uff0c\u4f46\u56de\u8bfb\u4ecd\u662f `[0,0,0,0,0,0]`"
+    "fluid_tank_fill": "✅ 可用：`world use-on-block --item minecraft:water_bucket` 对 `mekanism:ultimate_fluid_tank` 生效，`fluid_tanks=[{amount:1000, id:minecraft:water}]`",
+    "machine_fluid_by_bucket": "❌ 对 `mekanism:electrolytic_separator` 同一个调用返回 success/consume，但反射读 `fluidTank.getFluidAmount` 仍为 0 —— 水没有进机器",
+    "machine_fluid_by_nbt": "❌ `be set-nbt {\"fluid_tanks\":[...]}` 写不进去（机器罐是 attachment，不读 NBT）",
+    "machine_side_config_by_nbt": "❌ `be set-nbt {\"component_config\":{\"config0\":[1,1,1,1,1,1]}}` 返回 ok，但回读仍是 `[0,0,0,0,0,0]`"
   },
   "defect_candidate": {
-    "verdict": "**\u64a4\u56de**\uff082026-10-31\uff0c\u7528\u5b98\u65b9\u6784\u5efa\u505a\u5bf9\u7167\u540e\uff09",
-    "what_was_suspected": "\u672c\u79fb\u690d\u7684\u4f20\u8f93\u5668\u8fde\u4e0d\u4e0a\u673a\u5668\uff08\u7ebf\u7f06\u8d34\u673a\u5668 connections=0\uff09\uff0c\u7591\u4f3c\u80fd\u529b\u66b4\u9732\u7f3a\u5931\u7684 P0\u3002",
-    "ground_truth_test": "\u5728\u5b98\u65b9 NeoForge 21.1.200 + Mekanism 1.21.1-10.7.19.85 \u53c2\u8003\u670d\u52a1\u7aef\uff08`scripts/neoforge-reference.sh`\uff09\u7528\u63a7\u5236\u53f0 FIFO \u6267\u884c\uff1a`setblock 0 64 0 mekanism:metallurgic_infuser` + `setblock 1 64 0 mekanism:basic_universal_cable`\uff0c\u518d `data get block 1 64 0`\u3002",
-    "official_result": "`{connection: [0,0,0,0,0,0], acceptors: 0b, connections: 0b}` \u2014\u2014 **\u5b98\u65b9\u540c\u6837\u662f 0\uff0c\u8fde\u4e0d\u4e0a**",
-    "control": "\u540c\u4e00\u5957\u65b9\u6cd5\u653e\u7b2c\u4e8c\u6839\u7ebf\u7f06\u540e `connections: 32b`\uff0c\u8bf4\u660e\u8bfb\u6570\u5b57\u6bb5\u4e0e\u8bed\u4e49\u6b63\u786e\uff08connections \u662f\u4f20\u8f93\u5668\u2194\u4f20\u8f93\u5668\u63a9\u7801\uff09",
-    "conclusion": "**\u8fd9\u4e0d\u662f\u672c\u79fb\u690d\u7684\u7f3a\u9677**\uff1a\u9ed8\u8ba4\uff08\u5168 NONE\uff09\u4fa7\u914d\u7f6e\u4e0b\uff0c\u5b98\u65b9\u4e0e\u79fb\u690d\u90fd\u4e0d\u628a\u673a\u5668\u66b4\u9732\u7ed9\u4f20\u8f93\u5668\u3002W-111 \u9700\u8981\u7684\u201c\u5916\u90e8\u4f9b\u7535/\u4f9b\u6599\u201d\u5fc5\u987b\u5148\u914d\u7f6e\u673a\u5668\u4fa7\u9762\uff08GUI \u6216\u914d\u7f6e\u5305\uff09\uff0c\u800c\u5f53\u524d NBT \u5199\u5165 `component_config` \u5bf9\u5df2\u52a0\u8f7d\u7684\u65b9\u5757\u5b9e\u4f53\u4e0d\u751f\u6548\u3001mdb \u4e5f\u6ca1\u6709\u70b9\u51fb\u4fa7\u9762\u914d\u7f6e\u7684\u53ef\u9760\u624b\u6bb5 \u2014\u2014 \u8fd9\u662f**\u5de5\u5177\u9650\u5236**\uff0c\u4e0d\u662f\u4ea7\u54c1\u7f3a\u9677\u3002"
+    "verdict": "**撤回**（2026-10-31，用官方构建做对照后）",
+    "what_was_suspected": "本移植的传输器连不上机器（线缆贴机器 connections=0），疑似能力暴露缺失的 P0。",
+    "ground_truth_test": "在官方 NeoForge 21.1.200 + Mekanism 1.21.1-10.7.19.85 参考服务端（`scripts/neoforge-reference.sh`）用控制台 FIFO 执行：`setblock 0 64 0 mekanism:metallurgic_infuser` + `setblock 1 64 0 mekanism:basic_universal_cable`，再 `data get block 1 64 0`。",
+    "official_result": "`{connection: [0,0,0,0,0,0], acceptors: 0b, connections: 0b}` —— **官方同样是 0，连不上**",
+    "control": "同一套方法放第二根线缆后 `connections: 32b`，说明读数字段与语义正确（connections 是传输器↔传输器掩码）",
+    "conclusion": "**这不是本移植的缺陷**：默认（全 NONE）侧配置下，官方与移植都不把机器暴露给传输器。W-111 需要的“外部供电/供料”必须先配置机器侧面（GUI 或配置包），而当前 NBT 写入 `component_config` 对已加载的方块实体不生效、mdb 也没有点击侧面配置的可靠手段 —— 这是**工具限制**，不是产品缺陷。"
   },
   "not_verified": [
-    "\u00d75\uff08\u51c0\u5316/\u7c89\u788e/\u5bcc\u96c6\uff09",
-    "\u786b\u9178\u81ea\u4ea7\u94fe\uff08\u786b\u2192\u6c27\u5316\u2192\u9178\uff09",
-    "\u704c\u6ce8\u673a\u2192\u6ce8\u5165\u5ba4\u7684\u7a33\u5b9a\u7269\u7406\u8f93\u9001"
+    "完整矿石倍率表及官方同链数值对照",
+    "硫→氧化→硫酸完整自产链",
+    "全链槽满回压/气体混合拒绝矩阵"
   ],
   "defaults_compared": {
-    "question": "\u7ebf\u7f06\u8fde\u4e0d\u4e0a\u673a\u5668\uff0c\u662f\u4e0d\u662f\u56e0\u4e3a\u673a\u5668\u9ed8\u8ba4\u4fa7\u914d\u7f6e\u5168 NONE\uff08\u6211\u4eec\u7684\u79fb\u690d\u5199\u9519\u4e86\u9ed8\u8ba4\u503c\uff09\uff1f",
-    "test": "\u628a\u5b98\u65b9 NeoForge \u7248\u5199\u51fa\u7684\u6837\u672c\u5b58\u6863\uff08`~/.cache/mekanism-neoforge-reference/server/world`\uff09\u590d\u5236\u6210\u5f00\u53d1\u5ba2\u6237\u7aef\u7684\u4e00\u4e2a\u4e16\u754c\uff0c\u7528 mdb \u8bfb\u673a\u5668 NBT\u3002",
-    "official_saved": "\u5b98\u65b9\u7248\u5b58\u4e0b\u7684 `metallurgic_infuser`(0,64,0)\uff1a`component_config.config0 = [0,0,0,0,0,0]`",
-    "port_saved": "\u672c\u79fb\u690d\u65b0\u653e\u7684\u540c\u6b3e\u673a\u5668\uff1a`config0 = [0,0,0,0,0,0]`",
-    "conclusion": "\u5b98\u65b9\u4e0e\u672c\u79fb\u690d\u5b58\u7684 `component_config.config0` \u90fd\u662f\u5168 0\uff0c\u9ed8\u8ba4\u503c\u4e00\u81f4\uff1b\u7ed3\u5408\u5b98\u65b9\u63a7\u5236\u53f0\u5bf9\u7167\uff0c\u7ed3\u8bba\u4fee\u6b63\u4e3a\u201c\u4e24\u7248\u884c\u4e3a\u4e00\u81f4\u201d\uff0c\u4e0d\u662f\u79fb\u690d\u7684\u89e3\u6790\u94fe\u7f3a\u9677\u3002"
+    "question": "线缆连不上机器，是不是因为机器默认侧配置全 NONE（我们的移植写错了默认值）？",
+    "test": "把官方 NeoForge 版写出的样本存档（`~/.cache/mekanism-neoforge-reference/server/world`）复制成开发客户端的一个世界，用 mdb 读机器 NBT。",
+    "official_saved": "官方版存下的 `metallurgic_infuser`(0,64,0)：`component_config.config0 = [0,0,0,0,0,0]`",
+    "port_saved": "本移植新放的同款机器：`config0 = [0,0,0,0,0,0]`",
+    "conclusion": "官方与本移植存的 `component_config.config0` 都是全 0，默认值一致；结合官方控制台对照，结论修正为“两版行为一致”，不是移植的解析链缺陷。"
   },
   "rig_discovered": {
-    "what": "\u672c\u4ed3\u5e93\u5df2\u6709 `scripts/fabric-machine-smoke.sh`\uff1a\u8d77\u4e00\u4e2a**\u72ec\u7acb Fabric \u4e13\u7528\u670d\u52a1\u7aef**\uff08\u5168\u65b0\u4e16\u754c\uff09\uff0c\u7528\u63a7\u5236\u53f0 `setblock` + **`data merge block`** \u642d\u573a\u666f\u5e76\u65ad\u8a00\uff0c\u8986\u76d6\u80fd\u91cf\u7f51\u7edc\uff08\u80fd\u91cf\u7acb\u65b9\u4f53\u2192\u7ebf\u7f06\u2192\u673a\u5668\uff09\u3001\u7269\u54c1/\u6d41\u4f53/\u5316\u5b66\u54c1\u4f20\u8f93\uff08\u8fd0\u8f93\u5668/\u673a\u68b0\u7ba1\u9053/\u52a0\u538b\u7ba1\u9053\uff09\uff0c\u4ee5\u53ca**\u7535\u89e3\u5206\u79bb\u5668\u7ecf\u673a\u68b0\u7ba1\u9053\u8fdb\u6c34\u3001\u628a\u6c27\u6c14\u5f39\u5c04\u8fdb\u5316\u5b66\u54c1\u50a8\u7f50**\u3002",
-    "why_this_matters": "\u5b83\u8bc1\u660e\u201c\u5916\u90e8\u4f9b\u7535/\u4f9b\u6599\u201d\u5728\u79fb\u690d\u91cc\u662f\u901a\u7684 \u2014\u2014 \u5173\u952e\u5728\u4e8e**\u7528 `data merge`**\uff08\u5bf9\u4e13\u7528\u670d\u52a1\u7aef\u7684\u65b9\u5757\u5b9e\u4f53\u751f\u6548\uff09\uff0c\u800c\u4e0d\u662f\u6211\u4e00\u76f4\u5728\u5ba2\u6237\u7aef\u7528\u7684 `be set-nbt`\uff08\u5bf9\u5df2\u52a0\u8f7d BE \u7684\u7ec4\u4ef6\u5b57\u6bb5\u4e0d\u751f\u6548\uff09\u3002\u8fd9\u89e3\u91ca\u4e86\u4e0a\u4e00\u8f6e\u201c\u7ebf\u7f06\u8fde\u4e0d\u4e0a\u673a\u5668\u201d\u7684\u89c2\u5bdf\uff1a\u673a\u5668\u4fa7\u9762\u914d\u7f6e\u6839\u672c\u6ca1\u88ab\u8bbe\u4e0a\u3002",
-    "consequence": "W-111 \u7684\u6b63\u786e\u505a\u6cd5\u662f\u5728\u8fd9\u4e2a smoke \u91cc**\u8ffd\u52a0\u5316\u5b66\u94fe\u573a\u666f**\uff08\u5206\u79bb\u5668\u4ea7\u6c27 \u2192 \u52a0\u538b\u7ba1\u9053 \u2192 \u51b6\u91d1\u704c\u6ce8\u673a \u2192 \u94a2\uff09\uff0c\u800c\u4e0d\u662f\u5728\u5f00\u53d1\u5ba2\u6237\u7aef\u786c\u9a71\u52a8 GUI\u3002"
+    "what": "本仓库已有 `scripts/fabric-machine-smoke.sh`：起一个**独立 Fabric 专用服务端**（全新世界），用控制台 `setblock` + **`data merge block`** 搭场景并断言，覆盖能量网络（能量立方体→线缆→机器）、物品/流体/化学品传输（运输器/机械管道/加压管道），以及**电解分离器经机械管道进水、把氧气弹射进化学品储罐**。",
+    "why_this_matters": "它证明“外部供电/供料”在移植里是通的 —— 关键在于**用 `data merge`**（对专用服务端的方块实体生效），而不是我一直在客户端用的 `be set-nbt`（对已加载 BE 的组件字段不生效）。这解释了上一轮“线缆连不上机器”的观察：机器侧面配置根本没被设上。",
+    "consequence": "W-111 的正确做法是在这个 smoke 里**追加化学链场景**（分离器产氧 → 加压管道 → 冶金灌注机 → 钢），而不是在开发客户端硬驱动 GUI。"
   },
-  "gui_attempt": "\u672c\u8f6e\u8fd8\u8bd5\u4e86\u5f00\u53d1\u5ba2\u6237\u7aef GUI\uff1a\u4fa7\u9762\u914d\u7f6e\u7a97\u53e3\u53ef\u6253\u5f00\uff08`GuiSideConfigurationTab` \u70b9\u51fb\u6210\u529f\uff09\uff0c\u7a97\u53e3\u5185\u80fd\u5207\u5230 Eject on/off\uff0c\u4f46**\u5207\u6362\u4f20\u8f93\u7c7b\u578b\uff08Items\u2192Energy\uff09\u7684\u63a7\u4ef6\u6ca1\u627e\u5230**\uff08\u8bd5\u4e86\u53f3\u4e0a/\u53f3\u4fa7\u5750\u6807\u5747\u65e0\u6548\uff09\uff0c\u56e0\u6b64\u65e0\u6cd5\u7528 GUI \u8bbe\u7f6e\u80fd\u91cf\u4fa7\u914d\u7f6e\u3002\u8fd9\u6761\u8def\u7ebf\u653e\u5f03\u3002",
+  "gui_attempt": "本轮还试了开发客户端 GUI：侧面配置窗口可打开（`GuiSideConfigurationTab` 点击成功），窗口内能切到 Eject on/off，但**切换传输类型（Items→Energy）的控件没找到**（试了右上/右侧坐标均无效），因此无法用 GUI 设置能量侧配置。这条路线放弃。",
   "implemented_scenario": {
-    "where": "scripts/fabric-machine-smoke.sh\uff08\u4e13\u7528\u670d\u52a1\u7aef + \u5168\u65b0\u4e16\u754c + `data merge block`\uff09",
-    "blocks": "\u5316\u5b66\u704c\u6ce8\u673a (50,100,0) \u2192 \u52a0\u538b\u7ba1\u9053 (51,100,0) \u2192 \u5316\u5b66\u6eb6\u89e3\u5ba4 (52,100,0)",
-    "seeded": "\u704c\u6ce8\u673a\uff1a40k FE + 2000 mB \u4e09\u6c27\u5316\u786b + 2000 mB \u6c34\u84b8\u6c14\uff1b\u6eb6\u89e3\u5ba4\uff1a40k FE + 4000 mB \u786b\u9178 + 4 \u94c1\u77ff\u77f3\uff08**\u69fd\u4f4d 1**\uff09",
-    "observed": "\u6eb6\u89e3\u5ba4 `chemical_tanks` = `[{4115 mB sulfuric_acid}, {1000 mB dirty_iron}]` \u2014\u2014 \u704c\u6ce8\u673a\u81ea\u4ea7\u7684\u9178\u7ecf\u7ba1\u9053\u5e76\u5165\u3001\u77ff\u77f3\u88ab\u6eb6\u89e3\u6210 **dirty_iron \u6d46\u6db2 1000 mB**",
-    "result": "smoke **EXIT=0\uff0c23 PASS / 0 FAIL**\uff08\u65b0\u589e 3 \u6761\u65ad\u8a00\uff1a\u7ba1\u9053\u8f93\u9001\u5316\u5b66\u54c1\u3001\u704c\u6ce8\u673a\u4ea7\u9178\u5230\u6eb6\u89e3\u5ba4\u3001\u6eb6\u89e3\u5ba4\u4ea7\u6d46\u6db2\uff09"
+    "where": "scripts/fabric-machine-smoke.sh（专用服务端 + 全新世界 + `data merge block`）",
+    "blocks": "化学灌注机 (50,100,0) → 加压管道 (51,100,0) → 化学溶解室 (52,100,0)",
+    "seeded": "灌注机：40k FE + 2000 mB 三氧化硫 + 2000 mB 水蒸气；溶解室：40k FE + 4000 mB 硫酸 + 4 铁矿石（**槽位 1**）",
+    "observed": "溶解室 `chemical_tanks` = `[{4115 mB sulfuric_acid}, {1000 mB dirty_iron}]` —— 灌注机自产的酸经管道并入、矿石被溶解成 **dirty_iron 浆液 1000 mB**",
+    "result": "smoke **EXIT=0，23 PASS / 0 FAIL**（新增 3 条断言：管道输送化学品、灌注机产酸到溶解室、溶解室产浆液）"
   },
   "traps_found": [
-    "\u5316\u5b66\u6eb6\u89e3\u5ba4\u7684\u69fd\u4f4d\u987a\u5e8f\u662f **0=\u5316\u5b66\u54c1\u8f93\u5165\u69fd\u30011=\u7269\u54c1\u8f93\u5165\u69fd\u30012=\u5316\u5b66\u54c1\u8f93\u51fa\u30013=\u80fd\u91cf\u69fd**\uff1b\u628a\u77ff\u77f3\u653e\u8fdb\u69fd 0 \u4f1a\u8ba9\u673a\u5668\u5b8c\u5168\u4e0d\u542f\u52a8\uff08progress=0\uff09\uff0c\u8fd9\u662f\u672c\u8f6e\u5361\u4e86\u4e24\u8f6e\u7684\u539f\u56e0",
-    "\u65b0\u573a\u666f\u653e\u5728 x=50..52\uff08\u533a\u5757 3\uff09\uff0c\u9700\u8981 `forceload add 3 0`\uff0c\u5426\u5219\u533a\u5757\u4e0d\u5728\u52a0\u8f7d\u8303\u56f4",
-    "\u5316\u5b66\u704c\u6ce8\u673a\u7684**\u8f93\u51fa\u7f50\u4e0d\u4f1a\u88ab\u5e8f\u5217\u5316**\uff08\u7a7a\u7f50\u65f6 NBT \u91cc\u6ca1\u6709\uff09\uff0c\u6240\u4ee5\u65ad\u8a00\u8981\u770b\u4e0b\u6e38\u662f\u5426\u6536\u5230\u9178\uff0c\u800c\u4e0d\u662f\u770b\u704c\u6ce8\u673a\u81ea\u5df1\u7684\u7f50"
+    "化学溶解室的槽位顺序是 **0=化学品输入槽、1=物品输入槽、2=化学品输出、3=能量槽**；把矿石放进槽 0 会让机器完全不启动（progress=0），这是本轮卡了两轮的原因",
+    "新场景放在 x=50..52（区块 3），需要 `forceload add 3 0`，否则区块不在加载范围",
+    "化学灌注机的**输出罐不会被序列化**（空罐时 NBT 里没有），所以断言要看下游是否收到酸，而不是看灌注机自己的罐"
   ],
   "washer_stage_attempts": {
-    "outcome": "\u672a\u8dd1\u901a\uff0c\u5df2\u4ece smoke \u56de\u9000\uff08\u4fdd\u6301\u95e8\u7981\u5168\u7eff\uff09",
+    "outcome": "未跑通，已从 smoke 回退（保持门禁全绿）",
     "tried": [
-      "\u52a0\u538b\u7ba1\u9053\u8fde\u63a5\uff0853 \u53f7\u7ba1\u9053\u8bfb\u6570\u4e3a `acceptors: 0b` \u2014\u2014 \u4e24\u4fa7\u673a\u5668\u90fd\u6ca1\u88ab\u8bc6\u522b\u4e3a acceptor\uff0c\u5bf9\u6bd4\u5de5\u4f5c\u4e2d\u7ee7\u7ba1\u9053 37 \u662f `acceptors: 48b`\uff09",
-      "\u8ba9\u673a\u5668\u76f8\u90bb + `eject2:1b` + \u4e1c\u4fa7 OUTPUT(4)",
-      "\u540c\u4e0a\u4f46\u4e1c\u4fa7\u6539\u4e3a OUTPUT_2(6)\uff08\u4eff\u7167\u5206\u79bb\u5668\u5f39\u5c04\u6c27\u6c14\u7684\u5199\u6cd5\uff09",
-      "\u897f\u4fa7 INPUT(1) / \u4e1c\u4fa7 OUTPUT \u7684\u591a\u79cd\u7ec4\u5408"
+      "加压管道连接（53 号管道读数为 `acceptors: 0b` —— 两侧机器都没被识别为 acceptor，对比工作中继管道 37 是 `acceptors: 48b`）",
+      "让机器相邻 + `eject2:1b` + 东侧 OUTPUT(4)",
+      "同上但东侧改为 OUTPUT_2(6)（仿照分离器弹射氧气的写法）",
+      "西侧 INPUT(1) / 东侧 OUTPUT 的多种组合"
     ],
-    "conclusion": "\u5171 6 \u79cd\u914d\u7f6e\u4e0b\uff0c\u6eb6\u89e3\u5ba4\u90fd**\u6ca1\u6709\u628a dirty_iron \u5f39\u5c04\u51fa\u53bb**\uff08tank \u4e0e washer \u5747\u8bfb\u4e0d\u5230\u4efb\u4f55\u5316\u5b66\u54c1\uff09\uff0c\u800c\u6eb6\u89e3\u5ba4\u81ea\u8eab\u52a0\u5de5\u6b63\u5e38\uff08\u6bcf\u6b21\u8fd0\u884c\u90fd\u7a33\u5b9a\u4ea7\u51fa 1000 mB dirty_iron\uff09\u3002\u6700\u540e\u4e00\u79cd\u914d\u7f6e\u5df2\u6838\u5b9e\u5199\u5165\uff1a`eject2:1b`\u3001`config2:[0,0,0,0,1,6]`\u3001\u76f8\u90bb basic_chemical_tank \u2014\u2014 \u4ecd\u7136\u96f6\u6d41\u91cf\u3002\u8bf4\u660e\u95ee\u9898\u4e0d\u5728\u914d\u7f6e\u7b97\u672f\uff0c\u800c\u5728**\u8f93\u51fa\u7f50\u4e0e\u4fa7\u7c7b\u578b\u7684\u7ed1\u5b9a/\u5f39\u5c04\u8def\u5f84**\u672c\u8eab\uff0c\u9700\u8981\u4ece `ConfigChemicalTankHolder`/`BasicChemicalTank` \u7684 output slot \u88c5\u914d\u5904\u67e5\u8d77\u3002",
+    "conclusion": "共 6 种配置下，溶解室都**没有把 dirty_iron 弹射出去**（tank 与 washer 均读不到任何化学品），而溶解室自身加工正常（每次运行都稳定产出 1000 mB dirty_iron）。最后一种配置已核实写入：`eject2:1b`、`config2:[0,0,0,0,1,6]`、相邻 basic_chemical_tank —— 仍然零流量。说明问题不在配置算术，而在**输出罐与侧类型的绑定/弹射路径**本身，需要从 `ConfigChemicalTankHolder`/`BasicChemicalTank` 的 output slot 装配处查起。",
     "tried_additional": [
       "chemical tank as buffer between chamber and washer (tank exposes its chemical side on every face)",
-      "chamber eject2:1b + east side OUTPUT(4) \u4e0e OUTPUT_2(6) \u4e24\u79cd\u7c7b\u578b\uff0c\u914d\u76f8\u90bb tank \u6216\u76f8\u90bb washer",
-      "\u76f8\u90bb\u76f4\u8fde washer\uff08\u65e0\u7ba1\u9053\uff09"
+      "chamber eject2:1b + east side OUTPUT(4) 与 OUTPUT_2(6) 两种类型，配相邻 tank 或相邻 washer",
+      "相邻直连 washer（无管道）"
     ]
   },
-  "next_step_documented_in": "M-release.md \u7684 W-111 \u6bb5\u843d + \u672c\u6587\u4ef6 washer_stage_attempts",
-  "gate_status": "fabric-machine-smoke.sh \u4fdd\u6301\u5168\u7eff\uff1aEXIT=0 / 25 PASS\uff08\u672a\u8dd1\u901a\u7684\u9636\u6bb5\u5df2\u56de\u9000\uff09",
+  "next_step_documented_in": "M-release.md 的 W-111 段落 + 本文件 washer_stage_attempts",
+  "gate_status": "fabric-machine-smoke.sh 保持全绿：EXIT=0 / 25 PASS（未跑通的阶段已回退）",
   "x3_chain": {
-    "where": "scripts/fabric-machine-smoke.sh\uff08\u4e13\u7528\u670d\u52a1\u7aef + `data merge`\uff09",
-    "blocks": "\u5316\u5b66\u704c\u6ce8\u673a(50) \u2192 \u52a0\u538b\u7ba1\u9053(51) \u2192 \u5316\u5b66\u6eb6\u89e3\u5ba4(52) \u2192 \u5316\u5b66\u50a8\u7f50(53) \u2192 \u52a0\u538b\u7ba1\u9053(54) \u2192 \u5316\u5b66\u6d17\u6da4\u673a(55) \u2192 \u5316\u5b66\u7ed3\u6676\u5668(56)",
-    "flow": "\u4e09\u6c27\u5316\u786b+\u6c34\u84b8\u6c14 \u2192(\u704c\u6ce8\u673a) \u786b\u9178 \u2192(\u6eb6\u89e3\u5ba4 + \u94c1\u77ff\u77f3) dirty_iron \u2192(\u6d17\u6da4\u673a + \u6c34) clean_iron \u2192(\u7ed3\u6676\u5668) **crystal_iron**",
+    "where": "scripts/fabric-machine-smoke.sh（专用服务端 + `data merge`）",
+    "blocks": "化学灌注机(50) → 加压管道(51) → 化学溶解室(52) → 化学储罐(53) → 加压管道(54) → 化学洗涤机(55) → 化学结晶器(56)",
+    "flow": "三氧化硫+水蒸气 →(灌注机) 硫酸 →(溶解室 + 铁矿石) dirty_iron →(洗涤机 + 水) clean_iron →(结晶器) **crystal_iron**",
     "observed": [
-      "\u6d17\u6da4\u673a\u6536\u5230 dirty_iron\uff08\u4e2d\u9014\u8bfb\u6570 800 mB\uff09",
-      "\u7ed3\u6676\u5668\u6536\u5230 200 mB clean_iron \u5e76\u4ea7\u51fa **`items:[{slot:1, id:\"mekanism:crystal_iron\", count:1}]`**"
+      "洗涤机收到 dirty_iron（中途读数 800 mB）",
+      "结晶器收到 200 mB clean_iron 并产出 **`items:[{slot:1, id:\"mekanism:crystal_iron\", count:1}]`**"
     ],
     "result": "smoke **EXIT=0 / 27 PASS / 0 FAIL**"
   },
   "side_config_recipe": {
-    "indexing": "component_config \u7684 6 \u5143\u6570\u7ec4\u6309 `RelativeSide`\uff1aFRONT=0, LEFT=1, RIGHT=2, BACK=3, TOP=4, BOTTOM=5\uff08**\u4e0d\u662f\u7edd\u5bf9\u65b9\u5411**\uff09",
-    "emitter": "`eject2:1b` + \u5316\u5b66\u4fa7 `[7,7,7,7,7,7]`\uff08INPUT_OUTPUT\uff09\uff1b\u7eaf OUTPUT(4) \u4f1a\u8fde\u5e26\u6390\u65ad\u8fdb\u6599",
-    "buffer_tank": "`[7,7,7,7,7,7]`\uff0c\u5426\u5219\u7ba1\u9053\u62c9\u4e0d\u8d70",
-    "receiver": "`[1,1,1,1,1,1]`\uff08INPUT\uff09",
-    "energy": "\u6eb6\u89e3\u5ba4\u4e00\u6b21\u914d\u65b9\u51e0\u4e4e\u8017\u5c3d 40k \u7f13\u51b2\uff1b\u7ed3\u6676\u5668\u8981\u7b49\u6d17\u6da4\u673a\u5582\u6599\u540e\u624d\u5f00\u59cb\uff0c\u90a3\u65f6\u7f13\u51b2\u5df2\u8017\u5c3d \u2014\u2014 \u9700\u5728\u94fe\u5c3e\u8865\u80fd"
+    "indexing": "component_config 的 6 元数组按 `RelativeSide`：FRONT=0, LEFT=1, RIGHT=2, BACK=3, TOP=4, BOTTOM=5（**不是绝对方向**）",
+    "emitter": "`eject2:1b` + 化学侧 `[7,7,7,7,7,7]`（INPUT_OUTPUT）；纯 OUTPUT(4) 会连带掐断进料",
+    "buffer_tank": "`[7,7,7,7,7,7]`，否则管道拉不走",
+    "receiver": "`[1,1,1,1,1,1]`（INPUT）",
+    "energy": "溶解室一次配方几乎耗尽 40k 缓冲；结晶器要等洗涤机喂料后才开始，那时缓冲已耗尽 —— 需在链尾补能"
   },
   "x4_attempts": {
-    "outcome": "\u5df2\u95ed\u73af\uff1a\u6539\u7528\u50a8\u7f50\u4e2d\u8f6c\u540e\u7269\u7406\u8f93\u9001\u6210\u7acb\uff0828 PASS\uff09",
-    "goal": "\u5728 \u00d73 \u4e4b\u540e\u63a5\uff1a\u7535\u89e3\u5206\u79bb\u5668\uff08\u5364\u6c34\u2192\u6c2f\uff09\u2192 \u5316\u5b66\u704c\u6ce8\u673a\uff08\u6c22+\u6c2f\u2192\u6c2f\u5316\u6c22\uff09\u2192 \u5316\u5b66\u6ce8\u5165\u5ba4\uff08\u94c1\u6676\u4f53+HCl\u2192\u788e\u7247\uff09",
+    "outcome": "已闭环：改用储罐中转后物理输送成立（28 PASS）",
+    "goal": "在 ×3 之后接：电解分离器（卤水→氯）→ 化学灌注机（氢+氯→氯化氢）→ 化学注入室（铁晶体+HCl→碎片）",
     "observations": [
-      "\u5206\u79bb\u5668\u7528 `config2:[7,...]`\uff08INPUT_OUTPUT\uff09+ eject2 + \u4e2d\u95f4\u52a0\u538b\u7ba1\u9053\uff1a\u5206\u79bb\u5668**\u786e\u5b9e\u4ea7\u51fa\u4e86\u6c2f**\uff08100 mB\uff09\uff0c\u4f46\u6c2f\u7559\u5728\u81ea\u5df1\u7f50\u91cc\u6ca1\u9001\u51fa\u53bb",
-      "\u628a\u5206\u79bb\u5668\u7d27\u8d34\u704c\u6ce8\u673a\u3001\u5316\u5b66\u4fa7\u6539 `[4,...]`\uff08OUTPUT\uff09\uff1a\u4ecd\u7136\u7559\u5728\u81ea\u5df1\u7f50\u91cc",
-      "\u6539 `[6,...]`\uff08OUTPUT_2\uff0c\u4eff\u7167\u811a\u672c\u91cc\u65e2\u6709\u6c27\u6c14\u5f39\u5c04\u573a\u666f\u7684\u5199\u6cd5\uff09\uff1a\u8fde\u201c\u4ea7\u51fa\u6c2f\u201d\u8fd9\u6761\u90fd\u4e0d\u518d\u6210\u7acb\uff08likely \u4fa7\u7c7b\u578b\u4e0e\u4e24\u7f50\u7ed1\u5b9a\u4e0d\u5339\u914d\uff0c\u628a\u94a0/\u6c2f\u90fd\u5224\u6210\u53ef\u62bd\u51fa\u4f46\u6ca1\u6709\u5408\u6cd5\u76ee\u6807\uff09",
-      "\u704c\u6ce8\u673a\u59cb\u7ec8\u53ea\u6709\u79cd\u5b50\u6c22\uff082000 mB \u672a\u6d88\u8017\uff09\uff0c\u8bf4\u660e\u5b83\u4ece\u672a\u6536\u5230\u6c2f"
+      "分离器用 `config2:[7,...]`（INPUT_OUTPUT）+ eject2 + 中间加压管道：分离器**确实产出了氯**（100 mB），但氯留在自己罐里没送出去",
+      "把分离器紧贴灌注机、化学侧改 `[4,...]`（OUTPUT）：仍然留在自己罐里",
+      "改 `[6,...]`（OUTPUT_2，仿照脚本里既有氧气弹射场景的写法）：连“产出氯”这条都不再成立（likely 侧类型与两罐绑定不匹配，把钠/氯都判成可抽出但没有合法目标）",
+      "灌注机始终只有种子氢（2000 mB 未消耗），说明它从未收到氯"
     ],
-    "insight": "\u5206\u79bb\u5668\u7684\u4e24\u4e2a\u8f93\u51fa\u7f50\u662f**\u5e26\u7c7b\u578b\u7684\u8f93\u51fa\u69fd**\uff08OUTPUT_1/OUTPUT_2\uff09\uff0c\u800c\u65e2\u6709\u6c27\u6c14\u573a\u666f\u7528\u7684\u662f\u7d22\u5f15 5\uff08BOTTOM\uff09\u2014\u2014 \u540c\u4e00\u4e2a\u7d22\u5f15\u5728\u201c\u653e\u5230\u4e0a\u65b9\u7f50\u201d\u7684\u573a\u666f\u91cc\u6210\u7acb\uff0c\u8bf4\u660e `RelativeSide` \u5230\u7edd\u5bf9\u65b9\u5411\u7684\u6620\u5c04\u968f\u673a\u5668 facing \u53d8\u5316\uff0c\u5bf9 `setblock` \u653e\u7f6e\u7684\u65e0\u671d\u5411\u673a\u5668\uff08\u5206\u79bb\u5668\uff09\u4e0d\u80fd\u7528\u201c\u6bcf\u4fa7\u540c\u4e00\u7c7b\u578b\u201d\u6765\u731c\u3002\u4e0b\u4e00\u6b65\u5e94\u5728\u5b98\u65b9\u53c2\u8003\u670d\u4e0a\u540c\u4e00\u4e2a\u5206\u79bb\u5668\u573a\u666f\u505a\u5355\u4fa7\u679a\u4e3e\uff086 \u4e2a\u7d22\u5f15\u5404\u8bd5\u4e00\u6b21\uff09\uff0c\u628a\u6620\u5c04\u9489\u6b7b\u518d\u63a5\u7ebf\u3002",
-    "next": "\u5728\u5b98\u65b9\u53c2\u8003\u670d\u4e0a\u679a\u4e3e\u5206\u79bb\u5668\u7684 6 \u4e2a\u4fa7\u9762\u7d22\u5f15 + 3 \u79cd\u8f93\u51fa\u7c7b\u578b\uff0c\u5f97\u5230\u786e\u5b9a\u6620\u5c04\u540e\u56de\u5230 smoke \u63a5\u7ebf",
+    "insight": "分离器的两个输出罐是**带类型的输出槽**（OUTPUT_1/OUTPUT_2），而既有氧气场景用的是索引 5（BOTTOM）—— 同一个索引在“放到上方罐”的场景里成立，说明 `RelativeSide` 到绝对方向的映射随机器 facing 变化，对 `setblock` 放置的无朝向机器（分离器）不能用“每侧同一类型”来猜。下一步应在官方参考服上同一个分离器场景做单侧枚举（6 个索引各试一次），把映射钉死再接线。",
+    "next": "在官方参考服上枚举分离器的 6 个侧面索引 + 3 种输出类型，得到确定映射后回到 smoke 接线",
     "separator_mapping_probe": {
-      "where": "\u5b98\u65b9\u53c2\u8003\u670d\uff08NeoForge 21.1.200 + Mekanism 10.7.19.85\uff09\uff0c\u5206\u79bb\u5668 (100,64,0) \u516d\u9762\u5404\u653e\u4e00\u4e2a basic_chemical_tank\uff08\u5168\u90e8 `config2:[1,...]`\uff09\uff0c\u5206\u79bb\u5668\u6ce8\u5165 8000 mB \u5364\u6c34 + 40k FE",
-      "trial_A": "`config2:[4,4,4,4,4,4]`\uff08OUTPUT\uff09+ eject2 \u2192 \u516d\u4e2a\u65b9\u5411**\u90fd\u6ca1\u6536\u5230**\uff1b\u5206\u79bb\u5668\u81ea\u5df1\u7f50\u91cc\u7559\u7740 sodium 100 + chlorine 100",
-      "trial_B": "`config2:[6,6,6,6,6,6]`\uff08OUTPUT_2\uff09+ eject2 \u2192 **\u516d\u4e2a\u65b9\u5411\u5168\u90e8\u6536\u5230 chlorine**\uff08DOWN 17 / UP 17 / NORTH 17 / SOUTH 17 / WEST 16 / EAST 16 mB\uff09",
-      "conclusion": "\u5206\u79bb\u5668\u7684\u6c2f\u5728\u53f3\u7f50\uff08OUTPUT_2 \u7c7b\u578b\uff09\uff0c\u5fc5\u987b\u7528 **6** \u624d\u80fd\u5f39\u5c04\uff1b\u7528 4\uff08OUTPUT\uff09\u5b8c\u5168\u4e0d\u5f39\u3002\u8fd9\u89e3\u91ca\u4e86 smoke \u91cc `[7,...]`/`[4,...]` \u4e24\u6b21\u5931\u8d25\uff0c\u4e5f\u89e3\u91ca\u4e86\u4e3a\u4ec0\u4e48\u201c\u4ea7\u51fa\u6c2f\u201d\u7684\u65ad\u8a00\u53cd\u800c\u5931\u8d25 \u2014\u2014 \u6c2f\u88ab\u5f39\u8d70\u4e86\uff0c\u5206\u79bb\u5668\u81ea\u5df1\u7f50\u91cc\u5f53\u7136\u662f\u7a7a\u7684\u3002",
-      "next": "smoke \u91cc\u628a\u5206\u79bb\u5668\u5316\u5b66\u4fa7\u8bbe\u4e3a `[6,6,6,6,6,6]`+eject2\uff0c\u65ad\u8a00\u6539\u5230\u4e0b\u6e38\uff08\u704c\u6ce8\u673a\u662f\u5426\u62ff\u5230\u6c2f/\u662f\u5426\u4ea7\u51fa\u6c2f\u5316\u6c22\uff09\uff0c\u4e0d\u8981\u65ad\u8a00\u5206\u79bb\u5668\u81ea\u5df1\u7684\u7f50"
+      "where": "官方参考服（NeoForge 21.1.200 + Mekanism 10.7.19.85），分离器 (100,64,0) 六面各放一个 basic_chemical_tank（全部 `config2:[1,...]`），分离器注入 8000 mB 卤水 + 40k FE",
+      "trial_A": "`config2:[4,4,4,4,4,4]`（OUTPUT）+ eject2 → 六个方向**都没收到**；分离器自己罐里留着 sodium 100 + chlorine 100",
+      "trial_B": "`config2:[6,6,6,6,6,6]`（OUTPUT_2）+ eject2 → **六个方向全部收到 chlorine**（DOWN 17 / UP 17 / NORTH 17 / SOUTH 17 / WEST 16 / EAST 16 mB）",
+      "conclusion": "分离器的氯在右罐（OUTPUT_2 类型），必须用 **6** 才能弹射；用 4（OUTPUT）完全不弹。这解释了 smoke 里 `[7,...]`/`[4,...]` 两次失败，也解释了为什么“产出氯”的断言反而失败 —— 氯被弹走了，分离器自己罐里当然是空的。",
+      "next": "smoke 里把分离器化学侧设为 `[6,6,6,6,6,6]`+eject2，断言改到下游（灌注机是否拿到氯/是否产出氯化氢），不要断言分离器自己的罐"
     },
     "wiring_trial": {
-      "layout": "\u6ce8\u5165\u5ba4(58) \u2190 \u52a0\u538b\u7ba1\u9053(59,\u897f\u63a8\u4e1c\u62c9) \u2190 \u5316\u5b66\u704c\u6ce8\u673a(60) \u2190 \u7d27\u8d34 \u2190 \u7535\u89e3\u5206\u79bb\u5668(61,`[6,...]`+eject)",
-      "run_1": "\u5206\u79bb\u5668\u4ea7\u6c2f \u2713\u3001\u704c\u6ce8\u673a\u6d88\u8017 100 \u6c22\u9020\u51fa HCl \u2713\u3001**\u6ce8\u5165\u5ba4\u6536\u5230 17 mB hydrogen_chloride** \u2713 \u2014\u2014 \u4f46\u6ce8\u5165\u5ba4\u5f53\u65f6\u80fd\u91cf\u4e3a 0\uff0c\u6ca1\u5f00\u5de5",
-      "run_2": "\u7ed9\u6ce8\u5165\u5ba4\u8865\u80fd\u540e\uff1a\u6ce8\u5165\u5ba4 36,800 FE + 4 \u4e2a\u94c1\u6676\u4f53\u5c31\u4f4d\uff0c\u4f46**\u6ce8\u5165\u5ba4\u8bfb\u4e0d\u5230 HCl**\uff0c`progress` \u59cb\u7ec8 0\uff0c\u6ca1\u6709\u788e\u7247\u4ea7\u51fa",
-      "state_after": "x4 \u6bb5\u5df2\u4ece smoke \u56de\u9000\uff08\u4fdd\u6301 \u00d73 \u7684 27 PASS \u7248\u672c\uff09",
+      "layout": "注入室(58) ← 加压管道(59,西推东拉) ← 化学灌注机(60) ← 紧贴 ← 电解分离器(61,`[6,...]`+eject)",
+      "run_1": "分离器产氯 ✓、灌注机消耗 100 氢造出 HCl ✓、**注入室收到 17 mB hydrogen_chloride** ✓ —— 但注入室当时能量为 0，没开工",
+      "run_2": "给注入室补能后：注入室 36,800 FE + 4 个铁晶体就位，但**注入室读不到 HCl**，`progress` 始终 0，没有碎片产出",
+      "state_after": "x4 段已从 smoke 回退（保持 ×3 的 27 PASS 版本）",
       "remaining_unknown": [
-        "\u704c\u6ce8\u673a\u5316\u5b66\u4fa7\u5199 `[7,...]` \u65f6\u4f1a\u7ed9\u6240\u6709\u65b9\u5411\u5f39\u5c04\uff0cHCl \u53ef\u80fd\u88ab\u5f39\u5230\u522b\u7684\u9762\u800c\u4e0d\u662f\u7ba1\u9053\u90a3\u4e00\u4fa7\uff08run 1 \u53ea\u6f0f\u8fc7 17 mB \u8bf4\u660e\u6d41\u91cf\u672c\u8eab\u5c31\u5f88\u5c0f\uff09",
-        "\u6ce8\u5165\u5ba4\u62ff\u5230 HCl \u5374\u4e0d\u542f\u52a8\u7684\u539f\u56e0\u672a\u5b9a\uff08\u53ef\u80fd\u4fa7\u7c7b\u578b/`gasInputSlot` \u4e0e\u7f50\u7684\u7ed1\u5b9a\uff0c\u9700\u8981\u50cf\u5206\u79bb\u5668\u90a3\u6837\u5728\u5b98\u65b9\u670d\u4e0a\u679a\u4e3e\u4e00\u6b21\uff09"
+        "灌注机化学侧写 `[7,...]` 时会给所有方向弹射，HCl 可能被弹到别的面而不是管道那一侧（run 1 只漏过 17 mB 说明流量本身就很小）",
+        "注入室拿到 HCl 却不启动的原因未定（可能侧类型/`gasInputSlot` 与罐的绑定，需要像分离器那样在官方服上枚举一次）"
       ],
-      "next": "\u5728\u5b98\u65b9\u53c2\u8003\u670d\u4e0a\u679a\u4e3e\u300c\u704c\u6ce8\u673a\u2192\u6ce8\u5165\u5ba4\u300d\u8fd9\u4e00\u8df3\u7684\u4fa7\u7c7b\u578b\uff086 \u7d22\u5f15 \u00d7 3 \u7c7b\u578b\uff09\uff0c\u987a\u4fbf\u786e\u8ba4\u6ce8\u5165\u5ba4\u542f\u52a8\u6761\u4ef6\uff1b\u6620\u5c04\u9489\u6b7b\u540e\u518d\u63a5"
+      "next": "在官方参考服上枚举「灌注机→注入室」这一跳的侧类型（6 索引 × 3 类型），顺便确认注入室启动条件；映射钉死后再接"
     }
   },
   "x4_stage": {
-    "blocks": "\u7535\u89e3\u5206\u79bb\u5668(62) \u2190\u7d27\u8d34\u2190 \u5316\u5b66\u704c\u6ce8\u673a(61) \u2192 \u5316\u5b66\u50a8\u7f50(60) \u2192 \u52a0\u538b\u7ba1\u9053(59) \u2192 \u5316\u5b66\u6ce8\u5165\u5ba4(58)",
-    "physical_transfer": "\u6ce8\u5165\u5ba4**\u4e0d\u518d\u79cd\u5b50 HCl**\uff1a\u788e\u7247\u4ea7\u51fa\u7684\u552f\u4e00\u6765\u6e90\u662f\u4ece\u704c\u6ce8\u673a\u7ecf\u50a8\u7f50\u3001\u7ba1\u9053\u9001\u6765\u7684 HCl\u3002smoke \u65ad\u8a00 `injection chamber turned a crystal into a shard` \u901a\u8fc7 \u21d2 **\u7269\u7406\u8f93\u9001\u5df2\u95ed\u73af**",
+    "blocks": "电解分离器(62) ←紧贴← 化学灌注机(61) → 化学储罐(60) → 加压管道(59) → 化学注入室(58)",
+    "physical_transfer": "注入室**不再种子 HCl**：碎片产出的唯一来源是从灌注机经储罐、管道送来的 HCl。smoke 断言 `injection chamber turned a crystal into a shard` 通过 ⇒ **物理输送已闭环**",
     "result": "smoke **EXIT=0 / 28 PASS / 0 FAIL**",
-    "why_it_works": "\u5206\u79bb\u5668/\u704c\u6ce8\u673a\u8fd9\u7c7b\u4f1a\u5f39\u5c04\u7684\u673a\u5668\u4e0d\u80fd\u76f4\u63a5\u5bf9\u673a\u5668\u5f39\u5c04\uff08\u76ee\u6807\u673a\u5668\u53ef\u80fd\u5224\u4e3a\u975e acceptor\uff09\uff0c\u52a0\u4e00\u4e2a\u5316\u5b66\u54c1\u50a8\u7f50\u505a\u4e2d\u8f6c\u3001\u518d\u7531\u7ba1\u9053\u62c9\u8fdb\u63a5\u6536\u673a \u2014\u2014 \u4e0e \u00d73 \u94fe\u91cc chamber\u2192tank\u2192tube\u2192washer \u7684\u5199\u6cd5\u4e00\u81f4",
-    "assertion_lesson": "\u5e26 eject \u7684\u673a\u5668\u4e0e\u5176\u4e0b\u6e38\u7f13\u51b2\u7f50\u5728 dump \u65f6\u90fd\u53ef\u80fd\u4e3a\u7a7a\uff08\u4ea7\u7269\u5df2\u88ab\u62c9\u8d70\uff09\uff0c\u56e0\u6b64\u8bc1\u636e\u53ea\u80fd\u653e\u5728\u6700\u7ec8\u6d88\u8d39\u8005\uff08\u6ce8\u5165\u5ba4\u4ea7\u51fa\u788e\u7247\uff09"
+    "why_it_works": "分离器/灌注机这类会弹射的机器不能直接对机器弹射（目标机器可能判为非 acceptor），加一个化学品储罐做中转、再由管道拉进接收机 —— 与 ×3 链里 chamber→tank→tube→washer 的写法一致",
+    "assertion_lesson": "带 eject 的机器与其下游缓冲罐在 dump 时都可能为空（产物已被拉走），因此证据只能放在最终消费者（注入室产出碎片）"
   },
   "x4_physical_transfer_trial": {
-    "attempt": "\u628a\u704c\u6ce8\u673a(59)\u7d27\u8d34\u6ce8\u5165\u5ba4(58)\uff0c\u704c\u6ce8\u673a `eject2:1b` + `config2:[7,...]`\uff0c\u6ce8\u5165\u5ba4**\u4e0d\u518d\u79cd\u5b50 HCl**\uff0c\u671f\u671b HCl \u76f4\u63a5\u5f39\u5c04\u8fc7\u53bb",
-    "result": "\u672a\u901a\u8fc7\uff1a\u704c\u6ce8\u673a\u81ea\u8eab\u7f50\u8bfb\u5230\u7a7a\uff08\u56e0\u4e3a\u5f00\u7740 eject\uff0cHCl \u4e00\u4ea7\u51fa\u5c31\u88ab\u5f39\u8d70\uff09\uff0c\u6ce8\u5165\u5ba4\u4ecd\u672a\u4ea7\u51fa\u788e\u7247",
-    "learning": "\u518d\u6b21\u5370\u8bc1\u300c\u65ad\u8a00\u8981\u653e\u4e0b\u6e38\u300d\uff1a\u5e26 eject \u7684\u673a\u5668\u81ea\u8eab\u7f50\u5728 dump \u65f6\u5fc5\u7a7a\uff0c\u4e0d\u80fd\u7528\u5b83\u5224\u5b9a\u201c\u4ea7\u51fa\u4e86\u4ec0\u4e48\u201d",
-    "status": "\u5df2\u56de\u9000\u5230 29 PASS \u7684\u9a8c\u8bc1\u7248\u672c\uff1b\u7269\u7406\u8f93\u9001\u6bb5\u4ecd\u672a\u8bc1\u660e"
+    "attempt": "把灌注机(59)紧贴注入室(58)，灌注机 `eject2:1b` + `config2:[7,...]`，注入室**不再种子 HCl**，期望 HCl 直接弹射过去",
+    "result": "未通过：灌注机自身罐读到空（因为开着 eject，HCl 一产出就被弹走），注入室仍未产出碎片",
+    "learning": "再次印证「断言要放下游」：带 eject 的机器自身罐在 dump 时必空，不能用它判定“产出了什么”",
+    "status": "已回退到 29 PASS 的验证版本；物理输送段仍未证明"
   },
   "x5_stage": {
-    "blocks": "\u6ce8\u5165\u5ba4(58,100,0) \u2192 \u8fd0\u8f93\u5668(58,100,1) \u2192 \u51c0\u5316\u5ba4(58,100,2) \u2192 \u8fd0\u8f93\u5668(58,100,3) \u2192 \u7c89\u788e\u673a(58,100,4) \u2192 \u8fd0\u8f93\u5668(58,100,5) \u2192 \u5bcc\u96c6\u4ed3(58,100,6)",
-    "physical_chain": "**\u65e0\u4efb\u4f55\u7269\u54c1\u79cd\u5b50**\uff1a\u94fe\u5c3e\u53ea\u65ad\u8a00 `\u5bcc\u96c6\u4ed3 items=[{slot:1, mekanism:dust_iron}]`\uff0c\u800c\u5b83\u91cc\u9762\u7684\u94c1\u7c89\u53ea\u80fd\u7531 \u6676\u4f53\u2192\u788e\u7247\u2192\u56e2\u5757\u2192\u810f\u7c89\u2192\u94c1\u7c89 \u8fd9\u6761\u94fe\u4e00\u8def\u9001\u6765",
-    "result": "smoke **EXIT=0 / 28 PASS / 0 FAIL**\uff08`ore path ran end to end: crystal in at the chamber, dust out at the enrichment chamber`\uff09",
+    "blocks": "注入室(58,100,0) → 运输器(58,100,1) → 净化室(58,100,2) → 运输器(58,100,3) → 粉碎机(58,100,4) → 运输器(58,100,5) → 富集仓(58,100,6)",
+    "physical_chain": "**无任何物品种子**：链尾只断言 `富集仓 items=[{slot:1, mekanism:dust_iron}]`，而它里面的铁粉只能由 晶体→碎片→团块→脏粉→铁粉 这条链一路送来",
+    "result": "smoke **EXIT=0 / 28 PASS / 0 FAIL**（`ore path ran end to end: crystal in at the chamber, dust out at the enrichment chamber`）",
     "how_it_works": [
-      "\u4e32\u8054\u6cbf **+z** \u65b9\u5411\uff08chunk (3,0) \u5df2\u5728\u52a0\u8f7d\u8303\u56f4\u5185\uff09\uff0c\u907f\u514d\u4e4b\u524d -z \u65b9\u5411 chunk \u672a\u52a0\u8f7d\u7684\u95ee\u9898",
-      "\u6ce8\u5165\u5ba4\u7269\u54c1\u4fa7 `OUTPUT(4)`+`eject3:1b` \u628a\u788e\u7247\u63a8\u7ed9\u8fd0\u8f93\u5668",
-      "\u4e2d\u95f4\u4e24\u7ea7\u7269\u54c1\u4fa7 `INPUT_OUTPUT(7)`\uff1a\u65e2\u80fd\u88ab\u4e0a\u6e38\u63a8\u5165\u3001\u4e5f\u80fd\u88ab\u4e0b\u6e38\u62c9\u8d70",
-      "**\u672b\u7ea7\u5bcc\u96c6\u4ed3\u7269\u54c1\u4fa7 `INPUT(1)`**\uff1a\u80fd\u6536\u6599\u4f46\u4e0d\u80fd\u88ab\u62bd\u8d70 \u2192 \u4ea7\u7269\u7559\u5728\u69fd\u91cc\uff0c\u624d\u80fd\u88ab\u65ad\u8a00",
-      "\u8fd0\u8f93\u5668\u63a9\u7801 `[3,3,2,1,3,3]`\uff1a\u5317\u4fa7 PULL(2)\u3001\u5357\u4fa7 PUSH(1)",
-      "\u94fe\u5c3e\u9700\u8981**\u4e24\u8f6e\u8865\u80fd + \u4e00\u6b21 600 tick \u7684 sprint**\uff1a\u672b\u7ea7\u8981\u7b49\u810f\u7c89\u5230\u8d27\u624d\u5f00\u59cb\u52a0\u5de5"
+      "串联沿 **+z** 方向（chunk (3,0) 已在加载范围内），避免之前 -z 方向 chunk 未加载的问题",
+      "注入室物品侧 `OUTPUT(4)`+`eject3:1b` 把碎片推给运输器",
+      "中间两级物品侧 `INPUT_OUTPUT(7)`：既能被上游推入、也能被下游拉走",
+      "**末级富集仓物品侧 `INPUT(1)`**：能收料但不能被抽走 → 产物留在槽里，才能被断言",
+      "运输器掩码 `[3,3,2,1,3,3]`：北侧 PULL(2)、南侧 PUSH(1)",
+      "链尾需要**两轮补能 + 一次 600 tick 的 sprint**：末级要等脏粉到货才开始加工"
     ],
-    "assertion_lesson": "\u53ea\u65ad\u8a00**\u94fe\u5c3e**\uff1a\u4f1a\u5f39\u5c04\u7684\u4e2d\u95f4\u673a\u5668\u4e0e\u5176\u7f13\u51b2\u5728 dump \u65f6\u90fd\u662f\u7a7a\u7684\uff08\u672c\u8f6e\u4e3a\u6b64\u5931\u8d25 4 \u6b21\uff09"
-  }
+    "assertion_lesson": "只断言**链尾**：会弹射的中间机器与其缓冲在 dump 时都是空的（本轮为此失败 4 次）"
+  },
+  "historical_status": "x3_x4_x5_fully_chained",
+  "historical_not_verified": [
+    "×5（净化/粉碎/富集）",
+    "硫酸自产链（硫→氧化→酸）",
+    "灌注机→注入室的稳定物理输送"
+  ],
+  "current_scope": "Existing machine gate tests seeded chemistry stages and crystal→shard→clump→dirty dust→dust transport chain. It seeds crystal/HCl/O2, so does not prove one fully self-supplying ore×5 line. Valid210mB machine buffers plus external tank supply and frozen timing now replace old overfill fixture; see w117-smoke-stability.json."
 }

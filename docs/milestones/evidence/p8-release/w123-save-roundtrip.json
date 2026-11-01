@@ -49,8 +49,8 @@
       "64,100,0"
     ],
     "logs": [
-      "/tmp/mekanism-save-roundtrip.MQVZUr/phase-one.log",
-      "/tmp/mekanism-save-roundtrip.MQVZUr/phase-two.log"
+      "/tmp/mekanism-goal-final-release2/diagnostics/mekanism-save-roundtrip.MQVZUr-phase-one.log",
+      "/tmp/mekanism-goal-final-release2/diagnostics/mekanism-save-roundtrip.MQVZUr-phase-two.log"
     ],
     "sprint_ticks": [
       20,
@@ -67,5 +67,13 @@
     "not_claimed": "Exact quantity/progress conservation or full ore chain persistence; only stated configuration and ID-set roundtrip.",
     "estimated_sprint_wall_seconds": 0.62,
     "post_commit_review": "Astra identified field regex ignored first root compound key. Corrected whitespace match; reused same retained logs with existing comparator: ok, tank chemical_tanks explicitly resolved to hydrogen_chloride2000."
+  },
+  "status": "corrected_four_real_machine_roundtrip_verified",
+  "final_gate": {
+    "result": "PASS",
+    "seconds": 52,
+    "log": "/tmp/mekanism-goal-final-release2/10-save_roundtrip.log",
+    "artifact_source_commit": "4070cd5e8c8822d9285f79d97667086b1f9a8a91",
+    "scope": "Strict four dumps, complete config/sorting and content ID sets; not exact quantities/progress."
   }
 }
