@@ -476,3 +476,13 @@ W-74 的批准范围由"EMI→Jade"扩大为 **EMI → Jade → JEI → WTHIT**�
 4. **W-99**：Modern Industrialization 或 Tech Reborn 二选一，Mekanism↔对方双向能量读数。
 5. **W-79**：W-66/W-67 的反馈修复预留槽，无发现记"无"。
 6. 收口：再跑一次 `release-check.sh` + 两次 `build.sh --clean` 哈希比对；更新 `DECISIONS_PENDING.md`。
+
+**K1 进展（2026-11-01，W-98/W-99/W-101b 完成）**
+
+| 项 | 结果 | 证据 |
+|---|---|---|
+| W-101b | 921→**885** 提交，`wip` 前缀 **0**，树哈希与备份一致，33 个 merge 保留；**未推送**（D-07 未批） | `evidence/p8-release/w101-squash-analysis.json` |
+| W-98 | Sodium **兼容**（渲染/GUI/WTHIT 正常）；Iris 在 dev 客户端**装不上**（mixin 重映射空指针，原文已记）；环境是软件渲染，帧率无代表性 | `evidence/p8-release/w98-renderer-compat.json` |
+| W-99 | **双向互通**：Mekanism→Tech Reborn 研磨机 1000 L；Tech Reborn 发电机→Mekanism 熔炉 6925 FE；脚本连跑 3 次一致 | `evidence/p8-release/w99-third-party-energy.json` |
+
+发布门禁新增两步：第三方能量互通（`fabric-third-party-energy-smoke.sh`）与发布 JAR 第三方包泄漏断言（`sodium/iris/techreborn/reborncore/teamreborn`）。

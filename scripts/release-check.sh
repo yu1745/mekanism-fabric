@@ -44,5 +44,6 @@ run_step 'packaged server (50 mods, 458 values)' "$ROOT/scripts/fabric-packaged-
 run_step 'paired network (two clients, handshake)' "$ROOT/scripts/fabric-paired-network-smoke.sh"
 run_step 'configuration rejection (three clients rejected)' "$ROOT/scripts/fabric-configuration-rejection-smoke.sh"
 run_step 'machine runtime smoke' "$ROOT/scripts/fabric-machine-smoke.sh"
+run_step 'third-party energy interop (Tech Reborn)' "$ROOT/scripts/fabric-third-party-energy-smoke.sh"
 
 printf 'release-check: PASSED (%d steps, logs in %s)\n' "$STEP" "$LOG_DIR"
