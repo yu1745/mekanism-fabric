@@ -1,0 +1,33 @@
+{
+  "work_item": "W-123",
+  "date": "2026-11-01",
+  "goal": "存档往返第二轮：把侧配置、化学罐内容、工厂 sorting、机器进度存盘→停服→重启后核对是否保留。",
+  "rig": "scripts/fabric-save-roundtrip-smoke.sh（两阶段：布置+`save-all flush`+`stop`；同世界重启再转储）",
+  "scenario": {
+    "化学注入室(58,100,0)": "HCl 1500 mB + 4 晶体 + 能量 40000，化学品侧 INPUT、物品侧 INPUT_OUTPUT",
+    "化学储罐(60,100,0)": "HCl 2000 mB，化学侧 INPUT_OUTPUT",
+    "分离器(62,100,0)": "能量 40000，物品侧 INPUT_OUTPUT",
+    "精英冶炼工厂(64,100,0)": "能量 40000 + 8 脏粉，**`sorting:1b`**，能量侧 INPUT"
+  },
+  "comparison_rules": {
+    "精确比对": [
+      "`component_config`（侧配置）",
+      "`sorting`（工厂排序）"
+    ],
+    "内容比对": [
+      "`items` 与 `chemical_tanks` 必须存在且**物品/化学品 id 集合一致**"
+    ],
+    "为什么不比数量": "机器在运行期会消耗输入（注入室喝掉 HCl、工厂吃掉脏粉），数量变化是正常行为而不是丢失"
+  },
+  "readings": {
+    "phase_one": "四台机器转储齐全；注入室 HCl 1500、储罐 2000、工厂 sorting=1",
+    "phase_two": "重启后四台机器全部回来，`component_config` 与 `sorting` 逐字一致，`items`/`chemical_tanks` 的 id 集合一致",
+    "compare": "ok"
+  },
+  "stability": "连续 2 次 PASS（每次 2 条断言 + 逐字段比对）",
+  "reproduce": "bash scripts/fabric-save-roundtrip-smoke.sh",
+  "not_verified": [
+    "未覆盖 ×3/×4/×5 整链的重启（只覆盖四台代表性机器；整链已由 W-111 单独验证）",
+    "未覆盖 QIO 网络与多方块（多方块无法无头成型，见 W-116/W-122）"
+  ]
+}

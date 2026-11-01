@@ -24,6 +24,8 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 
 ## 验收证据
 
+W-123（存档往返第二轮）：**配置与内容都能活过重启**。脚本 `scripts/fabric-save-roundtrip-smoke.sh` 两阶段：布置四台机器（注入室 HCl 1500 + 4 晶体、化学储罐 HCl 2000、分离器、精英冶炼工厂 `sorting:1b` + 8 脏粉）→ `save-all flush` → 干净 `stop` → 同世界重启 → 再转储。逐字段比对：`component_config` 与 `sorting` **逐字一致**，`items`/`chemical_tanks` 的 **id 集合一致**；数量变化（注入室喝 HCl、工厂吃脏粉）属正常消耗，故不比数量。连续 2 次 PASS。[记录](evidence/p8-release/w123-save-roundtrip.json)
+
 W-122（发电→储能→用电）：**储能→线缆→机器通了，发电机一跳与感应矩阵均受限**。脚本 `scripts/fabric-energy-chain-smoke.sh`：能量立方（eject + 能量侧 OUTPUT，预充 100000）→ 通用线缆（西拉东推）→ 富集熔炉（能量侧 INPUT），熔炉实测 `stored = 20000`（充满上限）。**太阳能发电机确实在发电**（`stored: 13397`、`active_state: 1b`），但它的方块数据里**没有 `component_config`**，命令 rig 写不进能量侧配置，因此「发电机→线缆→机器」这一跳无法在无头 rig 里判定。**感应矩阵**：3×3×3 完整外壳 + 内部电芯逐块放置、等 60 tick 后**没有成型**，原文原因是成型入口 `IMultiblockBase.onActivate(Player, …)` 需玩家交互（与 W-116 涡轮同一堵墙）。[记录](evidence/p8-release/w122-energy-chain.json)
 
 W-121（崩溃下物品守恒）：**运输器搬运在硬崩溃下不精确守恒，但这是引擎行为不是移植缺陷**。脚本 `scripts/fabric-crash-conservation-smoke.sh`：1728 个铁矿石从箱子搬到另一箱子，`save-all flush` 后搬 20 秒、对进程组 `kill -9`、同世界重启再求和。三次实测总量 1762 / 1763 / 1761（应为 1728），**多出 33–35 个**——重复而非丢失。原因有二：官方 `TileEntityLogisticalTransporterBase` **没有** `saveAdditional`/`loadAdditional`（`javap` 核对官方 JAR，方法数 0），在途物品不持久化；且区块各自保存，源区块可能停留在物品离开前、目标区块已包含物品到达后。本移植的运输器同样不持久化在途缓冲，与官方一致。**QIO 变体未测**：QIO 网络需在 GUI 里创建频率，无头命令做不到。[记录](evidence/p8-release/w121-crash-conservation.json)
