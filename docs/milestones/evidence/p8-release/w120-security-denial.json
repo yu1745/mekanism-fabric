@@ -1,7 +1,7 @@
 {
-  "work_item": "W-120（进行中）",
+  "work_item": "W-120",
   "date": "2026-11-01",
-  "status": "deny_and_allow_readings_repeatable",
+  "status": "owner_stranger_trusted_and_revocation_verified",
   "what_exists": {
     "fixture_source_set": "fabric/src/securityDenialFixture（源集 + remap + mods 条目 + `runSecurityDenialClient` 运行配置），编译通过",
     "fixture_class": "SecurityDenialClient：每 tick 检查，进入世界后对目标方块发一次 useItemOn，再读 `minecraft.screen` 判定，日志输出 `SECURITY_FIXTURE_ALLOWED` / `SECURITY_FIXTURE_DENIED` / `SECURITY_FIXTURE_UNEXPECTED`",
@@ -27,7 +27,7 @@
     }
   ],
   "not_verified": [
-    "双玩家拒绝/放行读数（被上面第三条挡住）"
+    "simultaneous two-client fixture; current verification uses the authorized mdb alternative"
   ],
   "progress_this_round": {
     "dev_server": "dev 客户端连四 JAR 发布服务端会被拒（Received 781 registry entries that are unknown to this client），改用同源 dev 服务端 runSecurityDenialServer",
@@ -76,5 +76,145 @@
     "requires": "一个运行中的 mdb owned session（mdb session start dev …）",
     "does": "把机器属主先设为 Bob 的离线 UUID（PRIVATE），断言 gui open-block 被拒（NO_GUI_CHANGED）；再把属主设为当前玩家 UUID，断言界面打开",
     "stability": "连跑 3 次全部 PASS（每次两条断言）"
-  }
+  },
+  "current_verification": {
+    "baseline": "482abbb9",
+    "script": "scripts/fabric-security-denial-probe.sh",
+    "session": "goal-security (mdb owned, stopped after verification)",
+    "checks": [
+      {
+        "case": "PRIVATE stranger denied",
+        "reading": {
+          "ok": false,
+          "changed": false,
+          "result": "SUCCESS",
+          "reason": "NO_GUI_CHANGED",
+          "block": "mekanism:enrichment_chamber",
+          "distance": 1.5,
+          "reach": 5.0,
+          "screen": "",
+          "screenType": "none",
+          "screenTitle": "",
+          "containerId": 0,
+          "slotCount": 46,
+          "face": "up",
+          "hand": "main_hand",
+          "sneak": false,
+          "clearHand": false,
+          "pos": [
+            1,
+            100,
+            -3
+          ]
+        }
+      },
+      {
+        "case": "TRUSTED unlisted player denied",
+        "reading": {
+          "ok": false,
+          "changed": false,
+          "result": "SUCCESS",
+          "reason": "NO_GUI_CHANGED",
+          "block": "mekanism:enrichment_chamber",
+          "distance": 1.5,
+          "reach": 5.0,
+          "screen": "",
+          "screenType": "none",
+          "screenTitle": "",
+          "containerId": 0,
+          "slotCount": 46,
+          "face": "up",
+          "hand": "main_hand",
+          "sneak": false,
+          "clearHand": false,
+          "pos": [
+            1,
+            100,
+            -3
+          ]
+        }
+      },
+      {
+        "case": "TRUSTED listed player allowed",
+        "reading": {
+          "ok": true,
+          "changed": true,
+          "result": "SUCCESS",
+          "reason": "",
+          "block": "mekanism:enrichment_chamber",
+          "distance": 1.5,
+          "reach": 5.0,
+          "screen": "mekanism.client.gui.machine.GuiElectricMachine",
+          "screenType": "container",
+          "screenTitle": "Enrichment Chamber",
+          "containerId": 5,
+          "slotCount": 41,
+          "face": "up",
+          "hand": "main_hand",
+          "sneak": false,
+          "clearHand": false,
+          "pos": [
+            1,
+            100,
+            -3
+          ]
+        }
+      },
+      {
+        "case": "TRUSTED removed player denied",
+        "reading": {
+          "ok": false,
+          "changed": false,
+          "result": "SUCCESS",
+          "reason": "NO_GUI_CHANGED",
+          "block": "mekanism:enrichment_chamber",
+          "distance": 1.5,
+          "reach": 5.0,
+          "screen": "",
+          "screenType": "none",
+          "screenTitle": "",
+          "containerId": 0,
+          "slotCount": 46,
+          "face": "up",
+          "hand": "main_hand",
+          "sneak": false,
+          "clearHand": false,
+          "pos": [
+            1,
+            100,
+            -3
+          ]
+        }
+      },
+      {
+        "case": "PRIVATE owner allowed",
+        "reading": {
+          "ok": true,
+          "changed": true,
+          "result": "SUCCESS",
+          "reason": "",
+          "block": "mekanism:enrichment_chamber",
+          "distance": 1.5,
+          "reach": 5.0,
+          "screen": "mekanism.client.gui.machine.GuiElectricMachine",
+          "screenType": "container",
+          "screenTitle": "Enrichment Chamber",
+          "containerId": 6,
+          "slotCount": 41,
+          "face": "up",
+          "hand": "main_hand",
+          "sneak": false,
+          "clearHand": false,
+          "pos": [
+            1,
+            100,
+            -3
+          ]
+        }
+      }
+    ],
+    "cleanup": "temporary machine removed; temporary random-owner frequency removed and absence verified",
+    "scope": "single real player, temporary distinct owner UUID; GUI access before/after trusted membership changes; not simultaneous two-client coverage"
+  },
+  "history_notice": "Earlier problems_found/progress/result sections are historical attempts, superseded by current_verification; the old fixture and security:1b descriptions are not current reproduction steps."
 }

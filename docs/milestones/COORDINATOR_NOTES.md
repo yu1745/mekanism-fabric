@@ -785,3 +785,27 @@ JEI（W-74c）与 WTHIT（W-74d）已批准，见 `ROADMAP.md`「W-74 范围追�
 - 累计产品缺陷：**0**。门禁/验证抓出并已修复的真实问题 4 个（`+` 版本号解析崩溃、核心 JAR 不可复现、两个过期契约、WTHIT 旧接口崩溃）；被官方对照撤回或自我更正的怀疑/结论 5 次；本批次新增的"自己发现并修自己的 bug"：UUID int 数组转换、`security_mode` 键名。
 - W-99：**完成**（Tech Reborn 双向互通）。W-98：Sodium 兼容，Iris 在 dev 环境装不上（限制已记）。W-101/W-101b：完成，HEAD 无 `wip` 开头提交，树无损。W-120：进行中。W-79：未动。
 - 本地比 origin：**已分叉**（HEAD 896 个提交，合并基点 `e171c5c6`，origin 仍在 `cbf55f96`），推送必须 `--force-with-lease`。备份分支 `wip-squash-backup-20261101`、`wip-squash-backup2-20261101` 与对应 tag 都在。W-101b 已做完，**现在可以一次推完**，只等用户明确批准（D-07）。
+
+## 方向核对 M0（2026-11-01，goal 恢复；基线 `482abbb9`）
+
+本次核对开始时工作区干净，最新提交为 W-101 证据修复 `482abbb9`。L4 后已有 W-120 的 mdb 拒绝/放行读数、W-79 与 Iris 限制、P27 四场景、W-112 升级及收口提交；不得把 L4 的“未做/进行中”列表直接当当前状态。此次只读源码和证据、维护本文件与 ROADMAP，不改实现/测试、不提交、不启动客户端或服务器；由主实现者统一提交。后续仅在主实现者 followup 时再核对，不持续轮询。
+
+**撤回客户端 fixture 例外**：L3/L4 所称“Gradle fixture 是既有 paired smoke 的同类机制”不能豁免 AGENTS 的硬规则。所有游戏客户端，包括 fixture/handshake，都只允许 `mdb session start` 并由 `mdb session stop` 回收。历史启动结果保留为历史事实；相关旧脚本不获得重跑许可。主实现者当前沿 mdb 路径完成 W-120 受信玩家闭包，方向正确；现有证据只证明 PRIVATE 非属主拒绝与属主放行，受信名单放行尚缺。
+
+### W-121 真边界与已定位的验证缺陷
+
+- 原计划是 QIO 驱动阵列/导入导出守恒及官方同布置对照；实际 `fabric-crash-conservation-smoke.sh` 只有两个原版箱子与一个运输器。证据明确写了未建立 QIO 频率，因此 QIO 没有被验收，官方同场景也未运行。
+- **转储解析存在确定性重复计数**：`count_items` 使用 `re.S` 与 `r" has the following block data: (\{.*)"`，源箱匹配吞下后续目标箱转储，再遍历所有物品 compound。一次性内存样例（源 64、目标 5）得到源 69、目标 5、合计 74，而真实合计 69。没有新增测试文件；这只证明解析错误，不是游戏物品复制证据。
+- **“不同区块独立保存”不适用于这个布置**：源 `(1,100,0)`、运输器 `(2,100,0)`、目标 `(3,100,0)` 全在 chunk `(0,0)`。
+- **“在途物品不持久化”的推论错误**：`TileEntityLogisticalTransporterBase` 没声明 `saveAdditional` 不能排除继承行为。实际 owner 为 `TileEntityTransmitter.saveAdditional/loadAdditional` → `getTransmitter().write/read` → `LogisticalTransporterBase.writeToNBT/readFromNBT`，其中 `SerializationConstants.ITEMS` 保存并恢复在途栈。核对官方时须追到这条继承/委派链，不能只数子类声明方法。
+- 因而原 JSON 的 `port_defect:false` 与“+33–35 是引擎行为”**当前无有效依据**；同样不能倒过来宣称产品存在复制漏洞。先修既有脚本的转储边界、冻结/计数时点及在途统计，恢复有语义的断言，复验这个原场景。±128 容差不能作守恒证明；若仍有差异，再对照真实保存 owner 与官方同场景。脚本的等待与进程组回收也在同一执行闭包内按 AGENTS 修正，避免沿用未验证的宽松退出。
+
+### 后续最小闭包与停止扩题
+
+顺序已写入 ROADMAP 当前执行入口：**W-120 受信路径 → W-121 既有检查修正 → W-122 发电输出 → W-116 合法模块客户端入口及涡轮**。
+
+W-122 的现有 blocker 也需纠正：`TileEntitySolarGenerator.getEnergySides()` 返回 `BOTTOM`；`TileEntityGenerator.onUpdateServer()` 按固定输出面建立缓存并 `CableUtils.emit`，无需 `component_config`。先按这个 owner 接下方线缆和消费者，不增加不存在的侧配置组件、不将“无法注入配置”当作功能缺失。矩阵仍须独立的真实成型步骤，已有“储能→线缆→机器”读数不是整条发电/矩阵链证明。
+
+W-116 先核查 Loom 既有源集与 mdb `runClient` 入口的接线。旧 `runGeneratorsClient` 白名单错误不等于功能无法验证；若能以正式运行配置接入需要的模块，再由真实玩家触发结构成型。禁止以兼容壳、新机器框架或裸客户端绕过问题。
+
+W-123 当前仅四台代表机器、配置/sorting 与内容 id 集合；W-124 当前仅 Fabric 太阳能配置前后读数，未提供官方运行期对照。保留这些有效范围，不继续写“P27 全完成”。本轮不据此扩测试清单，不自动追加 W 编号，不重跑已有通过矩阵；普通编译与现有 focused tests 随真实改动，完整门禁留到功能闭包收口。push、部署、发布均不在本 goal 范围。

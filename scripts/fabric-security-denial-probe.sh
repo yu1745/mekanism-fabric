@@ -1,98 +1,103 @@
 #!/usr/bin/env bash
-# Two-player security check (W-120), driven through an mdb session.
-#
-# One machine, two identities: the probe points the machine's owner at another player first and expects the server to
-# refuse to open the screen, then points it at the player who is actually playing and expects the screen to open. Only
-# the owner changes between the two attempts, so a refusal has to come from the access check and not from a broken
-# interaction path.
-#
-# Requires a working mdb client session (`mdb session start dev ...`) and an X display for the client.
+# W-120: real GUI access for owner, stranger and trusted player in an existing mdb owned session.
+# Creates one temporary machine in air beside the player and removes it and its security frequency on exit.
 set -euo pipefail
+export FABRIC_SECURITY_MDB_SESSION=${FABRIC_SECURITY_MDB_SESSION:-dev}
+export MDB=${MDB:-java -jar /home/wangyu/server-v2/develop/mcdebug-wt-121/mcdebug-cli.jar}
+python3 - <<'PY'
+import json
+import math
+import os
+import shlex
+import subprocess
+import uuid
 
-ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-MDB=${MDB:-java -jar /home/wangyu/server-v2/develop/mcdebug-wt-121/mcdebug-cli.jar}
-SESSION=${FABRIC_SECURITY_MDB_SESSION:-dev}
-BLOCK=${FABRIC_SECURITY_BLOCK:-mekanism:enrichment_chamber}
+cli = shlex.split(os.environ['MDB']) + ['--session', os.environ['FABRIC_SECURITY_MDB_SESSION']]
 
-failures=0
-pass() { printf 'PASS %s\n' "$1"; }
-fail() { printf 'FAIL %s\n' "$1"; failures=$((failures + 1)); }
+def mdb(*args):
+    result = json.loads(subprocess.run(cli + list(args), check=True, capture_output=True, text=True).stdout)
+    if isinstance(result, dict) and result.get('ok') is False and args[:2] != ('gui', 'open-block'):
+        raise RuntimeError(result)
+    return result
 
-mdb() { $MDB --session "$SESSION" "$@"; }
+def call(method, args=(), **target):
+    flags = [flag for key, value in target.items() for flag in ('--' + key.rstrip('_').replace('_', '-'), str(value))]
+    value = mdb('reflect', 'call', *flags, '--method', method, '--args', json.dumps(args))['value']
+    return None if value == {'$null': True} else value
 
-json_field() { python3 -c "import json,sys;d=json.load(sys.stdin);print($1)"; }
+# Readiness checks reject stale discovery files before any mutation.
+mdb('status')
+mdb('gui', 'status')
+xyz = [math.floor(mdb('reflect', 'get', '--root', 'player', '--path', method)['value'])
+       for method in ('getX', 'getY', 'getZ')]
+xyz[0] += 1
+pos = ','.join(map(str, xyz))
+coords = tuple(flag for axis, value in zip('xyz', xyz) for flag in ('--' + axis, str(value)))
+original = mdb('world', 'get-block', *coords)
+assert original['state']['name'] == 'minecraft:air', f'probe requires air beside player: {original}'
+commands = call('getCommands', root='server')['ref']
+source = call('createCommandSourceStack', root='server')['ref']
 
-#A machine next to the player, private, owned by somebody else.
-mdb world set-block --x -18 --y 89 --z -303 --block "$BLOCK" >/dev/null
+def command(text):
+    value = call('performPrefixedCommand', [{'ref': source}, text], ref=commands)
+    assert value is None or value > 0, (text, value)
 
-read -r COMMANDS_REF SOURCE_REF PLAYER_UUID <<<"$(
-  python3 - "$SESSION" <<'PY'
-import json, subprocess, sys
+def block_arg(path):
+    return {'root': 'be', 'pos': xyz, 'path': path}
 
-def call(args):
-    out = subprocess.run(args, capture_output=True, text=True, check=True).stdout
-    return json.loads(out)
+owner = uuid.uuid4()  # Never borrow or edit an existing player's security frequency.
+ints = [(owner.int >> shift) & 0xFFFFFFFF for shift in (96, 64, 32, 0)]
+owner_nbt = ','.join(str(i - 2**32 if i >= 2**31 else i) for i in ints)
+created = False
+frequency = None
+manager = None
+owner_arg = block_arg('securityComponent.ownerUUID')
 
-mdb = ["java", "-jar", "/home/wangyu/server-v2/develop/mcdebug-wt-121/mcdebug-cli.jar", "--session", sys.argv[1]]
-commands = call(mdb + ["reflect", "call", "--root", "server", "--path", "", "--method", "getCommands"])
-source = call(mdb + ["reflect", "call", "--root", "server", "--method", "createCommandSourceStack", "--path", ""])
-player = call(mdb + ["reflect", "get", "--root", "player", "--path", "uuid"])
-print(commands["value"]["ref"], source["value"]["ref"], player["value"])
+def mode(value):
+    command(f'data merge block {xyz[0]} {xyz[1]} {xyz[2]} {{component_security:{{security_mode:{value}}}}}')
+    mdb('gui', 'settle')
+
+def check(label, allowed):
+    mdb('gui', 'close')
+    result = mdb('gui', 'open-block', *coords)
+    assert result['ok'] is allowed, (label, result)
+    if allowed:
+        assert result.get('screen') == 'mekanism.client.gui.machine.GuiElectricMachine', result
+    else:
+        assert result.get('reason') == 'NO_GUI_CHANGED', result
+    print(f'PASS {label} {json.dumps(result, separators=(",", ":"))}', flush=True)
+    mdb('gui', 'close')
+
+try:
+    mdb('world', 'set-block', *coords, '--block', 'mekanism:enrichment_chamber')
+    created = True
+    command(f'data merge block {xyz[0]} {xyz[1]} {xyz[2]} {{component_security:{{owner:[I;{owner_nbt}],security_mode:1}}}}')
+    # deserialize writes owner only; use the real setter to attach/create the owner's security frequency.
+    call('setOwnerUUID', [owner_arg], root='be', pos=pos, path='securityComponent')
+    frequency = call('getFrequency', root='be', pos=pos, path='securityComponent')['ref']
+    manager = call('getPublicManager', class_='mekanism.common.lib.frequency.FrequencyType',
+                   path='SECURITY.managerWrapper')['ref']
+    check('PRIVATE stranger denied', False)
+    mode(2)
+    check('TRUSTED unlisted player denied', False)
+    call('addTrusted', [{'root': 'player', 'path': 'uuid'}, 'W120 probe player'], ref=frequency)
+    check('TRUSTED listed player allowed', True)
+    call('removeTrusted', [0], ref=frequency)
+    check('TRUSTED removed player denied', False)
+    mode(1)
+    player_uuid = uuid.UUID(mdb('reflect', 'get', '--root', 'player', '--path', 'uuid')['value'])
+    player_ints = [(player_uuid.int >> shift) & 0xFFFFFFFF for shift in (96, 64, 32, 0)]
+    player_nbt = ','.join(str(i - 2**32 if i >= 2**31 else i) for i in player_ints)
+    command(f'data merge block {xyz[0]} {xyz[1]} {xyz[2]} {{component_security:{{owner:[I;{player_nbt}]}}}}')
+    check('PRIVATE owner allowed', True)
+finally:
+    mdb('gui', 'close')
+    if created:
+        if manager is not None:
+            # Keep the UUID object reachable while removing only this probe's frequency.
+            command(f'data merge block {xyz[0]} {xyz[1]} {xyz[2]} {{component_security:{{owner:[I;{owner_nbt}]}}}}')
+            assert call('remove', [owner_arg, owner_arg], ref=manager) is True
+            assert call('getFrequency', [owner_arg], ref=manager) is None
+        mdb('world', 'set-block', *coords, '--block', 'minecraft:air')
+print('fabric-security-denial-probe: PASSED')
 PY
-)"
-
-uuid_ints() {
-  python3 - "$1" <<'PY'
-import sys, uuid
-u = uuid.UUID(sys.argv[1])
-ints = [(u.int >> shift) & 0xFFFFFFFF for shift in (96, 64, 32, 0)]
-print(",".join(str(i - (1 << 32) if i >= (1 << 31) else i) for i in ints))
-PY
-}
-
-#Offline UUID of a second player, so the two attempts really involve two identities.
-OTHER_UUID=$(python3 - <<'PY'
-import hashlib, uuid
-digest = bytearray(hashlib.md5(b"OfflinePlayer:Bob").digest())
-digest[6] = (digest[6] & 0x0f) | 0x30
-digest[8] = (digest[8] & 0x3f) | 0x80
-print(uuid.UUID(bytes=bytes(digest)))
-PY
-)
-
-owner_command() {
-  #The mode key is security_mode and it is an integer: a byte is silently dropped and the machine stays public.
-  printf 'data merge block -18 89 -303 {component_security:{owner:[I;%s],security_mode:1}}' "$(uuid_ints "$1")"
-}
-
-set_owner() {
-  $MDB --session "$SESSION" reflect call --ref "$COMMANDS_REF" --method performPrefixedCommand \
-    --args "[{\"ref\":$SOURCE_REF},\"$(owner_command "$1")\"]" >/dev/null
-  sleep 1
-}
-
-#Attempt one: owned by another player.
-set_owner "$OTHER_UUID"
-mdb gui close >/dev/null 2>&1 || true
-denied=$(mdb gui open-block --x -18 --y 89 --z -303)
-if [[ $(printf '%s' "$denied" | json_field "d['ok']") == False ]]; then
-  pass "machine owned by another player refuses to open ($(printf '%s' "$denied" | json_field "d['reason']"))"
-else
-  fail "machine owned by another player opened: $denied"
-fi
-
-#Attempt two: owned by the player who is actually playing.
-set_owner "$PLAYER_UUID"
-opened=$(mdb gui open-block --x -18 --y 89 --z -303)
-if [[ $(printf '%s' "$opened" | json_field "d['ok']") == True ]]; then
-  pass "machine owned by the player opens ($(printf '%s' "$opened" | json_field "d['screen']"))"
-else
-  fail "machine owned by the player stayed closed: $opened"
-fi
-mdb gui close >/dev/null 2>&1 || true
-
-if (( failures > 0 )); then
-  echo "fabric-security-denial-probe: FAILED ($failures checks)" >&2
-  exit 1
-fi
-echo "fabric-security-denial-probe: PASSED"

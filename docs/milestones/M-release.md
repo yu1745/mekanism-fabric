@@ -44,7 +44,7 @@ W-104 涡轮（W-116）：**受阻并已定界**。工业涡轮属于 **Mekanism
 
 **门禁提速**：机器 smoke 的长壁钟等待改为 `/tick sprint`（900/200/300 tick），耗时 **113 s → 65 s**，断言仍 **29 PASS / 0 FAIL**（响应协调者 H3「固定 sleep 应改加速」）。[记录](evidence/p8-release/w104-chunk-unload.json)
 
-W-120（双玩家安全拒绝）：**拒绝与放行两条读数，脚本连跑 3 次全绿**（`scripts/fabric-security-denial-probe.sh`，经 mdb owned session）。属主为**他人 UUID** + PRIVATE 时 `gui open-block` 返回 `{"ok":false,"reason":"NO_GUI_CHANGED"}`、`screen` 保持 `none`；属主改为**当前玩家 UUID** 后同一操作返回 `GuiElectricMachine`。两次唯一变量是 owner，放行那次证明点击路径可用，故拒绝只能来自安全判定。**关键 NBT 事实**：`security_mode` 必须是**整型**（字节会被 `setEnumIfPresent` 静默丢弃、机器留在 PUBLIC）；owner 是 4 个有符号 32 位整数。另有一个更完整的双客户端脚本（`fabric-security-denial-smoke.sh`）已修好接线但因软件渲染下单客户端 4–5 分钟且偶发互相拖死，未纳入门禁。[记录](evidence/p8-release/w120-security-denial.json)
+W-120（安全访问闭包）：mdb owned session 实测 **5 项通过**：PRIVATE 非属主拒绝、TRUSTED 未受信拒绝、加入受信后放行、移除后拒绝、PRIVATE 属主放行。既有探针改为在玩家旁的空气创建临时机器，经真实 security frequency 的 `addTrusted/removeTrusted` 改成员，每次均走 `gui open-block`；结束删除临时机器与随机属主的频率并确认删除。无需双客户端，也未新增测试类。旧双客户端 fixture 未跑、不能绕过 mdb 规则。[读数](evidence/p8-release/w120-security-denial.json)
 
 W-104（W-81/82 余项）：**区块卸载完成（已按 W-114 修正为真证明）**，涡轮与跨维度传送仍开放。做法：x=2000 先 forceload 建机器、注入 4 矿石+20k FE，再 `forceload remove`；用 **`execute unless loaded 2000 100 0` 输出标记**证明区块确实未加载（旁证 `data get` 回 `That position is not loaded`），`forceload add` + **`tick sprint 300`** 后 `execute if loaded` 证明已重载，同台机器继续加工产出铁粉。smoke **EXIT=0 / 26 PASS**（`Sprint completed with 6302 ticks per second`）。未做：涡轮性能（W-116 手搭多方块）、跨维度传送（需玩家实体移动）。[记录](evidence/p8-release/w104-chunk-unload.json)
 
