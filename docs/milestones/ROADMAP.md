@@ -14,6 +14,19 @@
 
 新增四个可复跑脚本，并以 `release-check.sh --extended` 纳入收口档位；证据索引为 `evidence/p8-release/INDEX.md`（72 条）。
 
+
+**K3 进展（2026-11-01，本轮收尾）**
+
+| 项 | 结果 |
+|---|---|
+| W-112 升级 | **已解锁**：升级计数在 `component_upgrade: {upgrades:[{type,amount}]}`（SPEED=0、ENERGY=1），可直接 `data merge`；GUI 路径亦验证（点虚拟槽 0 消耗物品）。实测 8 个能量升级把碎石机缓冲从 20000 抬到 40000，已并入机器 smoke（30 PASS）|
+| W-116 涡轮 | **两条路线封死并记录**：mdb 任务白名单按名字匹配（`:runClient` 接受、`:generatorsClient` 拒绝）；`/mekanism build` 要求 `ServerPlayer`，无头服务端不能执行 |
+| 门禁 | 快速档 6 步 578 秒全绿；扩展档 10 步 934 秒全绿 |
+| 证据索引 | `evidence/p8-release/INDEX.md`，74 条，由证据文件自身字段生成 |
+
+**收口状态**：objective 的四项（W-101b / W-98 / W-99 / W-120）全部完成并落盘证据；额外完成 W-112 升级与 P27 的 W-121…W-124。
+仍开放：W-116 涡轮、W-104 跨维度传送（工具限制，均带原文）、D-07 历史推送（等用户裁决）。
+
 ## 进度与调整记录（协调者，2026-10-30 14:20）
 
 - P0–P4 已完成并过门禁（W-01…28，证据在 `docs/archive/M-{owner,config,platform,transfer}.md`）；P5 已做完 W-29/30/31/32，余 W-33 门禁。节奏明显快于预估，质量检查点（证据 CSV、首条错误原文、无新增测试）符合协议。
