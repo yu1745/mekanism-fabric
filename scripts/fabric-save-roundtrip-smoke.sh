@@ -206,7 +206,7 @@ if missing:
     raise SystemExit(0)
 
 def field(blob, key):
-    match = re.search(r"(?:^|[,{] )" + re.escape(key) + r": ", blob)
+    match = re.search(r"(?:^|[,{]\s*)" + re.escape(key) + r": ", blob)
     if not match:
         return None
     start = match.end()

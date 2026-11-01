@@ -248,3 +248,5 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 提交风格复核：`132b48d0` 的真实 diff 只让 `runClient` 选择既有附加模块源集和运行目录，无公共算法／注册／存档／切片变化；官方与 Fabric 单 tick 满负载一致。457 项既有测试和 API 检查通过；未新增测试类。
 
 提交后复核：`3512ce90` 的真实 diff 经主代理与 Astra 审查，发现 worldgen 独立 manager 漏 watch；已在同一配置 owner 边界补监听、卸载撤销和失败清理。其余 lifecycle/pending/effective/API fallback 未发现确定缺陷。官方同 rig 又证明原固定世界路径是假设错误，修复仍复用现 manager，不新增配置框架或测试类。
+
+提交风格复核：`8867f499` 只修复既有machine/save gate的非法种子、实际ID、时序与进程生命周期，不改生产算法或切片。Astra发现W-123字段解析漏掉根compound的首字段；已在同一比较边界修正，并直接重用保留的两份日志运行原比较器，`ok`且明确提取储罐HCl2000。没有新增测试类或游戏场景。

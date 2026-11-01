@@ -76,9 +76,9 @@
         4079,
         6627
       ],
-      "estimated_sprint_wall_seconds": 4.181,
-      "timing_note": "All setup/load sprints are20ticks; final five are900/300/200/300/600. Estimated wall time derives from rounded vanilla rates; rates include no fixed real-time soak.",
-      "cleanup": "Server exited normally; process group absent."
+      "timing_note": "Wall span includes server bootstrap, command/IO acknowledgements and shutdown at1second log resolution. Sprint count and total ticks exact; per-sprint rates in log order; no fixed real-time soak.",
+      "cleanup": "Server exited normally; process group absent.",
+      "server_log_wall_seconds": 20
     },
     "supersedes": "Historical no-flaky conclusion does not prove current gate. Full final extended gate remains pending."
   }

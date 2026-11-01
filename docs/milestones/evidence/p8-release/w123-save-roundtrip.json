@@ -65,6 +65,7 @@
     ],
     "cleanup": "Both dedicated JVMs exited normally, process groups absent.",
     "not_claimed": "Exact quantity/progress conservation or full ore chain persistence; only stated configuration and ID-set roundtrip.",
-    "estimated_sprint_wall_seconds": 0.62
+    "estimated_sprint_wall_seconds": 0.62,
+    "post_commit_review": "Astra identified field regex ignored first root compound key. Corrected whitespace match; reused same retained logs with existing comparator: ok, tank chemical_tanks explicitly resolved to hydrogen_chloride2000."
   }
 }
