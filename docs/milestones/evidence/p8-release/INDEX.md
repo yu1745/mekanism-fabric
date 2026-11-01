@@ -1,7 +1,7 @@
 # Evidence index (p8 release)
 
-One row per evidence file: what it covers, how it turned out, and where to read it. Files are machine-readable on
-purpose, so this index is generated from their own fields rather than hand-maintained.
+One row per evidence file: what it covers, how it turned out, and where to read it. Generated from the evidence
+files' own `work_item` and `status` fields, so it never drifts from the files themselves.
 
 | Work item | Outcome | File |
 | --- | --- | --- |
@@ -12,7 +12,9 @@ purpose, so this index is generated from their own fields rather than hand-maint
 | pre-w40-validation | - | [pre-w40-validation.json](pre-w40-validation.json) |
 | W-100 | - | [w100-decisions.json](w100-decisions.json) |
 | W-102 | done_via_runtime_proof | [w102-jei-categories.json](w102-jei-categories.json) |
+| release-check（扩展档） | PASSED (10 steps) | [w103-extended-release-check.json](w103-extended-release-check.json) |
 | release-check | PASSED (6 steps) | [w103-final-release-check.json](w103-final-release-check.json) |
+| release-check（快速档，含升级断言） | PASSED (6 steps) | [w103-release-check-upgrades.json](w103-release-check-upgrades.json) |
 | W-104 | chunk_unload_done_turbine_and_teleport_open | [w104-chunk-unload.json](w104-chunk-unload.json) |
 | W-105 | - | [w105-config-screen.json](w105-config-screen.json) |
 | W-106 | - | [w106-ore-chain.json](w106-ore-chain.json) |
@@ -78,4 +80,4 @@ purpose, so this index is generated from their own fields rather than hand-maint
 | W-98 | - | [w98-renderer-compat.json](w98-renderer-compat.json) |
 | W-99 | - | [w99-third-party-energy.json](w99-third-party-energy.json) |
 
-72 files.
+74 files.
