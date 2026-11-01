@@ -24,6 +24,8 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 
 ## 验收证据
 
+W-104 涡轮（W-116）：**受阻并已定界**。工业涡轮属于 **MekanismGenerators** 模块，dev 客户端只加载核心 mod —— `world fill-box ... mekanismgenerators:turbine_casing` 直接报 `block not registered`；且多方块成型需玩家交互（`BlockBasicMultiblock.useItemOn` → `onActivate(player,…)`），无玩家服务端触发不了。按 W-116 约定带原文结束。**已把 `TurbineValidator` 的完整结构规则提取留存**（尺寸/中心复合体/转子连续/叶片>0/线圈自复合体上方蔓延/分散器铺满平面/冷凝器在复合体之上/通风口不低于复合体），其中叶片数**可通过 NBT 注入**（`SerializationConstants.BLADES` 会被 `loadAdditional` 读取）。[记录](evidence/p8-release/w116-turbine.json)
+
 **门禁提速**：机器 smoke 的长壁钟等待改为 `/tick sprint`（900/200/300 tick），耗时 **113 s → 65 s**，断言仍 **29 PASS / 0 FAIL**（响应协调者 H3「固定 sleep 应改加速」）。[记录](evidence/p8-release/w104-chunk-unload.json)
 
 W-110（双玩家安全拒绝）：**未完成，已定界**。试了路线图备选①：单人会话里用服务端平面反射把机器设为 `PRIVATE`（回读确认为 PRIVATE），但 `ownerUUID` 无法改成「别人」——`reflect call` 传不了 UUID 对象；而 `/setblock` 放的机器无主，`SecurityUtils.canAccessObject` 第一条短路是 `owner == null → 允许`，所以无主机器对任何人可开（官方同逻辑）。结论：需要 **paired smoke fixture 双用户名**（备选③）才可能产出拒绝证据。[记录](evidence/p8-release/w110-security-denial.json)
