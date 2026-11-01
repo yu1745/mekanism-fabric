@@ -24,6 +24,8 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 
 ## 验收证据
 
+W-121（崩溃下物品守恒）：**运输器搬运在硬崩溃下不精确守恒，但这是引擎行为不是移植缺陷**。脚本 `scripts/fabric-crash-conservation-smoke.sh`：1728 个铁矿石从箱子搬到另一箱子，`save-all flush` 后搬 20 秒、对进程组 `kill -9`、同世界重启再求和。三次实测总量 1762 / 1763 / 1761（应为 1728），**多出 33–35 个**——重复而非丢失。原因有二：官方 `TileEntityLogisticalTransporterBase` **没有** `saveAdditional`/`loadAdditional`（`javap` 核对官方 JAR，方法数 0），在途物品不持久化；且区块各自保存，源区块可能停留在物品离开前、目标区块已包含物品到达后。本移植的运输器同样不持久化在途缓冲，与官方一致。**QIO 变体未测**：QIO 网络需在 GUI 里创建频率，无头命令做不到。[记录](evidence/p8-release/w121-crash-conservation.json)
+
 W-99（第三方能量互通）：**双向都通，用真实的 Tech Reborn 验证**。选 Tech Reborn 5.11.19 + Reborn Core 5.11.19（Modrinth 1.21.1 Fabric；Modern Industrialization 在 1.21.1 无可用版本）。两个方向：Mekanism 能量立方经通用线缆给 Tech Reborn 研磨机充到 **1000 L**；Tech Reborn 固体燃料发电机（喂煤）经通用线缆把 Mekanism 富集熔炉充到 **6925 FE**。脚本 `scripts/fabric-third-party-energy-smoke.sh`，连跑 3 次一致。第三方模组只进一次性服务端，`fabric-packaged-smoke.sh` 已加断言：发布 JAR 不含 `sodium/iris/techreborn/reborncore/teamreborn` 等包。[记录](evidence/p8-release/w99-third-party-energy.json)
 
 W-98（渲染器兼容抽样）：**Sodium 兼容、Iris 在 dev 环境装不上**。Sodium 0.8.13（Modrinth, 1.21.1 Fabric）装入开发客户端后 mdb 正常就绪，富集仓/碎石机渲染正确、WTHIT 提示正常、GUI 可打开（截图 `evidence/p8-release/w98-sodium-scene.png`）；`gui problems` 12 条均为警告级、无渲染异常。**Iris** 1.8.14-beta.1 + Sodium + ComplementaryReimagined 光影包：客户端启动失败（两次一致），原文 `InvalidMixinException: Unexpected NullPointerException parsing @ModifyArg annotation on iris$writeR...` → `MixinRemapper.unmapDesc` 空指针——Iris 的 mixin 按生产映射编写，dev 环境命名映射下重映射失败，与 Mekanism 无关。环境限制：客户端是 Mesa llvmpipe 软件渲染，**帧率无代表性**。第三方模组只在 `fabric/run/mods/`，不进发布依赖。[记录](evidence/p8-release/w98-renderer-compat.json)
