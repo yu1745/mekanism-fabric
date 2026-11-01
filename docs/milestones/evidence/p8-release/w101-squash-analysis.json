@@ -41,6 +41,17 @@
     },
     "not_done": [
       "**\u672a\u63a8\u9001**\uff08\u4e5f\u4e0d force push\uff09\uff1a\u8fdc\u7aef\u4e0e\u672c\u5730\u4e0d\u4e00\u81f4\uff0c\u9700\u7528\u6237\u51b3\u5b9a\u4f55\u65f6\u63a8\u9001"
-    ]
+    ],
+    "post_check": {
+      "where_run": "\u91cd\u5199\u540e\u7acb\u523b\u6821\u9a8c\uff1b\u968f\u540e\u6587\u6863\u63d0\u4ea4\u4f1a\u6b63\u5e38\u6539\u53d8 HEAD \u6811",
+      "tree_at_rewrite": "f9c7a4119aa38bdc2354aba697845311f4f776f6 == \u5907\u4efd\u6811 82b1222421af3e22e2caa041c8a976b98ba4a06f\uff08\u91cd\u5199\u5f53\u65f6\u6821\u9a8c\u4e00\u81f4\uff1b\u4e4b\u540e\u6211\u63d0\u4ea4\u4e86\u6587\u6863\u66f4\u65b0\uff0cHEAD \u6811\u56e0\u6b64\u53d8\u5316\uff0c\u5c5e\u6b63\u5e38\uff09",
+      "git_fsck": "\u901a\u8fc7\uff08\u4ec5\u6709 rebase \u4ea7\u751f\u7684 dangling commits\uff0c\u5c5e\u9884\u671f\uff09",
+      "fast_tests_after_rewrite": {
+        "command": "./gradlew -p fabric test",
+        "tests": 457,
+        "failures": 0,
+        "errors": 0
+      }
+    }
   }
 }
