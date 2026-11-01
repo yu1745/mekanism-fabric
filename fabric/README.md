@@ -5,6 +5,26 @@ stage. It compiles explicit, reviewed allowlists from `fabric/src/main`,
 `../src/api/java`, and `../src/main/java`; all other upstream Java sources remain
 excluded. It uses Minecraft 1.21.1, Java 21, and Mojang official mappings.
 
+## Owned development clients
+
+Clients must be started and stopped through mcdebug (`mdb session start` / `mdb session stop`).
+The existing `runClient` can select one optional module with the Gradle property `devModule`:
+`core` (default), `tools`, `additions`, or `generators`. This selects the existing source set and
+its `run-<module>` directory; it does not change the published JARs or source admission lists.
+For example, with a matching mcdebug mod installed in `fabric/run-generators/mods`:
+
+```bash
+ORG_GRADLE_PROJECT_devModule=generators mdb session start generators-dev \
+  --project fabric --game-dir fabric/run-generators --world 'Mekanism F1 isolated debug'
+mdb --session generators-dev status
+mdb session stop generators-dev
+```
+
+Use the actual existing isolated save name and display for the environment. If mdb requires a
+wrapper inside `fabric`, temporarily link `fabric/gradlew` to `../gradlew` and `fabric/gradle` to
+`../gradle`; remove only the links created for the session after stopping it. `mdb` here may also
+be invoked as `java -jar /path/to/mcdebug-cli.jar`. Do not launch module client tasks directly.
+
 ## Audited source slices
 
 `api-slice.txt` is the auditable allowlist of API source paths, relative to

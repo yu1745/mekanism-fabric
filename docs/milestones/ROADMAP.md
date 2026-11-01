@@ -2,14 +2,14 @@
 
 协调者编写，worker 按序执行。状态以 `docs/milestones/README.md` 为准；本文只定"做什么、什么顺序、怎样算完成、卡住怎么办"。不得借本文扩大 `AGENTS.md` 的边界。
 
-## 当前执行入口（2026-11-01，goal 恢复；起始基线 `482abbb9`，已核对 `e0bfa412`）
+## 当前执行入口（2026-11-01，goal 恢复；起始基线 `482abbb9`，已核对 `60761195`）
 
 本节取代下方 K2/K3 与旧巡检中冲突的完成判断和执行顺序。协调者本轮只读核对提交、源码与既有证据，没有重新运行游戏门禁；旧通过记录仅覆盖当时实际场景。
 
 1. **W-120 已提交，闭包范围通过**（`e0bfa412`）：PRIVATE 非属主拒绝、TRUSTED 未列入拒绝、加入受信后放行、移除后拒绝、PRIVATE 属主放行共五项真实 GUI 读数；随机属主频率和临时机器已清理，`goal-security` owned session 已停止。受信名单通过真实 `SecurityFrequency.addTrusted/removeTrusted` 修改，覆盖访问判定与撤销，不声称 Security Desk 编辑界面或两个并发客户端已验证。无需重做旧双客户端 fixture。
-2. **W-121 修正后原场景首次通过，待主实现者提交证据**：单条转储解析、单区块冻结快照、在途计数与严格总量断言已修；主实现者回报保存/硬崩溃重启前后均为源 1709 + 在途 2 + 目标 17 = 1728，继续搬运为 1690 + 2 + 36 = 1728。撤回旧“+33–35 是引擎行为”的定性，当前结果只覆盖原运输器场景的存档恢复与继续运行。QIO、官方同 rig、跨区块崩溃均未测，不据此扩测试矩阵；协调者尚未审查本项未提交实现。
-3. **W-122 发电输出闭包**：太阳能 `getEnergySides()` 固定返回 `BOTTOM`，`TileEntityGenerator.onUpdateServer()` 直接 `CableUtils.emit`，不依赖 `component_config`。按真实输出面修正既有布置，接发电机 → 线缆 → 真实消费者，观察下游与源端能量；若有真实差异只修这个调用链。矩阵成型仍需玩家交互，不把前半链通过写成全链完成。
-4. **W-116 复用已有附加模块运行入口**：主实现者已发现历史 `roadmap-generators` session 使用 `runClient`；先核实并复用它的模块/运行配置，不能继续假设 Generators 无法经 mdb 启动。归档 M-generators 已有涡轮运行、GUI、生命周期证据，复用这些边界，只处理 W-116 尚未回答的负载问题；不扩 mdb 白名单、不裸起客户端、不重搭已完成的验证矩阵。
+2. **W-121 已提交，Fabric/官方同 rig 通过**（`b9bf320c`）：两端同脚本均使用 unfreeze → sprint → freeze，保存与硬崩溃重启后均为源 1709 + 在途 2 + 目标 17 = 1728，继续搬运为 1690 + 2 + 36 = 1728。既有日志解析与定性错误已纠正；覆盖单区块运输器保存/恢复及继续搬运，QIO、跨区块未测。首轮 frozen-sprint-only 两端表现不同尚未归因，保留观察，不宣称产品缺陷或环境正常，也不因本项扩测试矩阵。
+3. **W-122 已提交，太阳能输出闭包通过**（`60761195`）：固定 BOTTOM → 初始空立方 → 线缆 → 初始空熔炉，800 tick 后立方 7955 J、太阳能 45 J、熔炉 20000 J。`energy_containers.stored` 单位是 J，不能写作 FE。原“缺少 component_config 无法输出”阻塞撤回；不声称感应矩阵容量或含线缆缓冲的全链精确能量守恒已验收。
+4. **W-116 正在推进负载范围，模块入口已打通**：主实现者已用 `ORG_GRADLE_PROJECT_devModule=generators mdb session start goal-generators` 经 `runClient` 到达 world_ready、355 值 ack；工作区的 `devModule` 接线尚未提交，协调者未审其 diff。任务名白名单已不是 blocker。复用旧 builder 与归档 M-generators 的普通运行/GUI/生命周期证据，只回答 W-116 尚缺负载问题，不重建已有验证矩阵；owned session 结束仍须 stop 并清理临时结构。
 
 **客户端规则更正**：COORDINATOR_NOTES L3/L4 的“Gradle fixture 属于既有 paired smoke 的同类机制”不能构成例外，相关豁免说法撤回。所有游戏客户端（含 fixture/handshake）都必须 `mdb session start/stop`；会启动客户端的旧脚本须先接入该生命周期再执行。历史证据保留，不据此重新启动旧路径。
 
@@ -20,8 +20,8 @@
 
 | 项 | 结果 | 证据 |
 |---|---|---|
-| W-121 崩溃物品计数 | 历史 +33~35 定性撤回；既有脚本修正后的首次严格总量读数通过，提交与范围见当前执行入口 | `evidence/p8-release/w121-crash-conservation.json` |
-| W-122 能量链 | 储能→线缆→机器 PASS（熔炉充满 20000）；发电机一跳因 tile 无 `component_config` 不可判定；感应矩阵无头不成型 | `evidence/p8-release/w122-energy-chain.json` |
+| W-121 崩溃物品计数 | 历史 +33~35 定性撤回；`b9bf320c` 的 Fabric/官方单区块运输器严格总量均通过 | `evidence/p8-release/w121-crash-conservation.json` |
+| W-122 能量链 | `60761195` 已补太阳能 BOTTOM→空立方→线缆→空熔炉；矩阵及全链精确能量守恒未测 | `evidence/p8-release/w122-energy-chain.json` |
 | W-123 存档往返 | 侧配置与 sorting 逐字保留、物品/化学品 id 集合一致 | `evidence/p8-release/w123-save-roundtrip.json` |
 | W-124 配置边界 | 改配置需重启，运行期编辑无效（≈41 vs ≈184 vs ≈204 FE/tick） | `evidence/p8-release/w124-config-boundary.json` |
 
@@ -37,7 +37,7 @@
 | 门禁 | 快速档 6 步 578 秒全绿；扩展档 10 步 934 秒全绿 |
 | 证据索引 | `evidence/p8-release/INDEX.md`，74 条，由证据文件自身字段生成 |
 
-**历史收口记录的边界更正**：W-101b、W-98/W-99 已有对应范围证据；W-120 后续已在 `e0bfa412` 补齐受信访问及撤销。W-112 已有升级读数；P27 四项已有场景记录，但 W-121 旧定性失效、修正状态见当前入口，W-122 全链未通，W-123/W-124 未完成原计划全部对照。W-116 负载、W-104 跨维度传送仍未验证；D-07 历史推送不在当前授权范围。
+**历史收口记录的边界更正**：W-101b、W-98/W-99 已有对应范围证据；W-120 后续已在 `e0bfa412` 补齐受信访问及撤销。W-112 已有升级读数；W-121/W-122 修正后范围见当前入口，未覆盖 QIO/跨区块或感应矩阵，W-123/W-124 未完成原计划全部对照。W-116 负载正在推进，W-104 跨维度传送仍未验证；D-07 历史推送不在当前授权范围。
 
 ## 进度与调整记录（协调者，2026-10-30 14:20）
 

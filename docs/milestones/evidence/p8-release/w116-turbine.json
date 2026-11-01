@@ -1,56 +1,146 @@
 {
-  "work_item": "W-116 / W-104 涡轮性能",
+  "work_item": "W-116 / W-104 turbine load",
   "date": "2026-11-01",
-  "status": "blocked_module_not_in_dev_client",
-  "goal": "在无玩家命令前提下搭出最小工业涡轮并测满负荷发电。",
-  "structure_requirements_extracted": {
-    "source": "src/generators/java/mekanism/generators/common/content/turbine/TurbineValidator.java",
-    "size": "5x3x5 到 17x18x17，且 length/width 必须为奇数",
-    "shell": "turbine_casing（frame）/ turbine_valve（valve）/ turbine_vent（other）；内部可为空，或放 turbine_rotor / rotational_complex / electromagnetic_coil / saturating_condenser / pressure_disperser",
-    "postcheck": [
-      "旋转复合体 rotational_complex 必须唯一且位于中心 (x,z)",
-      "rotor 必须在中轴、从 complex 下方连续到底部；blades 总数必须 > 0（`getHousedBlades`）",
-      "coils 至少一个，且必须从 complex 正上方连续蔓延（FormationProtocol.explore）",
-      "pressure_disperser 必须铺满 complex 所在高度的整个内部平面（除中心）",
-      "saturating_condenser 必须位于 complex 之上",
-      "turbine_vent 至少一个且不得低于 complex",
-      "内半径 (min(length,width)-3)/2 必须 ≥ rotors/4"
-    ],
-    "blades_are_persisted": "TileEntityTurbineRotor 把 blades 存进 NBT（`SerializationConstants.BLADES`，`loadAdditional` 读取），因此 `data merge {blades:N}` 理论上可注入叶片数 —— 这曾是可行的突破口"
+  "status": "maximum_flow_verified_and_matches_official",
+  "dev_entry": {
+    "gradle_property": "devModule=generators",
+    "command": "ORG_GRADLE_PROJECT_devModule=generators mdb session start goal-generators --project fabric --game-dir fabric/run-generators --world 'Mekanism F1 isolated debug' --display :94",
+    "task": "runClient",
+    "session": "goal-generators",
+    "config_values_applied_and_acknowledged": 355
   },
-  "blocker": {
-    "what": "工业涡轮属于 **MekanismGenerators** 模块，而 Gradle dev 客户端只加载核心 mod。",
-    "verbatim_error": "mdb: `world fill-box ... mekanismgenerators:turbine_casing` → `error [-32002] block not registered: mekanismgenerators:turbine_casing`",
-    "second_blocker": "多方块成型由玩家交互触发（`BlockBasicMultiblock.useItemOn` → `tile.onActivate(player, ...)`），无玩家的专用服务端无法触发；而 AGENTS 明确禁止用裸启动器跑打包客户端（mdb 只运行 Gradle runClient）。"
+  "setup": [
+    "Used actual ServerPlayer command source (server.createCommandSourceStack().withEntity(player)) and dispatcher.execute(\"mek build turbine 32 100 0\", source); did not bypass builder or validators.",
+    "Original 17x18x17 TurbineBuilder,28 blades,345 vents,49 coils; real gui open-block at32,100,0 opened GuiIndustrialTurbine and isFormed returned true.",
+    "For single-tick maximum, froze world, set real chemicalTank through MekanismChemicals.STEAM.asStack(capacity), cleared real energyContainer, and ran vanilla tick step1.",
+    "For sustained load, added a real valve and adjacent creative chemical tank, enabled chemical eject INPUT_OUTPUT, reformed, filled steam, cleared energy, then unfreezed and sprinted200 ticks."
+  ],
+  "fabric_single_tick": {
+    "before": {
+      "steam": 258944000,
+      "energy": 0
+    },
+    "after_one_real_tick": {
+      "steam": 247904000,
+      "energy": 110400000,
+      "flow": 11040000,
+      "production": 110400000,
+      "max_flow": 11040000,
+      "max_production": 110400000
+    },
+    "blades": 28,
+    "vents": 345,
+    "coils": 49
   },
-  "conclusion": "按 W-116 的约定「搭不出来则带原文记录并结束，不再挂起」：结构规则已完整提取（可直接用于后续会话），但当前工具链无法在 dev 客户端加载 generators 模块、也无法无玩家成型，故本轮不产出涡轮数值。",
-  "mdb_task_selection_check": {
-    "question": "协调者 J1 第 2 条：mdb 是否可以选择 Gradle 任务/源集来起一个含 generators 的客户端？",
-    "found": "fabric/generators.gradle 里**确实存在** `generatorsClient` 运行配置（loom runs.generatorsClient，runDir 'run-generators'，source sourceSets.generators），且 fabric/run-generators/saves 有可加载的世界。",
-    "attempt": "`mdb session start gens --project fabric --task generatorsClient --game-dir fabric/run-generators --world 'Mekanism F1 isolated debug'`",
-    "verbatim_rejection": "`error: task must be runClient or a qualified :module:runClient task`",
-    "conclusion": "mdb 只接受任务名 `runClient` 或 `:module:runClient`，而 generators 的运行配置名为 `generatorsClient`，因此**无法通过 mdb 启动含 generators 的客户端**；core 的 `runClient` 不含 generators（`block not registered` 已证）。W-116 的阻塞结论不变。"
+  "fabric_sustained": {
+    "ticks_requested": 200,
+    "equivalent_game_seconds": 10,
+    "command_and_observation_wall_seconds": 1.7469083350151777,
+    "after": {
+      "steam": 258944000,
+      "energy": 23736000000,
+      "production": 110400000,
+      "max_production": 110400000
+    }
   },
-  "mdb_task_name_probe": {
+  "official_single_tick": {
+    "runtime": "official NeoForge21.1.200/Mekanism10.7.19.85",
+    "before": {
+      "steam": 258944000,
+      "energy": 0
+    },
+    "after_one_real_tick": {
+      "steam": 247904000,
+      "energy": 110400000,
+      "flow": 11040000,
+      "production": 110400000,
+      "max_flow": 11040000,
+      "max_production": 110400000
+    },
+    "formed": true,
+    "world_source": "isolated copy of Fabric dev turbine world, resident sample untouched",
+    "status": "PASSED"
+  },
+  "units": {
+    "energy": "joules",
+    "steam": "mB"
+  },
+  "official_jars": {
+    "Mekanism-1.21.1-10.7.19.85.jar": "004dbc9f3106f4d192aeaa1ee1190dd16ec9ca8059ed3d093b80034f4c574f43",
+    "MekanismGenerators-1.21.1-10.7.19.85.jar": "0e5783b111e756f27b48c62b2f0e02fff750c77f7985ff809bfadc5f444ba4ac"
+  },
+  "sustained_acceleration": {
+    "requested_ticks": 200,
+    "game_seconds": 10,
+    "reported_ticks_per_second": 194,
+    "sprint_wall_seconds_from_reported_rate": 1.0309,
+    "observation": "Energy total includes normal ticks between unfreezing, sprint scheduling and the final freeze; do not infer exactly200 production ticks from stored energy."
+  },
+  "official_tooling": [
+    "Direct getMultiblock method then object ref avoids mcdebug field enumeration touching client-only SoundInstance on a dedicated server.",
+    "Allowed40 startup sprint ticks for copied structures to reform; freezing immediately after Done is too early."
+  ],
+  "cleanup": "Temporary builder region, external tank and support removed; extra forceload tickets removed; player restored, tick unfreezed; owned session stopped. Official process group verified gone; resident reference world untouched.",
+  "limits": [
+    "Official sustained creative-feed run not repeated; official/Fabric maximum single-tick values match exactly.",
+    "Other client modules tools/additions selectable via same property but not launched in this batch.",
+    "No extra persistent test class or fixture introduced."
+  ],
+  "superseded_record": {
+    "work_item": "W-116 / W-104 涡轮性能",
     "date": "2026-11-01",
-    "results": [
-      {
-        "task": ":runClient",
-        "result": "**被接受**（无 task 名报错；此前一次失败只是因为 fabric/ 里缺 Gradle wrapper 符号链接）"
-      },
-      {
-        "task": ":fabric:runClient",
-        "result": "同样接受（同样先卡在缺 wrapper）"
-      },
-      {
-        "task": ":generatorsClient",
-        "result": "`error: task must be runClient or a qualified :module:runClient task`"
-      }
-    ],
-    "conclusion": "mdb 的任务白名单是**名字**匹配（`runClient` 或 `:模块:runClient`），不是源集/配置选择；本仓库只有 `fabric` 一个 Gradle 项目且它的 `runClient` 只加载核心 mod，generators 的运行配置名为 `generatorsClient`（Loom 任务 `runGeneratorsClient`），因此**没有**可被 mdb 接受且含 generators 的客户端任务。"
+    "status": "blocked_module_not_in_dev_client",
+    "goal": "在无玩家命令前提下搭出最小工业涡轮并测满负荷发电。",
+    "structure_requirements_extracted": {
+      "source": "src/generators/java/mekanism/generators/common/content/turbine/TurbineValidator.java",
+      "size": "5x3x5 到 17x18x17，且 length/width 必须为奇数",
+      "shell": "turbine_casing（frame）/ turbine_valve（valve）/ turbine_vent（other）；内部可为空，或放 turbine_rotor / rotational_complex / electromagnetic_coil / saturating_condenser / pressure_disperser",
+      "postcheck": [
+        "旋转复合体 rotational_complex 必须唯一且位于中心 (x,z)",
+        "rotor 必须在中轴、从 complex 下方连续到底部；blades 总数必须 > 0（`getHousedBlades`）",
+        "coils 至少一个，且必须从 complex 正上方连续蔓延（FormationProtocol.explore）",
+        "pressure_disperser 必须铺满 complex 所在高度的整个内部平面（除中心）",
+        "saturating_condenser 必须位于 complex 之上",
+        "turbine_vent 至少一个且不得低于 complex",
+        "内半径 (min(length,width)-3)/2 必须 ≥ rotors/4"
+      ],
+      "blades_are_persisted": "TileEntityTurbineRotor 把 blades 存进 NBT（`SerializationConstants.BLADES`，`loadAdditional` 读取），因此 `data merge {blades:N}` 理论上可注入叶片数 —— 这曾是可行的突破口"
+    },
+    "blocker": {
+      "what": "工业涡轮属于 **MekanismGenerators** 模块，而 Gradle dev 客户端只加载核心 mod。",
+      "verbatim_error": "mdb: `world fill-box ... mekanismgenerators:turbine_casing` → `error [-32002] block not registered: mekanismgenerators:turbine_casing`",
+      "second_blocker": "多方块成型由玩家交互触发（`BlockBasicMultiblock.useItemOn` → `tile.onActivate(player, ...)`），无玩家的专用服务端无法触发；而 AGENTS 明确禁止用裸启动器跑打包客户端（mdb 只运行 Gradle runClient）。"
+    },
+    "conclusion": "按 W-116 的约定「搭不出来则带原文记录并结束，不再挂起」：结构规则已完整提取（可直接用于后续会话），但当前工具链无法在 dev 客户端加载 generators 模块、也无法无玩家成型，故本轮不产出涡轮数值。",
+    "mdb_task_selection_check": {
+      "question": "协调者 J1 第 2 条：mdb 是否可以选择 Gradle 任务/源集来起一个含 generators 的客户端？",
+      "found": "fabric/generators.gradle 里**确实存在** `generatorsClient` 运行配置（loom runs.generatorsClient，runDir 'run-generators'，source sourceSets.generators），且 fabric/run-generators/saves 有可加载的世界。",
+      "attempt": "`mdb session start gens --project fabric --task generatorsClient --game-dir fabric/run-generators --world 'Mekanism F1 isolated debug'`",
+      "verbatim_rejection": "`error: task must be runClient or a qualified :module:runClient task`",
+      "conclusion": "mdb 只接受任务名 `runClient` 或 `:module:runClient`，而 generators 的运行配置名为 `generatorsClient`，因此**无法通过 mdb 启动含 generators 的客户端**；core 的 `runClient` 不含 generators（`block not registered` 已证）。W-116 的阻塞结论不变。"
+    },
+    "mdb_task_name_probe": {
+      "date": "2026-11-01",
+      "results": [
+        {
+          "task": ":runClient",
+          "result": "**被接受**（无 task 名报错；此前一次失败只是因为 fabric/ 里缺 Gradle wrapper 符号链接）"
+        },
+        {
+          "task": ":fabric:runClient",
+          "result": "同样接受（同样先卡在缺 wrapper）"
+        },
+        {
+          "task": ":generatorsClient",
+          "result": "`error: task must be runClient or a qualified :module:runClient task`"
+        }
+      ],
+      "conclusion": "mdb 的任务白名单是**名字**匹配（`runClient` 或 `:模块:runClient`），不是源集/配置选择；本仓库只有 `fabric` 一个 Gradle 项目且它的 `runClient` 只加载核心 mod，generators 的运行配置名为 `generatorsClient`（Loom 任务 `runGeneratorsClient`），因此**没有**可被 mdb 接受且含 generators 的客户端任务。"
+    },
+    "mekanism_build_command": {
+      "finding": "`/mekanism build <structure>` 存在，但 `requires(MekanismPermissions.COMMAND_BUILD.and(cs -> cs.getEntity() instanceof ServerPlayer))` —— **必须有玩家实体**才能执行，无头服务端用不了",
+      "conclusion": "无法用它绕开“多方块需要玩家成型”这堵墙"
+    }
   },
-  "mekanism_build_command": {
-    "finding": "`/mekanism build <structure>` 存在，但 `requires(MekanismPermissions.COMMAND_BUILD.and(cs -> cs.getEntity() instanceof ServerPlayer))` —— **必须有玩家实体**才能执行，无头服务端用不了",
-    "conclusion": "无法用它绕开“多方块需要玩家成型”这堵墙"
-  }
+  "superseded_notice": "The old dev-client module blocker is resolved by selecting the existing source set for runClient."
 }

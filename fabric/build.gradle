@@ -1338,3 +1338,15 @@ def remapGeneratorsJar = tasks.register('remapGeneratorsJar', RemapJarTask) {
     classpath.from(sourceSets.generators.compileClasspath)
 }
 tasks.named('assemble') { dependsOn remapGeneratorsJar }
+
+// mdb owns clients through runClient. Select an existing module source set without changing any published JAR.
+def devModule = providers.gradleProperty('devModule').getOrElse('core')
+if (!(devModule in ['core', 'tools', 'additions', 'generators'])) {
+    throw new GradleException("Unknown devModule: ${devModule}; expected core, tools, additions or generators")
+}
+if (devModule != 'core') {
+    loom.runs.named('client') {
+        source sourceSets.getByName(devModule)
+        runDir "run-${devModule}"
+    }
+}

@@ -26,6 +26,8 @@ W-40 rejection 的真实顺序缺陷已修：Fabric 注册表同步先于原 CON
 
 **门禁分成两档**：`scripts/release-check.sh`（7 步，快速发布门禁）与 `scripts/release-check.sh --extended`（再加 P27 的四个场景：崩溃守恒、能量链、存档往返、配置边界）。后者每项都要起一到两次专用服务端，属于里程碑收口才跑的档位。全部证据索引见 [`evidence/p8-release/INDEX.md`](evidence/p8-release/INDEX.md)（由证据文件自身字段生成，72 条）。
 
+W-116（涡轮满负载）：通过 `devModule=generators` 将既有源集接入 mdb 的 `runClient`，355 值同步／ack，原“模块无法启动”阻塞撤回。真实玩家 builder／GUI 成型涡轮，满蒸汽、空能量缓冲下单 tick **11,040,000 mB → 110,400,000 J**，与计算上限及官方 NeoForge 同状态读数完全一致；真实 creative tank 经阀门持续供汽，200 tick 加速后仍达最大产率。临时结构、forceload、玩家位置与会话已清理；`test` **457/0/0** 与 API 检查通过，未新增测试类。官方持续供汽场景未跑。[完整读数](evidence/p8-release/w116-turbine.json)
+
 W-124（配置生效边界）：**改配置需要重启，不支持热重载**。用太阳能发电速率做可观测值（`[solar_generator] solarGeneration`）：默认 **≈42–49 FE/tick**；把文件改成 200 并**重启**后 **≈189–224 FE/tick**（生效）；运行中把文件改成 400、不重启再测 **≈207–246 FE/tick**（仍停在 200 档，**没有跳到 400**）。与官方一致——Mekanism 服务端在启动时加载配置、运行期不重读。脚本 `scripts/fabric-config-boundary-smoke.sh`，测量噪声约 10%，故用档位距离判定。[记录](evidence/p8-release/w124-config-boundary.json)
 
 W-123（存档往返第二轮）：**配置与内容都能活过重启**。脚本 `scripts/fabric-save-roundtrip-smoke.sh` 两阶段：布置四台机器（注入室 HCl 1500 + 4 晶体、化学储罐 HCl 2000、分离器、精英冶炼工厂 `sorting:1b` + 8 脏粉）→ `save-all flush` → 干净 `stop` → 同世界重启 → 再转储。逐字段比对：`component_config` 与 `sorting` **逐字一致**，`items`/`chemical_tanks` 的 **id 集合一致**；数量变化（注入室喝 HCl、工厂吃脏粉）属正常消耗，故不比数量。连续 2 次 PASS。[记录](evidence/p8-release/w123-save-roundtrip.json)
@@ -215,3 +217,5 @@ EOF
 提交风格复核：`e0bfa412` 的真实 diff 仅扩展已授权 W-120 探针和纠正文档，复用真实 security owner／frequency，无生产语义替代、无源码切片变化。五条 GUI 判定与清理已实跑，日常 `test` 成功（UP-TO-DATE）；全量门禁本批未跑。
 
 提交风格复核：`b9bf320c` 仅修正 W-121 既有探针与失效证据，未改生产行为或扩大切片；严格计数包含真实持久化的在途栈，官方与 Fabric 同 rig 均通过。QIO／跨区块范围未跑，不宣称完成。
+
+提交风格复核：`60761195` 的真实 diff 仅修正固定 BOTTOM 发电输出的既有 rig 与旧证据，复用原太阳能／能量立方／线缆 owner；无生产实现替换、无新测试类。全链容量与精确能量守恒未跑。
