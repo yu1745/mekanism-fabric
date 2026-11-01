@@ -888,3 +888,22 @@ W-123 当前仅四台代表机器、配置/sorting 与内容 id 集合；W-124 �
 **既有 smoke 的直接影响**：energy-chain、machine、third-party-energy 在启动前 seed 的 `world/serverconfig/Mekanism/general.toml` 本身就是合法 override，可保留；config-boundary 与 worldgen 对默认生成路径的假定、retrogen 对 world 文件的编辑路径需随真实选择规则校正。不要为跑通而把所有种子搬到全局，从而丢掉已有 override 路径覆盖。主实现者可先让官方同 rig 编辑其真实已加载文件，继续隔离验证热重载；该证据不豁免路径行为缺口。
 
 该改变影响跨世界文件选择，但调用链仍限于已经纳入的配置 manager、两个现有 SERVER owner 及其直接脚本/文档，没有必需的新模块。按 AGENTS 先记录本节边界，由唯一实现者在现有配置闭包内串行修复；若实施确需新模块再暂停该分支评估。协调者未审未提交实现、未启动进程或新增测试；热重载/路径修复与最终 runtime 验收均仍进行中。
+
+
+## 方向核对 M8（2026-11-01，已提交 `bff6045b`；GO 收口）
+
+按移植风格审查 Prompt 只读审查真实 diff，**未发现新的确定生产缺陷或移植风格偏离**。M6 的 worldgen 独立 watcher 遗漏已修：原 SERVER owner 加监听，停止走 unloadAll 撤销排队回调，启动异常也释放已加载状态和 claim。M7 的文件选择差异已在既有 manager 内修复：createDefault/createForServer 保留真实 process/SERVER 生命周期，逐文件选择已存在的世界 override，否则全局文件；缺失目标从 defaultconfigs 初始化，claim/watch/save/snapshot 绑定选中路径。没有把 SERVER 变成永久 process owner、加入迁移层或扩张源码切片。
+
+**运行闭包按证据范围接受**：W-124 两端同一受控 flat/plains/noon rig 的三次读数均为 44→179→366 J/t；模板 bio777、默认 global50、随后世界 override200/live400、全局仍50 均有断言。原 energy/machine/third-party-energy 的 world general seed 保留为合法 override；worldgen/retrogen 编辑与检查跟随实际文件选择。mdb owned 会话五项覆盖 NONE 实际消费者、WORLD/GAME effective-old 与 pending snapshot/save、独立 worldgen NONE；3 份原配置逐字节恢复，session stopped 且 PID absent。既有构建 584/0/0 已记录；没有新增测试类。远程 pending WORLD 重连没有新增真实客户端矩阵，不扩称已跑，太阳能平均读数也不冒充逐 tick 精确产量。
+
+**下一步仅最终收口**：GO 执行修复后的 extended 门禁与第二次 clean 四 JAR 哈希对比，然后更新状态、证据索引、最终 committed artifact provenance 和清理结果并提交。旧 f8 基线通过及 W-124 focused JAR 的前提交 metadata 不能替代该最终记录；除真实失败所需修复外，不再新增玩法、配置矩阵或测试任务。协调者本次未运行游戏/测试，未改实现、未提交；只维护两份方向文档。
+
+## 方向核对 M9（2026-11-01，最终门禁 machine 失败；尚未收口）
+
+主实现者报告 `bff6045b` 最终 gate 第 1–5 步通过（clean 274s、static 15s、server 55s、paired 79s、rejection 100s）；第 6 步只有 `ore path ran end to end: crystal in at the chamber, dust out at the enrichment chamber` 失败，其余 29 项通过。原临时日志被脚本 cleanup 删除，失败时链路 NBT 无法回读。同 JAR 的保留目录复跑 30 项通过，只是诊断事实，不能据此将最终 gate 标绿或排除缺陷。
+
+**只读既有脚本与成功 raw 日志定位到明确 fixture 前置错误**：脚本把 HCl2000/O₂4000 直接写入 `(58,100,0)` 注入机与 `(58,100,2)` 净化机；真实 `TileEntityAdvancedElectricMachine.MAX_GAS=210`。`BasicChemicalTank.growStack → setStackSize` 在首次 shrink 时按容量裁剪，成功日志 `/tmp/mekanism-machine-smoke.SAsgar/server.log:218/302` 的 `Stack size changed by a different amount (1790)/(3790) than requested (1)` 恰好对应这一超容量状态。两机器按 `usage.randomizedConsumption` 使用统计耗气；净化机没有持续氧气供给，后续两批只补能，气体不足不能靠更多 tick 解决。该证据说明既有 rig 有误，不足以追认已丢失首轮失败的唯一根因，也不是生产算法缺陷证据。
+
+最小方向是保留随机消耗算法和最终 dust 断言，修正这个既有链的容量内种子/持续化学输入或冻结阶段合法补气；构建、补能与最终取样需明确 tick 边界，以既有 Sprint 完成标记替代固定 sleep 推断。诊断保留四级机器及中间三运输器的 energy/progress/used_so_far/chemical/items 数据和失败日志；不新增测试类或玩法矩阵，不改生产代码以适应非法种子。由唯一实现者捕获和串行修正后继续既有最终验收；协调者未启动进程、未改脚本实现、未提交。
+
+**恢复检查点**：已再次核实 HEAD 仍为 `bff6045b`，工作区仅本文件与 ROADMAP 两份方向记录未提交，没有新的实现或验收结果。下一步确认采用既有链的合法持续化学供给、Sprint 完成标记/冻结取样及失败日志保留；随机算法、原四级真实流转和末端 dust 断言保持。该修复与必要进程回收属于原 gate 执行闭包；完成后回到既有最终门禁，不派生新场景。本次未运行游戏/测试、未改代码、未提交。

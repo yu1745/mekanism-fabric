@@ -2,7 +2,7 @@
 
 ## 现状
 
-W-120、W-121、W-122、W-116 已闭环，mdb 网络门禁已接通。W-124 的真实热重载与文件选择缺口已实现，官方/Fabric 同 rig 和 mdb owner 检查通过；不再把“只启动加载/固定世界路径”当平台差异。修复前 `f8e37d33` 的11步门禁只作基线，修复后最终 clean gate 尚待执行。
+W-120、W-121、W-122、W-116 已闭环，mdb 网络门禁已接通。W-124 的真实热重载与文件选择缺口已实现，官方/Fabric 同 rig 和 mdb owner 检查通过；不再把“只启动加载/固定世界路径”当平台差异。修复前 `f8e37d33` 的11步门禁只作基线，修复后最终 clean gate 第1–5步通过，第6步机器末端产出失败。已修正气槽超容量、缺少氧气供给及 tick/区块加载边界；focused复跑30项通过，完整最终门禁仍待重跑。
 
 ## 下一步
 
@@ -11,12 +11,14 @@ W-120、W-121、W-122、W-116 已闭环，mdb 网络门禁已接通。W-124 的�
 ## 未决项
 
 - QIO 崩溃守恒、跨区块原子性、矩阵容量及全链精确能量核算未跑；不能从已测的运输器与能量立方推断。
-- W-123 仅四台代表机器的配置／sorting与id集合；W-124 仅Fabric太阳能配置生效读数，非完整官方配置对照。
+- W-123 仅四台代表机器的配置／sorting与id集合；W-124 已有官方/Fabric太阳能同 rig 与 mdb owner 检查，非完整配置矩阵。
 - 语音原始16kHz/big-endian与双向会话未验证；W-64另一采样格式不能替代。Iris开发环境失败只构成该环境限制。
 - 早先frozen-sprint搭场差异未归因；当前运输器对照明确在两端unfreeze后执行sprint，不据早先现象判定产品缺陷。
 - 推送、发布与版本口径仅由用户决定，见 `DECISIONS_PENDING.md`。本 goal 不 push、不发布、不再改写历史。
 
 ## 验收证据
+
+当前机器 gate 修正：真实高级机器气槽仅210 mB，原2000/4000种子无效。改为210初值与真实储罐/管道持续供气，随机耗气与dust断言保留；30项focused通过且无shrink异常。首次失败raw被旧cleanup删除，根因不能追认。现失败保留日志、四级机器/运输器NBT，区块实际加载和sprint完成后再读取。[纠正证据](evidence/p8-release/w117-smoke-stability.json)
 
 **门禁分成两档**：`scripts/release-check.sh`（7 步，快速发布门禁）与 `scripts/release-check.sh --extended`（再加 P27 的四个场景：崩溃守恒、能量链、存档往返、配置边界）。后者每项都要起一到两次专用服务端，属于里程碑收口才跑的档位。全部证据索引见 [`evidence/p8-release/INDEX.md`](evidence/p8-release/INDEX.md)（由证据文件自身字段生成，72 条）。
 
@@ -26,7 +28,9 @@ W-116（涡轮满负载）：通过 `devModule=generators` 将既有源集接入
 
 W-124（真实配置缺口修复）：原“与官方一样不热重载”撤回。现已接所有实际 config owner 的文件监听/线程/卸载，区分 NONE/WORLD/GAME，保存和登录 snapshot 保留待重启值，并恢复官方全局默认＋逐文件世界覆盖＋defaultconfigs 模板规则。官方/Fabric 同一场景均 **44→179→366 J/t**；真实 mdb 五项检查覆盖实际策略消费者、WORLD/GAME pending/save 与独立 worldgen NONE，3 份配置逐字节恢复、owned JVM 退出。584 项既有检查通过，无新增测试类、无 PLAY 协议。最终 clean gate 仍待修复后复跑。[对照与历史撤回](evidence/p8-release/w124-config-boundary.json)
 
-W-123（存档往返第二轮）：**配置与内容都能活过重启**。脚本 `scripts/fabric-save-roundtrip-smoke.sh` 两阶段：布置四台机器（注入室 HCl 1500 + 4 晶体、化学储罐 HCl 2000、分离器、精英冶炼工厂 `sorting:1b` + 8 脏粉）→ `save-all flush` → 干净 `stop` → 同世界重启 → 再转储。逐字段比对：`component_config` 与 `sorting` **逐字一致**，`items`/`chemical_tanks` 的 **id 集合一致**；数量变化（注入室喝 HCl、工厂吃脏粉）属正常消耗，故不比数量。连续 2 次 PASS。[记录](evidence/p8-release/w123-save-roundtrip.json)
+W-123（当前纠正）：旧脚本使用无效分离器ID且跳过首轮缺失对象，旧四机结论不能沿用。现改为官方 `electrolytic_separator`、容量内HCl210、实际化学侧及严格四机完整转储；Done/sprint/冻结取样/保存后同世界重启，完整配置、sorting与ID集合比较通过，无新测试类。[记录](evidence/p8-release/w123-save-roundtrip.json)
+
+W-123（历史存档往返第二轮，以下由上述纠正取代）：**配置与内容都能活过重启**。脚本 `scripts/fabric-save-roundtrip-smoke.sh` 两阶段：布置四台机器（注入室 HCl 1500 + 4 晶体、化学储罐 HCl 2000、分离器、精英冶炼工厂 `sorting:1b` + 8 脏粉）→ `save-all flush` → 干净 `stop` → 同世界重启 → 再转储。逐字段比对：`component_config` 与 `sorting` **逐字一致**，`items`/`chemical_tanks` 的 **id 集合一致**；数量变化（注入室喝 HCl、工厂吃脏粉）属正常消耗，故不比数量。连续 2 次 PASS。[记录](evidence/p8-release/w123-save-roundtrip.json)
 
 W-122（发电→储能→用电纠正）：太阳能固定从 **BOTTOM** 输出，不需要 `component_config`。修正既有 rig 为太阳能→其下方空能量立方→线缆→空熔炉，800 tick（40 游戏秒，1107 tick/s，按报告速率约 0.72 秒加速运行）后，立方 **7955 J**、发电机 **45 J**、熔炉 **20000 J**，五项断言通过。原“无法配置输出”的阻塞撤回；不再把外壳仍可读取当成矩阵成型断言。矩阵容量与全链精确能量守恒未跑。[读数](evidence/p8-release/w122-energy-chain.json)
 
@@ -36,7 +40,7 @@ W-99（第三方能量互通）：**双向都通，用真实的 Tech Reborn 验�
 
 W-98（渲染器兼容抽样）：**Sodium 兼容、Iris 在 dev 环境装不上**。Sodium 0.8.13（Modrinth, 1.21.1 Fabric）装入开发客户端后 mdb 正常就绪，富集仓/碎石机渲染正确、WTHIT 提示正常、GUI 可打开（截图 `evidence/p8-release/w98-sodium-scene.png`）；`gui problems` 12 条均为警告级、无渲染异常。**Iris** 1.8.14-beta.1 + Sodium + ComplementaryReimagined 光影包：客户端启动失败（两次一致），原文 `InvalidMixinException: Unexpected NullPointerException parsing @ModifyArg annotation on iris$writeR...` → `MixinRemapper.unmapDesc` 空指针——Iris 的 mixin 按生产映射编写，dev 环境命名映射下重映射失败，与 Mekanism 无关。环境限制：客户端是 Mesa llvmpipe 软件渲染，**帧率无代表性**。第三方模组只在 `fabric/run/mods/`，不进发布依赖。[记录](evidence/p8-release/w98-renderer-compat.json)
 
-**门禁稳定性复核**（协调者 J1 第 4 条）：机器 smoke 连跑 3 次全部 exit 0、均 31 PASS，耗时 65/65/70 秒（提速前 113 秒），无 flaky。证据目录同时从 9.3 MB 压到 6.0 MB（256 色量化，不下采样，文字仍可读）。[记录](evidence/p8-release/w117-smoke-stability.json)
+**历史门禁稳定性复核（不证明当前稳定）**（协调者 J1 第 4 条）：机器 smoke 连跑 3 次全部 exit 0、均 31 PASS，耗时 65/65/70 秒（提速前 113 秒），无 flaky。证据目录同时从 9.3 MB 压到 6.0 MB（256 色量化，不下采样，文字仍可读）。[记录](evidence/p8-release/w117-smoke-stability.json)
 
 W-104 涡轮（W-116）：**受阻并已定界**。工业涡轮属于 **MekanismGenerators** 模块，dev 客户端只加载核心 mod —— `world fill-box ... mekanismgenerators:turbine_casing` 直接报 `block not registered`；且多方块成型需玩家交互（`BlockBasicMultiblock.useItemOn` → `onActivate(player,…)`），无玩家服务端触发不了。按 W-116 约定带原文结束。**已把 `TurbineValidator` 的完整结构规则提取留存**（尺寸/中心复合体/转子连续/叶片>0/线圈自复合体上方蔓延/分散器铺满平面/冷凝器在复合体之上/通风口不低于复合体），其中叶片数**可通过 NBT 注入**（`SerializationConstants.BLADES` 会被 `loadAdditional` 读取）。[记录](evidence/p8-release/w116-turbine.json)
 

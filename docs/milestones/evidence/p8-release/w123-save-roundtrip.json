@@ -29,5 +29,42 @@
   "not_verified": [
     "未覆盖 ×3/×4/×5 整链的重启（只覆盖四台代表性机器；整链已由 W-111 单独验证）",
     "未覆盖 QIO 网络与多方块（多方块无法无头成型，见 W-116/W-122）"
-  ]
+  ],
+  "historical_result_scope": "Old proof unreliable: invalid separator id omitted from both dumps and skipped by comparator; injector gas1500 exceeded cap210. Historical readings retained, superseded below.",
+  "corrected_current_run": {
+    "artifact_source_commit": "bff6045bae357af42d8a5003701c0c707b82efaf",
+    "result": "PASS: all four required dumps present before and after restart; full component_config, sorting and item/chemical id sets match.",
+    "fixes": [
+      "electrolytic_separator official registry id",
+      "injector HCl210 within real capacity",
+      "chemical tank config2 real chemical side, replacing irrelevant config1",
+      "FIFO/setsid and actual Done/sprint/snapshot markers; frozen reads and save",
+      "reject missing dumps on either side; compare balanced compound/list fields rather than truncated first bracket",
+      "failed run retains raw files; process group cleanup verified"
+    ],
+    "positions": [
+      "58,100,0",
+      "60,100,0",
+      "62,100,0",
+      "64,100,0"
+    ],
+    "logs": [
+      "/tmp/mekanism-save-roundtrip.MQVZUr/phase-one.log",
+      "/tmp/mekanism-save-roundtrip.MQVZUr/phase-two.log"
+    ],
+    "sprint_ticks": [
+      20,
+      120,
+      20
+    ],
+    "equivalent_game_seconds": 8,
+    "reported_ticks_per_second": [
+      87,
+      393,
+      235
+    ],
+    "cleanup": "Both dedicated JVMs exited normally, process groups absent.",
+    "not_claimed": "Exact quantity/progress conservation or full ore chain persistence; only stated configuration and ID-set roundtrip.",
+    "estimated_sprint_wall_seconds": 0.62
+  }
 }

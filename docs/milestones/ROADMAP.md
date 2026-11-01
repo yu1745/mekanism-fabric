@@ -2,7 +2,7 @@
 
 协调者编写，worker 按序执行。状态以 `docs/milestones/README.md` 为准；本文只定"做什么、什么顺序、怎样算完成、卡住怎么办"。不得借本文扩大 `AGENTS.md` 的边界。
 
-## 当前执行入口（2026-11-01，goal 恢复；起始基线 `482abbb9`，已核对 `f8e37d33`）
+## 当前执行入口（2026-11-01，goal 恢复；起始基线 `482abbb9`，已核对 `bff6045b`）
 
 本节取代下方 K2/K3 与旧巡检中冲突的完成判断和执行顺序。协调者本轮只读核对提交、源码与既有证据，没有重新运行游戏门禁；旧通过记录仅覆盖当时实际场景。
 
@@ -11,18 +11,16 @@
 3. **W-122 已提交，太阳能输出闭包通过**（`60761195`）：固定 BOTTOM → 初始空立方 → 线缆 → 初始空熔炉，800 tick 后立方 7955 J、太阳能 45 J、熔炉 20000 J。`energy_containers.stored` 单位是 J，不能写作 FE。原“缺少 component_config 无法输出”阻塞撤回；不声称感应矩阵容量或含线缆缓冲的全链精确能量守恒已验收。
 4. **W-116 已提交，负载范围通过**（`132b48d0`）：既有 Generators 源集接入 mdb `runClient`，355 值 ack；真实玩家 builder/GUI 成型，满蒸汽且空能量下单 tick 消耗 11,040,000 mB、生成 110,400,000 J，与最大流量/产率及官方同状态完全一致。Fabric creative tank 经阀门持续供汽 200 tick 后末产率仍为最大；官方持续供汽未跑，不把瞬时/末值读数扩称全程逐 tick 恒定。457 项测试真正执行且 0 失败，API 检查通过；临时世界改动已恢复，收尾确认 owned session 最终停止和进程无残留。
 5. **paired/rejection 已接入 mdb owned，直接门禁通过**（`f8e37d33`）：沿既有 preset 配置 `runClient`；两个全新客户端的正常握手和三种拒绝均通过，原精确原因/顺序/次数/无 PLAY 等断言未放宽。五个 owned session 已记录 stopped、JVM absent。旧未验收的 securityDenial 直启脚本以非零退出退役，W-120 使用已验证的真实 GUI probe。
-6. **W-124 新确认配置热重载缺口，先完成真实 owner 闭包**：固定 NeoForge 21.1.200 / FML 4.0.41 默认文件监听经 `ConfigWatcher → ConfigTracker.loadConfig → ModConfig.setConfig → ModConfigSpec.acceptConfig/afterReload → ModConfigEvent.Reloading → MekanismConfigHelper.onConfigLoad → clearCache(false)` 更新无需重启项；Fabric manager 当前仅初次 load/unload，缺运行期变更接入，不能把 W-124 写成“与官方一致”。最小边界是既有 manager/spec 的文件变更、磁盘 pending/运行 effective 分离、NONE/WORLD/GAME 缓存语义、Mekanism 失效 listener、实际 server/client/process owner 的调度和卸载注销。STARTUP 官方也会 watch；官方配置包仅 configurationToClient，无需新增 PLAY 协议，新连接 snapshot 与 save 要保留磁盘 pending 语义。由唯一实现者修复，不建立通用 FML 转换层或太阳能专用路径。具体事实见 COORDINATOR_NOTES M5。
-7. **最终验收暂只代表旧基线**：当前 `release-check.sh --extended` 针对 `f8e37d33`，clean build 已报 584/0/0、静态通过，后续仍在运行。主实现者先管理好现有任务生命周期，再修配置缺口；该旧基线即使通过也不能覆盖后续生产修复。修复后按实际影响完成既有检查与最终构建/四哈希记录，不新增测试类或无边界场景。frozen-sprint 初始差异仍未归因；语音原格式/双向会话仍未验收。
+6. **W-124 配置闭包已提交并通过限定范围实机对照**（`3512ce90`、`bff6045b`）：所有实际 owner 接文件监听/executor/撤销；NONE 热生效，WORLD/GAME 保留 effective 与 pending 分离；save/登录 snapshot 保留 pending。GeneralConfig 沿既有 publication seam 接真实消费者，独立 API 回退不变，无新 epoch 或 PLAY 协议。SERVER 默认全局配置，已有逐文件世界 override 优先，目标缺失可从 defaultconfigs 初始化。worldgen 独立 manager 漏接 watch 已修。官方/Fabric 同 rig 均 44→179→366 J/t，模板 bio777、生效世界覆盖及全局 solar50 保留均通过；mdb 五项覆盖实际策略消费者、WORLD/GAME pending/save 和 worldgen NONE，3 份配置逐字节恢复，owned session stopped/PID absent。既有 584 项构建检查通过，没有新增测试类。远程 pending WORLD 重连仅有既有 snapshot 验证及集成会话读数，不扩称真实双客户端矩阵已跑。
+7. **GO：先修 M9 既有 fixture，再完成最终收口**：只读审查 `bff6045b` 未发现新的确定生产缺陷，M6/M7 的实际缺口已在原 owner 边界修复；当前下一动作是下述 machine 合法供给、tick 标记与失败留证修正。完成后按实际提交运行 `release-check.sh --extended`（含 clean build），再第二次 clean 比四 JAR 哈希；更新最终提交/产物身份、状态和证据索引，确认所有 owned session、服务端进程组和临时依赖清理后提交。`f8e37d33` 的旧 11 步通过仅作基线，不能替代新结果；W-124 focused JAR 的 metadata 尚为前提交且含当时未提交修复，最终 clean 负责给出完整 committed provenance。不追加场景或测试清单。
 
-W-124 策略消费采用既有 canonical GeneralConfig owner：已加载时由 `ChemicalConfigAccess` 读取其 cached effective/远程已安装值，未加载保留独立 API context 回退；同时接通 `RadiationValidation` 的真实 owner 优先级与远程 attach/detach，集成客户端断开不撤销存活服务端 owner。无需配置专用 data-map epoch、客户端 tick 策略镜像或新 PLAY 协议；详见 COORDINATOR_NOTES M5 补充。此为方向建议，未提交实现尚未独立审查。
+W-124 的发现、真实官方调用链及两次审查见 COORDINATOR_NOTES M5–M8；先前“缺口待修/实机待验”状态已由本入口取代。frozen-sprint 初始差异仍未归因；语音原格式/双向会话仍未验收。
 
-**`3512ce90` 实现审查更新，W-124 仍进行中**：configured/effective、restart 边界、真实 executor 与策略 publication 已提交；507 项既有测试及编译通过是主实现者报告，修复后 runtime 尚未完成。只读审查发现 `FabricWorldGenConfig` 的独立 manager 尚未接 watch，`world.toml` 的 NONE 项仍缺热重载；由主实现者在该既有 owner 补监听/撤销/失败清理后继续原 W-124 同 rig 和最终门禁，不新增测试清单。详见 COORDINATOR_NOTES M6。
-
-**固定官方路径新事实，仍属未完成产品边界**：NeoForge 21.1.200 / FML 4.0.41 的 SERVER 配置默认加载实例 `config/Mekanism`；仅某个 `<world>/serverconfig/Mekanism/<name>.toml` 已存在时，该文件覆盖全局配置。选中路径缺失时还使用 `defaultconfigs` 模板初始化。旧 API_DELTAS 的“官方固定世界路径”说法未记录获批 delta，须纠正。最小修复限于既有 manager 的逐文件路径选择、FabricServerConfig/FabricWorldGenConfig 生命周期及直接 smoke 路径；保留已经 seed 的合法世界 override，不做旧开发版迁移、不新建配置框架。先按 COORDINATOR_NOTES M7 已记录的链与边界串行修复，再收口验收；仅改官方探针路径不等于该差异已解决。
+**最终 gate 当前未通过（M9）**：`bff6045b` 第 1–5 步通过，第 6 步 machine 的四级矿物链末端 dust 断言失败（其余 29 项通过）；原日志被 cleanup 删除，同 JAR 保留目录复跑 30 项通过不等于故障已排除。只读核对发现既有脚本向容量210的注入/净化机灌2000/4000气体，成功 raw 日志1790/3790超额 shrink异常与之吻合；净化机无持续氧气且存在随机消耗，后续只补能。主实现者在原 rig 内修合法供给、tick/快照边界与失败留证，保持最终dust断言；不扩大场景或先改生产算法，完成诊断修正后再继续最终收口。原失败的唯一根因尚未证实。
 
 **客户端规则更正**：COORDINATOR_NOTES L3/L4 的“Gradle fixture 属于既有 paired smoke 的同类机制”不能构成例外，相关豁免说法撤回。所有游戏客户端（含 fixture/handshake）都必须 `mdb session start/stop`；会启动客户端的旧脚本须先接入该生命周期再执行。历史证据保留，不据此重新启动旧路径。
 
-已完成范围继续复用：W-101b、本次已覆盖的 W-98 Sodium 抽样及 Iris 开发环境限制、W-99 双向互通、W-79 无反馈缺陷、W-112 升级读数。W-123 只覆盖四台代表机器的侧配置/sorting 与 id 集合；W-124 原 Fabric 读数的单位是 J/t，且当前实际不热重载是已确认移植缺口，须由上述闭包修复。不开新 W 编号，不因剩余项减少追加场景。日常按实际改动执行既有测试，完整门禁集中功能闭包收口；push、部署、发布仍不在本 goal 范围。
+已完成范围继续复用：W-101b、本次已覆盖的 W-98 Sodium 抽样及 Iris 开发环境限制、W-99 双向互通、W-79 无反馈缺陷、W-112 升级读数。W-123 只覆盖四台代表机器的侧配置/sorting 与 id 集合；W-124 原无热重载结论为已修复缺陷的历史记录，现按上述实机范围验收，能量读数单位为 J/t。不开新 W 编号，不因剩余项减少追加场景。日常按实际改动执行既有测试，完整门禁集中功能闭包收口；push、部署、发布仍不在本 goal 范围。
 
 
 **K2 历史进展（2026-11-01，P27 场景读数；完成口径以上方当前执行入口为准）**
@@ -32,7 +30,7 @@ W-124 策略消费采用既有 canonical GeneralConfig owner：已加载时由 `
 | W-121 崩溃物品计数 | 历史 +33~35 定性撤回；`b9bf320c` 的 Fabric/官方单区块运输器严格总量均通过 | `evidence/p8-release/w121-crash-conservation.json` |
 | W-122 能量链 | `60761195` 已补太阳能 BOTTOM→空立方→线缆→空熔炉；矩阵及全链精确能量守恒未测 | `evidence/p8-release/w122-energy-chain.json` |
 | W-123 存档往返 | 侧配置与 sorting 逐字保留、物品/化学品 id 集合一致 | `evidence/p8-release/w123-save-roundtrip.json` |
-| W-124 配置边界 | 原 Fabric 运行期编辑无效（单位 J/t）；官方默认支持 NONE 项热重载，当前缺口待修，不能写“与官方一致” | `evidence/p8-release/w124-config-boundary.json` |
+| W-124 配置边界 | `bff6045b` 已修热重载和文件选择；官方/Fabric 同 rig 与 mdb owner 检查通过，严格范围见当前入口 | `evidence/p8-release/w124-config-boundary.json` |
 
 新增四个可复跑脚本，并以 `release-check.sh --extended` 纳入收口档位；证据索引为 `evidence/p8-release/INDEX.md`（72 条）。
 

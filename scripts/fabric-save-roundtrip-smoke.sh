@@ -12,7 +12,6 @@ set -euo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 PROPERTIES="$ROOT/fabric/gradle.properties"
 CACHE_DIR=${FABRIC_SMOKE_CACHE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/mekanism-fabric-smoke}
-TIMEOUT=${FABRIC_ROUNDTRIP_TIMEOUT:-300}
 KEEP_SERVER=${FABRIC_SMOKE_KEEP_SERVER:-0}
 
 SERVER_DIR=
@@ -34,17 +33,23 @@ FABRIC_API_VERSION=$(property fabric_api_version)
 TEAM_REBORN_ENERGY_VERSION=$(property team_reborn_energy_version)
 INSTALLER_VERSION=${FABRIC_INSTALLER_VERSION:-1.1.2}
 
+SERVER_PID=
 cleanup() {
   local status=$?
   trap - EXIT INT TERM
-  if [[ -n "$SERVER_DIR" && -d "$SERVER_DIR" ]]; then
-    local pid pgid
-    pid=$(cat "$SERVER_DIR/server.pid" 2>/dev/null || true)
-    if [[ -n "${pid:-}" ]]; then
-      pgid=$(ps -o pgid= -p "$pid" 2>/dev/null | tr -d ' ' || true)
-      [[ -n "$pgid" ]] && kill -KILL -- "-$pgid" 2>/dev/null || true
+  if [[ -n "$SERVER_PID" ]]; then
+    kill -TERM -- "-$SERVER_PID" 2>/dev/null || true
+    if ! timeout 2 tail --pid="$SERVER_PID" -f /dev/null; then
+      kill -KILL -- "-$SERVER_PID" 2>/dev/null || true
     fi
-    if [[ "$KEEP_SERVER" == 1 ]]; then
+    wait "$SERVER_PID" 2>/dev/null || true
+    if ps -eo pgid= | awk -v group="$SERVER_PID" '$1 == group { found=1 } END { exit !found }'; then
+      echo "fabric-save-roundtrip-smoke: residual process group $SERVER_PID" >&2
+      status=1
+    fi
+  fi
+  if [[ -n "$SERVER_DIR" && -d "$SERVER_DIR" ]]; then
+    if [[ "$KEEP_SERVER" == 1 || "$status" != 0 ]]; then
       printf 'fabric-save-roundtrip-smoke: retained server: %s\n' "$SERVER_DIR" >&2
     else
       rm -rf "$SERVER_DIR"
@@ -88,38 +93,60 @@ cp "$FABRIC_API_JAR" "$ENERGY_JAR" "${MOD_JARS[@]}" "$SERVER_DIR/mods/"
 printf 'eula=true\n' > "$SERVER_DIR/eula.txt"
 printf 'online-mode=false\nserver-port=0\nspawn-protection=0\nmax-players=1\nview-distance=4\n' > "$SERVER_DIR/server.properties"
 
+mkfifo "$SERVER_DIR/console"
+command() { printf '%s\n' "$1" >&9; }
+wait_line() {
+  "$ROOT/scripts/wait-for-log-line.sh" -t 60 -p "$SERVER_PID" \
+    --fail-on 'Encountered an unexpected exception|FAILED TO BIND|Exception in thread|Stack size changed by a different amount|Unknown block type' "$@" "$LOG_FILE"
+}
 run_phase() {
-  local phase=$1 commands=$2
-  : > "$SERVER_DIR/server.log"
-  cd "$SERVER_DIR"
-  (
-    for _ in $(seq 1 180); do
-      grep -q 'Done (' server.log 2>/dev/null && break
-      sleep 1
-    done
-    sleep 1
-    echo "forceload add 0 0"
-    echo "forceload add 64 0"
-    while IFS= read -r line; do
-      [[ -z "$line" ]] && continue
-      echo "$line"
-    done <<<"$commands"
-    echo "stop"
-    sleep 6
-  ) | timeout "$TIMEOUT" java -Xms512M -Xmx2G -jar fabric-server-launch.jar nogui > "server-$phase.log" 2>&1 &
-  echo $! > server.pid
-  wait $! 2>/dev/null || true
-  cp "server-$phase.log" "phase-$phase.log"
+  local phase=$1 commands=$2 line sprints=0
+  LOG_FILE="$SERVER_DIR/phase-$phase.log"
+  exec 9<>"$SERVER_DIR/console"
+  (cd "$SERVER_DIR" && exec setsid java -Xms512M -Xmx2G -jar fabric-server-launch.jar nogui < console > "$LOG_FILE" 2>&1) &
+  SERVER_PID=$!
+  wait_line 'Done \('
+  command 'tick freeze'
+  command 'forceload add 48 0'
+  command 'forceload add 64 0'
+  #Advance chunk activation before placing or reading the four saved machines.
+  command 'tick unfreeze'
+  command 'tick sprint 20t'
+  sprints=1
+  wait_line -q -n "$sprints" 'Sprint completed with'
+  command 'tick freeze'
+  while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+    if [[ "$line" == 'tick sprint '* ]]; then
+      command 'tick unfreeze'
+      command "$line"
+      sprints=$((sprints + 1))
+      wait_line -q -n "$sprints" 'Sprint completed with'
+      command 'tick freeze'
+    else
+      command "$line"
+    fi
+  done <<<"$commands"
+  command "say ROUNDTRIP_${phase}_COMPLETE"
+  wait_line "\\[Server\\] ROUNDTRIP_${phase}_COMPLETE"
+  command stop
+  wait "$SERVER_PID"
+  if ps -eo pgid= | awk -v group="$SERVER_PID" '$1 == group { found=1 } END { exit !found }'; then
+    echo "fabric-save-roundtrip-smoke: residual process group $SERVER_PID after shutdown" >&2
+    exit 1
+  fi
+  SERVER_PID=
+  exec 9>&-
 }
 
 #Phase one leaves the world in a state worth comparing: sides configured, a tank with a known amount, a factory with
 #sorting on, and a machine that has started a recipe.
 PHASE_ONE=$(cat <<'EOF'
 setblock 58 100 0 mekanism:chemical_injection_chamber
-data merge block 58 100 0 {energy_containers:[{container:0b,stored:40000L}], items:[{slot:0b,item:{id:"mekanism:crystal_iron",count:4}}], chemical_tanks:[{tank:0b,stored:{id:"mekanism:hydrogen_chloride",amount:1500}}], component_config:{config2:[I;1,1,1,1,1,1], config3:[I;7,7,7,7,7,7]}}
+data merge block 58 100 0 {energy_containers:[{container:0b,stored:40000L}], items:[{slot:0b,item:{id:"mekanism:crystal_iron",count:4}}], chemical_tanks:[{tank:0b,stored:{id:"mekanism:hydrogen_chloride",amount:210}}], component_config:{config2:[I;1,1,1,1,1,1], config3:[I;7,7,7,7,7,7]}}
 setblock 60 100 0 mekanism:basic_chemical_tank
-data merge block 60 100 0 {chemical_tanks:[{tank:0b,stored:{id:"mekanism:hydrogen_chloride",amount:2000}}], component_config:{config1:[I;7,7,7,7,7,7]}}
-setblock 62 100 0 mekanism:separator
+data merge block 60 100 0 {chemical_tanks:[{tank:0b,stored:{id:"mekanism:hydrogen_chloride",amount:2000}}], component_config:{config2:[I;7,7,7,7,7,7]}}
+setblock 62 100 0 mekanism:electrolytic_separator
 data merge block 62 100 0 {energy_containers:[{container:0b,stored:40000L}], component_config:{config3:[I;7,7,7,7,7,7]}}
 setblock 64 100 0 mekanism:elite_smelting_factory
 data merge block 64 100 0 {energy_containers:[{container:0b,stored:40000L}], items:[{slot:0b,item:{id:"mekanism:dirty_dust_iron",count:8}}], sorting:1b, component_config:{config0:[I;1,1,1,1,1,1], config3:[I;7,7,7,7,7,7]}}
@@ -173,22 +200,44 @@ def dumps(path):
     return result
 
 before, after = dumps(sys.argv[1]), dumps(sys.argv[2])
-missing = [p for p in POSITIONS if p in before and p not in after]
+missing = [p for p in POSITIONS if p not in before or p not in after]
 if missing:
-    print("missing_after_restart " + ",".join(missing))
+    print("missing_dump " + ",".join(missing))
     raise SystemExit(0)
 
 def field(blob, key):
-    match = re.search(key + r": (\[[^]]*\]|[^,}]+|[^\]]*\])", blob)
-    return match.group(1).strip() if match else None
+    match = re.search(r"(?:^|[,{] )" + re.escape(key) + r": ", blob)
+    if not match:
+        return None
+    start = match.end()
+    depth = 0
+    quoted = escaped = False
+    for offset in range(start, len(blob)):
+        char = blob[offset]
+        if quoted:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                quoted = False
+        elif char == '"':
+            quoted = True
+        elif char in "[{":
+            depth += 1
+        elif char in "]}":
+            if depth == 0:
+                return blob[start:offset].strip()
+            depth -= 1
+        elif char == "," and depth == 0:
+            return blob[start:offset].strip()
+    return blob[start:].strip()
 
 def ids(blob, prefix):
     return sorted(set(re.findall(r'id: "([a-z0-9_:]+)"', blob))) if prefix else []
 
 problems = []
 for position in POSITIONS:
-    if position not in before:
-        continue
     old, new = before[position], after[position]
     for key in ("component_config", "sorting"):
         if field(old, key) != field(new, key):
@@ -204,7 +253,7 @@ PY
 
 result=$(compare)
 printf 'fabric-save-roundtrip-smoke: %s\n' "$result"
-check "every machine came back after the restart" $([[ "$result" == changed\ missing_after_restart* ]] && echo 1 || echo 0)
+check "every machine came back after the restart" $([[ "$result" == missing_dump* ]] && echo 1 || echo 0)
 check "side configs, tank contents, items and sorting survived" $([[ "$result" == "ok" ]] && echo 0 || echo 1)
 if (( failures > 0 )); then
   echo "fabric-save-roundtrip-smoke: FAILED ($failures checks)" >&2

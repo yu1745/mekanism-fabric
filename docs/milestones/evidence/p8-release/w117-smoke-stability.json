@@ -1,7 +1,7 @@
 {
-  "work_item": "W-117 \u524d\u7f6e / W-103 \u590d\u6838",
+  "work_item": "W-117 前置 / W-103 复核",
   "date": "2026-11-01",
-  "goal": "\u6309\u534f\u8c03\u8005 J1 \u7b2c 4 \u6761\uff1a\u786e\u8ba4\u673a\u5668 smoke \u5728 31 \u6761\u65ad\u8a00\u4e0b\u65f6\u957f\u4ecd\u5728\u95e8\u7981\u9884\u7b97\u5185\uff0c\u4e14\u8fde\u7eed 3 \u6b21\u4e00\u81f4\u3002",
+  "goal": "按协调者 J1 第 4 条：确认机器 smoke 在 31 条断言下时长仍在门禁预算内，且连续 3 次一致。",
   "runs": [
     {
       "run": 1,
@@ -22,10 +22,64 @@
       "passes": 31
     }
   ],
-  "conclusion": "3/3 \u5168\u7eff\u300131 \u6761\u65ad\u8a00\u4e00\u81f4\u300165\u201370 \u79d2\uff08\u63d0\u901f\u524d 113 \u79d2\uff09\uff0c\u672a\u89c1 flaky\uff1b\u4ecd\u5728\u95e8\u7981\u9884\u7b97\u5185\u3002",
+  "conclusion": "3/3 全绿、31 条断言一致、65–70 秒（提速前 113 秒），未见 flaky；仍在门禁预算内。",
   "evidence_dir_size": {
     "before": "9.3 MB",
     "after": "6.0 MB",
-    "method": "256 \u8272\u91cf\u5316 + \u4f18\u5316\uff0c\u4e0d\u4e0b\u91c7\u6837\uff08\u4fdd\u8bc1\u6587\u5b57\u53ef\u8bfb\uff09"
+    "method": "256 色量化 + 优化，不下采样（保证文字可读）"
+  },
+  "current_fixture_correction": {
+    "date": "2026-11-01",
+    "artifact_source_commit": "bff6045bae357af42d8a5003701c0c707b82efaf",
+    "first_final_gate": {
+      "result": "FAILED: terminal dust assertion; other 29 checks passed",
+      "log": "/tmp/mekanism-goal-final-release/06-machine_runtime_smoke.log",
+      "limitation": "Original raw server log deleted by old cleanup; first failure root cause unproven."
+    },
+    "unchanged_jar_reproduction": {
+      "result": "30 PASS but invalid fixture gas overfill produced shrink warnings",
+      "log": "/tmp/mekanism-machine-smoke.SAsgar/server.log",
+      "warnings": [
+        "requested shrink 1, actual 1790 from HCl2000 cap210",
+        "requested shrink 1, actual 3790 from oxygen4000 cap210"
+      ]
+    },
+    "fix": "Machine gas seeds 210; existing external HCl tank seeded8000 and real oxygen tank8000 with tube feeding purification. Unchanged randomized consumption, recipes and terminal dust assertion. FIFO/setsid, sprint completion, frozen snapshots, loaded-chunk confirmation; failures retain raw log/world.",
+    "corrected_run": {
+      "result": "30 PASS / 0 FAIL",
+      "raw_log": "/tmp/mekanism-machine-smoke.FdsR6K/server.log",
+      "output": "/tmp/mekanism-goal-machine-fixed2.log",
+      "terminal_dust": 1,
+      "purification_gas": 210,
+      "oxygen_supply_remaining": 3825,
+      "gas_shrink_warnings": 0,
+      "sprint_count": 18,
+      "sprint_ticks": 2560,
+      "equivalent_game_seconds": 128.0,
+      "reported_ticks_per_second": [
+        147,
+        327,
+        243,
+        530,
+        913,
+        1117,
+        830,
+        2388,
+        374,
+        1320,
+        460,
+        467,
+        2063,
+        268,
+        4344,
+        5702,
+        4079,
+        6627
+      ],
+      "estimated_sprint_wall_seconds": 4.181,
+      "timing_note": "All setup/load sprints are20ticks; final five are900/300/200/300/600. Estimated wall time derives from rounded vanilla rates; rates include no fixed real-time soak.",
+      "cleanup": "Server exited normally; process group absent."
+    },
+    "supersedes": "Historical no-flaky conclusion does not prove current gate. Full final extended gate remains pending."
   }
 }
