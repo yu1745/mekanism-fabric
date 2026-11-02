@@ -1,0 +1,2004 @@
+{
+ "module": "core",
+ "results": [
+  {
+   "block": "mekanism:electrolytic_separator",
+   "id": "electrolytic_separator_water",
+   "nbt_after": {
+    "active_state": 1,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 402,
+       "id": "mekanism:hydrogen"
+      },
+      "tank": 0
+     },
+     {
+      "stored": {
+       "amount": 201,
+       "id": "mekanism:oxygen"
+      },
+      "tank": 1
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config1": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject1": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 5,
+    "dump_left": 0,
+    "dump_right": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 79600
+     }
+    ],
+    "fluid_tanks": [
+     {
+      "stored": {
+       "amount": 7598,
+       "id": "minecraft:water"
+      },
+      "tank": 0
+     }
+    ],
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config1": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject1": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "dump_left": 0,
+    "dump_right": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 160000
+     }
+    ],
+    "fluid_tanks": [
+     {
+      "stored": {
+       "amount": 8000,
+       "id": "minecraft:water"
+      },
+      "tank": 0
+     }
+    ],
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "origin": [
+    20,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:chemical_oxidizer",
+   "id": "chemical_oxidizer_sulfur",
+   "nbt_after": {
+    "active_state": 1,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 200,
+       "id": "mekanism:sulfur_dioxide"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 39800
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 2,
+       "id": "mekanism:dust_sulfur"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 1,
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 80000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "mekanism:dust_sulfur"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "origin": [
+    28,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:chemical_infuser",
+   "id": "chemical_infuser_so2_o2",
+   "nbt_after": {
+    "active_state": 1,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 7799,
+       "id": "mekanism:oxygen"
+      },
+      "tank": 0
+     },
+     {
+      "stored": {
+       "amount": 7598,
+       "id": "mekanism:sulfur_dioxide"
+      },
+      "tank": 1
+     },
+     {
+      "stored": {
+       "amount": 402,
+       "id": "mekanism:sulfur_trioxide"
+      },
+      "tank": 2
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 39800
+     }
+    ],
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 8000,
+       "id": "mekanism:oxygen"
+      },
+      "tank": 0
+     },
+     {
+      "stored": {
+       "amount": 8000,
+       "id": "mekanism:sulfur_dioxide"
+      },
+      "tank": 1
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 80000
+     }
+    ],
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "origin": [
+    36,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:chemical_injection_chamber",
+   "id": "injection_iron_ore_hcl",
+   "nbt_after": {
+    "active_state": 1,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 37,
+       "id": "mekanism:hydrogen_chloride"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 79600
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 3,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     },
+     {
+      "item": {
+       "count": 4,
+       "id": "mekanism:shard_iron"
+      },
+      "slot": 2
+     }
+    ],
+    "progress": 1,
+    "redstone": 0,
+    "update_delay": 0,
+    "used_so_far": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 8000,
+       "id": "mekanism:hydrogen_chloride"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 160000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0,
+    "used_so_far": 0
+   },
+   "origin": [
+    44,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:purification_chamber",
+   "id": "purification_iron_ore_oxygen",
+   "nbt_after": {
+    "active_state": 1,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 37,
+       "id": "mekanism:oxygen"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 39800
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 3,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     },
+     {
+      "item": {
+       "count": 3,
+       "id": "mekanism:clump_iron"
+      },
+      "slot": 2
+     }
+    ],
+    "progress": 1,
+    "redstone": 0,
+    "update_delay": 0,
+    "used_so_far": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 8000,
+       "id": "mekanism:oxygen"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 80000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0,
+    "used_so_far": 0
+   },
+   "origin": [
+    52,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:chemical_dissolution_chamber",
+   "id": "dissolution_iron_ore_h2so4",
+   "nbt_after": {
+    "active_state": 0,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 8000,
+       "id": "mekanism:sulfuric_acid"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 160000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0,
+    "used_so_far": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 8000,
+       "id": "mekanism:sulfuric_acid"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 160000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0,
+    "used_so_far": 0
+   },
+   "origin": [
+    60,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:chemical_washer",
+   "id": "washer_dirty_iron",
+   "nbt_after": {
+    "active_state": 1,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 7799,
+       "id": "mekanism:dirty_iron"
+      },
+      "tank": 0
+     },
+     {
+      "stored": {
+       "amount": 201,
+       "id": "mekanism:clean_iron"
+      },
+      "tank": 1
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config1": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject1": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 11,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 39800
+     }
+    ],
+    "fluid_tanks": [
+     {
+      "stored": {
+       "amount": 6995,
+       "id": "minecraft:water"
+      },
+      "tank": 0
+     }
+    ],
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 8000,
+       "id": "mekanism:dirty_iron"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config1": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject1": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 80000
+     }
+    ],
+    "fluid_tanks": [
+     {
+      "stored": {
+       "amount": 8000,
+       "id": "minecraft:water"
+      },
+      "tank": 0
+     }
+    ],
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "origin": [
+    68,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:chemical_crystallizer",
+   "id": "crystallizer_clean_iron",
+   "nbt_after": {
+    "active_state": 1,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 7800,
+       "id": "mekanism:clean_iron"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 79600
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 1,
+       "id": "mekanism:crystal_iron"
+      },
+      "slot": 1
+     }
+    ],
+    "progress": 1,
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 8000,
+       "id": "mekanism:clean_iron"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 160000
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "origin": [
+    76,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:rotary_condensentrator",
+   "id": "rotary_hydrogen",
+   "nbt_after": {
+    "active_state": 1,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 7799,
+       "id": "mekanism:hydrogen"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config1": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject1": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 11,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 9950
+     }
+    ],
+    "fluid_tanks": [
+     {
+      "stored": {
+       "amount": 201,
+       "id": "mekanism:hydrogen"
+      },
+      "tank": 0
+     }
+    ],
+    "mode": 0,
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 8000,
+       "id": "mekanism:hydrogen"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config1": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject1": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 20000
+     }
+    ],
+    "mode": 0,
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "origin": [
+    84,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:pressurized_reaction_chamber",
+   "id": "prc_hdpe",
+   "nbt_after": {
+    "active_state": 0,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 8000,
+       "id": "mekanism:hydrogen"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config1": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject1": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 2000
+     }
+    ],
+    "fluid_tanks": [
+     {
+      "stored": {
+       "amount": 8000,
+       "id": "minecraft:water"
+      },
+      "tank": 0
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "mekanism:substrate"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 8000,
+       "id": "mekanism:hydrogen"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config1": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject1": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 2000
+     }
+    ],
+    "fluid_tanks": [
+     {
+      "stored": {
+       "amount": 8000,
+       "id": "minecraft:water"
+      },
+      "tank": 0
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "mekanism:substrate"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "origin": [
+    92,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:isotopic_centrifuge",
+   "id": "centrifuge_uf6",
+   "nbt_after": {
+    "active_state": 1,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 7799,
+       "id": "mekanism:uranium_hexafluoride"
+      },
+      "tank": 0
+     },
+     {
+      "stored": {
+       "amount": 201,
+       "id": "mekanism:fissile_fuel"
+      },
+      "tank": 1
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 11,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 39800
+     }
+    ],
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 8000,
+       "id": "mekanism:uranium_hexafluoride"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 80000
+     }
+    ],
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "origin": [
+    100,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:nutritional_liquifier",
+   "id": "nutritional_liquifier_bread",
+   "nbt_after": {
+    "active_state": 0,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config1": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject1": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "fluid_tanks": [
+     {
+      "stored": {
+       "amount": 500,
+       "id": "mekanism:nutritional_paste"
+      },
+      "tank": 0
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 2,
+       "id": "minecraft:bread"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 60
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config1": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject1": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 40000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:bread"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "origin": [
+    108,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:pigment_extractor",
+   "id": "pigment_extractor_red",
+   "nbt_after": {
+    "active_state": 0,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 512,
+       "id": "mekanism:red"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "items": [
+     {
+      "item": {
+       "count": 2,
+       "id": "minecraft:red_dye"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 60
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 40000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:red_dye"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "origin": [
+    116,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:pigment_mixer",
+   "id": "pigment_mixer",
+   "nbt_after": {
+    "active_state": 1,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 800,
+       "id": "mekanism:red"
+      },
+      "tank": 0
+     },
+     {
+      "stored": {
+       "amount": 800,
+       "id": "mekanism:blue"
+      },
+      "tank": 1
+     },
+     {
+      "stored": {
+       "amount": 402,
+       "id": "mekanism:purple"
+      },
+      "tank": 2
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 39800
+     }
+    ],
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 4000,
+       "id": "mekanism:red"
+      },
+      "tank": 0
+     },
+     {
+      "stored": {
+       "amount": 4000,
+       "id": "mekanism:blue"
+      },
+      "tank": 1
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 80000
+     }
+    ],
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "origin": [
+    124,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:fluidic_plenisher",
+   "id": "fluidic_plenisher",
+   "nbt_after": {
+    "active_state": 0,
+    "control_type": 0,
+    "current_redstone": 2,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 38000
+     }
+    ],
+    "finished": 1,
+    "fluid_tanks": [
+     {
+      "stored": {
+       "amount": 1000,
+       "id": "minecraft:water"
+      },
+      "tank": 0
+     }
+    ],
+    "progress": 1,
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 40000
+     }
+    ],
+    "finished": 0,
+    "fluid_tanks": [
+     {
+      "stored": {
+       "amount": 1000,
+       "id": "minecraft:water"
+      },
+      "tank": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "origin": [
+    132,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:basic_fluid_tank",
+   "id": "fluid_tank_basic_idle",
+   "nbt_after": {
+    "active_state": 0,
+    "current_redstone": 8,
+    "delay": 0,
+    "edit_mode": 0,
+    "fluid_tanks": [
+     {
+      "stored": {
+       "amount": 16000,
+       "id": "minecraft:water"
+      },
+      "tank": 0
+     }
+    ],
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "current_redstone": 0,
+    "delay": 0,
+    "edit_mode": 0,
+    "fluid_tanks": [
+     {
+      "stored": {
+       "amount": 16000,
+       "id": "minecraft:water"
+      },
+      "tank": 0
+     }
+    ],
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "origin": [
+    140,
+    -58,
+    20
+   ],
+   "ran_ticks": 21
+  }
+ ],
+ "side": "neo",
+ "table": "machines2.json"
+}

@@ -1,0 +1,2017 @@
+{
+ "module": "core",
+ "results": [
+  {
+   "block": "mekanism:chemical_injection_chamber",
+   "id": "injection_iron_ore_hcl_t1",
+   "nbt_after": {
+    "active_state": 1,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 208,
+       "id": "mekanism:hydrogen_chloride"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 159200
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 2,
+    "redstone": 0,
+    "update_delay": 0,
+    "used_so_far": 3
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 8000,
+       "id": "mekanism:hydrogen_chloride"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 160000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0,
+    "used_so_far": 0
+   },
+   "origin": [
+    20,
+    -58,
+    20
+   ],
+   "ran_ticks": 2
+  },
+  {
+   "block": "mekanism:chemical_injection_chamber",
+   "id": "injection_iron_ore_hcl_t10",
+   "nbt_after": {
+    "active_state": 1,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 198,
+       "id": "mekanism:hydrogen_chloride"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 155600
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 11,
+    "redstone": 0,
+    "update_delay": 0,
+    "used_so_far": 13
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 8000,
+       "id": "mekanism:hydrogen_chloride"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 160000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0,
+    "used_so_far": 0
+   },
+   "origin": [
+    28,
+    -58,
+    20
+   ],
+   "ran_ticks": 11
+  },
+  {
+   "block": "mekanism:chemical_injection_chamber",
+   "id": "injection_iron_ore_hcl_t50",
+   "nbt_after": {
+    "active_state": 1,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 165,
+       "id": "mekanism:hydrogen_chloride"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 139600
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 51,
+    "redstone": 0,
+    "update_delay": 0,
+    "used_so_far": 47
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 8000,
+       "id": "mekanism:hydrogen_chloride"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 160000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0,
+    "used_so_far": 0
+   },
+   "origin": [
+    36,
+    -58,
+    20
+   ],
+   "ran_ticks": 51
+  },
+  {
+   "block": "mekanism:chemical_injection_chamber",
+   "id": "injection_iron_ore_hcl_t100",
+   "nbt_after": {
+    "active_state": 1,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 102,
+       "id": "mekanism:hydrogen_chloride"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 119600
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 101,
+    "redstone": 0,
+    "update_delay": 0,
+    "used_so_far": 109
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 8000,
+       "id": "mekanism:hydrogen_chloride"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 160000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0,
+    "used_so_far": 0
+   },
+   "origin": [
+    44,
+    -58,
+    20
+   ],
+   "ran_ticks": 101
+  },
+  {
+   "block": "mekanism:chemical_injection_chamber",
+   "id": "injection_iron_ore_hcl_t150",
+   "nbt_after": {
+    "active_state": 1,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 85,
+       "id": "mekanism:hydrogen_chloride"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 99600
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 151,
+    "redstone": 0,
+    "update_delay": 0,
+    "used_so_far": 126
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 8000,
+       "id": "mekanism:hydrogen_chloride"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 160000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0,
+    "used_so_far": 0
+   },
+   "origin": [
+    52,
+    -58,
+    20
+   ],
+   "ran_ticks": 151
+  },
+  {
+   "block": "mekanism:purification_chamber",
+   "id": "purification_iron_ore_oxygen_t1",
+   "nbt_after": {
+    "active_state": 1,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 210,
+       "id": "mekanism:oxygen"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 79600
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 2,
+    "redstone": 0,
+    "update_delay": 0,
+    "used_so_far": 1
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 8000,
+       "id": "mekanism:oxygen"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 80000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0,
+    "used_so_far": 0
+   },
+   "origin": [
+    60,
+    -58,
+    20
+   ],
+   "ran_ticks": 2
+  },
+  {
+   "block": "mekanism:purification_chamber",
+   "id": "purification_iron_ore_oxygen_t10",
+   "nbt_after": {
+    "active_state": 1,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 197,
+       "id": "mekanism:oxygen"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 77800
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 11,
+    "redstone": 0,
+    "update_delay": 0,
+    "used_so_far": 14
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 8000,
+       "id": "mekanism:oxygen"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 80000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0,
+    "used_so_far": 0
+   },
+   "origin": [
+    68,
+    -58,
+    20
+   ],
+   "ran_ticks": 11
+  },
+  {
+   "block": "mekanism:purification_chamber",
+   "id": "purification_iron_ore_oxygen_t50",
+   "nbt_after": {
+    "active_state": 1,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 169,
+       "id": "mekanism:oxygen"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 69800
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 51,
+    "redstone": 0,
+    "update_delay": 0,
+    "used_so_far": 42
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 8000,
+       "id": "mekanism:oxygen"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 80000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0,
+    "used_so_far": 0
+   },
+   "origin": [
+    76,
+    -58,
+    20
+   ],
+   "ran_ticks": 51
+  },
+  {
+   "block": "mekanism:purification_chamber",
+   "id": "purification_iron_ore_oxygen_t100",
+   "nbt_after": {
+    "active_state": 1,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 122,
+       "id": "mekanism:oxygen"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 59800
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 101,
+    "redstone": 0,
+    "update_delay": 0,
+    "used_so_far": 89
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 8000,
+       "id": "mekanism:oxygen"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 80000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0,
+    "used_so_far": 0
+   },
+   "origin": [
+    84,
+    -58,
+    20
+   ],
+   "ran_ticks": 101
+  },
+  {
+   "block": "mekanism:purification_chamber",
+   "id": "purification_iron_ore_oxygen_t150",
+   "nbt_after": {
+    "active_state": 1,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 75,
+       "id": "mekanism:oxygen"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 49800
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 151,
+    "redstone": 0,
+    "update_delay": 0,
+    "used_so_far": 136
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 8000,
+       "id": "mekanism:oxygen"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 80000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0,
+    "used_so_far": 0
+   },
+   "origin": [
+    92,
+    -58,
+    20
+   ],
+   "ran_ticks": 151
+  },
+  {
+   "block": "mekanism:chemical_dissolution_chamber",
+   "id": "dissolution_iron_ore_h2so4_t1",
+   "nbt_after": {
+    "active_state": 0,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 8000,
+       "id": "mekanism:sulfuric_acid"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 160000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0,
+    "used_so_far": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 8000,
+       "id": "mekanism:sulfuric_acid"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 160000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0,
+    "used_so_far": 0
+   },
+   "origin": [
+    100,
+    -58,
+    20
+   ],
+   "ran_ticks": 2
+  },
+  {
+   "block": "mekanism:chemical_dissolution_chamber",
+   "id": "dissolution_iron_ore_h2so4_t10",
+   "nbt_after": {
+    "active_state": 0,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 8000,
+       "id": "mekanism:sulfuric_acid"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 160000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0,
+    "used_so_far": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 8000,
+       "id": "mekanism:sulfuric_acid"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 160000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0,
+    "used_so_far": 0
+   },
+   "origin": [
+    108,
+    -58,
+    20
+   ],
+   "ran_ticks": 11
+  },
+  {
+   "block": "mekanism:chemical_dissolution_chamber",
+   "id": "dissolution_iron_ore_h2so4_t50",
+   "nbt_after": {
+    "active_state": 0,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 8000,
+       "id": "mekanism:sulfuric_acid"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 160000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0,
+    "used_so_far": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 8000,
+       "id": "mekanism:sulfuric_acid"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 160000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0,
+    "used_so_far": 0
+   },
+   "origin": [
+    116,
+    -58,
+    20
+   ],
+   "ran_ticks": 51
+  },
+  {
+   "block": "mekanism:chemical_dissolution_chamber",
+   "id": "dissolution_iron_ore_h2so4_t100",
+   "nbt_after": {
+    "active_state": 0,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 8000,
+       "id": "mekanism:sulfuric_acid"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 160000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0,
+    "used_so_far": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 8000,
+       "id": "mekanism:sulfuric_acid"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 160000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0,
+    "used_so_far": 0
+   },
+   "origin": [
+    124,
+    -58,
+    20
+   ],
+   "ran_ticks": 101
+  },
+  {
+   "block": "mekanism:chemical_dissolution_chamber",
+   "id": "dissolution_iron_ore_h2so4_t150",
+   "nbt_after": {
+    "active_state": 0,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 8000,
+       "id": "mekanism:sulfuric_acid"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 160000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0,
+    "used_so_far": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "chemical_tanks": [
+     {
+      "stored": {
+       "amount": 8000,
+       "id": "mekanism:sulfuric_acid"
+      },
+      "tank": 0
+     }
+    ],
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 160000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0,
+    "used_so_far": 0
+   },
+   "origin": [
+    132,
+    -58,
+    20
+   ],
+   "ran_ticks": 151
+  }
+ ],
+ "side": "fabsrv",
+ "table": "gas_trajectory.json"
+}

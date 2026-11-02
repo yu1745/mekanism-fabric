@@ -1,0 +1,193 @@
+[
+ {
+  "id": "injection_iron_ore_hcl_t1",
+  "status": "diff",
+  "diffs": [
+   {
+    "path": "chemical_tanks[0].stored.amount",
+    "oracle": 210,
+    "candidate": 208,
+    "rel_err": -0.00952
+   },
+   {
+    "path": "used_so_far",
+    "oracle": 1,
+    "candidate": 3,
+    "rel_err": 2.0
+   }
+  ]
+ },
+ {
+  "id": "injection_iron_ore_hcl_t10",
+  "status": "diff",
+  "diffs": [
+   {
+    "path": "chemical_tanks[0].stored.amount",
+    "oracle": 203,
+    "candidate": 198,
+    "rel_err": -0.02463
+   },
+   {
+    "path": "used_so_far",
+    "oracle": 10,
+    "candidate": 13,
+    "rel_err": 0.3
+   }
+  ]
+ },
+ {
+  "id": "injection_iron_ore_hcl_t50",
+  "status": "diff",
+  "diffs": [
+   {
+    "path": "chemical_tanks[0].stored.amount",
+    "oracle": 157,
+    "candidate": 165,
+    "rel_err": 0.05096
+   },
+   {
+    "path": "used_so_far",
+    "oracle": 55,
+    "candidate": 47,
+    "rel_err": -0.14545
+   }
+  ]
+ },
+ {
+  "id": "injection_iron_ore_hcl_t100",
+  "status": "diff",
+  "diffs": [
+   {
+    "path": "chemical_tanks[0].stored.amount",
+    "oracle": 126,
+    "candidate": 102,
+    "rel_err": -0.19048
+   },
+   {
+    "path": "used_so_far",
+    "oracle": 86,
+    "candidate": 109,
+    "rel_err": 0.26744
+   }
+  ]
+ },
+ {
+  "id": "injection_iron_ore_hcl_t150",
+  "status": "match",
+  "diffs": []
+ },
+ {
+  "id": "purification_iron_ore_oxygen_t1",
+  "status": "diff",
+  "diffs": [
+   {
+    "path": "chemical_tanks[0].stored.amount",
+    "oracle": 8000,
+    "candidate": 210,
+    "rel_err": -0.97375
+   },
+   {
+    "path": "used_so_far",
+    "oracle": 0,
+    "candidate": 1
+   }
+  ]
+ },
+ {
+  "id": "purification_iron_ore_oxygen_t10",
+  "status": "diff",
+  "diffs": [
+   {
+    "path": "chemical_tanks[0].stored.amount",
+    "oracle": 203,
+    "candidate": 197,
+    "rel_err": -0.02956
+   },
+   {
+    "path": "used_so_far",
+    "oracle": 8,
+    "candidate": 14,
+    "rel_err": 0.75
+   }
+  ]
+ },
+ {
+  "id": "purification_iron_ore_oxygen_t50",
+  "status": "diff",
+  "diffs": [
+   {
+    "path": "chemical_tanks[0].stored.amount",
+    "oracle": 171,
+    "candidate": 169,
+    "rel_err": -0.0117
+   },
+   {
+    "path": "used_so_far",
+    "oracle": 40,
+    "candidate": 42,
+    "rel_err": 0.05
+   }
+  ]
+ },
+ {
+  "id": "purification_iron_ore_oxygen_t100",
+  "status": "diff",
+  "diffs": [
+   {
+    "path": "chemical_tanks[0].stored.amount",
+    "oracle": 118,
+    "candidate": 122,
+    "rel_err": 0.0339
+   },
+   {
+    "path": "used_so_far",
+    "oracle": 93,
+    "candidate": 89,
+    "rel_err": -0.04301
+   }
+  ]
+ },
+ {
+  "id": "purification_iron_ore_oxygen_t150",
+  "status": "diff",
+  "diffs": [
+   {
+    "path": "chemical_tanks[0].stored.amount",
+    "oracle": 49,
+    "candidate": 75,
+    "rel_err": 0.53061
+   },
+   {
+    "path": "used_so_far",
+    "oracle": 163,
+    "candidate": 136,
+    "rel_err": -0.16564
+   }
+  ]
+ },
+ {
+  "id": "dissolution_iron_ore_h2so4_t1",
+  "status": "match",
+  "diffs": []
+ },
+ {
+  "id": "dissolution_iron_ore_h2so4_t10",
+  "status": "match",
+  "diffs": []
+ },
+ {
+  "id": "dissolution_iron_ore_h2so4_t50",
+  "status": "match",
+  "diffs": []
+ },
+ {
+  "id": "dissolution_iron_ore_h2so4_t100",
+  "status": "match",
+  "diffs": []
+ },
+ {
+  "id": "dissolution_iron_ore_h2so4_t150",
+  "status": "match",
+  "diffs": []
+ }
+]

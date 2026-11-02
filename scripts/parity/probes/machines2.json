@@ -1,0 +1,180 @@
+{
+ "cases": [
+  {
+   "id": "electrolytic_separator_water",
+   "block": "mekanism:electrolytic_separator",
+   "ticks": 200,
+   "setup": [
+    {
+     "op": "cmd",
+     "command": "data merge block @X @Y @Z {energy_containers:[{container:0b,stored:1000000L}],fluid_tanks:[{tank:0b,stored:{id:\"minecraft:water\",amount:8000}}]}"
+    }
+   ]
+  },
+  {
+   "id": "chemical_oxidizer_sulfur",
+   "block": "mekanism:chemical_oxidizer",
+   "ticks": 200,
+   "setup": [
+    {
+     "op": "cmd",
+     "command": "data merge block @X @Y @Z {energy_containers:[{container:0b,stored:1000000L}],items:[{slot:0b,item:{id:\"mekanism:dust_sulfur\",count:4}}]}"
+    }
+   ]
+  },
+  {
+   "id": "chemical_infuser_so2_o2",
+   "block": "mekanism:chemical_infuser",
+   "ticks": 200,
+   "setup": [
+    {
+     "op": "cmd",
+     "command": "data merge block @X @Y @Z {energy_containers:[{container:0b,stored:1000000L}],chemical_tanks:[{tank:0b,stored:{id:\"mekanism:oxygen\",amount:8000}},{tank:1b,stored:{id:\"mekanism:sulfur_dioxide\",amount:8000}}]}"
+    }
+   ]
+  },
+  {
+   "id": "injection_iron_ore_hcl",
+   "block": "mekanism:chemical_injection_chamber",
+   "ticks": 200,
+   "setup": [
+    {
+     "op": "cmd",
+     "command": "data merge block @X @Y @Z {energy_containers:[{container:0b,stored:1000000L}],items:[{slot:0b,item:{id:\"minecraft:iron_ore\",count:4}}],chemical_tanks:[{tank:0b,stored:{id:\"mekanism:hydrogen_chloride\",amount:8000}}]}"
+    }
+   ]
+  },
+  {
+   "id": "purification_iron_ore_oxygen",
+   "block": "mekanism:purification_chamber",
+   "ticks": 200,
+   "setup": [
+    {
+     "op": "cmd",
+     "command": "data merge block @X @Y @Z {energy_containers:[{container:0b,stored:1000000L}],items:[{slot:0b,item:{id:\"minecraft:iron_ore\",count:4}}],chemical_tanks:[{tank:0b,stored:{id:\"mekanism:oxygen\",amount:8000}}]}"
+    }
+   ]
+  },
+  {
+   "id": "dissolution_iron_ore_h2so4",
+   "block": "mekanism:chemical_dissolution_chamber",
+   "ticks": 200,
+   "setup": [
+    {
+     "op": "cmd",
+     "command": "data merge block @X @Y @Z {energy_containers:[{container:0b,stored:1000000L}],items:[{slot:0b,item:{id:\"minecraft:iron_ore\",count:4}}],chemical_tanks:[{tank:0b,stored:{id:\"mekanism:sulfuric_acid\",amount:8000}}]}"
+    }
+   ]
+  },
+  {
+   "id": "washer_dirty_iron",
+   "block": "mekanism:chemical_washer",
+   "ticks": 200,
+   "setup": [
+    {
+     "op": "cmd",
+     "command": "data merge block @X @Y @Z {energy_containers:[{container:0b,stored:1000000L}],fluid_tanks:[{tank:0b,stored:{id:\"minecraft:water\",amount:8000}}],chemical_tanks:[{tank:0b,stored:{id:\"mekanism:dirty_iron\",amount:8000}}]}"
+    }
+   ]
+  },
+  {
+   "id": "crystallizer_clean_iron",
+   "block": "mekanism:chemical_crystallizer",
+   "ticks": 200,
+   "setup": [
+    {
+     "op": "cmd",
+     "command": "data merge block @X @Y @Z {energy_containers:[{container:0b,stored:1000000L}],chemical_tanks:[{tank:0b,stored:{id:\"mekanism:clean_iron\",amount:8000}}]}"
+    }
+   ]
+  },
+  {
+   "id": "rotary_hydrogen",
+   "block": "mekanism:rotary_condensentrator",
+   "ticks": 200,
+   "setup": [
+    {
+     "op": "cmd",
+     "command": "data merge block @X @Y @Z {energy_containers:[{container:0b,stored:1000000L}],chemical_tanks:[{tank:0b,stored:{id:\"mekanism:hydrogen\",amount:8000}}]}"
+    }
+   ]
+  },
+  {
+   "id": "prc_hdpe",
+   "block": "mekanism:pressurized_reaction_chamber",
+   "ticks": 200,
+   "setup": [
+    {
+     "op": "cmd",
+     "command": "data merge block @X @Y @Z {energy_containers:[{container:0b,stored:1000000L}],items:[{slot:0b,item:{id:\"mekanism:substrate\",count:4}}],fluid_tanks:[{tank:0b,stored:{id:\"minecraft:water\",amount:8000}}],chemical_tanks:[{tank:0b,stored:{id:\"mekanism:hydrogen\",amount:8000}}]}"
+    }
+   ]
+  },
+  {
+   "id": "centrifuge_uf6",
+   "block": "mekanism:isotopic_centrifuge",
+   "ticks": 200,
+   "setup": [
+    {
+     "op": "cmd",
+     "command": "data merge block @X @Y @Z {energy_containers:[{container:0b,stored:1000000L}],chemical_tanks:[{tank:0b,stored:{id:\"mekanism:uranium_hexafluoride\",amount:8000}}]}"
+    }
+   ]
+  },
+  {
+   "id": "nutritional_liquifier_bread",
+   "block": "mekanism:nutritional_liquifier",
+   "ticks": 200,
+   "setup": [
+    {
+     "op": "cmd",
+     "command": "data merge block @X @Y @Z {energy_containers:[{container:0b,stored:1000000L}],items:[{slot:0b,item:{id:\"minecraft:bread\",count:4}}]}"
+    }
+   ]
+  },
+  {
+   "id": "pigment_extractor_red",
+   "block": "mekanism:pigment_extractor",
+   "ticks": 200,
+   "setup": [
+    {
+     "op": "cmd",
+     "command": "data merge block @X @Y @Z {energy_containers:[{container:0b,stored:1000000L}],items:[{slot:0b,item:{id:\"minecraft:red_dye\",count:4}}]}"
+    }
+   ]
+  },
+  {
+   "id": "pigment_mixer",
+   "block": "mekanism:pigment_mixer",
+   "ticks": 200,
+   "setup": [
+    {
+     "op": "cmd",
+     "command": "data merge block @X @Y @Z {energy_containers:[{container:0b,stored:1000000L}],chemical_tanks:[{tank:0b,stored:{id:\"mekanism:red\",amount:4000}},{tank:1b,stored:{id:\"mekanism:blue\",amount:4000}}]}"
+    }
+   ]
+  },
+  {
+   "id": "fluidic_plenisher",
+   "block": "mekanism:fluidic_plenisher",
+   "ticks": 200,
+   "setup": [
+    {
+     "op": "cmd",
+     "command": "data merge block @X @Y @Z {energy_containers:[{container:0b,stored:1000000L}],fluid_tanks:[{tank:0b,stored:{id:\"minecraft:water\",amount:1000}}]}"
+    }
+   ]
+  },
+  {
+   "id": "fluid_tank_basic_idle",
+   "block": "mekanism:basic_fluid_tank",
+   "ticks": 20,
+   "setup": [
+    {
+     "op": "cmd",
+     "command": "data merge block @X @Y @Z {energy_containers:[{container:0b,stored:1000000L}],fluid_tanks:[{tank:0b,stored:{id:\"minecraft:water\",amount:16000}}]}"
+    }
+   ]
+  }
+ ]
+}
