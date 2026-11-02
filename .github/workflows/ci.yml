@@ -4,9 +4,9 @@ name: CI
 # and the scripts/*-smoke.sh gates) are run locally, see docs/Development.md.
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "1.21.1" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "1.21.1" ]
 
 jobs:
   build:
