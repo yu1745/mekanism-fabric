@@ -1,5 +1,5 @@
 {
-  "command": "FABRIC_SMOKE_CACHE_DIR=/home/wangyu/.cache/mekanism-fabric-smoke scripts/fabric-retrogen-smoke.sh",
+  "command": "FABRIC_SMOKE_CACHE_DIR=/home/user/.cache/mekanism-fabric-smoke scripts/fabric-retrogen-smoke.sh",
   "exit": 0,
   "artifactSHA256": "3ad91c2759506f56d25fab2de7b48de92834a85cbb79849358f016ae8cb783bf",
   "checks": [

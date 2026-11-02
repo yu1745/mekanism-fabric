@@ -4,7 +4,7 @@
   "testMode": "Seven existing test task outputs cleaned before full build to require fresh execution; no new test sources.",
   "environment": {
     "userBus": "Existing uid1000 bus verified live; exec shell lacked XDG_RUNTIME_DIR and DBUS_SESSION_BUS_ADDRESS, supplied to this run only.",
-    "artifactCache": "/home/wangyu/.cache/mekanism-fabric-smoke",
+    "artifactCache": "/home/user/.cache/mekanism-fabric-smoke",
     "modelTimeoutSeconds": 90
   },
   "results": [

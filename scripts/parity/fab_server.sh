@@ -6,7 +6,7 @@ set -uo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 DIR=${PARITY_FAB_SERVER_DIR:-/tmp/parity-fab-server}
 CACHE=${FABRIC_SMOKE_CACHE_DIR:-$HOME/.cache/mekanism-fabric-smoke}
-MDB_JAR=${MDB_JAR:-/home/wangyu/server-v2/develop/mcdebug-wt-121/mcdebug-cli.jar}
+MDB_JAR=${MDB_JAR:-$HOME/server-v2/develop/mcdebug-wt-121/mcdebug-cli.jar}
 fail() { printf 'fab_server: %s\n' "$1" >&2; exit 1; }
 pidfile=$DIR/server.pid
 

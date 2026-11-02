@@ -73,7 +73,7 @@ scripts/release-check.sh                          # W-70 一键发布检查（�
 
 优先用 mcdebug 取得真实 GUI、渲染、交互与客户端状态证据，不凭空推演；加载 `mcdebug` skill，参数以子命令 `--help` 为准。
 
-- CLI：PATH 上的 `mcdebug`/`mdb`，否则 `java -jar /home/wangyu/server-v2/develop/mcdebug-wt-121/mcdebug-cli.jar`；CLI 与游戏内 mod 版本须匹配。游戏目录 `fabric/run`，先 `status` / `gui status --brief` 确认目标，不因 socket 文件存在就认定 JVM 存活；同目录不起第二个客户端，不手动删 socket/lock。
+- CLI：PATH 上的 `mcdebug`/`mdb`，否则 `java -jar /home/user/server-v2/develop/mcdebug-wt-121/mcdebug-cli.jar`；CLI 与游戏内 mod 版本须匹配。游戏目录 `fabric/run`，先 `status` / `gui status --brief` 确认目标，不因 socket 文件存在就认定 JVM 存活；同目录不起第二个客户端，不手动删 socket/lock。
 - 服务端写入后先 `gui settle` 再看客户端；槽位以当前菜单 index 为准；客户端 BE 不持完整库存，权威库存读服务端；反射读客户端须 `--client`，反射写不触发同步/保存；`inv.*` 仅限 vanilla Container。
 - 方法体改动可 `gui hotswap`；字段/构造器/生命周期变化需重启。以真实命令结果判定成功。
 - 复用现有隔离调试世界，少量真实功能检查；结束时恢复临时方块/物品/配置，保存并关闭自己启动的会话，清理临时 debug mod。mcdebug 依赖不进入发布依赖或源码切片。

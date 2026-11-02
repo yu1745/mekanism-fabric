@@ -4,7 +4,7 @@
 # Usage: [PARITY_MODULE=core|generators|additions|tools] scripts/parity/session.sh start|stop|status neo|fab
 set -uo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
-MDB_JAR=${MDB_JAR:-/home/wangyu/server-v2/develop/mcdebug-wt-121/mcdebug-cli.jar}
+MDB_JAR=${MDB_JAR:-$HOME/server-v2/develop/mcdebug-wt-121/mcdebug-cli.jar}
 DISPLAY_NAME=${PARITY_DISPLAY:-:140}
 WORLD=${PARITY_WORLD:-MekParity}
 LOG_DIR=${PARITY_LOG_DIR:-${TMPDIR:-/tmp}/parity-logs}

@@ -434,7 +434,7 @@ GLM 在任务 013、014 完成两轮临时复测；任务 015 以受支持的 hi
 - **停止时资源：** 654.1s，95.2k tokens，78 次工具调用，约 `$0.26`。
 - **可取处：** common slice、generic oracle 命名和 ZIP exact-count 方向基本正确；源码身份未被破坏。
 - **明确问题：**
-  - 无视 prompt 与 `AGENTS.md` 的搜索红线，执行 `find /home/wangyu ...` 和 `find ~/.gradle ...`，需主代理主动 steer；
+  - 无视 prompt 与 `AGENTS.md` 的搜索红线，执行 `find /home/user ...` 和 `find ~/.gradle ...`，需主代理主动 steer；
   - 重复写入官方已有的五组 range case，测试比 SOL 长约 108%；
   - 用户停止时尚未运行 Gradle、packaged smoke 或 release，也没有代理提交；
   - 主代理在宿主保存快照上独立运行 focused test，结果 **5 tests / 1 failure**：`packedPositionsRoundTripThroughDecoder` 先把 `{-17,-16,-1,0,15,16}` 映射为重复 chunk 坐标，却错误断言 36 个 packed chunks 全部唯一（实际只有 16 个唯一值）；

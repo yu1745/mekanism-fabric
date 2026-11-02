@@ -29,7 +29,7 @@ fail() {
   exit 1
 }
 
-MCDEBUG_NEOFORGE_JAR=${MCDEBUG_NEOFORGE_JAR:-/home/wangyu/server-v2/develop/mcdebug-wt-121/neoforge/build/libs/mcdebug-neoforge-0.8.0.jar}
+MCDEBUG_NEOFORGE_JAR=${MCDEBUG_NEOFORGE_JAR:-$HOME/server-v2/develop/mcdebug-wt-121/neoforge/build/libs/mcdebug-neoforge-0.8.0.jar}
 
 install_env() {
   mkdir -p "$SERVER_DIR/mods"

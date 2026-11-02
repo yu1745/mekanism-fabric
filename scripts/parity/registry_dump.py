@@ -4,7 +4,7 @@ Usage: registry_dump.py <neo|fab> <out.json>
 """
 import json, subprocess, sys, os
 
-MDB = ["java", "-jar", os.environ.get("MDB_JAR", "/home/wangyu/server-v2/develop/mcdebug-wt-121/mcdebug-cli.jar")]
+MDB = ["java", "-jar", os.environ.get("MDB_JAR", os.path.expanduser("~/server-v2/develop/mcdebug-wt-121/mcdebug-cli.jar"))]
 REGISTRIES = {  # BuiltInRegistries field -> label
     "BLOCK": "block", "ITEM": "item", "BLOCK_ENTITY_TYPE": "block_entity_type", "ENTITY_TYPE": "entity_type",
     "MENU": "menu", "FLUID": "fluid", "RECIPE_TYPE": "recipe_type", "RECIPE_SERIALIZER": "recipe_serializer",

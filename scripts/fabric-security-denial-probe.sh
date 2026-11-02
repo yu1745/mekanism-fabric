@@ -3,7 +3,7 @@
 # Creates one temporary machine in air beside the player and removes it and its security frequency on exit.
 set -euo pipefail
 export FABRIC_SECURITY_MDB_SESSION=${FABRIC_SECURITY_MDB_SESSION:-dev}
-export MDB=${MDB:-java -jar /home/wangyu/server-v2/develop/mcdebug-wt-121/mcdebug-cli.jar}
+export MDB=${MDB:-java -jar $HOME/server-v2/develop/mcdebug-wt-121/mcdebug-cli.jar}
 python3 - <<'PY'
 import json
 import math

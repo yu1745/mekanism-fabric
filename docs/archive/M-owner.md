@@ -70,7 +70,7 @@ AW 保留独立的精确 intermediary 期望列表：111 条成员／类项经 n
 
 阶段偏差：P0 基线先发现两项既有门禁退化，按预案先修复再进入 P1；W-01.1 测试快照修复为 `dba1010d`，W-01.2 为本次 packaged 合同提交。没有新增功能、测试用例或边界外模块。非默认 general 的真实 consumer、Crusher 重启一致性等不因这些 PASS 视为完成。
 
-本地诊断：`/tmp/mekanism-roadmap-p0/`；paired 持久工作区日志 `build/fabric-paired-network-smoke/20261030T104728Z-1425317/`；packaged 诊断 `build/fabric-packaged-smoke/20261030T105430Z-1522603/`。smoke 自建临时世界和进程均由脚本清理，未启动 mcdebug 会话。后续客户端使用已有 `fabric/run/saves/Mekanism F1 isolated debug`，先 status/gui status；本轮已确认两平面无活连接。CLI 为 `/home/wangyu/server-v2/develop/mcdebug-wt-121/mcdebug-cli.jar`。当前 shell 缺 systemd 环境，paired 命令显式传入 `XDG_RUNTIME_DIR=/run/user/1000 DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus` 即可。
+本地诊断：`/tmp/mekanism-roadmap-p0/`；paired 持久工作区日志 `build/fabric-paired-network-smoke/20261030T104728Z-1425317/`；packaged 诊断 `build/fabric-packaged-smoke/20261030T105430Z-1522603/`。smoke 自建临时世界和进程均由脚本清理，未启动 mcdebug 会话。后续客户端使用已有 `fabric/run/saves/Mekanism F1 isolated debug`，先 status/gui status；本轮已确认两平面无活连接。CLI 为 `/home/user/server-v2/develop/mcdebug-wt-121/mcdebug-cli.jar`。当前 shell 缺 systemd 环境，paired 命令显式传入 `XDG_RUNTIME_DIR=/run/user/1000 DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus` 即可。
 
 提交后风格审查：检查本次已提交 packaged 实际 diff，确认没有生产／slice 改动、没有跳过真实服务器门禁；旧 package 子集由完整构建产物比较取代，独立 AW、metadata、依赖及 fixture 隔离保留。复查时补回全 entry 的 `unfreeze` 拒绝，并将兼容层 bytecode 检查统一为精确 namespace（避免把一般 connector 文本误认兼容层）。只需重跑静态门禁；此前相同 JAR 的干净服务端 PASS 仍有效。
 

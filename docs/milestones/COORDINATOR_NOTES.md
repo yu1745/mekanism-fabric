@@ -726,7 +726,7 @@ JEI（W-74c）与 WTHIT（W-74d）已批准，见 `ROADMAP.md`「W-74 范围追�
 
 **问题**
 1. **`release-check.sh` 新增了一步 `third-party energy interop`，这会让发布门禁依赖外网下载**（`curl` 从 `cdn.modrinth.com` 取 Tech Reborn 与 Reborn Core，缓存在 `~/.cache/mekanism-fabric-smoke`）。现有 smoke 也会下载 Fabric launcher / API，所以不是新类型的依赖，但请：①对两个第三方 jar 加 **sha256 校验**（下载完不对就失败），否则门禁结果可能随上游替换文件而变；②让这一步在离线且缓存存在时可用（脚本里已有 `FABRIC_SMOKE_RUNTIME_CACHE_DIR`，保持）；③把它的耗时记入 `RELEASE_CHECKLIST.md`，并确认 `release-check` 总时长（目前约 704 秒）仍可接受。
-2. **`fabric/home/` 是未跟踪且未被忽略的目录**（1.4MB，内含 `wangyu/server-v2`，像是 W-120 客户端把 `user.home` 指向了项目内）。要么让 fixture 把它指到 `fabric/run/security-client` 之下或系统缓存目录，要么加进 `.gitignore`；**提交时用具体路径，别 `git add -A`**。
+2. **`fabric/home/` 是未跟踪且未被忽略的目录**（1.4MB，内含个人家目录副本，像是 W-120 客户端把 `user.home` 指向了项目内）。要么让 fixture 把它指到 `fabric/run/security-client` 之下或系统缓存目录，要么加进 `.gitignore`；**提交时用具体路径，别 `git add -A`**。
 3. **worker 又一次往 `ROADMAP.md` 追加了"K1 进展"状态表**（我在 I0 要求过别这样）。内容是准确的（W-101b、W-98、W-99），但状态应写在 `M-release.md`/证据页；而且表里写"921→885 提交"，与我复核的 888 对不上（885 是此后又加了文档提交之前的值？），请以实测为准或删掉该行。以后路线图只由协调者改。
 4. **次序**：W-120 在进行中，是对的；**W-79 没动**（预留槽，无发现记"无"即可，不是大事）；INSTALL/CHANGELOG 里**没有 Iris 限制**（`rg -i iris` 在 `INSTALL.md`/`CHANGELOG.md` 命中 0），K1 的第 3 点还欠着。
 5. 打包服务端 `mods` 数仍应是 50：W-99 的 Tech Reborn 只进一次性服务端的 mods，与打包 smoke 的服务端是两套，我没看到污染；W-117 最终收口时再确认一次。
