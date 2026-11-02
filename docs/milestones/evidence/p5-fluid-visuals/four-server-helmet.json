@@ -1,1 +1,0 @@
-{"method":"getItemBySlot","resolvedTo":"getItemBySlot","declaringClass":"net.minecraft.world.entity.player.Player","signature":"(net.minecraft.world.entity.EquipmentSlot)","value":{"ref":1,"item":"mekanism:mekasuit_helmet","count":1}}

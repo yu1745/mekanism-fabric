@@ -78,7 +78,7 @@ scripts/scan-platform-deps.py
 
 不要在 Fabric 上大规模伪造 `net.neoforged.*` 类树。短期同名 facade 会把 NeoForge 生命周期、事件优先级、capability invalidation 和交易语义泄漏进核心，形成第二套不完整 NeoForge。应以 Mekanism 自有小接口或现有 holder 接口为缝，把 Fabric callback、lookup、transfer transaction 和 payload context 转成领域调用。只有 `FluidStack` 这类渗透极深的值对象可评估一个**项目自有、语义明确**的过渡值层；不得放在 `net.neoforged` namespace。
 
-当某项对应关系不清楚时，先在本地 [`upstream/kilt`](../upstream/kilt) 查 NeoForge→Fabric 的承接方式，再在 [`upstream/connector`](../upstream/connector) 查 Fabric→NeoForge 的反向映射，重点核对对象转换、生命周期、side/context、失效和事务语义。参考结果用于缩小 Mekanism 专用 adapter，而不是引入完整兼容层。实际采用的映射应在对应实现或本表中记录参考仓库的 commit/路径；若直接采用代码，还必须核对并遵守许可证。
+当某项对应关系不清楚时，先在本地 `upstream/kilt` 查 NeoForge→Fabric 的承接方式，再在 `upstream/connector` 查 Fabric→NeoForge 的反向映射，重点核对对象转换、生命周期、side/context、失效和事务语义。参考结果用于缩小 Mekanism 专用 adapter，而不是引入完整兼容层。实际采用的映射应在对应实现或本表中记录参考仓库的 commit/路径；若直接采用代码，还必须核对并遵守许可证。
 
 ## 平台矩阵
 
@@ -479,4 +479,4 @@ recipe identity 变更；无 machine-facing `InputRecipeCache` index；无新的
 ## P13 结论（2026-10-31）
 
 平台依赖清点与历史叙事截至 Task049；Task050–052 与 P0–P13 的当前状态以 `docs/milestones/README.md` 为准。
-四模块 JAR 的构建、初始化与 458 值配置同步证据在 `docs/milestones/evidence/p8-release/`，本文不再逐项复述。
+四模块 JAR 的构建、初始化与 458 值配置同步结果本文不再逐项复述。

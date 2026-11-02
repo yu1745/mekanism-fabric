@@ -10,7 +10,7 @@ if command -v mdb >/dev/null 2>&1; then
 elif command -v mcdebug >/dev/null 2>&1; then
   MDB_COMMAND=(mcdebug)
 else
-  MDB_COMMAND=(java -jar "${MCDEBUG_CLI_JAR:-$HOME/server-v2/develop/mcdebug-wt-121/mcdebug-cli.jar}")
+  MDB_COMMAND=(java -jar "${MCDEBUG_CLI_JAR:?set MCDEBUG_CLI_JAR}")
 fi
 
 mdb_owned_prepare() {

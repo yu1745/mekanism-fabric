@@ -1,1 +1,0 @@
-{"resolvedTo":"getAmount","steps":[{"seg":"slots","method":"getSlots","class":"java.util.ImmutableCollections$List12"},{"seg":"[0]","class":"mekanism.fabric.fluid.FabricFluidStorage$TankView"},{"seg":"amount","method":"getAmount","class":"java.lang.Long"}],"value":0}

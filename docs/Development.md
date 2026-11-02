@@ -1,6 +1,6 @@
 # Development
 
-> 状态核实（2026-10-30 / W-05）：上游 NeoForge 开发说明保留作源码布局参考；其中构建、打包与平台说明已被本项目 `AGENTS.md`、`FABRIC_PORT.md` 和 `../build.sh` 的 Fabric 契约取代。
+> 状态核实（2026-10-30 / W-05）：上游 NeoForge 开发说明保留作源码布局参考；其中构建、打包与平台说明已被本项目 `项目约束文档`、`FABRIC_PORT.md` 和 `../build.sh` 的 Fabric 契约取代。
 
 Mekanism is developed for Minecraft 1.21 using NeoForge.
 

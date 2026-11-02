@@ -1,1 +1,0 @@
-{"method":"getShape","resolvedTo":"getShape","declaringClass":"net.minecraft.world.level.block.state.BlockBehaviour$BlockStateBase","signature":"(net.minecraft.world.level.BlockGetter,net.minecraft.core.BlockPos)","value":{"ref":2,"class":"net.minecraft.world.phys.shapes.ArrayVoxelShape","toString":"VoxelShape[AABB[0.3125, 0.3125, 0.6875] -> [0.6875, 0.6875, 1.0]]"}}

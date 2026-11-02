@@ -1,1 +1,0 @@
-{"method":"getSlotStack","resolvedTo":"getSlotStack","declaringClass":"mekanism.common.integration.curios.CuriosIntegration","signature":"(net.minecraft.world.entity.LivingEntity,java.lang.String,int)","value":{"ref":2,"item":"mekanism:jetpack_armored","count":1}}

@@ -8,4 +8,4 @@ Historical pause checkpoint. **Superseded: user resumed with “好了，可以�
 - Parent has checked commit existence, diffstat, preserved ancestry and read the evidence document, NOT yet reviewed the full implementation diff. Resume with actual source review of5059aac7..1b273877 before accepting or merging; do not substitute child summary for source evidence. Tests' native-registry setup is not proof of production root/SYNCED lifecycle; inspect both honestly.
 - Prior renderer repair was source-reviewed in REVIEW18; pending full machine prerequisites remain in CONTINUATION12. No active implementer or next task launched at pause.
 - User offered actual in-game visual inspection. Notify when build/client startup/placeable blocks become possible; no visual check performed yet.
-- Standing model/safety rules remain AGENTS.md: next normal implementer uses UTC+8 time rule, not permanent Astra. Reload does not authorize model substitution, deployment, push or production writes.
+- Standing model/safety rules remain 项目约束文档: next normal implementer uses UTC+8 time rule, not permanent Astra. Reload does not authorize model substitution, deployment, push or production writes.

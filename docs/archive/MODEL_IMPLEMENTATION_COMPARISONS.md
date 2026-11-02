@@ -4,7 +4,7 @@
 > status lives in [`../milestones/README.md`](../milestones/README.md).
 
 
-> 状态核实（2026-10-30 / W-05）：历史模型评估记录；其中模型选择、并行与审查策略已被 `AGENTS.md` 的单一实现者策略取代，不作为当前执行指令。
+> 状态核实（2026-10-30 / W-05）：历史模型评估记录；其中模型选择、并行与审查策略已被 `项目约束文档` 的单一实现者策略取代，不作为当前执行指令。
 
 本文档长期记录同一开发任务由多个模型独立实现后的实际表现。任务 001–004 是四模型选拔阶段，任务 005–015 主要使用 SOL/DeepSeek 并穿插临时模型观察。结论只服务于本 Mekanism Fabric 项目的开发流程，不视为跨项目永久排行榜。
 
@@ -16,11 +16,11 @@
 
 ### MiniMax M3 临时观察（已终止）
 
-原计划在任务 005–007 额外加入 **MiniMax M3**。任务 005 首轮中，该代理违反明确搜索边界、未完成门禁，并生成一个可复现失败的边界测试；用户随即要求停止并排除该模型。实际证据保留在任务 005 记录中，任务 006–007 不再运行 MiniMax；它从未进入 `AGENTS.md` 或正式默认组合。
+原计划在任务 005–007 额外加入 **MiniMax M3**。任务 005 首轮中，该代理违反明确搜索边界、未完成门禁，并生成一个可复现失败的边界测试；用户随即要求停止并排除该模型。实际证据保留在任务 005 记录中，任务 006–007 不再运行 MiniMax；它从未进入 `项目约束文档` 或正式默认组合。
 
 ### GLM 5.3 临时复测（已提前终止）
 
-GLM 在任务 013、014 完成两轮临时复测；任务 015 以受支持的 high effort 启动第三轮。用户一度把观察期延长至任务 018，随后基于多实现架构的边际收益与成本，明确决定立即停止正在运行的 Task015 GLM，并从 Task016 起改用单 SOL 实现架构。Task015 partial 不进入主线，也不据此判断 GLM/DeepSeek 的永久替换；GLM 从未进入默认 `AGENTS.md` 实现组合。
+GLM 在任务 013、014 完成两轮临时复测；任务 015 以受支持的 high effort 启动第三轮。用户一度把观察期延长至任务 018，随后基于多实现架构的边际收益与成本，明确决定立即停止正在运行的 Task015 GLM，并从 Task016 起改用单 SOL 实现架构。Task015 partial 不进入主线，也不据此判断 GLM/DeepSeek 的永久替换；GLM 从未进入默认 `项目约束文档` 实现组合。
 
 ## 历史多模型执行与评价规则
 
@@ -69,7 +69,7 @@ GLM 在任务 013、014 完成两轮临时复测；任务 015 以受支持的 hi
   - 模式只解析一次，READY 与 RESPONSE 状态一致；
   - 三客户端后把 overall deadline 从 180s 提高到较合理的 240s。
 - **不足：**
-  - 漏改 `AGENTS.md` 中 rejection gate 的场景说明；
+  - 漏改 `项目约束文档` 中 rejection gate 的场景说明；
   - server start 和 username disconnect 的 Python 检查仍有重复。
 - **本任务评价：** 单体实现中整体代码质量最佳；主要缺点属于容易补齐的文档与去重问题。
 
@@ -82,7 +82,7 @@ GLM 在任务 013、014 完成两轮临时复测；任务 015 以受支持的 hi
 - **优点：**
   - 使用枚举并采用与服务端一致的 `client_rejected` 模式名；
   - 使用 Loom `property(...)` 转发模式；
-  - 240s deadline、文档和 `AGENTS.md` 均覆盖新场景。
+  - 240s deadline、文档和 `项目约束文档` 均覆盖新场景。
 - **不足：**
   - 默认 mismatch 模式把 `accepted` 永久写死为 `false`，没有保留原实现“请求协议若恰好等于 fixture protocol 则接受”的计算语义；
   - 空白模式被静默当作默认值，不符合严格拒绝不支持模式的目标；
@@ -99,7 +99,7 @@ GLM 在任务 013、014 完成两轮临时复测；任务 015 以受支持的 hi
 - **优点：**
   - 固定使用 `10.7.19` 模拟同版本拒绝，并保留默认 compatibility 计算；
   - 抽出 `require_username_disconnect` 和 `server_session_start_line`，shell 去重最好；
-  - Loom `property(...)`、文档和 `AGENTS.md` 完整；
+  - Loom `property(...)`、文档和 `项目约束文档` 完整；
   - 300s deadline 在并发负载下最保守。
 - **不足：**
   - 模式仍由字符串和布尔判断组合表达，不如枚举约束清晰；
@@ -116,7 +116,7 @@ GLM 在任务 013、014 完成两轮临时复测；任务 015 以受支持的 hi
 - **验证：** 代理报告全部门禁通过。
 - **优点：**
   - 四者中耗时、token、调用数、成本和 diff 均最低；
-  - 文档及 `AGENTS.md` 完整；
+  - 文档及 `项目约束文档` 完整；
   - 实现直接且没有修改生产网络代码。
 - **不足：**
   - reject 模式回显收到的服务端协议，而不是固定表达 `10.7.19` 客户端身份；
@@ -129,7 +129,7 @@ GLM 在任务 013、014 完成两轮临时复测；任务 015 以受支持的 hi
 
 - **单体代码质量：** 5.6 SOL > DeepSeek > GLM 5.3 > Gemini。
 - **执行效率：** GLM 5.3 > 5.6 SOL > DeepSeek > Gemini。
-- **最终策略：** 以 5.6 SOL 为基底，吸收 DeepSeek 的 shell helper 和 Loom `property(...)`，并补上 `AGENTS.md`。
+- **最终策略：** 以 5.6 SOL 为基底，吸收 DeepSeek 的 shell helper 和 Loom `property(...)`，并补上 `项目约束文档`。
 - **综合提交：** `be50a3eb01219d03a8e6b919abb867f4ce1d87a3`
 - **综合规模：** 8 files，`+106/-46`；rejection 脚本 247 行。
 - **主代理独立验证：**
@@ -434,7 +434,7 @@ GLM 在任务 013、014 完成两轮临时复测；任务 015 以受支持的 hi
 - **停止时资源：** 654.1s，95.2k tokens，78 次工具调用，约 `$0.26`。
 - **可取处：** common slice、generic oracle 命名和 ZIP exact-count 方向基本正确；源码身份未被破坏。
 - **明确问题：**
-  - 无视 prompt 与 `AGENTS.md` 的搜索红线，执行 `find /home/user ...` 和 `find ~/.gradle ...`，需主代理主动 steer；
+  - 无视 prompt 与 `项目约束文档` 的搜索红线，执行 `find /home/user ...` 和 `find ~/.gradle ...`，需主代理主动 steer；
   - 重复写入官方已有的五组 range case，测试比 SOL 长约 108%；
   - 用户停止时尚未运行 Gradle、packaged smoke 或 release，也没有代理提交；
   - 主代理在宿主保存快照上独立运行 focused test，结果 **5 tests / 1 failure**：`packedPositionsRoundTripThroughDecoder` 先把 `{-17,-16,-1,0,15,16}` 映射为重复 chunk 坐标，却错误断言 36 个 packed chunks 全部唯一（实际只有 16 个唯一值）；
@@ -517,7 +517,7 @@ GLM 在任务 013、014 完成两轮临时复测；任务 015 以受支持的 hi
 
 - **单体语义审计：** DeepSeek > 5.6 SOL；**单体实现克制与效率：** 5.6 SOL > DeepSeek。
 - **最终策略：** 在用户要求的 patched-source 登记提交 `1994bba9` 之后，以 SOL 候选 cherry-pick `c7fa833a` 为基底；主代理依据 DeepSeek 发现增加只针对 vanilla `Holder.Reference` 的 nullable-key helper：key-only standalone 仍返回 key，value-only intrusive 在 key 未绑定时恢复 NeoForge null；同时采用窄 registry helper。`5498f98a` 增加一个不注册、不变更 registry 的 focused test，固定 standalone/intrusive 两种 unbound 状态及三个公开入口，不采用 DeepSeek 的其余冗余断言。
-- **综合规模：** Task007 slice 本身 9 files，`+185/-12`，最终测试 120 行、7 tests；另有用户单独要求的 `AGENTS.md` patched-source 登记 `+11/-7`。
+- **综合规模：** Task007 slice 本身 9 files，`+185/-12`，最终测试 120 行、7 tests；另有用户单独要求的 `项目约束文档` patched-source 登记 `+11/-7`。
 - **主代理独立验证：** source diff 仅含两个 NeoForge-extension 边界的 vanilla helper；16 个 official root oracle 和 `fabric/build.gradle` 均未改变；slice 35/32/10；122 tests、0 failures/errors/skips，三个 jqwik properties 各 100,000 tries/checks；完整 Gradle gate 9.66s，`fabric-build.sh` 2.35s，packaged smoke 46.96s 并到达 `Done`；`RegistryUtils.class` 精确一次，无同名前缀测试/helper；最终 clean release contract 10.32s，恰好一个 JAR，无 fixture/NeoForge/JUnit/jqwik 泄漏，`build-info.json` source commit 与最终 HEAD 一致。
 
 ---
@@ -600,7 +600,7 @@ GLM 在任务 013、014 完成两轮临时复测；任务 015 以受支持的 hi
 - **基线：** `99ad0abdc69d473815e752eb3c07cf1bfa08eebd`
 - **目标：** 原样纳入 `BiLongMultimap`、`FilterTransformIterator` 与 `IndexedCuboidMap`，并把官方 `BiLongMultimapTest`、`IndexedCuboidMapTest` 加入精确 root oracle。
 - **关键验收：** 三个 production 与两份 official test 均保持 baseline 字节一致；slice 41/35/10，root oracle 16→18；本地只补 dual-index mutation return、negative/extreme long、filter-transform exhaustion、negative chunk/inclusive box、invalid center、same-box replacement 与 mixed removal；发布 JAR 的 collection package 精确为 outer、两个 anonymous iterator 与 `CenteredBoundingBox` 共六类；不宣称 miner/QIO/spatial caller、world/chunk lifecycle/loading、persistence、concurrency 或多线程 mutation 已移植。
-- **运行中约束调整：** 用户明确要求只限制未来测试增长、不消融现有测试；两个候选收到同一 steer，要求依赖官方测试、Fabric-local 总计不超过 200 行/5 tests。两者均满足。长期规则另以独立提交 `917a122a` 写入 `AGENTS.md`。
+- **运行中约束调整：** 用户明确要求只限制未来测试增长、不消融现有测试；两个候选收到同一 steer，要求依赖官方测试、Fabric-local 总计不超过 200 行/5 tests。两者均满足。长期规则另以独立提交 `917a122a` 写入 `项目约束文档`。
 
 ### 5.6 SOL
 
@@ -694,7 +694,7 @@ GLM 在任务 013、014 完成两轮临时复测；任务 015 以受支持的 hi
 
 - **单体代码质量：** 5.6 SOL > DeepSeek；**执行效率：** DeepSeek 墙钟略快，SOL 少 6.2k tokens、29 次工具调用且有成本数据。
 - **最终策略：** 将 SOL candidate 在包含最新测试政策的主线上 cherry-pick 为 `4d804f64`；综合提交 `b6ee11db` 把其 indexed fixture 改为 `[untouched, target]` 并调用 index 1，立即断言第一个 container 无事件，随后用独立 aggregate handler 保留 SOL 原有双向 aggregate 证据。没有吸收 DeepSeek 的 insertion-only allowed 结构或冗长文档。
-- **综合规模：** Task012 本身相对固定基线（排除独立 `AGENTS.md` 政策提交）8 files，`+200/-18`；local suite 136 行、4 tests。
+- **综合规模：** Task012 本身相对固定基线（排除独立 `项目约束文档` 政策提交）8 files，`+200/-18`；local suite 136 行、4 tests。
 - **主代理独立验证：** 三个 production source 与 `4646f509` 字节一致，18 个 official root oracle、`fabric/build.gradle` 和既有测试均未改变；slice 42/40/10 且无重复；33 suites、178 tests、0 failures/errors/skips，三个 jqwik properties 各 100,000 tries/checks；完整 clean Gradle gate 20.23s，`fabric-build.sh` 2.79s，packaged smoke 51.87s 并到达 `Done`；root capability 与 common energy 包精确匹配预期四个 production class，无 test/fixture/NeoForge/JUnit/jqwik 泄漏；implementation clean release 11.05s，恰好一个 JAR，`build-info.json` source commit 与 `b6ee11db` 一致，JAR sha256 为 `2b0a9f18f9e316ac51831403e3618d3d7216e807036df2d381108334a6bf60e1`。
 
 ---
@@ -706,7 +706,7 @@ GLM 在任务 013、014 完成两轮临时复测；任务 015 以受支持的 hi
 - **基线：** `b34f721e8bdf3b291b976cbe89c945468c5d7eec`
 - **目标：** 原样纳入 `mekanism.common.lib.LastEnergyTracker`，恢复只以三个 `long` 字段完成的 current/last game-time bucket accounting。
 - **关键验收：** production source 与 `4646f509` 字节一致；slice 42/41/10，18-file official oracle、`fabric/build.gradle`、API/platform slices 和既有测试不变；3–4 个黑盒测试覆盖 same-time accumulation、任意不同时间戳（跳号/回退）、初始 tick zero、zero/negative/true-long amount 与 client-sync setter；direct common-lib package 精确为它与 `WildcardMatcher` 各一次；不引入唯一 caller `TileEntityMekanism`、world tick、client sync/network/persistence、machine/network owner、external energy 或 Fabric transaction。
-- **GLM 临时复测：** 本任务是用户指定三轮 GLM 5.3 复测的第 1/3 轮；因闭包极小，GLM 使用 `thinking=low`，且未修改 `AGENTS.md`。
+- **GLM 临时复测：** 本任务是用户指定三轮 GLM 5.3 复测的第 1/3 轮；因闭包极小，GLM 使用 `thinking=low`，且未修改 `项目约束文档`。
 
 ### 5.6 SOL
 
@@ -731,14 +731,14 @@ GLM 在任务 013、014 完成两轮临时复测；任务 015 以受支持的 hi
 - **提交：** `625516c7ce33f0f15a079c88aabe31b7aa29df91`
 - **规模：** 8 files，`+117/-5`；local suite 87 行、4 tests。
 - **资源：** 354.0s，55.6k tokens，38 次工具调用，约 `$0.36`。
-- **优点：** tokens、工具调用和已知成本均最低，墙钟略快于 SOL；文档增量是三者最短且覆盖全部延期边界；测试用 `Long.MAX_VALUE` 做不溢出的完整 bucket round-trip，并把 setter 放在独立 tracker 上避免前段状态干扰；slice/source/182 tests/package/release 全部通过，严格未改 `AGENTS.md`。
+- **优点：** tokens、工具调用和已知成本均最低，墙钟略快于 SOL；文档增量是三者最短且覆盖全部延期边界；测试用 `Long.MAX_VALUE` 做不溢出的完整 bucket round-trip，并把 setter 放在独立 tracker 上避免前段状态干扰；slice/source/182 tests/package/release 全部通过，严格未改 `项目约束文档`。
 - **不足：** 87 行测试主要因每个方法同时使用长 `@DisplayName`、断言 message 和解释性注释，信息密度低于 SOL；package check 在 exact set 前又单独重复检查 `WildcardMatcher` 一次，并未复用后续 required-entry 结构或更新外层诊断标签。
 - **本任务评价：** 单体质量第二；低 reasoning effort 下正确完成全部验收并表现出本轮最佳 token/调用/成本效率，是值得继续观察的正面信号，但一轮简单任务不足以恢复默认席位。
 
 ### 本任务结论
 
 - **单体代码质量：** 5.6 SOL > GLM 5.3 > DeepSeek；**墙钟：** DeepSeek > GLM > SOL；**token/工具/已知成本：** GLM 最佳。
-- **最终策略：** 采用 SOL candidate，在主线 cherry-pick 为 `830859ad`；`a1607d4d` 吸收 DeepSeek/GLM 都采用的词法 slice 顺序，并吸收 DeepSeek 的 common-lib-root 外层诊断标签；`e231cbee` 将 SOL 的 true-long 输入提升为 GLM 的 `Long.MAX_VALUE`，但继续使用 SOL 的短测试结构，不加入 DeepSeek overflow 或 GLM 冗长 DisplayName/messages。`docs/MODEL_IMPLEMENTATION_COMPARISONS.md` 的 GLM 三轮临时说明同提交写入，不改变 `AGENTS.md`。
+- **最终策略：** 采用 SOL candidate，在主线 cherry-pick 为 `830859ad`；`a1607d4d` 吸收 DeepSeek/GLM 都采用的词法 slice 顺序，并吸收 DeepSeek 的 common-lib-root 外层诊断标签；`e231cbee` 将 SOL 的 true-long 输入提升为 GLM 的 `Long.MAX_VALUE`，但继续使用 SOL 的短测试结构，不加入 DeepSeek overflow 或 GLM 冗长 DisplayName/messages。`docs/MODEL_IMPLEMENTATION_COMPARISONS.md` 的 GLM 三轮临时说明同提交写入，不改变 `项目约束文档`。
 - **综合规模：** 排除评估文档本身，8 files，`+114/-8`；local suite 58 行、4 tests。
 - **主代理独立验证：** production source 与 `4646f509` 字节一致；18-file oracle、`fabric/build.gradle`、API/platform slices 和既有测试不变；slice 42/41/10 且无重复；34 suites、182 tests、0 failures/errors/skips，三个 jqwik properties 各 100,000 tries/checks；最终完整 Gradle gate 9.12s，`fabric-build.sh` 0.64s，packaged smoke 49.70s 并到达 `Done`；direct common-lib package 精确为两个 class 且无 test/fixture/NeoForge/JUnit/jqwik 泄漏；implementation clean release 11.42s，恰好一个 JAR，`build-info.json` source commit 与 `e231cbee` 一致，JAR sha256 为 `ee8b7fc16e7d95069627dde04e74366e82308090ae6980bbd2bf6bef148b0498`。
 
@@ -989,7 +989,7 @@ GLM 在任务 013、014 完成两轮临时复测；任务 015 以受支持的 hi
 
 ## 任务 039：client window config → concrete inventory slots 大纵向闭包（用户调整批量策略）
 
-- **范围决策：** 两轮 Astra high 小边界研究分别用273.2s/108.8k tokens/52次/约`$1.97`与370.6s/85.4k/65次/约`$2.11`返回 BLOCK：Chemical 仍陷于 synced maps/radiation/tank/client owner，slot 的最后障碍则是 `SelectedWindowData` 的真实 `client.toml` owner，而非 predicate/warning。用户明确认为整体速度过慢，遂把默认批次从4–12提升为完整 **15–40+ production files** vertical；仓库 `AGENTS.md` 同步规定不得只为小 diff 回避主路径。第三轮 Astra high 用402.1s、118.6k tokens、80次调用、约`$2.43`形成 GO，完整计划永久记录于 `docs/TASK039_PLAN.md`。
+- **范围决策：** 两轮 Astra high 小边界研究分别用273.2s/108.8k tokens/52次/约`$1.97`与370.6s/85.4k/65次/约`$2.11`返回 BLOCK：Chemical 仍陷于 synced maps/radiation/tank/client owner，slot 的最后障碍则是 `SelectedWindowData` 的真实 `client.toml` owner，而非 predicate/warning。用户明确认为整体速度过慢，遂把默认批次从4–12提升为完整 **15–40+ production files** vertical；仓库 `项目约束文档` 同步规定不得只为小 diff 回避主路径。第三轮 Astra high 用402.1s、118.6k tokens、80次调用、约`$2.43`形成 GO，完整计划永久记录于 `docs/TASK039_PLAN.md`。
 - **最终范围：** 一次纳入23个 common sources、2个新 Fabric owner/lifecycle sources并强化3个既有平台 sources，共28-production-Java-file closure；同时精确打包官方 `en_us.json`。真实链路为 physical client bootstrap → 唯一 process-wide `Mekanism/client.toml` window fragment writer → 无 client/Fabric linkage 的 common seam → `SelectedWindowData` → Basic/Input/Output、container/player/virtual slots、warnings、`InventorySlotInfo`。完整 `ClientConfig` 因 public QIO enums继续进入 storage/security/network/chemical SCC而延期，不复制 enum或制造 owner。slice **65/145/24**。
 - **SOL 候选：** `c591ad4d`（主线重建 `3b143709`），32 changed files、`+1583/-113`，3997.1s、505.9k tokens、326次调用、约`$21.52`，在240-turn bound结束时完成提交。实现11 window records/28 strict values、unknown-section retention、process-wide path claim、client-thread/lifetime owner、serialized logical save/retry/drain，以及完整 slots/warnings/translations；19个风险导向测试使 totals 达到75/353。候选 focused/full/build/static、两个 fresh client JVM、paired network和三类 rejection gates均报告通过。
 - **GLM 5.3 高风险审查：** exact candidate review用1286.0s、211.3k tokens、111次调用、约`$2.34`，结论 **ACCEPT WITH FIXES**。它独立复现 full75/353、slice65/145/24与静态 JAR/resource/leakage gates，并证明28-source identity/delta完整。stress probe在85,615次 save中观察到72个 transient torn x/y snapshots；官方 per-field update + async save同样存在，update-owned FIFO save最终收敛，故不改生产行为，但必须公开 crash/terminal-failure residual。另要求准确限定既有 ATOMIC_MOVE→ordinary REPLACE fallback。主代理把 synthetic null JOIN/DISCONNECT invoker 的伪重连证据提升为修复项；Armor/Offhand vanilla substitution由 pinned bytecode接受，但无 real-player runtime claim。

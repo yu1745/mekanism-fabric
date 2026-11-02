@@ -1,1 +1,0 @@
-{"method":"getBlockState","resolvedTo":"getBlockState","declaringClass":"net.minecraft.world.level.Level","signature":"(net.minecraft.core.BlockPos)","value":{"ref":1,"class":"net.minecraft.world.level.block.state.BlockState","toString":"Block{mekanism:digital_miner}[active=false,facing=north,fluid_logged=empty]"}}

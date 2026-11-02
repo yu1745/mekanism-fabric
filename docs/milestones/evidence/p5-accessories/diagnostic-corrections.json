@@ -1,7 +1,0 @@
-{
-  "diagnosticErrors": [
-    "KeyError: 'toString'",
-    "RuntimeError: armored_jetpack-give: error [-32603] command execution threw: CommandSyntaxException: Unknown item 'mekanism:armored_jetpack' at position 37: ...ar.0 with <--[HERE]"
-  ],
-  "scope": "Probe errors only; Python tracebacks removed. Corrections and excluded assertions remain in validation.json and native measurement JSON."
-}

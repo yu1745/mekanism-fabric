@@ -1,6 +1,6 @@
 # 规划书：2026-10-30 起的后续提交（W-01 … W-62）
 
-协调者编写，worker 按序执行。状态以 `docs/milestones/README.md` 为准；本文只定"做什么、什么顺序、怎样算完成、卡住怎么办"。不得借本文扩大 `AGENTS.md` 的边界。
+协调者编写，worker 按序执行。状态以 `docs/milestones/README.md` 为准；本文只定"做什么、什么顺序、怎样算完成、卡住怎么办"。不得借本文扩大 `项目约束文档` 的边界。
 
 ## 当前执行入口（2026-11-01，goal 最终 GO；起始基线 `482abbb9`，已核对 `3a8699e1`）
 
@@ -100,7 +100,7 @@ W-124 的发现、真实官方调用链及两次审查见 COORDINATOR_NOTES M5�
 2. **第三方集成**（CraftTweaker、ProjectE、JEI/EMI 等）**不在本规划内**，发布后另议；core 中对它们的引用用既有 platform 边界处理，不新增 stub 框架。
 3. `Mekanism.java`、`PacketHandler`、`ReloadListener`、`CommonPlayerTracker` 等 **NeoForge 事件总线入口不照搬**，由 Fabric 事件接口在 `MekanismFabricBootstrap` 一侧承接；逐项记录"官方行为 → Fabric 事件"映射，缺的行为才实现。
 4. wip 提交的 squash 不由 worker 执行（改写历史，需用户决定）；P11 之前提醒一次即可。
-5. 测试遵循 `AGENTS.md`：不主动加测试；用现有 smoke + mcdebug 单个端到端证据。
+5. 测试遵循 `项目约束文档`：不主动加测试；用现有 smoke + mcdebug 单个端到端证据。
 
 ## 2. 执行协议（每个 W 项都适用）
 
@@ -322,7 +322,7 @@ P11/P12 已完成后，"文件已移植"不再是进度瓶颈，剩余风险在*
 | ID | 内容 | 完成标志 / 依赖 |
 |---|---|---|
 | W-64 | **已知未验证项清单收口**：Generators 音效播放与裂变熔毁（隔离世界、受控）、Additions 语音音频采集/多客户端（需带音频设备的主机，否则明确标"本机不可验证"并写出替代证据）、Tools 之外的 Meka 套装 HUD/按键细节 | 每项：真机读数，或明确的"不可验证 + 原因" |
-| W-65 | **NeoForge 存档加载探针**：`AGENTS.md` 要求保留 NBT/存档语义。用官方 NeoForge 版 Mekanism（本仓库官方源码 / 已有 NeoForge 参考环境）生成一份含机器、频率、传输器、多方块的小样本世界，在 Fabric 版加载并比对关键 NBT；**只用独立生成的样本，不读生产/镜像/备份数据** | 样本与比对结果入 `evidence/`；差异逐条记录并修复或记入限制 |
+| W-65 | **NeoForge 存档加载探针**：`项目约束文档` 要求保留 NBT/存档语义。用官方 NeoForge 版 Mekanism（本仓库官方源码 / 已有 NeoForge 参考环境）生成一份含机器、频率、传输器、多方块的小样本世界，在 Fabric 版加载并比对关键 NBT；**只用独立生成的样本，不读生产/镜像/备份数据** | 样本与比对结果入 `evidence/`；差异逐条记录并修复或记入限制 |
 | W-66 | **专用服务器 + 多客户端浸泡**：1 服 2 客户端，传输网络 + 发电机 + 多方块运行 ≥30 分钟，日志无 ERROR/泄漏，tick 时间读数 | 浸泡日志摘要（标记行）+ 结论 |
 | W-67 | **性能基线**：大型传输网络与涡轮/裂变的 tick 耗时、区块加载压力；与官方 NeoForge 同场景粗对比（若 W-65 的环境可复用）| 数值表，异常项记入未决 |
 | W-68 | **第三方集成立项评估**：JEI/EMI 配方查看是玩家最直接的缺口；评估 Fabric 上 EMI/JEI/REI 适配的最小边界（`client/recipe_viewer` 现有 38+41 文件）、looking-at（WTHIT/Jade）。**仅出边界页**，是否实现等用户裁决 | `M-integration.md` 边界页 |
@@ -331,7 +331,7 @@ P11/P12 已完成后，"文件已移植"不再是进度瓶颈，剩余风险在*
 
 | ID | 内容 | 完成标志 |
 |---|---|---|
-| W-63 | 评估官方 `src/gameTest`（12 文件）与 `src/test` 中可直接纳入的 byte-identical 官方测试，作为发布 oracle；`src/datagen` 生成资源与已发布资源的一致性核对。只做评估页，不扩测试矩阵（遵 `AGENTS.md`） | `M-release.md` 一节：纳入/不纳入各自理由 |
+| W-63 | 评估官方 `src/gameTest`（12 文件）与 `src/test` 中可直接纳入的 byte-identical 官方测试，作为发布 oracle；`src/datagen` 生成资源与已发布资源的一致性核对。只做评估页，不扩测试矩阵（遵 `项目约束文档`） | `M-release.md` 一节：纳入/不纳入各自理由 |
 
 发布后议题（本规划不排期，记录以防遗忘）：第三方集成（JEI/EMI 替代、CraftTweaker、ProjectE、looking-at）、wip 提交 squash、submodule 指针更新、`mod_version` 从 `*-fabric-bootstrap` 过渡到正式号。
 
@@ -352,7 +352,7 @@ P0 ──► P1 ──► P2 ┐
 |---|---|
 | P0 发现门禁已退化或 smoke 失败 | 先修（`fix` 提交），把原 W 项顺延；规划书不重写，只在 README 记"顺延" |
 | 某多方块/模块需要大块新模块 | 记入未决项，继续后续项；P8 前汇总一次交协调者裁决 |
-| mcdebug 与游戏 mod 版本不匹配 | 按 `AGENTS.md`"客户端调试"用工作树内的 CLI；确认 `status` 后再操作 |
+| mcdebug 与游戏 mod 版本不匹配 | 按 `项目约束文档`"客户端调试"用工作树内的 CLI；确认 `status` 后再操作 |
 | 工作量超出 44 项 | 失败项 `fix` 可追加编号 `W-xx.n`，不改变总体顺序 |
 | 提交数量膨胀回到流水账 | 每个 W 项最多 3 个提交（实现 / 修正 / 文档）；审查与证据写进同一提交 |
 
@@ -470,14 +470,14 @@ W-74 的批准范围由"EMI→Jade"扩大为 **EMI → Jade → JEI → WTHIT**�
 
 | 工作项 | 状态 | 证据 |
 |---|---|---|
-| W-104 真实区块卸载 | ✅ 完成 | `execute unless loaded` 证明真卸载 + `tick sprint` 重载后续加工；smoke 29 PASS（[w104-chunk-unload.json](evidence/p8-release/w104-chunk-unload.json)）|
+| W-104 真实区块卸载 | ✅ 完成 | `execute unless loaded` 证明真卸载 + `tick sprint` 重载后续加工；smoke 29 PASS（w104-chunk-unload.json）|
 | W-104 涡轮（W-116） | 未做 | 多方块需手工搭建，风险高，留给后续会话 |
 | W-104 跨维度传送 | 未做 | 需玩家实体移动，mdb 无该能力 |
-| W-110 双玩家安全拒绝 | 阻塞 | 单人会话改不动所有者（`reflect` 传不了 UUID）；`/setblock` 机器无主且 `owner == null → 允许`。需 paired fixture 双用户名（[w110-security-denial.json](evidence/p8-release/w110-security-denial.json)）|
-| W-111 ×3 链 | ✅ 完成 | 硫酸→dirty_iron→clean_iron→**crystal_iron** 实测（[w111-chemical-chain.json](evidence/p8-release/w111-chemical-chain.json)）|
+| W-110 双玩家安全拒绝 | 阻塞 | 单人会话改不动所有者（`reflect` 传不了 UUID）；`/setblock` 机器无主且 `owner == null → 允许`。需 paired fixture 双用户名（w110-security-denial.json）|
+| W-111 ×3 链 | ✅ 完成 | 硫酸→dirty_iron→clean_iron→**crystal_iron** 实测（w111-chemical-chain.json）|
 | W-111 ×4 链 | ✅ 化学反应 | 卤水→氯→**HCl**→**shard_iron** 实测；官方服对照一致；缺口：注入室 HCl 用种子（输送未断言）|
 | W-111 ×5 链 | 未做 | 净化/粉碎/富集 |
-| W-112 tier/并行 | ✅ 完成 | 三档缓冲 20k/40k/80k、progress 3/5/9；sorting 开启后 **9 进程并行**、20 秒 2→9 矿石（[w112-factory-throughput.json](evidence/p8-release/w112-factory-throughput.json)）|
+| W-112 tier/并行 | ✅ 完成 | 三档缓冲 20k/40k/80k、progress 3/5/9；sorting 开启后 **9 进程并行**、20 秒 2→9 矿石（w112-factory-throughput.json）|
 | W-112 升级 | 阻塞 | 升级槽是虚拟容器槽，`be set-nbt` 写不进、需光标持有物品 |
 | 发布门禁 | ✅ 通过 | `release-check.sh` 六步全绿；机器 smoke 提速 113s→65s |
 

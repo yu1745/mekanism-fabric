@@ -21,7 +21,7 @@ Fresh GLM 5.3 high focused rereview `2a39f6d6-304a-459` (196.4s, 53.7k tokens, 3
 - Candidate baseline: clean `java-port` commit `2921ee0ff184126e6154fce94f460831b1e03668` (the committed approved-plan revision).
 - Official source oracle: `4646f509`.
 - Starting slices: API/common/platform **65/122/22**; tests **72 suites / 334 tests**.
-- User direction in `AGENTS.md`: use complete 15–40+ dependency/owner verticals rather than repeatedly stopping at small prerequisite batches.
+- User direction in `项目约束文档`: use complete 15–40+ dependency/owner verticals rather than repeatedly stopping at small prerequisite batches.
 
 Astra high planning (`c30cf836-80cd-4c1`, 402.1s, 118.6k tokens, 80 tool calls, about `$2.43`) returned GO for a 28-production-Java-file vertical. Earlier Task039 dependency investigations established that the concrete-slot predicate and warning/menu graph is bounded; the remaining owner is the physical-client `client.toml` window fragment. Full official `ClientConfig` is not selected because its public QIO enum fields lead into the real QIO container/frequency/security/network/chemical SCC, not merely a larger declaration list. That SCC must not be replaced by copied enums or no-op owners.
 

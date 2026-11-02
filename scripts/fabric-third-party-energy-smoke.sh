@@ -19,7 +19,7 @@
 # Requires only a JRE; the launcher and Fabric API jars are cached or downloaded.
 set -euo pipefail
 
-ROOT=$HOME/server-v2/develop/mekanism-fabric
+ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 PROPERTIES="$ROOT/fabric/gradle.properties"
 CACHE_DIR=${FABRIC_SMOKE_CACHE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/mekanism-fabric-smoke}
 TIMEOUT=${FABRIC_ENERGY_SMOKE_TIMEOUT:-240}

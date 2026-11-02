@@ -58,12 +58,12 @@
 
 遇到没有明确一一对应关系的平台 API 或对象语义时，可查阅两个本地只读参考仓库：
 
-- [`upstream/kilt`](../upstream/kilt)：[KiltMC/Kilt](https://github.com/KiltMC/Kilt)，主要展示如何在 Fabric 上承接 (Neo)Forge API 与对象语义；
-- [`upstream/connector`](../upstream/connector)：[Sinytra/Connector](https://github.com/Sinytra/Connector)，从反方向展示 Fabric API 与 NeoForge 对象、生命周期和调用约定的转换；仓库内另有生产补丁分支，但本目录固定使用官方上游作移植参考。
+- `upstream/kilt`：[KiltMC/Kilt](https://github.com/KiltMC/Kilt)，主要展示如何在 Fabric 上承接 (Neo)Forge API 与对象语义；
+- `upstream/connector`：[Sinytra/Connector](https://github.com/Sinytra/Connector)，从反方向展示 Fabric API 与 NeoForge 对象、生命周期和调用约定的转换；仓库内另有生产补丁分支，但本目录固定使用官方上游作移植参考。
 
 使用顺序：先找 vanilla/Fabric 的直接能力，再对照 Kilt 和 Connector 如何保持双方语义，最后实现最小的 Mekanism 专用 adapter。它们是语义与边界案例库，**不是必须采用的依赖或设计模板**；本项目不实现通用 Forge/Fabric 转换层，也不批量复制它们的兼容架构。若采用具体实现代码，必须记录仓库、commit、源文件并遵守相应许可证；默认只参考行为和测试思路后独立实现。
 
-具体相对路径、分支和搜索规则记录在仓库根部 `AGENTS.md`。
+具体相对路径、分支和搜索规则记录在仓库根部 `项目约束文档`。
 
 ## 当前状态
 
@@ -376,5 +376,5 @@ recipe/machine/Crusher 或 gameplay 完整性。
 ## P13 交付结论（2026-10-31，`77118a66`）
 
 - 范围：核心 + Tools / Additions / Generators 四个独立 JAR；各里程碑当前状态以 `docs/milestones/README.md` 为准。
-- 发布物：`./build.sh --clean` 的四个 JAR 与 sha256 记于 [W-61 证据](milestones/evidence/p8-release/w61-release.json)；干净四 JAR 服务端装配发布 schema 的 458 值 SERVER 快照（[W-60 证据](milestones/evidence/p8-release/w60-results.json)）。
+- 发布物：`./build.sh --clean` 的四个 JAR 与 sha256 记于 W-61 证据；干净四 JAR 服务端装配发布 schema 的 458 值 SERVER 快照（W-60 证据）。
 - 未含：第三方集成（JEI/EMI、CraftTweaker、ProjectE 等）、NeoForge 存档差异（W-65）、长稳与性能（W-66/67）；发布限制见 `docs/milestones/README.md`。

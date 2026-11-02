@@ -1,1 +1,0 @@
-{"resolvedTo":"getTemperature","steps":[{"seg":"heatCapacitor","field":"heatCapacitor","class":"mekanism.common.capabilities.heat.BasicHeatCapacitor"},{"seg":"temperature","method":"getTemperature","class":"java.lang.Double"}],"value":299.99794703558257}

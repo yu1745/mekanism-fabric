@@ -18,7 +18,7 @@ W-48实现已接真实server/connection owner：JDK AudioSystem＋TCP，原16kHz
 
 ## 验收证据
 
-- 真机：271方块／296物品／8实体，6份SERVER配置／345值send/apply/ack；文件中的TNT引信20、爆炸半径2、baby bogged权重0.2和语音端口36124在重启后生效。[读数](evidence/additions/native-summary.json)。
-- 实际气球物品交互、存读档后客户端red/latch一致；magic免疫有效；swamp生成列表14项，bogged权重2→6；fortress保留PIECE并从5项扩为7项；六种baby完成生成，关键渲染见[实体](evidence/additions/native-babies.png)、[气球/信标](evidence/additions/native-balloon-beacon.png)。
+- 真机：271方块／296物品／8实体，6份SERVER配置／345值send/apply/ack；文件中的TNT引信20、爆炸半径2、baby bogged权重0.2和语音端口36124在重启后生效。读数。
+- 实际气球物品交互、存读档后客户端red/latch一致；magic免疫有效；swamp生成列表14项，bogged权重2→6；fortress保留PIECE并从5项扩为7项；六种baby完成生成，关键渲染见实体、气球/信标。
 - 火石与实际FireBlock点火都生成20tick引信的原TNT实体，21tick后破坏地面；信标red=-51140。恢复256项重染配方，总3982项，红色重染接受blue/拒绝red；对讲机1→8换频道，客户端属性值8.0。
-- 自有JVM正常停止，端口释放，隔离世界副本、临时debug依赖及自有Xvfb已清理，原调试世界未动。统一构建、既有578项测试、API检查与机器smoke通过；[回归及三JAR摘要](evidence/additions/regression.json)。没有新增测试。提交后真实diff复核已移除语音public方法不必要的checked exception，保持server线程读取和可中断退出。
+- 自有JVM正常停止，端口释放，隔离世界副本、临时debug依赖及自有Xvfb已清理，原调试世界未动。统一构建、既有578项测试、API检查与机器smoke通过；回归及三JAR摘要。没有新增测试。提交后真实diff复核已移除语音public方法不必要的checked exception，保持server线程读取和可中断退出。

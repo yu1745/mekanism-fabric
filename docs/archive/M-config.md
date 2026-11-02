@@ -36,7 +36,7 @@ P0 paired-network 重跑通过：5 个 SERVER configs、304 个值，两次 fres
 
 ### P2 检查点（2026-10-30，基线 `3a3a6ba8`）
 
-W-12 consumer 实机证据：隔离世界 general.toml 的 `digital_miner.maxRadius` 从 32 改为 7 后正常启动集成服。完整 BlockItem 路径放置 Digital Miner，实际 `setRadiusFromPacket(999)` 后服务端 radius=7；真实 GUI Config 按钮打开 `GuiDigitalMinerConfig`，客户端 tile.radius=7，`radiusField.textField.maxLength`=1。读数与截图在 [p2-config](../milestones/evidence/p2-config/miner-radius-seven.png)，同目录包含 server-radius/client-radius/gui-radius-length JSON。无 GUI error。此证据证明非默认值被服务端和 GUI consumer 使用；集成服共享配置实例，独立客户端非默认快照仍待验证，不能用它替代远端安装路径。
+W-12 consumer 实机证据：隔离世界 general.toml 的 `digital_miner.maxRadius` 从 32 改为 7 后正常启动集成服。完整 BlockItem 路径放置 Digital Miner，实际 `setRadiusFromPacket(999)` 后服务端 radius=7；真实 GUI Config 按钮打开 `GuiDigitalMinerConfig`，客户端 tile.radius=7，`radiusField.textField.maxLength`=1。读数与截图在 p2-config，同目录包含 server-radius/client-radius/gui-radius-length JSON。无 GUI error。此证据证明非默认值被服务端和 GUI consumer 使用；集成服共享配置实例，独立客户端非默认快照仍待验证，不能用它替代远端安装路径。
 
 W-13 focused test：`./gradlew -p fabric qioTransactionTest --tests mekanism.fabric.config.FabricGearConfigLifecycleTest --console=plain` PASS（8 秒），原生命周期断言全部通过；未新增测试。
 
@@ -46,9 +46,9 @@ W-13 focused test：`./gradlew -p fabric qioTransactionTest --tests mekanism.fab
 
 ### P2 W-12/13 运行证据补齐（2026-10-30）
 
-W-12 独立远端补验通过：复用现有 paired-network smoke 的临时本地副本，在 disposable 服务端启动前写 `world/serverconfig/Mekanism/general.toml` 的 `digital_miner.maxRadius=7`；两个 fresh 客户端各自临时加载 mcdebug 后读取实际 `MekanismConfig.general.minerMaxRadius.get()`，两次均为 **7**。原 paired 协商／加入 play 门禁也 PASS。原始结果：[client 1](../milestones/evidence/p2-config/client-1-radius.json)、[client 2](../milestones/evidence/p2-config/client-2-radius.json)。诊断目录 `build/fabric-paired-network-smoke/20261030T111730Z-1840548/`。第一次只因 Unix socket 路径过长读取失败；修正为使用客户端端点发现文件（自动 TCP fallback）后重跑成功，失败运行不计通过。与上节实际 miner 服务端钳制、客户端 GUI 证据合并，完成非默认配置从文件到独立客户端及 consumer 的链路。
+W-12 独立远端补验通过：复用现有 paired-network smoke 的临时本地副本，在 disposable 服务端启动前写 `world/serverconfig/Mekanism/general.toml` 的 `digital_miner.maxRadius=7`；两个 fresh 客户端各自临时加载 mcdebug 后读取实际 `MekanismConfig.general.minerMaxRadius.get()`，两次均为 **7**。原 paired 协商／加入 play 门禁也 PASS。原始结果：client 1、client 2。诊断目录 `build/fabric-paired-network-smoke/20261030T111730Z-1840548/`。第一次只因 Unix socket 路径过长读取失败；修正为使用客户端端点发现文件（自动 TCP fallback）后重跑成功，失败运行不计通过。与上节实际 miner 服务端钳制、客户端 GUI 证据合并，完成非默认配置从文件到独立客户端及 consumer 的链路。
 
-W-13 alphaWarning 实证：复用 P1 未改动 remapped JAR 执行现有 packaged smoke 的临时副本（只省略重复 build，保留全部静态及真实启动断言），PASS 并到达 Done。保留 disposable server 后读取 `world/serverconfig/Mekanism/general.toml`，发布环境确实没有 alphaWarning；此前 dev 实机生成文档含 alphaWarning=true。两份实际 TOML 的读取结果见 [schema 证据](../milestones/evidence/p2-config/alpha-schema.json)。这确认各环境 schema 行为；未宣称额外执行开发／发布混合客户端矩阵。focused lifecycle PASS 与 `741d580d` 审查见上一节。
+W-13 alphaWarning 实证：复用 P1 未改动 remapped JAR 执行现有 packaged smoke 的临时副本（只省略重复 build，保留全部静态及真实启动断言），PASS 并到达 Done。保留 disposable server 后读取 `world/serverconfig/Mekanism/general.toml`，发布环境确实没有 alphaWarning；此前 dev 实机生成文档含 alphaWarning=true。两份实际 TOML 的读取结果见 schema 证据。这确认各环境 schema 行为；未宣称额外执行开发／发布混合客户端矩阵。focused lifecycle PASS 与 `741d580d` 审查见上一节。
 
 临时脚本副本已移除，正式 smoke 脚本未改；paired 的客户端／服务器均由原脚本清理，临时调试依赖不进入发行物。完整 P2 构建与阶段 machine 门禁正在收尾；W-14 在门禁通过后归档。
 

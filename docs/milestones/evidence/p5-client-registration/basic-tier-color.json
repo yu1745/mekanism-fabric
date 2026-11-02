@@ -1,1 +1,0 @@
-{"resolvedTo":"getPackedColor","steps":[{"seg":"BASIC","field":"BASIC","class":"mekanism.api.tier.BaseTier"},{"seg":"getPackedColor","method":"getPackedColor","class":"java.lang.Integer"}],"value":-10485832}

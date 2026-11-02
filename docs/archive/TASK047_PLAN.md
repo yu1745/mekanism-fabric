@@ -1,6 +1,6 @@
 # Task047 — Official base-tile persistence and reduced-update owner
 
-**Completed under the user's revised completion-first policy.** Final verification is build + six focused tests; no final runtime-green, packaged smoke or clean release is claimed. Earlier full-gate requirements below are historical and superseded by the parent closeout and current `AGENTS.md`.
+**Completed under the user's revised completion-first policy.** Final verification is build + six focused tests; no final runtime-green, packaged smoke or clean release is claimed. Earlier full-gate requirements below are historical and superseded by the parent closeout and current `项目约束文档`.
 
 ## Parent decision / checkpoint
 

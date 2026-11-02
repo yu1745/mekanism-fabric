@@ -1,1 +1,0 @@
-{"method":"insertArguments","resolvedTo":"insertArguments","declaringClass":"java.lang.invoke.MethodHandles","signature":"(java.lang.invoke.MethodHandle,int,[Ljava.lang.Object;)","value":{"ref":32,"class":"java.lang.invoke.BoundMethodHandle$Species_LLL","toString":"MethodHandle()void"}}

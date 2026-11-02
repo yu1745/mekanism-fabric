@@ -23,8 +23,7 @@ shader compatibility and several long-run or gameplay combinations remain unveri
 scripts/release-check.sh    # server-side release gates (clean build, packaged, paired, rejection, machine, Tech Reborn)
 ```
 
-All verification evidence lives in [`docs/milestones/evidence/`](docs/milestones/evidence/); the per-work-item index is
-[`docs/milestones/M-release.md`](docs/milestones/M-release.md).
+Verification notes are summarized in the milestone documents under `docs/milestones/`.
 
 ## Upstream Mekanism ##
 

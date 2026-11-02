@@ -71,6 +71,3 @@ who installs them takes on their licence terms. Refresh the table whenever a dep
 
 ## Where the evidence lives
 
-- Version and metadata of the four JARs: [`docs/milestones/evidence/p8-release/w71-release-metadata.json`](milestones/evidence/p8-release/w71-release-metadata.json)
-- Resource-level comparison against the official NeoForge JARs: [`docs/milestones/evidence/p8-release/w75-resource-inventory.json`](milestones/evidence/p8-release/w75-resource-inventory.json)
-- This audit: [`docs/milestones/evidence/p8-release/w85-licenses.json`](milestones/evidence/p8-release/w85-licenses.json)

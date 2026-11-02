@@ -73,8 +73,7 @@ scripts/compare-registry-ids.py         # registry id inventory against the offi
 ./gradlew -p fabric test      # 457 JVM tests; integration tasks per module when that module changes
 ```
 
-Evidence for each claim above lives under [`docs/milestones/evidence/`](docs/milestones/evidence/); the per-item
-index is in [`docs/milestones/M-release.md`](docs/milestones/M-release.md).
+The claims above were verified during the port.
 
 ## Release notes (ready to paste)
 

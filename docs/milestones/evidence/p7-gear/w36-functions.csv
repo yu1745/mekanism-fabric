@@ -1,7 +1,0 @@
-family,actualOwnerPath,functionalResult,modeResult,consumption
-MekaSuit,ModificationStation -> worn inventoryTick -> Module.tickServer,station installed vision; unworn control stable,HEAD native C2S disabled->enabled,995500->927500
-MekaTool,ModificationStation -> survival gameMode.destroyBlock -> mineBlock,excavation installed and actual stone removed,native C2S NORMAL->OFF then SLOW for mining,1000000->999960
-Jetpack,survival worn CommonPlayerTickHandler -> IJetpackItem,hover held Y105 from ground Y100,NORMAL->HOVER,hydrogen 1000->951
-Scuba,mask+tank -> actual player tick,air100->300,false->true,oxygen 962->736
-Flamethrower,native ItemStack.use -> actual onUseTick,one active use tick; original EntityFlame creation condition reached,COMBAT->HEAT,hydrogen 1000->999
-Configurator,survival gameMode.useItemOn -> original item.useOn,Crusher east->south,CONFIGURATE_ITEMS->ROTATE,not energy-backed in official version

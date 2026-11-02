@@ -1,1 +1,0 @@
-{"method":"defaultBlockState","resolvedTo":"defaultBlockState","declaringClass":"net.minecraft.world.level.block.Block","signature":"()","value":{"ref":44,"class":"net.minecraft.world.level.block.state.BlockState","toString":"Block{mekanism:basic_fluid_tank}[active=false,fluid_light=0,fluid_logged=empty]"}}

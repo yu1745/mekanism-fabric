@@ -14,7 +14,6 @@ Start here if you are new to the repository.
 | [`milestones/M-release.md`](milestones/M-release.md) | per-work-item evidence index (W-xx → evidence JSON) | reviewers |
 | [`milestones/DECISIONS_PENDING.md`](milestones/DECISIONS_PENDING.md) | items that need a user decision (force push, release form, remaining scope) | user |
 | [`milestones/W101-squash-analysis.md`](milestones/W101-squash-analysis.md) | W-101 wip squash 的现状测量与执行计划（未改写历史） | maintainers |
-| [`milestones/evidence/`](milestones/evidence/) | raw evidence: gates, probes, comparisons | reviewers |
 | [`Development.md`](Development.md) | local build, test task tiers, verify commands | contributors |
 | [`FABRIC_SMOKE.md`](FABRIC_SMOKE.md) | what each smoke script proves and how to run it | contributors |
 | [`FABRIC_PORT.md`](FABRIC_PORT.md) | port scope and status narrative | contributors |
@@ -29,5 +28,4 @@ Start here if you are new to the repository.
 
 - **Current status lives in `milestones/README.md`**, not in the topic notes or the archive. Those record why
   something is the way it is.
-- Every claim in a milestone document links to an evidence file under `milestones/evidence/`.
 - Documents in `archive/` are frozen: they are never rewritten, and a stale link inside them is not a bug.

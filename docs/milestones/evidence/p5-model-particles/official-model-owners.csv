@@ -1,8 +1,0 @@
-official_path,fabric_owner,behavior
-mekanism/client/model/baked/DriveArrayBakedModel.java,FabricQIODriveGeometry + RenderQIODriveArray + FabricQIOModelPlugin,12原placements/旋转；block BE byte[]与item frequency/DriveMetadata状态，原驱动模型和face light
-mekanism/client/model/baked/ExtensionOverrideBakedModel.java,FabricQIOModelPlugin.QIOModel.getOverrides,先解析原ItemOverrides；真实resolved模型继续包装，item状态由实际stack获取
-mekanism/client/model/baked/ModelDataBakedModel.java,owner-specific QIO item geometry and RobitBakedModel,stack/component选择实际quads/render types，保留display，不构建通用Forge ModelData外壳
-mekanism/client/model/data/DataBasedBakedModel.java,FabricDataBasedUnbakedModel.DataBasedModel,冻结BE状态选择no_data/emitting及对应光照与分层
-mekanism/client/model/data/DataBasedGeometry.java,FabricDataBasedUnbakedModel.resolveParents/bake,真实parent/dependencies和两套baked模型，不复制注册框架
-mekanism/client/model/data/DataBasedModelLoader.java,FabricMekanismModelPlugin + FabricDataBasedUnbakedModel,mekanism:data_based注册；仅官方唯一emitting属性，本批修正metadata错选
-mekanism/client/model/robit/RobitModelDataBakedModel.java,RobitBakedModel + RobitSpriteUploader + real Robit renderers,皮肤atlas/render types和动态模型/显示transform；模型cache随真实reload失效

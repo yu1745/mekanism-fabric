@@ -1,6 +1,0 @@
-family,validSize,unformedAfterBreak,formedAfterRepair,nativeChunkUnloaded,oldBERemoved,formedAfterChunkReload,invalidXSize,nativeValidatorPrecheck,formedAfterSizeRecovery,formedAfterNewJVM
-tank,18x18x18,True,True,True,True,True,19,False,True,True
-matrix,18x18x18,True,True,True,True,True,19,False,True,True
-boiler,18x18x18,True,True,True,True,True,19,False,True,True
-evaporation,4x18x4,True,True,True,True,True,5,False,True,True
-sps,7x7x7,True,True,True,True,True,8,False,True,True

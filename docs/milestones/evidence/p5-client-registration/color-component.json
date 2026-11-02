@@ -1,1 +1,0 @@
-{"resolvedTo":"get","steps":[{"seg":"COLOR","field":"COLOR","class":"mekanism.common.registration.MekanismDeferredHolder"},{"seg":"get","method":"get","class":"net.minecraft.core.component.DataComponentType$Builder$SimpleType"}],"value":{"ref":42,"class":"net.minecraft.core.component.DataComponentType$Builder$SimpleType","toString":"mekanism:color"}}

@@ -53,11 +53,11 @@ A small world authored by the official NeoForge build was loaded by this port an
 
 - verified: machine block-entity NBT (metallurgic infuser, energy cube, quantum entangloporter), transmitter
   connection masks, and a formed multi-block (dynamic tank) — see
-  [`evidence/p8-release/w65-neoforge-save-probe.json`](milestones/evidence/p8-release/w65-neoforge-save-probe.json);
+  `evidence/p8-release/w65-neoforge-save-probe.json`;
 - verified: machine side configuration (`component_config`, eject flags) written by the official build and read back
-  by the port — [`w77-runtime-content.json`](milestones/evidence/p8-release/w77-runtime-content.json);
+  by the port — `w77-runtime-content.json`;
 - verified in a later sample: machine inventory/side configuration and stored energy 5000 J transferred from the
-  official build — [`w80-save-roundtrip.json`](milestones/evidence/p8-release/w80-save-roundtrip.json);
+  official build — `w80-save-roundtrip.json`;
 - **not verified**: complete frequency/channel networks or arbitrary world transfers. Treat world transfer from
   NeoForge as experimental and keep a backup.
 
@@ -104,4 +104,3 @@ through the `-PjeiDev`, `-PemiDev`, `-PjadeDev` and `-PwthitDev` Gradle switches
 scripts/release-check.sh    # server-side gates (clean build, static, packaged, paired, rejection, machine, Tech Reborn)
 ```
 
-Evidence for every verification lives under [`docs/milestones/evidence/`](milestones/evidence/).

@@ -1,1 +1,0 @@
-{"resolvedTo":"isOverridden","steps":[{"seg":"freq","method":"getFreq","class":"mekanism.common.lib.security.SecurityFrequency"},{"seg":"overridden","method":"isOverridden","class":"java.lang.Boolean"}],"value":true}

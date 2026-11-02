@@ -18,5 +18,5 @@ W-44a–e已完成，按新版ROADMAP W-45推进Additions边界与实现。P8未
 
 - 真机核心与Tools共同启动，72物品／6材料／2serializer，6份SERVER配置／367值完成send/apply/ack。
 - 实际客户端paxel剥皮，耐久＋1；原配方匹配受损输入100/200/300，输出damage400/max3122；原生僵尸村民获得Tools铲。
-- 夜间盾牌材质与荧石护甲全亮；修复Holder比较后无新增渲染问题。[读数](../milestones/evidence/tools/native-summary.json)、[截图](../milestones/evidence/tools/native-night.png)。隔离副本已删除，自有JVM／Xvfb与临时debug依赖已清理。
-- `build.sh`产出两个独立JAR，578项现有测试零失败；API检查与机器smoke通过。新版规划在实现期间落地，W-44a/e回归在本批合并执行一次。[构建](../milestones/evidence/tools/build.json)、[回归](../milestones/evidence/tools/regression.json)。
+- 夜间盾牌材质与荧石护甲全亮；修复Holder比较后无新增渲染问题。读数、截图。隔离副本已删除，自有JVM／Xvfb与临时debug依赖已清理。
+- `build.sh`产出两个独立JAR，578项现有测试零失败；API检查与机器smoke通过。新版规划在实现期间落地，W-44a/e回归在本批合并执行一次。构建、回归。

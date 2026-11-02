@@ -19,7 +19,7 @@ Port `src/main/java/mekanism/common/recipe/lookup/cache/RotaryInputRecipeCache.j
 
 ## Acceptance
 
-Add a minimal focused test suite (normally 3–6 tests) covering independent rotary risks: one-way direction exclusion and bidirectional operation; insertion-vs-processing amount semantics; complex fallback; binding replacement/clear isolation of both directional indices. Reuse lower-level ownership fixtures rather than retesting their full matrices. Any additional tests require independent mutation justification under AGENTS.md.
+Add a minimal focused test suite (normally 3–6 tests) covering independent rotary risks: one-way direction exclusion and bidirectional operation; insertion-vs-processing amount semantics; complex fallback; binding replacement/clear isolation of both directional indices. Reuse lower-level ownership fixtures rather than retesting their full matrices. Any additional tests require independent mutation justification under 项目约束文档.
 
 Run focused tests, full local tests including isolated integration tasks, slice/isolation checks, Fabric build, and static final-JAR contract. Record actual commands, counts, and results; do not claim a runtime gate from static inspection. Parent independently inspects the diff, reruns final gates, packaged smoke and clean release.
 

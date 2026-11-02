@@ -1,6 +1,0 @@
-time,thread,level,owner,event
-12:42:43,Server thread,INFO,Mekanism/FabricRecipeCache,MEKANISM_FABRIC_RECIPE_CACHE_PROOF phase=start epoch=1
-12:42:53,Server thread,INFO,Mekanism/FabricRecipeCache,MEKANISM_FABRIC_RECIPE_CACHE_PROOF phase=apply epoch=2
-12:42:53,Server thread,INFO,Mekanism/FabricRecipeCache,MEKANISM_FABRIC_RECIPE_CACHE_PROOF phase=reload epoch=2
-12:43:21,Server thread,INFO,Mekanism/FabricRecipeCache,MEKANISM_FABRIC_RECIPE_CACHE_PROOF phase=apply epoch=3
-12:43:21,Server thread,INFO,Mekanism/FabricRecipeCache,MEKANISM_FABRIC_RECIPE_CACHE_PROOF phase=reload epoch=3

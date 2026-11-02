@@ -1,1 +1,0 @@
-{"resolvedTo":"maxLength","steps":[{"seg":"radiusField","field":"radiusField","class":"mekanism.client.gui.element.text.GuiTextField"},{"seg":"textField","field":"textField","class":"mekanism.client.gui.element.text.GuiTextField$ClearingEditBox"},{"seg":"maxLength","field":"maxLength","class":"java.lang.Integer"}],"value":1}

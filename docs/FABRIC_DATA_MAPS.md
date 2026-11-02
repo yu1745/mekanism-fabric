@@ -15,9 +15,9 @@ another registry. API/common code does not depend on Fabric.
 
 This work was audited against NeoForge 21.1.200 without copying its LGPL implementation:
 
-- sources: `/home/user/.gradle/caches/modules-2/files-2.1/net.neoforged/neoforge/21.1.200/f0f15283b397e14e812ca49eef21b074f2c484e5/neoforge-21.1.200-sources.jar`
+- sources: `~/.gradle/caches/modules-2/files-2.1/net.neoforged/neoforge/21.1.200/f0f15283b397e14e812ca49eef21b074f2c484e5/neoforge-21.1.200-sources.jar`
 - source SHA-256: `7b31b7f4b817c90b8aa05ade830d761223dff07967aab49ab1f197d51c4d1420`
-- binary: `/home/user/.gradle/caches/modules-2/files-2.1/net.neoforged/neoforge/21.1.200/13d648aad7dcdb2a68551a407027620fa32c0afa/neoforge-21.1.200-universal.jar`
+- binary: `~/.gradle/caches/modules-2/files-2.1/net.neoforged/neoforge/21.1.200/13d648aad7dcdb2a68551a407027620fa32c0afa/neoforge-21.1.200-universal.jar`
 - binary SHA-256: `bad2e2d951a275f1063600b432223d3fb5c18345f6bfde204517b51cb25720da`
 - audited concepts: `DataMapType`, `DataMapEntry`, `DataMapFile`, `DataMapLoader`, value merger/remover,
   `AdvancedDataMapType`, and conditional operations.

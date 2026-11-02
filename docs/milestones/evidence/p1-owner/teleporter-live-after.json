@@ -1,1 +1,0 @@
-{"resolvedTo":"name","steps":[{"seg":"frequency","method":"getFrequency","class":"mekanism.common.content.teleporter.TeleporterFrequency"},{"seg":"name","field":"name","class":"java.lang.String"}],"value":"roadmap_p1_teleporter"}

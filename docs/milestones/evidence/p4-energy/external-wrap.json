@@ -1,1 +1,0 @@
-{"method":"wrapAsStrictEnergyHandler","resolvedTo":"wrapAsStrictEnergyHandler","declaringClass":"mekanism.fabric.energy.FabricEnergyLookup","signature":"(team.reborn.energy.api.EnergyStorage,mekanism.api.energy.IEnergyConversion)","value":{"ref":2,"class":"mekanism.fabric.energy.FabricStrictEnergyHandler","toString":"mekanism.fabric.energy.FabricStrictEnergyHandler@691238f"}}

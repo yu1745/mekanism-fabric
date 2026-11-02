@@ -1,1 +1,0 @@
-{"method":"toAabbs","resolvedTo":"toAabbs","declaringClass":"net.minecraft.world.phys.shapes.VoxelShape","signature":"()","value":{"ref":6,"class":"java.util.ArrayList","size":1,"items":[{"class":"net.minecraft.world.phys.AABB","toString":"AABB[0.0, 0.0, 0.0] -> [1.0, 1.0, 1.0]"}]}}

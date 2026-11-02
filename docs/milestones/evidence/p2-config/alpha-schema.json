@@ -1,8 +1,0 @@
-{
-  "production_file": "/tmp/mekanism-fabric-smoke.v2J3PU/world/serverconfig/Mekanism/general.toml",
-  "production_has_alphaWarning": false,
-  "development_file": "/tmp/mekanism-p2-tested-world/serverconfig/Mekanism/general.toml",
-  "development_alphaWarning": true,
-  "production_radius": 32,
-  "development_radius": 7
-}

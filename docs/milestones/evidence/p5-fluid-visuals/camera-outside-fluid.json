@@ -1,1 +1,0 @@
-{"method":"getSubmergedType","resolvedTo":"getSubmergedType","declaringClass":"mekanism.fabric.client.FabricFluidColors","signature":"(net.minecraft.world.level.BlockGetter,net.minecraft.world.phys.Vec3)","value":{"$null":true}}

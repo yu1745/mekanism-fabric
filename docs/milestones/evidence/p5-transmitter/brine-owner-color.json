@@ -1,1 +1,0 @@
-{"resolvedTo":"color","steps":[{"seg":"BRINE","field":"BRINE","class":"mekanism.common.registration.impl.FluidRegistryObject"},{"seg":"fluidType","field":"fluidType","class":"mekanism.common.registration.impl.FluidDeferredRegister$MekanismFluidType"},{"seg":"color","field":"color","class":"java.lang.Integer"}],"value":-69732}

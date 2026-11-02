@@ -1,1 +1,0 @@
-{"method":"getMainPos","resolvedTo":"getMainPos","declaringClass":"mekanism.common.tile.TileEntityBoundingBlock","signature":"()","value":{"ref":8,"class":"net.minecraft.core.BlockPos","toString":"BlockPos{x=8, y=100, z=0}"}}

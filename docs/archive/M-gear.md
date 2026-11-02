@@ -14,10 +14,10 @@ W-38–39与P7门禁已通过；W-40前完成packaged smoke对照并交协调者
 
 ## 验收证据
 
-W-36：六类装备代表功能、两次真实Modification Station安装、C2S模式及实际能量／燃料消耗通过；修复后worn耗能、unworn不tick。assemble34秒与两项既有focused tests18秒PASS。[结果表](../milestones/evidence/p7-gear/w36-functions.csv)、[边界／测量纠正](../milestones/evidence/p7-gear/w36-validation.json)。
+W-36：六类装备代表功能、两次真实Modification Station安装、C2S模式及实际能量／燃料消耗通过；修复后worn耗能、unworn不tick。assemble34秒与两项既有focused tests18秒PASS。结果表、边界／测量纠正。
 完整隔离世界81文件恢复一致，自有会话和临时依赖清理；无新增测试。P7阶段门禁已通过；不宣布P8发布门禁通过。
 
-W-37：五类真实factory／直接owner核对通过，无生产代码缺口；Farming、Shearing、充能优先级与守恒、Swim两倍水中跳跃、Flight原生授予／耗能／存档过滤／撤销通过。[调用链与限制](../milestones/evidence/p7-gear/w37-owner-map.csv)、[验证范围](../milestones/evidence/p7-gear/w37-validation.json)。
+W-37：五类真实factory／直接owner核对通过，无生产代码缺口；Farming、Shearing、充能优先级与守恒、Swim两倍水中跳跃、Flight原生授予／耗能／存档过滤／撤销通过。调用链与限制、验证范围。
 Elytra仅工厂和原生资格检查；可选附件充能等未重复实测。隔离世界81文件恢复一致，自有运行会话与临时依赖清理。
 
-P7收尾：build285.40秒／578 tests、API0.64秒、machine98.45秒PASS；[阶段门禁](../milestones/evidence/p7-registry/p7-gates.json)。实现提交`7ce6a69f`、W-37核验`3174a76e`；无新增测试或临时框架。
+P7收尾：build285.40秒／578 tests、API0.64秒、machine98.45秒PASS；阶段门禁。实现提交`7ce6a69f`、W-37核验`3174a76e`；无新增测试或临时框架。
