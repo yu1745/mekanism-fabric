@@ -468,7 +468,7 @@ recipes and `OneInputCachedRecipe` factories are usable and `RecipeManager.byTyp
 `getToastSymbol()` item holders resolve `mekanism:<path>` against `BuiltInRegistries.ITEM`; because the `MekanismItems` family is not admitted they are non-null and
 key-correct but unbound, and `value()` throws. `mekanism/api/MekanismAPI.class` is still absent from the artifact.
 
-Verification: six ordinary methods in the single new `RecipeOutputHandlingTest` (no Knot), the three slice no-NeoForge checks, `scan-platform-deps.py`,
+Verification: six ordinary methods in the single new `RecipeOutputHandlingTest` (no Knot), the three slice no-NeoForge checks, ,
 `fabric-build.sh`, and the exact static packaged class-family/leakage gate. `./build.sh --clean` and real server/client smokes are not run.
 
 ## Recipe type/serializer registration and the concrete recipe family (Task 043)

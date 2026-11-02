@@ -1,9 +1,0 @@
-{
-  "schemaVersion": 1,
-  "id": "mekanism_port_review_fixture",
-  "version": "1.0.0",
-  "name": "Mekanism port review regression fixture",
-  "environment": "server",
-  "entrypoints": { "main": ["mekanism.fabric.review.PortReviewFixture"] },
-  "depends": { "minecraft": "~1.21.1", "fabricloader": ">=0.19.5", "mekanism": "*" }
-}

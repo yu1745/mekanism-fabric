@@ -54,8 +54,7 @@ see [`docs/LICENSES.md`](docs/LICENSES.md).
 
 ### Known limitations of this build
 
-- No recipe-viewer or looking-at integration: EMI/JEI/REI and Jade/WTHIT/TOP are not wired up yet
-  ([boundary page](docs/milestones/M-integration.md)).
+- No recipe-viewer or looking-at integration: EMI/JEI/REI and Jade/WTHIT/TOP are not wired up yet.
 - Large transmission networks, turbines and reactors have a first throughput baseline but no long-run soak yet.
 - The release-JAR client path has one-off evidence; it is not re-verified automatically on every build.
 - MekaSuit HUD values were only read on an uncharged suit (they render, at 0%); a controlled fission meltdown has
@@ -68,8 +67,6 @@ see [`docs/LICENSES.md`](docs/LICENSES.md).
 ```bash
 ./build.sh --clean            # four JARs into dist/ + build-info.json
 scripts/release-check.sh      # clean build, static gates, packaged server, paired network, rejection, machine smoke
-scripts/compare-resource-inventory.py   # data/assets diff against the official NeoForge JARs
-scripts/compare-registry-ids.py         # registry id inventory against the official JARs
 ./gradlew -p fabric test      # 457 JVM tests; integration tasks per module when that module changes
 ```
 

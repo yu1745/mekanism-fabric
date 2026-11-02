@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
  * Places the real server thread inside the Mekanism-owned marker group at the vanilla creation entry, so {@link EffectiveSide} classifies it and every
- * thread inheriting its group as the logical server (see {@code docs/archive/TASK052_ADJUDICATION_EFFECTIVE_SIDE.md}). All other statements of {@code spin}
+ * thread inheriting its group as the logical server. All other statements of {@code spin}
  * (uncaught handler, optional priority, factory-apply order, start) keep vanilla behavior.
  */
 @Mixin(MinecraftServer.class)

@@ -54,8 +54,7 @@ loader reports a missing or too-old version instead of failing at runtime.
 
 The port does not bundle or ship any optional integration code. Four client-side viewers are supported through
 **compile-only** API use — no code, assets or binaries from them are packaged into our JARs — and the rest
-(REI, TOP, CraftTweaker, ProjectE, Curios) are absent (see
-[`docs/milestones/M-integration.md`](milestones/M-integration.md)). Upstream data files that reference other
+(REI, TOP, CraftTweaker, ProjectE, Curios) are absent. Upstream data files that reference other
 mods are either transformed mechanically (compat recipe conditions) or left out, and are covered by the
 upstream MIT license.
 

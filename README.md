@@ -11,9 +11,8 @@ shader compatibility and several long-run or gameplay combinations remain unveri
 |---|---|
 | install it and start playing | [`docs/INSTALL.md`](docs/INSTALL.md) — requirements, the four JARs, install steps |
 | know what changed in this build | [`CHANGELOG.md`](CHANGELOG.md) |
-| see how far the port is | [`docs/milestones/README.md`](docs/milestones/README.md) — milestone table and release limits |
 | take a NeoForge world across | [`docs/INSTALL.md`](docs/INSTALL.md#save-compatibility-with-the-neoforge-build) |
-| report where it differs from upstream | [`docs/API_DELTAS.md`](docs/API_DELTAS.md), [`docs/PORT_MATRIX.md`](docs/PORT_MATRIX.md) |
+| report where it differs from upstream | [`docs/API_DELTAS.md`](docs/API_DELTAS.md) |
 | build and verify locally | [`docs/Development.md`](docs/Development.md), [`docs/FABRIC_SMOKE.md`](docs/FABRIC_SMOKE.md) |
 | see licences and attribution | [`docs/LICENSES.md`](docs/LICENSES.md) |
 
@@ -22,8 +21,6 @@ shader compatibility and several long-run or gameplay combinations remain unveri
 ./gradlew -p fabric test    # 457 JVM tests
 scripts/release-check.sh    # server-side release gates (clean build, packaged, paired, rejection, machine, Tech Reborn)
 ```
-
-Verification notes are summarized in the milestone documents under `docs/milestones/`.
 
 ## Upstream Mekanism ##
 

@@ -2,9 +2,9 @@ name: "CodeQL"
 
 on:
   push:
-    branches: [ "1.21.x" ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ "1.21.x" ]
+    branches: [ "main" ]
     types:
       - synchronize
       - opened
@@ -46,8 +46,8 @@ jobs:
           languages: ${{ matrix.language }}
           queries: +security-and-quality
 
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
+      - name: Build
+        run: ./gradlew -p fabric assemble --console=plain
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3

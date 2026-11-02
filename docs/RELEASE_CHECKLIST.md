@@ -60,7 +60,7 @@ cp fabric/run/../run/mods/fabric-api-*.jar /tmp/release-rehearsal/mods/ 2>/dev/n
 
 ## 4. 存档往返（W-65 样本世界）
 
-用官方样本世界副本（**不要**动 `~/.cache/mekanism-neoforge-reference/` 里的原件）：
+用官方样本世界副本（不要改动原件）：
 
 1. 起服加载副本世界，确认区块与机器正常加载、无 registry 缺失报错；
 2. 读 W-77（运行内容）与 W-80（库存/侧配置/能量）记录的对照点，确认读出的数值与记录一致；

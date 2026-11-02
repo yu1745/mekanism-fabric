@@ -1,7 +1,5 @@
 # Fabric item inventory boundary
 
-> 状态核实（2026-10-30 / W-05）：保留对应早期切片的语义设计与验收记录；文中 “current”、slice 数量及延期调用方仅指当时范围，不代表 Task052 后的纳入状态。当前状态与后续验收以 `milestones/README.md` 和 `milestones/ROADMAP.md` 为准。
-
 ## Task 033 scope
 
 Task 033 is the first deliberate P1 item owner/platform gateway. It landed at API **56** / common **122** / platform **16**. Task 034 left all seven item production sources unchanged; Task 035 admits the shared serialization owner and restores `IInventorySlot` delegation. Task 036 adds only the oracle-identical `IHashedItem` text-dispatch interface (not a concrete implementation), bringing the slices at that landing point to **64/122/17**. Task 033 production scope remains exactly seven sources:

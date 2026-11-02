@@ -1,7 +1,0 @@
-# Task052 review20 — ingredient prerequisite repair reviewed
-
-Parent read entire1b273877..d34dcb15 diff and evidence, after full ingredient review19. Both production ResourceLocation checks now use equals, exact packaged class set includes the actually emitted $BuiltIn class, root test uses correct MapCodec value type, and evidence distinguishes Knot lifecycle from ordinary native test installation. No additional repair loop warranted for this boundary.
-
-The added equal-ID assertion checks lookup value semantics, not the pre-interned-key startup failure itself; do not call it a mutation-killing regression for the former verify condition. This is a limit of the check, not a reason to expand tests again. Child records actual three-owner and selected-test javac PASS and emitted-class/Python syntax checks; no test method executed, full slice still blocked. Parent did not rerun duplicate compilation. Source repair reviewed, not full Task052/runtime/visual acceptance. Last accepted task remains051.
-
-WIPd34dcb15 preserved on pi-agent-aa515511-2983-497 (merge64ffcf0a includes1b273877 and5059aac7), not merged into parent. Next narrowly maps actual robit serializer/datapack ownership as a root prerequisite. No implementation until parent understands real native loading/network and codec initialization boundary; do not drop root module/robit fields to fake compilation. User resumed after reload; continuous work active. User visual-check offer remains pending build/client/placeable-block milestone.

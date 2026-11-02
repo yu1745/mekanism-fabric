@@ -2,8 +2,7 @@
 
 This is the **Fabric** build of Mekanism for Minecraft 1.21.1, ported from the official NeoForge
 `v1.21.1-10.7.19.85`. It remains a development port — see [Limitations](#limitations) — and the release
-server path and the data/save model are exercised by the gates listed in
-[`docs/milestones/README.md`](milestones/README.md).
+server pathand the data/save model are exercised by the gates in `scripts/release-check.sh`.
 
 ## Requirements
 
@@ -65,8 +64,7 @@ A small world authored by the official NeoForge build was loaded by this port an
 
 Four optional client-side viewers are supported and compile-only: JEI, EMI, Jade and WTHIT. Drop the
   matching mod JARs into `mods/` and the integration activates; without them nothing changes. REI, TOP and the
-  CraftTweaker/ProjectE data shipped by upstream are absent by design
-  ([boundary page](milestones/M-integration.md)).
+  CraftTweaker/ProjectE data shipped by upstream are absent by design.
 
 Each one is compiled against but never bundled, so the release JARs stay free of third-party code.
 

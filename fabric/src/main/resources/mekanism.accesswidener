@@ -71,7 +71,7 @@ accessible field net/minecraft/client/sounds/SoundManager soundEngine Lnet/minec
 accessible field net/minecraft/world/level/material/MapColor MATERIAL_COLORS [Lnet/minecraft/world/level/material/MapColor;
 
 # NeoForge exposes several positional/extension hooks and cross-package sound-engine state that vanilla keeps private.
-# Each entry below backs a specific ported caller; see docs/archive/TASK052_RESUME_2026-10-26.md for the mapping.
+# Each entry below backs a specific ported caller.
 accessible field net/minecraft/server/network/ServerGamePacketListenerImpl aboveGroundTickCount I
 accessible method net/minecraft/world/entity/player/Player playStepSound (Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)V
 accessible method net/minecraft/world/level/block/state/BlockBehaviour$BlockStateBase asState ()Lnet/minecraft/world/level/block/state/BlockState;

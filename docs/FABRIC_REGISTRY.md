@@ -1,7 +1,5 @@
 # Fabric registry 最小适配
 
-> 状态核实（2026-10-30 / W-05）：保留分阶段 registry 设计依据；开头的三层 closure 是历史范围，后续 canonical 内容、Robit 与 chemical ingredient owner 已接通。完整注册一致性仍待 ROADMAP W-38 验收。
-
 当前 registry closure 有三个 ownership 层次。既有 `FabricDeferredRegister`/`FabricDeferredHolder`
 为 built-in/custom registry 提供同步 deferred 提交；Task 037 的 `FabricDefaultedRegistry`/
 `FabricCustomRegistryLifecycle` 建立 intrusive + defaulted foundation；Task 040 的

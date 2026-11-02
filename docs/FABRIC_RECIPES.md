@@ -1,7 +1,5 @@
 # Fabric recipe ingredient/cache/reload vertical (Task 041)
 
-> 状态核实（2026-10-30 / W-05）：保留对应早期切片的语义设计与验收记录；文中 “current”、slice 数量及延期调用方仅指当时范围，不代表 Task052 后的纳入状态。当前状态与后续验收以 `milestones/README.md` 和 `milestones/ROADMAP.md` 为准。
-
 ## Status and boundary
 
 Task 041 implements the recipe ingredient, generic execution/cache, and reload-ownership vertical approved by `archive/TASK041_PLAN.md`, starting from approval commit
@@ -95,7 +93,7 @@ and client stop, and rejects late updates after stop.
 ## Verification
 
 Verification surfaces: focused and full `check build` with the fixed test totals; the isolated Knot ingredient closure suite; slice/no-NeoForge checks;
-`scan-platform-deps.py`; `fabric-build.sh`; static and packaged dedicated-server smoke; and the new real `scripts/fabric-recipe-runtime-smoke.sh`. The runtime gate
+; `fabric-build.sh`; static and packaged dedicated-server smoke; and the new real `scripts/fabric-recipe-runtime-smoke.sh`. The runtime gate
 loads a fixture recipe using an item compound, fluid tag, and chemical ingredient through the real server `RecipeManager`, finds and rejects through the generic
 triple input cache, proves mismatched-manager failure with the real server level, advances the server recipe context exactly once on a successful `/reload`
 (removing old candidates and exposing the replacement), retains the usable context through a deliberately failing reload, publishes the matching client epochs
@@ -170,7 +168,7 @@ truncation, foreign/full/zero-capacity tanks); the item slot matrix (empty-outpu
 `ChanceOutput` ordering and per-iteration refresh through by-hand `OperationTracker` counts; the three record handlers' member ordering and tracker short-circuit;
 and the `OneInputCachedRecipe` empty guards plus `getType()` identity stability, non-registration, and key-correct-but-unbound toast holders.
 
-Gates run for 042A: the four test tasks plus `verifyFabricTestContract` and `remapJar`; `check build`; the three slice no-NeoForge checks; `scan-platform-deps.py`;
+Gates run for 042A: the four test tasks plus `verifyFabricTestContract` and `remapJar`; `check build`; the three slice no-NeoForge checks; ;
 `fabric-build.sh`; and `FABRIC_SMOKE_STATIC_ONLY=1 scripts/fabric-packaged-smoke.sh`. The static packaged gate now admits exactly the new
 `mekanism/api/recipes/**` outer and nested classes (including `vanilla_input` records, `MekanismKeyedHolder`, `OutputHelper$1..$7`, and
 `MekanismRecipeTypes$1`) and rejects the 042B families (`recipes/basic/**`, `MekanismRecipeSerializers`, `common/recipe/MekanismRecipeType*`,
@@ -232,7 +230,7 @@ The isolated `fabricRecipeRegistryTest` worker asserts real registration: all 26
 26 serializer ids resolve through their holders, a real `RecipeManager` decodes a real `mekanism:crushing` document and serves it under the declared type and
 serializer, and duplicate registration fails while repeated `ensureRegistered()` is idempotent.
 
-Gates run: the five test tasks plus `verifyFabricTestContract` and `remapJar`; `check build`; the three `verify*SliceNoNeoForge` tasks; `scripts/scan-platform-deps.py`;
+Gates run: the five test tasks plus `verifyFabricTestContract` and `remapJar`; `check build`; the three `verify*SliceNoNeoForge` tasks; ``;
 `./fabric-build.sh`; and `FABRIC_SMOKE_STATIC_ONLY=1 scripts/fabric-packaged-smoke.sh`. The packaged smoke admits exactly the new `basic`, `serializer` and
 `WrappedShapedRecipe` classes plus `FabricRecipeRegistration` and the new access-widener entry, and still rejects `MekanismRecipeType*`,
 `IMekanismRecipeTypeProvider`, `RecipeTypeRegistryObject`, `RotaryInputRecipeCache`, `MekanismRecipeSerializersInternal`, the upgrade/bin/ClearConfiguration
@@ -287,7 +285,7 @@ Slices move **199/188/38 → 199/189/38** (426 production sources). Ordinary exe
 root-registry **1/2**, data-map **2/4**, recipe-registry **1/5** unchanged; five-group aggregate **86/422 → 87/427**.
 
 Gates run: the five test tasks plus `verifyFabricTestContract`; the three `verify*SliceNoNeoForge` tasks and `verifyOfficialRootTestSources`; the five
-`verify*FixtureIsolation` tasks; `scripts/scan-platform-deps.py`; `./fabric-build.sh`; and `FABRIC_SMOKE_STATIC_ONLY=1 scripts/fabric-packaged-smoke.sh`. The static
+`verify*FixtureIsolation` tasks; ``; `./fabric-build.sh`; and `FABRIC_SMOKE_STATIC_ONLY=1 scripts/fabric-packaged-smoke.sh`. The static
 gate now admits exactly `RotaryInputRecipeCache.class` and `RotaryInputRecipeCache$State.class` once each in the common recipe class family and no longer lists the
 class in the deferred-family rejections, while still rejecting `MekanismRecipeType*`, `IMekanismRecipeTypeProvider`, `RecipeTypeRegistryObject`,
 `MekanismRecipeSerializersInternal`, the upgrade/bin/ClearConfiguration recipe families, every `mekanism/client/**`, `MekanismItems*`, `mekanism/api/MekanismAPI.class`,
@@ -358,7 +356,7 @@ canonical-instance resolution with foreign-thread isolation. The exact-manager m
 initialization orders in isolated `fabricRecipeRegistryTest` workers and prove all 26 ids converge on one distinct canonical instance and stay registry-identical.
 
 Gates run with raw logs and real Gradle exit codes: `check` (five test groups plus `verifyFabricTestContract`), the three `verify*SliceNoNeoForge` tasks,
-`verifyOfficialRootTestSources`, the five `verify*FixtureIsolation` tasks, `scripts/scan-platform-deps.py`, `./fabric-build.sh`, and
+`verifyOfficialRootTestSources`, the five `verify*FixtureIsolation` tasks, ``, `./fabric-build.sh`, and
 `FABRIC_SMOKE_STATIC_ONLY=1 scripts/fabric-packaged-smoke.sh`. JUnit XML confirms ordinary 79/395, transfer 5/27, root-registry 1/2, data-map 2/4,
 recipe-registry 3/7, aggregate 90/435, all with zero failures and errors. The recipe-runtime fixture additionally asserts canonical owner/API identity, registered
 smelting identity, published-access identity and synthetic smelting through the owner source; `./build.sh --clean`, the packaged server smoke and

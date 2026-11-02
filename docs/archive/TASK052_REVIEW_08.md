@@ -1,9 +1,0 @@
-# Task052 continuation7 parent review
-
-Preserve WIP **06c13370** on `pi-agent-f2d87fb9-4dc6-4b9`, incorporating **79eb31b0** and all prior WIP. Parent remains on accepted Task051 production plus review/policy documents; Task052 is not accepted.
-
-Parent inspected full continuation7 source diff and correction diff. QE now offers typed nullable fresh `FluidStorage.SIDED.find` on the physical opposite face behind a loaded-neighbor guard. Frequency uses typed BiConsumer collection callbacks without fluid casts, while retaining activeQEs, config, ticking, once-per-gameTime and sender transaction ownership. Energy/chemical behavior was not redesigned. Keep these WIP changes.
-
-Parent caught the removed `Consumer` import while three nested classes still implemented it; correction 06c13370 restores it. Parent also required correction of misleading verification claims. None of the three changed source files is included in the slice compile input, so lack of displayed diagnostics says nothing about their compilation. No classpath-free parse was actually performed. `/tmp/c7-changed.log` ends in BUILD FAILED with capped 100 displayed errors and 11 warnings; capped counts do not establish equality with the prior uncapped 388-error result. Focused command retained only tail output, so its failure stage is unknown and no focused tests passed. Do not duplicate a known failing build just for an excluded import.
-
-Next parent work: understand Transmitter dirty/update and FluidNetwork send lifecycle before authorizing pipe acceptor-cache migration. NetworkAcceptorCache retains returned ACCEPTOR across ticks and merges, so per-pipe fresh lookup alone is insufficient; target rediscovery and retained storage lifetime must both be addressed. Item policy remains unapproved; use existing ITEM_OWNERSHIP_EVIDENCE rather than repeat discovery. No new implementation delegate until the parent has chosen this owner boundary.

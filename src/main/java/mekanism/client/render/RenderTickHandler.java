@@ -76,8 +76,7 @@ import org.joml.Vector4f;
  * Level-render and particle-tick parts of the official NeoForge event hub: the transparent {@link LazyRender} queue
  * (drained after translucent blocks), the end-client-tick gear particles, the wire-frame helpers shared with the tile
  * renderers, and the block-highlight handler including configurator overlays. Other listeners of the official
- * file are handled by their respective lanes — see
- * {@code docs/archive/TASK052_RESUME_2026-10-26.md}.
+ * file are handled by their respective lanes.
  */
 public class RenderTickHandler {
 

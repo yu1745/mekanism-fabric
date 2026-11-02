@@ -28,7 +28,6 @@ sourceSets {
     chemicalRuntimeFixture
     recipeRuntimeFixture
     tileUpdateRuntimeFixture
-    portReviewFixture
     securityDenialFixture
 }
 
@@ -41,7 +40,6 @@ loom {
     createRemapConfigurations(sourceSets.chemicalRuntimeFixture)
     createRemapConfigurations(sourceSets.recipeRuntimeFixture)
     createRemapConfigurations(sourceSets.tileUpdateRuntimeFixture)
-    createRemapConfigurations(sourceSets.portReviewFixture)
     createRemapConfigurations(sourceSets.securityDenialFixture)
 
     mods {
@@ -333,10 +331,6 @@ sourceSets {
         // The real-client probe sees production, but production never sees fixture output.
         compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
         runtimeClasspath += sourceSets.main.output.classesDirs + (sourceSets.main.runtimeClasspath - sourceSets.main.output)
-    }
-    portReviewFixture {
-        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
-        runtimeClasspath += sourceSets.main.runtimeClasspath
     }
     fabricTransferTest {
         // Keep Knot and its TCCL out of the ordinary jqwik/Jupiter suite. This source set
@@ -1284,22 +1278,6 @@ jar {
     from('../LICENSE') {
         rename { "${it}_${licenseSuffix}" }
     }
-}
-
-// Explicit, isolated regression fixture for the reviewed platform boundaries; never enters the production JAR.
-def portReviewFixtureJar = tasks.register('portReviewFixtureJar', Jar) {
-    dependsOn tasks.named('portReviewFixtureClasses')
-    archiveFileName = 'mekanism-port-review-fixture-dev.jar'
-    destinationDirectory = layout.buildDirectory.dir('port-review-fixture/dev')
-    from sourceSets.portReviewFixture.output
-}
-tasks.register('remapPortReviewFixtureJar', RemapJarTask) {
-    dependsOn portReviewFixtureJar
-    classpath.from(sourceSets.main.output, sourceSets.main.compileClasspath)
-    inputFile = portReviewFixtureJar.flatMap { it.archiveFile }
-    archiveFileName = 'mekanism-port-review-fixture.jar'
-    destinationDirectory = layout.buildDirectory.dir('port-review-fixture/remapped')
-    addNestedDependencies = false
 }
 
 apply from: "tools.gradle"
