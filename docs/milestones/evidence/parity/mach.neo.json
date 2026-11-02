@@ -1,0 +1,2885 @@
+{
+ "module": "all",
+ "results": [
+  {
+   "block": "mekanism:crusher",
+   "id": "crusher_iron_ore",
+   "nbt_after": {
+    "active_state": 0,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 20000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 20000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "origin": [
+    20,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:crusher",
+   "id": "crusher_cobblestone",
+   "nbt_after": {
+    "active_state": 1,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 9950
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 3,
+       "id": "minecraft:cobblestone"
+      },
+      "slot": 0
+     },
+     {
+      "item": {
+       "count": 1,
+       "id": "minecraft:gravel"
+      },
+      "slot": 1
+     }
+    ],
+    "progress": 1,
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 20000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:cobblestone"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "origin": [
+    28,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:enrichment_chamber",
+   "id": "enrichment_iron_ore",
+   "nbt_after": {
+    "active_state": 1,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 9950
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 3,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     },
+     {
+      "item": {
+       "count": 2,
+       "id": "mekanism:dust_iron"
+      },
+      "slot": 1
+     }
+    ],
+    "progress": 1,
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 20000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "origin": [
+    36,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:enrichment_chamber",
+   "id": "enrichment_redstone",
+   "nbt_after": {
+    "active_state": 1,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 9950
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 1,
+       "id": "minecraft:redstone_ore"
+      },
+      "slot": 0
+     },
+     {
+      "item": {
+       "count": 12,
+       "id": "minecraft:redstone"
+      },
+      "slot": 1
+     }
+    ],
+    "progress": 1,
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 20000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 2,
+       "id": "minecraft:redstone_ore"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "origin": [
+    44,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:energized_smelter",
+   "id": "smelter_iron_ore",
+   "nbt_after": {
+    "active_state": 1,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 9950
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 3,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     },
+     {
+      "item": {
+       "count": 1,
+       "id": "minecraft:iron_ingot"
+      },
+      "slot": 1
+     }
+    ],
+    "progress": 1,
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 20000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "origin": [
+    52,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:energized_smelter",
+   "id": "smelter_sand",
+   "nbt_after": {
+    "active_state": 1,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 9950
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 3,
+       "id": "minecraft:sand"
+      },
+      "slot": 0
+     },
+     {
+      "item": {
+       "count": 1,
+       "id": "minecraft:glass"
+      },
+      "slot": 1
+     }
+    ],
+    "progress": 1,
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 20000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:sand"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "origin": [
+    60,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:precision_sawmill",
+   "id": "sawmill_oak_log",
+   "nbt_after": {
+    "active_state": 1,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 9950
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 3,
+       "id": "minecraft:oak_log"
+      },
+      "slot": 0
+     },
+     {
+      "item": {
+       "count": 6,
+       "id": "minecraft:oak_planks"
+      },
+      "slot": 1
+     }
+    ],
+    "progress": 1,
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 20000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:oak_log"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "origin": [
+    68,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:precision_sawmill",
+   "id": "sawmill_oak_planks",
+   "nbt_after": {
+    "active_state": 1,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 9950
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 3,
+       "id": "minecraft:oak_planks"
+      },
+      "slot": 0
+     },
+     {
+      "item": {
+       "count": 6,
+       "id": "minecraft:stick"
+      },
+      "slot": 1
+     },
+     {
+      "item": {
+       "count": 1,
+       "id": "mekanism:sawdust"
+      },
+      "slot": 2
+     }
+    ],
+    "progress": 1,
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 20000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:oak_planks"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "origin": [
+    76,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:combiner",
+   "id": "combiner_cobble_redstone",
+   "nbt_after": {
+    "active_state": 0,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 40000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 8,
+       "id": "minecraft:redstone"
+      },
+      "slot": 0
+     },
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:cobblestone"
+      },
+      "slot": 1
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 40000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 8,
+       "id": "minecraft:redstone"
+      },
+      "slot": 0
+     },
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:cobblestone"
+      },
+      "slot": 1
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "origin": [
+    84,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:osmium_compressor",
+   "id": "compressor_osmium",
+   "nbt_after": {
+    "active_state": 0,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 80000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "mekanism:dust_osmium"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0,
+    "used_so_far": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 80000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "mekanism:dust_osmium"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0,
+    "used_so_far": 0
+   },
+   "origin": [
+    92,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:basic_smelting_factory",
+   "id": "basic_smelting_factory",
+   "nbt_after": {
+    "active_state": 1,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 19950
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 15,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 4
+     },
+     {
+      "item": {
+       "count": 1,
+       "id": "minecraft:iron_ingot"
+      },
+      "slot": 5
+     }
+    ],
+    "progress": [
+     0,
+     0,
+     1
+    ],
+    "redstone": 0,
+    "sorting": 0,
+    "update_delay": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 30000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 16,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 4
+     }
+    ],
+    "progress": [
+     0,
+     0,
+     0
+    ],
+    "redstone": 0,
+    "sorting": 0,
+    "update_delay": 0
+   },
+   "origin": [
+    100,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:advanced_smelting_factory",
+   "id": "advanced_smelting_factory",
+   "nbt_after": {
+    "active_state": 1,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 39950
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 15,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 4
+     },
+     {
+      "item": {
+       "count": 1,
+       "id": "minecraft:iron_ingot"
+      },
+      "slot": 5
+     }
+    ],
+    "progress": [
+     0,
+     0,
+     1,
+     0,
+     0
+    ],
+    "redstone": 0,
+    "sorting": 0,
+    "update_delay": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 50000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 16,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 4
+     }
+    ],
+    "progress": [
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "redstone": 0,
+    "sorting": 0,
+    "update_delay": 0
+   },
+   "origin": [
+    108,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:elite_smelting_factory",
+   "id": "elite_smelting_factory",
+   "nbt_after": {
+    "active_state": 1,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 59950
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 15,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 4
+     },
+     {
+      "item": {
+       "count": 1,
+       "id": "minecraft:iron_ingot"
+      },
+      "slot": 5
+     }
+    ],
+    "progress": [
+     0,
+     0,
+     1,
+     0,
+     0,
+     0,
+     0
+    ],
+    "redstone": 0,
+    "sorting": 0,
+    "update_delay": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 70000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 16,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 4
+     }
+    ],
+    "progress": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "redstone": 0,
+    "sorting": 0,
+    "update_delay": 0
+   },
+   "origin": [
+    116,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:ultimate_smelting_factory",
+   "id": "ultimate_smelting_factory",
+   "nbt_after": {
+    "active_state": 1,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 79950
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 15,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 4
+     },
+     {
+      "item": {
+       "count": 1,
+       "id": "minecraft:iron_ingot"
+      },
+      "slot": 5
+     }
+    ],
+    "progress": [
+     0,
+     0,
+     1,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "redstone": 0,
+    "sorting": 0,
+    "update_delay": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 90000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 16,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 4
+     }
+    ],
+    "progress": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "redstone": 0,
+    "sorting": 0,
+    "update_delay": 0
+   },
+   "origin": [
+    124,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:basic_crushing_factory",
+   "id": "basic_crushing_factory",
+   "nbt_after": {
+    "active_state": 1,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 19950
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 15,
+       "id": "minecraft:cobblestone"
+      },
+      "slot": 4
+     },
+     {
+      "item": {
+       "count": 1,
+       "id": "minecraft:gravel"
+      },
+      "slot": 5
+     }
+    ],
+    "progress": [
+     0,
+     0,
+     1
+    ],
+    "redstone": 0,
+    "sorting": 0,
+    "update_delay": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 30000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 16,
+       "id": "minecraft:cobblestone"
+      },
+      "slot": 4
+     }
+    ],
+    "progress": [
+     0,
+     0,
+     0
+    ],
+    "redstone": 0,
+    "sorting": 0,
+    "update_delay": 0
+   },
+   "origin": [
+    132,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:basic_enriching_factory",
+   "id": "basic_enriching_factory",
+   "nbt_after": {
+    "active_state": 1,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 19950
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 15,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 4
+     },
+     {
+      "item": {
+       "count": 2,
+       "id": "mekanism:dust_iron"
+      },
+      "slot": 5
+     }
+    ],
+    "progress": [
+     0,
+     0,
+     1
+    ],
+    "redstone": 0,
+    "sorting": 0,
+    "update_delay": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 30000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 16,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 4
+     }
+    ],
+    "progress": [
+     0,
+     0,
+     0
+    ],
+    "redstone": 0,
+    "sorting": 0,
+    "update_delay": 0
+   },
+   "origin": [
+    140,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:advanced_crushing_factory",
+   "id": "advanced_crushing_factory",
+   "nbt_after": {
+    "active_state": 1,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 39950
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 15,
+       "id": "minecraft:cobblestone"
+      },
+      "slot": 4
+     },
+     {
+      "item": {
+       "count": 1,
+       "id": "minecraft:gravel"
+      },
+      "slot": 5
+     }
+    ],
+    "progress": [
+     0,
+     0,
+     1,
+     0,
+     0
+    ],
+    "redstone": 0,
+    "sorting": 0,
+    "update_delay": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 50000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 16,
+       "id": "minecraft:cobblestone"
+      },
+      "slot": 4
+     }
+    ],
+    "progress": [
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "redstone": 0,
+    "sorting": 0,
+    "update_delay": 0
+   },
+   "origin": [
+    148,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:advanced_enriching_factory",
+   "id": "advanced_enriching_factory",
+   "nbt_after": {
+    "active_state": 1,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 39950
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 15,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 4
+     },
+     {
+      "item": {
+       "count": 2,
+       "id": "mekanism:dust_iron"
+      },
+      "slot": 5
+     }
+    ],
+    "progress": [
+     0,
+     0,
+     1,
+     0,
+     0
+    ],
+    "redstone": 0,
+    "sorting": 0,
+    "update_delay": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 50000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 16,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 4
+     }
+    ],
+    "progress": [
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "redstone": 0,
+    "sorting": 0,
+    "update_delay": 0
+   },
+   "origin": [
+    156,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:elite_crushing_factory",
+   "id": "elite_crushing_factory",
+   "nbt_after": {
+    "active_state": 1,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 59950
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 15,
+       "id": "minecraft:cobblestone"
+      },
+      "slot": 4
+     },
+     {
+      "item": {
+       "count": 1,
+       "id": "minecraft:gravel"
+      },
+      "slot": 5
+     }
+    ],
+    "progress": [
+     0,
+     0,
+     1,
+     0,
+     0,
+     0,
+     0
+    ],
+    "redstone": 0,
+    "sorting": 0,
+    "update_delay": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 70000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 16,
+       "id": "minecraft:cobblestone"
+      },
+      "slot": 4
+     }
+    ],
+    "progress": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "redstone": 0,
+    "sorting": 0,
+    "update_delay": 0
+   },
+   "origin": [
+    164,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:elite_enriching_factory",
+   "id": "elite_enriching_factory",
+   "nbt_after": {
+    "active_state": 1,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 59950
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 15,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 4
+     },
+     {
+      "item": {
+       "count": 2,
+       "id": "mekanism:dust_iron"
+      },
+      "slot": 5
+     }
+    ],
+    "progress": [
+     0,
+     0,
+     1,
+     0,
+     0,
+     0,
+     0
+    ],
+    "redstone": 0,
+    "sorting": 0,
+    "update_delay": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 70000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 16,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 4
+     }
+    ],
+    "progress": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "redstone": 0,
+    "sorting": 0,
+    "update_delay": 0
+   },
+   "origin": [
+    172,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:ultimate_crushing_factory",
+   "id": "ultimate_crushing_factory",
+   "nbt_after": {
+    "active_state": 1,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 79950
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 15,
+       "id": "minecraft:cobblestone"
+      },
+      "slot": 4
+     },
+     {
+      "item": {
+       "count": 1,
+       "id": "minecraft:gravel"
+      },
+      "slot": 5
+     }
+    ],
+    "progress": [
+     0,
+     0,
+     1,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "redstone": 0,
+    "sorting": 0,
+    "update_delay": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 90000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 16,
+       "id": "minecraft:cobblestone"
+      },
+      "slot": 4
+     }
+    ],
+    "progress": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "redstone": 0,
+    "sorting": 0,
+    "update_delay": 0
+   },
+   "origin": [
+    180,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:ultimate_enriching_factory",
+   "id": "ultimate_enriching_factory",
+   "nbt_after": {
+    "active_state": 1,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 79950
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 15,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 4
+     },
+     {
+      "item": {
+       "count": 2,
+       "id": "mekanism:dust_iron"
+      },
+      "slot": 5
+     }
+    ],
+    "progress": [
+     0,
+     0,
+     1,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "redstone": 0,
+    "sorting": 0,
+    "update_delay": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 90000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 16,
+       "id": "minecraft:iron_ore"
+      },
+      "slot": 4
+     }
+    ],
+    "progress": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "redstone": 0,
+    "sorting": 0,
+    "update_delay": 0
+   },
+   "origin": [
+    188,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:electric_pump",
+   "id": "electric_pump_water",
+   "nbt_after": {
+    "active_state": 0,
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 40000
+     }
+    ],
+    "progress": 11,
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 40000
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "origin": [
+    196,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:fuelwood_heater",
+   "id": "fuelwood_heater",
+   "nbt_after": {
+    "active_state": 1,
+    "burn_time": 599,
+    "heat_capacitors": [
+     {
+      "container": 0,
+      "heat_capacity": 100.0,
+      "stored": 105769.10044210902
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 3,
+       "id": "minecraft:coal"
+      },
+      "slot": 0
+     }
+    ],
+    "max_burn_time": 800,
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "burn_time": 0,
+    "heat_capacitors": [
+     {
+      "container": 0,
+      "heat_capacity": 100.0,
+      "stored": 30000.000029802322
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:coal"
+      },
+      "slot": 0
+     }
+    ],
+    "max_burn_time": 0,
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "origin": [
+    204,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:resistive_heater",
+   "id": "resistive_heater",
+   "nbt_after": {
+    "active_state": 1,
+    "control_type": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "energy_usage": 100,
+      "stored": 19900
+     }
+    ],
+    "heat_capacitors": [
+     {
+      "container": 0,
+      "heat_capacity": 100.0,
+      "stored": 41365.365091648324
+     }
+    ],
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "control_type": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "energy_usage": 100,
+      "stored": 40000
+     }
+    ],
+    "heat_capacitors": [
+     {
+      "container": 0,
+      "heat_capacity": 100.0,
+      "stored": 30000.000029802322
+     }
+    ],
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "origin": [
+    212,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:laser_amplifier",
+   "id": "laser_amplifier",
+   "nbt_after": {
+    "control_type": 0,
+    "current_redstone": 0,
+    "last_fired": 1000000,
+    "max": 5000000000,
+    "min": 0,
+    "output_mode": 0,
+    "redstone": 0,
+    "time": 0
+   },
+   "nbt_before": {
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 1000000
+     }
+    ],
+    "last_fired": 0,
+    "max": 5000000000,
+    "min": 0,
+    "output_mode": 0,
+    "redstone": 0,
+    "time": 0
+   },
+   "origin": [
+    220,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:basic_energy_cube",
+   "id": "energy_cube_basic_idle",
+   "nbt_after": {
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 4,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 1000000
+     }
+    ],
+    "redstone": 0
+   },
+   "nbt_before": {
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 1000000
+     }
+    ],
+    "redstone": 0
+   },
+   "origin": [
+    228,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:chargepad",
+   "id": "chargepad",
+   "nbt_after": {
+    "active_state": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 100000
+     }
+    ],
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 100000
+     }
+    ],
+    "redstone": 0,
+    "update_delay": 0
+   },
+   "origin": [
+    236,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  },
+  {
+   "block": "mekanism:metallurgic_infuser",
+   "id": "metallurgic_infuser_redstone",
+   "nbt_after": {
+    "active_state": 0,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 1,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 20000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:iron_ingot"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0,
+    "used_so_far": 0
+   },
+   "nbt_before": {
+    "active_state": 0,
+    "component_config": {
+     "config0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "config3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "eject0": 0,
+     "eject2": 0,
+     "eject3": 0
+    },
+    "control_type": 0,
+    "current_redstone": 0,
+    "energy_containers": [
+     {
+      "container": 0,
+      "stored": 20000
+     }
+    ],
+    "items": [
+     {
+      "item": {
+       "count": 4,
+       "id": "minecraft:iron_ingot"
+      },
+      "slot": 0
+     }
+    ],
+    "progress": 0,
+    "redstone": 0,
+    "update_delay": 0,
+    "used_so_far": 0
+   },
+   "origin": [
+    244,
+    -58,
+    20
+   ],
+   "ran_ticks": 201
+  }
+ ],
+ "side": "neo",
+ "table": "machines.json"
+}

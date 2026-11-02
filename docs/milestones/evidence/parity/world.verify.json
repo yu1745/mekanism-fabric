@@ -1,0 +1,771 @@
+{
+ "mekanism:advanced_crushing_factory": [
+  {
+   "what": "state",
+   "saved": {
+    "name": "mekanism:advanced_crushing_factory",
+    "props": {
+     "active": "true",
+     "facing": "north",
+     "fluid_logged": "empty"
+    }
+   },
+   "loaded": {
+    "name": "mekanism:advanced_crushing_factory",
+    "props": {
+     "active": "false",
+     "facing": "north",
+     "fluid_logged": "empty"
+    }
+   }
+  },
+  {
+   "what": "nbt",
+   "path": "active_state",
+   "saved": 1,
+   "loaded": 0
+  },
+  {
+   "what": "nbt",
+   "path": "energy_containers[0].container",
+   "saved": 0,
+   "loaded": null
+  },
+  {
+   "what": "nbt",
+   "path": "energy_containers[0].stored",
+   "saved": 1850,
+   "loaded": null
+  },
+  {
+   "what": "nbt",
+   "path": "progress[0]",
+   "saved": 63,
+   "loaded": 100
+  }
+ ],
+ "mekanism:advanced_fluid_tank": [
+  {
+   "what": "state",
+   "saved": {
+    "name": "mekanism:advanced_fluid_tank",
+    "props": {
+     "active": "false",
+     "fluid_logged": "empty"
+    }
+   },
+   "loaded": {
+    "name": "mekanism:advanced_fluid_tank",
+    "props": {
+     "active": "false",
+     "fluid_light": "0",
+     "fluid_logged": "empty"
+    }
+   }
+  }
+ ],
+ "mekanism:advanced_smelting_factory": [
+  {
+   "what": "state",
+   "saved": {
+    "name": "mekanism:advanced_smelting_factory",
+    "props": {
+     "active": "true",
+     "facing": "north",
+     "fluid_logged": "empty"
+    }
+   },
+   "loaded": {
+    "name": "mekanism:advanced_smelting_factory",
+    "props": {
+     "active": "false",
+     "facing": "north",
+     "fluid_logged": "empty"
+    }
+   }
+  },
+  {
+   "what": "nbt",
+   "path": "active_state",
+   "saved": 1,
+   "loaded": 0
+  },
+  {
+   "what": "nbt",
+   "path": "energy_containers[0].container",
+   "saved": 0,
+   "loaded": null
+  },
+  {
+   "what": "nbt",
+   "path": "energy_containers[0].stored",
+   "saved": 1850,
+   "loaded": null
+  },
+  {
+   "what": "nbt",
+   "path": "progress[0]",
+   "saved": 63,
+   "loaded": 100
+  }
+ ],
+ "mekanism:basic_crushing_factory": [
+  {
+   "what": "state",
+   "saved": {
+    "name": "mekanism:basic_crushing_factory",
+    "props": {
+     "active": "true",
+     "facing": "north",
+     "fluid_logged": "empty"
+    }
+   },
+   "loaded": {
+    "name": "mekanism:basic_crushing_factory",
+    "props": {
+     "active": "false",
+     "facing": "north",
+     "fluid_logged": "empty"
+    }
+   }
+  },
+  {
+   "what": "nbt",
+   "path": "active_state",
+   "saved": 1,
+   "loaded": 0
+  },
+  {
+   "what": "nbt",
+   "path": "energy_containers[0].container",
+   "saved": 0,
+   "loaded": null
+  },
+  {
+   "what": "nbt",
+   "path": "energy_containers[0].stored",
+   "saved": 1900,
+   "loaded": null
+  },
+  {
+   "what": "nbt",
+   "path": "progress[0]",
+   "saved": 62,
+   "loaded": 100
+  }
+ ],
+ "mekanism:basic_fluid_tank": [
+  {
+   "what": "state",
+   "saved": {
+    "name": "mekanism:basic_fluid_tank",
+    "props": {
+     "active": "false",
+     "fluid_logged": "empty"
+    }
+   },
+   "loaded": {
+    "name": "mekanism:basic_fluid_tank",
+    "props": {
+     "active": "false",
+     "fluid_light": "0",
+     "fluid_logged": "empty"
+    }
+   }
+  }
+ ],
+ "mekanism:basic_smelting_factory": [
+  {
+   "what": "state",
+   "saved": {
+    "name": "mekanism:basic_smelting_factory",
+    "props": {
+     "active": "true",
+     "facing": "north",
+     "fluid_logged": "empty"
+    }
+   },
+   "loaded": {
+    "name": "mekanism:basic_smelting_factory",
+    "props": {
+     "active": "false",
+     "facing": "north",
+     "fluid_logged": "empty"
+    }
+   }
+  },
+  {
+   "what": "nbt",
+   "path": "active_state",
+   "saved": 1,
+   "loaded": 0
+  },
+  {
+   "what": "nbt",
+   "path": "energy_containers[0].container",
+   "saved": 0,
+   "loaded": null
+  },
+  {
+   "what": "nbt",
+   "path": "energy_containers[0].stored",
+   "saved": 1900,
+   "loaded": null
+  },
+  {
+   "what": "nbt",
+   "path": "progress[0]",
+   "saved": 62,
+   "loaded": 100
+  }
+ ],
+ "mekanism:creative_fluid_tank": [
+  {
+   "what": "state",
+   "saved": {
+    "name": "mekanism:creative_fluid_tank",
+    "props": {
+     "active": "false",
+     "fluid_logged": "empty"
+    }
+   },
+   "loaded": {
+    "name": "mekanism:creative_fluid_tank",
+    "props": {
+     "active": "false",
+     "fluid_light": "0",
+     "fluid_logged": "empty"
+    }
+   }
+  }
+ ],
+ "mekanism:crusher": [
+  {
+   "what": "state",
+   "saved": {
+    "name": "mekanism:crusher",
+    "props": {
+     "active": "true",
+     "facing": "north"
+    }
+   },
+   "loaded": {
+    "name": "mekanism:crusher",
+    "props": {
+     "active": "false",
+     "facing": "north"
+    }
+   }
+  },
+  {
+   "what": "nbt",
+   "path": "active_state",
+   "saved": 1,
+   "loaded": 0
+  },
+  {
+   "what": "nbt",
+   "path": "energy_containers[0].container",
+   "saved": 0,
+   "loaded": null
+  },
+  {
+   "what": "nbt",
+   "path": "energy_containers[0].stored",
+   "saved": 1900,
+   "loaded": null
+  },
+  {
+   "what": "nbt",
+   "path": "progress",
+   "saved": 62,
+   "loaded": 100
+  }
+ ],
+ "mekanism:electric_pump": [
+  {
+   "what": "nbt",
+   "path": "progress",
+   "saved": 5,
+   "loaded": 4
+  }
+ ],
+ "mekanism:electrolytic_separator": [
+  {
+   "what": "nbt",
+   "path": "update_delay",
+   "saved": 11,
+   "loaded": 0
+  }
+ ],
+ "mekanism:elite_crushing_factory": [
+  {
+   "what": "state",
+   "saved": {
+    "name": "mekanism:elite_crushing_factory",
+    "props": {
+     "active": "true",
+     "facing": "north",
+     "fluid_logged": "empty"
+    }
+   },
+   "loaded": {
+    "name": "mekanism:elite_crushing_factory",
+    "props": {
+     "active": "false",
+     "facing": "north",
+     "fluid_logged": "empty"
+    }
+   }
+  },
+  {
+   "what": "nbt",
+   "path": "active_state",
+   "saved": 1,
+   "loaded": 0
+  },
+  {
+   "what": "nbt",
+   "path": "energy_containers[0].container",
+   "saved": 0,
+   "loaded": null
+  },
+  {
+   "what": "nbt",
+   "path": "energy_containers[0].stored",
+   "saved": 1900,
+   "loaded": null
+  },
+  {
+   "what": "nbt",
+   "path": "progress[0]",
+   "saved": 62,
+   "loaded": 100
+  }
+ ],
+ "mekanism:elite_fluid_tank": [
+  {
+   "what": "state",
+   "saved": {
+    "name": "mekanism:elite_fluid_tank",
+    "props": {
+     "active": "false",
+     "fluid_logged": "empty"
+    }
+   },
+   "loaded": {
+    "name": "mekanism:elite_fluid_tank",
+    "props": {
+     "active": "false",
+     "fluid_light": "0",
+     "fluid_logged": "empty"
+    }
+   }
+  }
+ ],
+ "mekanism:elite_smelting_factory": [
+  {
+   "what": "state",
+   "saved": {
+    "name": "mekanism:elite_smelting_factory",
+    "props": {
+     "active": "true",
+     "facing": "north",
+     "fluid_logged": "empty"
+    }
+   },
+   "loaded": {
+    "name": "mekanism:elite_smelting_factory",
+    "props": {
+     "active": "false",
+     "facing": "north",
+     "fluid_logged": "empty"
+    }
+   }
+  },
+  {
+   "what": "nbt",
+   "path": "active_state",
+   "saved": 1,
+   "loaded": 0
+  },
+  {
+   "what": "nbt",
+   "path": "energy_containers[0].container",
+   "saved": 0,
+   "loaded": null
+  },
+  {
+   "what": "nbt",
+   "path": "energy_containers[0].stored",
+   "saved": 1850,
+   "loaded": null
+  },
+  {
+   "what": "nbt",
+   "path": "progress[0]",
+   "saved": 63,
+   "loaded": 100
+  }
+ ],
+ "mekanism:energized_smelter": [
+  {
+   "what": "state",
+   "saved": {
+    "name": "mekanism:energized_smelter",
+    "props": {
+     "active": "true",
+     "facing": "north"
+    }
+   },
+   "loaded": {
+    "name": "mekanism:energized_smelter",
+    "props": {
+     "active": "false",
+     "facing": "north"
+    }
+   }
+  },
+  {
+   "what": "nbt",
+   "path": "active_state",
+   "saved": 1,
+   "loaded": 0
+  },
+  {
+   "what": "nbt",
+   "path": "energy_containers[0].container",
+   "saved": 0,
+   "loaded": null
+  },
+  {
+   "what": "nbt",
+   "path": "energy_containers[0].stored",
+   "saved": 1850,
+   "loaded": null
+  },
+  {
+   "what": "nbt",
+   "path": "progress",
+   "saved": 63,
+   "loaded": 100
+  }
+ ],
+ "mekanism:radioactive_waste_barrel": [
+  {
+   "what": "nbt",
+   "path": "chemical_tanks[0].stored.amount",
+   "saved": 997,
+   "loaded": 989
+  }
+ ],
+ "mekanism:resistive_heater": [
+  {
+   "what": "nbt",
+   "path": "heat_capacitors[0].stored",
+   "saved": 32935.20102006952,
+   "loaded": 32642.966045416706
+  },
+  {
+   "what": "nbt",
+   "path": "update_delay",
+   "saved": 49,
+   "loaded": 0
+  }
+ ],
+ "mekanism:seismic_vibrator": [
+  {
+   "what": "state",
+   "saved": {
+    "name": "mekanism:seismic_vibrator",
+    "props": {
+     "active": "true",
+     "facing": "north",
+     "fluid_logged": "empty"
+    }
+   },
+   "loaded": {
+    "name": "mekanism:seismic_vibrator",
+    "props": {
+     "active": "false",
+     "facing": "north",
+     "fluid_logged": "empty"
+    }
+   }
+  },
+  {
+   "what": "nbt",
+   "path": "active_state",
+   "saved": 1,
+   "loaded": 0
+  },
+  {
+   "what": "nbt",
+   "path": "energy_containers[0].container",
+   "saved": 0,
+   "loaded": null
+  },
+  {
+   "what": "nbt",
+   "path": "energy_containers[0].stored",
+   "saved": 1900,
+   "loaded": null
+  }
+ ],
+ "mekanism:ultimate_crushing_factory": [
+  {
+   "what": "state",
+   "saved": {
+    "name": "mekanism:ultimate_crushing_factory",
+    "props": {
+     "active": "true",
+     "facing": "north",
+     "fluid_logged": "empty"
+    }
+   },
+   "loaded": {
+    "name": "mekanism:ultimate_crushing_factory",
+    "props": {
+     "active": "false",
+     "facing": "north",
+     "fluid_logged": "empty"
+    }
+   }
+  },
+  {
+   "what": "nbt",
+   "path": "active_state",
+   "saved": 1,
+   "loaded": 0
+  },
+  {
+   "what": "nbt",
+   "path": "energy_containers[0].container",
+   "saved": 0,
+   "loaded": null
+  },
+  {
+   "what": "nbt",
+   "path": "energy_containers[0].stored",
+   "saved": 1900,
+   "loaded": null
+  },
+  {
+   "what": "nbt",
+   "path": "progress[0]",
+   "saved": 62,
+   "loaded": 100
+  }
+ ],
+ "mekanism:ultimate_fluid_tank": [
+  {
+   "what": "state",
+   "saved": {
+    "name": "mekanism:ultimate_fluid_tank",
+    "props": {
+     "active": "false",
+     "fluid_logged": "empty"
+    }
+   },
+   "loaded": {
+    "name": "mekanism:ultimate_fluid_tank",
+    "props": {
+     "active": "false",
+     "fluid_light": "0",
+     "fluid_logged": "empty"
+    }
+   }
+  }
+ ],
+ "mekanism:ultimate_smelting_factory": [
+  {
+   "what": "state",
+   "saved": {
+    "name": "mekanism:ultimate_smelting_factory",
+    "props": {
+     "active": "true",
+     "facing": "north",
+     "fluid_logged": "empty"
+    }
+   },
+   "loaded": {
+    "name": "mekanism:ultimate_smelting_factory",
+    "props": {
+     "active": "false",
+     "facing": "north",
+     "fluid_logged": "empty"
+    }
+   }
+  },
+  {
+   "what": "nbt",
+   "path": "active_state",
+   "saved": 1,
+   "loaded": 0
+  },
+  {
+   "what": "nbt",
+   "path": "energy_containers[0].container",
+   "saved": 0,
+   "loaded": null
+  },
+  {
+   "what": "nbt",
+   "path": "energy_containers[0].stored",
+   "saved": 1900,
+   "loaded": null
+  },
+  {
+   "what": "nbt",
+   "path": "progress[0]",
+   "saved": 62,
+   "loaded": 100
+  }
+ ],
+ "mekanismgenerators:advanced_solar_generator": [
+  {
+   "what": "nbt",
+   "path": "energy_containers[0].stored",
+   "saved": 21368,
+   "loaded": 67568
+  }
+ ],
+ "mekanismgenerators:bio_generator": [
+  {
+   "what": "nbt",
+   "path": "energy_containers[0].stored",
+   "saved": 26700,
+   "loaded": 87950
+  },
+  {
+   "what": "nbt",
+   "path": "fluid_tanks[0].stored.amount",
+   "saved": 938,
+   "loaded": 763
+  }
+ ],
+ "mekanismgenerators:gas_burning_generator": [
+  {
+   "what": "state",
+   "saved": {
+    "name": "mekanismgenerators:gas_burning_generator",
+    "props": {
+     "active": "true",
+     "facing": "north",
+     "fluid_logged": "empty"
+    }
+   },
+   "loaded": {
+    "name": "mekanismgenerators:gas_burning_generator",
+    "props": {
+     "active": "false",
+     "facing": "north",
+     "fluid_logged": "empty"
+    }
+   }
+  },
+  {
+   "what": "nbt",
+   "path": "active_state",
+   "saved": 1,
+   "loaded": 0
+  },
+  {
+   "what": "nbt",
+   "path": "chemical_tanks[0].stored.amount",
+   "saved": 391,
+   "loaded": 25
+  },
+  {
+   "what": "nbt",
+   "path": "energy_containers[0].stored",
+   "saved": 126800,
+   "loaded": 200000
+  },
+  {
+   "what": "nbt",
+   "path": "update_delay",
+   "saved": 0,
+   "loaded": 27
+  }
+ ],
+ "mekanismgenerators:heat_generator": [
+  {
+   "what": "state",
+   "saved": {
+    "name": "mekanismgenerators:heat_generator",
+    "props": {
+     "active": "true",
+     "facing": "north",
+     "fluid_logged": "empty"
+    }
+   },
+   "loaded": {
+    "name": "mekanismgenerators:heat_generator",
+    "props": {
+     "active": "false",
+     "facing": "north",
+     "fluid_logged": "empty"
+    }
+   }
+  },
+  {
+   "what": "nbt",
+   "path": "active_state",
+   "saved": 1,
+   "loaded": 0
+  },
+  {
+   "what": "nbt",
+   "path": "current_redstone",
+   "saved": 1,
+   "loaded": 0
+  },
+  {
+   "what": "nbt",
+   "path": "energy_containers[0].stored",
+   "saved": 9251,
+   "loaded": 14781
+  },
+  {
+   "what": "nbt",
+   "path": "fluid_tanks[0].stored.amount",
+   "saved": 380,
+   "loaded": null
+  },
+  {
+   "what": "nbt",
+   "path": "fluid_tanks[0].stored.id",
+   "saved": "minecraft:water",
+   "loaded": null
+  },
+  {
+   "what": "nbt",
+   "path": "fluid_tanks[0].tank",
+   "saved": 0,
+   "loaded": null
+  },
+  {
+   "what": "nbt",
+   "path": "heat_capacitors[0].stored",
+   "saved": 6794.881323907097,
+   "loaded": 3003.201664921934
+  }
+ ],
+ "mekanismgenerators:solar_generator": [
+  {
+   "what": "nbt",
+   "path": "energy_containers[0].stored",
+   "saved": 7728,
+   "loaded": 15428
+  }
+ ],
+ "mekanismgenerators:wind_generator": [
+  {
+   "what": "nbt",
+   "path": "energy_containers[0].stored",
+   "saved": 8720,
+   "loaded": 19220
+  }
+ ]
+}

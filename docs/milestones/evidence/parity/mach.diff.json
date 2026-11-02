@@ -1,0 +1,163 @@
+[
+ {
+  "id": "crusher_iron_ore",
+  "status": "match",
+  "diffs": []
+ },
+ {
+  "id": "crusher_cobblestone",
+  "status": "match",
+  "diffs": []
+ },
+ {
+  "id": "enrichment_iron_ore",
+  "status": "match",
+  "diffs": []
+ },
+ {
+  "id": "enrichment_redstone",
+  "status": "match",
+  "diffs": []
+ },
+ {
+  "id": "smelter_iron_ore",
+  "status": "match",
+  "diffs": []
+ },
+ {
+  "id": "smelter_sand",
+  "status": "match",
+  "diffs": []
+ },
+ {
+  "id": "sawmill_oak_log",
+  "status": "match",
+  "diffs": []
+ },
+ {
+  "id": "sawmill_oak_planks",
+  "status": "diff",
+  "diffs": [
+   {
+    "path": "items[2].item.count",
+    "oracle": 1,
+    "candidate": null
+   },
+   {
+    "path": "items[2].item.id",
+    "oracle": "mekanism:sawdust",
+    "candidate": null
+   },
+   {
+    "path": "items[2].slot",
+    "oracle": 2,
+    "candidate": null
+   }
+  ]
+ },
+ {
+  "id": "combiner_cobble_redstone",
+  "status": "match",
+  "diffs": []
+ },
+ {
+  "id": "compressor_osmium",
+  "status": "match",
+  "diffs": []
+ },
+ {
+  "id": "basic_smelting_factory",
+  "status": "match",
+  "diffs": []
+ },
+ {
+  "id": "advanced_smelting_factory",
+  "status": "match",
+  "diffs": []
+ },
+ {
+  "id": "elite_smelting_factory",
+  "status": "match",
+  "diffs": []
+ },
+ {
+  "id": "ultimate_smelting_factory",
+  "status": "match",
+  "diffs": []
+ },
+ {
+  "id": "basic_crushing_factory",
+  "status": "match",
+  "diffs": []
+ },
+ {
+  "id": "basic_enriching_factory",
+  "status": "match",
+  "diffs": []
+ },
+ {
+  "id": "advanced_crushing_factory",
+  "status": "match",
+  "diffs": []
+ },
+ {
+  "id": "advanced_enriching_factory",
+  "status": "match",
+  "diffs": []
+ },
+ {
+  "id": "elite_crushing_factory",
+  "status": "match",
+  "diffs": []
+ },
+ {
+  "id": "elite_enriching_factory",
+  "status": "match",
+  "diffs": []
+ },
+ {
+  "id": "ultimate_crushing_factory",
+  "status": "match",
+  "diffs": []
+ },
+ {
+  "id": "ultimate_enriching_factory",
+  "status": "match",
+  "diffs": []
+ },
+ {
+  "id": "electric_pump_water",
+  "status": "match",
+  "diffs": []
+ },
+ {
+  "id": "fuelwood_heater",
+  "status": "match",
+  "diffs": []
+ },
+ {
+  "id": "resistive_heater",
+  "status": "match",
+  "diffs": []
+ },
+ {
+  "id": "laser_amplifier",
+  "status": "match",
+  "diffs": []
+ },
+ {
+  "id": "energy_cube_basic_idle",
+  "status": "match",
+  "diffs": []
+ },
+ {
+  "id": "chargepad",
+  "status": "match",
+  "diffs": []
+ },
+ {
+  "id": "metallurgic_infuser_redstone",
+  "status": "match",
+  "diffs": []
+ }
+]

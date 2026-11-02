@@ -1,0 +1,242 @@
+{
+ "attribute/mekanism": {
+  "fab": 0,
+  "neo": 0,
+  "only_fab": [],
+  "only_neo": []
+ },
+ "attribute/mekanismadditions": {
+  "fab": 0,
+  "neo": 0,
+  "only_fab": [],
+  "only_neo": []
+ },
+ "attribute/mekanismgenerators": {
+  "fab": 0,
+  "neo": 0,
+  "only_fab": [],
+  "only_neo": []
+ },
+ "attribute/mekanismtools": {
+  "fab": 0,
+  "neo": 0,
+  "only_fab": [],
+  "only_neo": []
+ },
+ "creative_tab/mekanism": {
+  "fab": 1,
+  "neo": 1,
+  "only_fab": [],
+  "only_neo": []
+ },
+ "creative_tab/mekanismadditions": {
+  "fab": 1,
+  "neo": 1,
+  "only_fab": [],
+  "only_neo": []
+ },
+ "creative_tab/mekanismgenerators": {
+  "fab": 1,
+  "neo": 1,
+  "only_fab": [],
+  "only_neo": []
+ },
+ "creative_tab/mekanismtools": {
+  "fab": 1,
+  "neo": 1,
+  "only_fab": [],
+  "only_neo": []
+ },
+ "data_component_type/mekanism": {
+  "fab": 65,
+  "neo": 65,
+  "only_fab": [],
+  "only_neo": []
+ },
+ "data_component_type/mekanismadditions": {
+  "fab": 1,
+  "neo": 1,
+  "only_fab": [],
+  "only_neo": []
+ },
+ "data_component_type/mekanismgenerators": {
+  "fab": 3,
+  "neo": 3,
+  "only_fab": [],
+  "only_neo": []
+ },
+ "data_component_type/mekanismtools": {
+  "fab": 0,
+  "neo": 0,
+  "only_fab": [],
+  "only_neo": []
+ },
+ "entity_type/mekanism": {
+  "fab": 2,
+  "neo": 2,
+  "only_fab": [],
+  "only_neo": []
+ },
+ "entity_type/mekanismadditions": {
+  "fab": 8,
+  "neo": 8,
+  "only_fab": [],
+  "only_neo": []
+ },
+ "entity_type/mekanismgenerators": {
+  "fab": 0,
+  "neo": 0,
+  "only_fab": [],
+  "only_neo": []
+ },
+ "entity_type/mekanismtools": {
+  "fab": 0,
+  "neo": 0,
+  "only_fab": [],
+  "only_neo": []
+ },
+ "fluid/mekanism": {
+  "fab": 36,
+  "neo": 36,
+  "only_fab": [],
+  "only_neo": []
+ },
+ "fluid/mekanismadditions": {
+  "fab": 0,
+  "neo": 0,
+  "only_fab": [],
+  "only_neo": []
+ },
+ "fluid/mekanismgenerators": {
+  "fab": 8,
+  "neo": 8,
+  "only_fab": [],
+  "only_neo": []
+ },
+ "fluid/mekanismtools": {
+  "fab": 0,
+  "neo": 0,
+  "only_fab": [],
+  "only_neo": []
+ },
+ "menu/mekanism": {
+  "fab": 71,
+  "neo": 71,
+  "only_fab": [],
+  "only_neo": []
+ },
+ "menu/mekanismadditions": {
+  "fab": 0,
+  "neo": 0,
+  "only_fab": [],
+  "only_neo": []
+ },
+ "menu/mekanismgenerators": {
+  "fab": 16,
+  "neo": 16,
+  "only_fab": [],
+  "only_neo": []
+ },
+ "menu/mekanismtools": {
+  "fab": 0,
+  "neo": 0,
+  "only_fab": [],
+  "only_neo": []
+ },
+ "mob_effect/mekanism": {
+  "fab": 0,
+  "neo": 0,
+  "only_fab": [],
+  "only_neo": []
+ },
+ "mob_effect/mekanismadditions": {
+  "fab": 0,
+  "neo": 0,
+  "only_fab": [],
+  "only_neo": []
+ },
+ "mob_effect/mekanismgenerators": {
+  "fab": 0,
+  "neo": 0,
+  "only_fab": [],
+  "only_neo": []
+ },
+ "mob_effect/mekanismtools": {
+  "fab": 0,
+  "neo": 0,
+  "only_fab": [],
+  "only_neo": []
+ },
+ "particle_type/mekanism": {
+  "fab": 5,
+  "neo": 5,
+  "only_fab": [],
+  "only_neo": []
+ },
+ "particle_type/mekanismadditions": {
+  "fab": 0,
+  "neo": 0,
+  "only_fab": [],
+  "only_neo": []
+ },
+ "particle_type/mekanismgenerators": {
+  "fab": 0,
+  "neo": 0,
+  "only_fab": [],
+  "only_neo": []
+ },
+ "particle_type/mekanismtools": {
+  "fab": 0,
+  "neo": 0,
+  "only_fab": [],
+  "only_neo": []
+ },
+ "recipe_serializer/mekanism": {
+  "fab": 30,
+  "neo": 30,
+  "only_fab": [],
+  "only_neo": []
+ },
+ "recipe_serializer/mekanismadditions": {
+  "fab": 0,
+  "neo": 0,
+  "only_fab": [],
+  "only_neo": []
+ },
+ "recipe_serializer/mekanismgenerators": {
+  "fab": 0,
+  "neo": 0,
+  "only_fab": [],
+  "only_neo": []
+ },
+ "recipe_serializer/mekanismtools": {
+  "fab": 2,
+  "neo": 2,
+  "only_fab": [],
+  "only_neo": []
+ },
+ "recipe_type/mekanism": {
+  "fab": 26,
+  "neo": 26,
+  "only_fab": [],
+  "only_neo": []
+ },
+ "recipe_type/mekanismadditions": {
+  "fab": 0,
+  "neo": 0,
+  "only_fab": [],
+  "only_neo": []
+ },
+ "recipe_type/mekanismgenerators": {
+  "fab": 0,
+  "neo": 0,
+  "only_fab": [],
+  "only_neo": []
+ },
+ "recipe_type/mekanismtools": {
+  "fab": 0,
+  "neo": 0,
+  "only_fab": [],
+  "only_neo": []
+ }
+}
