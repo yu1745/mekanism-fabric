@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Save round-trip for the ore chains and a factory's sorting state (W-123).
+# Save round-trip for the ore chains and a factory's sorting state.
 #
 # Phase one builds the chain the way a player would leave it - configured sides, a filled chemical tank, a factory with
 # sorting switched on and a machine mid-recipe - then saves and stops the server cleanly. Phase two starts the same world

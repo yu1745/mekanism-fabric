@@ -20,7 +20,7 @@ import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Fabric port (Task052 continuation09): the old {@code InventoryInfo} per-slot size guessing is replaced by
+ * Fabric port: the old {@code InventoryInfo} per-slot size guessing is replaced by
  * cumulative real inserts inside one abort-only Fabric transaction. All already-flowing reservations (and any
  * additional flowing stacks, e.g. in-flight predictions from the same tick) are inserted first so later candidates
  * see the reserved state; then the request's own candidate is inserted and the actually accepted amount is measured.

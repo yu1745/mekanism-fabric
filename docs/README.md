@@ -12,7 +12,6 @@ Start here if you are new to the repository.
 | [`Development.md`](Development.md) | local build, test task tiers, verify commands | contributors |
 | [`FABRIC_SMOKE.md`](FABRIC_SMOKE.md) | what each smoke script proves and how to run it | contributors |
 | [`API_DELTAS.md`](API_DELTAS.md) | every intentional difference from the NeoForge behaviour | maintainers |
-| `FABRIC_{CHEMICAL,CONFIG,DATA_MAPS,ENERGY,FLUID,HEAT,HOLDERS,ITEM,NETWORK,RECIPES,REGISTRY,TEXT}.md` | topic notes: the platform facts and boundaries for one subsystem each | maintainers |
 
 
 

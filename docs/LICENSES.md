@@ -60,10 +60,10 @@ upstream MIT license.
 
 | Optional integration | Version compiled against | License | How it is used |
 |---|---|---|---|
-| JEI | `mezz.jei:jei-1.21.1-fabric:19.43.0.398` | MIT | `modCompileOnly`; `jei_mod_plugin` entrypoint (W-74c) |
-| EMI | `maven.modrinth:emi:1.1.24+1.21.1+fabric` | MIT | `modCompileOnly`; `emi` entrypoint (W-74a/W-91) |
-| Jade | `maven.modrinth:jade:15.10.6+fabric` | CC-BY-NC-SA-4.0 | `modCompileOnly`; `jade` entrypoint (W-74b/W-92) |
-| WTHIT | `mcp.mobius.waila:wthit:fabric-12.10.2` | CC-BY-NC-SA-4.0 | `modCompileOnly`; root `wthit_plugins.json` descriptor (W-74d) |
+| JEI | `mezz.jei:jei-1.21.1-fabric:19.43.0.398` | MIT | `modCompileOnly`; `jei_mod_plugin` entrypoint  |
+| EMI | `maven.modrinth:emi:1.1.24+1.21.1+fabric` | MIT | `modCompileOnly`; `emi` entrypoint  |
+| Jade | `maven.modrinth:jade:15.10.6+fabric` | CC-BY-NC-SA-4.0 | `modCompileOnly`; `jade` entrypoint  |
+| WTHIT | `mcp.mobius.waila:wthit:fabric-12.10.2` | CC-BY-NC-SA-4.0 | `modCompileOnly`; root `wthit_plugins.json` descriptor  |
 
 Both CC-BY-NC-SA-4.0 mods (Jade, WTHIT) are only linked against at compile time and never redistributed; a user
 who installs them takes on their licence terms. Refresh the table whenever a dependency version is bumped.

@@ -40,7 +40,7 @@ import net.minecraft.world.item.TooltipFlag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** Isolated real-server probe for the Task040 chemical vertical. */
+/** Isolated real-server probe for the chemical vertical. */
 public final class ChemicalRuntimeServerFixture implements ModInitializer {
     private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism/ChemicalRuntimeServerFixture");
     private static final Path ROOT = Path.of(System.getProperty("mekanism.chemical.runtimeRoot")).toAbsolutePath().normalize();

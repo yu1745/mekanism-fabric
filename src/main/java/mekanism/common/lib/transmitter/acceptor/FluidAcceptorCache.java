@@ -12,7 +12,7 @@ import net.minecraft.server.level.ServerLevel;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Fresh per-pipe fluid acceptor cache for MechanicalPipe (Task052 continuation08 ownership boundary).
+ * Fresh per-pipe fluid acceptor cache for MechanicalPipe.
  *
  * <p>Unlike {@link AcceptorCache}, the {@link AcceptorInfo} stores only lookup context (owning transmitter tile,
  * initialized server level, neighbor position, opposite face) and never the returned Fabric {@link Storage}. Each
@@ -23,7 +23,7 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p>Because no {@code BlockCapabilityCache} is retained, the refresh listener is not consumed here; connection
  * bitmap rediscovery relies on the official {@code refreshAcceptorConnections} / neighbor-update policy that callers
- * run before the acceptor decision, per the continuation08 contract.
+ * run before the acceptor decision,.
  */
 @NothingNullByDefault
 public class FluidAcceptorCache extends AbstractAcceptorCache<Storage<FluidVariant>, FluidAcceptorCache.FreshLookupInfo> {

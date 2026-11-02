@@ -12,7 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Physical-client receivers for the container/QIO S2C payloads (Task052 REVIEW_03 finding 5).
+ * Physical-client receivers for the container/QIO S2C payloads.
  *
  * <p>Each receiver resolves the player's currently open container on the client thread (Fabric dispatches play receivers inside the packet listener's client-owning
  * task, matching the original physical-client handler thread) and applies the payload only when the open menu is the expected container type — the same

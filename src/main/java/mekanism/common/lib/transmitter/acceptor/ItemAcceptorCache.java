@@ -12,7 +12,7 @@ import net.minecraft.server.level.ServerLevel;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Fresh per-transmitter item acceptor cache for {@code LogisticalTransporterBase} (Task052 continuation09).
+ * Fresh per-transmitter item acceptor cache for {@code LogisticalTransporterBase}.
  *
  * <p>Reuses the reviewed design (not the sources) of the fluid caches: the {@link AcceptorInfo} stores only lookup
  * context (owning transmitter tile, initialized server level, neighbor position, opposite face) and never the returned

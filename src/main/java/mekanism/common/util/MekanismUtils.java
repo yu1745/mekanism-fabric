@@ -421,7 +421,7 @@ public final class MekanismUtils {
     public static boolean lighterThanAirGas(FluidStack stack) {
         //Fabric port delta: NeoForge's Tags.Fluids.GASEOUS membership plus non-positive FluidType density becomes
         // Fabric's FluidVariantAttributes.isLighterThanAir gas convention (net.fabricmc.fabric.api.transfer.v1.fluid).
-        //Task052 REVIEW_03 finding 4 correction: the variant is built from the fluid AND the stack's component patch
+        //the variant is built from the fluid AND the stack's component patch
         // (FluidStack#getComponentsPatch is the component-preserving conversion owned by the accepted api shim) —
         // FluidVariantAttributes dispatch is variant-aware, so building the variant from the fluid id alone would drop
         // components before invoking a component-dependent attribute lookup.
@@ -773,7 +773,7 @@ public final class MekanismUtils {
      * Similar in concept to {@link net.minecraft.world.entity.Entity#updateFluidHeightAndDoFluidPushing()} except calculates if a given portion of the player is in the
      * fluids.
      *
-     * @implNote Fabric port delta (Task052 REVIEW_03 finding 4 correction): the original maps {@code NeoForge FluidType} to details. On the original
+     * @implNote Fabric port delta: the original maps {@code NeoForge FluidType} to details. On the original
      * platform a FluidType groups a fluid family — the source still and the flowing variant are distinct {@link Fluid} objects sharing one FluidType —
      * so source/flowing occurrences of the same liquid aggregated into one entry. Fabric has no FluidType; the equivalent vanilla grouping key is the
      * family's source fluid ({@code FlowingFluid#getSource()} normalizes a flowing occurrence to its source sibling, and is the identity for the
@@ -803,7 +803,7 @@ public final class MekanismUtils {
                         double fluidY = y + fluidState.getHeight(player.level(), mutablePos);
                         if (bb.minY <= fluidY) {
                             //The fluid intersects the bounding box
-                            //Task052 REVIEW_03 finding 4 correction: normalize a flowing fluid to its family's source fluid so source/flowing
+                            //normalize a flowing fluid to its family's source fluid so source/flowing
                             // occurrences of the same liquid aggregate into one entry, matching the original FluidType grouping
                             Fluid fluidKey = fluidState.getType() instanceof FlowingFluid flowing ? flowing.getSource() : fluidState.getType();
                             FluidInDetails details = fluidsIn.computeIfAbsent(fluidKey, f -> new FluidInDetails());
@@ -859,7 +859,7 @@ public final class MekanismUtils {
                 // block hardness values in a modded context
                 continue;
             }
-            //Fabric port correction (Task052 REVIEW_03 finding 3): preserve the original pre-break protection boundary. The original NeoForge path
+            //Fabric port correction: preserve the original pre-break protection boundary. The original NeoForge path
             // calls CommonHooks.fireBlockBreak, which fires the cancellable BreakEvent before any destructive work, letting protection mods stop
             // vein mining into protected land. Fabric's equivalent pre-break hook is PlayerBlockBreakEvents.BEFORE (pinned
             // fabric-events-interaction-v0 0.7.14+ba9dae0619: listeners run in order, first false cancels immediately). This vein-mining path invokes the
@@ -881,7 +881,7 @@ public final class MekanismUtils {
             // This also ensures that things like decorated pots are able to properly update to cracked and drop sherds rather than the pot block itself
             targetState = targetState.getBlock().playerWillDestroy(world, foundPos, targetState, player);
             Block block = targetState.getBlock();
-            //Fabric port correction (Task052 REVIEW_05 finding 3): use ACTUAL vanilla block-removal semantics. Vanilla ServerPlayerGameMode.destroyBlock
+            //Fabric port correction: use ACTUAL vanilla block-removal semantics. Vanilla ServerPlayerGameMode.destroyBlock
             // (survival branch) removes the block through Level.removeBlock(pos, false) — pinned upstream/neoforge-minecraft
             // net/minecraft/world/level/Level.java:311: removeBlock reads the CURRENT fluid state and setBlock(pos, fluidstate.createLegacyBlock(), 3)
             // (triggering the vanilla onRemove/BE-removal event chain through setBlock flags 3, plus its own BLOCK_DESTROY path when used via destroyBlock).

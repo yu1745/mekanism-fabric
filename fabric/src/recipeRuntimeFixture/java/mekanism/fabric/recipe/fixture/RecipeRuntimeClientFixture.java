@@ -23,7 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Isolated real-client probe for the Task041 recipe reload ownership: proves the client-only tail mixin publishes the matching client epochs for recipe packets,
+ * Isolated real-client probe for the recipe reload ownership: proves the client-only tail mixin publishes the matching client epochs for recipe packets,
  * disconnect clears the client state, a fresh manager cannot reuse prior candidates, and other threads keep distinct manager and chemical-context identities in one
  * JVM.
  */

@@ -114,7 +114,7 @@ for path in sys.argv[1:]:
         sys.exit(1)
 PYEOF
 # Compare against the same build's slice-gated dev artifact, including generated classes.
-# Early Task043 package subsets are no longer valid once the real machine/client catalogs are admitted.
+# Early package subsets are no longer valid once the real machine/client catalogs are admitted.
 DEV_JAR="$ROOT/fabric/build/devlibs/$(basename "${MOD_JARS[0]}" .jar)-dev.jar"
 if ! python3 - "${MOD_JARS[0]}" "$TEAM_REBORN_ENERGY_VERSION" "$DEV_JAR" "$NIGHT_CONFIG_VERSION" "$ROOT/scripts/fabric-packaged-oracles.json" <<'PYEOF'
 from collections import Counter
@@ -123,7 +123,7 @@ import hashlib, json, sys, zipfile
 expected_entrypoints = {
     "main": ["mekanism.fabric.MekanismFabricBootstrap"],
     "client": ["mekanism.fabric.MekanismFabricClientBootstrap"],
-    # Optional client integrations (W-74a/W-74b). Deliberate contract relaxation (E3): EMI and Jade discover
+    # Optional client integrations. Deliberate contract relaxation (E3): EMI and Jade discover
     # plugins through loader entrypoint keys, and these keys do nothing unless that mod is installed, so pinning
     # them here keeps the "no third-party classes in the release JAR" property intact while allowing the hooks.
     "emi": ["mekanism.client.recipe_viewer.emi.MekanismEmi"],
@@ -462,7 +462,7 @@ for required_entry in \
   fi
 done
 
-#Third-party mods are loaded only as test-runtime inputs (W-98/W-99). Their classes must never ride along in a release
+#Third-party mods are loaded only as test-runtime inputs. Their classes must never ride along in a release
 #artifact, so the four jars are checked for the packages those mods ship.
 for jar in "${MOD_JARS[@]}"; do
   if jar tf "$jar" | grep -Eq '^(sodium|net/caffeinemc|iris|net/irisshaders|techreborn|reborncore|teamreborn)/'; then

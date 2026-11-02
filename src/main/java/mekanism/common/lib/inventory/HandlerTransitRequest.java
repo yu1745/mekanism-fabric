@@ -22,7 +22,7 @@ import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Fabric port (Task052 continuation09): the handler is a real sided {@link Storage}, and the source plan records real
+ * Fabric port: the handler is a real sided {@link Storage}, and the source plan records real
  * slotted positions of a {@link SlottedStorage} (matching the exposed physical slot order) or operation-local real
  * {@link StorageView}s for arbitrary storages - never invented stable integer slots. Debit
  * ({@link HandlerItemData#use(int, Transaction)}) extracts through those same real positions inside the caller-owned
@@ -33,7 +33,7 @@ public class HandlerTransitRequest extends CollectionTransitRequest {
     private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism");
 
     /**
-     * Stable real-owner participant (R2): the request plan (per-type totalCount, slotted positions, retained view
+     * Stable real-owner participant: the request plan (per-type totalCount, slotted positions, retained view
      * candidates and ordered itemMap membership) is transactional. A snapshot is taken before the first debit
      * mutation at each nesting depth, so an abort at any enclosing level restores the exact pre-transaction plan —
      * including the case where a debit succeeded in a committed nested transaction and a later enclosing
@@ -65,7 +65,7 @@ public class HandlerTransitRequest extends CollectionTransitRequest {
                     // count backwards- we start from the bottom of the inventory and go back for consistency
                     for (int slot = slotted.getSlotCount() - 1; slot >= 0; slot--) {
                         SingleSlotStorage<ItemVariant> view = slotted.getSlot(slot);
-                        //Record the real slotted position, not an invented index (R2); debit re-resolves the same slot
+                        //Record the real slotted position, not an invented index; debit re-resolves the same slot
                         discoverView(ret, view, slot, null, max, finder, discovery);
                     }
                 } else {
@@ -115,7 +115,7 @@ public class HandlerTransitRequest extends CollectionTransitRequest {
             //The view did not actually give back anything; skip this candidate entirely
             return;
         }
-        //Record the actual accepted positive amount (R2): a partial positive extraction is still a real candidate
+        //Record the actual accepted positive amount: a partial positive extraction is still a real candidate
         // for exactly the amount the view actually provided, never discarded and never assumed to be `toUse`
         int accepted = extracted > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) extracted;
         ret.itemMap(hashed).addCandidate(new SourceCandidate(slot, retainedView, accepted));
@@ -133,7 +133,7 @@ public class HandlerTransitRequest extends CollectionTransitRequest {
     }
 
     /**
-     * Identity-checked selected-slot candidate (Task052 R3): connects the selected physical {@link IInventorySlot}
+     * Identity-checked selected-slot candidate: connects the selected physical {@link IInventorySlot}
      * identity to its real exposed position in this request's sided provider. If the provider is the slotted view of
      * those very slots (a {@link FabricItemStorage}), the candidate debits through that exact real slot view; if the
      * provider does not expose the selected identity, the candidate is rejected loudly instead of debiting through
@@ -154,7 +154,7 @@ public class HandlerTransitRequest extends CollectionTransitRequest {
             return;
         }
         //Not the slotted view of these very slots (for example a foreign provider occupying the bounding
-        // position): reject loudly rather than debiting through an unrelated storage (Task052 R3)
+        // position): reject loudly rather than debiting through an unrelated storage
         LOGGER.warn("Selected-slot ejection provider is not the provider of the selected slots; not ejecting.");
         LOGGER.warn("Provider: {}", handler == null ? "null" : handler.getClass().getName());
     }
@@ -204,7 +204,7 @@ public class HandlerTransitRequest extends CollectionTransitRequest {
         }
 
         void addCandidate(SourceCandidate candidate) {
-            //Real slotted positions and retained real views are recorded as distinct ordered candidates (R2); a
+            //Real slotted positions and retained real views are recorded as distinct ordered candidates; a
             // repeated real position accumulates instead of overwriting. Only the newly contributed amount joins
             // totalCount: the merged candidate replaces the old one, so adding the merged count again would
             // double-count the previous contribution (existing 5 + new 3 must total 8, not 13)
@@ -261,7 +261,7 @@ public class HandlerTransitRequest extends CollectionTransitRequest {
                 HashedItem itemType = getItemType();
                 ItemStack itemStack = itemType.getInternalStack();
                 ItemVariant variant = ItemVariant.of(itemStack);
-                //Snapshot the whole request plan before the first mutation (R2): plan and source unwind together
+                //Snapshot the whole request plan before the first mutation: plan and source unwind together
                 HandlerTransitRequest.this.planParticipant.updateSnapshots(tx);
                 boolean slottedPlan = candidates.stream().noneMatch(candidate -> candidate.view() != null);
                 SlottedStorage<ItemVariant> slotted = null;

@@ -48,10 +48,9 @@ Kilt 的转换表明 execute/simulate 应在 transfer 边界映射为 transactio
 - `./fabric-build.sh`
 - `scripts/fabric-packaged-smoke.sh`
 
-## Mekanism-owned `FluidStack` value (Task 034)
-
-状态：Task 034 落地时 API/common/platform allowlist 精确为 **57/122/17**；
-Task 035 后为 **58/122/17**，Task 036 后当前为 **64/122/17**。`mekanism.api.fluid.FluidStack` 是 final、
+## Mekanism-owned `FluidStack` value
+状态：落地时 API/common/platform allowlist 精确为 **57/122/17**；
+后为 **58/122/17**，后当前为 **64/122/17**。`mekanism.api.fluid.FluidStack` 是 final、
 项目自有、平台中立的 mutable
 `int` mB value；`FluidVariant` 与 Fabric Transfer units 只出现在新增的
 `mekanism.fabric.fluid.FabricFluidConversions`。不创建 `net.neoforged.*`
@@ -94,15 +93,13 @@ Fabric 没有 nominal `FluidType`，所以 custom `FluidType` description overri
 不可用；Fabric convention 明确为 block-derived。
 
 刻意删除 `getFluidType()`、`is(FluidType)` 与 deprecated
-`isFluidEqual(ItemStack)` capability bridge。Task 034 落地时所有既有 NeoForge FluidStack
-imports 及 callers 均未替换；Task 035 只替换 `SerializerHelper` 的一处 import；完整 provenance、单位 seam、测试与延期边界见
-`docs/FABRIC_FLUID.md`。
+`isFluidEqual(ItemStack)` capability bridge。落地时所有既有 NeoForge FluidStack
+imports 及 callers 均未替换；只替换 `SerializerHelper` 的一处 import
 
-## Shared serialization owner (Task 035)
-
+## Shared serialization owner
 状态：`mekanism.api.SerializerHelper` 已加入 API allowlist；这是具体 slot 调用点与
 item/fluid codec 的共享 owner，不是 registry、config、lifecycle 或 persistence owner。
-Task 035 是经 concrete-slot scouting 后批准的两份紧耦合 production-source 架构例外：
+是经 concrete-slot scouting 后批准的两份紧耦合 production-source 架构例外：
 新增 admission 为 `SerializerHelper`，另一份只修改已纳入的 `IInventorySlot`。
 
 相对 oracle `4646f509`，`SerializerHelper` 保留全部 11 个 public codec fields、6 个
@@ -123,21 +120,20 @@ caller-derived category，也不新增 public logger。`SerializerHelper` 的 st
 `SharedConstants`/`Bootstrap`；Fabric startup entrypoint 不引用该类，发布物不含
 `MekanismAPI.class` 或 serialization startup marker。
 
-`IInventorySlot` 删除 Task 033 的 private oversized codec 与仅由它使用的 imports，并
-恢复 exact `SerializerHelper.saveOversized(provider, getStack())` delegation。Task 033 的
+`IInventorySlot` 删除 的 private oversized codec 与仅由它使用的 imports，并
+恢复 exact `SerializerHelper.saveOversized(provider, getStack())` delegation。的
 Mekanism-owned NBT nominal parent、两处 Javadoc prose 以及全部 public/default methods
 保持。兼容效果是共享 codec owner 恢复；无新增依赖、common/platform source、chemical
 behavior、concrete slot、menu、recipe、warning 或 broad facade。
 
 验证由恰好五个 `SerializerHelperTest` methods 与 unchanged 四个
-`InventoryApiHolderTest` methods 提供；Task 035 落地 totals 为 ordinary **65/310**、Knot transfer
-**2/8**、aggregate **67/318**；Task 036 后当前为 **66/315**、**2/8**、**68/323**，
+`InventoryApiHolderTest` methods 提供；落地 totals 为 ordinary **65/310**、Knot transfer
+**2/8**、aggregate **67/318**；后当前为 **66/315**、**2/8**、**68/323**，
 三项 jqwik property 各 100,000。JAR family 精确为 `SerializerHelper.class` 加
 `$1`/`$2`/`$3`，各一次；unexpected nested/test/helper、`MekanismAPI.class`、
 NeoForge/Loader leakage 与 startup marker 均拒绝。
 
-## Portable text/color prerequisite closure (Task 036)
-
+## Portable text/color prerequisite closure
 状态：API/common/platform allowlist 当前为 **64/122/17**。新增 API admissions 精确为
 `IIncrementalEnum`、`IHashedItem`、`APILang`、`EnumColor`、`ILangEntry` 与
 `TextComponentUtil`；同时恢复已纳入的 `IHasTranslationKey`、`RelativeSide` 两个 caller。
@@ -160,7 +156,7 @@ style/copy 以及 `smartTranslate` primitive/string/trailing-format behavior 保
 `TextComponentUtil.translate(getTranslationKey())`。`RelativeSide` 六项再次直接持有相应
 APILang entry；serialized names、keys、codecs 和 direction behavior 不变。Fabric 没有
 `FluidType` description facade，因此 raw-fluid custom `FluidType#getDescription()` override
-不可保留；与 Task 034 一致只承诺 block-derived key，不发明 custom-name facade。
+不可保留；与 一致只承诺 block-derived key，不发明 custom-name facade。
 
 一个新 ordinary class 恰好五个 methods；加 unchanged `RelativeSideTest` 固定 key ownership、
 方向/codec 与 text/color behavior。当前预期 ordinary **66/315**、transfer **2/8**、aggregate
@@ -169,14 +165,12 @@ APILang entry；serialized names、keys、codecs 和 direction behavior 不变�
 RelativeSide/IHasTextComponent/IHasTranslationKey families，各一次。static gate 拒绝
 `MekanismAPI`、`ConstantPredicates`、chemical API、`TriPredicate`、concrete `HashedItem`、
 unexpected nested/test/helper/fixture、NeoForge/Loader 与 startup marker/reference；无 startup claim。
-完整边界见 `docs/FABRIC_TEXT.md`。
 
 本任务只关闭 portable text prerequisites。`ChemicalStack`、完整 `ConstantPredicates`、warning、
 menu、concrete slots、recipes、translation consumers 与所有 owners/callers 仍延期。
 
-## Module config value contracts (Task 032)
-
-状态：Task 032 落地时 API/common/platform allowlist 精确为 **53/120/14** unique sources；common、platform 与 18-file official root-test oracle 不变。新增六份官方 API source 中，`ModuleBooleanConfig`、`ModuleColorConfig` 与 `IHasModeIcon` 和 `4646f509` byte-identical；其余三份仅作以下封闭适配：
+## Module config value contracts
+状态：落地时 API/common/platform allowlist 精确为 **53/120/14** unique sources；common、platform 与 18-file official root-test oracle 不变。新增六份官方 API source 中，`ModuleBooleanConfig`、`ModuleColorConfig` 与 `IHasModeIcon` 和 `4646f509` byte-identical；其余三份仅作以下封闭适配：
 
 - `ModuleConfig` 只删除 `MekanismAPI` import，并以 literal `"mekanism"` 构造三个 canonical key 及 legacy name。`baseCodec` 保留官方行为：decode 时仅把 `minecraft:<path>` 改写为 `mekanism:<path>`，其它 namespace 原样保留；encode 始终写出 config 当前的 exact name。
 - `ModuleEnumConfig` 只以 method-local vanilla `StreamCodec` 替换 NeoForge `enumCodec`。它捕获 declaring enum constants，并通过 `ByteBufCodecs.VAR_INT` 写 `ordinal()`、读 ordinal 后直接数组索引，因此 wire bytes 不变；负数或过高 ordinal 继续抛 `ArrayIndexOutOfBoundsException`，null encode 继续抛 `NullPointerException`。没有 anonymous/new packaged class、platform source 或通用 shim。
@@ -198,7 +192,7 @@ menu、concrete slots、recipes、translation consumers 与所有 owners/callers
 
 ## Deferred registry wrapper surface
 
-状态：common wrapper 已移植，用于官方 GameEvent，并已扩到 Task 031 的 sound/damage declaration closure。
+状态：common wrapper 已移植，用于官方 GameEvent，并已扩到 的 sound/damage declaration closure。
 
 `MekanismDeferredRegister<T>` 不再继承 NeoForge `DeferredRegister<T>`，而是组合
 `FabricDeferredRegister<T>`；保留 Mekanism 自身使用的两个 typed `register` 重载，并新增通过
@@ -207,7 +201,7 @@ vanilla `Registry<T>` 提交批次的入口。`MekanismDeferredHolder<R, T>` 不
 `Supplier<T>`。`get/getKey/key/getId/getName/is/keyMatches`、绑定前 key 可用性、绑定后 canonical
 对象身份均保留；绑定前读取值继续明确失败。
 
-Task 031 的 `SoundEventDeferredRegister` 用既有 `MekanismDeferredRegister<SoundEvent>` 取代 NeoForge
+的 `SoundEventDeferredRegister` 用既有 `MekanismDeferredRegister<SoundEvent>` 取代 NeoForge
 父类，并在构造器传入 `SoundEventRegistryObject::new`；三种 registration behavior/typed return 保留，
 `createHolder` 与旧 imports 删除，无 shim。`SoundEventRegistryObject` 与 `DamageTypeRegister` 仍和
 `4646f509` byte-identical。`MekanismSounds`/`MekanismDamageTypes` 仅删除尚未纳入的完整
@@ -222,9 +216,7 @@ Task 031 的 `SoundEventDeferredRegister` 用既有 `MekanismDeferredRegister<So
 兼容影响：依赖 NeoForge `DeferredRegister`/`DeferredHolder` 继承关系或其额外方法的 addon
 需要迁移到 Fabric/vanilla 注册 API。Mekanism 自身面向 holder/value/key 的公共用法保持源码级
 表面。当前只承诺 `fabric/common-slice.txt` 已纳入的闭包；后续每引入一种 registry wrapper，
-都必须补足实际调用到的 holder 语义，而不是伪造整个 NeoForge registry API。
-
-语义依据与验证见 `docs/FABRIC_REGISTRY.md`、
+都必须补足实际调用到的 holder 语义，而不是伪造整个 NeoForge registry API。、
 `fabric/src/test/java/mekanism/common/registration/MekanismDeferredRegisterTest.java`、
 `SoundAndDamageRegistrationTest.java` 以及 static packaged-JAR gates。Kilt/Connector 与 NeoForge
 21.1.200 extension source 仅用于核对生命周期、冻结、canonical holder 和 lookup 语义；实现未复制。
@@ -241,11 +233,11 @@ Mekanism-owned builder，并直接声明原有 `getTranslationKey()`，不再通
 Fabric bootstrap 在完整 `MekanismConfig` 纳入前构造唯一 startup 实例。Cached int/float 的公开
 读写方法与 listener 语义不变，内部 backing value 类型改为 `MekanismConfigSpec.ConfigValue`。
 
-Task 030 的四个 common source 只替换 config backing types：`CachedResolvableConfigValue`、`CachedConfigValue`、`CachedMapConfigValue` 各把 NeoForge nested `ConfigValue` import 改为 `MekanismConfigSpec.ConfigValue`；`CachedOredictionificatorConfigValue` 只把 `ModConfigSpec`/nested `ConfigValue` imports 和 builder/value types 换成 `MekanismConfigSpec` 等价项，方法体不变。它们因此不是 byte-identical。Fabric builder 新增唯一 strongly typed `defineListAllowEmpty`，保留 empty list，整表拒绝 non-list/null/invalid element，并对一次求值且立即验证的 default 与每份 accepted raw/set list 作 immutable top-level copy。new-element supplier non-null 但因没有 UI/editor 而从不调用；既有 path/metadata/freeze/validation/correction/persist-before-publish/synchronization pipeline 继续负责生命周期。
+的四个 common source 只替换 config backing types：`CachedResolvableConfigValue`、`CachedConfigValue`、`CachedMapConfigValue` 各把 NeoForge nested `ConfigValue` import 改为 `MekanismConfigSpec.ConfigValue`；`CachedOredictionificatorConfigValue` 只把 `ModConfigSpec`/nested `ConfigValue` imports 和 builder/value types 换成 `MekanismConfigSpec` 等价项，方法体不变。它们因此不是 byte-identical。Fabric builder 新增唯一 strongly typed `defineListAllowEmpty`，保留 empty list，整表拒绝 non-list/null/invalid element，并对一次求值且立即验证的 default 与每份 accepted raw/set list 作 immutable top-level copy。new-element supplier non-null 但因没有 UI/editor 而从不调用；既有 path/metadata/freeze/validation/correction/persist-before-publish/synchronization pipeline 继续负责生命周期。
 
 兼容影响：直接依赖 NeoForge config spec/type 或 `IConfigTranslation` 到
 `IHasTranslationKey` 赋值关系的 addon 必须改用 Fabric 侧契约。TOML 文件名、12 个 startup
-路径、默认值、范围、restart 元数据与缓存行为保持。官方 resolvable `set` 仍缓存 caller 的原始 `TYPE`：encoded list backing 是 immutable copy，但 map 在 clear/reload 前仍可与 caller alias；clear/reload 后才按 deterministic sorted strings 重建。当前 **64/122/17** slice 不激活 `GeneralConfig`/`MekanismConfig`、cardboard blacklist、Oredictionificator filters/items、`CachedEnumValue`、UI/watch/sync 或 config ownership/lifecycle/threading。细节和验证见 `docs/FABRIC_CONFIG.md`。
+路径、默认值、范围、restart 元数据与缓存行为保持。官方 resolvable `set` 仍缓存 caller 的原始 `TYPE`：encoded list backing 是 immutable copy，但 map 在 clear/reload 前仍可与 caller alias；clear/reload 后才按 deterministic sorted strings 重建。当前 **64/122/17** slice 不激活 `GeneralConfig`/`MekanismConfig`、cardboard blacklist、Oredictionificator filters/items、`CachedEnumValue`、UI/watch/sync 或 config ownership/lifecycle/threading。
 
 ## Registry-aware NBT contract
 
@@ -283,15 +275,14 @@ void deserializeNBT(HolderLookup.Provider provider, T tag)
 - `./fabric-build.sh`
 - `scripts/fabric-packaged-smoke.sh`
 
-## Item inventory contracts (Task 033)
-
-状态：Task 033 落地时 API/common/platform allowlist 精确为 **56/122/16**；Task 034 后为 **57/122/17**，Task 035 后为 **58/122/17**，Task 036 后当前为 **64/122/17**。三份 inventory API source 中，`IMekanismInventory` 与 `4646f509` byte-identical；另两份只有以下有界平台适配。
+## Item inventory contracts
+状态：落地时 API/common/platform allowlist 精确为 **56/122/16**；后为 **57/122/17**，后为 **58/122/17**，后当前为 **64/122/17**。三份 inventory API source 中，`IMekanismInventory` 与 `4646f509` byte-identical；另两份只有以下有界平台适配。
 
 ### `IInventorySlot`
 
 NeoForge `INBTSerializable<CompoundTag>` nominal parent 换成既有 `mekanism.api.INBTSerializable<CompoundTag>`。两个仅供 Javadoc 的 item/fluid links/imports 换成平台中立文字；所有 public methods、default bodies、listener、amount/limit、oversized stack 与 nullable container-slot behavior 均保留。
 
-Task 033 因当时 `FluidStack` 尚未纳入而把唯一 shared-helper call 暂时换成 private method-local codec。Task 035 在 shared owner 可闭合后删除该 private codec 和仅由它使用的 imports，并恢复 `SerializerHelper.saveOversized(provider, getStack())`。共享 `OVERSIZED_ITEM_CODEC` 仍精确使用 non-air item holder `id`、positive int `count` default 1、optional empty `DataComponentPatch` `components` 和 registry-aware `NbtOps`；empty stack 仍抛 exact `IllegalStateException("Cannot encode empty ItemStack")`。oversized count/components 与全部既有 inventory behavior 不变。
+因当时 `FluidStack` 尚未纳入而把唯一 shared-helper call 暂时换成 private method-local codec。在 shared owner 可闭合后删除该 private codec 和仅由它使用的 imports，并恢复 `SerializerHelper.saveOversized(provider, getStack())`。共享 `OVERSIZED_ITEM_CODEC` 仍精确使用 non-air item holder `id`、positive int `count` default 1、optional empty `DataComponentPatch` `components` 和 registry-aware `NbtOps`；empty stack 仍抛 exact `IllegalStateException("Cannot encode empty ItemStack")`。oversized count/components 与全部既有 inventory behavior 不变。
 
 兼容影响：Fabric implementation 改为实现 Mekanism-owned registry-aware NBT nominal type，而不是 NeoForge nominal type；两个 serialize/deserialize method signatures 不变。依赖 NeoForge parent assignment 的 addon 需迁移。
 
@@ -301,13 +292,12 @@ Task 033 因当时 `FluidStack` 尚未纳入而把唯一 shared-helper call 暂�
 
 兼容影响：Mekanism-visible source method surface 保留，但 Fabric 上不再可把对象 nominally 赋给 NeoForge `IItemHandlerModifiable`；不提供伪 NeoForge shim。
 
-`IMekanismInventory` 的 invalid-index defaults、`AutomationType.handler(side)`、side routing、live lists 和 `hasInventory` implementation contract 未改变。行为与 package gates 见 `FABRIC_ITEM.md`、`InventoryApiHolderTest` 和 `FabricItemStorageTest`。
+`IMekanismInventory` 的 invalid-index defaults、`AutomationType.handler(side)`、side routing、live lists 和 `hasInventory` implementation contract 未改变。、`InventoryApiHolderTest` 和 `FabricItemStorageTest`。
 
-## Client window and concrete slot contracts (Task 039)
+## Client window and concrete slot contracts
+状态：后 API/common/platform slice 为 **65/145/24**。`SelectedWindowData` 的 public constructors、fields、records、enum order、codec、equals/hash 与 methods 保持官方 surface；内部 owner 从完整 `MekanismConfig.client` 改为不含 Fabric/client import 的 `ClientWindowConfigAccess`。crafting window 上限以经审计的 `(byte) 3` 编译常量替代未纳入 QIO holder，resource IDs 改用 vanilla `ResourceLocation.fromNamespaceAndPath("mekanism", ...)`。适用窗口 pre-init/post-close/wrong-thread 现在明确失败，而 `UNSPECIFIED` 继续返回 default 且不访问配置；这是 Fabric physical-client owner 的显式生命周期 contract，不提供隐式 fallback。
 
-状态：Task 039 后 API/common/platform slice 为 **65/145/24**。`SelectedWindowData` 的 public constructors、fields、records、enum order、codec、equals/hash 与 methods 保持官方 surface；内部 owner 从完整 `MekanismConfig.client` 改为不含 Fabric/client import 的 `ClientWindowConfigAccess`。crafting window 上限以经审计的 `(byte) 3` 编译常量替代未纳入 QIO holder，resource IDs 改用 vanilla `ResourceLocation.fromNamespaceAndPath("mekanism", ...)`。适用窗口 pre-init/post-close/wrong-thread 现在明确失败，而 `UNSPECIFIED` 继续返回 default 且不访问配置；这是 Fabric physical-client owner 的显式生命周期 contract，不提供隐式 fallback。
-
-Basic/Input/Output slot 的 public surface 与 domain behavior 不变；仅把 private non-escaping `ConstantPredicates` 调用换成 exact lambda。Armor/Offhand 不依赖 NeoForge-injected slot background extension，改由 vanilla `getNoItemIcon()` 返回相同 atlas/texture pair。Armor placement 使用 owning player 的 vanilla `getEquipmentSlotForItem(stack) == slotType`；因此 vanilla/Fabric equipment slot 保持，但 arbitrary NeoForge item `canEquip` hook override 不具 parity，也不提供 facade。完整 owner、路径、事务/测试与延期见 `FABRIC_CONFIG.md`、`FABRIC_ITEM.md`。
+Basic/Input/Output slot 的 public surface 与 domain behavior 不变；仅把 private non-escaping `ConstantPredicates` 调用换成 exact lambda。Armor/Offhand 不依赖 NeoForge-injected slot background extension，改由 vanilla `getNoItemIcon()` 返回相同 atlas/texture pair。Armor placement 使用 owning player 的 vanilla `getEquipmentSlotForItem(stack) == slotType`；因此 vanilla/Fabric equipment slot 保持，但 arbitrary NeoForge item `canEquip` hook override 不具 parity，也不提供 facade。
 
 ## Container callback contract admission
 
@@ -319,7 +309,7 @@ Basic/Input/Output slot 的 public surface 与 domain behavior 不变；仅把 p
 
 状态：`mekanism.api.energy.IEnergyConversion` 已加入 Fabric API allowlist，源码与官方 oracle commit `4646f509` byte-identical；这不是 API 变更。
 
-`isEnabled`、`getConversion`、`convertFrom`、`convertTo`/`convertToDouble`、deprecated `convertToAsLong`、`convertToAsInt` 与 `isOneToOne` 的签名、double rounding 和 saturation 均未修改，包括 exact-1 long 经 double 后对 odd `>2^53` 的官方精度损失。Task 023 只在 `mekanism.fabric.energy` adapter 内把 exact `1.0D` 作为 authoritative identity contract 并旁路该损失；与 advertised 1:1 rate 冲突的 custom conversion override 不受支持。finite positive non-1 rate 仅报告经官方双向验证、两域都不越 bound 的 conservative fixed pair。固定候选族由全局 10-bit dyadic mesh，以及 canonical-decimal continued-fraction 每个 denominator 的 1..64 bounded multiplier closure 和 fitting binary shifts 组成；bounds 只做过滤；对 documented stable conversion behavior，取最大 verified eligible member，因此 deterministic 且对两域 bound 分别 monotone。cold family 在 sort/dedup 前最多 399,103 occurrences，verified primitive snapshot 按 conversion exact identity + raw rate bits 放入 bounded four-slot weak cache；bit 变化重建、enabled 每次实时读取、distinct implementation 不按相同 rate 合并。warm bound selection 为 `O(log U)` 且每个返回 pair 仍经 owner conversion 双向复验；empty requested window 在 snapshot 非空时复验首个 cached sentinel。zero-pair snapshot 无 sentinel，cache 以 owner 在 advertised rate bits 不变时保持 conversion behavior 稳定为前提。它不声明 arbitrary rate 的全局最大值或通用 utilization 下限；换算对象由 caller 提供，不把第三方类型、硬编码 2.5 或 FE 等价写进 Mekanism API。
+`isEnabled`、`getConversion`、`convertFrom`、`convertTo`/`convertToDouble`、deprecated `convertToAsLong`、`convertToAsInt` 与 `isOneToOne` 的签名、double rounding 和 saturation 均未修改，包括 exact-1 long 经 double 后对 odd `>2^53` 的官方精度损失。只在 `mekanism.fabric.energy` adapter 内把 exact `1.0D` 作为 authoritative identity contract 并旁路该损失；与 advertised 1:1 rate 冲突的 custom conversion override 不受支持。finite positive non-1 rate 仅报告经官方双向验证、两域都不越 bound 的 conservative fixed pair。固定候选族由全局 10-bit dyadic mesh，以及 canonical-decimal continued-fraction 每个 denominator 的 1..64 bounded multiplier closure 和 fitting binary shifts 组成；bounds 只做过滤；对 documented stable conversion behavior，取最大 verified eligible member，因此 deterministic 且对两域 bound 分别 monotone。cold family 在 sort/dedup 前最多 399,103 occurrences，verified primitive snapshot 按 conversion exact identity + raw rate bits 放入 bounded four-slot weak cache；bit 变化重建、enabled 每次实时读取、distinct implementation 不按相同 rate 合并。warm bound selection 为 `O(log U)` 且每个返回 pair 仍经 owner conversion 双向复验；empty requested window 在 snapshot 非空时复验首个 cached sentinel。zero-pair snapshot 无 sentinel，cache 以 owner 在 advertised rate bits 不变时保持 conversion behavior 稳定为前提。它不声明 arbitrary rate 的全局最大值或通用 utilization 下限；换算对象由 caller 提供，不把第三方类型、硬编码 2.5 或 FE 等价写进 Mekanism API。
 
 ## Energy container contract
 
@@ -329,7 +319,7 @@ Basic/Input/Output slot 的 public surface 与 domain behavior 不变；仅把 p
 
 `IStrictEnergyHandler` 与 `ISidedStrictEnergyHandler` 同样只删除两个 NeoForge fluid import，并把仅用于 Javadoc 的 `IFluidHandler#fill(...)` 比较链接改为平台中立文字：fluid fill 返回 accepted amount，而 Mekanism energy insertion 返回 unaccepted remainder。可执行代码、公开签名、default-method 控制流、annotation 与其余 Javadoc 含义均不变；`IMekanismStrictEnergyHandler` 与官方基线字节一致。兼容影响：无（仅 Javadoc/source import 清理，删除的类型未出现在公开签名或字节码行为中）。
 
-`BasicEnergyContainer` 保留官方 public factory/predicate 表面与行为。为避免引入 chemical/fluid 和 broad NBT helper 闭包，`ConstantPredicates.alwaysTrue()` 改为类内缓存 predicate，`NBTUtils.setLegacyEnergyIfPresent` 的 `stored` long/legacy string 读取语义窄化到类内；Guava 参数检查改为同类型的显式 `IllegalArgumentException`。兼容细节、暂缓边界和验证见 `docs/FABRIC_ENERGY.md` 与 `fabric/src/test/java/mekanism/common/capabilities/energy/BasicEnergyContainerTest.java`。
+`BasicEnergyContainer` 保留官方 public factory/predicate 表面与行为。为避免引入 chemical/fluid 和 broad NBT helper 闭包，`ConstantPredicates.alwaysTrue()` 改为类内缓存 predicate，`NBTUtils.setLegacyEnergyIfPresent` 的 `stored` long/legacy string 读取语义窄化到类内；Guava 参数检查改为同类型的显式 `IllegalArgumentException`。与 `fabric/src/test/java/mekanism/common/capabilities/energy/BasicEnergyContainerTest.java`。
 
 ## Heat container contract
 
@@ -337,35 +327,32 @@ Basic/Input/Output slot 的 public surface 与 domain behavior 不变；仅把 p
 
 `IHeatCapacitor` 的 NeoForge `INBTSerializable<CompoundTag>` 父接口替换为上文的 Mekanism-owned registry-aware 契约；其 getter/setter、batch update、listener、capacity 和 NBT 方法签名保持。
 
-`BasicHeatCapacitor` 为避免引入 broad `NBTUtils` 闭包，局部实现 `stored` 与 `heat_capacity` 的 exact `TAG_DOUBLE` 读取；缺失/错误类型忽略、加载不通知、pending heat 保留等语义不变。`HeatAPI` 本身与官方基线字节一致；Fabric access widener 仅镜像官方 access transformer 对 `Biome.getTemperature(BlockPos)` 的 public access，以保留位置修正温度。`IHeatHandler`、`ISidedHeatHandler`、`IMekanismHeatHandler` 与两种 heat holder 类型未作源码修改。兼容细节、暂缓边界和验证见 `docs/FABRIC_HEAT.md` 与对应测试。
+`BasicHeatCapacitor` 为避免引入 broad `NBTUtils` 闭包，局部实现 `stored` 与 `heat_capacity` 的 exact `TAG_DOUBLE` 读取；缺失/错误类型忽略、加载不通知、pending heat 保留等语义不变。`HeatAPI` 本身与官方基线字节一致；Fabric access widener 仅镜像官方 access transformer 对 `Biome.getTemperature(BlockPos)` 的 public access，以保留位置修正温度。`IHeatHandler`、`ISidedHeatHandler`、`IMekanismHeatHandler` 与两种 heat holder 类型未作源码修改。与对应测试。
 
 ## Relative-side translation contract
 
 状态：`RelativeSide` 与非配置 energy holder 闭包已移植。
 
-`RelativeSide` 保持 `mekanism.api.RelativeSide` 类型身份、枚举顺序、serialized names、translation keys、`CODEC`、`BY_ID`、`STREAM_CODEC` 和全部方向映射。Task 036 已恢复 oracle 的 APILang/ILangEntry representation：六项持有对应 entry，constructor 保留 serialized name，并由 `getTranslationKey()` 精确 delegation 得到同一 `side.mekanism.*` key。
+`RelativeSide` 保持 `mekanism.api.RelativeSide` 类型身份、枚举顺序、serialized names、translation keys、`CODEC`、`BY_ID`、`STREAM_CODEC` 和全部方向映射。已恢复 oracle 的 APILang/ILangEntry representation：六项持有对应 entry，constructor 保留 serialized name，并由 `getTranslationKey()` 精确 delegation 得到同一 `side.mekanism.*` key。
 
-`IHasTranslationKey.IHasEnumNameTranslationKey` 保持原 FQN、父级 Mekanism interface 和 `getTranslatedName()` 方法，但不再继承 NeoForge `TranslatableEnum`；这是既有、已批准的 Fabric nominal-parent 变化。Task 036 将 default body 从临时 direct `Component.translatable` 恢复为 oracle 的 `TextComponentUtil.translate(getTranslationKey())`。依赖 NeoForge subtype 关系的 addon 仍需迁移到 Mekanism-visible interface；Fabric 不提供 shim。
+`IHasTranslationKey.IHasEnumNameTranslationKey` 保持原 FQN、父级 Mekanism interface 和 `getTranslatedName()` 方法，但不再继承 NeoForge `TranslatableEnum`；这是既有、已批准的 Fabric nominal-parent 变化。将 default body 从临时 direct `Component.translatable` 恢复为 oracle 的 `TextComponentUtil.translate(getTranslationKey())`。依赖 NeoForge subtype 关系的 addon 仍需迁移到 Mekanism-visible interface；Fabric 不提供 shim。
 
-`IHolder`、`BasicHolder`、`IEnergyContainerHolder` 与 `EnergyContainerHolder` 未改公开/可见性表面；方向过滤、内部访问、动态 facing、identity/order、duplicate 与 live-list 行为保持。详见 `docs/FABRIC_HOLDERS.md` 及对应测试。
+`IHolder`、`BasicHolder`、`IEnergyContainerHolder` 与 `EnergyContainerHolder` 未改公开/可见性表面；方向过滤、内部访问、动态 facing、identity/order、duplicate 与 live-list 行为保持。及对应测试。
 
-## `mekanism.api.datamaps.MekaSuitAbsorption` (Task 038)
-
-状态：Task 038 落地时作为唯一直接 `mekanism.api.datamaps` admission 启用。相对官方
+## `mekanism.api.datamaps.MekaSuitAbsorption`
+状态：落地时作为唯一直接 `mekanism.api.datamaps` admission 启用。相对官方
 `v1.21.1-10.7.19.85`，唯一 executable delta 是 `ID` 的 namespace 来源由
 `MekanismAPI.MEKANISM_MODID` 改成稳定 literal `"mekanism"`，从而不触发尚未纳入的 broad facade。
 record identity、constructor、`absorption()`、ID path、object-first `CODEC`、bare-float alternative、
-`[0,1]` codec 与 constructor rejection、Javadoc/public surface 均保持。Task 038 当时未新增 public
-descriptor；Task 040 后该历史边界由下一节取代。
+`[0,1]` codec 与 constructor rejection、Javadoc/public surface 均保持。当时未新增 public
+descriptor；后该历史边界由下一节取代。
 
 Fabric loader/session 不伪造 `net.neoforged.*`。ordinary、unconditional、server-side、non-synced
-MekaSuit absorption 语义保持；Task 040 在同一 loader 上增加 Chemical descriptor/context/sync，而
+MekaSuit absorption 语义保持；在同一 loader 上增加 Chemical descriptor/context/sync，而
 conditions、Advanced merger/remover、holder mixin与 NeoForge facade 仍延期。NeoForge 21.1.200 oracle
-source/binary hash、资源 hash、layer/lifecycle/failure truth table、query 规则和验证见
-`docs/FABRIC_DATA_MAPS.md`。
+source/binary hash、资源 hash、layer/lifecycle/f
 
-## Chemical registry, data maps, stack and tank contracts (Task 040)
-
+## Chemical registry, data maps, stack and tank contracts
 状态：candidate slices **98/164/33**。Fabric API 以 `ChemicalRegistry` 精确拥有
 `REGISTRY_ID`/`REGISTRY_KEY`/`EMPTY_KEY` 以及安装后 registry/canonical empty value+holder，取代
 `MekanismAPI.CHEMICAL_*` 引用；不提供 partial `MekanismAPI`。`Chemical` 的 public codecs、parse/save、
@@ -375,7 +362,7 @@ constructors、legacy/modern attributes、translation/texture/tint、empty/type 
 subclass behavior，overrider 必须调用 `super`。同一 Chemical 的重入查询读取已累积的 immutable partial
 view，另一 Chemical 使用独立 nested frame。与 NeoForge cache-refresh lifecycle 不同，direct external
 invocation 明确无效并由 base method 抛出，这是授权 Fabric delta；每个 top-level query 当前重新分配并做
-五次 map lookup，Task041 在 recipe hot path 前必须解决且不得引入 shared mutable Chemical/global cache。
+五次 map lookup，在 recipe hot path 前必须解决且不得引入 shared mutable Chemical/global cache。
 `trackAttribute` 参数型从 NeoForge `DataMapType` 精确替换为层中 `MekanismDataMapType`。
 
 新 public `MekanismDataMapType<R,T>` 是 immutable identity descriptor，暴露 `registryKey()`、`id()`、
@@ -400,11 +387,10 @@ namespace和 descriptor type替代 facade/NeoForge references，codec layouts保
 public surface保持；`TriPredicate` 完整保留 test/and/or/negate与 null-check contract。
 
 完整逐源 U/A/N/M/R report、资源/service、wire bounds、runtime evidence与 external provider/
-transaction/ingredient/machine non-claims见 `docs/FABRIC_CHEMICAL.md`。
+transaction
 
-## Recipe ingredient, creator, input-handler and cache contracts (Task 041)
-
-Task 041 admits the recipe ingredient/input/generic-cache layer with these bounded API deltas against `4646f509`:
+## Recipe ingredient, creator, input-handler and cache contracts
+admits the recipe ingredient/input/generic-cache layer with these bounded API deltas against `4646f509`:
 
 - `IngredientCreatorAccess` 改从 `MekanismServices.load(IIngredientCreatorProvider.class)` 获取四个 creator
   singleton，不再引用 broad `IMekanismAccess`；新 interface `IIngredientCreatorProvider` 是层中性 service
@@ -442,9 +428,8 @@ Task 041 admits the recipe ingredient/input/generic-cache layer with these bound
   `LegacyState` identity；`addAttribute` 发布新 state 并仅使该 Chemical 的 entry 失效。repeat top-level
   query 在 exact (thread, context, chemical, legacy state) 下零分配零 descriptor lookup。
 
-## Recipe output handling, one-input cached recipes, and keyed holders (Task 042A)
-
-Task 042A admits the 33-source output-handling/one-input closure plus one new layer-neutral source, moving the compiled slices to **163/184/37**. Against
+## Recipe output handling, one-input cached recipes, and keyed holders
+admits the 33-source output-handling/one-input closure plus one new layer-neutral source, moving the compiled slices to **163/184/37**. Against
 `4646f509` the closure is exactly 12 `U` (byte-identical) and 21 `A`, plus the new `N` source; there is no `M` or `R`.
 
 The only adaptations are the four families approved by `archive/TASK042_PLAN.md`:
@@ -453,7 +438,7 @@ The only adaptations are the four families approved by `archive/TASK042_PLAN.md`
   the simulate cap, `int amountUsed / toOutput.getAmount()` truncation, and the exact `getNeeded() > 0` error split; the chemical path keeps
   `MathUtils.clampToInt(amountUsed / toOutput.getAmount())` with a true-`long` `copyWithAmount(amount * operations)`.
 - NeoForge `TriPredicate` becomes `mekanism.api.functions.TriPredicate` in `PressurizedReactionRecipe`.
-- `MekanismAPI.MEKANISM_MODID` becomes the literal `"mekanism"`, matching the Task 032 precedent and dropping the entire 15-file module/gear/radial API group,
+- `MekanismAPI.MEKANISM_MODID` becomes the literal `"mekanism"`, matching the precedent and dropping the entire 15-file module/gear/radial API group,
   which was reachable only through the single mod-id constant.
 - `DeferredHolder.create(Registries.RECIPE_TYPE|ITEM, key)` becomes `MekanismKeyedHolder`.
 
@@ -471,9 +456,8 @@ key-correct but unbound, and `value()` throws. `mekanism/api/MekanismAPI.class` 
 Verification: six ordinary methods in the single new `RecipeOutputHandlingTest` (no Knot), the three slice no-NeoForge checks, ,
 `fabric-build.sh`, and the exact static packaged class-family/leakage gate. `./build.sh --clean` and real server/client smokes are not run.
 
-## Recipe type/serializer registration and the concrete recipe family (Task 043)
-
-Task 043 admits the whole `mekanism.api.recipes.basic` package (26 concrete recipes, 7 abstract bases, 2 output interfaces), the API serializer holder class, the
+## Recipe type/serializer registration and the concrete recipe family
+admits the whole `mekanism.api.recipes.basic` package (26 concrete recipes, 7 abstract bases, 2 output interfaces), the API serializer holder class, the
 three common recipe serializers, `mekanism.common.recipe.WrappedShapedRecipe`, and one new platform owner. The compiled slices move to **199/188/38**. Against
 `4646f509` the admitted set is 16 `U` (byte-identical: `BasicChemicalChemicalToChemicalRecipe`, `BasicChemicalCrystallizerRecipe`, `BasicChemicalDissolutionRecipe`, `BasicChemicalToChemicalRecipe`, `BasicCombinerRecipe`, `BasicItemStackChemicalToItemStackRecipe`, `BasicItemStackToChemicalRecipe`, `BasicItemStackToEnergyRecipe`, `BasicItemStackToFluidOptionalItemRecipe`, `BasicItemStackToItemStackRecipe`, `BasicNucleosynthesizingRecipe`, `BasicSawmillRecipe`, `IBasicChemicalOutput`, `IBasicItemStackOutput`, `SawmillRecipeSerializer`, `WrappedShapedRecipe`) with the other 24 `A` under exactly the authorized families below, plus one `N`.
 
@@ -482,7 +466,7 @@ Adaptations, all previously authorized or newly justified:
 - `net.neoforged.neoforge.fluids.FluidStack` → `mekanism.api.fluid.FluidStack` in the six `FluidStack`-bearing recipe classes and two common serializers;
 - `DeferredHolder.create(Registries.ITEM|RECIPE_SERIALIZER, key)` → `MekanismKeyedHolder` in the 16 toast-item holders and the 26 API serializer fields, with no
   public field changing its type parameters (a new typed-key `registryKeyed` overload keeps `MekanismKeyedHolder<RecipeSerializer<X>>`);
-- `MekanismAPI.MEKANISM_MODID` → literal `"mekanism"` (Task 032 precedent);
+- `MekanismAPI.MEKANISM_MODID` → literal `"mekanism"` ;
 - `net.neoforged.neoforge.network.codec.NeoForgeStreamCodecs.composite` (7-arity) → a private `composite` in `MekanismRecipeSerializer` implementing the identical
   sequential decode/encode algorithm;
 - `net.neoforged.neoforge.common.util.NeoForgeExtraCodecs.withAlternative(MapCodec, MapCodec)` → a private `AlternativeMapCodec` in `RotaryRecipeSerializer`
@@ -503,11 +487,10 @@ worker (real registration with canonical identity, holder resolution, a real `Re
 assertions were corrected to the real contract: an empty chemical output is an omitted optional field, and the no-output reaction and chance-without-output cases are
 rejected by the recipe constructor's precondition rather than as a codec error result.
 
-### Generic holder shape (Task 043 correction from independent review)
-
-Task 042A declared `MekanismKeyedHolder<T> implements Holder<T>`, which is not type compatible with the official surface: the oracle fields are
+### Generic holder shape
+declared `MekanismKeyedHolder<T> implements Holder<T>`, which is not type compatible with the official surface: the oracle fields are
 `DeferredHolder<RecipeType<?>, RecipeType<X>>`, and that two-parameter shape *is* a `Holder<RecipeType<?>>` because the registry element type is split from the
-declared value type. Compilation confirmed the incompatibility. Task 043 therefore re-declares the helper as `MekanismKeyedHolder<R, T extends R>`, so all 26 recipe
+declared value type. Compilation confirmed the incompatibility. therefore re-declares the helper as `MekanismKeyedHolder<R, T extends R>`, so all 26 recipe
 type fields are `MekanismKeyedHolder<RecipeType<?>, RecipeType<X>>` and all 26 serializer fields are
 `MekanismKeyedHolder<RecipeSerializer<?>, RecipeSerializer<X>>`, each assignable to the official widened `Holder<...>` while still returning the precise declared
 value type from `get()`/`value()`. The 16 toast-item fields keep the oracle's declared `Holder<Item>`. `attach` additionally rejects a delegate whose bound value is
@@ -517,8 +500,7 @@ Coverage is executable, not documentary: for every registered type the isolated 
 declared `TYPE_*` value, the canonical holder is that same instance, the holder is bound, `get()`/`value()` agree, and all 26 instances are distinct under an identity
 set. A real `RecipeManager` decode-and-serve case proves the served recipe reports the registered type and serializer.
 
-## Capability cache 与 capability 基类 tile（Task 051）
-
+## Capability cache 与 capability 基类 tile
 状态：已移植，Fabric common/platform allowlist 中启用（`mekanism/common/capabilities/CapabilityCache.java`、`mekanism/common/tile/base/CapabilityTileEntity.java`、`mekanism/fabric/tile/FabricCapabilityTileLifecycle.java`）。
 
 ### 永久签名差异（Fabric delta）
@@ -548,8 +530,7 @@ eager+lazy 的 removed/clearRemoved/load 代际守卫与保留别名 fail-closed
 `registerForBlockEntity` 注册后经真实 per-find 分发验证策略/生命周期/逐-find 新鲜解析与 Team Reborn 懒工厂）。`assemble`（remapJar + 三个 slice
 gate）BUILD SUCCESSFUL。未运行（按完成度优先策略）：全量测试、packaged smoke、clean release、真实 server/client fixture。
 
-### Play 通道 (C2S) 平台差异（Task052，2026-10-26）
-
+### Play 通道 (C2S) 平台差异
 - 官方 `IPayloadContext` 处理器统一改为 `IMekanismPacket#handle(Player)`：Fabric 的 play receiver 已解析发送玩家，`PacketUtils.config/ejector/filterManager/blockEntity` 直接接收该 `Player`。
 - 无效包拒绝：`IPayloadContext#disconnect` → `ServerPlayer#connection#disconnect`（play payload 在 Fabric 上没有 context 级断开入口）。
 - `PacketDropperUse` 通过 `ContainerType.FLUID.createHandler(stack)` 访问滴管自身的 attachment 流体罐；NeoForge 的外来 item fluid capability 在此无 attachment 等价物。
@@ -558,15 +539,13 @@ gate）BUILD SUCCESSFUL。未运行（按完成度优先策略）：全量测试
 - `PacketModeChangeCurios` 不移植：Curios 无 Fabric 对等物，官方 `PacketModeChange`（装备槽）保留。
 - 注册：25 个 C2S payload 由 `FabricServerPlayNetworking` 在 `PayloadTypeRegistry.playC2S()` 注册，并按类型各注册一个 `ServerPlayNetworking` receiver，重复注册直接抛错。
 
-### 接口重声明 vanilla 方法名（Task052 机器首跑修复，2026-10-26）
-
+### 接口重声明 vanilla 方法名
 - 现象：`TileEntityEnrichmentChamber` 首次 tick 抛 `AbstractMethodError`（`IRecipeLookupHandler.getLevel`）。dev 名字下接口抽象方法与 `BlockEntity#getLevel` 同名即视为实现；remap 后 vanilla 方法变为 `method_10997`，而 mod 接口不在 Minecraft 继承链上、名字不变，导致抽象方法无实现。
 - 规则：mod 接口不得以 abstract 形式重声明会被 remap 的 vanilla 方法名（至少 `getLevel`/`getBlockPos` 这类 `BlockEntity` 方法）。
 - 修复：新增 `mekanism.common.base.ILevelProvider`，以单一 default `getLevel()` 委托 `BlockEntity#getLevel`；`IRecipeLookupHandler`、`ITileWrapper`、`IQIOCraftingWindowHolder` 均 extend 它并删除各自的 `getLevel` 声明（两个互不相关的 default 也无法解析）。`ITileWrapper#getBlockPos` 同理保留 default；`Transmitter` 与 `PortableQIODashboardInventory` 保留显式实现。
 - 验证：`scripts/fabric-machine-smoke.sh` 在真实打包服务端驱动富集仓与冶炼机，断言 2 铁矿石→4 铁粉、2 铁矿石→2 铁锭，且无异常/崩溃；接口层级改动后必须 `compileJava --rerun`。
 
-### 能量边界（Task052 能量网络打通，2026-10-26）
-
+### 能量边界
 - `ForgeEnergyCompat#capabilityExists` 必须使用 Team Reborn Energy 的真实 mod id `team_reborn_energy`；写错会让所有能量 acceptor 缓存为空且 `isUsable` 路径失效。
 - `CapabilityTileEntity#setLevel` 在进入 `ServerLevel` 时开启 exposure。Fabric 的 `BLOCK_ENTITY_LOAD` 只覆盖区块加载的 BE，玩家放置（`LevelChunk#setBlockEntity`）不会触发；只在 LOAD 开启会让新放置机器的 provider 全部返回 null。
 - `BlockEnergyCapabilityCache#getCapability` 在本移植返回已包装的 `IStrictEnergyHandler`，`EnergyAcceptorCache` 不得再调用 `wrapAsStrictEnergyHandler`（否则把 handler 强转 `EnergyStorage` 抛 CCE）。
@@ -574,8 +553,7 @@ gate）BUILD SUCCESSFUL。未运行（按完成度优先策略）：全量测试
 - 机器默认侧面配置来自物品组件的 `AttachedSideConfig`（放置时由原版应用）；`/setblock` 不应用物品组件，测试需用 `data merge block` 写入 `component_config`（ENERGY ordinal 0 的 `config0` 数组、`eject0`）。
 - 验证：`scripts/fabric-machine-smoke.sh` 9/9（含 cube→cable→chamber）。
 
-### 物品/流体/化学传输边界（Task052，2026-10-26）
-
+### 物品/流体/化学传输边界
 - 三类传输器的 acceptor 都是“每次解析重新查询”的语义：物品/流体走 Fabric `ItemStorage.SIDED`/`FluidStorage.SIDED`，化学走 Mekanism 自有 lookup；不缓存返回的 `Storage`，因此端点重新暴露时无需失效回调。
 - 运行时放置的端点只有在 `CapabilityTileEntity#setLevel` 开启 exposure 后才可被发现（与能量网络同一条修复）；否则传输器看到的邻居能力为 null。
 - 传输器侧面连接类型由 `connection` int 数组持久化（Direction 序：down/up/north/south/west/east；ConnectionType：normal=0, push=1, pull=2, none=3）。真实玩家通过 GUI/配置器设置，测试用 `data merge block` 写入。
@@ -596,30 +574,27 @@ gate）BUILD SUCCESSFUL。未运行（按完成度优先策略）：全量测试
 - Chunk generation version 恢复原 root `mek_world_gen_version`：旧文件缺失为0；尚待 retrogen 的版本由 transient chunk attachment 承载，完成后显式保存当前版本。这不代表矿物生物群系注入已完成。
 - C2S catalog 现为26个，补上三个已注册 GUI 实际使用的 `PacketGuiInteract`；日志计数来自成功注册次数。彩色文本恢复原专用 filter，蜂巢剪切调用实际 vanilla harvest，电弓用 detached enchanted bow 调用原 projectile 创建流程。
 
-### 世界生成边界（Task052 官方矿物生成闭环，2026-10-26）
-
+### 世界生成边界
 - 官方 `data/mekanism/neoforge/biome_modifier/*.json`（6 个 `neoforge:add_features`，共引用 11 个 placed feature）按原样打包，仍是唯一事实来源；`FabricBiomeModifiers` 在启动时解析并逐 placed feature 调 `BiomeModifications.addFeature`，不发明注册表、不修改官方 JSON。`biomes` 字段保持官方 `HolderSet<Biome>` 语义：`#tag` 引用或 biome ID（单个/数组），在 biome 选择上下文上惰性匹配（tag 只有世界加载时才可解析）。`#` 前缀必须在 `ResourceLocation.parse` 之前剥离。
 - 非 `add_features` 官方类型（当前仅 Additions 的 `mekanismadditions:baby_mob_spawn`）直接拒绝而不是静默忽略，防止未来新增类型被无声丢弃；Additions 的 mob 修饰符不属于本轮边界。
 - 打包面新增 `data/mekanism/worldgen/configured_feature/`、`placed_feature/` 与 `neoforge/biome_modifier/` 三个目录（`tags/worldgen/biome/spawn_ores.json` 原已在 `data/mekanism/tags/**` 内）。configured/placed feature 作为普通 datapack 内容加载；`mekanism:ore`、`mekanism:disk`、`mekanism:ore_retrogen` feature、`configurable_constant`/`configurable_uniform` int provider、`configurable` height provider 与 `mekanism:disableable` placement modifier 共 7 个 codec 条目随 bootstrap 注册进对应 BuiltInRegistries。
-- 官方世界配置 `MekanismConfig.world`（SERVER 型）由 `FabricWorldGenConfig` 在实际 SERVER 生命周期加载/监听/卸载。W-124 固定 JAR 核对纠正旧固定世界路径说法：NeoForge 21.1.200 默认选实例 `config/Mekanism/world.toml`，仅已存在的 `<world>/serverconfig/Mekanism/world.toml` 覆盖该文件；缺失文件可从 `defaultconfigs/Mekanism/world.toml` 初始化。claim/save/watch 均绑定本次选择，下一世界重新选择。feature codec 只绑定 cached supplier，真实生成时读取已加载值；不得通过另一个 process manager 重复注册此 SERVER spec。
+- 官方世界配置 `MekanismConfig.world`（SERVER 型）由 `FabricWorldGenConfig` 在实际 SERVER 生命周期加载/监听/卸载。固定 JAR 核对纠正旧固定世界路径说法：NeoForge 21.1.200 默认选实例 `config/Mekanism/world.toml`，仅已存在的 `<world>/serverconfig/Mekanism/world.toml` 覆盖该文件；缺失文件可从 `defaultconfigs/Mekanism/world.toml` 初始化。claim/save/watch 均绑定本次选择，下一世界重新选择。feature codec 只绑定 cached supplier，真实生成时读取已加载值；不得通过另一个 process manager 重复注册此 SERVER spec。
 - `ConfigurableHeightProvider` 的官方 `Mekanism.logger` 改为同类别私有 SLF4J logger（与 `SerializerHelper` 先例一致），警告文本不变；四个 registry 类的 `DeferredHolder/DeferredRegister` 换成本项目注册件、`Mekanism.MODID` 换字面 mod id（与 `MekanismItems` 同型）。
 - 验收：`scripts/fabric-worldgen-smoke.sh`（固定 seed 世界 + 512 chunk forceload + 停服后扫描真实 region 文件调色板）5/5：注册 proof、`modifiers=6 features=11` proof、datapack 零错误、`world.toml` 落盘、六类目标（五种矿石 stone/deepslate 形态 + 盐盘）均在真实生成区块中命中。retrogen（`enableRegeneration` 默认 false）由既有 `CommonWorldTickHandler`/`ChunkGenVersionMixin` owner 承接，本轮未变。
 
-### 漏斗自动化边界（Task052，2026-10-26）
-
+### 漏斗自动化边界
 - 官方 NeoForge 让漏斗经物品 capability 看见机器；vanilla 漏斗只认识 `Container`/`WorldlyContainerHolder`，而 Container 的原地可变 stack 协议（`getItem` 后被 `grow`/`shrink` 直接改写）无法在 Mekanism 槽位 API 上忠实实现——返回副本会让合并路径静默丢物，返回内部 live stack 又绕过槽位校验与变更通知。因此桥接走传输器同一条真实事务面：`HopperTransferMixin` 在 `ejectItems`/`suckInItems` HEAD 处解析目标位置的 `ItemStorage.SIDED`，且仅当返回 `FabricItemStorage` 时才接管，一次移动一件、外层事务 simulate-decide-commit。
 - 侧面语义：eject 的机器侧面 = 漏斗朝向的反面（vanilla `getAttachedContainer` 的目标块）；suck 的机器侧面 = DOWN（漏斗吸取上方）。漏斗朝向读 blockstate `HopperBlock.FACING`（原 `facing` 字段为私有实例字段，静态注入不能 shadow）。
 - 守卫精确性：vanilla 容器（箱子、漏斗互传、实体容器、地面物品拾取）与第三方 storage 一律回退 vanilla 路径；目标不可收/已满时 abort 回滚，无物品损失。每次尝试重新查询（与传输器 acceptor"每次解析重新查询"语义一致），不引入结果缓存。
 - 验收：`scripts/fabric-machine-smoke.sh` 现为 20 项：朝向漏斗把 4 个铁矿推入腔体 LEFT 物品侧（`config3` FRONT..TOP=INPUT、BOTTOM=OUTPUT），下方漏斗从 BOTTOM OUTPUT 拉出 `mekanism:dust_iron`，两项各以漏斗 `Items` 断言，一次连续通过。
 
-### 官方资产与模型加载闭环（Task052 客户端渲染弧第一段，2026-10-26）
-
+### 官方资产与模型加载闭环
 - 打包面：release JAR 从只含 lang/particles/shaders 扩到官方完整资产——163 个手写 blockstate、590 个手写模型（含 transmitter/mekasuit 的 OBJ+MTL 源）、857 个贴图、GUI 贴图、代码加载的 render 贴图、音效与全部非英文语言（生成的 en_us.json 仍是唯一英文来源，无重复冲突），另含生成侧 38 blockstate、156 模型、60 贴图、实体图集与 sounds.json。官方文件零修改，`convert_uv.py` 是开发脚本不入包。
 - 模型加载闭环（`FabricMekanismModelPlugin`，PreparableModelLoadingPlugin，离线线程解析、严格未知 loader 拒绝）：`neoforge:composite`（82 个工厂模型）按官方 children 定义以 vanilla 管线逐个烘焙合并；`neoforge:obj`（Meka-Tool 实体 OBJ，`mtllib`/`map_Kd` 直引贴图）复用 transmitter 的 OBJ 几何解析/四边形烘焙器（`map_Kd` 扩到官方直引贴图 id 形式、无 map_Kd 的占位材质按 Blockbench 惯例跳过，面真正引用时烘焙器仍大声失败）；`neoforge:separate_transforms` 通过 `FabricSeparateTransformsModel` 烘焙 base／perspective，ItemRenderer 的专用参数分派在原生变换之前选择模型；OBJ 父链由既有 BlockModel mixin 承接，custom geometry 避开 generated-item 捷径；`neoforge:item_layers`（QIO dashboard）rebase 到 `minecraft:item/generated`（官方逐层 light 数据由既有 `FabricQIOModelPlugin` quad owner 应用）。四个模型类继承 BlockModel（vanilla 父链解析硬性要求，工厂物品模型直接 parent 到复合方块模型；与 transmitter 先例一致）。
 - 大声延迟（proof line 逐族计数，绝不伪造）：`mekanism:energy_cube`/`mekanism:data_based`/`mekanism:robit` 官方烘焙读取 NeoForge model data，回退 vanilla 纯解析（tier 模型 parent 在其上，不能经 resolver 干预否则触发 BlockModel 父链 cast）；`neoforge:fluid_container`（18 个流体桶）经 `FabricDeferredLoaderModel` 显式解析为 vanilla missing 模型并切断只存在于 NeoForge jar 的 `neoforge:item/bucket` 父链（否则资源重载崩溃）；`mekanism:transmitter` 归属既有 transmitter 插件。
 - 验收：`scripts/fabric-model-smoke.sh`（Xvfb 下真实客户端 JVM + 共享 Loom 输出互斥锁）5/5：标题屏、客户端入口点、`MEKANISM_FABRIC_MODELS_PROOF composite=82 separate_transforms=1 item_layers=1 obj=1 energy_cube_deferred=1 data_based_deferred=1 robit_deferred=2 fluid_container_deferred=18 transmitter_owned=3`、零缺失模型错误、零加载器异常。回归：machine smoke 20/20（保留目录复跑；一次 15-fail 为 240s 启动超时下的并发 flake，非 jar 缺陷）。
 
-### 瓦片 BER 脊柱闭环（Task052 客户端渲染弧 5(c) 前半，2026-10-26）
+### 瓦片 BER 脊柱闭环 前半，2026-10-26）
 
 - 纳入并接线 15 个瓦片实体渲染器（boiler/dynamic tank/digital miner/dimensional stabilizer/personal chest/nutritional liquifier/pigment mixer/seismic vibrator/teleporter/thermal evaporation/industrial alarm/SPS/bin×5/energy cube×5/fluid tank×5，共 30 个 tile 类型）+ 三个基类（MekanismTileEntityRenderer/ModelTileEntityRenderer/MultiblockTileEntityRenderer）+ IWireFrameRenderer，经 `FabricTileEntityRendererRegistration` 用 vanilla `BlockEntityRenderers.register` 注册（官方 ClientRegistration.registerRenderers 的瓦片半；transmitter 渲染器显式延后——本移植的 transmitter 外壳可视归 baked-model 缝所有，contents 覆盖层依赖官方 obj 几何 loader）。两个 BER Java 模型层（energy core/industrial alarm）经 Fabric `EntityModelLayerRegistry` 注册。
 - 事件枢纽拆分（sanctioned delta family）：`RenderTickHandler` 保留 level-render 半（透明 LazyRender 队列、wire-frame 助手、配置器覆盖模型缓存），HUD/护甲/高亮/EMI/tick 监听随各自延后车道移出；排空点由 Fabric `WorldRenderEvents.AFTER_TRANSLUCENT` 注册（对应官方 RenderLevelStageEvent AFTER_TRANSLUCENT_BLOCKS），render-tick 用 access widener 打开的 `LevelRenderer.ticks`（两个上游 AT 树对照为 NeoForge 事件内部注入）。`MekanismRenderer.onStitch` 的瓦片 reset 扇出恢复接线（transmitter 三条仍延后）。
@@ -627,116 +602,103 @@ gate）BUILD SUCCESSFUL。未运行（按完成度优先策略）：全量测试
 - 文件级适配：瓦片渲染器的 NeoForge FluidStack → `mekanism.api.fluid.FluidStack`；原记录误称端口 FluidStack 具有组件感知 equals/hashCode：实际只有身份相等；后续审查改用不可变 Fabric `FluidVariant` 作为流体类型及组件缓存键；NeoForge 专属 `getRenderBoundingBox` 覆盖移除（Fabric BER 无该钩子，`shouldRenderOffScreen` 已放宽视锥裁剪——记录的裁剪粒度 delta）；`ModelData.EMPTY` 调用点走 vanilla 无参路径；`Mekanism.rl` → `MekanismAPI.MEKANISM_MODID` 私有助手（既定先例）。access widener 增补：LevelRenderer.ticks、Minecraft.levelRenderer、ModelPart.children/cubes、ModelPart$Cube.polygons（上游两树可见性对照核对）。
 - 验收：`scripts/fabric-model-smoke.sh` 扩至 7 检查（新增 `MEKANISM_FABRIC_MODEL_CACHE_PROOF json_models=7`、`MEKANISM_FABRIC_BER_PROOF tile_types=30 renderers=15 layers=2`），两次全绿；machine smoke 20/20。未验证风险：BER 的世界内实际渲染画面（需要进入存档的可视验证）归功能里程碑门禁。
 
-### 方块物品 ISBER 闭环（Task052 客户端渲染弧 5(d) 第一段，2026-10-26）
+### 方块物品 ISBER 闭环 第一段，2026-10-26）
 
 - `MekanismISTER` + `RenderEnergyCubeItem` + `RenderFluidTankItem` 经 Fabric `BuiltinItemRendererRegistry` 以 `DynamicItemRenderer` lambda 接线（官方 registerItemExtensions 语义）；十个物品 id（5 能量立方 + 5 流体罐）的官方 JSON 保持不动，由 `FabricItemRendererRegistration` 的 resolveModel 覆盖用 `QuadsEmptyModel` 包装官方烘焙模型——仅抑制 quads、完整保留父链解析的 display 变换/粒子/overrides，避免 Fabric builtin 渲染器要求改 JSON（`builtin/entity`）导致的双重渲染。
 - `MekanismISTER.renderBlockItem` 从 NeoForge 通道（getRenderPasses/renderTypes/ModelData/renderQuadList）改写为 vanilla 1.21.1 等价路径（单块模型 + `ItemBlockRenderTypes.getRenderType(state, fabulous)` + 内联染色四边形循环，即 vanilla renderQuadList 私有体）；NeoForge 树公开化的 `Minecraft.levelRenderer`/`LevelRenderer.ticks`（官方 getTicks getter）/`Minecraft.itemColors`（官方 getItemColors getter）经 access widener 对齐，官方 getter 调用点为宽化字段读（微 delta，注明）。
 - 能量立方物品外壳仍属延后的 energy_cube loader 族（其 side-state 切换读 NeoForge model data），核心（ModelEnergyCore）正常渲染；三个官方物品条装饰器（ChemicalFluidBar/MekaSuitBar/TransmitterType）在本 fabric-api 版本无对应 API，延后。
 - 验收：client smoke 扩至 8 检查（新增 `MEKANISM_FABRIC_ITEM_RENDERER_PROOF suppressed_models=10 builtin_renderers=10`）；未验证风险：物品在 GUI/手中的实际画面归功能里程碑门禁。
 
-### 装备物品 ISBER 闭环（Task052 客户端渲染弧 5(d) 第二段，2026-10-26）
+### 装备物品 ISBER 闭环 第二段，2026-10-26）
 
 - 六个装备 ISBER（jetpack/armored jetpack/free runners/armored free runners/scuba mask/scuba tank/atomic disassembler/flamethrower）经同一 `BuiltinItemRendererRegistry` 通道接线；官方物品 JSON 本就 parent 到 `minecraft:builtin/entity`（vanilla 特殊模型、烘焙零 quads），Fabric 通道零 JSON 改动、零抑制器。八个 `Model*` Java 模型（jetpack 等）+ 八个层定义经 `EntityModelLayerRegistry` 注册（transporter box 层随 transmitter 车道）；`Mekanism.rl` → `MekanismAPI.MEKANISM_MODID` 私有助手（既定先例）。
 - 护甲形态半（`MekCustomArmorRenderProperties` 的 HumanoidModel gear 渲染，`JetpackArmor` 等）随 armor 车道延后；物品形态先接通。
 - 验收：client smoke 8 检查（BER proof layers=2→10、ITEM_RENDERER proof builtin_renderers=10→18）两次全绿；machine smoke 20/20。
 
-### NeoForge 类型化配料解码闭环（Task052 datagen 车道第一段，2026-10-26）
-
+### NeoForge 类型化配料解码闭环
 - 官方 320 个使用 `neoforge:compound`/`neoforge:difference`/`neoforge:intersection` 类型化配料的配方（染色/绘画/颜料提取/生物燃料/碳转化等核心目录）此前整批排除；`ItemStackIngredient` 编解码在既有 compound 支持上补齐 difference（base−subtracted）与 intersection（children AND）两类官方形状：JSON 编解码对称、网络流编解码以 mode byte 扩展（0 simple/1 compound/2 difference/3 intersection）、匹配语义（并/差/交）、配方输入缓存映射（intersection 缓存面=全部 children）与空匹配判定（intersection 任一成员为空即空）齐全。
 - 打包面解除 320 个排除项（`recipe-neoforge-only.txt` 删除），release JAR 配方 1476→1816；真实服务端 "Loaded 2868 recipes"、零配方解析错误、machine smoke 20/20。637 个 `compat/**` 配方仍延后：其 `neoforge:conditions`（mod_loaded 门）包装键在 Fabric 条件系统（固定 `fabric:load_conditions` 键）无对应物，需打包期 JSON 变换或裁决——作为 datagen 车道剩余切片记录。
 - 验收：新增 `NeoForgeTypedIngredientTest` 4 例（三种官方形状的精确 JSON 解码、并/差/交匹配语义、重编码对称、缓存面）。
 
-### compat 配方条件包装变换（Task052 datagen 车道第二段，2026-10-27）
-
+### compat 配方条件包装变换
 - 637 个官方 `compat/**` 配方以 NeoForge `neoforge:conditions` 包装门控其他模组,该包装键在 Fabric 条件系统（固定 `fabric:load_conditions`）无对应物。采用**打包期变换**（`transformCompatRecipes`，groovy JsonSlurper）:官方源文件 byte 不变,仅打包形态转换——wrapper→`fabric:load_conditions`、`mod_loaded`→`fabric:all_mods_loaded`（注意复数 s,首版误写单数被真实服务端 455 条解析错误暴露）、`not`→`fabric:not`、`tag_empty`→`mekanism:tag_empty`（读取重载时真实 item tag 内容）。
-- `mekanism:mod_version_loaded`（118 个）为 Mekanism 自定义条件,Fabric 无内建版本区间条件→移植 `FabricModVersionLoadedCondition` 注册同 id 的 fabric ResourceConditionType,语义对齐官方 `ModVersionLoadedCondition`（mod 存在且版本≥下限）。**2026-10-30 W-19 收口**：版本判断复用 Maven `ComparableVersion`，固定嵌套 maven-artifact 3.9.9；release/ga/sp 下限已在真实配方加载验证，原 Fabric Version 比较差异已移除。
+- `mekanism:mod_version_loaded`（118 个）为 Mekanism 自定义条件,Fabric 无内建版本区间条件→移植 `FabricModVersionLoadedCondition` 注册同 id 的 fabric ResourceConditionType,语义对齐官方 `ModVersionLoadedCondition`（mod 存在且版本≥下限）。**2026-10-30 收口**：版本判断复用 Maven `ComparableVersion`，固定嵌套 maven-artifact 3.9.9；release/ga/sp 下限已在真实配方加载验证，原 Fabric Version 比较差异已移除。
 - **标签条件修正（2026-10-27）**：原变换将 `tag_empty` 误映射为 `tags_populated`，外层 `not` 未被抵消，64 个官方兼容配方的条件因此反向；旧文档称只有空标签差异是错误的。现用真实 reload tag 快照实现 `mekanism:tag_empty`，区分不存在、存在但空和非空；作用域跟随 Fabric 条件加载清理。已在隔离服务端以 4 个测试配方验证三条条件通过、一条拒绝（2868→2871），未实测安装 BSWG 的完整配方。
 - 验收:jar 内 637 个 compat 配方全部为变换形态;真实服务端条件注册 proof + 零解析错误 + "Loaded 2868 recipes"(与无 compat 时相同——ae2/BSWG 缺席时 637 全部被条件正确跳过,即门控生效的直接证据)。
 
-### HUD 车道（Task052 client 渲染弧 (d) 段,2026-10-27）
+### HUD 车道 段,2026-10-27）
 
 - 四个官方 HUD 层（`LayeredDraw.Layer` 原生接口）全部接通:MekaSuitEnergyLevel（ARMOR_LEVEL 之上）、MekanismHUD（SUBTITLE_OVERLAY 之上）、MekanismStatusOverlay（原生 selected-item-name 位,ModeStatusOverlayMixin 早前已建）、RadiationOverlay（全层之下,RadiationOverlayMixin 早前已建）。1.21.1 fabric API 无分层 HUD 插入（仅尾部 HudRenderCallback）,故前两者经 `FabricHudLayersMixin` 包裹 vanilla `Gui` 构造器的两个 `LayeredDraw.add` 位点（ordinal 2/13）,与 NeoForge 插槽逐位对齐。
 - 平台适配:`FabricHudHeights.leftColumnHeight` 复刻 NeoForge `Gui.leftHeight`（vanilla 1.21.1 无此字段,renderPlayerHealth 局部变量算行）——沿 RadiationOverlay→FabricRadiationAttachments 先例;`+=8` 下游消费者缺失致最坏情形模式文本与本条 8px 重叠（记录）。MekanismHUD 的 curios 块随 curios 车道延后（装备槽主路径完整）。访问放宽镜像上游 AT 三项:Gui.subtitleOverlay、SubtitleOverlay.audibleSubtitles、SubtitleOverlay$Subtitle（HUDRenderer 字幕宽度测量用）。
 - 验收:模型 smoke 第 9 检查 `MEKANISM_FABRIC_HUD_PROOF layers=2`（新 mixin）+ 既有状态/辐射 mixin 真机运行;9/9 零缺失模型。切片 api 262 / common 1452 / platform 143。
 
-### Flame 实体渲染器（Task052 entity 渲染弧第一段,2026-10-26）
-
+### Flame 实体渲染器
 - `RenderFlame`（喷火器火舌实体,手绘方块面片 + FLAME render type,无模型依赖）经 fabric `EntityRendererRegistry` 注册——vanilla `EntityRenderers.register` 为 private,loader 拥有公开注册面。Robit 渲染器随 robit 模型族切片延后（baked-model 驱动,需 RobitSpriteUploader + 两个 deferred robit 缓存模型）。
 - 验收:模型 smoke 第 10 检查 `MEKANISM_FABRIC_ENTITY_RENDERER_PROOF entities=1`,客户端 boot 注册 proof + 零缺失模型;两次连续通过。切片 api 262 / common 1453 / platform 144。真机火舌视觉(需世界内实体)留待 mcdebug GUI 会话或用户观察——注册面与渲染路径代码已真机 boot 覆盖,渲染调用未覆盖(记录残留)。
 
-### Gear 客户端 tick 车道（Task052,2026-10-26）
-
+### Gear 客户端 tick 车道
 - `ClientTickHandler`（412 行）正式纳入:jetpack/潜水/重力调制玩家状态同步（驱动服务端飞行,经已纳的 `base.PlayerState.INSTANCE`,`Mekanism.playerState` 换名同 rl() 先例）、喷气背包推力与模式、夜视/视觉增强（药水+雾)、便携传送延迟计时、MekaTool 滚轮模式切换、MekaSuit 模型部件隐藏、径向选择器 GUI（GuiRadialSelector 同时纳入）。
 - 缝位:fabric `ClientTickEvents.START_CLIENT_TICK`(tick);`ClientMouseScrollMixin`(MouseHandler.onScroll HEAD 可取消);`FogColorMixin`(FogRenderer.setupColor TAIL,静态回调——首跑非静态被 mixin 拒绝,服务端日志逐字暴露);`FogSetupMixin`(setupFog TAIL 重发 shader 雾值,等效官方可取消事件);`LivingEntityVisibilityMixin`(render HEAD/RETURN);`ClientRecipeCacheMixin`(handleUpdateRecipes TAIL,1.21.1 fabric 无 RecipesUpdatedEvent)。
 - 访问放宽镜像上游 AT 5 项模型部件(ear/cloak/rightBodyStick/leftBodyStick/shoulderStick——**描述符包名必须是 mojmap `model.geom`**,首写 yarn `model.geometry` 静默不生效,与 fogRed 三项一并修正)。
 - 延后(记录):连接生命周期(MekanismClient.launchClient/reset)、喷火/盖革声(SoundHandler)、节日通知(HolidayManager)、KeySync——各随自己车道。
 - 验收:模型 smoke 第 11 检查 `MEKANISM_FABRIC_CLIENT_TICK_PROOF handler=registered seams=...`,11/11 两次连续;切片 api 262 / common 1454 / platform 150。
 
-### Armor 层车道·简单装备半（Task052,2026-10-26）
-
+### Armor 层车道·简单装备半
 - jetpack/强化喷气背包/自由跑鞋/强化自由跑鞋/潜水面膜/潜水气瓶六件的自定义盔甲渲染接通:`MekanismArmorLayer`(随 vanilla HumanoidArmorLayer 内外模型克隆)经 fabric `LivingEntityFeatureRendererRegistrationCallback` 挂上每个带原生盔甲层的 LivingEntity 渲染器(玩家含内,与官方 addCustomLayers 的全类型扫描一致);`MekanismElytraLayer`(HDPE 降落的翼)同挂。
 - 缝位:NeoForge `IClientItemExtensions` 表面→`FabricGearModels` 按物品查 `ICustomArmor`(注册镜像官方 render-properties 六项);vanilla 1.21.1 ElytraLayer 无 texture 钩子(NeoForge 补丁)→ render 体镜像 vanilla,HDPE 纹理替换,elytraModel 字段走访问放宽。
 - 访问放宽:HumanoidArmorLayer inner/outer、AgeableListModel 六标量(镜像上游 AT)、LivingEntityRenderer.layers、ElytraLayer.elytraModel。
 - 延后(记录):`MekaSuitArmor` 四件套(OBJ 模型缓存半,IGeometryBakingContext/BakingCompleted 依赖)+ `ISpecialGear`(NeoForge 扩展件,随其)——注册表持 `ICustomArmor`,层路径已为 MekaSuit 就位。
 - 验收:模型 smoke 第 12 检查 `MEKANISM_FABRIC_ARMOR_LAYER_PROOF callback=registered`,11/11→12/12 两次连续;切片 api 262 / common 1467 / platform 154。穿着视觉留 mcdebug/观察(与 flame/ecube 同)。
 
-### data_based 模型族（Task052,2026-10-26)
-
+### data_based 模型族
 - `mekanism:data_based`(qio_redstone_adapter 点亮切换)重构:NeoForge ModelData 驱动的双模型切换→静态烘焙(no_data=unlit)+ 移植侧 BER `RenderQIORedstoneAdapter` 按方块实体 render data(`getRenderData()` 返回 isEmitting)叠绘 lit 模型四元组(能量方块先例的分层)。
 - 插件 `LOADER_DATA_BASED` 落地:依赖解析 no_data/emitting 两模型、各自烘焙;lit 半按模型 id 注册进 `FabricDataBasedModels`(家族仅一件,lit id 常量化)。
 - 验收:模型 smoke 第 13 检查 `MEKANISM_FABRIC_DATA_BASED_PROOF baked=1`,BER proof `tile_types=31 renderers=16`;两次连续 13/13。视觉(点亮态)留 mcdebug/观察。
 
-### MekaSuit OBJ 半(Task052,2026-10-26)
-
+### MekaSuit OBJ 半
 - `BaseModelCache.OBJModelData` 移植落地:obj/mtl 懒解析(四个 shipped OBJ 指令集完全在移植 OBJ 读取器子集内) + 按组可见性重烘焙(`getQuads(parts, random)`,替代官方 `ObjModel.bake(IGeometryBakingContext)` 管线重烘焙);精灵经 blocks 图集即时解析;`clearCached` 供资源重载。
 - `MekanismModelCache` 扩 MEKASUIT/MEKATOOL_LEFT/RIGHT + MEKASUIT_MODULES + `registerMekaSuitModuleModel` + `reloadCallback`;模块模型/规格经前轮预备的 `MekaSuitModuleRenderRegistry` 缝回放(install Handler),共享 mekasuit_modules.obj 注册镜像 ClientRegistration 原行。
 - `MekaSuitArmor`(691 行)三锚重塑:BakingCompleted→懒解析+classifySpecs 惰性化;ModelData→parts 集直查;IGeometryBakingContext→删除(配置 record 被 parts 集替代);`ISpecialGear`/`gearModel()` 移植侧无调用方(注册表持 ICustomArmor),drop 有记录;泛型 MekanismModelData→OBJModelData 收窄。
 - FabricGearModels 四件注册(MEKASUIT_HELMET/BODYARMOR/PANTS/BOOTS)+ 实体穿戴走第 16 轮 armor 层路径;物品栏渲染(ISBER/RenderMekaSuit 物件)留 gear 物件渲染车道。
 - 验收:smoke 第 14 检查 `MEKANISM_FABRIC_MEKASUIT_PROOF handler=installed`;两次连续 14/14。穿着视觉留 mcdebug/观察(与其它渲染车道同)。
 
-### fluid_container 模型族(18 个化学桶)(Task052,2026-10-27)
-
+### fluid_container 模型族(18 个化学桶)
 - 官方基础模型核对源:`build/moddev/artifacts/neoforge-21.1.200.jar`(本仓库 ModDev 产物,精确版本)提取 `assets/neoforge/models/item/bucket.json` + `DynamicFluidContainerModel` 源——base 平面层(vanilla bucket 精灵的 item sheath)+ mask 扫描矩形元素(mask=bucket_fluid 轮廓,烘焙时换 still 纹理)+ FLUID_TRANSFORM 深度 1.002(移植为元素 z+0.017)+ tintIndex 1 由官方 `Colors` ItemColor 提供流体色。
 - 移植:`FabricFluidContainerModel` 重建全栈(neoforge 父链不存在于 fabric,父链忽略、依赖自含);`ItemModelGenerator.processFrames` 与 `BucketItem.content` 走访问放宽;流体色/still 纹理取自已纳片 `FluidDeferredRegister.MekanismFluidType`(getMekanismFluidType);`FabricFluidBucketRegistration` 按官方 Colors 绑定 18 桶。
 - 亮度:官方 applyFluidLuminosity 默认 true(lightLevel>0 全亮);本批 18 化学桶 lightLevel 全 0,记录后未携带全亮路径。
 - 验收:smoke 第 15 检查 `MEKANISM_FABRIC_FLUID_BUCKET_PROOF buckets=18` + proof `fluid_container_baked=18`;两次连续 15/15。桶内流体视觉(着色/轮廓)留 mcdebug/观察。
 
-### 客户端生命周期 hub(MekanismClient)(Task052,2026-10-27)
-
+### 客户端生命周期 hub(MekanismClient)
 - 官方 MekanismClient = @Mod(dist=CLIENT) 入口类:neoforge 头(注解/构造器/配置屏工厂)去除(fabric 入口为 bootstrap;配置屏走 fabric 配置车道,未接不记绿);hub 方法全保留。
 - 别名三件:`Mekanism.playerState`→`PlayerState.INSTANCE`(先例)、`Mekanism.activeVibrators`→`MekanismServerState.activeVibrators()`(既有)、`Mekanism.modulesLoaded`→新 `ModModuleState`(IModModule/Version 随纳;Version 的 maven-artifact 构造器改为字符串解析——fabric classpath 无该库,neoforge 内置)。
 - 生命周期缝:`ClientPlayNetworkEvent.Clone/LoggingIn/LoggingOut`→fabric `ClientWorldEvents.AFTER_CLIENT_WORLD_CHANGE`/`ClientPlayConnectionEvents.JOIN/DISCONNECT`(resetDimensionChange/launchClient/reset 全接;transmitter 清理保持既有钩子)。
 - 验收:15/15 冒烟×2;network proof 扩 `lifecycle=join,disconnect,world_change`。切片 api 262 / common 1478 / platform 160。
 
-### 假期车道(HolidayManager 家族)(Task052,2026-10-27)
-
+### 假期车道(HolidayManager 家族)
 - 12 件家族纳片(HolidayManager 0 neoforge 直纳;ClientHolidayInfo 三锚重塑:@EventBusSubscriber→mixin 调用点(TextureAtlasMixin.upload RETURN→blocks 图集 onStitch(atlas),与渲染纹理收集同钩)、TextureAtlasStitchedEvent→直参、Mekanism.rl→MekanismAPI)。
 - tick 缝两处:`MekanismClient.ticksPassed`(恢复官方字段,onTick 自增)+ HolidayManager.notify(每日一次、每 1_200 tick 刷新,官方节奏);`initHoliday` 标志随迁移。
 - miner 屏纹理变换(AF/5月4日)走 stitch 后 QuadTransformation;`hasRobitSkinsToday`(EntityRobit:356 已引用)接通。
 - 验收:15/15 冒烟×2(假期消息为 in-world 路径,标题屏不可达——与声车道同裁定)。切片 api 262 / common 1490 / platform 160。
 
-### ExtensionBakedModel 族(miner 假期变换 + drive array BER)(Task052,2026-10-27)
-
+### ExtensionBakedModel 族(miner 假期变换 + drive array BER)
 - `ExtensionBakedModel` 重塑纳片:BakedModelWrapper→直接实现 BakedModel(delegate);ModelData 路径、getRenderPasses 重映射、applyTransform(均 neoforge 面)去除;QuadsKey 逐行保留;LightedBakedModel/TransformedBakedModel 内件保留。`DigitalMinerBakedModel` 随纳(holiday 变换经 ClientHolidayInfo.getMinerTransform,接第 24 轮 stitch 钩)。
 - miner 包裹:插件 modifyModelAfterBake 按 block/digital_miner 模型 id 包 DigitalMinerBakedModel(官方 addCustomModel 同语义)。
 - **drive array 定裁定**:官方 wrapper 的 createKey 读 ModelData(DRIVE_STATUS_PROPERTY)——移植侧 tile `getRenderData()` 返回同一 byte[],走 `RenderQIODriveArray` BER 叠绘(DRIVE_PLACEMENTS/Attribute.getFacing/quad-lib translate+rotate 逐行保留;空仓=外壳静态模型,drive 四元组为纯增量);DriveArrayBakedModel/ExtensionOverrideBakedModel/ModelDataBakedModel(覆盖机制件)随 BER 裁定延后。
 - 验收:BER proof `tile_types=32 renderers=17`;15/15 冒烟×2。drive 视觉留 mcdebug/观察。
 
-### transmitter contents 半(四静态管/管缆/导线)(Task052,2026-10-27)
-
+### transmitter contents 半(四静态管/管缆/导线)
 - `OBJModelData` 图标覆盖烘焙:`getQuads(parts, random, icon)`——官方 contents 烘焙传 `material -> icon`(全部面用网络流体/气体/热图标),缓存键扩(parts, icon);`BaseModelCache.OBJModelData` 构造器 public 化(transmitter 基类直例,官方 TRANSMITTER_CONTENTS 亦为注册件)。
 - `RenderTransmitterBase` 重塑:NeoForge ModelBaker 内部/StandaloneGeometryBakingContext/ContentsModelData 全部由端口 OBJModelData 路径替代;平面法线(消漫反射)逐行保留。
 - 四渲染器纳片(机械管/加压管/热导线/ universal 缆;pressurized/thermo/cable 0 neoforge 直纳):机械管 FluidStack→`mekanism.api.fluid.FluidStack` + LinkedSet→plain map(RenderFluidTank 先例:端口类型自带组件等值)。
 - 注册:4 渲染器 × 4 tier(BASIC/ADVANCED/ELITE/ULTIMATE,官方 transmitter 无 creative tier)= 16 类型;BER proof `tile_types=48 renderers=21`;MekanismRenderer.onStitch 恢复两处 contents 清缓存。
 - 验收:15/15 冒烟×2。管内流体视觉留 mcdebug/观察;logistical transporter(物品动画车道)与物品形态 drive 阵列继续延后。
 
-## `GuiBar.IBarInfoHandler` 提到顶层（W-74a，2026-10-31）
+## `GuiBar.IBarInfoHandler` 提到顶层
+官方把它作为 `GuiBar` 的嵌套接口；本移植在早期批次就已同时存在嵌套与顶层两个同名接口（顶层版注释写明是"为了 viewer-neutral 代码不拉入 GUI 框架"）。接入 EMI 时，`RecipeViewerUtils.FULL_BAR` 是顶层类型，而 `GuiVerticalPowerBar`/`GuiHorizontalPowerBar` 只接受嵌套类型，导致 26 处编译错误。
 
-官方把它作为 `GuiBar` 的嵌套接口；本移植在早期批次就已同时存在嵌套与顶层两个同名接口（顶层版注释写明是"为了 viewer-neutral 代码不拉入 GUI 框架"）。W-74a 接入 EMI 时，`RecipeViewerUtils.FULL_BAR` 是顶层类型，而 `GuiVerticalPowerBar`/`GuiHorizontalPowerBar` 只接受嵌套类型，导致 26 处编译错误。
+**处置**：删除 `GuiBar` 内的嵌套接口，全仓 21 个文件统一用顶层 `mekanism.client.gui.element.bar.IBarInfoHandler`。
 
-**处置（W-74a）**：删除 `GuiBar` 内的嵌套接口，全仓 21 个文件统一用顶层 `mekanism.client.gui.element.bar.IBarInfoHandler`。
-
-**兼容性影响（W-95 复核）**：
+**兼容性影响**：
 
 - 这是**客户端渲染内部类型**，不进入 api-slice（`mekanism.api.*` 未受影响），也不参与网络/存档/NBT。
 - 受影响面仅在 `mekanism.client.*` 的源码级引用；附加模块（tools/additions/generators）各自的 GUI 已随该次提交一起改到顶层类型，编译通过。
@@ -744,8 +706,7 @@ gate）BUILD SUCCESSFUL。未运行（按完成度优先策略）：全量测试
 - **结论：保留顶层版本**（恢复嵌套会让 `RecipeViewerUtils`/EMI 再次需要桥接或另一套类型，等于把两套类型问题搬回来）。若未来有玩家可见的第三方兼容问题再评估。
 
 
-### 配置文件重载与重启边界纠正（W-124，2026-11-01）
-
+### 配置文件重载与重启边界纠正
 固定 FML 4.0.41 / NeoForge 21.1.200 具备默认文件监听；旧 Fabric 只启动加载不是有意平台差异。现在复用既有 manager/spec 与 COMMON/STARTUP/CLIENT/SERVER 真实 owner：IO 回调交 owner executor，关闭取消监听和排队任务。NONE 重载刷新缓存/listener；WORLD/GAME 运行值保留到对应重启，磁盘待重启值仍用于保存和登录快照。显式 `load` 维持完整加载接口，实际世界/连接加载保留 GAME 缓存。没有新增 PLAY 同步。
 
 GeneralConfig 经既有 ChemicalConfigAccess 发布实际 owner，避免独立 API 触发 common 注册初始化；已有数据上下文仍供无运行 owner 的 API 消费者回退。RadiationValidation 优先已发布策略；远程 attach/detach 管理其生命周期，集成客户端断开不撤销仍存活的服务端。既有 584 项检查通过；同一太阳能场景在官方/Fabric 均测得44→179→366 J/t，覆盖全局默认、defaultconfigs 模板、逐文件世界覆盖和热重载。真实 mdb 会话覆盖 NONE 消费者、WORLD/GAME pending 保存和 worldgen owner，见里程碑证据。

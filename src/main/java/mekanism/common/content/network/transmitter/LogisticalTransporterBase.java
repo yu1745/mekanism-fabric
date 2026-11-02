@@ -52,7 +52,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Fabric port (Task052 continuation09): the acceptor type is a real sided {@link Storage} resolved through fresh
+ * Fabric port: the acceptor type is a real sided {@link Storage} resolved through fresh
  * {@link ItemAcceptorCache} lookups (no retained external Storage aliases, mirroring the reviewed fluid cache design),
  * and insertion paths are transaction-aware. Initial insertion stages the actual {@code transit} entry, {@code nextId}
  * increment, selected stack path and {@link TransporterManager#flowingStacks} reservation into the caller transaction:
@@ -76,7 +76,7 @@ public abstract class LogisticalTransporterBase extends Transmitter<Storage<Item
     }
 
     /**
-     * Stable real-owner participant (Task052 R2/R7 correction) for the transporter's shared mutable transit state:
+     * Stable real-owner participant for the transporter's shared mutable transit state:
      * the {@code transit} map, {@code nextId}, {@code needsSync} and the per-reservation commit-only sync/save
      * notifications. An identity/map snapshot is taken before the first reservation at each nesting depth;
      * mutable stack contents/path/flowing state are separately deep-snapshotted by each stack's stable participant. The real
@@ -137,7 +137,7 @@ public abstract class LogisticalTransporterBase extends Transmitter<Storage<Item
     @Override
     protected AbstractAcceptorCache<Storage<ItemVariant>, ?> createAcceptorCache() {
         //Fresh per-transmitter item lookup cache: no returned Storage is retained; each resolution is a fresh
-        // ItemStorage.SIDED.find on the opposite face, guarded by the loaded neighbor check (continuation09)
+        // ItemStorage.SIDED.find on the opposite face, guarded by the loaded neighbor check
         return new ItemAcceptorCache(getTransmitterTile());
     }
 

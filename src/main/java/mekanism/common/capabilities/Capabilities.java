@@ -33,7 +33,7 @@ import net.minecraft.resources.ResourceLocation;
  *
  * <p>Official Mekanism declared three NeoForge tokens per multi-type domain ({@code mekanism:chemical_handler} as block,
  * item and entity capability). This port keeps the official domain ids and member names, and composes each member from the
- * real Fabric identities that Task049 established: Mekanism-owned {@link BlockApiLookup}s for the domain APIs that Fabric
+ * real Fabric identities that established: Mekanism-owned {@link BlockApiLookup}s for the domain APIs that Fabric
  * has no ecosystem-wide equivalent for ({@code chemical_handler}, {@code heat_handler}, {@code alloy_interaction},
  * {@code laser_receptor}, {@code evaporation_solar}, {@code configurable}, {@code config_card}), ecosystem Team Reborn /
  * Fabric transfer identities for the external energy, fluid and item domains ({@code EnergyStorage},

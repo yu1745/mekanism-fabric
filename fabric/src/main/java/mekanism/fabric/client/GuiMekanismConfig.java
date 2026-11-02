@@ -16,7 +16,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 /**
- * Read-only view of Mekanism's TOML configuration files, opened from Mod Menu (W-105).
+ * Read-only view of Mekanism's TOML configuration files, opened from Mod Menu.
  * <p>
  * Port delta: the NeoForge build lets NeoForge's built-in configuration screen edit every {@code ModConfigSpec} value
  * in game. On Fabric there is no such screen and no equivalent of {@code ModConfigSpec} to drive one, and the port reads

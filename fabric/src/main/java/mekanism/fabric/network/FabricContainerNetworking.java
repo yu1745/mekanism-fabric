@@ -17,14 +17,14 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
- * Fabric networking owner for the container/QIO play payloads (Task052 REVIEW_03 finding 5).
+ * Fabric networking owner for the container/QIO play payloads.
  *
  * <p>Registers the payload codecs in their real directions and the server-side receivers for every client-to-server container/QIO payload. Fabric's play receiver
  * contract executes handlers on the server main thread, matching the NeoForge {@code IPayloadContext} main-thread semantics of the original dispatch; each payload's
  * official {@code handle} method performs the original open-container type check (for example {@code PacketWindowSelect#handle} requires the player's open menu to be
  * a {@code MekanismContainer}), so the receiver is a plain main-thread dispatch and the container checks are preserved unchanged.</p>
  *
- * <p>The physical-client S2C receivers live in {@link FabricContainerClientNetworking}. This owner is part of the failing Task052 WIP work-list: it registers the
+ * <p>The physical-client S2C receivers live in {@link FabricContainerClientNetworking}. This owner is part of the failing WIP work-list: it registers the
  * same container/QIO sources that are being integrated, and until that closure compiles this registration is source-complete but not yet shipped.</p>
  */
 public final class FabricContainerNetworking {

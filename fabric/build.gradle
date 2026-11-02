@@ -212,7 +212,7 @@ repositories {
             includeGroup 'io.wispforest.endec'
         }
     }
-    //Optional client recipe viewer (W-74a). Modrinth mirrors EMI; it never enters the release artifacts.
+    //Optional client recipe viewer. Modrinth mirrors EMI; it never enters the release artifacts.
     maven {
         url = 'https://api.modrinth.com/maven'
         content { includeGroup 'maven.modrinth' }
@@ -675,31 +675,31 @@ dependencies {
     modCompileOnly('cc.tweaked:cc-tweaked-1.21.1-fabric:1.113.1') { transitive = false }
     // Optional accessory API; never bundle the mod or its runtime dependencies.
     modCompileOnly('io.wispforest:accessories-fabric:1.1.0-beta.53+1.21.1') { transitive = false }
-    //EMI recipe viewer (W-74a): compile-only plus a local runtime slot for the client gates; not shipped.
+    //EMI recipe viewer: compile-only plus a local runtime slot for the client gates; not shipped.
     def emiVersion = '1.1.24+1.21.1+fabric'
     modCompileOnly("maven.modrinth:emi:${emiVersion}") { transitive = false }
     if (providers.gradleProperty('emiDev').isPresent()) {
         modLocalRuntime "maven.modrinth:emi:${emiVersion}"
     }
-    //Jade looking-at integration (W-74b): same compile-only + opt-in runtime arrangement as EMI.
+    //Jade looking-at integration: same compile-only + opt-in runtime arrangement as EMI.
     def jadeVersion = '15.10.6+fabric'
     modCompileOnly("maven.modrinth:jade:${jadeVersion}") { transitive = false }
     if (providers.gradleProperty('jadeDev').isPresent()) {
         modLocalRuntime "maven.modrinth:jade:${jadeVersion}"
     }
-    //JEI recipe viewer (W-74c): same optional arrangement as EMI and Jade.
+    //JEI recipe viewer: same optional arrangement as EMI and Jade.
     def jeiVersion = '19.43.0.398'
     modCompileOnly("mezz.jei:jei-1.21.1-fabric:${jeiVersion}") { transitive = false }
     if (providers.gradleProperty('jeiDev').isPresent()) {
         modLocalRuntime "mezz.jei:jei-1.21.1-fabric:${jeiVersion}"
     }
-    //Mod Menu (W-105): optional client-side config screen factory. Compile-only like the viewers.
+    //Mod Menu: optional client-side config screen factory. Compile-only like the viewers.
     modCompileOnly('com.terraformersmc:modmenu:11.0.5') { transitive = false }
     if (providers.gradleProperty('modmenuDev').isPresent()) {
         modLocalRuntime 'com.terraformersmc:modmenu:11.0.5'
     }
 
-    //WTHIT looking-at integration (W-74d): same optional compile-only arrangement. WTHIT publishes to bai's maven
+    //WTHIT looking-at integration: same optional compile-only arrangement. WTHIT publishes to bai's maven
     //(Modrinth's maven has no wthit coordinates) with loader-prefixed versions.
     def wthitVersion = 'fabric-12.10.2'
     modCompileOnly("mcp.mobius.waila:wthit:${wthitVersion}") { transitive = false }

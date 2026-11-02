@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Item conservation across a hard crash (W-121).
+# Item conservation across a hard crash.
 #
 # Moves a known number of stacks between two chests through a logistical transporter, kills the server with SIGKILL in
 # the middle of the transfer, restarts it on the same world and counts both chests plus in-flight stacks.

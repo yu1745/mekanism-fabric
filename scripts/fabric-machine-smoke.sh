@@ -207,31 +207,31 @@ command 'data merge block 70 100 0 {component_upgrade:{upgrades:[{type:1,amount:
 command 'data merge block 70 100 0 {energy_containers:[{container:0b,stored:40000L}]}'
 command "setblock 42 100 0 minecraft:hopper[facing=west]"
 command "setblock 41 99 0 minecraft:hopper[facing=down]"
-#Chemical chain scenario (W-111): a chemical infuser turns seeded sulfur trioxide + water vapour into sulfuric acid,
+#Chemical chain scenario: a chemical infuser turns seeded sulfur trioxide + water vapour into sulfuric acid,
 #a pressurized tube carries it into a chemical dissolution chamber, and the chamber dissolves iron ore into dirty
 #iron slurry. This is the entry stage of the x3/x4/x5 ore path - the stage that needs a real chemical feed rather
 #than an item one.
 command "setblock 50 100 0 mekanism:chemical_infuser"
-#Chunk-unload scenario (W-104): vanilla refuses setblock in an unloaded chunk, so the far machine at x=2000 is built
+#Chunk-unload scenario: vanilla refuses setblock in an unloaded chunk, so the far machine at x=2000 is built
 #while its chunk is force-loaded and the forceload is released afterwards. Unloaded, it must not tick; force-loading
 #again must let it process, with the inventory intact across the unload.
 command "forceload add 2000 0"
 load_far_chunk initial
 command "setblock 2000 100 0 mekanism:enrichment_chamber"
 command "setblock 52 100 0 mekanism:chemical_dissolution_chamber"
-#x3 continuation (W-111/W-115). Side arrays index RelativeSide (FRONT, LEFT, RIGHT, BACK, TOP, BOTTOM), so the
+#x3 continuation. Side arrays index RelativeSide (FRONT, LEFT, RIGHT, BACK, TOP, BOTTOM), so the
 #chain configures "every side" with the right type instead of guessing which index faces the neighbour.
 command "setblock 53 100 0 mekanism:basic_chemical_tank"
 command "setblock 55 100 0 mekanism:chemical_washer"
 command "setblock 56 100 0 mekanism:chemical_crystallizer"
-#x4 stage (W-111). Each new machine's chemistry is asserted on its own tank: the separator's chlorine lives in its
+#x4 stage. Each new machine's chemistry is asserted on its own tank: the separator's chlorine lives in its
 #right (OUTPUT_2) tank so its chemical sides are 6, the infuser joins hydrogen and chlorine into hydrogen chloride and
 #holds it, and the injection chamber turns a crystal plus hydrogen chloride into a shard.
 command "setblock 58 100 0 mekanism:chemical_injection_chamber"
 command "setblock 60 100 0 mekanism:basic_chemical_tank"
 command "setblock 61 100 0 mekanism:chemical_infuser"
 command "setblock 62 100 0 mekanism:electrolytic_separator"
-#x5 stage (W-111): shard plus oxygen purifies into a clump, crushing the clump gives dirty dust, and enriching the
+#x5 stage: shard plus oxygen purifies into a clump, crushing the clump gives dirty dust, and enriching the
 #dirty dust gives the finished dust - the last three conversions of the ore path.
 command "setblock 58 100 2 mekanism:purification_chamber"
 command "setblock 58 100 4 mekanism:crusher"

@@ -19,7 +19,7 @@ public class QIODriveData {
     private static final Logger LOGGER = LoggerFactory.getLogger("Mekanism");
 
     /**
-     * Stable real-owner participant (Task052 R4 correction): the drive's itemMap/itemCount and the physical DRIVE_METADATA
+     * Stable real-owner participant: the drive's itemMap/itemCount and the physical DRIVE_METADATA
      * component on the <b>captured actual drive stack</b> are transactional. A snapshot is taken before the first
      * mutation at each nesting depth; the real {@link SnapshotParticipant} nesting promotion makes an enclosing abort
      * after a committed nested mutation roll the drive data back exactly. The holder {@code dataUpdate}
@@ -91,7 +91,7 @@ public class QIODriveData {
     }
 
     /**
-     * Transaction-aware removal (Task052 continuation09): the itemMap/itemCount mutation and the physical metadata
+     * Transaction-aware removal: the itemMap/itemCount mutation and the physical metadata
      * component update on the <b>captured actual drive stack</b> happen immediately (provisional state), while the
      * holder {@code dataUpdate}/save notification is deferred to the successful outer commit through the stable
      * drive participant. Any enclosing abort restores the captured stack's metadata component and the per-drive
@@ -114,7 +114,7 @@ public class QIODriveData {
                     throw new IllegalStateException("QIO drive owner no longer matches its physical stack");
                 }
                 //Join the drive's state to the caller transaction BEFORE any mutation, capturing the actual holder
-                // slot stack identity and its metadata component at snapshot time (R4)
+                // slot stack identity and its metadata component at snapshot time
                 driveStateTx.updateSnapshots(tx);
             }
             long remaining = stored - removed;

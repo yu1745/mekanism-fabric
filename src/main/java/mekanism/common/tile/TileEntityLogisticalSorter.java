@@ -299,7 +299,7 @@ public class TileEntityLogisticalSorter extends TileEntityMekanism implements IT
     }
 
     /**
-     * Stable owner participant for the sorter's round-robin target (Task052 correction): a committed nested
+     * Stable owner participant for the sorter's round-robin target: a committed nested
      * transaction whose enclosing transaction later aborts still restores the prior RR target exactly.
      */
     private final SnapshotParticipant<SidedBlockPos> rrTargetTx = new SnapshotParticipant<>() {

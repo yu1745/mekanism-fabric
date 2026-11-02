@@ -22,7 +22,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class FilterManager<FILTER extends IFilter<?>> {
 
-    //Task052 call-site narrowing (adjudicated): logging-only Mekanism dependency becomes the established Mekanism SLF4J category
+    //call-site narrowing: logging-only Mekanism dependency becomes the established Mekanism SLF4J category
     private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger("Mekanism");
 
 

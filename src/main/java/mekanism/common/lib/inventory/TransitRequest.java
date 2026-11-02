@@ -20,7 +20,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Fabric port (Task052 continuation09): requests operate on real sided {@link Storage} endpoints instead of NeoForge
+ * Fabric port: requests operate on real sided {@link Storage} endpoints instead of NeoForge
  * {@code IItemHandler} integer slots. Target insertion and source debit are caller-owned Fabric transactions: the
  * transaction-context overloads stage insertion into the given transaction and capture the accepted amount in the
  * returned {@link TransitResponse} before any debit happens; the caller then executes the exact debit

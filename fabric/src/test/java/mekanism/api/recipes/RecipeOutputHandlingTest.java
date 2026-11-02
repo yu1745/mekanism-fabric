@@ -44,7 +44,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Ordinary (non-Knot) execution contracts for the Task 042A output handling and one-input cached recipe vertical. Nothing here mutates a registry or touches the
+ * Ordinary (non-Knot) execution contracts for the output handling and one-input cached recipe vertical. Nothing here mutates a registry or touches the
  * network; recipe types are exercised only through their identity stable keyed holders.
  */
 @SuppressWarnings("removal")

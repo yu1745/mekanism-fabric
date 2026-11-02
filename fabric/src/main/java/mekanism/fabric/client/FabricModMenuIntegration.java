@@ -4,7 +4,7 @@ import com.terraformersmc.modmenu.api.ConfigScreenFactory;
 import com.terraformersmc.modmenu.api.ModMenuApi;
 
 /**
- * Mod Menu hook for Mekanism's configuration (W-105).
+ * Mod Menu hook for Mekanism's configuration.
  * <p>
  * The official NeoForge build gets a configuration screen for free: NeoForge renders one for any registered config and
  * exposes it through {@code IConfigScreenFactory}. Fabric has no loader-provided config screen, and Mod Menu is the

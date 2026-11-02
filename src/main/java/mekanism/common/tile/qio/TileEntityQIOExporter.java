@@ -77,7 +77,7 @@ public class TileEntityQIOExporter extends TileEntityQIOFilterHandler implements
     private static final int MAX_DELAY = MekanismUtils.TICKS_PER_HALF_SECOND;
 
     @Nullable
-    //No retained item provider cache: the back inventory is resolved fresh per operation (continuation09)
+    //No retained item provider cache: the back inventory is resolved fresh per operation
     private int delay = 0;
     private boolean exportWithoutFilter;
     private boolean roundRobin;
@@ -250,7 +250,7 @@ public class TileEntityQIOExporter extends TileEntityQIOFilterHandler implements
     }
 
     /**
-     * Stable owner participant for the exporter's round-robin target (Task052 correction): a committed nested
+     * Stable owner participant for the exporter's round-robin target: a committed nested
      * transaction whose enclosing transaction later aborts still restores the prior RR target exactly.
      */
     private final SnapshotParticipant<SidedBlockPos> rrTargetTx = new SnapshotParticipant<>() {

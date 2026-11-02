@@ -96,7 +96,7 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
     private boolean insertionTransactionActive;
 
     /**
-     * Stable frequency-level participant (Task052 R4 correction) for transaction-aware removal: snapshots the
+     * Stable frequency-level participant for transaction-aware removal: snapshots the
      * ordered {@code itemDataMap} membership and the tag/mod/fuzzy lookup memberships that a removal can touch.
      * Nested propagation is the real {@link SnapshotParticipant} promotion, so an enclosing abort after a committed
      * nested removal restores the exact ordered identity/membership and shared totals/publication state.
@@ -396,7 +396,7 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
     }
 
     /**
-     * Transaction-aware removal (Task052 continuation09). Snapshots are taken defensively before any mutation and
+     * Transaction-aware removal. Snapshots are taken defensively before any mutation and
      * all touched state is restored on abort (own or later root abort): the original {@link QIOItemTypeData} identity
      * and ordered itemDataMap membership, type count/containingDrives, per-drive itemMap/count, totalCount, the
      * tag/mod/fuzzy index memberships and the physical metadata on the captured actual drive stacks. The holder
@@ -938,7 +938,7 @@ public class QIOFrequency extends Frequency implements IColorableFrequency, IQIO
         }
 
         /**
-         * Transaction-aware removal (Task052 continuation09): journals count, totalCount, containingDrives and the
+         * Transaction-aware removal: journals count, totalCount, containingDrives and the
          * per-drive removals (which carry their own metadata/dataUpdate journals). Exact per-drive iteration order is
          * unchanged; the needsUpdate marking is never erased on rollback (it only marks an update, and an aborted
          * removal must not wipe earlier changes).

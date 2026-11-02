@@ -10,7 +10,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Client-player access point for common code.
  *
- * <p>Fabric port seam (Task052): the original {@code MekanismUtils.tryGetClientPlayer} checks the NeoForge distribution flag and then calls
+ * <p>Fabric port seam: the original {@code MekanismUtils.tryGetClientPlayer} checks the NeoForge distribution flag and then calls
  * {@code MekanismClient.tryGetClientPlayer()} (which just returns {@code Minecraft.getInstance().player}). {@code MekanismClient} is the full client-mod
  * entrypoint and is not admitted yet, so this small access point carries exactly that responsibility: an environment-guarded window into the physical client
  * player. {@link Minecraft} is only linked when this method actually executes on the physical client, so common callers never force client initialization on a

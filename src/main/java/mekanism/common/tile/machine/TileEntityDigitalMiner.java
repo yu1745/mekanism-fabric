@@ -133,7 +133,7 @@ public class TileEntityDigitalMiner extends TileEntityMekanism implements IChunk
     private Long2ObjectMap<BitSet> oresToMine = Long2ObjectMaps.emptyMap();
     public ThreadMinerSearch searcher = new ThreadMinerSearch(this);
 
-    //Item transfer state removed: all item pull/eject providers are resolved fresh per operation (continuation09)
+    //Item transfer state removed: all item pull/eject providers are resolved fresh per operation
 
     private int radius;
     private boolean inverse;

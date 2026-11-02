@@ -91,7 +91,7 @@ public class MekanismJEI implements IModPlugin {
     private static final ISubtypeInterpreter<ItemStack> MEKANISM_DATA_INTERPRETER = new MekanismSubtypeInterpreter();
     private static final Map<IRecipeViewerRecipeType<?>, RecipeType<?>> recipeTypeInstanceCache = new HashMap<>();
     //Fabric port proof: every category this plugin registers, so the runtime hook can report how many recipes
-    //each one actually resolves (W-102 asks for per-category coverage that the UI cannot be driven for here).
+    //each one actually resolves (per-category coverage cannot be driven through the UI here).
     private static final java.util.List<mezz.jei.api.recipe.category.IRecipeCategory<?>> REGISTERED_CATEGORIES = new java.util.ArrayList<>();
 
     public static boolean shouldLoad() {

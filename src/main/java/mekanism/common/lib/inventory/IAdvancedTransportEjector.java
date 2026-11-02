@@ -18,8 +18,8 @@ public interface IAdvancedTransportEjector {
     void setRoundRobinTarget(@Nullable SidedBlockPos target);
 
     /**
-     * Joins this ejector's round-robin target state to the given transaction (stable owner participant; Task052
-     * correction). Call before the pathfinder may assign a new RR target; an abort at any nesting level restores the
+     * Joins this ejector's round-robin target state to the given transaction (stable owner participant).
+     * Call before the pathfinder may assign a new RR target; an abort at any nesting level restores the
      * exact prior target.
      */
     default void updateRoundRobinSnapshot(TransactionContext tx) {

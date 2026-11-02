@@ -76,7 +76,7 @@ public final class MekanismFabricBootstrap implements ModInitializer {
         mekanism.fabric.recipe.FabricModVersionLoadedCondition.register();
         mekanism.fabric.recipe.FabricTagEmptyCondition.register();
         mekanism.fabric.recipe.FabricConditionExistsCondition.register();
-        //Task052 Q4 lifecycle owner: capture the starting server (no overworld access here), and on the post-save SERVER_STOPPED tail run the domain
+        //lifecycle owner: capture the starting server (no overworld access here), and on the post-save SERVER_STOPPED tail run the domain
         // cleanup in the original Mekanism.serverStopped order before releasing the shared server reference for the same server instance only
         ServerLifecycleEvents.SERVER_STARTING.register(MekanismServerLifecycle::captureStartingServer);
         net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {

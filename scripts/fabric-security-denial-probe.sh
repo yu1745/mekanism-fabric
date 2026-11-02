@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# W-120: real GUI access for owner, stranger and trusted player in an existing mdb owned session.
+# real GUI access for owner, stranger and trusted player in an existing mdb owned session.
 # Creates one temporary machine in air beside the player and removes it and its security frequency on exit.
 set -euo pipefail
 export FABRIC_SECURITY_MDB_SESSION=${FABRIC_SECURITY_MDB_SESSION:-dev}

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Energy interop against a real third-party tech mod (W-99).
+# Energy interop against a real third-party tech mod.
 #
 # Loads Tech Reborn and Reborn Core next to the release jars in a disposable dedicated server and checks both directions:
 # a Mekanism energy cube pushes through a universal cable into a Tech Reborn grinder, and a Tech Reborn solid fuel

@@ -45,7 +45,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Isolated real-server probe for the Task041 recipe ingredient/cache/reload vertical. Registers one disposable recipe type/serializer, loads a fixture recipe with an
+ * Isolated real-server probe for the recipe ingredient/cache/reload vertical. Registers one disposable recipe type/serializer, loads a fixture recipe with an
  * item compound, fluid tag, and chemical ingredient through the real {@link RecipeManager}, and proves the generic input cache, hot Chemical cache epoch, reload
  * ownership, and manager-identity contracts.
  */

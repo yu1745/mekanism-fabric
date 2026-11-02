@@ -21,10 +21,10 @@ import org.slf4j.LoggerFactory;
 /**
  * Last-known-username cache, persisted as {@code usernamecache.json} in the game directory.
  *
- * <p>Fabric port ownership (Task052): NeoForge ships a server-wide {@code UsernameCache} with exactly this behavior — a process-wide
+ * <p>Fabric port ownership: NeoForge ships a server-wide {@code UsernameCache} with exactly this behavior — a process-wide
  * UUID&rarr;name map, persisted to {@code usernamecache.json} next to the game's other root files, populated when players log in, and consulted for
  * owner-name display/sync (for example {@code Frequency}'s owner-name lookup). Fabric has no equivalent, so Mekanism owns the responsibility here.
- * Population is wired by the Fabric play-join lifecycle ({@code mekanism.fabric.MekanismUsernameLifecycle}, Task052): every accepted server-side play
+ * Population is wired by the Fabric play-join lifecycle ({@code mekanism.fabric.MekanismUsernameLifecycle}): every accepted server-side play
  * connection records the player's current profile name; the JSON is rewritten on every change (the file is tiny, matching the original's
  * save-on-modification semantics).</p>
  *

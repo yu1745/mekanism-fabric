@@ -283,7 +283,7 @@ public class PacketUtils {
                 }
             }
         }
-        //Fabric port correction (Task052 REVIEW_03 finding 5): keep vanilla bundle grouping — a ClientboundBundlePacket preserves the original
+        //Fabric port correction: keep vanilla bundle grouping — a ClientboundBundlePacket preserves the original
         // within-one-tick processing of the payloads; per-payload sends could split processing across client ticks
         List<Packet<? super net.minecraft.network.protocol.game.ClientGamePacketListener>> bundled = new ArrayList<>(packets.length);
         for (CustomPacketPayload payload : packets) {

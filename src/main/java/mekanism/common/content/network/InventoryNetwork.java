@@ -47,7 +47,7 @@ public class InventoryNetwork extends DynamicNetwork<Storage<ItemVariant>, Inven
 
     @Override
     protected mekanism.common.lib.transmitter.acceptor.NetworkAcceptorCache<Storage<ItemVariant>> createAcceptorCache() {
-        //Fresh ephemeral snapshot cache (continuation09): no external Storage is retained across ticks or copied on
+        //Fresh ephemeral snapshot cache: no external Storage is retained across ticks or copied on
         // adopt; every reader re-derives from current valid, loaded member transporters
         return new ItemNetworkAcceptorCache(this::getTransmitters);
     }

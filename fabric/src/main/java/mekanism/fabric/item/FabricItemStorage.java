@@ -79,7 +79,7 @@ public final class FabricItemStorage extends SnapshotParticipant<List<ItemStack>
     }
 
     /**
-     * Identity-checked real-slot selection facility (Task052 R3): returns the exposed single-slot view whose backing
+     * Identity-checked real-slot selection facility: returns the exposed single-slot view whose backing
      * slot <b>is</b> the given slot object identity, or {@code null} if this view does not expose that slot. Callers
      * use this to connect a selected physical {@link IInventorySlot} identity to its real position in this provider
      * instead of inferring identity from generic indices.

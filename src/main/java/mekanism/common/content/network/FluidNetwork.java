@@ -53,7 +53,7 @@ public class FluidNetwork extends DynamicBufferedNetwork<Storage<FluidVariant>, 
     /**
      * Fluid-only derived acceptor cache: public readers build a fresh ephemeral position-&gt;face-&gt;Storage snapshot from
      * the authoritative membership on each read; nothing is retained, adopted or copied. The membership supplier is
-     * deferred, so no subclass state is evaluated during DynamicNetwork construction (continuation08).
+     * deferred, so no subclass state is evaluated during DynamicNetwork construction.
      */
     @Override
     protected NetworkAcceptorCache<Storage<FluidVariant>> createAcceptorCache() {

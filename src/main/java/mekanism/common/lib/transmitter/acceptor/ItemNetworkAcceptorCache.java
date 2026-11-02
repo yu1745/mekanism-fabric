@@ -22,7 +22,7 @@ import net.minecraft.core.Direction;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Item-only derived {@link NetworkAcceptorCache} specialization (Task052 continuation09), reusing the reviewed design
+ * Item-only derived {@link NetworkAcceptorCache} specialization, reusing the reviewed design
  * of the fluid network acceptor cache: no external Fabric {@code Storage} is retained across ticks or copied on
  * adopt; every public reader builds a detached ephemeral position→face→{@link Storage} snapshot from the current
  * valid, loaded member transporters and re-reads providers on each read.

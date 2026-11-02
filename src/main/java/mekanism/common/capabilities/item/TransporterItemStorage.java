@@ -14,7 +14,7 @@ import org.jetbrains.annotations.NotNull;
 
 /**
  * Insert-only real Fabric {@link Storage} endpoint of a logistical transporter for one physical adjacent source
- * position/side (Task052 continuation09, R6 correction). Replaces the NeoForge {@code CursedTransporterItemHandler}:
+ * position/side. Replaces the NeoForge {@code CursedTransporterItemHandler}:
  * there are no fake nine integer slots, no per-instance stack identity tracking and no synthetic slotted framework -
  * the endpoint exposes exactly one operation, insertion, routed through the transporter's own <b>checked</b>
  * transaction-aware routing (current side/canReceiveFrom/physical-source/color/connection validity is re-validated

@@ -33,8 +33,8 @@ public final class FluidUtils {
     // now perform direct per-operation FluidStorage.SIDED.find lookups on the physical opposite face and route their real-tank sends through the sender-owned
     // FluidSendTransaction overloads below; unloaded neighbors are skipped and no Storage is retained across ticks.
     // Still on the OLD lookups (explicitly open, NOT migrated): none for fluid pipes - MechanicalPipe now uses FluidAcceptorCache (fresh per-pipe
-    // FluidStorage.SIDED.find, continuation08) and FluidNetwork uses the derived FluidNetworkAcceptorCache snapshot; pipe pulls and network sends both run
-    // through the sender-owned FluidSendTransaction path. QE/InventoryFrequency collects fluid through QE's typed getFluidStorage getter (continuation7).
+    // FluidStorage.SIDED.find) and FluidNetwork uses the derived FluidNetworkAcceptorCache snapshot; pipe pulls and network sends both run
+    // through the sender-owned FluidSendTransaction path. QE/InventoryFrequency collects fluid through QE's typed getFluidStorage getter.
     // Energy/chemical acceptor caches and item routing remain on the OLD lookups (not approved in this substep).
 
     private FluidUtils() {

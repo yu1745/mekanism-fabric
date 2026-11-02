@@ -19,7 +19,7 @@ import net.minecraft.world.item.ItemStack;
 @NothingNullByDefault
 public record FormulaAttachment(List<ItemStack> inventory, boolean invalid) {
 
-    //Task052 call-site narrowing (adjudicated): logging-only Mekanism dependency becomes the established Mekanism SLF4J category
+    //call-site narrowing: logging-only Mekanism dependency becomes the established Mekanism SLF4J category
     private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger("Mekanism");
 
 

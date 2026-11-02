@@ -71,7 +71,7 @@ public class FluidHandlerTarget extends Target<Storage<FluidVariant>, @NotNull F
     /**
      * Inserts exactly {@code millibuckets} (at most) as a nested transaction of {@code enclosing}, committing only a whole-millibucket result.
      *
-     * <p>REVIEW_06 correction: a probe response that is already an exact whole-millibucket amount (full OR partial) is accepted immediately; only a fractional (or zero)
+     * <p>a probe response that is already an exact whole-millibucket amount (full OR partial) is accepted immediately; only a fractional (or zero)
      * report gets the single bounded retry at the whole-millibucket floor of the report.
      *
      * @return the accepted whole millibuckets, or {@code 0} when the storage cannot accept an exact whole-millibucket amount or returned an invalid response.

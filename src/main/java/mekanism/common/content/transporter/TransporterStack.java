@@ -86,7 +86,7 @@ public class TransporterStack {
     private LongList pathToTarget = new LongArrayList();
 
     /**
-     * Stable real-owner participant (Task052 R2/R7 correction): the stack's mutable routing state — path type, deep
+     * Stable real-owner participant: the stack's mutable routing state — path type, deep
      * path list, idle direction, initiation flag, current item stack and its flowing reservation membership — is
      * transactional. A snapshot is taken before the first mutation at each nesting depth; the real
      * {@link SnapshotParticipant} nesting promotion makes a committed nested transaction whose enclosing transaction

@@ -1,5 +1,4 @@
-# 发布清单（W-96）
-
+# 发布清单
 本文件是**发布前最后一遍**的可执行清单。全部步骤只用仓库内脚本与 `mdb`，不上传、不 push、不打 tag（打 tag 与上传由用户执行）。
 
 - 版本命名与四 JAR 能力范围见 [`CHANGELOG.md`](../CHANGELOG.md)、安装步骤见 [`INSTALL.md`](INSTALL.md)、许可见 [`LICENSES.md`](LICENSES.md)。
@@ -40,7 +39,7 @@ scripts/release-check.sh
 diff /tmp/run1.txt /tmp/run2.txt && echo REPRODUCIBLE
 ```
 
-期望：`REPRODUCIBLE`，四个 JAR 哈希逐个相同（W-97 修好了注解处理器的顺序非确定，此前只有三个附加 JAR 可复现）。
+期望：`REPRODUCIBLE`，四个 JAR 哈希逐个相同。
 
 把 `dist/build-info.json` 的 `source_commit` 与第 0 步记下的 commit 对齐；build-info 里的 `jars[].sha256` 必须与 `sha256sum` 一致。
 
@@ -58,12 +57,11 @@ cp fabric/run/../run/mods/fabric-api-*.jar /tmp/release-rehearsal/mods/ 2>/dev/n
 - `Loading 4 mods:` 里出现 `mekanism`、`mekanismtools`、`mekanismadditions`、`mekanismgenerators`
 - 无 `Missing or unsupported mandatory dependencies`、无 `NoSuchMethodError`
 
-## 4. 存档往返（W-65 样本世界）
-
+## 4. 存档往返
 用官方样本世界副本（不要改动原件）：
 
 1. 起服加载副本世界，确认区块与机器正常加载、无 registry 缺失报错；
-2. 读 W-77（运行内容）与 W-80（库存/侧配置/能量）记录的对照点，确认读出的数值与记录一致；
+2. 读 （运行内容）与 （库存/侧配置/能量）记录的对照点，确认读出的数值与记录一致；
 3. 关服，确认 `level.dat` 与 region 文件无异常增长、日志无异常。
 
 ## 5. 客户端抽查（可选，`mdb` owned session）
@@ -75,7 +73,7 @@ mdb --session dev gui screenshot --mode window --out /tmp/release-client.png
 mdb session stop dev
 ```
 
-若 `fabric/run/mods/` 里放了 JEI / EMI / Jade / WTHIT（WTHIT 还需 `badpackets`），打开物品栏与准星对准机器应分别看到配方分类与 tooltip 读数（W-74a/b/c/d）b 的证据口径）。
+若 `fabric/run/mods/` 里放了 JEI / EMI / Jade / WTHIT（WTHIT 还需 `badpackets`），打开物品栏与准星对准机器应分别看到配方分类与 tooltip 读数b 的证据口径）。
 
 ## 6. 产物清单与校验和（写进发布说明）
 
@@ -101,6 +99,6 @@ sha256sum dist/*.jar
 
 ## 已知限制（发布说明里应如实带上）
 
-- 未覆盖：Sodium/Iris/光影（W-98）、真实第三方科技模组的能量互通样本（W-99）
+- 未覆盖：Sodium/Iris/光影、真实第三方科技模组的能量互通样本
 - 可选集成为 JEI / EMI / Jade / WTHIT 四个（编译期依赖、不打包）；未做的集成是 REI / TOP / CraftTweaker / ProjectE / Curios
-- 注册表差异：items 1064 vs 1066、tags 444 vs 448（W-76 记录，W-94 待逐项定性）
+- 注册表差异：items 1064 vs 1066、tags 444 vs 448

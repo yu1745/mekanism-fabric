@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# W-122: solar generator (fixed bottom output) -> energy cube -> cable -> smelter.
+# solar generator (fixed bottom output) -> energy cube -> cable -> smelter.
 # The generator chain starts empty; the separate seeded cube chain retains the existing storage-output check.
 # Uses four release jars in a disposable dedicated server. No third-party runtime is required.
 set -euo pipefail

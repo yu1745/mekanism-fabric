@@ -26,7 +26,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class MekanismClient {
 
-    //Task052 alias (same pattern as Mekanism.activeVibrators → MekanismServerState): the excluded client entrypoint's public field
+    //alias (same pattern as Mekanism.activeVibrators → MekanismServerState): the excluded client entrypoint's public field
     // now aliases the exact same domain map owned by mekanism.common.lib.security.ClientSecurityData, so every original writer/reset
     // (PacketSyncSecurity.put, PacketBatchSecurityUpdate.replaceAll, MekanismClient.reset clear) reaches the real owner map.
     public static final Map<UUID, SecurityData> clientSecurityMap = ClientSecurityData.securityMap();

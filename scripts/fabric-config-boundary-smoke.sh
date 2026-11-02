@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Where a config change takes effect (W-124).
+# Where a config change takes effect.
 #
 # The observable is the solar generator's generation rate, because it is a single number: the config value in joules per tick.
 # The run measures the rate, edits the config file while the server keeps running to see whether the change is hot, and

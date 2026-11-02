@@ -9,7 +9,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Client-side owner of the last-known security data per player UUID.
  *
- * <p>Fabric port ownership move (Task052): the original source keeps this map as the {@code MekanismClient.clientSecurityMap} static field, populated by the
+ * <p>Fabric port ownership move: the original source keeps this map as the {@code MekanismClient.clientSecurityMap} static field, populated by the
  * physical-client packet receivers and cleared on client reset. The companion username cache has the same lifetime;
  * original MekanismClient fields alias both canonical maps. The map itself is domain data read by common {@link SecurityUtils} through the client branch, so
  * the Fabric port hosts it here as the real owner; the excluded {@code MekanismClient} entrypoint aliases this exact map through its existing public field, the

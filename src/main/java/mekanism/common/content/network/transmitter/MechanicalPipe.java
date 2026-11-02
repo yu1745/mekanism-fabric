@@ -62,7 +62,7 @@ public class MechanicalPipe extends BufferedTransmitter<Storage<FluidVariant>, F
     @Override
     protected AbstractAcceptorCache<Storage<FluidVariant>, ?> createAcceptorCache() {
         //Fresh per-pipe fluid lookup cache: no returned Storage is retained; each resolution is a fresh
-        // FluidStorage.SIDED.find on the opposite face, guarded by the loaded neighbor check (continuation08)
+        // FluidStorage.SIDED.find on the opposite face, guarded by the loaded neighbor check
         return new FluidAcceptorCache(getTransmitterTile());
     }
 
@@ -83,7 +83,7 @@ public class MechanicalPipe extends BufferedTransmitter<Storage<FluidVariant>, F
         }
         FluidAcceptorCache acceptorCache = getAcceptorCache();
         for (Direction side : EnumUtils.DIRECTIONS) {
-            //REVIEW_09 correction: select the RAW configured PULL sides first. Checking the effective (bitmap-based)
+            //select the RAW configured PULL sides first. Checking the effective (bitmap-based)
             // connection type before refresh would skip a formerly null provider (bitmap bit still clear) and never
             // rediscover it, so the raw configuration is the candidate set.
             if (getConnectionTypeRaw(side) != ConnectionType.PULL) {
@@ -91,7 +91,7 @@ public class MechanicalPipe extends BufferedTransmitter<Storage<FluidVariant>, F
             }
             //Refresh this PULL side's acceptor-connection validity (official bitmap policy: redstone/mutual/
             // exclusion checks, packet only on bit change) BEFORE the effective check, so null->valid rediscovery
-            // updates the bitmap (continuation08)
+            // updates the bitmap
             refreshAcceptorConnections(side);
             //Effective PULL check now reflects the refreshed bitmap: a side that just became invalid (redstone,
             // mutual transmission, exclusion) is rejected here instead of being queried
@@ -99,14 +99,14 @@ public class MechanicalPipe extends BufferedTransmitter<Storage<FluidVariant>, F
                 continue;
             }
             //Bitmap-gated lookup (getCachedAcceptor checks currentAcceptorConnections before resolving); the
-            // ungated getConnectedAcceptor is deliberately NOT used (continuation08 REVIEW_09)
+            // ungated getConnectedAcceptor is deliberately NOT used
             Storage<FluidVariant> connectedAcceptor = acceptorCache.getCachedAcceptor(side);
             if (connectedAcceptor != null && connectedAcceptor.iterator().hasNext()) {
                 //Note: We recheck the buffer each time in case we ended up accepting fluid somewhere
                 // and our buffer changed and is no longer empty
                 FluidStack bufferWithFallback = getBufferWithFallback();
                 int availablePull = getAvailablePull();
-                //REVIEW_05 correction: snapshot the ACTUAL captured destination tank (network tank when attached, otherwise our own buffer) BEFORE any
+                //snapshot the ACTUAL captured destination tank (network tank when attached, otherwise our own buffer) BEFORE any
                 // external operation, and perform the internal insertion against that exact captured identity inside the transaction. The old code called
                 // takeFluid, which re-resolves the destination at call time (an owner can switch between simulation and execute) and ignored the returned
                 // remainder and resulting contents, so a listener exception or partial execute could abort the external extraction while the internal
@@ -198,7 +198,7 @@ public class MechanicalPipe extends BufferedTransmitter<Storage<FluidVariant>, F
     /**
      * Extracts up to {@code maxMillibuckets} of {@code variant} from {@code storage} inside {@code transaction}, accepting only a whole-millibucket result.
      *
-     * <p>REVIEW_06 correction: a probe response that is already an exact whole-millibucket amount (full OR partial) is accepted immediately; only a fractional (or zero)
+     * <p>a probe response that is already an exact whole-millibucket amount (full OR partial) is accepted immediately; only a fractional (or zero)
      * report gets the single bounded retry at the whole-millibucket floor of the report.
      *
      * @return the extracted stack, or {@code null} if the acceptor cannot provide a whole-millibucket amount.

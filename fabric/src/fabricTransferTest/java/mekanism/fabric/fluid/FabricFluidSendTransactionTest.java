@@ -241,7 +241,7 @@ class FabricFluidSendTransactionTest {
 
     @Test
     void offeredStackOverloadActuallyCommitsTheDistribution() {
-        //REVIEW_05 finding 1: the caller-owned offered-stack overload previously returned a positive count while every target write aborted on close,
+        //the caller-owned offered-stack overload previously returned a positive count while every target write aborted on close,
         // losing fluid if the caller debited the returned amount. It must commit the distribution.
         FakeFluidStorage destination = new FakeFluidStorage(10 * FabricFluidConversions.TRANSFER_UNITS_PER_MILLIBUCKET);
         FluidStack offered = new FluidStack(Fluids.WATER, 5);
@@ -293,7 +293,7 @@ class FabricFluidSendTransactionTest {
 
         assertEquals(0, sent, "A fractional retry response must abort, never committing a fractional destination amount");
         assertEquals(100, source.getFluidAmount(), "Nothing sent means nothing debited");
-        //REVIEW_06 correction of the previous wrong <=2 assumption: a FULL send takes the collectAcceptors simulation plus the Target.sendPossible simulation
+        //of the previous wrong <=2 assumption: a FULL send takes the collectAcceptors simulation plus the Target.sendPossible simulation
         // BEFORE the target's initial execute probe and its single bounded retry, so this one-destination case performs exactly 4 inserts — the bounded bound
         // itself (initial probe + one retry) is asserted directly below. Target fairness is unchanged.
         assertEquals(4, insertCalls[0], "Full send: 2 fair-distribution simulations + initial execute probe + one bounded floor retry");

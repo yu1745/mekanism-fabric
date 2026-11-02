@@ -12,7 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Client fixture for the two-player security check (W-120).
+ * Client fixture for the two-player security check.
  *
  * <p>Both players join the same throwaway server and this fixture makes each of them right-click the same machine once.
  * It then reports whether the server opened the machine screen: a player who may not use the machine gets no screen at

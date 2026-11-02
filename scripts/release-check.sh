@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# W-70: one command that runs the server-side release gates in order (clean build, four-JAR static checks, packaged
+# one command that runs the server-side release gates in order (clean build, four-JAR static checks, packaged
 # server, paired network, configuration rejection, machine runtime). It adds no checks of its own: every step is an
-# existing script. The release-JAR client path is NOT re-run here - that has one-off evidence only (W-69).
+# existing script. The release-JAR client path is NOT re-run here - that has one-off evidence only.
 #
 # Usage: scripts/release-check.sh [--skip-build] [--extended]
 #
@@ -57,10 +57,10 @@ run_step 'configuration rejection (three clients rejected)' "$ROOT/scripts/fabri
 run_step 'machine runtime smoke' "$ROOT/scripts/fabric-machine-smoke.sh"
 run_step 'third-party energy interop (Tech Reborn)' "$ROOT/scripts/fabric-third-party-energy-smoke.sh"
 if (( EXTENDED )); then
-  run_step 'crash conservation (W-121)' "$ROOT/scripts/fabric-crash-conservation-smoke.sh"
-  run_step 'energy chain (W-122)' "$ROOT/scripts/fabric-energy-chain-smoke.sh"
-  run_step 'save round-trip (W-123)' "$ROOT/scripts/fabric-save-roundtrip-smoke.sh"
-  run_step 'config boundary (W-124)' "$ROOT/scripts/fabric-config-boundary-smoke.sh"
+  run_step 'crash conservation' "$ROOT/scripts/fabric-crash-conservation-smoke.sh"
+  run_step 'energy chain' "$ROOT/scripts/fabric-energy-chain-smoke.sh"
+  run_step 'save round-trip' "$ROOT/scripts/fabric-save-roundtrip-smoke.sh"
+  run_step 'config boundary' "$ROOT/scripts/fabric-config-boundary-smoke.sh"
 fi
 
 printf 'release-check: PASSED (%d steps, logs in %s)\n' "$STEP" "$LOG_DIR"

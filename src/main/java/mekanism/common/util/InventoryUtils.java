@@ -169,7 +169,7 @@ public final class InventoryUtils {
             ItemStack simulatedExtraction = slot.extractItem(slot.getCount(), Action.SIMULATE, AutomationType.EXTERNAL);
             if (!simulatedExtraction.isEmpty()) {
                 //Identity-checked candidate: the selected physical slot is connected to its real exposed position in
-                // the request's sided provider (Task052 R3); no inferred generic indices
+                // the request's sided provider; no inferred generic indices
                 request.addItemFromSelectedSlot(simulatedExtraction, slot);
             }
         }

@@ -42,7 +42,7 @@ public record ModuleElectrolyticBreathingUnit(boolean fillHeld) implements ICust
         //Note: Being in water is checked first to ensure that if it is raining and the player is in water
         // they get the full strength production
         float eyeHeight = player.getEyeHeight();
-        //Task052 Fabric port migration (REVIEW_03 finding 4): MekanismUtils.getFluidsIn keys by the fluid family's source fluid
+        //Fabric port migration: MekanismUtils.getFluidsIn keys by the fluid family's source fluid
         // (FlowingFluid#getSource() aggregation, the vanilla equivalent of NeoForge's FluidType grouping), so the water classification
         // compares against Fluids.WATER
         Map<Fluid, FluidInDetails> fluidsIn = MekanismUtils.getFluidsIn(player, eyeHeight, (bb, data) -> {

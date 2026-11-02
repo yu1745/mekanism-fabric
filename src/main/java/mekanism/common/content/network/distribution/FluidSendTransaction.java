@@ -106,7 +106,7 @@ public final class FluidSendTransaction {
                 accepted = EmitUtils.sendToAcceptors(target, toSend.getAmount(), toSend);
             }
             if (accepted > 0) {
-                //REVIEW_05 correction: destinations only become durable when the enclosing transaction commits; previously a positive
+                //destinations only become durable when the enclosing transaction commits; previously a positive
                 // count was returned while every target write aborted on close, losing fluid if the caller debited the returned amount
                 outer.commit();
             }
